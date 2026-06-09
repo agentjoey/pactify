@@ -233,6 +233,39 @@ pact_checkpoint() {
   _pact_render_state
 }
 
+# pact_accept <task_id> : reviewer-only.
+pact_accept() {
+  _pact_require_id || return 1
+  local task="$1"
+  local reviewer; reviewer=$(_pact_task_field "$task" reviewer)
+  if [ "$reviewer" != "$PACT_AGENT_ID" ]; then
+    echo "pact_accept: only the reviewer ($reviewer) may accept $task; you are $PACT_AGENT_ID" >&2
+    return 1
+  fi
+  local feature; feature=$(_pact_task_feature "$task")
+  _pact_log_append accept reviewer "$task" "$feature" '{}'
+  _pact_render_state
+}
+
+# pact_changes <task_id> --reason "<text>" : reviewer-only; sends task back.
+pact_changes() {
+  _pact_require_id || return 1
+  local task="$1"; shift
+  local reason=""
+  while [ $# -gt 0 ]; do
+    case "$1" in --reason) reason="$2"; shift 2;; *) shift;; esac
+  done
+  local reviewer; reviewer=$(_pact_task_field "$task" reviewer)
+  if [ "$reviewer" != "$PACT_AGENT_ID" ]; then
+    echo "pact_changes: only the reviewer ($reviewer) may review $task" >&2
+    return 1
+  fi
+  local feature; feature=$(_pact_task_feature "$task")
+  local payload; payload=$(jq -nc --arg r "$reason" '{reason:$r}')
+  _pact_log_append changes_requested reviewer "$task" "$feature" "$payload"
+  _pact_render_state
+}
+
 # _pact_render_project <name> <seats_json>
 _pact_render_project() {
   local name="$1" seats_json="$2"

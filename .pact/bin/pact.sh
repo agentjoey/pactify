@@ -336,6 +336,30 @@ pact_validate() {
   return $rc
 }
 
+pact_help() {
+  cat <<'EOF'
+pact protocol — verb reference
+
+Roles: orchestrator | worker | reviewer | human
+Identity: export PACT_AGENT_ID=<seat> before any verb (fail-closed if unset).
+
+  pact_init --project <name> --seat "<id>:<roles>:<entry>" ...   scaffold .pact/ + bake entries
+  pact_join <id> --roles <r1,r2>                                 worker cold-start; pick up tasks
+  pact_assign <task> --feature <f> --branch <b> --owner <id> --reviewer <id> [--spec <p>]
+  pact_checkpoint <task> --evidence "<text>"                     worker → awaiting_review
+  pact_accept <task>                                             reviewer → accepted
+  pact_changes <task> --reason "<text>"                          reviewer → changes_requested
+  pact_merge <feature>                                           orchestrator: --no-ff merge → shipped
+  pact_status                                                    print STATE.yml
+  pact_log [--replay]                                            print log | rebuild STATE from log
+  pact_validate                                                  check projection + roster + rules
+
+The two rules (the pact):
+  1. A worker cannot self-accept. Only a task's reviewer may accept it (owner != reviewer).
+  2. A feature cannot merge until all its tasks are accepted.
+EOF
+}
+
 # _pact_render_project <name> <seats_json>
 _pact_render_project() {
   local name="$1" seats_json="$2"
@@ -363,3 +387,11 @@ $seats_md
 Run \`pact_help\` for the full verb reference.
 EOF
 }
+
+# Direct execution: `bash pact.sh --help`. When sourced, this block is skipped.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  case "${1:-}" in
+    --help|help) pact_help;;
+    *) echo "pact.sh: source me, or run 'bash pact.sh --help'"; exit 0;;
+  esac
+fi

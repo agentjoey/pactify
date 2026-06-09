@@ -30,8 +30,14 @@ log 事件加 `event_id` + `init.protocol_version`，validate 版本门禁(高 m
 6 个包（event/projection/gitx/pact/paths + cmd/pactify，cobra，单 4.4M 静态二进制）+ 10 动词 + 两条铁律。
 **STATE.yml 字节对齐 bash** → 跨工具 validate 直通；互操作测试证实 bash↔Go 同一 .pact/ 接力 + STATE 字节一致。
 go test 6 包 + bats 76 全绿。final review 修了 validate 缺 STATE 报 drift；记录悬挂事件投影分歧（仅畸形 log）。
-LICENSE = MIT。**下一步：M1.3 `pactify serve`（MCP server + fsnotify→SSE→Vite/React 本地 dashboard，go:embed）。**
-backlog：M6（join roles inert）、I5（task_status grep 脆弱）、F1 worktree 并发隔离、悬挂事件投影统一。
+LICENSE = MIT。
+
+**M1.3 进行中（拆 3 计划，brainstorm spec 一份：docs/superpowers/specs/2026-06-10-m1.3-serve-mcp-dashboard-design.md）：**
+- **M1.3a serve 后端 ✅**（2026-06-10，PR #3 merged）：`internal/registry`（~/.pactify/projects.json + register/unregister/list）+ `internal/serve`（State→JSON DTO、HTTP `/api/projects` `/state`、SSE `/events`、fsnotify 多项目 watcher、`pactify serve`）。observe-only 只读 API，无前端。8 Go 包 + 77 bats。final review 修了 watcher offset 两 bug（截断/切分支 reset、partial line）。
+- **M1.3b React dashboard 待做**（消费 A 的 API，go:embed，combined 布局已 mockup 锁定：项目切换/座位 per-agent activity/kanban/evidence preview/timeline，observe-only）→ 需 writing-plans。
+- **M1.3c pactify mcp 待做**（stdio MCP server，官方 go-sdk，全动词 tools + state/log resources + 通知）→ 需 writing-plans。
+**下一步：M1.3b 或 M1.3c 的 writing-plans（spec 已就绪，无需再 brainstorm）。M1.3 全完 = Pact-Base/Phase 1 齐活。**
+backlog：M6（join roles inert）、I5（task_status grep 脆弱）、F1 worktree 并发隔离、悬挂事件投影统一、serve minors（log fsnotify errors / failed watch-add / symlink dedup）。
 
 ## Next Sprint Candidates
 - [ ] [EP-001] [HIGH] Phase 0：Claude skill 实现 pact 协议 + dogfood 验证消灭人肉中继

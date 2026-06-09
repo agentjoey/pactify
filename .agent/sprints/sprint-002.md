@@ -30,7 +30,7 @@ Phase 0 已合入 main：`.pact/bin/pact.sh` bash 参考实现 + 11 动词 + 两
 - [ ] Claude skill 退化为薄封装（调 pactify CLI）
 
 ### T3: M1.3 pactify serve（MCP server + 本地 dashboard）[HIGH] [claude]
-**Status:** 🔲 Todo (依赖 T2)
+**Status:** 🔄 In Progress（拆 3 计划：**A serve 后端 ✅ PR #3 merged**；B React dashboard 待做；C pactify mcp 待做）
 **Milestone:** M1.3
 **Acceptance:**
 - [ ] MCP server：事件订阅 + 工具暴露

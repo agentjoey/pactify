@@ -21,3 +21,15 @@ setup() {
   [[ "$output" == *'"name":"demo"'* ]]
   [[ "$output" == *'"project":"demo"'* ]]
 }
+
+@test "serve renders the embedded dashboard at /" {
+  "$BIN" register "$PROJ" --name demo
+  "$BIN" serve --addr 127.0.0.1:7798 &
+  SERVE_PID=$!
+  sleep 1
+  run curl -s http://127.0.0.1:7798/
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:7798/)
+  kill $SERVE_PID 2>/dev/null || true
+  [ "$STATUS" = "200" ]
+  [[ "$output" == *'<div id="root">'* ]]
+}

@@ -3,6 +3,7 @@ package serve
 import (
 	"bufio"
 	"os"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -52,28 +53,42 @@ func (s *Server) watchLoop() {
 	}
 }
 
-// drainNew reads lines appended since the last offset and broadcasts them.
+// drainNew reads complete (newline-terminated) lines appended since the last
+// offset and broadcasts them. It advances the offset only past complete lines —
+// a trailing partial line is left for the next drain (avoids overshoot). If the
+// file shrank since last read (truncation / branch switch swapped log.jsonl), it
+// re-reads from the start so the stream doesn't silently freeze.
 func (s *Server) drainNew(id, lp string) {
+	fi, err := os.Stat(lp)
+	if err != nil {
+		return
+	}
+	off := s.offsets[id]
+	if fi.Size() < off {
+		off = 0 // truncated/swapped to a shorter file: re-read from the start
+	}
 	f, err := os.Open(lp)
 	if err != nil {
 		return
 	}
 	defer f.Close()
-	off := s.offsets[id]
 	if _, err := f.Seek(off, 0); err != nil {
 		return
 	}
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 1<<20), 1<<20)
-	var read int64
-	for sc.Scan() {
-		line := sc.Text()
-		read += int64(len(line)) + 1
-		if line != "" {
-			s.hub.broadcast(id, line)
+	rd := bufio.NewReader(f)
+	for {
+		line, err := rd.ReadString('\n')
+		if err != nil {
+			// EOF without a trailing newline: a partial line. Do NOT advance past
+			// it — it will be re-read complete on the next drain.
+			break
+		}
+		off += int64(len(line)) // len includes the '\n'
+		if t := strings.TrimRight(line, "\n"); t != "" {
+			s.hub.broadcast(id, t)
 		}
 	}
-	s.offsets[id] = off + read
+	s.offsets[id] = off
 }
 
 // Stop closes the fsnotify watcher.

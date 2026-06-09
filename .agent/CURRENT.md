@@ -1,10 +1,10 @@
 # Current Status — Pactify
 
 Version:        v0.1.0
-Sprint:         001
+Sprint:         002
 Sprint Status:  🔄 In Progress
-Last Updated:   2026-06-09 by claude-sonnet-4-6
-Sprint File:    .agent/sprints/sprint-001.md
+Last Updated:   2026-06-09 by claude-opus-4-8
+Sprint File:    .agent/sprints/sprint-002.md
 
 ## Open Bugs（P0/P1 必须本 Sprint 修复）
 🟢 无已知 P0/P1 bug。

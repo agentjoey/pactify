@@ -18,7 +18,9 @@ opencode worker 真实 Go 任务跑通 6 段，人只说"开始"、rule1 实战�
 **F1（worker 分支/提交纪律）、F2（多行 evidence）、F3（pact_init 覆盖入口文件）已全部修复**，
 F4（shell 持久化）入口文件已声明。F1 选最小自动化（join 自动切分支、checkpoint 自动提交、
 merge 自动回 base），全流程 hands-off 端到端验证通过。测试 **55/55 绿**。
-**下一步：收尾分支（finishing-a-development-branch）→ 进 Phase 1（M1.1 协议冻结 + Go CLI）。**
+**Phase 0 已 --no-ff 合入 main（branch feat/phase0-pact-skill 已删）。**
+**下一步：进 Phase 1 —— M1.1 通讯约定/协议冻结（log.jsonl 事件 schema + .pact JSON Schema）+ Go CLI 顶替 pact.sh。**
+backlog：M6（join roles 自声明 inert）、I5（task_status grep 脆弱）、F1 真正并发隔离（git worktree）。
 
 ## Next Sprint Candidates
 - [ ] [EP-001] [HIGH] Phase 0：Claude skill 实现 pact 协议 + dogfood 验证消灭人肉中继

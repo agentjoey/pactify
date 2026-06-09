@@ -162,6 +162,53 @@ func Assign(taskID, feature, branch, owner, reviewer, spec string) error {
 	})
 }
 
+// Merge integrates a feature branch into the base branch (rule: all accepted).
+func Merge(feature string) error {
+	id, err := requireAgentID()
+	if err != nil {
+		return err
+	}
+	st, evs, err := state()
+	if err != nil {
+		return err
+	}
+	if err := checkMerge(st, feature); err != nil {
+		return err
+	}
+	branch := featureBranch(st, feature)
+	if branch != "" {
+		if ch, _ := gitx.HasChanges("."); ch {
+			if err := gitx.CommitAll(".", "pact "+feature+": ledger before merge"); err != nil {
+				return err
+			}
+		}
+		base := initBaseBranch(evs)
+		if base != "" && base != branch {
+			if err := gitx.Checkout(".", base); err != nil {
+				return err
+			}
+		}
+		if err := gitx.MergeNoFF(".", branch, "Merge "+feature+" ("+branch+")"); err != nil {
+			return err
+		}
+	}
+	return appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("merge"), EventType: "merge",
+		Feature: feature, Payload: map[string]any{},
+	})
+}
+
+func initBaseBranch(evs []event.Event) string {
+	for _, e := range evs {
+		if e.EventType == "init" {
+			if s, ok := e.Payload["base_branch"].(string); ok {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
 // Accept marks a task accepted (reviewer-only; must be awaiting_review).
 func Accept(taskID string) error {
 	id, err := requireAgentID()

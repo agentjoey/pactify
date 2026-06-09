@@ -221,3 +221,54 @@ func TestChangesSendsBack(t *testing.T) {
 		t.Fatalf("state: %s", b)
 	}
 }
+
+func baseBranchFromLog() string {
+	evs, _ := event.ReadAll(".pact/log.jsonl")
+	for _, e := range evs {
+		if e.EventType == "init" {
+			if s, ok := e.Payload["base_branch"].(string); ok {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+func TestMergeRejectedWhenNotAllAccepted(t *testing.T) {
+	newRepo(t)
+	toAwaiting(t) // T1 awaiting_review, not accepted
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	if err := Merge("F"); err == nil {
+		t.Fatal("merge must be rejected when a task is not accepted")
+	}
+}
+
+func TestMergeUnknownFeatureRejected(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	if err := Merge("NOPE"); err == nil {
+		t.Fatal("merge of unknown feature must be rejected")
+	}
+}
+
+func TestMergeSucceedsFeatureShipped(t *testing.T) {
+	newRepo(t)
+	toAwaiting(t)
+	base := baseBranchFromLog()
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Accept("T1")
+	if err := Merge("F"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := execBranch(); b != base {
+		t.Fatalf("merge did not return to base %q, on %q", base, b)
+	}
+	b, _ := os.ReadFile(".pact/STATE.yml")
+	if !strings.Contains(string(b), "status: shipped") {
+		t.Fatalf("feature not shipped: %s", b)
+	}
+	if out, _ := exec.Command("git", "log", "--oneline").Output(); !strings.Contains(string(out), "Merge") {
+		t.Fatalf("no merge commit: %s", out)
+	}
+}

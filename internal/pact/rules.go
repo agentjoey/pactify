@@ -55,6 +55,33 @@ func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*pro
 	return f, nil
 }
 
+func checkMerge(st projection.State, feature string) error {
+	var feat *projection.Feature
+	for fi := range st.Features {
+		if st.Features[fi].ID == feature {
+			feat = &st.Features[fi]
+		}
+	}
+	if feat == nil || len(feat.Tasks) == 0 {
+		return fmt.Errorf("pactify merge: unknown feature %s (or it has no tasks)", feature)
+	}
+	for _, t := range feat.Tasks {
+		if t.Status != "accepted" {
+			return fmt.Errorf("pactify merge: cannot merge %s; task %s not accepted", feature, t.ID)
+		}
+	}
+	return nil
+}
+
+func featureBranch(st projection.State, feature string) string {
+	for _, f := range st.Features {
+		if f.ID == feature {
+			return f.Branch
+		}
+	}
+	return ""
+}
+
 func checkReviewerVerdict(st projection.State, verb, caller, taskID string) (*projection.Feature, error) {
 	tk, f := findTask(st, taskID)
 	if tk == nil {

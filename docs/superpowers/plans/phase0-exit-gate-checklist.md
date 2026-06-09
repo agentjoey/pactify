@@ -50,19 +50,23 @@ Proceed to Phase 1, feeding the findings below into M1.
 
 ## Dogfood findings → Phase 1 backlog
 
-- **F1 (worker branch/commit discipline) — HIGH.** opencode did correct work but left it
-  uncommitted on `main`; no `feat/hello` branch existed, so `pact_merge` (rightly) refused.
-  The worker loop never told it to checkout the feature branch + commit. Fix in M1: either
-  (a) the baked worker entry instructs `git checkout -b <branch>` + commit before checkpoint,
-  or (b) adopt git-worktree isolation (per-seat working tree) — the design-doc-preferred path.
+- **F1 (worker branch/commit discipline) — FIXED 2026-06-09 (commit 324cbb6).** Chose the
+  minimal-automation approach: `pact_join` auto-checks-out the worker's feature branch
+  (creates from HEAD if absent); `pact_checkpoint` auto-commits the worker's work; `pact_init`
+  records `base_branch` and `pact_merge` returns to it before merging. Flow is now hands-off
+  end-to-end (verified: worker joins → writes code → checkpoints → reviewer accepts → merge
+  → feature shipped on base, clean merge commit, validate OK). Limitation: single shared
+  working tree, one feature in flight at a time; true concurrent isolation (git worktree) is
+  still Phase 1.
 - **F2 (multi-line evidence) — FIXED 2026-06-09 (commit on feat/phase0-pact-skill).** Real
   `go test -v` output (newlines+tabs) broke STATE.yml rendering and made `pact_validate`
   checks 4/5 silently skip (`echo "$fresh" | jq` corrupts JSON when the shell's echo expands
   `\n`). Fixed: render folds newlines/tabs; validate uses here-strings. Regression test added.
-- **F3 (pact_init clobbers existing entry files) — HIGH.** Running pact_init in a repo that
-  already has CLAUDE.md/AGENTS.md overwrites them (and `cat >` through an AGENTS.md symlink
-  writes into CLAUDE.md). Fix in M1: write into a managed block / refuse-or-merge, never
-  blind-overwrite. This is why the dogfood used a scratch repo.
+- **F3 (pact_init clobbers existing entry files) — FIXED 2026-06-09 (commit 324cbb6).**
+  `_pact_bake_entry` now writes a managed `<!-- pact:begin/end -->` block: preserves existing
+  entry-file content, idempotent on re-init (replaces the block, no duplication), and never
+  writes through a symlink (resolves the AGENTS.md→CLAUDE.md corruption). pact_init is now
+  safe to run in a repo that already has CLAUDE.md/AGENTS.md.
 - **F4 (entry must state shell-persistence) — minor, mitigated.** Agents whose bash calls
   don't share state need `export PACT_AGENT_ID=… && source … &&` on every pact call; the
   baked entry should say so (added manually this run).

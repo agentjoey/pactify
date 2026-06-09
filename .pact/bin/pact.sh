@@ -100,6 +100,17 @@ _pact_render_state() {
   } > "$tmp" && mv "$tmp" "$PACT_STATE"
 }
 
+# _pact_task_field <task_id> <field> : read a field of a task from the projection.
+_pact_task_field() {
+  _pact_project_json | jq -r --arg t "$1" --arg f "$2" \
+    '.features[].tasks[] | select(.id==$t) | .[$f] // empty'
+}
+# _pact_task_feature <task_id> : the feature id owning a task.
+_pact_task_feature() {
+  _pact_project_json | jq -r --arg t "$1" \
+    '.features[] | select(.tasks[].id==$t) | .id' | head -1
+}
+
 # Export projection helpers + their env so `bash -c` subshells can call them.
 export PACT_DIR PACT_LOG PACT_STATE PACT_TASKS
 export -f _pact_project_json _pact_render_state
@@ -199,6 +210,26 @@ pact_assign() {
   payload=$(jq -nc --arg o "$owner" --arg r "$reviewer" --arg b "$branch" --arg s "$spec" \
     '{owner:$o, reviewer:$r, branch:$b, spec:$s}')
   _pact_log_append assign orchestrator "$task" "$feature" "$payload"
+  _pact_render_state
+}
+
+# pact_checkpoint <task_id> --evidence "<text>"
+pact_checkpoint() {
+  _pact_require_id || return 1
+  local task="$1"; shift
+  local evidence=""
+  while [ $# -gt 0 ]; do
+    case "$1" in --evidence) evidence="$2"; shift 2;; *) shift;; esac
+  done
+  [ -n "$evidence" ] || { echo "pact_checkpoint: --evidence required" >&2; return 1; }
+  local owner; owner=$(_pact_task_field "$task" owner)
+  if [ "$owner" != "$PACT_AGENT_ID" ]; then
+    echo "pact_checkpoint: $PACT_AGENT_ID is not the owner of $task (owner: $owner)" >&2
+    return 1
+  fi
+  local feature; feature=$(_pact_task_feature "$task")
+  local payload; payload=$(jq -nc --arg e "$evidence" '{evidence:$e}')
+  _pact_log_append checkpoint worker "$task" "$feature" "$payload"
   _pact_render_state
 }
 

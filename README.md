@@ -41,4 +41,4 @@ The verbs (`pact_<verb>` in bash today, `pactify <verb>` in the coming Go CLI) a
 
 ## License
 
-> ⚠️ Not yet licensed. A license (Apache-2.0 / MIT for the open core) will be added before wider release.
+[MIT](LICENSE) © 2026 Joey (agentjoey).

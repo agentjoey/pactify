@@ -238,10 +238,7 @@ An implementation MUST check the log projection before emitting a `merge` event 
 
 ### 6.2 Roster
 
-The authoritative seat roster is the union of:
-
-1. The `seats` array in the `payload` of the `init` event.
-2. All subsequent `join` events (which may introduce additional seats).
+The authoritative seat roster is the `seats` array in the `payload` of the `init` event. Seats are declared at init; a `join` event does NOT introduce a new seat — it only signals that an already-declared seat has come online (cold-start / resume). An `agent_id` that appears in the log but is not a declared seat is a validation error. (Adding seats after init is deferred to a future protocol revision.)
 
 Each seat object MUST conform to `schemas/seat.schema.json`:
 
@@ -332,7 +329,8 @@ validate
            (d) no task has owner == reviewer (Rule 1);
            (e) task_ids are globally unique;
            (f) protocol_version in the log does not exceed the supported major
-               (fail-closed if higher).
+               (fail-closed if higher);
+           (g) every event carries a non-empty event_id.
            Exits non-zero if any check fails.
 
 help

@@ -144,6 +144,18 @@ pact_init() {
     esac
   done
   [ -n "$project" ] || { echo "pact_init: --project required" >&2; return 1; }
+  # validate every seat before any side effect (no partial init)
+  local vs vid vroles ventry vextra
+  for vs in "${seats[@]}"; do
+    IFS=':' read -r vid vroles ventry vextra <<<"$vs"
+    if [ -z "$vid" ] || [ -z "$vroles" ] || [ -z "$ventry" ] || [ -n "$vextra" ]; then
+      echo "pact_init: seat must be 'id:roles:entry' (exactly 3 non-empty fields): $vs" >&2
+      return 1
+    fi
+    case "$ventry" in
+      /*|*..*) echo "pact_init: seat entry must be a repo-relative path without '..': $ventry" >&2; return 1;;
+    esac
+  done
   mkdir -p "$PACT_DIR/bin" "$PACT_TASKS"
   # self-copy if not already present (so target repos get the tool)
   [ -f "$PACT_DIR/bin/pact.sh" ] || cp "${BASH_SOURCE[0]}" "$PACT_DIR/bin/pact.sh"
@@ -209,6 +221,9 @@ pact_assign() {
     echo "pact_assign: owner ($owner) must differ from reviewer (separation of duties)" >&2
     return 1
   fi
+  if _pact_project_json | jq -e --arg t "$task" '[.features[].tasks[].id] | index($t) != null' >/dev/null; then
+    echo "pact_assign: task $task already exists" >&2; return 1
+  fi
   [ -n "$spec" ] || spec="$PACT_TASKS/$task.md"
   local payload
   payload=$(jq -nc --arg o "$owner" --arg r "$reviewer" --arg b "$branch" --arg s "$spec" \
@@ -246,6 +261,11 @@ pact_accept() {
     echo "pact_accept: only the reviewer ($reviewer) may accept $task; you are $PACT_AGENT_ID" >&2
     return 1
   fi
+  local st; st=$(_pact_task_field "$task" status)
+  if [ "$st" != "awaiting_review" ]; then
+    echo "pact_accept: $task is not awaiting_review (status: $st)" >&2
+    return 1
+  fi
   local feature; feature=$(_pact_task_feature "$task")
   _pact_log_append accept reviewer "$task" "$feature" '{}'
   _pact_render_state
@@ -264,6 +284,11 @@ pact_changes() {
     echo "pact_changes: only the reviewer ($reviewer) may review $task" >&2
     return 1
   fi
+  local st; st=$(_pact_task_field "$task" status)
+  if [ "$st" != "awaiting_review" ]; then
+    echo "pact_changes: $task is not awaiting_review (status: $st)" >&2
+    return 1
+  fi
   local feature; feature=$(_pact_task_feature "$task")
   local payload; payload=$(jq -nc --arg r "$reason" '{reason:$r}')
   _pact_log_append changes_requested reviewer "$task" "$feature" "$payload"
@@ -274,6 +299,10 @@ pact_changes() {
 pact_merge() {
   _pact_require_id || return 1
   local feature="$1"
+  if ! _pact_project_json | jq -e --arg f "$feature" '.features[]|select(.id==$f)|.tasks|length>0' >/dev/null; then
+    echo "pact_merge: unknown feature $feature (or it has no tasks)" >&2
+    return 1
+  fi
   local not_accepted
   not_accepted=$(_pact_project_json | jq -r --arg f "$feature" \
     '.features[] | select(.id==$f) | .tasks[] | select(.status!="accepted") | .id')
@@ -332,6 +361,12 @@ pact_validate() {
   viol=$(echo "$fresh" | jq -r '.features[].tasks[] | select(.owner==.reviewer) | .id')
   if [ -n "$viol" ]; then
     echo "pact_validate: rule1 violation (owner==reviewer) in tasks: $viol" >&2; rc=1
+  fi
+  # 5) task ids must be globally unique across features
+  local dup
+  dup=$(echo "$fresh" | jq -r '[.features[].tasks[].id] | group_by(.) | map(select(length>1)[0]) | .[]')
+  if [ -n "$dup" ]; then
+    echo "pact_validate: duplicate task id(s) across features: $dup" >&2; rc=1
   fi
   return $rc
 }

@@ -272,3 +272,48 @@ func TestMergeSucceedsFeatureShipped(t *testing.T) {
 		t.Fatalf("no merge commit: %s", out)
 	}
 }
+
+func TestStatusReturnsRenderedState(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	s, err := Status()
+	if err != nil || !strings.Contains(s, "project: p") {
+		t.Fatalf("status=%q err=%v", s, err)
+	}
+}
+
+func TestValidatePassesOnConformantRepo(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	Assign("T1", "F", "b", "opencode", "claude-opus", "s")
+	if err := Validate(); err != nil {
+		t.Fatalf("validate should pass: %v", err)
+	}
+}
+
+func TestValidateFailsClosedOnHigherProtocolMajor(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	b, _ := os.ReadFile(".pact/log.jsonl")
+	out := strings.Replace(string(b), `"protocol_version":1`, `"protocol_version":2`, 1)
+	os.WriteFile(".pact/log.jsonl", []byte(out), 0o644)
+	if err := Validate(); err == nil {
+		t.Fatal("validate must fail closed on higher major")
+	}
+}
+
+func TestLogReplayRebuildsState(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	os.Remove(".pact/STATE.yml")
+	if err := LogReplay(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(".pact/STATE.yml"); err != nil {
+		t.Fatal("replay did not rebuild STATE.yml")
+	}
+}

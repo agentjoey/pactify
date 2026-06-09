@@ -278,3 +278,36 @@ func Checkpoint(taskID, evidence string) error {
 	}
 	return nil
 }
+
+// Status returns the rendered STATE.yml text (from the live log).
+func Status() (string, error) {
+	st, _, err := state()
+	if err != nil {
+		return "", err
+	}
+	return projection.Render(st), nil
+}
+
+// LogReplay rebuilds STATE.yml from the log.
+func LogReplay() error {
+	st, _, err := state()
+	if err != nil {
+		return err
+	}
+	return projection.WriteState(paths.State(), st)
+}
+
+// LogText returns the raw log contents.
+func LogText() (string, error) {
+	b, err := os.ReadFile(paths.Log())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return string(b), nil
+}
+
+// Validate runs the v1 conformance checks.
+func Validate() error { return ValidateLog() }

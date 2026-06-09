@@ -2,7 +2,10 @@ package pact
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
 )
 
@@ -94,4 +97,64 @@ func checkReviewerVerdict(st projection.State, verb, caller, taskID string) (*pr
 		return nil, fmt.Errorf("pactify %s: %s is not awaiting_review (status: %s)", verb, taskID, tk.Status)
 	}
 	return f, nil
+}
+
+// ValidateLog runs the v1 conformance checks against the log + rendered STATE.
+func ValidateLog() error {
+	evs, err := event.ReadAll(paths.Log())
+	if err != nil {
+		return err
+	}
+	st := projection.Project(evs)
+
+	if b, err := os.ReadFile(paths.State()); err == nil {
+		if string(b) != projection.Render(st) {
+			return fmt.Errorf("pactify validate: STATE.yml drift vs render(log)")
+		}
+	}
+	declared := map[string]bool{}
+	var protocolVersion int
+	for _, e := range evs {
+		if e.EventType == "init" {
+			if seats, ok := e.Payload["seats"].([]any); ok {
+				for _, s := range seats {
+					if m, ok := s.(map[string]any); ok {
+						if id, ok := m["id"].(string); ok {
+							declared[id] = true
+						}
+					}
+				}
+			}
+			if pv, ok := e.Payload["protocol_version"].(float64); ok {
+				protocolVersion = int(pv)
+			}
+		}
+	}
+	if protocolVersion > paths.ProtocolVersion {
+		return fmt.Errorf("pactify validate: protocol_version %d exceeds supported %d; upgrade pactify", protocolVersion, paths.ProtocolVersion)
+	}
+	for _, e := range evs {
+		if e.EventID == "" {
+			return fmt.Errorf("pactify validate: event missing event_id")
+		}
+		if !declared[e.AgentID] {
+			return fmt.Errorf("pactify validate: agent_id %q not in seat roster", e.AgentID)
+		}
+		if !slugRe.MatchString(e.AgentID) {
+			return fmt.Errorf("pactify validate: agent_id %q is not a slug", e.AgentID)
+		}
+	}
+	seen := map[string]bool{}
+	for _, f := range st.Features {
+		for _, t := range f.Tasks {
+			if t.Owner == t.Reviewer {
+				return fmt.Errorf("pactify validate: rule1 violation (owner==reviewer) in task %s", t.ID)
+			}
+			if seen[t.ID] {
+				return fmt.Errorf("pactify validate: duplicate task id %s", t.ID)
+			}
+			seen[t.ID] = true
+		}
+	}
+	return nil
 }

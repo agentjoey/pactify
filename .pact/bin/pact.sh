@@ -266,6 +266,28 @@ pact_changes() {
   _pact_render_state
 }
 
+# pact_merge <feature_id> : orchestrator-only; requires all tasks accepted.
+pact_merge() {
+  _pact_require_id || return 1
+  local feature="$1"
+  local not_accepted
+  not_accepted=$(_pact_project_json | jq -r --arg f "$feature" \
+    '.features[] | select(.id==$f) | .tasks[] | select(.status!="accepted") | .id')
+  if [ -n "$not_accepted" ]; then
+    echo "pact_merge: cannot merge $feature; tasks not accepted: $not_accepted" >&2
+    return 1
+  fi
+  local branch
+  branch=$(_pact_project_json | jq -r --arg f "$feature" \
+    '.features[] | select(.id==$f) | .branch')
+  if [ -n "$branch" ] && [ "$branch" != "null" ]; then
+    git merge --no-ff -m "Merge $feature ($branch)" "$branch" || {
+      echo "pact_merge: git merge failed" >&2; return 1; }
+  fi
+  _pact_log_append merge orchestrator "" "$feature" '{}'
+  _pact_render_state
+}
+
 # _pact_render_project <name> <seats_json>
 _pact_render_project() {
   local name="$1" seats_json="$2"

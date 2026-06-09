@@ -5,6 +5,8 @@
 /dist/
 # Node
 node_modules/
+# Frontend deps (internal/serve/dist IS committed for go:embed)
+web/node_modules/
 # Rust (fallback)
 target/
 # Secrets

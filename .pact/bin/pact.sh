@@ -6,8 +6,18 @@ PACT_DIR="${PACT_DIR:-.pact}"
 PACT_LOG="$PACT_DIR/log.jsonl"
 PACT_STATE="$PACT_DIR/STATE.yml"
 PACT_TASKS="$PACT_DIR/tasks"
+PACT_PROTOCOL_VERSION=1
 
 _pact_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+# _pact_event_id: a globally-unique opaque id for a log event.
+_pact_event_id() {
+  if command -v uuidgen >/dev/null 2>&1; then
+    uuidgen | tr 'A-Z' 'a-z'
+  else
+    od -An -N16 -tx1 /dev/urandom | tr -d ' \n'
+  fi
+}
 
 _pact_require_id() {
   if [ -z "${PACT_AGENT_ID:-}" ]; then
@@ -23,10 +33,11 @@ _pact_log_append() {
   payload="${5:-}"; [ -z "$payload" ] && payload="{}"
   local line
   line=$(jq -nc \
+    --arg eid "$(_pact_event_id)" \
     --arg ts "$(_pact_now)" --arg id "$PACT_AGENT_ID" --arg role "$role" \
     --arg et "$et" --arg task "$task" --arg feature "$feature" \
     --argjson payload "$payload" \
-    '{ts:$ts,agent_id:$id,role:$role,event_type:$et,task_id:$task,feature:$feature,payload:$payload}')
+    '{event_id:$eid,ts:$ts,agent_id:$id,role:$role,event_type:$et,task_id:$task,feature:$feature,payload:$payload}')
   printf '%s\n' "$line" >> "$PACT_LOG"
 }
 
@@ -185,14 +196,15 @@ pact_init() {
   done
 
   # PROJECT.md charter
-  _pact_render_project "$project" "$seats_json" > "$PACT_DIR/PROJECT.md"
+  _pact_bake_project "$project" "$seats_json" "$PACT_PROTOCOL_VERSION"
 
   # init event + render. Record the base/integration branch so pact_merge can
   # return to it before merging a feature branch (F1).
   local base_branch payload
   base_branch=$(git branch --show-current 2>/dev/null)
   payload=$(jq -nc --arg p "$project" --argjson seats "$seats_json" --arg base "$base_branch" \
-    '{project:$p, seats:$seats, base_branch:$base}')
+    --argjson pv "$PACT_PROTOCOL_VERSION" \
+    '{project:$p, protocol_version:$pv, seats:$seats, base_branch:$base}')
   _pact_log_append init orchestrator "" "" "$payload"
   _pact_render_state
 }
@@ -224,14 +236,18 @@ EOF
   # Never follow a symlink: replace it with a real file.
   [ -L "$entry" ] && rm -f "$entry"
   if [ -f "$entry" ]; then
-    # Strip any existing pact block (inclusive), preserve the rest.
+    # strip the old managed block, then trim trailing blank lines
     awk '
       /<!-- pact:begin/ {inblock=1}
       !inblock {print}
       /<!-- pact:end -->/ {inblock=0}
-    ' "$entry" > "$entry.pact.tmp" && mv "$entry.pact.tmp" "$entry"
-    # Append a separating blank line before the fresh block.
-    printf '\n%s\n' "$block" >> "$entry"
+    ' "$entry" | awk 'NF{last=NR} {l[NR]=$0} END{for(i=1;i<=last;i++) print l[i]}' > "$entry.pact.tmp" \
+      && mv "$entry.pact.tmp" "$entry"
+    if [ -s "$entry" ]; then
+      printf '\n%s\n' "$block" >> "$entry"   # one separator before the block
+    else
+      printf '%s\n' "$block" > "$entry"        # file is now empty -> no leading blank
+    fi
   else
     printf '%s\n' "$block" > "$entry"
   fi
@@ -420,6 +436,20 @@ pact_validate() {
   if [ -n "$dup" ]; then
     echo "pact_validate: duplicate task id(s) across features: $dup" >&2; rc=1
   fi
+  # 6) protocol_version gate: refuse a log from a newer major
+  local pv; pv=$(jq -rs '(map(select(.event_type=="init"))|last).payload.protocol_version // 0' "$PACT_LOG")
+  case "$pv" in
+    ''|*[!0-9]*) pv=0;;
+  esac
+  if [ "$pv" -gt "$PACT_PROTOCOL_VERSION" ]; then
+    echo "pact_validate: protocol_version $pv exceeds supported $PACT_PROTOCOL_VERSION; upgrade pact" >&2; rc=1
+  fi
+  # 7) v1 conformance: every event must carry a non-empty event_id
+  local missing_eid
+  missing_eid=$(jq -rs '[.[] | select((.event_id // "") | length == 0)] | length' "$PACT_LOG")
+  if [ "$missing_eid" -gt 0 ]; then
+    echo "pact_validate: $missing_eid event(s) missing event_id" >&2; rc=1
+  fi
   return $rc
 }
 
@@ -447,32 +477,57 @@ The two rules (the pact):
 EOF
 }
 
-# _pact_render_project <name> <seats_json>
-_pact_render_project() {
-  local name="$1" seats_json="$2"
+# _pact_bake_project <name> <seats_json> <protocol_version>
+# Writes the charter + seat table into a managed block in .pact/PROJECT.md,
+# preserving any user content outside the block (idempotent on re-init).
+_pact_bake_project() {
+  local name="$1" seats_json="$2" pv="$3"
   local seats_md
   seats_md=$(jq -r '.[] | "- `\(.id)` — roles: \(.roles | join(", ")) — entry: \(.entry)"' <<<"$seats_json")
-  cat <<EOF
-# $name — Pact Charter
-
-This repo uses the **pact protocol**. Any agent that can read files + run git can participate.
-
-## Roles
-- **orchestrator** — split spec→tasks; assign; merge; maintain charter
-- **worker** — implement; at checkpoint set awaiting_review + write evidence
-- **reviewer** — verify diff+evidence → accept / changes_requested
-- **human** — start button + final authority
-
-## The two rules (the pact)
-1. A worker cannot self-accept. Only a task's reviewer may accept it (owner != reviewer).
-2. A feature cannot merge until all its tasks are accepted.
-
-## Seats
-$seats_md
-
-## Commands (source .pact/bin/pact.sh)
-Run \`pact_help\` for the full verb reference.
-EOF
+  # Use printf to build the block; avoids backtick re-evaluation that would occur
+  # if $seats_md were expanded inside an unquoted heredoc.
+  local block
+  block=$(printf '%s\n' \
+    "<!-- pact:begin (managed by pact_init — edit outside this block) -->" \
+    "# $name — Pact Charter (protocol_version: $pv)" \
+    "" \
+    "This repo uses the **pact protocol** (v$pv). Any agent that can read files + run git can participate." \
+    "" \
+    "## Roles" \
+    "- **orchestrator** — split spec→tasks; assign; merge; maintain charter" \
+    "- **worker** — implement; at checkpoint set awaiting_review + write evidence" \
+    "- **reviewer** — verify diff+evidence → accept / changes_requested" \
+    "- **human** — start button + final authority" \
+    "" \
+    "## The two rules (the pact)" \
+    "1. A worker cannot self-accept. Only a task's reviewer may accept it (owner != reviewer), and only when awaiting_review." \
+    "2. A feature cannot merge until all its tasks are accepted." \
+    "" \
+    "## Seats" \
+    "$seats_md" \
+    "" \
+    "## Commands" \
+    "Source the tool in .pact/bin and run \`pact_help\` (or \`pactify help\`) for the verb reference." \
+    "<!-- pact:end -->"\
+  )
+  local entry=".pact/PROJECT.md"
+  [ -L "$entry" ] && rm -f "$entry"
+  if [ -f "$entry" ]; then
+    # strip the old managed block, then trim trailing blank lines
+    awk '
+      /<!-- pact:begin/ {inblock=1}
+      !inblock {print}
+      /<!-- pact:end -->/ {inblock=0}
+    ' "$entry" | awk 'NF{last=NR} {l[NR]=$0} END{for(i=1;i<=last;i++) print l[i]}' > "$entry.pact.tmp" \
+      && mv "$entry.pact.tmp" "$entry"
+    if [ -s "$entry" ]; then
+      printf '\n%s\n' "$block" >> "$entry"   # one separator before the block
+    else
+      printf '%s\n' "$block" > "$entry"        # file is now empty -> no leading blank
+    fi
+  else
+    printf '%s\n' "$block" > "$entry"
+  fi
 }
 
 # Direct execution: `bash pact.sh --help`. When sourced, this block is skipped.

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pactify.dev/schemas/event.schema.json",
+  "title": "pact log event (v1)",
+  "type": "object",
+  "required": ["event_id", "ts", "agent_id", "role", "event_type", "task_id", "feature", "payload"],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1 },
+    "ts": { "type": "string", "format": "date-time" },
+    "agent_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "role": { "enum": ["orchestrator", "worker", "reviewer"] },
+    "event_type": { "enum": ["init", "assign", "join", "checkpoint", "accept", "changes_requested", "merge"] },
+    "task_id": { "type": "string" },
+    "feature": { "type": "string" },
+    "payload": { "type": "object" }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    { "if": { "properties": { "event_type": { "const": "init" } } },
+      "then": { "properties": { "payload": { "required": ["project", "protocol_version", "seats", "base_branch"] } } } },
+    { "if": { "properties": { "event_type": { "const": "assign" } } },
+      "then": { "properties": { "payload": { "required": ["owner", "reviewer", "branch", "spec"] } } } },
+    { "if": { "properties": { "event_type": { "const": "join" } } },
+      "then": { "properties": { "payload": { "required": ["roles"] } } } },
+    { "if": { "properties": { "event_type": { "const": "checkpoint" } } },
+      "then": { "properties": { "payload": { "required": ["evidence"] } } } },
+    { "if": { "properties": { "event_type": { "const": "changes_requested" } } },
+      "then": { "properties": { "payload": { "required": ["reason"] } } } }
+  ]
+}

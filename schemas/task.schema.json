@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pactify.dev/schemas/task.schema.json",
+  "title": "pact task frontmatter (v1)",
+  "type": "object",
+  "required": ["id", "feature", "owner", "reviewer"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "feature": { "type": "string", "minLength": 1 },
+    "owner": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "reviewer": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+  },
+  "additionalProperties": true
+}

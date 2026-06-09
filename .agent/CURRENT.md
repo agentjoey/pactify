@@ -10,15 +10,16 @@ Sprint File:    .agent/sprints/sprint-001.md
 🟢 无已知 P0/P1 bug。
 
 ## Current Sprint Summary
-Sprint 001：Repo 初始化完成，待决策 CLI 语言（Go vs Node）和第一交付物（CLI first vs skill first）；  
-决策后进入最小文件契约定义（.pact/ schema）+ CLI 骨架实现。
+Sprint 001：Repo 初始化完成。Roadmap 已锁定（三产品 Pact-Base/Squad/Team，守 Team 开源边界，
+见 docs/ROADMAP.md + ADR-001）；技术地基已定（Go CLI + log.jsonl 通讯总线 + pactify serve MCP
+server + Vite/React 本地 dashboard）。下一步进 **Phase 0**：Claude skill 实现 pact 协议并 dogfood。
 
 ## Next Sprint Candidates
-- [ ] [EP-002] [HIGH] CLI 完整命令集（init/join/status/checkpoint/accept/merge/log）
-- [ ] [EP-003] [HIGH] Dogfood：Pactify 自身用 .pact/ 管理开发
-- [ ] [EP-004] [MED] Claude skill 薄封装（调同一 CLI）
+- [ ] [EP-001] [HIGH] Phase 0：Claude skill 实现 pact 协议 + dogfood 验证消灭人肉中继
+- [ ] [EP-101] [HIGH] M1.1 通讯约定冻结（log.jsonl 事件 schema + .pact/ JSON Schema）
+- [ ] [EP-102] [HIGH] M1.2 CLI v1（Go）
 
 ## Version History（最近 5 版）
 | Version | Date | Summary |
 |---------|------|---------|
-| v0.1.0 | 2026-06-09 | Repo 初始化，确立文件契约骨架与 Sprint 001 |
+| v0.1.0 | 2026-06-09 | Repo 初始化 + roadmap 锁定（三产品/守 Team）+ 技术地基决策（Go/MCP/React）|

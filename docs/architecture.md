@@ -1,37 +1,73 @@
 # Pactify — Architecture
 
-> Last updated: 2026-06-09 | Status: Draft（Sprint 001，CLI 语言待定）
+> Last updated: 2026-06-09 | Status: Draft（地基决策已锁，CLI 待实现）
 
 ## Overview
 
-Pactify 是一个**多 agent 协同协议 + 薄 CLI**。
+Pactify = **多 agent 协同协议 + 薄 CLI + 可视化编排**，分三产品层（[ROADMAP](ROADMAP.md)）：
 
 ```
-用户 repo
-  .pact/
-    PROJECT.md      ← 章程（目标/技术栈/角色/约定）
-    STATE.yml       ← 结构化活状态（log.jsonl 的投影）
-    tasks/<id>.md   ← 单任务 spec+plan+验收项+交接日志
-    log.jsonl       ← append-only 事件流（事实源）
-  CLAUDE.md / AGENTS.md / GEMINI.md  ← 各厂商入口，均 → .pact/
-  docs/specs|plans|decisions/        ← 知识库
+Pact-Base   读 + 协议机制     免费开源
+Pact-Squad  写 + 可视化编排   主功能免费 + 部分付费
+Pact-Team   协作 + 云         付费商业化
 ```
+
+## 制品层（用户 repo）
+
+```
+.pact/
+  PROJECT.md      ← 章程（目标/技术栈/角色/约定）
+  STATE.yml       ← 结构化活状态（log.jsonl 的投影）
+  tasks/<id>.md   ← 单任务 spec+plan+验收项+交接日志
+  log.jsonl       ← append-only 事件流（事实源 + 通讯总线）
+CLAUDE.md / AGENTS.md / GEMINI.md  ← 各厂商入口，均 → .pact/
+docs/specs|plans|decisions/        ← 知识库
+```
+
+## 通讯架构（地基，Phase 1 冻结）
+
+**`log.jsonl` 既是审计事实源，也是 agent 之间的通讯总线。**
+
+```
+agents ──┬─ shell:  pactify checkpoint/accept   (任何 agent，零依赖)
+         └─ MCP:    tools + event subscription   (MCP 客户端)
+                          │
+                   log.jsonl  (append-only 事件总线)
+                          │
+                   pactify serve
+                     ├─ MCP server（事件订阅 + 工具暴露）
+                     ├─ fsnotify watch → SSE/WS → 本地 dashboard
+                     └─ (Phase 4) 云端 relay → Pact-Team
+```
+
+- **shell 写入与 MCP 调用产出同一种事件** → 一套 schema 服务所有入口
+- **本地零依赖**（文件 + 单 binary），**云端只是在上面加 relay**，协议不变
+
+### 事件 schema（草案，M1.1 定稿）
+
+```jsonc
+{
+  "ts": "2026-06-09T09:00:00Z",
+  "agent_id": "claude-opus",
+  "role": "orchestrator",        // orchestrator | worker | reviewer | human
+  "event_type": "checkpoint",    // join | assign | checkpoint | accept | changes_requested | merge | ...
+  "task_id": "T1",
+  "feature": "BL-042",
+  "payload": { /* event-specific，evidence/diff-ref/reason 等 */ }
+}
+```
+
+设计约束：event_type 枚举要同时覆盖 shell CLI 命令语义和 MCP 工具语义；payload 自由扩展但顶层字段冻结。
 
 ## 核心设计决策
 
 ### log.jsonl 为源，STATE.yml 为投影
-
-多 agent 并发写 STATE.yml → git 合并冲突；append-only 的 log.jsonl 天然 merge 友好。
-- **写**：任何状态变更 → 追加 log event
-- **读**：直接读 STATE.yml（快、结构化）
-- **重算**：`pactify log` 从 log.jsonl replay → 重建 STATE.yml
+多 agent 并发写 STATE.yml → git 冲突；append-only log 天然 merge 友好。写=追加 event；读=读 STATE；`pactify log` 从 log replay 重建 STATE。
 
 ### 拉取式派发
-
-异构 agent 跨进程/设备/厂商，无法互相 ping → 派发 = worker 启动时读 STATE（pull），不是 orchestrator 主动 push。人是"启动按钮"。
+异构 agent 无法互相 ping → worker 启动时读 STATE（pull）。人是"启动按钮"。推送式 daemon = Phase 4。
 
 ### 角色与职责分离
-
 | 角色 | 职责 |
 |---|---|
 | orchestrator | 拆 spec→tasks；派发；合并；维护章程 |
@@ -41,25 +77,32 @@ Pactify 是一个**多 agent 协同协议 + 薄 CLI**。
 
 worker 不能自标 `accepted`（职责分离）。
 
-## CLI 命令集（规划）
+## CLI 命令集（Phase 1）
 
 ```
-pactify init           # 在目标 repo 生成 .pact/ 骨架
-pactify join           # worker 冷启动；追加 join 事件
+pactify init           # 生成 .pact/ 骨架
+pactify join           # worker 冷启动 + 追加 join 事件
 pactify status         # 打印 STATE.yml 现状
 pactify checkpoint <id># task → awaiting_review + 追加 log
 pactify accept <id>    # reviewer 用；task → accepted + 追加 log
 pactify merge <feat>   # 全任务 accepted → --no-ff 合并 + feature → shipped
 pactify log            # replay log.jsonl → 重建 STATE（投影验证）
+pactify validate       # 校验 .pact/ schema（防漂移）
+pactify serve          # MCP server + SSE dashboard
 ```
 
-## Open-core 分层
+## 技术栈
 
-| 层 | 内容 | 状态 |
+| 层 | 选型 | 理由 |
 |---|---|---|
-| 开源核心 | 协议文件契约 + CLI + 各厂商薄封装 | Sprint 001-002 |
-| 产品/平台 | 持久状态服务 + 推送式 daemon + Mission-control UI | 产品阶段 |
+| CLI | **Go** 单静态二进制 | 零 runtime 依赖，agent shell drop-in；启动 ~5ms |
+| 本地 dashboard | Vite + React SPA，`go:embed` | 静态嵌入 binary，与云端共享 React 组件 |
+| 云端 app（Team）| Next.js standalone | 与本地共享组件；**不绑 Vercel 专属特性**（可迁自托管）|
+| 设计系统 | Tailwind + shadcn/ui | 两端通用 |
+| 可视化 | React Flow（编排画布）+ 时间线 | Squad 编排画布 |
+| 实时 | 本地 SSE/WS · 云端 Supabase Realtime | 本地零依赖，云端复用 Supabase |
+| 后端（Phase 4）| Supabase | 可自托管，大规模商业化前可用 |
 
-## 技术选型（待定）
+## Open-core 边界
 
-CLI 语言：Go（单静态二进制，agent shell 调用零依赖）vs Node（npm 生态）→ Sprint 001 T1 决策。
+见 [ADR-001](decisions/ADR-001-open-core-boundary.md)：守 Team。所有付费价值落在云端 relay 之上；log.jsonl 事件 schema 同时服务本地（免费）和云端（付费），零改动 agent 端。

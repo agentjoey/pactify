@@ -25,14 +25,15 @@ export default function App() {
 
   useEffect(() => {
     if (!current) return;
+    let alive = true;
     setEvents([]);
-    fetchState(current).then(setState).catch(() => setState(EMPTY));
-    setLive(true);
+    fetchState(current).then((s) => { if (alive) setState(s); }).catch(() => { if (alive) setState(EMPTY); });
     const off = subscribeEvents(current, (e) => {
+      if (!alive) return;
       setEvents((prev) => [...prev, e]);
-      fetchState(current).then(setState).catch(() => {});
-    });
-    return () => { off(); setLive(false); };
+      fetchState(current).then((s) => { if (alive) setState(s); }).catch(() => {});
+    }, (v) => { if (alive) setLive(v); });
+    return () => { alive = false; off(); setLive(false); };
   }, [current]);
 
   return (

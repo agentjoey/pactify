@@ -6,6 +6,7 @@ PACT_DIR="${PACT_DIR:-.pact}"
 PACT_LOG="$PACT_DIR/log.jsonl"
 PACT_STATE="$PACT_DIR/STATE.yml"
 PACT_TASKS="$PACT_DIR/tasks"
+PACT_PROTOCOL_VERSION=1
 
 _pact_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
@@ -202,7 +203,8 @@ pact_init() {
   local base_branch payload
   base_branch=$(git branch --show-current 2>/dev/null)
   payload=$(jq -nc --arg p "$project" --argjson seats "$seats_json" --arg base "$base_branch" \
-    '{project:$p, seats:$seats, base_branch:$base}')
+    --argjson pv "$PACT_PROTOCOL_VERSION" \
+    '{project:$p, protocol_version:$pv, seats:$seats, base_branch:$base}')
   _pact_log_append init orchestrator "" "" "$payload"
   _pact_render_state
 }

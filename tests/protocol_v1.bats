@@ -24,3 +24,15 @@ boot() {
   [ "$total" -eq "$uniq" ]
   [ "$total" -ge 3 ]
 }
+
+@test "v1: init event carries protocol_version = 1" {
+  setup_pact_repo; boot
+  run jq -rs '(map(select(.event_type=="init"))|last).payload.protocol_version' .pact/log.jsonl
+  [ "$output" = "1" ]
+}
+
+@test "v1: PACT_PROTOCOL_VERSION constant is exposed as 1" {
+  setup_pact_repo
+  source .pact/bin/pact.sh
+  [ "$PACT_PROTOCOL_VERSION" = "1" ]
+}

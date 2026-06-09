@@ -173,6 +173,35 @@ Then read \`.pact/PROJECT.md\` (protocol + roles + rules) and \`.pact/STATE.yml\
 EOF
 }
 
+# pact_assign <task_id> --feature <f> --branch <b> --owner <id> --reviewer <id> [--spec <p>]
+pact_assign() {
+  _pact_require_id || return 1
+  local task="$1"; shift
+  local feature="" branch="" owner="" reviewer="" spec=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --feature) feature="$2"; shift 2;;
+      --branch) branch="$2"; shift 2;;
+      --owner) owner="$2"; shift 2;;
+      --reviewer) reviewer="$2"; shift 2;;
+      --spec) spec="$2"; shift 2;;
+      *) echo "pact_assign: unknown arg $1" >&2; return 1;;
+    esac
+  done
+  [ -n "$owner" ] && [ -n "$reviewer" ] || {
+    echo "pact_assign: --owner and --reviewer required" >&2; return 1; }
+  if [ "$owner" = "$reviewer" ]; then
+    echo "pact_assign: owner ($owner) must differ from reviewer (separation of duties)" >&2
+    return 1
+  fi
+  [ -n "$spec" ] || spec="$PACT_TASKS/$task.md"
+  local payload
+  payload=$(jq -nc --arg o "$owner" --arg r "$reviewer" --arg b "$branch" --arg s "$spec" \
+    '{owner:$o, reviewer:$r, branch:$b, spec:$s}')
+  _pact_log_append assign orchestrator "$task" "$feature" "$payload"
+  _pact_render_state
+}
+
 # _pact_render_project <name> <seats_json>
 _pact_render_project() {
   local name="$1" seats_json="$2"

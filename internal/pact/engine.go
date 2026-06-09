@@ -162,6 +162,46 @@ func Assign(taskID, feature, branch, owner, reviewer, spec string) error {
 	})
 }
 
+// Accept marks a task accepted (reviewer-only; must be awaiting_review).
+func Accept(taskID string) error {
+	id, err := requireAgentID()
+	if err != nil {
+		return err
+	}
+	st, _, err := state()
+	if err != nil {
+		return err
+	}
+	f, err := checkReviewerVerdict(st, "accept", id, taskID)
+	if err != nil {
+		return err
+	}
+	return appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("accept"), EventType: "accept",
+		TaskID: taskID, Feature: f.ID, Payload: map[string]any{},
+	})
+}
+
+// Changes sends a task back (reviewer-only; must be awaiting_review).
+func Changes(taskID, reason string) error {
+	id, err := requireAgentID()
+	if err != nil {
+		return err
+	}
+	st, _, err := state()
+	if err != nil {
+		return err
+	}
+	f, err := checkReviewerVerdict(st, "changes", id, taskID)
+	if err != nil {
+		return err
+	}
+	return appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("changes_requested"), EventType: "changes_requested",
+		TaskID: taskID, Feature: f.ID, Payload: map[string]any{"reason": reason},
+	})
+}
+
 // Checkpoint submits a task for review (owner-only) and commits the work.
 func Checkpoint(taskID, evidence string) error {
 	id, err := requireAgentID()

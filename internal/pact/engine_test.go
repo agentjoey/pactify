@@ -170,3 +170,54 @@ func TestCheckpointRequiresEvidence(t *testing.T) {
 		t.Fatal("checkpoint must require evidence")
 	}
 }
+
+func toAwaiting(t *testing.T) {
+	t.Helper()
+	toAssigned(t)
+	os.WriteFile("impl.txt", []byte("c"), 0o644)
+	Checkpoint("T1", "ok")
+}
+
+func TestAcceptByReviewer(t *testing.T) {
+	newRepo(t)
+	toAwaiting(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	if err := Accept("T1"); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(".pact/STATE.yml")
+	if !strings.Contains(string(b), "status: accepted") {
+		t.Fatalf("state: %s", b)
+	}
+}
+
+func TestAcceptByWorkerRejected(t *testing.T) {
+	newRepo(t)
+	toAwaiting(t)
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	if err := Accept("T1"); err == nil {
+		t.Fatal("worker self-accept must be rejected")
+	}
+}
+
+func TestAcceptRequiresAwaitingReview(t *testing.T) {
+	newRepo(t)
+	toAssigned(t) // T1 is assigned, not awaiting_review
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	if err := Accept("T1"); err == nil {
+		t.Fatal("accept must require awaiting_review")
+	}
+}
+
+func TestChangesSendsBack(t *testing.T) {
+	newRepo(t)
+	toAwaiting(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	if err := Changes("T1", "fix lint"); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(".pact/STATE.yml")
+	if !strings.Contains(string(b), "status: changes_requested") {
+		t.Fatalf("state: %s", b)
+	}
+}

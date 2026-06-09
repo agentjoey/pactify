@@ -54,3 +54,17 @@ func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*pro
 	}
 	return f, nil
 }
+
+func checkReviewerVerdict(st projection.State, verb, caller, taskID string) (*projection.Feature, error) {
+	tk, f := findTask(st, taskID)
+	if tk == nil {
+		return nil, fmt.Errorf("pactify %s: unknown task %s", verb, taskID)
+	}
+	if tk.Reviewer != caller {
+		return nil, fmt.Errorf("pactify %s: only the reviewer (%s) may review %s; you are %s", verb, tk.Reviewer, taskID, caller)
+	}
+	if tk.Status != "awaiting_review" {
+		return nil, fmt.Errorf("pactify %s: %s is not awaiting_review (status: %s)", verb, taskID, tk.Status)
+	}
+	return f, nil
+}

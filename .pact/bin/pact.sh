@@ -432,6 +432,20 @@ pact_validate() {
   if [ -n "$dup" ]; then
     echo "pact_validate: duplicate task id(s) across features: $dup" >&2; rc=1
   fi
+  # 6) protocol_version gate: refuse a log from a newer major
+  local pv; pv=$(jq -rs '(map(select(.event_type=="init"))|last).payload.protocol_version // 0' "$PACT_LOG")
+  case "$pv" in
+    ''|*[!0-9]*) pv=0;;
+  esac
+  if [ "$pv" -gt "$PACT_PROTOCOL_VERSION" ]; then
+    echo "pact_validate: protocol_version $pv exceeds supported $PACT_PROTOCOL_VERSION; upgrade pact" >&2; rc=1
+  fi
+  # 7) v1 conformance: every event must carry a non-empty event_id
+  local missing_eid
+  missing_eid=$(jq -rs '[.[] | select((.event_id // "") | length == 0)] | length' "$PACT_LOG")
+  if [ "$missing_eid" -gt 0 ]; then
+    echo "pact_validate: $missing_eid event(s) missing event_id" >&2; rc=1
+  fi
   return $rc
 }
 

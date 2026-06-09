@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pactify.dev/schemas/seat.schema.json",
+  "title": "pact seat (v1)",
+  "type": "object",
+  "required": ["id", "roles", "entry"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "roles": { "type": "array", "minItems": 1, "items": { "enum": ["orchestrator", "worker", "reviewer"] } },
+    "entry": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true
+}

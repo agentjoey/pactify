@@ -77,6 +77,7 @@ func newRootCmd() *cobra.Command {
 	validateCmd := &cobra.Command{Use: "validate", Short: "check v1 conformance",
 		RunE: func(_ *cobra.Command, _ []string) error { return pact.Validate() }}
 
-	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, statusCmd, logCmd, validateCmd)
+	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, statusCmd, logCmd, validateCmd,
+		newRegisterCmd(), newUnregisterCmd(), newListCmd())
 	return root
 }

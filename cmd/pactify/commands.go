@@ -78,6 +78,6 @@ func newRootCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error { return pact.Validate() }}
 
 	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, statusCmd, logCmd, validateCmd,
-		newRegisterCmd(), newUnregisterCmd(), newListCmd())
+		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd())
 	return root
 }

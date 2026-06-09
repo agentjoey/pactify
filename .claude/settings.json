@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'release\\.sh'; then echo 'POST-RELEASE: (1) .agent/CURRENT.md 补充 Version History 描述 (2) 更新 Sprint Summary (3) 确认 Last Updated agent-id (4) 架构变更则更新 docs/architecture.md'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

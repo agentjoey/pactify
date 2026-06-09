@@ -9,6 +9,15 @@ PACT_TASKS="$PACT_DIR/tasks"
 
 _pact_now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
+# _pact_event_id: a globally-unique opaque id for a log event.
+_pact_event_id() {
+  if command -v uuidgen >/dev/null 2>&1; then
+    uuidgen | tr 'A-Z' 'a-z'
+  else
+    od -An -N16 -tx1 /dev/urandom | tr -d ' \n'
+  fi
+}
+
 _pact_require_id() {
   if [ -z "${PACT_AGENT_ID:-}" ]; then
     echo "pact: PACT_AGENT_ID not set; source your entry file (e.g. AGENTS.md)" >&2
@@ -23,10 +32,11 @@ _pact_log_append() {
   payload="${5:-}"; [ -z "$payload" ] && payload="{}"
   local line
   line=$(jq -nc \
+    --arg eid "$(_pact_event_id)" \
     --arg ts "$(_pact_now)" --arg id "$PACT_AGENT_ID" --arg role "$role" \
     --arg et "$et" --arg task "$task" --arg feature "$feature" \
     --argjson payload "$payload" \
-    '{ts:$ts,agent_id:$id,role:$role,event_type:$et,task_id:$task,feature:$feature,payload:$payload}')
+    '{event_id:$eid,ts:$ts,agent_id:$id,role:$role,event_type:$et,task_id:$task,feature:$feature,payload:$payload}')
   printf '%s\n' "$line" >> "$PACT_LOG"
 }
 

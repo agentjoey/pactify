@@ -34,9 +34,9 @@ LICENSE = MIT。
 
 **M1.3 进行中（拆 3 计划，brainstorm spec 一份：docs/superpowers/specs/2026-06-10-m1.3-serve-mcp-dashboard-design.md）：**
 - **M1.3a serve 后端 ✅**（2026-06-10，PR #3 merged）：`internal/registry`（~/.pactify/projects.json + register/unregister/list）+ `internal/serve`（State→JSON DTO、HTTP `/api/projects` `/state`、SSE `/events`、fsnotify 多项目 watcher、`pactify serve`）。observe-only 只读 API，无前端。8 Go 包 + 77 bats。final review 修了 watcher offset 两 bug（截断/切分支 reset、partial line）。
-- **M1.3b React dashboard 待做**（消费 A 的 API，go:embed，combined 布局已 mockup 锁定：项目切换/座位 per-agent activity/kanban/evidence preview/timeline，observe-only）→ 需 writing-plans。
-- **M1.3c pactify mcp 待做**（stdio MCP server，官方 go-sdk，全动词 tools + state/log resources + 通知）→ 需 writing-plans。
-**下一步：M1.3b 或 M1.3c 的 writing-plans（spec 已就绪，无需再 brainstorm）。M1.3 全完 = Pact-Base/Phase 1 齐活。**
+- **M1.3b React dashboard ✅**（2026-06-10，PR #4 merged）：`web/` Vite8+React19+TS+Tailwind4（项目切换/座位 chips/kanban/evidence preview/SSE timeline，observe-only），构建产物入库 `internal/serve/dist`，`internal/serve/embed.go` go:embed 在 `/` 服务 SPA（index fallback，/api 优先）。11 vitest + 78 bats。final review 修了 2 个 SSE 生命周期问题（切项目 stale fetchState 竞态；live 徽章接 onopen/onerror）。
+- **M1.3c pactify mcp 待做**（stdio MCP server，官方 go-sdk v1.6.1，全动词 tools + `pact://state`/`pact://log` resources + 通知）→ **需 writing-plans**（spec 已就绪 §4，无需 brainstorm）。
+**下一步：M1.3c writing-plans → 执行。M1.3c 完 = M1.3 全完 = Pact-Base/Phase 1 齐活。**
 backlog：M6（join roles inert）、I5（task_status grep 脆弱）、F1 worktree 并发隔离、悬挂事件投影统一、serve minors（log fsnotify errors / failed watch-add / symlink dedup）。
 
 ## Next Sprint Candidates

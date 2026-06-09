@@ -96,3 +96,35 @@ func TestJoinFailsClosedWithoutAgentID(t *testing.T) {
 		t.Fatal("Join must fail closed")
 	}
 }
+
+func TestAssignCreatesTask(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	if err := Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md"); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(".pact/STATE.yml")
+	if !strings.Contains(string(b), "owner: opencode") || !strings.Contains(string(b), "status: assigned") {
+		t.Fatalf("state: %s", b)
+	}
+}
+
+func TestAssignRejectsOwnerEqualsReviewer(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	if err := Assign("T1", "F", "b", "opencode", "opencode", "s"); err == nil {
+		t.Fatal("owner==reviewer must be rejected")
+	}
+}
+
+func TestAssignRejectsDuplicateTaskID(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	Assign("T1", "A", "b", "opencode", "claude-opus", "s")
+	if err := Assign("T1", "B", "b", "opencode", "claude-opus", "s"); err == nil {
+		t.Fatal("duplicate task id must be rejected")
+	}
+}

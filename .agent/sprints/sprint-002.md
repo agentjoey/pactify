@@ -13,7 +13,7 @@ Phase 0 已合入 main：`.pact/bin/pact.sh` bash 参考实现 + 11 动词 + 两
 ## Tasks
 
 ### T1: M1.1 通讯约定 / 协议冻结 [HIGH] [claude]
-**Status:** 🔲 Todo (brainstorm 进行中)
+**Status:** ✅ Done (PR #1 merged，73/73 测试，协议 v1 冻结)
 **Milestone:** M1.1
 **Acceptance:**
 - [ ] log.jsonl 事件 schema 正式定义（含 event_type 枚举 + 版本字段 + 与 MCP 工具语义对齐）

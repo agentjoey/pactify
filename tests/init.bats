@@ -48,3 +48,12 @@ run_init() {
   run pact_init --project x --seat "a:worker:A.md"
   [ "$status" -eq 1 ]
 }
+
+@test "init renders PROJECT.md Seats section with each seat" {
+  setup_pact_repo
+  run_init
+  grep -q '## Seats' .pact/PROJECT.md
+  grep -q 'claude-opus' .pact/PROJECT.md
+  grep -q 'roles: orchestrator, reviewer' .pact/PROJECT.md
+  grep -q 'opencode' .pact/PROJECT.md
+}

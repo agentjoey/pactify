@@ -163,6 +163,8 @@ EOF
 # _pact_render_project <name> <seats_json>
 _pact_render_project() {
   local name="$1" seats_json="$2"
+  local seats_md
+  seats_md=$(jq -r '.[] | "- `\(.id)` — roles: \(.roles | join(", ")) — entry: \(.entry)"' <<<"$seats_json")
   cat <<EOF
 # $name — Pact Charter
 
@@ -179,7 +181,7 @@ This repo uses the **pact protocol**. Any agent that can read files + run git ca
 2. A feature cannot merge until all its tasks are accepted.
 
 ## Seats
-$(jq -r '.[] | "- \`\(.id)\` — roles: \(.roles | join(", ")) — entry: \(.entry)"' <<<"$seats_json")
+$seats_md
 
 ## Commands (source .pact/bin/pact.sh)
 Run \`pact_help\` for the full verb reference.

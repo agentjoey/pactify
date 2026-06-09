@@ -43,6 +43,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects", s.handleProjects)
 	mux.HandleFunc("GET /api/projects/{id}/state", s.handleState)
 	mux.HandleFunc("GET /api/projects/{id}/events", s.handleEvents)
+	mux.Handle("/", dashboardHandler())
 	return mux
 }
 

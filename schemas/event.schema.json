@@ -14,5 +14,17 @@
     "feature": { "type": "string" },
     "payload": { "type": "object" }
   },
-  "additionalProperties": true
+  "additionalProperties": true,
+  "allOf": [
+    { "if": { "properties": { "event_type": { "const": "init" } } },
+      "then": { "properties": { "payload": { "required": ["project", "protocol_version", "seats", "base_branch"] } } } },
+    { "if": { "properties": { "event_type": { "const": "assign" } } },
+      "then": { "properties": { "payload": { "required": ["owner", "reviewer", "branch", "spec"] } } } },
+    { "if": { "properties": { "event_type": { "const": "join" } } },
+      "then": { "properties": { "payload": { "required": ["roles"] } } } },
+    { "if": { "properties": { "event_type": { "const": "checkpoint" } } },
+      "then": { "properties": { "payload": { "required": ["evidence"] } } } },
+    { "if": { "properties": { "event_type": { "const": "changes_requested" } } },
+      "then": { "properties": { "payload": { "required": ["reason"] } } } }
+  ]
 }

@@ -23,3 +23,13 @@ load helpers
   [ "$(grep -c 'pact:begin' .pact/PROJECT.md)" -eq 1 ]
   grep -q "My own notes." .pact/PROJECT.md
 }
+
+@test "re-baking PROJECT.md is byte-stable (no blank-line growth)" {
+  setup_pact_repo
+  source .pact/bin/pact.sh
+  printf '# Charter\n\nMy notes.\n' > .pact/PROJECT.md
+  _pact_bake_project pactify '[{"id":"a","roles":["worker"],"entry":"A.md"}]' 1
+  cp .pact/PROJECT.md /tmp/bake1.md
+  _pact_bake_project pactify '[{"id":"a","roles":["worker"],"entry":"A.md"}]' 1
+  diff /tmp/bake1.md .pact/PROJECT.md
+}

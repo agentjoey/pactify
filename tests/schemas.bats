@@ -74,3 +74,20 @@ except jsonschema.ValidationError:
 PY
   [ "$status" -eq 0 ]
 }
+
+@test "event.schema.json rejects a checkpoint missing required payload.evidence" {
+  setup_pact_repo
+  SCHEMA="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/schemas/event.schema.json"
+  run python3 - "$SCHEMA" <<'PY'
+import json, sys, jsonschema
+schema = json.load(open(sys.argv[1]))
+bad = {"event_id":"e1","ts":"2026-01-01T00:00:00Z","agent_id":"opencode","role":"worker",
+       "event_type":"checkpoint","task_id":"T1","feature":"F","payload":{}}
+try:
+    jsonschema.validate(bad, schema)
+    print("FAIL: missing evidence accepted"); sys.exit(1)
+except jsonschema.ValidationError:
+    sys.exit(0)
+PY
+  [ "$status" -eq 0 ]
+}

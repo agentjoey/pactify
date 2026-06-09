@@ -236,14 +236,18 @@ EOF
   # Never follow a symlink: replace it with a real file.
   [ -L "$entry" ] && rm -f "$entry"
   if [ -f "$entry" ]; then
-    # Strip any existing pact block (inclusive), preserve the rest.
+    # strip the old managed block, then trim trailing blank lines
     awk '
       /<!-- pact:begin/ {inblock=1}
       !inblock {print}
       /<!-- pact:end -->/ {inblock=0}
-    ' "$entry" > "$entry.pact.tmp" && mv "$entry.pact.tmp" "$entry"
-    # Append a separating blank line before the fresh block.
-    printf '\n%s\n' "$block" >> "$entry"
+    ' "$entry" | awk 'NF{last=NR} {l[NR]=$0} END{for(i=1;i<=last;i++) print l[i]}' > "$entry.pact.tmp" \
+      && mv "$entry.pact.tmp" "$entry"
+    if [ -s "$entry" ]; then
+      printf '\n%s\n' "$block" >> "$entry"   # one separator before the block
+    else
+      printf '%s\n' "$block" > "$entry"        # file is now empty -> no leading blank
+    fi
   else
     printf '%s\n' "$block" > "$entry"
   fi
@@ -509,12 +513,18 @@ _pact_bake_project() {
   local entry=".pact/PROJECT.md"
   [ -L "$entry" ] && rm -f "$entry"
   if [ -f "$entry" ]; then
+    # strip the old managed block, then trim trailing blank lines
     awk '
       /<!-- pact:begin/ {inblock=1}
       !inblock {print}
       /<!-- pact:end -->/ {inblock=0}
-    ' "$entry" > "$entry.pact.tmp" && mv "$entry.pact.tmp" "$entry"
-    printf '\n%s\n' "$block" >> "$entry"
+    ' "$entry" | awk 'NF{last=NR} {l[NR]=$0} END{for(i=1;i<=last;i++) print l[i]}' > "$entry.pact.tmp" \
+      && mv "$entry.pact.tmp" "$entry"
+    if [ -s "$entry" ]; then
+      printf '\n%s\n' "$block" >> "$entry"   # one separator before the block
+    else
+      printf '%s\n' "$block" > "$entry"        # file is now empty -> no leading blank
+    fi
   else
     printf '%s\n' "$block" > "$entry"
   fi

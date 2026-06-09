@@ -66,3 +66,33 @@ func TestInitFailsClosedWithoutAgentID(t *testing.T) {
 		t.Fatal("Init must fail closed without PACT_AGENT_ID")
 	}
 }
+
+func TestJoinAppendsEventAndChecksOutFeatureBranch(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	// seed an assign event directly (Assign verb arrives in Task 8)
+	event.Append(".pact/log.jsonl", event.Event{AgentID: "claude-opus", Role: "orchestrator", EventType: "assign",
+		TaskID: "T1", Feature: "F", Payload: map[string]any{"owner": "opencode", "reviewer": "claude-opus", "branch": "feat/x", "spec": "s"}})
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	if err := Join("opencode", "worker"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := execBranch(); b != "feat/x" {
+		t.Fatalf("join did not check out feat/x, on %q", b)
+	}
+}
+
+func execBranch() (string, error) {
+	c := exec.Command("git", "branch", "--show-current")
+	out, err := c.Output()
+	return strings.TrimSpace(string(out)), err
+}
+
+func TestJoinFailsClosedWithoutAgentID(t *testing.T) {
+	newRepo(t)
+	os.Unsetenv("PACT_AGENT_ID")
+	if err := Join("opencode", "worker"); err == nil {
+		t.Fatal("Join must fail closed")
+	}
+}

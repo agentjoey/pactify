@@ -1,0 +1,60 @@
+package serve
+
+import (
+	"bufio"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/agentjoey/pactify/internal/registry"
+)
+
+func TestSSEStreamsAppendedEvents(t *testing.T) {
+	root := t.TempDir()
+	seedProject(t, root, "pactify")
+	srv := New([]registry.Project{{Name: "pactify", Path: root}})
+	if err := srv.StartWatchers(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	req, _ := http.NewRequest("GET", ts.URL+"/api/projects/pactify/events", nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.Header.Get("Content-Type") != "text/event-stream" {
+		t.Fatalf("content-type=%q", resp.Header.Get("Content-Type"))
+	}
+
+	time.Sleep(50 * time.Millisecond)
+	f, _ := os.OpenFile(filepath.Join(root, ".pact", "log.jsonl"), os.O_APPEND|os.O_WRONLY, 0o644)
+	f.WriteString(`{"event_id":"2","ts":"2026-01-01T00:02:00Z","agent_id":"claude-opus","role":"orchestrator","event_type":"assign","task_id":"T1","feature":"F","payload":{"owner":"opencode","reviewer":"claude-opus","branch":"b","spec":"s"}}` + "\n")
+	f.Close()
+
+	done := make(chan string, 1)
+	go func() {
+		sc := bufio.NewScanner(resp.Body)
+		for sc.Scan() {
+			if strings.HasPrefix(sc.Text(), "data:") && strings.Contains(sc.Text(), `"event_type":"assign"`) {
+				done <- sc.Text()
+				return
+			}
+		}
+	}()
+	select {
+	case line := <-done:
+		if !strings.Contains(line, "T1") {
+			t.Fatalf("unexpected SSE line: %s", line)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for SSE event")
+	}
+}

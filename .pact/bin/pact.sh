@@ -196,7 +196,7 @@ pact_init() {
   done
 
   # PROJECT.md charter
-  _pact_render_project "$project" "$seats_json" > "$PACT_DIR/PROJECT.md"
+  _pact_bake_project "$project" "$seats_json" "$PACT_PROTOCOL_VERSION"
 
   # init event + render. Record the base/integration branch so pact_merge can
   # return to it before merging a feature branch (F1).
@@ -473,32 +473,51 @@ The two rules (the pact):
 EOF
 }
 
-# _pact_render_project <name> <seats_json>
-_pact_render_project() {
-  local name="$1" seats_json="$2"
+# _pact_bake_project <name> <seats_json> <protocol_version>
+# Writes the charter + seat table into a managed block in .pact/PROJECT.md,
+# preserving any user content outside the block (idempotent on re-init).
+_pact_bake_project() {
+  local name="$1" seats_json="$2" pv="$3"
   local seats_md
   seats_md=$(jq -r '.[] | "- `\(.id)` — roles: \(.roles | join(", ")) — entry: \(.entry)"' <<<"$seats_json")
-  cat <<EOF
-# $name — Pact Charter
-
-This repo uses the **pact protocol**. Any agent that can read files + run git can participate.
-
-## Roles
-- **orchestrator** — split spec→tasks; assign; merge; maintain charter
-- **worker** — implement; at checkpoint set awaiting_review + write evidence
-- **reviewer** — verify diff+evidence → accept / changes_requested
-- **human** — start button + final authority
-
-## The two rules (the pact)
-1. A worker cannot self-accept. Only a task's reviewer may accept it (owner != reviewer).
-2. A feature cannot merge until all its tasks are accepted.
-
-## Seats
-$seats_md
-
-## Commands (source .pact/bin/pact.sh)
-Run \`pact_help\` for the full verb reference.
-EOF
+  # Use printf to build the block; avoids backtick re-evaluation that would occur
+  # if $seats_md were expanded inside an unquoted heredoc.
+  local block
+  block=$(printf '%s\n' \
+    "<!-- pact:begin (managed by pact_init — edit outside this block) -->" \
+    "# $name — Pact Charter (protocol_version: $pv)" \
+    "" \
+    "This repo uses the **pact protocol** (v$pv). Any agent that can read files + run git can participate." \
+    "" \
+    "## Roles" \
+    "- **orchestrator** — split spec→tasks; assign; merge; maintain charter" \
+    "- **worker** — implement; at checkpoint set awaiting_review + write evidence" \
+    "- **reviewer** — verify diff+evidence → accept / changes_requested" \
+    "- **human** — start button + final authority" \
+    "" \
+    "## The two rules (the pact)" \
+    "1. A worker cannot self-accept. Only a task's reviewer may accept it (owner != reviewer), and only when awaiting_review." \
+    "2. A feature cannot merge until all its tasks are accepted." \
+    "" \
+    "## Seats" \
+    "$seats_md" \
+    "" \
+    "## Commands" \
+    "Source the tool in .pact/bin and run \`pact_help\` (or \`pactify help\`) for the verb reference." \
+    "<!-- pact:end -->"\
+  )
+  local entry=".pact/PROJECT.md"
+  [ -L "$entry" ] && rm -f "$entry"
+  if [ -f "$entry" ]; then
+    awk '
+      /<!-- pact:begin/ {inblock=1}
+      !inblock {print}
+      /<!-- pact:end -->/ {inblock=0}
+    ' "$entry" > "$entry.pact.tmp" && mv "$entry.pact.tmp" "$entry"
+    printf '\n%s\n' "$block" >> "$entry"
+  else
+    printf '%s\n' "$block" > "$entry"
+  fi
 }
 
 # Direct execution: `bash pact.sh --help`. When sourced, this block is skipped.

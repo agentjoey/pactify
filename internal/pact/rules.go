@@ -107,10 +107,10 @@ func ValidateLog() error {
 	}
 	st := projection.Project(evs)
 
-	if b, err := os.ReadFile(paths.State()); err == nil {
-		if string(b) != projection.Render(st) {
-			return fmt.Errorf("pactify validate: STATE.yml drift vs render(log)")
-		}
+	// (a) STATE.yml must match a fresh render of the log. A missing/unreadable
+	// STATE.yml is itself drift (matches bash, whose diff fails when STATE is absent).
+	if b, err := os.ReadFile(paths.State()); err != nil || string(b) != projection.Render(st) {
+		return fmt.Errorf("pactify validate: STATE.yml drift vs render(log)")
 	}
 	declared := map[string]bool{}
 	var protocolVersion int

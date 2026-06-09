@@ -317,3 +317,13 @@ func TestLogReplayRebuildsState(t *testing.T) {
 		t.Fatal("replay did not rebuild STATE.yml")
 	}
 }
+
+func TestValidateReportsDriftWhenStateMissing(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	os.Remove(".pact/STATE.yml")
+	if err := Validate(); err == nil {
+		t.Fatal("validate must report drift when STATE.yml is missing (parity with bash)")
+	}
+}

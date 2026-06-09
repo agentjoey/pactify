@@ -71,6 +71,13 @@ func Project(evs []event.Event) State {
 		return &st.Features[fi].Tasks[ti]
 	}
 
+	// Known limitation (parity): for a checkpoint/accept/changes_requested/merge
+	// that references a task/feature never created by an `assign`, this fold skips
+	// the event, whereas the bash reference autovivifies a null-field stub. This
+	// only differs on malformed / out-of-order logs — a well-formed log (and the
+	// git-merge interleaving of distinct features, which preserves each feature's
+	// intra-order) always has assign precede its task's other events. Reconcile if
+	// concurrent-feature support ever makes dangling events real. See M1.2 design.
 	for _, e := range evs {
 		switch e.EventType {
 		case "assign":

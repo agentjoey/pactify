@@ -104,4 +104,84 @@ _pact_render_state() {
 export PACT_DIR PACT_LOG PACT_STATE PACT_TASKS
 export -f _pact_project_json _pact_render_state
 
-pact_init() { echo "not yet implemented" >&2; return 1; }
+# pact_init --project <name> --seat "<id>:<roles>:<entry>" [--seat ...]
+pact_init() {
+  _pact_require_id || return 1
+  local project="" ; local -a seats=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --project) project="$2"; shift 2;;
+      --seat) seats+=("$2"); shift 2;;
+      *) echo "pact_init: unknown arg $1" >&2; return 1;;
+    esac
+  done
+  [ -n "$project" ] || { echo "pact_init: --project required" >&2; return 1; }
+  mkdir -p "$PACT_DIR/bin" "$PACT_TASKS"
+  # self-copy if not already present (so target repos get the tool)
+  [ -f "$PACT_DIR/bin/pact.sh" ] || cp "${BASH_SOURCE[0]}" "$PACT_DIR/bin/pact.sh"
+  : > "$PACT_LOG"
+
+  # build seats JSON + bake entry files
+  local seats_json="[]" s id roles entry
+  for s in "${seats[@]}"; do
+    IFS=':' read -r id roles entry <<<"$s"
+    seats_json=$(jq -c \
+      --arg id "$id" --arg entry "$entry" \
+      --argjson roles "$(jq -nc --arg r "$roles" '$r | split(",")')" \
+      '. + [{id:$id, roles:$roles, entry:$entry}]' <<<"$seats_json")
+    _pact_bake_entry "$id" "$roles" "$entry"
+  done
+
+  # PROJECT.md charter
+  _pact_render_project "$project" "$seats_json" > "$PACT_DIR/PROJECT.md"
+
+  # init event + render
+  local payload
+  payload=$(jq -nc --arg p "$project" --argjson seats "$seats_json" \
+    '{project:$p, seats:$seats}')
+  _pact_log_append init orchestrator "" "" "$payload"
+  _pact_render_state
+}
+
+# _pact_bake_entry <id> <roles_csv> <entryfile>
+_pact_bake_entry() {
+  local id="$1" roles="$2" entry="$3"
+  cat > "$entry" <<EOF
+# Entry: seat \`$id\` — pact protocol
+
+> Auto-baked by pact_init. On session start, run:
+
+\`\`\`bash
+export PACT_AGENT_ID=$id
+source .pact/bin/pact.sh && pact_join $id --roles $roles
+\`\`\`
+
+Then read \`.pact/PROJECT.md\` (protocol + roles + rules) and \`.pact/STATE.yml\` (current state).
+EOF
+}
+
+# _pact_render_project <name> <seats_json>
+_pact_render_project() {
+  local name="$1" seats_json="$2"
+  cat <<EOF
+# $name — Pact Charter
+
+This repo uses the **pact protocol**. Any agent that can read files + run git can participate.
+
+## Roles
+- **orchestrator** — split spec→tasks; assign; merge; maintain charter
+- **worker** — implement; at checkpoint set awaiting_review + write evidence
+- **reviewer** — verify diff+evidence → accept / changes_requested
+- **human** — start button + final authority
+
+## The two rules (the pact)
+1. A worker cannot self-accept. Only a task's reviewer may accept it (owner != reviewer).
+2. A feature cannot merge until all its tasks are accepted.
+
+## Seats
+$(jq -r '.[] | "- \`\(.id)\` — roles: \(.roles | join(", ")) — entry: \(.entry)"' <<<"$seats_json")
+
+## Commands (source .pact/bin/pact.sh)
+Run \`pact_help\` for the full verb reference.
+EOF
+}

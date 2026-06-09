@@ -128,3 +128,45 @@ func TestAssignRejectsDuplicateTaskID(t *testing.T) {
 		t.Fatal("duplicate task id must be rejected")
 	}
 }
+
+func toAssigned(t *testing.T) {
+	t.Helper()
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md")
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	Join("opencode", "worker")
+}
+
+func TestCheckpointByOwnerSetsAwaitingReviewAndCommits(t *testing.T) {
+	newRepo(t)
+	toAssigned(t)
+	os.WriteFile("impl.txt", []byte("code"), 0o644)
+	if err := Checkpoint("T1", "tests green"); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(".pact/STATE.yml")
+	if !strings.Contains(string(b), "status: awaiting_review") || !strings.Contains(string(b), "evidence: tests green") {
+		t.Fatalf("state: %s", b)
+	}
+	if out, _ := exec.Command("git", "status", "--porcelain").Output(); strings.TrimSpace(string(out)) != "" {
+		t.Fatalf("tree not clean after checkpoint: %s", out)
+	}
+}
+
+func TestCheckpointByNonOwnerRejected(t *testing.T) {
+	newRepo(t)
+	toAssigned(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	if err := Checkpoint("T1", "x"); err == nil {
+		t.Fatal("non-owner checkpoint must be rejected")
+	}
+}
+
+func TestCheckpointRequiresEvidence(t *testing.T) {
+	newRepo(t)
+	toAssigned(t)
+	if err := Checkpoint("T1", ""); err == nil {
+		t.Fatal("checkpoint must require evidence")
+	}
+}

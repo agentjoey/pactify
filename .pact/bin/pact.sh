@@ -73,11 +73,10 @@ _pact_project_json() {
   ' "$PACT_LOG"
 }
 
-# _pact_render_state: render STATE.yml from the projection (atomic write).
-_pact_render_state() {
-  local tmp="$PACT_STATE.tmp"
+# _pact_render_state_to <target_file> [projection_json]
+_pact_render_state_to() {
+  local target="$1"; local j="${2:-$(_pact_project_json)}"
   {
-    local j; j=$(_pact_project_json)
     echo "project: $(jq -r '.project' <<<"$j")"
     echo "working_tree_holder: null"
     echo "agents:"
@@ -97,7 +96,12 @@ _pact_render_state() {
         "        spec: \(.spec)",
         "        evidence: \(.evidence // "null")"
       )' <<<"$j"
-  } > "$tmp" && mv "$tmp" "$PACT_STATE"
+  } > "$target"
+}
+
+_pact_render_state() {
+  local tmp="$PACT_STATE.tmp"
+  _pact_render_state_to "$tmp" && mv "$tmp" "$PACT_STATE"
 }
 
 # _pact_task_field <task_id> <field> : read a field of a task from the projection.
@@ -113,7 +117,7 @@ _pact_task_feature() {
 
 # Export projection helpers + their env so `bash -c` subshells can call them.
 export PACT_DIR PACT_LOG PACT_STATE PACT_TASKS
-export -f _pact_project_json _pact_render_state
+export -f _pact_project_json _pact_render_state_to _pact_render_state
 
 # pact_join <id> [--roles r1,r2]
 pact_join() {
@@ -286,6 +290,50 @@ pact_merge() {
   fi
   _pact_log_append merge orchestrator "" "$feature" '{}'
   _pact_render_state
+}
+
+pact_status() { cat "$PACT_STATE"; }
+
+# pact_log [--replay]
+pact_log() {
+  if [ "${1:-}" = "--replay" ]; then
+    _pact_render_state
+  else
+    cat "$PACT_LOG"
+  fi
+}
+
+# pact_validate : check projection invariant + roster membership + slug + rule 1.
+pact_validate() {
+  local rc=0
+  # 1) STATE must equal a fresh render of the log (no drift / hand-edits)
+  local fresh; fresh=$(_pact_project_json)
+  local current_render="$PACT_STATE.check"
+  _pact_render_state_to "$current_render" "$fresh"
+  if ! diff -q "$current_render" "$PACT_STATE" >/dev/null; then
+    echo "pact_validate: STATE.yml drift vs render(log)" >&2; rc=1
+  fi
+  rm -f "$current_render"
+  # 2) every agent_id in the log must be a declared seat
+  local seats ids bad
+  seats=$(jq -rs '(map(select(.event_type=="init"))|last).payload.seats[].id' "$PACT_LOG" | sort -u)
+  ids=$(jq -r '.agent_id' "$PACT_LOG" | sort -u)
+  bad=$(comm -23 <(echo "$ids") <(echo "$seats"))
+  if [ -n "$bad" ]; then
+    echo "pact_validate: log agent_id(s) not in seat roster: $bad" >&2; rc=1
+  fi
+  # 3) slug format for seat ids
+  while read -r s; do
+    [ -z "$s" ] && continue
+    [[ "$s" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "pact_validate: bad seat slug: $s" >&2; rc=1; }
+  done <<<"$seats"
+  # 4) rule 1: no task has owner==reviewer
+  local viol
+  viol=$(echo "$fresh" | jq -r '.features[].tasks[] | select(.owner==.reviewer) | .id')
+  if [ -n "$viol" ]; then
+    echo "pact_validate: rule1 violation (owner==reviewer) in tasks: $viol" >&2; rc=1
+  fi
+  return $rc
 }
 
 # _pact_render_project <name> <seats_json>

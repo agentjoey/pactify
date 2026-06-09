@@ -10,3 +10,5 @@ target/
 # Secrets
 .env
 *.key
+# Brainstorm visual companion
+.superpowers/

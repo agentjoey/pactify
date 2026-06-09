@@ -26,8 +26,12 @@ log 事件加 `event_id` + `init.protocol_version`，validate 版本门禁(高 m
 规范正文 `docs/specs/pact-protocol.md`。final review 修了 spec/code 一致性(join 不扩 roster)。**73/73 绿**。
 **GitHub 已上线**：https://github.com/agentjoey/pactify (PUBLIC, default main)。git 流程见 CONTRIBUTING.md
 (GitHub flow：feat/* 分支 → PR → merge-commit → 删支；维护者 docs/chore 可直推 main；CI+分支保护待 Phase 2)。
-**下一步：M1.2 Go CLI v1**（`pactify` 顶替 pact.sh，命令契约 = docs/specs/pact-protocol.md §7；行为与 bash 参考一致）。
-backlog：M6（join roles inert）、I5（task_status grep 脆弱）、F1 worktree 并发隔离、**仓库 LICENSE 未定（待 Joey）**。
+**M1.2 Go CLI ✅ 完成**（2026-06-10，PR #2 merged）：`pactify` Go CLI = 协议 v1 第二实现，与 bash 可互换。
+6 个包（event/projection/gitx/pact/paths + cmd/pactify，cobra，单 4.4M 静态二进制）+ 10 动词 + 两条铁律。
+**STATE.yml 字节对齐 bash** → 跨工具 validate 直通；互操作测试证实 bash↔Go 同一 .pact/ 接力 + STATE 字节一致。
+go test 6 包 + bats 76 全绿。final review 修了 validate 缺 STATE 报 drift；记录悬挂事件投影分歧（仅畸形 log）。
+LICENSE = MIT。**下一步：M1.3 `pactify serve`（MCP server + fsnotify→SSE→Vite/React 本地 dashboard，go:embed）。**
+backlog：M6（join roles inert）、I5（task_status grep 脆弱）、F1 worktree 并发隔离、悬挂事件投影统一。
 
 ## Next Sprint Candidates
 - [ ] [EP-001] [HIGH] Phase 0：Claude skill 实现 pact 协议 + dogfood 验证消灭人肉中继

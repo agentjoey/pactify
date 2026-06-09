@@ -22,7 +22,7 @@ Phase 0 已合入 main：`.pact/bin/pact.sh` bash 参考实现 + 11 动词 + 两
 - [ ] 吸收 Phase 0 dogfood 经验（F1 分支模型、座位握手、replay 恢复）
 
 ### T2: M1.2 Go CLI v1 [HIGH] [claude/opencode]
-**Status:** 🔲 Todo (依赖 T1)
+**Status:** ✅ Done (PR #2 merged；6 Go 包 + 76 bats；bash↔Go 互操作 + STATE 字节一致)
 **Milestone:** M1.2
 **Acceptance:**
 - [ ] `pactify init/join/status/checkpoint/accept/changes/merge/log/validate/help`（命令契约同 pact.sh）

@@ -94,7 +94,7 @@ _pact_render_state_to() {
         "        status: \(.status)",
         "        reviewer: \(.reviewer)",
         "        spec: \(.spec)",
-        "        evidence: \(.evidence // "null")"
+        "        evidence: \((.evidence // "null") | gsub("\n";" ") | gsub("\t";" "))"
       )' <<<"$j"
   } > "$target"
 }
@@ -358,13 +358,13 @@ pact_validate() {
   done <<<"$seats"
   # 4) rule 1: no task has owner==reviewer
   local viol
-  viol=$(echo "$fresh" | jq -r '.features[].tasks[] | select(.owner==.reviewer) | .id')
+  viol=$(jq -r '.features[].tasks[] | select(.owner==.reviewer) | .id' <<<"$fresh")
   if [ -n "$viol" ]; then
     echo "pact_validate: rule1 violation (owner==reviewer) in tasks: $viol" >&2; rc=1
   fi
   # 5) task ids must be globally unique across features
   local dup
-  dup=$(echo "$fresh" | jq -r '[.features[].tasks[].id] | group_by(.) | map(select(length>1)[0]) | .[]')
+  dup=$(jq -r '[.features[].tasks[].id] | group_by(.) | map(select(length>1)[0]) | .[]' <<<"$fresh")
   if [ -n "$dup" ]; then
     echo "pact_validate: duplicate task id(s) across features: $dup" >&2; rc=1
   fi

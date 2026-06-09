@@ -10,9 +10,10 @@ Sprint File:    .agent/sprints/sprint-001.md
 🟢 无已知 P0/P1 bug。
 
 ## Current Sprint Summary
-Sprint 001：Repo 初始化完成。Roadmap 已锁定（三产品 Pact-Base/Squad/Team，守 Team 开源边界，
-见 docs/ROADMAP.md + ADR-001）；技术地基已定（Go CLI + log.jsonl 通讯总线 + pactify serve MCP
-server + Vite/React 本地 dashboard）。下一步进 **Phase 0**：Claude skill 实现 pact 协议并 dogfood。
+Sprint 001：Repo 初始化 + roadmap/地基锁定完成。**Phase 0 实现完成**（分支 feat/phase0-pact-skill）：
+`.pact/bin/pact.sh` 协议参考实现（11 动词 + 两条铁律 + 座位身份 + replay 恢复），**46/46 bats 测试绿**，
+经 final review 修复 4 处不变式漏洞（C1 accept 前置态、C2 task-id 唯一、I3 merge 校验 feature、I4 seat 校验）。
+**待办：Task 13 跨 agent dogfood（人 + opencode）= Phase 0 Exit Gate**，见 docs/superpowers/plans/phase0-exit-gate-checklist.md。
 
 ## Next Sprint Candidates
 - [ ] [EP-001] [HIGH] Phase 0：Claude skill 实现 pact 协议 + dogfood 验证消灭人肉中继

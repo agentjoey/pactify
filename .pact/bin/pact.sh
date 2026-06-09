@@ -130,6 +130,18 @@ pact_join() {
   local payload; payload=$(jq -nc --arg r "$roles" '{roles:($r|split(","))}')
   _pact_log_append join worker "" "" "$payload"
   _pact_render_state
+  # F1: move this seat onto its assigned task's feature branch (create if absent),
+  # so the worker's commits land on the right branch for merge.
+  local branch
+  branch=$(_pact_project_json | jq -r --arg s "$id" \
+    'first(.features[] | select(any(.tasks[]; .owner==$s)) | .branch) // empty')
+  if [ -n "$branch" ]; then
+    if git rev-parse --verify --quiet "refs/heads/$branch" >/dev/null; then
+      git checkout -q "$branch"
+    else
+      git checkout -q -b "$branch"
+    fi
+  fi
 }
 
 # pact_init --project <name> --seat "<id>:<roles>:<entry>" [--seat ...]
@@ -175,10 +187,12 @@ pact_init() {
   # PROJECT.md charter
   _pact_render_project "$project" "$seats_json" > "$PACT_DIR/PROJECT.md"
 
-  # init event + render
-  local payload
-  payload=$(jq -nc --arg p "$project" --argjson seats "$seats_json" \
-    '{project:$p, seats:$seats}')
+  # init event + render. Record the base/integration branch so pact_merge can
+  # return to it before merging a feature branch (F1).
+  local base_branch payload
+  base_branch=$(git branch --show-current 2>/dev/null)
+  payload=$(jq -nc --arg p "$project" --argjson seats "$seats_json" --arg base "$base_branch" \
+    '{project:$p, seats:$seats, base_branch:$base}')
   _pact_log_append init orchestrator "" "" "$payload"
   _pact_render_state
 }
@@ -186,18 +200,41 @@ pact_init() {
 # _pact_bake_entry <id> <roles_csv> <entryfile>
 _pact_bake_entry() {
   local id="$1" roles="$2" entry="$3"
-  cat > "$entry" <<EOF
-# Entry: seat \`$id\` — pact protocol
+  # F3: write into a managed block so we never clobber an existing entry file's
+  # own content; and never write *through* a symlink (e.g. AGENTS.md -> CLAUDE.md).
+  local block
+  block=$(cat <<EOF
+<!-- pact:begin (managed by pact_init — edit outside this block) -->
+# pact protocol — seat \`$id\`
 
-> Auto-baked by pact_init. On session start, run:
+> On session start, run this. If your shell does NOT persist state between commands,
+> prefix EVERY pact command with the export + source (see below).
 
 \`\`\`bash
 export PACT_AGENT_ID=$id
 source .pact/bin/pact.sh && pact_join $id --roles $roles
 \`\`\`
 
-Then read \`.pact/PROJECT.md\` (protocol + roles + rules) and \`.pact/STATE.yml\` (current state).
+Then read \`.pact/PROJECT.md\` (protocol + roles + rules) and \`.pact/STATE.yml\`.
+Run \`pact_help\` for the verb reference. Reminder if your shell is non-persistent:
+\`export PACT_AGENT_ID=$id && source .pact/bin/pact.sh && <pact command>\`.
+<!-- pact:end -->
 EOF
+)
+  # Never follow a symlink: replace it with a real file.
+  [ -L "$entry" ] && rm -f "$entry"
+  if [ -f "$entry" ]; then
+    # Strip any existing pact block (inclusive), preserve the rest.
+    awk '
+      /<!-- pact:begin/ {inblock=1}
+      !inblock {print}
+      /<!-- pact:end -->/ {inblock=0}
+    ' "$entry" > "$entry.pact.tmp" && mv "$entry.pact.tmp" "$entry"
+    # Append a separating blank line before the fresh block.
+    printf '\n%s\n' "$block" >> "$entry"
+  else
+    printf '%s\n' "$block" > "$entry"
+  fi
 }
 
 # pact_assign <task_id> --feature <f> --branch <b> --owner <id> --reviewer <id> [--spec <p>]
@@ -250,6 +287,11 @@ pact_checkpoint() {
   local payload; payload=$(jq -nc --arg e "$evidence" '{evidence:$e}')
   _pact_log_append checkpoint worker "$task" "$feature" "$payload"
   _pact_render_state
+  # F1: commit the worker's work + ledger on the current (feature) branch, so the
+  # evidence corresponds to a real commit and pact_merge has something to merge.
+  if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+    git add -A && git commit -q -m "pact $task: checkpoint by $PACT_AGENT_ID"
+  fi
 }
 
 # pact_accept <task_id> : reviewer-only.
@@ -314,6 +356,16 @@ pact_merge() {
   branch=$(_pact_project_json | jq -r --arg f "$feature" \
     '.features[] | select(.id==$f) | .branch')
   if [ -n "$branch" ] && [ "$branch" != "null" ]; then
+    # F1: the worker/reviewer flow leaves the tree on the feature branch with the
+    # latest ledger (e.g. the accept) possibly uncommitted. Commit it so the branch
+    # switch is clean, then return to the base branch and merge the feature in.
+    if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+      git add -A && git commit -q -m "pact $feature: ledger before merge"
+    fi
+    local base; base=$(jq -rs '(map(select(.event_type=="init"))|last).payload.base_branch // empty' "$PACT_LOG")
+    if [ -n "$base" ] && [ "$base" != "$branch" ]; then
+      git checkout -q "$base" || { echo "pact_merge: cannot checkout base $base" >&2; return 1; }
+    fi
     git merge --no-ff -m "Merge $feature ($branch)" "$branch" || {
       echo "pact_merge: git merge failed" >&2; return 1; }
   fi

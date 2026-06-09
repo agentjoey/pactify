@@ -104,6 +104,19 @@ _pact_render_state() {
 export PACT_DIR PACT_LOG PACT_STATE PACT_TASKS
 export -f _pact_project_json _pact_render_state
 
+# pact_join <id> [--roles r1,r2]
+pact_join() {
+  _pact_require_id || return 1
+  local id="$1"; shift || true
+  local roles=""
+  while [ $# -gt 0 ]; do
+    case "$1" in --roles) roles="$2"; shift 2;; *) shift;; esac
+  done
+  local payload; payload=$(jq -nc --arg r "$roles" '{roles:($r|split(","))}')
+  _pact_log_append join worker "" "" "$payload"
+  _pact_render_state
+}
+
 # pact_init --project <name> --seat "<id>:<roles>:<entry>" [--seat ...]
 pact_init() {
   _pact_require_id || return 1

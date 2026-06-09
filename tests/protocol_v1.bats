@@ -59,3 +59,20 @@ boot() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"event_id"* ]]
 }
+
+@test "v1 forward-compat: unknown event_type is ignored by the projection" {
+  setup_pact_repo; boot
+  pact_assign T1 --feature F --branch b --owner opencode --reviewer claude-opus
+  printf '%s\n' '{"event_id":"x1","ts":"2026-01-01T00:00:00Z","agent_id":"claude-opus","role":"orchestrator","event_type":"nudge","task_id":"T1","feature":"F","payload":{},"future_field":42}' >> .pact/log.jsonl
+  run bash -c '_pact_project_json | jq -r ".features[0].tasks[0].status"'
+  [ "$output" = "assigned" ]
+}
+
+@test "v1 forward-compat: log --replay still rebuilds STATE with an unknown event present" {
+  setup_pact_repo; boot
+  pact_assign T1 --feature F --branch b --owner opencode --reviewer claude-opus
+  printf '%s\n' '{"event_id":"x2","ts":"2026-01-01T00:00:00Z","agent_id":"claude-opus","role":"orchestrator","event_type":"nudge","task_id":"","feature":"","payload":{}}' >> .pact/log.jsonl
+  run pact_log --replay
+  [ "$status" -eq 0 ]
+  grep -q "project: p" .pact/STATE.yml
+}

@@ -78,6 +78,27 @@ spec B2 措辞（setup 只指向 doctor 不内嵌跑）；CI 跑 claude plugin v
 真实 `curl|sh` 端到端实测通（latest 解析/下载/checksum 校验/安装/版本注入 `pactify 0.3.0 (27a059a)`）；
 本机 /opt/homebrew/bin 已用正式渠道升级，doctor PATH ✓ + MCP 握手 ✓。
 
+### T5: Phase 3 / M3.1+M3.2 — Squad 编排画布 + 派发 [HIGH]
+**Status:** ✅ Done（PR #10 merged 6081bf6，2026-06-11 夜间包；CI test+site 双绿）
+**Milestone:** M3.1 + M3.2（M3.3/M3.4 留后）
+**交付**：目录感知引擎 `pact.At(dir).As(seat)`（旧套件一行不改全绿）；`deps` 协议扩展（additive v1：
+assign 校验 存在/同feature/无环DFS，join+checkpoint 双点硬门控，无 deps 日志与 bash 字节对齐，
+schema+addendum）；serve author API（--seat 行动座位逐请求验 roster、按项目互斥、verbs 4 端点
+引擎错误 422 原文、tasks 409 防 clobber、layout sidecar 原子写）；React Flow 画布（角色色节点/
+依赖边/build mode 本地草稿/拖拽派发/评审流/SSE toasts/停滞点/observe-only）。
+**E2E smoke 实测**：API 全生命周期 → shipped + layout 回写。
+**质量**：逐任务双审查 + fable5 终审；merge 前修了 9 个真问题（拖拽坐标系、spec 传 md 体击穿
+STATE、toast 轰炸、评审流不可达、品牌色漂移、clobber 竞态、绝对路径泄漏、join 门时序洞
+（checkpoint 补门关死）、draft 边消失）。基线：go 全套+race / bats 105 / vitest 49。
+**Deferred（PR #10 在案）**：跨进程锁（advisory flock）、mutex 并发 pin 测试、M3.3/M3.4。
+
+### T6: 站点 v2 [HIGH]
+**Status:** ✅ Done（PR #9 merged a8c846c，2026-06-11 夜间包；已上线 pactify.dev 实测）
+**交付**：11 段营销页（光缆 hero 三色拧缆+真逐字打字机、persona 座位+铁律、agent marquee 真锚点、
+角色色走查轮播、Phase3 画布占位、why cards、产品阶梯、philosophy、CTA、4 栏 footer）+
+brand 色-角色体系全站贯通 + check-dist 升至 11 断言。质量过程修了 CLS 坍塌、CTA 双击毁命令、
+标题语义、中文批注泄漏、dasharray 常数等真问题。
+
 ### T3: M2.3 Claude marketplace 上架 + 其余 agent 一键 + brew tap [MED]
 **Status:** 🔲 Todo（Claude 插件模板已在 M2.2 打样，本任务=提交社区 marketplace 审核 + Codex/opencode/Gemini 一键 + brew tap）
 **Milestone:** M2.3

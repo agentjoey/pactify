@@ -2,7 +2,7 @@
 
 Version:        v0.3.0（✅ 已发布，首个 GitHub Release，2026-06-10）
 Sprint:         003
-Sprint Status:  🚧 进行中（M2.1 ✅ + M2.2 ✅ + v0.3.0 已发布 + M2.4 ✅ 全量上线（pactify.dev LIVE，PR #7/#8）；M2.3 待开）
+Sprint Status:  🚧 进行中（M2.1-M2.4 ✅ + v0.3.0 + 站点v2 ✅（PR #9 已上线）+ Squad M3.1/M3.2 ✅（PR #10）；剩 M2.3 + M3.3/M3.4）
 Last Updated:   2026-06-10 by claude (fable-5 控制端)
 Sprint File:    .agent/sprints/sprint-003.md
 

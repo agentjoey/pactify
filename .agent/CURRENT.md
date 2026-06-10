@@ -2,7 +2,7 @@
 
 Version:        v0.3.0（✅ 已发布，首个 GitHub Release，2026-06-10）
 Sprint:         003
-Sprint Status:  🚧 进行中（M2.1 ✅ + M2.2 ✅ + v0.3.0 已发布（curl|sh 链路实测通）；下一步 M2.3）
+Sprint Status:  🚧 进行中（M2.1 ✅ + M2.2 ✅ + v0.3.0 已发布 + M2.4 站点代码 ✅（PR #7）；待 Vercel/DNS 上线；M2.3 待开）
 Last Updated:   2026-06-10 by claude (fable-5 控制端)
 Sprint File:    .agent/sprints/sprint-003.md
 

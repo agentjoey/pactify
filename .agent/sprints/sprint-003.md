@@ -82,6 +82,9 @@ spec B2 措辞（setup 只指向 doctor 不内嵌跑）；CI 跑 claude plugin v
 **Status:** 🔲 Todo（Claude 插件模板已在 M2.2 打样，本任务=提交社区 marketplace 审核 + Codex/opencode/Gemini 一键 + brew tap）
 **Milestone:** M2.3
 
-### T4: M2.4 pactify.dev 官网 v1（协议文档 + 5 分钟快速开始）[MED]
-**Status:** 🔲 Todo
+### T4: M2.4 pactify.dev 官网 v1 [MED]
+**Status:** ✅ 代码完成（PR #7 merged a8c4289，2026-06-10；CI test+site 双绿）。**待维护者：建 Vercel 项目 + DNS**（runbook 见 docs/deployment.md）
 **Milestone:** M2.4
+**交付**：Astro 6 静态站 `site/`——终端真实派 landing（打字 hero/双线合一/§1§2 条款/quickstart/入座区/可访问复制 CTA，动效全 CSS+reduced-motion 降级）；/protocol + /onboarding 构建时直读仓内规范（glob loader base ../docs，零拷贝）；/install.sh = 真安装器（prebuild 同步 + check-dist 字节守卫）；CI site job（informative）；Vercel runbook。
+**质量**：brainstorm 用可视化伴侣做了视觉调研板+结构 mockup（用户选向：终端派+双线/入座）；逐任务双审查 + fable5 终审（抓 CTA 双击毁命令真 bug、dasharray 常数 bug、移动端 CTA 碎裂等，全修）。
+**Deferred（PR #7 描述在案）**：og:image、/protocol TOC、README/插件 hook URL 切到 pactify.dev、site job 升 required、hero 版本串随 release 同步。

@@ -43,7 +43,11 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 	if !hasPact {
 		project := ask("Project name: ")
 		seat := ask("Your seat id (PACT_AGENT_ID): ")
-		kind := ask(fmt.Sprintf("Agent kind %v (blank to skip wiring): ", agent.Kinds()))
+		roles := ask("Roles (comma-separated) [worker]: ")
+		if roles == "" {
+			roles = "worker"
+		}
+		kind := ask(fmt.Sprintf("Agent kind %s (blank to skip wiring): ", strings.Join(agent.Kinds(), ", ")))
 		entry := "CLAUDE.md"
 		if kind != "" {
 			// Fail closed before any writes, like the init command does.
@@ -55,7 +59,7 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 				entry = ad.DefaultEntry()
 			}
 		}
-		seatSpec := seat + ":worker:" + entry
+		seatSpec := seat + ":" + roles + ":" + entry
 		if kind != "" {
 			seatSpec += ":" + kind
 		}
@@ -70,19 +74,25 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 			return err
 		}
 		if kind != "" {
-			if err := agent.Wire(kind, seat, "worker", cwd); err != nil {
+			if err := agent.Wire(kind, seat, roles, cwd); err != nil {
 				return err
 			}
+			reportWire(out, kind, seat, roles, cwd)
 		}
 		fmt.Fprintf(out, "\n✅ Initialized .pact/ for %q.\n", project)
 		fmt.Fprintf(out, "Set your seat for shell verbs (make it permanent in your shell rc):\n  export PACT_AGENT_ID=%s\n", seat)
 	} else {
-		kind := ask(fmt.Sprintf("Wire an agent — kind %v (blank to skip): ", agent.Kinds()))
+		kind := ask(fmt.Sprintf("Wire an agent — kind %s (blank to skip): ", strings.Join(agent.Kinds(), ", ")))
 		if kind != "" {
 			seat := ask("Seat id: ")
-			if err := agent.Wire(kind, seat, "worker", cwd); err != nil {
+			roles := ask("Roles (comma-separated) [worker]: ")
+			if roles == "" {
+				roles = "worker"
+			}
+			if err := agent.Wire(kind, seat, roles, cwd); err != nil {
 				return err
 			}
+			reportWire(out, kind, seat, roles, cwd)
 			fmt.Fprintf(out, "\n✅ Wired %s.\n  export PACT_AGENT_ID=%s\n", kind, seat)
 		}
 	}

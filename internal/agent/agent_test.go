@@ -55,6 +55,12 @@ func TestExpandPathHome(t *testing.T) {
 	}
 }
 
+func TestExpandPathNamedHomePassesThrough(t *testing.T) {
+	if got := ExpandPath("~user/x"); got != "~user/x" {
+		t.Fatalf("named-home form must pass through unchanged, got %q", got)
+	}
+}
+
 func TestUnknownKind(t *testing.T) {
 	if _, ok := Get("nope"); ok {
 		t.Fatal("unknown kind should not resolve")

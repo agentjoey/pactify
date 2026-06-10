@@ -94,7 +94,7 @@ func Kinds() []string {
 
 // ExpandPath expands a leading ~ to the user's home dir; other paths pass through.
 func ExpandPath(p string) string {
-	if !strings.HasPrefix(p, "~") {
+	if p != "~" && !strings.HasPrefix(p, "~/") {
 		return p
 	}
 	home, err := os.UserHomeDir()

@@ -7,7 +7,7 @@ multi-agent coordination.
 The `pactify` binary must be on your PATH (the MCP server runs `pactify mcp`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+curl -fsSL https://pactify.dev/install.sh | sh
 pactify setup
 ```
 

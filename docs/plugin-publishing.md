@@ -8,7 +8,7 @@
 
 ```bash
 # pactify 二进制必须在 PATH 上(插件的 MCP server 跑的是裸 `pactify mcp`)
-curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+curl -fsSL https://pactify.dev/install.sh | sh
 pactify version          # 应显示 v0.3.0+
 pactify doctor           # PATH ✓ + mcp server ✓ 即可
 ```

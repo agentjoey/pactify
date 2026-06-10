@@ -4,6 +4,6 @@ if command -v pactify >/dev/null 2>&1; then
   exit 0
 fi
 echo "pact plugin: the 'pactify' binary is not on PATH."
-echo "Install it:  curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh"
+echo "Install it:  curl -fsSL https://pactify.dev/install.sh | sh"
 echo "Then run:    pactify setup"
 exit 0

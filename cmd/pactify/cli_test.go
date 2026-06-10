@@ -77,6 +77,32 @@ func TestCLIHelpAndFullFlow(t *testing.T) {
 	}
 }
 
+func TestRootProjectChdirs(t *testing.T) {
+	start, _ := os.Getwd()
+	t.Cleanup(func() { os.Chdir(start) })
+	dir := t.TempDir()
+	if err := rootProject(dir); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.Getwd()
+	want, _ := filepath.EvalSymlinks(dir)
+	gotResolved, _ := filepath.EvalSymlinks(got)
+	if gotResolved != want {
+		t.Fatalf("cwd = %q, want %q", gotResolved, want)
+	}
+}
+
+func TestRootProjectEmptyIsNoop(t *testing.T) {
+	start, _ := os.Getwd()
+	if err := rootProject(""); err != nil {
+		t.Fatal(err)
+	}
+	now, _ := os.Getwd()
+	if now != start {
+		t.Fatalf("empty --project must not chdir: %q -> %q", start, now)
+	}
+}
+
 func TestCLIFailsClosedWithoutAgentID(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()

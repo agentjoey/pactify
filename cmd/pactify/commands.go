@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
+	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/spf13/cobra"
 )
@@ -13,9 +16,47 @@ func newRootCmd() *cobra.Command {
 	var project string
 	var seats []string
 	initCmd := &cobra.Command{Use: "init", Short: "scaffold .pact/ and bake entry files",
-		RunE: func(_ *cobra.Command, _ []string) error { return pact.Init(project, seats) }}
+		RunE: func(_ *cobra.Command, _ []string) error {
+			// Parse + validate all seats up front so init fails closed (before any writes).
+			parsed := make([]pact.Seat, 0, len(seats))
+			for _, raw := range seats {
+				s, err := pact.ParseSeat(raw)
+				if err != nil {
+					return err
+				}
+				if s.Kind != "" && s.Kind != "shell" {
+					ad, ok := agent.Get(s.Kind)
+					if !ok {
+						return fmt.Errorf("unknown agent kind %q (supported: %v)", s.Kind, agent.Kinds())
+					}
+					if ad.DefaultEntry() == "" {
+						return fmt.Errorf("kind %q has no project entry file; wire it with `pactify agent add %s` instead of init --seat", s.Kind, s.Kind)
+					}
+					if s.Entry != ad.DefaultEntry() {
+						return fmt.Errorf("seat %q: kind %q expects entry %q, got %q", s.ID, s.Kind, ad.DefaultEntry(), s.Entry)
+					}
+				}
+				parsed = append(parsed, s)
+			}
+			if err := pact.Init(project, seats); err != nil {
+				return err
+			}
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			for _, s := range parsed {
+				if s.Kind == "" || s.Kind == "shell" {
+					continue
+				}
+				if err := agent.Wire(s.Kind, s.ID, strings.Join(s.Roles, ","), wd); err != nil {
+					return err
+				}
+			}
+			return nil
+		}}
 	initCmd.Flags().StringVar(&project, "project", "", "project name")
-	initCmd.Flags().StringArrayVar(&seats, "seat", nil, "seat 'id:roles:entry' (repeatable)")
+	initCmd.Flags().StringArrayVar(&seats, "seat", nil, "seat 'id:roles:entry[:kind]' (repeatable)")
 
 	var joinRoles string
 	joinCmd := &cobra.Command{Use: "join <id>", Args: cobra.ExactArgs(1), Short: "worker cold-start",
@@ -78,6 +119,6 @@ func newRootCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error { return pact.Validate() }}
 
 	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, statusCmd, logCmd, validateCmd,
-		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd())
+		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd())
 	return root
 }

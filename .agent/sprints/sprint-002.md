@@ -30,7 +30,7 @@ Phase 0 已合入 main：`.pact/bin/pact.sh` bash 参考实现 + 11 动词 + 两
 - [ ] Claude skill 退化为薄封装（调 pactify CLI）
 
 ### T3: M1.3 pactify serve（MCP server + 本地 dashboard）[HIGH] [claude]
-**Status:** 🔄 In Progress（拆 3 计划：**A serve 后端 ✅ PR #3 merged**；B React dashboard 待做；C pactify mcp 待做）
+**Status:** ✅ Done（A serve 后端 PR #3 · B React dashboard PR #4 · C pactify mcp PR #5，全部 merged）
 **Milestone:** M1.3
 **Acceptance:**
 - [ ] MCP server：事件订阅 + 工具暴露
@@ -45,4 +45,6 @@ Phase 0 已合入 main：`.pact/bin/pact.sh` bash 参考实现 + 11 动词 + 两
 | verification-before-completion | Task Done 前 | ❌ 待触发 |
 
 ## Sprint 回顾
-（进行中）
+**Done:** T1 (M1.1 协议冻结 PR #1)、T2 (M1.2 Go CLI PR #2)、T3 (M1.3 serve+dashboard+mcp PR #3/#4/#5)
+**Phase 1 / Pact-Base 完成**：协议 v1 + bash 参考 + Go CLI（互操作）+ 多项目 SSE dashboard + stdio MCP server。
+最终测试基线：79 bats + 11 vitest + go test 全绿。下一 Sprint = Phase 2（跨 agent 覆盖 + 分发 + 官网）。

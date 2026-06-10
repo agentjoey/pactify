@@ -2,8 +2,8 @@
 
 Version:        v0.1.0
 Sprint:         002
-Sprint Status:  🔄 In Progress
-Last Updated:   2026-06-09 by claude-opus-4-8
+Sprint Status:  ✅ Done（Phase 1 / Pact-Base 完成）
+Last Updated:   2026-06-10 by claude-opus-4-8
 Sprint File:    .agent/sprints/sprint-002.md
 
 ## Open Bugs（P0/P1 必须本 Sprint 修复）
@@ -35,8 +35,14 @@ LICENSE = MIT。
 **M1.3 进行中（拆 3 计划，brainstorm spec 一份：docs/superpowers/specs/2026-06-10-m1.3-serve-mcp-dashboard-design.md）：**
 - **M1.3a serve 后端 ✅**（2026-06-10，PR #3 merged）：`internal/registry`（~/.pactify/projects.json + register/unregister/list）+ `internal/serve`（State→JSON DTO、HTTP `/api/projects` `/state`、SSE `/events`、fsnotify 多项目 watcher、`pactify serve`）。observe-only 只读 API，无前端。8 Go 包 + 77 bats。final review 修了 watcher offset 两 bug（截断/切分支 reset、partial line）。
 - **M1.3b React dashboard ✅**（2026-06-10，PR #4 merged）：`web/` Vite8+React19+TS+Tailwind4（项目切换/座位 chips/kanban/evidence preview/SSE timeline，observe-only），构建产物入库 `internal/serve/dist`，`internal/serve/embed.go` go:embed 在 `/` 服务 SPA（index fallback，/api 优先）。11 vitest + 78 bats。final review 修了 2 个 SSE 生命周期问题（切项目 stale fetchState 竞态；live 徽章接 onopen/onerror）。
-- **M1.3c pactify mcp 待做**（stdio MCP server，官方 go-sdk v1.6.1，全动词 tools + `pact://state`/`pact://log` resources + 通知）→ **需 writing-plans**（spec 已就绪 §4，无需 brainstorm）。
-**下一步：M1.3c writing-plans → 执行。M1.3c 完 = M1.3 全完 = Pact-Base/Phase 1 齐活。**
+- **M1.3c pactify mcp ✅**（2026-06-10，PR #5 merged）：`internal/mcp`（官方 go-sdk v1.6.1）——8 动词 tools（引擎铁律以 IsError 呈现）、`pact://state`/`pact://log` resources、fsnotify→ResourceUpdated 通知（SDK 按 session 订阅范围投递）、`pactify mcp` stdio 命令 + e2e。final review 修了 join seat 必须取自 PACT_AGENT_ID（防记录与行为分座）。
+
+## 🎉 Phase 1 / Pact-Base 完成（2026-06-10）
+协议 v1（冻结）+ bash 参考实现 + Go CLI（字节级互操作）+ 多项目 SSE dashboard + stdio MCP server。
+PR #1-#5 全 merged。基线：**79 bats + 11 vitest + go test（10 包）全绿**。
+**下一步 = Phase 2（Pact-Base 分发）：M2.1 跨 agent 薄封装（opencode/Gemini/Codex + 真实端到端）→
+M2.2 分发（GitHub releases/brew/curl|sh + CI/分支保护 EP-009）→ M2.3 Claude marketplace → M2.4 pactify.dev 官网。
+开 Sprint 003 + 从 M2.1 brainstorm 起步。**
 backlog：M6（join roles inert）、I5（task_status grep 脆弱）、F1 worktree 并发隔离、悬挂事件投影统一、serve minors（log fsnotify errors / failed watch-add / symlink dedup）。
 
 ## Next Sprint Candidates

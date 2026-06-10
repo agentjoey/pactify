@@ -1,6 +1,6 @@
 :root {
-  --bg: #0c1117; --bg2: #0a0e13; --line: #1d242e; --line2: #2d3640;
-  --fg: #cdd9e5; --dim: #7d8590; --dimmer: #566373;
+  --bg: #0c1117; --bg2: #0a0e13; --bg3: #161c24; --line: #1d242e; --line2: #2d3640;
+  --fg: #cdd9e5; --bright: #fff; --dim: #7d8590; --dimmer: #566373;
   --green: #6ee7a0; --blue: #8ab4ff; --yellow: #ffd479;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
@@ -9,7 +9,7 @@ html { background: var(--bg); color: var(--fg); font-family: var(--mono); }
 body { margin: 0; font-size: 15px; line-height: 1.7; }
 a { color: var(--blue); text-decoration: none; }
 a:hover { text-decoration: underline; }
-code { background: #161c24; border: 1px solid var(--line2); border-radius: 6px; padding: 1px 7px; }
+code { background: var(--bg3); border: 1px solid var(--line2); border-radius: 6px; padding: 1px 7px; }
 .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
 .label { font-size: 11px; letter-spacing: 2px; color: var(--dimmer); text-transform: uppercase; }
 
@@ -20,8 +20,10 @@ code { background: #161c24; border: 1px solid var(--line2); border-radius: 6px; 
   @keyframes blink { 50% { opacity: 0; } }
   .ln { opacity: 0; animation: lnIn 0.05s linear forwards; animation-delay: var(--d, 0s); }
   @keyframes lnIn { to { opacity: 1; } }
-  .draw path { stroke-dasharray: 420; stroke-dashoffset: 420; animation: draw 5s ease-in-out infinite; }
-  .draw path.late { stroke-dasharray: 200; stroke-dashoffset: 200; animation-delay: 1.4s; }
+  /* 440 over-covers every hero path (longest ≈ 423 units); over-length is harmless
+     for the draw trick, while a too-short dasharray punches holes in the line. */
+  .draw path { stroke-dasharray: 440; stroke-dashoffset: 440; animation: draw 5s ease-in-out infinite; }
+  .draw path.late { animation-delay: 1.4s; }
   @keyframes draw { 35% { stroke-dashoffset: 0; } 80% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
   .seat { animation: seatIn 4s ease infinite; animation-delay: var(--d, 0s); }
   @keyframes seatIn {

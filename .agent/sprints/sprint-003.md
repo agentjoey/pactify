@@ -74,7 +74,9 @@ POSIX `.` 不传参问题（PACTIFY_SOURCE_ONLY env 守卫修复）。基线 go 
 **Deferred minors（终审 M1–M6）**：plugin.json 版本与 release 同步机制；go-install 用户 version
 fallback（debug.ReadBuildInfo）；release.yml 加测试门；checkPath 用 LookPath 对比真实解析；
 spec B2 措辞（setup 只指向 doctor 不内嵌跑）；CI 跑 claude plugin validate。
-**🔜 待办：tag v0.3.0 触发首个 GitHub Release**（install.sh 在真 release 存在后才真正可用）。
+**✅ v0.3.0 已发布（2026-06-10）**：tag → release workflow 绿 → 4 平台产物 + checksums 上线；
+真实 `curl|sh` 端到端实测通（latest 解析/下载/checksum 校验/安装/版本注入 `pactify 0.3.0 (27a059a)`）；
+本机 /opt/homebrew/bin 已用正式渠道升级，doctor PATH ✓ + MCP 握手 ✓。
 
 ### T3: M2.3 Claude marketplace 上架 + 其余 agent 一键 + brew tap [MED]
 **Status:** 🔲 Todo（Claude 插件模板已在 M2.2 打样，本任务=提交社区 marketplace 审核 + Codex/opencode/Gemini 一键 + brew tap）

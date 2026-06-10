@@ -1,8 +1,8 @@
 # Current Status — Pactify
 
-Version:        v0.3.0 (target；tag 待打——首个 GitHub Release)
+Version:        v0.3.0（✅ 已发布，首个 GitHub Release，2026-06-10）
 Sprint:         003
-Sprint Status:  🚧 进行中（M2.1 ✅ + M2.2 ✅（PR #6 merged，CI 绿 + 分支保护生效）；下一步 tag v0.3.0 → M2.3）
+Sprint Status:  🚧 进行中（M2.1 ✅ + M2.2 ✅ + v0.3.0 已发布（curl|sh 链路实测通）；下一步 M2.3）
 Last Updated:   2026-06-10 by claude (fable-5 控制端)
 Sprint File:    .agent/sprints/sprint-003.md
 

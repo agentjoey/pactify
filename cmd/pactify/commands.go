@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
+	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/spf13/cobra"
 )
@@ -13,9 +16,30 @@ func newRootCmd() *cobra.Command {
 	var project string
 	var seats []string
 	initCmd := &cobra.Command{Use: "init", Short: "scaffold .pact/ and bake entry files",
-		RunE: func(_ *cobra.Command, _ []string) error { return pact.Init(project, seats) }}
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if err := pact.Init(project, seats); err != nil {
+				return err
+			}
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			for _, raw := range seats {
+				s, err := pact.ParseSeat(raw)
+				if err != nil {
+					return err
+				}
+				if s.Kind == "" || s.Kind == "shell" {
+					continue
+				}
+				if err := agent.Wire(s.Kind, s.ID, strings.Join(s.Roles, ","), wd); err != nil {
+					return err
+				}
+			}
+			return nil
+		}}
 	initCmd.Flags().StringVar(&project, "project", "", "project name")
-	initCmd.Flags().StringArrayVar(&seats, "seat", nil, "seat 'id:roles:entry' (repeatable)")
+	initCmd.Flags().StringArrayVar(&seats, "seat", nil, "seat 'id:roles:entry[:kind]' (repeatable)")
 
 	var joinRoles string
 	joinCmd := &cobra.Command{Use: "join <id>", Args: cobra.ExactArgs(1), Short: "worker cold-start",

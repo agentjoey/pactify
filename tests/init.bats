@@ -1,6 +1,13 @@
 #!/usr/bin/env bats
 load helpers
 
+REPO="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+
+setup() {
+  BIN="$BATS_TEST_TMPDIR/pactify"
+  go build -o "$BIN" "$REPO/cmd/pactify" || return 1
+}
+
 run_init() {
   export PACT_AGENT_ID=claude-opus
   pact_init --project pactify \
@@ -56,4 +63,14 @@ run_init() {
   grep -q 'claude-opus' .pact/PROJECT.md
   grep -q 'roles: orchestrator, reviewer' .pact/PROJECT.md
   grep -q 'opencode' .pact/PROJECT.md
+}
+
+@test "init with 4-field seat wires the MCP kind" {
+  cd "$BATS_TEST_TMPDIR"; rm -rf w && mkdir w && cd w
+  git init -q; git config user.email t@t.t; git config user.name t
+  echo x > base.txt; git add -A; git commit -q -m base
+  export PACT_AGENT_ID=opencode
+  "$BIN" init --project p --seat "opencode:worker:AGENTS.md:opencode"
+  grep -q '"pact"' opencode.json
+  grep -q 'seat `opencode`' AGENTS.md
 }

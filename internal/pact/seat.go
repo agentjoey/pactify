@@ -14,16 +14,21 @@ type Seat struct {
 	ID    string
 	Roles []string
 	Entry string
+	Kind  string // optional: agent kind for MCP wiring ("" = shell/legacy)
 }
 
-// ParseSeat parses "id:role1,role2:entry" with validation (3 non-empty fields,
-// slug id, entry is a repo-relative path without "..").
+// ParseSeat parses "id:role1,role2:entry[:kind]" with validation (3 or 4
+// non-empty fields, slug id, entry is a repo-relative path without "..").
 func ParseSeat(s string) (Seat, error) {
 	parts := strings.Split(s, ":")
-	if len(parts) != 3 {
-		return Seat{}, fmt.Errorf("seat must be 'id:roles:entry' (3 fields): %q", s)
+	if len(parts) != 3 && len(parts) != 4 {
+		return Seat{}, fmt.Errorf("seat must be 'id:roles:entry[:kind]' (3 or 4 fields): %q", s)
 	}
 	id, roles, entry := parts[0], parts[1], parts[2]
+	kind := ""
+	if len(parts) == 4 {
+		kind = parts[3]
+	}
 	if id == "" || roles == "" || entry == "" {
 		return Seat{}, fmt.Errorf("seat fields must be non-empty: %q", s)
 	}
@@ -33,7 +38,7 @@ func ParseSeat(s string) (Seat, error) {
 	if strings.HasPrefix(entry, "/") || strings.Contains(entry, "..") {
 		return Seat{}, fmt.Errorf("seat entry %q must be a repo-relative path without '..'", entry)
 	}
-	return Seat{ID: id, Roles: strings.Split(roles, ","), Entry: entry}, nil
+	return Seat{ID: id, Roles: strings.Split(roles, ","), Entry: entry, Kind: kind}, nil
 }
 
 const blockBegin = "<!-- pact:begin (managed by pactify — edit outside this block) -->"

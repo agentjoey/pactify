@@ -88,3 +88,20 @@ func TestBakeManagedBlockRejectsMarkerInBody(t *testing.T) {
 		t.Fatal("file should not be written when body is rejected")
 	}
 }
+
+func TestParseSeatOptionalKind(t *testing.T) {
+	s, err := ParseSeat("opencode:worker:AGENTS.md:opencode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Kind != "opencode" || s.Entry != "AGENTS.md" {
+		t.Fatalf("seat = %+v", s)
+	}
+	s2, err := ParseSeat("claude:orchestrator:CLAUDE.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s2.Kind != "" {
+		t.Fatalf("3-field seat must have empty kind, got %q", s2.Kind)
+	}
+}

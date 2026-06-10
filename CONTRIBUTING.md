@@ -63,3 +63,23 @@ bats tests/        # full suite — must be green before any PR merges
 New behaviour requires tests (TDD). Schema/protocol changes must keep `tests/schemas.bats` and
 `tests/protocol_v1.bats` green and, if they change the contract, bump `protocol_version` per the
 compatibility rules in `docs/specs/pact-protocol.md`.
+
+## Branch protection (maintainer)
+
+`main` requires the CI check to pass and a PR, with admin bypass enabled. To (re)apply
+(run once CI has reported the `test` check on main at least once):
+
+```bash
+gh api -X PUT repos/agentjoey/pactify/branches/main/protection \
+  --input - <<'JSON'
+{
+  "required_status_checks": { "strict": true, "checks": [ { "context": "test" } ] },
+  "enforce_admins": false,
+  "required_pull_request_reviews": { "required_approving_review_count": 0 },
+  "restrictions": null
+}
+JSON
+```
+
+`enforce_admins: false` lets maintainers direct-push trivial docs/chore commits,
+matching the workflow above.

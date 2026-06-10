@@ -4,7 +4,8 @@ project_name: pactify
 
 before:
   hooks:
-    - go mod tidy
+    # -diff fails loudly instead of silently rewriting go.mod mid-release
+    - go mod tidy -diff
 
 builds:
   - id: pactify
@@ -14,6 +15,8 @@ builds:
       - CGO_ENABLED=0
     goos: [darwin, linux]
     goarch: [amd64, arm64]
+    flags:
+      - -trimpath
     ldflags:
       - -s -w
       - -X main.version={{.Version}}

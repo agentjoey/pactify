@@ -6,16 +6,20 @@ const curl = 'curl -fsSL https://pactify.dev/install.sh | sh';
   <h1 class="hero-h1">Agents, in agreement.</h1>
   <p class="hero-sub">pact is a git-native coordination protocol for AI agents — append-only log, enforced review, any agent can take a seat.</p>
 
-  <div class="hero-term">
-    <span class="tw"><span class="t-green">$</span> pactify setup</span>
-    <span class="tw"><span class="t-dim">seat</span> <span class="t-yellow">product agent</span> / <span class="t-blue">design agent</span> / <span class="t-green">dev agent</span></span>
-    <span class="tw"><span class="t-blue">✓</span> dev agent joined — branch feat/t1</span>
-    <span class="tw"><span class="t-blue">✓</span> T1 accepted · F1 <span class="t-green">shipped</span> <span class="hero-cur"></span></span>
+  <div class="hero-term" id="hero-term">
+    <span class="tw tw-line"><span class="t-green">$</span> pactify setup</span>
+    <span class="tw tw-line"><span class="t-dim">seat</span> <span class="t-yellow">product agent</span> / <span class="t-blue">design agent</span> / <span class="t-green">dev agent</span></span>
+    <span class="tw tw-line"><span class="t-blue">✓</span> dev agent joined — branch feat/t1</span>
+    <span class="tw tw-line"><span class="t-blue">✓</span> T1 accepted · F1 <span class="t-green">shipped</span></span><span class="caret hero-cur" aria-hidden="true"></span>
   </div>
 
-  <div class="hero-tabs">
-    <div class="hero-tabbar"><span class="on">curl</span><span>go install</span><span>Claude plugin</span></div>
-    <div class="hero-tabbody"><span><span class="t-green">$</span> {curl}</span><i>copy</i></div>
+  <div class="hero-tabs" id="hero-tabs">
+    <div class="hero-tabbar">
+      <button class="tab on" data-cmd={curl}>curl</button>
+      <button class="tab" data-cmd="go install github.com/agentjoey/pactify/cmd/pactify@latest">go install</button>
+      <button class="tab" data-cmd="/plugin marketplace add agentjoey/pactify">Claude plugin</button>
+    </div>
+    <div class="hero-tabbody"><span class="hero-tabcmd"><span class="t-green">$</span> <span class="hero-tabtext">{curl}</span></span><button class="copy" type="button">copy</button></div>
   </div>
 
   <div class="hero-stats">
@@ -39,18 +43,64 @@ const curl = 'curl -fsSL https://pactify.dev/install.sh | sh';
   .t-blue { color: var(--blue); }
   .t-yellow { color: var(--yellow); }
   .t-dim { color: var(--dimmer); }
-  .hero-cur { display: inline-block; width: 7px; height: 12px; background: var(--green); vertical-align: -2px; }
+  .hero-cur, .hero-term .caret { display: inline-block; width: 7px; height: 12px; background: var(--green); vertical-align: -2px; }
 
   .hero-tabs { max-width: 540px; margin: 18px auto 0; position: relative; text-align: left; }
   .hero-tabbar { display: flex; gap: 2px; font-size: 10.5px; }
-  .hero-tabbar span { padding: 6px 14px; border: 1px solid var(--line); border-bottom: none; border-radius: 7px 7px 0 0; color: var(--dimmer); background: var(--bg2); }
-  .hero-tabbar .on { color: var(--green); background: var(--bg3); }
+  .hero-tabbar .tab { font-family: var(--mono); padding: 6px 14px; border: 1px solid var(--line); border-bottom: none; border-radius: 7px 7px 0 0; color: var(--dimmer); background: var(--bg2); cursor: pointer; font-size: 10.5px; }
+  .hero-tabbar .tab.on { color: var(--green); background: var(--bg3); }
   .hero-tabbody { border: 1px solid var(--line2); border-radius: 0 8px 8px 8px; background: var(--bg3); padding: 11px 14px; font-size: 11.5px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .hero-tabbody span { overflow-wrap: anywhere; }
-  .hero-tabbody i { font-style: normal; color: var(--dimmer); font-size: 10px; border: 1px solid var(--line2); border-radius: 4px; padding: 2px 7px; flex-shrink: 0; }
+  .hero-tabbody .copy { font-family: var(--mono); color: var(--dimmer); font-size: 10px; border: 1px solid var(--line2); border-radius: 4px; padding: 2px 7px; flex-shrink: 0; background: transparent; cursor: pointer; }
+  .hero-tabbody .copy:hover { color: var(--fg); }
 
   .hero-stats { display: flex; gap: 26px; justify-content: center; margin-top: 26px; position: relative; flex-wrap: wrap; }
   .hero-stat { text-align: center; }
   .hero-stat b { display: block; color: var(--bright); font-size: 16px; font-weight: 600; }
   .hero-stat span { font-size: 9.5px; color: var(--dimmer); letter-spacing: 1px; text-transform: uppercase; }
 </style>
+
+<script>
+  import { initCable } from '../scripts/cable';
+  import { initTypewriter } from '../scripts/typewriter';
+
+  const svg = document.getElementById('cable');
+  if (svg instanceof SVGSVGElement) initCable(svg);
+
+  const term = document.getElementById('hero-term');
+  if (term) initTypewriter(term);
+
+  // Install tabs: switch active + swap the displayed command. Copy writes the
+  // ACTIVE tab's command to the clipboard, flashing the button (debounced).
+  const tabs = document.getElementById('hero-tabs');
+  if (tabs) {
+    const buttons = Array.from(tabs.querySelectorAll<HTMLButtonElement>('.tab'));
+    const text = tabs.querySelector<HTMLElement>('.hero-tabtext');
+    const copy = tabs.querySelector<HTMLButtonElement>('.copy');
+
+    const activeCmd = () =>
+      buttons.find((b) => b.classList.contains('on'))?.dataset.cmd ?? '';
+
+    buttons.forEach((b) => {
+      b.addEventListener('click', () => {
+        buttons.forEach((x) => x.classList.toggle('on', x === b));
+        if (text) text.textContent = b.dataset.cmd ?? '';
+      });
+    });
+
+    if (copy) {
+      let resetTimer: number | undefined;
+      copy.addEventListener('click', async () => {
+        const cmd = activeCmd();
+        try {
+          await navigator.clipboard.writeText(cmd);
+        } catch {
+          /* clipboard may be unavailable (e.g. insecure context) */
+        }
+        copy.textContent = '✓';
+        if (resetTimer) clearTimeout(resetTimer);
+        resetTimer = window.setTimeout(() => { copy.textContent = 'copy'; }, 1200);
+      });
+    }
+  }
+</script>

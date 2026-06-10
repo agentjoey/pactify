@@ -20,17 +20,10 @@ code { background: var(--bg3); border: 1px solid var(--line2); border-radius: 6p
 .sec-h2 { text-align: center; color: var(--bright); font-size: 19px; font-weight: 600; margin: 0 0 26px; letter-spacing: -.3px; }
 
 /* motion primitives — all gated on reduced-motion */
-.cursor { display: inline-block; width: 8px; height: 15px; background: var(--green); vertical-align: -2px; }
+.caret { display: inline-block; width: 8px; height: 15px; background: var(--green); vertical-align: -2px; }
 @media (prefers-reduced-motion: no-preference) {
-  .cursor { animation: blink 1s steps(1) infinite; }
+  .caret { animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
-  .ln { opacity: 0; animation: lnIn 0.05s linear forwards; animation-delay: var(--d, 0s); }
-  @keyframes lnIn { to { opacity: 1; } }
-  /* 440 over-covers every hero path (longest ≈ 423 units); over-length is harmless
-     for the draw trick, while a too-short dasharray punches holes in the line. */
-  .draw path { stroke-dasharray: 440; stroke-dashoffset: 440; animation: draw 5s ease-in-out infinite; }
-  .draw path.late { animation-delay: 1.4s; }
-  @keyframes draw { 35% { stroke-dashoffset: 0; } 80% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
   .seat { animation: seatIn 4.5s ease infinite; animation-delay: var(--d, 0s); }
   @keyframes seatIn {
     0%, 6% { border-style: dashed; background: transparent; border-color: #3d4754; }

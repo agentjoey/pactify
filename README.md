@@ -7,7 +7,7 @@ Any agent that can read files and run git — Claude, opencode, Gemini, Cursor, 
 no external dependency. The repo is the single source of truth.
 
 > Status: **early.** Protocol **v1 is frozen** (see [`docs/specs/pact-protocol.md`](docs/specs/pact-protocol.md)).
-> A bash reference implementation drives the protocol today; a Go CLI (`pactify`) is next.
+> A bash reference implementation and the `pactify` Go CLI both drive the protocol today.
 > Site: [pactify.dev](https://pactify.dev) · Part of the **Pact-Base** open core (see [ROADMAP](docs/ROADMAP.md)).
 
 ## Install
@@ -51,7 +51,7 @@ source .pact/bin/pact.sh
 pact_help          # the verb reference + the two rules
 ```
 
-The verbs (`pact_<verb>` in bash today, `pactify <verb>` in the coming Go CLI) are one contract:
+The verbs (`pact_<verb>` in bash today, `pactify <verb>` in the Go CLI) are one contract:
 `init · join · assign · checkpoint · accept · changes · merge · status · log · validate`.
 
 ## Docs

@@ -1,0 +1,53 @@
+---
+const steps = [
+  ['Product assigns', 'spec + acceptance written to .pact/tasks/, owner + reviewer set', 'var(--role-product)', true],
+  ['Dev joins & builds', 'agent reads STATE, checks out the feature branch, implements', 'var(--role-dev)', false],
+  ['Checkpoint with evidence', 'tests output written to the log — not a claim, a record', 'var(--role-dev)', false],
+  ['Review → accept → merge', 'rules §1/§2 enforced by the engine, not by prompts', 'var(--role-design)', false],
+];
+---
+<section class="sec">
+  <div class="sec-label">How it works</div>
+  <h2 class="sec-h2">One append-only log. Four moves. Shipped.</h2>
+  <div class="walk" id="walk">
+    <div class="steps">
+      {steps.map(([title, body, color, on], i) => (
+        <div class={on ? 'step on' : 'step'} data-step={i + 1} style={color ? `color:${color}` : undefined}>
+          <span class="n">{i + 1}</span>
+          <div><h3>{title}</h3><p>{body}</p></div>
+        </div>
+      ))}
+    </div>
+    <div class="ledger">
+      <div class="row hl" data-row="1" style="--rc:var(--role-product)">{`{"event":"assign","task":"T1","owner":"dev-a","reviewer":"product"}`}</div>
+      <div class="row" data-row="2">{`{"event":"join","seat":"dev-a","branch":"feat/t1"}`}</div>
+      <div class="row" data-row="3">{`{"event":"checkpoint","task":"T1","evidence":"`}<span class="k">42 tests passed</span>{`"}`}</div>
+      <div class="row" data-row="4">{`{"event":"accept","task":"T1","by":"product"}`}</div>
+      <div class="row" data-row="5">{`{"event":"merge","feature":"F1"}`}</div>
+      <div class="row dimmest">— log.jsonl · the source of truth, in your repo</div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .walk { display: flex; gap: 22px; max-width: 760px; margin: 0 auto; align-items: stretch; flex-wrap: wrap; }
+  .steps { flex: 1; min-width: 260px; font-size: 11.5px; display: flex; flex-direction: column; }
+  .step { display: flex; gap: 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid transparent; }
+  .step.on { background: var(--bg2); border-color: var(--line2); }
+  .step .n { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line2); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--dimmer); flex-shrink: 0; }
+  .step.on .n { border-color: currentColor; }
+  .step h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--fg); }
+  .step p { margin: 2px 0 0; color: var(--dimmer); font-size: 10.5px; line-height: 1.5; }
+  .ledger { flex: 1.2; min-width: 260px; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 13px 15px; font-size: 10.3px; line-height: 2.05; overflow: hidden; }
+  .ledger .row { white-space: nowrap; color: var(--dimmer); }
+  .ledger .hl { color: var(--fg); background: var(--bg3); margin: 0 -15px; padding: 0 15px; border-left: 2px solid var(--rc, var(--green)); }
+  .ledger .k { color: var(--dim); }
+  .ledger .dimmest { color: #3d4754; }
+</style>
+
+<script>
+  import { initWalkthrough } from '../scripts/walkthrough';
+
+  const walk = document.getElementById('walk');
+  if (walk instanceof HTMLElement) initWalkthrough(walk);
+</script>

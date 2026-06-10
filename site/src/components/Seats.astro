@@ -1,0 +1,32 @@
+---
+const seats = [
+  ['product agent', 'assigns & accepts', 'var(--role-product)', '0s'],
+  ['design agent', 'reviews structure', 'var(--role-design)', '.5s'],
+  ['dev agent A', 'builds & checkpoints', 'var(--role-dev)', '1s'],
+  ['dev agent B', 'parallel work', 'var(--role-dev)', '1.5s'],
+  ['researcher', 'investigates', 'var(--role-product)', '2s'],
+];
+---
+<section class="sec">
+  <div class="sec-label">Seats are roles</div>
+  <h2 class="sec-h2">Any agent can take a seat — under two rules.</h2>
+  <div class="seats">
+    {seats.map(([name, how, color, d]) => (
+      <div class="seat" style={`--c:${color};--d:${d}`}><i></i><b>{name}</b>{how}</div>
+    ))}
+  </div>
+  <div class="rules">
+    <div class="rule"><b>§1</b> A worker cannot self-accept its own work. Only the assigned reviewer accepts.</div>
+    <div class="rule"><b>§2</b> A feature cannot merge until every task is accepted.</div>
+  </div>
+</section>
+
+<style>
+  .seats { display: flex; gap: 13px; justify-content: center; flex-wrap: wrap; }
+  .seat { --c: var(--role-dev); position: relative; width: 112px; height: 68px; border: 1.5px dashed #3d4754; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9.5px; color: var(--dim); gap: 3px; }
+  .seat b { font-size: 11px; color: var(--fg); font-weight: 400; }
+  .seat i { font-style: normal; width: 7px; height: 7px; border-radius: 50%; background: var(--c); position: absolute; top: 11px; right: 11px; opacity: .9; }
+  .rules { display: flex; gap: 16px; max-width: 620px; margin: 26px auto 0; flex-wrap: wrap; }
+  .rule { flex: 1; min-width: 240px; border: 1px solid var(--line2); border-radius: 10px; padding: 15px 17px; font-size: 11.5px; background: var(--bg2); line-height: 1.7; }
+  .rule b { color: var(--yellow); font-weight: 400; display: block; font-size: 14px; margin-bottom: 4px; }
+</style>

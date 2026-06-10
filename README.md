@@ -10,6 +10,28 @@ no external dependency. The repo is the single source of truth.
 > A bash reference implementation drives the protocol today; a Go CLI (`pactify`) is next.
 > Site: [pactify.dev](https://pactify.dev) · Part of the **Pact-Base** open core (see [ROADMAP](docs/ROADMAP.md)).
 
+## Install
+
+**curl | sh** (macOS / Linux, amd64 / arm64):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+```
+
+**go install:**
+
+```bash
+go install github.com/agentjoey/pactify/cmd/pactify@latest
+```
+
+Then get started:
+
+```bash
+pactify setup    # guided setup in your repo
+```
+
+Verify your install anytime with `pactify doctor`.
+
 ## The idea in 30 seconds
 
 - **`.pact/log.jsonl`** is an append-only event log — the authoritative source of truth and the

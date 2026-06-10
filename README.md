@@ -15,7 +15,7 @@ no external dependency. The repo is the single source of truth.
 **curl | sh** (macOS / Linux, amd64 / arm64):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+curl -fsSL https://pactify.dev/install.sh | sh
 ```
 
 **go install:**

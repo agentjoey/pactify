@@ -1,13 +1,14 @@
 # Current Status — Pactify
 
 Version:        v0.1.0
-Sprint:         002
-Sprint Status:  ✅ Done（Phase 1 / Pact-Base 完成）
+Sprint:         003
+Sprint Status:  🚧 进行中（Phase 2 / M2.1 ✅ Done，exit gate PASS；下一步 M2.2 分发）
 Last Updated:   2026-06-10 by claude-opus-4-8
-Sprint File:    .agent/sprints/sprint-002.md
+Sprint File:    .agent/sprints/sprint-003.md
 
 ## Open Bugs（P0/P1 必须本 Sprint 修复）
 🟢 无已知 P0/P1 bug。
+ℹ️ M2.1 dogfood F1（PATH/分发）：agent config 用裸 `pactify` 命令靠 PATH 解析；需 pactify 上 agent 继承的 PATH。M2.2 分发解决，或改写 os.Executable() 绝对路径——待 M2.2 决策。
 
 ## Current Sprint Summary
 Sprint 001：Repo 初始化 + roadmap/地基锁定完成。**Phase 0 实现完成**（分支 feat/phase0-pact-skill）：

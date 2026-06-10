@@ -33,6 +33,7 @@ main() {
   if [ -z "${PACTIFY_DOWNLOAD_BASE:-}" ]; then
     if [ -z "$version" ]; then
       version="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
+      [ -n "$version" ] || { echo "error: could not resolve latest release for $REPO (GitHub API rate-limited?). Set PACTIFY_VERSION to pin a tag." >&2; exit 1; }
     fi
     base="https://github.com/$REPO/releases/download/$version"
   else
@@ -41,13 +42,18 @@ main() {
 
   archive="pactify_${os}_${arch}.tar.gz"
   tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-  echo "Downloading $archive ..."
+  echo "Downloading $archive ${version:+($version) }..."
   fetch() { case "$1" in file://*) cp "${1#file://}" "$2" ;; *) curl -fsSL "$1" -o "$2" ;; esac; }
   fetch "$base/$archive" "$tmp/$archive"
   fetch "$base/checksums.txt" "$tmp/checksums.txt"
 
   echo "Verifying checksum ..."
-  ( cd "$tmp" && grep " $archive\$" checksums.txt | shasum -a 256 -c - ) >/dev/null
+  # sha256sum on minimal Linux images; shasum (perl) on macOS and most distros.
+  if command -v sha256sum >/dev/null 2>&1; then
+    ( cd "$tmp" && grep " $archive\$" checksums.txt | sha256sum -c - ) >/dev/null
+  else
+    ( cd "$tmp" && grep " $archive\$" checksums.txt | shasum -a 256 -c - ) >/dev/null
+  fi
 
   tar xzf "$tmp/$archive" -C "$tmp"
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -110,5 +111,48 @@ func TestMergeSymlinkSafe(t *testing.T) {
 	fi, _ := os.Lstat(link)
 	if fi.Mode()&os.ModeSymlink != 0 {
 		t.Fatal("symlink was followed/preserved; expected replacement with a regular file")
+	}
+}
+
+func TestMergeOverwritesExistingPact(t *testing.T) {
+	p := filepath.Join(t.TempDir(), ".mcp.json")
+	os.WriteFile(p, []byte(`{"mcpServers":{"pact":{"command":"OLD"}}}`), 0o644)
+	inv := Invoke{Command: "pactify", Args: []string{"mcp"}, Env: map[string]string{"PACT_AGENT_ID": "claude-code"}}
+	if err := mergeServer(p, JSONMcpServers, inv); err != nil {
+		t.Fatal(err)
+	}
+	pact := read(t, p)["mcpServers"].(map[string]any)["pact"].(map[string]any)
+	if pact["command"] != "pactify" {
+		t.Fatalf("stale pact entry not overwritten: %v", pact)
+	}
+}
+
+func TestMergeNonObjectParentErrors(t *testing.T) {
+	p := filepath.Join(t.TempDir(), ".mcp.json")
+	os.WriteFile(p, []byte(`{"mcpServers":"oops"}`), 0o644)
+	inv := Invoke{Command: "pactify", Args: []string{"mcp"}, Env: map[string]string{"PACT_AGENT_ID": "x"}}
+	if err := mergeServer(p, JSONMcpServers, inv); err == nil {
+		t.Fatal("expected error when parent key is a non-object")
+	}
+	b, _ := os.ReadFile(p)
+	if string(b) != `{"mcpServers":"oops"}` {
+		t.Fatalf("file was clobbered: %s", b)
+	}
+}
+
+func TestSnippetTOMLFormat(t *testing.T) {
+	inv := Invoke{Command: "pactify", Args: []string{"mcp", "--project", "/r"}, Env: map[string]string{"PACT_AGENT_ID": "codex"}}
+	got := snippet(TOML, inv)
+	want := "[mcp_servers.pact]\ncommand = \"pactify\"\nargs = [\"mcp\", \"--project\", \"/r\"]\nenv = { PACT_AGENT_ID = \"codex\" }\n"
+	if got != want {
+		t.Fatalf("snippet TOML mismatch:\ngot:  %q\nwant: %q", got, want)
+	}
+}
+
+func TestSnippetJSONOpencode(t *testing.T) {
+	inv := Invoke{Command: "pactify", Args: []string{"mcp"}, Env: map[string]string{"PACT_AGENT_ID": "opencode"}}
+	got := snippet(JSONOpencode, inv)
+	if !strings.Contains(got, `"type": "local"`) || !strings.Contains(got, `"mcp"`) {
+		t.Fatalf("opencode snippet wrong:\n%s", got)
 	}
 }

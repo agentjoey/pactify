@@ -63,9 +63,12 @@ func mergeServer(path string, format Format, inv Invoke) error {
 		}
 	}
 	pk := parentKey(format)
-	servers, _ := root[pk].(map[string]any)
-	if servers == nil {
-		servers = map[string]any{}
+	servers := map[string]any{}
+	if v, ok := root[pk]; ok {
+		servers, ok = v.(map[string]any)
+		if !ok {
+			return fmt.Errorf("%s: %q is not a JSON object", path, pk)
+		}
 	}
 	servers["pact"] = serverEntry(format, inv)
 	root[pk] = servers
@@ -95,6 +98,7 @@ func snippet(format Format, inv Invoke) string {
 			args += fmt.Sprintf("%q", a)
 		}
 		args += "]"
+		// env always carries exactly one key (PACT_AGENT_ID); multi-key would need a separator.
 		env := ""
 		for k, v := range inv.Env {
 			env += fmt.Sprintf("%s = %q", k, v)

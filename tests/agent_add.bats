@@ -31,3 +31,16 @@ setup() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"unknown agent kind"* ]]
 }
+
+@test "agent add errors when --id is missing" {
+  run "$BIN" agent add opencode --roles worker
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--id is required"* ]]
+  [ ! -f opencode.json ]
+}
+
+@test "agent add errors when --roles is missing" {
+  run "$BIN" agent add opencode --id opencode
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--roles is required"* ]]
+}

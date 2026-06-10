@@ -17,6 +17,12 @@ func newAgentCmd() *cobra.Command {
 		Short: "wire an agent kind (see docs/agent-onboarding.md for supported kinds)",
 		RunE: func(c *cobra.Command, args []string) error {
 			kind := args[0]
+			if id == "" {
+				return fmt.Errorf("--id is required (the seat id, sets PACT_AGENT_ID)")
+			}
+			if roles == "" {
+				return fmt.Errorf("--roles is required (comma-separated, e.g. worker)")
+			}
 			repoAbs := project
 			if repoAbs == "" {
 				wd, err := os.Getwd()

@@ -44,6 +44,18 @@ pactify setup
 your seat. Then launch your agent — it joins via the pact MCP tools. Run `pactify doctor`
 anytime to verify install + wiring.
 
+## Claude Code (one-click)
+
+Inside Claude Code:
+
+```
+/plugin marketplace add agentjoey/pactify
+/plugin install pact@pactify
+```
+
+This adds the `pact` skill and MCP server. If the `pactify` binary isn't installed yet,
+the plugin reminds you on session start — run the curl|sh installer above, then `pactify setup`.
+
 ## The idea in 30 seconds
 
 - **`.pact/log.jsonl`** is an append-only event log — the authoritative source of truth and the

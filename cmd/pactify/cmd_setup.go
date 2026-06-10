@@ -43,6 +43,9 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 	if !hasPact {
 		project := ask("Project name: ")
 		seat := ask("Your seat id (PACT_AGENT_ID): ")
+		if seat == "" {
+			return fmt.Errorf("seat id is required")
+		}
 		roles := ask("Roles (comma-separated) [worker]: ")
 		if roles == "" {
 			roles = "worker"
@@ -63,13 +66,11 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 		if kind != "" {
 			seatSpec += ":" + kind
 		}
-		// pact.Init records the init event under PACT_AGENT_ID. The user is
-		// running setup precisely because they haven't exported it yet, so it
-		// would fail closed. The prompted seat IS their identity — set it for
-		// this process before init; the printed export line makes it permanent.
-		if paths.AgentID() == "" {
-			os.Setenv("PACT_AGENT_ID", seat)
-		}
+		// The prompted seat is this repo's identity — adopt it for this process even
+		// if the shell carries a stale PACT_AGENT_ID from another repo. pact.Init
+		// records the init event under PACT_AGENT_ID, so it must match the roster's
+		// declared seat; the printed export line makes it permanent for the shell.
+		os.Setenv("PACT_AGENT_ID", seat)
 		if err := pact.Init(project, []string{seatSpec}); err != nil {
 			return err
 		}
@@ -85,6 +86,9 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 		kind := ask(fmt.Sprintf("Wire an agent — kind %s (blank to skip): ", strings.Join(agent.Kinds(), ", ")))
 		if kind != "" {
 			seat := ask("Seat id: ")
+			if seat == "" {
+				return fmt.Errorf("seat id is required")
+			}
 			roles := ask("Roles (comma-separated) [worker]: ")
 			if roles == "" {
 				roles = "worker"

@@ -86,3 +86,15 @@ func TestAgentWiringCheckDetectsConfigs(t *testing.T) {
 		t.Fatal("empty dir should report no wiring")
 	}
 }
+
+// A pre-existing markdown entry with no pact managed-block must NOT count as
+// wiring — the check is content-aware, not mere file presence.
+func TestAgentWiringCheckIgnoresUnwiredMarkdown(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("# my notes\nno pact here\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if c := checkAgentWiring(dir); c.OK {
+		t.Fatalf("CLAUDE.md without the pact:begin marker should not count as wiring: %+v", c)
+	}
+}

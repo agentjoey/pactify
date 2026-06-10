@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/agentjoey/pactify/internal/pact"
 )
 
 func gitInitWithCommit(t *testing.T, dir string) {
@@ -89,6 +91,48 @@ func TestSetupAutoSetsAgentIDFromSeat(t *testing.T) {
 	}
 	if s := out.String(); !strings.Contains(s, "PACT_AGENT_ID=lead") {
 		t.Fatalf("setup should echo the chosen seat export:\n%s", s)
+	}
+}
+
+// Second-repo journey: the shell already exports a PACT_AGENT_ID from another
+// repo. The prompted seat is this repo's identity and must be adopted
+// unconditionally, so the init event lands under the same seat the roster
+// declares — otherwise validate fails right after setup printed success.
+func TestSetupOverridesStaleSeatEnv(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	gitInitWithCommit(t, dir)
+	t.Setenv("PACT_AGENT_ID", "stale-other-seat")
+	var out bytes.Buffer
+	// fresh branch order: project, seat, roles (blank=default), kind (blank=skip)
+	in := strings.NewReader("demo\nlead\n\n\n")
+	if err := runSetup(in, &out, dir, true); err != nil {
+		t.Fatalf("setup should adopt the prompted seat and succeed: %v\n%s", err, out.String())
+	}
+	if err := pact.Validate(); err != nil {
+		t.Fatalf("validate should pass after setup adopts the prompted seat: %v", err)
+	}
+	if s := out.String(); !strings.Contains(s, "PACT_AGENT_ID=lead") {
+		t.Fatalf("setup should echo the chosen seat export:\n%s", s)
+	}
+}
+
+// Enter-through on the seat prompt must fail closed: an empty seat id would bake
+// PACT_AGENT_ID: "" into configs, which the agent add primitive rejects.
+func TestSetupRejectsEmptySeat(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	gitInitWithCommit(t, dir)
+	t.Setenv("PACT_AGENT_ID", "")
+	var out bytes.Buffer
+	// fresh branch: project "p", then blank seat -> must error before any writes.
+	in := strings.NewReader("p\n\n")
+	err := runSetup(in, &out, dir, true)
+	if err == nil || !strings.Contains(err.Error(), "seat id is required") {
+		t.Fatalf("expected empty-seat error, got %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, ".pact")); statErr == nil {
+		t.Fatal("setup must fail closed: no .pact/ should be written on empty seat")
 	}
 }
 

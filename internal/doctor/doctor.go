@@ -53,21 +53,33 @@ func checkRepo(cwd string) Check {
 }
 
 func checkAgentWiring(cwd string) Check {
-	candidates := []string{"opencode.json", ".mcp.json", ".gemini/settings.json", "AGENTS.md", "CLAUDE.md", "GEMINI.md"}
+	// JSON configs must contain a "pact" server key; markdown entries must
+	// contain the pact managed-block marker.
+	type probe struct{ file, marker string }
+	probes := []probe{
+		{"opencode.json", `"pact"`},
+		{".mcp.json", `"pact"`},
+		{".gemini/settings.json", `"pact"`},
+		{"AGENTS.md", "pact:begin"},
+		{"CLAUDE.md", "pact:begin"},
+		{"GEMINI.md", "pact:begin"},
+	}
 	var found []string
-	for _, f := range candidates {
-		if _, err := os.Stat(filepath.Join(cwd, f)); err == nil {
-			found = append(found, f)
+	for _, p := range probes {
+		b, err := os.ReadFile(filepath.Join(cwd, p.file))
+		if err == nil && strings.Contains(string(b), p.marker) {
+			found = append(found, p.file)
 		}
 	}
 	if len(found) == 0 {
-		return Check{"agent wiring", false, "no agent config here — `pactify agent add <kind>`"}
+		return Check{"agent wiring", false, "no pact wiring here — `pactify agent add <kind>`"}
 	}
 	return Check{"agent wiring", true, "found: " + strings.Join(found, ", ")}
 }
 
-// Run executes the non-MCP checks. The MCP-launch check is run by the command layer
-// (it spawns the binary) so this stays pure and unit-testable.
+// Run executes the non-MCP checks. The MCP-launch check (spec B1 #5) is run by the
+// command layer's checkMCP, which spawns the PATH-resolved binary and completes an
+// initialize handshake; keeping it there leaves this package pure and unit-testable.
 func Run(cwd, agentID, exePath, pathEnv string) []Check {
 	return []Check{
 		checkPath(exePath, pathEnv),

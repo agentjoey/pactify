@@ -1,0 +1,36 @@
+---
+const { title = 'pactify — agents, in agreement.', description =
+  'pact is a git-native coordination protocol for AI agents — append-only log, enforced review, any agent can take a seat.' } = Astro.props;
+import '../styles/global.css';
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={Astro.url} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <nav class="wrap" style="display:flex;justify-content:space-between;align-items:center;padding-top:18px;padding-bottom:18px;border-bottom:1px solid var(--line);font-size:13px">
+      <div>
+        <a href="/" style="color:#fff;font-weight:600;letter-spacing:.5px">pactify</a>
+        <a href="/protocol" style="color:var(--dim);margin-left:20px">protocol</a>
+        <a href="/onboarding" style="color:var(--dim);margin-left:14px">onboarding</a>
+      </div>
+      <a href="https://github.com/agentjoey/pactify" style="border:1px solid var(--line2);border-radius:6px;padding:5px 12px;color:var(--fg)">GitHub</a>
+    </nav>
+    <slot />
+    <footer class="wrap" style="display:flex;justify-content:space-between;padding-top:24px;padding-bottom:32px;border-top:1px solid var(--line);font-size:12px;color:var(--dimmer);margin-top:56px">
+      <span>MIT · protocol v1 frozen</span>
+      <span>
+        <a href="https://github.com/agentjoey/pactify" style="color:var(--dimmer)">github</a> ·
+        <a href="/protocol" style="color:var(--dimmer)">protocol</a> ·
+        <a href="/onboarding" style="color:var(--dimmer)">onboarding</a>
+      </span>
+    </footer>
+  </body>
+</html>

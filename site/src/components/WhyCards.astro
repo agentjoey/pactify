@@ -1,20 +1,20 @@
 ---
 const feats = [
-  ['⎇', 'var(--role-dev)', 'Git-native', 'The log lives in your repo. Diffable, auditable, recoverable — no server, no database.', 'protocol spec →'],
-  ['§', 'var(--role-product)', 'Enforced, not prompted', 'The two rules live in the engine. A worker literally cannot self-accept.', 'the two rules →'],
-  ['⌁', 'var(--role-design)', 'Any agent, one protocol', 'MCP tools + CLI fallback. One contract for every agent.', 'onboarding →'],
-  ['◎', 'var(--role-dev)', 'Observable', 'pactify serve streams every event to a live dashboard. Watch your squad work.', 'dashboard →'],
+  ['⎇', 'var(--role-dev)', 'Git-native', 'The log lives in your repo. Diffable, auditable, recoverable — no server, no database.', 'protocol spec →', '/protocol'],
+  ['§', 'var(--role-product)', 'Enforced, not prompted', 'The two rules live in the engine. A worker literally cannot self-accept.', 'the two rules →', '/protocol#5-the-two-rules-the-pact'],
+  ['⌁', 'var(--role-design)', 'Any agent, one protocol', 'MCP tools + CLI fallback. One contract for every agent.', 'onboarding →', '/onboarding'],
+  ['◎', 'var(--role-dev)', 'Observable', 'pactify serve streams every event to a live dashboard. Watch your squad work.', 'dashboard →', 'https://github.com/agentjoey/pactify#readme'],
 ];
 ---
 <section class="sec">
   <div class="sec-label">Why pact</div>
   <div class="feats">
-    {feats.map(([ic, color, title, body, link]) => (
+    {feats.map(([ic, color, title, body, link, href]) => (
       <div class="feat">
         <div class="ic" style={`color:${color}`}>{ic}</div>
         <h3>{title}</h3>
         <p>{body}</p>
-        <a href="#">{link}</a>
+        <a href={href}>{link}</a>
       </div>
     ))}
   </div>

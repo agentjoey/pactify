@@ -1,0 +1,9 @@
+{
+  "name": "pact",
+  "description": "Multi-agent coordination via the pact protocol — orchestrator/worker/reviewer over an MCP server.",
+  "version": "0.3.0",
+  "author": { "name": "agentjoey" },
+  "homepage": "https://github.com/agentjoey/pactify",
+  "repository": "https://github.com/agentjoey/pactify",
+  "license": "MIT"
+}

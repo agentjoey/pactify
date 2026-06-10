@@ -2,12 +2,32 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/spf13/cobra"
 )
+
+// reportWire prints what Wire actually did for kind: the doc-only snippet for
+// TOML kinds, or the config path that was written (flagging machine-global).
+func reportWire(out io.Writer, kind, id, roles, repoAbs string) {
+	ad, ok := agent.Get(kind)
+	if !ok {
+		return
+	}
+	cfg := ad.Config()
+	switch {
+	case cfg.Format == agent.TOML:
+		_, snip, _ := agent.Render(kind, id, roles, repoAbs)
+		fmt.Fprintf(out, "%s is doc-only — add this to %s:\n%s", kind, cfg.Path, snip)
+	case cfg.Scope == agent.Global:
+		fmt.Fprintf(out, "wrote %s (machine-global)\n", agent.ExpandPath(cfg.Path))
+	default:
+		fmt.Fprintf(out, "wrote %s\n", cfg.Path)
+	}
+}
 
 func newAgentCmd() *cobra.Command {
 	a := &cobra.Command{Use: "agent", Short: "wire agents (CLI + desktop) into this repo's pact"}
@@ -51,17 +71,7 @@ func newAgentCmd() *cobra.Command {
 			if err := agent.Wire(kind, id, roles, repoAbs); err != nil {
 				return err
 			}
-			ad, _ := agent.Get(kind) // kind is valid: Wire already resolved it
-			cfg := ad.Config()
-			switch {
-			case cfg.Format == agent.TOML:
-				_, snip, _ := agent.Render(kind, id, roles, repoAbs)
-				fmt.Fprintf(c.OutOrStdout(), "%s is doc-only — add this to %s:\n%s", kind, cfg.Path, snip)
-			case cfg.Scope == agent.Global:
-				fmt.Fprintf(c.OutOrStdout(), "wrote %s (machine-global)\n", agent.ExpandPath(cfg.Path))
-			default:
-				fmt.Fprintf(c.OutOrStdout(), "wrote %s\n", cfg.Path)
-			}
+			reportWire(c.OutOrStdout(), kind, id, roles, repoAbs)
 			return nil
 		}}
 	add.Flags().StringVar(&id, "id", "", "seat id (PACT_AGENT_ID)")

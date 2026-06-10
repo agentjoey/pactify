@@ -33,20 +33,14 @@ git checkout main && git pull
   the subagent-driven workflow produces. Use **squash** (`--squash`) only for small, noisy branches.
 - **PR body** must include a Summary and a Test Plan (what was run + results).
 
-## Maintainer exception (current phase)
+## Maintainer exception
 
-Until branch protection + CI are enabled, the maintainer **may commit trivial docs/chore changes
-directly to `main`** (e.g. README/spec touch-ups, status-board updates). Anything that changes
-behaviour or `.pact/bin/pact.sh` / `schemas/` goes through a PR.
+With `enforce_admins: false` in the branch protection below, the maintainer **may commit trivial
+docs/chore changes directly to `main`** (e.g. README/spec touch-ups, status-board updates).
+Anything that changes behaviour or `.pact/bin/pact.sh` / `schemas/` goes through a PR.
 
-## Branch protection & CI — planned (Phase 2)
-
-When GitHub Actions CI lands (ROADMAP M2.2 / EP-009), enable on `main`:
-- require a PR before merging,
-- require the `bats` test suite (and schema conformance) to pass,
-- (optionally) require one review.
-
-Not enabled yet because there is no CI to gate on and the project is single-maintainer + AI agents.
+CI (GitHub Actions) runs go vet/test/build + bats + web tests on every push & PR — see
+*Branch protection (maintainer)* below for the gate.
 
 ## Two different "feature branches" — don't confuse them
 
@@ -63,3 +57,23 @@ bats tests/        # full suite — must be green before any PR merges
 New behaviour requires tests (TDD). Schema/protocol changes must keep `tests/schemas.bats` and
 `tests/protocol_v1.bats` green and, if they change the contract, bump `protocol_version` per the
 compatibility rules in `docs/specs/pact-protocol.md`.
+
+## Branch protection (maintainer)
+
+`main` requires the CI check to pass and a PR, with admin bypass enabled. To (re)apply
+(run after the `test` check has reported on `main` at least once):
+
+```bash
+gh api -X PUT repos/agentjoey/pactify/branches/main/protection \
+  --input - <<'JSON'
+{
+  "required_status_checks": { "strict": true, "checks": [ { "context": "test" } ] },
+  "enforce_admins": false,
+  "required_pull_request_reviews": { "required_approving_review_count": 0 },
+  "restrictions": null
+}
+JSON
+```
+
+`enforce_admins: false` lets maintainers direct-push trivial docs/chore commits,
+matching the *Maintainer exception* above.

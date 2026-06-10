@@ -12,6 +12,8 @@ import (
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{Use: "pactify", Short: "pact protocol CLI", SilenceUsage: true, SilenceErrors: true}
+	root.Version = versionString(version, commit, date)
+	root.SetVersionTemplate("{{.Version}}\n")
 
 	var project string
 	var seats []string
@@ -119,6 +121,6 @@ func newRootCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error { return pact.Validate() }}
 
 	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, statusCmd, logCmd, validateCmd,
-		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd())
+		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd())
 	return root
 }

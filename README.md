@@ -7,8 +7,54 @@ Any agent that can read files and run git — Claude, opencode, Gemini, Cursor, 
 no external dependency. The repo is the single source of truth.
 
 > Status: **early.** Protocol **v1 is frozen** (see [`docs/specs/pact-protocol.md`](docs/specs/pact-protocol.md)).
-> A bash reference implementation drives the protocol today; a Go CLI (`pactify`) is next.
+> A bash reference implementation and the `pactify` Go CLI both drive the protocol today.
 > Site: [pactify.dev](https://pactify.dev) · Part of the **Pact-Base** open core (see [ROADMAP](docs/ROADMAP.md)).
+
+## Install
+
+**curl | sh** (macOS / Linux, amd64 / arm64):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+```
+
+**go install:**
+
+```bash
+go install github.com/agentjoey/pactify/cmd/pactify@latest
+```
+
+Then get started:
+
+```bash
+pactify setup    # guided setup in your repo
+```
+
+Verify your install anytime with `pactify doctor`.
+
+## Quickstart
+
+In your repo, run:
+
+```bash
+pactify setup
+```
+
+`setup` scaffolds `.pact/`, wires your agent (opencode / Claude / Gemini / Codex), and sets
+your seat. Then launch your agent — it joins via the pact MCP tools. Run `pactify doctor`
+anytime to verify install + wiring.
+
+## Claude Code (one-click)
+
+Inside Claude Code:
+
+```
+/plugin marketplace add agentjoey/pactify
+/plugin install pact@pactify
+```
+
+This adds the `pact` skill and MCP server. If the `pactify` binary isn't installed yet,
+the plugin reminds you on session start — run the curl|sh installer above, then `pactify setup`.
 
 ## The idea in 30 seconds
 
@@ -29,7 +75,7 @@ source .pact/bin/pact.sh
 pact_help          # the verb reference + the two rules
 ```
 
-The verbs (`pact_<verb>` in bash today, `pactify <verb>` in the coming Go CLI) are one contract:
+The verbs (`pact_<verb>` in bash today, `pactify <verb>` in the Go CLI) are one contract:
 `init · join · assign · checkpoint · accept · changes · merge · status · log · validate`.
 
 ## Docs

@@ -113,7 +113,10 @@ func TestFullLifecycleViaMCP(t *testing.T) {
 	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/T1.md"})
 
 	t.Setenv("PACT_AGENT_ID", "opencode")
-	callOK(t, cs, "join", map[string]any{"seat": "opencode", "roles": "worker"})
+	// join takes no seat arg: the seat is always the session's PACT_AGENT_ID
+	if got := callOK(t, cs, "join", map[string]any{"roles": "worker"}); !strings.Contains(got, "joined opencode") {
+		t.Fatalf("join did not use PACT_AGENT_ID as the seat: %q", got)
+	}
 	os.WriteFile("impl.txt", []byte("code"), 0o644)
 	callOK(t, cs, "checkpoint", map[string]any{"task": "T1", "evidence": "tests green"})
 

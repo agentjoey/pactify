@@ -5,13 +5,15 @@ import (
 	"fmt"
 
 	"github.com/agentjoey/pactify/internal/pact"
+	"github.com/agentjoey/pactify/internal/paths"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type empty struct{}
 
+// joinIn has no seat field: the seat is always the session's PACT_AGENT_ID,
+// so a client cannot join as one seat while the log records another.
 type joinIn struct {
-	Seat  string `json:"seat" jsonschema:"the seat id to join as"`
 	Roles string `json:"roles,omitempty" jsonschema:"comma-separated roles"`
 }
 type assignIn struct {
@@ -52,12 +54,13 @@ func registerTools(s *sdk.Server) {
 			return textResult(text), nil, nil
 		})
 
-	sdk.AddTool(s, &sdk.Tool{Name: "join", Description: "Worker cold-start: register the seat and check out its feature branch"},
+	sdk.AddTool(s, &sdk.Tool{Name: "join", Description: "Worker cold-start: register this session's seat (PACT_AGENT_ID) and check out its feature branch"},
 		func(_ context.Context, _ *sdk.CallToolRequest, in joinIn) (*sdk.CallToolResult, any, error) {
-			if err := pact.Join(in.Seat, in.Roles); err != nil {
+			seat := paths.AgentID()
+			if err := pact.Join(seat, in.Roles); err != nil {
 				return nil, nil, err
 			}
-			return textResult(fmt.Sprintf("joined %s", in.Seat)), nil, nil
+			return textResult(fmt.Sprintf("joined %s", seat)), nil, nil
 		})
 
 	sdk.AddTool(s, &sdk.Tool{Name: "assign", Description: "Assign a task (owner must differ from reviewer; task ids unique)"},

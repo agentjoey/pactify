@@ -81,3 +81,62 @@ func TestStatusTool(t *testing.T) {
 		t.Fatalf("status text: %q", toolText(res))
 	}
 }
+
+func callOK(t *testing.T, cs *sdk.ClientSession, name string, args map[string]any) string {
+	t.Helper()
+	res, err := cs.CallTool(context.Background(), &sdk.CallToolParams{Name: name, Arguments: args})
+	if err != nil {
+		t.Fatalf("%s transport error: %v", name, err)
+	}
+	if res.IsError {
+		t.Fatalf("%s tool error: %s", name, toolText(res))
+	}
+	return toolText(res)
+}
+
+func callErr(t *testing.T, cs *sdk.ClientSession, name string, args map[string]any) string {
+	t.Helper()
+	res, err := cs.CallTool(context.Background(), &sdk.CallToolParams{Name: name, Arguments: args})
+	if err != nil {
+		t.Fatalf("%s transport error: %v", name, err)
+	}
+	if !res.IsError {
+		t.Fatalf("%s should have errored, got: %s", name, toolText(res))
+	}
+	return toolText(res)
+}
+
+func TestFullLifecycleViaMCP(t *testing.T) {
+	newRepo(t)
+	cs := connect(t)
+	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/T1.md"})
+
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	callOK(t, cs, "join", map[string]any{"seat": "opencode", "roles": "worker"})
+	os.WriteFile("impl.txt", []byte("code"), 0o644)
+	callOK(t, cs, "checkpoint", map[string]any{"task": "T1", "evidence": "tests green"})
+
+	callErr(t, cs, "accept", map[string]any{"task": "T1"})
+
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	callOK(t, cs, "accept", map[string]any{"task": "T1"})
+	callOK(t, cs, "merge", map[string]any{"feature": "F"})
+	if !strings.Contains(callOK(t, cs, "status", nil), "status: shipped") {
+		t.Fatal("feature not shipped")
+	}
+	callOK(t, cs, "validate", nil)
+}
+
+func TestToolsFailClosedWithoutAgentID(t *testing.T) {
+	newRepo(t)
+	cs := connect(t)
+	t.Setenv("PACT_AGENT_ID", "")
+	callErr(t, cs, "assign", map[string]any{"task": "T9", "feature": "F", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
+}
+
+func TestMergeRule2ViaMCP(t *testing.T) {
+	newRepo(t)
+	cs := connect(t)
+	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
+	callErr(t, cs, "merge", map[string]any{"feature": "F"})
+}

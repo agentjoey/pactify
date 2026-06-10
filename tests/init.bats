@@ -74,3 +74,25 @@ run_init() {
   grep -q '"pact"' opencode.json
   grep -q 'seat `opencode`' AGENTS.md
 }
+
+@test "init rejects a kinded seat whose entry mismatches the kind default" {
+  cd "$BATS_TEST_TMPDIR"; rm -rf w2 && mkdir w2 && cd w2
+  git init -q; git config user.email t@t.t; git config user.name t
+  echo x > base.txt; git add -A; git commit -q -m base
+  export PACT_AGENT_ID=opencode
+  run "$BIN" init --project p --seat "opencode:worker:DOCS.md:opencode"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"expects entry"* ]]
+  [ ! -f DOCS.md ]
+  [ ! -f opencode.json ]
+}
+
+@test "init rejects a desktop kind seat (use agent add instead)" {
+  cd "$BATS_TEST_TMPDIR"; rm -rf w3 && mkdir w3 && cd w3
+  git init -q; git config user.email t@t.t; git config user.name t
+  echo x > base.txt; git add -A; git commit -q -m base
+  export PACT_AGENT_ID=x
+  run "$BIN" init --project p --seat "x:worker:SOMETHING.md:claude-desktop"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"agent add"* ]]
+}

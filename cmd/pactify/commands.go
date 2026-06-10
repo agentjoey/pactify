@@ -17,6 +17,27 @@ func newRootCmd() *cobra.Command {
 	var seats []string
 	initCmd := &cobra.Command{Use: "init", Short: "scaffold .pact/ and bake entry files",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			// Parse + validate all seats up front so init fails closed (before any writes).
+			parsed := make([]pact.Seat, 0, len(seats))
+			for _, raw := range seats {
+				s, err := pact.ParseSeat(raw)
+				if err != nil {
+					return err
+				}
+				if s.Kind != "" && s.Kind != "shell" {
+					ad, ok := agent.Get(s.Kind)
+					if !ok {
+						return fmt.Errorf("unknown agent kind %q (supported: %v)", s.Kind, agent.Kinds())
+					}
+					if ad.DefaultEntry() == "" {
+						return fmt.Errorf("kind %q has no project entry file; wire it with `pactify agent add %s` instead of init --seat", s.Kind, s.Kind)
+					}
+					if s.Entry != ad.DefaultEntry() {
+						return fmt.Errorf("seat %q: kind %q expects entry %q, got %q", s.ID, s.Kind, ad.DefaultEntry(), s.Entry)
+					}
+				}
+				parsed = append(parsed, s)
+			}
 			if err := pact.Init(project, seats); err != nil {
 				return err
 			}
@@ -24,11 +45,7 @@ func newRootCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			for _, raw := range seats {
-				s, err := pact.ParseSeat(raw)
-				if err != nil {
-					return err
-				}
+			for _, s := range parsed {
 				if s.Kind == "" || s.Kind == "shell" {
 					continue
 				}

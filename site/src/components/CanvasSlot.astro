@@ -34,6 +34,11 @@ const edges = [
   .canvas .ph { position: absolute; top: 12px; right: 14px; font-size: 8.5px; letter-spacing: 1px; color: var(--dimmer); border: 1px solid var(--line2); border-radius: 99px; padding: 2px 9px; text-transform: uppercase; }
   .cnodes { position: relative; height: 170px; }
   .cn { position: absolute; border-radius: 10px; border: 1.5px solid; background: #101820; padding: 8px 12px; font-size: 10px; }
+  /* Node breathing — gated so reduced-motion users get static nodes. */
+  @media (prefers-reduced-motion: no-preference) {
+    .cn { animation: cnPulse 3s ease infinite; }
+    @keyframes cnPulse { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 18px -4px currentColor; } }
+  }
   .cn h3 { margin: 0; font-size: 10.5px; font-weight: 600; }
   .cn p { margin: 1px 0 0; color: var(--dimmer); font-size: 9px; }
   .cedge { position: absolute; height: 1.5px; background: linear-gradient(90deg, #3d4754, var(--line2)); transform-origin: left center; }

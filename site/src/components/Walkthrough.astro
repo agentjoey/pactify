@@ -1,29 +1,29 @@
 ---
 const steps = [
   ['Product assigns', 'spec + acceptance written to .pact/tasks/, owner + reviewer set', 'var(--role-product)', true],
-  ['Dev joins & builds', 'agent reads STATE, checks out the feature branch, implements', null, false],
-  ['Checkpoint with evidence', 'tests output written to the log — not a claim, a record', null, false],
-  ['Review → accept → merge', 'rules §1/§2 enforced by the engine, not by prompts', null, false],
+  ['Dev joins & builds', 'agent reads STATE, checks out the feature branch, implements', 'var(--role-dev)', false],
+  ['Checkpoint with evidence', 'tests output written to the log — not a claim, a record', 'var(--role-dev)', false],
+  ['Review → accept → merge', 'rules §1/§2 enforced by the engine, not by prompts', 'var(--role-design)', false],
 ];
 ---
 <section class="sec">
   <div class="sec-label">How it works</div>
   <h2 class="sec-h2">One append-only log. Four moves. Shipped.</h2>
-  <div class="walk">
+  <div class="walk" id="walk">
     <div class="steps">
       {steps.map(([title, body, color, on], i) => (
-        <div class={on ? 'step on' : 'step'} style={color ? `color:${color}` : undefined}>
+        <div class={on ? 'step on' : 'step'} data-step={i + 1} style={color ? `color:${color}` : undefined}>
           <span class="n">{i + 1}</span>
           <div><h3>{title}</h3><p>{body}</p></div>
         </div>
       ))}
     </div>
     <div class="ledger">
-      <div class="row hl" style="--rc:var(--role-product)">{`{"event":"assign","task":"T1","owner":"dev-a","reviewer":"product"}`}</div>
-      <div class="row">{`{"event":"join","seat":"dev-a","branch":"feat/t1"}`}</div>
-      <div class="row">{`{"event":"checkpoint","task":"T1","evidence":"`}<span class="k">42 tests passed</span>{`"}`}</div>
-      <div class="row">{`{"event":"accept","task":"T1","by":"product"}`}</div>
-      <div class="row">{`{"event":"merge","feature":"F1"}`}</div>
+      <div class="row hl" data-row="1" style="--rc:var(--role-product)">{`{"event":"assign","task":"T1","owner":"dev-a","reviewer":"product"}`}</div>
+      <div class="row" data-row="2">{`{"event":"join","seat":"dev-a","branch":"feat/t1"}`}</div>
+      <div class="row" data-row="3">{`{"event":"checkpoint","task":"T1","evidence":"`}<span class="k">42 tests passed</span>{`"}`}</div>
+      <div class="row" data-row="4">{`{"event":"accept","task":"T1","by":"product"}`}</div>
+      <div class="row" data-row="5">{`{"event":"merge","feature":"F1"}`}</div>
       <div class="row dimmest">— log.jsonl · the source of truth, in your repo</div>
     </div>
   </div>
@@ -44,3 +44,10 @@ const steps = [
   .ledger .k { color: var(--dim); }
   .ledger .dimmest { color: #3d4754; }
 </style>
+
+<script>
+  import { initWalkthrough } from '../scripts/walkthrough';
+
+  const walk = document.getElementById('walk');
+  if (walk instanceof HTMLElement) initWalkthrough(walk);
+</script>

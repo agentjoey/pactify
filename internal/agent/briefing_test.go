@@ -91,3 +91,22 @@ func TestWireTOMLKindDoesNotWriteConfig(t *testing.T) {
 		t.Fatalf("entry file should still be baked for codex-cli: %v", err)
 	}
 }
+
+func TestRenderDocCoversEveryKind(t *testing.T) {
+	doc := RenderDoc()
+	for _, k := range Kinds() {
+		if !strings.Contains(doc, "## "+k) {
+			t.Fatalf("doc missing section for kind %q", k)
+		}
+	}
+}
+
+func TestDocFileInSync(t *testing.T) {
+	b, err := os.ReadFile("../../docs/agent-onboarding.md")
+	if err != nil {
+		t.Fatalf("docs/agent-onboarding.md missing — run `pactify agent docs`: %v", err)
+	}
+	if string(b) != RenderDoc() {
+		t.Fatal("docs/agent-onboarding.md is stale — regenerate with `pactify agent docs`")
+	}
+}

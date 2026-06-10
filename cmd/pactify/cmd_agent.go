@@ -56,6 +56,10 @@ func newAgentCmd() *cobra.Command {
 	add.Flags().StringVar(&project, "project", "", "repo abs path for desktop apps (default: cwd)")
 	add.Flags().BoolVar(&printOnly, "print", false, "print config + entry block, write nothing")
 
-	a.AddCommand(add)
+	docs := &cobra.Command{Use: "docs", Short: "regenerate docs/agent-onboarding.md",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return os.WriteFile("docs/agent-onboarding.md", []byte(agent.RenderDoc()), 0o644)
+		}}
+	a.AddCommand(add, docs)
 	return a
 }

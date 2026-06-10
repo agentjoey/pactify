@@ -140,3 +140,22 @@ func TestMergeRule2ViaMCP(t *testing.T) {
 	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
 	callErr(t, cs, "merge", map[string]any{"feature": "F"})
 }
+
+func TestResources(t *testing.T) {
+	newRepo(t)
+	cs := connect(t)
+	st, err := cs.ReadResource(context.Background(), &sdk.ReadResourceParams{URI: "pact://state"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Contents) != 1 || !strings.Contains(st.Contents[0].Text, "project: p") {
+		t.Fatalf("state resource: %+v", st.Contents)
+	}
+	lg, err := cs.ReadResource(context.Background(), &sdk.ReadResourceParams{URI: "pact://log"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lg.Contents) != 1 || !strings.Contains(lg.Contents[0].Text, `"event_type":"init"`) {
+		t.Fatalf("log resource: %+v", lg.Contents)
+	}
+}

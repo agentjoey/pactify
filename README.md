@@ -32,6 +32,18 @@ pactify setup    # guided setup in your repo
 
 Verify your install anytime with `pactify doctor`.
 
+## Quickstart
+
+In your repo, run:
+
+```bash
+pactify setup
+```
+
+`setup` scaffolds `.pact/`, wires your agent (opencode / Claude / Gemini / Codex), and sets
+your seat. Then launch your agent — it joins via the pact MCP tools. Run `pactify doctor`
+anytime to verify install + wiring.
+
 ## The idea in 30 seconds
 
 - **`.pact/log.jsonl`** is an append-only event log — the authoritative source of truth and the

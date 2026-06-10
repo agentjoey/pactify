@@ -18,3 +18,19 @@ index.includes('self-accept') && index.includes('every task is accepted') ? ok('
 // 3. docs pages render the canonical titles
 read('../dist/protocol/index.html').includes('Pact Protocol v1') ? ok('/protocol renders the spec') : fail('/protocol missing spec title');
 read('../dist/onboarding/index.html').includes('Agent onboarding') ? ok('/onboarding renders the doc') : fail('/onboarding missing doc title');
+
+// 4. v2 landing structure
+const personas = ['product agent', 'design agent', 'dev agent A'];
+personas.every((p) => index.includes(p)) ? ok('landing has persona seats') : fail('landing missing persona seat names');
+const anchors = (index.match(/onboarding#[a-z-]+/g) || []).length;
+anchors >= 12 ? ok(`marquee onboarding anchors (${anchors})`) : fail(`marquee anchors missing (found ${anchors}, want >=12)`);
+index.includes('What we didn&#39;t build') || index.includes("What we didn't build") ? ok('landing has philosophy section') : fail('landing missing philosophy section');
+index.includes('in development') ? ok('ladder has status badges') : fail('ladder missing in-development badge');
+index.includes('href="#"') ? fail('placeholder links remain on the landing') : ok('no placeholder links');
+
+// 5. role tokens shipped (Astro inlines global.css into index.html; scoped styles go to _astro/*.css)
+import { readdirSync } from 'node:fs';
+const cssDir = new URL('../dist/_astro/', import.meta.url);
+const cssFiles = readdirSync(cssDir).filter((f) => f.endsWith('.css'));
+const css = cssFiles.map((f) => readFileSync(new URL(f, cssDir), 'utf8')).join('') + index;
+css.includes('--role-product:') ? ok('role tokens shipped') : fail('role token definitions missing from shipped CSS');

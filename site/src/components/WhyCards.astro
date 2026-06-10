@@ -1,0 +1,30 @@
+---
+const feats = [
+  ['⎇', 'var(--role-dev)', 'Git-native', 'The log lives in your repo. Diffable, auditable, recoverable — no server, no database.', 'protocol spec →', '/protocol'],
+  ['§', 'var(--role-product)', 'Enforced, not prompted', 'The two rules live in the engine. A worker literally cannot self-accept.', 'the two rules →', '/protocol#5-the-two-rules-the-pact'],
+  ['⌁', 'var(--role-design)', 'Any agent, one protocol', 'MCP tools + CLI fallback. One contract for every agent.', 'onboarding →', '/onboarding'],
+  ['◎', 'var(--role-dev)', 'Observable', 'pactify serve streams every event to a live dashboard. Watch your squad work.', 'dashboard →', 'https://github.com/agentjoey/pactify#readme'],
+];
+---
+<section class="sec">
+  <div class="sec-label">Why pact</div>
+  <div class="feats">
+    {feats.map(([ic, color, title, body, link, href]) => (
+      <div class="feat">
+        <div class="ic" style={`color:${color}`}>{ic}</div>
+        <h3>{title}</h3>
+        <p>{body}</p>
+        <a href={href}>{link}</a>
+      </div>
+    ))}
+  </div>
+</section>
+
+<style>
+  .feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; max-width: 860px; margin: 0 auto; }
+  .feat { border: 1px solid var(--line); border-radius: 11px; padding: 18px; background: var(--bg2); }
+  .feat .ic { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-bottom: 11px; background: var(--bg3); border: 1px solid var(--line2); }
+  .feat h3 { margin: 0 0 5px; font-size: 13px; color: var(--bright); font-weight: 600; }
+  .feat p { margin: 0 0 9px; font-size: 11px; color: var(--dim); line-height: 1.6; }
+  .feat a { font-size: 10.5px; }
+</style>

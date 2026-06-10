@@ -1,0 +1,11 @@
+{
+  "name": "pactify",
+  "owner": { "name": "agentjoey" },
+  "plugins": [
+    {
+      "name": "pact",
+      "source": "./plugins/pact",
+      "description": "Multi-agent coordination via the pact protocol (skill + MCP server)."
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -218,4 +219,201 @@ func TestAssignUnknownProject(t *testing.T) {
 		t.Fatalf("want 404 got %d", resp.StatusCode)
 	}
 	resp.Body.Close()
+}
+
+// assignViaAPI assigns t1 (owner opencode, reviewer claude-opus) over HTTP and
+// fails the test unless it returns 200. Used by the verb happy-path tests.
+func assignViaAPI(t *testing.T, ts *httptest.Server) {
+	t.Helper()
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/assign", map[string]any{
+		"task": "t1", "feature": "F", "branch": "feat/x",
+		"owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md", "deps": []string{},
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("assign: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
+	}
+	resp.Body.Close()
+}
+
+// TestVerbsHappyPath walks the full author flow over HTTP: assign (API) →
+// worker join+checkpoint (engine, simulating the worker) → accept (API) →
+// merge (API) → STATE reports the feature shipped.
+func TestVerbsHappyPath(t *testing.T) {
+	dir := newAuthorRepo(t)
+	ts := authorServer(t, dir, "claude-opus") // acting seat = reviewer
+	assignViaAPI(t, ts)
+
+	// Simulate the worker joining its feature branch and checkpointing.
+	worker := pact.At(dir).As("opencode")
+	if err := worker.Join("opencode", "worker"); err != nil {
+		t.Fatalf("worker join: %v", err)
+	}
+	os.WriteFile(filepath.Join(dir, "work.txt"), []byte("done"), 0o644)
+	if err := worker.Checkpoint("t1", "evidence: built"); err != nil {
+		t.Fatalf("worker checkpoint: %v", err)
+	}
+
+	// reviewer accepts over the API.
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/accept", map[string]any{"task": "t1"})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("accept: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
+	}
+	resp.Body.Close()
+
+	// merge over the API.
+	resp = postJSON(t, ts.URL+"/api/projects/pactify/verbs/merge", map[string]any{"feature": "F"})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("merge: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
+	}
+	resp.Body.Close()
+
+	state, err := pact.At(dir).Status()
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if !strings.Contains(state, "shipped") {
+		t.Fatalf("STATE missing shipped:\n%s", state)
+	}
+}
+
+// TestAcceptSelfReview asserts the reviewer-only rule surfaces verbatim as 422:
+// here the acting seat is the task OWNER (opencode), so accept must be refused.
+func TestAcceptSelfReview(t *testing.T) {
+	dir := newAuthorRepo(t)
+	// Assign first as the orchestrator (reviewer), then re-seat the server as
+	// the owner so the accept call is a self-review.
+	assignTS := authorServer(t, dir, "claude-opus")
+	assignViaAPI(t, assignTS)
+	worker := pact.At(dir).As("opencode")
+	if err := worker.Join("opencode", "worker"); err != nil {
+		t.Fatalf("worker join: %v", err)
+	}
+	os.WriteFile(filepath.Join(dir, "work.txt"), []byte("done"), 0o644)
+	if err := worker.Checkpoint("t1", "evidence"); err != nil {
+		t.Fatalf("worker checkpoint: %v", err)
+	}
+
+	ts := authorServer(t, dir, "opencode") // acting seat = OWNER, not reviewer
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/accept", map[string]any{"task": "t1"})
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("want 422 got %d", resp.StatusCode)
+	}
+	if msg := errBody(t, resp); !strings.Contains(msg, "only the reviewer") {
+		t.Fatalf("error %q must carry the reviewer-only engine message", msg)
+	}
+}
+
+// TestMergeBeforeAccepted asserts merge before all tasks are accepted → 422
+// with the engine's "not accepted" message verbatim.
+func TestMergeBeforeAccepted(t *testing.T) {
+	dir := newAuthorRepo(t)
+	ts := authorServer(t, dir, "claude-opus")
+	assignViaAPI(t, ts)
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/merge", map[string]any{"feature": "F"})
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("want 422 got %d", resp.StatusCode)
+	}
+	if msg := errBody(t, resp); !strings.Contains(msg, "not accepted") {
+		t.Fatalf("error %q must carry the merge engine message", msg)
+	}
+}
+
+// TestChanges covers the changes_requested verb: empty reason → 400 (API
+// guard, since the engine does not enforce it); a non-empty reason on an
+// awaiting_review task → 200.
+func TestChanges(t *testing.T) {
+	dir := newAuthorRepo(t)
+	ts := authorServer(t, dir, "claude-opus")
+	assignViaAPI(t, ts)
+	worker := pact.At(dir).As("opencode")
+	if err := worker.Join("opencode", "worker"); err != nil {
+		t.Fatalf("worker join: %v", err)
+	}
+	os.WriteFile(filepath.Join(dir, "work.txt"), []byte("done"), 0o644)
+	if err := worker.Checkpoint("t1", "evidence"); err != nil {
+		t.Fatalf("worker checkpoint: %v", err)
+	}
+
+	// empty reason → 400 (engine does not enforce; API does).
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/changes", map[string]any{"task": "t1", "reason": ""})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("empty reason: want 400 got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// valid reason → 200.
+	resp = postJSON(t, ts.URL+"/api/projects/pactify/verbs/changes", map[string]any{"task": "t1", "reason": "please fix the thing"})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("changes: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
+	}
+	resp.Body.Close()
+}
+
+// TestLayout covers the squad layout sidecar: GET absent → {}; PUT valid JSON
+// → 200, then GET is byte-identical; PUT invalid JSON → 400; PUT >1MiB → 4xx.
+func TestLayout(t *testing.T) {
+	dir := newAuthorRepo(t)
+	ts := authorServer(t, dir, "claude-opus")
+	url := ts.URL + "/api/projects/pactify/squad/layout"
+
+	// GET absent → {}.
+	resp, err := http.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || string(b) != "{}" {
+		t.Fatalf("GET absent = %d %q, want 200 {}", resp.StatusCode, b)
+	}
+
+	// PUT valid JSON → 200.
+	payload := []byte(`{"nodes":[{"id":"n1","x":10,"y":20}],"v":1}`)
+	resp = putBytes(t, url, payload)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("PUT valid: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
+	}
+	resp.Body.Close()
+
+	// GET returns byte-identical body.
+	resp, err = http.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !bytes.Equal(got, payload) {
+		t.Fatalf("GET after PUT = %q, want %q", got, payload)
+	}
+
+	// PUT invalid JSON → 400.
+	resp = putBytes(t, url, []byte(`{not json`))
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("PUT invalid: want 400 got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// PUT >1MiB → 4xx.
+	big := append([]byte(`{"x":"`), bytes.Repeat([]byte("a"), 1<<20+16)...)
+	big = append(big, []byte(`"}`)...)
+	resp = putBytes(t, url, big)
+	if resp.StatusCode < 400 || resp.StatusCode >= 500 {
+		t.Fatalf("PUT >1MiB: want 4xx got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+// putBytes issues a PUT with a raw body (used by the layout test).
+func putBytes(t *testing.T, url string, body []byte) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("new PUT %s: %v", url, err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PUT %s: %v", url, err)
+	}
+	return resp
 }

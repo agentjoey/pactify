@@ -11,6 +11,11 @@ type Seat struct {
 type Task struct {
 	ID, Owner, Status, Reviewer, Spec string
 	Evidence                          *string
+	// Deps holds task dependencies (additive v1; see protocol addendum). It is
+	// non-nil ONLY when the assign event carried a non-empty deps array, so the
+	// renderer can omit the `deps:` line entirely for deps-free tasks and keep
+	// STATE.yml byte-identical to the bash reference.
+	Deps []string
 }
 
 type Feature struct {
@@ -89,6 +94,12 @@ func Project(evs []event.Event) State {
 				tIdx[e.Feature] = map[string]int{}
 			}
 			tk := Task{ID: e.TaskID, Owner: str(e.Payload["owner"]), Reviewer: str(e.Payload["reviewer"]), Spec: str(e.Payload["spec"]), Status: "assigned"}
+			if raw, ok := e.Payload["deps"].([]any); ok && len(raw) > 0 {
+				tk.Deps = make([]string, 0, len(raw))
+				for _, d := range raw {
+					tk.Deps = append(tk.Deps, str(d))
+				}
+			}
 			if ti, ok := tIdx[e.Feature][e.TaskID]; ok {
 				st.Features[fi].Tasks[ti] = tk
 			} else {

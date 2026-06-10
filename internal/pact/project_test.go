@@ -43,7 +43,7 @@ func TestProjectLifecycleFromForeignCwd(t *testing.T) {
 	if err := p.Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md"); err != nil {
+	if err := p.Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 

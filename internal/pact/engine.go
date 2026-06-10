@@ -108,6 +108,16 @@ func (p *Project) Join(seatID, roles string) error {
 		return err
 	}
 	rolesArr := splitCSV(roles)
+	// Join gate: a seat may not join while any task it owns is blocked by a
+	// dependency that has not reached `accepted`. Evaluate against pre-join
+	// state so the gate cannot be bypassed by the join itself.
+	preState, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := checkJoinGate(preState, seatID); err != nil {
+		return err
+	}
 	if err := p.appendAndRender(event.Event{
 		AgentID:   id,
 		Role:      event.RoleFor("join"),
@@ -142,7 +152,11 @@ func splitCSV(s string) []any {
 }
 
 // Assign records a task assignment (rule: owner != reviewer; task ids unique).
-func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string) error {
+// deps is an optional set of task ids in the SAME feature that must reach
+// `accepted` before the owner may join (see Join gate). deps is validated at
+// assign time (existence, same-feature, no self-dep, acyclic) and is recorded
+// in the payload ONLY when non-empty so deps-free logs stay byte-identical.
+func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -154,8 +168,19 @@ func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string) 
 	if err := checkAssign(st, taskID, owner, reviewer); err != nil {
 		return err
 	}
+	if err := checkDeps(st, taskID, feature, deps); err != nil {
+		return err
+	}
 	if spec == "" {
 		spec = paths.TasksIn(p.dir) + "/" + taskID + ".md"
+	}
+	payload := map[string]any{"owner": owner, "reviewer": reviewer, "branch": branch, "spec": spec}
+	if len(deps) > 0 {
+		ds := make([]any, len(deps))
+		for i, d := range deps {
+			ds[i] = d
+		}
+		payload["deps"] = ds
 	}
 	return p.appendAndRender(event.Event{
 		AgentID:   id,
@@ -163,7 +188,7 @@ func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string) 
 		EventType: "assign",
 		TaskID:    taskID,
 		Feature:   feature,
-		Payload:   map[string]any{"owner": owner, "reviewer": reviewer, "branch": branch, "spec": spec},
+		Payload:   payload,
 	})
 }
 
@@ -329,8 +354,8 @@ func Init(project string, seatSpecs []string) error { return At(".").Init(projec
 func Join(seatID, roles string) error { return At(".").Join(seatID, roles) }
 
 // Assign records a task assignment in the current working directory's repo.
-func Assign(taskID, feature, branch, owner, reviewer, spec string) error {
-	return At(".").Assign(taskID, feature, branch, owner, reviewer, spec)
+func Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
+	return At(".").Assign(taskID, feature, branch, owner, reviewer, spec, deps)
 }
 
 // Merge integrates a feature branch in the current working directory's repo.

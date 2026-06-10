@@ -75,6 +75,38 @@ PY
   [ "$status" -eq 0 ]
 }
 
+@test "event.schema.json accepts an assign with optional payload.deps (string array)" {
+  setup_pact_repo
+  SCHEMA="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/schemas/event.schema.json"
+  run python3 - "$SCHEMA" <<'PY'
+import json, sys, jsonschema
+schema = json.load(open(sys.argv[1]))
+good = {"event_id":"e1","ts":"2026-01-01T00:00:00Z","agent_id":"orch","role":"orchestrator",
+        "event_type":"assign","task_id":"T2","feature":"F",
+        "payload":{"owner":"w","reviewer":"rev","branch":"feat/x","spec":"s","deps":["T1"]}}
+jsonschema.validate(good, schema)
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "event.schema.json rejects an assign whose payload.deps is not an array" {
+  setup_pact_repo
+  SCHEMA="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/schemas/event.schema.json"
+  run python3 - "$SCHEMA" <<'PY'
+import json, sys, jsonschema
+schema = json.load(open(sys.argv[1]))
+bad = {"event_id":"e1","ts":"2026-01-01T00:00:00Z","agent_id":"orch","role":"orchestrator",
+       "event_type":"assign","task_id":"T2","feature":"F",
+       "payload":{"owner":"w","reviewer":"rev","branch":"feat/x","spec":"s","deps":"T1"}}
+try:
+    jsonschema.validate(bad, schema)
+    print("FAIL: deps as string accepted"); sys.exit(1)
+except jsonschema.ValidationError:
+    sys.exit(0)
+PY
+  [ "$status" -eq 0 ]
+}
+
 @test "event.schema.json rejects a checkpoint missing required payload.evidence" {
   setup_pact_repo
   SCHEMA="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/schemas/event.schema.json"

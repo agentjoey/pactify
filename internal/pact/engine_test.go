@@ -101,7 +101,7 @@ func TestAssignCreatesTask(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	if err := Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md"); err != nil {
+	if err := Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(".pact/STATE.yml")
@@ -114,7 +114,7 @@ func TestAssignRejectsOwnerEqualsReviewer(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	if err := Assign("T1", "F", "b", "opencode", "opencode", "s"); err == nil {
+	if err := Assign("T1", "F", "b", "opencode", "opencode", "s", nil); err == nil {
 		t.Fatal("owner==reviewer must be rejected")
 	}
 }
@@ -123,8 +123,8 @@ func TestAssignRejectsDuplicateTaskID(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("T1", "A", "b", "opencode", "claude-opus", "s")
-	if err := Assign("T1", "B", "b", "opencode", "claude-opus", "s"); err == nil {
+	Assign("T1", "A", "b", "opencode", "claude-opus", "s", nil)
+	if err := Assign("T1", "B", "b", "opencode", "claude-opus", "s", nil); err == nil {
 		t.Fatal("duplicate task id must be rejected")
 	}
 }
@@ -133,7 +133,7 @@ func toAssigned(t *testing.T) {
 	t.Helper()
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md")
+	Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
 	t.Setenv("PACT_AGENT_ID", "opencode")
 	Join("opencode", "worker")
 }
@@ -287,7 +287,7 @@ func TestValidatePassesOnConformantRepo(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("T1", "F", "b", "opencode", "claude-opus", "s")
+	Assign("T1", "F", "b", "opencode", "claude-opus", "s", nil)
 	if err := Validate(); err != nil {
 		t.Fatalf("validate should pass: %v", err)
 	}

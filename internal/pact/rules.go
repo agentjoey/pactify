@@ -44,6 +44,91 @@ func checkAssign(st projection.State, taskID, owner, reviewer string) error {
 	return nil
 }
 
+// checkDeps validates a new task's deps at assign time (additive v1):
+//   - no self-dependency,
+//   - every dep already exists in the SAME feature,
+//   - adding the new task's edges introduces no cycle (DFS over the feature's
+//     existing deps plus the new edge).
+func checkDeps(st projection.State, taskID, feature string, deps []string) error {
+	if len(deps) == 0 {
+		return nil
+	}
+	// Build the existing dep graph for this feature: task id -> its deps.
+	graph := map[string][]string{}
+	var feat *projection.Feature
+	for fi := range st.Features {
+		if st.Features[fi].ID == feature {
+			feat = &st.Features[fi]
+		}
+	}
+	if feat != nil {
+		for _, t := range feat.Tasks {
+			graph[t.ID] = t.Deps
+		}
+	}
+	for _, d := range deps {
+		if d == taskID {
+			// A self edge is the smallest cycle; report it as such so the
+			// cycle guard is the single source of truth for back-edges.
+			return fmt.Errorf("pactify assign: task %s introduces a dependency cycle (self-dep)", taskID)
+		}
+		tk, df := findTask(st, d)
+		if tk == nil {
+			return fmt.Errorf("pactify assign: unknown dep %s for task %s", d, taskID)
+		}
+		if df == nil || df.ID != feature {
+			return fmt.Errorf("pactify assign: dep %s must be in the same feature as %s (%s)", d, taskID, feature)
+		}
+	}
+	// Add the new node's edges and run a cycle check reachable from taskID.
+	graph[taskID] = deps
+	const (
+		white = 0
+		gray  = 1
+		black = 2
+	)
+	color := map[string]int{}
+	var dfs func(n string) bool
+	dfs = func(n string) bool {
+		color[n] = gray
+		for _, m := range graph[n] {
+			switch color[m] {
+			case gray:
+				return true // back-edge -> cycle
+			case white:
+				if dfs(m) {
+					return true
+				}
+			}
+		}
+		color[n] = black
+		return false
+	}
+	if dfs(taskID) {
+		return fmt.Errorf("pactify assign: task %s introduces a dependency cycle", taskID)
+	}
+	return nil
+}
+
+// checkJoinGate blocks a seat's join while any task it owns has a dep that has
+// not reached `accepted`. Task-level (not a third global rule).
+func checkJoinGate(st projection.State, seatID string) error {
+	for _, f := range st.Features {
+		for _, t := range f.Tasks {
+			if t.Owner != seatID || len(t.Deps) == 0 {
+				continue
+			}
+			for _, d := range t.Deps {
+				dep, _ := findTask(st, d)
+				if dep == nil || dep.Status != "accepted" {
+					return fmt.Errorf("pactify join: task %s blocked by unaccepted dep %s", t.ID, d)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*projection.Feature, error) {
 	if evidence == "" {
 		return nil, fmt.Errorf("pactify checkpoint: --evidence required")

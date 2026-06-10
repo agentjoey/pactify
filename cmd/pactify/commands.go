@@ -13,6 +13,7 @@ import (
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{Use: "pactify", Short: "pact protocol CLI", SilenceUsage: true, SilenceErrors: true}
 	root.Version = versionString(version, commit, date)
+	root.SetVersionTemplate("{{.Version}}\n")
 
 	var project string
 	var seats []string

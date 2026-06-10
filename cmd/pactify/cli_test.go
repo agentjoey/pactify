@@ -47,6 +47,12 @@ func TestCLIHelpAndFullFlow(t *testing.T) {
 	if out, err := run(nil, "help"); err != nil || !strings.Contains(out, "init") {
 		t.Fatalf("help: %v %s", err, out)
 	}
+	if out, err := run(nil, "version"); err != nil || !strings.Contains(out, "pactify dev") {
+		t.Fatalf("version: %v %s", err, out)
+	}
+	if out, err := run(nil, "--version"); err != nil || strings.TrimSpace(out) != versionString("dev", "none", "unknown") {
+		t.Fatalf("--version should print exactly the version line: %v %q", err, out)
+	}
 	orch := []string{"PACT_AGENT_ID=claude-opus"}
 	work := []string{"PACT_AGENT_ID=opencode"}
 	if out, err := run(orch, "init", "--project", "p", "--seat", "claude-opus:orchestrator,reviewer:CLAUDE.md", "--seat", "opencode:worker:AGENTS.md"); err != nil {

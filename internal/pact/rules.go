@@ -99,9 +99,12 @@ func checkReviewerVerdict(st projection.State, verb, caller, taskID string) (*pr
 	return f, nil
 }
 
-// ValidateLog runs the v1 conformance checks against the log + rendered STATE.
-func ValidateLog() error {
-	evs, err := event.ReadAll(paths.Log())
+// ValidateLog runs the v1 conformance checks against the cwd's log + STATE.
+func ValidateLog() error { return At(".").validateLog() }
+
+// validateLog runs the v1 conformance checks against the log + rendered STATE.
+func (p *Project) validateLog() error {
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
 	if err != nil {
 		return err
 	}
@@ -109,7 +112,7 @@ func ValidateLog() error {
 
 	// (a) STATE.yml must match a fresh render of the log. A missing/unreadable
 	// STATE.yml is itself drift (matches bash, whose diff fails when STATE is absent).
-	if b, err := os.ReadFile(paths.State()); err != nil || string(b) != projection.Render(st) {
+	if b, err := os.ReadFile(paths.StateIn(p.dir)); err != nil || string(b) != projection.Render(st) {
 		return fmt.Errorf("pactify validate: STATE.yml drift vs render(log)")
 	}
 	declared := map[string]bool{}

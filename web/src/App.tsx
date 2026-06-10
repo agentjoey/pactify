@@ -124,7 +124,7 @@ export default function App() {
       <Agents state={state} events={events} onPick={() => {}} />
       <div className="flex flex-1 overflow-hidden">
         {view === "canvas"
-          ? <Canvas project={current} state={state} author={author} staleTasks={staleTasks} />
+          ? <Canvas project={current} state={state} author={author} staleTasks={staleTasks} onSelectTask={setSelected} />
           : <Board state={state} selected={selected} onSelect={setSelected} />}
         <RightRail state={state} events={events} selected={selected} project={current} author={author} />
       </div>

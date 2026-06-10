@@ -140,6 +140,15 @@ func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*pro
 	if tk.Owner != caller {
 		return nil, fmt.Errorf("pactify checkpoint: %s is not the owner of %s (owner: %s)", caller, taskID, tk.Owner)
 	}
+	// Close the join-gate ordering hole: a seat that joined BEFORE a dep'd assign
+	// could otherwise checkpoint a still-blocked task. Re-apply the same dep gate
+	// the join uses, but for this single task.
+	for _, d := range tk.Deps {
+		dep, _ := findTask(st, d)
+		if dep == nil || dep.Status != "accepted" {
+			return nil, fmt.Errorf("pactify checkpoint: task %s blocked by unaccepted dep %s", taskID, d)
+		}
+	}
 	return f, nil
 }
 

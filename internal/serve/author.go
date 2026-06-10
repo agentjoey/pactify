@@ -95,6 +95,19 @@ func (s *Server) handleAuthorTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, fmt.Sprintf("task id %q is not a slug", req.ID))
 		return
 	}
+	// A committed task already owns this id — a draft must use a new id, or it
+	// would silently overwrite the spec of an assigned task. Drafts (ids not yet
+	// assigned to any feature) still re-POST fine.
+	if dto, err := ProjectState(dir); err == nil {
+		for _, f := range dto.Features {
+			for _, t := range f.Tasks {
+				if t.ID == req.ID {
+					writeErr(w, http.StatusConflict, fmt.Sprintf("task %s already exists; drafts must use a new id", req.ID))
+					return
+				}
+			}
+		}
+	}
 	tasksDir := paths.TasksIn(dir)
 	if err := os.MkdirAll(tasksDir, 0o755); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())

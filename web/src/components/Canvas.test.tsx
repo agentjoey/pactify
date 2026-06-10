@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State } from "../lib/types";
 
@@ -58,7 +58,22 @@ describe("Canvas", () => {
 
     // Dep edge: React Flow renders edges as DOM elements with a data-id.
     await waitFor(() => {
-      expect(container.querySelector('[data-id="dep:T1-T2"]')).not.toBeNull();
+      expect(container.querySelector('[data-id="dep:T1→T2"]')).not.toBeNull();
     });
+  });
+
+  it("clicking a task node reaches onSelectTask with the raw id", async () => {
+    const onSelectTask = vi.fn();
+    const { container } = render(
+      <Canvas project="demo" state={fixture} author={false} onSelectTask={onSelectTask} />,
+    );
+    // React Flow wraps each node in a [data-id] element; T1 is a task node.
+    const node = await waitFor(() => {
+      const el = container.querySelector('.react-flow__node[data-id="task:T1"]');
+      expect(el).not.toBeNull();
+      return el as Element;
+    });
+    fireEvent.click(node);
+    expect(onSelectTask).toHaveBeenCalledWith("T1");
   });
 });

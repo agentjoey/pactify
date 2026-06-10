@@ -139,6 +139,40 @@ func TestPostTask(t *testing.T) {
 	}
 }
 
+// TestPostTaskConflictWithCommittedTask asserts that re-POSTing a task id that
+// is already a committed (assigned) task returns 409 and does NOT overwrite the
+// existing spec file.
+func TestPostTaskConflictWithCommittedTask(t *testing.T) {
+	dir := newAuthorRepo(t)
+	ts := authorServer(t, dir, "claude-opus")
+	// Assign t1 so it becomes a committed task.
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/assign", map[string]any{
+		"task": "t1", "feature": "F", "branch": "feat/x",
+		"owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md", "deps": []string{},
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("assign: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
+	}
+	resp.Body.Close()
+
+	// Write sentinel content the conflicting POST must not clobber.
+	specPath := filepath.Join(dir, ".pact", "tasks", "t1.md")
+	os.MkdirAll(filepath.Dir(specPath), 0o755)
+	os.WriteFile(specPath, []byte("SENTINEL"), 0o644)
+
+	resp = postJSON(t, ts.URL+"/api/projects/pactify/tasks", map[string]any{"id": "t1", "spec_md": "OVERWRITE"})
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("want 409 got %d", resp.StatusCode)
+	}
+	if msg := errBody(t, resp); !strings.Contains(msg, "already exists") {
+		t.Fatalf("error %q must mention already exists", msg)
+	}
+	b, _ := os.ReadFile(specPath)
+	if string(b) != "SENTINEL" {
+		t.Fatalf("spec file overwritten: %q", b)
+	}
+}
+
 func TestPostTaskInvalidID(t *testing.T) {
 	dir := newAuthorRepo(t)
 	ts := authorServer(t, dir, "claude-opus")

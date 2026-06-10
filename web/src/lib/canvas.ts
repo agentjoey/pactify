@@ -123,10 +123,11 @@ export function deriveFlow(
           roleColor: roleColorVar(ownerRoles),
         },
       });
-      // Dep edge: source is the dependency, target is the dependent task.
+      // Dep edge: source is the dependency, target is the dependent task. The
+      // edge id uses an arrow separator so hyphenated slugs stay unambiguous.
       for (const from of deps) {
         edges.push({
-          id: `dep:${from}-${t.id}`,
+          id: `dep:${from}→${t.id}`,
           source: `task:${from}`,
           target: id,
           kind: "dep",
@@ -189,9 +190,12 @@ export function deriveFlow(
       data: { draft: true, specMd: d.specMd, deps: d.deps },
     });
     for (const from of d.deps) {
+      // A dep can point at a committed task OR another draft; prefix the source
+      // node id accordingly so draft→draft edges resolve to the right node.
+      const fromIsDraft = drafts.some((x) => x.id === from);
       edges.push({
-        id: `dep:${from}-${d.id}`,
-        source: `task:${from}`,
+        id: `dep:${from}→${d.id}`,
+        source: `${fromIsDraft ? "draft" : "task"}:${from}`,
         target: id,
         kind: "dep",
       });

@@ -414,6 +414,8 @@ A failed check aborts the assign; nothing is written to the log.
 
 This is the only behavioural change deps introduces. Workers pull work as before; the gate simply refuses a premature pull while an upstream task is still in flight. Once the upstream task reaches `accepted`, the same join succeeds.
 
+The gate is enforced at **join AND checkpoint**: a seat that joined before its dep'd task was assigned cannot bypass the gate by checkpointing — `checkpoint` re-applies the same per-task dep check and refuses a blocked task with `task <T> blocked by unaccepted dep <D>`.
+
 ### Bash reference is not extended
 
 The bash reference implementation (`pact.sh`) is **not** extended for `deps`. It has no deps concept, emits no `deps` payloads, and renders no `deps:` lines — which is exactly why a deps-free Go log stays byte-identical to a bash log (proven by the interop suite). Implementations that don't support deps remain fully v1-conformant; they simply never emit the field.

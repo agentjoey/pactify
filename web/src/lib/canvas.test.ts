@@ -98,7 +98,7 @@ describe("deriveFlow", () => {
   it("emits a dep edge with source=dependency, target=dependent", () => {
     const { edges } = deriveFlow(state, noLayout, noDrafts);
     expect(edges).toHaveLength(1);
-    expect(edges[0]).toEqual({ id: "dep:T1-T2", source: "task:T1", target: "task:T2", kind: "dep" });
+    expect(edges[0]).toEqual({ id: "dep:T1→T2", source: "task:T1", target: "task:T2", kind: "dep" });
   });
 
   it("layout.positions overrides the deterministic grid", () => {
@@ -120,7 +120,16 @@ describe("deriveFlow", () => {
     expect(d.data.draft).toBe(true);
     expect(d.data.specMd).toBe("# draft");
     expect(d.data.deps).toEqual(["T1"]);
-    expect(edges).toContainEqual({ id: "dep:T1-D1", source: "task:T1", target: "draft:D1", kind: "dep" });
+    expect(edges).toContainEqual({ id: "dep:T1→D1", source: "task:T1", target: "draft:D1", kind: "dep" });
+  });
+
+  it("a draft→draft dep edge sources from the draft node, not a task node", () => {
+    const drafts: Draft[] = [
+      { id: "A", specMd: "x", feature: "F1", deps: [] },
+      { id: "B", specMd: "y", feature: "F1", deps: ["A"] },
+    ];
+    const { edges } = deriveFlow(state, noLayout, drafts);
+    expect(edges).toContainEqual({ id: "dep:A→B", source: "draft:A", target: "draft:B", kind: "dep" });
   });
 
   it("empty state yields only seat nodes — none when there are no agents", () => {

@@ -172,7 +172,10 @@ func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string, 
 		return err
 	}
 	if spec == "" {
-		spec = paths.TasksIn(p.dir) + "/" + taskID + ".md"
+		// Repo-relative convention so the shared log never leaks a host-absolute
+		// path (p.dir may be absolute). The file itself is still written/read via
+		// dir-aware paths elsewhere.
+		spec = paths.Tasks() + "/" + taskID + ".md"
 	}
 	payload := map[string]any{"owner": owner, "reviewer": reviewer, "branch": branch, "spec": spec}
 	if len(deps) > 0 {

@@ -156,6 +156,7 @@ export function Canvas({
   state,
   author,
   staleTasks,
+  onSelectTask,
 }: {
   project: string;
   state: State;
@@ -163,6 +164,9 @@ export function Canvas({
   // Raw task ids that have sat in_progress past the stale threshold (App owns
   // the timestamp map). Rendered as an amber dot on the task node.
   staleTasks?: Set<string>;
+  // Clicking a committed task node selects it (drives the RightRail review
+  // flow). Receives the raw task id (no "task:" prefix).
+  onSelectTask?: (id: string) => void;
 }) {
   const [layout, setLayout] = useState<LayoutJSON>({});
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -308,7 +312,9 @@ export function Canvas({
   // layout position (the dispatch flow replaces the draft on success).
   const onNodeDragStop = useCallback(
     (_e: unknown, node: Node, allNodes: Node[]) => {
-      if (author && node.type === "draft") {
+      // Observe-only dashboards never persist layout drags.
+      if (!author) return;
+      if (node.type === "draft") {
         const dragBox = nodeBounds(node, allNodes);
         const seat = allNodes.find(
           (n) => n.type === "seat" && overlaps(dragBox, nodeBounds(n, allNodes)),
@@ -335,9 +341,15 @@ export function Canvas({
     [author, drafts, scheduleSave],
   );
 
-  // Click a draft node → reopen the editor prefilled for that draft.
+  // Click a node:
+  //   - a committed task → select it (drives the RightRail review flow);
+  //   - a draft (author only) → reopen the editor prefilled for that draft.
   const onNodeClick = useCallback(
     (_e: unknown, node: Node) => {
+      if (node.type === "task") {
+        onSelectTask?.(node.id.replace(/^task:/, ""));
+        return;
+      }
       if (!author || node.type !== "draft") return;
       const rawId = node.id.replace(/^draft:/, "");
       const d = drafts.find((x) => x.id === rawId);
@@ -346,7 +358,7 @@ export function Canvas({
         setEditorOpen(true);
       }
     },
-    [author, drafts],
+    [author, drafts, onSelectTask],
   );
 
   // --- build-mode handlers -------------------------------------------------
@@ -466,6 +478,7 @@ export function Canvas({
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onConnect={onConnect}
+        nodesDraggable={author}
         nodesConnectable={author}
         fitView
         proOptions={{ hideAttribution: true }}

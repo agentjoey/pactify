@@ -16,11 +16,11 @@ Config:
       "args": [
         "mcp",
         "--project",
-        "\u003crepo-abs\u003e"
+        "REPO_DIR"
       ],
       "command": "pactify",
       "env": {
-        "PACT_AGENT_ID": "\u003cseat\u003e"
+        "PACT_AGENT_ID": "SEAT_ID"
       }
     }
   }
@@ -34,10 +34,10 @@ Config:
 
 Entry block:
 
-```markdown
-# pact protocol — seat `<seat>`
+````markdown
+# pact protocol — seat `SEAT_ID`
 
-This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>.
+This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (status / join / assign / checkpoint / accept / changes / merge / list) and resources
@@ -46,14 +46,14 @@ This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=<seat>
-pactify join <seat> --roles <roles>
+export PACT_AGENT_ID=SEAT_ID
+pactify join SEAT_ID --roles ROLES
 ```
 then `pactify help` for the verbs.
 
 **The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
 feature cannot merge until all its tasks are accepted.
-```
+````
 
 Config:
 
@@ -66,7 +66,7 @@ Config:
       ],
       "command": "pactify",
       "env": {
-        "PACT_AGENT_ID": "\u003cseat\u003e"
+        "PACT_AGENT_ID": "SEAT_ID"
       }
     }
   }
@@ -87,11 +87,11 @@ Config:
       "args": [
         "mcp",
         "--project",
-        "\u003crepo-abs\u003e"
+        "REPO_DIR"
       ],
       "command": "pactify",
       "env": {
-        "PACT_AGENT_ID": "\u003cseat\u003e"
+        "PACT_AGENT_ID": "SEAT_ID"
       }
     }
   }
@@ -105,10 +105,10 @@ Config:
 
 Entry block:
 
-```markdown
-# pact protocol — seat `<seat>`
+````markdown
+# pact protocol — seat `SEAT_ID`
 
-This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>.
+This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (status / join / assign / checkpoint / accept / changes / merge / list) and resources
@@ -117,22 +117,22 @@ This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=<seat>
-pactify join <seat> --roles <roles>
+export PACT_AGENT_ID=SEAT_ID
+pactify join SEAT_ID --roles ROLES
 ```
 then `pactify help` for the verbs.
 
 **The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
 feature cannot merge until all its tasks are accepted.
-```
+````
 
 Config:
 
 ```
 [mcp_servers.pact]
 command = "pactify"
-args = ["mcp", "--project", "<repo-abs>"]
-env = { PACT_AGENT_ID = "<seat>" }
+args = ["mcp", "--project", "REPO_DIR"]
+env = { PACT_AGENT_ID = "SEAT_ID" }
 ```
 
 ## codex-cli
@@ -142,10 +142,10 @@ env = { PACT_AGENT_ID = "<seat>" }
 
 Entry block:
 
-```markdown
-# pact protocol — seat `<seat>`
+````markdown
+# pact protocol — seat `SEAT_ID`
 
-This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>.
+This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (status / join / assign / checkpoint / accept / changes / merge / list) and resources
@@ -154,14 +154,14 @@ This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=<seat>
-pactify join <seat> --roles <roles>
+export PACT_AGENT_ID=SEAT_ID
+pactify join SEAT_ID --roles ROLES
 ```
 then `pactify help` for the verbs.
 
 **The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
 feature cannot merge until all its tasks are accepted.
-```
+````
 
 Config:
 
@@ -169,7 +169,7 @@ Config:
 [mcp_servers.pact]
 command = "pactify"
 args = ["mcp"]
-env = { PACT_AGENT_ID = "<seat>" }
+env = { PACT_AGENT_ID = "SEAT_ID" }
 ```
 
 ## gemini-cli
@@ -179,10 +179,10 @@ env = { PACT_AGENT_ID = "<seat>" }
 
 Entry block:
 
-```markdown
-# pact protocol — seat `<seat>`
+````markdown
+# pact protocol — seat `SEAT_ID`
 
-This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>.
+This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (status / join / assign / checkpoint / accept / changes / merge / list) and resources
@@ -191,14 +191,14 @@ This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=<seat>
-pactify join <seat> --roles <roles>
+export PACT_AGENT_ID=SEAT_ID
+pactify join SEAT_ID --roles ROLES
 ```
 then `pactify help` for the verbs.
 
 **The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
 feature cannot merge until all its tasks are accepted.
-```
+````
 
 Config:
 
@@ -211,7 +211,7 @@ Config:
       ],
       "command": "pactify",
       "env": {
-        "PACT_AGENT_ID": "\u003cseat\u003e"
+        "PACT_AGENT_ID": "SEAT_ID"
       }
     }
   }
@@ -225,10 +225,10 @@ Config:
 
 Entry block:
 
-```markdown
-# pact protocol — seat `<seat>`
+````markdown
+# pact protocol — seat `SEAT_ID`
 
-This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>.
+This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (status / join / assign / checkpoint / accept / changes / merge / list) and resources
@@ -237,14 +237,14 @@ This repo uses the **pact protocol** (v1). You are seat `<seat>`, roles: <roles>
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=<seat>
-pactify join <seat> --roles <roles>
+export PACT_AGENT_ID=SEAT_ID
+pactify join SEAT_ID --roles ROLES
 ```
 then `pactify help` for the verbs.
 
 **The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
 feature cannot merge until all its tasks are accepted.
-```
+````
 
 Config:
 
@@ -258,7 +258,7 @@ Config:
       ],
       "enabled": true,
       "environment": {
-        "PACT_AGENT_ID": "\u003cseat\u003e"
+        "PACT_AGENT_ID": "SEAT_ID"
       },
       "type": "local"
     }

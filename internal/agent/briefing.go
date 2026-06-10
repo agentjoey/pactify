@@ -52,12 +52,12 @@ func RenderDoc() string {
 	for _, k := range Kinds() {
 		a, _ := Get(k)
 		c := a.Config()
-		entry, cfg, _ := Render(k, "<seat>", "<roles>", "<repo-abs>")
+		entry, cfg, _ := Render(k, "SEAT_ID", "ROLES", "REPO_DIR")
 		fmt.Fprintf(&b, "## %s\n\n", k)
 		fmt.Fprintf(&b, "- config: `%s` (%s)\n", c.Path, scopeName(c.Scope))
 		if a.DefaultEntry() != "" {
 			fmt.Fprintf(&b, "- entry file: `%s`\n\n", a.DefaultEntry())
-			fmt.Fprintf(&b, "Entry block:\n\n```markdown\n%s\n```\n\n", entry)
+			fmt.Fprintf(&b, "Entry block:\n\n````markdown\n%s\n````\n\n", entry)
 		} else {
 			b.WriteString("- entry file: none (desktop app)\n\n")
 		}

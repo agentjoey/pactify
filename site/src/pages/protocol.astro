@@ -1,0 +1,8 @@
+---
+import { getEntry, render } from 'astro:content';
+import Doc from '../layouts/Doc.astro';
+const entry = await getEntry('docs', 'specs/pact-protocol');
+if (!entry) throw new Error('canonical spec not found at ../docs/specs/pact-protocol.md');
+const { Content } = await render(entry);
+---
+<Doc title="Protocol v1"><Content /></Doc>

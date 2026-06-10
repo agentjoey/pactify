@@ -81,6 +81,12 @@ func bakeBlock(path, block string) error {
 	return os.WriteFile(path, []byte(out), 0o644)
 }
 
+// BakeManagedBlock writes body inside the managed markers at path, preserving
+// any surrounding content. Idempotent and symlink-safe (see bakeBlock).
+func BakeManagedBlock(path, body string) error {
+	return bakeBlock(path, blockBegin+"\n"+body+"\n"+blockEnd)
+}
+
 // BakeEntry writes a seat's vendor entry file (managed block).
 func BakeEntry(dir string, s Seat) error {
 	roles := strings.Join(s.Roles, ",")

@@ -61,3 +61,20 @@ func TestBakeEntryReplacesSymlink(t *testing.T) {
 		t.Fatal("AGENTS.md should be a real file now")
 	}
 }
+
+func TestBakeManagedBlockRoundTrips(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "AGENTS.md")
+	os.WriteFile(p, []byte("# Mine\n\nkeep me\n"), 0o644)
+	if err := BakeManagedBlock(p, "BODY-A"); err != nil {
+		t.Fatal(err)
+	}
+	if err := BakeManagedBlock(p, "BODY-B"); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(p)
+	s := string(b)
+	if !strings.Contains(s, "keep me") || strings.Contains(s, "BODY-A") || !strings.Contains(s, "BODY-B") {
+		t.Fatalf("managed block not replaced cleanly:\n%s", s)
+	}
+}

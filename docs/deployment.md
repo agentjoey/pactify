@@ -32,6 +32,8 @@ CLI 语言待 Sprint 001 T1 决策后补充。
 One-time setup (maintainer):
 1. Vercel → Add New Project → import `agentjoey/pactify`.
    - **Root Directory: `site/`** · Framework preset: Astro · production branch `main`.
+   - Settings → General → 确认 **"Include source files outside of the Root Directory"** 为开启
+     （默认开启；构建依赖 `../docs/*` 与 `../install.sh`，关掉会直接构建失败）。
 2. Project → Settings → Git → **Ignored Build Step**:
    ```bash
    git diff --quiet HEAD^ HEAD -- ./ ../docs/specs/pact-protocol.md ../docs/agent-onboarding.md ../install.sh

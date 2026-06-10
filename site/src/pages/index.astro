@@ -92,14 +92,18 @@ const lines = [
   </main>
   <script>
     const cta = document.getElementById('cta');
+    // Capture once, outside the handler — a double-click during the feedback
+    // window must never capture '✓ copied' as the thing to restore.
+    const original = cta?.innerHTML;
+    let timer: ReturnType<typeof setTimeout>;
     cta?.addEventListener('click', async () => {
       const cmd = cta.dataset.cmd;
-      if (!cmd) return;
+      if (!cmd || !original) return;
       try {
         await navigator.clipboard.writeText(cmd);
-        const original = cta.innerHTML;
         cta.textContent = '✓ copied';
-        setTimeout(() => { cta.innerHTML = original; }, 1500);
+        clearTimeout(timer);
+        timer = setTimeout(() => { cta.innerHTML = original; }, 1500);
       } catch {
         /* clipboard unavailable (http/permissions) — leave the command selectable */
       }

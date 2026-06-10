@@ -1,8 +1,8 @@
 ---
 import Base from './Base.astro';
-const { title } = Astro.props;
+const { title, description } = Astro.props;
 ---
-<Base title={`${title} — pactify`}>
+<Base title={`${title} — pactify`} description={description}>
   <main class="wrap doc" style="padding-top:32px;font-size:14px">
     <slot />
   </main>

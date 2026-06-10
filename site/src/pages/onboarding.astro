@@ -5,4 +5,4 @@ const entry = await getEntry('docs', 'agent-onboarding');
 if (!entry) throw new Error('canonical doc not found at ../docs/agent-onboarding.md');
 const { Content } = await render(entry);
 ---
-<Doc title="Agent onboarding"><Content /></Doc>
+<Doc title="Agent onboarding" description="Manual onboarding reference for every supported agent — config snippets and entry blocks, per kind."><Content /></Doc>

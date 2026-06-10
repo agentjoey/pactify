@@ -34,7 +34,8 @@ const agents = [
   .mq-track { display: flex; width: max-content; padding: 4px 0; }
   .mq-card { width: 200px; margin-right: 14px; border: 1px solid var(--line); border-radius: 11px; padding: 15px; background: var(--bg2); display: flex; align-items: center; gap: 11px; flex-shrink: 0; transition: border-color .2s, transform .2s; }
   .mq-card:hover { border-color: var(--line2); transform: translateY(-3px); }
-  .mq-card:hover .go { opacity: 1; }
+  .mq-card:hover .go,
+  .mq-card:focus-visible .go { opacity: 1; }
   .mq-card .lg { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; background: var(--bg3); border: 1px solid var(--line2); color: var(--fg); flex-shrink: 0; }
   .mq-card h3 { margin: 0; font-size: 11.5px; color: var(--bright); font-weight: 600; }
   .mq-card p { margin: 2px 0 0; font-size: 9.5px; color: var(--dimmer); }
@@ -42,7 +43,8 @@ const agents = [
 
   @media (prefers-reduced-motion: no-preference) {
     .mq-track { animation: mqScroll 26s linear infinite; }
-    .mq:hover .mq-track { animation-play-state: paused; }
+    .mq:hover .mq-track,
+    .mq:focus-within .mq-track { animation-play-state: paused; }
     @keyframes mqScroll { to { transform: translateX(-50%); } }
   }
 </style>

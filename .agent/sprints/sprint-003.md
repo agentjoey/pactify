@@ -83,7 +83,7 @@ spec B2 措辞（setup 只指向 doctor 不内嵌跑）；CI 跑 claude plugin v
 **Milestone:** M2.3
 
 ### T4: M2.4 pactify.dev 官网 v1 [MED]
-**Status:** ✅ 代码完成（PR #7 merged a8c4289，2026-06-10；CI test+site 双绿）。**待维护者：建 Vercel 项目 + DNS**（runbook 见 docs/deployment.md）
+**Status:** ✅ **全量上线**（PR #7 代码 + Vercel 项目/构建配置核验无误 + pactify.dev/www DNS 生效；真 curl|sh 从 pactify.dev 装 v0.3.0 实测通；PR #8 把全仓安装 URL 切到 pactify.dev）
 **Milestone:** M2.4
 **交付**：Astro 6 静态站 `site/`——终端真实派 landing（打字 hero/双线合一/§1§2 条款/quickstart/入座区/可访问复制 CTA，动效全 CSS+reduced-motion 降级）；/protocol + /onboarding 构建时直读仓内规范（glob loader base ../docs，零拷贝）；/install.sh = 真安装器（prebuild 同步 + check-dist 字节守卫）；CI site job（informative）；Vercel runbook。
 **质量**：brainstorm 用可视化伴侣做了视觉调研板+结构 mockup（用户选向：终端派+双线/入座）；逐任务双审查 + fable5 终审（抓 CTA 双击毁命令真 bug、dasharray 常数 bug、移动端 CTA 碎裂等，全修）。

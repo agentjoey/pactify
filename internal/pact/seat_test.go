@@ -78,3 +78,13 @@ func TestBakeManagedBlockRoundTrips(t *testing.T) {
 		t.Fatalf("managed block not replaced cleanly:\n%s", s)
 	}
 }
+
+func TestBakeManagedBlockRejectsMarkerInBody(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "AGENTS.md")
+	if err := BakeManagedBlock(p, "oops <!-- pact:end --> tail"); err == nil {
+		t.Fatal("expected error when body contains a managed marker")
+	}
+	if _, err := os.Stat(p); err == nil {
+		t.Fatal("file should not be written when body is rejected")
+	}
+}

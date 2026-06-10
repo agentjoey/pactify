@@ -12,6 +12,10 @@ func TestBriefingMentionsSeatRolesAndMCP(t *testing.T) {
 			t.Fatalf("briefing missing %q:\n%s", want, b)
 		}
 	}
+	// the fiddly backtick-concatenation must yield a balanced code fence
+	if n := strings.Count(b, "```"); n != 2 {
+		t.Fatalf("briefing code fence not balanced: found %d ``` markers", n)
+	}
 }
 
 func TestRenderJSONKindReturnsBlockAndSnippet(t *testing.T) {

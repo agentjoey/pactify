@@ -82,8 +82,13 @@ func bakeBlock(path, block string) error {
 }
 
 // BakeManagedBlock writes body inside the managed markers at path, preserving
-// any surrounding content. Idempotent and symlink-safe (see bakeBlock).
+// any surrounding content. Idempotent and symlink-safe (see bakeBlock). body
+// must not itself contain the managed markers, or a later stripBlock pass would
+// mis-detect the region boundary and corrupt it.
 func BakeManagedBlock(path, body string) error {
+	if strings.Contains(body, "pact:begin") || strings.Contains(body, "pact:end") {
+		return fmt.Errorf("managed-block body must not contain the pact:begin/pact:end markers")
+	}
 	return bakeBlock(path, blockBegin+"\n"+body+"\n"+blockEnd)
 }
 

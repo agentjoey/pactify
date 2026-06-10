@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/pact"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -157,5 +158,45 @@ func TestResources(t *testing.T) {
 	}
 	if len(lg.Contents) != 1 || !strings.Contains(lg.Contents[0].Text, `"event_type":"init"`) {
 		t.Fatalf("log resource: %+v", lg.Contents)
+	}
+}
+
+func TestLogChangeNotifiesSubscribers(t *testing.T) {
+	newRepo(t)
+	ctx := context.Background()
+	got := make(chan string, 4)
+
+	st, ct := sdk.NewInMemoryTransports()
+	server := New()
+	stop, err := Watch(ctx, server)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stop()
+	if _, err := server.Connect(ctx, st, nil); err != nil {
+		t.Fatal(err)
+	}
+	client := sdk.NewClient(&sdk.Implementation{Name: "test", Version: "v0"}, &sdk.ClientOptions{
+		ResourceUpdatedHandler: func(_ context.Context, r *sdk.ResourceUpdatedNotificationRequest) {
+			got <- r.Params.URI
+		},
+	})
+	cs, err := client.Connect(ctx, ct, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cs.Close()
+	if err := cs.Subscribe(ctx, &sdk.SubscribeParams{URI: logURI}); err != nil {
+		t.Fatal(err)
+	}
+	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
+
+	select {
+	case uri := <-got:
+		if uri != logURI {
+			t.Fatalf("unexpected uri %q", uri)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("no resource-updated notification within 3s")
 	}
 }

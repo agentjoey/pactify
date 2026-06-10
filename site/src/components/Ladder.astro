@@ -1,0 +1,44 @@
+---
+const prods = [
+  {
+    av: true, name: 'Base', pr: 'free · open source',
+    badge: 'available', badgeBg: '#13251b', badgeColor: 'var(--green)',
+    items: ['protocol + CLI', 'MCP server', 'live dashboard', 'agent onboarding'],
+  },
+  {
+    av: false, name: 'Squad', pr: 'visual orchestration',
+    badge: 'in development', badgeBg: '#252013', badgeColor: 'var(--yellow)',
+    items: ['orchestration canvas', 'drag-and-drop dispatch', 'live squad view', 'role-based personas'],
+  },
+  {
+    av: false, name: 'Team', pr: 'cloud · multi-repo',
+    badge: 'planned', badgeBg: 'var(--bg3)', badgeColor: 'var(--dimmer)',
+    items: ['event relay', 'mission control', 'RBAC + audit', 'team invites'],
+  },
+];
+---
+<section class="sec" id="ladder">
+  <div class="sec-label">The ladder</div>
+  <div class="sec-h2">Start free. Grow into a squad.</div>
+  <div class="prods">
+    {prods.map((p) => (
+      <div class={p.av ? 'prod av' : 'prod'}>
+        <span class="badge" style={`background:${p.badgeBg};color:${p.badgeColor}`}>{p.badge}</span>
+        <h4>{p.name}</h4>
+        <div class="pr">{p.pr}</div>
+        <ul>{p.items.map((it) => (<li>{it}</li>))}</ul>
+      </div>
+    ))}
+  </div>
+</section>
+
+<style>
+  .sec { padding: 46px 30px; border-top: 1px solid var(--line); position: relative; }
+  .prods { display: flex; gap: 16px; max-width: 820px; margin: 0 auto; flex-wrap: wrap; }
+  .prod { flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--bg2); position: relative; }
+  .prod.av { border-color: #2a4a39; }
+  .prod .badge { position: absolute; top: 14px; right: 14px; font-size: 8.5px; letter-spacing: 1px; border-radius: 99px; padding: 2px 9px; text-transform: uppercase; }
+  .prod h4 { margin: 0 0 3px; font-size: 15px; color: var(--bright); font-weight: 600; }
+  .prod .pr { font-size: 10px; color: var(--dimmer); margin-bottom: 11px; }
+  .prod ul { margin: 0; padding-left: 15px; font-size: 10.5px; color: var(--dim); line-height: 1.9; }
+</style>

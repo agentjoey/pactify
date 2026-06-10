@@ -1,0 +1,38 @@
+---
+const agents = [
+  ['CC', 'Claude Code', 'one-click plugin', '#d97757'],
+  ['OC', 'opencode', 'auto-wired', null],
+  ['GM', 'Gemini CLI', 'auto-wired', '#8ab4ff'],
+  ['CX', 'Codex CLI', 'config snippet', null],
+  ['CD', 'Claude Desktop', '--project rooting', '#d97757'],
+  ['AG', 'Antigravity', '--project rooting', '#8ab4ff'],
+];
+---
+<section class="sec">
+  <div class="sec-label">Bring your own agents</div>
+  <div class="sec-h2">Wired in one command.</div>
+  <div class="mq">
+    <div class="mq-track" id="mqt">
+      {agents.map(([lg, name, how, color]) => (
+        <a class="mq-card" href="#">
+          <div class="lg" style={color ? `color:${color}` : undefined}>{lg}</div>
+          <div><h5>{name}</h5><p>{how}</p></div>
+          <span class="go">setup →</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .sec { padding: 46px 30px; border-top: 1px solid var(--line); position: relative; }
+  .mq { overflow: hidden; position: relative; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .mq-track { display: flex; gap: 14px; width: max-content; padding: 4px 0; }
+  .mq-card { width: 200px; border: 1px solid var(--line); border-radius: 11px; padding: 15px; background: var(--bg2); display: flex; align-items: center; gap: 11px; flex-shrink: 0; transition: border-color .2s, transform .2s; }
+  .mq-card:hover { border-color: var(--line2); transform: translateY(-3px); }
+  .mq-card:hover .go { opacity: 1; }
+  .mq-card .lg { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; background: var(--bg3); border: 1px solid var(--line2); color: var(--fg); flex-shrink: 0; }
+  .mq-card h5 { margin: 0; font-size: 11.5px; color: var(--bright); font-weight: 600; }
+  .mq-card p { margin: 2px 0 0; font-size: 9.5px; color: var(--dimmer); }
+  .mq-card .go { margin-left: auto; font-size: 10px; color: var(--blue); opacity: 0; transition: opacity .2s; }
+</style>

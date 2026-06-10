@@ -14,12 +14,13 @@ type SeatDTO struct {
 }
 
 type TaskDTO struct {
-	ID       string `json:"id"`
-	Owner    string `json:"owner"`
-	Status   string `json:"status"`
-	Reviewer string `json:"reviewer"`
-	Spec     string `json:"spec"`
-	Evidence string `json:"evidence"`
+	ID       string   `json:"id"`
+	Owner    string   `json:"owner"`
+	Status   string   `json:"status"`
+	Reviewer string   `json:"reviewer"`
+	Spec     string   `json:"spec"`
+	Evidence string   `json:"evidence"`
+	Deps     []string `json:"deps,omitempty"`
 }
 
 type FeatureDTO struct {
@@ -64,7 +65,7 @@ func toDTO(st projection.State) StateDTO {
 			if t.Status == "awaiting_review" {
 				d.AwaitingCount++
 			}
-			fd.Tasks = append(fd.Tasks, TaskDTO{ID: t.ID, Owner: t.Owner, Status: t.Status, Reviewer: t.Reviewer, Spec: t.Spec, Evidence: ev})
+			fd.Tasks = append(fd.Tasks, TaskDTO{ID: t.ID, Owner: t.Owner, Status: t.Status, Reviewer: t.Reviewer, Spec: t.Spec, Evidence: ev, Deps: t.Deps})
 		}
 		d.Features = append(d.Features, fd)
 	}

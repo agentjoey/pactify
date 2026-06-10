@@ -32,7 +32,9 @@ export function dispatchPayload(
     branch,
     owner,
     reviewer,
-    spec: draft.specMd,
+    // spec is a PATH reference (the markdown body was already written via postTask);
+    // inlining the body would corrupt STATE.yml's single-line spec field.
+    spec: `.pact/tasks/${draft.id}.md`,
     deps: draft.deps, // deps pass through verbatim; server fixes them at assign
   };
 }

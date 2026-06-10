@@ -13,7 +13,7 @@ describe("dispatchPayload", () => {
       branch: "feat/x",
       owner: "opencode",
       reviewer: "claude-opus",
-      spec: "# do it",
+      spec: ".pact/tasks/T7.md",
       deps: ["T1", "T2"],
     });
   });

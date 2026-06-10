@@ -57,7 +57,10 @@ export default function App() {
   // the in_progress timestamp map, then commit the new state.
   function applyState(s: State) {
     // 1) review toasts — tasks newly entering awaiting_review.
-    const ready = diffAwaiting(prevState.current, s);
+    // First snapshot after load/project-switch seeds the baseline silently:
+    // tasks ALREADY awaiting on arrival must not toast-spam.
+    const firstSnapshot = prevState.current === EMPTY;
+    const ready = firstSnapshot ? [] : diffAwaiting(prevState.current, s);
     if (ready.length) {
       setToasts((prev) => {
         const next = [...prev];

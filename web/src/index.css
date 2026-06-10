@@ -11,3 +11,20 @@ body { margin: 0; background: #0d1117; color: #e6edf3; font-family: system-ui, s
 
 /* React Flow dark overrides — keep the canvas consistent with the dashboard. */
 .react-flow__attribution { display: none; }
+
+/* awaiting_review nodes pulse design-blue to draw the reviewer's eye. The
+   animation is wrapped in a reduced-motion guard: users who opt out get a
+   static ring instead of the breathing glow. */
+.pact-awaiting {
+  border-radius: 0.25rem;
+  box-shadow: 0 0 0 1px #2f81f7;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pact-awaiting {
+    animation: pact-pulse 1.6s ease-in-out infinite;
+  }
+}
+@keyframes pact-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px #2f81f7; }
+  50% { box-shadow: 0 0 0 4px rgba(47, 129, 247, 0.5); }
+}

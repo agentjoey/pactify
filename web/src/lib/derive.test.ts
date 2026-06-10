@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { boardColumns, allTasks, agentActivity, lastAction, findTask, COLUMNS } from "./derive";
+import { boardColumns, allTasks, agentActivity, lastAction, findTask, canMergeFeature, COLUMNS } from "./derive";
 import type { State, PactEvent } from "./types";
 
 const state: State = {
@@ -38,5 +38,28 @@ describe("derive", () => {
   it("findTask locates a task + its feature", () => {
     expect(findTask(state, "T0")?.feature).toBe("F");
     expect(findTask(state, "nope")).toBeUndefined();
+  });
+});
+
+describe("canMergeFeature", () => {
+  const mk = (statuses: string[]): State => ({
+    project: "p",
+    agents: [],
+    awaiting_count: 0,
+    features: [{ id: "F", branch: "b", status: "in_progress", tasks: statuses.map((s, i) => ({
+      id: `T${i}`, owner: "o", status: s, reviewer: "r", spec: "", evidence: "",
+    })) }],
+  });
+  it("true only when every task is accepted", () => {
+    expect(canMergeFeature(mk(["accepted", "accepted"]), "F")).toBe(true);
+  });
+  it("false when any task is not accepted", () => {
+    expect(canMergeFeature(mk(["accepted", "in_progress"]), "F")).toBe(false);
+  });
+  it("false for an empty feature (nothing to merge)", () => {
+    expect(canMergeFeature(mk([]), "F")).toBe(false);
+  });
+  it("false for an unknown feature", () => {
+    expect(canMergeFeature(mk(["accepted"]), "ZZ")).toBe(false);
   });
 });

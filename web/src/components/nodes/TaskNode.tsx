@@ -20,14 +20,16 @@ export function TaskNode({ id, data }: NodeProps) {
     deps?: string[];
     roleColor?: string;
     draft?: boolean;
+    stale?: boolean;
   };
   const taskId = id.replace(/^(task|draft):/, "");
   const roleVar = d.roleColor ?? "--role-dev";
   const statusColor = d.status ? STATUS_COLOR[d.status] ?? "#8b949e" : "#8b949e";
+  const awaiting = d.status === "awaiting_review";
 
   return (
     <div
-      className="rounded bg-[#161b22] text-xs px-2.5 py-2 min-w-[160px]"
+      className={`rounded bg-[#161b22] text-xs px-2.5 py-2 min-w-[160px] ${awaiting ? "pact-awaiting" : ""}`}
       style={{
         borderTop: d.draft ? "1px dashed #6e7681" : "1px solid #30363d",
         borderRight: d.draft ? "1px dashed #6e7681" : "1px solid #30363d",
@@ -38,6 +40,13 @@ export function TaskNode({ id, data }: NodeProps) {
       <Handle type="target" position={Position.Top} style={{ background: "#484f58" }} />
       <div className="flex items-center gap-1.5">
         <span className="font-semibold text-[#e6edf3]">{taskId}</span>
+        {d.stale && (
+          <span
+            data-testid="stale-dot"
+            title="in_progress > 30min"
+            className="inline-block h-2 w-2 rounded-full bg-[#d29922]"
+          />
+        )}
         {d.draft && (
           <span className="text-[9px] uppercase tracking-wide rounded px-1 bg-[#21262d] text-[#8b949e] border border-dashed border-[#6e7681]">
             draft

@@ -1,10 +1,6 @@
 package agent
 
-import (
-	"fmt"
-
-	"github.com/agentjoey/pactify/internal/pact"
-)
+import "fmt"
 
 // briefing renders the agent-agnostic onboarding body (MCP-first, shell fallback).
 func briefing(seatID, roles string) string {
@@ -40,10 +36,4 @@ func Render(kind, seatID, roles, repoAbs string) (entry, config string, err erro
 	}
 	config = snippet(a.Config().Format, a.Invocation(seatID, repoAbs))
 	return entry, config, nil
-}
-
-// BakeEntry delegates to pact.BakeManagedBlock so callers can write the managed
-// block into a seat's entry file without importing pact directly.
-func BakeEntry(path, body string) error {
-	return pact.BakeManagedBlock(path, body)
 }

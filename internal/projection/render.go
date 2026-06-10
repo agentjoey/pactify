@@ -33,6 +33,12 @@ func Render(st State) string {
 			fmt.Fprintf(&b, "        reviewer: %s\n", t.Reviewer)
 			fmt.Fprintf(&b, "        spec: %s\n", t.Spec)
 			fmt.Fprintf(&b, "        evidence: %s\n", ev)
+			// deps line is emitted ONLY when the task carried deps; deps-free
+			// tasks render byte-identically to the bash reference (which has no
+			// deps concept). Mirrors the agents `roles: [a, b]` list style.
+			if len(t.Deps) > 0 {
+				fmt.Fprintf(&b, "        deps: [%s]\n", strings.Join(t.Deps, ", "))
+			}
 		}
 	}
 	return b.String()

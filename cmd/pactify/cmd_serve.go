@@ -15,6 +15,7 @@ import (
 func newServeCmd() *cobra.Command {
 	var addr string
 	var extra []string
+	var seat string
 	cmd := &cobra.Command{Use: "serve", Short: "run the multi-project dashboard HTTP server",
 		RunE: func(c *cobra.Command, _ []string) error {
 			reg, err := registry.Load()
@@ -32,6 +33,7 @@ func newServeCmd() *cobra.Command {
 				projects = appendIfNew(projects, registry.Project{Name: registry.Slug(filepath.Base(abs)), Path: abs})
 			}
 			srv := serve.New(projects)
+			srv.SetSeat(seat)
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
 			fmt.Fprintf(c.OutOrStdout(), "pactify serve on http://%s (%d project(s))\n", addr, len(projects))
@@ -39,6 +41,7 @@ func newServeCmd() *cobra.Command {
 		}}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:7777", "listen address")
 	cmd.Flags().StringArrayVar(&extra, "project", nil, "extra project path (repeatable, not persisted)")
+	cmd.Flags().StringVar(&seat, "seat", os.Getenv("PACT_AGENT_ID"), "acting seat for author (write) endpoints (default $PACT_AGENT_ID)")
 	return cmd
 }
 

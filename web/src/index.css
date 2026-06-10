@@ -1,4 +1,30 @@
 @import "tailwindcss";
 
-:root { color-scheme: dark; }
+:root {
+  color-scheme: dark;
+  /* Role color tokens — see roleColorVar() in lib/canvas.ts. */
+  --role-product: #ffd479; /* orchestrator — yellow (brand) */
+  --role-design: #8ab4ff;  /* reviewer — blue (brand) */
+  --role-dev: #6ee7a0;     /* worker — green (brand) */
+}
 body { margin: 0; background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; }
+
+/* React Flow dark overrides — keep the canvas consistent with the dashboard. */
+.react-flow__attribution { display: none; }
+
+/* awaiting_review nodes pulse design-blue to draw the reviewer's eye. The
+   animation is wrapped in a reduced-motion guard: users who opt out get a
+   static ring instead of the breathing glow. */
+.pact-awaiting {
+  border-radius: 0.25rem;
+  box-shadow: 0 0 0 1px var(--role-design);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pact-awaiting {
+    animation: pact-pulse 1.6s ease-in-out infinite;
+  }
+}
+@keyframes pact-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px var(--role-design); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--role-design) 50%, transparent); }
+}

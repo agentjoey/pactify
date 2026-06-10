@@ -377,3 +377,49 @@ The following aspects of an implementation are explicitly NOT part of the v1 wir
 ## Conformance Statement
 
 Conformance: an implementation is v1-conformant if its emitted log.jsonl validates against schemas/event.schema.json, it enforces the two rules and the state machines, and it fails closed on a higher protocol major.
+
+---
+
+## Addendum: task dependencies (additive, v1)
+
+This addendum is **additive to frozen v1**: it introduces one optional field and one enforced gate. Logs that never use it are bit-for-bit unchanged, and the wire envelope, the two rules, and every state machine are untouched.
+
+### The field
+
+An `assign` event's `payload` MAY carry an optional `deps` array of task ids:
+
+```json
+{ "event_type": "assign", "task_id": "T2", "feature": "F",
+  "payload": { "owner": "w2", "reviewer": "rev", "branch": "feat/x", "spec": ".pact/tasks/T2.md", "deps": ["T1"] } }
+```
+
+`deps` is **emitted only when non-empty.** A task with no dependencies carries no `deps` key, and `STATE.yml` renders no `deps:` line for it — preserving byte-parity with the bash reference renderer. In the schema, `deps` is an optional `array` of `string`; an assign payload with `deps` present but not an array is rejected.
+
+### Assign-time validation
+
+When an `assign` carries `deps`, the implementation MUST validate, **before appending the event**:
+
+1. **Existence** — every dep id already exists (was assigned earlier).
+2. **Same feature** — every dep belongs to the **same feature** as the new task. Cross-feature dependencies are rejected.
+3. **No self-dependency** — a task may not list itself (the smallest cycle).
+4. **Acyclic** — adding the new task's out-edges introduces no cycle. The reference checks this with a depth-first search over the feature's existing `deps` graph plus the new node's edges, flagging any back-edge (gray node) reachable from the new task.
+
+A failed check aborts the assign; nothing is written to the log.
+
+### The join gate (enforced; task-level)
+
+`deps` adds an **enforced join gate**, not a third global rule. It is evaluated **per task**, against the pre-join state, when a seat joins:
+
+> For each task owned by the joining seat, every dep of that task MUST have status `accepted`. If any dep is not yet `accepted`, the join is rejected with an error naming the blocking task and dep (`task <T> blocked by unaccepted dep <D>`).
+
+This is the only behavioural change deps introduces. Workers pull work as before; the gate simply refuses a premature pull while an upstream task is still in flight. Once the upstream task reaches `accepted`, the same join succeeds.
+
+The gate is enforced at **join AND checkpoint**: a seat that joined before its dep'd task was assigned cannot bypass the gate by checkpointing — `checkpoint` re-applies the same per-task dep check and refuses a blocked task with `task <T> blocked by unaccepted dep <D>`.
+
+### Bash reference is not extended
+
+The bash reference implementation (`pact.sh`) is **not** extended for `deps`. It has no deps concept, emits no `deps` payloads, and renders no `deps:` lines — which is exactly why a deps-free Go log stays byte-identical to a bash log (proven by the interop suite). Implementations that don't support deps remain fully v1-conformant; they simply never emit the field.
+
+### UI sidecar files are outside the protocol
+
+A `.pact/squad/layout.json` (or any similar UI sidecar) is **not part of the protocol**. It carries presentation-only data (e.g. canvas node positions) and is never read by the state machine or validation. `validate` ignores unknown files under `.pact/`; their presence or absence does not affect conformance.

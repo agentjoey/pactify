@@ -66,15 +66,17 @@ func newRootCmd() *cobra.Command {
 	joinCmd.Flags().StringVar(&joinRoles, "roles", "", "comma-separated roles")
 
 	var feature, branch, owner, reviewer, spec string
+	var deps []string
 	assignCmd := &cobra.Command{Use: "assign <task>", Args: cobra.ExactArgs(1), Short: "assign a task",
 		RunE: func(_ *cobra.Command, a []string) error {
-			return pact.Assign(a[0], feature, branch, owner, reviewer, spec)
+			return pact.Assign(a[0], feature, branch, owner, reviewer, spec, deps)
 		}}
 	assignCmd.Flags().StringVar(&feature, "feature", "", "feature id")
 	assignCmd.Flags().StringVar(&branch, "branch", "", "feature branch")
 	assignCmd.Flags().StringVar(&owner, "owner", "", "owner seat")
 	assignCmd.Flags().StringVar(&reviewer, "reviewer", "", "reviewer seat")
 	assignCmd.Flags().StringVar(&spec, "spec", "", "task spec path")
+	assignCmd.Flags().StringSliceVar(&deps, "deps", nil, "comma-separated dep task ids (same feature)")
 
 	var evidence string
 	cpCmd := &cobra.Command{Use: "checkpoint <task>", Args: cobra.ExactArgs(1), Short: "submit for review",

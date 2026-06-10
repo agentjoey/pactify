@@ -106,3 +106,24 @@ pactify serve          # MCP server + SSE dashboard
 ## Open-core 边界
 
 见 [ADR-001](decisions/ADR-001-open-core-boundary.md)：守 Team。所有付费价值落在云端 relay 之上；log.jsonl 事件 schema 同时服务本地（免费）和云端（付费），零改动 agent 端。
+
+## Squad (Phase 3, M3.1+M3.2)
+
+The serve dashboard gains author powers — the same binary, `pactify serve --seat <id>`:
+
+- **Dir-aware engine**: `pact.At(dir).As(seat)` runs any verb against any registered
+  project from any cwd; package-level funcs remain `At(".")` wrappers (CLI/MCP unchanged).
+- **Author API** (localhost trust model): `POST /api/projects/{id}/tasks` (spec file),
+  `POST .../verbs/{assign,accept,changes,merge}` executed as the acting seat (must be in
+  the project roster; engine rules apply — the acting human cannot self-accept either),
+  engine errors returned verbatim as 422. Writes serialize per project (mutex).
+  `GET/PUT .../squad/layout` stores the canvas layout sidecar at `.pact/squad/layout.json`
+  (UI-only, outside the protocol).
+- **deps** (protocol v1 additive): optional `deps` on assign — validated (same feature,
+  exists, acyclic), enforced at join (a task with un-accepted deps cannot be joined).
+  Deps-free logs render byte-identical to the bash reference.
+- **Canvas** (web/, React Flow): task/seat/feature/draft nodes, role-colored per
+  docs/brand.md (orchestrator→product, reviewer→design, worker→dev), dep edges,
+  drag-to-dispatch onto seats, review accept/changes/merge from the rail, SSE-live
+  updates, layout persistence, awaiting-review pulse + stale indicators.
+  Build mode keeps drafts local until dispatch — the log stays protocol-pure.

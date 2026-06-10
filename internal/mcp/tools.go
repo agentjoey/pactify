@@ -17,12 +17,13 @@ type joinIn struct {
 	Roles string `json:"roles,omitempty" jsonschema:"comma-separated roles"`
 }
 type assignIn struct {
-	Task     string `json:"task"`
-	Feature  string `json:"feature"`
-	Branch   string `json:"branch"`
-	Owner    string `json:"owner"`
-	Reviewer string `json:"reviewer"`
-	Spec     string `json:"spec,omitempty"`
+	Task     string   `json:"task"`
+	Feature  string   `json:"feature"`
+	Branch   string   `json:"branch"`
+	Owner    string   `json:"owner"`
+	Reviewer string   `json:"reviewer"`
+	Spec     string   `json:"spec,omitempty"`
+	Deps     []string `json:"deps,omitempty" jsonschema:"dep task ids in the same feature (must be accepted before owner joins)"`
 }
 type checkpointIn struct {
 	Task     string `json:"task"`
@@ -65,7 +66,7 @@ func registerTools(s *sdk.Server) {
 
 	sdk.AddTool(s, &sdk.Tool{Name: "assign", Description: "Assign a task (owner must differ from reviewer; task ids unique)"},
 		func(_ context.Context, _ *sdk.CallToolRequest, in assignIn) (*sdk.CallToolResult, any, error) {
-			if err := pact.Assign(in.Task, in.Feature, in.Branch, in.Owner, in.Reviewer, in.Spec); err != nil {
+			if err := pact.Assign(in.Task, in.Feature, in.Branch, in.Owner, in.Reviewer, in.Spec, in.Deps); err != nil {
 				return nil, nil, err
 			}
 			return textResult(fmt.Sprintf("assigned %s", in.Task)), nil, nil

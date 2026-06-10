@@ -29,3 +29,13 @@ export function lastAction(agentId: string, events: PactEvent[]): PactEvent | un
 export function findTask(state: State, id: string): BoardTask | undefined {
   return allTasks(state).find((b) => b.task.id === id);
 }
+
+// canMergeFeature is the client mirror of the server's merge precondition: a
+// feature is mergeable only when it has at least one task and every task is
+// accepted. The server is authoritative (422 verbatim on disagreement); this
+// just disables the button to avoid an obviously-doomed request.
+export function canMergeFeature(state: State, featureId: string): boolean {
+  const f = state.features.find((x) => x.id === featureId);
+  if (!f || f.tasks.length === 0) return false;
+  return f.tasks.every((t) => t.status === "accepted");
+}

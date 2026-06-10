@@ -12,7 +12,12 @@ import (
 
 var errNoAgent = errors.New("pactify: PACT_AGENT_ID not set; source your entry file")
 
-func requireAgentID() (string, error) {
+// agentID resolves the acting seat: the handle's actor override if set, else
+// PACT_AGENT_ID from the environment. Fails closed when neither is present.
+func (p *Project) agentID() (string, error) {
+	if p.actor != "" {
+		return p.actor, nil
+	}
 	id := paths.AgentID()
 	if id == "" {
 		return "", errNoAgent
@@ -20,28 +25,29 @@ func requireAgentID() (string, error) {
 	return id, nil
 }
 
-func state() (projection.State, []event.Event, error) {
-	evs, err := event.ReadAll(paths.Log())
+func (p *Project) state() (projection.State, []event.Event, error) {
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
 	if err != nil {
 		return projection.State{}, nil, err
 	}
 	return projection.Project(evs), evs, nil
 }
 
-func appendAndRender(ev event.Event) error {
-	if err := event.Append(paths.Log(), ev); err != nil {
+func (p *Project) appendAndRender(ev event.Event) error {
+	if err := event.Append(paths.LogIn(p.dir), ev); err != nil {
 		return err
 	}
-	evs, err := event.ReadAll(paths.Log())
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
 	if err != nil {
 		return err
 	}
-	return projection.WriteState(paths.State(), projection.Project(evs))
+	return projection.WriteState(paths.StateIn(p.dir), projection.Project(evs))
 }
 
 // Init scaffolds .pact/, bakes entry files, and writes the init event.
-func Init(project string, seatSpecs []string) error {
-	if _, err := requireAgentID(); err != nil {
+func (p *Project) Init(project string, seatSpecs []string) error {
+	id, err := p.agentID()
+	if err != nil {
 		return err
 	}
 	if project == "" {
@@ -55,13 +61,13 @@ func Init(project string, seatSpecs []string) error {
 		}
 		seats = append(seats, s)
 	}
-	if err := os.MkdirAll(paths.Bin(), 0o755); err != nil {
+	if err := os.MkdirAll(paths.BinIn(p.dir), 0o755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(paths.Tasks(), 0o755); err != nil {
+	if err := os.MkdirAll(paths.TasksIn(p.dir), 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(paths.Log(), nil, 0o644); err != nil {
+	if err := os.WriteFile(paths.LogIn(p.dir), nil, 0o644); err != nil {
 		return err
 	}
 
@@ -72,17 +78,16 @@ func Init(project string, seatSpecs []string) error {
 			roles[i] = r
 		}
 		seatPayload = append(seatPayload, map[string]any{"id": s.ID, "roles": roles, "entry": s.Entry})
-		if err := BakeEntry(".", s); err != nil {
+		if err := BakeEntry(p.dir, s); err != nil {
 			return err
 		}
 	}
-	if err := BakeProject(paths.Dir(), project, seats, paths.ProtocolVersion); err != nil {
+	if err := BakeProject(paths.DirIn(p.dir), project, seats, paths.ProtocolVersion); err != nil {
 		return err
 	}
 
-	base, _ := gitx.CurrentBranch(".")
-	id := paths.AgentID()
-	return appendAndRender(event.Event{
+	base, _ := gitx.CurrentBranch(p.dir)
+	return p.appendAndRender(event.Event{
 		AgentID:   id,
 		Role:      event.RoleFor("init"),
 		EventType: "init",
@@ -97,13 +102,23 @@ func Init(project string, seatSpecs []string) error {
 
 // Join registers the seat (join event) and moves it onto its assigned task's
 // feature branch (creating the branch from HEAD if absent).
-func Join(seatID, roles string) error {
-	id, err := requireAgentID()
+func (p *Project) Join(seatID, roles string) error {
+	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
 	rolesArr := splitCSV(roles)
-	if err := appendAndRender(event.Event{
+	// Join gate: a seat may not join while any task it owns is blocked by a
+	// dependency that has not reached `accepted`. Evaluate against pre-join
+	// state so the gate cannot be bypassed by the join itself.
+	preState, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := checkJoinGate(preState, seatID); err != nil {
+		return err
+	}
+	if err := p.appendAndRender(event.Event{
 		AgentID:   id,
 		Role:      event.RoleFor("join"),
 		EventType: "join",
@@ -111,14 +126,14 @@ func Join(seatID, roles string) error {
 	}); err != nil {
 		return err
 	}
-	st, _, err := state()
+	st, _, err := p.state()
 	if err != nil {
 		return err
 	}
 	for _, f := range st.Features {
 		for _, tk := range f.Tasks {
 			if tk.Owner == seatID && f.Branch != "" {
-				return gitx.CheckoutOrCreate(".", f.Branch)
+				return gitx.CheckoutOrCreate(p.dir, f.Branch)
 			}
 		}
 	}
@@ -137,38 +152,56 @@ func splitCSV(s string) []any {
 }
 
 // Assign records a task assignment (rule: owner != reviewer; task ids unique).
-func Assign(taskID, feature, branch, owner, reviewer, spec string) error {
-	id, err := requireAgentID()
+// deps is an optional set of task ids in the SAME feature that must reach
+// `accepted` before the owner may join (see Join gate). deps is validated at
+// assign time (existence, same-feature, no self-dep, acyclic) and is recorded
+// in the payload ONLY when non-empty so deps-free logs stay byte-identical.
+func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
+	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
-	st, _, err := state()
+	st, _, err := p.state()
 	if err != nil {
 		return err
 	}
 	if err := checkAssign(st, taskID, owner, reviewer); err != nil {
 		return err
 	}
+	if err := checkDeps(st, taskID, feature, deps); err != nil {
+		return err
+	}
 	if spec == "" {
+		// Repo-relative convention so the shared log never leaks a host-absolute
+		// path (p.dir may be absolute). The file itself is still written/read via
+		// dir-aware paths elsewhere.
 		spec = paths.Tasks() + "/" + taskID + ".md"
 	}
-	return appendAndRender(event.Event{
+	payload := map[string]any{"owner": owner, "reviewer": reviewer, "branch": branch, "spec": spec}
+	if len(deps) > 0 {
+		ds := make([]any, len(deps))
+		for i, d := range deps {
+			ds[i] = d
+		}
+		payload["deps"] = ds
+	}
+	return p.appendAndRender(event.Event{
 		AgentID:   id,
 		Role:      event.RoleFor("assign"),
 		EventType: "assign",
 		TaskID:    taskID,
 		Feature:   feature,
-		Payload:   map[string]any{"owner": owner, "reviewer": reviewer, "branch": branch, "spec": spec},
+		Payload:   payload,
 	})
 }
 
 // Merge integrates a feature branch into the base branch (rule: all accepted).
-func Merge(feature string) error {
-	id, err := requireAgentID()
+func (p *Project) Merge(feature string) error {
+	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
-	st, evs, err := state()
+	st, evs, err := p.state()
 	if err != nil {
 		return err
 	}
@@ -177,22 +210,22 @@ func Merge(feature string) error {
 	}
 	branch := featureBranch(st, feature)
 	if branch != "" {
-		if ch, _ := gitx.HasChanges("."); ch {
-			if err := gitx.CommitAll(".", "pact "+feature+": ledger before merge"); err != nil {
+		if ch, _ := gitx.HasChanges(p.dir); ch {
+			if err := gitx.CommitAll(p.dir, "pact "+feature+": ledger before merge"); err != nil {
 				return err
 			}
 		}
 		base := initBaseBranch(evs)
 		if base != "" && base != branch {
-			if err := gitx.Checkout(".", base); err != nil {
+			if err := gitx.Checkout(p.dir, base); err != nil {
 				return err
 			}
 		}
-		if err := gitx.MergeNoFF(".", branch, "Merge "+feature+" ("+branch+")"); err != nil {
+		if err := gitx.MergeNoFF(p.dir, branch, "Merge "+feature+" ("+branch+")"); err != nil {
 			return err
 		}
 	}
-	return appendAndRender(event.Event{
+	return p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("merge"), EventType: "merge",
 		Feature: feature, Payload: map[string]any{},
 	})
@@ -210,12 +243,12 @@ func initBaseBranch(evs []event.Event) string {
 }
 
 // Accept marks a task accepted (reviewer-only; must be awaiting_review).
-func Accept(taskID string) error {
-	id, err := requireAgentID()
+func (p *Project) Accept(taskID string) error {
+	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
-	st, _, err := state()
+	st, _, err := p.state()
 	if err != nil {
 		return err
 	}
@@ -223,19 +256,19 @@ func Accept(taskID string) error {
 	if err != nil {
 		return err
 	}
-	return appendAndRender(event.Event{
+	return p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("accept"), EventType: "accept",
 		TaskID: taskID, Feature: f.ID, Payload: map[string]any{},
 	})
 }
 
 // Changes sends a task back (reviewer-only; must be awaiting_review).
-func Changes(taskID, reason string) error {
-	id, err := requireAgentID()
+func (p *Project) Changes(taskID, reason string) error {
+	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
-	st, _, err := state()
+	st, _, err := p.state()
 	if err != nil {
 		return err
 	}
@@ -243,19 +276,19 @@ func Changes(taskID, reason string) error {
 	if err != nil {
 		return err
 	}
-	return appendAndRender(event.Event{
+	return p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("changes_requested"), EventType: "changes_requested",
 		TaskID: taskID, Feature: f.ID, Payload: map[string]any{"reason": reason},
 	})
 }
 
 // Checkpoint submits a task for review (owner-only) and commits the work.
-func Checkpoint(taskID, evidence string) error {
-	id, err := requireAgentID()
+func (p *Project) Checkpoint(taskID, evidence string) error {
+	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
-	st, _, err := state()
+	st, _, err := p.state()
 	if err != nil {
 		return err
 	}
@@ -263,7 +296,7 @@ func Checkpoint(taskID, evidence string) error {
 	if err != nil {
 		return err
 	}
-	if err := appendAndRender(event.Event{
+	if err := p.appendAndRender(event.Event{
 		AgentID:   id,
 		Role:      event.RoleFor("checkpoint"),
 		EventType: "checkpoint",
@@ -273,15 +306,15 @@ func Checkpoint(taskID, evidence string) error {
 	}); err != nil {
 		return err
 	}
-	if ch, _ := gitx.HasChanges("."); ch {
-		return gitx.CommitAll(".", "pact "+taskID+": checkpoint by "+id)
+	if ch, _ := gitx.HasChanges(p.dir); ch {
+		return gitx.CommitAll(p.dir, "pact "+taskID+": checkpoint by "+id)
 	}
 	return nil
 }
 
 // Status returns the rendered STATE.yml text (from the live log).
-func Status() (string, error) {
-	st, _, err := state()
+func (p *Project) Status() (string, error) {
+	st, _, err := p.state()
 	if err != nil {
 		return "", err
 	}
@@ -289,17 +322,17 @@ func Status() (string, error) {
 }
 
 // LogReplay rebuilds STATE.yml from the log.
-func LogReplay() error {
-	st, _, err := state()
+func (p *Project) LogReplay() error {
+	st, _, err := p.state()
 	if err != nil {
 		return err
 	}
-	return projection.WriteState(paths.State(), st)
+	return projection.WriteState(paths.StateIn(p.dir), st)
 }
 
 // LogText returns the raw log contents.
-func LogText() (string, error) {
-	b, err := os.ReadFile(paths.Log())
+func (p *Project) LogText() (string, error) {
+	b, err := os.ReadFile(paths.LogIn(p.dir))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", nil
@@ -310,4 +343,44 @@ func LogText() (string, error) {
 }
 
 // Validate runs the v1 conformance checks.
-func Validate() error { return ValidateLog() }
+func (p *Project) Validate() error { return p.validateLog() }
+
+// ---------------------------------------------------------------------------
+// cwd-bound package-level wrappers. These preserve the historical behavior:
+// every verb operates against the process cwd's .pact and PACT_AGENT_ID.
+// ---------------------------------------------------------------------------
+
+// Init scaffolds .pact/ in the current working directory.
+func Init(project string, seatSpecs []string) error { return At(".").Init(project, seatSpecs) }
+
+// Join registers the seat in the current working directory's repo.
+func Join(seatID, roles string) error { return At(".").Join(seatID, roles) }
+
+// Assign records a task assignment in the current working directory's repo.
+func Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
+	return At(".").Assign(taskID, feature, branch, owner, reviewer, spec, deps)
+}
+
+// Merge integrates a feature branch in the current working directory's repo.
+func Merge(feature string) error { return At(".").Merge(feature) }
+
+// Accept marks a task accepted in the current working directory's repo.
+func Accept(taskID string) error { return At(".").Accept(taskID) }
+
+// Changes sends a task back in the current working directory's repo.
+func Changes(taskID, reason string) error { return At(".").Changes(taskID, reason) }
+
+// Checkpoint submits a task for review in the current working directory's repo.
+func Checkpoint(taskID, evidence string) error { return At(".").Checkpoint(taskID, evidence) }
+
+// Status returns rendered STATE.yml for the current working directory's repo.
+func Status() (string, error) { return At(".").Status() }
+
+// LogReplay rebuilds STATE.yml for the current working directory's repo.
+func LogReplay() error { return At(".").LogReplay() }
+
+// LogText returns the raw log for the current working directory's repo.
+func LogText() (string, error) { return At(".").LogText() }
+
+// Validate runs the v1 conformance checks against the current working dir.
+func Validate() error { return At(".").Validate() }

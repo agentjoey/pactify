@@ -28,9 +28,9 @@ index.includes('What we didn&#39;t build') || index.includes("What we didn't bui
 index.includes('in development') ? ok('ladder has status badges') : fail('ladder missing in-development badge');
 index.includes('href="#"') ? fail('placeholder links remain on the landing') : ok('no placeholder links');
 
-// 5. role tokens shipped in the built CSS
+// 5. role tokens shipped (Astro inlines global.css into index.html; scoped styles go to _astro/*.css)
 import { readdirSync } from 'node:fs';
 const cssDir = new URL('../dist/_astro/', import.meta.url);
 const cssFiles = readdirSync(cssDir).filter((f) => f.endsWith('.css'));
-const css = cssFiles.map((f) => readFileSync(new URL(f, cssDir), 'utf8')).join('');
-css.includes('--role-product') ? ok('role tokens in built CSS') : fail('role tokens missing from built CSS');
+const css = cssFiles.map((f) => readFileSync(new URL(f, cssDir), 'utf8')).join('') + index;
+css.includes('--role-product:') ? ok('role tokens shipped') : fail('role token definitions missing from shipped CSS');

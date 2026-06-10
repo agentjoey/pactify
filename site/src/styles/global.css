@@ -12,6 +12,7 @@ a { color: var(--blue); text-decoration: none; }
 a:hover { text-decoration: underline; }
 code { background: var(--bg3); border: 1px solid var(--line2); border-radius: 6px; padding: 1px 7px; }
 .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+.sec { padding: 46px 30px; border-top: 1px solid var(--line); position: relative; }
 .label { font-size: 11px; letter-spacing: 2px; color: var(--dimmer); text-transform: uppercase; }
 
 /* shared section heading primitives (adapted from mockup .hf-label / .hf-h2) */

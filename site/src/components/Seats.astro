@@ -9,7 +9,7 @@ const seats = [
 ---
 <section class="sec">
   <div class="sec-label">Seats are roles</div>
-  <div class="sec-h2">Any agent can take a seat — under two rules.</div>
+  <h2 class="sec-h2">Any agent can take a seat — under two rules.</h2>
   <div class="seats">
     {seats.map(([name, how, color, d]) => (
       <div class="seat" style={`--c:${color};--d:${d}`}><i></i><b>{name}</b>{how}</div>
@@ -22,7 +22,6 @@ const seats = [
 </section>
 
 <style>
-  .sec { padding: 46px 30px; border-top: 1px solid var(--line); position: relative; }
   .seats { display: flex; gap: 13px; justify-content: center; flex-wrap: wrap; }
   .seat { --c: var(--role-dev); position: relative; width: 112px; height: 68px; border: 1.5px dashed #3d4754; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9.5px; color: var(--dim); gap: 3px; }
   .seat b { font-size: 11px; color: var(--fg); font-weight: 400; }

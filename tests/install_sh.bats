@@ -3,11 +3,12 @@
 REPO="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
 @test "install.sh detect_arch maps common arches" {
-  run sh -c ". '$REPO/install.sh' --source-only; detect_arch x86_64"
+  # env-var form: POSIX `.` does not portably pass args (dash ignores them)
+  run sh -c "PACTIFY_SOURCE_ONLY=1; export PACTIFY_SOURCE_ONLY; . '$REPO/install.sh'; detect_arch x86_64"
   [ "$status" -eq 0 ]; [ "$output" = "amd64" ]
-  run sh -c ". '$REPO/install.sh' --source-only; detect_arch aarch64"
+  run sh -c "PACTIFY_SOURCE_ONLY=1; export PACTIFY_SOURCE_ONLY; . '$REPO/install.sh'; detect_arch aarch64"
   [ "$status" -eq 0 ]; [ "$output" = "arm64" ]
-  run sh -c ". '$REPO/install.sh' --source-only; detect_arch arm64"
+  run sh -c "PACTIFY_SOURCE_ONLY=1; export PACTIFY_SOURCE_ONLY; . '$REPO/install.sh'; detect_arch arm64"
   [ "$status" -eq 0 ]; [ "$output" = "arm64" ]
 }
 

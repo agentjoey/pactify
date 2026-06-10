@@ -18,12 +18,15 @@ detect_arch() {
   esac
 }
 
-# --source-only lets tests load the functions without running main.
-# When sourced, `return 0` ends sourcing early. When executed, `return` fails
-# (outside a function) so `exit 0` runs; 2>/dev/null hides the shell's return
-# complaint. shellcheck can't model the runtime-dependent reachability of exit 0.
+# PACTIFY_SOURCE_ONLY=1 (or executing with --source-only) lets tests load the
+# functions without running main. The env form is required for sourcing: POSIX
+# `.` does not portably pass arguments to the sourced file (bash does, dash
+# ignores them). When sourced, `return 0` ends sourcing early; when executed,
+# `return` fails (outside a function) so `exit 0` runs; 2>/dev/null hides the
+# shell's return complaint. shellcheck can't model that runtime-dependent
+# reachability of exit 0.
 # shellcheck disable=SC2317
-case "${1:-}" in --source-only) return 0 2>/dev/null || exit 0 ;; esac
+case "${PACTIFY_SOURCE_ONLY:-}${1:-}" in 1|--source-only) return 0 2>/dev/null || exit 0 ;; esac
 
 main() {
   os="$(detect_os)"; arch="$(detect_arch)"

@@ -36,8 +36,13 @@ func checkSeat(agentID string) Check {
 }
 
 // checkRepo requires cwd to be the process working directory for the validate
-// call (pact.Validate reads via paths.Dir(), which is cwd-relative).
+// call (pact.Validate reads via paths.Dir(), which is cwd-relative). A caller
+// passing any other dir would silently validate the wrong repo, so that is a
+// loud failure instead.
 func checkRepo(cwd string) Check {
+	if wd, err := os.Getwd(); err != nil || wd != cwd {
+		return Check{".pact/ valid", false, "internal: doctor must run with cwd = process working directory"}
+	}
 	if _, err := os.Stat(filepath.Join(cwd, paths.Dir())); err != nil {
 		return Check{".pact/ present", false, "no .pact/ here — run `pactify setup` or `pactify init`"}
 	}

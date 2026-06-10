@@ -2,9 +2,12 @@ package doctor
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/agentjoey/pactify/internal/pact"
 )
 
 func TestPathCheckDetectsDir(t *testing.T) {
@@ -28,12 +31,45 @@ func TestSeatCheck(t *testing.T) {
 }
 
 func TestRepoCheckNoPactDir(t *testing.T) {
-	c := checkRepo(t.TempDir())
+	dir := t.TempDir()
+	t.Chdir(dir)
+	c := checkRepo(dir)
 	if c.OK {
 		t.Fatal("missing .pact should not be ok")
 	}
 	if !strings.Contains(c.Detail, "pactify setup") {
 		t.Fatalf("remediation should point at setup: %+v", c)
+	}
+}
+
+func TestRepoCheckGuardsForeignCwd(t *testing.T) {
+	// cwd != process cwd must fail loudly, never validate the wrong repo.
+	c := checkRepo(t.TempDir())
+	if c.OK || !strings.Contains(c.Detail, "internal") {
+		t.Fatalf("foreign cwd should trip the guard: %+v", c)
+	}
+}
+
+func TestRepoCheckValidRepo(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	for _, a := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t.t"}, {"config", "user.name", "t"}} {
+		c := exec.Command("git", a...)
+		c.Dir = dir
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", a, err, out)
+		}
+	}
+	os.WriteFile(filepath.Join(dir, "base.txt"), []byte("x"), 0o644)
+	exec.Command("git", "-C", dir, "add", "-A").Run()
+	exec.Command("git", "-C", dir, "commit", "-q", "-m", "base").Run()
+	t.Setenv("PACT_AGENT_ID", "x")
+	if err := pact.Init("p", []string{"x:worker:CLAUDE.md"}); err != nil {
+		t.Fatal(err)
+	}
+	c := checkRepo(dir)
+	if !c.OK || !strings.Contains(c.Detail, "conformant") {
+		t.Fatalf("valid repo should pass: %+v", c)
 	}
 }
 

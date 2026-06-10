@@ -1,14 +1,15 @@
 # Current Status — Pactify
 
-Version:        v0.1.0
+Version:        v0.3.0 (target；tag 待打——首个 GitHub Release)
 Sprint:         003
-Sprint Status:  🚧 进行中（Phase 2 / M2.1 ✅ Done，exit gate PASS；下一步 M2.2 分发）
-Last Updated:   2026-06-10 by claude-opus-4-8
+Sprint Status:  🚧 进行中（M2.1 ✅ + M2.2 ✅（PR #6 merged，CI 绿 + 分支保护生效）；下一步 tag v0.3.0 → M2.3）
+Last Updated:   2026-06-10 by claude (fable-5 控制端)
 Sprint File:    .agent/sprints/sprint-003.md
 
 ## Open Bugs（P0/P1 必须本 Sprint 修复）
 🟢 无已知 P0/P1 bug。
-ℹ️ M2.1 dogfood F1（PATH/分发）：agent config 用裸 `pactify` 命令靠 PATH 解析；需 pactify 上 agent 继承的 PATH。M2.2 分发解决，或改写 os.Executable() 绝对路径——待 M2.2 决策。
+ℹ️ M2.1 F1 已闭环：M2.2 拍板裸 `pactify` + 分发上 PATH（install.sh/go install），agent 码零改动。
+ℹ️ M2.2 终审 deferred minors（M1–M6，见 sprint-003 T2）：plugin 版本同步、go-install version fallback、release 测试门、checkPath LookPath 化等。
 
 ## Current Sprint Summary
 Sprint 001：Repo 初始化 + roadmap/地基锁定完成。**Phase 0 实现完成**（分支 feat/phase0-pact-skill）：

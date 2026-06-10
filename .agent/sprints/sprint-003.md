@@ -51,18 +51,33 @@ orchestrator(claude) 派 T1（写 `hello.sh`）→ 人只说一次"开始"→ op
   opencode.json）若在派活前未 commit，会被 worker 首个 checkpoint 的 `git add -A` 扫进 feature 提交，
   污染 feature diff。建议 `pactify init` 或工作流在开首个 feature 分支前先提交 scaffold 工件。低优。
 
-### T2: M2.2 分发（GitHub releases + brew tap + curl|sh + go install）+ CI/分支保护 [HIGH]
-**Status:** 🔲 Todo
+### T2: M2.2 分发 + 引导 + Claude 一键 [HIGH]
+**Status:** ✅ Done（PR #6 merged fa1ea66，2026-06-10；CI 首跑绿 + 分支保护已生效）
 **Milestone:** M2.2
 **Context:** 吸收 M2.1 F1——分发的核心交付就是把 `pactify` 放上 agent 继承的 PATH。
 **Acceptance:**
-- [ ] GitHub Actions CI（go test + bats + vitest + build）+ 分支保护（EP-009）
-- [ ] release 流水线（多平台静态二进制）
-- [ ] brew tap + `curl|sh` 安装脚本 + `go install` 路径
-- [ ] 决策 F1：config 用 PATH 裸命令 vs os.Executable() 绝对路径
+- [x] GitHub Actions CI（vet/test/build + bats + vitest，tidy-diff 门/缓存/超时/并发组）+ 分支保护（EP-009，
+      `test` 必过 + PR + admin 可绕，已用 gh api 生效，命令见 CONTRIBUTING）
+- [x] release 流水线：GoReleaser v2（darwin/linux × amd64/arm64，sha256 checksums，trimpath，
+      version/commit/date ldflags 注入 + `pactify version`/`--version`），`release.yml` on `v*` tag
+- [x] `curl|sh` 安装脚本（os/arch 检测、checksum 校验、空版本守卫、sha256sum 兜底、PATH 感知、
+      可测 seam PACTIFY_VERSION/DOWNLOAD_BASE/BINDIR/SOURCE_ONLY）+ `go install` 路径；
+      **brew tap 留 M2.3**（spec 决策）
+- [x] **F1 决策 = 裸 `pactify` + 分发上 PATH**（project config 提交进仓必须可移植，绝对路径会烂；agent 码零改动）
+- [x] 三支柱新增：**B 引导**——`pactify doctor`（PATH/repo/seat/内容感知 wiring/真 MCP 握手 5 检查）+
+      `pactify setup`（TTY 交互引导，非 TTY 让路，fail-closed，座位无条件采用）；**C Claude 一键**——
+      `plugins/pact`（skill+MCP+SessionStart 提示 hook，`claude plugin validate` ✔）+ 同仓
+      `.claude-plugin/marketplace.json`（`/plugin marketplace add agentjoey/pactify` → `/plugin install pact@pactify`）
+**质量**：每任务两阶段审查（spec=opus / quality=fable5）+ fable5 终审抓 4 个 merge 前修复
+（C1 旧座位污染 init、I1 MCP 检查缺失、I2 wiring 假阳性、I3 空座位）；CI 首跑暴露 dash 的
+POSIX `.` 不传参问题（PACTIFY_SOURCE_ONLY env 守卫修复）。基线 go 全套 + bats 101 + vitest 11。
+**Deferred minors（终审 M1–M6）**：plugin.json 版本与 release 同步机制；go-install 用户 version
+fallback（debug.ReadBuildInfo）；release.yml 加测试门；checkPath 用 LookPath 对比真实解析；
+spec B2 措辞（setup 只指向 doctor 不内嵌跑）；CI 跑 claude plugin validate。
+**🔜 待办：tag v0.3.0 触发首个 GitHub Release**（install.sh 在真 release 存在后才真正可用）。
 
-### T3: M2.3 Claude marketplace 上架（skill 打包）[MED]
-**Status:** 🔲 Todo
+### T3: M2.3 Claude marketplace 上架 + 其余 agent 一键 + brew tap [MED]
+**Status:** 🔲 Todo（Claude 插件模板已在 M2.2 打样，本任务=提交社区 marketplace 审核 + Codex/opencode/Gemini 一键 + brew tap）
 **Milestone:** M2.3
 
 ### T4: M2.4 pactify.dev 官网 v1（协议文档 + 5 分钟快速开始）[MED]

@@ -5,6 +5,11 @@ import type { State } from "./types";
 // and intended deps so it can render alongside committed tasks.
 export type Draft = { id: string; specMd: string; feature: string; deps: string[] };
 
+// DraftFeature is a feature being authored in the canvas but not yet present in
+// protocol state. It renders as an empty feature group so drafts can target it
+// before any task lands. id is a slug; branch is its git branch label.
+export type DraftFeature = { id: string; branch: string };
+
 // LayoutJSON is the free-form canvas sidecar (stored verbatim server-side at
 // .pact/squad/layout.json). positions maps a flow node id to its saved coords.
 export type LayoutJSON = { positions?: Record<string, { x: number; y: number }> };
@@ -58,6 +63,7 @@ export function deriveFlow(
   state: State,
   layout: LayoutJSON,
   drafts: Draft[],
+  draftFeatures: DraftFeature[] = [],
 ): { nodes: FlowNode[]; edges: FlowEdge[] } {
   const nodes: FlowNode[] = [];
   const edges: FlowEdge[] = [];
@@ -129,16 +135,40 @@ export function deriveFlow(
     });
   });
 
+  // Draft feature groups: rendered as empty containers one column past the
+  // committed features, so authored-but-unassigned features get a column too.
+  // featAbs (built next) folds these in so drafts can target them.
+  const committedIds = new Set(state.features.map((f) => f.id));
+  draftFeatures.forEach((df, dfi) => {
+    if (committedIds.has(df.id)) return; // a committed feature already owns this id
+    const featId = `feature:${df.id}`;
+    const colX = (state.features.length + 1 + dfi) * COL_W;
+    nodes.push({
+      id: featId,
+      type: "feature",
+      position: pos(featId, { x: colX, y: FEATURE_Y }),
+      data: { id: df.id, branch: df.branch, status: "draft", draft: true },
+    });
+  });
+
   // Draft nodes: rendered under their target feature, stacked below any tasks.
   // We index task counts per feature so drafts continue the row stacking.
   const taskRows = new Map<string, number>();
   for (const f of state.features) taskRows.set(f.id, f.tasks.length);
   // featAbs holds each feature's ABSOLUTE position (saved or grid fallback) so a
   // draft's grid slot can be computed relative to its parent, same as tasks.
+  // Committed features come first, then draft features continue the columns.
   const featAbs = new Map<string, { x: number; y: number }>();
   state.features.forEach((f, fi) =>
     featAbs.set(f.id, pos(`feature:${f.id}`, { x: (fi + 1) * COL_W, y: FEATURE_Y })),
   );
+  draftFeatures.forEach((df, dfi) => {
+    if (committedIds.has(df.id)) return;
+    featAbs.set(
+      df.id,
+      pos(`feature:${df.id}`, { x: (state.features.length + 1 + dfi) * COL_W, y: FEATURE_Y }),
+    );
+  });
   const draftSeen = new Map<string, number>();
 
   for (const d of drafts) {
@@ -186,6 +216,33 @@ export function toParentRelative(nodes: FlowNode[]): FlowNode[] {
       ...n,
       position: { x: n.position.x - parent.x, y: n.position.y - parent.y },
     };
+  });
+}
+
+// applyConnect folds a new dep edge drawn in the canvas into the drafts list.
+// Node ids arrive in their flow form ("task:T1" / "draft:D1"); we strip the
+// prefix to the raw task id. Semantics: an edge A→B means "B depends on A", so
+// the SOURCE is the prerequisite and the TARGET gains the source in its deps.
+//
+// Only a DRAFT target can change — its deps are still editable. If the target
+// is a committed task, deps are fixed at assign time, so we return the drafts
+// unchanged (the UI surfaces a toast explaining why). Same-feature constraint
+// is enforced by the caller (Canvas) before invoking this helper.
+//
+// Pure: returns a new array (and a new Draft object for the touched draft);
+// never mutates its input. A duplicate dep is a no-op.
+export function applyConnect(
+  drafts: Draft[],
+  sourceId: string,
+  targetId: string,
+): Draft[] {
+  const raw = (id: string) => id.replace(/^(task|draft):/, "");
+  const from = raw(sourceId); // prerequisite (A)
+  const to = raw(targetId);   // dependent (B) — must be a draft to change deps
+  return drafts.map((d) => {
+    if (d.id !== to) return d;
+    if (d.deps.includes(from)) return d; // already a dep — no-op
+    return { ...d, deps: [...d.deps, from] };
   });
 }
 

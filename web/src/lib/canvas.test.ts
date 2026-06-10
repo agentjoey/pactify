@@ -4,7 +4,9 @@ import {
   deriveFlow,
   toParentRelative,
   childToAbsolute,
+  applyConnect,
   type Draft,
+  type DraftFeature,
   type LayoutJSON,
 } from "./canvas";
 import type { State } from "./types";
@@ -136,6 +138,82 @@ describe("deriveFlow", () => {
     const a = JSON.stringify(deriveFlow(state, noLayout, drafts));
     const b = JSON.stringify(deriveFlow(state, noLayout, drafts));
     expect(a).toBe(b);
+  });
+});
+
+describe("deriveFlow — build mode (drafts + draft features)", () => {
+  it("renders a draft feature group one column past committed features", () => {
+    const dfs: DraftFeature[] = [{ id: "F9", branch: "feat/new" }];
+    const { nodes } = deriveFlow(state, noLayout, noDrafts, dfs);
+    const f9 = nodes.find((n) => n.id === "feature:F9");
+    expect(f9).toBeDefined();
+    expect(f9!.type).toBe("feature");
+    expect(f9!.data.draft).toBe(true);
+    expect(f9!.data.branch).toBe("feat/new");
+    // two committed features (F1,F2) → draft feature sits in column 3.
+    expect(f9!.position.x).toBe(3 * 320);
+  });
+
+  it("a draft feature id that clashes with a committed feature is skipped", () => {
+    const dfs: DraftFeature[] = [{ id: "F1", branch: "dup" }];
+    const { nodes } = deriveFlow(state, noLayout, noDrafts, dfs);
+    // only ONE feature:F1 (the committed one, branch feat/x).
+    const f1s = nodes.filter((n) => n.id === "feature:F1");
+    expect(f1s).toHaveLength(1);
+    expect(f1s[0].data.branch).toBe("feat/x");
+  });
+
+  it("a draft can target a draft feature and parents to it", () => {
+    const dfs: DraftFeature[] = [{ id: "F9", branch: "feat/new" }];
+    const drafts: Draft[] = [{ id: "D1", specMd: "x", feature: "F9", deps: [] }];
+    const { nodes } = deriveFlow(state, noLayout, drafts, dfs);
+    const d = nodes.find((n) => n.id === "draft:D1")!;
+    expect(d.parentId).toBe("feature:F9");
+  });
+
+  it("add → edit → remove a draft round-trips through deriveFlow", () => {
+    // add
+    let drafts: Draft[] = [{ id: "D1", specMd: "# v1", feature: "F1", deps: [] }];
+    let r = deriveFlow(state, noLayout, drafts);
+    expect(r.nodes.find((n) => n.id === "draft:D1")!.data.specMd).toBe("# v1");
+    // edit (spec change)
+    drafts = drafts.map((d) => (d.id === "D1" ? { ...d, specMd: "# v2" } : d));
+    r = deriveFlow(state, noLayout, drafts);
+    expect(r.nodes.find((n) => n.id === "draft:D1")!.data.specMd).toBe("# v2");
+    // remove
+    drafts = drafts.filter((d) => d.id !== "D1");
+    r = deriveFlow(state, noLayout, drafts);
+    expect(r.nodes.find((n) => n.id === "draft:D1")).toBeUndefined();
+  });
+});
+
+describe("applyConnect", () => {
+  const drafts: Draft[] = [
+    { id: "D1", specMd: "x", feature: "F1", deps: [] },
+    { id: "D2", specMd: "y", feature: "F1", deps: ["T1"] },
+  ];
+
+  it("draft target gains the source task id as a dep (A→B = B depends on A)", () => {
+    const out = applyConnect(drafts, "task:T1", "draft:D1");
+    expect(out.find((d) => d.id === "D1")!.deps).toEqual(["T1"]);
+    // input not mutated
+    expect(drafts.find((d) => d.id === "D1")!.deps).toEqual([]);
+  });
+
+  it("source may itself be a draft (draft → draft dep)", () => {
+    const out = applyConnect(drafts, "draft:D1", "draft:D2");
+    expect(out.find((d) => d.id === "D2")!.deps).toEqual(["T1", "D1"]);
+  });
+
+  it("a duplicate dep is a no-op", () => {
+    const out = applyConnect(drafts, "task:T1", "draft:D2");
+    expect(out.find((d) => d.id === "D2")!.deps).toEqual(["T1"]);
+  });
+
+  it("a committed (non-draft) target is unchanged — deps fixed at assign time", () => {
+    // target task:T2 is not in drafts, so nothing changes.
+    const out = applyConnect(drafts, "task:T1", "task:T2");
+    expect(out).toEqual(drafts);
   });
 });
 

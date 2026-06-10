@@ -44,3 +44,26 @@ setup() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"--roles is required"* ]]
 }
+
+@test "agent add makes a relative --project absolute (desktop --print)" {
+  run "$BIN" agent add claude-desktop --id h --roles worker --project ./somerepo --print
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"--project"'* ]]
+  [[ "$output" != *'"./somerepo"'* ]]
+  [[ "$output" == *"/somerepo"* ]]
+}
+
+@test "agent add desktop kind writes global config under HOME and confirms" {
+  export HOME="$BATS_TEST_TMPDIR/home"; mkdir -p "$HOME"
+  run "$BIN" agent add claude-desktop --id h --roles worker
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"machine-global"* ]]
+  [ -f "$HOME/Library/Application Support/Claude/claude_desktop_config.json" ]
+  grep -q '"pact"' "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+}
+
+@test "agent add opencode confirms the written config" {
+  run "$BIN" agent add opencode --id opencode --roles worker
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"wrote opencode.json"* ]]
+}

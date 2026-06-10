@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/spf13/cobra"
@@ -31,6 +32,11 @@ func newAgentCmd() *cobra.Command {
 				}
 				repoAbs = wd
 			}
+			absRepo, err := filepath.Abs(repoAbs)
+			if err != nil {
+				return err
+			}
+			repoAbs = absRepo
 			if printOnly {
 				entry, cfg, err := agent.Render(kind, id, roles, repoAbs)
 				if err != nil {
@@ -45,9 +51,16 @@ func newAgentCmd() *cobra.Command {
 			if err := agent.Wire(kind, id, roles, repoAbs); err != nil {
 				return err
 			}
-			if ad, ok := agent.Get(kind); ok && ad.Config().Format == agent.TOML {
-				_, cfg, _ := agent.Render(kind, id, roles, repoAbs)
-				fmt.Fprintf(c.OutOrStdout(), "%s is doc-only — add this to %s:\n%s", kind, ad.Config().Path, cfg)
+			ad, _ := agent.Get(kind) // kind is valid: Wire already resolved it
+			cfg := ad.Config()
+			switch {
+			case cfg.Format == agent.TOML:
+				_, snip, _ := agent.Render(kind, id, roles, repoAbs)
+				fmt.Fprintf(c.OutOrStdout(), "%s is doc-only — add this to %s:\n%s", kind, cfg.Path, snip)
+			case cfg.Scope == agent.Global:
+				fmt.Fprintf(c.OutOrStdout(), "wrote %s (machine-global)\n", agent.ExpandPath(cfg.Path))
+			default:
+				fmt.Fprintf(c.OutOrStdout(), "wrote %s\n", cfg.Path)
 			}
 			return nil
 		}}

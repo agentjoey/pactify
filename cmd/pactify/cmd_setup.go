@@ -45,8 +45,15 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 		seat := ask("Your seat id (PACT_AGENT_ID): ")
 		kind := ask(fmt.Sprintf("Agent kind %v (blank to skip wiring): ", agent.Kinds()))
 		entry := "CLAUDE.md"
-		if ad, ok := agent.Get(kind); ok && ad.DefaultEntry() != "" {
-			entry = ad.DefaultEntry()
+		if kind != "" {
+			// Fail closed before any writes, like the init command does.
+			ad, ok := agent.Get(kind)
+			if !ok {
+				return fmt.Errorf("unknown agent kind %q (supported: %v)", kind, agent.Kinds())
+			}
+			if ad.DefaultEntry() != "" {
+				entry = ad.DefaultEntry()
+			}
 		}
 		seatSpec := seat + ":worker:" + entry
 		if kind != "" {

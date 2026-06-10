@@ -53,3 +53,19 @@ func TestSetupInteractivePromptsForSeat(t *testing.T) {
 		t.Fatalf("setup should echo the chosen seat export:\n%s", s)
 	}
 }
+
+func TestSetupInteractiveRejectsUnknownKindBeforeWrites(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	gitInitWithCommit(t, dir)
+	t.Setenv("PACT_AGENT_ID", "s")
+	var out bytes.Buffer
+	in := strings.NewReader("p\ns\nbadkind\n")
+	err := runSetup(in, &out, dir, true)
+	if err == nil || !strings.Contains(err.Error(), "unknown agent kind") {
+		t.Fatalf("expected unknown-kind error, got %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, ".pact")); statErr == nil {
+		t.Fatal("setup must fail closed: no .pact/ should be written on invalid kind")
+	}
+}

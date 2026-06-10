@@ -12,7 +12,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { State } from "../lib/types";
-import { deriveFlow, type Draft, type FlowNode, type LayoutJSON } from "../lib/canvas";
+import { deriveFlow, toParentRelative, childToAbsolute, type Draft, type FlowNode, type LayoutJSON } from "../lib/canvas";
 import { getLayout, putLayout } from "../lib/api";
 import { TaskNode } from "./nodes/TaskNode";
 import { SeatNode } from "./nodes/SeatNode";
@@ -54,18 +54,20 @@ function handlesFor(type: string): SeedHandle[] {
 }
 
 // toRFNodes maps derived FlowNodes → React Flow nodes. Feature nodes get a sized
-// style + dropped into the front; children get parentId + extent:'parent' and
-// their positions are rebased to be relative to the parent origin.
+// style and are pushed first (React Flow requires parents before children);
+// children get parentId + extent:'parent'. Child positions arrive already
+// rebased to parent-relative coords by toParentRelative() — this function does
+// NO coordinate math, so there is a single rebase path in the codebase.
 function toRFNodes(flow: FlowNode[]): Node[] {
-  const byId = new Map(flow.map((n) => [n.id, n]));
+  const rel = toParentRelative(flow);
   // Count child rows per feature for the container bound.
   const rows = new Map<string, number>();
-  for (const n of flow) {
+  for (const n of rel) {
     if (n.parentId) rows.set(n.parentId, (rows.get(n.parentId) ?? 0) + 1);
   }
 
   const out: Node[] = [];
-  for (const n of flow) {
+  for (const n of rel) {
     if (n.type === "feature") {
       const sz = featureStyle(rows.get(n.id) ?? 0);
       out.push({
@@ -81,7 +83,7 @@ function toRFNodes(flow: FlowNode[]): Node[] {
       });
     }
   }
-  for (const n of flow) {
+  for (const n of rel) {
     if (n.type === "feature") continue;
     const node: Node = {
       id: n.id,
@@ -94,21 +96,12 @@ function toRFNodes(flow: FlowNode[]): Node[] {
       // jsdom (no layout) these seeds are what let dep edges render in tests.
       handles: handlesFor(n.type),
     };
-    if (n.parentId && byId.has(n.parentId)) {
-      const parent = byId.get(n.parentId)!;
+    if (n.parentId) {
       node.parentId = n.parentId;
       node.extent = "parent";
-      // Rebase absolute grid coords to parent-relative coords.
-      node.position = {
-        x: PAD,
-        y: HEADER + (n.position.y - parent.position.y - ROW_H >= 0
-          ? Math.round((n.position.y - parent.position.y - ROW_H) / ROW_H) * ROW_H
-          : 0),
-      };
     }
     out.push(node);
   }
-  // React Flow requires parents before children — features already pushed first.
   return out;
 }
 
@@ -176,11 +169,20 @@ export function Canvas({
     setNodes((nds) => applyNodeChanges(changes, nds));
   }, []);
 
-  // Persist a node's new position into the layout sidecar after a drag.
+  // Persist a node's new position into the layout sidecar after a drag. The
+  // layout stores ABSOLUTE coords for every node (one coordinate system). A
+  // child reports a parent-relative position, so convert it back to absolute
+  // using its parent's CURRENT absolute position from the live nodes state
+  // (the parent may itself have been dragged this gesture).
   const onNodeDragStop = useCallback(
-    (_e: unknown, node: Node) => {
+    (_e: unknown, node: Node, allNodes: Node[]) => {
+      let abs = { x: node.position.x, y: node.position.y };
+      if (node.parentId) {
+        const parent = allNodes.find((n) => n.id === node.parentId);
+        if (parent) abs = childToAbsolute(node.position, parent.position);
+      }
       const positions = { ...(layoutRef.current.positions ?? {}) };
-      positions[node.id] = { x: node.position.x, y: node.position.y };
+      positions[node.id] = abs;
       scheduleSave({ ...layoutRef.current, positions });
     },
     [scheduleSave],

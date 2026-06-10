@@ -41,10 +41,15 @@ export function roleColorVar(roles: string[]): string {
 const COL_W = 320; // horizontal gap between feature columns
 const ROW_H = 120; // vertical gap between stacked task/draft rows
 const FEATURE_Y = 0; // feature group nodes sit on the top row
-const TASK_Y0 = ROW_H; // first task/draft row sits one row below its feature
 const SEAT_X = 0; // seats pin to x:0 (the left rail)
 const SEAT_Y0 = 0; // first seat row
 const SEAT_DY = ROW_H; // vertical gap between stacked seats
+
+// Child layout within a feature group. Children render parent-relative in React
+// Flow, so a child's relative origin is (PAD, HEADER) and rows stack by ROW_H.
+const PAD = 16; // inner padding of the feature container
+const HEADER = 28; // height reserved for the feature header
+const TASK_REL_Y0 = HEADER + PAD; // first task/draft row, relative to the feature
 
 // deriveFlow folds protocol state + saved layout + in-flight drafts into the
 // node/edge graph the canvas renders. Pure and deterministic: it reads only its
@@ -77,14 +82,18 @@ export function deriveFlow(
   });
 
   // Feature columns + their task rows. The rail occupies the first column, so
-  // features start one column to the right.
+  // features start one column to the right. All positions are ABSOLUTE here —
+  // a child's grid fallback is its feature's absolute position plus the child's
+  // relative row offset. toParentRelative() later rebases children for React
+  // Flow's parent-relative coordinate space.
   state.features.forEach((f, fi) => {
     const featId = `feature:${f.id}`;
     const colX = (fi + 1) * COL_W;
+    const featPos = pos(featId, { x: colX, y: FEATURE_Y });
     nodes.push({
       id: featId,
       type: "feature",
-      position: pos(featId, { x: colX, y: FEATURE_Y }),
+      position: featPos,
       data: { id: f.id, branch: f.branch, status: f.status },
     });
 
@@ -96,7 +105,10 @@ export function deriveFlow(
         id,
         type: "task",
         parentId: featId,
-        position: pos(id, { x: colX, y: TASK_Y0 + ti * ROW_H }),
+        position: pos(id, {
+          x: featPos.x + PAD,
+          y: featPos.y + TASK_REL_Y0 + ti * ROW_H,
+        }),
         data: {
           status: t.status,
           owner: t.owner,
@@ -121,14 +133,18 @@ export function deriveFlow(
   // We index task counts per feature so drafts continue the row stacking.
   const taskRows = new Map<string, number>();
   for (const f of state.features) taskRows.set(f.id, f.tasks.length);
-  const featCol = new Map<string, number>();
-  state.features.forEach((f, fi) => featCol.set(f.id, fi + 1));
+  // featAbs holds each feature's ABSOLUTE position (saved or grid fallback) so a
+  // draft's grid slot can be computed relative to its parent, same as tasks.
+  const featAbs = new Map<string, { x: number; y: number }>();
+  state.features.forEach((f, fi) =>
+    featAbs.set(f.id, pos(`feature:${f.id}`, { x: (fi + 1) * COL_W, y: FEATURE_Y })),
+  );
   const draftSeen = new Map<string, number>();
 
   for (const d of drafts) {
     const id = `draft:${d.id}`;
     const featId = `feature:${d.feature}`;
-    const col = featCol.get(d.feature) ?? state.features.length + 1;
+    const featP = featAbs.get(d.feature) ?? { x: (state.features.length + 1) * COL_W, y: FEATURE_Y };
     const base = taskRows.get(d.feature) ?? 0;
     const slot = draftSeen.get(d.feature) ?? 0;
     draftSeen.set(d.feature, slot + 1);
@@ -136,7 +152,10 @@ export function deriveFlow(
       id,
       type: "draft",
       parentId: featId,
-      position: pos(id, { x: col * COL_W, y: TASK_Y0 + (base + slot) * ROW_H }),
+      position: pos(id, {
+        x: featP.x + PAD,
+        y: featP.y + TASK_REL_Y0 + (base + slot) * ROW_H,
+      }),
       data: { draft: true, specMd: d.specMd, deps: d.deps },
     });
     for (const from of d.deps) {
@@ -150,4 +169,33 @@ export function deriveFlow(
   }
 
   return { nodes, edges };
+}
+
+// toParentRelative converts deriveFlow's ABSOLUTE child positions into the
+// parent-relative coordinates React Flow expects for nodes with extent:'parent'.
+// It is the single rebase path: a child's relative position is its absolute
+// position minus its parent feature's absolute position. Top-level nodes
+// (features, seats) pass through unchanged. Pure — does not mutate its input.
+export function toParentRelative(nodes: FlowNode[]): FlowNode[] {
+  const absById = new Map(nodes.map((n) => [n.id, n.position]));
+  return nodes.map((n) => {
+    if (!n.parentId) return n;
+    const parent = absById.get(n.parentId);
+    if (!parent) return n;
+    return {
+      ...n,
+      position: { x: n.position.x - parent.x, y: n.position.y - parent.y },
+    };
+  });
+}
+
+// childToAbsolute converts a dragged child's parent-relative position (what
+// React Flow reports in onNodeDragStop) back to the absolute coordinate the
+// layout sidecar stores. parentAbs is the parent feature's CURRENT absolute
+// position from the live nodes state (it may itself have been dragged).
+export function childToAbsolute(
+  childRel: { x: number; y: number },
+  parentAbs: { x: number; y: number },
+): { x: number; y: number } {
+  return { x: childRel.x + parentAbs.x, y: childRel.y + parentAbs.y };
 }

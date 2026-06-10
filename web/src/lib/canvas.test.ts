@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { roleColorVar, deriveFlow, type Draft, type LayoutJSON } from "./canvas";
+import {
+  roleColorVar,
+  deriveFlow,
+  toParentRelative,
+  childToAbsolute,
+  type Draft,
+  type LayoutJSON,
+} from "./canvas";
 import type { State } from "./types";
 
 describe("roleColorVar", () => {
@@ -129,5 +136,96 @@ describe("deriveFlow", () => {
     const a = JSON.stringify(deriveFlow(state, noLayout, drafts));
     const b = JSON.stringify(deriveFlow(state, noLayout, drafts));
     expect(a).toBe(b);
+  });
+});
+
+describe("toParentRelative", () => {
+  it("emits children whose feature-absolute + relative position equals derive's absolute", () => {
+    const { nodes } = deriveFlow(state, noLayout, noDrafts);
+    const abs = new Map(nodes.map((n) => [n.id, n.position]));
+    const rel = toParentRelative(nodes);
+    const relById = new Map(rel.map((n) => [n.id, n]));
+    for (const n of nodes) {
+      if (!n.parentId) {
+        // top-level nodes pass through unchanged
+        expect(relById.get(n.id)!.position).toEqual(n.position);
+        continue;
+      }
+      const featAbs = abs.get(n.parentId)!;
+      const r = relById.get(n.id)!.position;
+      expect({ x: featAbs.x + r.x, y: featAbs.y + r.y }).toEqual(abs.get(n.id));
+    }
+  });
+
+  it("does not mutate its input", () => {
+    const { nodes } = deriveFlow(state, noLayout, noDrafts);
+    const before = JSON.stringify(nodes);
+    toParentRelative(nodes);
+    expect(JSON.stringify(nodes)).toBe(before);
+  });
+});
+
+// Regression for the drag-persistence bug: a child (task/draft) reports a
+// parent-relative position in onNodeDragStop, which must be converted to
+// ABSOLUTE before being written into layout.positions. On the next derive the
+// saved absolute value must round-trip back to the same absolute coordinate so
+// the node stays exactly where it was dropped (no snap to a wrong spot).
+describe("child drag round-trip (single coordinate system)", () => {
+  it("dragging task:T1 by +100/+50 persists absolute, re-derives to the same spot", () => {
+    // 1) derive a fixture, take T1's absolute position and its feature's absolute.
+    const { nodes } = deriveFlow(state, noLayout, noDrafts);
+    const t1Abs = nodes.find((n) => n.id === "task:T1")!.position;
+    const featAbs = nodes.find((n) => n.id === "feature:F1")!.position;
+
+    // 2) toParentRelative gives the parent-relative coords React Flow renders.
+    const rel = toParentRelative(nodes);
+    const t1Rel = rel.find((n) => n.id === "task:T1")!.position;
+    expect({ x: featAbs.x + t1Rel.x, y: featAbs.y + t1Rel.y }).toEqual(t1Abs);
+
+    // 3) simulate a drag of the relative node by +100/+50 (what RF reports).
+    const draggedRel = { x: t1Rel.x + 100, y: t1Rel.y + 50 };
+    // The expected absolute drop target.
+    const expectedAbs = { x: t1Abs.x + 100, y: t1Abs.y + 50 };
+
+    // 4) onNodeDragStop conversion: child-relative → absolute via parent abs.
+    const savedAbs = childToAbsolute(draggedRel, featAbs);
+    expect(savedAbs).toEqual(expectedAbs);
+
+    // 5) write ABSOLUTE into layout.positions and re-derive.
+    const layout: LayoutJSON = { positions: { "task:T1": savedAbs } };
+    const re = deriveFlow(state, layout, noDrafts);
+    const reFeatAbs = re.nodes.find((n) => n.id === "feature:F1")!.position;
+    const reRel = toParentRelative(re.nodes);
+    const reT1Rel = reRel.find((n) => n.id === "task:T1")!.position;
+
+    // 6) feature-absolute + relative === the dragged absolute, exactly.
+    expect({ x: reFeatAbs.x + reT1Rel.x, y: reFeatAbs.y + reT1Rel.y }).toEqual(expectedAbs);
+    // and the derived absolute itself equals the dragged absolute.
+    expect(re.nodes.find((n) => n.id === "task:T1")!.position).toEqual(expectedAbs);
+  });
+
+  it("dragging a child after its parent moved still round-trips (parent abs is live)", () => {
+    // Feature F1 has been dragged to a new absolute spot; T1 dragged relative.
+    const layout: LayoutJSON = { positions: { "feature:F1": { x: 500, y: 200 } } };
+    const { nodes } = deriveFlow(state, layout, noDrafts);
+    const featAbs = nodes.find((n) => n.id === "feature:F1")!.position;
+    expect(featAbs).toEqual({ x: 500, y: 200 });
+
+    const rel = toParentRelative(nodes);
+    const t1Rel = rel.find((n) => n.id === "task:T1")!.position;
+    const draggedRel = { x: t1Rel.x + 30, y: t1Rel.y + 70 };
+
+    // Convert with the parent's CURRENT (moved) absolute position.
+    const savedAbs = childToAbsolute(draggedRel, featAbs);
+
+    const re = deriveFlow(
+      state,
+      { positions: { "feature:F1": { x: 500, y: 200 }, "task:T1": savedAbs } },
+      noDrafts,
+    );
+    const reRel = toParentRelative(re.nodes);
+    const reFeatAbs = re.nodes.find((n) => n.id === "feature:F1")!.position;
+    const reT1Rel = reRel.find((n) => n.id === "task:T1")!.position;
+    expect({ x: reFeatAbs.x + reT1Rel.x, y: reFeatAbs.y + reT1Rel.y }).toEqual(savedAbs);
   });
 });

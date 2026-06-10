@@ -39,7 +39,7 @@ const lines = [
         </div>
         <div style="padding:16px 18px;font-size:12.5px;line-height:2">
           {lines.map(([mark, color, rest], i) => (
-            <div class="ln" style={`--d:${0.3 + i * 0.7}s`}>
+            <div class="ln" style={`--d:${(0.3 + i * 0.7).toFixed(1)}s`}>
               <span style={`color:var(--${color})`}>{mark}</span>{rest}
               {i === lines.length - 1 && <span class="cursor" aria-hidden="true"></span>}
             </div>
@@ -47,9 +47,10 @@ const lines = [
         </div>
       </div>
       <div style="margin-top:28px;position:relative">
-        <code id="cta" style="padding:10px 18px;font-size:13px;cursor:pointer" title="click to copy">
+        <button id="cta" data-cmd={curl} title="click to copy"
+          style="display:inline-block;max-width:100%;overflow-wrap:anywhere;background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:10px 18px;font-size:13px;font-family:var(--mono);color:var(--fg);cursor:pointer;text-align:left">
           <span style="color:var(--green)">$</span> {curl}
-        </code>
+        </button>
       </div>
     </section>
 
@@ -71,7 +72,7 @@ const lines = [
     <section class="wrap" style="padding:48px 20px;border-top:1px solid var(--line)">
       <div class="label" style="text-align:center;margin-bottom:22px">Five minutes to a working pact</div>
       <ol style="max-width:620px;margin:0 auto;font-size:13.5px;line-height:2.4;color:var(--fg);padding-left:24px">
-        <li>Install — <code>{curl}</code></li>
+        <li>Install — <code style="overflow-wrap:anywhere">{curl}</code></li>
         <li>In your repo — <code>pactify setup</code> <span style="color:var(--dimmer)">(scaffolds .pact/, wires your agent, sets your seat)</span></li>
         <li>Verify — <code>pactify doctor</code></li>
         <li>Launch your agent — it joins via the pact MCP tools. You just say <em>"start"</em>.</li>
@@ -90,8 +91,18 @@ const lines = [
     </section>
   </main>
   <script>
-    document.getElementById('cta')?.addEventListener('click', () => {
-      navigator.clipboard?.writeText('curl -fsSL https://pactify.dev/install.sh | sh');
+    const cta = document.getElementById('cta');
+    cta?.addEventListener('click', async () => {
+      const cmd = cta.dataset.cmd;
+      if (!cmd) return;
+      try {
+        await navigator.clipboard.writeText(cmd);
+        const original = cta.innerHTML;
+        cta.textContent = '✓ copied';
+        setTimeout(() => { cta.innerHTML = original; }, 1500);
+      } catch {
+        /* clipboard unavailable (http/permissions) — leave the command selectable */
+      }
     });
   </script>
 </Base>

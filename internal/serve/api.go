@@ -3,6 +3,7 @@ package serve
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
 
 	"github.com/agentjoey/pactify/internal/registry"
 	"github.com/fsnotify/fsnotify"
@@ -16,6 +17,32 @@ type Server struct {
 	watcher    *fsnotify.Watcher
 	offsets    map[string]int64
 	watchPaths []struct{ id, lp string }
+
+	seat string // acting seat for author writes ("" = none configured)
+
+	// mu serializes author writes per project: authoring verbs append to the
+	// same log.jsonl, so concurrent assigns must not interleave. muGuard
+	// guards lazy creation of the per-project mutexes.
+	muGuard sync.Mutex
+	mu      map[string]*sync.Mutex
+}
+
+// SetSeat configures the acting seat used for author (write) endpoints.
+func (s *Server) SetSeat(seat string) { s.seat = seat }
+
+// projectMu returns the lazily-created mutex serializing author writes for id.
+func (s *Server) projectMu(id string) *sync.Mutex {
+	s.muGuard.Lock()
+	defer s.muGuard.Unlock()
+	if s.mu == nil {
+		s.mu = map[string]*sync.Mutex{}
+	}
+	m, ok := s.mu[id]
+	if !ok {
+		m = &sync.Mutex{}
+		s.mu[id] = m
+	}
+	return m
 }
 
 // New builds a Server over the given projects.
@@ -43,6 +70,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects", s.handleProjects)
 	mux.HandleFunc("GET /api/projects/{id}/state", s.handleState)
 	mux.HandleFunc("GET /api/projects/{id}/events", s.handleEvents)
+	s.registerAuthorRoutes(mux)
 	mux.Handle("/", dashboardHandler())
 	return mux
 }

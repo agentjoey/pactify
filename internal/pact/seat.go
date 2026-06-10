@@ -10,6 +10,12 @@ import (
 
 var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 
+// IsSlug reports whether s matches the protocol slug pattern used for seat and
+// task ids: a lowercase alphanumeric start followed by lowercase alphanumerics
+// or dashes. Exported so callers (e.g. the serve author API) validate ids with
+// the same pattern instead of duplicating the regex.
+func IsSlug(s string) bool { return slugRe.MatchString(s) }
+
 type Seat struct {
 	ID    string
 	Roles []string

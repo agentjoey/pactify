@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -47,5 +48,46 @@ func TestRenderDesktopAppHasNoEntry(t *testing.T) {
 func TestRenderUnknownKindErrors(t *testing.T) {
 	if _, _, err := Render("nope", "s", "r", "/r"); err == nil {
 		t.Fatal("expected error for unknown kind")
+	}
+}
+
+func TestWireJSONKindWritesConfigAndEntry(t *testing.T) {
+	dir := t.TempDir()
+	start, _ := os.Getwd()
+	t.Cleanup(func() { os.Chdir(start) })
+	os.Chdir(dir)
+
+	if err := Wire("opencode", "opencode", "worker", "/repo"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := os.ReadFile("opencode.json")
+	if err != nil {
+		t.Fatalf("config not written: %v", err)
+	}
+	if !strings.Contains(string(cfg), `"pact"`) {
+		t.Fatalf("config missing pact server:\n%s", cfg)
+	}
+	entry, err := os.ReadFile("AGENTS.md")
+	if err != nil {
+		t.Fatalf("entry not written: %v", err)
+	}
+	if !strings.Contains(string(entry), "seat `opencode`") {
+		t.Fatalf("entry missing briefing:\n%s", entry)
+	}
+}
+
+func TestWireTOMLKindDoesNotWriteConfig(t *testing.T) {
+	dir := t.TempDir()
+	start, _ := os.Getwd()
+	t.Cleanup(func() { os.Chdir(start) })
+	os.Chdir(dir)
+	if err := Wire("codex-cli", "codex", "worker", "/repo"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(".codex/config.toml"); err == nil {
+		t.Fatal("TOML kind must be doc-only — no config file should be written")
+	}
+	if _, err := os.Stat("AGENTS.md"); err != nil {
+		t.Fatalf("entry file should still be baked for codex-cli: %v", err)
 	}
 }

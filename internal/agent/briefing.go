@@ -1,6 +1,10 @@
 package agent
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/agentjoey/pactify/internal/pact"
+)
 
 // briefing renders the agent-agnostic onboarding body (MCP-first, shell fallback).
 func briefing(seatID, roles string) string {
@@ -36,4 +40,25 @@ func Render(kind, seatID, roles, repoAbs string) (entry, config string, err erro
 	}
 	config = snippet(a.Config().Format, a.Invocation(seatID, repoAbs))
 	return entry, config, nil
+}
+
+// Wire performs the onboarding side effects for kind: bake the entry block (if
+// the kind has an entry file) and, for JSON kinds, merge the pact server into the
+// agent's config. TOML kinds are doc-only — their config is not written (the
+// caller prints the snippet). Project-scoped paths are relative to cwd.
+func Wire(kind, seatID, roles, repoAbs string) error {
+	a, ok := Get(kind)
+	if !ok {
+		return fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
+	}
+	if a.DefaultEntry() != "" {
+		if err := pact.BakeManagedBlock(a.DefaultEntry(), briefing(seatID, roles)); err != nil {
+			return err
+		}
+	}
+	c := a.Config()
+	if c.Format == TOML {
+		return nil // doc-only
+	}
+	return mergeServer(ExpandPath(c.Path), c.Format, a.Invocation(seatID, repoAbs))
 }

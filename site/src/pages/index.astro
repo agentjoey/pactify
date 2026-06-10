@@ -1,0 +1,112 @@
+---
+import Base from '../layouts/Base.astro';
+const curl = 'curl -fsSL https://pactify.dev/install.sh | sh';
+const seats = [
+  ['Claude Code', 'one-click plugin'],
+  ['opencode', 'auto-wired'],
+  ['Gemini CLI', 'auto-wired'],
+  ['Codex', 'config snippet'],
+  ['Desktop apps', '--project'],
+];
+const lines = [
+  ['$', 'green', ` ${curl}`],
+  ['✓', 'blue', ' pactify 0.3.0 installed'],
+  ['$', 'green', ' pactify setup'],
+  ['seat', 'dimmer', ' claude-opus · orchestrator / opencode · worker'],
+  ['✓', 'blue', ' opencode joined — branch feat/t1'],
+  ['✓', 'blue', ' T1 accepted · F1 shipped'],
+];
+---
+<Base>
+  <main>
+    <section style="position:relative;text-align:center;padding:72px 20px 56px;overflow:hidden">
+      <svg class="draw" viewBox="0 0 800 300" preserveAspectRatio="none"
+           style="position:absolute;inset:0;width:100%;height:100%;opacity:.5;pointer-events:none" aria-hidden="true">
+        <path d="M-10 60 C 200 60, 260 150, 400 150" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M-10 240 C 200 240, 260 150, 400 150" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round"/>
+        <path class="late" d="M400 150 L 810 150" fill="none" stroke="var(--line2)" stroke-width="1.5"/>
+      </svg>
+      <h1 style="font-size:clamp(28px,5vw,40px);margin:0;color:var(--bright);font-weight:600;letter-spacing:-.5px;position:relative">Agents, in agreement.</h1>
+      <p style="color:var(--dim);font-size:14px;margin:16px auto 32px;max-width:560px;position:relative">
+        pact is a git-native coordination protocol for AI agents —
+        append-only log, enforced review, any agent can take a seat.
+      </p>
+      <div style="max-width:600px;margin:0 auto;background:var(--bg2);border:1px solid var(--line);border-radius:10px;text-align:left;box-shadow:0 18px 50px rgba(0,0,0,.5);position:relative">
+        <div style="display:flex;gap:5px;padding:11px 14px;border-bottom:1px solid var(--bg3)" aria-hidden="true">
+          <i style="width:9px;height:9px;border-radius:50%;background:var(--line2)"></i>
+          <i style="width:9px;height:9px;border-radius:50%;background:var(--line2)"></i>
+          <i style="width:9px;height:9px;border-radius:50%;background:var(--line2)"></i>
+        </div>
+        <div style="padding:16px 18px;font-size:12.5px;line-height:2">
+          {lines.map(([mark, color, rest], i) => (
+            <div class="ln" style={`--d:${(0.3 + i * 0.7).toFixed(1)}s`}>
+              <span style={`color:var(--${color})`}>{mark}</span>{rest}
+              {i === lines.length - 1 && <span class="cursor" aria-hidden="true"></span>}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style="margin-top:28px;position:relative">
+        <button id="cta" data-cmd={curl} title="click to copy"
+          style="display:inline-block;max-width:100%;overflow-wrap:anywhere;background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:10px 18px;font-size:13px;font-family:var(--mono);color:var(--fg);cursor:pointer;text-align:left">
+          <span style="color:var(--green)">$</span> {curl}
+        </button>
+      </div>
+    </section>
+
+    <section class="wrap" style="text-align:center;padding:48px 20px;border-top:1px solid var(--line)">
+      <div class="label" style="margin-bottom:20px">The pact — two rules, enforced</div>
+      <div style="display:flex;gap:18px;max-width:660px;margin:0 auto;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px;border:1px solid var(--line2);border-radius:10px;padding:20px;font-size:13.5px;text-align:left;background:var(--bg2)">
+          <div style="color:var(--yellow);font-size:16px;margin-bottom:8px">§1</div>
+          A worker cannot <span style="border-bottom:1px dashed #3d4754">self-accept</span> its own work.
+          Only the assigned reviewer accepts.
+        </div>
+        <div style="flex:1;min-width:240px;border:1px solid var(--line2);border-radius:10px;padding:20px;font-size:13.5px;text-align:left;background:var(--bg2)">
+          <div style="color:var(--yellow);font-size:16px;margin-bottom:8px">§2</div>
+          A feature cannot merge until <span style="border-bottom:1px dashed #3d4754">every task is accepted</span>.
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap" style="padding:48px 20px;border-top:1px solid var(--line)">
+      <div class="label" style="text-align:center;margin-bottom:22px">Five minutes to a working pact</div>
+      <ol style="max-width:620px;margin:0 auto;font-size:13.5px;line-height:2.4;color:var(--fg);padding-left:24px">
+        <li>Install — <code style="overflow-wrap:anywhere">{curl}</code></li>
+        <li>In your repo — <code>pactify setup</code> <span style="color:var(--dimmer)">(scaffolds .pact/, wires your agent, sets your seat)</span></li>
+        <li>Verify — <code>pactify doctor</code></li>
+        <li>Launch your agent — it joins via the pact MCP tools. You just say <em>"start"</em>.</li>
+      </ol>
+    </section>
+
+    <section class="wrap" style="text-align:center;padding:48px 20px;border-top:1px solid var(--line)">
+      <div class="label" style="margin-bottom:22px">Any agent can take a seat</div>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+        {seats.map(([name, how], i) => (
+          <div class="seat" style={`--d:${i * 0.4}s;width:118px;height:72px;border:1.5px dashed var(--line2);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10.5px;color:var(--dim);gap:4px`}>
+            <b style="font-size:12px;color:var(--fg);font-weight:400">{name}</b>{how}
+          </div>
+        ))}
+      </div>
+    </section>
+  </main>
+  <script>
+    const cta = document.getElementById('cta');
+    // Capture once, outside the handler — a double-click during the feedback
+    // window must never capture '✓ copied' as the thing to restore.
+    const original = cta?.innerHTML;
+    let timer: ReturnType<typeof setTimeout>;
+    cta?.addEventListener('click', async () => {
+      const cmd = cta.dataset.cmd;
+      if (!cmd || !original) return;
+      try {
+        await navigator.clipboard.writeText(cmd);
+        cta.textContent = '✓ copied';
+        clearTimeout(timer);
+        timer = setTimeout(() => { cta.innerHTML = original; }, 1500);
+      } catch {
+        /* clipboard unavailable (http/permissions) — leave the command selectable */
+      }
+    });
+  </script>
+</Base>

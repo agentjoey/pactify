@@ -287,8 +287,14 @@ export function Canvas({
   const [renaming, setRenaming] = useState<{ id: string; x: number; y: number; value: string } | null>(null);
   // The stage element, so context-menu / rename coords are stage-relative.
   const stageRef = useRef<HTMLDivElement>(null);
-  // Live selection ids, tracked from node changes so Del can target them.
-  const selectedRef = useRef<Set<string>>(new Set());
+  // Selection is read from nodesRef (the single source of truth) wherever Del/
+  // Esc need it — a separate id set would desync when the rebuild effect
+  // replaces the node array wholesale (SSE snapshots, project switches) and
+  // leave "ghost" selections that delete the wrong drafts.
+  const selectedIds = useCallback(
+    () => nodesRef.current.filter((n) => n.selected).map((n) => n.id),
+    [],
+  );
 
   // Secondary dispatch entry: the button on a draft node (the drag gesture is
   // the primary path; the button exists for discoverability).
@@ -354,15 +360,6 @@ export function Canvas({
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    // Track selection so Del can remove the currently-selected drafts.
-    for (const ch of changes) {
-      if (ch.type === "select") {
-        if (ch.selected) selectedRef.current.add(ch.id);
-        else selectedRef.current.delete(ch.id);
-      } else if (ch.type === "remove") {
-        selectedRef.current.delete(ch.id);
-      }
-    }
     setNodes((nds) => applyNodeChanges(changes, nds));
   }, []);
 
@@ -622,7 +619,7 @@ export function Canvas({
   // tasks/features are never deletable here. Author && !replaying only.
   const deleteSelected = useCallback(() => {
     if (!author || replaying) return;
-    const sel = selectedRef.current;
+    const sel = new Set(selectedIds());
     if (sel.size === 0) return;
     const draftIds = new Set(
       [...sel].filter((id) => id.startsWith("draft:")).map((id) => id.replace(/^draft:/, "")),
@@ -654,8 +651,7 @@ export function Canvas({
       if (e.key === "Escape") {
         if (menu) { setMenu(null); return; }
         if (renaming) { setRenaming(null); return; }
-        if (selectedRef.current.size > 0) {
-          selectedRef.current.clear();
+        if (selectedIds().length > 0) {
           setNodes((nds) => nds.map((n) => (n.selected ? { ...n, selected: false } : n)));
           return;
         }
@@ -847,6 +843,10 @@ export function Canvas({
         // drag-to-dispatch is a NODE drag, unaffected by pane panOnDrag.
         selectionKeyCode="Shift"
         panOnDrag
+        // React Flow's built-in Backspace delete would remove ANY selected node
+        // (committed tasks/seats included) via applyNodeChanges, bypassing the
+        // draft-only deleteSelected path below. Deletion is exclusively ours.
+        deleteKeyCode={null}
         fitView
         proOptions={{ hideAttribution: true }}
         colorMode="dark"

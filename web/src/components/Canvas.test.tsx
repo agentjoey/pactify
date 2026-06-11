@@ -264,6 +264,26 @@ describe("Canvas", () => {
     expect(screen.queryByTestId("canvas-ctx")).toBeNull();
   });
 
+
+  // T8 quality fix: React Flow's built-in Backspace delete is disabled
+  // (deleteKeyCode={null}) — selecting a COMMITTED node and pressing Backspace
+  // must not remove it (deletion is exclusively the draft-only path).
+  it("Backspace on a selected committed node does not remove it", async () => {
+    const { container } = render(
+      <Canvas project="demo" state={fixture} author onSelectTask={() => {}} {...noopDraftProps} />,
+    );
+    const node = await waitFor(() => {
+      const el = container.querySelector('.react-flow__node[data-id="task:T1"]');
+      expect(el).not.toBeNull();
+      return el as Element;
+    });
+    fireEvent.click(node); // select it
+    fireEvent.keyDown(window, { key: "Backspace" });
+    await waitFor(() => {
+      expect(container.querySelector('.react-flow__node[data-id="task:T1"]')).not.toBeNull();
+    });
+  });
+
   // T8: pane right-click → New feature / New task entries.
   it("pane right-click opens the New feature / New task menu (author)", async () => {
     const { container } = render(

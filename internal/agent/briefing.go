@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/agentjoey/pactify/internal/pact"
@@ -73,17 +74,26 @@ func scopeName(s Scope) string {
 	return "project, committed in repo"
 }
 
-// Wire performs the onboarding side effects for kind: bake the entry block (if
-// the kind has an entry file) and, for JSON kinds, merge the pact server into the
-// agent's config. TOML kinds are doc-only — their config is not written (the
-// caller prints the snippet). Project-scoped paths are relative to cwd.
+// Wire performs the onboarding side effects for kind rooted at the current
+// working directory (the CLI runs from the repo root). It is WireAt(".", …).
 func Wire(kind, seatID, roles, repoAbs string) error {
+	return WireAt(".", kind, seatID, roles, repoAbs)
+}
+
+// WireAt performs the onboarding side effects for kind, rooting project-scoped
+// writes at dir (so a caller need not chdir): bake the entry block (if the kind
+// has an entry file) and, for JSON kinds, merge the pact server into the agent's
+// config. TOML kinds are doc-only — their config is not written (the caller
+// prints the snippet). Global-scoped configs are written at their machine path
+// (ExpandPath) regardless of dir; only project-relative paths are joined to dir.
+// repoAbs is the repo path baked into the agent invocation (env/args).
+func WireAt(dir, kind, seatID, roles, repoAbs string) error {
 	a, ok := Get(kind)
 	if !ok {
 		return fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
 	}
 	if a.DefaultEntry() != "" {
-		if err := pact.BakeManagedBlock(a.DefaultEntry(), briefing(seatID, roles)); err != nil {
+		if err := pact.BakeManagedBlock(filepath.Join(dir, a.DefaultEntry()), briefing(seatID, roles)); err != nil {
 			return err
 		}
 	}
@@ -91,5 +101,9 @@ func Wire(kind, seatID, roles, repoAbs string) error {
 	if c.Format == TOML {
 		return nil // doc-only
 	}
-	return mergeServer(ExpandPath(c.Path), c.Format, a.Invocation(seatID, repoAbs))
+	cfgPath := ExpandPath(c.Path)
+	if c.Scope == Project {
+		cfgPath = filepath.Join(dir, c.Path)
+	}
+	return mergeServer(cfgPath, c.Format, a.Invocation(seatID, repoAbs))
 }

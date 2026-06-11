@@ -423,3 +423,35 @@ The bash reference implementation (`pact.sh`) is **not** extended for `deps`. It
 ### UI sidecar files are outside the protocol
 
 A `.pact/squad/layout.json` (or any similar UI sidecar) is **not part of the protocol**. It carries presentation-only data (e.g. canvas node positions) and is never read by the state machine or validation. `validate` ignores unknown files under `.pact/`; their presence or absence does not affect conformance.
+
+## Addendum: join client provenance (additive, v1)
+
+This addendum is **additive to frozen v1**: it introduces one optional field on the `join` event and changes no rule, state machine, or projection. Logs that never use it are bit-for-bit unchanged.
+
+### The field
+
+A `join` event's `payload` MAY carry an optional `client` object recording the tool that performed the join:
+
+```json
+{ "event_type": "join",
+  "payload": { "roles": ["worker"], "client": { "name": "claude-code", "version": "1.4.0" } } }
+```
+
+`client` is **emitted only when its name is non-empty.** A join with no client provenance carries no `client` key, preserving byte-parity with the bash reference renderer and with pre-feature Go logs (the interop suite stays untouched). In the schema, `client` is an optional `object` with optional string `name`/`version`; a join payload whose `client` is present but not an object is rejected.
+
+### Who fills it
+
+- The **CLI** stamps `client: {name: "pactify-cli", version: <build version>}` on every `join`.
+- The **MCP host** fills it from the connecting session's `initialize` `clientInfo` (`name`/`version` as the client self-reported them). When the session has no clientInfo, no `client` field is emitted.
+
+### Semantics — advisory, not identity
+
+`client` is **self-reported metadata, not an identity proof.** A client names itself; nothing verifies the claim. It is provenance for display and a soft "this seat was last joined by a different tool" warning — never an access-control or authentication signal. Seat identity remains `agent_id` (§6); the join gate and the two rules are unaffected.
+
+### Projection — log only
+
+`client` is **never projected into `STATE.yml`.** Provenance lives in the log; tools that want it (e.g. the ops panel) fold it from the raw join events. This keeps STATE byte-parity trivially intact for every log.
+
+### Bash reference is not extended
+
+The bash reference implementation (`pact.sh`) is **not** extended for `client`. It emits no `client` payloads, which is exactly why a client-free Go log stays byte-identical to a bash log. Implementations that don't support client provenance remain fully v1-conformant; they simply never emit the field.

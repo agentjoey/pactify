@@ -1,4 +1,12 @@
-import type { ProjectMeta, State, PactEvent } from "./types";
+import type {
+  ProjectMeta,
+  State,
+  PactEvent,
+  RegistryEntry,
+  WiringStatus,
+  SeatInfo,
+  WireResult,
+} from "./types";
 import type { LayoutJSON } from "./canvas";
 
 async function getJSON<T>(url: string): Promise<T> {
@@ -53,6 +61,39 @@ export const getLayout = (project: string) =>
 export async function putLayout(project: string, layout: LayoutJSON): Promise<void> {
   await writeJSON(`/api/projects/${project}/squad/layout`, "PUT", layout);
 }
+
+// --- Ops view (M3.3a) ---
+//
+// Registry/wiring/seats reads use getJSON (status-line errors on non-2xx);
+// mutations use writeJSON so the server's {"error":msg} surfaces verbatim.
+
+export const getRegistry = () => getJSON<RegistryEntry[]>("/api/registry");
+
+export async function postRegister(path: string, name?: string): Promise<{ name: string }> {
+  const body: { path: string; name?: string } = { path };
+  if (name) body.name = name;
+  const r = await writeJSON("/api/registry", "POST", body);
+  return (await r.json()) as { name: string };
+}
+
+export async function deleteRegistry(name: string): Promise<void> {
+  await writeJSON(`/api/registry/${encodeURIComponent(name)}`, "DELETE", undefined);
+}
+
+export const getWiring = (project: string) =>
+  getJSON<WiringStatus[]>(`/api/projects/${project}/wiring`);
+
+export async function postWire(
+  project: string,
+  kind: string,
+  body: { seat: string; roles: string },
+): Promise<WireResult> {
+  const r = await writeJSON(`/api/projects/${project}/wiring/${kind}`, "POST", body);
+  return (await r.json()) as WireResult;
+}
+
+export const getSeats = (project: string) =>
+  getJSON<SeatInfo[]>(`/api/projects/${project}/seats`);
 
 // subscribeEvents opens an SSE stream; returns an unsubscribe fn.
 // onLive (optional) reports connection state: true on open, false on error/drop.

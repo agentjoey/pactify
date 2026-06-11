@@ -21,7 +21,7 @@ func newDrainHarness(t *testing.T, initial string) (*Server, string, chan string
 	os.WriteFile(lp, []byte(initial), 0o644)
 
 	srv := New([]registry.Project{{Name: "p", Path: root}})
-	srv.offsets = map[string]int64{}
+	srv.watchPaths["p"] = lp
 	if fi, err := os.Stat(lp); err == nil {
 		srv.offsets["p"] = fi.Size()
 	}

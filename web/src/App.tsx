@@ -5,6 +5,7 @@ import { TopBar, type View } from "./components/TopBar";
 import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
 import { Canvas } from "./components/Canvas";
+import { OpsView } from "./components/ops/OpsView";
 import { RightRail } from "./components/RightRail";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
@@ -30,6 +31,9 @@ export default function App() {
   const [author, setAuthor] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
+  // Monotonic tick bumped on every applied state snapshot; passed to the ops
+  // panels so their fetches re-run on SSE updates for the selected project.
+  const [refreshTick, setRefreshTick] = useState(0);
 
   const prevState = useRef<State>(EMPTY);
   const toastId = useRef(0);
@@ -38,11 +42,20 @@ export default function App() {
   // tick forces stale re-evaluation on an interval even without state changes.
   const [tick, setTick] = useState(0);
 
-  useEffect(() => {
+  // refreshProjects re-fetches the registry-backed project list, seeding the
+  // selection on first load and dropping it if the current project was removed.
+  function refreshProjects() {
     fetchProjects().then((ps) => {
       setProjects(ps);
-      if (ps.length && !current) setCurrent(ps[0].id);
+      setCurrent((cur) => {
+        if (cur && ps.some((p) => p.id === cur)) return cur;
+        return ps.length ? ps[0].id : "";
+      });
     }).catch(() => {});
+  }
+
+  useEffect(() => {
+    refreshProjects();
     // A non-empty acting seat means this dashboard can author.
     getActingSeat().then((r) => setAuthor(!!(r?.seat))).catch(() => setAuthor(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -87,6 +100,7 @@ export default function App() {
 
     prevState.current = s;
     setState(s);
+    setRefreshTick((n) => n + 1);
   }
 
   useEffect(() => {
@@ -122,12 +136,16 @@ export default function App() {
     <div data-testid="app-root" className="h-screen flex flex-col">
       <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} view={view} onView={setView} />
       <Agents state={state} events={events} onPick={() => {}} />
-      <div className="flex flex-1 overflow-hidden">
-        {view === "canvas"
-          ? <Canvas project={current} state={state} author={author} staleTasks={staleTasks} onSelectTask={setSelected} />
-          : <Board state={state} selected={selected} onSelect={setSelected} />}
-        <RightRail state={state} events={events} selected={selected} project={current} author={author} />
-      </div>
+      {view === "ops"
+        ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} />
+        : (
+          <div className="flex flex-1 overflow-hidden">
+            {view === "canvas"
+              ? <Canvas project={current} state={state} author={author} staleTasks={staleTasks} onSelectTask={setSelected} />
+              : <Board state={state} selected={selected} onSelect={setSelected} />}
+            <RightRail state={state} events={events} selected={selected} project={current} author={author} />
+          </div>
+        )}
       <Toasts toasts={toasts} />
     </div>
   );

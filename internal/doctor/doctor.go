@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/paths"
 )
@@ -52,23 +53,17 @@ func checkRepo(cwd string) Check {
 	return Check{".pact/ valid", true, "protocol v1 conformant"}
 }
 
+// checkAgentWiring folds the shared content-aware probe (agent.ProbeWiring) into
+// the doctor Check. A kind is wired when its config carries the pact server key
+// OR its entry file carries the managed-block marker; the Detail surfaces which
+// file proved each wired kind ("config opencode.json" / "entry CLAUDE.md").
+// Global (machine-level) kinds are skipped: doctor reports per-repo wiring, and
+// a machine-global config would otherwise mark every repo "wired".
 func checkAgentWiring(cwd string) Check {
-	// JSON configs must contain a "pact" server key; markdown entries must
-	// contain the pact managed-block marker.
-	type probe struct{ file, marker string }
-	probes := []probe{
-		{"opencode.json", `"pact"`},
-		{".mcp.json", `"pact"`},
-		{".gemini/settings.json", `"pact"`},
-		{"AGENTS.md", "pact:begin"},
-		{"CLAUDE.md", "pact:begin"},
-		{"GEMINI.md", "pact:begin"},
-	}
 	var found []string
-	for _, p := range probes {
-		b, err := os.ReadFile(filepath.Join(cwd, p.file))
-		if err == nil && strings.Contains(string(b), p.marker) {
-			found = append(found, p.file)
+	for _, ws := range agent.ProbeWiring(cwd) {
+		if ws.Wired && !ws.Global {
+			found = append(found, ws.Detail)
 		}
 	}
 	if len(found) == 0 {

@@ -36,7 +36,9 @@ func writeErr(w http.ResponseWriter, code int, msg string) {
 
 // project resolves a registered project id to its name + on-disk dir.
 func (s *Server) project(id string) (name, dir string, ok bool) {
+	s.pmu.RLock()
 	p, ok := s.projects[id]
+	s.pmu.RUnlock()
 	if !ok {
 		return "", "", false
 	}

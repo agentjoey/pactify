@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ProjectMeta } from "../lib/types";
 import { getActingSeat } from "../lib/api";
 
-export type View = "kanban" | "canvas";
+export type View = "kanban" | "canvas" | "ops";
 
 export function TopBar({ projects, current, onSelect, live, view, onView }: {
   projects: ProjectMeta[];
@@ -25,7 +25,7 @@ export function TopBar({ projects, current, onSelect, live, view, onView }: {
       </select>
 
       <div className="flex rounded border border-gray-700 overflow-hidden text-xs" role="group" aria-label="view toggle">
-        {(["kanban", "canvas"] as const).map((v) => (
+        {(["kanban", "canvas", "ops"] as const).map((v) => (
           <button
             key={v}
             onClick={() => onView(v)}

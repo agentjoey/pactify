@@ -1,16 +1,41 @@
 import { type NodeProps } from "@xyflow/react";
 
-// FeatureGroup is a translucent subflow container: child task/draft nodes carry
-// parentId pointing here. The width/height come from Canvas (style on the node).
-// Header shows the feature id plus its branch label, top-left.
+// FeatureGroup v2 (T7) — translucent subflow container per board2-canvas-v2
+// `.frame`/`.fhead`. Child task/draft nodes carry parentId pointing here; the
+// width/height come from Canvas (style on the node). The header is a gradient
+// strip (success-tinted left edge) with the feature id, branch (mono, text-3)
+// and a right-aligned `n/total accepted` progress readout + bar. When every
+// task is accepted (total>0 && accepted===total) the header tints green.
 export function FeatureGroup({ data }: NodeProps) {
-  const d = data as { id?: string; branch?: string; status?: string };
+  const d = data as {
+    id?: string;
+    branch?: string;
+    status?: string;
+    accepted?: number;
+    total?: number;
+  };
+  const accepted = d.accepted ?? 0;
+  const total = d.total ?? 0;
+  const allDone = total > 0 && accepted === total;
+  const pct = total > 0 ? Math.round((accepted / total) * 100) : 0;
+
   return (
-    <div className="w-full h-full rounded-lg border border-[#30363d] bg-[#161b22]/30 pointer-events-none">
-      <div className="px-2 py-1 text-[11px] pointer-events-auto">
-        <span className="font-semibold text-[#e6edf3]">{d.id}</span>
-        {d.branch && (
-          <span className="ml-1.5 text-[10px] text-[#8b949e] font-mono">{d.branch}</span>
+    <div className="feature-frame pointer-events-none h-full w-full">
+      <div
+        className={`fhead pointer-events-auto${allDone ? " done" : ""}`}
+        data-testid="feature-frame-head"
+      >
+        <span className="fname">{d.id}</span>
+        {d.branch && <span className="fbranch mono">{d.branch}</span>}
+        {total > 0 && (
+          <span className="fprog" data-testid="feature-progress">
+            <span className="mono">
+              {accepted}/{total} accepted
+            </span>
+            <span className="fbar" aria-hidden>
+              <i style={{ width: `${pct}%` }} />
+            </span>
+          </span>
         )}
       </div>
     </div>

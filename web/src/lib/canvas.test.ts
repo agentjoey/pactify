@@ -97,6 +97,52 @@ describe("deriveFlow", () => {
     expect(t3.data.roleColor).toBe("--role-product");
   });
 
+  it("feature node carries accepted/total progress (T7)", () => {
+    const { nodes } = deriveFlow(state, noLayout, noDrafts);
+    // F1: T1 in_progress, T2 assigned → 0 of 2 accepted.
+    const f1 = nodes.find((n) => n.id === "feature:F1")!;
+    expect(f1.data.total).toBe(2);
+    expect(f1.data.accepted).toBe(0);
+    // F2: T3 assigned → 0 of 1.
+    const f2 = nodes.find((n) => n.id === "feature:F2")!;
+    expect(f2.data.total).toBe(1);
+    expect(f2.data.accepted).toBe(0);
+  });
+
+  it("feature progress counts accepted tasks; all-accepted reads total===accepted", () => {
+    const allDone: State = {
+      ...state,
+      features: [
+        {
+          id: "F1",
+          branch: "feat/x",
+          status: "done",
+          tasks: [
+            { id: "T1", owner: "opencode", status: "accepted", reviewer: "claude-opus", spec: "", evidence: "" },
+            { id: "T2", owner: "opencode", status: "accepted", reviewer: "claude-opus", spec: "", evidence: "" },
+          ],
+        },
+      ],
+    };
+    const f1 = deriveFlow(allDone, noLayout, noDrafts).nodes.find((n) => n.id === "feature:F1")!;
+    expect(f1.data.total).toBe(2);
+    expect(f1.data.accepted).toBe(2);
+  });
+
+  it("an empty feature reports 0/0 (no division), draft feature too", () => {
+    const empty: State = {
+      ...state,
+      features: [{ id: "F1", branch: "b", status: "active", tasks: [] }],
+    };
+    const f1 = deriveFlow(empty, noLayout, noDrafts, [{ id: "F9", branch: "feat/n" }]).nodes;
+    const committed = f1.find((n) => n.id === "feature:F1")!;
+    expect(committed.data.total).toBe(0);
+    expect(committed.data.accepted).toBe(0);
+    const draftFeat = f1.find((n) => n.id === "feature:F9")!;
+    expect(draftFeat.data.total).toBe(0);
+    expect(draftFeat.data.accepted).toBe(0);
+  });
+
   it("seat node carries roles + roleColor and pins to the left rail (x:0)", () => {
     const { nodes } = deriveFlow(state, noLayout, noDrafts);
     const s = nodes.find((n) => n.id === "seat:claude-opus")!;

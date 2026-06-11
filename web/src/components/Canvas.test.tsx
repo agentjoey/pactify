@@ -79,6 +79,19 @@ describe("Canvas", () => {
     await waitFor(() => {
       expect(container.querySelector('[data-id="dep:T1→T2"]')).not.toBeNull();
     });
+
+    // T7 re-skin chrome: the frosted toolbar, the bottom-right zoom HUD and the
+    // bottom-left MiniMap all mount inside the stage.
+    expect(screen.getByTestId("canvas-toolbar")).toBeInTheDocument();
+    expect(screen.getByTestId("canvas-hud")).toBeInTheDocument();
+    expect(container.querySelector(".react-flow__minimap")).not.toBeNull();
+  });
+
+  it("feature frame v2 shows the accepted/total progress readout", async () => {
+    // F1 = T1 accepted + T2 assigned → "1/2 accepted".
+    render(<Canvas project="demo" state={fixture} author={false} {...noopDraftProps} />);
+    const prog = await screen.findByTestId("feature-progress");
+    expect(prog.textContent).toContain("1/2 accepted");
   });
 
   it("replay mode is read-only: no author affordances rendered", async () => {
@@ -86,8 +99,11 @@ describe("Canvas", () => {
     // author=false → the build-mode toolbar (New feature / New task) is absent.
     render(<Canvas project="demo" state={fixture} author={false} replaying {...noopDraftProps} />);
     await waitFor(() => expect(screen.getAllByText("T1").length).toBeGreaterThan(0));
-    expect(screen.queryByText("+ New feature")).toBeNull();
-    expect(screen.queryByText("+ New task")).toBeNull();
+    // The frosted toolbar renders (it always carries the comms pill), but the
+    // author build-mode affordances (Feature / Task) are absent.
+    const toolbar = screen.getByTestId("canvas-toolbar");
+    expect(toolbar.textContent).not.toContain("Feature");
+    expect(toolbar.textContent).not.toContain("Task");
   });
 
   it("comms toggle (default off) merges the overlay lens + legend when turned on", async () => {
@@ -192,7 +208,7 @@ describe("Canvas", () => {
     const { container } = render(<Harness />);
 
     // Author a draft via the real New-task editor flow.
-    fireEvent.click(await screen.findByText("+ New task"));
+    fireEvent.click(await screen.findByRole("button", { name: /Task/ }));
     const editor = await screen.findByTestId("task-editor");
     expect(editor).toBeInTheDocument();
     // The id field is pre-seeded (auto-id) but we set it explicitly for clarity.
@@ -234,7 +250,7 @@ describe("Canvas", () => {
         setDraftFeatures={() => {}}
       />,
     );
-    fireEvent.click(await screen.findByText("+ New task"));
+    fireEvent.click(await screen.findByRole("button", { name: /Task/ }));
     const idInput = (await screen.findByLabelText("task id")) as HTMLInputElement;
     // committed tasks are T1/T2 (uppercase) → 't' series is free from t1.
     expect(idInput.value).toBe("t1");

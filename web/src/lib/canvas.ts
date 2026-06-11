@@ -159,11 +159,16 @@ export function deriveFlow(
     const colX = (fi + 1) * COL_W;
     const featPos = placeFeature(featId, { x: colX, y: FEATURE_Y });
     placedFeatures.set(f.id, featPos);
+    // Per-feature progress: accepted / total tasks, surfaced on the frame's
+    // progress bar (FeatureGroup v2). all-accepted (total>0 && accepted===total)
+    // tints the header green.
+    const total = f.tasks.length;
+    const accepted = f.tasks.filter((t) => t.status === "accepted").length;
     nodes.push({
       id: featId,
       type: "feature",
       position: featPos,
-      data: { id: f.id, branch: f.branch, status: f.status },
+      data: { id: f.id, branch: f.branch, status: f.status, accepted, total },
     });
 
     f.tasks.forEach((t, ti) => {
@@ -216,7 +221,7 @@ export function deriveFlow(
       id: featId,
       type: "feature",
       position: dfPos,
-      data: { id: df.id, branch: df.branch, status: "draft", draft: true },
+      data: { id: df.id, branch: df.branch, status: "draft", draft: true, accepted: 0, total: 0 },
     });
   });
 

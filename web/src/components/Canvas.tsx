@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import {
   ReactFlow,
-  Background,
-  Controls,
   Position,
+  useReactFlow,
   type Node,
   type Edge,
   type NodeTypes,
@@ -31,6 +30,8 @@ import { SeatNode } from "./nodes/SeatNode";
 import { FeatureGroup } from "./nodes/FeatureGroup";
 import { TaskEditor, type FeatureOption } from "./TaskEditor";
 import { DispatchModal } from "./DispatchModal";
+import { Toolbar } from "./canvas/Toolbar";
+import { Hud } from "./canvas/Hud";
 
 const nodeTypes: NodeTypes = {
   task: TaskNode,
@@ -38,6 +39,34 @@ const nodeTypes: NodeTypes = {
   feature: FeatureGroup,
   draft: TaskNode, // drafts reuse TaskNode; data.draft drives the dashed style
 };
+
+// prefersReducedMotion reads the OS setting once per call. matchMedia is absent
+// in some jsdom configs — treat that as "no preference" (allow motion).
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+// FitOnEntry runs an animated fitView the first time a given project's nodes
+// render, then again only when the project changes — NOT on every SSE snapshot
+// (that would yank the viewport on each live update). Must live inside
+// <ReactFlow> (it reads the flow store via useReactFlow). Skipped under
+// reduced-motion (the initial `fitView` prop still frames the graph instantly).
+function FitOnEntry({ project, ready }: { project: string; ready: boolean }) {
+  const { fitView } = useReactFlow();
+  const fittedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    if (fittedFor.current === project) return;
+    fittedFor.current = project;
+    if (prefersReducedMotion()) return; // initial fitView prop already framed it
+    fitView({ duration: 300 });
+  }, [project, ready, fitView]);
+  return null;
+}
 
 // Feature-group sizing — a basic bound computed from its child rows so the
 // translucent container wraps its tasks/drafts. Children position relative to
@@ -505,99 +534,54 @@ export function Canvas({
   const displayEdges = display.edges;
 
   return (
-    <div className={`relative flex-1${draggingDraft ? " dragging-draft" : ""}`} data-testid="canvas-root">
-      {author && (
-        <div className="absolute left-2 top-2 z-10 flex items-center gap-2">
-          {!newFeatureOpen ? (
-            <button
-              className="rounded border border-[#30363d] bg-[#161b22] px-2.5 py-1 text-xs text-[#e6edf3] hover:border-[#8b949e]"
-              onClick={() => { setNfId(nextId(existingFeatureIds, "f")); setNewFeatureOpen(true); }}
-            >
-              + New feature
-            </button>
-          ) : (
-            <div className="flex items-center gap-1 rounded border border-[#30363d] bg-[#161b22] px-2 py-1">
-              <input
-                aria-label="feature id"
-                className="w-24 rounded border border-[#30363d] bg-[#0d1117] px-1.5 py-0.5 text-xs text-[#e6edf3]"
-                placeholder="feature id"
-                value={nfId}
-                onChange={(e) => setNfId(e.target.value)}
-              />
-              <input
-                aria-label="feature branch"
-                className="w-28 rounded border border-[#30363d] bg-[#0d1117] px-1.5 py-0.5 font-mono text-xs text-[#e6edf3]"
-                placeholder="feat/x"
-                value={nfBranch}
-                onChange={(e) => setNfBranch(e.target.value)}
-              />
-              <button
-                className="rounded bg-[#238636] px-2 py-0.5 text-xs font-semibold text-white disabled:opacity-50"
-                onClick={addFeature}
-                disabled={!nfValid}
-              >
-                Add
-              </button>
-              <button
-                className="rounded border border-[#30363d] px-2 py-0.5 text-xs text-[#8b949e]"
-                onClick={() => { setNewFeatureOpen(false); setNfId(""); setNfBranch(""); }}
-              >
-                ✕
-              </button>
-              {(nfIdBad || nfBranchBad) && (
-                <span className="text-[10px] text-[#f85149]">slug: [a-z0-9][a-z0-9-]*</span>
-              )}
-            </div>
-          )}
-          <button
-            className="rounded border border-[#30363d] bg-[#161b22] px-2.5 py-1 text-xs text-[#e6edf3] hover:border-[#8b949e] disabled:opacity-50"
-            onClick={() => { setEditingDraft(undefined); setEditorOpen(true); }}
-            disabled={featureOptions.length === 0}
-          >
-            + New task
-          </button>
+    <div
+      className={`canvas-stage relative flex-1${draggingDraft ? " dragging-draft" : ""}`}
+      data-testid="canvas-root"
+    >
+      {/* Ambient stage layers (board2-canvas-v2 `.stage`): two role-color glows
+          (page token sits behind via the .canvas-stage background) + a masked
+          dot grid. Both purely decorative, behind the flow. */}
+      <div className="canvas-grid" aria-hidden />
+
+      {/* Frosted toolbar (top-left): author Feature/Task + Comms lens pill. */}
+      <Toolbar
+        author={author}
+        comms={comms}
+        onToggleComms={() => setComms((v) => !v)}
+        newFeatureOpen={newFeatureOpen}
+        onOpenNewFeature={() => { setNfId(nextId(existingFeatureIds, "f")); setNewFeatureOpen(true); }}
+        onCloseNewFeature={() => { setNewFeatureOpen(false); setNfId(""); setNfBranch(""); }}
+        nfId={nfId}
+        setNfId={setNfId}
+        nfBranch={nfBranch}
+        setNfBranch={setNfBranch}
+        nfValid={nfValid}
+        nfIdBad={nfIdBad}
+        nfBranchBad={nfBranchBad}
+        onAddFeature={addFeature}
+        onOpenNewTask={() => { setEditingDraft(undefined); setEditorOpen(true); }}
+        newTaskDisabled={featureOptions.length === 0}
+      />
+
+      {/* Comms legend — frosted pill below the toolbar when the lens is on. */}
+      {comms && (
+        <div className="canvas-legend" data-testid="comms-legend">
+          <span>
+            <i style={{ borderColor: "var(--color-role-design)" }} />
+            waiting
+          </span>
+          <span>
+            <span className="inline-block h-2 w-2 rounded-sm border border-[var(--color-warn)]" />
+            blocked
+          </span>
+          <span style={{ opacity: 0.6 }}>◐ idle</span>
         </div>
       )}
-
-      {/* Comms overlay toggle — top-right, always available (read-only lens). */}
-      <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1.5">
-        <button
-          data-testid="comms-toggle"
-          aria-pressed={comms}
-          className={`rounded border px-2.5 py-1 text-xs ${
-            comms
-              ? "border-[#8ab4ff] bg-[#161b22] text-[#8ab4ff]"
-              : "border-[#30363d] bg-[#161b22] text-[#e6edf3] hover:border-[#8b949e]"
-          }`}
-          onClick={() => setComms((v) => !v)}
-        >
-          comms {comms ? "on" : "off"}
-        </button>
-        {comms && (
-          <div
-            data-testid="comms-legend"
-            className="flex items-center gap-2 rounded border border-[#30363d] bg-[#161b22] px-2 py-1 text-[10px] text-[#8b949e]"
-          >
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-0 w-3 border-t border-dashed border-[#8ab4ff]" />
-              waiting
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm border border-[#d29922]" />
-              blocked
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#484f58] opacity-50" />
-              idle
-            </span>
-          </div>
-        )}
-      </div>
 
       {notice && (
         <div
           data-testid="canvas-notice"
-          className="absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded border border-[#d29922] bg-[#161b22] px-3 py-1 text-xs text-[#d29922]"
+          className="absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-md border border-[var(--color-warn)] bg-[var(--color-bg-surface)] px-3 py-1 text-xs text-[var(--color-warn)]"
         >
           {notice}
         </div>
@@ -617,9 +601,10 @@ export function Canvas({
         fitView
         proOptions={{ hideAttribution: true }}
         colorMode="dark"
+        style={{ background: "transparent" }}
       >
-        <Background color="#21262d" gap={20} />
-        <Controls showInteractive={false} />
+        <FitOnEntry project={project} ready={displayNodes.length > 0} />
+        <Hud />
       </ReactFlow>
 
       {editorOpen && (

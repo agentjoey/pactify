@@ -175,6 +175,10 @@ export function Canvas({
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
+  // React Flow v12 passes only the DRAGGED nodes as the drag handlers' third
+  // argument — parent/seat lookups need the FULL node list, kept fresh here.
+  const nodesRef = useRef<Node[]>([]);
+  useEffect(() => { nodesRef.current = nodes; }, [nodes]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const layoutRef = useRef<LayoutJSON>({});
   layoutRef.current = layout;
@@ -332,10 +336,13 @@ export function Canvas({
   }, []);
 
   const onNodeDragStop = useCallback(
-    (_e: unknown, node: Node, allNodes: Node[]) => {
+    (_e: unknown, node: Node) => {
       setDraggingDraft(false);
       // Observe-only dashboards never persist layout drags.
       if (!author) return;
+      // RF v12: the callback's nodes arg is the dragged selection only — use
+      // the live full list for parent/seat resolution.
+      const allNodes = nodesRef.current;
       if (node.type === "draft") {
         const dragBox = nodeBounds(node, allNodes);
         const seat = allNodes.find(

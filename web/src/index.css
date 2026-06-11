@@ -1,32 +1,40 @@
 @import "tailwindcss";
+/* Design tokens (spec §1) — @theme block, @font-face, legacy role var
+   re-pointing all live here. Imported after Tailwind so @theme registers. */
+@import "./tokens.css";
 
 :root {
   color-scheme: dark;
-  /* Role color tokens — see roleColorVar() in lib/canvas.ts. */
-  --role-product: #ffd479; /* orchestrator — yellow (brand) */
-  --role-design: #8ab4ff;  /* reviewer — blue (brand) */
-  --role-dev: #6ee7a0;     /* worker — green (brand) */
+  /* Legacy role tokens (--role-product/-design/-dev) are re-pointed to the new
+     desaturated palette in tokens.css; components read them via roleColorVar()
+     in lib/canvas.ts and shift hue automatically. */
 }
-body { margin: 0; background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; }
+body {
+  margin: 0;
+  background: var(--color-bg-page);
+  color: var(--color-text-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  font-feature-settings: "cv01", "cv02", "cv03", "tnum";
+}
 
 /* React Flow dark overrides — keep the canvas consistent with the dashboard. */
 .react-flow__attribution { display: none; }
 
-/* awaiting_review nodes pulse design-blue to draw the reviewer's eye. The
-   animation is wrapped in a reduced-motion guard: users who opt out get a
-   static ring instead of the breathing glow. */
-.pact-awaiting {
-  border-radius: 0.25rem;
-  box-shadow: 0 0 0 1px var(--role-design);
-}
+/* ui/Modal entry — 180ms scale+fade per spec §1. The overlay fades, the panel
+   scales up from 96%. Suppressed under reduced-motion (instant, no transform). */
 @media (prefers-reduced-motion: no-preference) {
-  .pact-awaiting {
-    animation: pact-pulse 1.6s ease-in-out infinite;
-  }
+  .ui-modal-overlay { animation: ui-overlay-in 180ms var(--motion-ease); }
+  .ui-modal-panel { animation: ui-panel-in 180ms var(--motion-ease); }
 }
-@keyframes pact-pulse {
-  0%, 100% { box-shadow: 0 0 0 1px var(--role-design); }
-  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--role-design) 50%, transparent); }
+@keyframes ui-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ui-panel-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* Live pulse (M3.3b): on each applied LIVE snapshot, the task node(s) whose
@@ -50,11 +58,112 @@ body { margin: 0; background: #0d1117; color: #e6edf3; font-family: system-ui, s
 /* Comms overlay (M3.3b) node markers. Idle seats dim back; blocked tasks get an
    amber outline. Wait edges/badges are handled inline (mergeComms + node JSX). */
 .comms-idle { opacity: 0.45; }
-.comms-blocked > div { box-shadow: 0 0 0 1.5px #d29922; border-radius: 0.25rem; }
+.comms-blocked > div { box-shadow: 0 0 0 1.5px var(--warn); border-radius: 0.25rem; }
 
 /* While a draft is being dragged, light the seat rail up as drop targets. */
 .dragging-draft .react-flow__node-seat > div {
   border-color: var(--role-dev) !important;
   box-shadow: 0 0 14px -4px var(--role-dev);
   transition: box-shadow 0.15s ease;
+}
+
+/* ── TaskCard genome (T4) — lifted from board3-kanban.html `.task`, retoned to
+   tokens. --st (per-card status color) is set inline by TaskCard. Shared by the
+   kanban board and the canvas task node. ───────────────────────────────────── */
+.task-card {
+  position: relative;
+  border-radius: 11px;
+  padding: 11px 12px 10px;
+  background: linear-gradient(
+    170deg,
+    color-mix(in srgb, var(--st, var(--color-bg-surface)) 9%, var(--color-bg-surface)),
+    var(--color-bg-page) 60%
+  );
+  border: 1px solid var(--color-border-strong);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.12s ease, box-shadow 0.2s ease;
+}
+.task-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+.task-card.dashed {
+  border-style: dashed;
+  border-color: var(--color-text-3);
+  background: transparent;
+  box-shadow: none;
+}
+.task-card.selected {
+  border-color: var(--color-role-product);
+  box-shadow: 0 0 0 1px var(--color-role-product), 0 3px 12px rgba(0, 0, 0, 0.35);
+}
+.task-card.glow {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-role-design) 55%, transparent),
+    0 0 16px color-mix(in srgb, var(--color-role-design) 22%, transparent),
+    0 3px 12px rgba(0, 0, 0, 0.35);
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-card { transition: none; }
+}
+
+.task-card-med {
+  width: 21px;
+  height: 21px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--st, var(--color-text-2)) 17%, transparent);
+  color: var(--st, var(--color-text-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st, var(--color-text-2)) 42%, transparent);
+}
+
+.task-card-ant {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.task-card .life i {
+  width: 11px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  display: inline-block;
+}
+.task-card .life i.done {
+  background: var(--st, var(--color-success));
+}
+.task-card .life i.cur {
+  background: var(--st, var(--color-success));
+  box-shadow: 0 0 5px color-mix(in srgb, var(--st, var(--color-success)) 70%, transparent);
+}
+
+/* TopBar live badge (T5) — the green dot breathes while live. Suppressed under
+   reduced-motion (a steady glow remains). board3 `.live .d`. */
+.topbar-live-dot {
+  animation: topbar-breath 2.4s ease-in-out infinite;
+}
+@keyframes topbar-breath {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--color-success); }
+  50% { opacity: 0.5; box-shadow: 0 0 2px var(--color-success); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topbar-live-dot { animation: none; }
+}
+
+/* Kanban column ghost (empty column placeholder) — board3 `.ghost`. */
+.kb-ghost {
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: 11px;
+  padding: 14px;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--color-text-3);
+  background: transparent;
 }

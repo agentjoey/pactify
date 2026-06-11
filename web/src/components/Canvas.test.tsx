@@ -54,15 +54,23 @@ describe("Canvas", () => {
       <Canvas project="demo" state={fixture} author={false} {...noopDraftProps} />,
     );
 
-    // Task node ids appear.
+    // Task node ids appear. TaskCard renders the id in two tiers (mono id +
+    // title, which falls back to the id absent a title field), so the id text
+    // occurs more than once per card — assert presence via getAllByText.
     await waitFor(() => {
-      expect(screen.getByText("T1")).toBeInTheDocument();
-      expect(screen.getByText("T2")).toBeInTheDocument();
+      expect(screen.getAllByText("T1").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("T2").length).toBeGreaterThan(0);
     });
 
-    // Seat rail cards.
-    expect(screen.getByText("alice")).toBeInTheDocument();
-    expect(screen.getByText("bob")).toBeInTheDocument();
+    // Seat rail cards. (Scope to the seat nodes: the task cards' owner/reviewer
+    // ant chips now carry the seat name as an SVG <title> too, so a bare
+    // getByText collides — query within each seat node instead.)
+    expect(
+      container.querySelector('.react-flow__node[data-id="seat:alice"]')!.textContent,
+    ).toContain("alice");
+    expect(
+      container.querySelector('.react-flow__node[data-id="seat:bob"]')!.textContent,
+    ).toContain("bob");
 
     // Feature group header.
     expect(screen.getByText("F1")).toBeInTheDocument();
@@ -77,7 +85,7 @@ describe("Canvas", () => {
     // App passes author={author && !replaying}, so a replaying canvas receives
     // author=false → the build-mode toolbar (New feature / New task) is absent.
     render(<Canvas project="demo" state={fixture} author={false} replaying {...noopDraftProps} />);
-    await waitFor(() => expect(screen.getByText("T1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("T1").length).toBeGreaterThan(0));
     expect(screen.queryByText("+ New feature")).toBeNull();
     expect(screen.queryByText("+ New task")).toBeNull();
   });
@@ -101,7 +109,7 @@ describe("Canvas", () => {
       }],
     };
     const { container } = render(<Canvas project="demo" state={blocked} author={false} {...noopDraftProps} />);
-    await waitFor(() => expect(screen.getByText("T2")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("T2").length).toBeGreaterThan(0));
 
     // Default OFF: no overlay markers, no legend.
     expect(container.querySelector('.react-flow__node[data-id="task:T2"]')!.className).not.toContain("comms-blocked");

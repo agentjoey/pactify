@@ -1,99 +1,76 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import type { Task } from "../../lib/types";
+import { TaskCard } from "../TaskCard";
 
-// Status chip colors mirror the board's column semantics. Kept local so the
-// canvas reads at a glance without importing board styling.
-const STATUS_COLOR: Record<string, string> = {
-  assigned: "#8b949e",
-  in_progress: "#2f81f7",
-  awaiting_review: "#d29922",
-  accepted: "#3fb950",
-  changes_requested: "#f85149",
-};
-
-// TaskNode renders both committed tasks and in-flight drafts (data.draft).
-// The 3px left border is tinted by the owner's role color var.
+// TaskNode renders both committed tasks and in-flight drafts (data.draft) by
+// wrapping the shared TaskCard genome in React Flow Handles. The pulse / comms
+// (idle/blocked/notjoined) classes are applied at the React Flow node-wrapper
+// level by Canvas's className merge — TaskNode itself just draws the card and
+// keeps the draft "dispatch →" affordance + the not-joined warning badge.
 export function TaskNode({ id, data }: NodeProps) {
   const d = data as {
+    id?: string;
+    feature?: string;
     status?: string;
     owner?: string;
     reviewer?: string;
-    deps?: string[];
-    roleColor?: string;
+    ownerRoles?: string[];
+    reviewerRoles?: string[];
     draft?: boolean;
     stale?: boolean;
     commsNotJoined?: boolean;
     onDispatch?: () => void;
   };
-  const taskId = id.replace(/^(task|draft):/, "");
-  const roleVar = d.roleColor ?? "--role-dev";
-  const statusColor = d.status ? STATUS_COLOR[d.status] ?? "#8b949e" : "#8b949e";
-  const awaiting = d.status === "awaiting_review";
+  const taskId = d.id ?? id.replace(/^(task|draft):/, "");
+
+  // Resolve owner/reviewer roles from the node data the canvas baked in.
+  const rolesOf = (seat: string): string[] => {
+    if (seat === d.owner) return d.ownerRoles ?? [];
+    if (seat === d.reviewer) return d.reviewerRoles ?? [];
+    return [];
+  };
+
+  // Draft tasks carry no protocol status; present them as an assigned-shaped,
+  // dashed card so the genome (medallion/lifecycle) still reads.
+  const task: Task = {
+    id: taskId,
+    owner: d.owner ?? "",
+    reviewer: d.reviewer ?? "",
+    status: d.status ?? "assigned",
+    spec: "",
+    evidence: "",
+  };
 
   return (
-    <div
-      className={`rounded bg-[#161b22] text-xs px-2.5 py-2 min-w-[160px] ${awaiting ? "pact-awaiting" : ""}`}
-      style={{
-        borderTop: d.draft ? "1px dashed #6e7681" : "1px solid #30363d",
-        borderRight: d.draft ? "1px dashed #6e7681" : "1px solid #30363d",
-        borderBottom: d.draft ? "1px dashed #6e7681" : "1px solid #30363d",
-        borderLeft: `3px solid var(${roleVar})`,
-      }}
-    >
+    <div className="min-w-[176px]">
       <Handle type="target" position={Position.Top} style={{ background: "#484f58" }} />
-      <div className="flex items-center gap-1.5">
-        <span className="font-semibold text-[#e6edf3]">{taskId}</span>
-        {d.stale && (
-          <span
-            data-testid="stale-dot"
-            title="in_progress > 30min"
-            className="inline-block h-2 w-2 rounded-full bg-[#d29922]"
-          />
+      <TaskCard task={task} rolesOf={rolesOf} stale={d.stale} draft={d.draft}>
+        {(d.commsNotJoined || (d.draft && d.onDispatch)) && (
+          <div className="mb-1.5 flex items-center gap-1.5">
+            {d.commsNotJoined && (
+              <span
+                data-testid="notjoined-badge"
+                title="owner or reviewer never joined"
+                className="rounded border border-[var(--color-danger)] bg-[var(--color-bg-raised)] px-1 text-[9px] uppercase tracking-wide text-[var(--color-danger)]"
+              >
+                ⚠ not joined
+              </span>
+            )}
+            {d.draft && d.onDispatch && (
+              <button
+                data-testid="dispatch-btn"
+                className="rounded border border-[var(--color-border-strong)] bg-[var(--color-bg-raised)] px-1.5 py-0.5 text-[10px] text-[var(--color-role-design)] hover:border-[var(--color-role-design)]"
+                onClick={(e) => {
+                  e.stopPropagation(); // don't trigger the node-click editor
+                  d.onDispatch?.();
+                }}
+              >
+                dispatch →
+              </button>
+            )}
+          </div>
         )}
-        {d.draft && (
-          <span className="text-[9px] uppercase tracking-wide rounded px-1 bg-[#21262d] text-[#8b949e] border border-dashed border-[#6e7681]">
-            draft
-          </span>
-        )}
-        {d.commsNotJoined && (
-          <span
-            data-testid="notjoined-badge"
-            title="owner or reviewer never joined"
-            className="text-[9px] uppercase tracking-wide rounded px-1 bg-[#21262d] text-[#f85149] border border-[#f85149]"
-          >
-            ⚠ not joined
-          </span>
-        )}
-      </div>
-      {d.status && (
-        <div className="mt-1">
-          <span
-            className="text-[9px] uppercase tracking-wide rounded px-1 py-0.5"
-            style={{ background: "#21262d", color: statusColor }}
-          >
-            {d.status.replace(/_/g, " ")}
-          </span>
-        </div>
-      )}
-      {d.draft && d.onDispatch && (
-        <button
-          data-testid="dispatch-btn"
-          className="mt-1 rounded border border-[#30363d] bg-[#21262d] px-1.5 py-0.5 text-[10px] text-[#8ab4ff] hover:border-[#8ab4ff]"
-          onClick={(e) => {
-            e.stopPropagation(); // don't trigger the node-click editor
-            d.onDispatch?.();
-          }}
-        >
-          dispatch →
-        </button>
-      )}
-      <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-[#8b949e]">
-        {d.owner && (
-          <span className="rounded bg-[#21262d] px-1">owner: {d.owner}</span>
-        )}
-        {d.reviewer && (
-          <span className="rounded bg-[#21262d] px-1">rev: {d.reviewer}</span>
-        )}
-      </div>
+      </TaskCard>
       <Handle type="source" position={Position.Bottom} style={{ background: "#484f58" }} />
     </div>
   );

@@ -1,31 +1,111 @@
 import type { CSSProperties } from "react";
 import type { State } from "../lib/types";
-import { boardColumns, COLUMNS } from "../lib/derive";
+import { boardColumns, type Column } from "../lib/derive";
 import { roleColorVar } from "../lib/canvas";
-export function Board({ state, selected, onSelect, pulses }: { state: State; selected: string; onSelect: (id: string) => void; pulses?: Set<string> }) {
+import { statusColorVar } from "../lib/lifecycle";
+import { TaskCard } from "./TaskCard";
+import { Tooltip } from "./ui/Tooltip";
+
+// Kanban column order + presentation per board3 / spec §4 (note: distinct from
+// derive's COLUMNS order — that one is derivation-internal; this is the visual
+// left→right flow assigned → in_progress → awaiting → changes → accepted).
+const ORDER: Column[] = [
+  "assigned",
+  "in_progress",
+  "awaiting_review",
+  "changes_requested",
+  "accepted",
+];
+
+// Per-column empty-state copy (board3 ghost text).
+const GHOST: Record<string, string> = {
+  assigned: "没有待派发的任务",
+  in_progress: "没有进行中的任务",
+  awaiting_review: "没有待评审的任务",
+  changes_requested: "没有需要返工的任务",
+  accepted: "还没有已验收的任务",
+};
+
+export function Board({
+  state,
+  selected,
+  onSelect,
+  pulses,
+  staleTasks,
+}: {
+  state: State;
+  selected: string;
+  onSelect: (id: string) => void;
+  pulses?: Set<string>;
+  staleTasks?: Set<string>;
+}) {
   const cols = boardColumns(state);
-  // rolesOf indexes seat → roles so a pulsing card glows in its owner's color.
-  const rolesOf = new Map(state.agents.map((a) => [a.id, a.roles]));
+  // rolesOf indexes seat → roles so a pulsing card glows in its owner's color
+  // and the ant chips pick the right caste.
+  const rolesMap = new Map(state.agents.map((a) => [a.id, a.roles]));
+  const rolesOf = (seat: string): string[] => rolesMap.get(seat) ?? [];
+
   return (
-    <div className="flex gap-2 p-3 flex-1 overflow-x-auto">
-      {COLUMNS.map((c) => (
-        <div key={c} className="flex-1 min-w-[140px]">
-          <div className="text-[10px] font-semibold tracking-wide text-gray-500 mb-1.5 uppercase">{c.replace("_", " ")}</div>
-          {cols[c].map((bt) => {
-            const pulsing = pulses?.has(bt.task.id);
-            const roleVar = roleColorVar(rolesOf.get(bt.task.owner) ?? []);
-            return (
-              <button key={bt.task.id} onClick={() => onSelect(bt.task.id)}
-                data-testid={pulsing ? "board-pulse" : undefined}
-                style={pulsing ? ({ "--pulse-color": `var(${roleVar})` } as CSSProperties) : undefined}
-                className={`w-full text-left bg-[#161b22] border rounded p-2 mb-1.5 text-xs ${pulsing ? "pulse " : ""}${selected === bt.task.id ? "border-yellow-500" : "border-gray-700"}`}>
-                <div>{bt.task.id}</div>
-                <div className="text-[10px] text-gray-500">{bt.task.owner}</div>
-              </button>
-            );
-          })}
-        </div>
-      ))}
+    <div
+      className="grid flex-1 gap-3 overflow-x-auto p-4"
+      style={{ gridTemplateColumns: `repeat(${ORDER.length}, minmax(140px, 1fr))` }}
+    >
+      {ORDER.map((c) => {
+        const tasks = cols[c] ?? [];
+        const dot = statusColorVar(c);
+        return (
+          <div key={c} className={`min-h-[360px] ${c === "accepted" ? "opacity-[.82]" : ""}`}>
+            <Tooltip label="status flows through pact verbs">
+              <div className="flex items-center gap-[7px] px-1 pb-2.5 pt-0.5">
+                <span
+                  className="h-[7px] w-[7px] rounded-full"
+                  style={{
+                    background: dot,
+                    boxShadow: c === "awaiting_review" ? `0 0 6px ${dot}` : undefined,
+                  }}
+                />
+                <span className="text-[11px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-2)]">
+                  {c.replace(/_/g, " ")}
+                </span>
+                <span className="mono ml-auto rounded-full bg-white/[.06] px-[7px] py-px text-[10px] tabular-nums text-[var(--color-text-3)]">
+                  {tasks.length}
+                </span>
+              </div>
+            </Tooltip>
+            <div className="flex flex-col gap-[9px]">
+              {tasks.length === 0 ? (
+                <div className="kb-ghost">{GHOST[c] ?? "暂无任务"}</div>
+              ) : (
+                tasks.map((bt) => {
+                  const pulsing = pulses?.has(bt.task.id);
+                  const roleVar = roleColorVar(rolesOf(bt.task.owner));
+                  return (
+                    <div
+                      key={bt.task.id}
+                      data-testid={pulsing ? "board-pulse" : undefined}
+                      className={pulsing ? "pulse rounded-[11px]" : undefined}
+                      style={
+                        pulsing
+                          ? ({ "--pulse-color": `var(${roleVar})` } as CSSProperties)
+                          : undefined
+                      }
+                    >
+                      <TaskCard
+                        task={bt.task}
+                        featureId={bt.feature}
+                        rolesOf={rolesOf}
+                        stale={staleTasks?.has(bt.task.id)}
+                        selected={selected === bt.task.id}
+                        onClick={() => onSelect(bt.task.id)}
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

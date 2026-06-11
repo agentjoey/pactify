@@ -95,6 +95,12 @@ User acceptance feedback (greet repo, blocked at dispatch): ① switching canvas
 
 ## Wave 2 — Office mode + canvas re-skin + ant edges + detail panel (branch `feat/dashboard-v2-w2`)
 
+> **W2 structural prep (from T4 quality review, fold into T7/T10 work):** ① replace
+> TaskCard's `rolesOf` callback prop with resolved `ownerRoles`/`reviewerRoles`
+> (deletes per-consumer adapters; Office desks would be the third); ② canvas.ts task
+> node data should carry the `task` object itself + roles instead of re-flattening
+> id/status/owner/reviewer (TaskNode currently re-materializes a fake Task).
+
 ### Task T7: Plan-canvas surface re-skin
 
 **Files:** Modify `web/src/components/Canvas.tsx` (extract `web/src/components/canvas/{Toolbar,Hud}.tsx`), `web/src/components/nodes/FeatureGroup.tsx`, `web/src/lib/canvas.ts`.

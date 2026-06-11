@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import type { RegistryEntry } from "../../lib/types";
 import { getRegistry, postRegister, deleteRegistry } from "../../lib/api";
 import { relativeTime } from "../../lib/ops";
+import { Modal } from "../ui/Modal";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
 
 // Projects is the registry panel: one card per registered project (status badge,
 // seat count, last activity), plus a Register form and per-card Remove. The
@@ -21,6 +24,8 @@ export function Projects({
   const [regErr, setRegErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
+  // The project pending a Remove confirmation (null = no dialog open).
+  const [pendingRemove, setPendingRemove] = useState<RegistryEntry | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -48,7 +53,7 @@ export function Projects({
   };
 
   const remove = async (entry: RegistryEntry) => {
-    if (!window.confirm(`Remove "${entry.name}" from the registry? (files are untouched)`)) return;
+    setPendingRemove(null);
     try {
       await deleteRegistry(entry.name);
       refresh();
@@ -88,13 +93,15 @@ export function Projects({
               <span className="ml-auto text-[#f85149] whitespace-pre-wrap">{e.status.error || "invalid"}</span>
             )}
             {author && (
-              <button
+              <Button
                 data-testid={`project-remove-${e.name}`}
-                className="rounded border border-gray-700 px-2 py-0.5 text-[10px] text-gray-400 hover:border-[#f85149] hover:text-[#f85149]"
-                onClick={() => remove(e)}
+                variant="ghost"
+                size="sm"
+                className="hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
+                onClick={() => setPendingRemove(e)}
               >
                 Remove
-              </button>
+              </Button>
             )}
           </div>
         ))}
@@ -104,30 +111,56 @@ export function Projects({
         <div data-testid="register-form" className="rounded border border-gray-800 bg-[#0d1117] p-2">
           <div className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Register a project</div>
           <div className="flex gap-2 mb-1.5">
-            <input
+            <Input
               aria-label="path"
-              className="flex-1 rounded border border-gray-700 bg-[#161b22] px-1.5 py-1 text-[11px] text-[#e6edf3]"
+              className="flex-1"
               placeholder="absolute path to repo"
               value={path}
               onChange={(ev) => setPath(ev.target.value)}
             />
-            <input
+            <Input
               aria-label="name"
-              className="w-32 rounded border border-gray-700 bg-[#161b22] px-1.5 py-1 text-[11px] text-[#e6edf3]"
+              className="w-32"
               placeholder="name (optional)"
               value={name}
               onChange={(ev) => setName(ev.target.value)}
             />
-            <button
-              className="rounded bg-[#238636] px-2 py-0.5 text-[11px] font-semibold text-white disabled:opacity-50"
+            <Button
+              size="sm"
               disabled={busy || path.trim().length === 0}
               onClick={register}
             >
               Register
-            </button>
+            </Button>
           </div>
-          {regErr && <p data-testid="register-error" className="text-[11px] text-[#f85149] whitespace-pre-wrap">{regErr}</p>}
+          {regErr && <p data-testid="register-error" className="text-[11px] text-[var(--color-danger)] whitespace-pre-wrap">{regErr}</p>}
         </div>
+      )}
+
+      {pendingRemove && (
+        <Modal
+          testId="remove-confirm"
+          variant="danger"
+          title={`Remove ${pendingRemove.name}?`}
+          onClose={() => setPendingRemove(null)}
+          width="420px"
+          footer={
+            <>
+              <Button variant="danger" onClick={() => remove(pendingRemove)}>
+                Remove
+              </Button>
+              <Button variant="ghost" className="ml-auto" onClick={() => setPendingRemove(null)}>
+                Cancel
+              </Button>
+            </>
+          }
+        >
+          <p className="text-xs text-[var(--color-text-2)]">
+            Remove “{pendingRemove.name}” from the registry? The files at{" "}
+            <span className="font-mono text-[var(--color-text-1)]">{pendingRemove.path}</span>{" "}
+            are untouched.
+          </p>
+        </Modal>
       )}
     </section>
   );

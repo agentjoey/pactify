@@ -1,6 +1,9 @@
 import { useState } from "react";
 import type { Draft } from "../lib/canvas";
 import { postTask, postVerb } from "../lib/api";
+import { Modal } from "./ui/Modal";
+import { Button } from "./ui/Button";
+import { Select } from "./ui/Select";
 
 // dispatchPayload assembles the assign verb body from a draft + chosen reviewer.
 // Pure + exported so the wire shape (owner≠reviewer guard, deps passthrough) is
@@ -91,97 +94,86 @@ export function DispatchModal({
     }
   };
 
+  const label = "text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-3)]";
+  const readonly =
+    "mt-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-2 py-1 text-[var(--color-text-1)]";
+
   return (
-    <div
-      data-testid="dispatch-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      onClick={onClose}
-    >
-      <div
-        className="w-[520px] max-w-[92vw] rounded-lg border border-[#30363d] bg-[#161b22] p-4 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[#e6edf3]">Dispatch · {draft.id}</h2>
-          <button className="text-xs text-[#8b949e] hover:text-[#e6edf3]" onClick={onClose} aria-label="close">
-            ✕
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-[#8b949e]">Owner</div>
-            {initialOwner ? (
-              <div className="mt-1 rounded border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[#e6edf3]">{owner}</div>
-            ) : (
-              <select
-                aria-label="owner"
-                className="mt-1 w-full rounded border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[#e6edf3]"
-                value={owner}
-                onChange={(e) => {
-                  setOwner(e.target.value);
-                  if (reviewer === e.target.value) setReviewer("");
-                }}
-              >
-                <option value="">(choose owner)</option>
-                {roster.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            )}
-          </div>
-          <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wide text-[#8b949e]">Reviewer</label>
-            <select
-              aria-label="reviewer"
-              className="mt-1 w-full rounded border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[#e6edf3]"
-              value={reviewer}
-              onChange={(e) => setReviewer(e.target.value)}
-            >
-              {reviewers.length === 0 && <option value="">(no eligible reviewer)</option>}
-              {reviewers.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-[#8b949e]">Branch</div>
-            <div className="mt-1 rounded border border-[#30363d] bg-[#0d1117] px-2 py-1 font-mono text-[#e6edf3]">
-              {branch || "—"}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-[#8b949e]">Deps</div>
-            <div className="mt-1 rounded border border-[#30363d] bg-[#0d1117] px-2 py-1 font-mono text-[#8b949e]">
-              {draft.deps.length ? draft.deps.join(", ") : "(none)"}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-[#8b949e]">Spec preview</div>
-          <pre className="mt-1 max-h-40 overflow-auto rounded border border-[#30363d] bg-[#0d1117] p-2 text-[10px] text-[#e6edf3]">
-            {draft.specMd || "(empty)"}
-          </pre>
-        </div>
-
-        {err && <p className="mt-3 whitespace-pre-wrap text-xs text-[#f85149]">{err}</p>}
-
-        <div className="mt-4 flex items-center gap-2">
-          <button
-            className="rounded bg-[#238636] px-3 py-1 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={confirm}
-            disabled={!canConfirm}
-          >
+    <Modal
+      testId="dispatch-modal"
+      title={`Dispatch · ${draft.id}`}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={confirm} disabled={!canConfirm}>
             {busy ? "Dispatching…" : "Confirm dispatch"}
-          </button>
-          <button className="ml-auto rounded border border-[#30363d] px-3 py-1 text-xs text-[#8b949e]" onClick={onClose}>
+          </Button>
+          <Button variant="ghost" className="ml-auto" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
+        </>
+      }
+    >
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <div className={label}>Owner</div>
+          {initialOwner ? (
+            <div className={readonly}>{owner}</div>
+          ) : (
+            <Select
+              aria-label="owner"
+              className="mt-1"
+              value={owner}
+              onChange={(e) => {
+                setOwner(e.target.value);
+                if (reviewer === e.target.value) setReviewer("");
+              }}
+            >
+              <option value="">(choose owner)</option>
+              {roster.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </Select>
+          )}
+        </div>
+        <div>
+          <label className={label}>Reviewer</label>
+          <Select
+            aria-label="reviewer"
+            className="mt-1"
+            value={reviewer}
+            onChange={(e) => setReviewer(e.target.value)}
+          >
+            {reviewers.length === 0 && <option value="">(no eligible reviewer)</option>}
+            {reviewers.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <div className={label}>Branch</div>
+          <div className={`${readonly} font-mono`}>{branch || "—"}</div>
+        </div>
+        <div>
+          <div className={label}>Deps</div>
+          <div className={`${readonly} font-mono text-[var(--color-text-2)]`}>
+            {draft.deps.length ? draft.deps.join(", ") : "(none)"}
+          </div>
         </div>
       </div>
-    </div>
+
+      <div className="mt-3">
+        <div className={label}>Spec preview</div>
+        <pre className="mt-1 max-h-40 overflow-auto rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-2 text-[10px] text-[var(--color-text-1)]">
+          {draft.specMd || "(empty)"}
+        </pre>
+      </div>
+
+      {err && (
+        <p className="mt-3 whitespace-pre-wrap text-xs text-[var(--color-danger)]">{err}</p>
+      )}
+    </Modal>
   );
 }

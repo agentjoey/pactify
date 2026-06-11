@@ -1,0 +1,106 @@
+/* Dashboard v2 design tokens — single source of truth (spec §1, LOCKED).
+   Values are normative; do not improvise. Mockup ref:
+   docs/superpowers/mockups/dashboard-v2/board1-tokens-v2.html (B · Indigo).
+
+   Self-hosted fonts: no external network requests at runtime (CSP-friendly).
+   Files live in web/public/fonts/ and are served from the app origin. */
+
+@font-face {
+  font-family: "InterVariable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/JetBrainsMono-Medium.woff2") format("woff2");
+}
+
+/* Tailwind v4 @theme — exposes tokens as CSS vars AND wires utilities.
+   `static` keeps EVERY var in the build output: components read tokens at
+   runtime via var() in inline styles / node data, which Tailwind's usage
+   scanner can't see — without `static` ~70% of this sheet is tree-shaken. */
+@theme static {
+  /* Font stacks. Overriding --font-mono re-points every `font-mono` utility
+     to the self-hosted JetBrains Mono stack app-wide. */
+  --font-sans: "InterVariable", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  /* Background — 4 layers (B · Indigo). */
+  --color-bg-page: #191b26;
+  --color-bg-surface: #20222f;
+  --color-bg-raised: #272a3a;
+  --color-bg-overlay: #2f3246;
+
+  /* Borders. */
+  --color-border-subtle: rgba(255, 255, 255, 0.07);
+  --color-border-strong: rgba(255, 255, 255, 0.1);
+
+  /* Text — 3 layers. */
+  --color-text-1: rgba(255, 255, 255, 0.92);
+  --color-text-2: rgba(255, 255, 255, 0.6);
+  --color-text-3: rgba(255, 255, 255, 0.38);
+
+  /* Role colors — protocol-hard (desaturated from legacy brand hues). */
+  --color-role-product: #ecc678; /* orchestrator/编排 — desaturated from legacy brand yellow */
+  --color-role-design: #93b4f2;  /* reviewer/评审   — desaturated from legacy brand blue */
+  --color-role-dev: #7bd8a0;     /* worker/开发     — desaturated from legacy brand green */
+
+  /* Role colors — extended roster (caste hue families). */
+  --color-role-qa: #5fc8c3;
+  --color-role-pm: #e8a85c;
+  --color-role-designer: #a89bf0;
+  --color-role-research: #c99bd8;
+  --color-role-ops: #ee9a6b;
+
+  /* Semantic. */
+  --color-danger: #e5615c;
+  --color-warn: #d9a23d;
+  --color-success: #7bd8a0;
+
+  /* Radius. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Shadows — 3 steps (matching the boards). */
+  --shadow-card: 0 3px 12px rgba(0, 0, 0, 0.35);
+  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Motion + legacy role re-pointing. The legacy vars --role-product/-design/-dev
+   are read directly via var() by existing canvas components (see roleColorVar()
+   in lib/canvas.ts). Re-pointing them here shifts their hue to the new
+   desaturated palette automatically — no component edits required. */
+:root {
+  /* Motion. */
+  --motion-micro: 120ms;
+  --motion-layout: 200ms;
+  --motion-ease: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* Legacy role vars → new desaturated hexes (supersedes index.css :root). */
+  --role-product: var(--color-role-product); /* #ECC678 */
+  --role-design: var(--color-role-design);   /* #93B4F2 */
+  --role-dev: var(--color-role-dev);         /* #7BD8A0 */
+
+  /* Semantic shorthands consumed by existing CSS (e.g. .comms-blocked uses
+     var(--warn)) — without these the declarations are invalid and silently
+     render nothing. */
+  --danger: var(--color-danger);
+  --warn: var(--color-warn);
+  --success: var(--color-success);
+}

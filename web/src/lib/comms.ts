@@ -29,6 +29,14 @@ function flatTasks(state: State): Task[] {
   return out;
 }
 
+// unmet(t, byId): dep task ids of t that are not accepted (an absent dep id can't
+// be accepted, so it counts as unmet too — deps are same-feature by protocol).
+// Shared with office.ts (T9) so the two lenses can never drift on what "blocked"
+// means. byId is the caller's flatTasks index; pure (reads only its args).
+export function unmetDeps(t: Task, byId: Map<string, Task>): string[] {
+  return (t.deps ?? []).filter((d) => byId.get(d)?.status !== "accepted");
+}
+
 // deriveComms folds a snapshot into wait edges + seat/task markers. Pure: reads
 // only its argument, never mutates. Semantics are the spec §1 table verbatim.
 export function deriveComms(state: State): CommsResult {
@@ -38,10 +46,7 @@ export function deriveComms(state: State): CommsResult {
 
   const edges: WaitEdge[] = [];
 
-  // unmet(t): dep task ids of t that are not accepted (an absent dep id can't be
-  // accepted, so it counts as unmet too — deps are same-feature by protocol).
-  const unmet = (t: Task): string[] =>
-    (t.deps ?? []).filter((d) => byId.get(d)?.status !== "accepted");
+  const unmet = (t: Task): string[] => unmetDeps(t, byId);
 
   for (const t of tasks) {
     if (t.status === "awaiting_review") {

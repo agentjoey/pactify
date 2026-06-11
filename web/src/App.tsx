@@ -8,6 +8,7 @@ import { Canvas } from "./components/Canvas";
 import { OpsView } from "./components/ops/OpsView";
 import { ReplayBar } from "./components/ReplayBar";
 import { RightRail } from "./components/RightRail";
+import { CommandK } from "./components/CommandK";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
@@ -292,6 +293,17 @@ export default function App() {
           </>
         )}
       <Toasts toasts={toasts} />
+      <CommandK
+        projects={projects}
+        current={current}
+        state={shownState}
+        view={view}
+        setView={setView}
+        setSelected={setSelected}
+        onSelectProject={setCurrent}
+        author={author}
+        replaying={replaying}
+      />
     </div>
   );
 }

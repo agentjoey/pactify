@@ -29,6 +29,13 @@ if (globalThis.SVGElement && typeof (globalThis.SVGElement.prototype as unknown 
   };
 }
 
+// scrollIntoView: jsdom doesn't implement it. cmdk (the ⌘K palette) calls it to
+// keep the active item in view on selection-change; without the stub mounting the
+// palette throws.
+if (typeof Element.prototype.scrollIntoView === "undefined") {
+  Element.prototype.scrollIntoView = function () {};
+}
+
 // getBoundingClientRect: jsdom returns all-zeros; React Flow bails when the
 // pane has zero size, so report a fixed non-zero box.
 if (!(globalThis as { __rfRectPatched?: boolean }).__rfRectPatched) {

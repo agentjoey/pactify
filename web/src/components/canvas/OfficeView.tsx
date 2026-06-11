@@ -460,7 +460,7 @@ export function OfficeView({
   void onParcelDragStart;
 
   return (
-    <div className="office-view absolute inset-0" data-testid="office-view" onDragOver={onPaneDragOver} onDrop={onPaneDrop}>
+    <div className={`office-view absolute inset-0${replaying ? " replaying" : ""}`} data-testid="office-view" onDragOver={onPaneDragOver} onDrop={onPaneDrop}>
       {/* transit overlay (single lane + carrier ant carrying the parcel) */}
       {transit && (
         <svg

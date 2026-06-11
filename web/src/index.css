@@ -524,6 +524,8 @@ body {
 .desk .eq i:nth-child(2) { height: 8px; animation-delay: 0.15s; }
 .desk .eq i:nth-child(3) { height: 5px; animation-delay: 0.3s; }
 @keyframes eq { 50% { transform: scaleY(0.4); } }
+/* Replay renders a HISTORICAL snapshot — live activity animations are off. */
+.office-view.replaying .desk .eq i { animation: none; }
 
 .desk .dzone { padding: 0 12px 6px; }
 .desk .zlab {

@@ -188,6 +188,109 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
+/* Task connect handles (T8) — enlarged hit area, hidden until the node is
+   hovered or a connection is being dragged (then any node shows its handles so
+   the author can aim). board2-canvas-v2 connect-UX (acceptance feedback 2.5). */
+.react-flow__handle.task-handle {
+  width: 12px;
+  height: 12px;
+  background: var(--color-role-design);
+  border: 2px solid var(--color-bg-page);
+  opacity: 0;
+  transition: opacity 0.12s var(--motion-ease), transform 0.12s var(--motion-ease);
+}
+.react-flow__node:hover .react-flow__handle.task-handle,
+.react-flow__handle.task-handle.connecting,
+.react-flow__handle.task-handle:hover {
+  opacity: 1;
+}
+.react-flow__handle.task-handle:hover { transform: scale(1.25); }
+/* While a connection drag is active, reveal every node's handles + ring valid
+   targets so the magnetic snap target is obvious. */
+.react-flow.connecting .react-flow__handle.task-handle { opacity: 0.85; }
+.task-node.connect-target {
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--color-role-dev), 0 0 14px color-mix(in srgb, var(--color-role-dev) 45%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__handle.task-handle { transition: none; }
+}
+
+/* Context menu (T8) — board2-canvas-v2 `.ctx`. Frosted, Kbd hints. */
+.canvas-ctx {
+  position: absolute;
+  z-index: 50;
+  width: 182px;
+  background: color-mix(in srgb, var(--color-bg-overlay) 96%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 11px;
+  padding: 5px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.canvas-ctx .ci {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--color-text-1);
+  padding: 6.5px 9px;
+  border-radius: 7px;
+  text-align: left;
+  transition: background 0.1s var(--motion-ease);
+}
+.canvas-ctx .ci:hover { background: rgba(255, 255, 255, 0.06); }
+.canvas-ctx .ci.hot {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-role-design) 20%, transparent), color-mix(in srgb, var(--color-role-design) 10%, transparent));
+}
+.canvas-ctx .ci.danger { color: var(--color-danger); }
+.canvas-ctx .ci .ci-ic { opacity: 0.7; width: 14px; text-align: center; }
+.canvas-ctx .ci kbd {
+  margin-left: auto;
+  font-size: 9.5px;
+  color: var(--color-text-3);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.canvas-ctx .ci-sep {
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: 4px 7px;
+}
+
+/* Snap-alignment guide lines (T8) — drawn while dragging a node whose x/y aligns
+   with another node (±6px). Display-only overlay, role-design colored. */
+.canvas-guides {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+.canvas-guides .guide {
+  position: absolute;
+  background: var(--color-role-design);
+  opacity: 0.7;
+}
+.canvas-guides .guide.v { width: 1px; top: 0; bottom: 0; }
+.canvas-guides .guide.h { height: 1px; left: 0; right: 0; }
+
+/* Inline rename input (T8) — dbl-click a draft title. */
+.canvas-rename {
+  position: absolute;
+  z-index: 50;
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  background: var(--color-bg-raised);
+  color: var(--color-text-1);
+  border: 1px solid var(--color-role-design);
+  border-radius: 6px;
+  padding: 4px 7px;
+  outline: none;
+}
+
 /* Feature frame v2 (T7) — board2-canvas-v2 `.frame`/`.fhead`. */
 .feature-frame {
   border-radius: 16px;

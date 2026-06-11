@@ -1,6 +1,12 @@
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
+import type { CSSProperties } from "react";
 import type { Task } from "../../lib/types";
 import { TaskCard } from "../TaskCard";
+
+// HANDLE_STYLE enlarges the connect hit area to ≥12px (was the React Flow
+// default ~6px dot). Visibility is driven by the `.task-handle` CSS (hidden
+// until node hover / active connection).
+const HANDLE_STYLE: CSSProperties = { width: 12, height: 12 };
 
 // TaskNode renders both committed tasks and in-flight drafts (data.draft) by
 // wrapping the shared TaskCard genome in React Flow Handles. The pulse / comms
@@ -34,9 +40,27 @@ export function TaskNode({ id, data }: NodeProps) {
       evidence: "",
     };
 
+  // useConnection lets a node light up as a valid drop target WHILE a connection
+  // is being dragged. We highlight any node that is not the connection's own
+  // source (self-loops are invalid; cross-feature/cycle invalidity is enforced
+  // by isValidConnection on the flow, which paints the not-allowed cursor — the
+  // highlight here is the affordance that says "you can aim here").
+  const connection = useConnection();
+  const connecting = connection.inProgress;
+  const fromId = connection.fromNode?.id;
+  const isValidTarget = connecting && fromId !== undefined && fromId !== id;
+
   return (
-    <div className="min-w-[176px]">
-      <Handle type="target" position={Position.Top} style={{ background: "#484f58" }} />
+    <div
+      className={`task-node min-w-[176px]${isValidTarget ? " connect-target" : ""}`}
+      data-testid="task-node"
+    >
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="task-handle"
+        style={HANDLE_STYLE}
+      />
       <TaskCard
         task={task}
         ownerRoles={d.ownerRoles}
@@ -70,7 +94,12 @@ export function TaskNode({ id, data }: NodeProps) {
           </div>
         )}
       </TaskCard>
-      <Handle type="source" position={Position.Bottom} style={{ background: "#484f58" }} />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="task-handle"
+        style={HANDLE_STYLE}
+      />
     </div>
   );
 }

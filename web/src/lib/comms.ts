@@ -197,17 +197,23 @@ export function mergeComms(
     // would be silently skipped by React Flow — drop it explicitly; the
     // not-joined badge on the task carries the signal.
     if (!nodeIds.has(source) || !nodeIds.has(target)) return [];
+    // Ant-crawl edge (T8): review/rework = "wait" (messenger ant), dep =
+    // "blocked" (carrier ant + cargo). `ant` is decided by Canvas's cap pass
+    // (assignAntFlags) after merge; default false until then. The base dashed
+    // path + color is preserved via `style` passthrough so the look is unchanged.
+    const antKind = e.kind === "dep" ? "blocked" : "wait";
     return [{
       id,
       source,
       target,
+      type: "ant",
       label: e.reason,
       labelStyle: { fontSize: 9, fill: "#e6edf3" },
       labelBgStyle: { fill: "#161b22" },
       labelBgPadding: [3, 1] as [number, number],
       style: { stroke: color, strokeDasharray: "5 4", strokeWidth: 1.5 },
       animated: false,
-      data: { comms: true, kind: e.kind },
+      data: { comms: true, kind: antKind, color, ant: false },
     }];
   });
 

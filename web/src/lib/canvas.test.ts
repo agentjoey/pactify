@@ -5,8 +5,12 @@ import {
   toParentRelative,
   childToAbsolute,
   applyConnect,
+  isValidDep,
+  assignAntFlags,
+  ANT_CAP,
   nextId,
   type Draft,
+  type DepGraph,
   type DraftFeature,
   type LayoutJSON,
 } from "./canvas";
@@ -450,5 +454,68 @@ describe("nextId", () => {
 
   it("counts both committed tasks and current drafts (caller passes the union)", () => {
     expect(nextId(["t1", "t2", "t3"], "t")).toBe("t4");
+  });
+});
+
+describe("isValidDep (connect UX validation, T8)", () => {
+  // graph helper: f1 owns t1,t2,t3 (t3 committed); f2 owns x1. t2 depends on t1.
+  const make = (): DepGraph => ({
+    deps: new Map<string, string[]>([
+      ["t1", []],
+      ["t2", ["t1"]],
+      ["t3", ["t2"]],
+      ["x1", []],
+    ]),
+    featureOf: (id) => (id === "x1" ? "f2" : "f1"),
+    committed: new Set(["t3"]),
+  });
+
+  it("rejects a self-loop", () => {
+    expect(isValidDep(make(), "t1", "t1")).toBe(false);
+  });
+
+  it("rejects a cross-feature edge", () => {
+    expect(isValidDep(make(), "x1", "t1")).toBe(false);
+  });
+
+  it("rejects a committed target (deps fixed at assign)", () => {
+    expect(isValidDep(make(), "t1", "t3")).toBe(false);
+  });
+
+  it("rejects an edge that would create a cycle", () => {
+    // t2 already depends (transitively) on t1; adding t1→t2 means t2 depends on
+    // t1 again — fine — but t2→t1 (t1 depends on t2) would close a loop since
+    // t2 reaches t1 via its existing deps.
+    expect(isValidDep(make(), "t2", "t1")).toBe(false);
+  });
+
+  it("accepts a valid same-feature, draft-target, acyclic edge", () => {
+    // t1→t2: t2 already depends on t1, but that's a duplicate not a cycle on the
+    // *new* direction. Use an independent draft target to be unambiguous.
+    const g = make();
+    g.deps.set("t4", []);
+    g.featureOf = (id) => (id === "x1" ? "f2" : "f1");
+    expect(isValidDep(g, "t1", "t4")).toBe(true);
+  });
+});
+
+describe("assignAntFlags (cap + priority, T8)", () => {
+  it("caps at ANT_CAP, first eligible win", () => {
+    const edges = Array.from({ length: ANT_CAP + 2 }, (_, i) => ({ id: `e${i}`, kind: "dep" as const }));
+    const flags = assignAntFlags(edges);
+    expect(flags.size).toBe(ANT_CAP);
+    expect(flags.has("e0")).toBe(true);
+    expect(flags.has(`e${ANT_CAP}`)).toBe(false);
+  });
+
+  it("wait edges jump ahead of dep edges", () => {
+    const deps = Array.from({ length: ANT_CAP }, (_, i) => ({ id: `d${i}`, kind: "dep" as const }));
+    const flags = assignAntFlags([...deps, { id: "w", kind: "wait" }]);
+    expect(flags.has("w")).toBe(true);
+    expect(flags.has(`d${ANT_CAP - 1}`)).toBe(false);
+  });
+
+  it("reduced motion → empty", () => {
+    expect(assignAntFlags([{ id: "e", kind: "wait" }], true).size).toBe(0);
   });
 });

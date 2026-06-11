@@ -238,6 +238,60 @@ describe("Canvas", () => {
   // series ignores, so the first suggestion is t1. Editable + slug validation
   // unchanged is covered by TaskEditor's own contract; here we only assert the
   // field is pre-filled rather than blank.
+  // T8: right-click a committed task node → context menu with "View spec";
+  // gated to author && !replaying.
+  it("context menu opens on node right-click (author) and is hidden in replay", async () => {
+    const { container, rerender } = render(
+      <Canvas project="demo" state={fixture} author onSelectTask={() => {}} {...noopDraftProps} />,
+    );
+    const node = await waitFor(() => {
+      const el = container.querySelector('.react-flow__node[data-id="task:T1"]');
+      expect(el).not.toBeNull();
+      return el as Element;
+    });
+    fireEvent.contextMenu(node);
+    expect(await screen.findByTestId("canvas-ctx")).toBeInTheDocument();
+    expect(screen.getByText("View spec")).toBeInTheDocument();
+
+    // Esc closes it.
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("canvas-ctx")).toBeNull());
+
+    // Replay (author=false) → right-click yields no menu.
+    rerender(<Canvas project="demo" state={fixture} author={false} replaying {...noopDraftProps} />);
+    const node2 = container.querySelector('.react-flow__node[data-id="task:T1"]')!;
+    fireEvent.contextMenu(node2);
+    expect(screen.queryByTestId("canvas-ctx")).toBeNull();
+  });
+
+  // T8: pane right-click → New feature / New task entries.
+  it("pane right-click opens the New feature / New task menu (author)", async () => {
+    const { container } = render(
+      <Canvas project="demo" state={fixture} author {...noopDraftProps} />,
+    );
+    await waitFor(() => expect(screen.getAllByText("T1").length).toBeGreaterThan(0));
+    const pane = container.querySelector(".react-flow__pane")!;
+    fireEvent.contextMenu(pane);
+    expect(await screen.findByTestId("canvas-ctx")).toBeInTheDocument();
+    expect(screen.getByText("New feature")).toBeInTheDocument();
+    expect(screen.getByText("New task")).toBeInTheDocument();
+  });
+
+  // T8: dep edges are ant-crawl edges (type:"ant") so the AntEdge renderer takes
+  // over. The first eligible dep edge wins an ant slot (cap not exceeded here).
+  it("dep edges render as ant edges with a crawling ant within the cap", async () => {
+    const { container } = render(
+      <Canvas project="demo" state={fixture} author={false} {...noopDraftProps} />,
+    );
+    await waitFor(() => {
+      expect(container.querySelector('[data-id="dep:T1→T2"]')).not.toBeNull();
+    });
+    // The single dep edge is under the cap → it animates (animateMotion present).
+    await waitFor(() => {
+      expect(container.querySelector("animateMotion")).not.toBeNull();
+    });
+  });
+
   it("New-task editor pre-fills an auto-generated id (not blank)", async () => {
     render(
       <Canvas

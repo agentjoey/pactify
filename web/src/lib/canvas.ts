@@ -313,6 +313,75 @@ export function applyConnect(
   });
 }
 
+// DepGraph is the minimal view isValidDep needs: every task/draft id mapped to
+// its current dep ids, plus a feature lookup. Built by Canvas from committed
+// tasks + drafts.
+export interface DepGraph {
+  deps: Map<string, string[]>;      // id → its prerequisite ids
+  featureOf: (id: string) => string | undefined;
+  committed: Set<string>;           // committed task ids (deps fixed at assign)
+}
+
+// isValidDep is the single source of truth for whether a dep edge A→B ("B
+// depends on A") may be drawn. Rules (acceptance feedback 2.5, surfaced as the
+// not-allowed cursor via React Flow's isValidConnection):
+//   • no self-loop (A === B)
+//   • same feature (deps are same-feature by protocol)
+//   • target must be a DRAFT (committed-task deps are fixed at assign time)
+//   • no cycle: A must not already (transitively) depend on B
+// Pure: reads only its arguments. fromId/toId are RAW ids (no flow prefix).
+export function isValidDep(g: DepGraph, fromId: string, toId: string): boolean {
+  if (fromId === toId) return false;
+  if (g.committed.has(toId)) return false;
+  if (g.featureOf(fromId) !== g.featureOf(toId)) return false;
+  // Cycle check: would B become a prerequisite of A while A already (transitively)
+  // depends on B? Adding A→B means B depends on A; a cycle exists iff A already
+  // reaches B through the existing dep chain.
+  const seen = new Set<string>();
+  const stack = [fromId];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (cur === toId) return false; // A reaches B → adding B→…→A closes a loop
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    for (const d of g.deps.get(cur) ?? []) stack.push(d);
+  }
+  return true;
+}
+
+// AntEdgeKind classifies an ant-bearing edge for the AntEdge renderer:
+//   "wait"    → messenger ant (review/rework comms wait edges)
+//   "dep"     → carrier ant + cargo cube (unmet/derived dependency edges)
+//   "blocked" → carrier ant + cargo cube (blocked dep edges; same visual as dep)
+export type AntEdgeKind = "wait" | "dep" | "blocked";
+
+// ANT_CAP is the per-render ceiling on simultaneously animated ant edges. Beyond
+// it, ant-bearing edges fall back to a plain dashed path (no animateMotion) so
+// the canvas never animates dozens of ants at once. Spec §3 / board4 §①.
+export const ANT_CAP = 6;
+
+// assignAntFlags decides which of the ant-eligible edges actually carry a
+// crawling ant this render. Comms WAIT edges get priority over dep/blocked
+// edges; within a kind, input order is preserved. The first ANT_CAP eligible
+// edges get ant=true, the rest ant=false. Returns a Set of the edge ids that
+// won the ant slot — pure, deterministic, no global mutable state.
+//
+// `edges` is the list of ant-eligible edges with their kind; the caller filters
+// to only edges that should ever bear an ant (dep + wait), then this assigns the
+// scarce animation budget. reducedMotion short-circuits to an empty set (no ant
+// anywhere) so the cap logic and the motion gate share one decision point.
+export function assignAntFlags(
+  edges: { id: string; kind: AntEdgeKind }[],
+  reducedMotion = false,
+): Set<string> {
+  if (reducedMotion) return new Set();
+  const ordered = [
+    ...edges.filter((e) => e.kind === "wait"),
+    ...edges.filter((e) => e.kind !== "wait"),
+  ];
+  return new Set(ordered.slice(0, ANT_CAP).map((e) => e.id));
+}
+
 // childToAbsolute converts a dragged child's parent-relative position (what
 // React Flow reports in onNodeDragStop) back to the absolute coordinate the
 // layout sidecar stores. parentAbs is the parent feature's CURRENT absolute

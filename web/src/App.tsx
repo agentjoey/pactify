@@ -194,6 +194,10 @@ export default function App() {
     replayAtRef.current = null;
     setReplayAt(null);
     setReplayState(null);
+    // Clear the displayed snapshot IMMEDIATELY: rendering the previous
+    // project's state under the new project id both flashes stale data and
+    // made Canvas's FitOnEntry frame the OLD graph (then never refit).
+    setState(EMPTY);
     fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => { if (alive) setState(EMPTY); });
     const off = subscribeEvents(current, (e) => {
       if (!alive) return;

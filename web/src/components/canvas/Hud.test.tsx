@@ -13,9 +13,9 @@ const zoomTo = vi.fn();
 vi.mock("@xyflow/react", () => ({
   useReactFlow: () => ({ zoomIn, zoomOut, fitView, zoomTo }),
   useViewport: () => ({ x: 0, y: 0, zoom: 1.5 }),
-  MiniMap: (props: Record<string, unknown>) => (
-    <div data-testid={(props["data-testid"] as string) ?? "minimap-stub"} />
-  ),
+  // Fixed marker testid: the real MiniMap drops unknown props, so forwarding
+  // data-testid here would make the assertion self-certifying.
+  MiniMap: () => <div data-testid="minimap-stub" />,
 }));
 
 import { Hud } from "./Hud";
@@ -30,7 +30,7 @@ describe("Hud (T7)", () => {
 
   it("renders the minimap and the zoom percent from the viewport", () => {
     render(<Hud />);
-    expect(screen.getByTestId("canvas-minimap")).toBeInTheDocument();
+    expect(screen.getByTestId("minimap-stub")).toBeInTheDocument();
     // zoom 1.5 → 150%
     expect(screen.getByText("150%")).toBeInTheDocument();
   });

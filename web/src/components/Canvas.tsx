@@ -50,11 +50,13 @@ function prefersReducedMotion(): boolean {
   );
 }
 
-// FitOnEntry runs an animated fitView the first time a given project's nodes
-// render, then again only when the project changes — NOT on every SSE snapshot
-// (that would yank the viewport on each live update). Must live inside
-// <ReactFlow> (it reads the flow store via useReactFlow). Skipped under
-// reduced-motion (the initial `fitView` prop still frames the graph instantly).
+// FitOnEntry runs a fitView the first time a given project's nodes render,
+// then again only when the project changes — NOT on every SSE snapshot (that
+// would yank the viewport on each live update). App clears the snapshot to
+// EMPTY on project switch, so `ready` only turns true once the NEW project's
+// nodes exist — the fit always frames the right graph. Must live inside
+// <ReactFlow> (it reads the flow store via useReactFlow). Reduced-motion gets
+// an instant (0ms) fit instead of the 300ms ease.
 function FitOnEntry({ project, ready }: { project: string; ready: boolean }) {
   const { fitView } = useReactFlow();
   const fittedFor = useRef<string | null>(null);
@@ -62,8 +64,7 @@ function FitOnEntry({ project, ready }: { project: string; ready: boolean }) {
     if (!ready) return;
     if (fittedFor.current === project) return;
     fittedFor.current = project;
-    if (prefersReducedMotion()) return; // initial fitView prop already framed it
-    fitView({ duration: 300 });
+    fitView({ duration: prefersReducedMotion() ? 0 : 300 });
   }, [project, ready, fitView]);
   return null;
 }

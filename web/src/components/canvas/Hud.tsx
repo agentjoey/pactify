@@ -30,8 +30,10 @@ export function Hud() {
 
   return (
     <>
+      {/* NOTE: React Flow's MiniMap does NOT forward unknown props (a
+          data-testid here would be silently dropped) — tests select via the
+          .react-flow__minimap class instead. */}
       <MiniMap
-        data-testid="canvas-minimap"
         className="canvas-minimap"
         pannable
         zoomable

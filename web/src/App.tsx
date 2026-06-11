@@ -36,7 +36,9 @@ export default function App() {
   // applyState (so the firstSnapshot toast/pulse guard stays live-only) — they
   // render directly via replayState.
   const [replayAt, setReplayAt] = useState<number | null>(null);
-  const [replayState, setReplayState] = useState<State>(EMPTY);
+  // null until the first historical snapshot arrives — the display falls back to
+  // the live state meanwhile, so entering replay never flashes an empty board.
+  const [replayState, setReplayState] = useState<State | null>(null);
   const replaying = replayAt !== null;
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
@@ -46,11 +48,12 @@ export default function App() {
 
   const prevState = useRef<State>(EMPTY);
   const toastId = useRef(0);
-  // Mirror of `replaying` readable inside the SSE callback (which closes over the
-  // value at subscribe time). While replaying we still append to the event log
-  // but do NOT apply snapshots — the historical replayState owns the display.
-  const replayingRef = useRef(false);
-  useEffect(() => { replayingRef.current = replaying; }, [replaying]);
+  // Mirror of `replayAt` readable inside callbacks that close over stale state
+  // (the SSE handler, and the stale-response guard in showReplaySnapshot). While
+  // replaying we still append to the event log but do NOT apply snapshots — the
+  // historical replayState owns the display.
+  const replayAtRef = useRef<number | null>(null);
+  useEffect(() => { replayAtRef.current = replayAt; }, [replayAt]);
   // task id → epoch ms when first observed in_progress this session.
   const inProgressSince = useRef<Map<string, number>>(new Map());
   // tick forces stale re-evaluation on an interval even without state changes.
@@ -126,7 +129,7 @@ export default function App() {
     setStaleTasks(new Set());
     // Exit replay on project switch — the new project starts live.
     setReplayAt(null);
-    setReplayState(EMPTY);
+    setReplayState(null);
     fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => { if (alive) setState(EMPTY); });
     const off = subscribeEvents(current, (e) => {
       if (!alive) return;
@@ -134,7 +137,7 @@ export default function App() {
       // While replaying, SSE-applied snapshots are IGNORED (the displayed snapshot
       // is the fetched historical one). We keep the subscription open but skip the
       // refetch+apply so toasts/pulse stay live-only.
-      if (replayingRef.current) return;
+      if (replayAtRef.current !== null) return;
       fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => {});
     }, (v) => { if (alive) setLive(v); });
     return () => { alive = false; off(); setLive(false); };
@@ -161,7 +164,10 @@ export default function App() {
   function enterReplay(at: number) {
     setReplayAt(at);
   }
-  function showReplaySnapshot(_at: number, s: State) {
+  function showReplaySnapshot(at: number, s: State) {
+    // Drop stale responses: a slow fetch for an old position must not override
+    // the snapshot for where the scrubber is now (or live mode).
+    if (at !== replayAtRef.current) return;
     setReplayState(s);
   }
 
@@ -169,12 +175,13 @@ export default function App() {
   // NOT trust the last SSE-applied state), and resume applying SSE.
   function resumeLive() {
     setReplayAt(null);
-    setReplayState(EMPTY);
+    setReplayState(null);
     fetchState(current).then((s) => applyState(s)).catch(() => {});
   }
 
-  // Snapshot shown by kanban/canvas: historical while replaying, else live.
-  const shownState = replaying ? replayState : state;
+  // Snapshot shown by kanban/canvas: historical while replaying (falling back to
+  // the live state until the first replay snapshot lands), else live.
+  const shownState = replaying ? (replayState ?? state) : state;
 
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">

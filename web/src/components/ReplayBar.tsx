@@ -55,10 +55,12 @@ export function ReplayBar({
     getTimeline(project)
       .then((t) => { if (alive) setTimeline(t); })
       .catch(() => { if (alive) setTimeline({ total: 0, events: [] }); });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+      // Cancel any pending position fetch for the previous project.
+      if (debounce.current) clearTimeout(debounce.current);
+    };
   }, [project]);
-
-  useEffect(() => () => { if (debounce.current) clearTimeout(debounce.current); }, []);
 
   // go moves to position `at`: enter replay if currently live, then debounce the
   // historical-state fetch. at=0 → empty fold (no network). The fetched snapshot

@@ -1,13 +1,23 @@
 @import "tailwindcss";
+/* Design tokens (spec §1) — @theme block, @font-face, legacy role var
+   re-pointing all live here. Imported after Tailwind so @theme registers. */
+@import "./tokens.css";
 
 :root {
   color-scheme: dark;
-  /* Role color tokens — see roleColorVar() in lib/canvas.ts. */
-  --role-product: #ffd479; /* orchestrator — yellow (brand) */
-  --role-design: #8ab4ff;  /* reviewer — blue (brand) */
-  --role-dev: #6ee7a0;     /* worker — green (brand) */
+  /* Legacy role tokens (--role-product/-design/-dev) are re-pointed to the new
+     desaturated palette in tokens.css; components read them via roleColorVar()
+     in lib/canvas.ts and shift hue automatically. */
 }
-body { margin: 0; background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; }
+body {
+  margin: 0;
+  background: var(--color-bg-page);
+  color: var(--color-text-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  font-feature-settings: "cv01", "cv02", "cv03", "tnum";
+}
 
 /* React Flow dark overrides — keep the canvas consistent with the dashboard. */
 .react-flow__attribution { display: none; }
@@ -50,7 +60,7 @@ body { margin: 0; background: #0d1117; color: #e6edf3; font-family: system-ui, s
 /* Comms overlay (M3.3b) node markers. Idle seats dim back; blocked tasks get an
    amber outline. Wait edges/badges are handled inline (mergeComms + node JSX). */
 .comms-idle { opacity: 0.45; }
-.comms-blocked > div { box-shadow: 0 0 0 1.5px #d29922; border-radius: 0.25rem; }
+.comms-blocked > div { box-shadow: 0 0 0 1.5px var(--warn); border-radius: 0.25rem; }
 
 /* While a draft is being dragged, light the seat rail up as drop targets. */
 .dragging-draft .react-flow__node-seat > div {

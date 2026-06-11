@@ -120,7 +120,7 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	p, ok := s.projects[r.PathValue("id")]
 	s.pmu.RUnlock()
 	if !ok {
-		http.Error(w, "unknown project", http.StatusNotFound)
+		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
 	// at param: ABSENT → full state (unchanged); present+valid → prefix fold of
@@ -135,7 +135,7 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	}
 	dto, err := ProjectStateAt(p.Path, at)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, dto)

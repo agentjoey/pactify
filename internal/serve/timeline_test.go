@@ -3,6 +3,8 @@ package serve
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -121,12 +123,20 @@ func TestTimelineUnknownProject(t *testing.T) {
 func TestTimelineOmitemptyTaskFeature(t *testing.T) {
 	root, _ := seedTimelineRepo(t)
 	ts := timelineServer(t, root)
-	resp, _ := http.Get(ts.URL + "/api/projects/pactify/timeline")
+	resp, err := http.Get(ts.URL + "/api/projects/pactify/timeline")
+	if err != nil {
+		t.Fatalf("GET timeline: %v", err)
+	}
 	defer resp.Body.Close()
 	var raw struct {
 		Events []map[string]any `json:"events"`
 	}
-	json.NewDecoder(resp.Body).Decode(&raw)
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(raw.Events) < 3 {
+		t.Fatalf("want >= 3 events, got %d", len(raw.Events))
+	}
 	if _, has := raw.Events[0]["task"]; has {
 		t.Fatalf("init event[0] must omit task key: %+v", raw.Events[0])
 	}
@@ -157,7 +167,7 @@ func TestStateAtZero(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("want 200 got %d", resp.StatusCode)
 	}
-	got, _ := io_ReadAll(t, resp)
+	got := readBody(t, resp)
 	want, err := json.Marshal(toDTO(projection.Project(nil)))
 	if err != nil {
 		t.Fatalf("marshal want: %v", err)
@@ -172,9 +182,9 @@ func TestStateAtMid(t *testing.T) {
 	root, evs := seedTimelineRepo(t)
 	ts := timelineServer(t, root)
 	k := 2
-	resp := getStateAt(t, ts.URL, "?at=2")
+	resp := getStateAt(t, ts.URL, fmt.Sprintf("?at=%d", k))
 	defer resp.Body.Close()
-	got, _ := io_ReadAll(t, resp)
+	got := readBody(t, resp)
 	want, _ := json.Marshal(toDTO(projection.Project(evs[:k])))
 	if !bytes.Equal(bytes.TrimSpace(got), bytes.TrimSpace(want)) {
 		t.Fatalf("at=%d body\n got %s\nwant %s", k, got, want)
@@ -190,7 +200,7 @@ func TestStateAtClamp(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("want 200 got %d", resp.StatusCode)
 	}
-	got, _ := io_ReadAll(t, resp)
+	got := readBody(t, resp)
 	want, _ := json.Marshal(toDTO(projection.Project(evs)))
 	if !bytes.Equal(bytes.TrimSpace(got), bytes.TrimSpace(want)) {
 		t.Fatalf("clamp body\n got %s\nwant %s", got, want)
@@ -223,7 +233,7 @@ func TestStateNoAtByteIdentical(t *testing.T) {
 	ts := timelineServer(t, root)
 	resp := getStateAt(t, ts.URL, "")
 	defer resp.Body.Close()
-	got, _ := io_ReadAll(t, resp)
+	got := readBody(t, resp)
 	dto, err := ProjectState(root)
 	if err != nil {
 		t.Fatalf("ProjectState: %v", err)
@@ -234,10 +244,38 @@ func TestStateNoAtByteIdentical(t *testing.T) {
 	}
 }
 
-// io_ReadAll drains the response body.
-func io_ReadAll(t *testing.T, resp *http.Response) ([]byte, error) {
+// readBody drains the response body, failing the test on a read error.
+func readBody(t *testing.T, resp *http.Response) []byte {
 	t.Helper()
-	var buf bytes.Buffer
-	_, err := buf.ReadFrom(resp.Body)
-	return buf.Bytes(), err
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	return b
+}
+
+// TestTimelineEmptyLog: a project with no log yields total 0 and events as an
+// empty array (not null) on the wire.
+func TestTimelineEmptyLog(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".pact"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	ts := timelineServer(t, root)
+	resp, err := http.Get(ts.URL + "/api/projects/pactify/timeline")
+	if err != nil {
+		t.Fatalf("GET timeline: %v", err)
+	}
+	defer resp.Body.Close()
+	body := readBody(t, resp)
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(body, &raw); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if string(raw["total"]) != "0" {
+		t.Fatalf("total = %s want 0", raw["total"])
+	}
+	if string(raw["events"]) != "[]" {
+		t.Fatalf("events = %s want []", raw["events"])
+	}
 }

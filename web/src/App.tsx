@@ -6,9 +6,11 @@ import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
 import { Canvas } from "./components/Canvas";
 import { OpsView } from "./components/ops/OpsView";
+import { ReplayBar } from "./components/ReplayBar";
 import { RightRail } from "./components/RightRail";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
+import { pulseTargets } from "./lib/comms";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
 
@@ -29,14 +31,39 @@ export default function App() {
   const [live, setLive] = useState(false);
   const [view, setView] = useState<View>("kanban");
   const [author, setAuthor] = useState(false);
+  // Replay (M3.3b): replayAt is the scrubber position (null = live). When set,
+  // replayState holds the fetched HISTORICAL snapshot, which takes display
+  // precedence over the live `state`. Historical snapshots never pass through
+  // applyState (so the firstSnapshot toast/pulse guard stays live-only) — they
+  // render directly via replayState.
+  const [replayAt, setReplayAt] = useState<number | null>(null);
+  // null until the first historical snapshot arrives — the display falls back to
+  // the live state meanwhile, so entering replay never flashes an empty board.
+  const [replayState, setReplayState] = useState<State | null>(null);
+  const replaying = replayAt !== null;
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
+  // Live pulse (M3.3b C4): task ids whose status changed on the latest applied
+  // LIVE snapshot. Canvas/Board apply a transient `pulse` class; the set is
+  // cleared after the keyframe duration so the glow plays exactly once. Replay
+  // snapshots never reach applyState, so this stays live-only.
+  const [pulses, setPulses] = useState<Set<string>>(new Set());
+  const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Monotonic tick bumped on every applied state snapshot; passed to the ops
   // panels so their fetches re-run on SSE updates for the selected project.
   const [refreshTick, setRefreshTick] = useState(0);
 
   const prevState = useRef<State>(EMPTY);
   const toastId = useRef(0);
+  // Mirror of `replayAt` readable inside callbacks that close over stale state
+  // (the SSE handler, and the stale-response guard in showReplaySnapshot). While
+  // replaying we still append to the event log but do NOT apply snapshots — the
+  // historical replayState owns the display. Written SYNCHRONOUSLY in
+  // enterReplay/resumeLive (not via an effect) so an SSE event landing between
+  // the state update and the next render can't slip a toast through.
+  const replayAtRef = useRef<number | null>(null);
+  // Mirror of `current` for guarding late async responses after a project switch.
+  const currentRef = useRef("");
   // task id → epoch ms when first observed in_progress this session.
   const inProgressSince = useRef<Map<string, number>>(new Map());
   // tick forces stale re-evaluation on an interval even without state changes.
@@ -98,6 +125,22 @@ export default function App() {
     }
     for (const id of [...m.keys()]) if (!liveInProgress.has(id)) m.delete(id);
 
+    // 3) live pulse — task ids whose status changed since the previous live
+    // snapshot. Computed BEFORE prevState is updated. The first snapshot must
+    // NOT pulse: prev here is the EMPTY sentinel (not null), so pulseTargets
+    // would flag every task as "newly appearing" — gate on firstSnapshot.
+    if (!firstSnapshot) {
+      const { taskIds } = pulseTargets(prevState.current, s);
+      if (taskIds.length) {
+        setPulses(new Set(taskIds));
+        if (pulseTimer.current) clearTimeout(pulseTimer.current);
+        // Timeout fallback clears the class after the ~900ms keyframe so the
+        // glow plays once (animationend on the node also works in the browser;
+        // this guarantees cleanup under jsdom and prefers-reduced-motion).
+        pulseTimer.current = setTimeout(() => setPulses(new Set()), 950);
+      }
+    }
+
     prevState.current = s;
     setState(s);
     setRefreshTick((n) => n + 1);
@@ -106,17 +149,33 @@ export default function App() {
   useEffect(() => {
     if (!current) return;
     let alive = true;
+    currentRef.current = current;
     setEvents([]);
     prevState.current = EMPTY;
     inProgressSince.current = new Map();
     setStaleTasks(new Set());
+    setPulses(new Set());
+    if (pulseTimer.current) clearTimeout(pulseTimer.current);
+    // Exit replay on project switch — the new project starts live.
+    replayAtRef.current = null;
+    setReplayAt(null);
+    setReplayState(null);
     fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => { if (alive) setState(EMPTY); });
     const off = subscribeEvents(current, (e) => {
       if (!alive) return;
       setEvents((prev) => [...prev, e]);
+      // While replaying, SSE-applied snapshots are IGNORED (the displayed snapshot
+      // is the fetched historical one). We keep the subscription open but skip the
+      // refetch+apply so toasts/pulse stay live-only.
+      if (replayAtRef.current !== null) return;
       fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => {});
     }, (v) => { if (alive) setLive(v); });
-    return () => { alive = false; off(); setLive(false); };
+    return () => {
+      alive = false;
+      off();
+      setLive(false);
+      if (pulseTimer.current) clearTimeout(pulseTimer.current);
+    };
   }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recompute the stale set from the timestamp map whenever state or tick moves.
@@ -132,19 +191,54 @@ export default function App() {
     });
   }, [state, tick]);
 
+  // --- Replay handlers (M3.3b) ----------------------------------------------
+  // ReplayBar owns the debounced getStateAt fetch; App just records position
+  // (onEnter) and parks the fetched historical snapshot (onSnapshot) which takes
+  // display precedence over the live state. Historical snapshots never pass
+  // through applyState, so the firstSnapshot toast/pulse guard stays live-only.
+  function enterReplay(at: number) {
+    replayAtRef.current = at;
+    setReplayAt(at);
+  }
+  function showReplaySnapshot(at: number, s: State) {
+    // Drop stale responses: a slow fetch for an old position must not override
+    // the snapshot for where the scrubber is now (or live mode).
+    if (at !== replayAtRef.current) return;
+    setReplayState(s);
+  }
+
+  // Return to live: drop the historical snapshot, refetch fresh live state (do
+  // NOT trust the last SSE-applied state), and resume applying SSE.
+  function resumeLive() {
+    replayAtRef.current = null;
+    setReplayAt(null);
+    setReplayState(null);
+    const p = current;
+    fetchState(p)
+      .then((s) => { if (p === currentRef.current) applyState(s); })
+      .catch(() => {});
+  }
+
+  // Snapshot shown by kanban/canvas: historical while replaying (falling back to
+  // the live state until the first replay snapshot lands), else live.
+  const shownState = replaying ? (replayState ?? state) : state;
+
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} view={view} onView={setView} />
-      <Agents state={state} events={events} onPick={() => {}} />
+      <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} replaying={replaying} view={view} onView={setView} />
+      <Agents state={shownState} events={events} onPick={() => {}} />
       {view === "ops"
         ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} />
         : (
-          <div className="flex flex-1 overflow-hidden">
-            {view === "canvas"
-              ? <Canvas project={current} state={state} author={author} staleTasks={staleTasks} onSelectTask={setSelected} />
-              : <Board state={state} selected={selected} onSelect={setSelected} />}
-            <RightRail state={state} events={events} selected={selected} project={current} author={author} />
-          </div>
+          <>
+            <div className="flex flex-1 overflow-hidden">
+              {view === "canvas"
+                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} />
+                : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} />}
+              <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} />
+            </div>
+            <ReplayBar project={current} replayAt={replayAt} refreshTick={refreshTick} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />
+          </>
         )}
       <Toasts toasts={toasts} />
     </div>

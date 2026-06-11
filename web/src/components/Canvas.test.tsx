@@ -62,6 +62,71 @@ describe("Canvas", () => {
     });
   });
 
+  it("replay mode is read-only: no author affordances rendered", async () => {
+    // App passes author={author && !replaying}, so a replaying canvas receives
+    // author=false → the build-mode toolbar (New feature / New task) is absent.
+    render(<Canvas project="demo" state={fixture} author={false} replaying />);
+    await waitFor(() => expect(screen.getByText("T1")).toBeInTheDocument());
+    expect(screen.queryByText("+ New feature")).toBeNull();
+    expect(screen.queryByText("+ New task")).toBeNull();
+  });
+
+  it("comms toggle (default off) merges the overlay lens + legend when turned on", async () => {
+    // T2 has an unmet dep (T1 in_progress) → it is a blocked task; reviewer alice
+    // reviews nothing pending and owns no in-flight work → idle seat. The overlay
+    // is OFF by default and merges these markers + the legend when toggled on.
+    // (Wait EDGE id/label/dashed style is asserted exhaustively in comms.test.ts;
+    // here we assert the toggle wires deriveComms→mergeComms into the live graph
+    // via the node-class markers, which render deterministically under jsdom.)
+    const blocked: State = {
+      ...fixture,
+      awaiting_count: 0,
+      features: [{
+        ...fixture.features[0],
+        tasks: [
+          { id: "T1", owner: "bob", status: "in_progress", reviewer: "alice", spec: "", evidence: "" },
+          { id: "T2", owner: "bob", status: "in_progress", reviewer: "alice", spec: "", evidence: "", deps: ["T1"] },
+        ],
+      }],
+    };
+    const { container } = render(<Canvas project="demo" state={blocked} author={false} />);
+    await waitFor(() => expect(screen.getByText("T2")).toBeInTheDocument());
+
+    // Default OFF: no overlay markers, no legend.
+    expect(container.querySelector('.react-flow__node[data-id="task:T2"]')!.className).not.toContain("comms-blocked");
+    expect(screen.queryByTestId("comms-legend")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("comms-toggle"));
+
+    await waitFor(() => {
+      const t2 = container.querySelector('.react-flow__node[data-id="task:T2"]')!;
+      expect(t2.className).toContain("comms-blocked");
+    });
+    expect(container.querySelector('.react-flow__node[data-id="seat:alice"]')!.className).toContain("comms-idle");
+    expect(screen.getByTestId("comms-legend")).toBeInTheDocument();
+
+    // Toggling back OFF removes the lens (it's a display-only overlay).
+    fireEvent.click(screen.getByTestId("comms-toggle"));
+    await waitFor(() => {
+      expect(container.querySelector('.react-flow__node[data-id="task:T2"]')!.className).not.toContain("comms-blocked");
+    });
+    expect(screen.queryByTestId("comms-legend")).toBeNull();
+  });
+
+  it("pulses prop applies the pulse class to the changed task node", async () => {
+    const { container } = render(
+      <Canvas project="demo" state={fixture} author={false} pulses={new Set(["T2"])} />,
+    );
+    await waitFor(() => {
+      const node = container.querySelector('.react-flow__node[data-id="task:T2"]');
+      expect(node).not.toBeNull();
+      expect(node!.className).toContain("pulse");
+    });
+    // T1 (not in pulses) does not pulse.
+    const t1 = container.querySelector('.react-flow__node[data-id="task:T1"]')!;
+    expect(t1.className).not.toContain("pulse");
+  });
+
   it("clicking a task node reaches onSelectTask with the raw id", async () => {
     const onSelectTask = vi.fn();
     const { container } = render(

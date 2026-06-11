@@ -4,11 +4,14 @@ import { getActingSeat } from "../lib/api";
 
 export type View = "kanban" | "canvas" | "ops";
 
-export function TopBar({ projects, current, onSelect, live, view, onView }: {
+export function TopBar({ projects, current, onSelect, live, replaying, view, onView }: {
   projects: ProjectMeta[];
   current: string;
   onSelect: (id: string) => void;
   live: boolean;
+  // When true, the dashboard is scrubbing historical state — the live indicator
+  // shows "replay" instead of live/offline.
+  replaying?: boolean;
   view: View;
   onView: (v: View) => void;
 }) {
@@ -42,7 +45,9 @@ export function TopBar({ projects, current, onSelect, live, view, onView }: {
         : <span className="text-xs text-gray-600">observe-only</span>}
 
       <span className="ml-auto text-xs text-gray-500">{projects.length} project(s)</span>
-      <span className={`text-xs ${live ? "text-green-400" : "text-gray-500"}`}>● {live ? "live" : "offline"}</span>
+      {replaying
+        ? <span className="text-xs text-[#d29922]">● replay</span>
+        : <span className={`text-xs ${live ? "text-green-400" : "text-gray-500"}`}>● {live ? "live" : "offline"}</span>}
     </div>
   );
 }

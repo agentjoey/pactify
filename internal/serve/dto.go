@@ -41,11 +41,21 @@ func logPath(projectRoot string) string {
 	return filepath.Join(projectRoot, ".pact", "log.jsonl")
 }
 
-// ProjectState reads a project's log and folds it into a JSON DTO.
+// ProjectState reads a project's log and folds the whole log into a JSON DTO.
 func ProjectState(projectRoot string) (StateDTO, error) {
+	return ProjectStateAt(projectRoot, -1)
+}
+
+// ProjectStateAt reads a project's log and folds the first `at` events into a
+// JSON DTO. `at` < 0 means "all events"; `at` >= len(evs) clamps to the full
+// log. `at` == 0 yields the empty-fold state.
+func ProjectStateAt(projectRoot string, at int) (StateDTO, error) {
 	evs, err := event.ReadAll(logPath(projectRoot))
 	if err != nil {
 		return StateDTO{}, err
+	}
+	if at >= 0 && at < len(evs) {
+		evs = evs[:at]
 	}
 	return toDTO(projection.Project(evs)), nil
 }

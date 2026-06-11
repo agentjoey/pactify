@@ -29,6 +29,29 @@ body { margin: 0; background: #0d1117; color: #e6edf3; font-family: system-ui, s
   50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--role-design) 50%, transparent); }
 }
 
+/* Live pulse (M3.3b): on each applied LIVE snapshot, the task node(s) whose
+   status changed get a `.pulse` class for ~900ms (cleared by App's timeout /
+   animationend). The glow is role-colored via the inline --pulse-color var the
+   node sets; it falls back to the design-blue brand accent. The keyframe plays
+   exactly once. Fully suppressed under reduced-motion (no glow at all). */
+.pulse {
+  --pulse-color: var(--role-design);
+  border-radius: 0.25rem; /* keep the glow hugging the rounded card */
+  animation: pact-cable-pulse 0.9s ease-out 1;
+}
+@keyframes pact-cable-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pulse-color) 70%, transparent); }
+  100% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--pulse-color) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; }
+}
+
+/* Comms overlay (M3.3b) node markers. Idle seats dim back; blocked tasks get an
+   amber outline. Wait edges/badges are handled inline (mergeComms + node JSX). */
+.comms-idle { opacity: 0.45; }
+.comms-blocked > div { box-shadow: 0 0 0 1.5px #d29922; border-radius: 0.25rem; }
+
 /* While a draft is being dragged, light the seat rail up as drop targets. */
 .dragging-draft .react-flow__node-seat > div {
   border-color: var(--role-dev) !important;

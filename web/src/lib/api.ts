@@ -6,6 +6,7 @@ import type {
   WiringStatus,
   SeatInfo,
   WireResult,
+  Timeline,
 } from "./types";
 import type { LayoutJSON } from "./canvas";
 
@@ -39,6 +40,17 @@ export const fetchProjects = () => getJSON<ProjectMeta[]>("/api/projects");
 export const fetchState = (id: string) => getJSON<State>(`/api/projects/${id}/state`);
 
 export const getActingSeat = () => getJSON<{ seat: string }>("/api/acting-seat");
+
+// --- Replay (M3.3b) ---
+//
+// getTimeline reads the lightweight log index once on entering replay.
+// getStateAt folds the first `at` events into a state snapshot (at=0 → empty,
+// at≥total → clamps to full). Both are read-only; status-line errors on non-2xx.
+export const getTimeline = (id: string) =>
+  getJSON<Timeline>(`/api/projects/${id}/timeline`);
+
+export const getStateAt = (id: string, at: number) =>
+  getJSON<State>(`/api/projects/${id}/state?at=${at}`);
 
 export async function postTask(
   project: string,

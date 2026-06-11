@@ -31,11 +31,13 @@ export function Board({
   selected,
   onSelect,
   pulses,
+  staleTasks,
 }: {
   state: State;
   selected: string;
   onSelect: (id: string) => void;
   pulses?: Set<string>;
+  staleTasks?: Set<string>;
 }) {
   const cols = boardColumns(state);
   // rolesOf indexes seat → roles so a pulsing card glows in its owner's color
@@ -92,6 +94,7 @@ export function Board({
                         task={bt.task}
                         featureId={bt.feature}
                         rolesOf={rolesOf}
+                        stale={staleTasks?.has(bt.task.id)}
                         selected={selected === bt.task.id}
                         onClick={() => onSelect(bt.task.id)}
                       />

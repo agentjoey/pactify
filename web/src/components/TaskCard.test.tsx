@@ -68,14 +68,14 @@ describe("TaskCard — genome", () => {
       <TaskCard task={task({ status: "awaiting_review" })} rolesOf={rolesOf} />,
     );
     // two ant svgs (owner + reviewer) in the bottom row
-    const ants = container.querySelectorAll('[data-testid="task-card"] .bot svg');
+    const ants = container.querySelectorAll('[data-testid="task-card"] .task-card-bot svg');
     expect(ants.length).toBe(2);
     expect(screen.getByTestId("task-card").className).toContain("glow");
   });
 
   it("non-review status shows only the owner ant (no reviewer chip)", () => {
     const { container } = render(<TaskCard task={task({ status: "in_progress" })} rolesOf={rolesOf} />);
-    const ants = container.querySelectorAll('[data-testid="task-card"] .bot svg');
+    const ants = container.querySelectorAll('[data-testid="task-card"] .task-card-bot svg');
     expect(ants.length).toBe(1);
   });
 

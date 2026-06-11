@@ -113,7 +113,7 @@ export function TaskCard({
         )}
       </div>
 
-      <div className="bot mt-[9px] ml-[28px] flex items-center gap-[5px]">
+      <div className="task-card-bot mt-[9px] ml-[28px] flex items-center gap-[5px]">
         {task.owner && (
           <span className="task-card-ant">
             <Ant caste={ownerCaste} size={14} title={task.owner} />

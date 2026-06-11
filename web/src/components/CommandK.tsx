@@ -54,6 +54,7 @@ export function CommandK({
   onSelectProject,
   author,
   replaying,
+  notify,
 }: {
   projects: ProjectMeta[];
   current: string;
@@ -66,10 +67,21 @@ export function CommandK({
   // hidden when !author (observe mode) or while replaying.
   author: boolean;
   replaying: boolean;
+  // Surfaces palette-action failures on the app toast stack (a failed accept
+  // produces no SSE event, so nothing else would ever report it).
+  notify?: (text: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [cheat, setCheat] = useState(false);
+
+  // Focus restore (WAI-ARIA dialog): the cmdk input autofocuses on open; on
+  // close, give focus back to whatever had it (TopBar hint, canvas, …).
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    return () => prev?.focus();
+  }, [open]);
 
   const tasks = useMemo(() => allTasks(state), [state]);
   // Awaiting-review tasks are the ones Accept / Request-changes can target.
@@ -82,8 +94,9 @@ export function CommandK({
 
   // Global open: ⌘K / Ctrl+K from anywhere (the convention — works even inside
   // inputs), EXCEPT when another modal/dialog is open (don't stack over the
-  // detail panel / a ui Modal). The cheat sheet itself is a Modal, so we exclude
-  // our own dialogs from that guard via the [data-cmdk-cheat] marker.
+  // detail panel / a ui Modal — the cheat-sheet Modal included). Only the
+  // palette's OWN dialog is exempt, via its [data-cmdk-root] attribute, so ⌘K
+  // still toggle-closes an open palette.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
@@ -138,7 +151,12 @@ export function CommandK({
   const runAction = useCallback(async (kind: ActionKind, taskId: string) => {
     close();
     if (kind === "accept") {
-      try { await postVerb(current, "accept", { task: taskId }); } catch { /* surfaced by App toasts on the next refresh; palette already closed */ }
+      try {
+        await postVerb(current, "accept", { task: taskId });
+      } catch (e) {
+        // A failed accept emits no event — nothing downstream would report it.
+        notify?.(`accept ${taskId} failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
     } else {
       // Request changes needs a reason — the detail panel owns that flow. Open
       // the task (canvas + select); the panel's "Changes…" affordance collects
@@ -163,12 +181,12 @@ export function CommandK({
         >
           <Command
             label="Command palette"
+            aria-label="Command palette"
             data-testid="cmdk"
             data-cmdk-root=""
             role="dialog"
             aria-modal="true"
-            shouldFilter
-            className="w-[560px] max-w-[92vw] overflow-hidden rounded-[14px] border border-[var(--color-border-strong)] bg-[#242630] shadow-[var(--shadow-overlay)]"
+            className="w-[560px] max-w-[92vw] overflow-hidden rounded-[14px] border border-[var(--color-border-strong)] bg-[var(--color-bg-overlay)] shadow-[var(--shadow-overlay)]"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               // Esc closes the palette and must NOT leak to the canvas Esc chains
@@ -177,6 +195,10 @@ export function CommandK({
                 e.stopPropagation();
                 close();
               }
+              // Focus containment: the input is the palette's only focusable
+              // element (options are aria-selected, not tabbable), so trapping
+              // is simply refusing to Tab out of the dialog.
+              if (e.key === "Tab") e.preventDefault();
             }}
           >
             {/* input row */}
@@ -238,7 +260,7 @@ export function CommandK({
                     >
                       <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[11px]">✓</span>
                       <span>Accept <span className="mono text-[11px]">{b.task.id}</span></span>
-                      <Kbd className="ml-auto">⌘↵</Kbd>
+                      <Kbd className="ml-auto">↵</Kbd>
                     </Command.Item>
                   ))}
                   {awaiting.map((b) => (

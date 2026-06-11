@@ -125,6 +125,17 @@ export default function App() {
     return () => clearInterval(t);
   }, []);
 
+  // pushToast surfaces a one-off message on the shared toast stack (review
+  // notifications and palette-action failures ride the same rail).
+  function pushToast(text: string) {
+    setToasts((prev) => {
+      toastId.current += 1;
+      const tid = toastId.current;
+      setTimeout(() => setToasts((cur) => cur.filter((x) => x.id !== tid)), 5000);
+      return [...prev, { id: tid, text }].slice(-3);
+    });
+  }
+
   // applyState centralizes a fresh snapshot: diff for review toasts, maintain
   // the in_progress timestamp map, then commit the new state.
   function applyState(s: State) {
@@ -303,6 +314,7 @@ export default function App() {
         onSelectProject={setCurrent}
         author={author}
         replaying={replaying}
+        notify={pushToast}
       />
     </div>
   );

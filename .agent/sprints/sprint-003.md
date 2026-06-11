@@ -107,6 +107,21 @@ MCP clientInfo / pactify-cli，addendum 注明 advisory；Seats 面板 last join
 serve 并发改造（RWMutex,race 干净）。基线 bats 109 / vitest 69。
 **Deferred**：移除项目时关 SSE 订阅、坏日志 500 信封、M3.3b 通讯可视化。
 
+### T8: Squad M3.3b — 通讯可视化（waits overlay + 回放刮擦器）[HIGH]
+**Status:** ✅ Done（PR #15 merged，2026-06-11）
+**交付**：serve 只读端点 `GET /timeline`（事件索引,1-based n,task/feature omitempty）+
+`state?at=N`（前缀折叠回放,clamp,无 at 字节级不变有回归测试）；canvas comms 开关
+（虚线角色色等待边+原因 chip:awaiting review/changes requested/blocked by dep,
+空闲坐席变暗,阻塞琥珀描边,未入座警告徽章,图例;display-only lens 不碰 layout.json）；
+ReplayBar 全状态时间旅行（滑块/±1/LIVE,回放模式全只读,历史快照绕过 applyState,
+toast/脉冲仅 live）；live 脉冲（状态变更 900ms 角色色光晕,reduced-motion 关闭,
+首快照/回放不触发）。零协议/引擎/schema 改动。基线 bats 111 / vitest 99 / go 全绿。
+**质量**：逐任务双审查折叠修复（C1 错误信封统一+测试卫生;C2 死 memo 删除——unmet
+判定已涵盖传递性阻塞;C3 空板闪烁/stale 响应/timeline 不刷新三连修;C4 不可达
+seat 徽章删除+display memo 合一+roleColorVar 共源）+ fable5 终审 APPROVED。
+**插曲**：C4 实现 agent 中途断连(socket),半成品续派补完（缺 CSS/测试 + SeatNode
+缺 target handle 真 bug）。
+
 ### T3: M2.3 Claude marketplace 上架 + 其余 agent 一键 + brew tap [MED]
 **Status:** 🔲 Todo（Claude 插件模板已在 M2.2 打样，本任务=提交社区 marketplace 审核 + Codex/opencode/Gemini 一键 + brew tap）
 **Milestone:** M2.3

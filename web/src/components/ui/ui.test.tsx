@@ -16,7 +16,7 @@ describe("Button", () => {
     const btn = screen.getByRole("button", { name: "Go" });
     // primary uses the role-design token background and dark text
     expect(btn.className).toMatch(/bg-\[var\(--color-role-design\)\]/);
-    expect(btn.className).toMatch(/text-\[#191b26\]/i);
+    expect(btn.className).toMatch(/text-\[var\(--color-bg-page\)\]/);
   });
 
   it("renders the ghost variant (transparent, subtle border, text-2)", () => {

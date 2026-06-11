@@ -10,7 +10,7 @@ export type ButtonSize = "sm" | "md";
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary:
-    "bg-[var(--color-role-design)] text-[#191b26] font-medium hover:brightness-110",
+    "bg-[var(--color-role-design)] text-[var(--color-bg-page)] font-medium hover:brightness-110",
   ghost:
     "bg-transparent border border-[var(--color-border-subtle)] text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:border-[var(--color-border-strong)]",
   danger:

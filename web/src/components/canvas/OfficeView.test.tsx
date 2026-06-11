@@ -103,14 +103,12 @@ describe("OfficeView", () => {
     expect(node.style.transform).toContain("777");
   });
 
-  it("dragging a desk persists ONLY the office key (positions untouched)", async () => {
+  it("does not persist on mount (drag-stop is the only save path)", async () => {
+    // The office-key-only persistence invariant lives in mergeOfficePos unit
+    // tests + the Canvas round-trip; here we only assert mount never auto-saves.
     const onSaveOffice = vi.fn();
     render(<OfficeView {...baseProps} onSaveOffice={onSaveOffice} />);
     await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
-    // The handler is invoked by RF's drag-stop; call the contract directly via a
-    // simulated node drag is brittle under jsdom, so we assert the prop is the
-    // single persistence path by confirming it is wired (covered by round-trip
-    // in Canvas). Here we just confirm no save fires on mount.
     expect(onSaveOffice).not.toHaveBeenCalled();
   });
 
@@ -134,12 +132,70 @@ describe("OfficeView", () => {
     expect(onDispatchDraft).not.toHaveBeenCalled();
   });
 
-  it("click-dispatch on a desk pre-fills owner when exactly one draft exists", async () => {
+  it("click-dispatch on an IDLE desk pre-fills owner when exactly one draft exists", async () => {
     const onDispatchDraft = vi.fn();
     const drafts: Draft[] = [{ id: "d1", specMd: "# d", feature: "F1", deps: [] }];
     render(<OfficeView {...baseProps} drafts={drafts} onDispatchDraft={onDispatchDraft} />);
     await waitFor(() => expect(screen.getByTestId("desk-dave")).toBeInTheDocument());
     fireEvent.click(screen.getByTestId("desk-dave"));
     expect(onDispatchDraft).toHaveBeenCalledWith(drafts[0], "dave");
+  });
+
+  it("click-dispatch is IDLE-only — clicking a BUSY desk does not dispatch", async () => {
+    // Regression for the file header's "idle desks double as the drop affordance"
+    // contract: with one draft present, clicking the IDLE dave dispatches, but
+    // clicking the BUSY bob (owns the in-flight T1) must NOT.
+    const onDispatchDraft = vi.fn();
+    const drafts: Draft[] = [{ id: "d1", specMd: "# d", feature: "F1", deps: [] }];
+    render(<OfficeView {...baseProps} drafts={drafts} onDispatchDraft={onDispatchDraft} />);
+    await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId("desk-bob"));
+    expect(onDispatchDraft).not.toHaveBeenCalled();
+
+    // Sanity: the idle desk still dispatches under the same props.
+    fireEvent.click(screen.getByTestId("desk-dave"));
+    expect(onDispatchDraft).toHaveBeenCalledWith(drafts[0], "dave");
+  });
+
+  it("pane drop resolves the desk even when the pointer lands on its status badge", async () => {
+    // Regression for the prefix-collision bug: closest() matches self-first, so a
+    // drop whose elementFromPoint is the `desk-status-<seat>` BADGE must still
+    // resolve to its parent desk (via the dedicated data-desk-id attribute), not
+    // silently die. Stub elementFromPoint to return bob's status badge element.
+    const onDispatchDraft = vi.fn();
+    const drafts: Draft[] = [{ id: "d1", specMd: "# d", feature: "F1", deps: [] }];
+    render(<OfficeView {...baseProps} drafts={drafts} onDispatchDraft={onDispatchDraft} />);
+    await waitFor(() => expect(screen.getByTestId("office-view")).toBeInTheDocument());
+
+    const badge = screen.getByTestId("desk-status-bob");
+    const prev = document.elementFromPoint;
+    document.elementFromPoint = vi.fn().mockReturnValue(badge);
+    try {
+      const pane = screen.getByTestId("office-view");
+      const dataTransfer = { getData: vi.fn().mockReturnValue("d1"), dropEffect: "" };
+      fireEvent.drop(pane, { clientX: 10, clientY: 10, dataTransfer });
+    } finally {
+      document.elementFromPoint = prev;
+    }
+    expect(onDispatchDraft).toHaveBeenCalledWith(drafts[0], "bob");
+  });
+
+  it("renders the transit overlay when a pulsed task changes to awaiting_review", async () => {
+    // The lane + carrier ant now live INSIDE <ReactFlow> (viewport-space). jsdom
+    // won't run the SMIL motion, but the office-transit element render is
+    // assertable. Seed prevStatus with T1 in_progress, then rerender with T1
+    // flipped to awaiting_review + a pulse → a lane (owner→reviewer) appears.
+    const seed: State = JSON.parse(JSON.stringify(fixture));
+    const { rerender } = render(
+      <OfficeView {...baseProps} state={seed} pulses={new Set()} />,
+    );
+    await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
+    expect(screen.queryByTestId("office-transit")).toBeNull();
+
+    const next: State = JSON.parse(JSON.stringify(fixture));
+    next.features[0].tasks[1].status = "awaiting_review"; // T1 bob → alice
+    rerender(<OfficeView {...baseProps} state={next} pulses={new Set(["T1"])} />);
+    await waitFor(() => expect(screen.getByTestId("office-transit")).toBeInTheDocument());
   });
 });

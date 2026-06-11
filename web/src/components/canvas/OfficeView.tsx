@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
+  useReactFlow,
+  useViewport,
   type Node,
   type NodeProps,
   type NodeTypes,
@@ -105,7 +107,6 @@ function Parcel({
 // DeskNodeData rides each desk RF node.
 interface DeskNodeData {
   desk: DeskModel;
-  author: boolean;
   dropTarget: boolean; // currently dragged-over by a dock parcel
   onSelectTask?: (id: string) => void;
   onDeskClick?: (seatId: string) => void;
@@ -129,6 +130,7 @@ function DeskNode({ data }: NodeProps) {
     <div
       className={`desk ${desk.status}${d.dropTarget ? " drop-target" : ""}`}
       data-testid={`desk-${desk.seatId}`}
+      data-desk-id={desk.seatId}
       onClick={() => d.onDeskClick?.(desk.seatId)}
     >
       <div className="dhead">
@@ -223,13 +225,71 @@ function prefersReducedMotion(): boolean {
 
 // Transit kind → lane color + ant species feel (carrier ant always; the parcel
 // rides it). checkpoint owner→reviewer (blue), changes reviewer→owner (red),
-// accept desk→tray (green).
+// accept desk→tray (green). `from`/`to` are FLOW-space coordinates; the
+// TransitOverlay (rendered INSIDE <ReactFlow>) transforms them to screen space
+// via the live viewport so the lane tracks pan/zoom. `toTray` flags the accept
+// lane whose true target is the screen-fixed shipped tray — the overlay resolves
+// the tray's flow position from its DOM rect (falling back to `to`).
 type Transit = {
   taskId: string;
   from: { x: number; y: number };
   to: { x: number; y: number };
+  toTray?: boolean;
   color: string;
 };
+
+// TransitOverlay renders the single parcel-transit lane + carrier ant INSIDE
+// <ReactFlow> (mirrors SnapGuides in Canvas.tsx): `from`/`to` arrive in FLOW
+// space and are transformed to screen space via the live viewport (pos * zoom +
+// offset) so the lane and the SMIL-driven ant track pan/zoom/fitView. For the
+// accept lane (`toTray`), the true target is the screen-fixed shipped tray — we
+// read its DOM rect and convert screen→flow via screenToFlowPosition, falling
+// back to the precomputed `to` offset when the rect is unavailable (e.g. jsdom).
+function TransitOverlay({
+  transit,
+  trayRef,
+}: {
+  transit: Transit;
+  trayRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const { x: vx, y: vy, zoom } = useViewport();
+  const { screenToFlowPosition } = useReactFlow();
+  const toScreen = (p: { x: number; y: number }) => ({ x: p.x * zoom + vx, y: p.y * zoom + vy });
+
+  // Resolve the accept lane's flow-space target from the tray's actual rect.
+  let toFlow = transit.to;
+  if (transit.toTray && trayRef.current) {
+    const r = trayRef.current.getBoundingClientRect();
+    if (r.width > 0 || r.height > 0) {
+      toFlow = screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    }
+  }
+  const from = toScreen(transit.from);
+  const to = toScreen(toFlow);
+
+  return (
+    <svg
+      data-testid="office-transit"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", zIndex: 5, pointerEvents: "none" }}
+    >
+      <path
+        id={`office-lane-${transit.taskId}`}
+        className="office-lane"
+        d={`M ${from.x} ${from.y} L ${to.x} ${to.y}`}
+        fill="none"
+        stroke={transit.color}
+        strokeWidth="1.4"
+        opacity="0.5"
+      />
+      <g style={{ overflow: "visible" }}>
+        <CarrierAnt color={transit.color} />
+        <animateMotion dur="2.5s" repeatCount="1" rotate="auto" fill="freeze">
+          <mpath href={`#office-lane-${transit.taskId}`} />
+        </animateMotion>
+      </g>
+    </svg>
+  );
+}
 
 export function OfficeView({
   state,
@@ -269,13 +329,17 @@ export function OfficeView({
   const dropSeatRef = useRef<string | null>(null);
   dropSeatRef.current = dropSeat;
 
-  // Single draft → click-dispatch convenience target.
+  // Single draft → click-dispatch convenience target. Idle desks ONLY (the file
+  // header's affordance contract): clicking a busy/review/waiting desk is a
+  // read gesture, not a dispatch.
   const onDeskClick = useCallback(
     (seatId: string) => {
       if (!dropDispatch) return;
+      const desk = desks.find((d) => d.seatId === seatId);
+      if (desk?.status !== "idle") return;
       if (drafts.length === 1) onDispatchDraft(drafts[0], seatId);
     },
-    [dropDispatch, drafts, onDispatchDraft],
+    [dropDispatch, desks, drafts, onDispatchDraft],
   );
 
   // Rebuild desk nodes from the derived office whenever it (or layout/flags)
@@ -289,7 +353,6 @@ export function OfficeView({
         position: office[desk.seatId] ?? gridPos(i),
         data: {
           desk,
-          author,
           dropTarget: dropSeatRef.current === desk.seatId,
           onSelectTask,
           onDeskClick,
@@ -297,7 +360,7 @@ export function OfficeView({
         draggable: !replaying,
       })),
     );
-  }, [desks, layout.office, author, replaying, onSelectTask, onDeskClick]);
+  }, [desks, layout.office, replaying, onSelectTask, onDeskClick]);
 
   // Reflect drop-target highlight without rebuilding the whole node array.
   useEffect(() => {
@@ -326,7 +389,9 @@ export function OfficeView({
   // --- transit animation (parcel rides a carrier ant between desks) ---------
   // We track the previous status per task; when `pulses` flags a changed task we
   // compute the lane (owner desk → reviewer desk etc.) and play one transit. One
-  // at a time per task; reduced-motion → skip (the parcel just re-renders).
+  // global transit, latest-wins, first changed task per snapshot; reduced-motion
+  // → skip (the parcel just re-renders). Lane endpoints are FLOW-space — the
+  // TransitOverlay child transforms them to screen space via the live viewport.
   const prevStatus = useRef<Map<string, string>>(new Map());
   const [transit, setTransit] = useState<Transit | null>(null);
   const deskCenter = useCallback(
@@ -360,6 +425,7 @@ export function OfficeView({
 
       let from: { x: number; y: number } | null = null;
       let to: { x: number; y: number } | null = null;
+      let toTray = false;
       let color = "var(--color-role-design)";
       if (after === "awaiting_review") {
         from = deskCenter(task.owner);
@@ -371,12 +437,15 @@ export function OfficeView({
         color = "#E5615C";
       } else if (after === "accepted") {
         from = deskCenter(task.owner);
-        // tray sits bottom-right of the stage; aim toward it.
+        // True target is the screen-fixed shipped tray — TransitOverlay resolves
+        // it from the tray's DOM rect. This flow-space offset is only the
+        // fallback when the rect is unavailable (e.g. jsdom).
         to = { x: (from?.x ?? 0) + 400, y: (from?.y ?? 0) + 240 };
+        toTray = true;
         color = "var(--color-success)";
       }
       if (from && to) {
-        setTransit({ taskId: id, from, to, color });
+        setTransit({ taskId: id, from, to, toTray, color });
         break;
       }
     }
@@ -394,30 +463,20 @@ export function OfficeView({
     e.dataTransfer.setData("text/pactify-draft", draftId);
     e.dataTransfer.effectAllowed = "move";
   };
-  const onDeskDragOver = (e: React.DragEvent, seatId: string) => {
-    if (!dropDispatch) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (dropSeatRef.current !== seatId) setDropSeat(seatId);
-  };
-  const onDeskDrop = (e: React.DragEvent, seatId: string) => {
-    if (!dropDispatch) return;
-    e.preventDefault();
-    setDropSeat(null);
-    const id = e.dataTransfer.getData("text/pactify-draft");
-    const d = drafts.find((x) => x.id === id);
-    if (d) onDispatchDraft(d, seatId);
-  };
 
   // The desk DOM (RF node) is the drop zone; we attach the HTML5 handlers at the
-  // pane level by delegating via data-testid lookup. RF nodes already render the
-  // desk markup, so we listen on the wrapping pane and resolve the desk under the
-  // pointer through elementFromPoint at drop time.
+  // pane level by delegating via a dedicated data-desk-id attribute on the .desk
+  // root. closest("[data-desk-id]") matches self-first, so resolving by this
+  // attribute (NOT data-testid^='desk-') avoids snapping onto the desk-status
+  // badge, whose testid `desk-status-<seat>` would otherwise be matched and let
+  // header-targeted drops silently die. RF nodes render the desk markup, so we
+  // listen on the wrapping pane and resolve the desk under the pointer through
+  // elementFromPoint at drop time.
   const onPaneDragOver = (e: React.DragEvent) => {
     if (!dropDispatch) return;
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-    const desk = el?.closest("[data-testid^='desk-']") as HTMLElement | null;
-    const seatId = desk?.getAttribute("data-testid")?.replace(/^desk-/, "");
+    const desk = el?.closest("[data-desk-id]") as HTMLElement | null;
+    const seatId = desk?.getAttribute("data-desk-id") ?? undefined;
     if (seatId && desks.some((d) => d.seatId === seatId)) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
@@ -429,8 +488,8 @@ export function OfficeView({
   const onPaneDrop = (e: React.DragEvent) => {
     if (!dropDispatch) return;
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-    const desk = el?.closest("[data-testid^='desk-']") as HTMLElement | null;
-    const seatId = desk?.getAttribute("data-testid")?.replace(/^desk-/, "");
+    const desk = el?.closest("[data-desk-id]") as HTMLElement | null;
+    const seatId = desk?.getAttribute("data-desk-id") ?? undefined;
     setDropSeat(null);
     if (!seatId) return;
     e.preventDefault();
@@ -453,38 +512,12 @@ export function OfficeView({
   const trayVisible = shipped.slice(0, 5);
   const trayMore = shipped.length - trayVisible.length;
 
-  // Suppress unused warnings for the per-desk DnD handlers kept for symmetry;
-  // the pane-delegated handlers are the active path under RF's node layering.
-  void onDeskDragOver;
-  void onDeskDrop;
-  void onParcelDragStart;
+  // The shipped tray's DOM, so the accept-lane transit can anchor to its actual
+  // on-screen rect (TransitOverlay → screenToFlowPosition).
+  const trayRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className={`office-view absolute inset-0${replaying ? " replaying" : ""}`} data-testid="office-view" onDragOver={onPaneDragOver} onDrop={onPaneDrop}>
-      {/* transit overlay (single lane + carrier ant carrying the parcel) */}
-      {transit && (
-        <svg
-          data-testid="office-transit"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", zIndex: 5, pointerEvents: "none" }}
-        >
-          <path
-            id={`office-lane-${transit.taskId}`}
-            className="office-lane"
-            d={`M ${transit.from.x} ${transit.from.y} L ${transit.to.x} ${transit.to.y}`}
-            fill="none"
-            stroke={transit.color}
-            strokeWidth="1.4"
-            opacity="0.5"
-          />
-          <g style={{ overflow: "visible" }}>
-            <CarrierAnt color={transit.color} />
-            <animateMotion dur="2.5s" repeatCount="1" rotate="auto" fill="freeze">
-              <mpath href={`#office-lane-${transit.taskId}`} />
-            </animateMotion>
-          </g>
-        </svg>
-      )}
-
       <ReactFlow
         nodes={nodes}
         nodeTypes={nodeTypes}
@@ -499,7 +532,12 @@ export function OfficeView({
         proOptions={{ hideAttribution: true }}
         colorMode="dark"
         style={{ background: "transparent" }}
-      />
+      >
+        {/* transit overlay (single lane + carrier ant carrying the parcel) —
+            INSIDE <ReactFlow> so it can read the live viewport and draw the lane
+            in screen space (flow→screen), tracking pan/zoom/fitView. */}
+        {transit && <TransitOverlay transit={transit} trayRef={trayRef} />}
+      </ReactFlow>
 
       {/* Wall chart (fixed top-right) — board5 `.wall`. */}
       <div className="office-wall" data-testid="office-wall">
@@ -517,7 +555,7 @@ export function OfficeView({
       </div>
 
       {/* Shipped tray (fixed bottom-right) — board5 `.tray`. */}
-      <div className="office-tray" data-testid="office-tray">
+      <div className="office-tray" data-testid="office-tray" ref={trayRef}>
         <div className="tt">✓ shipped 出货托盘</div>
         {trayVisible.length === 0 && <div className="dempty">尚无出货</div>}
         {trayVisible.map((t) => (

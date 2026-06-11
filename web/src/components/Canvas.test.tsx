@@ -77,3 +77,19 @@ describe("Canvas", () => {
     expect(onSelectTask).toHaveBeenCalledWith("T1");
   });
 });
+
+
+import { toRFNodes } from "./Canvas";
+import { deriveFlow } from "../lib/canvas";
+
+test("drafts are NOT clamped to their feature (extent), committed tasks are", () => {
+  const flow = deriveFlow(fixture, {}, [
+    { id: "D1", specMd: "# d", feature: "F1", deps: [] },
+  ]);
+  const nodes = toRFNodes(flow.nodes);
+  const task = nodes.find((n) => n.id === "task:T1")!;
+  const draft = nodes.find((n) => n.id === "draft:D1")!;
+  expect(task.extent).toBe("parent");
+  expect(draft.extent).toBeUndefined(); // must be able to reach the seat rail
+  expect(draft.parentId).toBe("feature:F1"); // still grouped visually
+});

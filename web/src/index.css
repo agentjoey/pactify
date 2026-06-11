@@ -28,3 +28,10 @@ body { margin: 0; background: #0d1117; color: #e6edf3; font-family: system-ui, s
   0%, 100% { box-shadow: 0 0 0 1px var(--role-design); }
   50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--role-design) 50%, transparent); }
 }
+
+/* While a draft is being dragged, light the seat rail up as drop targets. */
+.dragging-draft .react-flow__node-seat > div {
+  border-color: var(--role-dev) !important;
+  box-shadow: 0 0 14px -4px var(--role-dev);
+  transition: box-shadow 0.15s ease;
+}

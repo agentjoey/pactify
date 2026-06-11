@@ -4,6 +4,10 @@ import { lifecycleStage, statusColorVar } from "../lib/lifecycle";
 import { casteForRoles } from "../lib/ants";
 import { Ant } from "./ui/ants/Ant";
 
+// Empty default so callers that omit owner/reviewer roles fall back to the
+// worker caste (casteForRoles([]) === "builder").
+const NO_ROLES: string[] = [];
+
 // TaskCard — the shared "genome" rendered by both the kanban board and the
 // canvas task node (the canvas node wraps this in React Flow Handles + comms /
 // pulse plumbing). Lifted from board3-kanban.html `.task` markup, translated to
@@ -30,9 +34,12 @@ export interface TaskCardProps {
   // Display title; falls back to the task id when absent (the protocol task has
   // no separate title field today).
   title?: string;
-  // Resolves a seat id → its roles, so the card can pick the owner/reviewer
-  // ant caste. Defaults to the worker caste when unknown.
-  rolesOf?: (seatId: string) => string[];
+  // Pre-resolved owner/reviewer roles, used to pick the ant caste. Resolved by
+  // the caller (Board / TaskNode) from the seat roster — the card no longer takes
+  // a rolesOf callback, so there is one less per-consumer adapter. Default empty
+  // → worker caste.
+  ownerRoles?: string[];
+  reviewerRoles?: string[];
   stale?: boolean;
   draft?: boolean;
   selected?: boolean;
@@ -43,16 +50,12 @@ export interface TaskCardProps {
   children?: ReactNode;
 }
 
-function antFor(seatId: string | undefined, rolesOf?: (s: string) => string[]) {
-  const roles = seatId && rolesOf ? rolesOf(seatId) : [];
-  return casteForRoles(roles);
-}
-
 export function TaskCard({
   task,
   featureId,
   title,
-  rolesOf,
+  ownerRoles = NO_ROLES,
+  reviewerRoles = NO_ROLES,
   stale,
   draft,
   selected,
@@ -67,8 +70,8 @@ export function TaskCard({
   const showReviewer =
     REVIEW_FLOW.has(status) && task.reviewer && task.reviewer !== task.owner;
 
-  const ownerCaste = antFor(task.owner, rolesOf);
-  const reviewerCaste = antFor(task.reviewer, rolesOf);
+  const ownerCaste = casteForRoles(ownerRoles);
+  const reviewerCaste = casteForRoles(reviewerRoles);
 
   return (
     <div

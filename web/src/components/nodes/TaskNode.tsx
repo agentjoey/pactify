@@ -9,11 +9,11 @@ import { TaskCard } from "../TaskCard";
 // keeps the draft "dispatch →" affordance + the not-joined warning badge.
 export function TaskNode({ id, data }: NodeProps) {
   const d = data as {
-    id?: string;
+    // Committed tasks carry the protocol Task object + resolved roles (baked by
+    // deriveFlow). Drafts carry only draft/specMd/deps — no task — so the card
+    // is materialized from the draft id below.
+    task?: Task;
     feature?: string;
-    status?: string;
-    owner?: string;
-    reviewer?: string;
     ownerRoles?: string[];
     reviewerRoles?: string[];
     draft?: boolean;
@@ -21,30 +21,29 @@ export function TaskNode({ id, data }: NodeProps) {
     commsNotJoined?: boolean;
     onDispatch?: () => void;
   };
-  const taskId = d.id ?? id.replace(/^(task|draft):/, "");
 
-  // Resolve owner/reviewer roles from the node data the canvas baked in.
-  const rolesOf = (seat: string): string[] => {
-    if (seat === d.owner) return d.ownerRoles ?? [];
-    if (seat === d.reviewer) return d.reviewerRoles ?? [];
-    return [];
-  };
-
-  // Draft tasks carry no protocol status; present them as an assigned-shaped,
-  // dashed card so the genome (medallion/lifecycle) still reads.
-  const task: Task = {
-    id: taskId,
-    owner: d.owner ?? "",
-    reviewer: d.reviewer ?? "",
-    status: d.status ?? "assigned",
-    spec: "",
-    evidence: "",
-  };
+  // Drafts carry no protocol Task; present them as an assigned-shaped, dashed
+  // card (status drives the medallion/lifecycle genome) keyed by the draft id.
+  const task: Task =
+    d.task ?? {
+      id: id.replace(/^(task|draft):/, ""),
+      owner: "",
+      reviewer: "",
+      status: "assigned",
+      spec: "",
+      evidence: "",
+    };
 
   return (
     <div className="min-w-[176px]">
       <Handle type="target" position={Position.Top} style={{ background: "#484f58" }} />
-      <TaskCard task={task} rolesOf={rolesOf} stale={d.stale} draft={d.draft}>
+      <TaskCard
+        task={task}
+        ownerRoles={d.ownerRoles}
+        reviewerRoles={d.reviewerRoles}
+        stale={d.stale}
+        draft={d.draft}
+      >
         {(d.commsNotJoined || (d.draft && d.onDispatch)) && (
           <div className="mb-1.5 flex items-center gap-1.5">
             {d.commsNotJoined && (

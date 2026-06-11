@@ -75,13 +75,21 @@ describe("deriveFlow", () => {
     expect(byId.get("seat:opencode")!.parentId).toBeUndefined();
   });
 
-  it("task node carries owner's role color, status, owner, reviewer, deps", () => {
+  it("task node carries the Task object, feature, resolved roles and color", () => {
     const { nodes } = deriveFlow(state, noLayout, noDrafts);
     const t2 = nodes.find((n) => n.id === "task:T2")!;
-    expect(t2.data.status).toBe("assigned");
-    expect(t2.data.owner).toBe("opencode");
-    expect(t2.data.reviewer).toBe("claude-opus");
-    expect(t2.data.deps).toEqual(["T1"]);
+    // The node data carries the protocol Task object itself (no flattening).
+    const task = t2.data.task as State["features"][number]["tasks"][number];
+    expect(task.id).toBe("T2");
+    expect(task.status).toBe("assigned");
+    expect(task.owner).toBe("opencode");
+    expect(task.reviewer).toBe("claude-opus");
+    expect(task.deps).toEqual(["T1"]);
+    expect(t2.data.feature).toBe("F1");
+    // Pre-resolved roles: owner opencode is a worker, reviewer claude-opus is
+    // orchestrator+reviewer.
+    expect(t2.data.ownerRoles).toEqual(["worker"]);
+    expect(t2.data.reviewerRoles).toEqual(["orchestrator", "reviewer"]);
     // owner opencode is a worker → dev
     expect(t2.data.roleColor).toBe("--role-dev");
     // T3 owned by orchestrator seat → product

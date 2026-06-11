@@ -178,15 +178,14 @@ export function deriveFlow(
           x: featPos.x + PAD,
           y: featPos.y + TASK_REL_Y0 + ti * ROW_H,
         }),
+        // Node data carries the Task object itself + the feature + the
+        // pre-resolved owner/reviewer roles, so TaskNode reads them directly
+        // (no re-materializing a fake Task, no per-seat role lookup).
         data: {
-          id: t.id,
+          task: t,
           feature: f.id,
-          status: t.status,
-          owner: t.owner,
-          reviewer: t.reviewer,
           ownerRoles,
           reviewerRoles: rolesOf.get(t.reviewer) ?? [],
-          deps,
           roleColor: roleColorVar(ownerRoles),
         },
       });

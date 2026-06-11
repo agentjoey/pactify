@@ -276,11 +276,14 @@ export default function App() {
         ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} />
         : (
           <>
-            <div className="flex flex-1 overflow-hidden">
+            {/* relative so the slide-over detail panel + its scrim position
+                within this row, overlaying kanban/canvas (not ops). The board
+                and canvas now take the full width — the panel is absolute. */}
+            <div className="relative flex flex-1 overflow-hidden">
               {view === "canvas"
                 ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} />
                 : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} staleTasks={staleTasks} />}
-              <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} />
+              <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} onSelect={setSelected} />
             </div>
             <ReplayBar project={current} replayAt={replayAt} refreshTick={refreshTick} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />
           </>

@@ -37,6 +37,19 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
+/* Task detail panel (T11): slide-over from the right + scrim fade. Both are
+   referenced inline by RightRail only when reduced-motion is OFF (it gates the
+   `animation` style on matchMedia), so reduced-motion users get the panel
+   instantly with no keyframe. */
+@keyframes panel-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes panel-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Live pulse (M3.3b): on each applied LIVE snapshot, the task node(s) whose
    status changed get a `.pulse` class for ~900ms (cleared by App's timeout /
    animationend). The glow is role-colored via the inline --pulse-color var the

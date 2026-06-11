@@ -203,3 +203,17 @@ describe("deriveOffice — shipped tray", () => {
     expect(deriveOffice(mk(seats, [task({ id: "A", status: "in_progress" })])).shipped).toEqual([]);
   });
 });
+
+describe("deriveOffice — changes_requested (rework returns to the owner's desk)", () => {
+  it("a changes_requested task sits in the owner's doing zone (board5: red lane back)", () => {
+    const st = mk(
+      [{ id: "worker", roles: ["worker"] }, { id: "rev", roles: ["reviewer"] }],
+      [task({ id: "T1", owner: "worker", reviewer: "rev", status: "changes_requested" })],
+    );
+    const d = deskOf(st, "worker");
+    expect(d.doing.map((t) => t.id)).toEqual(["T1"]);
+    expect(d.inbox).toEqual([]);
+    // rework is queued like assigned work: not busy (no in_progress) → idle-with-doing
+    expect(d.status).toBe("idle");
+  });
+});

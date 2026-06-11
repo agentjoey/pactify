@@ -1,5 +1,5 @@
 import type { State, Task } from "./types";
-import { unmetDeps } from "./comms";
+import { unmetDeps, flatTasks } from "./comms";
 
 // --- Office mode model (T9, spec §3) --------------------------------------
 //
@@ -18,16 +18,10 @@ export interface DeskModel {
   seatId: string;
   roles: string[];
   status: DeskStatus;
-  doing: Task[];           // tasks they own in assigned | in_progress
+  doing: Task[];           // tasks they own in assigned | in_progress | changes_requested
   inbox: Task[];           // awaiting_review tasks where they are reviewer
   waitingOn: WaitingItem[]; // own awaiting_review (on=reviewer, reason "review")
                             // + own non-accepted tasks per unmet dep (on=depId, reason "dep")
-}
-
-function flatTasks(state: State): Task[] {
-  const out: Task[] = [];
-  for (const f of state.features) for (const t of f.tasks) out.push(t);
-  return out;
 }
 
 // deriveOffice — desks for joined seats (roster order) + shipped tray.
@@ -50,8 +44,13 @@ export function deriveOffice(state: State): { desks: DeskModel[]; shipped: Task[
   const byId = new Map(tasks.map((t) => [t.id, t]));
 
   const desks: DeskModel[] = state.agents.map((seat) => {
+    // changes_requested is REWORK bounced back to the owner — per board5 the
+    // parcel returns to the owner's desk, so it lives in `doing` (otherwise a
+    // changes_requested task would vanish from every zone in the office view).
     const doing = tasks.filter(
-      (t) => t.owner === seat.id && (t.status === "assigned" || t.status === "in_progress"),
+      (t) =>
+        t.owner === seat.id &&
+        (t.status === "assigned" || t.status === "in_progress" || t.status === "changes_requested"),
     );
     const inbox = tasks.filter(
       (t) => t.reviewer === seat.id && t.status === "awaiting_review",

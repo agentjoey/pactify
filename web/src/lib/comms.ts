@@ -23,7 +23,8 @@ export interface CommsResult {
   blockedTasks: string[];
 }
 
-function flatTasks(state: State): Task[] {
+// Exported: office.ts shares this flattening (one definition, no drift).
+export function flatTasks(state: State): Task[] {
   const out: Task[] = [];
   for (const f of state.features) for (const t of f.tasks) out.push(t);
   return out;

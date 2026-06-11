@@ -127,3 +127,23 @@ The serve dashboard gains author powers — the same binary, `pactify serve --se
   drag-to-dispatch onto seats, review accept/changes/merge from the rail, SSE-live
   updates, layout persistence, awaiting-review pulse + stale indicators.
   Build mode keeps drafts local until dispatch — the log stays protocol-pure.
+
+### Ops panel (M3.3a)
+
+The serve binary also runs the squad's ops surface — managing which projects are
+served and how they are wired, without leaving the dashboard:
+
+- **Registry endpoints** (`GET /api/registry`, `POST /api/registry {path}`,
+  `DELETE /api/registry/{name}`): add/remove projects at runtime (no server restart) —
+  add validates the path (absolute → exists → git repo → has `.pact/`, no implicit init)
+  and persists to the shared `~/.pactify` registry file so CLI and serve stay consistent;
+  remove stops the live watcher but never touches the on-disk `.pact/` files. The list
+  folds a content-aware status (validity, seat count, last-event ts) per project.
+- **Wiring probes** (`GET .../wiring`, `POST .../wiring/{kind}`): the probe is the single
+  source of truth shared with `pactify doctor` (`agent.ProbeWiring`) — each kind reports
+  `wired` from its config marker or entry managed-block; POST bakes the entry block and
+  merges the pact server (TOML kinds are doc-only, returning the snippet to copy).
+- **Join client provenance** (advisory): the seats endpoint (`GET .../seats`) folds the
+  roster with each seat's most recent join client+version — a CLI join stamps
+  `pactify-cli`, richer hosts stamp their own identity — and flags `clientChanged` when a
+  seat's last two joins name different clients. Provenance is advisory, never gating.

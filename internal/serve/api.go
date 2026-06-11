@@ -87,6 +87,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerAuthorRoutes(mux)
 	s.registerWiringRoutes(mux)
 	s.registerSeatsRoutes(mux)
+	s.registerTimelineRoutes(mux)
 	mux.Handle("/", dashboardHandler())
 	return mux
 }
@@ -122,7 +123,17 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unknown project", http.StatusNotFound)
 		return
 	}
-	dto, err := ProjectState(p.Path)
+	// at param: ABSENT → full state (unchanged); present+valid → prefix fold of
+	// the first N events (clamped); present+malformed/negative → 400.
+	at, present, valid := parseAt(r)
+	if present && !valid {
+		writeErr(w, http.StatusBadRequest, "at must be a non-negative integer")
+		return
+	}
+	if !present {
+		at = -1 // all events
+	}
+	dto, err := ProjectStateAt(p.Path, at)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

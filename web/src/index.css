@@ -144,6 +144,19 @@ body {
   box-shadow: 0 0 5px color-mix(in srgb, var(--st, var(--color-success)) 70%, transparent);
 }
 
+/* TopBar live badge (T5) — the green dot breathes while live. Suppressed under
+   reduced-motion (a steady glow remains). board3 `.live .d`. */
+.topbar-live-dot {
+  animation: topbar-breath 2.4s ease-in-out infinite;
+}
+@keyframes topbar-breath {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--color-success); }
+  50% { opacity: 0.5; box-shadow: 0 0 2px var(--color-success); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topbar-live-dot { animation: none; }
+}
+
 /* Kanban column ghost (empty column placeholder) — board3 `.ghost`. */
 .kb-ghost {
   border: 1.5px dashed var(--color-border-strong);

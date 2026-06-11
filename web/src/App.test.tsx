@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
 import App from "./App";
 
 // Module-level capture so tests can fire events on the last-constructed instance.
@@ -49,7 +49,8 @@ describe("App", () => {
   it("loads projects and shows the switcher + an agent", async () => {
     render(<App />);
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("option", { name: "demo" })).toBeInTheDocument());
+    // The TopBar project chip shows the current project name.
+    await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
     await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
   });
 
@@ -107,16 +108,44 @@ describe("App", () => {
       );
     });
 
-    // Switch project — events should reset (new EventSource created)
-    const select = screen.getByRole("combobox");
+    // Switch project — events should reset (new EventSource created). Open the
+    // TopBar project switcher Popover and pick "other".
     await act(async () => {
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-      Object.defineProperty(select, "value", { value: "other", configurable: true });
-      select.dispatchEvent(new Event("change", { bubbles: true }));
+      fireEvent.click(screen.getByTestId("project-chip"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("option", { name: /other/ }));
     });
 
     // After switching, the old ES should have been closed
     // (new ES created for "other" project — just verify no crash)
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
+  });
+
+  describe("global view shortcuts", () => {
+    it("1/2/3 switch views; ignored while typing in an input", async () => {
+      render(<App />);
+      await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+
+      const group = () => screen.getByRole("group", { name: "view toggle" });
+      const pressed = () =>
+        within(group()).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"));
+
+      // default = kanban (first button pressed)
+      expect(pressed()).toEqual(["true", "false", "false"]);
+
+      await act(async () => { fireEvent.keyDown(window, { key: "2" }); });
+      expect(pressed()).toEqual(["false", "true", "false"]);
+
+      await act(async () => { fireEvent.keyDown(window, { key: "1" }); });
+      expect(pressed()).toEqual(["true", "false", "false"]);
+
+      // typing guard: a keydown originating from an INPUT must not switch.
+      const input = document.createElement("input");
+      document.body.appendChild(input);
+      await act(async () => { fireEvent.keyDown(input, { key: "2" }); });
+      expect(pressed()).toEqual(["true", "false", "false"]);
+      input.remove();
+    });
   });
 });

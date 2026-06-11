@@ -11,6 +11,7 @@ import { RightRail } from "./components/RightRail";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
+import { docTitle } from "./lib/docTitle";
 import type { Draft, DraftFeature } from "./lib/canvas";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
@@ -32,6 +33,9 @@ export default function App() {
   const [live, setLive] = useState(false);
   const [view, setView] = useState<View>("kanban");
   const [author, setAuthor] = useState(false);
+  // The acting seat id (empty when observing) — TopBar resolves its roles from
+  // state.agents to pick the ant caste for the seat avatar.
+  const [seat, setSeat] = useState("");
   // Canvas build-mode drafts live HERE (not inside Canvas) so they survive the
   // Canvas unmount that view switching causes — switching canvas→ops→canvas
   // would otherwise wipe every in-flight draft. Reset on project switch (the
@@ -91,8 +95,28 @@ export default function App() {
   useEffect(() => {
     refreshProjects();
     // A non-empty acting seat means this dashboard can author.
-    getActingSeat().then((r) => setAuthor(!!(r?.seat))).catch(() => setAuthor(false));
+    getActingSeat().then((r) => {
+      setAuthor(!!(r?.seat));
+      setSeat(r?.seat ?? "");
+    }).catch(() => { setAuthor(false); setSeat(""); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Global view shortcuts: 1/2/3 switch kanban/canvas/ops. Ignored while typing
+  // (input/textarea/select or contentEditable) or while a modal/dialog is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t?.isContentEditable) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      if (e.key === "1") setView("kanban");
+      else if (e.key === "2") setView("canvas");
+      else if (e.key === "3") setView("ops");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Re-evaluate stale tasks on a 60s ticker (and whenever state changes).
   useEffect(() => {
@@ -233,9 +257,16 @@ export default function App() {
   // the live state until the first replay snapshot lands), else live.
   const shownState = replaying ? (replayState ?? state) : state;
 
+  // Dynamic document title (spec §6.5): «project» · N awaiting ●. Driven from
+  // the currently displayed (live or replay) state's awaiting count.
+  useEffect(() => {
+    const name = projects.find((p) => p.id === current)?.name ?? current;
+    document.title = docTitle(name, shownState.awaiting_count);
+  }, [projects, current, shownState.awaiting_count]);
+
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} replaying={replaying} view={view} onView={setView} />
+      <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} replaying={replaying} view={view} onView={setView} author={author} seat={seat} agents={shownState.agents} />
       <Agents state={shownState} events={events} onPick={() => {}} />
       {view === "ops"
         ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} />

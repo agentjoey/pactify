@@ -85,6 +85,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects/{id}/events", s.handleEvents)
 	s.registerRegistryRoutes(mux)
 	s.registerAuthorRoutes(mux)
+	s.registerWiringRoutes(mux)
 	mux.Handle("/", dashboardHandler())
 	return mux
 }

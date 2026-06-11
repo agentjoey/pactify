@@ -107,6 +107,38 @@ PY
   [ "$status" -eq 0 ]
 }
 
+@test "event.schema.json accepts a join with optional payload.client (name/version object)" {
+  setup_pact_repo
+  SCHEMA="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/schemas/event.schema.json"
+  run python3 - "$SCHEMA" <<'PY'
+import json, sys, jsonschema
+schema = json.load(open(sys.argv[1]))
+good = {"event_id":"e1","ts":"2026-01-01T00:00:00Z","agent_id":"w","role":"worker",
+        "event_type":"join","task_id":"","feature":"",
+        "payload":{"roles":["worker"],"client":{"name":"claude-code","version":"1.2.3"}}}
+jsonschema.validate(good, schema)
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "event.schema.json rejects a join whose payload.client is not an object" {
+  setup_pact_repo
+  SCHEMA="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/schemas/event.schema.json"
+  run python3 - "$SCHEMA" <<'PY'
+import json, sys, jsonschema
+schema = json.load(open(sys.argv[1]))
+bad = {"event_id":"e1","ts":"2026-01-01T00:00:00Z","agent_id":"w","role":"worker",
+       "event_type":"join","task_id":"","feature":"",
+       "payload":{"roles":["worker"],"client":"claude-code"}}
+try:
+    jsonschema.validate(bad, schema)
+    print("FAIL: client as string accepted"); sys.exit(1)
+except jsonschema.ValidationError:
+    sys.exit(0)
+PY
+  [ "$status" -eq 0 ]
+}
+
 @test "event.schema.json rejects a checkpoint missing required payload.evidence" {
   setup_pact_repo
   SCHEMA="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/schemas/event.schema.json"

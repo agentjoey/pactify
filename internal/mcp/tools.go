@@ -45,6 +45,21 @@ func textResult(text string) *sdk.CallToolResult {
 	return &sdk.CallToolResult{Content: []sdk.Content{&sdk.TextContent{Text: text}}}
 }
 
+// clientInfo extracts the connecting client's self-reported name/version from
+// the session's initialize params. Nil-safe at every hop (no session, not yet
+// initialized, or no clientInfo) → empty strings → JoinWithClient emits no
+// client field. This is advisory provenance only, never an identity proof.
+func clientInfo(req *sdk.CallToolRequest) (name, version string) {
+	if req == nil || req.Session == nil {
+		return "", ""
+	}
+	params := req.Session.InitializeParams()
+	if params == nil || params.ClientInfo == nil {
+		return "", ""
+	}
+	return params.ClientInfo.Name, params.ClientInfo.Version
+}
+
 func registerTools(s *sdk.Server) {
 	sdk.AddTool(s, &sdk.Tool{Name: "status", Description: "Print the project's pact STATE.yml (rendered from the log)"},
 		func(_ context.Context, _ *sdk.CallToolRequest, _ empty) (*sdk.CallToolResult, any, error) {
@@ -56,9 +71,10 @@ func registerTools(s *sdk.Server) {
 		})
 
 	sdk.AddTool(s, &sdk.Tool{Name: "join", Description: "Worker cold-start: register this session's seat (PACT_AGENT_ID) and check out its feature branch"},
-		func(_ context.Context, _ *sdk.CallToolRequest, in joinIn) (*sdk.CallToolResult, any, error) {
+		func(_ context.Context, req *sdk.CallToolRequest, in joinIn) (*sdk.CallToolResult, any, error) {
 			seat := paths.AgentID()
-			if err := pact.Join(seat, in.Roles); err != nil {
+			name, version := clientInfo(req)
+			if err := pact.JoinWithClient(seat, in.Roles, name, version); err != nil {
 				return nil, nil, err
 			}
 			return textResult(fmt.Sprintf("joined %s", seat)), nil, nil

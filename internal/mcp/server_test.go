@@ -131,6 +131,45 @@ func TestFullLifecycleViaMCP(t *testing.T) {
 	callOK(t, cs, "validate", nil)
 }
 
+// TestJoinRecordsSessionClientInfo: the MCP join handler stamps the connecting
+// client's initialize clientInfo (name/version) onto the join event's payload.
+func TestJoinRecordsSessionClientInfo(t *testing.T) {
+	dir := newRepo(t)
+	ctx := context.Background()
+	st, ct := sdk.NewInMemoryTransports()
+	server := New()
+	if _, err := server.Connect(ctx, st, nil); err != nil {
+		t.Fatal(err)
+	}
+	// The client's Implementation is what the server sees as session clientInfo.
+	client := sdk.NewClient(&sdk.Implementation{Name: "testclient", Version: "9"}, nil)
+	cs, err := client.Connect(ctx, ct, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { cs.Close() })
+
+	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/T1.md"})
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	callOK(t, cs, "join", map[string]any{"roles": "worker"})
+
+	log, err := os.ReadFile(filepath.Join(dir, ".pact/log.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(log), `"client":{"name":"testclient","version":"9"}`) {
+		t.Fatalf("join event must carry session clientInfo; log:\n%s", log)
+	}
+	// Provenance never reaches STATE.yml.
+	state, err := os.ReadFile(filepath.Join(dir, ".pact/STATE.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(state), "testclient") || strings.Contains(string(state), "client") {
+		t.Fatalf("STATE.yml must not contain client provenance:\n%s", state)
+	}
+}
+
 func TestToolsFailClosedWithoutAgentID(t *testing.T) {
 	newRepo(t)
 	cs := connect(t)

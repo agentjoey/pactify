@@ -12,6 +12,12 @@ import (
 
 var errNoAgent = errors.New("pactify: PACT_AGENT_ID not set; source your entry file")
 
+// ClientVersion is the version string the CLI stamps onto join events as the
+// self-reported client provenance (client.name = "pactify-cli"). main() sets it
+// from the build-time version var at startup; "dev" is the default for tests and
+// un-stamped builds. It is advisory metadata only — never an identity proof.
+var ClientVersion = "dev"
+
 // agentID resolves the acting seat: the handle's actor override if set, else
 // PACT_AGENT_ID from the environment. Fails closed when neither is present.
 func (p *Project) agentID() (string, error) {
@@ -100,9 +106,22 @@ func (p *Project) Init(project string, seatSpecs []string) error {
 	})
 }
 
-// Join registers the seat (join event) and moves it onto its assigned task's
-// feature branch (creating the branch from HEAD if absent).
+// Join registers the seat via the CLI client identity (pactify-cli + the
+// injected ClientVersion). It is the cwd/CLI entry point; richer hosts (MCP)
+// call JoinWithClient directly with their own clientInfo.
 func (p *Project) Join(seatID, roles string) error {
+	return p.JoinWithClient(seatID, roles, "pactify-cli", ClientVersion)
+}
+
+// JoinWithClient registers the seat (join event) and moves it onto its assigned
+// task's feature branch (creating the branch from HEAD if absent).
+//
+// clientName/clientVersion are optional self-reported provenance: when
+// clientName is non-empty the join payload gains a "client": {name, version}
+// object; when empty no client key is emitted, so client-free logs stay
+// byte-identical to pre-feature logs. Provenance lives in the log only — it is
+// never projected into STATE.yml.
+func (p *Project) JoinWithClient(seatID, roles, clientName, clientVersion string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -118,11 +137,17 @@ func (p *Project) Join(seatID, roles string) error {
 	if err := checkJoinGate(preState, seatID); err != nil {
 		return err
 	}
+	payload := map[string]any{"roles": rolesArr}
+	// client is emitted ONLY when a name is present, mirroring deps' additive
+	// conditional-serialization discipline (byte-parity for client-free logs).
+	if clientName != "" {
+		payload["client"] = map[string]any{"name": clientName, "version": clientVersion}
+	}
 	if err := p.appendAndRender(event.Event{
 		AgentID:   id,
 		Role:      event.RoleFor("join"),
 		EventType: "join",
-		Payload:   map[string]any{"roles": rolesArr},
+		Payload:   payload,
 	}); err != nil {
 		return err
 	}
@@ -353,8 +378,15 @@ func (p *Project) Validate() error { return p.validateLog() }
 // Init scaffolds .pact/ in the current working directory.
 func Init(project string, seatSpecs []string) error { return At(".").Init(project, seatSpecs) }
 
-// Join registers the seat in the current working directory's repo.
+// Join registers the seat in the current working directory's repo (CLI client
+// identity: pactify-cli + ClientVersion).
 func Join(seatID, roles string) error { return At(".").Join(seatID, roles) }
+
+// JoinWithClient registers the seat in the current working directory's repo with
+// caller-supplied client provenance (empty clientName → no client field).
+func JoinWithClient(seatID, roles, clientName, clientVersion string) error {
+	return At(".").JoinWithClient(seatID, roles, clientName, clientVersion)
+}
 
 // Assign records a task assignment in the current working directory's repo.
 func Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {

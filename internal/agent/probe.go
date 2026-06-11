@@ -16,6 +16,7 @@ type WiringStatus struct {
 	Kind    string `json:"kind"`
 	Wired   bool   `json:"wired"`
 	Detail  string `json:"detail"`
+	Path    string `json:"path"`
 	Global  bool   `json:"global"`
 	DocOnly bool   `json:"docOnly"`
 }
@@ -39,6 +40,7 @@ func probeKind(kind string, dir string) WiringStatus {
 	c := a.Config()
 	ws := WiringStatus{
 		Kind:    kind,
+		Path:    c.Path,
 		Global:  c.Scope == Global,
 		DocOnly: c.Format == TOML,
 	}

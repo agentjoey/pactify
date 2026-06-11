@@ -13,9 +13,9 @@ vi.mock("../../lib/api", () => ({
 import { Wiring } from "./Wiring";
 
 const fixture: WiringStatus[] = [
-  { kind: "opencode", wired: true, detail: "config opencode.json", global: false, docOnly: false },
-  { kind: "claude-desktop", wired: false, detail: "config ~/Library/.../config.json", global: true, docOnly: false },
-  { kind: "codex", wired: false, detail: "entry .pact/agents/codex.md", global: false, docOnly: true },
+  { kind: "opencode", wired: true, detail: "config opencode.json", path: "opencode.json", global: false, docOnly: false },
+  { kind: "claude-desktop", wired: false, detail: "not wired", path: "~/Library/Application Support/Claude/claude_desktop_config.json", global: true, docOnly: false },
+  { kind: "codex", wired: false, detail: "not wired", path: "~/.codex/config.toml", global: false, docOnly: true },
 ];
 
 describe("Wiring", () => {
@@ -51,6 +51,10 @@ describe("Wiring", () => {
 
     await waitFor(() => expect(screen.getByTestId("wire-modal-claude-desktop")).toBeInTheDocument());
     expect(screen.getByTestId("global-warn")).toBeInTheDocument();
+    // the consent line names the exact machine-global path (from row.path).
+    expect(screen.getByTestId("global-warn")).toHaveTextContent(
+      "~/Library/Application Support/Claude/claude_desktop_config.json",
+    );
 
     // fill valid seat + roles; Confirm still disabled until the checkbox.
     fireEvent.change(screen.getByLabelText("seat"), { target: { value: "claude" } });

@@ -31,6 +31,9 @@ export default function App() {
   const [author, setAuthor] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
+  // Monotonic tick bumped on every applied state snapshot; passed to the ops
+  // panels so their fetches re-run on SSE updates for the selected project.
+  const [refreshTick, setRefreshTick] = useState(0);
 
   const prevState = useRef<State>(EMPTY);
   const toastId = useRef(0);
@@ -97,6 +100,7 @@ export default function App() {
 
     prevState.current = s;
     setState(s);
+    setRefreshTick((n) => n + 1);
   }
 
   useEffect(() => {
@@ -133,7 +137,7 @@ export default function App() {
       <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} view={view} onView={setView} />
       <Agents state={state} events={events} onPick={() => {}} />
       {view === "ops"
-        ? <OpsView project={current} author={author} onRegistryChanged={refreshProjects} />
+        ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} />
         : (
           <div className="flex flex-1 overflow-hidden">
             {view === "canvas"

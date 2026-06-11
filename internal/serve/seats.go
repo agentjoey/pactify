@@ -17,6 +17,10 @@ type lastJoinDTO struct {
 	Client  string `json:"client,omitempty"`
 	Version string `json:"version,omitempty"`
 	TS      string `json:"ts"`
+	// PrevClient is the previous join's client name when it differs from the
+	// current one — lets the UI render a before→after provenance hint. Omitted
+	// when there is no prior join or the client name is unchanged.
+	PrevClient string `json:"prevClient,omitempty"`
 }
 
 type seatProvenanceDTO struct {
@@ -66,6 +70,7 @@ func (s *Server) handleSeats(w http.ResponseWriter, r *http.Request) {
 				prevName, _ := joinClient(joins[n-2])
 				if name != "" && prevName != "" && name != prevName {
 					row.ClientChanged = true
+					row.LastJoin.PrevClient = prevName
 				}
 			}
 		}

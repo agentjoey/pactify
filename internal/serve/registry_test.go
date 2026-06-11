@@ -129,6 +129,26 @@ func TestRegistryPOSTDuplicate(t *testing.T) {
 	}
 }
 
+// TestRegistryPOSTDuplicatePath registers the SAME path under two DIFFERENT names
+// and asserts the second is rejected 409 (shared fsnotify watch would otherwise be
+// killed on remove), naming the existing registration.
+func TestRegistryPOSTDuplicatePath(t *testing.T) {
+	dir := newAuthorRepo(t)
+	_, ts := registryServer(t)
+	resp := postJSON(t, ts.URL+"/api/registry", map[string]any{"path": dir, "name": "first"})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("first register: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
+	}
+	resp.Body.Close()
+	resp = postJSON(t, ts.URL+"/api/registry", map[string]any{"path": dir, "name": "second"})
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("duplicate path: want 409 got %d", resp.StatusCode)
+	}
+	if msg := errBody(t, resp); !strings.Contains(msg, "already registered as first") {
+		t.Fatalf("duplicate-path error %q must name the existing registration", msg)
+	}
+}
+
 // TestRegistryRegisterMakesProjectLive registers a scratch repo and asserts the
 // project (1) appears in GET /api/projects and (2) has a LIVE watcher: appending
 // a join line to its log produces an SSE hub event.

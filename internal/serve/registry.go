@@ -142,6 +142,24 @@ func (s *Server) handleRegistryAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Reject a path already registered under any (possibly different) name. Two
+	// registry entries pointing at the same dir share one fsnotify watch, so
+	// removing one would kill the other's live updates — guard before adding.
+	cleaned := filepath.Clean(req.Path)
+	s.pmu.RLock()
+	var dupName string
+	for _, p := range s.projects {
+		if filepath.Clean(p.Path) == cleaned {
+			dupName = p.Name
+			break
+		}
+	}
+	s.pmu.RUnlock()
+	if dupName != "" {
+		writeErr(w, http.StatusConflict, fmt.Sprintf("path already registered as %s", dupName))
+		return
+	}
+
 	// Persist to the shared registry file so CLI and serve stay consistent.
 	reg, err := registry.Load()
 	if err != nil {

@@ -8,17 +8,19 @@ import { Seats } from "./Seats";
 export function OpsView({
   project,
   author,
+  refreshTick,
   onRegistryChanged,
 }: {
   project: string;
   author: boolean;
+  refreshTick?: number;
   onRegistryChanged?: () => void;
 }) {
   return (
     <div data-testid="ops-view" className="flex-1 overflow-auto p-4 text-[#e6edf3]">
       <Projects author={author} onChanged={onRegistryChanged} />
-      <Wiring project={project} author={author} />
-      <Seats project={project} />
+      <Wiring project={project} author={author} refreshKey={refreshTick} />
+      <Seats project={project} refreshKey={refreshTick} />
     </div>
   );
 }

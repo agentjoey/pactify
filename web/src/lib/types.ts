@@ -26,6 +26,7 @@ export interface WiringStatus {
   kind: string;
   wired: boolean;
   detail: string;
+  path: string;
   global: boolean;
   docOnly: boolean;
 }
@@ -36,7 +37,7 @@ export interface WiringStatus {
 export interface SeatInfo {
   id: string;
   roles: string[];
-  lastJoin?: { client: string; version: string; ts: string };
+  lastJoin?: { client: string; version: string; ts: string; prevClient?: string };
   clientChanged: boolean;
 }
 

@@ -102,6 +102,10 @@ func TestSeatsClientChanged(t *testing.T) {
 	if row.LastJoin == nil || row.LastJoin.Client != "claude-code" {
 		t.Fatalf("lastJoin should be the most recent client: %+v", row.LastJoin)
 	}
+	// prevClient carries the FIRST (differing) join's client name for a before→after hint.
+	if row.LastJoin.PrevClient != "opencode" {
+		t.Fatalf("prevClient should be the previous join's client: %+v", row.LastJoin)
+	}
 }
 
 // TestSeatsClientUnchanged: two joins with the SAME client name do not flag

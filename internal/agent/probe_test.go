@@ -35,6 +35,9 @@ func TestProbeWiringUnwired(t *testing.T) {
 		if r.Detail != "not wired" {
 			t.Fatalf("kind %q unwired detail = %q want 'not wired'", r.Kind, r.Detail)
 		}
+		if r.Path == "" {
+			t.Fatalf("kind %q must carry its ConfigTarget path even when unwired: %+v", r.Kind, r)
+		}
 	}
 }
 

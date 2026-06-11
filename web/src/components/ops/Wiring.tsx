@@ -25,9 +25,13 @@ function WireModal({
   const [err, setErr] = useState("");
   const [result, setResult] = useState<WireResult | null>(null);
 
+  // A machine-global write only warrants the red consent line + checkbox when
+  // the kind actually writes a global file. docOnly kinds (e.g. codex-app) never
+  // write — only a snippet is shown — so they must not false-claim a global write.
+  const showGlobalWarn = row.global && !row.docOnly;
   const seatOk = isSlug(seat);
   const rolesOk = roles.trim().length > 0;
-  const ackOk = !row.global || ack;
+  const ackOk = !showGlobalWarn || ack;
   const canConfirm = seatOk && rolesOk && ackOk && !busy;
 
   // docOnly kinds (codex) write only the entry; the action shows the snippet.
@@ -51,9 +55,9 @@ function WireModal({
     <div data-testid={`wire-modal-${row.kind}`} className="mt-2 rounded border border-gray-700 bg-[#0d1117] p-2">
       <div className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Wire {row.kind}</div>
 
-      {row.global && (
+      {showGlobalWarn && (
         <p data-testid="global-warn" className="text-[11px] text-[#f85149] mb-1.5">
-          writes a machine-global file: {row.detail.replace(/^config /, "") || "(machine config)"}
+          writes a machine-global file: {row.path || "(machine config)"}
         </p>
       )}
 
@@ -77,7 +81,7 @@ function WireModal({
         <p className="text-[10px] text-[#f85149] mb-1.5">seat must match [a-z0-9][a-z0-9-]*</p>
       )}
 
-      {row.global && (
+      {showGlobalWarn && (
         <label className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-1.5">
           <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
           I understand this writes a machine-global file

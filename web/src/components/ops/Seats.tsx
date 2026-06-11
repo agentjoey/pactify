@@ -45,7 +45,7 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
                   {s.clientChanged && (
                     <span
                       data-testid={`seat-warn-${s.id}`}
-                      title="client changed between joins"
+                      title={`client changed: ${s.lastJoin?.prevClient} → ${s.lastJoin?.client}`}
                       className="ml-1.5 inline-block h-2 w-2 rounded-full bg-[#d29922] align-middle"
                     />
                   )}
@@ -65,11 +65,21 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
                 </td>
                 <td className="py-1.5 text-gray-400 font-mono">
                   {s.lastJoin ? (
-                    <span>
-                      {s.lastJoin.client} v{s.lastJoin.version}
-                      {" · "}
-                      {relativeTime(s.lastJoin.ts)}
-                    </span>
+                    s.lastJoin.client ? (
+                      <span>
+                        {s.lastJoin.client} v{s.lastJoin.version}
+                        {" · "}
+                        {relativeTime(s.lastJoin.ts)}
+                      </span>
+                    ) : (
+                      // A join with no self-reported client: show a dim placeholder
+                      // and skip the "v ·" version artifact.
+                      <span className="text-gray-600">
+                        unknown client
+                        {" · "}
+                        {relativeTime(s.lastJoin.ts)}
+                      </span>
+                    )
                   ) : (
                     <span className="text-gray-600">never joined</span>
                   )}

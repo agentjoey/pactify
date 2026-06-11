@@ -11,8 +11,8 @@ import { casteForRoles, padGradient } from "../lib/ants";
 export type View = "kanban" | "canvas" | "ops";
 
 // The three-color cable mini-mark (board3 `.logo` svg). Also used as the
-// favicon (index.html, static data-URI).
-function CableMark() {
+// favicon (index.html, static data-URI) and the no-project hero (NoProjects).
+export function CableMark() {
   return (
     <svg width="22" height="14" viewBox="0 0 30 18" aria-hidden="true">
       <path d="M1 4 C10 4, 14 9, 29 9" stroke="#ECC678" strokeWidth="2" fill="none" strokeLinecap="round" />

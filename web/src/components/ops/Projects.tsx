@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { RegistryEntry } from "../../lib/types";
 import { getRegistry, postRegister, deleteRegistry } from "../../lib/api";
+import { humanizeError } from "../../lib/protocolErrors";
 import { relativeTime } from "../../lib/ops";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
@@ -46,7 +47,7 @@ export function Projects({
       setName("");
       refresh();
     } catch (e) {
-      setRegErr(e instanceof Error ? e.message : String(e));
+      setRegErr(humanizeError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
@@ -58,7 +59,7 @@ export function Projects({
       await deleteRegistry(entry.name);
       refresh();
     } catch (e) {
-      setLoadErr(e instanceof Error ? e.message : String(e));
+      setLoadErr(humanizeError(e instanceof Error ? e.message : String(e)));
     }
   };
 

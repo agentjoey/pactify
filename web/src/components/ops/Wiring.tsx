@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { WiringStatus, WireResult } from "../../lib/types";
 import { getWiring, postWire } from "../../lib/api";
+import { humanizeError } from "../../lib/protocolErrors";
 import { isSlug } from "../../lib/ops";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
@@ -63,7 +64,7 @@ function WireModal({
       setResult(res);
       onWired();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      setErr(humanizeError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }

@@ -9,6 +9,7 @@ import { OpsView } from "./components/ops/OpsView";
 import { ReplayBar } from "./components/ReplayBar";
 import { RightRail } from "./components/RightRail";
 import { CommandK } from "./components/CommandK";
+import { NoProjects } from "./components/NoProjects";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
@@ -134,13 +135,14 @@ export default function App() {
   }, []);
 
   // pushToast surfaces a one-off message on the shared toast stack (review
-  // notifications and palette-action failures ride the same rail).
-  function pushToast(text: string) {
+  // notifications and palette-action failures ride the same rail). `kind:
+  // "error"` renders the danger-tinted variant for failed author actions.
+  function pushToast(text: string, kind?: "error") {
     setToasts((prev) => {
       toastId.current += 1;
       const tid = toastId.current;
       setTimeout(() => setToasts((cur) => cur.filter((x) => x.id !== tid)), 5000);
-      return [...prev, { id: tid, text }].slice(-3);
+      return [...prev, { id: tid, text, kind }].slice(-3);
     });
   }
 
@@ -309,6 +311,12 @@ export default function App() {
   // the live state until the first replay snapshot lands), else live.
   const shownState = replaying ? (replayState ?? state) : state;
 
+  // First-load skeleton signal (T15): a project is current but its very first
+  // live snapshot hasn't been applied yet (state is still the EMPTY sentinel).
+  // Not while replaying (replay has its own fallback) and only when there ARE
+  // projects (the no-project hero owns the empty-registry case).
+  const firstLoad = !!current && state === EMPTY && !replaying;
+
   // Dynamic document title (spec §6.5): «project» · N awaiting ●. Driven from
   // the currently displayed (live or replay) state's awaiting count.
   useEffect(() => {
@@ -320,8 +328,10 @@ export default function App() {
     <div data-testid="app-root" className="h-screen flex flex-col">
       <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} replaying={replaying} view={view} onView={setView} author={author} seat={seat} agents={shownState.agents} />
       <Agents state={shownState} events={events} onPick={() => {}} />
-      {view === "ops"
-        ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} />
+      {projects.length === 0
+        ? <NoProjects onRegistered={refreshProjects} />
+        : view === "ops"
+        ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} loading={firstLoad} />
         : (
           <>
             {/* relative so the slide-over detail panel + its scrim position
@@ -329,8 +339,8 @@ export default function App() {
                 and canvas now take the full width — the panel is absolute. */}
             <div className="relative flex flex-1 overflow-hidden">
               {view === "canvas"
-                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} />
-                : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} staleTasks={staleTasks} />}
+                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} />
+                : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} staleTasks={staleTasks} loading={firstLoad} />}
               <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} onSelect={setSelected} />
             </div>
             <ReplayBar project={current} replayAt={replayAt} refreshTick={refreshTick} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />
@@ -347,7 +357,7 @@ export default function App() {
         onSelectProject={setCurrent}
         author={author}
         replaying={replaying}
-        notify={pushToast}
+        notify={(text) => pushToast(text, "error")}
       />
     </div>
   );

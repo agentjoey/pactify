@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Draft } from "../lib/canvas";
 import { postTask, postVerb } from "../lib/api";
+import { humanizeError } from "../lib/protocolErrors";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { Select } from "./ui/Select";
@@ -89,7 +90,7 @@ export function DispatchModal({
       await postVerb(project, "assign", body as unknown as Record<string, unknown>);
       onDispatched();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      setErr(humanizeError(e instanceof Error ? e.message : String(e)));
       setBusy(false);
     }
   };

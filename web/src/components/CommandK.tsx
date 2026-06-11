@@ -4,6 +4,7 @@ import type { ProjectMeta, State } from "../lib/types";
 import type { View } from "./TopBar";
 import { allTasks } from "../lib/derive";
 import { postVerb } from "../lib/api";
+import { humanizeError } from "../lib/protocolErrors";
 import { Kbd } from "./ui/Kbd";
 import { Modal } from "./ui/Modal";
 
@@ -155,7 +156,10 @@ export function CommandK({
         await postVerb(current, "accept", { task: taskId });
       } catch (e) {
         // A failed accept emits no event — nothing downstream would report it.
-        notify?.(`accept ${taskId} failed: ${e instanceof Error ? e.message : String(e)}`);
+        // Route the raw engine error through humanizeError so the toast carries
+        // actionable guidance (e.g. self-accept → use a reviewer seat).
+        const raw = e instanceof Error ? e.message : String(e);
+        notify?.(`accept ${taskId}: ${humanizeError(raw)}`);
       }
     } else {
       // Request changes needs a reason — the detail panel owns that flow. Open

@@ -17,7 +17,9 @@ export function NoProjects({ onRegistered }: { onRegistered: () => void }) {
   const [busy, setBusy] = useState(false);
 
   const register = async () => {
-    if (path.trim().length === 0) return;
+    // busy guard: Enter in either input calls this directly — a double Enter
+    // must not fire a second concurrent POST (the loser 409s confusingly).
+    if (busy || path.trim().length === 0) return;
     setBusy(true);
     setErr("");
     try {

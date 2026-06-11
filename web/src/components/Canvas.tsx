@@ -331,6 +331,11 @@ export function Canvas({
   // Load saved layout on mount / project change.
   useEffect(() => {
     let alive = true;
+    // Per-project display state must not leak across a project switch (Canvas
+    // is not keyed by project): a stale focus would dim the entire new graph.
+    setFocusFeature(null);
+    setMenu(null);
+    setRenaming(null);
     getLayout(project).then((l) => { if (alive) setLayout(l ?? {}); }).catch(() => {
       if (alive) setLayout({});
     });
@@ -691,9 +696,9 @@ export function Canvas({
     }
   }, [author, replaying, draftFeatures, state.features, setDrafts, setDraftFeatures]);
 
-  // Esc chain + Del key. Esc closes the menu first, then clears selection, then
-  // closes the draft form. Del removes selected drafts. Both respect a typing
-  // guard (don't hijack keys while an input/textarea is focused).
+  // Esc chain + Del key. Esc resolves in order: context menu → inline rename →
+  // selection → feature focus → draft form. Del removes selected drafts. Both
+  // respect a typing guard (don't hijack keys while an input/textarea is focused).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = document.activeElement as HTMLElement | null;

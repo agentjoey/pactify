@@ -168,7 +168,7 @@ export function CommandK({
       setView("canvas");
       setSelected(taskId);
     }
-  }, [close, current, setView, setSelected]);
+  }, [close, current, setView, setSelected, notify]);
 
   const switchProject = useCallback((id: string) => {
     onSelectProject(id);

@@ -29,6 +29,10 @@ const STALE_MS = 30 * 60 * 1000;
 
 export default function App() {
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+  // A failed first state fetch must NOT read as "still loading" — it suppresses
+  // the skeleton so the honest empty board shows instead. Reset per project.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [current, setCurrent] = useState("");
   const [state, setState] = useState<State>(EMPTY);
   const [events, setEvents] = useState<PactEvent[]>([]);
@@ -92,9 +96,12 @@ export default function App() {
 
   // refreshProjects re-fetches the registry-backed project list, seeding the
   // selection on first load and dropping it if the current project was removed.
+  // projectsLoaded gates the empty-registry hero: only a CONFIRMED-empty
+  // registry shows it (never the pre-fetch window, never a failed fetch).
   function refreshProjects() {
     fetchProjects().then((ps) => {
       setProjects(ps);
+      setProjectsLoaded(true);
       setCurrent((cur) => {
         if (cur && ps.some((p) => p.id === cur)) return cur;
         return ps.length ? ps[0].id : "";
@@ -227,7 +234,10 @@ export default function App() {
     // project's state under the new project id both flashes stale data and
     // made Canvas's FitOnEntry frame the OLD graph (then never refit).
     setState(EMPTY);
-    fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => { if (alive) setState(EMPTY); });
+    setLoadFailed(false);
+    fetchState(current)
+      .then((s) => { if (alive) applyState(s); })
+      .catch(() => { if (alive) { setState(EMPTY); setLoadFailed(true); } });
     const off = subscribeEvents(current, (e) => {
       if (!alive) return;
       setEvents((prev) => [...prev, e]);
@@ -315,7 +325,7 @@ export default function App() {
   // live snapshot hasn't been applied yet (state is still the EMPTY sentinel).
   // Not while replaying (replay has its own fallback) and only when there ARE
   // projects (the no-project hero owns the empty-registry case).
-  const firstLoad = !!current && state === EMPTY && !replaying;
+  const firstLoad = !!current && state === EMPTY && !replaying && !loadFailed;
 
   // Dynamic document title (spec §6.5): «project» · N awaiting ●. Driven from
   // the currently displayed (live or replay) state's awaiting count.
@@ -328,7 +338,7 @@ export default function App() {
     <div data-testid="app-root" className="h-screen flex flex-col">
       <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} replaying={replaying} view={view} onView={setView} author={author} seat={seat} agents={shownState.agents} />
       <Agents state={shownState} events={events} onPick={() => {}} />
-      {projects.length === 0
+      {projectsLoaded && projects.length === 0
         ? <NoProjects onRegistered={refreshProjects} />
         : view === "ops"
         ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} loading={firstLoad} />

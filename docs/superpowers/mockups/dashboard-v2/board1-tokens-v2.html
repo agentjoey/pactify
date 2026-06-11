@@ -1,0 +1,145 @@
+<style>
+  .tk { font-family: -apple-system, "Inter", system-ui, sans-serif; }
+  .tk * { box-sizing: border-box; }
+  .tk .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+  .pal { border-radius: 14px; padding: 0; cursor: pointer; border: 2px solid rgba(255,255,255,.08); transition: border-color .15s; overflow: hidden; }
+  .pal:hover { border-color: rgba(255,255,255,.25); }
+  .pal.selected { border-color: #93B4F2; }
+  .pal .inner { padding: 26px; }
+  .pal h4 { margin: 0 0 4px; font-size: 14px; letter-spacing: .4px; color: rgba(255,255,255,.92); }
+  .pal .sub { font-size: 11px; color: rgba(255,255,255,.45); margin: 0 0 18px; }
+  .layers { display: flex; gap: 10px; margin-bottom: 16px; }
+  .layer { flex: 1; border-radius: 8px; padding: 10px 10px 34px; font-size: 10px; }
+  .chiprow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { font-size: 11px; padding: 3px 10px; border-radius: 999px; font-weight: 500; }
+  .mini { border-radius: 10px; padding: 16px; margin-top: 16px; }
+  .mini .card { border-radius: 8px; padding: 12px 14px; position: relative; }
+  .mini .edge { position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; }
+  .mini .t { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.92); }
+  .mini .s { font-size: 11px; color: rgba(255,255,255,.42); margin-top: 2px; }
+  .mini .meta { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 10.5px; }
+  .av { width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; }
+  .badge { font-size: 10px; padding: 1px 8px; border-radius: 999px; font-weight: 500; }
+  .btnrow { display: flex; gap: 8px; margin-top: 12px; }
+  .btn { font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 6px; }
+  .stripwrap { margin: 6px 0 26px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); display: flex; height: 86px; }
+  .strip { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; color: rgba(255,255,255,.6); flex-direction: column; gap: 4px; }
+  .strip b { color: rgba(255,255,255,.9); font-size: 13px; }
+  .spec { background: #101218; border: 1px solid rgba(255,255,255,.07); border-radius: 14px; padding: 26px 30px; margin-top: 26px; }
+  .spec table { width: 100%; border-collapse: collapse; }
+  .spec td { padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: baseline; color: rgba(255,255,255,.92); }
+  .spec td.lbl { width: 200px; font-size: 10.5px; color: rgba(255,255,255,.4); font-family: ui-monospace, Menlo, monospace; }
+</style>
+
+<h2>板 ①/④ v2 — Token 色板(已拉开 A/B 差距)</h2>
+<p class="subtitle">上一版两套底色只差 4% 亮度,是我定值太保守。v2:A 维持近黑冷灰;B 改为 Linear 真实氛围——明显更亮一档、带蓝紫调。先看顶部纯底色对比条,再看嵌入的迷你 UI。点选其一。</p>
+
+<div class="tk">
+
+<div class="stripwrap">
+  <div class="strip" style="background:#0B0D10"><b>A · Graphite</b>page #0B0D10(近黑,中性冷灰)</div>
+  <div class="strip" style="background:#191B26"><b>B · Indigo</b>page #191B26(亮一档,蓝紫调)</div>
+</div>
+
+<div class="options" style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+
+  <!-- Variant A: Graphite -->
+  <div class="option pal" data-choice="A-graphite" onclick="toggleSelect(this)">
+    <div class="inner" style="background:#0B0D10">
+      <h4>A · Graphite</h4>
+      <p class="sub">近黑、中性、对比度最大。内容色彩(三色 persona)在纯黑底上最跳。长时间盯屏最"沉"。</p>
+      <div class="layers">
+        <div class="layer" style="background:#0B0D10;border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.5)">page<br>#0B0D10</div>
+        <div class="layer" style="background:#12151A;border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.5)">surface<br>#12151A</div>
+        <div class="layer" style="background:#191D24;border:1px solid rgba(255,255,255,.09);color:rgba(255,255,255,.55)">raised<br>#191D24</div>
+        <div class="layer" style="background:#20252E;border:1px solid rgba(255,255,255,.11);color:rgba(255,255,255,.6)">overlay<br>#20252E</div>
+      </div>
+      <div class="chiprow">
+        <span class="chip" style="background:rgba(236,198,120,.14);color:#ECC678;border:1px solid rgba(236,198,120,.4)">产品</span>
+        <span class="chip" style="background:rgba(147,180,242,.14);color:#93B4F2;border:1px solid rgba(147,180,242,.4)">设计</span>
+        <span class="chip" style="background:rgba(123,216,160,.14);color:#7BD8A0;border:1px solid rgba(123,216,160,.4)">开发</span>
+        <span class="chip" style="background:rgba(229,97,92,.12);color:#E5615C">danger</span>
+        <span class="chip" style="background:rgba(217,162,61,.12);color:#D9A23D">warn</span>
+      </div>
+      <div class="mini" style="background:#0B0D10;border:1px dashed rgba(255,255,255,.08)">
+        <div class="card" style="background:#12151A;border:1px solid rgba(255,255,255,.08);box-shadow:0 1px 3px rgba(0,0,0,.5)">
+          <div class="edge" style="background:#7BD8A0"></div>
+          <div style="padding-left:8px">
+            <div class="t">t1-core <span class="mono" style="font-weight:400;font-size:10px;color:rgba(255,255,255,.35);margin-left:6px">greet-cli</span></div>
+            <div class="s">实现 greet 核心函数与表驱动单测</div>
+            <div class="meta">
+              <span class="av" style="background:rgba(123,216,160,.18);color:#7BD8A0;border:1px solid #7BD8A0">O</span>
+              <span class="mono" style="color:rgba(255,255,255,.55)">opencode</span>
+              <span style="color:rgba(255,255,255,.25)">→</span>
+              <span class="av" style="background:rgba(236,198,120,.18);color:#ECC678;border:1px solid #ECC678">C</span>
+              <span class="mono" style="color:rgba(255,255,255,.55)">claude-opus</span>
+              <span class="badge" style="background:rgba(147,180,242,.14);color:#93B4F2;margin-left:auto">awaiting review</span>
+            </div>
+          </div>
+        </div>
+        <div class="btnrow">
+          <span class="btn" style="background:#93B4F2;color:#0B0D10">Accept</span>
+          <span class="btn" style="background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12)">Request changes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant B: Indigo -->
+  <div class="option pal" data-choice="B-indigo" onclick="toggleSelect(this)">
+    <div class="inner" style="background:#191B26">
+      <h4>B · Indigo</h4>
+      <p class="sub">Linear 本尊氛围:底色亮一档、明确的蓝紫调。"软"一些、更有产品温度,但黑不够纯,三色 persona 的对比略降。</p>
+      <div class="layers">
+        <div class="layer" style="background:#191B26;border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.5)">page<br>#191B26</div>
+        <div class="layer" style="background:#20222F;border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.5)">surface<br>#20222F</div>
+        <div class="layer" style="background:#272A3A;border:1px solid rgba(255,255,255,.09);color:rgba(255,255,255,.55)">raised<br>#272A3A</div>
+        <div class="layer" style="background:#2F3246;border:1px solid rgba(255,255,255,.11);color:rgba(255,255,255,.6)">overlay<br>#2F3246</div>
+      </div>
+      <div class="chiprow">
+        <span class="chip" style="background:rgba(236,198,120,.14);color:#ECC678;border:1px solid rgba(236,198,120,.4)">产品</span>
+        <span class="chip" style="background:rgba(147,180,242,.14);color:#93B4F2;border:1px solid rgba(147,180,242,.4)">设计</span>
+        <span class="chip" style="background:rgba(123,216,160,.14);color:#7BD8A0;border:1px solid rgba(123,216,160,.4)">开发</span>
+        <span class="chip" style="background:rgba(229,97,92,.12);color:#E5615C">danger</span>
+        <span class="chip" style="background:rgba(217,162,61,.12);color:#D9A23D">warn</span>
+      </div>
+      <div class="mini" style="background:#191B26;border:1px dashed rgba(255,255,255,.08)">
+        <div class="card" style="background:#20222F;border:1px solid rgba(255,255,255,.08);box-shadow:0 1px 3px rgba(0,0,0,.5)">
+          <div class="edge" style="background:#7BD8A0"></div>
+          <div style="padding-left:8px">
+            <div class="t">t1-core <span class="mono" style="font-weight:400;font-size:10px;color:rgba(255,255,255,.35);margin-left:6px">greet-cli</span></div>
+            <div class="s">实现 greet 核心函数与表驱动单测</div>
+            <div class="meta">
+              <span class="av" style="background:rgba(123,216,160,.18);color:#7BD8A0;border:1px solid #7BD8A0">O</span>
+              <span class="mono" style="color:rgba(255,255,255,.55)">opencode</span>
+              <span style="color:rgba(255,255,255,.25)">→</span>
+              <span class="av" style="background:rgba(236,198,120,.18);color:#ECC678;border:1px solid #ECC678">C</span>
+              <span class="mono" style="color:rgba(255,255,255,.55)">claude-opus</span>
+              <span class="badge" style="background:rgba(147,180,242,.14);color:#93B4F2;margin-left:auto">awaiting review</span>
+            </div>
+          </div>
+        </div>
+        <div class="btnrow">
+          <span class="btn" style="background:#93B4F2;color:#191B26">Accept</span>
+          <span class="btn" style="background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.12)">Request changes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="spec">
+  <div class="label" style="margin-bottom:14px">TYPE SPECIMEN — Inter(UI 声部)× JetBrains Mono(数据声部)· 与底色无关,单独确认</div>
+  <table>
+    <tr><td class="lbl">display / 24 / 600</td><td style="font-size:24px;font-weight:600">Squad orchestration</td></tr>
+    <tr><td class="lbl">title / 18 / 600</td><td style="font-size:18px;font-weight:600">greet-cli — feature</td></tr>
+    <tr><td class="lbl">heading / 15 / 600</td><td style="font-size:15px;font-weight:600">派发任务到坐席</td></tr>
+    <tr><td class="lbl">body / 13 / 400 ← UI 基准</td><td style="font-size:13px">所有正文与控件文字使用 13px,行高 1.4。密度来自小而清晰,不是小而模糊。</td></tr>
+    <tr><td class="lbl">caption / 12 / 400</td><td style="font-size:12px;color:rgba(255,255,255,.6)">次级说明文字用 60% 白</td></tr>
+    <tr><td class="lbl">micro / 11 / 500</td><td style="font-size:11px;font-weight:500;color:rgba(255,255,255,.38);letter-spacing:.4px;text-transform:uppercase">SECTION LABEL</td></tr>
+    <tr><td class="lbl">data / mono 12</td><td class="mono" style="font-size:12px;color:rgba(255,255,255,.6)">t1-core · opencode · checkpoint · 2026-06-11T14:02:11Z</td></tr>
+    <tr><td class="lbl">data focal / mono 13</td><td class="mono" style="font-size:13px;color:#7BD8A0">$ pactify serve --seat claude-opus</td></tr>
+  </table>
+</div>
+</div>

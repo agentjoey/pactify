@@ -1,0 +1,257 @@
+<style>
+  .cv { font-family: -apple-system, "Inter", system-ui, sans-serif; }
+  .cv * { box-sizing: border-box; }
+  .cv .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  .stage { position: relative; height: 640px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.1);
+           background:
+             radial-gradient(1200px 500px at 70% -10%, rgba(147,180,242,.06), transparent 60%),
+             radial-gradient(900px 400px at 10% 110%, rgba(123,216,160,.05), transparent 60%),
+             #191B26; }
+  .stage .grid { position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px); background-size: 24px 24px;
+                 mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%); }
+  .stage svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  .tbar { position: absolute; top: 14px; left: 14px; display: flex; gap: 2px; align-items: center; background: rgba(39,42,58,.7); backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+  .tbtn { font-size: 12px; font-weight: 500; color: rgba(255,255,255,.78); padding: 5px 11px; border-radius: 7px; display: flex; align-items: center; gap: 6px; }
+  .tbtn .ic { opacity: .6; font-size: 11px; }
+  .tbtn.on { background: linear-gradient(180deg, rgba(147,180,242,.22), rgba(147,180,242,.12)); color: #B8CFFA; box-shadow: inset 0 0 0 1px rgba(147,180,242,.3); }
+  .legend { position: absolute; top: 20px; right: 16px; display: flex; gap: 12px; font-size: 10.5px; color: rgba(255,255,255,.6); background: rgba(39,42,58,.7);
+            backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.1); border-radius: 999px; padding: 6px 14px; }
+  .legend i { display: inline-block; width: 14px; height: 0; border-top: 2px dashed; margin-right: 5px; vertical-align: middle; }
+  .hud { position: absolute; bottom: 16px; right: 16px; display: flex; align-items: center; gap: 2px; background: rgba(39,42,58,.75); backdrop-filter: blur(10px);
+         border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 4px; font-size: 12px; color: rgba(255,255,255,.7); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+  .hud span { padding: 4px 10px; border-radius: 6px; }
+  .hud .pct { font-size: 11px; color: rgba(255,255,255,.5); }
+  .mmap { position: absolute; bottom: 16px; left: 16px; width: 150px; height: 86px; background: rgba(32,34,47,.6); backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,.1); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+  .mmap b { position: absolute; border-radius: 2px; opacity: .85; }
+  .mmap .view { position: absolute; border: 1px solid rgba(255,255,255,.4); border-radius: 3px; background: rgba(255,255,255,.05); }
+
+  /* ── seat station v2: a teammate, not a box ── */
+  .seat { position: absolute; width: 218px; border-radius: 14px; padding: 13px 14px 12px;
+          background: linear-gradient(160deg, rgba(47,50,70,.9), rgba(32,34,47,.92));
+          border: 1px solid rgba(255,255,255,.1); box-shadow: 0 8px 24px rgba(0,0,0,.4); backdrop-filter: blur(8px); }
+  .seat::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px; border-radius: 14px 14px 0 0; background: var(--seat-accent); opacity: .8; }
+  .seat .row { display: flex; align-items: center; gap: 10px; }
+  .pava { position: relative; width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 2px 8px rgba(0,0,0,.4); }
+  .pava .glyph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; color: rgba(13,14,20,.9); }
+  .pava .presence { position: absolute; right: -3px; bottom: -3px; width: 11px; height: 11px; border-radius: 50%; border: 2.5px solid #20222F; }
+  .seat .name { font-size: 13.5px; font-weight: 650; color: rgba(255,255,255,.95); letter-spacing: .1px; }
+  .seat .vendor { font-size: 9.5px; color: rgba(255,255,255,.4); margin-top: 1px; }
+  .seat .rolemark { margin-left: auto; display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+  .rolechip { font-size: 8.5px; font-weight: 650; padding: 1.5px 7px; border-radius: 999px; letter-spacing: .5px; text-transform: uppercase; }
+  .seat .now { margin-top: 11px; border-radius: 8px; padding: 7px 9px; background: rgba(13,14,20,.45); border: 1px solid rgba(255,255,255,.06);
+               font-size: 10.5px; display: flex; align-items: center; gap: 7px; }
+  .seat .now .lab { color: rgba(255,255,255,.38); font-size: 9px; text-transform: uppercase; letter-spacing: .5px; }
+  .eq { display: inline-flex; gap: 1.5px; align-items: flex-end; height: 10px; }
+  .eq i { width: 2.5px; background: #7BD8A0; border-radius: 1px; animation: eq 1s ease-in-out infinite; }
+  .eq i:nth-child(1){height:5px} .eq i:nth-child(2){height:9px;animation-delay:.15s} .eq i:nth-child(3){height:6px;animation-delay:.3s}
+  @keyframes eq { 50% { transform: scaleY(.45); } }
+
+  /* ── task card v2: medallion + wash + lifecycle, no hard frame ── */
+  .task { position: absolute; width: 246px; border-radius: 12px; padding: 12px 13px 11px;
+          background: linear-gradient(170deg, color-mix(in srgb, var(--st, #20222F) 9%, #20222F), #1E202B 55%);
+          border: 1px solid rgba(255,255,255,.09); box-shadow: 0 6px 20px rgba(0,0,0,.42); }
+  .task .top { display: flex; align-items: center; gap: 8px; }
+  .med { width: 24px; height: 24px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0;
+         background: color-mix(in srgb, var(--st, #888) 18%, transparent); color: var(--st, #ccc);
+         box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st, #888) 45%, transparent); }
+  .task .tid { font-size: 11px; color: rgba(255,255,255,.45); }
+  .task .tt { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.94); margin-top: 1px; }
+  .task .more { margin-left: auto; color: rgba(255,255,255,.3); letter-spacing: 1.5px; }
+  .task .ts { font-size: 11px; color: rgba(255,255,255,.42); margin: 7px 0 0 32px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .task .bot { display: flex; align-items: center; gap: 5px; margin: 10px 0 0 32px; }
+  .av16 { width: 17px; height: 17px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 8.5px; font-weight: 800; color: rgba(13,14,20,.85); }
+  .life { display: flex; gap: 3px; margin-left: auto; align-items: center; }
+  .life i { width: 13px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.1); }
+  .life i.done { background: var(--st, #7BD8A0); }
+  .life i.cur { background: var(--st, #7BD8A0); box-shadow: 0 0 6px color-mix(in srgb, var(--st, #7BD8A0) 70%, transparent); }
+  .task.awaiting { box-shadow: 0 6px 24px rgba(0,0,0,.42), 0 0 22px rgba(147,180,242,.18); border-color: rgba(147,180,242,.35); }
+  .task.draft { border-style: dashed; border-color: rgba(255,255,255,.16); background: rgba(32,34,47,.4); box-shadow: none; }
+
+  .pill { position: absolute; font-size: 9.5px; font-weight: 550; padding: 2.5px 10px; border-radius: 999px; background: rgba(39,42,58,.95); border: 1px solid #93B4F2;
+          color: #B8CFFA; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.45); backdrop-filter: blur(6px); }
+  .pill.amber { border-color: rgba(217,162,61,.8); color: #E8C27A; }
+
+  .frame { position: absolute; border-radius: 16px; background: rgba(30,32,44,.35); border: 1px solid rgba(255,255,255,.08); }
+  .frame .fhead { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,.06);
+                  background: linear-gradient(90deg, rgba(123,216,160,.07), rgba(39,42,58,.5) 40%); border-radius: 16px 16px 0 0; backdrop-filter: blur(6px); }
+  .frame .fname { font-size: 13.5px; font-weight: 650; color: rgba(255,255,255,.95); }
+  .frame .fbranch { font-size: 10.5px; color: rgba(255,255,255,.38); }
+  .fprog { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 10px; color: rgba(255,255,255,.5); }
+  .fbar { width: 64px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.09); overflow: hidden; }
+  .fbar i { display: block; width: 33%; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #7BD8A0, #9FE8BE); }
+
+  .ctx { position: absolute; width: 182px; background: rgba(47,50,70,.96); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.14); border-radius: 11px; padding: 5px;
+         box-shadow: 0 16px 40px rgba(0,0,0,.6); z-index: 5; }
+  .ctx .ci { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,.88); padding: 6.5px 9px; border-radius: 7px; }
+  .ctx .ci.hot { background: linear-gradient(180deg, rgba(147,180,242,.2), rgba(147,180,242,.1)); }
+  .ctx .ci kbd { margin-left: auto; font-size: 9.5px; color: rgba(255,255,255,.4); background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);
+                 border-radius: 4px; padding: 0 5px; font-family: ui-monospace, Menlo, monospace; }
+  .ctx .sep { height: 1px; background: rgba(255,255,255,.08); margin: 4px 7px; }
+  .ctx .ci.danger { color: #F08A86; }
+
+  @keyframes flow { to { stroke-dashoffset: -28; } }
+  .wires .dep { stroke-dasharray: 7 7; animation: flow 1.6s linear infinite; }
+  .wires .wait { stroke-dasharray: 4 5; animation: flow 2.4s linear infinite; }
+</style>
+
+<h2>板 ②/④ v2 — Canvas hi-fi(坐席人格化 + 任务卡重设计)</h2>
+<p class="subtitle">改动:① 坐席=工作伙伴——专属渐变头像+在线状态点+厂牌+「正在做」活动条(均衡器动效);② 任务卡弃用色框——状态徽章(左上方块)+ 同色微染卡面 + 底部生命周期进度段;③ 舞台加氛围光、玻璃态浮层、更柔的阴影。</p>
+
+<div class="cv">
+<div class="stage">
+  <div class="grid"></div>
+  <svg class="wires" viewBox="0 0 1160 640">
+    <path class="dep" d="M 628 206 C 604 206, 598 206, 576 206" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="1.6"/>
+    <path class="dep" d="M 596 348 C 668 348, 710 310, 736 262" fill="none" stroke="#D9A23D" stroke-width="1.6"/>
+    <path class="wait" d="M 628 182 C 480 150, 392 152, 246 162" fill="none" stroke="#93B4F2" stroke-width="1.5"/>
+  </svg>
+
+  <div class="tbar">
+    <span class="tbtn"><span class="ic">▢</span>Feature</span>
+    <span class="tbtn"><span class="ic">＋</span>Task</span>
+    <span style="width:1px;height:16px;background:rgba(255,255,255,.1);margin:0 3px"></span>
+    <span class="tbtn on"><span class="ic">◉</span>Comms</span>
+  </div>
+
+  <div class="legend">
+    <span><i style="border-color:#93B4F2"></i>waiting</span>
+    <span><i style="border-color:#D9A23D"></i>blocked</span>
+    <span style="opacity:.6">◐ idle</span>
+  </div>
+
+  <!-- seat: claude-opus -->
+  <div class="seat" style="left:26px;top:108px;--seat-accent:linear-gradient(90deg,#ECC678,#93B4F2)">
+    <div class="row">
+      <div class="pava" style="background:linear-gradient(135deg,#F2D38C,#D9A23D 55%,#B07A28)">
+        <span class="glyph">C</span>
+        <span class="presence" style="background:#93B4F2"></span>
+      </div>
+      <div>
+        <div class="name">claude-opus</div>
+        <div class="vendor mono">claude-code · fable-5</div>
+      </div>
+      <div class="rolemark">
+        <span class="rolechip" style="background:rgba(236,198,120,.15);color:#ECC678">orch</span>
+        <span class="rolechip" style="background:rgba(147,180,242,.15);color:#93B4F2">review</span>
+      </div>
+    </div>
+    <div class="now">
+      <span class="lab">queue</span>
+      <span class="mono" style="color:rgba(255,255,255,.7)">t2-cli</span>
+      <span style="margin-left:auto;color:#93B4F2;font-size:9px">1 waiting ●</span>
+    </div>
+  </div>
+
+  <!-- seat: opencode -->
+  <div class="seat" style="left:26px;top:252px;--seat-accent:linear-gradient(90deg,#7BD8A0,#4EB3A0)">
+    <div class="row">
+      <div class="pava" style="background:linear-gradient(135deg,#9FE8BE,#5CC78F 55%,#2E8F66)">
+        <span class="glyph">O</span>
+        <span class="presence" style="background:#7BD8A0;box-shadow:0 0 6px #7BD8A0"></span>
+      </div>
+      <div>
+        <div class="name">opencode</div>
+        <div class="vendor mono">opencode cli</div>
+      </div>
+      <div class="rolemark"><span class="rolechip" style="background:rgba(123,216,160,.15);color:#7BD8A0">worker</span></div>
+    </div>
+    <div class="now">
+      <span class="eq"><i></i><i></i><i></i></span>
+      <span class="mono" style="color:rgba(255,255,255,.7)">t3-docs</span>
+      <span style="margin-left:auto;color:rgba(255,255,255,.35);font-size:9px">12m</span>
+    </div>
+  </div>
+
+  <!-- feature frame -->
+  <div class="frame" style="left:308px;top:80px;width:620px;height:392px">
+    <div class="fhead">
+      <span class="fname">greet-cli</span>
+      <span class="fbranch mono">feat/greet-cli</span>
+      <span class="fprog"><span class="mono">1/3 accepted</span><span class="fbar"><i></i></span></span>
+    </div>
+  </div>
+
+  <!-- t1 accepted -->
+  <div class="task" style="left:338px;top:158px;--st:#7BD8A0">
+    <div class="top">
+      <span class="med">✓</span>
+      <div><div class="tid mono">t1-core</div><div class="tt">核心函数</div></div>
+      <span class="more">⋯</span>
+    </div>
+    <div class="ts">greet 核心函数 + 表驱动单测</div>
+    <div class="bot">
+      <span class="av16" style="background:linear-gradient(135deg,#9FE8BE,#5CC78F)">O</span>
+      <span class="mono" style="font-size:9.5px;color:rgba(255,255,255,.45)">opencode</span>
+      <span class="life"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i></span>
+    </div>
+  </div>
+
+  <!-- t2 awaiting -->
+  <div class="task awaiting" style="left:630px;top:158px;--st:#93B4F2">
+    <div class="top">
+      <span class="med">◉</span>
+      <div><div class="tid mono">t2-cli</div><div class="tt">CLI 入口</div></div>
+      <span class="more">⋯</span>
+    </div>
+    <div class="ts">读参打印问候,无参默认</div>
+    <div class="bot">
+      <span class="av16" style="background:linear-gradient(135deg,#9FE8BE,#5CC78F)">O</span>
+      <span style="color:rgba(255,255,255,.25);font-size:10px">→</span>
+      <span class="av16" style="background:linear-gradient(135deg,#F2D38C,#D9A23D)">C</span>
+      <span class="life"><i class="done"></i><i class="done"></i><i class="cur"></i><i></i></span>
+    </div>
+  </div>
+
+  <!-- t3 blocked -->
+  <div class="task" style="left:358px;top:308px;--st:#D9A23D">
+    <div class="top">
+      <span class="med">⛔</span>
+      <div><div class="tid mono">t3-docs</div><div class="tt">使用文档</div></div>
+      <span class="more">⋯</span>
+    </div>
+    <div class="ts">README usage,示例与真实行为一致</div>
+    <div class="bot">
+      <span class="av16" style="background:linear-gradient(135deg,#9FE8BE,#5CC78F)">O</span>
+      <span class="mono" style="font-size:9.5px;color:rgba(255,255,255,.45)">opencode</span>
+      <span class="life"><i class="cur"></i><i></i><i></i><i></i></span>
+    </div>
+  </div>
+
+  <span class="pill" style="left:380px;top:138px">⏳ awaiting review · t2-cli</span>
+  <span class="pill amber" style="left:650px;top:330px">⛔ blocked by t2-cli</span>
+
+  <div class="ctx" style="left:618px;top:372px">
+    <div class="ci hot">⚡ Dispatch<kbd>D</kbd></div>
+    <div class="ci">✎ Edit task<kbd>E</kbd></div>
+    <div class="ci">☰ View spec<kbd>V</kbd></div>
+    <div class="sep"></div>
+    <div class="ci danger">✕ Delete draft<kbd>⌫</kbd></div>
+  </div>
+
+  <div class="mmap">
+    <b style="left:14px;top:30px;width:10px;height:6px;background:#ECC678"></b>
+    <b style="left:14px;top:44px;width:10px;height:6px;background:#7BD8A0"></b>
+    <b style="left:50px;top:28px;width:14px;height:7px;background:#7BD8A0"></b>
+    <b style="left:82px;top:28px;width:14px;height:7px;background:#93B4F2"></b>
+    <b style="left:58px;top:48px;width:14px;height:7px;background:#D9A23D"></b>
+    <div class="view" style="left:36px;top:16px;width:90px;height:54px"></div>
+  </div>
+
+  <div class="hud"><span>−</span><span class="pct mono">100%</span><span>+</span><span>⊡</span></div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve-v2" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>这版通过</h3><p>坐席人格化 + 徽章/微染/生命周期卡 + 氛围光照此实装</p></div>
+  </div>
+  <div class="option" data-choice="adjust-v2" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>还要调</h3><p>点这个并在终端说哪里</p></div>
+  </div>
+</div>
+</div>

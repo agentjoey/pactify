@@ -1,143 +1,175 @@
 # Dashboard v2 — commercial-SaaS polish (Linear-grade) — Design
 
-- **Date:** 2026-06-11 · **Status:** approved direction (brainstorm); visual constants
-  pending the mockup gate (§8) — marked `[MOCKUP]` throughout.
+- **Date:** 2026-06-11 · **Status:** approved (brainstorm + 5 mockup boards validated)
 - **Origin:** user: "按商业化 SaaS 产品的标准 polish 整体 UI 和交互,在审美和交互上做到最好".
-- **Decisions locked:** scope = B 旗舰版 (design system + full interaction upgrade);
-  气质 = **Linear 精致密度感** (dense, refined, keyboard-first); **⌘K palette = in**.
-- **Benchmarks:** Linear (density/keyboard/speed), Vercel (dark restraint), n8n/Langflow
-  (commercial React Flow canvases), pactify.dev site (brand continuity: 3 persona colors,
-  cable/pulse motion language, mono-as-data).
+- **Decisions locked:** scope = B 旗舰版 + Office mode; 气质 = Linear 精致密度感;
+  palette = **B·Indigo**; avatars = **蚁群八品级** (rotated 45° cw); ⌘K in;
+  **canvas dual-mode with Office as the DEFAULT landing mode**; ant-crawl edge motion.
+- **Mockups (normative, committed):** `docs/superpowers/mockups/dashboard-v2/`
+  board1 tokens/type · board2 canvas cards/stations · board2-ants avatar set ·
+  board3 kanban+topbar · board4 ⌘K/timeline/detail/ant-crawl · board5 office mode.
+  Implementation matches the boards; this doc carries the exact constants.
 
-## §0 Current-state audit (what "简陋" means, concretely)
+## §1 Design system foundation (LOCKED)
 
-Six systemic gaps: (1) no token layer — 3 role colors + ~21 components with hard-coded
-GitHub-dark hexes; (2) zero typography design — system-ui, 9–12px everywhere, no scale;
-(3) no spacing discipline; (4) hand-rolled one-off buttons/inputs/modals with incomplete
-states and no focus rings; (5) React Flow defaults — no grid/minimap/zoom HUD/node
-elevation; (6) no empty states or guidance. ~2,600 lines across web/src/components.
+**Color tokens** (`web/src/tokens.css`, Tailwind v4 `@theme`):
 
-## §1 Design system foundation
+```
+--bg-page:    #191B26   --bg-surface: #20222F
+--bg-raised:  #272A3A   --bg-overlay: #2F3246
+--border-subtle: rgba(255,255,255,.07)   --border-strong: rgba(255,255,255,.10)
+--text-1: rgba(255,255,255,.92)  --text-2: rgba(255,255,255,.60)  --text-3: rgba(255,255,255,.38)
+--role-product: #ECC678  (orchestrator/编排 — was #ffd479, desaturated)
+--role-design:  #93B4F2  (reviewer/评审   — was #8ab4ff)
+--role-dev:     #7BD8A0  (worker/开发     — was #6ee7a0)
+--role-qa:      #5FC8C3  --role-pm:   #E8A85C  --role-designer: #A89BF0
+--role-research:#C99BD8  --role-ops:  #EE9A6B
+--danger: #E5615C  --warn: #D9A23D  --success: #7BD8A0
+radius: 4/6/10px · shadows 3 steps · site keeps its own palette (legacy role hues OK there)
+```
 
-**Color tokens** (`web/src/tokens.css`, Tailwind v4 `@theme`; exact values `[MOCKUP]`):
-- Backgrounds, 4 layers ~4% luminance apart: `--bg-page` (near-black blue-gray) →
-  `--bg-surface` (cards) → `--bg-raised` (popovers/hover) → `--bg-overlay` (modals).
-- Borders: translucent white only — `--border-subtle` (≈6% white), `--border-strong`
-  (≈10%). No opaque grays anywhere.
-- Brand persona colors desaturated 10–15% for dense UI: `--role-product` (yellow),
-  `--role-design` (blue), `--role-dev` (green) — identity & status accents ONLY.
-- Semantic: `--success`, `--warn`, `--danger`, `--info`.
-- Text 3 layers: `--text-1` 92% / `--text-2` 60% / `--text-3` 38% white.
-- Radius 3 (4/6/10px), shadow 3 (card/raised/overlay), all tokens.
+**Typography:** Inter variable self-hosted, base **13px** lh 1.4, scale
+11/12/13/15/18/24, weights 600/500/400, `tabular-nums`. Data voice (ids, seats,
+event types, timestamps, branches) = JetBrains Mono self-hosted, half-step smaller,
+`--text-3` unless focal. Type specimen = board1.
 
-**Typography:**
-- UI: **Inter variable**, self-hosted (no network fetch), base **13px**, line-height 1.4,
-  6-step scale (11/12/13/15/18/24), `tabular-nums` for numerics.
-- Data voice: task ids, seat ids, event types, timestamps, branch names in **JetBrains
-  Mono** (self-hosted), one half-step smaller, `--text-3` unless focal — the
-  "data vs chrome" two-voice system continuing the site's terminal-real brand.
-- Weights: 600 headings / 500 interactive / 400 body.
+**Primitives** (`web/src/components/ui/`, sole source app-wide): Button
+(primary/ghost/danger × sm/md), Input, Select, Modal (180ms scale+fade, Esc, focus
+trap), Popover, Tooltip (400ms), Badge, Kbd, EmptyState, Avatar (ant SVG on
+role-tinted gradient squircle). Motion: 120ms micro / 200ms layout,
+`cubic-bezier(0.25,1,0.5,1)`, hover = luminance, all behind reduced-motion.
 
-**Primitives** (`web/src/components/ui/`, each with vitest; the ONLY source of these
-controls app-wide — replaces all hand-rolled instances):
-`Button` (primary/ghost/danger × sm/md, full hover/focus/active/disabled + focus ring),
-`Input`, `Select`, `Modal` (180ms scale+fade, Esc, focus trap, overlay token),
-`Popover`, `Tooltip` (400ms delay), `Badge` (status variants), `Kbd`, `EmptyState`,
-`Avatar` (seat initial, role-color 15%-alpha bg + solid ring).
+## §2 Ant avatar system (LOCKED — board2-ants)
 
-**Motion system:** two durations (120ms micro / 200ms layout), single curve
-`cubic-bezier(0.25, 1, 0.5, 1)`; hover = luminance shift, never translation; every
-animation behind `prefers-reduced-motion` (existing discipline).
+One colony, eight castes; geometric stamp style (dark charcoal body `#2A2C3A`,
+white-alpha outline, role color ONLY on two abdomen bands + the caste prop), whole
+figure rotated **45° clockwise** (crawling toward upper-right). Assets =
+`web/src/components/ui/ants/*.tsx` (inline SVG components, sizes 14/22/34/72 with a
+bold-stroke small variant at ≤18px).
 
-## §2 Canvas redesign
+| Caste | Role key | Prop |
+|---|---|---|
+| 蚁后 Queen | orchestrator | crown + wings + amber bands |
+| 兵蚁 Guard | reviewer | big head + mandibles + blue visor |
+| 工蚁 Builder | worker (and fallback) | carried green cube |
+| 捕虫蚁 Catcher | qa / test* | teal magnifier with red bug |
+| 酿蜜蚁 Brewer | product / pm | checklist scroll |
+| 彩绘蚁 Painter | design* | palette crown (3 dots) |
+| 探路蚁 Scout | research | long antennae + signal arcs |
+| 巡巢蚁 Keeper | ops / operation / devops | gear |
 
-- **Surface:** dot-grid background (~2% white dots `[MOCKUP]`), zoom HUD bottom-right
-  (−/percent/+/fit), **MiniMap** bottom-left (nodes tinted by role color, frosted
-  backdrop), fitView entry with 300ms ease.
-- **Task card** (shared genome with kanban cards): 4px status-color left edge bar;
-  13px/600 title + hover-revealed `⋯` menu; one-line spec excerpt in `--text-3`;
-  owner→reviewer Avatar chips (mono labels); status Badge + deps count; hover = raise
-  shadow + border one step brighter. Stale dot & awaiting pulse preserved on the new card.
-- **Feature frame:** translucent panel; header = name + branch (mono) + progress ring
-  `accepted/total`; all-accepted state tints header green and lights the merge button.
-- **Seat station:** Avatar + name + role chips + status line (mono: "⚡ working on
-  t1-core" / "idle"); drag-over = scale 1.04 + role-color halo (replaces border tint).
-- **Edges:** dep = smoothstep + slow flowing dash; comms wait edges keep dash but reason
-  chips become pill labels; selected edge thickens + highlights both endpoints.
-- **Interactions:** snap alignment guides while dragging; marquee multi-select;
-  right-click context menus (task: dispatch/edit/view spec/delete-draft; canvas: new
-  feature/new task); double-click rename (drafts); Esc cancels layer-by-layer; Del
-  removes selected drafts.
-- **Empty state:** dashed placeholder frame + "⌘K or click to create your first
-  feature" + 3-step mini guide.
-- **Invariants preserved:** layout-lens isolation (display layers never reach
-  layout.json), comms overlay semantics, replay read-only short-circuits,
-  observe-only hides all mutations.
+Mapping: protocol-hard roles map first (orchestrator>reviewer>worker priority for
+multi-role seats); free-form roster role strings match by keyword (case-insensitive
+substring); unmatched → Builder. Seat INDIVIDUALITY = avatar pad gradient derived
+from seat-id hash within the caste's hue family + name; the ant itself is per-caste.
 
-## §3 Kanban
+## §3 Canvas — dual mode, Office is DEFAULT
 
-Column header = status dot + name + count badge; cards reuse §2 task card; higher
-density (Linear-list tightness); awaiting_review column keeps the blue breathing ring on
-its cards. No cross-column drag (protocol verbs drive state) — hover tooltip explains
-"status flows through pact verbs" to prevent the drag expectation.
+Mode segment top-left: **Office | Plan** (Office lands first).
 
-## §4 Ops
+**Office mode (board5) — agents are the subject.** Each seat = a draggable desk
+station (position persisted under a SEPARATE layout sidecar key, e.g.
+`layout.office`): header = 34px ant avatar + presence dot + name + vendor (mono) +
+status badge; three zones with parcels (task chips: status-color left edge, icon,
+id mono, title, age):
+- 手上 doing — tasks they own in assigned/in_progress
+- 收件 inbox — awaiting_review tasks where they are reviewer (+ blue glow)
+- 等回音 waiting on — their own output parked elsewhere (owner of awaiting_review;
+  blocked-by-dep tasks show here with the blocker named)
 
-Left anchor nav (Projects/Wiring/Seats) + card-based content panes; all forms on ui/
-primitives; Wiring rows = icon + status text + probe detail (mono); destructive actions
-(remove project, machine-global write) through a unified red confirm Modal. Existing
-consent-gating semantics unchanged.
+Desk status derivation (pure projection): **BUSY** green border+equalizer (owns
+in_progress, shows current task) · **REVIEW DUE** amber (non-empty inbox) ·
+**WAITING** amber (waiting-on non-empty, nothing doing) · **IDLE** 62% opacity +
+"拖任务到这张桌子即派发" hint (drop target). Side furniture: 墙上看板 wall chart
+(per-feature progress bars) + ✓ shipped 出货托盘 (accepted/merged parcels slide in).
+Parcel transit animation: on checkpoint a carrier ant carries the parcel along a
+lane to the reviewer desk (parcel half-lit at both ends while in transit); accept →
+slides into the tray; changes → returns on a red lane.
 
-## §5 Shell, ⌘K, keyboard
+**Plan mode** = existing feature/task-frame canvas re-skinned (board2-v2): dot-grid
++ ambient role-color glows, zoom HUD, role-tinted MiniMap, frosted toolbar/legend.
+Task card v2: status MEDALLION (icon squircle) + id (mono) + title two-tier, 9%
+status-color wash gradient, bottom LIFECYCLE segments (assigned→in_progress→review→
+accepted, current glows) — NO hard color frames; awaiting keeps a soft glow; draft =
+dashed. Feature frame: gradient header + branch mono + progress bar. Drag-over seat:
+scale 1.04 + role halo. Context menu (Dispatch/Edit/View spec/Delete + Kbd), snap
+guides, marquee select, dbl-click rename, Esc/Del.
 
-- **TopBar:** left = 3-color cable mini-mark + project switcher (Popover with search);
-  center = segmented control Kanban/Canvas/Ops with `1/2/3` Kbd hints; right = live
-  badge (green breathing dot / amber "replay" / gray offline) + acting-seat Avatar.
-- **⌘K palette** (new dep: `cmdk`, ~5KB): switch project, switch view, jump to task
-  (search id/title → canvas fitView focuses the card), new feature/task, dispatch,
-  jump replay to event N. Footer shows shortcut hints. Observe-only mode hides mutating
-  commands.
-- **Global keys:** `1/2/3` views, `⌘K`, `?` shortcut cheat-sheet panel, Esc chain.
-- **ReplayBar → timeline:** thin ruler with per-event ticks colored by event type
-  `[MOCKUP: tick palette]`, hover tick floats an event preview card, drag handle
-  replaces the native range input (keyboard ←/→ still steps ±1); LIVE button with
-  breathing red dot when live, amber state while replaying.
+**Ant-crawl edges (both modes + comms overlay):** custom React Flow edge embeds an
+`animateMotion` ant along the real path (rotate=auto): wait edges = blue messenger
+ant; dep/blocked = amber carrier ant with a tiny cargo cube (board4 §1 demo). Cap 6
+concurrent ants (overflow → static dashed); reduced-motion → static dashed always.
 
-## §6 Engineering
+## §4 Kanban + TopBar (board3)
 
-- **New deps:** `cmdk` only, plus self-hosted font files (Inter var + JetBrains Mono
-  subset). Everything else = Tailwind v4 `@theme` tokens + CSS.
-- **Architecture:** `tokens.css` → `components/ui/*` → business components re-skinned.
-  Canvas.tsx (635 lines) splits out `canvas/Toolbar.tsx`, `canvas/ContextMenu.tsx`,
-  `canvas/Hud.tsx` (minimap/zoom). No logic rewrites — visual + interaction layer only.
-- **Two waves:** Wave 1 = §1 + §2 cards/surface + §3 + empty states (visual
-  transformation). Wave 2 = ⌘K + context menus + marquee + snap + timeline + §4 + §5
-  TopBar.
-- **Constraints carried over:** dist rebuilt+committed in every web-touching commit;
-  vitest baseline (99) only grows; a11y (focus rings, aria on menus/palette);
-  reduced-motion on every animation; replay/observe-only/lens invariants regression-
-  tested after re-skin.
+TopBar: cable mini-mark + wordmark · project switcher chip (Popover+search) ·
+centered segmented control with `1/2/3` Kbd hints · ⌘K hint · live badge (green
+breathing / amber ● replay / gray offline) · acting-seat ant avatar. Observe-only:
+"👁 observing" badge with hover explainer (how to start with --seat).
 
-## §7 Testing
+Kanban: 5 columns (assigned / in progress / awaiting review / changes req. /
+accepted), headers = status dot + uppercase label + count chip; cards share the
+task-card-v2 genome with 14px bold-stroke ant mini avatars (owner → reviewer);
+in-progress keeps stale amber dot; awaiting glows; accepted column at 82% opacity;
+empty column = dashed ghost text. No cross-column drag (hover header tooltip:
+"status flows through pact verbs").
 
-- ui/ primitives: unit tests per component (variants, disabled, focus ring class,
-  Esc/focus-trap for Modal).
-- Re-skin regressions: existing 99 tests stay green (testids preserved); new tests for
-  context menu actions, marquee selection state, ⌘K command dispatch, timeline
-  tick→jump, keyboard view switching.
-- Visual sanity: check-dist-style string asserts for key new classnames in built dist.
+## §5 ⌘K · replay timeline · task detail panel (board4)
 
-## §8 Mockup gate (blocking Wave 1 implementation)
+- **⌘K** (cmdk): groups Tasks (jump → canvas focus) / Actions (accept, request
+  changes, replay-to-event — hidden in observe mode) / Navigate (view, project).
+  Footer hints. `⌘P` project switch alias.
+- **Replay timeline** replaces the slider: ruler with per-event ticks colored by
+  type (amber assign/init · blue review-flow · green join/checkpoint/accept · red
+  changes), played region gradient fill, unplayed ticks 35% opacity, white drag
+  handle, hover tick → event preview card, ◀▶ steps + `←/→`, `?at=N` deep link
+  (read+write URL), LIVE button ambers during replay.
+- **Task detail panel** (RightRail v2, slides over on card click, dims content
+  behind, outside-click closes): header (id·feature mono, title, status badge,
+  owner→reviewer ant chips, time-in-flight) · Spec rendered from
+  `.pact/tasks/<id>.md` (inline code highlighted) · Evidence (mono) · per-task event
+  Timeline (ant avatar + relative time; entries link "replay to here") · action row
+  (Accept primary / Changes ghost) gated by role + live mode.
 
-When the user is back at the dev machine, validate 4 boards via the visual companion;
-lock `[MOCKUP]` constants into this spec afterwards:
-1. Token palette + type specimen (the §1 sheet rendered).
-2. Canvas hi-fi (new task card / feature frame / seat station / edges / HUD).
-3. Kanban + TopBar.
-4. ⌘K palette + replay timeline.
+## §6 Supplementary requirements (locked in brainstorm)
 
-## §9 Out of scope (this round)
+1. Unified feedback: humanized protocol-422 toasts (e.g. self-accept → explain the
+   rule), API-failure toasts, loading skeletons, empty/error/loading triple states.
+2. Observe-mode visibility (TopBar badge, §4).
+3. Feature focus mode (Plan): click feature header → focus (others dim/recede), Esc.
+4. Relative times on cards/desks ("3m ago", tabular).
+5. Dynamic document title `«project» · N awaiting ●` + cable favicon.
+6. Replay deep-link `?at=N` (§5).
+7. No-project landing hero (serve with empty registry → guided register panel).
+8. Office parcel-transit + crawl animations all reduced-motion-gated.
 
-Onboarding tour · light theme · canvas inertia/space-pan (C-tier, next round) ·
-proposal/approval flow (M3.3c candidate) · any protocol/serve API change — this
-milestone is strictly web/ presentation + interaction.
+Deferred: browser notifications · full canvas keyboard nav · marquee batch dispatch ·
+sounds · real seat heartbeat (presence derives from last event, labeled honestly).
+
+## §7 Engineering
+
+- New deps: `cmdk` only + self-hosted fonts (Inter var, JetBrains Mono subset).
+- `tokens.css` → `ui/` primitives (each with vitest) → re-skin. Canvas.tsx splits:
+  `canvas/{PlanView,OfficeView,Toolbar,ContextMenu,Hud,edges/AntEdge}.tsx`.
+  Office desk positions: layout sidecar gains an OPTIONAL `office` key (additive,
+  same PUT endpoint, lens isolation unchanged).
+- **Three waves:** W1 foundation (tokens/fonts/ui/ants) + task-card v2 + kanban +
+  TopBar; W2 Office mode + ant-crawl edges + detail panel; W3 ⌘K + timeline +
+  focus mode + supplements (§6).
+- Constraints: dist rebuilt+committed every web commit; vitest baseline (99) only
+  grows; existing invariants regression-covered (replay read-only, observe-only,
+  lens isolation, reduced-motion); no protocol/serve API changes EXCEPT the
+  additive `office` layout key.
+
+## §8 Testing
+
+ui/ primitives unit tests; ant-avatar role-mapping pure fn (keyword/fallback);
+office derivation pure fn (BUSY/REVIEW DUE/WAITING/IDLE per §3 rules, zone
+membership); AntEdge renders ant ≤cap / static beyond; timeline tick coloring fn;
+?at URL round-trip; detail panel action gating; existing 99 green throughout;
+check-dist string asserts for new class names.
+
+## §9 Out of scope
+
+Light theme · onboarding tour · canvas inertia · proposal/approval flow (M3.3c
+candidate) · site changes · M3.4 relay.

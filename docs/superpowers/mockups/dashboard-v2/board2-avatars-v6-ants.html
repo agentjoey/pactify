@@ -1,0 +1,212 @@
+<style>
+  .an * { box-sizing: border-box; }
+  .an { font-family: -apple-system, "Inter", system-ui, sans-serif; }
+  .an .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+  .grid8 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .ccard { background: #191B26; border: 1px solid rgba(255,255,255,.09); border-radius: 16px; padding: 18px 12px 14px; text-align: center; }
+  .pad { width: 96px; height: 96px; margin: 0 auto; border-radius: 24px; display: flex; align-items: center; justify-content: center;
+         box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.15), 0 6px 18px rgba(0,0,0,.45); }
+  .cname { font-size: 13px; font-weight: 650; color: rgba(255,255,255,.92); margin-top: 11px; }
+  .crole { font-size: 10px; color: rgba(255,255,255,.45); margin-top: 2px; }
+  .ctag { display: inline-block; font-size: 9px; font-weight: 600; padding: 1.5px 8px; border-radius: 999px; margin-top: 7px; letter-spacing: .4px; }
+  .seat { width: 238px; border-radius: 14px; padding: 13px 14px; background: linear-gradient(160deg, rgba(47,50,70,.9), rgba(32,34,47,.92));
+          border: 1px solid rgba(255,255,255,.1); box-shadow: 0 8px 24px rgba(0,0,0,.4); position: relative; }
+  .seat::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px; border-radius: 14px 14px 0 0; background: var(--acc); opacity: .85; }
+  .seat .row { display: flex; align-items: center; gap: 10px; }
+  .sava { position: relative; width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 2px 8px rgba(0,0,0,.4); }
+  .presence { position: absolute; right: -3px; bottom: -3px; width: 11px; height: 11px; border-radius: 50%; border: 2.5px solid #20222F; }
+  .sname { font-size: 13.5px; font-weight: 650; color: rgba(255,255,255,.95); }
+  .svend { font-size: 9.5px; color: rgba(255,255,255,.4); margin-top: 1px; }
+  .rolechip { font-size: 8.5px; font-weight: 650; padding: 1.5px 7px; border-radius: 999px; letter-spacing: .5px; text-transform: uppercase; margin-left: auto; }
+</style>
+
+<h2>板 ②/④ v6 — 蚁群八品级(图章风 · 顺时针 45°)</h2>
+<p class="subtitle">回到 v4 几何图章画风:深炭身体、白描轮廓、角色色环带+道具。整体顺时针旋转 45°(蚂蚁朝右上爬,有行进感)。八角色对齐交付链路;协议硬角色为前三,其余按 roster role 关键词匹配,未匹配回退工蚁。</p>
+
+<div class="an">
+<div class="grid8">
+
+  <!-- Queen / orchestrator -->
+  <div class="ccard">
+    <div class="pad" style="background:linear-gradient(135deg,#3D3520,#221E14)">
+      <svg width="72" height="72" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round">
+        <path d="M19 5.5 L21.5 9 L24 5 L26.5 9 L29 5.5 L28 10.5 L20 10.5 Z" fill="#ECC678"/>
+        <path d="M20.5 12 C18 10, 17 8.5, 16.5 7 M27.5 12 C30 10, 31 8.5, 31.5 7" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/>
+        <circle cx="24" cy="15.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <ellipse cx="13.5" cy="25.5" rx="8" ry="3.6" fill="rgba(236,198,120,.16)" stroke="rgba(236,198,120,.42)" stroke-width=".8" transform="rotate(-24 13.5 25.5)"/>
+        <ellipse cx="34.5" cy="25.5" rx="8" ry="3.6" fill="rgba(236,198,120,.16)" stroke="rgba(236,198,120,.42)" stroke-width=".8" transform="rotate(24 34.5 25.5)"/>
+        <ellipse cx="24" cy="24.5" rx="4" ry="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <ellipse cx="24" cy="37" rx="6.6" ry="8" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M18.4 34 C20 35, 28 35, 29.6 34 M18 38.5 C20 39.5, 28 39.5, 30 38.5" stroke="#ECC678" stroke-width="1.6" fill="none"/>
+      </g></svg>
+    </div>
+    <div class="cname">蚁后 Queen</div><div class="crole">编排 · 金冠与翼</div>
+    <span class="ctag" style="background:rgba(236,198,120,.14);color:#ECC678">orchestrator</span>
+  </div>
+
+  <!-- Guard / reviewer -->
+  <div class="ccard">
+    <div class="pad" style="background:linear-gradient(135deg,#232C44,#171B28)">
+      <svg width="72" height="72" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round">
+        <path d="M18.5 11 C16 8.5, 15.5 7, 15.5 5.5 M29.5 11 C32 8.5, 32.5 7, 32.5 5.5" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/>
+        <circle cx="24" cy="16.5" r="7" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M17.5 20 C14.5 22, 13.5 24.5, 14 27 M30.5 20 C33.5 22, 34.5 24.5, 34 27" stroke="rgba(255,255,255,.42)" stroke-width="1.6" fill="none"/>
+        <rect x="17.5" y="14.1" width="13" height="3.6" rx="1.8" fill="#93B4F2" opacity=".92"/>
+        <ellipse cx="24" cy="27.5" rx="3.6" ry="4.4" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <ellipse cx="24" cy="38.5" rx="5.6" ry="6.6" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M19.2 36.5 C21 37.5, 27 37.5, 28.8 36.5 M19.6 40.5 C21.5 41.3, 26.5 41.3, 28.4 40.5" stroke="#93B4F2" stroke-width="1.6" fill="none"/>
+      </g></svg>
+    </div>
+    <div class="cname">兵蚁 Guard</div><div class="crole">评审 · 颚钳与目镜带</div>
+    <span class="ctag" style="background:rgba(147,180,242,.14);color:#93B4F2">reviewer</span>
+  </div>
+
+  <!-- Builder / worker -->
+  <div class="ccard">
+    <div class="pad" style="background:linear-gradient(135deg,#1F3329,#16231C)">
+      <svg width="72" height="72" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round">
+        <rect x="18" y="3" width="12" height="9" rx="2" fill="rgba(123,216,160,.22)" stroke="#7BD8A0" stroke-width="1.3"/>
+        <circle cx="24" cy="17.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.8 13.8 L19.2 11.6 M27.2 13.8 L28.8 11.6" stroke="rgba(255,255,255,.4)" stroke-width="1.3"/>
+        <ellipse cx="24" cy="26" rx="3.8" ry="4.6" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.4 23.5 C16 22, 14 23.5, 12.5 26 M27.6 23.5 C32 22, 34 23.5, 35.5 26 M20.6 27.5 C17 28.5, 15.5 30.5, 15 33 M27.4 27.5 C31 28.5, 32.5 30.5, 33 33" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/>
+        <ellipse cx="24" cy="37.5" rx="5.8" ry="7" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M18.8 35.5 C20.5 36.5, 27.5 36.5, 29.2 35.5 M19.2 39.8 C21 40.6, 27 40.6, 28.8 39.8" stroke="#7BD8A0" stroke-width="1.6" fill="none"/>
+      </g></svg>
+    </div>
+    <div class="cname">工蚁 Builder</div><div class="crole">开发 · 扛着任务块</div>
+    <span class="ctag" style="background:rgba(123,216,160,.14);color:#7BD8A0">worker</span>
+  </div>
+
+  <!-- QA -->
+  <div class="ccard">
+    <div class="pad" style="background:linear-gradient(135deg,#1E3A3C,#142122)">
+      <svg width="72" height="72" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round">
+        <circle cx="31" cy="7.5" r="4.6" fill="rgba(95,200,195,.12)" stroke="#5FC8C3" stroke-width="1.6"/>
+        <path d="M27.8 10.8 L26 13" stroke="#5FC8C3" stroke-width="1.8"/>
+        <ellipse cx="31" cy="7.5" rx="2" ry="1.5" fill="#D96B66" stroke="#15120E" stroke-width=".8"/>
+        <path d="M29.6 6.2 L28.8 5.2 M32.4 6.2 L33.2 5.2" stroke="rgba(255,255,255,.5)" stroke-width=".9"/>
+        <path d="M20.8 13.5 L19.2 11.2" stroke="rgba(255,255,255,.4)" stroke-width="1.3"/>
+        <circle cx="24" cy="17.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <ellipse cx="24" cy="26" rx="3.8" ry="4.6" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.4 23.5 C16 22, 14 23.5, 12.5 26 M20.6 27.5 C17 28.5, 15.5 30.5, 15 33 M27.4 27.5 C31 28.5, 32.5 30.5, 33 33" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/>
+        <ellipse cx="24" cy="37.5" rx="5.8" ry="7" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M18.8 35.5 C20.5 36.5, 27.5 36.5, 29.2 35.5 M19.2 39.8 C21 40.6, 27 40.6, 28.8 39.8" stroke="#5FC8C3" stroke-width="1.6" fill="none"/>
+      </g></svg>
+    </div>
+    <div class="cname">捕虫蚁 Catcher</div><div class="crole">测试 · 镜下现 bug</div>
+    <span class="ctag" style="background:rgba(95,200,195,.14);color:#5FC8C3">qa / tester</span>
+  </div>
+
+  <!-- Product -->
+  <div class="ccard">
+    <div class="pad" style="background:linear-gradient(135deg,#3F311E,#211B12)">
+      <svg width="72" height="72" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round">
+        <rect x="17.5" y="2.5" width="13" height="10" rx="1.6" fill="#FFF4DC" stroke="#15120E" stroke-width="1"/>
+        <path d="M20 5.5 L23.5 5.5 M20 8 L27.5 8 M20 10.2 L26 10.2" stroke="#C9A86C" stroke-width="1.1"/>
+        <path d="M25.2 4.6 L26.2 5.8 L28 3.8" stroke="#E8A85C" stroke-width="1.2" fill="none"/>
+        <circle cx="24" cy="17.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.8 13.8 L19.2 11.6 M27.2 13.8 L28.8 11.6" stroke="rgba(255,255,255,.4)" stroke-width="1.3"/>
+        <ellipse cx="24" cy="26" rx="3.8" ry="4.6" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.4 23.5 C16 22, 14 23.5, 12.5 26 M27.6 23.5 C32 22, 34 23.5, 35.5 26 M20.6 27.5 C17 28.5, 15.5 30.5, 15 33 M27.4 27.5 C31 28.5, 32.5 30.5, 33 33" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/>
+        <ellipse cx="24" cy="37.5" rx="5.8" ry="7" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M18.8 35.5 C20.5 36.5, 27.5 36.5, 29.2 35.5 M19.2 39.8 C21 40.6, 27 40.6, 28.8 39.8" stroke="#E8A85C" stroke-width="1.6" fill="none"/>
+      </g></svg>
+    </div>
+    <div class="cname">酿蜜蚁 Brewer</div><div class="crole">产品 · 顶着需求清单</div>
+    <span class="ctag" style="background:rgba(232,168,92,.14);color:#E8A85C">product / pm</span>
+  </div>
+
+  <!-- Designer -->
+  <div class="ccard">
+    <div class="pad" style="background:linear-gradient(135deg,#2E2B49,#1A1828)">
+      <svg width="72" height="72" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round">
+        <path d="M16.5 8.5 C16.5 4.5, 21 2, 25.5 3.5 C30 5, 31 9.5, 28 12 C26.5 13.2, 24.8 12.6, 24.3 11.2 C23.8 9.8, 22.3 9.4, 21 9.8 C19.5 10.3, 16.5 10.5, 16.5 8.5 Z" fill="#FFF4DC" stroke="#15120E" stroke-width="1"/>
+        <circle cx="21" cy="6" r="1.2" fill="#ECC678"/><circle cx="25" cy="6.2" r="1.2" fill="#93B4F2"/><circle cx="27.4" cy="8.6" r="1.2" fill="#7BD8A0"/>
+        <circle cx="24" cy="17.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.8 13.8 L19.2 11.6 M27.2 13.8 L28.8 11.6" stroke="rgba(255,255,255,.4)" stroke-width="1.3"/>
+        <ellipse cx="24" cy="26" rx="3.8" ry="4.6" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.4 23.5 C16 22, 14 23.5, 12.5 26 M27.6 23.5 C32 22, 34 23.5, 35.5 26 M20.6 27.5 C17 28.5, 15.5 30.5, 15 33 M27.4 27.5 C31 28.5, 32.5 30.5, 33 33" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/>
+        <ellipse cx="24" cy="37.5" rx="5.8" ry="7" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M18.8 35.5 C20.5 36.5, 27.5 36.5, 29.2 35.5 M19.2 39.8 C21 40.6, 27 40.6, 28.8 39.8" stroke="#A89BF0" stroke-width="1.6" fill="none"/>
+      </g></svg>
+    </div>
+    <div class="cname">彩绘蚁 Painter</div><div class="crole">设计 · 调色盘当冠</div>
+    <span class="ctag" style="background:rgba(168,155,240,.14);color:#A89BF0">designer</span>
+  </div>
+
+  <!-- Research -->
+  <div class="ccard">
+    <div class="pad" style="background:linear-gradient(135deg,#372B42,#1E1825)">
+      <svg width="72" height="72" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round">
+        <path d="M19.5 12.5 C16.5 9.5, 15.8 7, 16 4.5 M28.5 12.5 C31.5 9.5, 32.2 7, 32 4.5" stroke="#C99BD8" stroke-width="1.4" fill="none"/>
+        <circle cx="16" cy="3.8" r="1.4" fill="#C99BD8"/><circle cx="32" cy="3.8" r="1.4" fill="#C99BD8"/>
+        <path d="M20 6.5 C22.5 5, 25.5 5, 28 6.5 M18.6 9.3 C21.8 7.4, 26.2 7.4, 29.4 9.3" stroke="rgba(201,155,216,.5)" stroke-width="1" fill="none"/>
+        <circle cx="24" cy="17.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <circle cx="22" cy="17" r="1.9" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1"/>
+        <circle cx="26.6" cy="17" r="1.9" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1"/>
+        <path d="M23.9 17 L24.7 17" stroke="rgba(255,255,255,.55)" stroke-width="1"/>
+        <ellipse cx="24" cy="26" rx="3.8" ry="4.6" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.4 23.5 C16 22, 14 23.5, 12.5 26 M27.6 23.5 C32 22, 34 23.5, 35.5 26 M20.6 27.5 C17 28.5, 15.5 30.5, 15 33 M27.4 27.5 C31 28.5, 32.5 30.5, 33 33" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/>
+        <ellipse cx="24" cy="37.5" rx="5.8" ry="7" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M18.8 35.5 C20.5 36.5, 27.5 36.5, 29.2 35.5 M19.2 39.8 C21 40.6, 27 40.6, 28.8 39.8" stroke="#C99BD8" stroke-width="1.6" fill="none"/>
+      </g></svg>
+    </div>
+    <div class="cname">探路蚁 Scout</div><div class="crole">研究 · 长须收信号</div>
+    <span class="ctag" style="background:rgba(201,155,216,.14);color:#C99BD8">research</span>
+  </div>
+
+  <!-- Ops -->
+  <div class="ccard">
+    <div class="pad" style="background:linear-gradient(135deg,#402E1E,#211912)">
+      <svg width="72" height="72" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round">
+        <g>
+          <circle cx="24" cy="7" r="4" fill="rgba(238,154,107,.15)" stroke="#EE9A6B" stroke-width="1.5"/>
+          <circle cx="24" cy="7" r="1.3" fill="#EE9A6B"/>
+          <path d="M24 1.8 L24 0.6 M24 12.2 L24 13.4 M18.8 7 L17.6 7 M29.2 7 L30.4 7 M20.3 3.3 L19.4 2.4 M27.7 10.7 L28.6 11.6 M20.3 10.7 L19.4 11.6 M27.7 3.3 L28.6 2.4" stroke="#EE9A6B" stroke-width="1.4"/>
+        </g>
+        <circle cx="24" cy="17.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.8 13.8 L19.2 11.6 M27.2 13.8 L28.8 11.6" stroke="rgba(255,255,255,.4)" stroke-width="1.3"/>
+        <ellipse cx="24" cy="26" rx="3.8" ry="4.6" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M20.4 23.5 C16 22, 14 23.5, 12.5 26 M27.6 23.5 C32 22, 34 23.5, 35.5 26 M20.6 27.5 C17 28.5, 15.5 30.5, 15 33 M27.4 27.5 C31 28.5, 32.5 30.5, 33 33" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/>
+        <ellipse cx="24" cy="37.5" rx="5.8" ry="7" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/>
+        <path d="M18.8 35.5 C20.5 36.5, 27.5 36.5, 29.2 35.5 M19.2 39.8 C21 40.6, 27 40.6, 28.8 39.8" stroke="#EE9A6B" stroke-width="1.6" fill="none"/>
+      </g></svg>
+    </div>
+    <div class="cname">巡巢蚁 Keeper</div><div class="crole">运维 · 顶着齿轮巡检</div>
+    <span class="ctag" style="background:rgba(238,154,107,.14);color:#EE9A6B">operation / devops</span>
+  </div>
+</div>
+
+<div class="label" style="margin:24px 0 10px">工位卡实际效果</div>
+<div style="display:flex;gap:18px;background:#191B26;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:20px">
+  <div class="seat" style="--acc:linear-gradient(90deg,#ECC678,#93B4F2)">
+    <div class="row">
+      <div class="sava" style="background:linear-gradient(135deg,#3D3520,#221E14)">
+        <svg width="34" height="34" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round"><path d="M19 5.5 L21.5 9 L24 5 L26.5 9 L29 5.5 L28 10.5 L20 10.5 Z" fill="#ECC678"/><circle cx="24" cy="15.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/><ellipse cx="13.5" cy="25.5" rx="8" ry="3.6" fill="rgba(236,198,120,.16)" stroke="rgba(236,198,120,.42)" stroke-width=".8" transform="rotate(-24 13.5 25.5)"/><ellipse cx="34.5" cy="25.5" rx="8" ry="3.6" fill="rgba(236,198,120,.16)" stroke="rgba(236,198,120,.42)" stroke-width=".8" transform="rotate(24 34.5 25.5)"/><ellipse cx="24" cy="24.5" rx="4" ry="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/><ellipse cx="24" cy="37" rx="6.6" ry="8" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/><path d="M18.4 34 C20 35, 28 35, 29.6 34 M18 38.5 C20 39.5, 28 39.5, 30 38.5" stroke="#ECC678" stroke-width="1.6" fill="none"/></g></svg>
+        <span class="presence" style="background:#93B4F2"></span>
+      </div>
+      <div><div class="sname">claude-opus</div><div class="svend mono">claude-code · fable-5</div></div>
+      <span class="rolechip" style="background:rgba(236,198,120,.15);color:#ECC678">蚁后</span>
+    </div>
+  </div>
+  <div class="seat" style="--acc:linear-gradient(90deg,#7BD8A0,#4EB3A0)">
+    <div class="row">
+      <div class="sava" style="background:linear-gradient(135deg,#1F3329,#16231C)">
+        <svg width="34" height="34" viewBox="0 0 48 48"><g transform="rotate(45 24 24)" stroke-linecap="round"><rect x="18" y="3" width="12" height="9" rx="2" fill="rgba(123,216,160,.22)" stroke="#7BD8A0" stroke-width="1.3"/><circle cx="24" cy="17.5" r="5" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/><path d="M20.8 13.8 L19.2 11.6 M27.2 13.8 L28.8 11.6" stroke="rgba(255,255,255,.4)" stroke-width="1.3"/><ellipse cx="24" cy="26" rx="3.8" ry="4.6" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/><path d="M20.4 23.5 C16 22, 14 23.5, 12.5 26 M27.6 23.5 C32 22, 34 23.5, 35.5 26 M20.6 27.5 C17 28.5, 15.5 30.5, 15 33 M27.4 27.5 C31 28.5, 32.5 30.5, 33 33" stroke="rgba(255,255,255,.35)" stroke-width="1.2" fill="none"/><ellipse cx="24" cy="37.5" rx="5.8" ry="7" fill="#2A2C3A" stroke="rgba(255,255,255,.32)" stroke-width="1.2"/><path d="M18.8 35.5 C20.5 36.5, 27.5 36.5, 29.2 35.5 M19.2 39.8 C21 40.6, 27 40.6, 28.8 39.8" stroke="#7BD8A0" stroke-width="1.6" fill="none"/></g></svg>
+        <span class="presence" style="background:#7BD8A0;box-shadow:0 0 6px #7BD8A0"></span>
+      </div>
+      <div><div class="sname">opencode</div><div class="svend mono">opencode cli</div></div>
+      <span class="rolechip" style="background:rgba(123,216,160,.15);color:#7BD8A0">工蚁</span>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:18px">
+  <div class="option" data-choice="ants-approve" onclick="toggleSelect(this)"><div class="letter">A</div>
+    <div class="content"><h3>通过,蚁群定稿</h3><p>八品级按此实装(精修小尺寸)</p></div></div>
+  <div class="option" data-choice="ants-adjust" onclick="toggleSelect(this)"><div class="letter">B</div>
+    <div class="content"><h3>还要调</h3><p>点这个并在终端说</p></div></div>
+</div>
+</div>

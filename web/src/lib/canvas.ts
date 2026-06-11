@@ -179,9 +179,13 @@ export function deriveFlow(
           y: featPos.y + TASK_REL_Y0 + ti * ROW_H,
         }),
         data: {
+          id: t.id,
+          feature: f.id,
           status: t.status,
           owner: t.owner,
           reviewer: t.reviewer,
+          ownerRoles,
+          reviewerRoles: rolesOf.get(t.reviewer) ?? [],
           deps,
           roleColor: roleColorVar(ownerRoles),
         },

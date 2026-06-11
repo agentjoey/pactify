@@ -70,7 +70,8 @@ func toDTO(st projection.State) StateDTO {
 		d.Agents = append(d.Agents, SeatDTO{ID: a.ID, Roles: a.Roles})
 	}
 	for _, f := range st.Features {
-		fd := FeatureDTO{ID: f.ID, Branch: f.Branch, Status: f.Status}
+		// Tasks seeded for the same []-not-null contract as Agents/Features above.
+		fd := FeatureDTO{ID: f.ID, Branch: f.Branch, Status: f.Status, Tasks: []TaskDTO{}}
 		for _, t := range f.Tasks {
 			ev := ""
 			if t.Evidence != nil {

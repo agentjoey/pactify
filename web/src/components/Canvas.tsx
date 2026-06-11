@@ -21,6 +21,7 @@ import {
   applyConnect,
   assignAntFlags,
   isValidDep,
+  mergeOfficePos,
   nextId,
   type Draft,
   type DraftFeature,
@@ -39,6 +40,11 @@ import { ContextMenu, type MenuTarget } from "./canvas/ContextMenu";
 import { Toolbar } from "./canvas/Toolbar";
 import { Hud } from "./canvas/Hud";
 import { AntEdge } from "./canvas/edges/AntEdge";
+import { OfficeView } from "./canvas/OfficeView";
+
+// CanvasMode picks which surface the stage shows. Office (agents-as-subject) is
+// the DEFAULT landing (spec §3); Plan is the existing feature/task-frame canvas.
+export type CanvasMode = "office" | "plan";
 
 const nodeTypes: NodeTypes = {
   task: TaskNode,
@@ -229,6 +235,7 @@ export function Canvas({
   setDrafts,
   draftFeatures,
   setDraftFeatures,
+  initialMode = "office",
 }: {
   project: string;
   state: State;
@@ -253,7 +260,14 @@ export function Canvas({
   setDrafts: Dispatch<SetStateAction<Draft[]>>;
   draftFeatures: DraftFeature[];
   setDraftFeatures: Dispatch<SetStateAction<DraftFeature[]>>;
+  // Session-local landing mode. Defaults to "office" (the spec-default landing);
+  // tests that exercise Plan-mode behaviors pass initialMode="plan" so their
+  // semantics are unchanged — the mode segment switch is otherwise the only way
+  // in. Mode is NOT persisted to layout.
+  initialMode?: CanvasMode;
 }) {
+  // Office | Plan — session-local, not persisted.
+  const [mode, setMode] = useState<CanvasMode>(initialMode);
   // Comms overlay toggle — component-local, default OFF. It's a display lens
   // (derived wait edges + node markers merged into the rendered graph), never
   // persisted to layout.json.
@@ -358,6 +372,26 @@ export function Canvas({
   }, [project]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  // Office desk position persistence (T10). Writes ONLY the additive `office`
+  // sidecar key — `positions` (Plan-mode coords) is carried through untouched —
+  // and rides the same debounced PUT path as Plan drags.
+  const saveOfficePos = useCallback(
+    (seatId: string, pos: { x: number; y: number }) => {
+      scheduleSave(mergeOfficePos(layoutRef.current, seatId, pos));
+    },
+    [scheduleSave],
+  );
+
+  // Office drop/click-to-dispatch: open DispatchModal with the dropped draft +
+  // the target seat as owner (reuses the exact Plan dispatch flow).
+  const dispatchDraftToSeat = useCallback(
+    (d: Draft, seatId: string) => {
+      if (replaying) return;
+      setDispatch({ draft: d, owner: seatId });
+    },
+    [replaying],
+  );
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
@@ -773,7 +807,43 @@ export function Canvas({
           dot grid. Both purely decorative, behind the flow. */}
       <div className="canvas-grid" aria-hidden />
 
-      {/* Frosted toolbar (top-left): author Feature/Task + Comms lens pill. */}
+      {/* Mode segment (top-left) — Office | Plan. Office is the default landing
+          (spec §3). Session-local; not persisted. */}
+      <div className="office-modeseg" data-testid="canvas-modeseg">
+        <button
+          className={mode === "plan" ? "on" : ""}
+          data-testid="mode-plan"
+          onClick={() => setMode("plan")}
+        >
+          Plan
+        </button>
+        <button
+          className={mode === "office" ? "on" : ""}
+          data-testid="mode-office"
+          onClick={() => setMode("office")}
+        >
+          Office
+        </button>
+      </div>
+
+      {mode === "office" && (
+        <OfficeView
+          state={state}
+          layout={layout}
+          author={author}
+          replaying={replaying}
+          pulses={pulses}
+          drafts={drafts}
+          onSaveOffice={saveOfficePos}
+          onSelectTask={onSelectTask}
+          onDispatchDraft={dispatchDraftToSeat}
+        />
+      )}
+
+      {mode === "plan" && (
+      <>
+      {/* Frosted toolbar: author Feature/Task + Comms lens pill. Shifted right of
+          the mode segment so the two top-left chrome blocks don't overlap. */}
       <Toolbar
         author={author}
         comms={comms}
@@ -889,6 +959,8 @@ export function Canvas({
           }}
           onBlur={() => setRenaming(null)}
         />
+      )}
+      </>
       )}
 
       {editorOpen && (

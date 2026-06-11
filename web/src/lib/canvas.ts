@@ -34,8 +34,27 @@ export type Draft = { id: string; specMd: string; feature: string; deps: string[
 export type DraftFeature = { id: string; branch: string };
 
 // LayoutJSON is the free-form canvas sidecar (stored verbatim server-side at
-// .pact/squad/layout.json). positions maps a flow node id to its saved coords.
-export type LayoutJSON = { positions?: Record<string, { x: number; y: number }> };
+// .pact/squad/layout.json). `positions` maps a Plan-mode flow node id to its
+// saved coords; `office` is an ADDITIVE sidecar key (T10) mapping a seat id to
+// its Office-mode desk position. The two keys are independent coordinate spaces —
+// Plan drags never touch `office` and Office drags never touch `positions`.
+export type LayoutJSON = {
+  positions?: Record<string, { x: number; y: number }>;
+  office?: Record<string, { x: number; y: number }>;
+};
+
+// mergeOfficePos folds one seat's Office-mode desk position into the layout
+// sidecar's `office` key WITHOUT touching `positions` (the Plan coords) or any
+// other office entry. Pure: returns a new object; the additive-sidecar
+// invariant (T10) — Office drags never disturb Plan layout — lives here so it is
+// unit-testable independent of React Flow's drag plumbing.
+export function mergeOfficePos(
+  layout: LayoutJSON,
+  seatId: string,
+  pos: { x: number; y: number },
+): LayoutJSON {
+  return { ...layout, office: { ...(layout.office ?? {}), [seatId]: pos } };
+}
 
 export type FlowNode = {
   id: string;

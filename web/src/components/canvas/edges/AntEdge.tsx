@@ -25,8 +25,9 @@ export interface AntEdgeData {
 }
 
 // MessengerAnt — board4 §① "wait" species (review/rework). Stroke-colored body,
-// no cargo. Scaled ~0.9 vs the board demo (board used 1.15).
-function MessengerAnt({ color }: { color: string }) {
+// no cargo. Scaled ~0.9 vs the board demo (board used 1.15). Exported so the
+// Office transit overlay (T10) reuses the SAME ant silhouette as the edges.
+export function MessengerAnt({ color }: { color: string }) {
   return (
     <g transform="scale(0.9)">
       <ellipse cx="0" cy="0" rx="4.5" ry="3" fill={color} />
@@ -42,8 +43,9 @@ function MessengerAnt({ color }: { color: string }) {
 }
 
 // CarrierAnt — board4 §① "dep"/"blocked" species. Carries a tiny cargo cube on
-// its back. Scaled ~0.9 vs the board demo (board used 1.05).
-function CarrierAnt({ color }: { color: string }) {
+// its back. Scaled ~0.9 vs the board demo (board used 1.05). Exported so the
+// Office transit overlay (T10) carries parcels with the SAME ant silhouette.
+export function CarrierAnt({ color }: { color: string }) {
   return (
     <g transform="scale(0.9)">
       <rect

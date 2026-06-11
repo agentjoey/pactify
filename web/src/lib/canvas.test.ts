@@ -8,6 +8,7 @@ import {
   isValidDep,
   assignAntFlags,
   ANT_CAP,
+  mergeOfficePos,
   nextId,
   type Draft,
   type DepGraph,
@@ -517,5 +518,27 @@ describe("assignAntFlags (cap + priority, T8)", () => {
 
   it("reduced motion → empty", () => {
     expect(assignAntFlags([{ id: "e", kind: "wait" }], true).size).toBe(0);
+  });
+});
+
+describe("mergeOfficePos", () => {
+  it("adds a seat's desk position under the office key", () => {
+    const out = mergeOfficePos({}, "bob", { x: 5, y: 6 });
+    expect(out.office).toEqual({ bob: { x: 5, y: 6 } });
+  });
+
+  it("never disturbs the Plan positions key (additive sidecar invariant)", () => {
+    const layout: LayoutJSON = { positions: { "task:T1": { x: 1, y: 2 } } };
+    const out = mergeOfficePos(layout, "alice", { x: 9, y: 9 });
+    expect(out.positions).toEqual({ "task:T1": { x: 1, y: 2 } });
+    expect(out.office).toEqual({ alice: { x: 9, y: 9 } });
+    // input is not mutated
+    expect(layout.office).toBeUndefined();
+  });
+
+  it("merges alongside existing office entries without dropping them", () => {
+    const layout: LayoutJSON = { office: { bob: { x: 1, y: 1 } } };
+    const out = mergeOfficePos(layout, "alice", { x: 2, y: 2 });
+    expect(out.office).toEqual({ bob: { x: 1, y: 1 }, alice: { x: 2, y: 2 } });
   });
 });

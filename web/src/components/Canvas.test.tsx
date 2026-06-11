@@ -7,8 +7,9 @@ import type { Draft, DraftFeature } from "../lib/canvas";
 // Mock the api module: getLayout resolves empty, putLayout is a spy, and
 // getActingSeat is unused by Canvas but stubbed for completeness.
 const putLayout = vi.fn().mockResolvedValue(undefined);
+const getLayout = vi.fn().mockResolvedValue({});
 vi.mock("../lib/api", () => ({
-  getLayout: vi.fn().mockResolvedValue({}),
+  getLayout: (...args: unknown[]) => getLayout(...args),
   putLayout: (...args: unknown[]) => putLayout(...args),
   getActingSeat: vi.fn().mockResolvedValue({ seat: "" }),
 }));
@@ -37,16 +38,25 @@ const fixture: State = {
 
 // noopDraftProps supplies the lifted draft state Canvas now requires as props.
 // Tests that don't exercise drafts pass empty lists + no-op setters.
+//
+// initialMode="plan": Office is the DEFAULT landing mode (T10), but every test
+// in this file exercises PLAN-mode behavior (task/seat/feature nodes, dep edges,
+// context menus, drafts). Forcing Plan via the prop keeps their semantics
+// unchanged without re-clicking the mode segment in each test. Office-mode
+// behavior is covered by OfficeView.test.tsx + the default-mode test below.
 const noopDraftProps = {
   drafts: [] as Draft[],
   setDrafts: () => {},
   draftFeatures: [] as DraftFeature[],
   setDraftFeatures: () => {},
+  initialMode: "plan" as const,
 };
 
 describe("Canvas", () => {
   beforeEach(() => {
     putLayout.mockClear();
+    getLayout.mockReset();
+    getLayout.mockResolvedValue({});
   });
 
   it("renders task nodes, seat rail, and the dep edge", async () => {
@@ -195,6 +205,7 @@ describe("Canvas", () => {
               project="demo"
               state={fixture}
               author
+              initialMode="plan"
               drafts={drafts}
               setDrafts={setDrafts}
               draftFeatures={draftFeatures}
@@ -318,6 +329,7 @@ describe("Canvas", () => {
         project="demo"
         state={fixture}
         author
+        initialMode="plan"
         drafts={[]}
         setDrafts={() => {}}
         draftFeatures={[]}
@@ -329,6 +341,51 @@ describe("Canvas", () => {
     // committed tasks are T1/T2 (uppercase) → 't' series is free from t1.
     expect(idInput.value).toBe("t1");
   });
+
+  // T10: Office is the DEFAULT landing mode; the segment switches to Plan.
+  it("lands in Office mode by default; the mode segment switches to Plan", async () => {
+    const { container } = render(
+      // No initialMode → defaults to "office".
+      <Canvas project="demo" state={fixture} author drafts={[]} setDrafts={() => {}} draftFeatures={[]} setDraftFeatures={() => {}} />,
+    );
+    // Office surface present, Plan toolbar absent.
+    await waitFor(() => expect(screen.getByTestId("office-view")).toBeInTheDocument());
+    expect(screen.queryByTestId("canvas-toolbar")).toBeNull();
+    expect(container.querySelector('[data-testid="desk-bob"]')).not.toBeNull();
+
+    // Click "Plan" → Plan surface mounts, Office unmounts.
+    fireEvent.click(screen.getByTestId("mode-plan"));
+    await waitFor(() => expect(screen.getByTestId("canvas-toolbar")).toBeInTheDocument());
+    expect(screen.queryByTestId("office-view")).toBeNull();
+
+    // Back to Office.
+    fireEvent.click(screen.getByTestId("mode-office"));
+    await waitFor(() => expect(screen.getByTestId("office-view")).toBeInTheDocument());
+  });
+
+  // T10: dropping a draft onto a desk opens DispatchModal with owner pre-filled.
+  it("office click-dispatch opens DispatchModal with the seat as owner", async () => {
+    render(
+      <Canvas
+        project="demo"
+        state={fixture}
+        author
+        drafts={[{ id: "d1", specMd: "# d", feature: "F1", deps: [] }]}
+        setDrafts={() => {}}
+        draftFeatures={[]}
+        setDraftFeatures={() => {}}
+      />,
+    );
+    // bob's desk is BUSY but with a single draft, a desk click dispatches.
+    await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("desk-bob"));
+    const modal = await screen.findByTestId("dispatch-modal");
+    expect(modal).toBeInTheDocument();
+    // Owner is pre-filled read-only with the clicked seat.
+    expect(modal.textContent).toContain("bob");
+    expect(modal.textContent).toContain("d1");
+  });
+
 });
 
 

@@ -84,7 +84,8 @@ body {
 .canvas-tbar {
   position: absolute;
   top: 14px;
-  left: 14px;
+  /* Shifted right of the Office|Plan mode segment (which sits at left:14px). */
+  left: 138px;
   z-index: 10;
   display: flex;
   gap: 2px;
@@ -454,4 +455,132 @@ body {
   font-size: 10.5px;
   color: var(--color-text-3);
   background: transparent;
+}
+
+/* ── Office mode (T10) — board5 `.desk`/`.wall`/`.tray`/`.modeseg` ───────────
+   Agent-as-subject canvas. Desks are React Flow nodes (positions in the layout
+   `office` sidecar); wall chart + shipped tray + draft dock are fixed panels
+   over the stage. CSS lifted from board5-office.html, hard-coded colors
+   re-pointed to tokens. */
+
+/* Mode segment (top-left, above the Plan toolbar slot) — board5 `.modeseg`. */
+.office-modeseg {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  display: flex;
+  background: color-mix(in srgb, var(--color-bg-raised) 80%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 9px;
+  padding: 3px;
+}
+.office-modeseg button {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  padding: 4.5px 13px;
+  border-radius: 6px;
+  transition: background 0.12s var(--motion-ease), color 0.12s var(--motion-ease);
+}
+.office-modeseg button.on {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
+  color: var(--color-text-1);
+}
+
+/* Desk station — board5 `.desk`. */
+.desk {
+  width: 264px;
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(165deg, rgba(47, 50, 70, 0.92), rgba(32, 34, 47, 0.94));
+  border: 1px solid var(--color-border-strong);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.desk.busy {
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 24px color-mix(in srgb, var(--color-success) 18%, transparent);
+}
+.desk.review_due, .desk.waiting { border-color: color-mix(in srgb, var(--color-warn) 40%, transparent); }
+.desk.idle { opacity: 0.62; }
+.desk.drop-target { border-color: var(--color-role-dev); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-role-dev) 45%, transparent); }
+.desk .dhead { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
+.desk .dava {
+  position: relative; width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+.desk .presence { position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid #232532; }
+.desk .dname { font-size: 14px; font-weight: 650; color: var(--color-text-1); }
+.desk .dvend { font-size: 9.5px; color: var(--color-text-3); margin-top: 1px; }
+.desk .dstat {
+  margin-left: auto; font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px;
+  padding: 3px 10px; border-radius: 999px; display: flex; align-items: center; gap: 5px;
+}
+.desk .eq { display: inline-flex; gap: 1.5px; align-items: flex-end; height: 9px; }
+.desk .eq i { width: 2.5px; background: currentColor; border-radius: 1px; animation: eq 1s ease-in-out infinite; }
+.desk .eq i:nth-child(1) { height: 4px; }
+.desk .eq i:nth-child(2) { height: 8px; animation-delay: 0.15s; }
+.desk .eq i:nth-child(3) { height: 5px; animation-delay: 0.3s; }
+@keyframes eq { 50% { transform: scaleY(0.4); } }
+
+.desk .dzone { padding: 0 12px 6px; }
+.desk .zlab {
+  font-size: 8.5px; letter-spacing: 0.7px; text-transform: uppercase; color: var(--color-text-3);
+  margin: 7px 2px 5px; display: flex; align-items: center; gap: 6px;
+}
+.desk .zlab .zc { background: rgba(255, 255, 255, 0.07); border-radius: 999px; padding: 0 6px; font-size: 8.5px; color: var(--color-text-2); }
+.parcel {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(13, 14, 20, 0.5); border: 1px solid var(--color-border-subtle);
+  border-left: 3px solid var(--st, #888);
+  border-radius: 7px; padding: 6px 9px; margin-bottom: 5px; font-size: 11px; color: var(--color-text-1);
+}
+.parcel .pico { font-size: 11px; }
+.parcel .pid { font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: var(--color-text-2); }
+.parcel .ptitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.parcel .pmeta { margin-left: auto; font-size: 9px; color: var(--color-text-3); flex-shrink: 0; }
+.parcel.dim { opacity: 0.55; border-style: dashed; }
+.parcel.inbox-glow { box-shadow: 0 0 10px color-mix(in srgb, var(--color-role-design) 18%, transparent); }
+.desk .dempty { font-size: 10px; color: var(--color-text-3); padding: 8px 2px 6px; text-align: center; font-style: italic; }
+
+/* Wall chart — board5 `.wall` (fixed top-right). */
+.office-wall {
+  position: absolute; right: 18px; top: 64px; width: 200px; z-index: 10;
+  background: color-mix(in srgb, var(--color-bg-raised) 70%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border-strong); border-radius: 12px; padding: 12px 14px;
+}
+.office-wall .wt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-text-3); margin-bottom: 9px; }
+.office-wall .wrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; color: var(--color-text-2); }
+.office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.office-wall .wbar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 70%, white)); }
+
+/* Shipped tray — board5 `.tray` (fixed bottom-right). */
+.office-tray {
+  position: absolute; right: 18px; bottom: 18px; width: 200px; z-index: 10;
+  background: color-mix(in srgb, var(--color-success) 6%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--color-success) 30%, transparent);
+  border-radius: 12px; padding: 10px 14px;
+}
+.office-tray .tt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-success); opacity: 0.8; margin-bottom: 7px; }
+.office-tray .tmore { font-size: 9px; color: var(--color-text-3); margin-top: 2px; }
+
+/* Draft dock (bottom-left) — drag a draft parcel onto a desk to dispatch. */
+.office-dock {
+  position: absolute; left: 14px; bottom: 18px; max-width: 260px; z-index: 10;
+  background: color-mix(in srgb, var(--color-bg-raised) 70%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border-strong); border-radius: 12px; padding: 10px 12px;
+}
+.office-dock .dt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-text-3); margin-bottom: 7px; }
+.office-dock .parcel { cursor: grab; --st: var(--color-text-2); }
+.office-dock .parcel:active { cursor: grabbing; }
+
+/* Transit lane crawl — board5 `.lane`. */
+@keyframes crawlflow { to { stroke-dashoffset: -22; } }
+.office-lane { stroke-dasharray: 3 8; animation: crawlflow 2.6s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .desk .eq i { animation: none; }
+  .office-lane { animation: none; }
 }

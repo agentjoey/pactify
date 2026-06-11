@@ -11,12 +11,20 @@ import (
 
 // Server holds the watched projects and the SSE hub.
 type Server struct {
+	// pmu guards the project registry maps + watcher bookkeeping (projects,
+	// order, offsets, watchPaths). The HTTP handlers read these concurrently
+	// with runtime AddProject/RemoveProject and the fsnotify watchLoop, so all
+	// access goes through pmu (RWMutex: handlers RLock, mutations Lock). It was
+	// lock-free when projects were fixed at New(); runtime registry dynamics
+	// (O2) make the maps mutable, hence the lock.
+	pmu        sync.RWMutex
 	projects   map[string]registry.Project // by name (id)
 	order      []string                    // stable display order
-	hub        *hub
-	watcher    *fsnotify.Watcher
-	offsets    map[string]int64
-	watchPaths []struct{ id, lp string }
+	offsets    map[string]int64            // id -> bytes consumed from log.jsonl
+	watchPaths map[string]string           // id -> watched log.jsonl path
+
+	hub     *hub
+	watcher *fsnotify.Watcher
 
 	seat string // acting seat for author writes ("" = none configured)
 
@@ -47,7 +55,12 @@ func (s *Server) projectMu(id string) *sync.Mutex {
 
 // New builds a Server over the given projects.
 func New(projects []registry.Project) *Server {
-	s := &Server{projects: map[string]registry.Project{}, hub: newHub()}
+	s := &Server{
+		projects:   map[string]registry.Project{},
+		offsets:    map[string]int64{},
+		watchPaths: map[string]string{},
+		hub:        newHub(),
+	}
 	for _, p := range projects {
 		if _, ok := s.projects[p.Name]; ok {
 			continue
@@ -70,6 +83,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects", s.handleProjects)
 	mux.HandleFunc("GET /api/projects/{id}/state", s.handleState)
 	mux.HandleFunc("GET /api/projects/{id}/events", s.handleEvents)
+	s.registerRegistryRoutes(mux)
 	s.registerAuthorRoutes(mux)
 	mux.Handle("/", dashboardHandler())
 	return mux
@@ -84,9 +98,14 @@ func (s *Server) handleProjects(w http.ResponseWriter, _ *http.Request) {
 		FeatureCount  int    `json:"feature_count"`
 		AwaitingCount int    `json:"awaiting_count"`
 	}
-	out := []item{}
+	s.pmu.RLock()
+	projs := make([]registry.Project, 0, len(s.order))
 	for _, id := range s.order {
-		p := s.projects[id]
+		projs = append(projs, s.projects[id])
+	}
+	s.pmu.RUnlock()
+	out := []item{}
+	for _, p := range projs {
 		dto, _ := ProjectState(p.Path)
 		out = append(out, item{ID: p.Name, Name: p.Name, Path: p.Path, Project: dto.Project, FeatureCount: len(dto.Features), AwaitingCount: dto.AwaitingCount})
 	}
@@ -94,7 +113,9 @@ func (s *Server) handleProjects(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
+	s.pmu.RLock()
 	p, ok := s.projects[r.PathValue("id")]
+	s.pmu.RUnlock()
 	if !ok {
 		http.Error(w, "unknown project", http.StatusNotFound)
 		return
@@ -109,7 +130,10 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if _, ok := s.projects[id]; !ok {
+	s.pmu.RLock()
+	_, known := s.projects[id]
+	s.pmu.RUnlock()
+	if !known {
 		http.Error(w, "unknown project", http.StatusNotFound)
 		return
 	}

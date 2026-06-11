@@ -8,26 +8,50 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// StartWatchers opens an fsnotify watch on each project's .pact/ dir and, on
-// each append to log.jsonl, broadcasts the new lines to that project's SSE subs.
+// StartWatchers opens a single fsnotify watcher and registers each currently
+// known project's .pact/ dir. On each append to log.jsonl it broadcasts the new
+// lines to that project's SSE subs. Per-project watches are added/removed at
+// runtime by AddProject/RemoveProject via watchProject/unwatchProject — this
+// shared watcher and its watchLoop persist for the server's lifetime.
 func (s *Server) StartWatchers() error {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
 	}
 	s.watcher = w
-	s.offsets = map[string]int64{}
+	s.pmu.Lock()
 	for _, id := range s.order {
-		p := s.projects[id]
-		lp := logPath(p.Path)
-		if fi, err := os.Stat(lp); err == nil {
-			s.offsets[id] = fi.Size()
-		}
-		_ = w.Add(p.Path + "/.pact")
-		s.watchPaths = append(s.watchPaths, struct{ id, lp string }{id, lp})
+		s.watchProjectLocked(id, s.projects[id].Path)
 	}
+	s.pmu.Unlock()
 	go s.watchLoop()
 	return nil
+}
+
+// watchProjectLocked registers an fsnotify watch on the project's .pact/ dir and
+// seeds its log offset to the current file size (so only NEW appends stream).
+// Caller must hold s.pmu (write).
+func (s *Server) watchProjectLocked(id, root string) {
+	lp := logPath(root)
+	if fi, err := os.Stat(lp); err == nil {
+		s.offsets[id] = fi.Size()
+	} else {
+		s.offsets[id] = 0
+	}
+	s.watchPaths[id] = lp
+	if s.watcher != nil {
+		_ = s.watcher.Add(root + "/.pact")
+	}
+}
+
+// unwatchProjectLocked removes the fsnotify watch and the per-project
+// bookkeeping. Caller must hold s.pmu (write).
+func (s *Server) unwatchProjectLocked(id, root string) {
+	if s.watcher != nil {
+		_ = s.watcher.Remove(root + "/.pact")
+	}
+	delete(s.watchPaths, id)
+	delete(s.offsets, id)
 }
 
 func (s *Server) watchLoop() {
@@ -40,10 +64,20 @@ func (s *Server) watchLoop() {
 			if ev.Op&(fsnotify.Write|fsnotify.Create) == 0 {
 				continue
 			}
-			for _, wp := range s.watchPaths {
-				if ev.Name == wp.lp {
-					s.drainNew(wp.id, wp.lp)
+			// Snapshot the (id,path) whose log changed under the read lock, then
+			// drain outside the lock (drainNew touches only s.offsets[id], which
+			// it re-guards).
+			s.pmu.RLock()
+			var hitID, hitLP string
+			for id, lp := range s.watchPaths {
+				if ev.Name == lp {
+					hitID, hitLP = id, lp
+					break
 				}
+			}
+			s.pmu.RUnlock()
+			if hitID != "" {
+				s.drainNew(hitID, hitLP)
 			}
 		case _, ok := <-s.watcher.Errors:
 			if !ok {
@@ -63,7 +97,9 @@ func (s *Server) drainNew(id, lp string) {
 	if err != nil {
 		return
 	}
+	s.pmu.Lock()
 	off := s.offsets[id]
+	s.pmu.Unlock()
 	if fi.Size() < off {
 		off = 0 // truncated/swapped to a shorter file: re-read from the start
 	}
@@ -88,7 +124,14 @@ func (s *Server) drainNew(id, lp string) {
 			s.hub.broadcast(id, t)
 		}
 	}
-	s.offsets[id] = off
+	s.pmu.Lock()
+	// Only persist the advanced offset if the project is still watched: a
+	// concurrent RemoveProject may have deleted it, and resurrecting the entry
+	// here would leak a stale offset.
+	if _, ok := s.watchPaths[id]; ok {
+		s.offsets[id] = off
+	}
+	s.pmu.Unlock()
 }
 
 // Stop closes the fsnotify watcher.

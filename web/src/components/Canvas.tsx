@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from "react";
 import {
   ReactFlow,
-  Background,
-  Controls,
   Position,
+  useReactFlow,
+  useViewport,
   type Node,
   type Edge,
   type NodeTypes,
+  type EdgeTypes,
   type NodeChange,
   type Connection,
   applyNodeChanges,
@@ -18,11 +19,15 @@ import {
   toParentRelative,
   childToAbsolute,
   applyConnect,
+  assignAntFlags,
+  isValidDep,
+  mergeOfficePos,
   nextId,
   type Draft,
   type DraftFeature,
   type FlowNode,
   type LayoutJSON,
+  type AntEdgeKind,
 } from "../lib/canvas";
 import { getLayout, putLayout } from "../lib/api";
 import { deriveComms, mergeComms } from "../lib/comms";
@@ -31,6 +36,15 @@ import { SeatNode } from "./nodes/SeatNode";
 import { FeatureGroup } from "./nodes/FeatureGroup";
 import { TaskEditor, type FeatureOption } from "./TaskEditor";
 import { DispatchModal } from "./DispatchModal";
+import { ContextMenu, type MenuTarget } from "./canvas/ContextMenu";
+import { Toolbar } from "./canvas/Toolbar";
+import { Hud } from "./canvas/Hud";
+import { AntEdge } from "./canvas/edges/AntEdge";
+import { OfficeView } from "./canvas/OfficeView";
+
+// CanvasMode picks which surface the stage shows. Office (agents-as-subject) is
+// the DEFAULT landing (spec §3); Plan is the existing feature/task-frame canvas.
+export type CanvasMode = "office" | "plan";
 
 const nodeTypes: NodeTypes = {
   task: TaskNode,
@@ -38,6 +52,59 @@ const nodeTypes: NodeTypes = {
   feature: FeatureGroup,
   draft: TaskNode, // drafts reuse TaskNode; data.draft drives the dashed style
 };
+
+const edgeTypes: EdgeTypes = {
+  ant: AntEdge, // dep + comms wait edges crawl an ant along the path (T8)
+};
+
+// prefersReducedMotion reads the OS setting once per call. matchMedia is absent
+// in some jsdom configs — treat that as "no preference" (allow motion).
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+// FitOnEntry runs a fitView the first time a given project's nodes render,
+// then again only when the project changes — NOT on every SSE snapshot (that
+// would yank the viewport on each live update). App clears the snapshot to
+// EMPTY on project switch, so `ready` only turns true once the NEW project's
+// nodes exist — the fit always frames the right graph. Must live inside
+// <ReactFlow> (it reads the flow store via useReactFlow). Reduced-motion gets
+// an instant (0ms) fit instead of the 300ms ease.
+function FitOnEntry({ project, ready }: { project: string; ready: boolean }) {
+  const { fitView } = useReactFlow();
+  const fittedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    if (fittedFor.current === project) return;
+    fittedFor.current = project;
+    fitView({ duration: prefersReducedMotion() ? 0 : 300 });
+  }, [project, ready, fitView]);
+  return null;
+}
+
+// SnapGuides renders the drag-time alignment lines (T8). Guides arrive in FLOW
+// space (node x/y); this transforms them to screen space via the live viewport
+// so the 1px lines track zoom/pan. Must render inside <ReactFlow> (uses the
+// flow store). Display-only — never persisted.
+function SnapGuides({ guides }: { guides: { axis: "v" | "h"; pos: number }[] }) {
+  const { x: vx, y: vy, zoom } = useViewport();
+  if (guides.length === 0) return null;
+  return (
+    <div className="canvas-guides" data-testid="canvas-guides" aria-hidden>
+      {guides.map((g, i) =>
+        g.axis === "v" ? (
+          <div key={i} className="guide v" style={{ left: g.pos * zoom + vx }} />
+        ) : (
+          <div key={i} className="guide h" style={{ top: g.pos * zoom + vy }} />
+        ),
+      )}
+    </div>
+  );
+}
 
 // Feature-group sizing — a basic bound computed from its child rows so the
 // translucent container wraps its tasks/drafts. Children position relative to
@@ -168,6 +235,7 @@ export function Canvas({
   setDrafts,
   draftFeatures,
   setDraftFeatures,
+  initialMode = "office",
 }: {
   project: string;
   state: State;
@@ -192,7 +260,14 @@ export function Canvas({
   setDrafts: Dispatch<SetStateAction<Draft[]>>;
   draftFeatures: DraftFeature[];
   setDraftFeatures: Dispatch<SetStateAction<DraftFeature[]>>;
+  // Session-local landing mode. Defaults to "office" (the spec-default landing);
+  // tests that exercise Plan-mode behaviors pass initialMode="plan" so their
+  // semantics are unchanged — the mode segment switch is otherwise the only way
+  // in. Mode is NOT persisted to layout.
+  initialMode?: CanvasMode;
 }) {
+  // Office | Plan — session-local, not persisted.
+  const [mode, setMode] = useState<CanvasMode>(initialMode);
   // Comms overlay toggle — component-local, default OFF. It's a display lens
   // (derived wait edges + node markers merged into the rendered graph), never
   // persisted to layout.json.
@@ -217,6 +292,23 @@ export function Canvas({
   // Dispatch target: a draft dropped onto a seat.
   const [dispatch, setDispatch] = useState<{ draft: Draft; owner?: string } | undefined>(undefined);
   const [draggingDraft, setDraggingDraft] = useState(false);
+
+  // Context menu (T8) — open position + target, gated to author && !replaying.
+  const [menu, setMenu] = useState<MenuTarget | null>(null);
+  // Snap guides (T8) — alignment lines drawn while dragging; cleared on stop.
+  const [guides, setGuides] = useState<{ axis: "v" | "h"; pos: number }[]>([]);
+  // Inline rename (T8) — a draft whose title is being edited in place.
+  const [renaming, setRenaming] = useState<{ id: string; x: number; y: number; value: string } | null>(null);
+  // The stage element, so context-menu / rename coords are stage-relative.
+  const stageRef = useRef<HTMLDivElement>(null);
+  // Selection is read from nodesRef (the single source of truth) wherever Del/
+  // Esc need it — a separate id set would desync when the rebuild effect
+  // replaces the node array wholesale (SSE snapshots, project switches) and
+  // leave "ghost" selections that delete the wrong drafts.
+  const selectedIds = useCallback(
+    () => nodesRef.current.filter((n) => n.selected).map((n) => n.id),
+    [],
+  );
 
   // Secondary dispatch entry: the button on a draft node (the drag gesture is
   // the primary path; the button exists for discoverability).
@@ -243,13 +335,18 @@ export function Canvas({
     [state, layout, drafts, draftFeatures],
   );
 
+  // Dep edges render as ant-crawl edges (type:"ant"): a carrier ant + cargo
+  // cube crawls source→target. The base dashed look is unchanged (style
+  // passthrough); `ant` is decided by the cap pass in `display` below.
   const edges: Edge[] = useMemo(
     () =>
       flow.edges.map((e) => ({
         id: e.id,
         source: e.source,
         target: e.target,
-        style: { stroke: "#484f58" },
+        type: "ant",
+        style: { stroke: "#484f58", strokeDasharray: "5 4" },
+        data: { kind: "dep" as const, color: "#484f58", ant: false },
       })),
     [flow.edges],
   );
@@ -275,6 +372,26 @@ export function Canvas({
   }, [project]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  // Office desk position persistence (T10). Writes ONLY the additive `office`
+  // sidecar key — `positions` (Plan-mode coords) is carried through untouched —
+  // and rides the same debounced PUT path as Plan drags.
+  const saveOfficePos = useCallback(
+    (seatId: string, pos: { x: number; y: number }) => {
+      scheduleSave(mergeOfficePos(layoutRef.current, seatId, pos));
+    },
+    [scheduleSave],
+  );
+
+  // Office drop/click-to-dispatch: open DispatchModal with the dropped draft +
+  // the target seat as owner (reuses the exact Plan dispatch flow).
+  const dispatchDraftToSeat = useCallback(
+    (d: Draft, seatId: string) => {
+      if (replaying) return;
+      setDispatch({ draft: d, owner: seatId });
+    },
+    [replaying],
+  );
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
@@ -332,10 +449,30 @@ export function Canvas({
     setTimeout(() => setNotice(""), 4000);
   }, []);
 
+  // depGraph: the id→deps view + feature/committed lookups isValidDep needs.
+  // Rebuilt from committed tasks + drafts whenever either changes.
+  const depGraph = useMemo(() => {
+    const deps = new Map<string, string[]>();
+    for (const f of state.features) for (const t of f.tasks) deps.set(t.id, t.deps ?? []);
+    for (const d of drafts) deps.set(d.id, d.deps);
+    return { deps, featureOf: featureOfId, committed: committedTaskIds };
+  }, [state.features, drafts, featureOfId, committedTaskIds]);
+
+  // isValidConnection paints the not-allowed cursor on invalid drop targets
+  // WHILE dragging (cross-feature / self / committed-target / cycle), so the
+  // author gets live feedback before releasing. Mirrors onConnect's rule set
+  // through the single isValidDep helper.
+  const isValidConnection = useCallback(
+    (c: Connection | Edge): boolean => {
+      const raw = (id: string) => id.replace(/^(task|draft):/, "");
+      return isValidDep(depGraph, raw(c.source), raw(c.target));
+    },
+    [depGraph],
+  );
+
   // onConnect: author draws a dep edge. A→B means "B depends on A" (source is
-  // the prerequisite). Only same-feature edges are allowed, and only a DRAFT
-  // target can change (committed-task deps are fixed at assign time — surfaced
-  // as a notice via applyConnect's contract).
+  // the prerequisite). Validation routes through isValidDep; invalid drops get a
+  // human notice (the drag-time cursor already discouraged them).
   const onConnect = useCallback(
     (c: Connection) => {
       if (!author) return;
@@ -351,9 +488,13 @@ export function Canvas({
         flashNotice("deps must stay within one feature");
         return;
       }
+      if (!isValidDep(depGraph, from, to)) {
+        flashNotice("that would create a dependency cycle");
+        return;
+      }
       setDrafts((ds) => applyConnect(ds, c.source, c.target));
     },
-    [author, committedTaskIds, featureOfId, flashNotice],
+    [author, committedTaskIds, featureOfId, flashNotice, depGraph, setDrafts],
   );
 
   // Persist a node's new position into the layout sidecar after a drag. The
@@ -369,9 +510,28 @@ export function Canvas({
     if (node.type === "draft") setDraggingDraft(true);
   }, [replaying]);
 
+  // Snap guides (T8): while dragging, if the dragged node's absolute x or y is
+  // within ±6px of ANOTHER node's x/y, surface a 1px guide line (computed in
+  // flow space; SnapGuides transforms to screen). Display-only.
+  const SNAP = 6;
+  const onNodeDrag = useCallback((_e: unknown, node: Node) => {
+    if (replaying) return;
+    const all = nodesRef.current;
+    const me = nodeBounds(node, all);
+    const next: { axis: "v" | "h"; pos: number }[] = [];
+    for (const other of all) {
+      if (other.id === node.id || other.type === "feature") continue;
+      const ob = nodeBounds(other, all);
+      if (Math.abs(ob.x - me.x) <= SNAP) next.push({ axis: "v", pos: ob.x });
+      if (Math.abs(ob.y - me.y) <= SNAP) next.push({ axis: "h", pos: ob.y });
+    }
+    setGuides(next);
+  }, [replaying]);
+
   const onNodeDragStop = useCallback(
     (_e: unknown, node: Node) => {
       setDraggingDraft(false);
+      setGuides([]); // clear snap guides
       // Replay is read-only and observe-only dashboards never persist drags.
       if (replaying || !author) return;
       // RF v12: the callback's nodes arg is the dragged selection only — use
@@ -423,6 +583,121 @@ export function Canvas({
     },
     [author, drafts, onSelectTask],
   );
+
+  // Dbl-click a DRAFT node → inline rename input over the card. Committed tasks
+  // are not renamable (their id is protocol-fixed). Author && !replaying only.
+  const onNodeDoubleClick = useCallback(
+    (e: ReactMouseEvent, node: Node) => {
+      if (!author || replaying || node.type !== "draft") return;
+      e.stopPropagation();
+      const rawId = node.id.replace(/^draft:/, "");
+      const { x, y } = stageXY(e);
+      setRenaming({ id: rawId, x, y, value: rawId });
+    },
+    [author, replaying],
+  );
+
+  // stageXY maps a browser event to stage-relative coords for menu/rename
+  // placement (the overlay is absolutely positioned within the stage div).
+  const stageXY = (e: { clientX: number; clientY: number }) => {
+    const r = stageRef.current?.getBoundingClientRect();
+    return { x: e.clientX - (r?.left ?? 0), y: e.clientY - (r?.top ?? 0) };
+  };
+
+  // Context-menu openers (author && !replaying only — the menu component is
+  // gated at the render site too).
+  const onPaneContextMenu = useCallback(
+    (e: ReactMouseEvent | MouseEvent) => {
+      if (!author || replaying) return;
+      e.preventDefault();
+      const { x, y } = stageXY(e);
+      // Flow position is "if cheap" — default placement is acceptable per the
+      // plan; pass the stage coords through for a best-effort cursor hint.
+      setMenu({ kind: "pane", x, y, flow: { x, y } });
+    },
+    [author, replaying],
+  );
+
+  const onNodeContextMenu = useCallback(
+    (e: ReactMouseEvent, node: Node) => {
+      if (!author || replaying) return;
+      if (node.type !== "task" && node.type !== "draft") return;
+      e.preventDefault();
+      const { x, y } = stageXY(e);
+      const rawId = node.id.replace(/^(task|draft):/, "");
+      setMenu({ kind: "node", x, y, id: rawId, draft: node.type === "draft" });
+    },
+    [author, replaying],
+  );
+
+  // Inline draft rename commit: Enter validates the new id is a free slug, then
+  // rewrites the draft id (and any dep references to it). Esc cancels.
+  const commitRename = useCallback(() => {
+    setRenaming((r) => {
+      if (!r) return null;
+      const next = r.value.trim();
+      if (next && next !== r.id && SLUG_RE.test(next) && !existingTaskIds.includes(next)) {
+        setDrafts((ds) =>
+          ds.map((d) => ({
+            ...d,
+            id: d.id === r.id ? next : d.id,
+            deps: d.deps.map((dep) => (dep === r.id ? next : dep)),
+          })),
+        );
+      }
+      return null;
+    });
+  }, [existingTaskIds, setDrafts]);
+
+  // Del removes the selected DRAFTS (and selected draft features). Committed
+  // tasks/features are never deletable here. Author && !replaying only.
+  const deleteSelected = useCallback(() => {
+    if (!author || replaying) return;
+    const sel = new Set(selectedIds());
+    if (sel.size === 0) return;
+    const draftIds = new Set(
+      [...sel].filter((id) => id.startsWith("draft:")).map((id) => id.replace(/^draft:/, "")),
+    );
+    const featIds = new Set(
+      [...sel]
+        .filter((id) => id.startsWith("feature:"))
+        .map((id) => id.replace(/^feature:/, ""))
+        // only DRAFT features (not committed) are deletable
+        .filter((fid) => draftFeatures.some((df) => df.id === fid) && !state.features.some((f) => f.id === fid)),
+    );
+    if (draftIds.size > 0) {
+      setDrafts((ds) => ds.filter((d) => !draftIds.has(d.id)));
+    }
+    if (featIds.size > 0) {
+      setDraftFeatures((dfs) => dfs.filter((df) => !featIds.has(df.id)));
+    }
+  }, [author, replaying, draftFeatures, state.features, setDrafts, setDraftFeatures]);
+
+  // Esc chain + Del key. Esc closes the menu first, then clears selection, then
+  // closes the draft form. Del removes selected drafts. Both respect a typing
+  // guard (don't hijack keys while an input/textarea is focused).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement as HTMLElement | null;
+      const typing =
+        !!el &&
+        (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      if (e.key === "Escape") {
+        if (menu) { setMenu(null); return; }
+        if (renaming) { setRenaming(null); return; }
+        if (selectedIds().length > 0) {
+          setNodes((nds) => nds.map((n) => (n.selected ? { ...n, selected: false } : n)));
+          return;
+        }
+        if (newFeatureOpen) { setNewFeatureOpen(false); setNfId(""); setNfBranch(""); return; }
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && !typing && !renaming) {
+        deleteSelected();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menu, renaming, newFeatureOpen, deleteSelected]);
 
   // --- build-mode handlers -------------------------------------------------
   const addFeature = () => {
@@ -498,106 +773,115 @@ export function Canvas({
         return n;
       });
     }
-    if (commsResult) return mergeComms(out, edges, commsResult, state);
-    return { nodes: out, edges };
+    const merged = commsResult
+      ? mergeComms(out, edges, commsResult, state)
+      : { nodes: out, edges };
+
+    // Ant-crawl cap pass (T8): over the FINAL edge set (dep + any comms wait
+    // edges), grant the scarce ant-animation budget to at most ANT_CAP edges,
+    // comms WAIT edges first. reduced-motion → no ant anywhere. This is the
+    // single place `data.ant` is set true; AntEdge only animates when it's true.
+    const eligible = merged.edges
+      .filter((e) => e.type === "ant")
+      .map((e) => ({ id: e.id, kind: (e.data as { kind?: AntEdgeKind })?.kind ?? "dep" }));
+    const antIds = assignAntFlags(eligible, prefersReducedMotion());
+    const antEdges = merged.edges.map((e) =>
+      e.type === "ant"
+        ? { ...e, data: { ...(e.data ?? {}), ant: antIds.has(e.id) } }
+        : e,
+    );
+
+    return { nodes: merged.nodes, edges: antEdges };
   }, [nodes, edges, pulses, commsResult, state]);
   const displayNodes = display.nodes;
   const displayEdges = display.edges;
 
   return (
-    <div className={`relative flex-1${draggingDraft ? " dragging-draft" : ""}`} data-testid="canvas-root">
-      {author && (
-        <div className="absolute left-2 top-2 z-10 flex items-center gap-2">
-          {!newFeatureOpen ? (
-            <button
-              className="rounded border border-[#30363d] bg-[#161b22] px-2.5 py-1 text-xs text-[#e6edf3] hover:border-[#8b949e]"
-              onClick={() => { setNfId(nextId(existingFeatureIds, "f")); setNewFeatureOpen(true); }}
-            >
-              + New feature
-            </button>
-          ) : (
-            <div className="flex items-center gap-1 rounded border border-[#30363d] bg-[#161b22] px-2 py-1">
-              <input
-                aria-label="feature id"
-                className="w-24 rounded border border-[#30363d] bg-[#0d1117] px-1.5 py-0.5 text-xs text-[#e6edf3]"
-                placeholder="feature id"
-                value={nfId}
-                onChange={(e) => setNfId(e.target.value)}
-              />
-              <input
-                aria-label="feature branch"
-                className="w-28 rounded border border-[#30363d] bg-[#0d1117] px-1.5 py-0.5 font-mono text-xs text-[#e6edf3]"
-                placeholder="feat/x"
-                value={nfBranch}
-                onChange={(e) => setNfBranch(e.target.value)}
-              />
-              <button
-                className="rounded bg-[#238636] px-2 py-0.5 text-xs font-semibold text-white disabled:opacity-50"
-                onClick={addFeature}
-                disabled={!nfValid}
-              >
-                Add
-              </button>
-              <button
-                className="rounded border border-[#30363d] px-2 py-0.5 text-xs text-[#8b949e]"
-                onClick={() => { setNewFeatureOpen(false); setNfId(""); setNfBranch(""); }}
-              >
-                ✕
-              </button>
-              {(nfIdBad || nfBranchBad) && (
-                <span className="text-[10px] text-[#f85149]">slug: [a-z0-9][a-z0-9-]*</span>
-              )}
-            </div>
-          )}
-          <button
-            className="rounded border border-[#30363d] bg-[#161b22] px-2.5 py-1 text-xs text-[#e6edf3] hover:border-[#8b949e] disabled:opacity-50"
-            onClick={() => { setEditingDraft(undefined); setEditorOpen(true); }}
-            disabled={featureOptions.length === 0}
-          >
-            + New task
-          </button>
-        </div>
+    <div
+      ref={stageRef}
+      className={`canvas-stage relative flex-1${draggingDraft ? " dragging-draft" : ""}`}
+      data-testid="canvas-root"
+    >
+      {/* Ambient stage layers (board2-canvas-v2 `.stage`): two role-color glows
+          (page token sits behind via the .canvas-stage background) + a masked
+          dot grid. Both purely decorative, behind the flow. */}
+      <div className="canvas-grid" aria-hidden />
+
+      {/* Mode segment (top-left) — Office | Plan. Office is the default landing
+          (spec §3). Session-local; not persisted. */}
+      <div className="office-modeseg" data-testid="canvas-modeseg">
+        <button
+          className={mode === "plan" ? "on" : ""}
+          data-testid="mode-plan"
+          onClick={() => setMode("plan")}
+        >
+          Plan
+        </button>
+        <button
+          className={mode === "office" ? "on" : ""}
+          data-testid="mode-office"
+          onClick={() => setMode("office")}
+        >
+          Office
+        </button>
+      </div>
+
+      {mode === "office" && (
+        <OfficeView
+          state={state}
+          layout={layout}
+          author={author}
+          replaying={replaying}
+          pulses={pulses}
+          drafts={drafts}
+          onSaveOffice={saveOfficePos}
+          onSelectTask={onSelectTask}
+          onDispatchDraft={dispatchDraftToSeat}
+        />
       )}
 
-      {/* Comms overlay toggle — top-right, always available (read-only lens). */}
-      <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1.5">
-        <button
-          data-testid="comms-toggle"
-          aria-pressed={comms}
-          className={`rounded border px-2.5 py-1 text-xs ${
-            comms
-              ? "border-[#8ab4ff] bg-[#161b22] text-[#8ab4ff]"
-              : "border-[#30363d] bg-[#161b22] text-[#e6edf3] hover:border-[#8b949e]"
-          }`}
-          onClick={() => setComms((v) => !v)}
-        >
-          comms {comms ? "on" : "off"}
-        </button>
-        {comms && (
-          <div
-            data-testid="comms-legend"
-            className="flex items-center gap-2 rounded border border-[#30363d] bg-[#161b22] px-2 py-1 text-[10px] text-[#8b949e]"
-          >
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-0 w-3 border-t border-dashed border-[#8ab4ff]" />
-              waiting
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm border border-[#d29922]" />
-              blocked
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#484f58] opacity-50" />
-              idle
-            </span>
-          </div>
-        )}
-      </div>
+      {mode === "plan" && (
+      <>
+      {/* Frosted toolbar: author Feature/Task + Comms lens pill. Shifted right of
+          the mode segment so the two top-left chrome blocks don't overlap. */}
+      <Toolbar
+        author={author}
+        comms={comms}
+        onToggleComms={() => setComms((v) => !v)}
+        newFeatureOpen={newFeatureOpen}
+        onOpenNewFeature={() => { setNfId(nextId(existingFeatureIds, "f")); setNewFeatureOpen(true); }}
+        onCloseNewFeature={() => { setNewFeatureOpen(false); setNfId(""); setNfBranch(""); }}
+        nfId={nfId}
+        setNfId={setNfId}
+        nfBranch={nfBranch}
+        setNfBranch={setNfBranch}
+        nfValid={nfValid}
+        nfIdBad={nfIdBad}
+        nfBranchBad={nfBranchBad}
+        onAddFeature={addFeature}
+        onOpenNewTask={() => { setEditingDraft(undefined); setEditorOpen(true); }}
+        newTaskDisabled={featureOptions.length === 0}
+      />
+
+      {/* Comms legend — frosted pill below the toolbar when the lens is on. */}
+      {comms && (
+        <div className="canvas-legend" data-testid="comms-legend">
+          <span>
+            <i style={{ borderColor: "var(--color-role-design)" }} />
+            waiting
+          </span>
+          <span>
+            <span className="inline-block h-2 w-2 rounded-sm border border-[var(--color-warn)]" />
+            blocked
+          </span>
+          <span style={{ opacity: 0.6 }}>◐ idle</span>
+        </div>
+      )}
 
       {notice && (
         <div
           data-testid="canvas-notice"
-          className="absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded border border-[#d29922] bg-[#161b22] px-3 py-1 text-xs text-[#d29922]"
+          className="absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-md border border-[var(--color-warn)] bg-[var(--color-bg-surface)] px-3 py-1 text-xs text-[var(--color-warn)]"
         >
           {notice}
         </div>
@@ -607,20 +891,77 @@ export function Canvas({
         nodes={displayNodes}
         edges={displayEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneContextMenu={onPaneContextMenu}
+        onPaneClick={() => setMenu(null)}
         onConnect={onConnect}
+        isValidConnection={isValidConnection}
+        connectionRadius={30}
         nodesDraggable={author}
         nodesConnectable={author}
+        // Marquee multi-select on Shift+drag (React Flow's default
+        // selectionKeyCode), plain left-drag still pans the canvas, and
+        // right-click is left free for the context menu (panOnDrag must NOT
+        // include button 2, or React Flow swallows the pane contextmenu). Node
+        // drag-to-dispatch is a NODE drag, unaffected by pane panOnDrag.
+        selectionKeyCode="Shift"
+        panOnDrag
+        // React Flow's built-in Backspace delete would remove ANY selected node
+        // (committed tasks/seats included) via applyNodeChanges, bypassing the
+        // draft-only deleteSelected path below. Deletion is exclusively ours.
+        deleteKeyCode={null}
         fitView
         proOptions={{ hideAttribution: true }}
         colorMode="dark"
+        style={{ background: "transparent" }}
       >
-        <Background color="#21262d" gap={20} />
-        <Controls showInteractive={false} />
+        <FitOnEntry project={project} ready={displayNodes.length > 0} />
+        <Hud />
+        <SnapGuides guides={guides} />
       </ReactFlow>
+
+      {/* Context menu (author && !replaying) — board2-canvas-v2 `.ctx`. */}
+      {menu && author && !replaying && (
+        <ContextMenu
+          target={menu}
+          onClose={() => setMenu(null)}
+          onNewFeature={() => { setNfId(nextId(existingFeatureIds, "f")); setNewFeatureOpen(true); }}
+          onNewTask={() => { setEditingDraft(undefined); setEditorOpen(true); }}
+          onDispatch={(id) => openDispatchFor(id)}
+          onEdit={(id) => {
+            const d = drafts.find((x) => x.id === id);
+            if (d) { setEditingDraft(d); setEditorOpen(true); }
+          }}
+          onViewSpec={(id) => onSelectTask?.(id)}
+          onDelete={(id) => setDrafts((ds) => ds.filter((x) => x.id !== id))}
+        />
+      )}
+
+      {/* Inline draft rename (author && !replaying). */}
+      {renaming && author && !replaying && (
+        <input
+          className="canvas-rename"
+          data-testid="canvas-rename"
+          autoFocus
+          style={{ left: renaming.x, top: renaming.y, width: 120 }}
+          value={renaming.value}
+          onChange={(e) => setRenaming((r) => (r ? { ...r, value: e.target.value } : r))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); commitRename(); }
+            else if (e.key === "Escape") { e.preventDefault(); setRenaming(null); }
+          }}
+          onBlur={() => setRenaming(null)}
+        />
+      )}
+      </>
+      )}
 
       {editorOpen && (
         <TaskEditor

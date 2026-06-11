@@ -93,7 +93,8 @@ export function Board({
                       <TaskCard
                         task={bt.task}
                         featureId={bt.feature}
-                        rolesOf={rolesOf}
+                        ownerRoles={rolesOf(bt.task.owner)}
+                        reviewerRoles={rolesOf(bt.task.reviewer)}
                         stale={staleTasks?.has(bt.task.id)}
                         selected={selected === bt.task.id}
                         onClick={() => onSelect(bt.task.id)}

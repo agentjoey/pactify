@@ -1,6 +1,12 @@
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
+import type { CSSProperties } from "react";
 import type { Task } from "../../lib/types";
 import { TaskCard } from "../TaskCard";
+
+// HANDLE_STYLE enlarges the connect hit area to ≥12px (was the React Flow
+// default ~6px dot). Visibility is driven by the `.task-handle` CSS (hidden
+// until node hover / active connection).
+const HANDLE_STYLE: CSSProperties = { width: 12, height: 12 };
 
 // TaskNode renders both committed tasks and in-flight drafts (data.draft) by
 // wrapping the shared TaskCard genome in React Flow Handles. The pulse / comms
@@ -9,11 +15,11 @@ import { TaskCard } from "../TaskCard";
 // keeps the draft "dispatch →" affordance + the not-joined warning badge.
 export function TaskNode({ id, data }: NodeProps) {
   const d = data as {
-    id?: string;
+    // Committed tasks carry the protocol Task object + resolved roles (baked by
+    // deriveFlow). Drafts carry only draft/specMd/deps — no task — so the card
+    // is materialized from the draft id below.
+    task?: Task;
     feature?: string;
-    status?: string;
-    owner?: string;
-    reviewer?: string;
     ownerRoles?: string[];
     reviewerRoles?: string[];
     draft?: boolean;
@@ -21,30 +27,47 @@ export function TaskNode({ id, data }: NodeProps) {
     commsNotJoined?: boolean;
     onDispatch?: () => void;
   };
-  const taskId = d.id ?? id.replace(/^(task|draft):/, "");
 
-  // Resolve owner/reviewer roles from the node data the canvas baked in.
-  const rolesOf = (seat: string): string[] => {
-    if (seat === d.owner) return d.ownerRoles ?? [];
-    if (seat === d.reviewer) return d.reviewerRoles ?? [];
-    return [];
-  };
+  // Drafts carry no protocol Task; present them as an assigned-shaped, dashed
+  // card (status drives the medallion/lifecycle genome) keyed by the draft id.
+  const task: Task =
+    d.task ?? {
+      id: id.replace(/^(task|draft):/, ""),
+      owner: "",
+      reviewer: "",
+      status: "assigned",
+      spec: "",
+      evidence: "",
+    };
 
-  // Draft tasks carry no protocol status; present them as an assigned-shaped,
-  // dashed card so the genome (medallion/lifecycle) still reads.
-  const task: Task = {
-    id: taskId,
-    owner: d.owner ?? "",
-    reviewer: d.reviewer ?? "",
-    status: d.status ?? "assigned",
-    spec: "",
-    evidence: "",
-  };
+  // useConnection lets a node light up as a valid drop target WHILE a connection
+  // is being dragged. We highlight any node that is not the connection's own
+  // source (self-loops are invalid; cross-feature/cycle invalidity is enforced
+  // by isValidConnection on the flow, which paints the not-allowed cursor — the
+  // highlight here is the affordance that says "you can aim here").
+  const connection = useConnection();
+  const connecting = connection.inProgress;
+  const fromId = connection.fromNode?.id;
+  const isValidTarget = connecting && fromId !== undefined && fromId !== id;
 
   return (
-    <div className="min-w-[176px]">
-      <Handle type="target" position={Position.Top} style={{ background: "#484f58" }} />
-      <TaskCard task={task} rolesOf={rolesOf} stale={d.stale} draft={d.draft}>
+    <div
+      className={`task-node min-w-[176px]${isValidTarget ? " connect-target" : ""}`}
+      data-testid="task-node"
+    >
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="task-handle"
+        style={HANDLE_STYLE}
+      />
+      <TaskCard
+        task={task}
+        ownerRoles={d.ownerRoles}
+        reviewerRoles={d.reviewerRoles}
+        stale={d.stale}
+        draft={d.draft}
+      >
         {(d.commsNotJoined || (d.draft && d.onDispatch)) && (
           <div className="mb-1.5 flex items-center gap-1.5">
             {d.commsNotJoined && (
@@ -71,7 +94,12 @@ export function TaskNode({ id, data }: NodeProps) {
           </div>
         )}
       </TaskCard>
-      <Handle type="source" position={Position.Bottom} style={{ background: "#484f58" }} />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="task-handle"
+        style={HANDLE_STYLE}
+      />
     </div>
   );
 }

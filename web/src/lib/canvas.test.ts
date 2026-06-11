@@ -5,8 +5,13 @@ import {
   toParentRelative,
   childToAbsolute,
   applyConnect,
+  isValidDep,
+  assignAntFlags,
+  ANT_CAP,
+  mergeOfficePos,
   nextId,
   type Draft,
+  type DepGraph,
   type DraftFeature,
   type LayoutJSON,
 } from "./canvas";
@@ -75,18 +80,72 @@ describe("deriveFlow", () => {
     expect(byId.get("seat:opencode")!.parentId).toBeUndefined();
   });
 
-  it("task node carries owner's role color, status, owner, reviewer, deps", () => {
+  it("task node carries the Task object, feature, resolved roles and color", () => {
     const { nodes } = deriveFlow(state, noLayout, noDrafts);
     const t2 = nodes.find((n) => n.id === "task:T2")!;
-    expect(t2.data.status).toBe("assigned");
-    expect(t2.data.owner).toBe("opencode");
-    expect(t2.data.reviewer).toBe("claude-opus");
-    expect(t2.data.deps).toEqual(["T1"]);
+    // The node data carries the protocol Task object itself (no flattening).
+    const task = t2.data.task as State["features"][number]["tasks"][number];
+    expect(task.id).toBe("T2");
+    expect(task.status).toBe("assigned");
+    expect(task.owner).toBe("opencode");
+    expect(task.reviewer).toBe("claude-opus");
+    expect(task.deps).toEqual(["T1"]);
+    expect(t2.data.feature).toBe("F1");
+    // Pre-resolved roles: owner opencode is a worker, reviewer claude-opus is
+    // orchestrator+reviewer.
+    expect(t2.data.ownerRoles).toEqual(["worker"]);
+    expect(t2.data.reviewerRoles).toEqual(["orchestrator", "reviewer"]);
     // owner opencode is a worker → dev
     expect(t2.data.roleColor).toBe("--role-dev");
     // T3 owned by orchestrator seat → product
     const t3 = nodes.find((n) => n.id === "task:T3")!;
     expect(t3.data.roleColor).toBe("--role-product");
+  });
+
+  it("feature node carries accepted/total progress (T7)", () => {
+    const { nodes } = deriveFlow(state, noLayout, noDrafts);
+    // F1: T1 in_progress, T2 assigned → 0 of 2 accepted.
+    const f1 = nodes.find((n) => n.id === "feature:F1")!;
+    expect(f1.data.total).toBe(2);
+    expect(f1.data.accepted).toBe(0);
+    // F2: T3 assigned → 0 of 1.
+    const f2 = nodes.find((n) => n.id === "feature:F2")!;
+    expect(f2.data.total).toBe(1);
+    expect(f2.data.accepted).toBe(0);
+  });
+
+  it("feature progress counts accepted tasks; all-accepted reads total===accepted", () => {
+    const allDone: State = {
+      ...state,
+      features: [
+        {
+          id: "F1",
+          branch: "feat/x",
+          status: "done",
+          tasks: [
+            { id: "T1", owner: "opencode", status: "accepted", reviewer: "claude-opus", spec: "", evidence: "" },
+            { id: "T2", owner: "opencode", status: "accepted", reviewer: "claude-opus", spec: "", evidence: "" },
+          ],
+        },
+      ],
+    };
+    const f1 = deriveFlow(allDone, noLayout, noDrafts).nodes.find((n) => n.id === "feature:F1")!;
+    expect(f1.data.total).toBe(2);
+    expect(f1.data.accepted).toBe(2);
+  });
+
+  it("an empty feature reports 0/0 (no division), draft feature too", () => {
+    const empty: State = {
+      ...state,
+      features: [{ id: "F1", branch: "b", status: "active", tasks: [] }],
+    };
+    const f1 = deriveFlow(empty, noLayout, noDrafts, [{ id: "F9", branch: "feat/n" }]).nodes;
+    const committed = f1.find((n) => n.id === "feature:F1")!;
+    expect(committed.data.total).toBe(0);
+    expect(committed.data.accepted).toBe(0);
+    const draftFeat = f1.find((n) => n.id === "feature:F9")!;
+    expect(draftFeat.data.total).toBe(0);
+    expect(draftFeat.data.accepted).toBe(0);
   });
 
   it("seat node carries roles + roleColor and pins to the left rail (x:0)", () => {
@@ -396,5 +455,90 @@ describe("nextId", () => {
 
   it("counts both committed tasks and current drafts (caller passes the union)", () => {
     expect(nextId(["t1", "t2", "t3"], "t")).toBe("t4");
+  });
+});
+
+describe("isValidDep (connect UX validation, T8)", () => {
+  // graph helper: f1 owns t1,t2,t3 (t3 committed); f2 owns x1. t2 depends on t1.
+  const make = (): DepGraph => ({
+    deps: new Map<string, string[]>([
+      ["t1", []],
+      ["t2", ["t1"]],
+      ["t3", ["t2"]],
+      ["x1", []],
+    ]),
+    featureOf: (id) => (id === "x1" ? "f2" : "f1"),
+    committed: new Set(["t3"]),
+  });
+
+  it("rejects a self-loop", () => {
+    expect(isValidDep(make(), "t1", "t1")).toBe(false);
+  });
+
+  it("rejects a cross-feature edge", () => {
+    expect(isValidDep(make(), "x1", "t1")).toBe(false);
+  });
+
+  it("rejects a committed target (deps fixed at assign)", () => {
+    expect(isValidDep(make(), "t1", "t3")).toBe(false);
+  });
+
+  it("rejects an edge that would create a cycle", () => {
+    // t2 already depends (transitively) on t1; adding t1→t2 means t2 depends on
+    // t1 again — fine — but t2→t1 (t1 depends on t2) would close a loop since
+    // t2 reaches t1 via its existing deps.
+    expect(isValidDep(make(), "t2", "t1")).toBe(false);
+  });
+
+  it("accepts a valid same-feature, draft-target, acyclic edge", () => {
+    // t1→t2: t2 already depends on t1, but that's a duplicate not a cycle on the
+    // *new* direction. Use an independent draft target to be unambiguous.
+    const g = make();
+    g.deps.set("t4", []);
+    g.featureOf = (id) => (id === "x1" ? "f2" : "f1");
+    expect(isValidDep(g, "t1", "t4")).toBe(true);
+  });
+});
+
+describe("assignAntFlags (cap + priority, T8)", () => {
+  it("caps at ANT_CAP, first eligible win", () => {
+    const edges = Array.from({ length: ANT_CAP + 2 }, (_, i) => ({ id: `e${i}`, kind: "dep" as const }));
+    const flags = assignAntFlags(edges);
+    expect(flags.size).toBe(ANT_CAP);
+    expect(flags.has("e0")).toBe(true);
+    expect(flags.has(`e${ANT_CAP}`)).toBe(false);
+  });
+
+  it("wait edges jump ahead of dep edges", () => {
+    const deps = Array.from({ length: ANT_CAP }, (_, i) => ({ id: `d${i}`, kind: "dep" as const }));
+    const flags = assignAntFlags([...deps, { id: "w", kind: "wait" }]);
+    expect(flags.has("w")).toBe(true);
+    expect(flags.has(`d${ANT_CAP - 1}`)).toBe(false);
+  });
+
+  it("reduced motion → empty", () => {
+    expect(assignAntFlags([{ id: "e", kind: "wait" }], true).size).toBe(0);
+  });
+});
+
+describe("mergeOfficePos", () => {
+  it("adds a seat's desk position under the office key", () => {
+    const out = mergeOfficePos({}, "bob", { x: 5, y: 6 });
+    expect(out.office).toEqual({ bob: { x: 5, y: 6 } });
+  });
+
+  it("never disturbs the Plan positions key (additive sidecar invariant)", () => {
+    const layout: LayoutJSON = { positions: { "task:T1": { x: 1, y: 2 } } };
+    const out = mergeOfficePos(layout, "alice", { x: 9, y: 9 });
+    expect(out.positions).toEqual({ "task:T1": { x: 1, y: 2 } });
+    expect(out.office).toEqual({ alice: { x: 9, y: 9 } });
+    // input is not mutated
+    expect(layout.office).toBeUndefined();
+  });
+
+  it("merges alongside existing office entries without dropping them", () => {
+    const layout: LayoutJSON = { office: { bob: { x: 1, y: 1 } } };
+    const out = mergeOfficePos(layout, "alice", { x: 2, y: 2 });
+    expect(out.office).toEqual({ bob: { x: 1, y: 1 }, alice: { x: 2, y: 2 } });
   });
 });

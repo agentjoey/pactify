@@ -23,10 +23,19 @@ export interface CommsResult {
   blockedTasks: string[];
 }
 
-function flatTasks(state: State): Task[] {
+// Exported: office.ts shares this flattening (one definition, no drift).
+export function flatTasks(state: State): Task[] {
   const out: Task[] = [];
   for (const f of state.features) for (const t of f.tasks) out.push(t);
   return out;
+}
+
+// unmet(t, byId): dep task ids of t that are not accepted (an absent dep id can't
+// be accepted, so it counts as unmet too — deps are same-feature by protocol).
+// Shared with office.ts (T9) so the two lenses can never drift on what "blocked"
+// means. byId is the caller's flatTasks index; pure (reads only its args).
+export function unmetDeps(t: Task, byId: Map<string, Task>): string[] {
+  return (t.deps ?? []).filter((d) => byId.get(d)?.status !== "accepted");
 }
 
 // deriveComms folds a snapshot into wait edges + seat/task markers. Pure: reads
@@ -38,10 +47,7 @@ export function deriveComms(state: State): CommsResult {
 
   const edges: WaitEdge[] = [];
 
-  // unmet(t): dep task ids of t that are not accepted (an absent dep id can't be
-  // accepted, so it counts as unmet too — deps are same-feature by protocol).
-  const unmet = (t: Task): string[] =>
-    (t.deps ?? []).filter((d) => byId.get(d)?.status !== "accepted");
+  const unmet = (t: Task): string[] => unmetDeps(t, byId);
 
   for (const t of tasks) {
     if (t.status === "awaiting_review") {
@@ -197,17 +203,23 @@ export function mergeComms(
     // would be silently skipped by React Flow — drop it explicitly; the
     // not-joined badge on the task carries the signal.
     if (!nodeIds.has(source) || !nodeIds.has(target)) return [];
+    // Ant-crawl edge (T8): review/rework = "wait" (messenger ant), dep =
+    // "blocked" (carrier ant + cargo). `ant` is decided by Canvas's cap pass
+    // (assignAntFlags) after merge; default false until then. The base dashed
+    // path + color is preserved via `style` passthrough so the look is unchanged.
+    const antKind = e.kind === "dep" ? "blocked" : "wait";
     return [{
       id,
       source,
       target,
+      type: "ant",
       label: e.reason,
       labelStyle: { fontSize: 9, fill: "#e6edf3" },
       labelBgStyle: { fill: "#161b22" },
       labelBgPadding: [3, 1] as [number, number],
       style: { stroke: color, strokeDasharray: "5 4", strokeWidth: 1.5 },
       animated: false,
-      data: { comms: true, kind: e.kind },
+      data: { comms: true, kind: antKind, color, ant: false },
     }];
   });
 

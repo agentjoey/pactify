@@ -37,6 +37,19 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
+/* Task detail panel (T11): slide-over from the right + scrim fade. Both are
+   referenced inline by RightRail only when reduced-motion is OFF (it gates the
+   `animation` style on matchMedia), so reduced-motion users get the panel
+   instantly with no keyframe. */
+@keyframes panel-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes panel-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Live pulse (M3.3b): on each applied LIVE snapshot, the task node(s) whose
    status changed get a `.pulse` class for ~900ms (cleared by App's timeout /
    animationend). The glow is role-colored via the inline --pulse-color var the
@@ -60,11 +73,300 @@ body {
 .comms-idle { opacity: 0.45; }
 .comms-blocked > div { box-shadow: 0 0 0 1.5px var(--warn); border-radius: 0.25rem; }
 
-/* While a draft is being dragged, light the seat rail up as drop targets. */
+/* ── Plan canvas stage (T7) — board2-canvas-v2 `.stage` ──────────────────────
+   Two ambient role-color radial glows over the page token, plus a masked dot
+   grid layer. Purely decorative; the React Flow pane sits transparent on top. */
+.canvas-stage {
+  background:
+    radial-gradient(1200px 500px at 70% -10%, color-mix(in srgb, var(--color-role-design) 6%, transparent), transparent 60%),
+    radial-gradient(900px 400px at 10% 110%, color-mix(in srgb, var(--color-role-dev) 5%, transparent), transparent 60%),
+    var(--color-bg-page);
+}
+.canvas-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%);
+}
+
+/* Frosted toolbar (top-left) — board2-canvas-v2 `.tbar`/`.tbtn`. */
+.canvas-tbar {
+  position: absolute;
+  top: 14px;
+  /* Shifted right of the Office|Plan mode segment (which sits at left:14px). */
+  left: 138px;
+  z-index: 10;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  background: color-mix(in srgb, var(--color-bg-raised) 70%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.canvas-tbar .tbtn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-1);
+  padding: 5px 11px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.12s var(--motion-ease);
+}
+.canvas-tbar .tbtn:hover { background: rgba(255, 255, 255, 0.06); }
+.canvas-tbar .tbtn:disabled { opacity: 0.4; }
+.canvas-tbar .tbtn .ic { opacity: 0.6; font-size: 11px; }
+.canvas-tbar .tbtn.on {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-role-design) 22%, transparent), color-mix(in srgb, var(--color-role-design) 12%, transparent));
+  color: var(--color-role-design);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-role-design) 30%, transparent);
+}
+.canvas-tbar .tbar-div {
+  width: 1px;
+  height: 16px;
+  background: var(--color-border-strong);
+  margin: 0 3px;
+}
+
+/* Comms legend pill — board2-canvas-v2 `.legend`. */
+.canvas-legend {
+  position: absolute;
+  top: 58px;
+  left: 14px;
+  z-index: 10;
+  display: flex;
+  gap: 12px;
+  font-size: 10.5px;
+  color: var(--color-text-2);
+  background: color-mix(in srgb, var(--color-bg-raised) 70%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+.canvas-legend span { display: flex; align-items: center; gap: 4px; }
+.canvas-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 0;
+  border-top: 2px dashed;
+}
+
+/* Zoom HUD (bottom-right) — board2-canvas-v2 `.hud`. */
+.canvas-hud {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: color-mix(in srgb, var(--color-bg-raised) 75%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  padding: 4px;
+  font-size: 12px;
+  color: var(--color-text-2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.canvas-hud button {
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: var(--color-text-2);
+  transition: background 0.12s var(--motion-ease);
+}
+.canvas-hud button:hover { background: rgba(255, 255, 255, 0.06); color: var(--color-text-1); }
+.canvas-hud .pct { font-size: 11px; color: var(--color-text-3); }
+
+/* Frosted MiniMap (bottom-left) — board2-canvas-v2 `.mmap`. React Flow renders
+   the <MiniMap> as an SVG; we re-skin its container to the glass panel. */
+.react-flow__minimap.canvas-minimap {
+  bottom: 16px;
+  left: 16px;
+  width: 150px;
+  height: 86px;
+  margin: 0;
+  background: color-mix(in srgb, var(--color-bg-surface) 60%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Task connect handles (T8) — enlarged hit area, hidden until the node is
+   hovered or a connection is being dragged (then any node shows its handles so
+   the author can aim). board2-canvas-v2 connect-UX (acceptance feedback 2.5). */
+.react-flow__handle.task-handle {
+  width: 12px;
+  height: 12px;
+  background: var(--color-role-design);
+  border: 2px solid var(--color-bg-page);
+  opacity: 0;
+  transition: opacity 0.12s var(--motion-ease), transform 0.12s var(--motion-ease);
+}
+.react-flow__node:hover .react-flow__handle.task-handle,
+.react-flow__handle.task-handle.connecting,
+.react-flow__handle.task-handle:hover {
+  opacity: 1;
+}
+.react-flow__handle.task-handle:hover { transform: scale(1.25); }
+/* While a connection drag is active, reveal every node's handles + ring valid
+   targets so the magnetic snap target is obvious. */
+.react-flow.connecting .react-flow__handle.task-handle { opacity: 0.85; }
+.task-node.connect-target {
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--color-role-dev), 0 0 14px color-mix(in srgb, var(--color-role-dev) 45%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__handle.task-handle { transition: none; }
+}
+
+/* Context menu (T8) — board2-canvas-v2 `.ctx`. Frosted, Kbd hints. */
+.canvas-ctx {
+  position: absolute;
+  z-index: 50;
+  width: 182px;
+  background: color-mix(in srgb, var(--color-bg-overlay) 96%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 11px;
+  padding: 5px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.canvas-ctx .ci {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--color-text-1);
+  padding: 6.5px 9px;
+  border-radius: 7px;
+  text-align: left;
+  transition: background 0.1s var(--motion-ease);
+}
+.canvas-ctx .ci:hover { background: rgba(255, 255, 255, 0.06); }
+.canvas-ctx .ci.hot {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-role-design) 20%, transparent), color-mix(in srgb, var(--color-role-design) 10%, transparent));
+}
+.canvas-ctx .ci.danger { color: var(--color-danger); }
+.canvas-ctx .ci .ci-ic { opacity: 0.7; width: 14px; text-align: center; }
+.canvas-ctx .ci kbd {
+  margin-left: auto;
+  font-size: 9.5px;
+  color: var(--color-text-3);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.canvas-ctx .ci-sep {
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: 4px 7px;
+}
+
+/* Snap-alignment guide lines (T8) — drawn while dragging a node whose x/y aligns
+   with another node (±6px). Display-only overlay, role-design colored. */
+.canvas-guides {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+.canvas-guides .guide {
+  position: absolute;
+  background: var(--color-role-design);
+  opacity: 0.7;
+}
+.canvas-guides .guide.v { width: 1px; top: 0; bottom: 0; }
+.canvas-guides .guide.h { height: 1px; left: 0; right: 0; }
+
+/* Inline rename input (T8) — dbl-click a draft title. */
+.canvas-rename {
+  position: absolute;
+  z-index: 50;
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  background: var(--color-bg-raised);
+  color: var(--color-text-1);
+  border: 1px solid var(--color-role-design);
+  border-radius: 6px;
+  padding: 4px 7px;
+  outline: none;
+}
+
+/* Feature frame v2 (T7) — board2-canvas-v2 `.frame`/`.fhead`. */
+.feature-frame {
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-bg-surface) 35%, transparent);
+  border: 1px solid var(--color-border-subtle);
+}
+.feature-frame .fhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-success) 7%, transparent), color-mix(in srgb, var(--color-bg-raised) 50%, transparent) 40%);
+  border-radius: 16px 16px 0 0;
+  backdrop-filter: blur(6px);
+}
+.feature-frame .fhead.done {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-success) 14%, transparent), color-mix(in srgb, var(--color-success) 7%, transparent) 60%);
+}
+.feature-frame .fname {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--color-text-1);
+}
+.feature-frame .fbranch { font-size: 10.5px; color: var(--color-text-3); }
+.feature-frame .fprog {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--color-text-2);
+}
+.feature-frame .fbar {
+  width: 64px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+}
+.feature-frame .fbar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--color-success), #9fe8be);
+}
+
+/* Seat drag-over halo (T7) — while a draft is dragged, every seat lifts as a
+   drop target: a subtle scale + role-color halo (board2-canvas-v2 seat halo).
+   Replaces the old border tint. Reduced-motion drops the scale (halo only). */
+.dragging-draft .react-flow__node-seat {
+  transition: transform 0.18s var(--motion-ease);
+  transform: scale(1.04);
+}
 .dragging-draft .react-flow__node-seat > div {
-  border-color: var(--role-dev) !important;
-  box-shadow: 0 0 14px -4px var(--role-dev);
-  transition: box-shadow 0.15s ease;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--role-dev) 55%, transparent),
+    0 0 22px color-mix(in srgb, var(--role-dev) 30%, transparent);
+  transition: box-shadow 0.18s var(--motion-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dragging-draft .react-flow__node-seat { transform: none; transition: none; }
+  .dragging-draft .react-flow__node-seat > div { transition: none; }
 }
 
 /* ── TaskCard genome (T4) — lifted from board3-kanban.html `.task`, retoned to
@@ -166,4 +468,134 @@ body {
   font-size: 10.5px;
   color: var(--color-text-3);
   background: transparent;
+}
+
+/* ── Office mode (T10) — board5 `.desk`/`.wall`/`.tray`/`.modeseg` ───────────
+   Agent-as-subject canvas. Desks are React Flow nodes (positions in the layout
+   `office` sidecar); wall chart + shipped tray + draft dock are fixed panels
+   over the stage. CSS lifted from board5-office.html, hard-coded colors
+   re-pointed to tokens. */
+
+/* Mode segment (top-left, above the Plan toolbar slot) — board5 `.modeseg`. */
+.office-modeseg {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  display: flex;
+  background: color-mix(in srgb, var(--color-bg-raised) 80%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 9px;
+  padding: 3px;
+}
+.office-modeseg button {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  padding: 4.5px 13px;
+  border-radius: 6px;
+  transition: background 0.12s var(--motion-ease), color 0.12s var(--motion-ease);
+}
+.office-modeseg button.on {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
+  color: var(--color-text-1);
+}
+
+/* Desk station — board5 `.desk`. */
+.desk {
+  width: 264px;
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(165deg, rgba(47, 50, 70, 0.92), rgba(32, 34, 47, 0.94));
+  border: 1px solid var(--color-border-strong);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.desk.busy {
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 24px color-mix(in srgb, var(--color-success) 18%, transparent);
+}
+.desk.review_due, .desk.waiting { border-color: color-mix(in srgb, var(--color-warn) 40%, transparent); }
+.desk.idle { opacity: 0.62; }
+.desk.drop-target { border-color: var(--color-role-dev); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-role-dev) 45%, transparent); }
+.desk .dhead { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
+.desk .dava {
+  position: relative; width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+.desk .presence { position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid #232532; }
+.desk .dname { font-size: 14px; font-weight: 650; color: var(--color-text-1); }
+.desk .dvend { font-size: 9.5px; color: var(--color-text-3); margin-top: 1px; }
+.desk .dstat {
+  margin-left: auto; font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px;
+  padding: 3px 10px; border-radius: 999px; display: flex; align-items: center; gap: 5px;
+}
+.desk .eq { display: inline-flex; gap: 1.5px; align-items: flex-end; height: 9px; }
+.desk .eq i { width: 2.5px; background: currentColor; border-radius: 1px; animation: eq 1s ease-in-out infinite; }
+.desk .eq i:nth-child(1) { height: 4px; }
+.desk .eq i:nth-child(2) { height: 8px; animation-delay: 0.15s; }
+.desk .eq i:nth-child(3) { height: 5px; animation-delay: 0.3s; }
+@keyframes eq { 50% { transform: scaleY(0.4); } }
+/* Replay renders a HISTORICAL snapshot — live activity animations are off. */
+.office-view.replaying .desk .eq i { animation: none; }
+
+.desk .dzone { padding: 0 12px 6px; }
+.desk .zlab {
+  font-size: 8.5px; letter-spacing: 0.7px; text-transform: uppercase; color: var(--color-text-3);
+  margin: 7px 2px 5px; display: flex; align-items: center; gap: 6px;
+}
+.desk .zlab .zc { background: rgba(255, 255, 255, 0.07); border-radius: 999px; padding: 0 6px; font-size: 8.5px; color: var(--color-text-2); }
+.parcel {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(13, 14, 20, 0.5); border: 1px solid var(--color-border-subtle);
+  border-left: 3px solid var(--st, #888);
+  border-radius: 7px; padding: 6px 9px; margin-bottom: 5px; font-size: 11px; color: var(--color-text-1);
+}
+.parcel .pico { font-size: 11px; }
+.parcel .pid { font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: var(--color-text-2); }
+.parcel .ptitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.parcel .pmeta { margin-left: auto; font-size: 9px; color: var(--color-text-3); flex-shrink: 0; }
+.parcel.dim { opacity: 0.55; border-style: dashed; }
+.parcel.inbox-glow { box-shadow: 0 0 10px color-mix(in srgb, var(--color-role-design) 18%, transparent); }
+.desk .dempty { font-size: 10px; color: var(--color-text-3); padding: 8px 2px 6px; text-align: center; font-style: italic; }
+
+/* Wall chart — board5 `.wall` (fixed top-right). */
+.office-wall {
+  position: absolute; right: 18px; top: 64px; width: 200px; z-index: 10;
+  background: color-mix(in srgb, var(--color-bg-raised) 70%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border-strong); border-radius: 12px; padding: 12px 14px;
+}
+.office-wall .wt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-text-3); margin-bottom: 9px; }
+.office-wall .wrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; color: var(--color-text-2); }
+.office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.office-wall .wbar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 70%, white)); }
+
+/* Shipped tray — board5 `.tray` (fixed bottom-right). */
+.office-tray {
+  position: absolute; right: 18px; bottom: 18px; width: 200px; z-index: 10;
+  background: color-mix(in srgb, var(--color-success) 6%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--color-success) 30%, transparent);
+  border-radius: 12px; padding: 10px 14px;
+}
+.office-tray .tt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-success); opacity: 0.8; margin-bottom: 7px; }
+.office-tray .tmore { font-size: 9px; color: var(--color-text-3); margin-top: 2px; }
+
+/* Draft dock (bottom-left) — drag a draft parcel onto a desk to dispatch. */
+.office-dock {
+  position: absolute; left: 14px; bottom: 18px; max-width: 260px; z-index: 10;
+  background: color-mix(in srgb, var(--color-bg-raised) 70%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border-strong); border-radius: 12px; padding: 10px 12px;
+}
+.office-dock .dt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-text-3); margin-bottom: 7px; }
+.office-dock .parcel { cursor: grab; --st: var(--color-text-2); }
+.office-dock .parcel:active { cursor: grabbing; }
+
+/* Transit lane crawl — board5 `.lane`. */
+@keyframes crawlflow { to { stroke-dashoffset: -22; } }
+.office-lane { stroke-dasharray: 3 8; animation: crawlflow 2.6s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .desk .eq i { animation: none; }
+  .office-lane { animation: none; }
 }

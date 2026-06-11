@@ -24,6 +24,7 @@ const DEBOUNCE_MS = 150;
 export function ReplayBar({
   project,
   replayAt,
+  refreshTick = 0,
   onEnter,
   onSnapshot,
   onLive,
@@ -31,6 +32,10 @@ export function ReplayBar({
   project: string;
   // null = live; a number = current replay position (0..total).
   replayAt: number | null;
+  // Bumped by App on every applied live snapshot — re-fetches the timeline so
+  // the slider bounds track new events during a long live session. Frozen while
+  // replaying (SSE snapshots are skipped, so the tick doesn't move).
+  refreshTick?: number;
   // Called with the position when entering replay from live (App sets replayAt).
   onEnter: (at: number) => void;
   // Called with the fetched historical state for a given position. App parks it
@@ -46,21 +51,24 @@ export function ReplayBar({
   const replaying = replayAt !== null;
   const total = timeline?.total ?? 0;
 
-  // Fetch the timeline index once per project (cheap, no payloads). Reset on
-  // project change so the slider bounds track the selected project.
+  // Reset the index on project change only (a refresh keeps the old index
+  // visible until the new one lands — no caption flicker).
+  useEffect(() => {
+    setTimeline(null);
+    // Cancel any pending position fetch on project switch and on unmount.
+    return () => { if (debounce.current) clearTimeout(debounce.current); };
+  }, [project]);
+
+  // Fetch the timeline index (cheap, no payloads) on project change and on
+  // every applied live snapshot, so the slider bounds track new events.
   useEffect(() => {
     let alive = true;
-    setTimeline(null);
     if (!project) return;
     getTimeline(project)
       .then((t) => { if (alive) setTimeline(t); })
-      .catch(() => { if (alive) setTimeline({ total: 0, events: [] }); });
-    return () => {
-      alive = false;
-      // Cancel any pending position fetch for the previous project.
-      if (debounce.current) clearTimeout(debounce.current);
-    };
-  }, [project]);
+      .catch(() => { if (alive) setTimeline((cur) => cur ?? { total: 0, events: [] }); });
+    return () => { alive = false; };
+  }, [project, refreshTick]);
 
   // go moves to position `at`: enter replay if currently live, then debounce the
   // historical-state fetch. at=0 → empty fold (no network). The fetched snapshot

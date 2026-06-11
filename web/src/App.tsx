@@ -51,9 +51,12 @@ export default function App() {
   // Mirror of `replayAt` readable inside callbacks that close over stale state
   // (the SSE handler, and the stale-response guard in showReplaySnapshot). While
   // replaying we still append to the event log but do NOT apply snapshots — the
-  // historical replayState owns the display.
+  // historical replayState owns the display. Written SYNCHRONOUSLY in
+  // enterReplay/resumeLive (not via an effect) so an SSE event landing between
+  // the state update and the next render can't slip a toast through.
   const replayAtRef = useRef<number | null>(null);
-  useEffect(() => { replayAtRef.current = replayAt; }, [replayAt]);
+  // Mirror of `current` for guarding late async responses after a project switch.
+  const currentRef = useRef("");
   // task id → epoch ms when first observed in_progress this session.
   const inProgressSince = useRef<Map<string, number>>(new Map());
   // tick forces stale re-evaluation on an interval even without state changes.
@@ -123,11 +126,13 @@ export default function App() {
   useEffect(() => {
     if (!current) return;
     let alive = true;
+    currentRef.current = current;
     setEvents([]);
     prevState.current = EMPTY;
     inProgressSince.current = new Map();
     setStaleTasks(new Set());
     // Exit replay on project switch — the new project starts live.
+    replayAtRef.current = null;
     setReplayAt(null);
     setReplayState(null);
     fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => { if (alive) setState(EMPTY); });
@@ -162,6 +167,7 @@ export default function App() {
   // display precedence over the live state. Historical snapshots never pass
   // through applyState, so the firstSnapshot toast/pulse guard stays live-only.
   function enterReplay(at: number) {
+    replayAtRef.current = at;
     setReplayAt(at);
   }
   function showReplaySnapshot(at: number, s: State) {
@@ -174,9 +180,13 @@ export default function App() {
   // Return to live: drop the historical snapshot, refetch fresh live state (do
   // NOT trust the last SSE-applied state), and resume applying SSE.
   function resumeLive() {
+    replayAtRef.current = null;
     setReplayAt(null);
     setReplayState(null);
-    fetchState(current).then((s) => applyState(s)).catch(() => {});
+    const p = current;
+    fetchState(p)
+      .then((s) => { if (p === currentRef.current) applyState(s); })
+      .catch(() => {});
   }
 
   // Snapshot shown by kanban/canvas: historical while replaying (falling back to
@@ -197,7 +207,7 @@ export default function App() {
                 : <Board state={shownState} selected={selected} onSelect={setSelected} />}
               <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} />
             </div>
-            <ReplayBar project={current} replayAt={replayAt} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />
+            <ReplayBar project={current} replayAt={replayAt} refreshTick={refreshTick} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />
           </>
         )}
       <Toasts toasts={toasts} />

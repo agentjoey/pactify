@@ -86,22 +86,59 @@ describe("ReplayBar", () => {
   it("position 0 shows the 'start' caption without a network fetch", async () => {
     vi.useFakeTimers();
     try {
+      const onSnapshot = vi.fn();
+      const onEnter = vi.fn();
+      const bar = (at: number | null) => (
+        <ReplayBar
+          project="demo"
+          replayAt={at}
+          onEnter={onEnter}
+          onSnapshot={onSnapshot}
+          onLive={vi.fn()}
+        />
+      );
+      const { rerender } = render(bar(1));
+      await act(async () => { await Promise.resolve(); });
+
+      // Step back to 0: the empty fold is synthesized locally — onSnapshot gets
+      // the EMPTY state and getStateAt is never hit.
+      fireEvent.click(screen.getByLabelText("step back"));
+      expect(onEnter).toHaveBeenCalledWith(0);
+      rerender(bar(0)); // App parks replayAt=0
+      await act(async () => { vi.advanceTimersByTime(200); });
+      expect(screen.getByText("start")).toBeInTheDocument();
+      expect(getStateAt).not.toHaveBeenCalled();
+      expect(onSnapshot).toHaveBeenCalledWith(0, { project: "", agents: [], features: [], awaiting_count: 0 });
+
+      // Stepping forward to 1 fetches at=1.
+      fireEvent.click(screen.getByLabelText("step forward"));
+      await act(async () => { vi.advanceTimersByTime(200); });
+      expect(getStateAt).toHaveBeenCalledWith("demo", 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("fast scrubbing coalesces into a single fetch for the last position", async () => {
+    vi.useFakeTimers();
+    try {
       render(
         <ReplayBar
           project="demo"
-          replayAt={0}
+          replayAt={null}
           onEnter={vi.fn()}
           onSnapshot={vi.fn()}
           onLive={vi.fn()}
         />,
       );
       await act(async () => { await Promise.resolve(); });
-      expect(screen.getByText("start")).toBeInTheDocument();
 
-      // Stepping back from 0 is disabled; stepping forward to 1 fetches at=1.
-      fireEvent.click(screen.getByLabelText("step forward"));
+      const slider = screen.getByLabelText("replay position") as HTMLInputElement;
+      fireEvent.change(slider, { target: { value: "1" } });
+      fireEvent.change(slider, { target: { value: "2" } });
       await act(async () => { vi.advanceTimersByTime(200); });
-      expect(getStateAt).toHaveBeenCalledWith("demo", 1);
+      expect(getStateAt).toHaveBeenCalledTimes(1);
+      expect(getStateAt).toHaveBeenCalledWith("demo", 2);
     } finally {
       vi.useRealTimers();
     }

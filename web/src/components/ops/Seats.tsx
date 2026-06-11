@@ -52,15 +52,18 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
                 </td>
                 <td className="py-1.5 pr-3">
                   <span className="flex flex-wrap gap-1">
-                    {s.roles.map((r) => (
-                      <span
-                        key={r}
-                        className="rounded px-1 py-0.5 text-[10px]"
-                        style={{ background: "#21262d", color: `var(${roleColorVar([r])})` }}
-                      >
-                        {r}
-                      </span>
-                    ))}
+                    {s.roles.map((r) => {
+                      const c = `var(${roleColorVar([r])})`;
+                      return (
+                        <span
+                          key={r}
+                          className="inline-flex items-center rounded-full px-2 py-px text-[10px] font-medium"
+                          style={{ color: c, background: `color-mix(in srgb, ${c} 15%, transparent)` }}
+                        >
+                          {r}
+                        </span>
+                      );
+                    })}
                   </span>
                 </td>
                 <td className="py-1.5 text-gray-400 font-mono">

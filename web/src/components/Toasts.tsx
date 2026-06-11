@@ -30,7 +30,7 @@ export function Toasts({ toasts }: { toasts: Toast[] }) {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="pointer-events-auto rounded-md border border-[#30363d] bg-[#161b22] px-3 py-2 text-xs text-[#e6edf3] shadow-lg"
+          className="pointer-events-auto rounded-md border border-[var(--color-border-subtle)] border-l-2 border-l-[var(--color-role-design)] bg-[var(--color-bg-raised)] px-3 py-2 text-xs text-[var(--color-text-1)] shadow-[var(--shadow-raised)]"
         >
           {t.text}
         </div>

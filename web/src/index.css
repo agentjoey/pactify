@@ -22,6 +22,21 @@ body {
 /* React Flow dark overrides — keep the canvas consistent with the dashboard. */
 .react-flow__attribution { display: none; }
 
+/* ui/Modal entry — 180ms scale+fade per spec §1. The overlay fades, the panel
+   scales up from 96%. Suppressed under reduced-motion (instant, no transform). */
+@media (prefers-reduced-motion: no-preference) {
+  .ui-modal-overlay { animation: ui-overlay-in 180ms var(--motion-ease); }
+  .ui-modal-panel { animation: ui-panel-in 180ms var(--motion-ease); }
+}
+@keyframes ui-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ui-panel-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* awaiting_review nodes pulse design-blue to draw the reviewer's eye. The
    animation is wrapped in a reduced-motion guard: users who opt out get a
    static ring instead of the breathing glow. */

@@ -88,4 +88,30 @@ describe("Wiring", () => {
     });
     expect(postWire).toHaveBeenCalledWith("demo", "codex", { seat: "codex", roles: "worker" });
   });
+
+  it("Copy button writes the snippet to the clipboard and flashes copied", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    // jsdom has no clipboard API — stub it.
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    const res: WireResult = {
+      wrote: true, global: false, path: ".pact/agents/codex.md", docOnly: true,
+      snippet: "[mcp_servers.pact]\ncommand = \"pactify\"",
+    };
+    postWire.mockResolvedValue(res);
+
+    render(<Wiring project="demo" author={true} />);
+    await waitFor(() => expect(screen.getByTestId("wiring-row-codex")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("show snippet"));
+    fireEvent.change(screen.getByLabelText("seat"), { target: { value: "codex" } });
+    fireEvent.change(screen.getByLabelText("roles"), { target: { value: "worker" } });
+    fireEvent.click(screen.getByText("wire entry + show snippet"));
+    await waitFor(() => expect(screen.getByTestId("wire-snippet")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId("wire-snippet-copy"));
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith("[mcp_servers.pact]\ncommand = \"pactify\""),
+    );
+    await waitFor(() => expect(screen.getByText("copied ✓")).toBeInTheDocument());
+  });
 });

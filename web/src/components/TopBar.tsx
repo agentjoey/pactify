@@ -93,7 +93,7 @@ export function TopBar({
       {/* project switcher (chip → Popover with search) */}
       <Popover
         open={projOpen}
-        onClose={() => setProjOpen(false)}
+        onClose={() => { setProjOpen(false); setQuery(""); }}
         align="left"
         anchor={
           <button

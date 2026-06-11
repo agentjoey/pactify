@@ -1,4 +1,5 @@
 import type { State, Task } from "./types";
+import type { Node, Edge } from "@xyflow/react";
 
 // WaitEdge is one "who-waits-on-whom" arrow derived from the snapshot. For
 // review/rework edges from/to are SEAT ids; for dep edges they are TASK ids
@@ -101,4 +102,117 @@ export function pulseTargets(prev: State | null, next: State): { taskIds: string
     if (old === undefined || old !== t.status) taskIds.push(t.id);
   }
   return { taskIds };
+}
+
+// --- Overlay lens (M3.3b C4) ----------------------------------------------
+//
+// mergeComms folds a CommsResult into the React Flow node/edge arrays that the
+// canvas already renders, producing a NEW pair (the inputs are never mutated and
+// the result is NEVER persisted to layout.json — this is a display-only lens).
+//
+// Wait edges become DASHED React Flow edges with ids `wait:${from}→${to}:${taskId}`
+// so they cannot collide with the `dep:` edge ids. Markers (idle/blocked/not
+// joined) are surfaced as boolean data flags + a `commsClass` className on the
+// affected nodes, which the node components / className merge already honor.
+//
+// Anchoring for review/rework edges (from/to are SEAT ids): we draw from the
+// TASK's node to the WAITED-ON seat's node, because the task is the subject of
+// the wait and the seat carrying the ball is the destination. Review waits on
+// the reviewer (the `to` seat); rework waits on the owner (also the `to` seat),
+// so in BOTH cases the arrow targets `seat:${edge.to}` and sources the task.
+// Seat nodes always render on the canvas (the left rail), so we never need the
+// seat-to-seat fallback; if a seat node is somehow absent we fall back to
+// seat-to-seat (`seat:from` → `seat:to`) rather than dropping the edge. Dep
+// edges (from/to are TASK ids) draw task→task, neutral amber.
+
+// Role color var for a seat id from the snapshot (defaults to --role-dev).
+function seatColorVar(state: State, seatId: string): string {
+  const a = state.agents.find((x) => x.id === seatId);
+  if (!a) return "--role-dev";
+  if (a.roles.includes("orchestrator")) return "--role-product";
+  if (a.roles.includes("reviewer")) return "--role-design";
+  if (a.roles.includes("worker")) return "--role-dev";
+  return "--role-dev";
+}
+
+const AMBER = "#d29922"; // neutral/blocked accent (matches stale-dot + blocked outline)
+
+export function mergeComms(
+  nodes: Node[],
+  edges: Edge[],
+  comms: CommsResult,
+  state: State,
+): { nodes: Node[]; edges: Edge[] } {
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const idle = new Set(comms.idleSeats.map((s) => `seat:${s}`));
+  const blocked = new Set(comms.blockedTasks.map((t) => `task:${t}`));
+  // notJoined holds SEAT ids; surface the warning on the seat chip AND on every
+  // task whose owner/reviewer is that missing seat.
+  const notJoinedSeats = new Set(comms.notJoined);
+
+  // task id → true if any of its owner/reviewer never joined (built from edges'
+  // backing snapshot). We resolve through the State so a task node can light up
+  // even if no wait edge references it.
+  const tasksWithMissing = new Set<string>();
+  for (const f of state.features) {
+    for (const t of f.tasks) {
+      if (notJoinedSeats.has(t.owner) || notJoinedSeats.has(t.reviewer)) {
+        tasksWithMissing.add(`task:${t.id}`);
+      }
+    }
+  }
+
+  const outNodes: Node[] = nodes.map((n) => {
+    const isIdle = idle.has(n.id);
+    const isBlocked = blocked.has(n.id);
+    const isNotJoined = notJoinedSeats.has(n.id.replace(/^seat:/, "")) && n.type === "seat"
+      ? true
+      : tasksWithMissing.has(n.id);
+    if (!isIdle && !isBlocked && !isNotJoined) return n;
+    const classes = [
+      isIdle ? "comms-idle" : "",
+      isBlocked ? "comms-blocked" : "",
+      isNotJoined ? "comms-notjoined" : "",
+    ].filter(Boolean).join(" ");
+    return {
+      ...n,
+      className: [n.className, classes].filter(Boolean).join(" "),
+      data: { ...n.data, commsIdle: isIdle, commsBlocked: isBlocked, commsNotJoined: isNotJoined },
+    };
+  });
+
+  const waitEdges: Edge[] = comms.edges.map((e) => {
+    const id = `wait:${e.from}→${e.to}:${e.taskId}`;
+    let source: string;
+    let target: string;
+    let color: string;
+    if (e.kind === "dep") {
+      // from/to are TASK ids; draw dependent → unmet prerequisite, amber.
+      source = `task:${e.from}`;
+      target = `task:${e.to}`;
+      color = AMBER;
+    } else {
+      // review/rework: from/to are SEAT ids. Anchor TASK → waited-on seat.
+      const taskNode = `task:${e.taskId}`;
+      const waitedOn = `seat:${e.to}`;
+      const haveSeat = nodeIds.has(waitedOn);
+      source = nodeIds.has(taskNode) ? taskNode : `seat:${e.from}`;
+      target = haveSeat ? waitedOn : `seat:${e.to}`;
+      color = `var(${seatColorVar(state, e.to)})`;
+    }
+    return {
+      id,
+      source,
+      target,
+      label: e.reason,
+      labelStyle: { fontSize: 9, fill: "#e6edf3" },
+      labelBgStyle: { fill: "#161b22" },
+      labelBgPadding: [3, 1] as [number, number],
+      style: { stroke: color, strokeDasharray: "5 4", strokeWidth: 1.5 },
+      animated: false,
+      data: { comms: true, kind: e.kind },
+    };
+  });
+
+  return { nodes: outNodes, edges: [...edges, ...waitEdges] };
 }

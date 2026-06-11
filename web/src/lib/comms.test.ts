@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { deriveComms, pulseTargets } from "./comms";
+import type { Node, Edge } from "@xyflow/react";
+import { deriveComms, mergeComms, pulseTargets } from "./comms";
 import type { State, Task } from "./types";
 
 // mk builds a minimal State with the given agents and one feature whose tasks
@@ -122,6 +123,76 @@ describe("deriveComms — clean state", () => {
   it("in-flight only → no edges, no blocked, no missing (reviewer idle until handoff)", () => {
     const r = deriveComms(mk(seats, [task({ id: "T1", owner: "worker", status: "in_progress", reviewer: "rev" })]));
     expect(r).toEqual({ edges: [], idleSeats: ["rev"], notJoined: [], blockedTasks: [] });
+  });
+});
+
+describe("mergeComms — overlay lens", () => {
+  // Minimal React Flow node/edge inputs mirroring what deriveFlow emits: seat
+  // nodes (left rail) + task nodes, plus a base dep edge.
+  const seatNode = (id: string): Node => ({ id: `seat:${id}`, type: "seat", position: { x: 0, y: 0 }, data: {} });
+  const taskNode = (id: string): Node => ({ id: `task:${id}`, type: "task", position: { x: 0, y: 0 }, data: {} });
+
+  it("awaiting_review → dashed wait edge task→reviewer seat with reason label + stable id", () => {
+    const state = mk(seats, [task({ id: "T1", owner: "worker", reviewer: "rev", status: "awaiting_review" })]);
+    const comms = deriveComms(state);
+    const baseNodes = [seatNode("worker"), seatNode("rev"), taskNode("T1")];
+    const { edges } = mergeComms(baseNodes, [], comms, state);
+
+    const wait = edges.find((e) => e.id === "wait:worker→rev:T1")!;
+    expect(wait).toBeDefined();
+    // Review wait anchors the TASK node to the waited-on (reviewer) SEAT node.
+    expect(wait.source).toBe("task:T1");
+    expect(wait.target).toBe("seat:rev");
+    expect(wait.label).toBe("awaiting review: T1");
+    expect((wait.style as { strokeDasharray?: string }).strokeDasharray).toBe("5 4");
+    expect((wait.data as { comms?: boolean }).comms).toBe(true);
+  });
+
+  it("dep edge draws task→task amber and never collides with dep: ids", () => {
+    const state = mk(seats, [
+      task({ id: "B", status: "in_progress" }),
+      task({ id: "T1", status: "in_progress", deps: ["B"] }),
+    ]);
+    const comms = deriveComms(state);
+    const baseEdges: Edge[] = [{ id: "dep:B→T1", source: "task:B", target: "task:T1" }];
+    const { edges } = mergeComms([taskNode("B"), taskNode("T1")], baseEdges, comms, state);
+
+    expect(edges.some((e) => e.id === "dep:B→T1")).toBe(true); // base preserved
+    const wait = edges.find((e) => e.id === "wait:T1→B:T1")!;
+    expect(wait.source).toBe("task:T1");
+    expect(wait.target).toBe("task:B");
+    expect((wait.style as { stroke?: string }).stroke).toBe("#d29922");
+  });
+
+  it("applies comms-blocked / comms-idle / comms-notjoined classes to nodes", () => {
+    // T1 blocked by unmet dep B; seat 'idle' does nothing; reviewer ghost absent.
+    const state = mk(
+      [{ id: "worker", roles: ["worker"] }, { id: "idle", roles: ["worker"] }],
+      [
+        task({ id: "B", status: "in_progress", owner: "worker", reviewer: "worker" }),
+        task({ id: "T1", status: "in_progress", owner: "worker", reviewer: "ghost", deps: ["B"] }),
+      ],
+    );
+    const comms = deriveComms(state);
+    const baseNodes = [seatNode("worker"), seatNode("idle"), taskNode("B"), taskNode("T1")];
+    const { nodes } = mergeComms(baseNodes, [], comms, state);
+
+    const t1 = nodes.find((n) => n.id === "task:T1")!;
+    expect(t1.className).toContain("comms-blocked");
+    expect(t1.className).toContain("comms-notjoined"); // reviewer ghost not joined
+    const idleSeat = nodes.find((n) => n.id === "seat:idle")!;
+    expect(idleSeat.className).toContain("comms-idle");
+  });
+
+  it("clean state → no wait edges, no class changes (lens is inert)", () => {
+    const state = mk(seats, [task({ id: "T1", owner: "worker", status: "in_progress", reviewer: "rev" })]);
+    const comms = deriveComms(state);
+    const baseNodes = [seatNode("worker"), seatNode("rev"), taskNode("T1")];
+    const { nodes, edges } = mergeComms(baseNodes, [], comms, state);
+    expect(edges).toEqual([]);
+    // worker active; rev idle until handoff → rev seat dimmed, tasks untouched.
+    expect(nodes.find((n) => n.id === "task:T1")!.className).toBeUndefined();
+    expect(nodes.find((n) => n.id === "seat:rev")!.className).toContain("comms-idle");
   });
 });
 

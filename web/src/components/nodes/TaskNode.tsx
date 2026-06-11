@@ -21,6 +21,7 @@ export function TaskNode({ id, data }: NodeProps) {
     roleColor?: string;
     draft?: boolean;
     stale?: boolean;
+    commsNotJoined?: boolean;
     onDispatch?: () => void;
   };
   const taskId = id.replace(/^(task|draft):/, "");
@@ -51,6 +52,15 @@ export function TaskNode({ id, data }: NodeProps) {
         {d.draft && (
           <span className="text-[9px] uppercase tracking-wide rounded px-1 bg-[#21262d] text-[#8b949e] border border-dashed border-[#6e7681]">
             draft
+          </span>
+        )}
+        {d.commsNotJoined && (
+          <span
+            data-testid="notjoined-badge"
+            title="owner or reviewer never joined"
+            className="text-[9px] uppercase tracking-wide rounded px-1 bg-[#21262d] text-[#f85149] border border-[#f85149]"
+          >
+            ⚠ not joined
           </span>
         )}
       </div>

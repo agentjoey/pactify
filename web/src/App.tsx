@@ -10,6 +10,7 @@ import { ReplayBar } from "./components/ReplayBar";
 import { RightRail } from "./components/RightRail";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
+import { pulseTargets } from "./lib/comms";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
 
@@ -42,6 +43,12 @@ export default function App() {
   const replaying = replayAt !== null;
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
+  // Live pulse (M3.3b C4): task ids whose status changed on the latest applied
+  // LIVE snapshot. Canvas/Board apply a transient `pulse` class; the set is
+  // cleared after the keyframe duration so the glow plays exactly once. Replay
+  // snapshots never reach applyState, so this stays live-only.
+  const [pulses, setPulses] = useState<Set<string>>(new Set());
+  const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Monotonic tick bumped on every applied state snapshot; passed to the ops
   // panels so their fetches re-run on SSE updates for the selected project.
   const [refreshTick, setRefreshTick] = useState(0);
@@ -118,6 +125,22 @@ export default function App() {
     }
     for (const id of [...m.keys()]) if (!liveInProgress.has(id)) m.delete(id);
 
+    // 3) live pulse — task ids whose status changed since the previous live
+    // snapshot. Computed BEFORE prevState is updated. The first snapshot must
+    // NOT pulse: prev here is the EMPTY sentinel (not null), so pulseTargets
+    // would flag every task as "newly appearing" — gate on firstSnapshot.
+    if (!firstSnapshot) {
+      const { taskIds } = pulseTargets(prevState.current, s);
+      if (taskIds.length) {
+        setPulses(new Set(taskIds));
+        if (pulseTimer.current) clearTimeout(pulseTimer.current);
+        // Timeout fallback clears the class after the ~900ms keyframe so the
+        // glow plays once (animationend on the node also works in the browser;
+        // this guarantees cleanup under jsdom and prefers-reduced-motion).
+        pulseTimer.current = setTimeout(() => setPulses(new Set()), 950);
+      }
+    }
+
     prevState.current = s;
     setState(s);
     setRefreshTick((n) => n + 1);
@@ -131,6 +154,8 @@ export default function App() {
     prevState.current = EMPTY;
     inProgressSince.current = new Map();
     setStaleTasks(new Set());
+    setPulses(new Set());
+    if (pulseTimer.current) clearTimeout(pulseTimer.current);
     // Exit replay on project switch — the new project starts live.
     replayAtRef.current = null;
     setReplayAt(null);
@@ -203,8 +228,8 @@ export default function App() {
           <>
             <div className="flex flex-1 overflow-hidden">
               {view === "canvas"
-                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} onSelectTask={setSelected} />
-                : <Board state={shownState} selected={selected} onSelect={setSelected} />}
+                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} />
+                : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} />}
               <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} />
             </div>
             <ReplayBar project={current} replayAt={replayAt} refreshTick={refreshTick} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />

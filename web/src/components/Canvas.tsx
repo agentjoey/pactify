@@ -24,6 +24,7 @@ import {
   type LayoutJSON,
 } from "../lib/canvas";
 import { getLayout, putLayout } from "../lib/api";
+import { deriveComms, mergeComms } from "../lib/comms";
 import { TaskNode } from "./nodes/TaskNode";
 import { SeatNode } from "./nodes/SeatNode";
 import { FeatureGroup } from "./nodes/FeatureGroup";
@@ -160,6 +161,7 @@ export function Canvas({
   author,
   replaying,
   staleTasks,
+  pulses,
   onSelectTask,
 }: {
   project: string;
@@ -172,10 +174,17 @@ export function Canvas({
   // Raw task ids that have sat in_progress past the stale threshold (App owns
   // the timestamp map). Rendered as an amber dot on the task node.
   staleTasks?: Set<string>;
+  // Raw task ids to pulse once (live SSE diff). App owns the set; a task node
+  // whose id is present gets a transient `pulse` class (role-colored glow).
+  pulses?: Set<string>;
   // Clicking a committed task node selects it (drives the RightRail review
   // flow). Receives the raw task id (no "task:" prefix).
   onSelectTask?: (id: string) => void;
 }) {
+  // Comms overlay toggle — component-local, default OFF. It's a display lens
+  // (derived wait edges + node markers merged into the rendered graph), never
+  // persisted to layout.json.
+  const [comms, setComms] = useState(false);
   const [layout, setLayout] = useState<LayoutJSON>({});
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
@@ -442,6 +451,42 @@ export function Canvas({
   const nfBranchBad = nfBranch.length > 0 && !SLUG_RE.test(nfBranch.trim());
   const nfValid = SLUG_RE.test(nfId.trim()) && SLUG_RE.test(nfBranch.trim());
 
+  // Comms lens result, derived from the snapshot only when the overlay is on.
+  const commsResult = useMemo(
+    () => (comms ? deriveComms(state) : null),
+    [comms, state],
+  );
+
+  // displayNodes / displayEdges are the DISPLAY layer fed to React Flow. They
+  // start from the layout-pristine `nodes` state + base dep `edges`, then layer
+  // on (a) the pulse class for live-changed tasks and (b) the comms overlay when
+  // the toggle is on. Neither is ever written back to the layout sidecar — the
+  // drag-persistence path reads the pristine `nodes` state / layoutRef, not these.
+  const displayNodes = useMemo(() => {
+    let out = nodes;
+    if (pulses && pulses.size > 0) {
+      out = out.map((n) => {
+        const raw = n.id.replace(/^(task|draft):/, "");
+        if ((n.type === "task" || n.type === "draft") && pulses.has(raw)) {
+          const roleVar = (n.data as { roleColor?: string }).roleColor ?? "--role-dev";
+          return {
+            ...n,
+            className: [n.className, "pulse"].filter(Boolean).join(" "),
+            style: { ...n.style, ["--pulse-color" as string]: `var(${roleVar})` },
+          };
+        }
+        return n;
+      });
+    }
+    if (commsResult) out = mergeComms(out, edges, commsResult, state).nodes;
+    return out;
+  }, [nodes, edges, pulses, commsResult, state]);
+
+  const displayEdges = useMemo(() => {
+    if (!commsResult) return edges;
+    return mergeComms(nodes, edges, commsResult, state).edges;
+  }, [nodes, edges, commsResult, state]);
+
   return (
     <div className={`relative flex-1${draggingDraft ? " dragging-draft" : ""}`} data-testid="canvas-root">
       {author && (
@@ -497,6 +542,41 @@ export function Canvas({
         </div>
       )}
 
+      {/* Comms overlay toggle — top-right, always available (read-only lens). */}
+      <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1.5">
+        <button
+          data-testid="comms-toggle"
+          aria-pressed={comms}
+          className={`rounded border px-2.5 py-1 text-xs ${
+            comms
+              ? "border-[#8ab4ff] bg-[#161b22] text-[#8ab4ff]"
+              : "border-[#30363d] bg-[#161b22] text-[#e6edf3] hover:border-[#8b949e]"
+          }`}
+          onClick={() => setComms((v) => !v)}
+        >
+          comms {comms ? "on" : "off"}
+        </button>
+        {comms && (
+          <div
+            data-testid="comms-legend"
+            className="flex items-center gap-2 rounded border border-[#30363d] bg-[#161b22] px-2 py-1 text-[10px] text-[#8b949e]"
+          >
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-0 w-3 border-t border-dashed border-[#8ab4ff]" />
+              waiting
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-sm border border-[#d29922]" />
+              blocked
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-[#484f58] opacity-50" />
+              idle
+            </span>
+          </div>
+        )}
+      </div>
+
       {notice && (
         <div
           data-testid="canvas-notice"
@@ -507,8 +587,8 @@ export function Canvas({
       )}
 
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={displayNodes}
+        edges={displayEdges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onNodeDragStart={onNodeDragStart}

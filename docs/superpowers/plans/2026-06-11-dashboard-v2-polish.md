@@ -30,6 +30,19 @@ export function deriveOffice(state: State): { desks: DeskModel[]; shipped: Task[
 
 ---
 
+## Wave 0 — acceptance-blocker hotfix (branch `fix/canvas-ux-hotfix`, ships BEFORE W1)
+
+### Task T0: canvas state survival + dispatch seat bug + draft auto-ids
+
+**Files:** Modify `web/src/App.tsx`, `web/src/components/Canvas.tsx`, `web/src/components/TaskEditor.tsx`, `web/src/components/DispatchModal.tsx` (+tests).
+
+User acceptance feedback (greet repo, blocked at dispatch): ① switching canvas→ops→canvas WIPES the board — drafts/draftFeatures live in Canvas component state (Canvas.tsx:189-190) and App unmounts Canvas on view switch (App.tsx:230-237); ② dispatch modal showed NO seats to choose although STATE.yml has two agents (verified: `~/AgentWorks/Code_Claude/pact-dogfood-squad/.pact/STATE.yml` lists claude-opus + opencode; roster wiring is Canvas.tsx:448 `state.agents` → DispatchModal roster) — REPRODUCE first (register that repo, open dispatch via button AND via drop) and fix the actual cause; check whether seat NODES also failed to render (user "没有坐席" may mean the canvas left rail); ③ draft forms demand hand-typed ids.
+
+- [ ] Lift `drafts`/`draftFeatures` (and comms toggle if trivial) from Canvas to App state passed down as props, so view switches preserve them. vitest: render App-ish harness, create draft, unmount/remount Canvas, draft persists.
+- [ ] Systematic repro of ②: fixture state with 2 agents → open DispatchModal via button → assert both options present (this test may PASS — then repro deeper: through Canvas with a draft inside a draft feature, through TaskEditor path, and with the REAL serve against the dogfood repo via manual check). Fix root cause; regression test pinned to whatever the cause was.
+- [ ] Auto-ids: draft task form defaults to next free `t<N>` (scan existing+draft ids), feature form defaults `f<N>`; still editable; slug-validated as today. TDD the `nextId(existing: string[], prefix: string)` helper.
+- [ ] Gate (tsc/test, dist rebuild+commit). Single PR `fix(web): canvas drafts survive view switches, dispatch roster fix, draft auto-ids — dist rebuilt`; CI green → merge (authorized).
+
 ## Wave 1 — foundation + cards + kanban + TopBar (branch `feat/dashboard-v2-w1`)
 
 ### Task T1: tokens + fonts + base styles
@@ -46,7 +59,7 @@ export function deriveOffice(state: State): { desks: DeskModel[]; shipped: Task[
 **Files:** Create `web/src/components/ui/{Button,Input,Select,Badge,Kbd,Modal,Popover,Tooltip,EmptyState}.tsx` + `ui/ui.test.tsx`.
 
 - [ ] TDD per component (render variants, disabled state, focus-visible ring class; Modal: Esc closes + focus trap + overlay token; Tooltip: 400ms delayed appear with fake timers; Popover: outside-click closes). Visual specs = board1/board3 (paddings, radii, 120/200ms transitions, `cubic-bezier(0.25,1,0.5,1)`).
-- [ ] Replace hand-rolled controls in DispatchModal.tsx, TaskEditor.tsx, ops/{Projects,Wiring,Seats}.tsx with ui/ primitives (mechanical swap, keep behavior + testids; ops danger confirms move from inline confirm to `<Modal variant="danger">`).
+- [ ] Replace hand-rolled controls in DispatchModal.tsx, TaskEditor.tsx, ops/{Projects,Wiring,Seats}.tsx with ui/ primitives (mechanical swap, keep behavior + testids; ops danger confirms move from inline confirm to `<Modal variant="danger">`). Wiring codex snippet gains an explicit Copy button (navigator.clipboard + "copied" flash) — acceptance feedback 1.2.
 - [ ] Gate + dist. Commit: `feat(web): ui primitives — buttons/inputs/modal/popover/tooltip/badge/kbd, app-wide swap — dist rebuilt`
 
 ### Task T3: ant avatar system
@@ -97,6 +110,7 @@ export function deriveOffice(state: State): { desks: DeskModel[]; shipped: Task[
 - [ ] AntEdge: custom edge rendering the base path (dashed, colored as today) + an `<animateMotion rotate="auto"><mpath>` ant group — messenger ant (wait edges, edge color) / carrier ant with cargo cube (dep/blocked) — SVGs lifted from board4 §1. Module-level cap: only first 6 ant-bearing edges per render get ants (orderly: comms wait edges first), beyond → plain dash; `prefers-reduced-motion` (matchMedia) → never animate. TDD: ≤cap renders `<animateMotion>`, beyond-cap and reduced-motion render none (stub matchMedia).
 - [ ] ContextMenu (board2-v2 markup): canvas right-click → New feature/New task; task node right-click → Dispatch/Edit/View spec/Delete draft (+Kbd hints); wired to existing handlers; Esc closes; only in author+live mode.
 - [ ] Snap guides on drag (nearest node edge alignment ±6px → red guide line overlay), dbl-click draft rename (inline input), Del removes selected drafts, Esc chain (menu→selection→draft form). Marquee = React Flow `selectionOnDrag` with shift.
+- [ ] **Connect UX fix (acceptance feedback 2.5 — connecting deps failed, anchors offset, poor feel):** task handles repositioned to card edge midpoints and enlarged hit area (≥12px, visible on hover), `connectionRadius={30}` magnetic snapping, valid drop targets highlight while dragging a connection, invalid (cross-feature/self/cycle per applyConnect) show not-allowed state. Manual verification against the dogfood repo is part of DONE.
 - [ ] Gate + dist. Commit: `feat(web): ant-crawl edges, context menus, snap/rename/del interactions — dist rebuilt`
 
 ### Task T9: office derivation lib (pure)

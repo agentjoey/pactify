@@ -41,6 +41,7 @@ import { Toolbar } from "./canvas/Toolbar";
 import { Hud } from "./canvas/Hud";
 import { AntEdge } from "./canvas/edges/AntEdge";
 import { OfficeView } from "./canvas/OfficeView";
+import { CanvasSkeleton } from "./Skeleton";
 
 // CanvasMode picks which surface the stage shows. Office (agents-as-subject) is
 // the DEFAULT landing (spec §3); Plan is the existing feature/task-frame canvas.
@@ -236,6 +237,7 @@ export function Canvas({
   draftFeatures,
   setDraftFeatures,
   initialMode = "office",
+  loading,
 }: {
   project: string;
   state: State;
@@ -265,6 +267,9 @@ export function Canvas({
   // semantics are unchanged — the mode segment switch is otherwise the only way
   // in. Mode is NOT persisted to layout.
   initialMode?: CanvasMode;
+  // First-load only: a project is current but its first snapshot hasn't landed
+  // yet → show a dim skeleton stage instead of an empty graph.
+  loading?: boolean;
 }) {
   // Office | Plan — session-local, not persisted.
   const [mode, setMode] = useState<CanvasMode>(initialMode);
@@ -289,6 +294,11 @@ export function Canvas({
   const [nfId, setNfId] = useState("");
   const [nfBranch, setNfBranch] = useState("");
   const [notice, setNotice] = useState(""); // transient toast (deps-fixed cue)
+  // Feature focus mode (T15): the feature id whose frame header was clicked. When
+  // set, the RF wrapper gets a `focus-active` class + a `data-focus` attr; CSS
+  // dims/desaturates every node/edge NOT belonging to that feature. Display-only
+  // — it never touches layout or the derived graph. null = no focus.
+  const [focusFeature, setFocusFeature] = useState<string | null>(null);
   // Dispatch target: a draft dropped onto a seat.
   const [dispatch, setDispatch] = useState<{ draft: Draft; owner?: string } | undefined>(undefined);
   const [draggingDraft, setDraggingDraft] = useState(false);
@@ -321,6 +331,11 @@ export function Canvas({
   // Load saved layout on mount / project change.
   useEffect(() => {
     let alive = true;
+    // Per-project display state must not leak across a project switch (Canvas
+    // is not keyed by project): a stale focus would dim the entire new graph.
+    setFocusFeature(null);
+    setMenu(null);
+    setRenaming(null);
     getLayout(project).then((l) => { if (alive) setLayout(l ?? {}); }).catch(() => {
       if (alive) setLayout({});
     });
@@ -352,13 +367,21 @@ export function Canvas({
   );
 
   // Rebuild RF nodes whenever the derived flow (or stale set) changes.
+  // Draft nodes get an onDispatch callback; feature nodes get an onFocus callback
+  // (clicking the frame header → feature focus mode) — both injected through node
+  // data, mirroring each other.
   useEffect(() => {
     setNodes(
-      toRFNodes(flow.nodes, staleTasks).map((n) =>
-        n.type === "draft"
-          ? { ...n, data: { ...n.data, onDispatch: () => openDispatchFor(n.id.replace(/^draft:/, "")) } }
-          : n,
-      ),
+      toRFNodes(flow.nodes, staleTasks).map((n) => {
+        if (n.type === "draft") {
+          return { ...n, data: { ...n.data, onDispatch: () => openDispatchFor(n.id.replace(/^draft:/, "")) } };
+        }
+        if (n.type === "feature") {
+          const fid = (n.data as { id?: string }).id ?? n.id.replace(/^feature:/, "");
+          return { ...n, data: { ...n.data, onFocus: () => setFocusFeature((cur) => (cur === fid ? null : fid)) } };
+        }
+        return n;
+      }),
     );
   }, [flow.nodes, staleTasks]);
 
@@ -481,15 +504,15 @@ export function Canvas({
       const to = raw(c.target);
       if (from === to) return;
       if (committedTaskIds.has(to)) {
-        flashNotice("deps are fixed at assign time");
+        flashNotice("依赖在 assign 时已固定,不能再改");
         return;
       }
       if (featureOfId(from) !== featureOfId(to)) {
-        flashNotice("deps must stay within one feature");
+        flashNotice("依赖必须和任务在同一个 feature 内");
         return;
       }
       if (!isValidDep(depGraph, from, to)) {
-        flashNotice("that would create a dependency cycle");
+        flashNotice("依赖关系会形成环");
         return;
       }
       setDrafts((ds) => applyConnect(ds, c.source, c.target));
@@ -673,9 +696,9 @@ export function Canvas({
     }
   }, [author, replaying, draftFeatures, state.features, setDrafts, setDraftFeatures]);
 
-  // Esc chain + Del key. Esc closes the menu first, then clears selection, then
-  // closes the draft form. Del removes selected drafts. Both respect a typing
-  // guard (don't hijack keys while an input/textarea is focused).
+  // Esc chain + Del key. Esc resolves in order: context menu → inline rename →
+  // selection → feature focus → draft form. Del removes selected drafts. Both
+  // respect a typing guard (don't hijack keys while an input/textarea is focused).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = document.activeElement as HTMLElement | null;
@@ -689,6 +712,7 @@ export function Canvas({
           setNodes((nds) => nds.map((n) => (n.selected ? { ...n, selected: false } : n)));
           return;
         }
+        if (focusFeature) { setFocusFeature(null); return; }
         if (newFeatureOpen) { setNewFeatureOpen(false); setNfId(""); setNfBranch(""); return; }
       }
       if ((e.key === "Delete" || e.key === "Backspace") && !typing && !renaming) {
@@ -697,7 +721,7 @@ export function Canvas({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [menu, renaming, newFeatureOpen, deleteSelected]);
+  }, [menu, renaming, newFeatureOpen, focusFeature, deleteSelected]);
 
   // --- build-mode handlers -------------------------------------------------
   const addFeature = () => {
@@ -791,16 +815,38 @@ export function Canvas({
         : e,
     );
 
-    return { nodes: merged.nodes, edges: antEdges };
-  }, [nodes, edges, pulses, commsResult, state]);
+    // Feature focus dimming (T15): when a feature is focused, every node NOT in
+    // its subtree (the frame + its child task/draft nodes) gets a `focus-dim`
+    // class; same for edges whose endpoints leave the focused subtree. CSS owns
+    // the visual (opacity 25% + desaturate) — this never touches layout.
+    if (!focusFeature) return { nodes: merged.nodes, edges: antEdges };
+    const frameId = `feature:${focusFeature}`;
+    const inFocus = (n: Node) => n.id === frameId || n.parentId === frameId;
+    const focusedNodeIds = new Set(merged.nodes.filter(inFocus).map((n) => n.id));
+    const dimNode = (n: Node): Node =>
+      inFocus(n)
+        ? n
+        : { ...n, className: [n.className, "focus-dim"].filter(Boolean).join(" ") };
+    const dimEdge = (e: Edge): Edge =>
+      focusedNodeIds.has(e.source) && focusedNodeIds.has(e.target)
+        ? e
+        : { ...e, className: [e.className, "focus-dim"].filter(Boolean).join(" ") };
+    return {
+      nodes: merged.nodes.map(dimNode),
+      edges: antEdges.map(dimEdge),
+    };
+  }, [nodes, edges, pulses, commsResult, state, focusFeature]);
   const displayNodes = display.nodes;
   const displayEdges = display.edges;
+
+  if (loading) return <CanvasSkeleton />;
 
   return (
     <div
       ref={stageRef}
-      className={`canvas-stage relative flex-1${draggingDraft ? " dragging-draft" : ""}`}
+      className={`canvas-stage relative flex-1${draggingDraft ? " dragging-draft" : ""}${focusFeature ? " focus-active" : ""}`}
       data-testid="canvas-root"
+      data-focus={focusFeature ?? undefined}
     >
       {/* Ambient stage layers (board2-canvas-v2 `.stage`): two role-color glows
           (page token sits behind via the .canvas-stage background) + a masked
@@ -862,6 +908,23 @@ export function Canvas({
         onOpenNewTask={() => { setEditingDraft(undefined); setEditorOpen(true); }}
         newTaskDisabled={featureOptions.length === 0}
       />
+
+      {/* Feature focus chip (T15): shown while a feature is focused; the ✕ exits
+          (same as Esc). Sits in the top chrome row. */}
+      {focusFeature && (
+        <button
+          type="button"
+          data-testid="focus-chip"
+          className="absolute right-3 top-2 z-20 flex items-center gap-1.5 rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-1)] shadow-[var(--shadow-raised)] hover:border-[var(--color-text-3)]"
+          onClick={() => setFocusFeature(null)}
+          title="退出聚焦(Esc)"
+        >
+          <span>
+            focusing <span className="mono">«{focusFeature}»</span>
+          </span>
+          <span aria-hidden className="text-[var(--color-text-3)]">✕</span>
+        </button>
+      )}
 
       {/* Comms legend — frosted pill below the toolbar when the lens is on. */}
       {comms && (

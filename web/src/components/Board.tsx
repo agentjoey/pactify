@@ -5,6 +5,7 @@ import { roleColorVar } from "../lib/canvas";
 import { statusColorVar } from "../lib/lifecycle";
 import { TaskCard } from "./TaskCard";
 import { Tooltip } from "./ui/Tooltip";
+import { BoardSkeleton } from "./Skeleton";
 
 // Kanban column order + presentation per board3 / spec §4 (note: distinct from
 // derive's COLUMNS order — that one is derivation-internal; this is the visual
@@ -32,13 +33,17 @@ export function Board({
   onSelect,
   pulses,
   staleTasks,
+  loading,
 }: {
   state: State;
   selected: string;
   onSelect: (id: string) => void;
   pulses?: Set<string>;
   staleTasks?: Set<string>;
+  // First-load only: a project is current but its first snapshot hasn't landed.
+  loading?: boolean;
 }) {
+  if (loading) return <BoardSkeleton />;
   const cols = boardColumns(state);
   // rolesOf indexes seat → roles so a pulsing card glows in its owner's color
   // and the ant chips pick the right caste.

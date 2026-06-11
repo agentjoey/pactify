@@ -18,7 +18,10 @@ export function diffAwaiting(prev: State, next: State): string[] {
   return out;
 }
 
-export type Toast = { id: number; text: string };
+// kind drives the left-border accent: the default (review notifications) uses
+// the design hue; "error" is danger-tinted so a failed author action reads as a
+// problem, not a status ping.
+export type Toast = { id: number; text: string; kind?: "error" };
 
 // Toasts renders the active toast stack (newest at the bottom). The 5s lifetime
 // and max-3 cap are owned by App, which feeds this list; this component is a
@@ -30,7 +33,12 @@ export function Toasts({ toasts }: { toasts: Toast[] }) {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="pointer-events-auto rounded-md border border-[var(--color-border-subtle)] border-l-2 border-l-[var(--color-role-design)] bg-[var(--color-bg-raised)] px-3 py-2 text-xs text-[var(--color-text-1)] shadow-[var(--shadow-raised)]"
+          data-testid={t.kind === "error" ? "toast-error" : "toast"}
+          className={`pointer-events-auto rounded-md border border-[var(--color-border-subtle)] border-l-2 bg-[var(--color-bg-raised)] px-3 py-2 text-xs text-[var(--color-text-1)] shadow-[var(--shadow-raised)] ${
+            t.kind === "error"
+              ? "border-l-[var(--color-danger)]"
+              : "border-l-[var(--color-role-design)]"
+          }`}
         >
           {t.text}
         </div>

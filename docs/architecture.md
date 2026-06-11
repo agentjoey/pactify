@@ -175,3 +175,31 @@ changes** (this milestone writes no events):
 - **Live pulse**: each SSE-applied snapshot (live mode only) diffs the changed task(s) and
   pulses their node + wait edges once in the actor's role color (the site's cable-pulse
   brand idiom). Pure CSS keyframe, fully gated off under `prefers-reduced-motion`.
+
+### Dashboard v2 (Linear-grade re-skin + Office mode)
+
+The embedded dashboard was rebuilt to the locked design system (spec
+`docs/superpowers/specs/2026-06-11-dashboard-v2-polish-design.md`, six validated mockup
+boards in `docs/superpowers/mockups/dashboard-v2/`) — still **zero protocol changes**;
+the only sidecar growth is an additive `office` key in the opaque layout JSON:
+
+- **Token foundation** (`web/src/tokens.css`, Tailwind v4 `@theme static`): B·Indigo
+  4-layer backgrounds, 8 role colors, semantic tokens, self-hosted Inter + JetBrains
+  Mono. Legacy `--role-*` vars are re-pointed, so all components shifted hue without
+  edits. `ui/` primitives (Button/Modal/Popover/Badge/…) are the sole control source.
+- **Ant colony avatars** (`web/src/components/ui/ants/`): one colony, eight castes
+  (queen=orchestrator, guard=reviewer, builder=worker + qa/pm/designer/research/ops by
+  roster-role keyword, fallback builder); seat individuality = deterministic pad-gradient
+  hash. Used across seats, desks, task-card chips, and the TopBar acting-seat avatar.
+- **Canvas dual mode — Office is the default landing**: Office renders one draggable
+  desk per joined seat (doing/inbox/waiting-on zones from `lib/office.ts`, a pure
+  derivation; status precedence busy>review_due>waiting>idle), wall-chart + shipped-tray
+  furniture, draft-dock drag-to-desk dispatch, and pulses-driven carrier-ant parcel
+  transit in viewport space. Plan mode keeps the feature/task frames with the ambient
+  stage, zoom HUD, minimap, ant-crawl dep/wait edges (cap 6, reduced-motion → static),
+  context menus, snap guides, and feature focus mode.
+- **Shell**: searchable project switcher, segmented views with 1/2/3 keys, ⌘K command
+  palette (cmdk; tasks/actions/navigation, observe-safe), `?` cheat sheet, observe badge,
+  dynamic title/favicon, task detail slide-over (spec/evidence/session timeline/verbs),
+  replay timeline with typed ticks + `?at=N` deep link, humanized engine errors on the
+  toast rail, first-load skeletons, and an empty-registry onboarding hero.

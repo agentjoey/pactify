@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { State, PactEvent } from "../lib/types";
 import { findTask, canMergeFeature } from "../lib/derive";
 import { postVerb } from "../lib/api";
+import { humanizeError } from "../lib/protocolErrors";
 import { relTime } from "../lib/reltime";
 import { casteForRoles } from "../lib/ants";
 import { Ant } from "./ui/ants/Ant";
@@ -123,7 +124,7 @@ export function RightRail({
     try {
       await fn();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      setErr(humanizeError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }

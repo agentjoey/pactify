@@ -68,6 +68,48 @@ body {
   .pulse { animation: none; }
 }
 
+/* First-load skeletons (T15): a gray block with a left→right shimmer sweep.
+   prefers-reduced-motion → the sweep is dropped and the block sits static. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent);
+  border-radius: 6px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-text-3) 14%, transparent),
+    transparent
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton::after { animation: skeleton-sweep 1.4s ease-in-out infinite; }
+}
+@keyframes skeleton-sweep {
+  100% { transform: translateX(100%); }
+}
+
+/* Feature focus mode (T15): nodes/edges outside the focused feature get the
+   `focus-dim` class (set in Canvas's display memo). Display-only — opacity +
+   desaturate, never touches layout. A 120ms ease keeps the transition calm. */
+.react-flow__node.focus-dim,
+.react-flow__edge.focus-dim {
+  opacity: 0.25;
+  filter: saturate(0.35);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .react-flow__node,
+  .react-flow__edge {
+    transition: opacity 0.12s ease, filter 0.12s ease;
+  }
+}
+
 /* Comms overlay (M3.3b) node markers. Idle seats dim back; blocked tasks get an
    amber outline. Wait edges/badges are handled inline (mergeComms + node JSX). */
 .comms-idle { opacity: 0.45; }

@@ -8,10 +8,13 @@ import { Canvas } from "./components/Canvas";
 import { OpsView } from "./components/ops/OpsView";
 import { ReplayBar } from "./components/ReplayBar";
 import { RightRail } from "./components/RightRail";
+import { CommandK } from "./components/CommandK";
+import { NoProjects } from "./components/NoProjects";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
 import { docTitle } from "./lib/docTitle";
+import { readAt, writeAt } from "./lib/replayUrl";
 import type { Draft, DraftFeature } from "./lib/canvas";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
@@ -26,6 +29,10 @@ const STALE_MS = 30 * 60 * 1000;
 
 export default function App() {
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+  // A failed first state fetch must NOT read as "still loading" — it suppresses
+  // the skeleton so the honest empty board shows instead. Reset per project.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [current, setCurrent] = useState("");
   const [state, setState] = useState<State>(EMPTY);
   const [events, setEvents] = useState<PactEvent[]>([]);
@@ -75,6 +82,13 @@ export default function App() {
   const replayAtRef = useRef<number | null>(null);
   // Mirror of `current` for guarding late async responses after a project switch.
   const currentRef = useRef("");
+  // Replay deep link (spec §6.6): the `?at=N` value read ONCE on mount, applied
+  // as enterReplay(N) the moment the first project becomes current (ReplayBar
+  // clamps N to the timeline bounds). Cleared after it fires so a later project
+  // switch doesn't re-trigger it.
+  const pendingAt = useRef<number | null>(readAt(window.location.search));
+  // Debounce handle for `?at` URL writes during scrubs (see enterReplay).
+  const urlTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // task id → epoch ms when first observed in_progress this session.
   const inProgressSince = useRef<Map<string, number>>(new Map());
   // tick forces stale re-evaluation on an interval even without state changes.
@@ -82,9 +96,12 @@ export default function App() {
 
   // refreshProjects re-fetches the registry-backed project list, seeding the
   // selection on first load and dropping it if the current project was removed.
+  // projectsLoaded gates the empty-registry hero: only a CONFIRMED-empty
+  // registry shows it (never the pre-fetch window, never a failed fetch).
   function refreshProjects() {
     fetchProjects().then((ps) => {
       setProjects(ps);
+      setProjectsLoaded(true);
       setCurrent((cur) => {
         if (cur && ps.some((p) => p.id === cur)) return cur;
         return ps.length ? ps[0].id : "";
@@ -123,6 +140,18 @@ export default function App() {
     const t = setInterval(() => setTick((n) => n + 1), 60_000);
     return () => clearInterval(t);
   }, []);
+
+  // pushToast surfaces a one-off message on the shared toast stack (review
+  // notifications and palette-action failures ride the same rail). `kind:
+  // "error"` renders the danger-tinted variant for failed author actions.
+  function pushToast(text: string, kind?: "error") {
+    setToasts((prev) => {
+      toastId.current += 1;
+      const tid = toastId.current;
+      setTimeout(() => setToasts((cur) => cur.filter((x) => x.id !== tid)), 5000);
+      return [...prev, { id: tid, text, kind }].slice(-3);
+    });
+  }
 
   // applyState centralizes a fresh snapshot: diff for review toasts, maintain
   // the in_progress timestamp map, then commit the new state.
@@ -193,15 +222,22 @@ export default function App() {
     setDrafts([]);
     setDraftFeatures([]);
     if (pulseTimer.current) clearTimeout(pulseTimer.current);
-    // Exit replay on project switch — the new project starts live.
-    replayAtRef.current = null;
-    setReplayAt(null);
+    // Exit replay on project switch — the new project starts live, UNLESS a
+    // pending `?at` deep link is waiting to be applied to the FIRST project that
+    // becomes current (consumed once so later switches start live as normal).
+    const at = pendingAt.current;
+    pendingAt.current = null;
+    replayAtRef.current = at;
+    setReplayAt(at);
     setReplayState(null);
     // Clear the displayed snapshot IMMEDIATELY: rendering the previous
     // project's state under the new project id both flashes stale data and
     // made Canvas's FitOnEntry frame the OLD graph (then never refit).
     setState(EMPTY);
-    fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => { if (alive) setState(EMPTY); });
+    setLoadFailed(false);
+    fetchState(current)
+      .then((s) => { if (alive) applyState(s); })
+      .catch(() => { if (alive) { setState(EMPTY); setLoadFailed(true); } });
     const off = subscribeEvents(current, (e) => {
       if (!alive) return;
       setEvents((prev) => [...prev, e]);
@@ -240,6 +276,20 @@ export default function App() {
   function enterReplay(at: number) {
     replayAtRef.current = at;
     setReplayAt(at);
+    // Reflect the scrub position in the URL (spec §6.6) without a history entry,
+    // so the view is shareable/reloadable. ReplayBar stays URL-agnostic — App
+    // owns the `?at` param. A pending deep-link read is now consumed.
+    pendingAt.current = null;
+    // DEBOUNCED: a pointer drag calls enterReplay per move; WebKit caps
+    // replaceState at ~100 calls / 30s (SecurityError beyond) — write the URL
+    // at the same cadence as the snapshot fetch instead of per-move.
+    if (urlTimer.current) clearTimeout(urlTimer.current);
+    urlTimer.current = setTimeout(() => {
+      const next = writeAt(window.location.search, at);
+      if (next !== window.location.search) {
+        window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
+      }
+    }, 150);
   }
   function showReplaySnapshot(at: number, s: State) {
     // Drop stale responses: a slow fetch for an old position must not override
@@ -254,6 +304,13 @@ export default function App() {
     replayAtRef.current = null;
     setReplayAt(null);
     setReplayState(null);
+    // Clear the `?at` deep link on return to live (spec §6.6) — immediately,
+    // cancelling any debounced scrub write still in flight.
+    if (urlTimer.current) clearTimeout(urlTimer.current);
+    const next = writeAt(window.location.search, null);
+    if (next !== window.location.search) {
+      window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
+    }
     const p = current;
     fetchState(p)
       .then((s) => { if (p === currentRef.current) applyState(s); })
@@ -263,6 +320,12 @@ export default function App() {
   // Snapshot shown by kanban/canvas: historical while replaying (falling back to
   // the live state until the first replay snapshot lands), else live.
   const shownState = replaying ? (replayState ?? state) : state;
+
+  // First-load skeleton signal (T15): a project is current but its very first
+  // live snapshot hasn't been applied yet (state is still the EMPTY sentinel).
+  // Not while replaying (replay has its own fallback) and only when there ARE
+  // projects (the no-project hero owns the empty-registry case).
+  const firstLoad = !!current && state === EMPTY && !replaying && !loadFailed;
 
   // Dynamic document title (spec §6.5): «project» · N awaiting ●. Driven from
   // the currently displayed (live or replay) state's awaiting count.
@@ -275,8 +338,10 @@ export default function App() {
     <div data-testid="app-root" className="h-screen flex flex-col">
       <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} replaying={replaying} view={view} onView={setView} author={author} seat={seat} agents={shownState.agents} />
       <Agents state={shownState} events={events} onPick={() => {}} />
-      {view === "ops"
-        ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} />
+      {projectsLoaded && projects.length === 0
+        ? <NoProjects onRegistered={refreshProjects} />
+        : view === "ops"
+        ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} loading={firstLoad} />
         : (
           <>
             {/* relative so the slide-over detail panel + its scrim position
@@ -284,14 +349,26 @@ export default function App() {
                 and canvas now take the full width — the panel is absolute. */}
             <div className="relative flex flex-1 overflow-hidden">
               {view === "canvas"
-                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} />
-                : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} staleTasks={staleTasks} />}
+                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} />
+                : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} staleTasks={staleTasks} loading={firstLoad} />}
               <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} onSelect={setSelected} />
             </div>
             <ReplayBar project={current} replayAt={replayAt} refreshTick={refreshTick} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />
           </>
         )}
       <Toasts toasts={toasts} />
+      <CommandK
+        projects={projects}
+        current={current}
+        state={shownState}
+        view={view}
+        setView={setView}
+        setSelected={setSelected}
+        onSelectProject={setCurrent}
+        author={author}
+        replaying={replaying}
+        notify={(text) => pushToast(text, "error")}
+      />
     </div>
   );
 }

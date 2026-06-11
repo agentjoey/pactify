@@ -21,7 +21,7 @@ export interface CommsResult {
   blockedTasks: string[];
 }
 
-function allTasks(state: State): Task[] {
+function flatTasks(state: State): Task[] {
   const out: Task[] = [];
   for (const f of state.features) for (const t of f.tasks) out.push(t);
   return out;
@@ -30,7 +30,7 @@ function allTasks(state: State): Task[] {
 // deriveComms folds a snapshot into wait edges + seat/task markers. Pure: reads
 // only its argument, never mutates. Semantics are the spec §1 table verbatim.
 export function deriveComms(state: State): CommsResult {
-  const tasks = allTasks(state);
+  const tasks = flatTasks(state);
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const joined = new Set(state.agents.map((a) => a.id));
 
@@ -79,32 +79,12 @@ export function deriveComms(state: State): CommsResult {
   }
   const idleSeats = state.agents.map((a) => a.id).filter((id) => !active.has(id));
 
-  // blockedTasks: a task is blocked if it has an unmet dep (direct) or any of
-  // its deps is itself blocked (transitive). Accepted tasks are never blocked.
-  // The dep graph is acyclic (assign-time DFS guard), so memoized reachability
-  // terminates without a visited-cycle guard.
-  const memo = new Map<string, boolean>();
-  const isBlocked = (t: Task): boolean => {
-    const cached = memo.get(t.id);
-    if (cached !== undefined) return cached;
-    if (t.status === "accepted") {
-      memo.set(t.id, false);
-      return false;
-    }
-    let blocked = false;
-    for (const d of t.deps ?? []) {
-      const dep = byId.get(d);
-      if (!dep || dep.status !== "accepted") {
-        // Unmet dep (absent or not accepted) blocks directly. If the dep exists
-        // and is itself blocked, that's the transitive case — same outcome.
-        blocked = true;
-        break;
-      }
-    }
-    memo.set(t.id, blocked);
-    return blocked;
-  };
-  const blockedTasks = tasks.filter((t) => isBlocked(t)).map((t) => t.id);
+  // blockedTasks: a task is blocked iff it is not accepted and has an unmet
+  // dep. This subsumes transitive blocking: a blocked dep is by definition not
+  // accepted, so it already counts as unmet for its dependents — no graph walk.
+  const blockedTasks = tasks
+    .filter((t) => t.status !== "accepted" && unmet(t).length > 0)
+    .map((t) => t.id);
 
   return { edges, idleSeats, notJoined, blockedTasks };
 }
@@ -114,9 +94,9 @@ export function deriveComms(state: State): CommsResult {
 // pulse every node). Pure; reads only its arguments.
 export function pulseTargets(prev: State | null, next: State): { taskIds: string[] } {
   if (prev === null) return { taskIds: [] };
-  const before = new Map(allTasks(prev).map((t) => [t.id, t.status]));
+  const before = new Map(flatTasks(prev).map((t) => [t.id, t.status]));
   const taskIds: string[] = [];
-  for (const t of allTasks(next)) {
+  for (const t of flatTasks(next)) {
     const old = before.get(t.id);
     if (old === undefined || old !== t.status) taskIds.push(t.id);
   }

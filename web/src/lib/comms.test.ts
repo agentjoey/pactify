@@ -119,7 +119,7 @@ describe("deriveComms — idleSeats", () => {
 });
 
 describe("deriveComms — clean state", () => {
-  it("no waits → every array empty", () => {
+  it("in-flight only → no edges, no blocked, no missing (reviewer idle until handoff)", () => {
     const r = deriveComms(mk(seats, [task({ id: "T1", owner: "worker", status: "in_progress", reviewer: "rev" })]));
     expect(r).toEqual({ edges: [], idleSeats: ["rev"], notJoined: [], blockedTasks: [] });
   });

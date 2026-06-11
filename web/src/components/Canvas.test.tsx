@@ -62,6 +62,15 @@ describe("Canvas", () => {
     });
   });
 
+  it("replay mode is read-only: no author affordances rendered", async () => {
+    // App passes author={author && !replaying}, so a replaying canvas receives
+    // author=false → the build-mode toolbar (New feature / New task) is absent.
+    render(<Canvas project="demo" state={fixture} author={false} replaying />);
+    await waitFor(() => expect(screen.getByText("T1")).toBeInTheDocument());
+    expect(screen.queryByText("+ New feature")).toBeNull();
+    expect(screen.queryByText("+ New task")).toBeNull();
+  });
+
   it("clicking a task node reaches onSelectTask with the raw id", async () => {
     const onSelectTask = vi.fn();
     const { container } = render(

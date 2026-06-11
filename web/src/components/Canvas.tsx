@@ -158,12 +158,17 @@ export function Canvas({
   project,
   state,
   author,
+  replaying,
   staleTasks,
   onSelectTask,
 }: {
   project: string;
   state: State;
   author: boolean;
+  // Read-only replay mode: drag/drop/dispatch short-circuit and author
+  // affordances are unreachable. App also passes author=false while replaying,
+  // but this is an explicit belt-and-suspenders guard on the gesture handlers.
+  replaying?: boolean;
   // Raw task ids that have sat in_progress past the stale threshold (App owns
   // the timestamp map). Rendered as an amber dot on the task node.
   staleTasks?: Set<string>;
@@ -197,6 +202,7 @@ export function Canvas({
   // Secondary dispatch entry: the button on a draft node (the drag gesture is
   // the primary path; the button exists for discoverability).
   function openDispatchFor(draftId: string) {
+    if (replaying) return; // read-only replay: dispatch is unreachable
     const d = drafts.find((x) => x.id === draftId);
     if (d) setDispatch({ draft: d });
   }
@@ -332,14 +338,15 @@ export function Canvas({
   // the DispatchModal with that seat as the prefilled owner instead of saving a
   // layout position (the dispatch flow replaces the draft on success).
   const onNodeDragStart = useCallback((_e: unknown, node: Node) => {
+    if (replaying) return;
     if (node.type === "draft") setDraggingDraft(true);
-  }, []);
+  }, [replaying]);
 
   const onNodeDragStop = useCallback(
     (_e: unknown, node: Node) => {
       setDraggingDraft(false);
-      // Observe-only dashboards never persist layout drags.
-      if (!author) return;
+      // Replay is read-only and observe-only dashboards never persist drags.
+      if (replaying || !author) return;
       // RF v12: the callback's nodes arg is the dragged selection only — use
       // the live full list for parent/seat resolution.
       const allNodes = nodesRef.current;
@@ -367,7 +374,7 @@ export function Canvas({
       positions[node.id] = abs;
       scheduleSave({ ...layoutRef.current, positions });
     },
-    [author, drafts, scheduleSave],
+    [author, replaying, drafts, scheduleSave],
   );
 
   // Click a node:

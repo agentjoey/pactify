@@ -37,23 +37,6 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* awaiting_review nodes pulse design-blue to draw the reviewer's eye. The
-   animation is wrapped in a reduced-motion guard: users who opt out get a
-   static ring instead of the breathing glow. */
-.pact-awaiting {
-  border-radius: 0.25rem;
-  box-shadow: 0 0 0 1px var(--role-design);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .pact-awaiting {
-    animation: pact-pulse 1.6s ease-in-out infinite;
-  }
-}
-@keyframes pact-pulse {
-  0%, 100% { box-shadow: 0 0 0 1px var(--role-design); }
-  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--role-design) 50%, transparent); }
-}
-
 /* Live pulse (M3.3b): on each applied LIVE snapshot, the task node(s) whose
    status changed get a `.pulse` class for ~900ms (cleared by App's timeout /
    animationend). The glow is role-colored via the inline --pulse-color var the

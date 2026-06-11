@@ -13,6 +13,7 @@ import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
 import { docTitle } from "./lib/docTitle";
+import { readAt, writeAt } from "./lib/replayUrl";
 import type { Draft, DraftFeature } from "./lib/canvas";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
@@ -76,6 +77,11 @@ export default function App() {
   const replayAtRef = useRef<number | null>(null);
   // Mirror of `current` for guarding late async responses after a project switch.
   const currentRef = useRef("");
+  // Replay deep link (spec §6.6): the `?at=N` value read ONCE on mount, applied
+  // as enterReplay(N) the moment the first project becomes current (ReplayBar
+  // clamps N to the timeline bounds). Cleared after it fires so a later project
+  // switch doesn't re-trigger it.
+  const pendingAt = useRef<number | null>(readAt(window.location.search));
   // task id → epoch ms when first observed in_progress this session.
   const inProgressSince = useRef<Map<string, number>>(new Map());
   // tick forces stale re-evaluation on an interval even without state changes.
@@ -205,9 +211,13 @@ export default function App() {
     setDrafts([]);
     setDraftFeatures([]);
     if (pulseTimer.current) clearTimeout(pulseTimer.current);
-    // Exit replay on project switch — the new project starts live.
-    replayAtRef.current = null;
-    setReplayAt(null);
+    // Exit replay on project switch — the new project starts live, UNLESS a
+    // pending `?at` deep link is waiting to be applied to the FIRST project that
+    // becomes current (consumed once so later switches start live as normal).
+    const at = pendingAt.current;
+    pendingAt.current = null;
+    replayAtRef.current = at;
+    setReplayAt(at);
     setReplayState(null);
     // Clear the displayed snapshot IMMEDIATELY: rendering the previous
     // project's state under the new project id both flashes stale data and
@@ -252,6 +262,14 @@ export default function App() {
   function enterReplay(at: number) {
     replayAtRef.current = at;
     setReplayAt(at);
+    // Reflect the scrub position in the URL (spec §6.6) without a history entry,
+    // so the view is shareable/reloadable. ReplayBar stays URL-agnostic — App
+    // owns the `?at` param. A pending deep-link read is now consumed.
+    pendingAt.current = null;
+    const next = writeAt(window.location.search, at);
+    if (next !== window.location.search) {
+      window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
+    }
   }
   function showReplaySnapshot(at: number, s: State) {
     // Drop stale responses: a slow fetch for an old position must not override
@@ -266,6 +284,11 @@ export default function App() {
     replayAtRef.current = null;
     setReplayAt(null);
     setReplayState(null);
+    // Clear the `?at` deep link on return to live (spec §6.6).
+    const next = writeAt(window.location.search, null);
+    if (next !== window.location.search) {
+      window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
+    }
     const p = current;
     fetchState(p)
       .then((s) => { if (p === currentRef.current) applyState(s); })

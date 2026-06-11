@@ -41,6 +41,7 @@ beforeEach(() => {
   globalThis.EventSource = makeFakeESClass() as unknown as typeof EventSource;
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
+    if (url.includes("/timeline")) return { ok: true, json: async () => ({ total: 0, events: [] }) };
     return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
   }));
 });
@@ -120,6 +121,60 @@ describe("App", () => {
     // After switching, the old ES should have been closed
     // (new ES created for "other" project — just verify no crash)
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
+  });
+
+  describe("?at deep link (spec §6.6)", () => {
+    function stubReplayFetch() {
+      vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+        if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
+        if (url.includes("/timeline")) return {
+          ok: true,
+          json: async () => ({
+            total: 3,
+            events: [
+              { n: 1, ts: "t1", type: "join", actor: "alice" },
+              { n: 2, ts: "t2", type: "assign", actor: "alice", task: "T1" },
+              { n: 3, ts: "t3", type: "checkpoint", actor: "bob", task: "T1" },
+            ],
+          }),
+        };
+        // state and state?at=N both fold to a demo state.
+        return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
+      }));
+    }
+
+    it("reads ?at on load → enters replay, then LIVE clears the param", async () => {
+      window.history.replaceState(null, "", "/?at=2");
+      stubReplayFetch();
+      render(<App />);
+      await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+
+      // Replay is entered: the LIVE button (resume live) becomes enabled and the
+      // URL still carries ?at=2 (normalized through enterReplay's replaceState).
+      const liveBtn = await screen.findByLabelText("resume live");
+      await waitFor(() => expect(liveBtn).toBeEnabled());
+      expect(window.location.search).toBe("?at=2");
+
+      // Resume live clears the param.
+      await act(async () => { fireEvent.click(liveBtn); });
+      expect(window.location.search).toBe("");
+      window.history.replaceState(null, "", "/");
+    });
+
+    it("scrubbing writes ?at into the URL; absent on a fresh live load", async () => {
+      window.history.replaceState(null, "", "/");
+      stubReplayFetch();
+      render(<App />);
+      await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+      // Fresh load with no ?at stays live: no param written.
+      expect(window.location.search).toBe("");
+
+      // Step back on the timeline (drives enterReplay) → ?at appears.
+      const stepBack = await screen.findByLabelText("step back");
+      await act(async () => { fireEvent.click(stepBack); });
+      await waitFor(() => expect(window.location.search).toBe("?at=2"));
+      window.history.replaceState(null, "", "/");
+    });
   });
 
   describe("global view shortcuts", () => {

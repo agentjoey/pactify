@@ -72,7 +72,9 @@ station (position persisted under a SEPARATE layout sidecar key, e.g.
 `layout.office`): header = 34px ant avatar + presence dot + name + vendor (mono) +
 status badge; three zones with parcels (task chips: status-color left edge, icon,
 id mono, title, age):
-- 手上 doing — tasks they own in assigned/in_progress
+- 手上 doing — tasks they own in assigned/in_progress/changes_requested (rework
+  returns to the owner's desk — board5's red lane; otherwise it would vanish
+  from every zone)
 - 收件 inbox — awaiting_review tasks where they are reviewer (+ blue glow)
 - 等回音 waiting on — their own output parked elsewhere (owner of awaiting_review;
   blocked-by-dep tasks show here with the blocker named)

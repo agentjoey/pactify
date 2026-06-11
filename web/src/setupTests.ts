@@ -23,7 +23,7 @@ if (typeof globalThis.DOMMatrixReadOnly === "undefined") {
 // getBBox: jsdom doesn't implement the SVG text metrics API. React Flow's edge
 // LABEL renderer (the wait-edge reason chips) calls getBBox on the <text>; without
 // this stub the edge render throws and the labeled edge never mounts.
-if (typeof (globalThis.SVGElement?.prototype as unknown as { getBBox?: unknown })?.getBBox === "undefined") {
+if (globalThis.SVGElement && typeof (globalThis.SVGElement.prototype as unknown as { getBBox?: unknown }).getBBox === "undefined") {
   (globalThis.SVGElement.prototype as unknown as { getBBox: () => DOMRect }).getBBox = function () {
     return { x: 0, y: 0, width: 40, height: 12, top: 0, left: 0, right: 40, bottom: 12, toJSON: () => {} } as DOMRect;
   };

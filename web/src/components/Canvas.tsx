@@ -457,12 +457,14 @@ export function Canvas({
     [comms, state],
   );
 
-  // displayNodes / displayEdges are the DISPLAY layer fed to React Flow. They
-  // start from the layout-pristine `nodes` state + base dep `edges`, then layer
-  // on (a) the pulse class for live-changed tasks and (b) the comms overlay when
-  // the toggle is on. Neither is ever written back to the layout sidecar — the
-  // drag-persistence path reads the pristine `nodes` state / layoutRef, not these.
-  const displayNodes = useMemo(() => {
+  // display is the DISPLAY layer fed to React Flow. It starts from the
+  // layout-pristine `nodes` state + base dep `edges`, then layers on (a) the
+  // pulse class for live-changed tasks and (b) the comms overlay when the
+  // toggle is on. ONE mergeComms call over the pulse-augmented nodes, so the
+  // node and edge outputs can never disagree. Nothing here is ever written back
+  // to the layout sidecar — the drag-persistence path reads the pristine
+  // `nodes` state / layoutRef, not these.
+  const display = useMemo(() => {
     let out = nodes;
     if (pulses && pulses.size > 0) {
       out = out.map((n) => {
@@ -478,14 +480,11 @@ export function Canvas({
         return n;
       });
     }
-    if (commsResult) out = mergeComms(out, edges, commsResult, state).nodes;
-    return out;
+    if (commsResult) return mergeComms(out, edges, commsResult, state);
+    return { nodes: out, edges };
   }, [nodes, edges, pulses, commsResult, state]);
-
-  const displayEdges = useMemo(() => {
-    if (!commsResult) return edges;
-    return mergeComms(nodes, edges, commsResult, state).edges;
-  }, [nodes, edges, commsResult, state]);
+  const displayNodes = display.nodes;
+  const displayEdges = display.edges;
 
   return (
     <div className={`relative flex-1${draggingDraft ? " dragging-draft" : ""}`} data-testid="canvas-root">

@@ -52,7 +52,7 @@ describe("deriveComms — blocked chains", () => {
       task({ id: "B", status: "in_progress", deps: ["C"] }),
       task({ id: "A", status: "in_progress", deps: ["B"] }),
     ]));
-    expect(r.blockedTasks.sort()).toEqual(["A", "B"]);
+    expect([...r.blockedTasks].sort()).toEqual(["A", "B"]);
     expect(r.blockedTasks).not.toContain("C");
   });
 
@@ -115,7 +115,7 @@ describe("deriveComms — idleSeats", () => {
 
   it("accepted-only work leaves both seats idle", () => {
     const r = deriveComms(mk(seats, [task({ id: "T1", owner: "worker", status: "accepted", reviewer: "rev" })]));
-    expect(r.idleSeats.sort()).toEqual(["rev", "worker"]);
+    expect([...r.idleSeats].sort()).toEqual(["rev", "worker"]);
   });
 });
 

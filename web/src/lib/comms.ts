@@ -1,5 +1,6 @@
 import type { State, Task } from "./types";
 import type { Node, Edge } from "@xyflow/react";
+import { roleColorVar } from "./canvas";
 
 // WaitEdge is one "who-waits-on-whom" arrow derived from the snapshot. For
 // review/rework edges from/to are SEAT ids; for dep edges they are TASK ids
@@ -120,19 +121,15 @@ export function pulseTargets(prev: State | null, next: State): { taskIds: string
 // the wait and the seat carrying the ball is the destination. Review waits on
 // the reviewer (the `to` seat); rework waits on the owner (also the `to` seat),
 // so in BOTH cases the arrow targets `seat:${edge.to}` and sources the task.
-// Seat nodes always render on the canvas (the left rail), so we never need the
-// seat-to-seat fallback; if a seat node is somehow absent we fall back to
-// seat-to-seat (`seat:from` → `seat:to`) rather than dropping the edge. Dep
-// edges (from/to are TASK ids) draw task→task, neutral amber.
+// Seat nodes render only for JOINED seats, so a wait on a never-joined seat has
+// no anchor — that edge is intentionally dropped (the not-joined warning badge
+// on the task carries the signal instead). Dep edges (from/to are TASK ids)
+// draw task→task, neutral amber.
 
-// Role color var for a seat id from the snapshot (defaults to --role-dev).
+// Role color var for a seat id from the snapshot. Delegates to roleColorVar so
+// wait-edge colors can never drift from the node border colors.
 function seatColorVar(state: State, seatId: string): string {
-  const a = state.agents.find((x) => x.id === seatId);
-  if (!a) return "--role-dev";
-  if (a.roles.includes("orchestrator")) return "--role-product";
-  if (a.roles.includes("reviewer")) return "--role-design";
-  if (a.roles.includes("worker")) return "--role-dev";
-  return "--role-dev";
+  return roleColorVar(state.agents.find((a) => a.id === seatId)?.roles ?? []);
 }
 
 const AMBER = "#d29922"; // neutral/blocked accent (matches stale-dot + blocked outline)
@@ -146,8 +143,8 @@ export function mergeComms(
   const nodeIds = new Set(nodes.map((n) => n.id));
   const idle = new Set(comms.idleSeats.map((s) => `seat:${s}`));
   const blocked = new Set(comms.blockedTasks.map((t) => `task:${t}`));
-  // notJoined holds SEAT ids; surface the warning on the seat chip AND on every
-  // task whose owner/reviewer is that missing seat.
+  // notJoined holds SEAT ids of seats that never joined — they have NO seat
+  // node on the canvas, so the warning surfaces on the affected TASK nodes.
   const notJoinedSeats = new Set(comms.notJoined);
 
   // task id → true if any of its owner/reviewer never joined (built from edges'
@@ -165,9 +162,7 @@ export function mergeComms(
   const outNodes: Node[] = nodes.map((n) => {
     const isIdle = idle.has(n.id);
     const isBlocked = blocked.has(n.id);
-    const isNotJoined = notJoinedSeats.has(n.id.replace(/^seat:/, "")) && n.type === "seat"
-      ? true
-      : tasksWithMissing.has(n.id);
+    const isNotJoined = tasksWithMissing.has(n.id);
     if (!isIdle && !isBlocked && !isNotJoined) return n;
     const classes = [
       isIdle ? "comms-idle" : "",
@@ -181,7 +176,7 @@ export function mergeComms(
     };
   });
 
-  const waitEdges: Edge[] = comms.edges.map((e) => {
+  const waitEdges: Edge[] = comms.edges.flatMap((e) => {
     const id = `wait:${e.from}→${e.to}:${e.taskId}`;
     let source: string;
     let target: string;
@@ -194,13 +189,15 @@ export function mergeComms(
     } else {
       // review/rework: from/to are SEAT ids. Anchor TASK → waited-on seat.
       const taskNode = `task:${e.taskId}`;
-      const waitedOn = `seat:${e.to}`;
-      const haveSeat = nodeIds.has(waitedOn);
       source = nodeIds.has(taskNode) ? taskNode : `seat:${e.from}`;
-      target = haveSeat ? waitedOn : `seat:${e.to}`;
+      target = `seat:${e.to}`;
       color = `var(${seatColorVar(state, e.to)})`;
     }
-    return {
+    // An edge whose endpoint has no node (e.g. the waited-on seat never joined)
+    // would be silently skipped by React Flow — drop it explicitly; the
+    // not-joined badge on the task carries the signal.
+    if (!nodeIds.has(source) || !nodeIds.has(target)) return [];
+    return [{
       id,
       source,
       target,
@@ -211,7 +208,7 @@ export function mergeComms(
       style: { stroke: color, strokeDasharray: "5 4", strokeWidth: 1.5 },
       animated: false,
       data: { comms: true, kind: e.kind },
-    };
+    }];
   });
 
   return { nodes: outNodes, edges: [...edges, ...waitEdges] };

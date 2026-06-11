@@ -2,7 +2,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 
 // SeatNode is a left-rail card: seat id, its roles, and a role-color dot.
 export function SeatNode({ id, data }: NodeProps) {
-  const d = data as { roles?: string[]; roleColor?: string; commsNotJoined?: boolean };
+  const d = data as { roles?: string[]; roleColor?: string };
   const seatId = id.replace(/^seat:/, "");
   const roleVar = d.roleColor ?? "--role-dev";
   const roles = d.roles ?? [];
@@ -19,15 +19,6 @@ export function SeatNode({ id, data }: NodeProps) {
           style={{ background: `var(${roleVar})` }}
         />
         <span className="font-semibold text-[#e6edf3]">{seatId}</span>
-        {d.commsNotJoined && (
-          <span
-            data-testid="seat-notjoined-badge"
-            title="seat never joined"
-            className="text-[9px] uppercase tracking-wide rounded px-1 bg-[#21262d] text-[#f85149] border border-[#f85149]"
-          >
-            ⚠
-          </span>
-        )}
       </div>
       <div className="mt-1 text-[10px] text-[#8b949e]">{roles.join(" · ") || "—"}</div>
     </div>

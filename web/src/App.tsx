@@ -170,7 +170,12 @@ export default function App() {
       if (replayAtRef.current !== null) return;
       fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => {});
     }, (v) => { if (alive) setLive(v); });
-    return () => { alive = false; off(); setLive(false); };
+    return () => {
+      alive = false;
+      off();
+      setLive(false);
+      if (pulseTimer.current) clearTimeout(pulseTimer.current);
+    };
   }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recompute the stale set from the timestamp map whenever state or tick moves.

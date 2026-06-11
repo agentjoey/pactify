@@ -29,8 +29,11 @@
   src: url("/fonts/JetBrainsMono-Medium.woff2") format("woff2");
 }
 
-/* Tailwind v4 @theme — exposes tokens as CSS vars AND wires utilities. */
-@theme {
+/* Tailwind v4 @theme — exposes tokens as CSS vars AND wires utilities.
+   `static` keeps EVERY var in the build output: components read tokens at
+   runtime via var() in inline styles / node data, which Tailwind's usage
+   scanner can't see — without `static` ~70% of this sheet is tree-shaken. */
+@theme static {
   /* Font stacks. Overriding --font-mono re-points every `font-mono` utility
      to the self-hosted JetBrains Mono stack app-wide. */
   --font-sans: "InterVariable", "Inter", system-ui, sans-serif;
@@ -93,4 +96,11 @@
   --role-product: var(--color-role-product); /* #ECC678 */
   --role-design: var(--color-role-design);   /* #93B4F2 */
   --role-dev: var(--color-role-dev);         /* #7BD8A0 */
+
+  /* Semantic shorthands consumed by existing CSS (e.g. .comms-blocked uses
+     var(--warn)) — without these the declarations are invalid and silently
+     render nothing. */
+  --danger: var(--color-danger);
+  --warn: var(--color-warn);
+  --success: var(--color-success);
 }

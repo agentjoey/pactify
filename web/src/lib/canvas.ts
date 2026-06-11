@@ -72,6 +72,45 @@ export function deriveFlow(
   // pos picks the saved position when present, else the deterministic grid slot.
   const pos = (id: string, grid: { x: number; y: number }) => positions[id] ?? grid;
 
+  // Grid fallbacks must AVOID nodes the user already placed (saved positions):
+  // a new feature column or task row otherwise lands on top of whatever was
+  // dragged there. Deterministic nudge: shift by one slot until free.
+  const featureTaken: { x: number; y: number }[] = [];
+  const placeFeature = (id: string, grid: { x: number; y: number }) => {
+    const saved = positions[id];
+    if (saved) {
+      featureTaken.push(saved);
+      return saved;
+    }
+    let p = { ...grid };
+    const hits = (q: { x: number; y: number }) =>
+      featureTaken.some((t) => Math.abs(t.x - q.x) < COL_W && Math.abs(t.y - q.y) < ROW_H * 2);
+    while (hits(p)) p = { x: p.x + COL_W, y: p.y };
+    featureTaken.push(p);
+    return p;
+  };
+  const childTaken = new Map<string, { x: number; y: number }[]>();
+  const placeChild = (featId: string, id: string, grid: { x: number; y: number }) => {
+    const list = childTaken.get(featId) ?? [];
+    const saved = positions[id];
+    if (saved) {
+      list.push(saved);
+      childTaken.set(featId, list);
+      return saved;
+    }
+    let p = { ...grid };
+    const hits = (q: { x: number; y: number }) =>
+      list.some((t) => Math.abs(t.x - q.x) < 200 && Math.abs(t.y - q.y) < ROW_H * 0.8);
+    while (hits(p)) p = { x: p.x, y: p.y + ROW_H };
+    list.push(p);
+    childTaken.set(featId, list);
+    return p;
+  };
+
+  // Every feature's FINAL absolute position (saved or collision-nudged grid),
+  // recorded once at placement so drafts target the same coords as the node.
+  const placedFeatures = new Map<string, { x: number; y: number }>();
+
   // Index seat roles so task nodes can color by their owner's roles.
   const rolesOf = new Map<string, string[]>();
   for (const a of state.agents) rolesOf.set(a.id, a.roles);
@@ -95,7 +134,8 @@ export function deriveFlow(
   state.features.forEach((f, fi) => {
     const featId = `feature:${f.id}`;
     const colX = (fi + 1) * COL_W;
-    const featPos = pos(featId, { x: colX, y: FEATURE_Y });
+    const featPos = placeFeature(featId, { x: colX, y: FEATURE_Y });
+    placedFeatures.set(f.id, featPos);
     nodes.push({
       id: featId,
       type: "feature",
@@ -111,7 +151,7 @@ export function deriveFlow(
         id,
         type: "task",
         parentId: featId,
-        position: pos(id, {
+        position: placeChild(featId, id, {
           x: featPos.x + PAD,
           y: featPos.y + TASK_REL_Y0 + ti * ROW_H,
         }),
@@ -144,10 +184,12 @@ export function deriveFlow(
     if (committedIds.has(df.id)) return; // a committed feature already owns this id
     const featId = `feature:${df.id}`;
     const colX = (state.features.length + 1 + dfi) * COL_W;
+    const dfPos = placeFeature(featId, { x: colX, y: FEATURE_Y });
+    placedFeatures.set(df.id, dfPos);
     nodes.push({
       id: featId,
       type: "feature",
-      position: pos(featId, { x: colX, y: FEATURE_Y }),
+      position: dfPos,
       data: { id: df.id, branch: df.branch, status: "draft", draft: true },
     });
   });
@@ -159,17 +201,7 @@ export function deriveFlow(
   // featAbs holds each feature's ABSOLUTE position (saved or grid fallback) so a
   // draft's grid slot can be computed relative to its parent, same as tasks.
   // Committed features come first, then draft features continue the columns.
-  const featAbs = new Map<string, { x: number; y: number }>();
-  state.features.forEach((f, fi) =>
-    featAbs.set(f.id, pos(`feature:${f.id}`, { x: (fi + 1) * COL_W, y: FEATURE_Y })),
-  );
-  draftFeatures.forEach((df, dfi) => {
-    if (committedIds.has(df.id)) return;
-    featAbs.set(
-      df.id,
-      pos(`feature:${df.id}`, { x: (state.features.length + 1 + dfi) * COL_W, y: FEATURE_Y }),
-    );
-  });
+  const featAbs = placedFeatures; // single source: the positions the nodes actually got
   const draftSeen = new Map<string, number>();
 
   for (const d of drafts) {
@@ -183,7 +215,7 @@ export function deriveFlow(
       id,
       type: "draft",
       parentId: featId,
-      position: pos(id, {
+      position: placeChild(featId, id, {
         x: featP.x + PAD,
         y: featP.y + TASK_REL_Y0 + (base + slot) * ROW_H,
       }),

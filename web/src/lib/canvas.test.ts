@@ -316,3 +316,55 @@ describe("child drag round-trip (single coordinate system)", () => {
     expect({ x: reFeatAbs.x + reT1Rel.x, y: reFeatAbs.y + reT1Rel.y }).toEqual(savedAbs);
   });
 });
+
+
+describe("grid fallback collision avoidance", () => {
+  it("a new feature is nudged off a column the user moved another feature onto", () => {
+    // F2 has no saved position; its grid slot is column 2 — but the user
+    // dragged F1 there. F2 must shift right instead of stacking.
+    const st = twoFeatureState();
+    const layout = { positions: { "feature:F1": { x: 640, y: 0 } } }; // F1 sits on F2's grid slot (col 2)
+    const { nodes } = deriveFlow(st, layout, []);
+    const f1 = nodes.find((n) => n.id === "feature:F1")!;
+    const f2 = nodes.find((n) => n.id === "feature:F2")!;
+    expect(f1.position).toEqual({ x: 640, y: 0 });
+    expect(Math.abs(f2.position.x - f1.position.x)).toBeGreaterThanOrEqual(320); // a full column away
+  });
+
+  it("a draft is nudged below a task the user moved onto its grid row", () => {
+    const st = oneFeatureOneTaskState();
+    // The draft's grid row would be row 1 (below T1) — move T1 onto row 1 so the
+    // draft must drop further down.
+    const layout = { positions: { "task:T1": { x: 336, y: 148 } } }; // exactly the draft's fallback slot
+    const { nodes } = deriveFlow(st, layout, [{ id: "D1", specMd: "x", feature: "F1", deps: [] }]);
+    const t1 = nodes.find((n) => n.id === "task:T1")!;
+    const d1 = nodes.find((n) => n.id === "draft:D1")!;
+    expect(Math.abs(d1.position.y - t1.position.y)).toBeGreaterThanOrEqual(96); // pushed a row down
+  });
+});
+
+function twoFeatureState(): State {
+  return {
+    project: "p",
+    agents: [{ id: "a", roles: ["worker"] }],
+    features: [
+      { id: "F1", branch: "b1", status: "in_progress", tasks: [] },
+      { id: "F2", branch: "b2", status: "in_progress", tasks: [] },
+    ],
+    awaiting_count: 0,
+  };
+}
+
+function oneFeatureOneTaskState(): State {
+  return {
+    project: "p",
+    agents: [{ id: "a", roles: ["worker"] }],
+    features: [
+      {
+        id: "F1", branch: "b1", status: "in_progress",
+        tasks: [{ id: "T1", owner: "a", status: "assigned", reviewer: "r", spec: "", evidence: "" }],
+      },
+    ],
+    awaiting_count: 0,
+  };
+}

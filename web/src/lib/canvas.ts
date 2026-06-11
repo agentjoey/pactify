@@ -12,6 +12,7 @@ import type { State } from "./types";
 //   nextId(["foo","t2"], "t")  → "t1"   (non-matching ids ignored)
 export function nextId(existing: string[], prefix: string): string {
   const taken = new Set<number>();
+  // prefix must be a literal slug ("t"/"f") — it is interpolated unescaped.
   const re = new RegExp(`^${prefix}([1-9][0-9]*)$`);
   for (const id of existing) {
     const m = re.exec(id);

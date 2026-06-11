@@ -209,11 +209,11 @@ describe("Canvas", () => {
     });
   });
 
-  // ③ Auto-id: the New-task editor opens with a generated default id (t1 for a
-  // fresh feature whose tasks are T1/T2 already — wait, those are uppercase; the
-  // 't' series is independent, so the first suggestion is t1). Editable + slug
-  // validation unchanged is covered by TaskEditor's own contract; here we only
-  // assert the field is pre-filled rather than blank.
+  // ③ Auto-id: the New-task editor opens with a generated default id. The
+  // fixture's committed tasks are uppercase (T1/T2), which the lowercase 't'
+  // series ignores, so the first suggestion is t1. Editable + slug validation
+  // unchanged is covered by TaskEditor's own contract; here we only assert the
+  // field is pre-filled rather than blank.
   it("New-task editor pre-fills an auto-generated id (not blank)", async () => {
     render(
       <Canvas

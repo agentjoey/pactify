@@ -43,7 +43,14 @@ async function writeJSON(url: string, method: string, body: unknown): Promise<Re
 // .forEach / .find, so an un-coerced null crashes the whole canvas (no seats
 // render, "+ New task" stays disabled, dispatch is unreachable). Coercing once
 // at the fetch boundary keeps that contract true for all downstream code.
-function normalizeState(s: State): State {
+type WireFeature = Omit<State["features"][number], "tasks"> & {
+  tasks: State["features"][number]["tasks"] | null;
+};
+type WireState = Omit<State, "agents" | "features"> & {
+  agents: State["agents"] | null;
+  features: WireFeature[] | null;
+};
+function normalizeState(s: WireState): State {
   return {
     ...s,
     agents: s.agents ?? [],

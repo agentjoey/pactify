@@ -82,7 +82,7 @@ describe("Canvas", () => {
 import { toRFNodes } from "./Canvas";
 import { deriveFlow } from "../lib/canvas";
 
-test("drafts are NOT clamped to their feature (extent), committed tasks are", () => {
+it("drafts are NOT clamped to their feature (extent), committed tasks are", () => {
   const flow = deriveFlow(fixture, {}, [
     { id: "D1", specMd: "# d", feature: "F1", deps: [] },
   ]);

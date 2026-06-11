@@ -31,6 +31,6 @@ describe("dispatchPayload", () => {
 });
 
 
-test("dispatchPayload requires an owner (button path starts empty)", () => {
+it("dispatchPayload requires an owner (button path starts empty)", () => {
   expect(() => dispatchPayload(draft, "", "claude", "feat/x")).toThrow();
 });

@@ -186,6 +186,9 @@ export default function App() {
     inProgressSince.current = new Map();
     setStaleTasks(new Set());
     setPulses(new Set());
+    // Selection is per-project: a stale id from the previous project would
+    // leave the detail panel's listeners half-armed against a missing task.
+    setSelected("");
     // Drafts are scoped to one project's canvas — drop them on project switch.
     setDrafts([]);
     setDraftFeatures([]);

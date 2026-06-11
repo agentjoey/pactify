@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { State, PactEvent } from "../lib/types";
 import { findTask, canMergeFeature } from "../lib/derive";
 import { postVerb } from "../lib/api";
@@ -67,12 +67,18 @@ export function RightRail({
   const [busy, setBusy] = useState(false);
 
   const close = () => onSelect?.("");
+  // Whether the panel actually RENDERS. `selected` alone is not enough: after a
+  // project switch (or in replay) the id may not resolve to a task — gating the
+  // listeners on `open` keeps an invisible panel from stealing Esc from real
+  // modals and the canvas chains.
+  const open = !!selected && !!bt;
+  const panelRef = useRef<HTMLElement>(null);
 
   // The panel owns its own Esc while open, stopping propagation so it closes
   // before the canvas/menu Esc chains see the key. Capture phase so we win the
   // race against any window-level listener those chains install.
   useEffect(() => {
-    if (!selected) return;
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -82,7 +88,18 @@ export function RightRail({
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected]);
+  }, [open]);
+
+  // Focus management (WAI-ARIA dialog, same contract as ui/Modal): move focus
+  // into the panel on open, restore it to the opener on close. The aside is
+  // focusable (tabIndex -1) so there is always a target even before the action
+  // buttons render.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => prev?.focus();
+  }, [open]);
 
   // Reset the per-task transient UI (changes note + error) when the target
   // task changes or the panel closes.
@@ -118,7 +135,7 @@ export function RightRail({
   // Per-task timeline from this session's SSE events. The events prop only
   // accumulates events seen since the page loaded — history before load is NOT
   // shown (labelled "this session"). Newest-first.
-  const timeline = events.filter((e) => e.task_id === task.id).slice().reverse();
+  const timeline = events.filter((e) => e.task_id === task.id).reverse();
 
   // Time-in-flight: relTime of the EARLIEST observed event for this task this
   // session (the first assign/join/in_progress-ish event we saw). If no event
@@ -143,8 +160,11 @@ export function RightRail({
         }
       />
       <aside
+        ref={panelRef}
+        tabIndex={-1}
         data-testid="task-panel"
         role="dialog"
+        aria-modal="true"
         aria-label={`Task ${task.id}`}
         className="absolute right-0 top-0 bottom-0 z-50 flex w-[340px] flex-col overflow-y-auto border-l border-[var(--color-border-subtle)] bg-[#20222F] shadow-[0_10px_32px_rgba(0,0,0,.4)]"
         style={

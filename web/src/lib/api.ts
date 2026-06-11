@@ -36,8 +36,24 @@ async function writeJSON(url: string, method: string, body: unknown): Promise<Re
   return r;
 }
 
+// normalizeState repairs the State the backend may emit with `null` instead of
+// `[]` for empty lists. Go marshals a nil slice as JSON `null`, so a freshly
+// registered repo (agents present, zero features) arrives as { features: null }.
+// The State type promises non-null arrays and every consumer relies on .map /
+// .forEach / .find, so an un-coerced null crashes the whole canvas (no seats
+// render, "+ New task" stays disabled, dispatch is unreachable). Coercing once
+// at the fetch boundary keeps that contract true for all downstream code.
+function normalizeState(s: State): State {
+  return {
+    ...s,
+    agents: s.agents ?? [],
+    features: (s.features ?? []).map((f) => ({ ...f, tasks: f.tasks ?? [] })),
+  };
+}
+
 export const fetchProjects = () => getJSON<ProjectMeta[]>("/api/projects");
-export const fetchState = (id: string) => getJSON<State>(`/api/projects/${id}/state`);
+export const fetchState = (id: string) =>
+  getJSON<State>(`/api/projects/${id}/state`).then(normalizeState);
 
 export const getActingSeat = () => getJSON<{ seat: string }>("/api/acting-seat");
 
@@ -50,7 +66,7 @@ export const getTimeline = (id: string) =>
   getJSON<Timeline>(`/api/projects/${id}/timeline`);
 
 export const getStateAt = (id: string, at: number) =>
-  getJSON<State>(`/api/projects/${id}/state?at=${at}`);
+  getJSON<State>(`/api/projects/${id}/state?at=${at}`).then(normalizeState);
 
 export async function postTask(
   project: string,

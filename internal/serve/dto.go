@@ -61,7 +61,11 @@ func ProjectStateAt(projectRoot string, at int) (StateDTO, error) {
 }
 
 func toDTO(st projection.State) StateDTO {
-	d := StateDTO{Project: st.Project}
+	// Initialize the slices so an empty roster/feature list marshals as JSON `[]`
+	// rather than `null` (Go marshals a nil slice as null). The dashboard's State
+	// type promises non-null arrays; a freshly-registered repo with agents but no
+	// features would otherwise crash the canvas client-side.
+	d := StateDTO{Project: st.Project, Agents: []SeatDTO{}, Features: []FeatureDTO{}}
 	for _, a := range st.Agents {
 		d.Agents = append(d.Agents, SeatDTO{ID: a.ID, Roles: a.Roles})
 	}

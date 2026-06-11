@@ -11,6 +11,7 @@ import { RightRail } from "./components/RightRail";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
+import type { Draft, DraftFeature } from "./lib/canvas";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
 
@@ -31,6 +32,12 @@ export default function App() {
   const [live, setLive] = useState(false);
   const [view, setView] = useState<View>("kanban");
   const [author, setAuthor] = useState(false);
+  // Canvas build-mode drafts live HERE (not inside Canvas) so they survive the
+  // Canvas unmount that view switching causes — switching canvas→ops→canvas
+  // would otherwise wipe every in-flight draft. Reset on project switch (the
+  // [current] effect below), since drafts are scoped to one project's canvas.
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
   // Replay (M3.3b): replayAt is the scrubber position (null = live). When set,
   // replayState holds the fetched HISTORICAL snapshot, which takes display
   // precedence over the live `state`. Historical snapshots never pass through
@@ -155,6 +162,9 @@ export default function App() {
     inProgressSince.current = new Map();
     setStaleTasks(new Set());
     setPulses(new Set());
+    // Drafts are scoped to one project's canvas — drop them on project switch.
+    setDrafts([]);
+    setDraftFeatures([]);
     if (pulseTimer.current) clearTimeout(pulseTimer.current);
     // Exit replay on project switch — the new project starts live.
     replayAtRef.current = null;
@@ -233,7 +243,7 @@ export default function App() {
           <>
             <div className="flex flex-1 overflow-hidden">
               {view === "canvas"
-                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} />
+                ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} />
                 : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} />}
               <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} />
             </div>

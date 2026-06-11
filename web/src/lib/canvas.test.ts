@@ -5,6 +5,7 @@ import {
   toParentRelative,
   childToAbsolute,
   applyConnect,
+  nextId,
   type Draft,
   type DraftFeature,
   type LayoutJSON,
@@ -368,3 +369,32 @@ function oneFeatureOneTaskState(): State {
     awaiting_count: 0,
   };
 }
+
+describe("nextId", () => {
+  it("empty list → prefix + 1", () => {
+    expect(nextId([], "t")).toBe("t1");
+    expect(nextId([], "f")).toBe("f1");
+  });
+
+  it("contiguous run → next number", () => {
+    expect(nextId(["t1", "t2"], "t")).toBe("t3");
+  });
+
+  it("gap → smallest free number, not next-highest", () => {
+    expect(nextId(["t1", "t3"], "t")).toBe("t2");
+  });
+
+  it("ignores ids that don't match the prefix series", () => {
+    // 'foo' and a different-prefix 'f2' must not influence the 't' series.
+    expect(nextId(["foo", "f2", "t2"], "t")).toBe("t1");
+  });
+
+  it("ignores leading-zero / non-positive matches", () => {
+    // 't0' and 't01' are not valid `${prefix}<positive-int>` ids.
+    expect(nextId(["t0", "t01"], "t")).toBe("t1");
+  });
+
+  it("counts both committed tasks and current drafts (caller passes the union)", () => {
+    expect(nextId(["t1", "t2", "t3"], "t")).toBe("t4");
+  });
+});

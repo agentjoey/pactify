@@ -1,5 +1,27 @@
 import type { State } from "./types";
 
+// nextId returns the smallest `${prefix}${N}` (N≥1) not already present in
+// `existing`. Used to seed the draft task/feature id forms with a sensible
+// default so authors don't have to hand-type ids (the value stays editable and
+// slug validation is unchanged). Ids that don't match `${prefix}<positive int>`
+// are ignored — only the numeric series for THIS prefix participates.
+//
+//   nextId([], "t")            → "t1"
+//   nextId(["t1","t2"], "t")   → "t3"
+//   nextId(["t1","t3"], "t")   → "t2"   (smallest free, not t4)
+//   nextId(["foo","t2"], "t")  → "t1"   (non-matching ids ignored)
+export function nextId(existing: string[], prefix: string): string {
+  const taken = new Set<number>();
+  const re = new RegExp(`^${prefix}([1-9][0-9]*)$`);
+  for (const id of existing) {
+    const m = re.exec(id);
+    if (m) taken.add(Number(m[1]));
+  }
+  let n = 1;
+  while (taken.has(n)) n++;
+  return `${prefix}${n}`;
+}
+
 // Draft is a task being authored in the canvas but not yet assigned (no event
 // in the log). It carries the in-flight spec markdown plus its target feature
 // and intended deps so it can render alongside committed tasks.

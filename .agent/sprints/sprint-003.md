@@ -122,6 +122,26 @@ seat 徽章删除+display memo 合一+roleColorVar 共源）+ fable5 终审 APPR
 **插曲**：C4 实现 agent 中途断连(socket),半成品续派补完（缺 CSS/测试 + SeatNode
 缺 target handle 真 bug）。
 
+### T9: Dashboard v2 — 商业化 SaaS 级 polish(三波 + hotfix)[HIGH]
+**Status:** ✅ Done（PR #16 hotfix + #17 W1 + #18 W2 + #19 W3,全部 merged,2026-06-11/12）
+**设计**:brainstorm 决策 B 旗舰版 + Linear 精致密度感 + ⌘K;可视化伴侣出 5 块 mockup 板
+逐板拍板(B·Indigo 色板/蚁群八品级头像 45°/Office 作战室/⌘K+时间轴+详情面板),
+视觉常数锁进 spec,mockup 入库 docs/superpowers/mockups/dashboard-v2/ 作实装 markup 源。
+**W0 hotfix(#16)**:验收阻塞三连——空仓 features 序列化 null 崩画布(真凶,Go 侧+前端
+双修)/草稿切视图即丢(提升 App 层)/draft 自动编号。
+**W1(#17)**:tokens+自托管字体(@theme static 防 tree-shake——审查抓到七成 token 被
+裁掉的真问题)/ui 九件套基础件/蚁群头像系统/TaskCard v2+看板/TopBar v2+动态标题。
+**W2(#18)**:Plan 画布质感/AntEdge 爬线(cap6)/连线手感重做(验收反馈 2.5)/右键菜单+
+吸附+框选(审查抓到 RF 内置 Backspace 可删已提交节点的 Critical)/office.ts 纯派生
+(审查牵出 changes_requested 从所有抽屉消失的语义洞)/OfficeView 默认模式(修复 agent
+整改在途动画坐标空间错位)/任务详情面板(动词语义逐字节保真)。
+**W3(#19)**:⌘K(cmdk 唯一新依赖)/回放时间轴+?at 深链(抓到 WebKit replaceState 限频)/
+人话化报错(11 条引擎原文核验)/骨架屏/空仓引导/聚焦模式 + 生命周期边角四连修。
+**基线**:vitest 99→358 / go 全绿 / bats 111;每个 web commit 带重建 dist。
+**插曲**:opus 实现 agent socket 断连 4 次(T3/C4/T15 半成品续派补完,T14/T15 空启动重派)。
+**Deferred**:千级 tick 渲染降采样、Canvas.tsx 体量二刀(useBuildMode/样式拆分)、
+⌘K 画布 fitView 聚焦动画、回放跳转入 ⌘K(需 timeline jump 钩子)。
+
 ### T3: M2.3 Claude marketplace 上架 + 其余 agent 一键 + brew tap [MED]
 **Status:** 🔲 Todo（Claude 插件模板已在 M2.2 打样，本任务=提交社区 marketplace 审核 + Codex/opencode/Gemini 一键 + brew tap）
 **Milestone:** M2.3

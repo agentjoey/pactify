@@ -2,8 +2,8 @@
 
 Version:        v0.3.0（✅ 已发布，首个 GitHub Release，2026-06-10）
 Sprint:         003
-Sprint Status:  🚧 进行中（M2.1-M2.4 ✅ + v0.3.0 + 站点v2 ✅（PR #9 已上线）+ Squad M3.1/M3.2 ✅ + M3.3a Ops面板 ✅（PR #14）+ M3.3b 通讯可视化 ✅（PR #15）；剩 M2.3 + M3.4）
-Last Updated:   2026-06-11 by claude (fable-5 控制端)
+Sprint Status:  🚧 进行中（M2.1-M2.4 ✅ + v0.3.0 + 站点v2 ✅ + Squad M3.1/M3.2 ✅ + M3.3a ✅（PR #14）+ M3.3b ✅（PR #15）+ Dashboard v2 三波 ✅（PR #16-#19）；剩 M2.3 + M3.4）
+Last Updated:   2026-06-12 by claude (fable-5 控制端)
 Sprint File:    .agent/sprints/sprint-003.md
 
 ## Open Bugs（P0/P1 必须本 Sprint 修复）

@@ -17,6 +17,21 @@ describe("api", () => {
     expect(fetch).toHaveBeenCalledWith("/api/projects/p/state");
   });
 
+  it("fetchState coerces a null features/agents list to [] (Go nil-slice → JSON null)", async () => {
+    // The Go backend marshals an empty Features (or Agents) slice as JSON `null`,
+    // not `[]`. A freshly-registered repo with agents but no features yet (the
+    // dogfood acceptance case) thus arrives as { features: null }. Every consumer
+    // does state.features.map/forEach/find, so an un-coerced null crashes the
+    // whole canvas (no seats, "+ New task" disabled, dispatch unreachable). The
+    // fetch boundary normalizes so the State type contract holds downstream.
+    const raw = { project: "greet", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: null, awaiting_count: 0 };
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => raw })));
+    const s = await fetchState("p");
+    expect(s.features).toEqual([]);
+    expect(Array.isArray(s.features)).toBe(true);
+    expect(s.agents).toHaveLength(1);
+  });
+
   it("subscribeEvents parses pact events, reports live state, ignores malformed", () => {
     let lastES: FakeES | null = null;
     const pactListeners: Array<(ev: MessageEvent) => void> = [];

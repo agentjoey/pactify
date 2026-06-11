@@ -1,6 +1,8 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State } from "../lib/types";
+import type { Draft, DraftFeature } from "../lib/canvas";
 
 // Mock the api module: getLayout resolves empty, putLayout is a spy, and
 // getActingSeat is unused by Canvas but stubbed for completeness.
@@ -33,6 +35,15 @@ const fixture: State = {
   ],
 };
 
+// noopDraftProps supplies the lifted draft state Canvas now requires as props.
+// Tests that don't exercise drafts pass empty lists + no-op setters.
+const noopDraftProps = {
+  drafts: [] as Draft[],
+  setDrafts: () => {},
+  draftFeatures: [] as DraftFeature[],
+  setDraftFeatures: () => {},
+};
+
 describe("Canvas", () => {
   beforeEach(() => {
     putLayout.mockClear();
@@ -40,7 +51,7 @@ describe("Canvas", () => {
 
   it("renders task nodes, seat rail, and the dep edge", async () => {
     const { container } = render(
-      <Canvas project="demo" state={fixture} author={false} />,
+      <Canvas project="demo" state={fixture} author={false} {...noopDraftProps} />,
     );
 
     // Task node ids appear.
@@ -65,7 +76,7 @@ describe("Canvas", () => {
   it("replay mode is read-only: no author affordances rendered", async () => {
     // App passes author={author && !replaying}, so a replaying canvas receives
     // author=false → the build-mode toolbar (New feature / New task) is absent.
-    render(<Canvas project="demo" state={fixture} author={false} replaying />);
+    render(<Canvas project="demo" state={fixture} author={false} replaying {...noopDraftProps} />);
     await waitFor(() => expect(screen.getByText("T1")).toBeInTheDocument());
     expect(screen.queryByText("+ New feature")).toBeNull();
     expect(screen.queryByText("+ New task")).toBeNull();
@@ -89,7 +100,7 @@ describe("Canvas", () => {
         ],
       }],
     };
-    const { container } = render(<Canvas project="demo" state={blocked} author={false} />);
+    const { container } = render(<Canvas project="demo" state={blocked} author={false} {...noopDraftProps} />);
     await waitFor(() => expect(screen.getByText("T2")).toBeInTheDocument());
 
     // Default OFF: no overlay markers, no legend.
@@ -115,7 +126,7 @@ describe("Canvas", () => {
 
   it("pulses prop applies the pulse class to the changed task node", async () => {
     const { container } = render(
-      <Canvas project="demo" state={fixture} author={false} pulses={new Set(["T2"])} />,
+      <Canvas project="demo" state={fixture} author={false} pulses={new Set(["T2"])} {...noopDraftProps} />,
     );
     await waitFor(() => {
       const node = container.querySelector('.react-flow__node[data-id="task:T2"]');
@@ -130,7 +141,7 @@ describe("Canvas", () => {
   it("clicking a task node reaches onSelectTask with the raw id", async () => {
     const onSelectTask = vi.fn();
     const { container } = render(
-      <Canvas project="demo" state={fixture} author={false} onSelectTask={onSelectTask} />,
+      <Canvas project="demo" state={fixture} author={false} onSelectTask={onSelectTask} {...noopDraftProps} />,
     );
     // React Flow wraps each node in a [data-id] element; T1 is a task node.
     const node = await waitFor(() => {
@@ -140,6 +151,85 @@ describe("Canvas", () => {
     });
     fireEvent.click(node);
     expect(onSelectTask).toHaveBeenCalledWith("T1");
+  });
+
+  // ① Acceptance-blocker regression: drafts must survive Canvas unmount/remount.
+  // App lifts `drafts` above Canvas and unmounts Canvas when the view leaves
+  // "canvas" (canvas→ops→canvas). The harness reproduces that lifecycle: state
+  // is held ABOVE Canvas and the Canvas mount is toggled. Before the fix, drafts
+  // lived in Canvas-local useState and vanished on unmount ("画布为空").
+  it("drafts survive a Canvas unmount/remount cycle (lifted state)", async () => {
+    function Harness() {
+      const [drafts, setDrafts] = useState<Draft[]>([]);
+      const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
+      const [mounted, setMounted] = useState(true);
+      return (
+        <div>
+          <button onClick={() => setMounted((m) => !m)}>toggle</button>
+          {mounted && (
+            <Canvas
+              project="demo"
+              state={fixture}
+              author
+              drafts={drafts}
+              setDrafts={setDrafts}
+              draftFeatures={draftFeatures}
+              setDraftFeatures={setDraftFeatures}
+            />
+          )}
+        </div>
+      );
+    }
+
+    const { container } = render(<Harness />);
+
+    // Author a draft via the real New-task editor flow.
+    fireEvent.click(await screen.findByText("+ New task"));
+    const editor = await screen.findByTestId("task-editor");
+    expect(editor).toBeInTheDocument();
+    // The id field is pre-seeded (auto-id) but we set it explicitly for clarity.
+    fireEvent.change(screen.getByLabelText("task id"), { target: { value: "d1" } });
+    fireEvent.click(screen.getByText("Add draft"));
+
+    // Draft node renders on the canvas.
+    await waitFor(() => {
+      expect(container.querySelector('.react-flow__node[data-id="draft:d1"]')).not.toBeNull();
+    });
+
+    // Switch away (unmount Canvas) then back (remount) — the App view-switch path.
+    fireEvent.click(screen.getByText("toggle"));
+    await waitFor(() => {
+      expect(container.querySelector('[data-testid="canvas-root"]')).toBeNull();
+    });
+    fireEvent.click(screen.getByText("toggle"));
+
+    // The draft is STILL there — lifted state outlived the unmount.
+    await waitFor(() => {
+      expect(container.querySelector('.react-flow__node[data-id="draft:d1"]')).not.toBeNull();
+    });
+  });
+
+  // ③ Auto-id: the New-task editor opens with a generated default id. The
+  // fixture's committed tasks are uppercase (T1/T2), which the lowercase 't'
+  // series ignores, so the first suggestion is t1. Editable + slug validation
+  // unchanged is covered by TaskEditor's own contract; here we only assert the
+  // field is pre-filled rather than blank.
+  it("New-task editor pre-fills an auto-generated id (not blank)", async () => {
+    render(
+      <Canvas
+        project="demo"
+        state={fixture}
+        author
+        drafts={[]}
+        setDrafts={() => {}}
+        draftFeatures={[]}
+        setDraftFeatures={() => {}}
+      />,
+    );
+    fireEvent.click(await screen.findByText("+ New task"));
+    const idInput = (await screen.findByLabelText("task id")) as HTMLInputElement;
+    // committed tasks are T1/T2 (uppercase) → 't' series is free from t1.
+    expect(idInput.value).toBe("t1");
   });
 });
 

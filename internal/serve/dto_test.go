@@ -76,6 +76,41 @@ func TestProjectStateForwardsDeps(t *testing.T) {
 	}
 }
 
+// TestProjectStateEmptyListsMarshalAsArrays pins the dogfood acceptance bug: a
+// freshly-registered repo with agents but ZERO features must serialize
+// "features":[] (and "agents":[] when empty), never "null". Go marshals a nil
+// slice as null; the dashboard's State type promises non-null arrays and every
+// consumer does features.map/forEach, so a null crashed the whole canvas.
+func TestProjectStateEmptyListsMarshalAsArrays(t *testing.T) {
+	root := t.TempDir()
+	pact := filepath.Join(root, ".pact")
+	os.MkdirAll(pact, 0o755)
+	log := filepath.Join(pact, "log.jsonl")
+	// init only: two seats, no features assigned yet (the dogfood state).
+	lines := `{"event_id":"1","ts":"2026-01-01T00:00:00Z","agent_id":"claude-opus","role":"orchestrator","event_type":"init","task_id":"","feature":"","payload":{"project":"greet","protocol_version":1,"seats":[{"id":"claude-opus","roles":["orchestrator","reviewer"],"entry":"CLAUDE.md"},{"id":"opencode","roles":["worker"],"entry":"AGENTS.md"}],"base_branch":"main"}}
+`
+	os.WriteFile(log, []byte(lines), 0o644)
+
+	dto, err := ProjectState(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(dto.Agents) != 2 {
+		t.Fatalf("want 2 agents, got %d", len(dto.Agents))
+	}
+	b, err := json.Marshal(dto)
+	if err != nil {
+		t.Fatal(err)
+	}
+	js := string(b)
+	if !strings.Contains(js, `"features":[]`) {
+		t.Fatalf(`features must marshal as [] not null: %s`, js)
+	}
+	if strings.Contains(js, `"features":null`) || strings.Contains(js, `"agents":null`) {
+		t.Fatalf("no list field may marshal as null: %s", js)
+	}
+}
+
 func TestProjectStateMissingLogIsEmpty(t *testing.T) {
 	dto, err := ProjectState(t.TempDir())
 	if err != nil {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import {
   ReactFlow,
   Background,
@@ -18,6 +18,7 @@ import {
   toParentRelative,
   childToAbsolute,
   applyConnect,
+  nextId,
   type Draft,
   type DraftFeature,
   type FlowNode,
@@ -163,6 +164,10 @@ export function Canvas({
   staleTasks,
   pulses,
   onSelectTask,
+  drafts,
+  setDrafts,
+  draftFeatures,
+  setDraftFeatures,
 }: {
   project: string;
   state: State;
@@ -180,14 +185,19 @@ export function Canvas({
   // Clicking a committed task node selects it (drives the RightRail review
   // flow). Receives the raw task id (no "task:" prefix).
   onSelectTask?: (id: string) => void;
+  // Build-mode drafts are owned by App (lifted state) so they survive the
+  // Canvas unmount caused by view switching. Canvas mutates them via the
+  // setters exactly as it did when they were component-local.
+  drafts: Draft[];
+  setDrafts: Dispatch<SetStateAction<Draft[]>>;
+  draftFeatures: DraftFeature[];
+  setDraftFeatures: Dispatch<SetStateAction<DraftFeature[]>>;
 }) {
   // Comms overlay toggle — component-local, default OFF. It's a display lens
   // (derived wait edges + node markers merged into the rendered graph), never
   // persisted to layout.json.
   const [comms, setComms] = useState(false);
   const [layout, setLayout] = useState<LayoutJSON>({});
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
   // React Flow v12 passes only the DRAGGED nodes as the drag handlers' third
   // argument — parent/seat lookups need the FULL node list, kept fresh here.
@@ -288,6 +298,14 @@ export function Canvas({
     for (const d of drafts) ids.push(d.id);
     return ids;
   }, [state.features, drafts]);
+
+  // existingFeatureIds: feature ids already taken (committed + draft features),
+  // used to seed the New-feature form's default id.
+  const existingFeatureIds = useMemo(() => {
+    const ids = state.features.map((f) => f.id);
+    for (const df of draftFeatures) ids.push(df.id);
+    return ids;
+  }, [state.features, draftFeatures]);
 
   // committedTaskIds: only assigned tasks (for the deps-fixed onConnect rule).
   const committedTaskIds = useMemo(() => {
@@ -493,7 +511,7 @@ export function Canvas({
           {!newFeatureOpen ? (
             <button
               className="rounded border border-[#30363d] bg-[#161b22] px-2.5 py-1 text-xs text-[#e6edf3] hover:border-[#8b949e]"
-              onClick={() => setNewFeatureOpen(true)}
+              onClick={() => { setNfId(nextId(existingFeatureIds, "f")); setNewFeatureOpen(true); }}
             >
               + New feature
             </button>
@@ -607,6 +625,7 @@ export function Canvas({
       {editorOpen && (
         <TaskEditor
           initial={editingDraft}
+          defaultId={nextId(existingTaskIds, "t")}
           features={featureOptions}
           existingIds={existingTaskIds}
           onSave={saveDraft}

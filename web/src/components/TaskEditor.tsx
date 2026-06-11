@@ -14,6 +14,7 @@ export type FeatureOption = { id: string; label: string };
 // caller, which owns the local drafts list.
 export function TaskEditor({
   initial,
+  defaultId,
   features,
   existingIds,
   onSave,
@@ -21,6 +22,10 @@ export function TaskEditor({
   onClose,
 }: {
   initial?: Draft;
+  // Auto-generated id suggestion for a NEW draft (e.g. "t3"). Pre-fills the id
+  // field as an editable default; ignored in edit mode (the draft keeps its id).
+  // Slug validation is unchanged — the user may overwrite it freely.
+  defaultId?: string;
   features: FeatureOption[];
   existingIds: string[]; // task ids already taken (committed + other drafts)
   onSave: (d: Draft) => void;
@@ -28,7 +33,7 @@ export function TaskEditor({
   onClose: () => void;
 }) {
   const editing = !!initial;
-  const [id, setId] = useState(initial?.id ?? "");
+  const [id, setId] = useState(initial?.id ?? defaultId ?? "");
   const [feature, setFeature] = useState(initial?.feature ?? features[0]?.id ?? "");
   const [specMd, setSpecMd] = useState(initial?.specMd ?? "");
 

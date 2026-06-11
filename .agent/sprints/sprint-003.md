@@ -99,6 +99,14 @@ STATE、toast 轰炸、评审流不可达、品牌色漂移、clobber 竞态、�
 brand 色-角色体系全站贯通 + check-dist 升至 11 断言。质量过程修了 CLS 坍塌、CTA 双击毁命令、
 标题语义、中文批注泄漏、dasharray 常数等真问题。
 
+### T7: Squad M3.3a — Ops 面板（注册/接线/座位出处）[HIGH]
+**Status:** ✅ Done（PR #14 merged，2026-06-11；用户验收测试反馈直接驱动）
+**交付**：UI 运行时注册/移除 repo（动态 watcher）+ 每 kind 接线状态与一键接线（桌面类真实路径
+知情同意门，codex doc-only 片段，probe 与 doctor 共源）+ 座位出处（join 可选 client 元数据：
+MCP clientInfo / pactify-cli，addendum 注明 advisory；Seats 面板 last join + before→after 变更告警）。
+serve 并发改造（RWMutex,race 干净）。基线 bats 109 / vitest 69。
+**Deferred**：移除项目时关 SSE 订阅、坏日志 500 信封、M3.3b 通讯可视化。
+
 ### T3: M2.3 Claude marketplace 上架 + 其余 agent 一键 + brew tap [MED]
 **Status:** 🔲 Todo（Claude 插件模板已在 M2.2 打样，本任务=提交社区 marketplace 审核 + Codex/opencode/Gemini 一键 + brew tap）
 **Milestone:** M2.3

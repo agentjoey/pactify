@@ -5,7 +5,7 @@ import { casteForRoles, padGradient } from "../../lib/ants";
 // SeatNode is a left-rail card: seat id, its roles, and the seat's caste ant on
 // a per-seat pad gradient (replacing the old role-color dot).
 export function SeatNode({ id, data }: NodeProps) {
-  const d = data as { roles?: string[]; roleColor?: string };
+  const d = data as { roles?: string[] };
   const seatId = id.replace(/^seat:/, "");
   const roles = d.roles ?? [];
   const caste = casteForRoles(roles);

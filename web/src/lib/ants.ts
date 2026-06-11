@@ -24,9 +24,9 @@ const KEYWORD_CASTES: ReadonlyArray<readonly [string, Caste]> = [
   ["pm", "brewer"],
   ["design", "painter"],
   ["research", "scout"],
+  // "devops" needs no entry: any string containing it already matches "ops".
   ["ops", "keeper"],
   ["operation", "keeper"],
-  ["devops", "keeper"],
 ];
 
 // casteForRoles resolves a seat's roles to its colony caste.

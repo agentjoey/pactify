@@ -12,10 +12,9 @@
 import type { JSX } from "react";
 import type { Caste } from "../../../lib/ants";
 
-// Canonical render sizes used across the dashboard (kanban chip / seat / pad /
-// caste card). Any px works — `size` is a number — but these are the four the
-// design uses; ≤ 18 triggers the simplified glyph.
-export type AntSize = 14 | 22 | 34 | 72;
+// Canonical render sizes used across the dashboard: 14 (kanban chip), 22
+// (seat), 34 (pad), 72 (caste card). Any px works — `size` is a number —
+// and ≤ 18 triggers the simplified glyph.
 
 // Below (and including) this px size we swap to the bold-stroke simplified glyph.
 const SMALL_MAX = 18;

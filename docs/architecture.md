@@ -147,3 +147,31 @@ served and how they are wired, without leaving the dashboard:
   roster with each seat's most recent join client+version — a CLI join stamps
   `pactify-cli`, richer hosts stamp their own identity — and flags `clientChanged` when a
   seat's last two joins name different clients. Provenance is advisory, never gating.
+
+### Comms visualization (M3.3b)
+
+The canvas gains a comms lens + replay scrubber — pure visualization, **zero protocol
+changes** (this milestone writes no events):
+
+- **Waits overlay** (`web/src/lib/comms.ts`, client-side): wait edges and seat markers are
+  derived from the existing `StateDTO` snapshot alone — no engine or new endpoint. Each
+  status maps to an edge/marker (`awaiting_review`→owner→reviewer, `changes_requested`→
+  reviewer→owner, unmet `deps`→task→dep, never-joined owner/reviewer→warning badge, an idle
+  joined seat→dimmed) with a reason chip; tasks transitively blocked through dep edges get
+  an amber outline (cycle-free graph reachability). The overlay is a canvas-toolbar toggle
+  (default off, component-local) — derived edges merge into `deriveFlow` when on, never
+  written back to the layout sidecar.
+- **Replay = prefix fold**: the projection is a pure fold, so historical state =
+  `Project(evs[:n])`. serve adds two read-only endpoints — `GET .../timeline`
+  (`{total, events:[{n, ts, type, actor, task?, feature?}]}`, a light index with no
+  payloads) and `GET .../state?at=N` (folds the first N events; `at=0`→empty, `N≥total`
+  clamps to the full/live shape, malformed `at`→400, absent `at`→unchanged). Both share the
+  existing read path (`event.ReadAll`); no mutex beyond today's `handleState`. The
+  **ReplayBar** scrubs `0..total`, fetching `state?at=N` per position; SSE snapshots are
+  ignored while scrubbing.
+- **Replay mode is read-only**: every author/ops mutation (dispatch, task editor, drag,
+  review verbs) is disabled or hidden while not live — the `replaying` flag short-circuits
+  the handlers; LIVE refetches the current state and resumes the SSE stream.
+- **Live pulse**: each SSE-applied snapshot (live mode only) diffs the changed task(s) and
+  pulses their node + wait edges once in the actor's role color (the site's cable-pulse
+  brand idiom). Pure CSS keyframe, fully gated off under `prefers-reduced-motion`.

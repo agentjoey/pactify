@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 // Modal — overlay (55% black + blur) with a panel on the bg-overlay token.
 // 180ms scale+fade entry via the shared motion vars; Esc closes; overlay click
@@ -25,6 +25,7 @@ export function Modal({
   width?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -68,14 +69,19 @@ export function Modal({
     return () => document.removeEventListener("keydown", onKey, true);
   }, [onClose]);
 
-  // Move focus into the panel on open so the trap has a starting point.
+  // Move focus into the panel on open so the trap has a starting point; on
+  // close, restore focus to whatever had it before (WAI-ARIA dialog pattern —
+  // a keyboard user who Esc's out must not be dropped on <body>).
   useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
-    if (!panel) return;
-    const first = Array.from(
-      panel.querySelectorAll<HTMLElement>(FOCUSABLE),
-    ).find((el) => el.tabIndex !== -1);
-    first?.focus();
+    if (panel) {
+      const first = Array.from(
+        panel.querySelectorAll<HTMLElement>(FOCUSABLE),
+      ).find((el) => el.tabIndex !== -1);
+      first?.focus();
+    }
+    return () => prev?.focus();
   }, []);
 
   return (
@@ -89,6 +95,7 @@ export function Modal({
         data-testid={testId}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
         className="ui-modal-panel max-w-[92vw] rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-overlay)] p-4 shadow-[var(--shadow-overlay)]"
         style={{ width }}
         onClick={(e) => e.stopPropagation()}
@@ -102,7 +109,7 @@ export function Modal({
               : "text-[var(--color-text-1)]",
           ].join(" ")}
         >
-          <h2 className="text-sm font-semibold">{title}</h2>
+          <h2 id={titleId} className="text-sm font-semibold">{title}</h2>
           <button
             type="button"
             tabIndex={-1}

@@ -48,7 +48,9 @@ function WireModal({
   const seatOk = isSlug(seat);
   const rolesOk = roles.trim().length > 0;
   const ackOk = !showGlobalWarn || ack;
-  const canConfirm = seatOk && rolesOk && ackOk && !busy;
+  // `!result` blocks a second Confirm after a successful wire (double-submit
+  // would re-run the machine-global write).
+  const canConfirm = seatOk && rolesOk && ackOk && !busy && !result;
 
   // docOnly kinds (codex) write only the entry; the action shows the snippet.
   const confirmLabel = row.docOnly ? "wire entry + show snippet" : "Confirm";

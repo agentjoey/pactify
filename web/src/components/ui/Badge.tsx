@@ -18,14 +18,18 @@ export type BadgeColor =
 
 export function Badge({
   color = "role-design",
+  colorVar,
   className = "",
   children,
 }: {
   color?: BadgeColor;
+  // Escape hatch for runtime-computed colors (e.g. `var(${roleColorVar(roles)})`).
+  // Takes precedence over `color`; the token union stays the encouraged path.
+  colorVar?: string;
   className?: string;
   children: ReactNode;
 }) {
-  const token = `var(--color-${color})`;
+  const token = colorVar ?? `var(--color-${color})`;
   return (
     <span
       className={[

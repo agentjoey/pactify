@@ -3,6 +3,7 @@ import type { SeatInfo } from "../../lib/types";
 import { getSeats } from "../../lib/api";
 import { roleColorVar } from "../../lib/canvas";
 import { relativeTime } from "../../lib/ops";
+import { Badge } from "../ui/Badge";
 
 // Seats renders the roster table with join provenance. It is read-only (the
 // point of provenance is observability), so it shows in observe-only mode too.
@@ -52,18 +53,9 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
                 </td>
                 <td className="py-1.5 pr-3">
                   <span className="flex flex-wrap gap-1">
-                    {s.roles.map((r) => {
-                      const c = `var(${roleColorVar([r])})`;
-                      return (
-                        <span
-                          key={r}
-                          className="inline-flex items-center rounded-full px-2 py-px text-[10px] font-medium"
-                          style={{ color: c, background: `color-mix(in srgb, ${c} 15%, transparent)` }}
-                        >
-                          {r}
-                        </span>
-                      );
-                    })}
+                    {s.roles.map((r) => (
+                      <Badge key={r} colorVar={`var(${roleColorVar([r])})`}>{r}</Badge>
+                    ))}
                   </span>
                 </td>
                 <td className="py-1.5 text-gray-400 font-mono">

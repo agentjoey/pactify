@@ -3,7 +3,9 @@ import { useEffect, useRef, type ReactNode } from "react";
 // Popover — an anchored dropdown panel (bg-raised, shadow-raised). The anchor is
 // rendered inline; when `open`, the panel renders below it. Closes on
 // outside-click (mousedown outside the wrapper) and on Esc. The parent owns the
-// open state (controlled).
+// open state (controlled). The panel carries NO ARIA role by default — pass
+// `role="menu"` only when the children really are menuitems; aria-expanded/
+// aria-haspopup on the trigger are the consumer's job (the anchor is opaque).
 export function Popover({
   open,
   onClose,
@@ -11,6 +13,7 @@ export function Popover({
   children,
   align = "left",
   className = "",
+  role,
 }: {
   open: boolean;
   onClose: () => void;
@@ -18,6 +21,7 @@ export function Popover({
   children: ReactNode;
   align?: "left" | "right";
   className?: string;
+  role?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +48,7 @@ export function Popover({
       {anchor}
       {open && (
         <div
-          role="menu"
+          role={role}
           className={[
             "absolute top-full z-50 mt-1 min-w-[180px] rounded-lg border border-[var(--color-border-subtle)]",
             "bg-[var(--color-bg-raised)] p-1 shadow-[var(--shadow-raised)]",

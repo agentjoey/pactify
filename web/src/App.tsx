@@ -82,6 +82,8 @@ export default function App() {
   // clamps N to the timeline bounds). Cleared after it fires so a later project
   // switch doesn't re-trigger it.
   const pendingAt = useRef<number | null>(readAt(window.location.search));
+  // Debounce handle for `?at` URL writes during scrubs (see enterReplay).
+  const urlTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // task id → epoch ms when first observed in_progress this session.
   const inProgressSince = useRef<Map<string, number>>(new Map());
   // tick forces stale re-evaluation on an interval even without state changes.
@@ -266,10 +268,16 @@ export default function App() {
     // so the view is shareable/reloadable. ReplayBar stays URL-agnostic — App
     // owns the `?at` param. A pending deep-link read is now consumed.
     pendingAt.current = null;
-    const next = writeAt(window.location.search, at);
-    if (next !== window.location.search) {
-      window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
-    }
+    // DEBOUNCED: a pointer drag calls enterReplay per move; WebKit caps
+    // replaceState at ~100 calls / 30s (SecurityError beyond) — write the URL
+    // at the same cadence as the snapshot fetch instead of per-move.
+    if (urlTimer.current) clearTimeout(urlTimer.current);
+    urlTimer.current = setTimeout(() => {
+      const next = writeAt(window.location.search, at);
+      if (next !== window.location.search) {
+        window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
+      }
+    }, 150);
   }
   function showReplaySnapshot(at: number, s: State) {
     // Drop stale responses: a slow fetch for an old position must not override
@@ -284,7 +292,9 @@ export default function App() {
     replayAtRef.current = null;
     setReplayAt(null);
     setReplayState(null);
-    // Clear the `?at` deep link on return to live (spec §6.6).
+    // Clear the `?at` deep link on return to live (spec §6.6) — immediately,
+    // cancelling any debounced scrub write still in flight.
+    if (urlTimer.current) clearTimeout(urlTimer.current);
     const next = writeAt(window.location.search, null);
     if (next !== window.location.search) {
       window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);

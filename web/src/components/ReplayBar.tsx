@@ -58,8 +58,8 @@ export function ReplayBar({
   const ruler = useRef<HTMLDivElement | null>(null);
   // The last position THIS component drove through go(). Used to detect a replay
   // position set EXTERNALLY by App (the `?at` deep link, or a "replay to here"
-  // jump elsewhere) so we fetch+park that snapshot exactly once. -1 = nothing
-  // driven yet; reset to null-equivalent on resume.
+  // jump elsewhere) so we fetch+park that snapshot exactly once. null = nothing
+  // driven yet; reset to null on resume.
   const lastDriven = useRef<number | null>(null);
   // While a pointer drag is active we capture moves on the ruler and keep
   // scrubbing until pointerup. dragging guards the move handler.
@@ -153,6 +153,7 @@ export function ReplayBar({
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
+    if (total <= 0) return; // empty timeline: nothing to scrub into
     if (e.key === "ArrowLeft") { e.preventDefault(); go(pos - 1); }
     else if (e.key === "ArrowRight") { e.preventDefault(); go(pos + 1); }
   }
@@ -179,20 +180,6 @@ export function ReplayBar({
       data-testid="replay-bar"
       className="relative border-t border-gray-800 bg-[#0f1419] px-4 pt-4 pb-1.5 text-xs"
     >
-      {/* Hover event-preview card, floating above the ruler. */}
-      {hoverEv && (
-        <div
-          data-testid="replay-evcard"
-          className="pointer-events-none absolute -translate-x-1/2 rounded-lg border border-white/15 bg-[#2F3246] px-2.5 py-1.5 font-mono text-[10.5px] text-white/85 shadow-[0_10px_28px_rgba(0,0,0,0.55)] whitespace-nowrap"
-          style={{ left: `calc(${pct(hoverEv.n)}% + 16px)`, bottom: "46px" }}
-        >
-          <span style={{ color: "var(--color-role-design)" }}>#{hoverEv.n} {hoverEv.type}</span>
-          {" · "}{hoverEv.actor}
-          {hoverEv.task ? <> · {hoverEv.task}</> : null}
-          <span className="text-white/40"> · {hoverEv.ts}</span>
-        </div>
-      )}
-
       <div className="flex items-center gap-3">
         <button
           aria-label="step back"
@@ -215,6 +202,21 @@ export function ReplayBar({
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
+          {/* Hover event-preview card. Lives INSIDE the ruler so its percentage
+              left shares the ticks' coordinate basis (the bar's padding/buttons
+              would otherwise skew it rightward, growing with position). */}
+          {hoverEv && (
+            <div
+              data-testid="replay-evcard"
+              className="pointer-events-none absolute bottom-[30px] -translate-x-1/2 rounded-lg border border-white/15 bg-[#2F3246] px-2.5 py-1.5 font-mono text-[10.5px] text-white/85 shadow-[0_10px_28px_rgba(0,0,0,0.55)] whitespace-nowrap"
+              style={{ left: `${pct(hoverEv.n)}%` }}
+            >
+              <span style={{ color: "var(--color-role-design)" }}>#{hoverEv.n} {hoverEv.type}</span>
+              {" · "}{hoverEv.actor}
+              {hoverEv.task ? <> · {hoverEv.task}</> : null}
+              <span className="text-white/40"> · {hoverEv.ts}</span>
+            </div>
+          )}
           {/* base track */}
           <div className="absolute inset-x-0 top-3 h-[3px] rounded-sm bg-white/10" />
           {/* played region — left of the current position */}

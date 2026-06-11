@@ -70,7 +70,7 @@ function handlesFor(type: string): SeedHandle[] {
 // children get parentId + extent:'parent'. Child positions arrive already
 // rebased to parent-relative coords by toParentRelative() — this function does
 // NO coordinate math, so there is a single rebase path in the codebase.
-function toRFNodes(flow: FlowNode[], staleTasks?: Set<string>): Node[] {
+export function toRFNodes(flow: FlowNode[], staleTasks?: Set<string>): Node[] {
   const rel = toParentRelative(flow);
   // Count child rows per feature for the container bound.
   const rows = new Map<string, number>();
@@ -112,7 +112,10 @@ function toRFNodes(flow: FlowNode[], staleTasks?: Set<string>): Node[] {
     };
     if (n.parentId) {
       node.parentId = n.parentId;
-      node.extent = "parent";
+      // Committed tasks stay visually inside their feature. Drafts must be able
+      // to LEAVE the group to reach the seat rail (drag-to-dispatch), so they
+      // get no extent clamp.
+      if (n.type === "task") node.extent = "parent";
     }
     out.push(node);
   }
@@ -184,7 +187,15 @@ export function Canvas({
   const [nfBranch, setNfBranch] = useState("");
   const [notice, setNotice] = useState(""); // transient toast (deps-fixed cue)
   // Dispatch target: a draft dropped onto a seat.
-  const [dispatch, setDispatch] = useState<{ draft: Draft; owner: string } | undefined>(undefined);
+  const [dispatch, setDispatch] = useState<{ draft: Draft; owner?: string } | undefined>(undefined);
+  const [draggingDraft, setDraggingDraft] = useState(false);
+
+  // Secondary dispatch entry: the button on a draft node (the drag gesture is
+  // the primary path; the button exists for discoverability).
+  function openDispatchFor(draftId: string) {
+    const d = drafts.find((x) => x.id === draftId);
+    if (d) setDispatch({ draft: d });
+  }
 
   // Load saved layout on mount / project change.
   useEffect(() => {
@@ -216,7 +227,13 @@ export function Canvas({
 
   // Rebuild RF nodes whenever the derived flow (or stale set) changes.
   useEffect(() => {
-    setNodes(toRFNodes(flow.nodes, staleTasks));
+    setNodes(
+      toRFNodes(flow.nodes, staleTasks).map((n) =>
+        n.type === "draft"
+          ? { ...n, data: { ...n.data, onDispatch: () => openDispatchFor(n.id.replace(/^draft:/, "")) } }
+          : n,
+      ),
+    );
   }, [flow.nodes, staleTasks]);
 
   // Debounced layout persistence (single timer).
@@ -310,8 +327,13 @@ export function Canvas({
   // Drag-to-dispatch: if a DRAFT node is dropped overlapping a SEAT node, open
   // the DispatchModal with that seat as the prefilled owner instead of saving a
   // layout position (the dispatch flow replaces the draft on success).
+  const onNodeDragStart = useCallback((_e: unknown, node: Node) => {
+    if (node.type === "draft") setDraggingDraft(true);
+  }, []);
+
   const onNodeDragStop = useCallback(
     (_e: unknown, node: Node, allNodes: Node[]) => {
+      setDraggingDraft(false);
       // Observe-only dashboards never persist layout drags.
       if (!author) return;
       if (node.type === "draft") {
@@ -407,7 +429,7 @@ export function Canvas({
   const nfValid = SLUG_RE.test(nfId.trim()) && SLUG_RE.test(nfBranch.trim());
 
   return (
-    <div className="relative flex-1" data-testid="canvas-root">
+    <div className={`relative flex-1${draggingDraft ? " dragging-draft" : ""}`} data-testid="canvas-root">
       {author && (
         <div className="absolute left-2 top-2 z-10 flex items-center gap-2">
           {!newFeatureOpen ? (
@@ -475,6 +497,7 @@ export function Canvas({
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onConnect={onConnect}

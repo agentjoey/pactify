@@ -21,6 +21,7 @@ export function TaskNode({ id, data }: NodeProps) {
     roleColor?: string;
     draft?: boolean;
     stale?: boolean;
+    onDispatch?: () => void;
   };
   const taskId = id.replace(/^(task|draft):/, "");
   const roleVar = d.roleColor ?? "--role-dev";
@@ -62,6 +63,18 @@ export function TaskNode({ id, data }: NodeProps) {
             {d.status.replace(/_/g, " ")}
           </span>
         </div>
+      )}
+      {d.draft && d.onDispatch && (
+        <button
+          data-testid="dispatch-btn"
+          className="mt-1 rounded border border-[#30363d] bg-[#21262d] px-1.5 py-0.5 text-[10px] text-[#8ab4ff] hover:border-[#8ab4ff]"
+          onClick={(e) => {
+            e.stopPropagation(); // don't trigger the node-click editor
+            d.onDispatch?.();
+          }}
+        >
+          dispatch →
+        </button>
       )}
       <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-[#8b949e]">
         {d.owner && (

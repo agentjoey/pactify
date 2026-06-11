@@ -23,6 +23,9 @@ export function dispatchPayload(
   reviewer: string,
   branch: string,
 ): AssignPayload {
+  if (!owner || !reviewer) {
+    throw new Error("owner and reviewer are required");
+  }
   if (owner === reviewer) {
     throw new Error("owner and reviewer must differ");
   }
@@ -49,7 +52,7 @@ export function dispatchPayload(
 export function DispatchModal({
   project,
   draft,
-  owner,
+  owner: initialOwner,
   roster,
   branch,
   onDispatched,
@@ -57,18 +60,19 @@ export function DispatchModal({
 }: {
   project: string;
   draft: Draft;
-  owner: string;
+  owner?: string; // set by the drop gesture; undefined when opened via the dispatch button
   roster: string[];
   branch: string;
   onDispatched: () => void;
   onClose: () => void;
 }) {
+  const [owner, setOwner] = useState(initialOwner ?? "");
   const reviewers = roster.filter((r) => r !== owner);
   const [reviewer, setReviewer] = useState(reviewers[0] ?? "");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const canConfirm = !!reviewer && reviewer !== owner && !busy;
+  const canConfirm = !!owner && !!reviewer && reviewer !== owner && !busy;
 
   const confirm = async () => {
     if (!canConfirm) return;
@@ -107,7 +111,24 @@ export function DispatchModal({
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-[#8b949e]">Owner</div>
-            <div className="mt-1 rounded border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[#e6edf3]">{owner}</div>
+            {initialOwner ? (
+              <div className="mt-1 rounded border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[#e6edf3]">{owner}</div>
+            ) : (
+              <select
+                aria-label="owner"
+                className="mt-1 w-full rounded border border-[#30363d] bg-[#0d1117] px-2 py-1 text-[#e6edf3]"
+                value={owner}
+                onChange={(e) => {
+                  setOwner(e.target.value);
+                  if (reviewer === e.target.value) setReviewer("");
+                }}
+              >
+                <option value="">(choose owner)</option>
+                {roster.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label className="text-[10px] font-semibold uppercase tracking-wide text-[#8b949e]">Reviewer</label>

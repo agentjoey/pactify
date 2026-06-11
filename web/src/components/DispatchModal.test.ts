@@ -29,3 +29,8 @@ describe("dispatchPayload", () => {
     expect(dispatchPayload(d, "a", "b", "br").deps).toEqual([]);
   });
 });
+
+
+test("dispatchPayload requires an owner (button path starts empty)", () => {
+  expect(() => dispatchPayload(draft, "", "claude", "feat/x")).toThrow();
+});

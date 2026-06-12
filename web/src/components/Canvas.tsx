@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type SetStateAction } from "react";
 import {
   ReactFlow,
-  Position,
   useReactFlow,
   useViewport,
   type Node,
@@ -15,17 +14,19 @@ import {
 import "@xyflow/react/dist/style.css";
 import type { State } from "../lib/types";
 import {
-  deriveFlow,
-  toParentRelative,
-  childToAbsolute,
+  deriveGraph,
+  placeNew,
+  mergeNodes,
+  normalizeLayout,
+  LAYOUT_V,
   applyConnect,
   assignAntFlags,
   isValidDep,
   mergeOfficePos,
   nextId,
+  CHILD_W,
   type Draft,
   type DraftFeature,
-  type FlowNode,
   type LayoutJSON,
   type AntEdgeKind,
 } from "../lib/canvas";
@@ -105,91 +106,6 @@ function SnapGuides({ guides }: { guides: { axis: "v" | "h"; pos: number }[] }) 
       )}
     </div>
   );
-}
-
-// Feature-group sizing — a basic bound computed from its child rows so the
-// translucent container wraps its tasks/drafts. Children position relative to
-// the parent in React Flow, so a child at the group's own x/y maps to (0,0).
-const CHILD_W = 200;
-const ROW_H = 120;
-const PAD = 16;
-const HEADER = 28;
-
-// featureStyle returns {width,height} sized to hold `rows` stacked children.
-function featureStyle(rows: number): { width: number; height: number } {
-  const r = Math.max(rows, 1);
-  return { width: CHILD_W + PAD * 2, height: HEADER + r * ROW_H + PAD };
-}
-
-// handlesFor mirrors the <Handle> elements each node type renders, so edge
-// routing can resolve handle bounds without a real DOM measurement pass.
-type SeedHandle = NonNullable<Node["handles"]>[number];
-function handlesFor(type: string): SeedHandle[] {
-  if (type === "seat") {
-    return [{ type: "source", position: Position.Right, x: CHILD_W, y: 40, width: 1, height: 1 }];
-  }
-  // task + draft
-  return [
-    { type: "target", position: Position.Top, x: CHILD_W / 2, y: 0, width: 1, height: 1 },
-    { type: "source", position: Position.Bottom, x: CHILD_W / 2, y: 80, width: 1, height: 1 },
-  ];
-}
-
-// toRFNodes maps derived FlowNodes → React Flow nodes. Feature nodes get a sized
-// style and are pushed first (React Flow requires parents before children);
-// children get parentId + extent:'parent'. Child positions arrive already
-// rebased to parent-relative coords by toParentRelative() — this function does
-// NO coordinate math, so there is a single rebase path in the codebase.
-export function toRFNodes(flow: FlowNode[], staleTasks?: Set<string>): Node[] {
-  const rel = toParentRelative(flow);
-  // Count child rows per feature for the container bound.
-  const rows = new Map<string, number>();
-  for (const n of rel) {
-    if (n.parentId) rows.set(n.parentId, (rows.get(n.parentId) ?? 0) + 1);
-  }
-
-  const out: Node[] = [];
-  for (const n of rel) {
-    if (n.type === "feature") {
-      const sz = featureStyle(rows.get(n.id) ?? 0);
-      out.push({
-        id: n.id,
-        type: "feature",
-        position: n.position,
-        data: n.data,
-        style: sz,
-        // Seed measured dims so React Flow can route edges before the browser
-        // measures the DOM (it never does under jsdom; harmless in the browser,
-        // where real measurements override these on first frame).
-        measured: sz,
-      });
-    }
-  }
-  for (const n of rel) {
-    if (n.type === "feature") continue;
-    const rawId = n.id.replace(/^(task|draft):/, "");
-    const data = staleTasks?.has(rawId) ? { ...n.data, stale: true } : n.data;
-    const node: Node = {
-      id: n.id,
-      type: n.type,
-      position: n.position,
-      data,
-      measured: { width: CHILD_W, height: 80 },
-      // Seed handle bounds so edges resolve before the browser measures the DOM.
-      // The real <Handle> components re-register on mount in the browser; under
-      // jsdom (no layout) these seeds are what let dep edges render in tests.
-      handles: handlesFor(n.type),
-    };
-    if (n.parentId) {
-      node.parentId = n.parentId;
-      // Committed tasks stay visually inside their feature. Drafts must be able
-      // to LEAVE the group to reach the seat rail (drag-to-dispatch), so they
-      // get no extent clamp.
-      if (n.type === "task") node.extent = "parent";
-    }
-    out.push(node);
-  }
-  return out;
 }
 
 // SLUG_RE validates a feature id / branch slug entered in the New-feature form.
@@ -336,18 +252,23 @@ export function Canvas({
     setFocusFeature(null);
     setMenu(null);
     setRenaming(null);
-    getLayout(project).then((l) => { if (alive) setLayout(l ?? {}); }).catch(() => {
-      if (alive) setLayout({});
-    });
+    // Normalize the opaque server blob into a v2 layout: a legacy (no `v`) layout
+    // is discarded so every node re-materializes from the deterministic grid
+    // (spec §1.3) — a stale v1 absolute-coord blob must never poison v2.
+    getLayout(project)
+      .then((l) => { if (alive) setLayout(normalizeLayout(l)); })
+      .catch(() => { if (alive) setLayout({ v: LAYOUT_V }); });
     return () => { alive = false; };
   }, [project]);
 
-  // Derive the flow graph from protocol state + saved layout + drafts +
-  // draft-features. SSE state changes re-run this; unmoved nodes keep their
-  // layout-saved positions.
-  const flow = useMemo(
-    () => deriveFlow(state, layout, drafts, draftFeatures),
-    [state, layout, drafts, draftFeatures],
+  // Derive the position-LESS graph (node identities + data + dep edges) from
+  // protocol state + drafts + draft-features. Position is NOT here — layout owns
+  // it (materialized once by placeNew, thereafter changed only by user drag).
+  // SSE state changes re-run this; the materialization effect below folds the new
+  // graph into the RF node array by merge-by-id so unmoved nodes never teleport.
+  const graph = useMemo(
+    () => deriveGraph(state, drafts, draftFeatures),
+    [state, drafts, draftFeatures],
   );
 
   // Dep edges render as ant-crawl edges (type:"ant"): a carrier ant + cargo
@@ -355,7 +276,7 @@ export function Canvas({
   // passthrough); `ant` is decided by the cap pass in `display` below.
   const edges: Edge[] = useMemo(
     () =>
-      flow.edges.map((e) => ({
+      graph.edges.map((e) => ({
         id: e.id,
         source: e.source,
         target: e.target,
@@ -363,38 +284,87 @@ export function Canvas({
         style: { stroke: "#484f58", strokeDasharray: "5 4" },
         data: { kind: "dep" as const, color: "#484f58", ant: false },
       })),
-    [flow.edges],
+    [graph.edges],
   );
 
-  // Rebuild RF nodes whenever the derived flow (or stale set) changes.
-  // Draft nodes get an onDispatch callback; feature nodes get an onFocus callback
-  // (clicking the frame header → feature focus mode) — both injected through node
-  // data, mirroring each other.
-  useEffect(() => {
-    setNodes(
-      toRFNodes(flow.nodes, staleTasks).map((n) => {
+  // injectCallbacks re-attaches the per-node callbacks (draft onDispatch /
+  // feature onFocus) and the stale marker onto the merged node array. mergeNodes
+  // keeps a node's `data` REFERENCE stable when nothing changed (so RF skips
+  // re-render); to preserve that, we only produce a NEW data object for a node
+  // when its injected fields actually change — a stale flag only flips when the
+  // node's stale status differs from what's already on the node. Unchanged nodes
+  // pass through by reference.
+  const injectCallbacks = useCallback(
+    (merged: Node[]): Node[] =>
+      merged.map((n) => {
         if (n.type === "draft") {
+          // onDispatch closes over the raw id; re-attaching every merge is fine
+          // (data already churns for drafts) — keep it simple and correct.
           return { ...n, data: { ...n.data, onDispatch: () => openDispatchFor(n.id.replace(/^draft:/, "")) } };
         }
         if (n.type === "feature") {
           const fid = (n.data as { id?: string }).id ?? n.id.replace(/^feature:/, "");
           return { ...n, data: { ...n.data, onFocus: () => setFocusFeature((cur) => (cur === fid ? null : fid)) } };
         }
+        if (n.type === "task") {
+          const raw = n.id.replace(/^task:/, "");
+          const want = !!staleTasks?.has(raw);
+          const has = !!(n.data as { stale?: boolean }).stale;
+          // Only mint a new data object when the stale state actually changed —
+          // otherwise return the node by reference so RF's merge stays stable.
+          if (want === has) return n;
+          return { ...n, data: { ...n.data, stale: want } };
+        }
         return n;
       }),
-    );
-  }, [flow.nodes, staleTasks]);
+    [staleTasks],
+  );
 
-  // Debounced layout persistence (single timer).
-  const scheduleSave = useCallback((next: LayoutJSON) => {
-    setLayout(next);
+  // schedulePut debounces a layout PUT WITHOUT touching local state. The
+  // materialization effect uses this: it always setLayout()s locally (so every
+  // surface — observer/replay included — renders the freshly placed nodes), then
+  // separately schedules a PUT only when author && !replaying. scheduleSave below
+  // (setLayout + PUT) is the combined path the drag/office handlers still use.
+  const schedulePut = useCallback((next: LayoutJSON) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       putLayout(project, next).catch(() => {});
     }, 800);
   }, [project]);
 
+  // Debounced layout persistence (single timer): local state + PUT together.
+  const scheduleSave = useCallback((next: LayoutJSON) => {
+    setLayout(next);
+    schedulePut(next);
+  }, [schedulePut]);
+
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  // Single materialization effect (spec §1.4). Whenever the graph changes (SSE
+  // snapshot, drafts, draft-features) or stale set changes:
+  //   1. placeNew assigns a one-time position to every node with NO layout entry.
+  //   2. If any new entries, fold them into layout: setLayout LOCALLY ALWAYS (so
+  //      observer/replay still render), and PUT only when author && !replaying.
+  //   3. mergeNodes(prev, graph, next) folds graph + layout into the RF node
+  //      array by merge-by-id — unmoved nodes keep their prev position/measured/
+  //      selected/dragging, so a drag-in-progress node is never teleported.
+  // Ordering contract: placeNew runs BEFORE mergeNodes, so a brand-new node has a
+  // layout position to merge in (mergeNodes falls back to {0,0} only if it didn't).
+  useEffect(() => {
+    const add = placeNew(layoutRef.current, graph);
+    let layoutForMerge = layoutRef.current;
+    if (Object.keys(add).length > 0) {
+      const next: LayoutJSON = {
+        ...layoutRef.current,
+        v: LAYOUT_V,
+        positions: { ...(layoutRef.current.positions ?? {}), ...add },
+      };
+      layoutForMerge = next;
+      setLayout(next); // local materialization ALWAYS (every surface renders)
+      if (author && !replaying) schedulePut(next);
+    }
+    setNodes((prev) => injectCallbacks(mergeNodes(prev, graph, layoutForMerge)));
+  }, [graph, injectCallbacks, author, replaying, schedulePut]);
 
   // Office desk position persistence (T10). Writes ONLY the additive `office`
   // sidecar key — `positions` (Plan-mode coords) is carried through untouched —
@@ -520,10 +490,12 @@ export function Canvas({
     [author, committedTaskIds, featureOfId, flashNotice, depGraph, setDrafts],
   );
 
-  // Persist a node's new position into the layout sidecar after a drag. The
-  // layout stores ABSOLUTE coords for every node (one coordinate system). A
-  // child reports a parent-relative position, so convert it back to absolute
-  // using its parent's CURRENT absolute position from the live nodes state.
+  // Persist dragged nodes' new positions into the layout sidecar after a drag.
+  // Layout v2 stores RF-NATIVE coords directly: top-level nodes absolute, child
+  // nodes parent-relative — exactly what React Flow reports in node.position, so
+  // there is ZERO coordinate conversion here (the v1 childToAbsolute rebase is
+  // gone). RF v12 passes the DRAGGED selection as the handler's third argument;
+  // we write one layout entry per dragged node and save once.
   //
   // Drag-to-dispatch: if a DRAFT node is dropped overlapping a SEAT node, open
   // the DispatchModal with that seat as the prefilled owner instead of saving a
@@ -552,14 +524,20 @@ export function Canvas({
   }, [replaying]);
 
   const onNodeDragStop = useCallback(
-    (_e: unknown, node: Node) => {
+    (_e: unknown, node: Node, dragged: Node[]) => {
       setDraggingDraft(false);
       setGuides([]); // clear snap guides
       // Replay is read-only and observe-only dashboards never persist drags.
       if (replaying || !author) return;
-      // RF v12: the callback's nodes arg is the dragged selection only — use
-      // the live full list for parent/seat resolution.
+      // RF v12: `dragged` is the moved selection only — use the live full list
+      // for parent/seat resolution. Fall back to the single node for callers
+      // (or RF builds) that don't pass the third arg.
       const allNodes = nodesRef.current;
+      const moved = dragged && dragged.length > 0 ? dragged : [node];
+
+      // Drag-to-dispatch is a single-draft gesture: a draft dropped on a seat
+      // dispatches instead of saving a layout move. Only checked for the primary
+      // dragged node (a multi-select group drag never dispatches).
       if (node.type === "draft") {
         const dragBox = nodeBounds(node, allNodes);
         const seat = allNodes.find(
@@ -575,14 +553,14 @@ export function Canvas({
         }
       }
 
-      let abs = { x: node.position.x, y: node.position.y };
-      if (node.parentId) {
-        const parent = allNodes.find((n) => n.id === node.parentId);
-        if (parent) abs = childToAbsolute(node.position, parent.position);
-      }
+      // Write one layout entry per dragged node. node.position is already the
+      // RF-native value layout v2 stores (top-level absolute / child parent-
+      // relative) — zero conversion. Save once for the whole selection.
       const positions = { ...(layoutRef.current.positions ?? {}) };
-      positions[node.id] = abs;
-      scheduleSave({ ...layoutRef.current, positions });
+      for (const n of moved) {
+        positions[n.id] = { x: n.position.x, y: n.position.y };
+      }
+      scheduleSave({ ...layoutRef.current, v: LAYOUT_V, positions });
     },
     [author, replaying, drafts, scheduleSave],
   );

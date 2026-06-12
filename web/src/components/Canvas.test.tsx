@@ -14,7 +14,8 @@ vi.mock("../lib/api", () => ({
   getActingSeat: vi.fn().mockResolvedValue({ seat: "" }),
 }));
 
-import { Canvas } from "./Canvas";
+import { Canvas, dragDispatchSeat } from "./Canvas";
+import type { Node } from "@xyflow/react";
 
 const fixture: State = {
   project: "demo",
@@ -587,6 +588,111 @@ describe("Canvas", () => {
     // them unset under jsdom.
     expect(t1.style.width).toBe("");
     expect(t1.style.height).toBe("");
+  });
+
+  // ⑦ layout-load race (review fix): on a project switch the materialization
+  // effect must NOT run (no nodes, no PUT) until THIS project's server layout
+  // has resolved. Otherwise placeNew reads the cleared/previous layout and PUTs
+  // a default grid over the server's real positions. We delay getLayout's
+  // resolution: before it resolves, nothing materializes / no PUT fires; after
+  // it resolves, nodes merge against the SERVER layout (its position wins).
+  it("project switch: no materialize/PUT until layout loads; then merges server layout", async () => {
+    vi.useFakeTimers();
+    try {
+      // Controlled deferred getLayout: holds until we resolve it manually. The
+      // server layout pins task:T1 at a sentinel parent-relative slot so we can
+      // prove the merge used the SERVER value, not a freshly placed default.
+      let resolveLayout!: (l: unknown) => void;
+      getLayout.mockImplementation(
+        () => new Promise((res) => { resolveLayout = res; }),
+      );
+
+      const { container } = render(
+        <Canvas project="demo" state={fixture} author {...noopDraftProps} />,
+      );
+
+      // Before the layout resolves: the gate blocks materialization — no task
+      // nodes rendered and (critically) no PUT issued.
+      await vi.advanceTimersByTimeAsync(900);
+      expect(container.querySelector('.react-flow__node[data-id="task:T1"]')).toBeNull();
+      expect(putLayout).not.toHaveBeenCalled();
+
+      // Server layout lands: a COMPLETE v2 layout (every visible node already has
+      // an entry) with a sentinel x:555 on the top-level feature node. A top-level
+      // node's RF transform is its own position (child nodes inherit the parent's
+      // transform under jsdom, so we pin the assertion on feature:F1).
+      resolveLayout({
+        v: 2,
+        positions: {
+          "seat:alice": { x: 0, y: 0 },
+          "seat:bob": { x: 0, y: 120 },
+          "feature:F1": { x: 555, y: 0 },
+          "task:T1": { x: 16, y: 44 },
+          "task:T2": { x: 16, y: 164 },
+        },
+      });
+
+      // Now the effect re-runs against the real layout: nodes materialize and
+      // feature:F1 sits at the SERVER x:555, proving the merge consumed the
+      // server layout (not a freshly placed default of x:320).
+      await vi.waitFor(() => {
+        expect(container.querySelector('.react-flow__node[data-id="feature:F1"]')).not.toBeNull();
+      });
+      await vi.waitFor(() => {
+        const tf = nodeTransform(container, "feature:F1");
+        expect(tf).not.toBeNull();
+        expect(tf).toContain("555");
+      });
+
+      // The server layout already covered every node → placeNew added nothing →
+      // NO PUT was issued. (Reverse-race guarantee: an empty/early layout never
+      // overwrites the server's real positions.)
+      await vi.advanceTimersByTimeAsync(900);
+      expect(putLayout).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // ⑧ multi-select drag dispatch guard (review fix): drag-to-dispatch is a
+  // SINGLE-draft gesture. dragDispatchSeat returns the overlapped seat only when
+  // exactly one node moved; a multi-select group drag (draft + task) returns null
+  // even though the draft overlaps the seat — so the caller persists BOTH nodes'
+  // positions instead of opening the modal. (Driven at the unit level because a
+  // real RF multi-drag can't run under jsdom — d3-drag, spec §5.)
+  describe("dragDispatchSeat (drag-to-dispatch single-draft guard)", () => {
+    // A draft sitting exactly on top of a seat (overlapping AABB).
+    const mk = (id: string, type: string, x: number, y: number): Node => ({
+      id,
+      type,
+      position: { x, y },
+      data: {},
+      measured: { width: 100, height: 60 },
+    });
+    const draft = mk("draft:d1", "draft", 100, 100);
+    const seat = mk("seat:bob", "seat", 100, 100); // overlaps the draft
+    const task = mk("task:T1", "task", 400, 400);
+    const all = [draft, seat, task];
+
+    it("single draft over a seat → returns the seat (dispatch gesture)", () => {
+      expect(dragDispatchSeat(draft, 1, all)).toBe(seat);
+    });
+
+    it("multi-select drag (movedCount > 1) over a seat → null (no dispatch)", () => {
+      // draft + task dragged as a group; draft still overlaps the seat, but the
+      // group-drag guard suppresses dispatch so both positions get persisted.
+      expect(dragDispatchSeat(draft, 2, all)).toBeNull();
+    });
+
+    it("non-draft primary node → null even when alone over a seat", () => {
+      const taskOnSeat = mk("task:T9", "task", 100, 100);
+      expect(dragDispatchSeat(taskOnSeat, 1, [taskOnSeat, seat])).toBeNull();
+    });
+
+    it("single draft NOT over any seat → null", () => {
+      const lonelyDraft = mk("draft:d2", "draft", 999, 999);
+      expect(dragDispatchSeat(lonelyDraft, 1, [lonelyDraft, seat])).toBeNull();
+    });
   });
 
 });

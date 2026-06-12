@@ -140,6 +140,27 @@ function overlaps(
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
+// dragDispatchSeat decides whether a drag-stop is a drag-to-dispatch gesture and,
+// if so, returns the overlapped seat node. Drag-to-dispatch is a SINGLE-draft
+// gesture: it fires only when the primary dragged node is a draft AND exactly one
+// node moved (movedCount === 1). A multi-select group drag (draft + others)
+// returns null even if the draft overlaps a seat, so the caller persists every
+// dragged node's position instead of opening the modal. Pure + exported so the
+// guard is unit-testable without driving a real RF drag (impossible under jsdom).
+export function dragDispatchSeat(
+  node: Node,
+  movedCount: number,
+  allNodes: Node[],
+): Node | null {
+  if (node.type !== "draft" || movedCount !== 1) return null;
+  const dragBox = nodeBounds(node, allNodes);
+  return (
+    allNodes.find(
+      (n) => n.type === "seat" && overlaps(dragBox, nodeBounds(n, allNodes)),
+    ) ?? null
+  );
+}
+
 export function Canvas({
   project,
   state,
@@ -194,6 +215,14 @@ export function Canvas({
   // persisted to layout.json.
   const [comms, setComms] = useState(false);
   const [layout, setLayout] = useState<LayoutJSON>({});
+  // layoutLoaded gates materialization until THIS project's server layout has
+  // landed. Without it, the materialization effect fires against an empty (or
+  // the previous project's) layout the instant the project changes — placeNew
+  // would read a stale layoutRef and PUT a default grid over the server's real
+  // positions (reverse race). The load effect clears it to false synchronously
+  // on every project switch and the load promise flips it true (success OR
+  // failure), after which the effect re-runs against the real layout.
+  const [layoutLoaded, setLayoutLoaded] = useState(false);
   const [nodes, setNodes] = useState<Node[]>([]);
   // React Flow v12 passes only the DRAGGED nodes as the drag handlers' third
   // argument — parent/seat lookups need the FULL node list, kept fresh here.
@@ -237,12 +266,17 @@ export function Canvas({
   );
 
   // Secondary dispatch entry: the button on a draft node (the drag gesture is
-  // the primary path; the button exists for discoverability).
-  function openDispatchFor(draftId: string) {
+  // the primary path; the button exists for discoverability). useCallback over
+  // [replaying, drafts] so it always closes over the CURRENT drafts list — a
+  // stale closure would resolve a deleted/old draft (or miss a new one) when the
+  // injected onDispatch fires. injectCallbacks lists it as a dep, so draft nodes
+  // re-mint their data when drafts changes (draft data already churns on every
+  // graph change; non-draft node references stay stable and are unaffected).
+  const openDispatchFor = useCallback((draftId: string) => {
     if (replaying) return; // read-only replay: dispatch is unreachable
     const d = drafts.find((x) => x.id === draftId);
     if (d) setDispatch({ draft: d });
-  }
+  }, [replaying, drafts]);
 
   // Load saved layout on mount / project change.
   useEffect(() => {
@@ -252,12 +286,22 @@ export function Canvas({
     setFocusFeature(null);
     setMenu(null);
     setRenaming(null);
+    // Clear the OLD project's layout + nodes and re-gate materialization
+    // SYNCHRONOUSLY. This wipes the previous project's layoutRef so a placeNew
+    // running before the new layout lands can't read stale positions, and
+    // blocks the materialization effect (layoutLoaded=false) until the server
+    // layout for THIS project resolves.
+    setLayout({ v: LAYOUT_V });
+    setNodes([]);
+    setLayoutLoaded(false);
     // Normalize the opaque server blob into a v2 layout: a legacy (no `v`) layout
     // is discarded so every node re-materializes from the deterministic grid
-    // (spec §1.3) — a stale v1 absolute-coord blob must never poison v2.
+    // (spec §1.3) — a stale v1 absolute-coord blob must never poison v2. Flip
+    // layoutLoaded true on BOTH success and failure: a load error still yields a
+    // usable default-grid materialization, it just won't merge server positions.
     getLayout(project)
-      .then((l) => { if (alive) setLayout(normalizeLayout(l)); })
-      .catch(() => { if (alive) setLayout({ v: LAYOUT_V }); });
+      .then((l) => { if (alive) { setLayout(normalizeLayout(l)); setLayoutLoaded(true); } })
+      .catch(() => { if (alive) { setLayout({ v: LAYOUT_V }); setLayoutLoaded(true); } });
     return () => { alive = false; };
   }, [project]);
 
@@ -317,7 +361,7 @@ export function Canvas({
         }
         return n;
       }),
-    [staleTasks],
+    [staleTasks, openDispatchFor],
   );
 
   // schedulePut debounces a layout PUT WITHOUT touching local state. The
@@ -351,6 +395,12 @@ export function Canvas({
   // Ordering contract: placeNew runs BEFORE mergeNodes, so a brand-new node has a
   // layout position to merge in (mergeNodes falls back to {0,0} only if it didn't).
   useEffect(() => {
+    // Gate: don't materialize until THIS project's server layout has landed.
+    // Before that, layoutRef holds the cleared default ({v}) — placeNew would
+    // grid-place every node and (author) PUT that default over the server's
+    // real positions. Once getLayout resolves, layoutLoaded flips true and this
+    // effect re-runs against the real layout, merging server positions.
+    if (!layoutLoaded) return;
     const add = placeNew(layoutRef.current, graph);
     let layoutForMerge = layoutRef.current;
     if (Object.keys(add).length > 0) {
@@ -364,7 +414,7 @@ export function Canvas({
       if (author && !replaying) schedulePut(next);
     }
     setNodes((prev) => injectCallbacks(mergeNodes(prev, graph, layoutForMerge)));
-  }, [graph, injectCallbacks, author, replaying, schedulePut]);
+  }, [graph, injectCallbacks, author, replaying, schedulePut, layoutLoaded]);
 
   // Office desk position persistence (T10). Writes ONLY the additive `office`
   // sidecar key — `positions` (Plan-mode coords) is carried through untouched —
@@ -536,20 +586,18 @@ export function Canvas({
       const moved = dragged && dragged.length > 0 ? dragged : [node];
 
       // Drag-to-dispatch is a single-draft gesture: a draft dropped on a seat
-      // dispatches instead of saving a layout move. Only checked for the primary
-      // dragged node (a multi-select group drag never dispatches).
-      if (node.type === "draft") {
-        const dragBox = nodeBounds(node, allNodes);
-        const seat = allNodes.find(
-          (n) => n.type === "seat" && overlaps(dragBox, nodeBounds(n, allNodes)),
-        );
-        if (seat) {
-          const rawId = node.id.replace(/^draft:/, "");
-          const d = drafts.find((x) => x.id === rawId);
-          if (d) {
-            setDispatch({ draft: d, owner: seat.id.replace(/^seat:/, "") });
-            return; // don't persist a layout move for a dispatch gesture
-          }
+      // dispatches instead of saving a layout move. dragDispatchSeat guards on
+      // moved.length === 1, so a multi-select group drag (e.g. a draft + a task)
+      // NEVER dispatches — it falls through to persist every dragged node's
+      // position. Without the guard a group drag whose draft happens to overlap a
+      // seat would open the modal and swallow the other nodes' position writes.
+      const seat = dragDispatchSeat(node, moved.length, allNodes);
+      if (seat) {
+        const rawId = node.id.replace(/^draft:/, "");
+        const d = drafts.find((x) => x.id === rawId);
+        if (d) {
+          setDispatch({ draft: d, owner: seat.id.replace(/^seat:/, "") });
+          return; // don't persist a layout move for a dispatch gesture
         }
       }
 

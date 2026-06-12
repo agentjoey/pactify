@@ -70,7 +70,7 @@ export function initialState() {
   };
 }
 
-// snapshotT2AwaitingReview is the new state pushed by the drag-during-sse test:
+// snapshotT2InProgress is the new state pushed by the drag-during-sse test:
 // t2 moves assigned → in_progress. It deliberately changes ONLY t2 (t1 untouched)
 // so the test can assert the dragged-elsewhere node (t1) is not teleported by the
 // SSE-driven merge. awaiting_count stays 0 (no awaiting_review here).

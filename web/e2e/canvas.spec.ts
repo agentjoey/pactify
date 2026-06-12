@@ -109,6 +109,45 @@ test("connect: wiring two drafts adds an edge", async ({ page }) => {
   await expect(page.locator(".react-flow__edge")).toHaveCount(edgesBefore + 1);
 });
 
+// connect (negative, spec §4 case② second half): wiring to a COMMITTED task is
+// rejected. A committed task's deps were frozen at assign time, so dropping a
+// draft's out-port onto a committed task's in-port must NOT create an edge — and
+// must surface the "已固定" canvas notice instead.
+test("connect: wiring to a committed task is rejected (edge count held + notice)", async ({ page }) => {
+  // One draft in f1 (same feature as committed t1/t2 — the committed-target rule
+  // fires before the same-feature check, so f1 is the right place to prove it).
+  await page.locator('[data-testid="canvas-toolbar"] button', { hasText: "Task" }).click();
+  const editor = page.locator('[data-testid="task-editor"]');
+  await editor.waitFor();
+  await editor.getByLabel("task id").fill("d1");
+  await editor.getByRole("button", { name: "Add draft" }).click();
+  await editor.waitFor({ state: "hidden" });
+
+  const draft = rfNode(page, "draft:d1");
+  const committed = rfNode(page, "task:t1");
+  await awaitMeasured(draft);
+  await awaitMeasured(committed);
+
+  // Bring both ports into the viewport (RF hit-tests live DOM — see connectDrag).
+  await page.getByRole("button", { name: "fit view" }).click();
+  await page.waitForTimeout(400);
+
+  const edgesBefore = await page.locator(".react-flow__edge").count();
+
+  // Source = draft's bottom port (.task-port-out); target = the COMMITTED task's
+  // top port (.task-port-in). The drop is invalid: t1's deps are fixed.
+  const outPort = draft.locator(".task-port-out");
+  const inPort = committed.locator(".task-port-in");
+  await connectDrag(page, outPort, inPort);
+
+  // No edge appears — the invalid wiring was rejected (load-bearing assertion).
+  await expect(page.locator(".react-flow__edge")).toHaveCount(edgesBefore);
+  // And the author got the "已固定" notice explaining why.
+  const notice = page.locator('[data-testid="canvas-notice"]');
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText("已固定");
+});
+
 // Bug #1 (SSE variant): a snapshot arriving mid-drag must not teleport the node
 // being dragged (mergeNodes preserves the in-flight position).
 test("drag-during-sse: an SSE snapshot mid-drag does not teleport the dragged node", async ({ page }) => {

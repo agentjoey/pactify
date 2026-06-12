@@ -9,6 +9,7 @@ import {
   type EdgeTypes,
   type NodeChange,
   type Connection,
+  type FinalConnectionState,
   applyNodeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -568,6 +569,25 @@ export function Canvas({
     [author, committedTaskIds, featureOfId, flashNotice, depGraph, setDrafts],
   );
 
+  // onConnectEnd: when a connection is RELEASED over a committed task's in-port,
+  // RF's isValidConnection has already rejected it, so onConnect never fires —
+  // and the "已固定" notice would never surface. Catch that drop here and flash
+  // the cue (the committed-target branch in onConnect stays as the single source
+  // of the wording, mirrored verbatim). Only this rule needs onConnectEnd; the
+  // other invalid drops still flow through onConnect when RF lets them land.
+  const onConnectEnd = useCallback(
+    (_e: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+      if (!author) return;
+      const targetId = state.toNode?.id;
+      if (!targetId) return;
+      const raw = targetId.replace(/^(task|draft):/, "");
+      if (committedTaskIds.has(raw)) {
+        flashNotice("依赖在 assign 时已固定,不能再改");
+      }
+    },
+    [author, committedTaskIds, flashNotice],
+  );
+
   // Persist dragged nodes' new positions into the layout sidecar after a drag.
   // Layout v2 stores RF-NATIVE coords directly: top-level nodes absolute, child
   // nodes parent-relative — exactly what React Flow reports in node.position, so
@@ -1027,6 +1047,7 @@ export function Canvas({
         onPaneContextMenu={onPaneContextMenu}
         onPaneClick={() => setMenu(null)}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
         isValidConnection={isValidConnection}
         connectionLineComponent={ConnectionLine}
         connectionRadius={30}

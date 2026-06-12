@@ -14,7 +14,8 @@ vi.mock("../lib/api", () => ({
   getActingSeat: vi.fn().mockResolvedValue({ seat: "" }),
 }));
 
-import { Canvas } from "./Canvas";
+import { Canvas, dragDispatchSeat } from "./Canvas";
+import type { Node } from "@xyflow/react";
 
 const fixture: State = {
   project: "demo",
@@ -85,10 +86,13 @@ describe("Canvas", () => {
     // Feature group header.
     expect(screen.getByText("F1")).toBeInTheDocument();
 
-    // Dep edge: React Flow renders edges as DOM elements with a data-id.
-    await waitFor(() => {
-      expect(container.querySelector('[data-id="dep:T1→T2"]')).not.toBeNull();
-    });
+    // NOTE (Task 2): the dep-edge DOM assertion was removed here. With the
+    // measured/handles geometry seeds stripped from the production node pipeline
+    // (spec §5: no jsdom stubs in production), React Flow renders NO edge DOM
+    // under jsdom (it needs real node measurements to resolve handle positions).
+    // Dep-edge IDENTITY is now asserted at the unit level (deriveGraph edges in
+    // canvas.test.ts); edge RENDERING/routing is verified by the Playwright e2e
+    // gate (T5). Per spec §5 we must NOT re-seed geometry to make jsdom route.
 
     // T7 re-skin chrome: the frosted toolbar, the bottom-right zoom HUD and the
     // bottom-left MiniMap all mount inside the stage.
@@ -308,20 +312,14 @@ describe("Canvas", () => {
     expect(screen.getByText("New task")).toBeInTheDocument();
   });
 
-  // T8: dep edges are ant-crawl edges (type:"ant") so the AntEdge renderer takes
-  // over. The first eligible dep edge wins an ant slot (cap not exceeded here).
-  it("dep edges render as ant edges with a crawling ant within the cap", async () => {
-    const { container } = render(
-      <Canvas project="demo" state={fixture} author={false} {...noopDraftProps} />,
-    );
-    await waitFor(() => {
-      expect(container.querySelector('[data-id="dep:T1→T2"]')).not.toBeNull();
-    });
-    // The single dep edge is under the cap → it animates (animateMotion present).
-    await waitFor(() => {
-      expect(container.querySelector("animateMotion")).not.toBeNull();
-    });
-  });
+  // NOTE (Task 2): the "dep edges render as ant edges with a crawling ant"
+  // jsdom test was removed. It asserted edge DOM (data-id="dep:T1→T2") and an
+  // <animateMotion> element, both of which require React Flow to route the edge
+  // — impossible under jsdom once the measured/handles geometry seeds are gone
+  // (spec §5 forbids re-seeding geometry into production nodes just for jsdom).
+  // The ant-cap DECISION logic is unit-tested in canvas.test.ts (assignAntFlags),
+  // edge identity in deriveGraph's edge tests, and actual ant rendering in the
+  // Playwright e2e gate (T5).
 
   it("New-task editor pre-fills an auto-generated id (not blank)", async () => {
     render(
@@ -386,20 +384,321 @@ describe("Canvas", () => {
     expect(modal.textContent).toContain("d1");
   });
 
+  // ===================================================================
+  // Task 2: materialization pipeline (deriveGraph → placeNew → mergeNodes)
+  // ===================================================================
+
+  // Helper: find a rendered RF node's React-Flow transform (position) so a test
+  // can assert position stability across re-renders. RF writes the node position
+  // into the wrapper's inline `transform: translate(x px, y px)`.
+  const nodeTransform = (container: HTMLElement, id: string): string | null => {
+    const el = container.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null;
+    return el?.style.transform ?? null;
+  };
+
+  // ① Loading a LEGACY layout (no `v` field, has positions) → normalizeLayout
+  // discards it and every node re-materializes from the deterministic grid; the
+  // surface still renders. (Regression: a stale v1 blob must not poison v2.)
+  it("loads a legacy (no-v) layout: all nodes re-materialize and the surface renders", async () => {
+    getLayout.mockResolvedValue({
+      positions: { "task:T1": { x: 9991, y: 8881 } }, // legacy absolute coords
+      office: { bob: { x: 1, y: 1 } },
+    });
+    const { container } = render(
+      <Canvas project="demo" state={fixture} author {...noopDraftProps} />,
+    );
+    await waitFor(() => {
+      expect(container.querySelector('.react-flow__node[data-id="task:T1"]')).not.toBeNull();
+      expect(container.querySelector('.react-flow__node[data-id="task:T2"]')).not.toBeNull();
+      expect(container.querySelector('.react-flow__node[data-id="feature:F1"]')).not.toBeNull();
+    });
+    // The legacy x:9991 coord was discarded — T1 sits at its re-materialized grid
+    // slot (parent-relative {x:16,y:44}), NOT the legacy value.
+    await waitFor(() => {
+      const tf = nodeTransform(container, "task:T1");
+      expect(tf).not.toBeNull();
+      expect(tf).not.toContain("9991");
+    });
+  });
+
+  // ② Materialization PUT (author) writes EVERY node's layout entry exactly once,
+  // in the RF-native coordinate system layout v2 stores (top-level absolute, child
+  // parent-relative). This is the write half of the drag-isolation guarantee: the
+  // PUT body is a per-id map, so a later single-node drag rewrites ONLY that id's
+  // entry (onNodeDragStop spreads layoutRef.current.positions and overwrites one
+  // key). The actual pointer-drag isolation — drag box A, assert every OTHER node's
+  // transform is byte-identical after the PUT — is the Playwright drag-isolation
+  // case (T5): jsdom has no layout engine, so a real RF drag can't be driven here
+  // (d3-drag dereferences a null document on a synthetic mousedown), and spec §5
+  // forbids faking geometry to force it.
+  it("author materialization PUTs a per-id position map (top-level absolute, child parent-relative)", async () => {
+    vi.useFakeTimers();
+    try {
+      getLayout.mockResolvedValue({});
+      const { container } = render(
+        <Canvas project="demo" state={fixture} author {...noopDraftProps} />,
+      );
+      await vi.waitFor(() => {
+        expect(container.querySelector('.react-flow__node[data-id="task:T2"]')).not.toBeNull();
+      });
+      await vi.advanceTimersByTimeAsync(900); // flush the materialize debounce
+      expect(putLayout).toHaveBeenCalled();
+      const body = putLayout.mock.calls.at(-1)![1] as {
+        v: number;
+        positions: Record<string, { x: number; y: number }>;
+      };
+      expect(body.v).toBe(2);
+      const p = body.positions;
+      // Every visible node got its own entry — the map is keyed by id, so a drag
+      // overwrites exactly one key and leaves the rest untouched.
+      expect(p["seat:alice"]).toEqual({ x: 0, y: 0 });
+      expect(p["feature:F1"]).toEqual({ x: 320, y: 0 });
+      // Children are PARENT-RELATIVE (v2): T1 row0 = {16,44}, T2 row1 = {16,164}.
+      expect(p["task:T1"]).toEqual({ x: 16, y: 44 });
+      expect(p["task:T2"]).toEqual({ x: 16, y: 164 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // ③ A snapshot update (re-render with new state) must NOT teleport an unmoved
+  // node: its RF position (transform) is identical before and after the update.
+  // This is the SSE-merge guarantee (mergeNodes keeps prev position).
+  it("snapshot update keeps an unmoved node's position (merge-by-id)", async () => {
+    getLayout.mockResolvedValue({});
+    const { container, rerender } = render(
+      <Canvas project="demo" state={fixture} author {...noopDraftProps} />,
+    );
+    await waitFor(() => {
+      expect(container.querySelector('.react-flow__node[data-id="task:T1"]')).not.toBeNull();
+    });
+    const t1Before = nodeTransform(container, "task:T1");
+    expect(t1Before).not.toBeNull();
+
+    // New snapshot: T2 changes status (assigned→in_progress) — a live SSE diff.
+    const next: State = {
+      ...fixture,
+      features: [{
+        ...fixture.features[0],
+        tasks: [
+          fixture.features[0].tasks[0],
+          { ...fixture.features[0].tasks[1], status: "in_progress" },
+        ],
+      }],
+    };
+    rerender(<Canvas project="demo" state={next} author {...noopDraftProps} />);
+    await waitFor(() => {
+      // T2 data updated (still rendered) — and T1 did not move.
+      expect(container.querySelector('.react-flow__node[data-id="task:T2"]')).not.toBeNull();
+    });
+    expect(nodeTransform(container, "task:T1")).toBe(t1Before);
+  });
+
+  // ④ A new draft appears → it auto-materializes a position AND (author) the
+  // debounced PUT carries the new draft entry.
+  it("a new draft auto-materializes a position and (author) PUTs the new entry", async () => {
+    vi.useFakeTimers();
+    try {
+      getLayout.mockResolvedValue({});
+      function Harness() {
+        const [drafts, setDrafts] = useState<Draft[]>([]);
+        const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
+        return (
+          <div>
+            <button onClick={() => setDrafts([{ id: "d1", specMd: "# d", feature: "F1", deps: [] }])}>
+              add-draft
+            </button>
+            <Canvas
+              project="demo"
+              state={fixture}
+              author
+              initialMode="plan"
+              drafts={drafts}
+              setDrafts={setDrafts}
+              draftFeatures={draftFeatures}
+              setDraftFeatures={setDraftFeatures}
+            />
+          </div>
+        );
+      }
+      const { container } = render(<Harness />);
+      await vi.waitFor(() => {
+        expect(container.querySelector('.react-flow__node[data-id="task:T1"]')).not.toBeNull();
+      });
+      await vi.advanceTimersByTimeAsync(900);
+      putLayout.mockClear();
+
+      fireEvent.click(screen.getByText("add-draft"));
+      await vi.waitFor(() => {
+        expect(container.querySelector('.react-flow__node[data-id="draft:d1"]')).not.toBeNull();
+      });
+      await vi.advanceTimersByTimeAsync(900);
+      // The PUT body contains the freshly materialized draft entry.
+      expect(putLayout).toHaveBeenCalled();
+      const body = putLayout.mock.calls.at(-1)![1] as { positions: Record<string, unknown> };
+      expect(body.positions["draft:d1"]).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // ⑤ Observer (author=false): a new node still materializes LOCALLY (renders)
+  // but NO PUT is ever issued (observe-only never writes layout).
+  it("observer (author=false) materializes locally but never PUTs", async () => {
+    vi.useFakeTimers();
+    try {
+      getLayout.mockResolvedValue({});
+      const { container } = render(
+        <Canvas project="demo" state={fixture} author={false} {...noopDraftProps} />,
+      );
+      await vi.waitFor(() => {
+        // Nodes still render (materialized locally).
+        expect(container.querySelector('.react-flow__node[data-id="task:T1"]')).not.toBeNull();
+        expect(container.querySelector('.react-flow__node[data-id="feature:F1"]')).not.toBeNull();
+      });
+      await vi.advanceTimersByTimeAsync(2000); // well past any debounce window
+      expect(putLayout).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // ⑥ Anti-regression (spec §5): the nodes handed to React Flow carry NO
+  // hand-written measured/handles on freshly materialized nodes. We assert via
+  // the absence of seeded handle DOM that the test stubs alone provide — there
+  // is no .react-flow__handle seeded into the node markup by our pipeline.
+  // (mergeNodes' own unit test asserts the node objects directly; here we guard
+  // the wiring: nodes render without any pipeline-injected handle geometry.)
+  it("nodes given to React Flow carry no pipeline-seeded measured/handles", async () => {
+    getLayout.mockResolvedValue({});
+    const { container } = render(
+      <Canvas project="demo" state={fixture} author {...noopDraftProps} />,
+    );
+    await waitFor(() => {
+      expect(container.querySelector('.react-flow__node[data-id="task:T1"]')).not.toBeNull();
+    });
+    // TaskNode itself renders <Handle> elements (the real, measurable ones);
+    // what must be ABSENT is any pipeline-seeded geometry. We assert the node
+    // wrapper has no inline measured width/height attribute injected by us — RF
+    // measures in the browser. Under jsdom no measurement occurs, so a seeded
+    // `measured` would be the ONLY source of a width/height style on the wrapper.
+    const t1 = container.querySelector('.react-flow__node[data-id="task:T1"]') as HTMLElement;
+    // A pipeline that seeded measured:{width:200,height:80} would surface it as
+    // the node wrapper's width/height inline style. With seeds gone, RF leaves
+    // them unset under jsdom.
+    expect(t1.style.width).toBe("");
+    expect(t1.style.height).toBe("");
+  });
+
+  // ⑦ layout-load race (review fix): on a project switch the materialization
+  // effect must NOT run (no nodes, no PUT) until THIS project's server layout
+  // has resolved. Otherwise placeNew reads the cleared/previous layout and PUTs
+  // a default grid over the server's real positions. We delay getLayout's
+  // resolution: before it resolves, nothing materializes / no PUT fires; after
+  // it resolves, nodes merge against the SERVER layout (its position wins).
+  it("project switch: no materialize/PUT until layout loads; then merges server layout", async () => {
+    vi.useFakeTimers();
+    try {
+      // Controlled deferred getLayout: holds until we resolve it manually. The
+      // server layout pins task:T1 at a sentinel parent-relative slot so we can
+      // prove the merge used the SERVER value, not a freshly placed default.
+      let resolveLayout!: (l: unknown) => void;
+      getLayout.mockImplementation(
+        () => new Promise((res) => { resolveLayout = res; }),
+      );
+
+      const { container } = render(
+        <Canvas project="demo" state={fixture} author {...noopDraftProps} />,
+      );
+
+      // Before the layout resolves: the gate blocks materialization — no task
+      // nodes rendered and (critically) no PUT issued.
+      await vi.advanceTimersByTimeAsync(900);
+      expect(container.querySelector('.react-flow__node[data-id="task:T1"]')).toBeNull();
+      expect(putLayout).not.toHaveBeenCalled();
+
+      // Server layout lands: a COMPLETE v2 layout (every visible node already has
+      // an entry) with a sentinel x:555 on the top-level feature node. A top-level
+      // node's RF transform is its own position (child nodes inherit the parent's
+      // transform under jsdom, so we pin the assertion on feature:F1).
+      resolveLayout({
+        v: 2,
+        positions: {
+          "seat:alice": { x: 0, y: 0 },
+          "seat:bob": { x: 0, y: 120 },
+          "feature:F1": { x: 555, y: 0 },
+          "task:T1": { x: 16, y: 44 },
+          "task:T2": { x: 16, y: 164 },
+        },
+      });
+
+      // Now the effect re-runs against the real layout: nodes materialize and
+      // feature:F1 sits at the SERVER x:555, proving the merge consumed the
+      // server layout (not a freshly placed default of x:320).
+      await vi.waitFor(() => {
+        expect(container.querySelector('.react-flow__node[data-id="feature:F1"]')).not.toBeNull();
+      });
+      await vi.waitFor(() => {
+        const tf = nodeTransform(container, "feature:F1");
+        expect(tf).not.toBeNull();
+        expect(tf).toContain("555");
+      });
+
+      // The server layout already covered every node → placeNew added nothing →
+      // NO PUT was issued. (Reverse-race guarantee: an empty/early layout never
+      // overwrites the server's real positions.)
+      await vi.advanceTimersByTimeAsync(900);
+      expect(putLayout).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // ⑧ multi-select drag dispatch guard (review fix): drag-to-dispatch is a
+  // SINGLE-draft gesture. dragDispatchSeat returns the overlapped seat only when
+  // exactly one node moved; a multi-select group drag (draft + task) returns null
+  // even though the draft overlaps the seat — so the caller persists BOTH nodes'
+  // positions instead of opening the modal. (Driven at the unit level because a
+  // real RF multi-drag can't run under jsdom — d3-drag, spec §5.)
+  describe("dragDispatchSeat (drag-to-dispatch single-draft guard)", () => {
+    // A draft sitting exactly on top of a seat (overlapping AABB).
+    const mk = (id: string, type: string, x: number, y: number): Node => ({
+      id,
+      type,
+      position: { x, y },
+      data: {},
+      measured: { width: 100, height: 60 },
+    });
+    const draft = mk("draft:d1", "draft", 100, 100);
+    const seat = mk("seat:bob", "seat", 100, 100); // overlaps the draft
+    const task = mk("task:T1", "task", 400, 400);
+    const all = [draft, seat, task];
+
+    it("single draft over a seat → returns the seat (dispatch gesture)", () => {
+      expect(dragDispatchSeat(draft, 1, all)).toBe(seat);
+    });
+
+    it("multi-select drag (movedCount > 1) over a seat → null (no dispatch)", () => {
+      // draft + task dragged as a group; draft still overlaps the seat, but the
+      // group-drag guard suppresses dispatch so both positions get persisted.
+      expect(dragDispatchSeat(draft, 2, all)).toBeNull();
+    });
+
+    it("non-draft primary node → null even when alone over a seat", () => {
+      const taskOnSeat = mk("task:T9", "task", 100, 100);
+      expect(dragDispatchSeat(taskOnSeat, 1, [taskOnSeat, seat])).toBeNull();
+    });
+
+    it("single draft NOT over any seat → null", () => {
+      const lonelyDraft = mk("draft:d2", "draft", 999, 999);
+      expect(dragDispatchSeat(lonelyDraft, 1, [lonelyDraft, seat])).toBeNull();
+    });
+  });
+
 });
 
-
-import { toRFNodes } from "./Canvas";
-import { deriveFlow } from "../lib/canvas";
-
-it("drafts are NOT clamped to their feature (extent), committed tasks are", () => {
-  const flow = deriveFlow(fixture, {}, [
-    { id: "D1", specMd: "# d", feature: "F1", deps: [] },
-  ]);
-  const nodes = toRFNodes(flow.nodes);
-  const task = nodes.find((n) => n.id === "task:T1")!;
-  const draft = nodes.find((n) => n.id === "draft:D1")!;
-  expect(task.extent).toBe("parent");
-  expect(draft.extent).toBeUndefined(); // must be able to reach the seat rail
-  expect(draft.parentId).toBe("feature:F1"); // still grouped visually
-});
+// NOTE (Task 2): the standalone "drafts are NOT clamped to their feature
+// (extent)" test was removed. It imported the now-deleted toRFNodes/deriveFlow.
+// The same contract — task gets extent:'parent', draft gets none, both keep
+// parentId — is asserted by mergeNodes' "a task carries extent:'parent'; a draft
+// does not" test in canvas.test.ts (the merge layer now owns extent assignment).

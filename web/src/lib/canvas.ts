@@ -1,3 +1,4 @@
+import type { Node } from "@xyflow/react";
 import type { State } from "./types";
 
 // nextId returns the smallest `${prefix}${N}` (N≥1) not already present in
@@ -39,9 +40,28 @@ export type DraftFeature = { id: string; branch: string };
 // its Office-mode desk position. The two keys are independent coordinate spaces —
 // Plan drags never touch `office` and Office drags never touch `positions`.
 export type LayoutJSON = {
-  positions?: Record<string, { x: number; y: number }>;
+  v?: number; // 2 = current schema (LAYOUT_V); absent = legacy (pre-materialization)
+  positions?: Record<string, { x: number; y: number }>; // top-level = absolute; child = parent-relative (RF native space)
   office?: Record<string, { x: number; y: number }>;
 };
+
+// LAYOUT_V is the current layout schema version. v2 = position-materialization
+// model: layout is the single source of truth, child positions are stored
+// PARENT-RELATIVE (v1 stored them absolute). A layout with no `v` field is a v1
+// scratch layout; normalizeLayout discards it (migration isn't worth writing —
+// only dev-era scratch projects exist; spec §1.3).
+export const LAYOUT_V = 2;
+
+// normalizeLayout coerces an opaque server-stored layout blob into a v2
+// LayoutJSON. A v2 layout passes through untouched. A legacy layout (no `v`) or
+// any non-object (null/undefined/string/number) yields a fresh empty {v:2} so
+// every node re-materializes from the deterministic grid. Pure.
+export function normalizeLayout(raw: unknown): LayoutJSON {
+  if (raw && typeof raw === "object" && (raw as { v?: unknown }).v === LAYOUT_V) {
+    return raw as LayoutJSON;
+  }
+  return { v: LAYOUT_V };
+}
 
 // mergeOfficePos folds one seat's Office-mode desk position into the layout
 // sidecar's `office` key WITHOUT touching `positions` (the Plan coords) or any
@@ -97,6 +117,21 @@ const SEAT_DY = ROW_H; // vertical gap between stacked seats
 const PAD = 16; // inner padding of the feature container
 const HEADER = 28; // height reserved for the feature header
 const TASK_REL_Y0 = HEADER + PAD; // first task/draft row, relative to the feature
+
+// CHILD_W is the nominal task/draft card width, used both for the feature
+// container's default width and as the bbox estimate for an unmeasured child
+// (no `measured` yet) when sizing the container around dragged children.
+export const CHILD_W = 200;
+const CHILD_H = 80; // nominal task/draft card height (bbox estimate when unmeasured)
+
+// featureStyle returns the feature container's default {width,height} sized to
+// hold `rows` stacked children (min 1 row). mergeNodes takes the max of this and
+// the actual child bbox so a child dragged outside the default frame stays
+// bounded. Lives in lib (was Canvas.tsx) so the merge layer can import it.
+export function featureStyle(rows: number): { width: number; height: number } {
+  const r = Math.max(rows, 1);
+  return { width: CHILD_W + PAD * 2, height: HEADER + r * ROW_H + PAD };
+}
 
 // deriveFlow folds protocol state + saved layout + in-flight drafts into the
 // node/edge graph the canvas renders. Pure and deterministic: it reads only its
@@ -285,6 +320,305 @@ export function deriveFlow(
   }
 
   return { nodes, edges };
+}
+
+// GraphNode is the position-LESS node identity the materialization pipeline
+// works with: id + type + parentId + data, exactly as deriveFlow produces them
+// but with NO position. Positions are owned solely by `layout` (computed once by
+// placeNew at first appearance, thereafter only changed by user drag). deriveGraph
+// produces GraphNode[]; placeNew assigns initial coords; mergeNodes folds graph +
+// layout into the React Flow node array (merge-by-id, never a full rebuild).
+export type GraphNode = {
+  id: string;
+  type: "task" | "seat" | "feature" | "draft";
+  parentId?: string;
+  data: Record<string, unknown>;
+};
+
+// deriveGraph is deriveFlow minus position: it folds protocol state + in-flight
+// drafts into the node IDENTITIES (+ data + parentId) and the dep edges the
+// canvas renders. Node/edge identity, data fields (ownerRoles/reviewerRoles/
+// roleColor/feature progress/draft spec) and edge prefixes are byte-for-byte the
+// same as deriveFlow — only `position` is gone (layout owns it now). Pure and
+// deterministic.
+export function deriveGraph(
+  state: State,
+  drafts: Draft[],
+  draftFeatures: DraftFeature[] = [],
+): { nodes: GraphNode[]; edges: FlowEdge[] } {
+  const nodes: GraphNode[] = [];
+  const edges: FlowEdge[] = [];
+
+  // Index seat roles so task nodes can color by their owner's roles.
+  const rolesOf = new Map<string, string[]>();
+  for (const a of state.agents) rolesOf.set(a.id, a.roles);
+
+  // Seat nodes: left rail (position assigned later by placeNew).
+  for (const a of state.agents) {
+    nodes.push({
+      id: `seat:${a.id}`,
+      type: "seat",
+      data: { roles: a.roles, roleColor: roleColorVar(a.roles) },
+    });
+  }
+
+  // Committed features + their tasks.
+  for (const f of state.features) {
+    const featId = `feature:${f.id}`;
+    const total = f.tasks.length;
+    const accepted = f.tasks.filter((t) => t.status === "accepted").length;
+    nodes.push({
+      id: featId,
+      type: "feature",
+      data: { id: f.id, branch: f.branch, status: f.status, accepted, total },
+    });
+    for (const t of f.tasks) {
+      const id = `task:${t.id}`;
+      const ownerRoles = rolesOf.get(t.owner) ?? [];
+      nodes.push({
+        id,
+        type: "task",
+        parentId: featId,
+        data: {
+          task: t,
+          feature: f.id,
+          ownerRoles,
+          reviewerRoles: rolesOf.get(t.reviewer) ?? [],
+          roleColor: roleColorVar(ownerRoles),
+        },
+      });
+      for (const from of t.deps ?? []) {
+        edges.push({ id: `dep:${from}→${t.id}`, source: `task:${from}`, target: id, kind: "dep" });
+      }
+    }
+  }
+
+  // Draft feature groups (authored but not yet in protocol state).
+  const committedIds = new Set(state.features.map((f) => f.id));
+  for (const df of draftFeatures) {
+    if (committedIds.has(df.id)) continue;
+    nodes.push({
+      id: `feature:${df.id}`,
+      type: "feature",
+      data: { id: df.id, branch: df.branch, status: "draft", draft: true, accepted: 0, total: 0 },
+    });
+  }
+
+  // Draft nodes parented to their target feature.
+  for (const d of drafts) {
+    const id = `draft:${d.id}`;
+    nodes.push({
+      id,
+      type: "draft",
+      parentId: `feature:${d.feature}`,
+      data: { draft: true, specMd: d.specMd, deps: d.deps },
+    });
+    for (const from of d.deps) {
+      const fromIsDraft = drafts.some((x) => x.id === from);
+      edges.push({
+        id: `dep:${from}→${d.id}`,
+        source: `${fromIsDraft ? "draft" : "task"}:${from}`,
+        target: id,
+        kind: "dep",
+      });
+    }
+  }
+
+  return { nodes, edges };
+}
+
+// placeNew assigns a one-time initial position to every graph node that has NO
+// entry in layout.positions yet. It is idempotent: an id already present in the
+// layout NEVER appears in the result (its saved coords are authoritative). The
+// return value is ONLY the new entries — the caller folds them into layout.
+//
+// Coordinate model (v2): top-level nodes (seat/feature) get ABSOLUTE coords;
+// children (task/draft) get PARENT-RELATIVE coords (x=PAD, y=TASK_REL_Y0 + row*ROW_H)
+// — the v1 absolute-then-rebase path is gone.
+//
+// Collision avoidance (carried over from v1 placeFeature/placeChild) runs against
+// the union of "already-saved layout entries" and "siblings assigned earlier in
+// THIS batch", split by id prefix so each node type avoids only its own kind:
+//   • feature column: |dx|<COL_W && |dy|<ROW_H*2 → shift one column right.
+//   • child row (parent-relative): |dy|<ROW_H*0.8 (same x) → drop one row.
+export function placeNew(
+  layout: LayoutJSON,
+  graph: { nodes: GraphNode[] },
+): Record<string, { x: number; y: number }> {
+  const saved = layout.positions ?? {};
+  const add: Record<string, { x: number; y: number }> = {};
+
+  // Occupancy pools seeded from already-saved entries, split by node kind so a
+  // feature only avoids features and a child only avoids its own feature's
+  // children. Children are stored parent-relative in layout, so the saved values
+  // are already in the per-feature relative space we compare in.
+  const featureTaken: { x: number; y: number }[] = [];
+  const childTaken = new Map<string, { x: number; y: number }[]>(); // featureId → relative slots
+  // Map each known child id → its parent feature so saved child entries land in
+  // the right per-feature pool.
+  const parentOf = new Map<string, string>();
+  for (const n of graph.nodes) if (n.parentId) parentOf.set(n.id, n.parentId);
+  for (const [id, p] of Object.entries(saved)) {
+    if (id.startsWith("feature:")) {
+      featureTaken.push(p);
+    } else if (id.startsWith("task:") || id.startsWith("draft:")) {
+      const feat = parentOf.get(id);
+      if (feat) {
+        const list = childTaken.get(feat) ?? [];
+        list.push(p);
+        childTaken.set(feat, list);
+      }
+    }
+  }
+
+  // Running feature column index: the Nth feature node placed (committed first,
+  // then draft features in graph order) lands in column (N+1)*COL_W — matching
+  // v1's (fi+1)/(committed+1+dfi) scheme since deriveGraph emits them in order.
+  let featCol = 0;
+  // Per-feature next child grid row, advanced as children are placed.
+  const childRow = new Map<string, number>();
+  // A saved feature counts toward the column index too, so the next NEW feature
+  // doesn't reuse a column index a saved feature already consumed.
+
+  for (const n of graph.nodes) {
+    if (n.type === "seat") {
+      if (saved[n.id]) continue;
+      const i = seatIndex(graph.nodes, n.id);
+      add[n.id] = { x: SEAT_X, y: SEAT_Y0 + i * SEAT_DY };
+      continue;
+    }
+    if (n.type === "feature") {
+      const col = featCol++;
+      if (saved[n.id]) continue; // saved features still consume a column index
+      let p = { x: (col + 1) * COL_W, y: FEATURE_Y };
+      const hits = (q: { x: number; y: number }) =>
+        featureTaken.some((t) => Math.abs(t.x - q.x) < COL_W && Math.abs(t.y - q.y) < ROW_H * 2);
+      while (hits(p)) p = { x: p.x + COL_W, y: p.y };
+      featureTaken.push(p);
+      add[n.id] = p;
+      continue;
+    }
+    // task / draft — parent-relative position within the feature.
+    const feat = n.parentId ?? "";
+    const row = childRow.get(feat) ?? 0;
+    childRow.set(feat, row + 1);
+    if (saved[n.id]) continue;
+    const list = childTaken.get(feat) ?? [];
+    let p = { x: PAD, y: TASK_REL_Y0 + row * ROW_H };
+    const hits = (q: { x: number; y: number }) =>
+      list.some((t) => Math.abs(t.x - q.x) < CHILD_W && Math.abs(t.y - q.y) < ROW_H * 0.8);
+    while (hits(p)) p = { x: p.x, y: p.y + ROW_H };
+    list.push(p);
+    childTaken.set(feat, list);
+    add[n.id] = p;
+  }
+
+  return add;
+}
+
+// seatIndex returns a seat node's roster index among the seat nodes in graph
+// order (seats are emitted first, in roster order, by deriveGraph).
+function seatIndex(nodes: GraphNode[], id: string): number {
+  let i = 0;
+  for (const n of nodes) {
+    if (n.type !== "seat") continue;
+    if (n.id === id) return i;
+    i++;
+  }
+  return 0;
+}
+
+// mergeNodes folds the derived graph + layout into the React Flow node array by
+// MERGING BY ID — never a full rebuild, so React Flow's per-node measurement and
+// interaction state survives. For an id already in `prev`, it keeps prev's RF
+// write-back fields (position/measured/selected/dragging/width/height) and
+// replaces only `data`. For a new id, position comes from layout.positions
+// (fallback {0,0}); children get parentId + expandParent, tasks also extent:'parent'
+// (drafts omit extent so they can be dragged out to the seat rail to dispatch).
+// Vanished ids are dropped. Feature nodes are emitted first (RF requires a parent
+// before its children); the rest follow graph order. NEW nodes carry no
+// hand-written measured/handles — React Flow measures them; a prev node's
+// measured is RF's own write-back and is preserved as-is.
+//
+// Feature container style {width,height} = max(featureStyle default, child bbox +
+// PAD). A child's bbox uses its prev `measured` when present, else CHILD_W×CHILD_H.
+export function mergeNodes(
+  prev: Node[],
+  graph: { nodes: GraphNode[] },
+  layout: LayoutJSON,
+): Node[] {
+  const prevById = new Map(prev.map((n) => [n.id, n]));
+  const positions = layout.positions ?? {};
+
+  // Resolve each child's CURRENT parent-relative position (prev drag wins over
+  // the freshly-placed layout value) so feature containers can be sized to bound
+  // children that were dragged far from their default slot.
+  const childRel = (id: string): { x: number; y: number } =>
+    prevById.get(id)?.position ?? positions[id] ?? { x: 0, y: 0 };
+  const childSize = (id: string): { w: number; h: number } => {
+    const m = prevById.get(id)?.measured;
+    return { w: m?.width ?? CHILD_W, h: m?.height ?? CHILD_H };
+  };
+
+  // Per-feature child row count + bbox of its children (for container sizing).
+  const childCount = new Map<string, number>();
+  const childExtent = new Map<string, { w: number; h: number }>();
+  for (const n of graph.nodes) {
+    if (!n.parentId) continue;
+    childCount.set(n.parentId, (childCount.get(n.parentId) ?? 0) + 1);
+    const rel = childRel(n.id);
+    const sz = childSize(n.id);
+    const cur = childExtent.get(n.parentId) ?? { w: 0, h: 0 };
+    childExtent.set(n.parentId, {
+      w: Math.max(cur.w, rel.x + sz.w),
+      h: Math.max(cur.h, rel.y + sz.h),
+    });
+  }
+
+  const build = (n: GraphNode): Node => {
+    const existing = prevById.get(n.id);
+    if (n.type === "feature") {
+      const def = featureStyle(childCount.get(n.id) ?? 0);
+      const ext = childExtent.get(n.id) ?? { w: 0, h: 0 };
+      const style = {
+        width: Math.max(def.width, ext.w + PAD),
+        height: Math.max(def.height, ext.h + PAD),
+      };
+      if (existing) {
+        return { ...existing, data: n.data, style };
+      }
+      return {
+        id: n.id,
+        type: "feature",
+        position: positions[n.id] ?? { x: 0, y: 0 },
+        data: n.data,
+        style,
+      };
+    }
+    // seat / task / draft
+    if (existing) {
+      return { ...existing, data: n.data };
+    }
+    const node: Node = {
+      id: n.id,
+      type: n.type,
+      position: positions[n.id] ?? { x: 0, y: 0 },
+      data: n.data,
+    };
+    if (n.parentId) {
+      node.parentId = n.parentId;
+      node.expandParent = true;
+      if (n.type === "task") node.extent = "parent";
+    }
+    return node;
+  };
+
+  // Feature nodes first (RF parent-before-child), then everything else in graph
+  // order. Vanished ids are simply never visited.
+  const out: Node[] = [];
+  for (const n of graph.nodes) if (n.type === "feature") out.push(build(n));
+  for (const n of graph.nodes) if (n.type !== "feature") out.push(build(n));
+  return out;
 }
 
 // toParentRelative converts deriveFlow's ABSOLUTE child positions into the

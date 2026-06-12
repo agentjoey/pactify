@@ -10,11 +10,18 @@ import {
   ANT_CAP,
   mergeOfficePos,
   nextId,
+  normalizeLayout,
+  deriveGraph,
+  placeNew,
+  mergeNodes,
+  featureStyle,
+  LAYOUT_V,
   type Draft,
   type DepGraph,
   type DraftFeature,
   type LayoutJSON,
 } from "./canvas";
+import type { Node } from "@xyflow/react";
 import type { State } from "./types";
 
 describe("roleColorVar", () => {
@@ -540,5 +547,262 @@ describe("mergeOfficePos", () => {
     const layout: LayoutJSON = { office: { bob: { x: 1, y: 1 } } };
     const out = mergeOfficePos(layout, "alice", { x: 2, y: 2 });
     expect(out.office).toEqual({ bob: { x: 1, y: 1 }, alice: { x: 2, y: 2 } });
+  });
+});
+
+describe("normalizeLayout", () => {
+  it("a v2 layout passes through unchanged", () => {
+    const raw = {
+      v: 2,
+      positions: { "feature:F1": { x: 320, y: 0 }, "task:T1": { x: 16, y: 44 } },
+      office: { "claude-opus": { x: 60, y: 40 } },
+    };
+    expect(normalizeLayout(raw)).toEqual(raw);
+  });
+
+  it("an old layout with no v field → drop positions/office, return {v:2}", () => {
+    const old = { positions: { "task:T1": { x: 1, y: 2 } }, office: { bob: { x: 3, y: 4 } } };
+    expect(normalizeLayout(old)).toEqual({ v: LAYOUT_V });
+  });
+
+  it("a non-object / null → {v:2}", () => {
+    expect(normalizeLayout(null)).toEqual({ v: LAYOUT_V });
+    expect(normalizeLayout(undefined)).toEqual({ v: LAYOUT_V });
+    expect(normalizeLayout("nope")).toEqual({ v: LAYOUT_V });
+    expect(normalizeLayout(42)).toEqual({ v: LAYOUT_V });
+  });
+});
+
+describe("deriveGraph", () => {
+  it("emits seat/feature/task/draft nodes with the same identity/data/parentId as deriveFlow but NO position", () => {
+    const drafts: Draft[] = [{ id: "D1", specMd: "# draft", feature: "F1", deps: ["T1"] }];
+    const { nodes } = deriveGraph(state, drafts);
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const ids = nodes.map((n) => n.id).sort();
+    expect(ids).toEqual(
+      [
+        "feature:F1", "feature:F2", "seat:claude-opus", "seat:opencode",
+        "task:T1", "task:T2", "task:T3", "draft:D1",
+      ].sort(),
+    );
+    // no position on any node
+    for (const n of nodes) {
+      expect("position" in n).toBe(false);
+    }
+    // parentId carried
+    expect(byId.get("task:T1")!.parentId).toBe("feature:F1");
+    expect(byId.get("draft:D1")!.parentId).toBe("feature:F1");
+    expect(byId.get("feature:F1")!.parentId).toBeUndefined();
+    expect(byId.get("seat:opencode")!.parentId).toBeUndefined();
+    // data parity with deriveFlow on a task node
+    const t2 = byId.get("task:T2")!;
+    expect((t2.data.task as { id: string }).id).toBe("T2");
+    expect(t2.data.feature).toBe("F1");
+    expect(t2.data.ownerRoles).toEqual(["worker"]);
+    expect(t2.data.reviewerRoles).toEqual(["orchestrator", "reviewer"]);
+    expect(t2.data.roleColor).toBe("--role-dev");
+    // feature progress data parity
+    const f1 = byId.get("feature:F1")!;
+    expect(f1.data.total).toBe(2);
+    expect(f1.data.accepted).toBe(0);
+    // seat data parity
+    expect(byId.get("seat:claude-opus")!.data.roleColor).toBe("--role-product");
+  });
+
+  it("dep edges match deriveFlow (id/source/target/kind)", () => {
+    const flowEdges = deriveFlow(state, noLayout, noDrafts).edges;
+    const graphEdges = deriveGraph(state, noDrafts).edges;
+    expect(graphEdges).toEqual(flowEdges);
+    expect(graphEdges).toContainEqual({ id: "dep:T1→T2", source: "task:T1", target: "task:T2", kind: "dep" });
+  });
+
+  it("a draft→draft dep sources from the draft node (prefix correct)", () => {
+    const drafts: Draft[] = [
+      { id: "A", specMd: "x", feature: "F1", deps: [] },
+      { id: "B", specMd: "y", feature: "F1", deps: ["A", "T1"] },
+    ];
+    const { edges } = deriveGraph(state, drafts);
+    expect(edges).toContainEqual({ id: "dep:A→B", source: "draft:A", target: "draft:B", kind: "dep" });
+    expect(edges).toContainEqual({ id: "dep:T1→B", source: "task:T1", target: "draft:B", kind: "dep" });
+  });
+});
+
+describe("placeNew", () => {
+  it("empty layout: feature columns, task rows (parent-relative), seat rail match the v1 grid", () => {
+    const { nodes } = deriveGraph(state, noDrafts);
+    const add = placeNew({ v: LAYOUT_V }, { nodes });
+    // seats: left rail x:0, stacked by SEAT_DY=120
+    expect(add["seat:claude-opus"]).toEqual({ x: 0, y: 0 });
+    expect(add["seat:opencode"]).toEqual({ x: 0, y: 120 });
+    // features: column (fi+1)*320, y:0
+    expect(add["feature:F1"]).toEqual({ x: 320, y: 0 });
+    expect(add["feature:F2"]).toEqual({ x: 640, y: 0 });
+    // tasks: PARENT-RELATIVE (x:PAD=16, y:44 + row*120)
+    expect(add["task:T1"]).toEqual({ x: 16, y: 44 });
+    expect(add["task:T2"]).toEqual({ x: 16, y: 164 });
+    // T3 is first child of F2 → row 0
+    expect(add["task:T3"]).toEqual({ x: 16, y: 44 });
+  });
+
+  it("a draft stacks below committed tasks in its feature (parent-relative rows)", () => {
+    const drafts: Draft[] = [{ id: "D1", specMd: "x", feature: "F1", deps: [] }];
+    const { nodes } = deriveGraph(state, drafts);
+    const add = placeNew({ v: LAYOUT_V }, { nodes });
+    // F1 has T1(row0) T2(row1) → draft is row2
+    expect(add["draft:D1"]).toEqual({ x: 16, y: 44 + 2 * 120 });
+  });
+
+  it("ids already present in layout.positions never appear in the result (idempotent)", () => {
+    const { nodes } = deriveGraph(state, noDrafts);
+    const layout: LayoutJSON = {
+      v: LAYOUT_V,
+      positions: { "task:T1": { x: 16, y: 44 }, "feature:F1": { x: 320, y: 0 } },
+    };
+    const add = placeNew(layout, { nodes });
+    expect("task:T1" in add).toBe(false);
+    expect("feature:F1" in add).toBe(false);
+    // others still placed
+    expect("task:T2" in add).toBe(true);
+    expect("feature:F2" in add).toBe(true);
+  });
+
+  it("a new feature column avoids a saved feature on its grid slot (v1 collision rule)", () => {
+    const { nodes } = deriveGraph(state, noDrafts);
+    // F1 dragged onto F2's grid column (col 2 = x:640)
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: { "feature:F1": { x: 640, y: 0 } } };
+    const add = placeNew(layout, { nodes });
+    expect("feature:F1" in add).toBe(false);
+    // F2's grid slot is 640 but F1 occupies it → nudged right a full column
+    expect(add["feature:F2"].x).toBeGreaterThanOrEqual(640 + 320);
+  });
+
+  it("a new task row avoids an already-saved sibling in the same feature (parent-relative collision)", () => {
+    const { nodes } = deriveGraph(state, noDrafts);
+    // T1 saved at the parent-relative slot that T2 would otherwise take (row 1 = y:164)
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: { "task:T1": { x: 16, y: 164 } } };
+    const add = placeNew(layout, { nodes });
+    expect("task:T1" in add).toBe(false);
+    // T2's natural row-1 slot (y:164) is taken → pushed down a row
+    expect(add["task:T2"].y).toBeGreaterThanOrEqual(164 + 120 * 0.8);
+  });
+
+  it("two successive calls (second after merging the first into layout) returns an empty object", () => {
+    const { nodes } = deriveGraph(state, noDrafts);
+    const first = placeNew({ v: LAYOUT_V }, { nodes });
+    const layout2: LayoutJSON = { v: LAYOUT_V, positions: { ...first } };
+    const second = placeNew(layout2, { nodes });
+    expect(second).toEqual({});
+  });
+});
+
+describe("mergeNodes", () => {
+  const graphOf = (drafts: Draft[] = noDrafts) => deriveGraph(state, drafts);
+
+  it("an existing node keeps prev's position/measured/selected/dragging/width/height; data is updated", () => {
+    const graph = graphOf();
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: placeNew({ v: LAYOUT_V }, graph) };
+    const prev: Node[] = [
+      {
+        id: "task:T1",
+        type: "task",
+        position: { x: 999, y: 888 },
+        data: { stale: true },
+        measured: { width: 200, height: 80 },
+        width: 200,
+        height: 80,
+        selected: true,
+        dragging: true,
+        parentId: "feature:F1",
+      },
+    ];
+    const out = mergeNodes(prev, graph, layout);
+    const t1 = out.find((n) => n.id === "task:T1")!;
+    expect(t1.position).toEqual({ x: 999, y: 888 });
+    expect(t1.measured).toEqual({ width: 200, height: 80 });
+    expect(t1.width).toBe(200);
+    expect(t1.height).toBe(80);
+    expect(t1.selected).toBe(true);
+    expect(t1.dragging).toBe(true);
+    // data is replaced with the fresh graph data (the prev stale flag is gone)
+    expect((t1.data.task as { id: string }).id).toBe("T1");
+    expect(t1.data.stale).toBeUndefined();
+  });
+
+  it("a new node takes its position from layout (child = parent-relative) + parentId + expandParent", () => {
+    const graph = graphOf();
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: placeNew({ v: LAYOUT_V }, graph) };
+    const out = mergeNodes([], graph, layout);
+    const t1 = out.find((n) => n.id === "task:T1")!;
+    expect(t1.position).toEqual(layout.positions!["task:T1"]);
+    expect(t1.position).toEqual({ x: 16, y: 44 });
+    expect(t1.parentId).toBe("feature:F1");
+    expect(t1.expandParent).toBe(true);
+  });
+
+  it("a task carries extent:'parent'; a draft does not", () => {
+    const drafts: Draft[] = [{ id: "D1", specMd: "x", feature: "F1", deps: [] }];
+    const graph = graphOf(drafts);
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: placeNew({ v: LAYOUT_V }, graph) };
+    const out = mergeNodes([], graph, layout);
+    const t1 = out.find((n) => n.id === "task:T1")!;
+    const d1 = out.find((n) => n.id === "draft:D1")!;
+    expect(t1.extent).toBe("parent");
+    expect(d1.extent).toBeUndefined();
+    // draft still gets parentId + expandParent (so it sits in the group)
+    expect(d1.parentId).toBe("feature:F1");
+    expect(d1.expandParent).toBe(true);
+  });
+
+  it("nodes that vanished from the graph are removed; feature nodes are emitted before their children", () => {
+    const graph = graphOf();
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: placeNew({ v: LAYOUT_V }, graph) };
+    const prev: Node[] = [
+      { id: "task:GONE", type: "task", position: { x: 0, y: 0 }, data: {}, parentId: "feature:F1" },
+    ];
+    const out = mergeNodes(prev, graph, layout);
+    expect(out.find((n) => n.id === "task:GONE")).toBeUndefined();
+    // feature nodes all come before any non-feature node (RF parent-before-child)
+    const lastFeatureIdx = out.map((n) => n.type).lastIndexOf("feature");
+    const firstChildIdx = out.findIndex((n) => n.type !== "feature");
+    expect(lastFeatureIdx).toBeLessThan(firstChildIdx);
+  });
+
+  it("feature style is at least the featureStyle default, and grows to bound a child dragged far away", () => {
+    const graph = graphOf();
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: placeNew({ v: LAYOUT_V }, graph) };
+    // default sizing (no prev): F1 holds 2 tasks
+    const out0 = mergeNodes([], graph, layout);
+    const f1def = out0.find((n) => n.id === "feature:F1")!;
+    const def = featureStyle(2);
+    expect((f1def.style as { width: number }).width).toBeGreaterThanOrEqual(def.width);
+    expect((f1def.style as { height: number }).height).toBeGreaterThanOrEqual(def.height);
+
+    // now drag T1 far down inside F1 (prev measured present) → container grows to bound it
+    const prev: Node[] = [
+      {
+        id: "task:T1",
+        type: "task",
+        position: { x: 16, y: 2000 },
+        data: {},
+        parentId: "feature:F1",
+        measured: { width: 200, height: 80 },
+      },
+    ];
+    const out1 = mergeNodes(prev, graph, layout);
+    const f1big = out1.find((n) => n.id === "feature:F1")!;
+    expect((f1big.style as { height: number }).height).toBeGreaterThan(def.height);
+    // tall enough to contain the child bottom edge (y:2000 + 80) plus padding
+    expect((f1big.style as { height: number }).height).toBeGreaterThanOrEqual(2000 + 80);
+  });
+
+  it("output nodes carry no hand-written measured/handles on NEW nodes (anti-regression)", () => {
+    const graph = graphOf([{ id: "D1", specMd: "x", feature: "F1", deps: [] }]);
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: placeNew({ v: LAYOUT_V }, graph) };
+    const out = mergeNodes([], graph, layout);
+    for (const n of out) {
+      expect("handles" in n).toBe(false);
+      // new nodes (no prev) must not seed measured
+      expect(n.measured).toBeUndefined();
+    }
   });
 });

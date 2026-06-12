@@ -467,21 +467,68 @@ function OfficeViewInner({
     const add = placeNewDesks(office, desks.map((d) => d.seatId));
     if (Object.keys(add).length > 0) onMaterializeOffice?.(add);
     const effective = { ...office, ...add };
-    setNodes(
-      desks.map((desk) => ({
-        id: `desk:${desk.seatId}`,
-        type: "desk",
-        position: effective[desk.seatId],
-        data: {
-          desk,
-          dropTarget: dropSeatRef.current === desk.seatId,
-          onSelectTask,
-          onDeskClick,
-          onDeskContextMenu,
-        } satisfies DeskNodeData,
-        draggable: !replaying,
-      })),
-    );
+
+    // Merge-by-id (same principle as the Plan canvas's mergeNodes): an already-
+    // mounted desk node keeps its PREV object — and with it RF's live truth
+    // (position from the last drag, measured, selected, dragging). We produce a
+    // fresh object ONLY when the desk's observable data actually changed (desk
+    // model, dropTarget, or a callback identity), otherwise we return prev by
+    // reference so RF skips the re-render and never resets drag/selection state.
+    // A whole-group `setNodes(desks.map(...))` instead rebuilt every node on each
+    // layout.office change (e.g. a drag-stop save echoing the same coords back),
+    // wiping dragging/selected/measured mid-interaction. CRITICAL: a desk's
+    // position source is prev.position for existing nodes (the post-drag RF truth;
+    // layout.office is merely its persisted copy) — only NEW seats take `effective`.
+    setNodes((prev) => {
+      const prevById = new Map(prev.map((n) => [n.id, n]));
+      return desks.map((desk) => {
+        const id = `desk:${desk.seatId}`;
+        const existing = prevById.get(id);
+        const dropTarget = dropSeatRef.current === desk.seatId;
+        if (existing) {
+          const ex = existing.data as DeskNodeData;
+          // Unchanged observable data → return prev untouched (reference-stable),
+          // preserving prev.position/measured/selected/dragging.
+          if (
+            ex.desk === desk &&
+            ex.dropTarget === dropTarget &&
+            ex.onSelectTask === onSelectTask &&
+            ex.onDeskClick === onDeskClick &&
+            ex.onDeskContextMenu === onDeskContextMenu &&
+            existing.draggable === !replaying
+          ) {
+            return existing;
+          }
+          // Data changed: new object, but KEEP prev.position (post-drag RF truth)
+          // and any other RF-owned fields via the spread.
+          return {
+            ...existing,
+            draggable: !replaying,
+            data: {
+              desk,
+              dropTarget,
+              onSelectTask,
+              onDeskClick,
+              onDeskContextMenu,
+            } satisfies DeskNodeData,
+          };
+        }
+        // New seat: materialize from the effective office map.
+        return {
+          id,
+          type: "desk",
+          position: effective[desk.seatId],
+          data: {
+            desk,
+            dropTarget,
+            onSelectTask,
+            onDeskClick,
+            onDeskContextMenu,
+          } satisfies DeskNodeData,
+          draggable: !replaying,
+        };
+      });
+    });
   }, [desks, layout.office, replaying, onSelectTask, onDeskClick, onDeskContextMenu, onMaterializeOffice]);
 
   // Clear the dock pulse 1.5s after it fires.
@@ -698,8 +745,10 @@ function OfficeViewInner({
         {transit && <TransitOverlay transit={transit} trayRef={trayRef} />}
       </ReactFlow>
 
-      {/* Wall chart (fixed top-right) — board5 `.wall`. */}
-      <div className="office-wall" data-testid="office-wall">
+      {/* Wall chart (fixed top-right) — board5 `.wall`. The fixed furniture panels
+          sit INSIDE the office-view div, so their right-click would bubble to the
+          stage's onContextMenu and open the pane menu over the panel. Stop it. */}
+      <div className="office-wall" data-testid="office-wall" onContextMenu={(e) => e.stopPropagation()}>
         <div className="wt">📋 墙上看板 · features</div>
         {wallRows.length === 0 && <div className="dempty">无 feature</div>}
         {wallRows.map((r) => (
@@ -714,7 +763,7 @@ function OfficeViewInner({
       </div>
 
       {/* Shipped tray (fixed bottom-right) — board5 `.tray`. */}
-      <div className="office-tray" data-testid="office-tray" ref={trayRef}>
+      <div className="office-tray" data-testid="office-tray" ref={trayRef} onContextMenu={(e) => e.stopPropagation()}>
         <div className="tt">✓ shipped 出货托盘</div>
         {trayVisible.length === 0 && <div className="dempty">尚无出货</div>}
         {trayVisible.map((t) => (
@@ -731,6 +780,7 @@ function OfficeViewInner({
         <div
           className={`office-dock${dockPulse ? " pulse" : ""}`}
           data-testid="office-dock"
+          onContextMenu={(e) => e.stopPropagation()}
         >
           <div className="dt">✎ drafts — drag onto a desk</div>
           {drafts.length === 0 ? (

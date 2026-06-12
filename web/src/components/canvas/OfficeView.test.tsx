@@ -265,6 +265,54 @@ describe("OfficeView", () => {
     expect(onMaterializeOffice).not.toHaveBeenCalled();
   });
 
+  it("right-clicking a furniture panel does NOT open the pane context menu", async () => {
+    // The fixed furniture panels (wall / tray / dock) live inside office-view, so
+    // their right-click must NOT bubble to the stage's onContextMenu (which opens
+    // the New task/feature pane menu). Each panel stopPropagation()s contextmenu.
+    render(<OfficeView {...baseProps} />);
+    const tray = await screen.findByTestId("office-tray");
+    fireEvent.contextMenu(tray);
+    expect(screen.queryByTestId("office-ctx")).toBeNull();
+
+    const wall = screen.getByTestId("office-wall");
+    fireEvent.contextMenu(wall);
+    expect(screen.queryByTestId("office-ctx")).toBeNull();
+
+    const dock = screen.getByTestId("office-dock");
+    fireEvent.contextMenu(dock);
+    expect(screen.queryByTestId("office-ctx")).toBeNull();
+
+    // Sanity: the bare pane still DOES open the menu (isolation is panel-local).
+    fireEvent.contextMenu(screen.getByTestId("office-view"));
+    expect(await screen.findByTestId("office-ctx")).toBeInTheDocument();
+  });
+
+  it("desk nodes merge by id — a same-value layout.office change keeps the node element (no full rebuild)", async () => {
+    // Materialization used to `setNodes(desks.map(...))` whole-group, so any
+    // layout.office change (e.g. a drag-stop save echoing the same coords back)
+    // rebuilt every desk node and reset RF's dragging/selected/measured. The
+    // merge-by-id fix returns the prev node object by reference when nothing
+    // observable changed, so React/RF keeps the SAME DOM element across the
+    // rerender (Object.is on the element holds) — the merge's observable proxy.
+    const office = {
+      bob: { x: 10, y: 10 },
+      alice: { x: 10, y: 320 },
+      carol: { x: 310, y: 10 },
+      dave: { x: 310, y: 320 },
+    };
+    const layoutA: LayoutJSON = { v: 2, office };
+    const { rerender } = render(<OfficeView {...baseProps} layout={layoutA} />);
+    const before = await screen.findByTestId("desk-bob");
+
+    // A NEW layout object carrying the SAME office values (a fresh reference, as a
+    // PUT round-trip would produce). The effect re-runs; merge-by-id must reuse
+    // the prev node, so the desk DOM element instance is unchanged.
+    const layoutB: LayoutJSON = { v: 2, office: { ...office } };
+    rerender(<OfficeView {...baseProps} layout={layoutB} />);
+    const after = await screen.findByTestId("desk-bob");
+    expect(Object.is(before, after)).toBe(true);
+  });
+
   it("renders the transit overlay when a pulsed task changes to awaiting_review", async () => {
     // The lane + carrier ant now live INSIDE <ReactFlow> (viewport-space). jsdom
     // won't run the SMIL motion, but the office-transit element render is

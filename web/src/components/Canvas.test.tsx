@@ -346,19 +346,72 @@ describe("Canvas", () => {
       // No initialMode → defaults to "office".
       <Canvas project="demo" state={fixture} author drafts={[]} setDrafts={() => {}} draftFeatures={[]} setDraftFeatures={() => {}} />,
     );
-    // Office surface present, Plan toolbar absent.
+    // Office surface present. The authoring Toolbar is now shared across both
+    // modes (Task 4), but the comms lens pill is Plan-only.
     await waitFor(() => expect(screen.getByTestId("office-view")).toBeInTheDocument());
-    expect(screen.queryByTestId("canvas-toolbar")).toBeNull();
+    expect(screen.getByTestId("canvas-toolbar")).toBeInTheDocument();
+    expect(screen.queryByTestId("comms-toggle")).toBeNull(); // comms pill is Plan-only
     expect(container.querySelector('[data-testid="desk-bob"]')).not.toBeNull();
 
-    // Click "Plan" → Plan surface mounts, Office unmounts.
+    // Click "Plan" → Plan surface mounts, Office unmounts; comms pill appears.
     fireEvent.click(screen.getByTestId("mode-plan"));
-    await waitFor(() => expect(screen.getByTestId("canvas-toolbar")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("comms-toggle")).toBeInTheDocument());
     expect(screen.queryByTestId("office-view")).toBeNull();
 
     // Back to Office.
     fireEvent.click(screen.getByTestId("mode-office"));
     await waitFor(() => expect(screen.getByTestId("office-view")).toBeInTheDocument());
+    expect(screen.queryByTestId("comms-toggle")).toBeNull();
+  });
+
+  // Task 4: the shared authoring Toolbar in Office mode opens the same forms.
+  it("office mode: New Task button opens the TaskEditor", async () => {
+    render(
+      <Canvas project="demo" state={fixture} author drafts={[]} setDrafts={() => {}} draftFeatures={[]} setDraftFeatures={() => {}} />,
+    );
+    await waitFor(() => expect(screen.getByTestId("office-view")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /^.?Task$/ }));
+    expect(await screen.findByTestId("task-editor")).toBeInTheDocument();
+  });
+
+  it("office mode: New Feature button opens the inline feature form", async () => {
+    render(
+      <Canvas project="demo" state={fixture} author drafts={[]} setDrafts={() => {}} draftFeatures={[]} setDraftFeatures={() => {}} />,
+    );
+    await waitFor(() => expect(screen.getByTestId("office-view")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /Feature/ }));
+    expect(await screen.findByLabelText("feature id")).toBeInTheDocument();
+  });
+
+  // Task 4: zero-draft dock shows a "+ 新建任务" entry that opens the TaskEditor.
+  it("office mode: empty dock New-task entry opens the TaskEditor", async () => {
+    render(
+      <Canvas project="demo" state={fixture} author drafts={[]} setDrafts={() => {}} draftFeatures={[]} setDraftFeatures={() => {}} />,
+    );
+    await waitFor(() => expect(screen.getByTestId("office-dock")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("dock-new-task"));
+    expect(await screen.findByTestId("task-editor")).toBeInTheDocument();
+  });
+
+  // Task 4: a new seat joining (state.agents grows) must NOT move an already-
+  // materialized desk — office positions are materialized once, idempotently.
+  it("office mode: a new seat joining does not move existing desks", async () => {
+    const { container, rerender } = render(
+      <Canvas project="demo" state={fixture} author drafts={[]} setDrafts={() => {}} draftFeatures={[]} setDraftFeatures={() => {}} />,
+    );
+    await waitFor(() => expect(container.querySelector('.react-flow__node[data-id="desk:bob"]')).not.toBeNull());
+    const bobBefore = (container.querySelector('.react-flow__node[data-id="desk:bob"]') as HTMLElement).style.transform;
+
+    const grown: State = {
+      ...fixture,
+      agents: [...fixture.agents, { id: "carol", roles: ["worker"] }],
+    };
+    rerender(
+      <Canvas project="demo" state={grown} author drafts={[]} setDrafts={() => {}} draftFeatures={[]} setDraftFeatures={() => {}} />,
+    );
+    await waitFor(() => expect(container.querySelector('.react-flow__node[data-id="desk:carol"]')).not.toBeNull());
+    const bobAfter = (container.querySelector('.react-flow__node[data-id="desk:bob"]') as HTMLElement).style.transform;
+    expect(bobAfter).toBe(bobBefore);
   });
 
   // T10: dropping a draft onto a desk opens DispatchModal with owner pre-filled.

@@ -24,6 +24,10 @@ export interface ToolbarProps {
   // New-task editor.
   onOpenNewTask: () => void;
   newTaskDisabled: boolean;
+  // Comms is a Plan-only display lens. Office shares this Toolbar for authoring
+  // (Feature / Task) but must hide the comms pill. Defaults true so Plan callers
+  // are unaffected; Office passes showComms={false} (Task 4).
+  showComms?: boolean;
 }
 
 export function Toolbar({
@@ -43,6 +47,7 @@ export function Toolbar({
   onAddFeature,
   onOpenNewTask,
   newTaskDisabled,
+  showComms = true,
 }: ToolbarProps) {
   return (
     <div className="canvas-tbar" data-testid="canvas-toolbar">
@@ -98,16 +103,18 @@ export function Toolbar({
           </>
         ))}
 
-      {author && <span className="tbar-div" aria-hidden />}
+      {author && showComms && <span className="tbar-div" aria-hidden />}
 
-      <button
-        data-testid="comms-toggle"
-        aria-pressed={comms}
-        className={`tbtn${comms ? " on" : ""}`}
-        onClick={onToggleComms}
-      >
-        <span className="ic">◉</span>Comms {comms ? "on" : "off"}
-      </button>
+      {showComms && (
+        <button
+          data-testid="comms-toggle"
+          aria-pressed={comms}
+          className={`tbtn${comms ? " on" : ""}`}
+          onClick={onToggleComms}
+        >
+          <span className="ic">◉</span>Comms {comms ? "on" : "off"}
+        </button>
+      )}
     </div>
   );
 }

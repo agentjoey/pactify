@@ -43,6 +43,8 @@ const baseProps = {
   onSaveOffice: noop,
   onSelectTask: noop,
   onDispatchDraft: noop,
+  onOpenNewTask: noop,
+  onMaterializeOffice: noop,
 };
 
 describe("OfficeView", () => {
@@ -179,6 +181,136 @@ describe("OfficeView", () => {
       document.elementFromPoint = prev;
     }
     expect(onDispatchDraft).toHaveBeenCalledWith(drafts[0], "bob");
+  });
+
+  // ===================================================================
+  // Task 4: Office authoring surface — HUD/minimap, dock empty state,
+  // context menus, desk materialization idempotence.
+  // ===================================================================
+
+  it("renders the zoom HUD and minimap inside the office flow", async () => {
+    const { container } = render(<OfficeView {...baseProps} />);
+    await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
+    expect(screen.getByTestId("canvas-hud")).toBeInTheDocument();
+    expect(container.querySelector(".react-flow__minimap")).not.toBeNull();
+  });
+
+  it("author + zero drafts shows the dock with a New task entry; click opens TaskEditor", async () => {
+    const onOpenNewTask = vi.fn();
+    render(<OfficeView {...baseProps} drafts={[]} onOpenNewTask={onOpenNewTask} />);
+    await waitFor(() => expect(screen.getByTestId("office-dock")).toBeInTheDocument());
+    const btn = screen.getByTestId("dock-new-task");
+    fireEvent.click(btn);
+    expect(onOpenNewTask).toHaveBeenCalled();
+  });
+
+  it("observer (author=false) does not render the dock", async () => {
+    render(<OfficeView {...baseProps} author={false} drafts={[]} />);
+    await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
+    expect(screen.queryByTestId("office-dock")).toBeNull();
+  });
+
+  it("pane right-click opens a menu with New Task / New Feature / fit view", async () => {
+    const onOpenNewTask = vi.fn();
+    render(<OfficeView {...baseProps} onOpenNewTask={onOpenNewTask} />);
+    await waitFor(() => expect(screen.getByTestId("office-view")).toBeInTheDocument());
+    // RF pane right-click → office context menu appears.
+    fireEvent.contextMenu(screen.getByTestId("office-view"));
+    const menu = await screen.findByTestId("office-ctx");
+    expect(menu.textContent).toContain("New task");
+    expect(menu.textContent).toContain("New feature");
+    expect(menu.textContent).toContain("fit");
+    // Clicking New task fires the handler.
+    fireEvent.click(screen.getByTestId("office-ctx-new-task"));
+    expect(onOpenNewTask).toHaveBeenCalled();
+  });
+
+  it("desk right-click with drafts lists a dispatch entry per draft → seat", async () => {
+    const onDispatchDraft = vi.fn();
+    const drafts: Draft[] = [{ id: "d1", specMd: "# d", feature: "F1", deps: [] }];
+    render(<OfficeView {...baseProps} drafts={drafts} onDispatchDraft={onDispatchDraft} />);
+    await waitFor(() => expect(screen.getByTestId("desk-dave")).toBeInTheDocument());
+    fireEvent.contextMenu(screen.getByTestId("desk-dave"));
+    const menu = await screen.findByTestId("office-ctx");
+    expect(menu.textContent).toContain("d1");
+    expect(menu.textContent).toContain("dave");
+    fireEvent.click(screen.getByTestId("office-ctx-dispatch-d1"));
+    expect(onDispatchDraft).toHaveBeenCalledWith(drafts[0], "dave");
+  });
+
+  it("materializes office positions for seats with no layout entry (author PUT via onMaterializeOffice)", async () => {
+    const onMaterializeOffice = vi.fn();
+    render(<OfficeView {...baseProps} onMaterializeOffice={onMaterializeOffice} />);
+    await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
+    // All four seats lack a layout.office entry → one materialization batch.
+    await waitFor(() => expect(onMaterializeOffice).toHaveBeenCalled());
+    const entries = onMaterializeOffice.mock.calls[0][0] as Record<string, { x: number; y: number }>;
+    expect(Object.keys(entries).sort()).toEqual(["alice", "bob", "carol", "dave"]);
+  });
+
+  it("does not re-materialize seats that already have an office entry (idempotent)", async () => {
+    const onMaterializeOffice = vi.fn();
+    const layout: LayoutJSON = {
+      v: 2,
+      office: {
+        bob: { x: 10, y: 10 },
+        alice: { x: 10, y: 320 },
+        carol: { x: 310, y: 10 },
+        dave: { x: 310, y: 320 },
+      },
+    };
+    render(<OfficeView {...baseProps} layout={layout} onMaterializeOffice={onMaterializeOffice} />);
+    await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
+    // Every seat already placed → no materialization.
+    expect(onMaterializeOffice).not.toHaveBeenCalled();
+  });
+
+  it("right-clicking a furniture panel does NOT open the pane context menu", async () => {
+    // The fixed furniture panels (wall / tray / dock) live inside office-view, so
+    // their right-click must NOT bubble to the stage's onContextMenu (which opens
+    // the New task/feature pane menu). Each panel stopPropagation()s contextmenu.
+    render(<OfficeView {...baseProps} />);
+    const tray = await screen.findByTestId("office-tray");
+    fireEvent.contextMenu(tray);
+    expect(screen.queryByTestId("office-ctx")).toBeNull();
+
+    const wall = screen.getByTestId("office-wall");
+    fireEvent.contextMenu(wall);
+    expect(screen.queryByTestId("office-ctx")).toBeNull();
+
+    const dock = screen.getByTestId("office-dock");
+    fireEvent.contextMenu(dock);
+    expect(screen.queryByTestId("office-ctx")).toBeNull();
+
+    // Sanity: the bare pane still DOES open the menu (isolation is panel-local).
+    fireEvent.contextMenu(screen.getByTestId("office-view"));
+    expect(await screen.findByTestId("office-ctx")).toBeInTheDocument();
+  });
+
+  it("desk nodes merge by id — a same-value layout.office change keeps the node element (no full rebuild)", async () => {
+    // Materialization used to `setNodes(desks.map(...))` whole-group, so any
+    // layout.office change (e.g. a drag-stop save echoing the same coords back)
+    // rebuilt every desk node and reset RF's dragging/selected/measured. The
+    // merge-by-id fix returns the prev node object by reference when nothing
+    // observable changed, so React/RF keeps the SAME DOM element across the
+    // rerender (Object.is on the element holds) — the merge's observable proxy.
+    const office = {
+      bob: { x: 10, y: 10 },
+      alice: { x: 10, y: 320 },
+      carol: { x: 310, y: 10 },
+      dave: { x: 310, y: 320 },
+    };
+    const layoutA: LayoutJSON = { v: 2, office };
+    const { rerender } = render(<OfficeView {...baseProps} layout={layoutA} />);
+    const before = await screen.findByTestId("desk-bob");
+
+    // A NEW layout object carrying the SAME office values (a fresh reference, as a
+    // PUT round-trip would produce). The effect re-runs; merge-by-id must reuse
+    // the prev node, so the desk DOM element instance is unchanged.
+    const layoutB: LayoutJSON = { v: 2, office: { ...office } };
+    rerender(<OfficeView {...baseProps} layout={layoutB} />);
+    const after = await screen.findByTestId("desk-bob");
+    expect(Object.is(before, after)).toBe(true);
   });
 
   it("renders the transit overlay when a pulsed task changes to awaiting_review", async () => {

@@ -203,3 +203,33 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
   dynamic title/favicon, task detail slide-over (spec/evidence/session timeline/verbs),
   replay timeline with typed ticks + `?at=N` deep link, humanized engine errors on the
   toast rail, first-load skeletons, and an empty-registry onboarding hero.
+
+### Canvas P0 (interaction-foundation rework, 2026-06-12, PR #20-#22)
+- **Position materialization** (`web/src/lib/canvas.ts`): layout sidecar **v2** is the
+  single source of truth for node positions — top-level nodes absolute, children
+  parent-relative (RF-native coords, zero conversion on drag-save). `deriveGraph`
+  produces identity/data/edges only; `placeNew` assigns a grid slot ONCE when a node
+  first appears (idempotent, orphan entries excluded from occupancy but preserved as
+  replay position memory); `mergeNodes` updates the RF node array by id, preserving
+  RF-written position/measured/selected/dragging and returning identical references
+  for unchanged nodes. Legacy v1 layouts (no `v` field) are dropped and re-materialized.
+  A `layoutLoaded` gate prevents materializing against another project's (or an empty)
+  layout during project switches. Desk positions follow the same model via the
+  additive `office` key.
+- **Connect UX**: Dify-style full-width 16px strip handles with center port marks
+  (visible to authors, hidden for observers), v12-correct connection classes
+  (`connectingfrom`/`valid`; the v11-era `.connecting` rules were dead), a stage-level
+  `connecting` state lifted from `useConnection`, and a custom bezier connection line.
+  All invalid-connection notices (committed target / cross-feature / cycle) surface
+  via `onConnectEnd` — `isValidConnection` blocks `onConnect` for invalid drops, so
+  notice branches there are unreachable defensive code.
+- **Engineering rules** (spec §5): production code never fabricates RF geometry
+  (`measured`/`handles` are SSR inputs + RF write-back fields); node arrays update
+  only via merge-by-id; positions have exactly two writers — `placeNew` on first
+  appearance and user drags.
+- **Acceptance gate**: Playwright e2e (`web/e2e/`, chromium) against a hermetic mock
+  server (real serve JSON shapes, SSE push hook, PUT capture). Seven regression specs
+  pin the four user-reported failures (drag isolation, connect + two negative cases,
+  office zoom, office authoring chain, drag-during-SSE stability). CI `e2e` job is a
+  required merge gate alongside vitest for canvas PRs; jsdom is no longer the
+  authority on interaction correctness.

@@ -9,6 +9,7 @@ import {
   type EdgeTypes,
   type NodeChange,
   type Connection,
+  type FinalConnectionState,
   applyNodeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -543,7 +544,11 @@ export function Canvas({
 
   // onConnect: author draws a dep edge. A→B means "B depends on A" (source is
   // the prerequisite). Validation routes through isValidDep; invalid drops get a
-  // human notice (the drag-time cursor already discouraged them).
+  // human notice. NOTE: in practice the notice branches below are NEVER reached —
+  // isValidConnection rejects every invalid landing, so RF refuses to call
+  // onConnect for them at all (the drop only routes through onConnectEnd, which
+  // owns the notices). They're kept here as a defensive fallback in case a build
+  // ever fires onConnect without consulting isValidConnection.
   const onConnect = useCallback(
     (c: Connection) => {
       if (!author) return;
@@ -566,6 +571,41 @@ export function Canvas({
       setDrafts((ds) => applyConnect(ds, c.source, c.target));
     },
     [author, committedTaskIds, featureOfId, flashNotice, depGraph, setDrafts],
+  );
+
+  // onConnectEnd: RF's isValidConnection rejects EVERY invalid landing during the
+  // drag, so RF refuses to call onConnect for any of them — all three rule
+  // notices ("已固定" / 同 feature / 成环) would be unreachable through onConnect.
+  // This handler is therefore the SOLE surface for those notices: on release we
+  // re-run the same three-rule routing here (same order as onConnect: committed →
+  // cross-feature → cycle) and flash the matching cue. Guards: no author / replay
+  // → nothing; isValid === null means the pointer was released over empty space
+  // (not over a handle) — no notice at all; isValid === false is a real invalid
+  // landing over a target handle, which is what we route on.
+  const onConnectEnd = useCallback(
+    (_e: MouseEvent | TouchEvent, cs: FinalConnectionState) => {
+      if (!author || replaying) return;
+      if (cs.isValid !== false) return; // null = released in empty space → no notice
+      const fromNode = cs.fromNode;
+      const toNode = cs.toNode;
+      if (!fromNode || !toNode) return;
+      const raw = (id: string) => id.replace(/^(task|draft):/, "");
+      const from = raw(fromNode.id);
+      const to = raw(toNode.id);
+      if (from === to) return;
+      if (committedTaskIds.has(to)) {
+        flashNotice("依赖在 assign 时已固定,不能再改");
+        return;
+      }
+      if (featureOfId(from) !== featureOfId(to)) {
+        flashNotice("依赖必须和任务在同一个 feature 内");
+        return;
+      }
+      if (!isValidDep(depGraph, from, to)) {
+        flashNotice("依赖关系会形成环");
+      }
+    },
+    [author, replaying, committedTaskIds, featureOfId, flashNotice, depGraph],
   );
 
   // Persist dragged nodes' new positions into the layout sidecar after a drag.
@@ -1027,6 +1067,7 @@ export function Canvas({
         onPaneContextMenu={onPaneContextMenu}
         onPaneClick={() => setMenu(null)}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
         isValidConnection={isValidConnection}
         connectionLineComponent={ConnectionLine}
         connectionRadius={30}

@@ -152,3 +152,23 @@ seat 徽章删除+display memo 合一+roleColorVar 共源）+ fable5 终审 APPR
 **交付**：Astro 6 静态站 `site/`——终端真实派 landing（打字 hero/双线合一/§1§2 条款/quickstart/入座区/可访问复制 CTA，动效全 CSS+reduced-motion 降级）；/protocol + /onboarding 构建时直读仓内规范（glob loader base ../docs，零拷贝）；/install.sh = 真安装器（prebuild 同步 + check-dist 字节守卫）；CI site job（informative）；Vercel runbook。
 **质量**：brainstorm 用可视化伴侣做了视觉调研板+结构 mockup（用户选向：终端派+双线/入座）；逐任务双审查 + fable5 终审（抓 CTA 双击毁命令真 bug、dasharray 常数 bug、移动端 CTA 碎裂等，全修）。
 **Deferred（PR #7 描述在案）**：og:image、/protocol TOC、README/插件 hook URL 切到 pactify.dev、site job 升 required、hero 版本串随 release 同步。
+
+### T10: Canvas P0 — 交互地基重构(位置物化 + e2e 验收门)[HIGH]
+**Status:** ✅ Done（PR #20 W1 + #21 W2 + #22 W3,2026-06-12）
+**背景**:Dashboard v2 验收实测四个基础交互全废——拖一个 box 其他乱跳/拉线完全不可交互/
+Office(默认落地)零操作面/Office 无缩放。根因复盘:①位置被当"派生数据"每渲染重算
+(deriveFlow 碰撞避让级联挤压);②jsdom 测试桩(measured/handles 假几何)混入生产路径,
+v12 源码证实会整体覆盖 DOM 真实锚点;③CSS 用了 v11 时代死类名(.connecting 从不被应用);
+④Toolbar/Hud 只挂 plan。流程教训:393 个 jsdom 测试全绿但交互结构性测不出来。
+**设计**:研究先行(Dify 画布源码 + RF v12 官方文档/源码两路并查)→ spec 锁定
+"位置创建时物化一次"模型(Dify 同款)。
+**W1(#20)**:layout v2(子节点父相对)+deriveGraph/placeNew/mergeNodes 纯函数层+Canvas
+管线切换+条形 handle/v12 类名/自定义连接线。审查拦下:项目切换竞态(旧项目坐标会 PUT 进
+新项目,layoutLoaded 门修)/多选拖拽+draft 派发互吃/connecting 类被受控 className 冲掉。
+**W2(#21)**:Toolbar 双模式+Hud/minimap 进 Office+desk 物化(坐席加入不挤桌)+dock 空态
++office 右键菜单。审查拦下:家具面板右键漏 pane 菜单/desk 整组重建。
+**W3(#22)**:Playwright e2e 门(mock server 真形状对齐 dto.go+SSE 钩子)+7 条回归用例
+(四个用户报告一一对应+两条负向+创建闭环)+CI e2e job 必过门。**e2e 首跑即抓到真 bug**:
+isValidConnection 拦截后 onConnect 的三条 notice 分支全部不可达(提示从未真正出现过),
+改 onConnectEnd 路由。vitest 393 + e2e 7×2 + go test 全绿。
+**插曲**:opus 实现 agent 断连 ×3(T2/T4/T5)+会话限额 ×1,均半成品续派补完。

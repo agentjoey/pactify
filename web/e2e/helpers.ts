@@ -93,6 +93,43 @@ export async function getPuts(page: Page): Promise<Array<{ v?: number; positions
   return r.json();
 }
 
+// waitForPutCountAbove polls the recorded PUT log until at least `min`+1 PUTs have
+// landed (i.e. count > min). Replaces a fixed waitForTimeout that blindly hoped a
+// debounced PUT (≈0.8s) had fired — this waits on the observable instead, so it's
+// both faster on the happy path and robust under load. Returns once satisfied.
+export async function waitForPutCountAbove(page: Page, min: number, timeout = 5000) {
+  await expect
+    .poll(() => getPuts(page).then((p) => p.length), { timeout })
+    .toBeGreaterThan(min);
+}
+
+// settleBoundingBox waits for a node's on-screen boundingBox to stop moving:
+// it reads the box twice with a short gap and only returns once two consecutive
+// reads are identical (the fitView / drag-settle animation has finished). Replaces
+// a fixed post-fitView sleep — it ends the instant the animation rests rather than
+// over-waiting a worst-case constant. Returns the settled box.
+export async function settleBoundingBox(node: Locator, timeout = 3000) {
+  await awaitMeasured(node);
+  const deadline = Date.now() + timeout;
+  let prev = await node.boundingBox();
+  while (Date.now() < deadline) {
+    await node.page().waitForTimeout(50);
+    const cur = await node.boundingBox();
+    if (
+      prev &&
+      cur &&
+      prev.x === cur.x &&
+      prev.y === cur.y &&
+      prev.width === cur.width &&
+      prev.height === cur.height
+    ) {
+      return cur;
+    }
+    prev = cur;
+  }
+  return prev;
+}
+
 // pushSnapshot injects a new protocol state and pushes it over SSE (the test hook
 // the mock server exposes — same event/refetch path as real serve).
 export async function pushSnapshot(page: Page, snapshot: unknown) {

@@ -79,7 +79,14 @@ async function readBody(req) {
 function pushEvent(ev) {
   const line = JSON.stringify(ev);
   for (const res of sseClients) {
-    res.write(`event: pact\ndata: ${line}\n\n`);
+    // A client may have disconnected without its 'close' firing yet (or be
+    // mid-teardown); writing to a finished socket throws ERR_STREAM_WRITE_AFTER_END
+    // and would crash the whole fan-out. Guard each write and evict the dead client.
+    try {
+      res.write(`event: pact\ndata: ${line}\n\n`);
+    } catch {
+      sseClients.delete(res);
+    }
   }
 }
 

@@ -433,6 +433,27 @@ export function Canvas({
     [scheduleSave],
   );
 
+  // Office desk materialization (T4, spec §3). OfficeView reports the freshly
+  // placed seats (those with no `office` entry) once on first render; we fold
+  // them into layout.office — mirroring the Plan placeNew fold: setLayout LOCALLY
+  // ALWAYS (so observer/replay render the same deterministic grid), and PUT only
+  // when author && !replaying. The additive `office` key never disturbs the Plan
+  // `positions`. Idempotent on OfficeView's side, so a re-fire with the same seats
+  // can't happen, but we still guard against an empty batch.
+  const materializeOffice = useCallback(
+    (entries: Record<string, { x: number; y: number }>) => {
+      if (Object.keys(entries).length === 0) return;
+      const next: LayoutJSON = {
+        ...layoutRef.current,
+        v: LAYOUT_V,
+        office: { ...(layoutRef.current.office ?? {}), ...entries },
+      };
+      setLayout(next); // local materialization ALWAYS (every surface renders)
+      if (author && !replaying) schedulePut(next);
+    },
+    [author, replaying, schedulePut],
+  );
+
   // Office drop/click-to-dispatch: open DispatchModal with the dropped draft +
   // the target seat as owner (reuses the exact Plan dispatch flow).
   const dispatchDraftToSeat = useCallback(
@@ -905,27 +926,16 @@ export function Canvas({
         </button>
       </div>
 
-      {mode === "office" && (
-        <OfficeView
-          state={state}
-          layout={layout}
-          author={author}
-          replaying={replaying}
-          pulses={pulses}
-          drafts={drafts}
-          onSaveOffice={saveOfficePos}
-          onSelectTask={onSelectTask}
-          onDispatchDraft={dispatchDraftToSeat}
-        />
-      )}
-
-      {mode === "plan" && (
-      <>
-      {/* Frosted toolbar: author Feature/Task + Comms lens pill. Shifted right of
-          the mode segment so the two top-left chrome blocks don't overlap. */}
+      {/* Authoring toolbar — SHARED across both modes (Task 4, spec §3): New
+          Feature / New Task render in Office and Plan alike; the comms lens pill
+          is Plan-only (showComms). The inline New-feature form it opens is also
+          shared (rendered just below), so the office surface can author features.
+          Gated on layoutLoaded only for OfficeView; the Toolbar itself is always
+          available. */}
       <Toolbar
         author={author}
         comms={comms}
+        showComms={mode === "plan"}
         onToggleComms={() => setComms((v) => !v)}
         newFeatureOpen={newFeatureOpen}
         onOpenNewFeature={() => { setNfId(nextId(existingFeatureIds, "f")); setNewFeatureOpen(true); }}
@@ -942,6 +952,25 @@ export function Canvas({
         newTaskDisabled={featureOptions.length === 0}
       />
 
+      {mode === "office" && layoutLoaded && (
+        <OfficeView
+          state={state}
+          layout={layout}
+          author={author}
+          replaying={replaying}
+          pulses={pulses}
+          drafts={drafts}
+          onSaveOffice={saveOfficePos}
+          onSelectTask={onSelectTask}
+          onDispatchDraft={dispatchDraftToSeat}
+          onOpenNewTask={() => { setEditingDraft(undefined); setEditorOpen(true); }}
+          onOpenNewFeature={() => { setNfId(nextId(existingFeatureIds, "f")); setNewFeatureOpen(true); }}
+          onMaterializeOffice={materializeOffice}
+        />
+      )}
+
+      {mode === "plan" && (
+      <>
       {/* Feature focus chip (T15): shown while a feature is focused; the ✕ exits
           (same as Esc). Sits in the top chrome row. */}
       {focusFeature && (

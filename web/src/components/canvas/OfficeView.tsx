@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
   useReactFlow,
   useViewport,
   type Node,
@@ -16,6 +17,7 @@ import { casteForRoles, padGradient } from "../../lib/ants";
 import { Ant } from "../ui/ants/Ant";
 import { statusColorVar } from "../../lib/lifecycle";
 import { CarrierAnt } from "./edges/AntEdge";
+import { Hud } from "./Hud";
 
 // OfficeView (T10, spec §3 / board5) — the DEFAULT canvas mode. Agents are the
 // subject: one draggable desk station per JOINED seat (deriveOffice), with three
@@ -110,6 +112,7 @@ interface DeskNodeData {
   dropTarget: boolean; // currently dragged-over by a dock parcel
   onSelectTask?: (id: string) => void;
   onDeskClick?: (seatId: string) => void;
+  onDeskContextMenu?: (e: ReactMouseEvent, seatId: string) => void;
   [key: string]: unknown;
 }
 
@@ -132,6 +135,7 @@ function DeskNode({ data }: NodeProps) {
       data-testid={`desk-${desk.seatId}`}
       data-desk-id={desk.seatId}
       onClick={() => d.onDeskClick?.(desk.seatId)}
+      onContextMenu={(e) => d.onDeskContextMenu?.(e, desk.seatId)}
     >
       <div className="dhead">
         <span className="dava" style={{ background: `linear-gradient(135deg, ${pad.from}, ${pad.to})` }}>
@@ -215,6 +219,45 @@ function gridPos(i: number): { x: number; y: number } {
   };
 }
 
+// placeNewDesks materializes office positions ONCE for seats with no layout.office
+// entry — the Office-mode analogue of placeNew (spec §1/§3). It mirrors the Plan
+// pipeline's idempotence: a seat already in layout.office is never re-placed, so a
+// new seat joining can't jostle an already-materialized desk (the old gridPos(i)
+// re-derived EVERY desk by roster index, which shifted unsaved desks when the
+// roster grew). Grid slots are walked in order; a candidate cell already occupied
+// by an existing office entry (or a sibling assigned earlier in THIS batch) is
+// skipped (|dx|<pitch*0.8 && |dy|<pitch*0.8) and placement falls through to the
+// next free slot. Returns only the NEW entries (empty when every seat is placed).
+function placeNewDesks(
+  office: Record<string, { x: number; y: number }>,
+  seatIds: string[],
+): Record<string, { x: number; y: number }> {
+  const taken: { x: number; y: number }[] = seatIds
+    .filter((id) => office[id])
+    .map((id) => office[id]);
+  const hits = (q: { x: number; y: number }) =>
+    taken.some(
+      (t) =>
+        Math.abs(t.x - q.x) < GRID_PITCH_X * 0.8 && Math.abs(t.y - q.y) < GRID_PITCH_Y * 0.8,
+    );
+  const add: Record<string, { x: number; y: number }> = {};
+  let slot = 0;
+  for (const id of seatIds) {
+    if (office[id]) continue; // already materialized — idempotent, never re-place
+    let p = gridPos(slot++);
+    while (hits(p)) p = gridPos(slot++);
+    taken.push(p);
+    add[id] = p;
+  }
+  return add;
+}
+
+// OfficeMenu describes an open office context menu: a pane menu (New task / New
+// feature / fit view) or a desk menu (one dispatch entry per draft → this seat).
+type OfficeMenu =
+  | { kind: "pane"; x: number; y: number }
+  | { kind: "desk"; x: number; y: number; seatId: string };
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -291,17 +334,8 @@ function TransitOverlay({
   );
 }
 
-export function OfficeView({
-  state,
-  layout,
-  author,
-  replaying,
-  pulses,
-  drafts,
-  onSaveOffice,
-  onSelectTask,
-  onDispatchDraft,
-}: {
+// OfficeViewProps — shared by the inner component and the provider wrapper.
+interface OfficeViewProps {
   state: State;
   layout: LayoutJSON;
   // Author-and-live: drop-to-dispatch + click-dispatch only when true. App
@@ -319,7 +353,44 @@ export function OfficeView({
   onSelectTask?: (id: string) => void;
   // Open DispatchModal pre-filled with this draft + seat as owner.
   onDispatchDraft: (draft: Draft, seatId: string) => void;
-}) {
+  // Open the TaskEditor (dock empty-state + pane context menu). Author only.
+  onOpenNewTask?: () => void;
+  // Open the inline New-feature form (pane context menu). Author only.
+  onOpenNewFeature?: () => void;
+  // Report freshly materialized office entries up to Canvas, which folds them
+  // into layout.office (local always; PUT when author && !replaying). The Office
+  // analogue of the Plan placeNew→setLayout fold.
+  onMaterializeOffice?: (entries: Record<string, { x: number; y: number }>) => void;
+}
+
+// OfficeView wraps the inner surface in a ReactFlowProvider so the office context
+// menu's "fit view" item (and any future store reads at this level) can call
+// useReactFlow OUTSIDE the <ReactFlow> subtree. <ReactFlow> alone only provisions
+// the store for its CHILDREN (Hud/TransitOverlay); the component RENDERING it is
+// not inside that store. The provider hoists the store one level up so both the
+// menu handler and the in-flow children share it.
+export function OfficeView(props: OfficeViewProps) {
+  return (
+    <ReactFlowProvider>
+      <OfficeViewInner {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+function OfficeViewInner({
+  state,
+  layout,
+  author,
+  replaying,
+  pulses,
+  drafts,
+  onSaveOffice,
+  onSelectTask,
+  onDispatchDraft,
+  onOpenNewTask,
+  onOpenNewFeature,
+  onMaterializeOffice,
+}: OfficeViewProps) {
   const { desks, shipped } = useMemo(() => deriveOffice(state), [state]);
   const dropDispatch = author && !replaying;
 
@@ -329,38 +400,107 @@ export function OfficeView({
   const dropSeatRef = useRef<string | null>(null);
   dropSeatRef.current = dropSeat;
 
+  // The office stage element, so context-menu coords are stage-relative.
+  const stageRef = useRef<HTMLDivElement>(null);
+  // Office context menu (author && !replaying). Pane = New task/feature/fit;
+  // desk = one "dispatch <draft> → <seat>" entry per draft.
+  const [menu, setMenu] = useState<OfficeMenu | null>(null);
+  // dockPulse flashes the dock when an idle desk is clicked with >1 draft (the
+  // guided "go drag from the dock" cue). Cleared after 1.5s by an effect below.
+  const [dockPulse, setDockPulse] = useState(false);
+  const { fitView } = useReactFlow();
+
   // Single draft → click-dispatch convenience target. Idle desks ONLY (the file
   // header's affordance contract): clicking a busy/review/waiting desk is a
-  // read gesture, not a dispatch.
+  // read gesture, not a dispatch. With MORE than one draft, an idle-desk click
+  // can't disambiguate which draft to dispatch — pulse the dock instead to guide
+  // the author toward the drag-from-dock path.
   const onDeskClick = useCallback(
     (seatId: string) => {
       if (!dropDispatch) return;
       const desk = desks.find((d) => d.seatId === seatId);
       if (desk?.status !== "idle") return;
       if (drafts.length === 1) onDispatchDraft(drafts[0], seatId);
+      else if (drafts.length > 1) setDockPulse(true);
     },
     [dropDispatch, desks, drafts, onDispatchDraft],
   );
 
-  // Rebuild desk nodes from the derived office whenever it (or layout/flags)
-  // change. Positions come from the office sidecar; missing seats get the grid.
+  // stageXY maps a browser event to office-stage-relative coords for menu placement.
+  const stageXY = (e: { clientX: number; clientY: number }) => {
+    const r = stageRef.current?.getBoundingClientRect();
+    return { x: e.clientX - (r?.left ?? 0), y: e.clientY - (r?.top ?? 0) };
+  };
+
+  // Desk right-click → desk context menu (author && !replaying only). Stops the
+  // event so the pane handler doesn't also fire.
+  const onDeskContextMenu = useCallback(
+    (e: ReactMouseEvent, seatId: string) => {
+      if (!dropDispatch) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const { x, y } = stageXY(e);
+      setMenu({ kind: "desk", x, y, seatId });
+    },
+    [dropDispatch],
+  );
+
+  // Pane right-click → pane context menu (New task / New feature / fit view).
+  const onPaneContextMenu = useCallback(
+    (e: ReactMouseEvent | MouseEvent) => {
+      if (!dropDispatch) return;
+      e.preventDefault();
+      const { x, y } = stageXY(e);
+      setMenu({ kind: "pane", x, y });
+    },
+    [dropDispatch],
+  );
+
+  // Office desk positions are materialized ONCE per seat (spec §3): build the
+  // effective office map = saved entries + freshly placed new seats, report the
+  // new entries up so Canvas folds them into layout.office (local always; PUT
+  // when author&&!replaying), and place every node from that map. Idempotent —
+  // a seat already in layout.office keeps its saved coords, so a new seat joining
+  // never jostles an existing desk.
   useEffect(() => {
     const office = layout.office ?? {};
+    const add = placeNewDesks(office, desks.map((d) => d.seatId));
+    if (Object.keys(add).length > 0) onMaterializeOffice?.(add);
+    const effective = { ...office, ...add };
     setNodes(
-      desks.map((desk, i) => ({
+      desks.map((desk) => ({
         id: `desk:${desk.seatId}`,
         type: "desk",
-        position: office[desk.seatId] ?? gridPos(i),
+        position: effective[desk.seatId],
         data: {
           desk,
           dropTarget: dropSeatRef.current === desk.seatId,
           onSelectTask,
           onDeskClick,
+          onDeskContextMenu,
         } satisfies DeskNodeData,
         draggable: !replaying,
       })),
     );
-  }, [desks, layout.office, replaying, onSelectTask, onDeskClick]);
+  }, [desks, layout.office, replaying, onSelectTask, onDeskClick, onDeskContextMenu, onMaterializeOffice]);
+
+  // Clear the dock pulse 1.5s after it fires.
+  useEffect(() => {
+    if (!dockPulse) return;
+    const h = setTimeout(() => setDockPulse(false), 1500);
+    return () => clearTimeout(h);
+  }, [dockPulse]);
+
+  // Esc closes the office context menu (outside-click is handled by RF's
+  // onPaneClick + the menu's own buttons).
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenu(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menu]);
 
   // Reflect drop-target highlight without rebuilding the whole node array.
   useEffect(() => {
@@ -517,15 +657,31 @@ export function OfficeView({
   const trayRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className={`office-view absolute inset-0${replaying ? " replaying" : ""}`} data-testid="office-view" onDragOver={onPaneDragOver} onDrop={onPaneDrop}>
+    <div
+      ref={stageRef}
+      className={`office-view absolute inset-0${replaying ? " replaying" : ""}`}
+      data-testid="office-view"
+      onDragOver={onPaneDragOver}
+      onDrop={onPaneDrop}
+      // Pane context menu is wired on the stage div (not only RF's
+      // onPaneContextMenu) so a right-click anywhere on the empty office surface
+      // opens the menu — RF's onPaneContextMenu only fires on the inner
+      // .react-flow__pane, which jsdom doesn't reliably hit. DeskNode's own
+      // onContextMenu stopPropagation()s, so a desk right-click never reaches
+      // this handler (it opens the desk menu instead).
+      onContextMenu={onPaneContextMenu}
+    >
       <ReactFlow
         nodes={nodes}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onNodeDragStop={onNodeDragStop}
+        onPaneClick={() => setMenu(null)}
         nodesDraggable={!replaying}
         nodesConnectable={false}
         elementsSelectable={false}
+        // panOnDrag must NOT include button 2, or React Flow swallows the pane
+        // contextmenu (mirrors the Plan canvas).
         panOnDrag
         zoomOnScroll
         fitView
@@ -533,6 +689,9 @@ export function OfficeView({
         colorMode="dark"
         style={{ background: "transparent" }}
       >
+        {/* Zoom HUD + minimap (shared with Plan) — gives Office real zoom
+            controls (spec §3/#4). Must live inside <ReactFlow> (reads the store). */}
+        <Hud />
         {/* transit overlay (single lane + carrier ant carrying the parcel) —
             INSIDE <ReactFlow> so it can read the live viewport and draw the lane
             in screen space (flow→screen), tracking pan/zoom/fitView. */}
@@ -564,24 +723,95 @@ export function OfficeView({
         {trayMore > 0 && <div className="tmore">+{trayMore} more</div>}
       </div>
 
-      {/* Draft dock (fixed bottom-left) — drag a draft onto a desk to dispatch.
-          Author-and-live only; hidden in replay/observe. */}
-      {dropDispatch && drafts.length > 0 && (
-        <div className="office-dock" data-testid="office-dock">
+      {/* Draft dock (fixed bottom-left) — always shown in author+live (even with
+          zero drafts, so the surface always has a create entry; spec §3). Drag a
+          draft onto a desk to dispatch; the empty state offers a New-task button.
+          Hidden in replay/observe. */}
+      {dropDispatch && (
+        <div
+          className={`office-dock${dockPulse ? " pulse" : ""}`}
+          data-testid="office-dock"
+        >
           <div className="dt">✎ drafts — drag onto a desk</div>
-          {drafts.map((d) => (
-            <div
-              key={d.id}
-              className="parcel"
-              data-testid={`dock-${d.id}`}
-              draggable
-              onDragStart={(e) => onParcelDragStart(e, d.id)}
+          {drafts.length === 0 ? (
+            <button
+              type="button"
+              className="dock-new"
+              data-testid="dock-new-task"
+              onClick={() => onOpenNewTask?.()}
             >
-              <span className="pico">◇</span>
-              <span className="pid">{d.id}</span>
-              <span className="ptitle">{d.feature}</span>
-            </div>
-          ))}
+              ＋ 新建任务
+            </button>
+          ) : (
+            drafts.map((d) => (
+              <div
+                key={d.id}
+                className="parcel"
+                data-testid={`dock-${d.id}`}
+                draggable
+                onDragStart={(e) => onParcelDragStart(e, d.id)}
+              >
+                <span className="pico">◇</span>
+                <span className="pid">{d.id}</span>
+                <span className="ptitle">{d.feature}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Office context menu (author && !replaying). Reuses the .canvas-ctx
+          frosted shell; the menu semantics here are Office-specific (pane:
+          New task/feature/fit view; desk: one dispatch entry per draft). */}
+      {menu && dropDispatch && (
+        <div
+          className="canvas-ctx"
+          data-testid="office-ctx"
+          style={{ left: menu.x, top: menu.y }}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {menu.kind === "pane" && (
+            <>
+              <button
+                className="ci"
+                data-testid="office-ctx-new-task"
+                onClick={() => { onOpenNewTask?.(); setMenu(null); }}
+              >
+                <span className="ci-ic">＋</span>New task
+              </button>
+              <button
+                className="ci"
+                data-testid="office-ctx-new-feature"
+                onClick={() => { onOpenNewFeature?.(); setMenu(null); }}
+              >
+                <span className="ci-ic">▭</span>New feature
+              </button>
+              <div className="ci-sep" />
+              <button
+                className="ci"
+                data-testid="office-ctx-fit"
+                onClick={() => { fitView({ duration: 200 }); setMenu(null); }}
+              >
+                <span className="ci-ic">⊡</span>fit view
+              </button>
+            </>
+          )}
+          {menu.kind === "desk" && (
+            drafts.length === 0 ? (
+              <div className="ci" style={{ opacity: 0.6 }}>无 draft 可派发</div>
+            ) : (
+              drafts.map((d) => (
+                <button
+                  key={d.id}
+                  className="ci hot"
+                  data-testid={`office-ctx-dispatch-${d.id}`}
+                  onClick={() => { onDispatchDraft(d, menu.seatId); setMenu(null); }}
+                >
+                  <span className="ci-ic">⚡</span>派发 {d.id} → {menu.seatId}
+                </button>
+              ))
+            )
+          )}
         </div>
       )}
     </div>

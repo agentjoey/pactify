@@ -666,6 +666,25 @@ body {
 .office-dock .dt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-text-3); margin-bottom: 7px; }
 .office-dock .parcel { cursor: grab; --st: var(--color-text-2); }
 .office-dock .parcel:active { cursor: grabbing; }
+/* Empty-state create entry (zero drafts) — opens the TaskEditor (Task 4). */
+.office-dock .dock-new {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  border: 1px dashed var(--color-border-strong); border-radius: 8px;
+  background: transparent; color: var(--color-text-2);
+  padding: 7px 10px; font-size: 12px; cursor: pointer;
+  transition: border-color 0.12s var(--motion-ease), color 0.12s var(--motion-ease);
+}
+.office-dock .dock-new:hover { border-color: var(--color-text-3); color: var(--color-text-1); }
+/* Guided-dispatch pulse: clicking an idle desk with >1 draft flashes the dock
+   for ~1.5s to point the author at the drag-from-dock path (Task 4). */
+.office-dock.pulse { animation: dockpulse 1.5s var(--motion-ease); }
+@keyframes dockpulse {
+  0%, 100% { box-shadow: none; }
+  20%, 60% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-role-design) 70%, transparent), 0 0 18px color-mix(in srgb, var(--color-role-design) 45%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .office-dock.pulse { animation: none; }
+}
 
 /* Transit lane crawl — board5 `.lane`. */
 @keyframes crawlflow { to { stroke-dashoffset: -22; } }

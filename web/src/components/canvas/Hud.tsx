@@ -19,6 +19,14 @@ function minimapNodeColor(n: Node): string {
     const status = (n.data as { task?: { status?: string } }).task?.status ?? "assigned";
     return statusColorVar(status);
   }
+  // Office desks tint by their derived status: busy=success, review/waiting=warn,
+  // idle (and anything else) recedes to text-3.
+  if (n.type === "desk") {
+    const status = (n.data as { desk?: { status?: string } }).desk?.status;
+    if (status === "busy") return "var(--color-success)";
+    if (status === "review_due" || status === "waiting") return "var(--color-warn)";
+    return "var(--color-text-3)";
+  }
   // drafts + features + anything else recede.
   return "var(--color-text-3)";
 }

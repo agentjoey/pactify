@@ -65,4 +65,18 @@ describe("canvas Toolbar (T7)", () => {
     const task = screen.getByRole("button", { name: /^.?Task$/ });
     expect(task).toBeDisabled();
   });
+
+  // Task 4: Office mode reuses the Toolbar for authoring but hides the comms
+  // lens pill (comms is a Plan-only display lens). showComms defaults true so
+  // Plan-mode callers are unaffected; Office passes showComms={false}.
+  it("showComms=false hides the comms pill (Office authoring chrome)", () => {
+    const { rerender } = render(<Toolbar {...props({ showComms: false })} />);
+    expect(screen.queryByTestId("comms-toggle")).toBeNull();
+    // Feature/Task authoring buttons remain.
+    expect(screen.getByRole("button", { name: /Feature/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^.?Task$/ })).toBeInTheDocument();
+    // Default (omitted) → comms pill present.
+    rerender(<Toolbar {...props()} />);
+    expect(screen.getByTestId("comms-toggle")).toBeInTheDocument();
+  });
 });

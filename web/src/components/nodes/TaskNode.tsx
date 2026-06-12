@@ -1,12 +1,6 @@
 import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
-import type { CSSProperties } from "react";
 import type { Task } from "../../lib/types";
 import { TaskCard } from "../TaskCard";
-
-// HANDLE_STYLE enlarges the connect hit area to ≥12px (was the React Flow
-// default ~6px dot). Visibility is driven by the `.task-handle` CSS (hidden
-// until node hover / active connection).
-const HANDLE_STYLE: CSSProperties = { width: 12, height: 12 };
 
 // TaskNode renders both committed tasks and in-flight drafts (data.draft) by
 // wrapping the shared TaskCard genome in React Flow Handles. The pulse / comms
@@ -58,9 +52,11 @@ export function TaskNode({ id, data }: NodeProps) {
       <Handle
         type="target"
         position={Position.Top}
-        className="task-handle"
-        style={HANDLE_STYLE}
-      />
+        className="task-port task-port-in"
+        isConnectableStart={false}
+      >
+        <span className="port-mark" />
+      </Handle>
       <TaskCard
         task={task}
         ownerRoles={d.ownerRoles}
@@ -97,9 +93,10 @@ export function TaskNode({ id, data }: NodeProps) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="task-handle"
-        style={HANDLE_STYLE}
-      />
+        className="task-port task-port-out"
+      >
+        <span className="port-mark" />
+      </Handle>
     </div>
   );
 }

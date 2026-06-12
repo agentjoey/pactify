@@ -42,6 +42,8 @@ import { Toolbar } from "./canvas/Toolbar";
 import { Hud } from "./canvas/Hud";
 import { AntEdge } from "./canvas/edges/AntEdge";
 import { OfficeView } from "./canvas/OfficeView";
+import { ConnectionLine } from "./canvas/ConnectionLine";
+import { ConnectingFlag } from "./canvas/ConnectingFlag";
 import { CanvasSkeleton } from "./Skeleton";
 
 // CanvasMode picks which surface the stage shows. Office (agents-as-subject) is
@@ -870,7 +872,7 @@ export function Canvas({
   return (
     <div
       ref={stageRef}
-      className={`canvas-stage relative flex-1${draggingDraft ? " dragging-draft" : ""}${focusFeature ? " focus-active" : ""}`}
+      className={`canvas-stage relative flex-1${author && !replaying ? " author" : ""}${draggingDraft ? " dragging-draft" : ""}${focusFeature ? " focus-active" : ""}`}
       data-testid="canvas-root"
       data-focus={focusFeature ?? undefined}
     >
@@ -992,6 +994,7 @@ export function Canvas({
         onPaneClick={() => setMenu(null)}
         onConnect={onConnect}
         isValidConnection={isValidConnection}
+        connectionLineComponent={ConnectionLine}
         connectionRadius={30}
         nodesDraggable={author}
         nodesConnectable={author}
@@ -1012,6 +1015,7 @@ export function Canvas({
         style={{ background: "transparent" }}
       >
         <FitOnEntry project={project} ready={displayNodes.length > 0} />
+        <ConnectingFlag stageRef={stageRef} />
         <Hud />
         <SnapGuides guides={guides} />
       </ReactFlow>

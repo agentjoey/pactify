@@ -244,32 +244,63 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-/* Task connect handles (T8) — enlarged hit area, hidden until the node is
-   hovered or a connection is being dragged (then any node shows its handles so
-   the author can aim). board2-canvas-v2 connect-UX (acceptance feedback 2.5). */
-.react-flow__handle.task-handle {
-  width: 12px;
-  height: 12px;
+/* Task connect ports (Canvas P0 §2) — Dify / Easy-Connect bar handles. The
+   handle is a full-width, 16px-tall TRANSPARENT hit strip glued to the card's
+   top (target) / bottom (source) edge; a small central `.port-mark` is the only
+   visible affordance (default half-shown so the port is DISCOVERABLE without
+   hover, unlike the old opacity:0 dot). Hover the strip → mark enlarges + lights.
+   Connecting state uses React Flow v12's REAL handle classes (`connectingfrom` /
+   `valid`); the canvas-level `.connecting` class is added by <ConnectingFlag>
+   (v12 applies no connection-state class at the root/pane). */
+.react-flow__handle.task-port {
+  width: 100%;
+  height: 16px;
+  left: 0;
+  transform: none;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  min-width: 0;
+  min-height: 0;
+}
+.task-port-in { top: -8px; }
+.task-port-out { bottom: -8px; }
+.task-port .port-mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
   background: var(--color-role-design);
-  border: 2px solid var(--color-bg-page);
-  opacity: 0;
+  opacity: 0.45;
   transition: opacity 0.12s var(--motion-ease), transform 0.12s var(--motion-ease);
 }
-.react-flow__node:hover .react-flow__handle.task-handle,
-.react-flow__handle.task-handle.connecting,
-.react-flow__handle.task-handle:hover {
+.task-port:hover .port-mark {
   opacity: 1;
+  transform: translate(-50%, -50%) scale(1.3);
 }
-.react-flow__handle.task-handle:hover { transform: scale(1.25); }
-/* While a connection drag is active, reveal every node's handles + ring valid
-   targets so the magnetic snap target is obvious. */
-.react-flow.connecting .react-flow__handle.task-handle { opacity: 0.85; }
+/* While a connection is dragged, light up every node's INPUT port so the valid
+   drop targets are obvious (the canvas-level class comes from ConnectingFlag). */
+.connecting .task-port-in .port-mark { opacity: 0.9; }
+/* v12 real handle classes: the source the drag started from, and a hovered
+   valid target — both get the dev role color. */
+.react-flow__handle.task-port.connectingfrom .port-mark,
+.react-flow__handle.task-port.valid .port-mark {
+  opacity: 1;
+  background: var(--color-role-dev);
+}
+/* Observer / replay surfaces must NOT show the port marks (they aren't
+   interactive there — a visible mark would falsely invite a connection). The
+   stage gets the `author` class only when author && !replaying. */
+.canvas-stage:not(.author) .port-mark { display: none; }
 .task-node.connect-target {
   border-radius: 12px;
   box-shadow: 0 0 0 2px var(--color-role-dev), 0 0 14px color-mix(in srgb, var(--color-role-dev) 45%, transparent);
 }
 @media (prefers-reduced-motion: reduce) {
-  .react-flow__handle.task-handle { transition: none; }
+  .task-port .port-mark { transition: none; }
 }
 
 /* Context menu (T8) — board2-canvas-v2 `.ctx`. Frosted, Kbd hints. */

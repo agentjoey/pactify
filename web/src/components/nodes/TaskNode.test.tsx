@@ -12,26 +12,49 @@ function renderNode(data: Record<string, unknown>) {
   return render(
     <ReactFlowProvider>
       <div style={{ width: 400, height: 400 }}>
-        <ReactFlow nodes={nodes} edges={[]} nodeTypes={nodeTypes} />
+        <ReactFlow nodes={nodes} edges={[]} nodeTypes={nodeTypes} nodesConnectable />
       </div>
     </ReactFlowProvider>,
   );
 }
 
-describe("TaskNode connect handles (T8)", () => {
-  it("renders enlarged source + target handles with the .task-handle class", () => {
+describe("TaskNode bar connect handles", () => {
+  it("renders a top (target) and bottom (source) bar handle, each with a .port-mark", () => {
     const { container } = renderNode({
       task: { id: "T1", owner: "bob", reviewer: "alice", status: "assigned", spec: "", evidence: "" },
     });
-    const handles = container.querySelectorAll(".react-flow__handle.task-handle");
-    expect(handles.length).toBe(2);
-    // Hit area enlarged to ≥12px (set via inline style).
-    handles.forEach((h) => {
-      expect((h as HTMLElement).style.width).toBe("12px");
-      expect((h as HTMLElement).style.height).toBe("12px");
+    const inPort = container.querySelector(".react-flow__handle.task-port.task-port-in");
+    const outPort = container.querySelector(".react-flow__handle.task-port.task-port-out");
+    expect(inPort).not.toBeNull();
+    expect(outPort).not.toBeNull();
+    // Each bar carries a central mark element.
+    expect(inPort!.querySelector(".port-mark")).not.toBeNull();
+    expect(outPort!.querySelector(".port-mark")).not.toBeNull();
+    // Source/target wiring preserved.
+    expect(inPort!.classList.contains("target")).toBe(true);
+    expect(outPort!.classList.contains("source")).toBe(true);
+  });
+
+  it("the target (in) bar is not a connection START handle (isConnectableStart=false)", () => {
+    const { container } = renderNode({
+      task: { id: "T1", owner: "bob", reviewer: "alice", status: "assigned", spec: "", evidence: "" },
     });
-    // A source and a target handle are present.
-    expect(container.querySelector(".react-flow__handle.source")).not.toBeNull();
-    expect(container.querySelector(".react-flow__handle.target")).not.toBeNull();
+    // React Flow v12 renders connectablestart on handles that can START a
+    // connection. isConnectableStart={false} on the target means it can only be a
+    // drop end — so it carries connectableend but NOT connectablestart.
+    const inPort = container.querySelector(".react-flow__handle.task-port.task-port-in")!;
+    const outPort = container.querySelector(".react-flow__handle.task-port.task-port-out")!;
+    expect(inPort.classList.contains("connectablestart")).toBe(false);
+    expect(outPort.classList.contains("connectablestart")).toBe(true);
+  });
+
+  it("keeps the dispatch affordance + not-joined badge for drafts", () => {
+    const { getByTestId } = renderNode({
+      draft: true,
+      onDispatch: () => {},
+      commsNotJoined: true,
+    });
+    expect(getByTestId("dispatch-btn")).not.toBeNull();
+    expect(getByTestId("notjoined-badge")).not.toBeNull();
   });
 });

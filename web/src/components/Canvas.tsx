@@ -249,6 +249,11 @@ export function Canvas({
   // Dispatch target: a draft dropped onto a seat.
   const [dispatch, setDispatch] = useState<{ draft: Draft; owner?: string } | undefined>(undefined);
   const [draggingDraft, setDraggingDraft] = useState(false);
+  // A connection drag is in progress (lifted from ConnectingFlag, which reads
+  // useConnection inside <ReactFlow>). Folded into the stage className below so
+  // it survives Canvas re-renders — a direct classList.toggle on the stage would
+  // be clobbered the next time the controlled className is rewritten.
+  const [connecting, setConnecting] = useState(false);
 
   // Context menu (T8) — open position + target, gated to author && !replaying.
   const [menu, setMenu] = useState<MenuTarget | null>(null);
@@ -872,7 +877,7 @@ export function Canvas({
   return (
     <div
       ref={stageRef}
-      className={`canvas-stage relative flex-1${author && !replaying ? " author" : ""}${draggingDraft ? " dragging-draft" : ""}${focusFeature ? " focus-active" : ""}`}
+      className={`canvas-stage relative flex-1${author && !replaying ? " author" : ""}${draggingDraft ? " dragging-draft" : ""}${focusFeature ? " focus-active" : ""}${connecting ? " connecting" : ""}`}
       data-testid="canvas-root"
       data-focus={focusFeature ?? undefined}
     >
@@ -1015,7 +1020,7 @@ export function Canvas({
         style={{ background: "transparent" }}
       >
         <FitOnEntry project={project} ready={displayNodes.length > 0} />
-        <ConnectingFlag stageRef={stageRef} />
+        <ConnectingFlag onChange={setConnecting} />
         <Hud />
         <SnapGuides guides={guides} />
       </ReactFlow>

@@ -1,10 +1,11 @@
 import { render } from "@testing-library/react";
-import { useRef, type RefObject } from "react";
 import { describe, it, expect, vi } from "vitest";
 
 // Drive useConnection().inProgress directly so we can assert ConnectingFlag
-// toggles the canvas-level `connecting` class on the stage element. v12 applies
-// NO connection-state class at the root/pane level — the stage class is ours.
+// reports the canvas-level "a connection is dragging" signal UP via onChange.
+// v12 applies NO connection-state class at the root/pane level — Canvas folds the
+// reported flag into the (controlled) stage className, so the flag is lifted, not
+// toggled directly on the element (which a re-render would clobber).
 const connState = { inProgress: false };
 vi.mock("@xyflow/react", () => ({
   useConnection: () => ({ inProgress: connState.inProgress }),
@@ -12,30 +13,20 @@ vi.mock("@xyflow/react", () => ({
 
 import { ConnectingFlag } from "./ConnectingFlag";
 
-// Harness: a stage div + a ConnectingFlag bound to its ref. Re-rendering with a
-// new `inProgress` flips the class (no React state lift — direct classList).
-function Harness() {
-  const stageRef = useRef<HTMLDivElement>(null);
-  return (
-    <div ref={stageRef} data-testid="stage" className="canvas-stage">
-      <ConnectingFlag stageRef={stageRef as RefObject<HTMLDivElement>} />
-    </div>
-  );
-}
-
 describe("ConnectingFlag", () => {
-  it("adds `connecting` to the stage while a connection is in progress, removes it after", () => {
+  it("reports inProgress via onChange and updates it as the connection toggles", () => {
     connState.inProgress = false;
-    const { getByTestId, rerender } = render(<Harness />);
-    const stage = getByTestId("stage");
-    expect(stage.classList.contains("connecting")).toBe(false);
+    const onChange = vi.fn();
+    const { rerender } = render(<ConnectingFlag onChange={onChange} />);
+    // Initial effect fires with the current (false) flag.
+    expect(onChange).toHaveBeenLastCalledWith(false);
 
     connState.inProgress = true;
-    rerender(<Harness />);
-    expect(stage.classList.contains("connecting")).toBe(true);
+    rerender(<ConnectingFlag onChange={onChange} />);
+    expect(onChange).toHaveBeenLastCalledWith(true);
 
     connState.inProgress = false;
-    rerender(<Harness />);
-    expect(stage.classList.contains("connecting")).toBe(false);
+    rerender(<ConnectingFlag onChange={onChange} />);
+    expect(onChange).toHaveBeenLastCalledWith(false);
   });
 });

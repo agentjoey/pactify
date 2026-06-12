@@ -263,8 +263,11 @@ body {
   min-width: 0;
   min-height: 0;
 }
-.task-port-in { top: -8px; }
-.task-port-out { bottom: -8px; }
+/* Compound `.react-flow__handle.task-port-*` (0,2,0) so these always beat RF's
+   own `.react-flow__handle-top/bottom` (0,1,0) regardless of stylesheet load
+   order — RF's style.css may load after ours. */
+.react-flow__handle.task-port-in { top: -8px; }
+.react-flow__handle.task-port-out { bottom: -8px; }
 .task-port .port-mark {
   position: absolute;
   left: 50%;

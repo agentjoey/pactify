@@ -448,6 +448,15 @@ export function placeNew(
   const saved = layout.positions ?? {};
   const add: Record<string, { x: number; y: number }> = {};
 
+  // Ids present in the CURRENT graph (visible nodes). Used to filter the
+  // occupancy seeding below: a saved layout entry whose id is NOT in the graph
+  // is an "orphan" (e.g. a node temporarily gone during replay(?at)) and must
+  // NOT occupy a grid slot — an invisible node should not block placement of a
+  // visible one. NOTE: we only skip it from the occupancy POOLS; the orphan
+  // entry itself stays in layout.positions untouched (it is that node's position
+  // MEMORY for when it reappears — never delete/prune it here).
+  const graphIds = new Set(graph.nodes.map((n) => n.id));
+
   // Occupancy pools seeded from already-saved entries, split by node kind so a
   // feature only avoids features and a child only avoids its own feature's
   // children. Children are stored parent-relative in layout, so the saved values
@@ -459,6 +468,7 @@ export function placeNew(
   const parentOf = new Map<string, string>();
   for (const n of graph.nodes) if (n.parentId) parentOf.set(n.id, n.parentId);
   for (const [id, p] of Object.entries(saved)) {
+    if (!graphIds.has(id)) continue; // orphan entry: keep in layout, exclude from occupancy
     if (id.startsWith("feature:")) {
       featureTaken.push(p);
     } else if (id.startsWith("task:") || id.startsWith("draft:")) {
@@ -471,6 +481,11 @@ export function placeNew(
     }
   }
 
+  // Defensive de-dup: skip any id that appears more than once in graph.nodes
+  // (first wins). deriveGraph already guarantees unique ids; this guards against
+  // a malformed graph silently double-counting columns/rows or overwriting `add`.
+  const seenIds = new Set<string>();
+
   // Running feature column index: the Nth feature node placed (committed first,
   // then draft features in graph order) lands in column (N+1)*COL_W — matching
   // v1's (fi+1)/(committed+1+dfi) scheme since deriveGraph emits them in order.
@@ -481,6 +496,8 @@ export function placeNew(
   // doesn't reuse a column index a saved feature already consumed.
 
   for (const n of graph.nodes) {
+    if (seenIds.has(n.id)) continue; // dup id (first wins) — defensive, see above
+    seenIds.add(n.id);
     if (n.type === "seat") {
       if (saved[n.id]) continue;
       const i = seatIndex(graph.nodes, n.id);
@@ -585,6 +602,17 @@ export function mergeNodes(
         height: Math.max(def.height, ext.h + PAD),
       };
       if (existing) {
+        // Reference stability: when nothing observable changed — same data
+        // reference AND same computed style (width/height) — return the prev
+        // object untouched so React Flow sees an identical reference and skips
+        // re-render. NOTE: deriveGraph currently produces a FRESH `data` object
+        // every call, so `existing.data === n.data` is rarely true today; deeper
+        // structural sharing in deriveGraph is a P1 perf item (spec §6). This
+        // establishes the contract now so the merge layer is ready for it.
+        const ex = existing.style as { width?: number; height?: number } | undefined;
+        if (existing.data === n.data && ex?.width === style.width && ex?.height === style.height) {
+          return existing;
+        }
         return { ...existing, data: n.data, style };
       }
       return {
@@ -597,6 +625,10 @@ export function mergeNodes(
     }
     // seat / task / draft
     if (existing) {
+      // Reference stability: same data reference → return prev untouched (no new
+      // object) so RF skips re-render. As above, deriveGraph produces fresh data
+      // each call today (P1 perf item, spec §6); this fixes the contract now.
+      if (existing.data === n.data) return existing;
       return { ...existing, data: n.data };
     }
     const node: Node = {

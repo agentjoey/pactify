@@ -693,6 +693,31 @@ describe("placeNew", () => {
     const second = placeNew(layout2, { nodes });
     expect(second).toEqual({});
   });
+
+  it("an orphan layout entry (id not in graph) does not block placement and is not returned", () => {
+    // Replay(?at) can leave a saved position for a node that has temporarily
+    // vanished from the graph. That orphan entry must NOT occupy a grid slot
+    // (an invisible node shouldn't push a visible one aside), and placeNew must
+    // never emit the orphan id in its result.
+    const { nodes } = deriveGraph(state, noDrafts);
+    const layout: LayoutJSON = {
+      v: LAYOUT_V,
+      positions: {
+        // orphan feature sitting on F2's natural grid column (x:640)
+        "feature:GHOST": { x: 640, y: 0 },
+        // orphan child sitting on T2's natural parent-relative row (y:164) of F1
+        "task:GHOSTKID": { x: 16, y: 164 },
+      },
+    };
+    const add = placeNew(layout, { nodes });
+    // orphan ids are never emitted
+    expect("feature:GHOST" in add).toBe(false);
+    expect("task:GHOSTKID" in add).toBe(false);
+    // placement is UNaffected by the orphans: F2 lands on its natural column…
+    expect(add["feature:F2"]).toEqual({ x: 640, y: 0 });
+    // …and T2 takes its natural row-1 slot (orphan child did not push it down)
+    expect(add["task:T2"]).toEqual({ x: 16, y: 164 });
+  });
 });
 
 describe("mergeNodes", () => {
@@ -803,6 +828,57 @@ describe("mergeNodes", () => {
       expect("handles" in n).toBe(false);
       // new nodes (no prev) must not seed measured
       expect(n.measured).toBeUndefined();
+    }
+  });
+
+  it("an existing node's prev measured is preserved on the merge output (existing path)", () => {
+    // The anti-regression test above only covers NEW nodes. This covers the
+    // existing-node path: a prev node carrying RF-written `measured` must keep
+    // it verbatim through mergeNodes (RF's own write-back, not re-seeded/dropped).
+    const graph = graphOf();
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: placeNew({ v: LAYOUT_V }, graph) };
+    const prev: Node[] = [
+      {
+        id: "task:T1",
+        type: "task",
+        position: { x: 16, y: 44 },
+        data: { stale: true },
+        parentId: "feature:F1",
+        measured: { width: 123, height: 45 },
+      },
+    ];
+    const out = mergeNodes(prev, graph, layout);
+    const t1 = out.find((n) => n.id === "task:T1")!;
+    expect(t1.measured).toEqual({ width: 123, height: 45 });
+  });
+
+  it("a draft targeting a non-existent feature gets parentId feature:<ghost>; placeNew is safe + idempotent", () => {
+    // A draft can reference a feature that isn't in state yet. The node still
+    // parents to feature:<ghost>; placeNew must not throw and must be idempotent.
+    const drafts: Draft[] = [{ id: "D1", specMd: "x", feature: "ghost", deps: [] }];
+    const graph = graphOf(drafts);
+    const d1 = graph.nodes.find((n) => n.id === "draft:D1")!;
+    expect(d1.parentId).toBe("feature:ghost");
+
+    expect(() => placeNew({ v: LAYOUT_V }, graph)).not.toThrow();
+    const first = placeNew({ v: LAYOUT_V }, graph);
+    expect("draft:D1" in first).toBe(true);
+    // idempotent: re-running with the first batch merged in yields nothing new
+    const second = placeNew({ v: LAYOUT_V, positions: { ...first } }, graph);
+    expect(second).toEqual({});
+  });
+
+  it("reference identity: unchanged data + unchanged style returns the prev node object (Object.is)", () => {
+    const graph = graphOf();
+    const layout: LayoutJSON = { v: LAYOUT_V, positions: placeNew({ v: LAYOUT_V }, graph) };
+    // First merge produces the canonical nodes with the graph's data references.
+    const first = mergeNodes([], graph, layout);
+    // Second merge with the SAME graph (same data references) + same prev: every
+    // node should come back as the identical object (no new allocation).
+    const second = mergeNodes(first, graph, layout);
+    const firstById = new Map(first.map((n) => [n.id, n]));
+    for (const n of second) {
+      expect(Object.is(n, firstById.get(n.id))).toBe(true);
     }
   });
 });

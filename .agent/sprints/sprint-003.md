@@ -194,3 +194,8 @@ isValidConnection 拦截后 onConnect 的三条 notice 分支全部不可达(提
 **Status:** ✅ Done（feature agents shipped via `pactify orchestrate`，本地 main，2026-06-13）
 **功能**：本机 agent 扫描（installed 检测，注入探针可测）+ 机器级注册表（~/.pactify/agents.json）+ CLI（agent scan/register/unregister）+ serve `/api/agents` 端点 + 前端 Agents 面板（onboarding 空态 + 管理器）。
 **元成果**：**orchestrate 第一次真 LLM 全自主交付完整 feature，零人工介入**。5 棒（scan/reg/cli/serve/ui）由 claude（claude -p）+ opencode（opencode run）自主开发+评审+合并。一个 agent 多角色 + per-task 角色翻转（scan owner=claude/reviewer=opencode，余反之）实战。预飞实测发现并修 #11（claude-code runner 缺 --dangerously-skip-permissions）。观测记录 docs/dogfood/2026-06-13-orchestrate-e2e-log.md。
+
+### T14: planner（pactify plan 自动规划）+ orchestrate 混编模型压测 [HIGH]
+**Status:** ✅ Done（feature planner shipped via orchestrate，本地 main，2026-06-13）
+**功能**：`pactify plan "<目标>"` 驱动 planner agent 生成 pact 任务图（manifest+规格）→ 人审/--auto → `plan apply` → orchestrate。internal/planner（manifest/prompt/apply）+ cmd_plan。
+**元成果**：第三次 orchestrate 自主交付，**首次按复杂度混编模型**（核心 claude/opus-4-8、标准 opencode/deepseek-v4-pro）。压出 4 个真问题：#1 agent 挂死无超时（已修 --run-timeout）、#2 orchestrator 接手错模式（backlog 设计）、#3 分支错位假阴性、#4 merge 缺 acting seat（待 --as 正解）。**递归 dogfood**：planner 用一句话规划 #3（liveview），生成的图过校验门且真懂代码库（投影架构/项目作用域端点）——#2 端到端验收。观测 docs/dogfood/2026-06-13-planner-e2e-log.md。

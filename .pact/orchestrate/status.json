@@ -1,1 +1,1 @@
-{"feature":"agentcfgserve","task":"t-agentcfg-serve","seat":"claude","action":"run_reviewer","phase":"reviewer reviewing","escalated":false,"done":false,"total":1,"accepted":0,"iter":1,"updated_at":"20260614-022412"}
+{"feature":"","task":"","seat":"","action":"done","phase":"done","escalated":false,"done":true,"total":1,"accepted":1,"iter":2,"updated_at":"20260614-022532"}

@@ -6,6 +6,8 @@ import { relativeTime } from "../../lib/ops";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
+import { Alert } from "../ui/Alert";
+import { EmptyState } from "../ui/EmptyState";
 
 // Projects is the registry panel: one card per registered project (status badge,
 // seat count, last activity), plus a Register form and per-card Remove. The
@@ -65,12 +67,18 @@ export function Projects({
 
   return (
     <section data-testid="ops-projects" className="mb-4">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase mb-2">Projects · registry</h2>
-      {loadErr && <p className="text-[11px] text-[#f85149] whitespace-pre-wrap mb-2">{loadErr}</p>}
+      <h2 className="text-[10px] font-semibold text-[var(--color-text-3)] uppercase mb-2">Projects · registry</h2>
+      {loadErr && (
+        <div className="mb-2">
+          <Alert tone="danger" onRetry={() => setTick((n) => n + 1)}>
+            {loadErr}
+          </Alert>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5 mb-3">
         {entries.length === 0 && !loadErr && (
-          <p className="text-[11px] text-gray-600">no registered projects</p>
+          <EmptyState title="还没有注册的项目" hint="注册一个有 .pact/ 的 git repo（下方表单），dashboard 即可观察它。" />
         )}
         {entries.map((e) => (
           <div

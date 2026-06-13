@@ -63,3 +63,15 @@ describe("Seats", () => {
     expect(screen.queryByText(/^ v ·/)).toBeNull();
   });
 });
+
+describe("Seats polish states", () => {
+  beforeEach(() => getSeats.mockReset());
+
+  it("shows an EmptyState when there are no seats", async () => {
+    getSeats.mockResolvedValue([]);
+    render(<Seats project="p1" />);
+    await waitFor(() => {
+      expect(screen.getByText("还没有座席")).toBeInTheDocument();
+    });
+  });
+});

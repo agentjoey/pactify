@@ -7,6 +7,9 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Badge } from "../ui/Badge";
+import { Alert } from "../ui/Alert";
+import { EmptyState } from "../ui/EmptyState";
+import { Spinner } from "../ui/Spinner";
 
 // WireModal is the inline form for wiring one kind: seat id + roles, with a
 // client-side slug check on the seat (server re-validates). Desktop (global)
@@ -195,6 +198,7 @@ export function Wiring({
   const [err, setErr] = useState("");
   const [open, setOpen] = useState<string>("");
   const [localTick, setLocalTick] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!project) {
@@ -202,16 +206,27 @@ export function Wiring({
       return;
     }
     let alive = true;
+    setLoading(true);
     getWiring(project)
       .then((w) => { if (alive) { setRows(w); setErr(""); } })
-      .catch((e) => { if (alive) setErr(e instanceof Error ? e.message : String(e)); });
+      .catch((e) => { if (alive) setErr(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [project, refreshKey, localTick]);
 
   return (
     <section data-testid="ops-wiring" className="mb-4">
-      <h2 className="text-[10px] font-semibold text-[var(--color-text-3)] uppercase mb-2">Wiring · {project || "(no project)"}</h2>
-      {err && <p className="text-[11px] text-[var(--color-danger)] whitespace-pre-wrap">{err}</p>}
+      <h2 className="flex items-center gap-2 text-[10px] font-semibold text-[var(--color-text-3)] uppercase mb-2">
+        Wiring · {project || "(no project)"} {loading && <Spinner size="xs" />}
+      </h2>
+      {err && (
+        <Alert tone="danger" onRetry={() => setLocalTick((t) => t + 1)}>
+          {err}
+        </Alert>
+      )}
+      {!err && !loading && rows.length === 0 && (
+        <EmptyState title="无 agent wiring" hint="把 agent 接进项目：pactify agent add <kind>，或用 Setup 视图。" />
+      )}
       {rows.map((row) => (
         <div key={row.kind} data-testid={`wiring-row-${row.kind}`} className="border-t border-[var(--color-border-subtle)] py-1.5">
           <div className="flex items-center gap-2 text-[11px]">

@@ -1,6 +1,6 @@
 # Task t2 · watcher-hook
 
-**Feature:** relay (M3.4) · **Owner:** gemini-worker · **Reviewer:** claude · **Deps:** t1（relay client 已 accepted）
+**Feature:** relay (M3.4) · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** t1（relay client 已 accepted）
 
 ## 目标
 把 t1 的 relay client 接进 serve——watcher 每广播一条事件就旁路一份给 relay；`pactify serve` 暴露 `--relay-url`/`--relay-token`（env `PACT_RELAY_TOKEN` 兜底）。**relay 未配置时 serve 行为字节级不变**（硬约束）。
@@ -23,9 +23,9 @@
 
 ## 验收命令
 ```
-cd /Users/xtation/AgentWorks/Code_Claude/pactify && go test ./internal/serve/ && go build ./... && ./pactify serve --help 2>&1 | grep relay
+cd /Users/xtation/AgentWorks/Code_Claude/pactify && go test ./internal/serve/ && go build ./... && go run ./cmd/pactify serve --help 2>&1 | grep relay
 ```
-（注：你是 antigravity/MCP 座席——经 pact MCP 工具 join/checkpoint。t1 accepted 后本 task deps 解锁，STATE.yml 会显示 t2 可领。）
+（t1 已 accepted，本 task deps 已解锁；t1 交付的 relay.go 在 newRelay 内自启后台 goroutine，SetRelay 只需调 newRelay 即可，无需额外 start。）
 
 ## 完成方式
-TDD。完成后经 MCP `checkpoint` 工具置 awaiting_review，evidence 附测试 + build 输出。不要自标 accepted。
+TDD。完成后 `pactify checkpoint` 置 awaiting_review，evidence 附 go test + build 输出。不要自标 accepted——reviewer 是 claude。

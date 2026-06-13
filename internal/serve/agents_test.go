@@ -154,6 +154,126 @@ func TestAgentsUnknownKind(t *testing.T) {
 	respDel.Body.Close()
 }
 
+func TestAgentConfigGetUnregistered(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("PACTIFY_HOME", home)
+	srv := New(nil)
+	ts := newTestServer(t, srv)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/agents/opencode/config")
+	if err != nil {
+		t.Fatalf("GET config: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("want 200 got %d", resp.StatusCode)
+	}
+	var dto struct {
+		Kind         string   `json:"kind"`
+		Registered   bool     `json:"registered"`
+		Drivable     bool     `json:"drivable"`
+		Model        string   `json:"model"`
+		AllowedTools []string `json:"allowed_tools"`
+		Restricted   bool     `json:"restricted"`
+		EffModel     string   `json:"effective_model"`
+		EffScoped    bool     `json:"effective_scoped"`
+	}
+	json.NewDecoder(resp.Body).Decode(&dto)
+	if dto.Registered {
+		t.Fatal("expected registered=false for unregistered opencode")
+	}
+	if !dto.Drivable {
+		t.Fatal("expected drivable=true for opencode")
+	}
+	if dto.EffModel == "" {
+		t.Fatal("expected non-empty effective_model (default)")
+	}
+}
+
+func TestAgentConfigGetUnknownKind(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("PACTIFY_HOME", home)
+	srv := New(nil)
+	ts := newTestServer(t, srv)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/agents/nope/config")
+	if err != nil {
+		t.Fatalf("GET config unknown: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("unknown kind: want 404 got %d", resp.StatusCode)
+	}
+}
+
+func TestAgentConfigSetAndGet(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("PACTIFY_HOME", home)
+	srv := New(nil)
+	ts := newTestServer(t, srv)
+	defer ts.Close()
+
+	// First, register opencode.
+	respReg := postJSON(t, ts.URL+"/api/agents/opencode/register", map[string]any{"label": "oc"})
+	if respReg.StatusCode != http.StatusOK {
+		t.Fatalf("register: want 200 got %d (%s)", respReg.StatusCode, errBody(t, respReg))
+	}
+	respReg.Body.Close()
+
+	// POST config.
+	respSet := postJSON(t, ts.URL+"/api/agents/opencode/config", map[string]any{
+		"model":         "deepseek/custom",
+		"restricted":    true,
+		"allowed_tools": []string{"Read", "Edit"},
+	})
+	if respSet.StatusCode != http.StatusOK {
+		t.Fatalf("config set: want 200 got %d (%s)", respSet.StatusCode, errBody(t, respSet))
+	}
+	var dto struct {
+		Kind         string   `json:"kind"`
+		Registered   bool     `json:"registered"`
+		Drivable     bool     `json:"drivable"`
+		Model        string   `json:"model"`
+		AllowedTools []string `json:"allowed_tools"`
+		Restricted   bool     `json:"restricted"`
+		EffModel     string   `json:"effective_model"`
+		EffScoped    bool     `json:"effective_scoped"`
+	}
+	json.NewDecoder(respSet.Body).Decode(&dto)
+	respSet.Body.Close()
+
+	if dto.Model != "deepseek/custom" {
+		t.Fatalf("model = %q, want deepseek/custom", dto.Model)
+	}
+	if !dto.Restricted {
+		t.Fatal("expected restricted=true")
+	}
+	if dto.EffModel != "deepseek/custom" {
+		t.Fatalf("effective_model = %q, want deepseek/custom", dto.EffModel)
+	}
+}
+
+func TestAgentConfigSetUnregistered(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("PACTIFY_HOME", home)
+	srv := New(nil)
+	ts := newTestServer(t, srv)
+	defer ts.Close()
+
+	resp := postJSON(t, ts.URL+"/api/agents/opencode/config", map[string]any{
+		"model": "deepseek/custom",
+	})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("unregistered config: want 400 got %d", resp.StatusCode)
+	}
+	if msg := errBody(t, resp); !strings.Contains(msg, "register") {
+		t.Fatalf("expected 'register' in error: %q", msg)
+	}
+	resp.Body.Close()
+}
+
 // newTestServer is a thin wrapper returning an httptest.Server.
 func newTestServer(t *testing.T, srv *Server) *httptest.Server {
 	t.Helper()

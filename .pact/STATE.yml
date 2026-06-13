@@ -152,3 +152,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/recipe-core.md
         evidence: === go build ./... === clean (no output)  === go test ./internal/recipe/... === === RUN   TestNames --- PASS === RUN   TestGet --- PASS (4 sub-tests: add-tests, review-harden, spec-to-plan, nope) === RUN   TestGetReturnsRecipeWithTasks --- PASS === RUN   TestExpand --- PASS (5 sub-tests: single task, two tasks, two tasks, empty goal, whitespace-only goal) === RUN   TestExpandSubstitutesGoal --- PASS === RUN   TestExpandPreservesDeps --- PASS === RUN   TestExpandDepsAreIndependentSlices --- PASS ok  github.com/agentjoey/pactify/internal/recipe  0.413s  === ./pactify recipe list === add-tests            给一个现有功能补测试 review-harden        实现 + 独立评审加固（两棒，第二棒依赖第一棒） spec-to-plan         把需求拆成设计 + 实现两棒  === ./pactify recipe show review-harden --goal 加缓存层 === --- task: t-impl deps=[] --- task: t-harden deps=[t-impl]  === go test ./... === 17/17 packages PASS, zero regressions === go vet ./... === clean  Files: internal/recipe/recipe.go (NEW), internal/recipe/recipe_test.go (NEW), cmd/pactify/cmd_recipe.go (NEW), cmd/pactify/commands.go (+newRecipeCmd)
+  - id: recipeserve
+    branch: feat-recipeserve
+    status: in_progress
+    tasks:
+      - id: t-recipe-serve
+        owner: oc-recipeserve
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/recipe-serve.md
+        evidence: null

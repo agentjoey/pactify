@@ -31,6 +31,13 @@ func (p *Project) agentID() (string, error) {
 	return id, nil
 }
 
+// StateProjection returns the current projected state for the repo (exported
+// wrapper around the internal projection used by the orchestrate driver).
+func (p *Project) StateProjection() (projection.State, error) {
+	st, _, err := p.state()
+	return st, err
+}
+
 func (p *Project) state() (projection.State, []event.Event, error) {
 	evs, err := event.ReadAll(paths.LogIn(p.dir))
 	if err != nil {

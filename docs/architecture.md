@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Last updated: 2026-06-09 | Status: Draft（地基决策已锁，CLI 待实现）
+> Last updated: 2026-06-13 | Status: Draft（地基决策已锁，CLI 待实现）
 
 ## Overview
 
@@ -42,6 +42,41 @@ agents ──┬─ shell:  pactify checkpoint/accept   (任何 agent，零依�
 
 - **shell 写入与 MCP 调用产出同一种事件** → 一套 schema 服务所有入口
 - **本地零依赖**（文件 + 单 binary），**云端只是在上面加 relay**，协议不变
+
+### M3.4 relay 接口
+
+`pactify serve` 内置 best-effort 异步 relay，将每个项目的 log 事件 POST 到可配端点。挂载点在 `drainNew` 中（`hub.broadcast` 之后，旁路非阻塞）：
+
+```
+pactify serve
+  └─ fsnotify → watchLoop → drainNew
+       ├─ hub.broadcast(id, line)    ← SSE 订阅者
+       └─ relay.enqueue(id, line)    ← 远端 relay 端点（可选）
+```
+
+**语义：**
+- **best-effort**：relay 失败/超时/排队满 不阻塞 SSE，不影响 offset 推进，不回传错误到 watcher。
+- **异步队列**：有界 256 条，FIFO；满时丢弃最旧条目并递增 `dropped` 计数器。
+- **重试**：单条最多 4 次尝试（1 次初始 + 3 次退避重试：1s、2s、4s），全部失败递增 `dropped` 后静默丢弃。
+- **可中断**：`stop()` 在重试间隙检查，不会卡死 shutdown。
+
+**配置：**
+- CLI flag：`serve --relay-url <url> [--relay-token <token>]`
+- 环境变量：`PACT_RELAY_URL`、`PACT_RELAY_TOKEN`
+- 空 URL（默认）= relay 禁用，`newRelay("","")` 返回 nil，`enqueue` 是安全空操作
+
+**线格式（POST JSON）：**
+```json
+{
+  "project": "pactify",
+  "event": { "event_id": "...", "event_type": "...", ... }
+}
+```
+- `Content-Type: application/json`
+- token 非空时附带 `Authorization: Bearer <token>`
+- event 行非合法 JSON 时，原始文本被转义为 JSON string 后放入 envelope，不 panic
+
+**端点要求：** HTTPS 端点；2xx 视为成功，4xx/5xx 触发重试；10s 超时。
 
 ### 事件 schema（草案，M1.1 定稿）
 
@@ -233,3 +268,12 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
   office zoom, office authoring chain, drag-during-SSE stability). CI `e2e` job is a
   required merge gate alongside vitest for canvas PRs; jsdom is no longer the
   authority on interaction correctness.
+
+### orchestrate 驱动器（autonomous loop, 2026-06-13, #9）
+源自 dogfood 头号发现 #9：协议把协调【内容】放进文件，但协调【时机】仍需人触发，人退化成调度器。`pactify orchestrate` 在产品层兑现"消灭人肉中继"。
+- **中心化串行驱动**（`internal/orchestrate`）：读 `.pact/log.jsonl` → `projection.Project` → `nextAction(纯函数)` → 在状态变迁 headless 拉起对应 agent → 重投影 → 循环，直到 feature shipped 或升级暂停。串行天然规避 F1 单工作树。
+- **nextAction 纯决策**（decide.go）：优先级 RunReviewer(awaiting_review) > RunOwner(assigned/changes_requested/**in_progress** + deps 全 accepted) > Merge(feature 全 accepted) > Done。in_progress 是可派态——`pactify join` 会把座席所有 assigned task 一次翻成 in_progress，未 checkpoint 的须重派（顺带给崩溃重试）。阈值不在此纯函数里（churning task 总有 action），由 loop 的 `tripped()` 在派发前执行。
+- **per-kind headless runner**（agent.Adapter.Runner）：opencode→`opencode run`、claude-code→`claude -p`、gemini-cli→`gemini -p`；GUI/desktop kind 无 runner → fail-closed。Runner 接口化（生产 exec 与测试 fake 共用）。座席→kind 经 `--seat-kind` 映射（kind 未持久化进协议态）。
+- **硬测试门**（gate.go）：merge 前 orchestrate 独立复跑 feature 的验收命令（task 规格 `verify:` 行，缺则全量 `go build && go test` 回退），不过不 merge——给 LLM 评审垫确定性安全网（LLM accept ≠ 可 merge）。
+- **升级=暂停非终止**：返工/失败阈值或硬门失败 → 写 `.pact/orchestrate/escalation-*.md` + 通知 + 暂停；人修后重跑续行。agent 瞬时崩溃算软失败（重试至 MaxFails），不杀驱动；ctx 取消透传。
+- **测试**：纯函数单测 + 注入 fake Runner/cmdExec 的端到端集成（happy/返工/升级/硬门拦截/崩溃软失败/dry-run），不用真 LLM。

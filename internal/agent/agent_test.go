@@ -66,3 +66,43 @@ func TestUnknownKind(t *testing.T) {
 		t.Fatal("unknown kind should not resolve")
 	}
 }
+
+func TestRunnerCLIKinds(t *testing.T) {
+	cases := []struct {
+		kind    string
+		command string
+		args    []string
+	}{
+		{"opencode", "opencode", []string{"run", "{briefing}"}},
+		{"claude-code", "claude", []string{"-p", "{briefing}"}},
+		{"gemini-cli", "gemini", []string{"-p", "{briefing}"}},
+	}
+	for _, tc := range cases {
+		a, ok := Get(tc.kind)
+		if !ok {
+			t.Fatalf("%s not registered", tc.kind)
+		}
+		rs, ok := a.Runner()
+		if !ok {
+			t.Fatalf("%s should have a headless runner", tc.kind)
+		}
+		if rs.Command != tc.command {
+			t.Fatalf("%s runner command = %q, want %q", tc.kind, rs.Command, tc.command)
+		}
+		if strings.Join(rs.Args, " ") != strings.Join(tc.args, " ") {
+			t.Fatalf("%s runner args = %v, want %v", tc.kind, rs.Args, tc.args)
+		}
+	}
+}
+
+func TestRunnerNoHeadless(t *testing.T) {
+	for _, kind := range []string{"antigravity", "claude-desktop", "codex-app", "codex-cli"} {
+		a, ok := Get(kind)
+		if !ok {
+			t.Fatalf("%s not registered", kind)
+		}
+		if _, ok := a.Runner(); ok {
+			t.Fatalf("%s is GUI/unverified and must have no headless runner", kind)
+		}
+	}
+}

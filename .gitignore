@@ -9,6 +9,8 @@ node_modules/
 web/node_modules/
 # Rust (fallback)
 target/
+# Session state
+data/
 # Secrets
 .env
 *.key

@@ -38,3 +38,24 @@ cat .agent/CURRENT.md
 1. .agent/CURRENT.md：补充 Version History 描述
 2. 更新 Current Sprint Summary
 3. 如有架构变更：更新 docs/architecture.md
+
+<!-- pact:begin (managed by pactify — edit outside this block) -->
+# pact protocol — seat `claude`
+
+This repo uses the **pact protocol** (v1). You are seat `claude`, roles: orchestrator,reviewer.
+
+**Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
+(status / join / assign / checkpoint / accept / changes / merge / list) and resources
+(`pact://state`, `pact://log`). Cold start: call `status`, then `join`
+(registers your seat and checks out your feature branch).
+
+**Fallback — shell** (if MCP is unavailable):
+```bash
+export PACT_AGENT_ID=claude
+pactify join claude --roles orchestrator,reviewer
+```
+then `pactify help` for the verbs.
+
+**The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
+feature cannot merge until all its tasks are accepted.
+<!-- pact:end -->

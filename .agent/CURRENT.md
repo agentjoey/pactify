@@ -2,7 +2,7 @@
 
 Version:        v0.3.0（✅ 已发布，首个 GitHub Release，2026-06-10）
 Sprint:         003
-Sprint Status:  🚧 进行中（M2.1-M2.4 ✅ + v0.3.0 + 站点v2 ✅ + Squad M3.1-M3.3b ✅ + Dashboard v2 ✅（PR #16-#19）+ Canvas P0 交互重构 ✅（PR #20-#22）；剩 M2.3 + M3.4）
+Sprint Status:  🚧 进行中（… + Canvas P0 ✅（PR #20-#22）+ M3.4 relay ✅（pact self-host dogfood，feature shipped）；剩 M2.3、relay/orchestrate 推 origin）
 Last Updated:   2026-06-12 by claude (fable-5 控制端)
 Sprint File:    .agent/sprints/sprint-003.md
 

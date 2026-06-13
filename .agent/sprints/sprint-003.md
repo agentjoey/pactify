@@ -189,3 +189,8 @@ isValidConnection 拦截后 onConnect 的三条 notice 分支全部不可达(提
 **Wave2**：Runner exec 接口（projection.Seat 无 Kind→显式 seatID+kind）/ 升级记录+Notifier / 主循环（5 集成用例 fake Runner 端到端）。审查抓 1 Critical（runner 崩溃曾杀全局→改软失败重试）+ 2 Important（Fails consecutive 重置、nil-Now 兜底）；并修真 bug：in_progress 须可派（join 翻态致多 task 搁浅），阈值彻底归位 loop。
 **Wave3**：CLI（--seat-kind 映射 + 生产默认 shellExec/CmdRunner/StdoutNotifier）+ 文档。
 **质量底线**：硬测试门独立于 LLM 评审（accept≠可 merge）；exec 全接口化杜绝测试桩入生产；升级暂停非终止。全仓 12 包 go test 绿。
+
+### T13: agent 扫描+注册（orchestrate 真 LLM e2e 验收）[HIGH]
+**Status:** ✅ Done（feature agents shipped via `pactify orchestrate`，本地 main，2026-06-13）
+**功能**：本机 agent 扫描（installed 检测，注入探针可测）+ 机器级注册表（~/.pactify/agents.json）+ CLI（agent scan/register/unregister）+ serve `/api/agents` 端点 + 前端 Agents 面板（onboarding 空态 + 管理器）。
+**元成果**：**orchestrate 第一次真 LLM 全自主交付完整 feature，零人工介入**。5 棒（scan/reg/cli/serve/ui）由 claude（claude -p）+ opencode（opencode run）自主开发+评审+合并。一个 agent 多角色 + per-task 角色翻转（scan owner=claude/reviewer=opencode，余反之）实战。预飞实测发现并修 #11（claude-code runner 缺 --dangerously-skip-permissions）。观测记录 docs/dogfood/2026-06-13-orchestrate-e2e-log.md。

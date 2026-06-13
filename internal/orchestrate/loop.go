@@ -37,6 +37,26 @@ type Options struct {
 	Notify   Notifier                   // injected escalation notifier
 	Now      func() string              // injected timestamp for escalation filenames
 	SeatKind func(seatID string) string // seat id → agent kind (prod parses roster, test injects)
+	// RunTimeout bounds a single agent run. A hung agent (e.g. its model stalls
+	// after finishing the work, never returning) would otherwise block the serial
+	// driver forever. On expiry the agent subprocess is killed and the run counts
+	// as a soft failure (retry → escalate). 0 = no timeout (tests use the fake
+	// runner which returns instantly).
+	RunTimeout time.Duration
+}
+
+// launchAgent runs one agent under an optional per-run timeout. The timeout is a
+// CHILD of ctx, so a per-run expiry cancels just that subprocess (soft failure),
+// while a parent-ctx cancellation (Ctrl-C) propagates. Callers distinguish the
+// two by checking the PARENT ctx.Err() after a non-nil return.
+func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief string) error {
+	runCtx := ctx
+	if opts.RunTimeout > 0 {
+		var cancel context.CancelFunc
+		runCtx, cancel = context.WithTimeout(ctx, opts.RunTimeout)
+		defer cancel()
+	}
+	return opts.Run.Run(runCtx, seatID, kind, brief, opts.Dir)
 }
 
 // Run drives the pact state machine for opts.Dir until the targeted work is
@@ -139,7 +159,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	reason := lastChangesReason(opts.Dir, act.Task)
 	brief := workerBrief(seatFor(st, act.Seat, seat), task, reason)
 
-	if runErr := opts.Run.Run(ctx, task.Owner, opts.kind(task.Owner), brief, opts.Dir); runErr != nil {
+	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
@@ -172,7 +192,7 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 	}
 	brief := reviewerBrief(projection.Seat{ID: act.Seat}, task)
 
-	if runErr := opts.Run.Run(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, opts.Dir); runErr != nil {
+	if runErr := opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}

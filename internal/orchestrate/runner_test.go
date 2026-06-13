@@ -50,8 +50,11 @@ func TestCmdRunner_Opencode(t *testing.T) {
 	if cap.name != "opencode" {
 		t.Fatalf("name = %q, want opencode", cap.name)
 	}
-	if len(cap.args) != 2 || cap.args[0] != "run" || cap.args[1] != "do the work" {
-		t.Fatalf("args = %v, want [run \"do the work\"]", cap.args)
+	// The exact flag list (model pin etc.) is agent.go's contract, tested in
+	// agent_test. Here we only assert the command resolves, "run" leads, the
+	// briefing is substituted into an arg, and no literal {briefing} survives.
+	if cap.args[0] != "run" || !argsHave(cap.args, "do the work") || argsHave(cap.args, "{briefing}") {
+		t.Fatalf("args = %v, want run + substituted briefing", cap.args)
 	}
 	if cap.dir != "/repo" {
 		t.Fatalf("dir = %q, want /repo", cap.dir)
@@ -71,8 +74,8 @@ func TestCmdRunner_ClaudeCode(t *testing.T) {
 	if cap.name != "claude" {
 		t.Fatalf("name = %q, want claude", cap.name)
 	}
-	if len(cap.args) != 2 || cap.args[0] != "-p" || cap.args[1] != "review task t1" {
-		t.Fatalf("args = %v, want [-p \"review task t1\"]", cap.args)
+	if cap.args[0] != "-p" || !argsHave(cap.args, "review task t1") || argsHave(cap.args, "{briefing}") {
+		t.Fatalf("args = %v, want -p + substituted briefing", cap.args)
 	}
 	if !hasEnv(cap.env, "PACT_AGENT_ID=r1") {
 		t.Fatalf("env missing PACT_AGENT_ID=r1: %v", cap.env)
@@ -119,4 +122,14 @@ func TestNewCmdRunner_HasExec(t *testing.T) {
 	if NewCmdRunner().Exec == nil {
 		t.Fatal("NewCmdRunner().Exec is nil")
 	}
+}
+
+// argsHave reports whether args contains an element equal to want.
+func argsHave(args []string, want string) bool {
+	for _, a := range args {
+		if a == want {
+			return true
+		}
+	}
+	return false
 }

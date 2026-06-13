@@ -33,3 +33,12 @@
 ## 来自 planner 真跑（2026-06-13）
 - **orchestrate 空闲超时（比总超时更精）**：本次 opencode/deepseek-v4-pro 在 p-manifest 写完代码+测试过后【挂死】（进程 sleeping、0.7% CPU、25min 无输出、不 checkpoint），无限阻塞驱动器。已加 `--run-timeout`（总运行超时，默认 30min）兜底防无限阻塞；更优 = 空闲超时（无输出 N min 即杀），需在 osExec 包输出活动检测。
 - **opencode/deepseek-v4-pro 慢+偶挂观察**：简单 manifest 棒耗时 ~25min 且 checkpoint 前挂死一次。记录为模型/runtime 稳定性观察；per-agent 模型配置（backlog）后可换标准棒模型。
+
+## 错误处理设计（worker 挂死/部分完成的恢复）—— 需专门设计（2026-06-13）
+**问题**：worker 卡住时，"orchestrator 接手完成"是错的一般模式——若 worker 只干了 5% 就挂，后面主要工作都由 orchestrator 做，自主性破产（orchestrator 变 worker）。本次手动抢救 p-manifest 只因它恰好 100% 完成（活+测试都过），是一次性补救，不可推广。
+**正确方向**：挂死/失败 → 杀掉 + **重试 worker**（worker 重读状态+树里半成品，自己续/重做、自己 checkpoint），worker 始终是干活的人；反复失败到上限 → 升级给人。`--run-timeout` 已走这条路（超时→软失败→重派 owner=worker，非 orchestrator 接手）。
+**待设计点**：
+- 半成品续接：重试 worker 从未提交半成品续（省力但可能被半残状态搞晕）vs 先 reset 树干净从头（干净但浪费）——怎么选/怎么提示 worker。
+- 何时放弃重试转人工：每次全量重试重做+烧 token，代价高，阈值/成本上限怎么定。
+- 分类恢复："活干完只是 checkpoint 挂" vs "活没干完挂了"——能否更聪明地分类（前者只补 checkpoint，后者续/重做）。
+- 空闲超时（无输出 N min）vs 总超时：空闲更快兜挂死、又不误杀合法慢任务（需 osExec 包输出活动检测）。

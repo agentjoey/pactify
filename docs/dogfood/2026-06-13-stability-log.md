@@ -80,3 +80,29 @@ plan：docs/superpowers/plans/2026-06-13-headless-dogfood-m3.4-relay.md
 ### t2 全无人闭环跑通（正向，#9 解法验证）
 - orchestrator 用 `opencode run "<prompt>"` 非交互拉起 worker，worker 自 join/读规格/TDD 实现(api.go+watch.go+cmd_serve.go)/checkpoint，orchestrator 后台接住、复审、accept——**全程零人工介入**。#9 的运营层解法（orchestrator 当自主驱动器）端到端成立。
 - #8 余波（次要）：opencode 给 opencode.json 自动加了 `$schema` 行，被 checkpoint CommitAll 扫入。本次为合法注解、无害，accept 时容忍；佐证 #8（CommitAll 无差别暂存）对【已跟踪的工具配置】同样会扫入工具的自动改动。
+
+---
+
+## 协议稳定性结论（2026-06-13 dogfood 收官）
+
+本轮是 pactify **首次用自己的协议交付自己的真实里程碑**（M3.4 relay 接口），claude 编排、opencode 交付，t2/t3 全程零人工。
+
+### 硬了（协议核心成立）
+- **完整生命周期端到端跑通**：assign→join→checkpoint→changes→rework→accept→merge，feature 最终 `shipped`，main 上全量 `go test ./...`（11 包）+ `pactify validate` 一致性绿。
+- **两条铁律实战生效**：worker 不能自接受（t1 worker 始终只置 awaiting_review）；owner≠reviewer 分离。
+- **评审返工回路硬（#10）**：reviewer changes 两点 → worker 精确返工 → 复审 accept，内容经协议日志流转、无需人转述。
+- **自主驱动闭环成立（#9 运营层解法）**：orchestrator 用 `opencode run` 把一次性 worker 按状态变迁自动调起 + 后台观测自动接住复审，t2/t3 全无人。证明"消灭人肉中继"在编排层可达——只要有驱动器。
+
+### 仍是已知限制
+- **#9 缺产品级编排驱动**：本轮靠 orchestrator(claude) 手搓 `opencode run` 补位；产品自身没有 `pactify orchestrate` / worker 守护，换个人/换个 orchestrator 就得重搓。**这是协议落地的最大缺口。**
+- **#5 软链共享 entry 与 per-seat 烘焙不兼容**：self-hosting 特有，暴露 BakeEntry 软链处理可改进。
+- **#7 F1 单工作树**：orchestrator/worker 共享 git HEAD，提交易落错分支；Phase 1 worktree 隔离 backlog。
+- **#1 / #0 GUI/MCP agent 无 roster 路径 + 进不了无人闭环**：antigravity 这轮被迫放弃；异构性与全自主的根本张力。
+- **#8 checkpoint CommitAll 无差别暂存**：扫入工具自动生成/修改的文件（data/state.json、opencode.json $schema）。
+
+### 下一轮该补（按优先级）
+1. **（高）产品级编排驱动**：`pactify orchestrate`（监听 log 状态机，按 owner 自动 exec 对应 CLI agent）或 worker 守护（订阅自己任务状态，changes/assigned 自动起活）——消灭人肉调度器的产品答案（#9）。
+2. **（高）checkpoint 暂存范围限定** + init 补常见工具状态 .gitignore（#8）。
+3. **（中）BakeEntry 软链内联目标内容**（#5）；init 对非空 log.jsonl fail-closed（#4）。
+4. **（中）roster 解耦 entry 烘焙 / 后置加座席命令**（#1）；git worktree 隔离 orchestrator/worker（#7）。
+5. **（低）GUI agent 无人化**：探索 antigravity 的 headless/ACP 接口能否被驱动（异构全自主）。

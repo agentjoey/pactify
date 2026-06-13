@@ -190,19 +190,19 @@ describe("App", () => {
         within(group()).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"));
 
       // default = kanban (first button pressed)
-      expect(pressed()).toEqual(["true", "false", "false", "false", "false"]);
+      expect(pressed()).toEqual(["true", "false", "false", "false", "false", "false"]);
 
       await act(async () => { fireEvent.keyDown(window, { key: "2" }); });
-      expect(pressed()).toEqual(["false", "true", "false", "false", "false"]);
+      expect(pressed()).toEqual(["false", "true", "false", "false", "false", "false"]);
 
       await act(async () => { fireEvent.keyDown(window, { key: "1" }); });
-      expect(pressed()).toEqual(["true", "false", "false", "false", "false"]);
+      expect(pressed()).toEqual(["true", "false", "false", "false", "false", "false"]);
 
       // typing guard: a keydown originating from an INPUT must not switch.
       const input = document.createElement("input");
       document.body.appendChild(input);
       await act(async () => { fireEvent.keyDown(input, { key: "2" }); });
-      expect(pressed()).toEqual(["true", "false", "false", "false", "false"]);
+      expect(pressed()).toEqual(["true", "false", "false", "false", "false", "false"]);
       input.remove();
     });
   });

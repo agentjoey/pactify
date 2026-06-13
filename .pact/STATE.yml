@@ -48,17 +48,17 @@ features:
         deps: [scan]
       - id: cli
         owner: opencode-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/agents-cli.md
         evidence: === RUN   TestAgentScanRegisterUnregister --- PASS: TestAgentScanRegisterUnregister (0.85s) === RUN   TestCLIFailsClosedWithoutAgentID --- PASS: TestCLIFailsClosedWithoutAgentID (0.78s) === RUN   TestSetupAutoSetsAgentIDFromSeat --- PASS: TestSetupAutoSetsAgentIDFromSeat (0.06s) === RUN   TestSetupExistingPactWiresAgent --- PASS: TestSetupExistingPactWiresAgent (0.06s) PASS ok   github.com/agentjoey/pactify/cmd/pactify 2.121s
         deps: [reg]
       - id: serve
         owner: opencode-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/agents-serve.md
-        evidence: null
+        evidence: === RUN   TestAgentsGET --- PASS: TestAgentsGET (0.00s) === RUN   TestAgentsRegisterAndUnregister --- PASS: TestAgentsRegisterAndUnregister (0.00s) === RUN   TestAgentsUnknownKind --- PASS: TestAgentsUnknownKind (0.00s) PASS ok   github.com/agentjoey/pactify/internal/serve  0.618s  Full serve suite: 15.503s — all green.  Files changed:  - internal/serve/agents.go (NEW): 3 machine-level agent endpoints (GET /api/agents merge Scan+Load, POST /api/agents/{kind}/register, DELETE /api/agents/{kind}/register) following wiring kind-validation pattern  - internal/serve/agents_test.go (NEW): 3 httptest tests (GET known kind+registered state, POST register→GET confirms registered+label, DELETE→GET confirms false, unknown kind→400)  - internal/serve/api.go: wired s.registerAgentRoutes(mux) in Handler() next to registerWiringRoutes
         deps: [cli]
       - id: ui
         owner: opencode-worker

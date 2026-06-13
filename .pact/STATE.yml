@@ -1,0 +1,7 @@
+project: pactify
+working_tree_holder: null
+agents:
+  - { id: claude, roles: [orchestrator, reviewer] }
+  - { id: opencode-worker, roles: [worker] }
+  - { id: gemini-worker, roles: [worker] }
+features:

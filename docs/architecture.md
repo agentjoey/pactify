@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Last updated: 2026-06-09 | Status: Draft（地基决策已锁，CLI 待实现）
+> Last updated: 2026-06-13 | Status: Draft（地基决策已锁，CLI 待实现）
 
 ## Overview
 
@@ -42,6 +42,41 @@ agents ──┬─ shell:  pactify checkpoint/accept   (任何 agent，零依�
 
 - **shell 写入与 MCP 调用产出同一种事件** → 一套 schema 服务所有入口
 - **本地零依赖**（文件 + 单 binary），**云端只是在上面加 relay**，协议不变
+
+### M3.4 relay 接口
+
+`pactify serve` 内置 best-effort 异步 relay，将每个项目的 log 事件 POST 到可配端点。挂载点在 `drainNew` 中（`hub.broadcast` 之后，旁路非阻塞）：
+
+```
+pactify serve
+  └─ fsnotify → watchLoop → drainNew
+       ├─ hub.broadcast(id, line)    ← SSE 订阅者
+       └─ relay.enqueue(id, line)    ← 远端 relay 端点（可选）
+```
+
+**语义：**
+- **best-effort**：relay 失败/超时/排队满 不阻塞 SSE，不影响 offset 推进，不回传错误到 watcher。
+- **异步队列**：有界 256 条，FIFO；满时丢弃最旧条目并递增 `dropped` 计数器。
+- **重试**：单条最多 4 次尝试（1 次初始 + 3 次退避重试：1s、2s、4s），全部失败递增 `dropped` 后静默丢弃。
+- **可中断**：`stop()` 在重试间隙检查，不会卡死 shutdown。
+
+**配置：**
+- CLI flag：`serve --relay-url <url> [--relay-token <token>]`
+- 环境变量：`PACT_RELAY_URL`、`PACT_RELAY_TOKEN`
+- 空 URL（默认）= relay 禁用，`newRelay("","")` 返回 nil，`enqueue` 是安全空操作
+
+**线格式（POST JSON）：**
+```json
+{
+  "project": "pactify",
+  "event": { "event_id": "...", "event_type": "...", ... }
+}
+```
+- `Content-Type: application/json`
+- token 非空时附带 `Authorization: Bearer <token>`
+- event 行非合法 JSON 时，原始文本被转义为 JSON string 后放入 envelope，不 panic
+
+**端点要求：** HTTPS 端点；2xx 视为成功，4xx/5xx 触发重试；10s 超时。
 
 ### 事件 schema（草案，M1.1 定稿）
 

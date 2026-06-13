@@ -1,0 +1,7 @@
+{
+  "nextAgent": "build",
+  "nextModel": {
+    "providerID": "deepseek",
+    "modelID": "deepseek-v4-pro"
+  }
+}

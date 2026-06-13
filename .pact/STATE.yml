@@ -132,3 +132,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/finishstep-core.md
         evidence: Acceptance criteria met: 1. go build ./... — clean (no output) 2. go test ./internal/finish/... — 7/7 PASS 3. pactify finish --help — shows command with flags: --remote, --branch, --pr, --head, --title, --body 4. Full project test suite: 15/15 packages green, zero regressions
+  - id: sessions
+    branch: feat-sessions
+    status: in_progress
+    tasks:
+      - id: t-sessions
+        owner: oc-sessions
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/sessions-core.md
+        evidence: null

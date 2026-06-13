@@ -11,6 +11,8 @@ import type {
   ParallelStatusResponse,
   PlanReviewResponse,
   SetupSuggestResponse,
+  RecipeItem,
+  ExpandedTaskItem,
 } from "./types";
 import type { LayoutJSON } from "./canvas";
 
@@ -161,6 +163,13 @@ export const getParallelOrchestrate = (project: string) =>
   getJSON<ParallelStatusResponse>(`/api/projects/${project}/orchestrate/parallel`);
 
 export const getSetupSuggest = () => getJSON<SetupSuggestResponse>(`/api/setup/suggest`);
+
+export const getRecipes = () => getJSON<RecipeItem[]>(`/api/recipes`);
+
+export const expandRecipe = (name: string, goal: string) =>
+  writeJSON(`/api/recipes/${name}/expand`, "POST", { goal }).then(
+    (r) => r.json() as Promise<ExpandedTaskItem[]>,
+  );
 
 export const getPlanReview = (project: string, feature: string) =>
   getJSON<PlanReviewResponse>(`/api/projects/${project}/plan/${feature}`);

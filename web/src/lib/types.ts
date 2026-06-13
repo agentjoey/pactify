@@ -85,6 +85,19 @@ export interface ParallelStatusResponse {
   features?: OrchestrateStatus[];
 }
 
+// Recipes (#11): named orchestrate templates that expand a one-line goal into a
+// pact task graph.
+export interface RecipeItem {
+  name: string;
+  description: string;
+}
+
+export interface ExpandedTaskItem {
+  id: string;
+  spec: string;
+  deps?: string[];
+}
+
 // Project setup wizard (#1): proposed seat roster from the machine's registered
 // agents + any gaps that would block the pact loop.
 export interface SetupBinding {

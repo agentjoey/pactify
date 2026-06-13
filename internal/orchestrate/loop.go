@@ -95,11 +95,13 @@ func (opts Options) run(ctx context.Context) error {
 		// action that would spin, so the offending task escalates instead.
 		if !opts.DryRun && (act.Kind == ActRunOwner || act.Kind == ActRunReviewer) {
 			if reason, tripped := tripped(act.Task, h, opts.Th); tripped {
+				opts.emitEscalatedStatus(view, act.Task, reason, h)
 				return opts.escalate(act.Task, reason, evidenceFor(st, act.Task),
 					"人工介入后 pactify orchestrate 续跑")
 			}
 		}
 		if !opts.DryRun && opts.Th.MaxIters > 0 && h.Iters >= opts.Th.MaxIters {
+			opts.emitEscalatedStatus(view, "", "iteration limit exceeded", h)
 			return opts.escalate("", "iteration limit exceeded", "(global cap)",
 				"放宽 --max-iters 或检查为何 task 图迟迟不收敛")
 		}
@@ -113,8 +115,22 @@ func (opts Options) run(ctx context.Context) error {
 			return nil
 		}
 
+		opts.emitLoopStatus(view, act, h)
+
 		switch act.Kind {
 		case ActDone:
+			total, accepted := progress(view)
+			s := Status{
+				Feature:   act.Feature,
+				Action:    "done",
+				Phase:     "done",
+				Done:      true,
+				Total:     total,
+				Accepted:  accepted,
+				Iter:      h.Iters,
+				UpdatedAt: statusNow(opts.Now),
+			}
+			writeStatus(opts.Dir, s)
 			return nil
 
 		case ActRunOwner:
@@ -128,7 +144,7 @@ func (opts Options) run(ctx context.Context) error {
 			}
 
 		case ActMerge:
-			done, err := opts.merge(ctx, st, act)
+			done, err := opts.merge(ctx, st, view, act, &h)
 			if err != nil {
 				return err
 			}
@@ -138,12 +154,14 @@ func (opts Options) run(ctx context.Context) error {
 			}
 
 		case ActStuck:
+			opts.emitEscalatedStatus(view, act.Task, act.Reason, h)
 			return opts.escalate(act.Task, act.Reason, evidenceFor(st, act.Task),
 				"人工介入后 pactify orchestrate 续跑")
 
 		case ActIdle:
 			// Theoretically unreachable (unfinished work, no action, no threshold
 			// tripped). Treat defensively as Stuck so the driver never spins.
+			opts.emitEscalatedStatus(view, act.Task, "driver idle with unfinished work (unexpected)", h)
 			return opts.escalate(act.Task, "driver idle with unfinished work (unexpected)",
 				evidenceFor(st, act.Task), "检查 task 图/依赖是否成环或卡死，修后续跑")
 		}
@@ -225,7 +243,7 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 // PASS. A gate FAIL escalates (returns done=true so the loop pauses). The hard
 // gate is deliberately redundant with the LLM reviewer's own run: a deterministic
 // safety net beneath "LLM accepted" (spec §2.4).
-func (opts Options) merge(ctx context.Context, st projection.State, act Action) (done bool, err error) {
+func (opts Options) merge(ctx context.Context, st, view projection.State, act Action, h *History) (done bool, err error) {
 	var feat *projection.Feature
 	for fi := range st.Features {
 		if st.Features[fi].ID == act.Feature {
@@ -239,6 +257,7 @@ func (opts Options) merge(ctx context.Context, st projection.State, act Action) 
 	for _, cmd := range gateCommands(opts.Dir, *feat) {
 		ok, detail := runGate(ctx, opts.Exec, opts.Dir, cmd)
 		if !ok {
+			opts.emitEscalatedStatus(view, act.Feature, "hard gate failed: "+detail, *h)
 			return true, opts.escalate(act.Feature, "hard gate failed: "+detail,
 				evidenceFor(st, ""), "修复实现/规格后 pactify orchestrate 续跑")
 		}
@@ -371,6 +390,59 @@ func tripped(task string, h History, th Thresholds) (string, bool) {
 		return "failure limit exceeded", true
 	}
 	return "", false
+}
+
+// --- status emission ----------------------------------------------------------
+
+// emitLoopStatus writes a per-iteration status snapshot for the current action.
+// Write errors are silently ignored (status is observation, not a transaction source).
+func (opts Options) emitLoopStatus(view projection.State, act Action, h History) {
+	total, accepted := progress(view)
+	s := Status{
+		Feature:   act.Feature,
+		Task:      act.Task,
+		Seat:      act.Seat,
+		Action:    actionString(act.Kind),
+		Phase:     phaseFor(act),
+		Total:     total,
+		Accepted:  accepted,
+		Iter:      h.Iters,
+		UpdatedAt: statusNow(opts.Now),
+	}
+	writeStatus(opts.Dir, s)
+}
+
+// emitEscalatedStatus writes an escalated status snapshot.
+// Write errors are silently ignored (status is observation, not a transaction source).
+func (opts Options) emitEscalatedStatus(view projection.State, task, reason string, h History) {
+	total, accepted := progress(view)
+	s := Status{
+		Feature:   task,
+		Action:    "stuck",
+		Phase:     "stuck",
+		Escalated: true,
+		Reason:    reason,
+		Total:     total,
+		Accepted:  accepted,
+		Iter:      h.Iters,
+		UpdatedAt: statusNow(opts.Now),
+	}
+	if task != "" {
+		for _, f := range view.Features {
+			if f.ID == task {
+				break
+			}
+			for _, t := range f.Tasks {
+				if t.ID == task {
+					s.Feature = f.ID
+					s.Task = task
+					s.Seat = t.Owner
+					break
+				}
+			}
+		}
+	}
+	writeStatus(opts.Dir, s)
 }
 
 // --- small state/log helpers -------------------------------------------------

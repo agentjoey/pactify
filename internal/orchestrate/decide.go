@@ -59,13 +59,18 @@ func nextAction(st projection.State, h History, th Thresholds) Action {
 		}
 	}
 
-	// 2. RunOwner: any task assigned/changes_requested whose deps are all accepted.
+	// 2. RunOwner: any task assigned/changes_requested/in_progress whose deps are
+	//    all accepted. in_progress is included because `pactify join` flips EVERY
+	//    of a seat's assigned tasks to in_progress at once (projection.go), so a
+	//    task the worker hasn't checkpointed yet sits in in_progress — the driver
+	//    must (re-)launch the owner to work it (this also gives crash-retry: a
+	//    worker that died mid-task is relaunched until the Fails threshold trips).
 	for _, f := range st.Features {
 		if f.Status == "shipped" {
 			continue
 		}
 		for _, t := range f.Tasks {
-			if (t.Status == "assigned" || t.Status == "changes_requested") && depsSatisfied(f, t) {
+			if (t.Status == "assigned" || t.Status == "changes_requested" || t.Status == "in_progress") && depsSatisfied(f, t) {
 				return Action{Kind: ActRunOwner, Feature: f.ID, Task: t.ID, Seat: t.Owner}
 			}
 		}
@@ -87,32 +92,14 @@ func nextAction(st projection.State, h History, th Thresholds) Action {
 		return Action{Kind: ActDone}
 	}
 
-	// 5. Unfinished work but nothing actionable → threshold checks → Stuck, else Idle.
-	//    Per-task thresholds first (so the offending task id is reported). Skip
-	//    shipped features and already-accepted tasks: a completed task can carry a
-	//    stale Rework/Fails count from before it shipped, and must never trip Stuck
-	//    (that would mask ActDone and name a done task in the escalation).
-	for _, f := range st.Features {
-		if f.Status == "shipped" {
-			continue
-		}
-		for _, t := range f.Tasks {
-			if t.Status == "accepted" {
-				continue
-			}
-			if th.MaxRework > 0 && h.Rework[t.ID] >= th.MaxRework {
-				return Action{Kind: ActStuck, Feature: f.ID, Task: t.ID, Reason: "rework limit exceeded"}
-			}
-			if th.MaxFails > 0 && h.Fails[t.ID] >= th.MaxFails {
-				return Action{Kind: ActStuck, Feature: f.ID, Task: t.ID, Reason: "failure limit exceeded"}
-			}
-		}
-	}
-	if th.MaxIters > 0 && h.Iters >= th.MaxIters {
-		return Action{Kind: ActStuck, Reason: "iteration limit exceeded"}
-	}
-
-	// 6. Theoretically unreachable: unfinished work, no action, no threshold.
+	// 5. Unfinished work but nothing actionable. With in_progress now a runnable
+	//    state (section 2), every non-accepted task IS actionable, so this point is
+	//    only reached defensively. Thresholds/escalation are NOT decided here: a
+	//    churning task always has an action (relaunch its owner), so a threshold
+	//    check in this pure function would never fire. The loop owns History and
+	//    enforces the rework/fail/iteration bounds via tripped() BEFORE dispatching
+	//    an action, then escalates. Here we just report "nothing to do" and let the
+	//    loop treat it defensively.
 	return Action{Kind: ActIdle}
 }
 

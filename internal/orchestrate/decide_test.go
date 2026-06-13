@@ -54,21 +54,22 @@ func TestNextAction_AssignedDepNotAccepted_BlockedTaskSkipped(t *testing.T) {
 
 // b') a single task blocked by an unaccepted dep with no other action → not Done,
 // not Merge; falls through to Idle (no threshold tripped).
-func TestNextAction_OnlyBlockedTask_Idle(t *testing.T) {
+func TestNextAction_DepBlockedTask_DrivesDepFirst(t *testing.T) {
 	st := projection.State{
 		Features: []projection.Feature{{
 			ID: "f1", Status: "in_progress",
 			Tasks: []projection.Task{
-				// t0 is in_progress (not actionable, not accepted); t1 depends on
-				// t0 so it cannot run either → no action, no threshold → Idle.
+				// t0 is in_progress (runnable — `join` flipped it); t1 depends on the
+				// not-yet-accepted t0 so t1 stays blocked. The driver advances the
+				// dependency first → RunOwner(t0); t1 never jumps its dep.
 				{ID: "t0", Owner: "w0", Reviewer: "r1", Status: "in_progress"},
 				{ID: "t1", Owner: "w1", Reviewer: "r1", Status: "assigned", Deps: []string{"t0"}},
 			},
 		}},
 	}
 	act := nextAction(st, emptyHistory(), defaultTh())
-	if act.Kind != ActIdle {
-		t.Fatalf("kind = %v, want ActIdle (t1 blocked, t0 in_progress not actionable)", act.Kind)
+	if act.Kind != ActRunOwner || act.Task != "t0" {
+		t.Fatalf("got %+v, want RunOwner(t0) (drive the dep first; t1 stays blocked)", act)
 	}
 }
 
@@ -105,8 +106,9 @@ func TestNextAction_ChangesRequested_RunOwner(t *testing.T) {
 	}
 }
 
-// changes_requested blocked by an unaccepted dep is NOT actionable.
-func TestNextAction_ChangesRequestedDepNotAccepted_Idle(t *testing.T) {
+// A changes_requested task blocked by an unaccepted dep does not run; the driver
+// advances the runnable dependency (t0) instead.
+func TestNextAction_ChangesRequestedDepNotAccepted_DrivesDepFirst(t *testing.T) {
 	st := projection.State{
 		Features: []projection.Feature{{
 			ID: "f1", Status: "in_progress",
@@ -117,8 +119,8 @@ func TestNextAction_ChangesRequestedDepNotAccepted_Idle(t *testing.T) {
 		}},
 	}
 	act := nextAction(st, emptyHistory(), defaultTh())
-	if act.Kind != ActIdle {
-		t.Fatalf("kind = %v, want ActIdle (changes_requested blocked by dep)", act.Kind)
+	if act.Kind != ActRunOwner || act.Task != "t0" {
+		t.Fatalf("got %+v, want RunOwner(t0) (t1 changes_requested stays dep-blocked)", act)
 	}
 }
 
@@ -190,61 +192,33 @@ func TestNextAction_NoFeatures_Done(t *testing.T) {
 	}
 }
 
-// g) no actionable task but unfinished work + Rework[t] >= MaxRework → Stuck(task)
-func TestNextAction_ReworkExceeded_Stuck(t *testing.T) {
-	st := projection.State{
-		Features: []projection.Feature{{
-			ID: "f1", Status: "in_progress",
-			Tasks: []projection.Task{
-				// blocked by an unaccepted dep so no normal action fires
-				{ID: "t0", Owner: "w0", Reviewer: "r1", Status: "in_progress"},
-				{ID: "t1", Owner: "w1", Reviewer: "r1", Status: "assigned", Deps: []string{"t0"}},
-			},
-		}},
-	}
+// Thresholds are enforced by the LOOP (it owns History), not by nextAction:
+// with in_progress runnable, a churning task always has an action, so the pure
+// decision function never reaches a threshold branch. The bounds live in
+// tripped(), tested here directly (rework + fail). The iteration bound is a
+// separate loop-level guard, covered by the loop's escalation integration test.
+func TestTripped_ReworkExceeded(t *testing.T) {
 	h := emptyHistory()
 	h.Rework["t1"] = 3
-	act := nextAction(st, h, Thresholds{MaxRework: 3, MaxFails: 3, MaxIters: 50})
-	if act.Kind != ActStuck || act.Task != "t1" {
-		t.Fatalf("got kind=%v task=%q, want Stuck t1", act.Kind, act.Task)
+	if reason, ok := tripped("t1", h, Thresholds{MaxRework: 3, MaxFails: 3}); !ok || reason == "" {
+		t.Fatalf("rework=3 MaxRework=3: got (%q,%v), want tripped", reason, ok)
 	}
 }
 
-// h) Fails[t] >= MaxFails → Stuck
-func TestNextAction_FailsExceeded_Stuck(t *testing.T) {
-	st := projection.State{
-		Features: []projection.Feature{{
-			ID: "f1", Status: "in_progress",
-			Tasks: []projection.Task{
-				{ID: "t0", Owner: "w0", Reviewer: "r1", Status: "in_progress"},
-				{ID: "t1", Owner: "w1", Reviewer: "r1", Status: "assigned", Deps: []string{"t0"}},
-			},
-		}},
-	}
+func TestTripped_FailsExceeded(t *testing.T) {
 	h := emptyHistory()
 	h.Fails["t1"] = 3
-	act := nextAction(st, h, Thresholds{MaxRework: 3, MaxFails: 3, MaxIters: 50})
-	if act.Kind != ActStuck || act.Task != "t1" {
-		t.Fatalf("got kind=%v task=%q, want Stuck t1", act.Kind, act.Task)
+	if reason, ok := tripped("t1", h, Thresholds{MaxRework: 3, MaxFails: 3}); !ok || reason == "" {
+		t.Fatalf("fails=3 MaxFails=3: got (%q,%v), want tripped", reason, ok)
 	}
 }
 
-// i) Iters >= MaxIters → Stuck
-func TestNextAction_ItersExceeded_Stuck(t *testing.T) {
-	st := projection.State{
-		Features: []projection.Feature{{
-			ID: "f1", Status: "in_progress",
-			Tasks: []projection.Task{
-				{ID: "t0", Owner: "w0", Reviewer: "r1", Status: "in_progress"},
-				{ID: "t1", Owner: "w1", Reviewer: "r1", Status: "assigned", Deps: []string{"t0"}},
-			},
-		}},
-	}
+func TestTripped_WithinBounds(t *testing.T) {
 	h := emptyHistory()
-	h.Iters = 50
-	act := nextAction(st, h, Thresholds{MaxRework: 3, MaxFails: 3, MaxIters: 50})
-	if act.Kind != ActStuck {
-		t.Fatalf("kind = %v, want ActStuck (iters exceeded)", act.Kind)
+	h.Rework["t1"] = 1
+	h.Fails["t1"] = 1
+	if reason, ok := tripped("t1", h, Thresholds{MaxRework: 3, MaxFails: 3}); ok {
+		t.Fatalf("rework=1 fails=1 under bounds: got (%q,%v), want not tripped", reason, ok)
 	}
 }
 
@@ -398,5 +372,36 @@ func TestNextAction_ShippedTaskDoesNotTripStuck(t *testing.T) {
 	got := nextAction(st, h, th)
 	if got.Kind != ActDone {
 		t.Fatalf("shipped feature with stale rework count: got %v, want ActDone", got)
+	}
+}
+
+// TestNextAction_InProgress_RunOwner (review, real prod bug): `pactify join` flips
+// all of a seat's assigned tasks to in_progress; an un-checkpointed in_progress
+// task (deps met) must be (re)dispatched to its owner, else multi-task features
+// strand after join.
+func TestNextAction_InProgress_RunOwner(t *testing.T) {
+	st := projection.State{Features: []projection.Feature{
+		{ID: "f1", Status: "in_progress", Tasks: []projection.Task{
+			{ID: "t1", Status: "in_progress", Owner: "w", Reviewer: "r"},
+		}},
+	}}
+	got := nextAction(st, emptyHistory(), defaultTh())
+	if got.Kind != ActRunOwner || got.Task != "t1" || got.Seat != "w" {
+		t.Fatalf("in_progress task: got %+v, want RunOwner t1/w", got)
+	}
+}
+
+// In-progress dep gates a dependent in-progress task the same as assigned.
+func TestNextAction_InProgressDepNotAccepted_Blocked(t *testing.T) {
+	st := projection.State{Features: []projection.Feature{
+		{ID: "f1", Status: "in_progress", Tasks: []projection.Task{
+			{ID: "t1", Status: "in_progress", Owner: "w", Reviewer: "r"},
+			{ID: "t2", Status: "in_progress", Owner: "w", Reviewer: "r", Deps: []string{"t1"}},
+		}},
+	}}
+	// t1 is runnable (no deps); t2 blocked by unaccepted t1. First candidate = t1.
+	got := nextAction(st, emptyHistory(), defaultTh())
+	if got.Task != "t1" {
+		t.Fatalf("got %+v, want t1 first (t2 dep-blocked)", got)
 	}
 }

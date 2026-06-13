@@ -95,6 +95,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerSeatsRoutes(mux)
 	s.registerTimelineRoutes(mux)
 	s.registerOrchestrateRoutes(mux)
+	s.registerSetupRoutes(mux)
 	mux.Handle("/", dashboardHandler())
 	return mux
 }

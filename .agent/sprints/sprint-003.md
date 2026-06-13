@@ -199,3 +199,9 @@ isValidConnection 拦截后 onConnect 的三条 notice 分支全部不可达(提
 **Status:** ✅ Done（feature planner shipped via orchestrate，本地 main，2026-06-13）
 **功能**：`pactify plan "<目标>"` 驱动 planner agent 生成 pact 任务图（manifest+规格）→ 人审/--auto → `plan apply` → orchestrate。internal/planner（manifest/prompt/apply）+ cmd_plan。
 **元成果**：第三次 orchestrate 自主交付，**首次按复杂度混编模型**（核心 claude/opus-4-8、标准 opencode/deepseek-v4-pro）。压出 4 个真问题：#1 agent 挂死无超时（已修 --run-timeout）、#2 orchestrator 接手错模式（backlog 设计）、#3 分支错位假阴性、#4 merge 缺 acting seat（待 --as 正解）。**递归 dogfood**：planner 用一句话规划 #3（liveview），生成的图过校验门且真懂代码库（投影架构/项目作用域端点）——#2 端到端验收。观测 docs/dogfood/2026-06-13-planner-e2e-log.md。
+
+### T15: #4 orchestrate acting-seat fix + #3 liveview 三 agent 自主建 [HIGH]
+**Status:** ✅ Done（feature liveview shipped via orchestrate，本地 main，2026-06-13）
+**#4 修复**：orchestrate 的 merge 调用需 acting seat（引擎 agentID），之前靠进程 PACT_AGENT_ID、干完所有活才在 merge 死。修：merge 用 `As(opts.Orchestrator)`、CLI 加 `--as`（默认 PACT_AGENT_ID）、启动即 fail-fast 若无 acting seat。
+**#3 liveview**：planner 递归规划的 feature，**首次三异构 agent 同台自主建**：step1 orchestrate 状态吐出（opencode/deepseek→`internal/orchestrate/status.go`）、**step2 serve 端点（gemini/gemini-3.1-pro-preview→`internal/serve/orchestrate.go`，gemini 首次自主开发成功）**、step3 前端 Live 面板（opencode→`web/src/components/LiveOrchestrate.tsx`+TopBar "Live" 视图），claude(opus) 全程评审 → merge shipped。14 包 go test + LiveOrchestrate vitest 绿。
+**新发现**：`--run-timeout 15` 太短误杀慢任务（step3 被杀一次→重试续建完成，验证恢复链）；空闲超时正解 + session 累积清理 + post-merge STATE 滞后 → backlog。**递归闭环成立**：planner 规划 → orchestrate 三 agent 建 → shipped。

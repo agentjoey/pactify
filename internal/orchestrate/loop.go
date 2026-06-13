@@ -37,6 +37,10 @@ type Options struct {
 	Notify   Notifier                   // injected escalation notifier
 	Now      func() string              // injected timestamp for escalation filenames
 	SeatKind func(seatID string) string // seat id → agent kind (prod parses roster, test injects)
+	// Orchestrator is the seat the driver acts as for its OWN protocol writes
+	// (Merge). "" falls back to PACT_AGENT_ID (tests rely on the env fallback; the
+	// CLI resolves it from --as / PACT_AGENT_ID and fail-fasts when both are empty).
+	Orchestrator string
 	// RunTimeout bounds a single agent run. A hung agent (e.g. its model stalls
 	// after finishing the work, never returning) would otherwise block the serial
 	// driver forever. On expiry the agent subprocess is killed and the run counts
@@ -240,7 +244,12 @@ func (opts Options) merge(ctx context.Context, st projection.State, act Action) 
 		}
 	}
 
-	if err := pact.At(opts.Dir).Merge(act.Feature); err != nil {
+	// Merge is the driver's OWN protocol write (unlike worker/reviewer verbs, which
+	// the spawned agents run). It needs an acting seat: As(Orchestrator) sets it
+	// explicitly so the merge doesn't depend on the driver process's PACT_AGENT_ID
+	// (which the worker runner overrides per-spawn). As("") falls back to the env
+	// (the CLI fail-fasts when neither --as nor PACT_AGENT_ID is set).
+	if err := pact.At(opts.Dir).As(opts.Orchestrator).Merge(act.Feature); err != nil {
 		return false, fmt.Errorf("orchestrate: merge %s: %w", act.Feature, err)
 	}
 	return false, nil

@@ -23,6 +23,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var runTimeoutMin int
 	var dryRun bool
 	var seatKinds []string
+	var asSeat string
 
 	cmd := &cobra.Command{
 		Use:   "orchestrate",
@@ -53,17 +54,29 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				km[parts[0]] = parts[1]
 			}
 
+			// The driver needs an acting seat for its own merges. Resolve --as, else
+			// PACT_AGENT_ID; fail fast (before any agent runs) when neither is set, so
+			// a run can't do all the work and then die at the final merge.
+			orchestrator := asSeat
+			if orchestrator == "" {
+				orchestrator = os.Getenv("PACT_AGENT_ID")
+			}
+			if orchestrator == "" && !dryRun {
+				return fmt.Errorf("orchestrate needs an acting seat for merges: pass --as <seat> or set PACT_AGENT_ID")
+			}
+
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
 
 			opts := orchestrate.Options{
-				Dir:        dir,
-				Feature:    feature,
-				Th:         orchestrate.Thresholds{MaxRework: maxRework, MaxFails: maxFails, MaxIters: maxIters},
-				DryRun:     dryRun,
-				Now:        func() string { return time.Now().Format("20060102-150405") },
-				SeatKind:   func(seat string) string { return km[seat] },
-				RunTimeout: time.Duration(runTimeoutMin) * time.Minute,
+				Dir:          dir,
+				Feature:      feature,
+				Th:           orchestrate.Thresholds{MaxRework: maxRework, MaxFails: maxFails, MaxIters: maxIters},
+				DryRun:       dryRun,
+				Now:          func() string { return time.Now().Format("20060102-150405") },
+				SeatKind:     func(seat string) string { return km[seat] },
+				RunTimeout:   time.Duration(runTimeoutMin) * time.Minute,
+				Orchestrator: orchestrator,
 			}
 			if err := orchestrate.Run(ctx, opts); err != nil {
 				return err
@@ -82,5 +95,6 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().IntVar(&runTimeoutMin, "run-timeout", 30, "minutes to wait for one agent run before killing it as a soft failure (0 = no timeout)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")
+	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")
 	return cmd
 }

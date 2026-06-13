@@ -31,3 +31,11 @@
 ## 进度日志
 
 - 2026-06-14 启动，完成全系统探查，写本 roadmap。
+
+## 进度更新 2026-06-14（中段）
+- ✅ **P1 配置体系**(#10 model + #9 权限姿态 + #4 作用域权限 + #8 drivability)— claude，merged main `af50606`。新 internal/agentcfg + agent/launch.go(参数化 RunnerProfile)+ agentreg config + CLI `agent config`/scan drivable。
+- ✅ **P2 错误处理**(#5)— claude，merged `1393766`。idle-timeout watchdog(runner_idle.go)+ 重试续接 briefing + CLI --idle-timeout。
+- ✅ **P4 收尾交付步**(#5 收尾)— **opencode 真跑** worker + claude reviewer，merged `daecfd4`。internal/finish + CLI `pactify finish`(push/PR)。idle-timeout 实战护航，opencode 未挂正常完成。
+- ✅ **P5 并行编排**(#3)— claude，merged `f611cdf`。nextActions/featureAction + gitx worktree + RunParallel(worktree 隔离并行开发 + 串行 merge + .gitattributes union 驱动 + merge 事件提交)+ CLI --max-concurrency。集成测试两 feature 并行 ship。
+- 进行中：opencode → P3 session 清理；claude → #12 UI polish。
+- 剩余：#1 向导、#6 session 清理(opencode 跑)、#7 planner review UI、#11 配方、#12 UI polish。

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/agentcfg"
 	"github.com/agentjoey/pactify/internal/agentreg"
 )
 
@@ -14,6 +15,8 @@ func (s *Server) registerAgentRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/agents", s.handleAgents)
 	mux.HandleFunc("POST /api/agents/{kind}/register", s.handleAgentRegister)
 	mux.HandleFunc("DELETE /api/agents/{kind}/register", s.handleAgentUnregister)
+	mux.HandleFunc("GET /api/agents/{kind}/config", s.handleAgentConfigGet)
+	mux.HandleFunc("POST /api/agents/{kind}/config", s.handleAgentConfigSet)
 }
 
 type agentItem struct {
@@ -106,4 +109,82 @@ func (s *Server) handleAgentUnregister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"kind": kind})
+}
+
+type agentConfigDTO struct {
+	Kind         string   `json:"kind"`
+	Registered   bool     `json:"registered"`
+	Drivable     bool     `json:"drivable"`
+	Model        string   `json:"model"`
+	AllowedTools []string `json:"allowed_tools"`
+	Restricted   bool     `json:"restricted"`
+	EffModel     string   `json:"effective_model"`
+	EffScoped    bool     `json:"effective_scoped"`
+}
+
+func (s *Server) handleAgentConfigGet(w http.ResponseWriter, r *http.Request) {
+	kind := r.PathValue("kind")
+	if _, ok := agent.Get(kind); !ok {
+		writeErr(w, http.StatusNotFound, "unknown kind")
+		return
+	}
+	reg, err := agentreg.Load()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	model, tools, restricted := reg.Config(kind)
+	dto := agentConfigDTO{
+		Kind: kind, Registered: reg.Has(kind), Drivable: agent.Drivable(kind),
+		Model: model, AllowedTools: tools, Restricted: restricted,
+	}
+	if eff, ok := agentcfg.Resolve(kind); ok {
+		dto.EffModel, dto.EffScoped = eff.Model, eff.Scoped
+	}
+	writeJSON(w, http.StatusOK, dto)
+}
+
+type agentConfigReq struct {
+	Model        string   `json:"model"`
+	AllowedTools []string `json:"allowed_tools"`
+	Restricted   bool     `json:"restricted"`
+}
+
+func (s *Server) handleAgentConfigSet(w http.ResponseWriter, r *http.Request) {
+	kind := r.PathValue("kind")
+	if _, ok := agent.Get(kind); !ok {
+		writeErr(w, http.StatusNotFound, "unknown kind")
+		return
+	}
+	var req agentConfigReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	reg, err := agentreg.Load()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !reg.Has(kind) {
+		writeErr(w, http.StatusBadRequest, "agent not registered — register it first")
+		return
+	}
+	if err := reg.SetConfig(kind, req.Model, req.AllowedTools, req.Restricted); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := reg.Save(); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	model, tools, restricted := reg.Config(kind)
+	dto := agentConfigDTO{
+		Kind: kind, Registered: true, Drivable: agent.Drivable(kind),
+		Model: model, AllowedTools: tools, Restricted: restricted,
+	}
+	if eff, ok := agentcfg.Resolve(kind); ok {
+		dto.EffModel, dto.EffScoped = eff.Model, eff.Scoped
+	}
+	writeJSON(w, http.StatusOK, dto)
 }

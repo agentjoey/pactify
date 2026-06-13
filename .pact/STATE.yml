@@ -168,7 +168,7 @@ features:
     tasks:
       - id: t-agentcfg-serve
         owner: oc-acfg
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/agent-config-serve.md
-        evidence: null
+        evidence: === VERIFY === go build ./... clean (no output). go test ./internal/serve/ -v -count=1 — 76 PASS (4 new: TestAgentConfigGetUnregistered PASS, TestAgentConfigGetUnknownKind PASS, TestAgentConfigSetAndGet PASS, TestAgentConfigSetUnregistered PASS), 0 FAIL, all pre-existing tests green, zero regressions. FILES CHANGED: internal/serve/agents.go (added agentcfg import + 2 routes + agentConfigDTO + agentConfigReq + handleAgentConfigGet + handleAgentConfigSet), internal/serve/agents_test.go (4 new httptest tests per spec).

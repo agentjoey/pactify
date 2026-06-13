@@ -1,6 +1,7 @@
 import { Projects } from "./Projects";
 import { Wiring } from "./Wiring";
 import { Seats } from "./Seats";
+import { AgentConfig } from "./AgentConfig";
 import { OpsSkeleton } from "../Skeleton";
 
 // OpsView composes the three ops panels — registry management, per-kind agent
@@ -25,6 +26,7 @@ export function OpsView({
   return (
     <div data-testid="ops-view" className="flex-1 overflow-auto p-4 text-[#e6edf3]">
       <Projects author={author} onChanged={onRegistryChanged} />
+      <AgentConfig refreshKey={refreshTick} />
       {loading ? (
         <OpsSkeleton />
       ) : (

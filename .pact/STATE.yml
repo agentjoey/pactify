@@ -21,14 +21,12 @@ features:
         reviewer: claude
         spec: .pact/tasks/watcher-hook.md
         evidence: ok   github.com/agentjoey/pactify/internal/serve 14.669s
-        deps: [t1]
       - id: t3
         owner: opencode-worker
         status: accepted
         reviewer: claude
         spec: .pact/tasks/integration-docs.md
         evidence: === RUN   TestRelayIntegrationFullChain --- PASS: TestRelayIntegrationFullChain (0.17s) === RUN   TestRelayIntegrationFailureIsolation --- PASS: TestRelayIntegrationFailureIsolation (0.16s) === RUN   TestRelayNilOnEmptyURL --- PASS: TestRelayNilOnEmptyURL (0.00s) === RUN   TestRelayNilEnqueueNoPanic --- PASS: TestRelayNilEnqueueNoPanic (0.00s) === RUN   TestRelayAuthHeader --- PASS: TestRelayAuthHeader (0.20s) === RUN   TestRelayBodyEnvelope --- PASS: TestRelayBodyEnvelope (0.20s) === RUN   TestRelayQueueFullDropsOldest --- PASS: TestRelayQueueFullDropsOldest (0.00s) === RUN   TestRelayServerErrorRetriesAndDrops --- PASS: TestRelayServerErrorRetriesAndDrops (10.00s) === RUN   TestRelayBadJSONLineSafe --- PASS: TestRelayBadJSONLineSafe (0.20s) ... (65 tests total, all PASS)  === FULL SUITE === ok  github.com/agentjoey/pactify/cmd/pactify      2.827s ok  github.com/agentjoey/pactify/internal/agent ok  github.com/agentjoey/pactify/internal/doctor ok  github.com/agentjoey/pactify/internal/event ok  github.com/agentjoey/pactify/internal/gitx ok  github.com/agentjoey/pactify/internal/mcp ok  github.com/agentjoey/pactify/internal/pact ok  github.com/agentjoey/pactify/internal/paths ok  github.com/agentjoey/pactify/internal/projection ok  github.com/agentjoey/pactify/internal/registry ok  github.com/agentjoey/pactify/internal/serve      15.493s  Files changed: - internal/serve/relay_integration_test.go (NEW): 2 integration tests exercising full fsnotify→drainNew→relay chain - docs/architecture.md: added M3.4 relay section (mount point, semantics, config, wire format) - docs/operations.md: added relay ops section (enable, token via Keychain, monitoring, disable)
-        deps: [t2]
   - id: agents
     branch: feat-agents
     status: in_progress
@@ -45,56 +43,49 @@ features:
         reviewer: claude
         spec: .pact/tasks/agents-reg.md
         evidence: === RUN   TestRegisterUnknownKind --- PASS: TestRegisterUnknownKind (0.00s) === RUN   TestRegisterKnownKind --- PASS: TestRegisterKnownKind (0.00s) === RUN   TestRegisterDuplicateKind --- PASS: TestRegisterDuplicateKind (0.00s) === RUN   TestUnregister --- PASS: TestUnregister (0.00s) === RUN   TestUnregisterMissing --- PASS: TestUnregisterMissing (0.00s) === RUN   TestLoadMissingIsEmpty --- PASS: TestLoadMissingIsEmpty (0.00s) === RUN   TestLoadSaveRoundtrip --- PASS: TestLoadSaveRoundtrip (0.00s) === RUN   TestRegisterUpdatesFile --- PASS: TestRegisterUpdatesFile (0.00s) === RUN   TestHasUnknownKind --- PASS: TestHasUnknownKind (0.00s) PASS ok   github.com/agentjoey/pactify/internal/agentreg 0.689s
-        deps: [scan]
       - id: cli
         owner: opencode-worker
         status: accepted
         reviewer: claude
         spec: .pact/tasks/agents-cli.md
         evidence: === RUN   TestAgentScanRegisterUnregister --- PASS: TestAgentScanRegisterUnregister (0.85s) === RUN   TestCLIFailsClosedWithoutAgentID --- PASS: TestCLIFailsClosedWithoutAgentID (0.78s) === RUN   TestSetupAutoSetsAgentIDFromSeat --- PASS: TestSetupAutoSetsAgentIDFromSeat (0.06s) === RUN   TestSetupExistingPactWiresAgent --- PASS: TestSetupExistingPactWiresAgent (0.06s) PASS ok   github.com/agentjoey/pactify/cmd/pactify 2.121s
-        deps: [reg]
       - id: serve
         owner: opencode-worker
         status: accepted
         reviewer: claude
         spec: .pact/tasks/agents-serve.md
         evidence: === RUN   TestAgentsGET --- PASS: TestAgentsGET (0.00s) === RUN   TestAgentsRegisterAndUnregister --- PASS: TestAgentsRegisterAndUnregister (0.00s) === RUN   TestAgentsUnknownKind --- PASS: TestAgentsUnknownKind (0.00s) PASS ok   github.com/agentjoey/pactify/internal/serve  0.618s  Full serve suite: 15.503s — all green.  Files changed:  - internal/serve/agents.go (NEW): 3 machine-level agent endpoints (GET /api/agents merge Scan+Load, POST /api/agents/{kind}/register, DELETE /api/agents/{kind}/register) following wiring kind-validation pattern  - internal/serve/agents_test.go (NEW): 3 httptest tests (GET known kind+registered state, POST register→GET confirms registered+label, DELETE→GET confirms false, unknown kind→400)  - internal/serve/api.go: wired s.registerAgentRoutes(mux) in Handler() next to registerWiringRoutes
-        deps: [cli]
       - id: ui
         owner: opencode-worker
         status: accepted
         reviewer: claude
         spec: .pact/tasks/agents-ui.md
         evidence: === Agents vitest (spec verify) === PASS src/components/Agents.test.tsx (7 tests)   - renders onboarding when no agents registered   - renders manager when some agents registered   - clicking register calls registerAgent and optimistically toggles   - clicking registered calls unregisterAgent   - not-installed rows are grayed and toggle disabled   - observe mode disables toggle for installed agents   - handles fetch error gracefully  === Full vitest suite === 45 test files passed | 400 tests passed  === npm run build === tsc + vite build: dist rebuilt successfully  Files changed: - web/src/lib/api.ts: added AgentRow type + getAgents/registerAgent/unregisterAgent - web/src/components/Agents.tsx: machine-level agents panel (onboarding + manager views) - web/src/components/Agents.test.tsx: 7 vitest tests - web/src/App.tsx: wired Agents with author/onChanged props - web/src/App.test.tsx: updated fetch mocks for /api/agents + assertions
-        deps: [serve]
   - id: planner
     branch: feat-planner
     status: in_progress
     tasks:
       - id: p-manifest
         owner: opencode-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/planner-manifest.md
         evidence: ok   github.com/agentjoey/pactify/internal/planner (cached)
       - id: p-prompt
         owner: claude
-        status: assigned
+        status: awaiting_review
         reviewer: opencode-worker
         spec: .pact/tasks/planner-prompt.md
-        evidence: null
-        deps: [p-manifest]
+        evidence: go test ./internal/planner/ -run Prompt — PASS (9 tests): TestPromptContainsGoalFeatureAndRepoTree, TestPromptListsSeatsWithDrivable, TestPromptMentionsTaskAndManifestPaths, TestPromptIncludesManifestSchemaExample, TestPromptStatesAssignmentRules, TestPromptRequiresVerifyLine, TestPromptRequiresDependencyChain, TestPromptManifestExampleParses (embedded JSON parses via planner.Parse), TestPromptDeterministic. Full pkg green, go vet clean. New files: internal/planner/prompt.go (PromptInput, SeatInfo, BuildPrompt) + prompt_test.go. BuildPrompt is pure/deterministic; emits Goal/Feature/RepoTree, roster with Drivable flags, serial-deps+single-worktree rationale, owner≠reviewer + prefer-drivable + complexity allocation rules, .pact/tasks/<feature>-<id>.md spec layout with mandatory verify: line, and a schema-correct .pact/plan-<feature>.json example.
       - id: p-apply
         owner: opencode-worker
         status: assigned
         reviewer: claude
         spec: .pact/tasks/planner-apply.md
         evidence: null
-        deps: [p-manifest]
       - id: p-cmd
         owner: claude
-        status: assigned
+        status: in_progress
         reviewer: opencode-worker
         spec: .pact/tasks/planner-cmd.md
         evidence: null
-        deps: [p-prompt, p-apply]

@@ -172,3 +172,11 @@ v12 源码证实会整体覆盖 DOM 真实锚点;③CSS 用了 v11 时代死类�
 isValidConnection 拦截后 onConnect 的三条 notice 分支全部不可达(提示从未真正出现过),
 改 onConnectEnd 路由。vitest 393 + e2e 7×2 + go test 全绿。
 **插曲**:opus 实现 agent 断连 ×3(T2/T4/T5)+会话限额 ×1,均半成品续派补完。
+
+### T11: 无 UI dogfood — pact 自托管交付 M3.4 relay [HIGH]
+**Status:** ✅ Done（feature relay shipped 进 main，2026-06-13）
+**背景**：UI 端验收差，战略转向先跑通无 UI 全链路稳定性。pactify 首次用自己的协议开发自己。
+**阵容**：claude 编排+评审 / opencode-worker 交付 / （antigravity 第三家因 GUI 无法无人驱动，本轮放弃）。
+**交付**：M3.4 relay 接口（serve watcher 旁路事件→可配置 HTTP POST，best-effort 异步、失败隔离）。3 棒依赖链 t1 relay-client → t2 watcher-hook → t3 集成+文档，全经 assign→checkpoint→review→accept→merge。
+**关键转折**：用户两次点破"人肉中继没消灭"——orchestrator 缺自主观测(#6)、一次性 worker 致人退化成调度器(#9)。运营层解法落地：orchestrator 用 `opencode run` 非交互拉起 worker + 后台观测自动接住，t2/t3 全无人闭环。
+**产出 = stability 报告**（docs/dogfood/2026-06-13-stability-log.md，10 条发现）：协议核心硬（生命周期/铁律/返工回路/自主闭环成立），最大缺口 = 缺产品级编排驱动（#9，下轮 `pactify orchestrate`/worker 守护）。次要：checkpoint CommitAll 扫工具垃圾(#8)、软链 entry 不兼容(#5)、F1 单树(#7)、GUI agent 进不了无人闭环(#0/#1)。

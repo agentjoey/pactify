@@ -128,7 +128,7 @@ features:
     tasks:
       - id: t-finish
         owner: oc-finish
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/finishstep-core.md
-        evidence: null
+        evidence: Acceptance criteria met: 1. go build ./... — clean (no output) 2. go test ./internal/finish/... — 7/7 PASS 3. pactify finish --help — shows command with flags: --remote, --branch, --pr, --head, --title, --body 4. Full project test suite: 15/15 packages green, zero regressions

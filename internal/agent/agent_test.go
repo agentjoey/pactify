@@ -74,7 +74,7 @@ func TestRunnerCLIKinds(t *testing.T) {
 		args    []string
 	}{
 		{"opencode", "opencode", []string{"run", "{briefing}"}},
-		{"claude-code", "claude", []string{"-p", "{briefing}"}},
+		{"claude-code", "claude", []string{"-p", "--dangerously-skip-permissions", "{briefing}"}},
 		{"gemini-cli", "gemini", []string{"-p", "{briefing}"}},
 	}
 	for _, tc := range cases {

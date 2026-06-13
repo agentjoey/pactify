@@ -91,7 +91,10 @@ func (s spec) Runner() (RunnerSpec, bool) {
 
 var registry = map[string]spec{
 	"opencode":       {"opencode", "AGENTS.md", "opencode.json", Project, JSONOpencode, false, "opencode", []string{"run", "{briefing}"}},
-	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude", []string{"-p", "{briefing}"}},
+	// claude-code: -p is non-interactive (headless); --dangerously-skip-permissions
+	// is REQUIRED for autonomous tool use (no human to approve Edit/Bash) — without
+	// it `claude -p` stalls on permission prompts and cannot develop/review.
+	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude", []string{"-p", "--dangerously-skip-permissions", "{briefing}"}},
 	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, "gemini", []string{"-p", "{briefing}"}},
 	// codex-cli: codex headless not yet verified; keep no runner conservatively
 	// (set runnerCmd once `codex exec`-style headless mode is confirmed).

@@ -20,6 +20,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var feature string
 	var resume bool
 	var maxRework, maxFails, maxIters int
+	var runTimeoutMin int
 	var dryRun bool
 	var seatKinds []string
 
@@ -56,12 +57,13 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 			defer stop()
 
 			opts := orchestrate.Options{
-				Dir:      dir,
-				Feature:  feature,
-				Th:       orchestrate.Thresholds{MaxRework: maxRework, MaxFails: maxFails, MaxIters: maxIters},
-				DryRun:   dryRun,
-				Now:      func() string { return time.Now().Format("20060102-150405") },
-				SeatKind: func(seat string) string { return km[seat] },
+				Dir:        dir,
+				Feature:    feature,
+				Th:         orchestrate.Thresholds{MaxRework: maxRework, MaxFails: maxFails, MaxIters: maxIters},
+				DryRun:     dryRun,
+				Now:        func() string { return time.Now().Format("20060102-150405") },
+				SeatKind:   func(seat string) string { return km[seat] },
+				RunTimeout: time.Duration(runTimeoutMin) * time.Minute,
 			}
 			if err := orchestrate.Run(ctx, opts); err != nil {
 				return err
@@ -77,6 +79,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().IntVar(&maxRework, "max-rework", 3, "escalate after this many changes-requested rounds on a task")
 	cmd.Flags().IntVar(&maxFails, "max-fails", 2, "escalate after this many failed agent runs on a task")
 	cmd.Flags().IntVar(&maxIters, "max-iters", 50, "global iteration cap (backstop against a non-converging loop)")
+	cmd.Flags().IntVar(&runTimeoutMin, "run-timeout", 30, "minutes to wait for one agent run before killing it as a soft failure (0 = no timeout)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")
 	return cmd

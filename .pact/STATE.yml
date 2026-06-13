@@ -144,7 +144,7 @@ features:
         evidence: === ACCEPTANCE === go build ./... — clean go test ./internal/sessions/... -v — 15/15 PASS pactify sessions --help — list/prune subcommands shown pactify sessions prune opencode — 'kind opencode: session cleanup not supported (no verified command)', exit 0 go vet ./cmd/pactify/ — clean === FILES === internal/sessions/sessions.go (NEW): Manager, Spec, Runner types + Supported/CanPrune/List/Prune internal/sessions/sessions_test.go (NEW): 15 table-driven + fake-Runner tests cmd/pactify/cmd_sessions.go (NEW): pactify sessions {list,prune} CLI cmd/pactify/commands.go: +newSessionsCmd() registration
   - id: recipe
     branch: feat-recipe
-    status: in_progress
+    status: shipped
     tasks:
       - id: t-recipe
         owner: oc-recipe

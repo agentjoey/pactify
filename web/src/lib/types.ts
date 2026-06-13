@@ -77,3 +77,23 @@ export interface OrchestrateStatusResponse {
   present: boolean;
   status?: OrchestrateStatus;
 }
+
+// Planner-generated task graph surfaced for human review before `plan apply`
+// assigns it (#7 planner review).
+export interface PlanTaskReview {
+  id: string;
+  owner: string;
+  reviewer: string;
+  spec: string;
+  verify: string;
+  deps?: string[];
+}
+
+export interface PlanReviewResponse {
+  present: boolean;
+  feature?: string;
+  branch?: string;
+  tasks?: PlanTaskReview[];
+  valid: boolean;
+  error?: string;
+}

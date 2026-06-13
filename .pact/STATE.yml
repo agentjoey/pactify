@@ -67,3 +67,34 @@ features:
         spec: .pact/tasks/agents-ui.md
         evidence: === Agents vitest (spec verify) === PASS src/components/Agents.test.tsx (7 tests)   - renders onboarding when no agents registered   - renders manager when some agents registered   - clicking register calls registerAgent and optimistically toggles   - clicking registered calls unregisterAgent   - not-installed rows are grayed and toggle disabled   - observe mode disables toggle for installed agents   - handles fetch error gracefully  === Full vitest suite === 45 test files passed | 400 tests passed  === npm run build === tsc + vite build: dist rebuilt successfully  Files changed: - web/src/lib/api.ts: added AgentRow type + getAgents/registerAgent/unregisterAgent - web/src/components/Agents.tsx: machine-level agents panel (onboarding + manager views) - web/src/components/Agents.test.tsx: 7 vitest tests - web/src/App.tsx: wired Agents with author/onChanged props - web/src/App.test.tsx: updated fetch mocks for /api/agents + assertions
         deps: [serve]
+  - id: planner
+    branch: feat-planner
+    status: in_progress
+    tasks:
+      - id: p-manifest
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/planner-manifest.md
+        evidence: null
+      - id: p-prompt
+        owner: claude
+        status: assigned
+        reviewer: opencode-worker
+        spec: .pact/tasks/planner-prompt.md
+        evidence: null
+        deps: [p-manifest]
+      - id: p-apply
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/planner-apply.md
+        evidence: null
+        deps: [p-manifest]
+      - id: p-cmd
+        owner: claude
+        status: assigned
+        reviewer: opencode-worker
+        spec: .pact/tasks/planner-cmd.md
+        evidence: null
+        deps: [p-prompt, p-apply]

@@ -41,17 +41,17 @@ features:
         evidence: --- PASS: TestScanWithCoversCLIAndDesktop (0.00s) --- PASS: TestScanWithOrderMatchesKinds (0.00s) --- PASS: TestScanDefaultProbeSmoke (0.00s) PASS ok   github.com/agentjoey/pactify/internal/agent (cached)
       - id: reg
         owner: opencode-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/agents-reg.md
         evidence: === RUN   TestRegisterUnknownKind --- PASS: TestRegisterUnknownKind (0.00s) === RUN   TestRegisterKnownKind --- PASS: TestRegisterKnownKind (0.00s) === RUN   TestRegisterDuplicateKind --- PASS: TestRegisterDuplicateKind (0.00s) === RUN   TestUnregister --- PASS: TestUnregister (0.00s) === RUN   TestUnregisterMissing --- PASS: TestUnregisterMissing (0.00s) === RUN   TestLoadMissingIsEmpty --- PASS: TestLoadMissingIsEmpty (0.00s) === RUN   TestLoadSaveRoundtrip --- PASS: TestLoadSaveRoundtrip (0.00s) === RUN   TestRegisterUpdatesFile --- PASS: TestRegisterUpdatesFile (0.00s) === RUN   TestHasUnknownKind --- PASS: TestHasUnknownKind (0.00s) PASS ok   github.com/agentjoey/pactify/internal/agentreg 0.689s
         deps: [scan]
       - id: cli
         owner: opencode-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/agents-cli.md
-        evidence: null
+        evidence: === RUN   TestAgentScanRegisterUnregister --- PASS: TestAgentScanRegisterUnregister (0.85s) === RUN   TestCLIFailsClosedWithoutAgentID --- PASS: TestCLIFailsClosedWithoutAgentID (0.78s) === RUN   TestSetupAutoSetsAgentIDFromSeat --- PASS: TestSetupAutoSetsAgentIDFromSeat (0.06s) === RUN   TestSetupExistingPactWiresAgent --- PASS: TestSetupExistingPactWiresAgent (0.06s) PASS ok   github.com/agentjoey/pactify/cmd/pactify 2.121s
         deps: [reg]
       - id: serve
         owner: opencode-worker

@@ -5,8 +5,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/agentreg"
 	"github.com/spf13/cobra"
 )
 
@@ -83,6 +86,59 @@ func newAgentCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return os.WriteFile("docs/agent-onboarding.md", []byte(agent.RenderDoc()), 0o644)
 		}}
-	a.AddCommand(add, docs)
+	scan := &cobra.Command{Use: "scan", Short: "detect installed agents and show registration status",
+		RunE: func(c *cobra.Command, args []string) error {
+			reg, err := agentreg.Load()
+			if err != nil {
+				return err
+			}
+			for _, r := range agent.Scan() {
+				mark := "—"
+				if r.Installed {
+					mark = "installed"
+				}
+				tag := ""
+				if reg.Has(r.Kind) {
+					tag = "  [registered]"
+				}
+				fmt.Fprintf(c.OutOrStdout(), "%-15s %-10s %-45s%s\n", r.Kind, mark, r.Detail, tag)
+			}
+			return nil
+		}}
+
+	var label string
+	register := &cobra.Command{Use: "register <kind>", Args: cobra.ExactArgs(1),
+		Short: "register an installed agent kind for orchestration",
+		RunE: func(c *cobra.Command, args []string) error {
+			kind := args[0]
+			if _, ok := agent.Get(kind); !ok {
+				return fmt.Errorf("unknown agent kind %q — known kinds: %s", kind, strings.Join(agent.Kinds(), ", "))
+			}
+			reg, err := agentreg.Load()
+			if err != nil {
+				return err
+			}
+			ts := time.Now().Format("2006-01-02T15:04:05Z07:00")
+			if err := reg.Register(kind, label, ts); err != nil {
+				return err
+			}
+			return reg.Save()
+		}}
+	register.Flags().StringVar(&label, "label", "", "human-readable label for this agent")
+
+	unregister := &cobra.Command{Use: "unregister <kind>", Args: cobra.ExactArgs(1),
+		Short: "unregister an agent kind from orchestration",
+		RunE: func(c *cobra.Command, args []string) error {
+			reg, err := agentreg.Load()
+			if err != nil {
+				return err
+			}
+			if err := reg.Unregister(args[0]); err != nil {
+				return err
+			}
+			return reg.Save()
+		}}
+
+	a.AddCommand(add, docs, scan, register, unregister)
 	return a
 }

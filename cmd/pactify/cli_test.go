@@ -120,6 +120,60 @@ func TestCLIFailsClosedWithoutAgentID(t *testing.T) {
 	}
 }
 
+func TestAgentScanRegisterUnregister(t *testing.T) {
+	bin := buildBinary(t)
+	dir := t.TempDir()
+	t.Setenv("PACTIFY_HOME", dir)
+
+	// scan exits 0 and contains a known kind
+	out, err := exec.Command(bin, "agent", "scan").CombinedOutput()
+	if err != nil {
+		t.Fatalf("agent scan: %v %s", err, out)
+	}
+	if !strings.Contains(string(out), "opencode") {
+		t.Fatalf("agent scan missing opencode: %s", out)
+	}
+
+	// register opencode
+	out, err = exec.Command(bin, "agent", "register", "opencode", "--label", "test-oc").CombinedOutput()
+	if err != nil {
+		t.Fatalf("agent register opencode: %v %s", err, out)
+	}
+
+	// scan now shows registered
+	out, err = exec.Command(bin, "agent", "scan").CombinedOutput()
+	if err != nil {
+		t.Fatalf("agent scan after register: %v %s", err, out)
+	}
+	if !strings.Contains(string(out), "[registered]") {
+		t.Fatalf("agent scan missing [registered] after register: %s", out)
+	}
+
+	// unregister opencode
+	out, err = exec.Command(bin, "agent", "unregister", "opencode").CombinedOutput()
+	if err != nil {
+		t.Fatalf("agent unregister opencode: %v %s", err, out)
+	}
+
+	// scan no longer shows registered
+	out, err = exec.Command(bin, "agent", "scan").CombinedOutput()
+	if err != nil {
+		t.Fatalf("agent scan after unregister: %v %s", err, out)
+	}
+	if strings.Contains(string(out), "[registered]") {
+		t.Fatalf("agent scan still shows [registered] after unregister: %s", out)
+	}
+
+	// register bogus exits non-zero and lists known kinds
+	out, err = exec.Command(bin, "agent", "register", "bogus").CombinedOutput()
+	if err == nil {
+		t.Fatalf("agent register bogus must fail: %s", out)
+	}
+	if !strings.Contains(string(out), "antigravity") {
+		t.Fatalf("agent register bogus should list known kinds: %s", out)
+	}
+}
+
 // TestCLIOrchestrateHelpAndDryRun smoke-tests the orchestrate command: --help
 // surfaces the flags, and --dry-run on an inited project exits cleanly without
 // launching any agent.

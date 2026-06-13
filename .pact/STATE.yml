@@ -73,10 +73,10 @@ features:
     tasks:
       - id: p-manifest
         owner: opencode-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/planner-manifest.md
-        evidence: null
+        evidence: ok   github.com/agentjoey/pactify/internal/planner (cached)
       - id: p-prompt
         owner: claude
         status: assigned

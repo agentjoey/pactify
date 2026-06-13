@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/agentreg"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/paths"
+	"github.com/agentjoey/pactify/internal/wizard"
 	"github.com/spf13/cobra"
 )
 
@@ -105,9 +107,70 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 }
 
 func newSetupCmd() *cobra.Command {
-	return &cobra.Command{Use: "setup", Short: "guided onboarding (interactive)",
+	cmd := &cobra.Command{Use: "setup", Short: "guided onboarding (interactive)",
 		RunE: func(c *cobra.Command, _ []string) error {
 			cwd, _ := os.Getwd()
 			return runSetup(os.Stdin, c.OutOrStdout(), cwd, isTTY())
+		}}
+	cmd.AddCommand(newSetupSuggestCmd())
+	return cmd
+}
+
+// newSetupSuggestCmd wires `pactify setup suggest`: the bridge from registered
+// machine agents (pactify agent register) to a project's pact seat roster (#1).
+// It reads the machine agent registry, proposes a seat roster (lead + workers),
+// flags any gap that would block the pact loop, and prints the exact init +
+// wiring commands to apply it — turning "I registered my agents" into "this
+// project can do work".
+func newSetupSuggestCmd() *cobra.Command {
+	return &cobra.Command{Use: "suggest", Short: "propose a project seat roster from your registered agents",
+		RunE: func(c *cobra.Command, _ []string) error {
+			out := c.OutOrStdout()
+			reg, err := agentreg.Load()
+			if err != nil {
+				return err
+			}
+			var kinds []string
+			for _, a := range reg.Agents {
+				kinds = append(kinds, a.Kind)
+			}
+			bindings := wizard.Suggest(kinds)
+			if len(bindings) == 0 {
+				fmt.Fprintln(out, "no registered agents — run `pactify agent register <kind>` first (see `pactify agent scan`)")
+				return nil
+			}
+
+			fmt.Fprintln(out, "Proposed seat roster (from your registered agents):")
+			for _, b := range bindings {
+				drive := "manual"
+				if b.Drivable {
+					drive = "drivable"
+				}
+				fmt.Fprintf(out, "  %-12s %-13s %-9s roles: %s\n", b.Seat, b.Kind, drive, strings.Join(b.Roles, ","))
+			}
+
+			if warns := wizard.Validate(bindings); len(warns) > 0 {
+				fmt.Fprintln(out, "\nGaps to resolve:")
+				for _, w := range warns {
+					fmt.Fprintf(out, "  ⚠ %s\n", w)
+				}
+			}
+
+			// Actionable apply steps: a single `init` seeds every seat, then wire
+			// each drivable kind so it can join. This is the "now make it work" bridge.
+			fmt.Fprintln(out, "\nApply with:")
+			var seatArgs []string
+			for _, b := range bindings {
+				entry := "AGENTS.md"
+				if ad, ok := agent.Get(b.Kind); ok && ad.DefaultEntry() != "" {
+					entry = ad.DefaultEntry()
+				}
+				seatArgs = append(seatArgs, fmt.Sprintf("--seat %q", b.Seat+":"+strings.Join(b.Roles, ",")+":"+entry+":"+b.Kind))
+			}
+			fmt.Fprintf(out, "  pactify init <project> %s\n", strings.Join(seatArgs, " "))
+			for _, b := range bindings {
+				fmt.Fprintf(out, "  pactify agent add %s --id %s --roles %s\n", b.Kind, b.Seat, strings.Join(b.Roles, ","))
+			}
+			return nil
 		}}
 }

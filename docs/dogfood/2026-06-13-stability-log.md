@@ -64,3 +64,15 @@ plan：docs/superpowers/plans/2026-06-13-headless-dogfood-m3.4-relay.md
 - 根因：`pactify checkpoint` 调 `gitx.CommitAll`（engine.go:335，stages everything），把工作树里任何工具生成的文件都扫进 feature commit。worker 非故意。
 - 处置：changes 退回要求 git rm + gitignore；记录。
 - 候选改进：checkpoint 应限定暂存范围（如只 task spec 声明的路径 + 显式变更），或对意外文件告警；或 init 时为常见工具状态目录补 .gitignore。
+
+### #9 「人是启动按钮」在多状态流转里退化成「人是调度器」（核心）
+- 阶段：t1 changes→rework
+- 现象：worker 是一次性会话，干完即退。每次状态变迁（assigned→该干活 / changes_requested→该返工）都需有人把对应 worker 重新拉起。协调【内容】在协议日志里（无需人转述），但协调【时机】仍需人触发——人退化成调度器。用户："还是我在传话。"
+- 根因：无 worker 侧反应式回路，也无编排驱动器；"人是启动按钮"模型在单步任务成立，多步流转下每步都要人重新按按钮。
+- 处置（本轮，运营层验证解法）：orchestrator 改为【自主驱动器】——用 `opencode run "<prompt>"` 非交互拉起 worker，状态变迁自动触发；orchestrator 后台观测接住 checkpoint，自动 review，changes 则自动重拉。人只在最初说"开始"。
+- 候选改进（产品层，高优先）：① worker 守护进程订阅自己 owner 的任务状态，changes/assigned 自动起活；② `pactify orchestrate` 驱动器：监听 log 状态机，按 owner 自动调起对应 agent（CLI 类可 exec，GUI 类无解）；③ GUI/IDE agent（antigravity）无法进无人闭环——异构性与全自主的根本张力，记为异构性发现。
+
+### #10（正向）changes→rework→accept 回路端到端成立
+- 阶段：t1
+- 现象：reviewer changes（两点：范围外文件 + start() 隐患）→ worker 精确返工（删文件+gitignore、newRelay 自启+注释、还顺手把重试改可中断）→ 未自接受、重 checkpoint → reviewer 复跑验收通过 → accept。铁律生效（worker 不能自接受）、返工内容经协议日志流转无需人转述。
+- 结论：协议的评审返工核心回路是硬的；缺口在【触发时机】（#9）而非【内容流转】。

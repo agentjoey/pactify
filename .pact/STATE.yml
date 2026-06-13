@@ -5,3 +5,13 @@ agents:
   - { id: opencode-worker, roles: [worker] }
   - { id: gemini-worker, roles: [worker] }
 features:
+  - id: relay
+    branch: feat-relay
+    status: in_progress
+    tasks:
+      - id: t1
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/relay-client.md
+        evidence: null

@@ -73,28 +73,28 @@ features:
     tasks:
       - id: p-manifest
         owner: opencode-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/planner-manifest.md
-        evidence: null
+        evidence: ok   github.com/agentjoey/pactify/internal/planner (cached)
       - id: p-prompt
         owner: claude
-        status: assigned
+        status: accepted
         reviewer: opencode-worker
         spec: .pact/tasks/planner-prompt.md
-        evidence: null
+        evidence: go test ./internal/planner/ -run Prompt — PASS (9 tests): TestPromptContainsGoalFeatureAndRepoTree, TestPromptListsSeatsWithDrivable, TestPromptMentionsTaskAndManifestPaths, TestPromptIncludesManifestSchemaExample, TestPromptStatesAssignmentRules, TestPromptRequiresVerifyLine, TestPromptRequiresDependencyChain, TestPromptManifestExampleParses (embedded JSON parses via planner.Parse), TestPromptDeterministic. Full pkg green, go vet clean. New files: internal/planner/prompt.go (PromptInput, SeatInfo, BuildPrompt) + prompt_test.go. BuildPrompt is pure/deterministic; emits Goal/Feature/RepoTree, roster with Drivable flags, serial-deps+single-worktree rationale, owner≠reviewer + prefer-drivable + complexity allocation rules, .pact/tasks/<feature>-<id>.md spec layout with mandatory verify: line, and a schema-correct .pact/plan-<feature>.json example.
         deps: [p-manifest]
       - id: p-apply
         owner: opencode-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/planner-apply.md
-        evidence: null
+        evidence: === RUN   TestApplyValidPlan --- PASS: TestApplyValidPlan (0.08s) === RUN   TestApplySpecMissing --- PASS: TestApplySpecMissing (0.06s) === RUN   TestApplyInvalidPlan --- PASS: TestApplyInvalidPlan (0.05s) PASS ok   github.com/agentjoey/pactify/internal/planner 0.532s
         deps: [p-manifest]
       - id: p-cmd
         owner: claude
-        status: assigned
+        status: accepted
         reviewer: opencode-worker
         spec: .pact/tasks/planner-cmd.md
-        evidence: null
+        evidence: verify: `go test ./cmd/pactify/ -run Plan && go build ./...` — PASS.  === go test ./cmd/pactify/ -run Plan -v === === RUN   TestCLIPlanApply --- PASS: TestCLIPlanApply (0.90s) PASS ok  github.com/agentjoey/pactify/cmd/pactify  === go build ./... === build OK === go vet ./cmd/pactify/ === vet OK  Files changed: - cmd/pactify/cmd_plan.go (NEW): newPlanCmd() = `pactify plan "<goal>" --feature <id> [--auto] [--run] [--planner-kind <kind>]` (gathers repoTree via git ls-files shallow + roster from StateProjection → SeatInfo with MVP Drivable=true → planner.BuildPrompt → orchestrate.NewCmdRunner().Run("planner", plannerKind default "claude-code", prompt, cwd); default stops with review hint, --auto applies, --run also prints orchestrate next-step) + `plan apply <feature> [--run]` subcommand (reads .pact/plan-<feature>.json → planner.Parse → planner.Apply, reports assign count). Helpers: applyPlan, rosterFromState, repoTree, shallowWalk. - cmd/pactify/commands.go: registered newPlanCmd() in root.AddCommand. - cmd/pactify/cli_test.go: TestCLIPlanApply smoke — plan --help carries --feature/--auto/--run/--planner-kind, plan apply --help carries --run, and `plan apply f1` over a committed plan-f1.json + spec assigns t1 (status shows assigned). Smoke tests apply path only (launching a real planner agent needs a live LLM → integration acceptance), per spec.  Note: two pre-existing failures in internal/orchestrate (TestCmdRunner_Opencode/ClaudeCode — model-pinning specs vs un-updated runner tests) exist on clean HEAD and are unrelated to this task's files (confirmed via git stash). p-cmd touches only cmd/pactify/.
         deps: [p-prompt, p-apply]

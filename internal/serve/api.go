@@ -33,10 +33,15 @@ type Server struct {
 	// guards lazy creation of the per-project mutexes.
 	muGuard sync.Mutex
 	mu      map[string]*sync.Mutex
+
+	relay *relay
 }
 
 // SetSeat configures the acting seat used for author (write) endpoints.
 func (s *Server) SetSeat(seat string) { s.seat = seat }
+
+// SetRelay configures the optional best-effort relay for log events.
+func (s *Server) SetRelay(url, token string) { s.relay = newRelay(url, token) }
 
 // projectMu returns the lazily-created mutex serializing author writes for id.
 func (s *Server) projectMu(id string) *sync.Mutex {

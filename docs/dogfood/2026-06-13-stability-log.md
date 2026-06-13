@@ -43,3 +43,40 @@ plan：docs/superpowers/plans/2026-06-13-headless-dogfood-m3.4-relay.md
 
 ## 协议稳定性结论（持续更新）
 - 待 worker 进场后补充。
+
+### #6 orchestrator 缺自主观测，退化成人肉 bus
+- 阶段：t1 派发后
+- 现象：worker 启动后，orchestrator（claude）无内建机制感知 worker 何时 checkpoint，需用户口头传"干完了去 review"——人肉中继没消灭，只是从"传任务内容"退化成"传状态信号"。用户一针见血："还是我手动做这个 bus，那有什么意义？"
+- 根因：orchestrator 角色是被动 CLI 驱动；协议靠 .pact/ 文件协调，但没有"orchestrator 监听 log.jsonl 状态变迁并自动接手"的回路。serve 有 watcher/SSE，但服务于 dashboard，未反哺 orchestrator 决策。
+- 处置（本轮，运营层）：orchestrator 起后台轮询盯 .pact/log.jsonl 的 checkpoint 事件，worker checkpoint 即自动醒来 review，用户只当"启动按钮"。
+- 候选改进（产品层）：① `pactify watch --seat claude --on-checkpoint <cmd>` 之类的 orchestrator 守护，状态变迁触发回调；② 正是 M3.4 relay 的延伸——事件流反哺编排端；③ orchestrator 也是 MCP 客户端，用 resource subscription 订阅 STATE 变更。**这条直接关系到协议"消灭人肉中继"的核心价值能否在 orchestrator 层兑现，优先级高。**
+
+### #7 共享单工作树致 orchestrator 提交落错分支
+- 阶段：t1 review
+- 现象：我架完后台观测后提交 #6 stability log，commit 落到了 feat-relay 而非 main——因为此时 opencode worker 已把【共享工作树】切到 feat-relay。`git log main..feat-relay` 里混入了 orchestrator 的文档提交。
+- 根因：F1 单工作树——orchestrator 与 worker 共用一个 git HEAD，worker 切分支后 orchestrator 的任何提交都落到 worker 的分支。
+- 处置：本轮容忍（#6/#7/#8 文档随 feature merge 回 main）；记录危害。
+- 候选改进：orchestrator 与 worker 各用 git worktree（F1 并发隔离，Phase 1 backlog 已列）；或 orchestrator 文档提交前显式确认分支。
+
+### #8 checkpoint 的 CommitAll 无差别扫入工具垃圾
+- 阶段：t1 review
+- 现象：worker 交付里混入 `data/state.json`（内容 `{"nextAgent":"build","nextModel":{deepseek-v4-pro}}`——opencode 自己的会话状态文件），范围外。
+- 根因：`pactify checkpoint` 调 `gitx.CommitAll`（engine.go:335，stages everything），把工作树里任何工具生成的文件都扫进 feature commit。worker 非故意。
+- 处置：changes 退回要求 git rm + gitignore；记录。
+- 候选改进：checkpoint 应限定暂存范围（如只 task spec 声明的路径 + 显式变更），或对意外文件告警；或 init 时为常见工具状态目录补 .gitignore。
+
+### #9 「人是启动按钮」在多状态流转里退化成「人是调度器」（核心）
+- 阶段：t1 changes→rework
+- 现象：worker 是一次性会话，干完即退。每次状态变迁（assigned→该干活 / changes_requested→该返工）都需有人把对应 worker 重新拉起。协调【内容】在协议日志里（无需人转述），但协调【时机】仍需人触发——人退化成调度器。用户："还是我在传话。"
+- 根因：无 worker 侧反应式回路，也无编排驱动器；"人是启动按钮"模型在单步任务成立，多步流转下每步都要人重新按按钮。
+- 处置（本轮，运营层验证解法）：orchestrator 改为【自主驱动器】——用 `opencode run "<prompt>"` 非交互拉起 worker，状态变迁自动触发；orchestrator 后台观测接住 checkpoint，自动 review，changes 则自动重拉。人只在最初说"开始"。
+- 候选改进（产品层，高优先）：① worker 守护进程订阅自己 owner 的任务状态，changes/assigned 自动起活；② `pactify orchestrate` 驱动器：监听 log 状态机，按 owner 自动调起对应 agent（CLI 类可 exec，GUI 类无解）；③ GUI/IDE agent（antigravity）无法进无人闭环——异构性与全自主的根本张力，记为异构性发现。
+
+### #10（正向）changes→rework→accept 回路端到端成立
+- 阶段：t1
+- 现象：reviewer changes（两点：范围外文件 + start() 隐患）→ worker 精确返工（删文件+gitignore、newRelay 自启+注释、还顺手把重试改可中断）→ 未自接受、重 checkpoint → reviewer 复跑验收通过 → accept。铁律生效（worker 不能自接受）、返工内容经协议日志流转无需人转述。
+- 结论：协议的评审返工核心回路是硬的；缺口在【触发时机】（#9）而非【内容流转】。
+
+### t2 全无人闭环跑通（正向，#9 解法验证）
+- orchestrator 用 `opencode run "<prompt>"` 非交互拉起 worker，worker 自 join/读规格/TDD 实现(api.go+watch.go+cmd_serve.go)/checkpoint，orchestrator 后台接住、复审、accept——**全程零人工介入**。#9 的运营层解法（orchestrator 当自主驱动器）端到端成立。
+- #8 余波（次要）：opencode 给 opencode.json 自动加了 `$schema` 行，被 checkpoint CommitAll 扫入。本次为合法注解、无害，accept 时容忍；佐证 #8（CommitAll 无差别暂存）对【已跟踪的工具配置】同样会扫入工具的自动改动。

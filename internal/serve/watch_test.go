@@ -1,9 +1,13 @@
 package serve
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -77,4 +81,55 @@ func TestDrainNewLeavesPartialLine(t *testing.T) {
 	if got := recvWithin(t, ch, time.Second); !strings.Contains(got, `"event_id":"2"`) || !strings.Contains(got, "join") {
 		t.Fatalf("completed line not broadcast intact, got %q", got)
 	}
+}
+
+func TestDrainNewEnqueuesToRelay(t *testing.T) {
+	srv, lp, ch := newDrainHarness(t, "")
+
+	var mu sync.Mutex
+	var bodies []string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		bodies = append(bodies, string(b))
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	srv.SetRelay(ts.URL, "test-token")
+
+	f, _ := os.OpenFile(lp, os.O_APPEND|os.O_WRONLY, 0o644)
+	f.WriteString(`{"event_id":"A","event_type":"assign"}` + "\n")
+	f.Close()
+	srv.drainNew("p", lp)
+
+	if got := recvWithin(t, ch, time.Second); !strings.Contains(got, `"event_id":"A"`) {
+		t.Fatalf("broadcast should still work with relay on, got %q", got)
+	}
+	deadline := time.After(2 * time.Second)
+	found := false
+	for !found {
+		select {
+		case <-deadline:
+			mu.Lock()
+			gotBodies := bodies
+			mu.Unlock()
+			t.Fatalf("relay should have received the event, got bodies: %v", gotBodies)
+		default:
+		}
+		mu.Lock()
+		gotBodies := bodies
+		mu.Unlock()
+		for _, b := range gotBodies {
+			if strings.Contains(b, `"event_id":"A"`) && strings.Contains(b, `"project":"p"`) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
+	srv.relay.stop()
 }

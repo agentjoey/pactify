@@ -96,7 +96,7 @@ var registry = map[string]spec{
 	// is REQUIRED for autonomous tool use (no human to approve Edit/Bash) — without
 	// it `claude -p` stalls on permission prompts and cannot develop/review.
 	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude", []string{"-p", "--dangerously-skip-permissions", "{briefing}"}, "claude"},
-	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, "gemini", []string{"-p", "{briefing}"}, "gemini"},
+	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, "gemini", []string{"-p", "--approval-mode", "yolo", "--skip-trust", "{briefing}"}, "gemini"},
 	// codex-cli: codex headless not yet verified; keep no runner conservatively
 	// (set runnerCmd once `codex exec`-style headless mode is confirmed).
 	"codex-cli":      {"codex-cli", "AGENTS.md", ".codex/config.toml", Project, TOML, false, "", nil, "codex"},

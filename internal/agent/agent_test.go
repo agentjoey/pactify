@@ -75,7 +75,7 @@ func TestRunnerCLIKinds(t *testing.T) {
 	}{
 		{"opencode", "opencode", []string{"run", "{briefing}"}},
 		{"claude-code", "claude", []string{"-p", "--dangerously-skip-permissions", "{briefing}"}},
-		{"gemini-cli", "gemini", []string{"-p", "{briefing}"}},
+		{"gemini-cli", "gemini", []string{"-p", "--approval-mode", "yolo", "--skip-trust", "{briefing}"}},
 	}
 	for _, tc := range cases {
 		a, ok := Get(tc.kind)

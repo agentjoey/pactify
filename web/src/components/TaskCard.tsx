@@ -84,7 +84,7 @@ export function TaskCard({
         draft ? "dashed" : "",
         status === "awaiting_review" ? "glow" : "",
         selected ? "selected" : "",
-        onClick ? "cursor-pointer" : "",
+        onClick ? "cursor-pointer hover-lift" : "",
       ]
         .filter(Boolean)
         .join(" ")}

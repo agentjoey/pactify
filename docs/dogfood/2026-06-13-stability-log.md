@@ -76,3 +76,7 @@ plan：docs/superpowers/plans/2026-06-13-headless-dogfood-m3.4-relay.md
 - 阶段：t1
 - 现象：reviewer changes（两点：范围外文件 + start() 隐患）→ worker 精确返工（删文件+gitignore、newRelay 自启+注释、还顺手把重试改可中断）→ 未自接受、重 checkpoint → reviewer 复跑验收通过 → accept。铁律生效（worker 不能自接受）、返工内容经协议日志流转无需人转述。
 - 结论：协议的评审返工核心回路是硬的；缺口在【触发时机】（#9）而非【内容流转】。
+
+### t2 全无人闭环跑通（正向，#9 解法验证）
+- orchestrator 用 `opencode run "<prompt>"` 非交互拉起 worker，worker 自 join/读规格/TDD 实现(api.go+watch.go+cmd_serve.go)/checkpoint，orchestrator 后台接住、复审、accept——**全程零人工介入**。#9 的运营层解法（orchestrator 当自主驱动器）端到端成立。
+- #8 余波（次要）：opencode 给 opencode.json 自动加了 `$schema` 行，被 checkpoint CommitAll 扫入。本次为合法注解、无害，accept 时容忍；佐证 #8（CommitAll 无差别暂存）对【已跟踪的工具配置】同样会扫入工具的自动改动。

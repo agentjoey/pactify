@@ -17,7 +17,7 @@ features:
         evidence: === RUN   TestRelayNilOnEmptyURL --- PASS: TestRelayNilOnEmptyURL (0.00s) === RUN   TestRelayNilEnqueueNoPanic --- PASS: TestRelayNilEnqueueNoPanic (0.00s) === RUN   TestRelayAuthHeader --- PASS: TestRelayAuthHeader (0.20s) === RUN   TestRelayBodyEnvelope --- PASS: TestRelayBodyEnvelope (0.20s) === RUN   TestRelayQueueFullDropsOldest --- PASS: TestRelayQueueFullDropsOldest (0.00s) === RUN   TestRelayServerErrorRetriesAndDrops --- PASS: TestRelayServerErrorRetriesAndDrops (10.00s) === RUN   TestRelayBadJSONLineSafe --- PASS: TestRelayBadJSONLineSafe (0.20s) PASS ok   github.com/agentjoey/pactify/internal/serve 10.982s  Changes made: 1) Removed data/state.json (git rm + added data/ to .gitignore) 2) Eliminated separate start() method; newRelay auto-starts background goroutine 3) Added stopCh for interruptible shutdown (stop() doesnt wait for retry backoffs) 4) Added brief comments: relay struct purpose, enqueue oldest-drop, postOne retry, buildBody behavior
       - id: t2
         owner: opencode-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/watcher-hook.md
         evidence: ok   github.com/agentjoey/pactify/internal/serve 14.669s

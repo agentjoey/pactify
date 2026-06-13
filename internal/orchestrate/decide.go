@@ -103,6 +103,48 @@ func nextAction(st projection.State, h History, th Thresholds) Action {
 	return Action{Kind: ActIdle}
 }
 
+// featureAction returns the next runnable action for a SINGLE feature, using the
+// same priority as nextAction (RunReviewer > RunOwner > Merge). ok=false when the
+// feature is shipped or has no runnable work. This is the per-feature decision
+// core shared by the parallel driver: a feature's tasks share a branch/worktree,
+// so a feature advances by one action at a time.
+func featureAction(f projection.Feature, h History, th Thresholds) (Action, bool) {
+	if f.Status == "shipped" {
+		return Action{}, false
+	}
+	for _, t := range f.Tasks {
+		if t.Status == "awaiting_review" {
+			return Action{Kind: ActRunReviewer, Feature: f.ID, Task: t.ID, Seat: t.Reviewer}, true
+		}
+	}
+	for _, t := range f.Tasks {
+		if (t.Status == "assigned" || t.Status == "changes_requested" || t.Status == "in_progress") && depsSatisfied(f, t) {
+			return Action{Kind: ActRunOwner, Feature: f.ID, Task: t.ID, Seat: t.Owner}, true
+		}
+	}
+	if len(f.Tasks) > 0 && allAccepted(f) {
+		return Action{Kind: ActMerge, Feature: f.ID}, true
+	}
+	return Action{}, false
+}
+
+// nextActions returns one runnable action per feature that has work — the
+// parallel analogue of nextAction. Features are independent (separate
+// branches/worktrees) so the driver can run these concurrently; within a feature
+// the action follows featureAction's priority. Merges are included but the driver
+// serializes them onto the shared base branch. Threshold/escalation handling is
+// the driver's job (it owns History), applied per action before dispatch — just
+// like the serial loop's tripped() guard.
+func nextActions(st projection.State, h History, th Thresholds) []Action {
+	var acts []Action
+	for _, f := range st.Features {
+		if act, ok := featureAction(f, h, th); ok {
+			acts = append(acts, act)
+		}
+	}
+	return acts
+}
+
 // depsSatisfied reports whether every dependency of t is an accepted task within
 // the SAME feature. Dep ids are scoped to the feature; a dep id not present in f
 // is treated as unsatisfied.

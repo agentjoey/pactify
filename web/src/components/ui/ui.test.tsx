@@ -9,6 +9,7 @@ import { Modal } from "./Modal";
 import { Popover } from "./Popover";
 import { Tooltip } from "./Tooltip";
 import { EmptyState } from "./EmptyState";
+import { Spinner } from "./Spinner";
 
 describe("Button", () => {
   it("renders the primary variant by default with role-design bg + dark text", () => {
@@ -303,5 +304,38 @@ describe("EmptyState", () => {
     expect(hint.className).toMatch(/text-\[var\(--color-text-3\)\]/);
     const root = screen.getByTestId("empty-state");
     expect(root.className).toMatch(/border-dashed/);
+  });
+});
+
+describe("Spinner", () => {
+  it("renders a status role with an accessible label", () => {
+    render(<Spinner label="Saving" />);
+    const s = screen.getByRole("status", { name: "Saving" });
+    expect(s.getAttribute("data-testid")).toBe("spinner");
+    expect(s.getAttribute("class")).toMatch(/spinner-spin/);
+  });
+});
+
+describe("Button loading", () => {
+  it("shows a spinner, keeps the label, and disables when loading", () => {
+    render(<Button loading>Save</Button>);
+    const btn = screen.getByRole("button", { name: /Save/ });
+    expect(btn).toBeDisabled();
+    expect(btn.getAttribute("aria-busy")).toBe("true");
+    // label text is still present (no width collapse)
+    expect(btn.textContent).toContain("Save");
+    // a spinner is rendered inside
+    expect(screen.getByTestId("spinner")).toBeTruthy();
+  });
+
+  it("renders a leading icon when provided and not loading", () => {
+    render(<Button icon={<span data-testid="ic" />}>Go</Button>);
+    expect(screen.getByTestId("ic")).toBeTruthy();
+    expect(screen.queryByTestId("spinner")).toBeNull();
+  });
+
+  it("has an active-press transform class for tactile feedback", () => {
+    render(<Button>x</Button>);
+    expect(screen.getByRole("button").className).toMatch(/active:scale-\[0\.97\]/);
   });
 });

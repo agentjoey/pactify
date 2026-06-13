@@ -68,6 +68,38 @@ body {
   .pulse { animation: none; }
 }
 
+/* Spinner (loading indicator): a continuous rotation of the three-quarter ring.
+   Under reduced-motion it sits static (the ring gap still reads as "busy"). */
+@media (prefers-reduced-motion: no-preference) {
+  .spinner-spin { animation: spinner-rotate 0.7s linear infinite; transform-origin: center; }
+}
+@keyframes spinner-rotate {
+  100% { transform: rotate(360deg); }
+}
+
+/* fade-rise: the standard entrance for cards/rows/panels appearing in a list —
+   a short fade + 4px rise so newly-arriving content reads as "arrived" rather
+   than popping. Apply `.fade-rise` to the element. Suppressed under
+   reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .fade-rise { animation: fade-rise var(--motion-layout, 200ms) var(--motion-ease); }
+}
+@keyframes fade-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* hover-lift: a reusable card affordance — on hover the card raises (shadow +
+   1px translate) so it reads as interactive. Pair with a token shadow. */
+.hover-lift {
+  transition: transform var(--motion-micro) var(--motion-ease),
+    box-shadow var(--motion-micro) var(--motion-ease),
+    border-color var(--motion-micro) var(--motion-ease);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hover-lift:hover { transform: translateY(-1px); box-shadow: var(--shadow-raised); }
+}
+
 /* First-load skeletons (T15): a gray block with a left→right shimmer sweep.
    prefers-reduced-motion → the sweep is dropped and the block sits static. */
 .skeleton {

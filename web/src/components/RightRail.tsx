@@ -66,6 +66,9 @@ export function RightRail({
   const [showChanges, setShowChanges] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  // pending names the in-flight action so only the clicked button shows its
+  // spinner (busy still disables them all, server is authoritative).
+  const [pending, setPending] = useState("");
 
   const close = () => onSelect?.("");
   // Whether the panel actually RENDERS. `selected` alone is not enough: after a
@@ -118,8 +121,9 @@ export function RightRail({
   const mergeable = canMergeFeature(state, feature);
   const reduced = prefersReducedMotion();
 
-  const run = async (fn: () => Promise<void>) => {
+  const run = async (id: string, fn: () => Promise<void>) => {
     setBusy(true);
+    setPending(id);
     setErr("");
     try {
       await fn();
@@ -127,6 +131,7 @@ export function RightRail({
       setErr(humanizeError(e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
+      setPending("");
     }
   };
 
@@ -267,7 +272,8 @@ export function RightRail({
                 variant="primary"
                 className="flex-1"
                 disabled={busy}
-                onClick={() => run(() => postVerb(project, "accept", { task: task.id }))}
+                loading={pending === "accept"}
+                onClick={() => run("accept", () => postVerb(project, "accept", { task: task.id }))}
               >
                 ✓ Accept
               </Button>
@@ -294,8 +300,9 @@ export function RightRail({
                   size="sm"
                   className="mt-1.5"
                   disabled={busy || !reason.trim()}
+                  loading={pending === "changes"}
                   onClick={() =>
-                    run(async () => {
+                    run("changes", async () => {
                       await postVerb(project, "changes", { task: task.id, reason: reason.trim() });
                       setReason("");
                       setShowChanges(false);
@@ -320,8 +327,9 @@ export function RightRail({
             <Button
               size="sm"
               disabled={busy || !mergeable}
+              loading={pending === "merge"}
               title={mergeable ? "" : "all tasks must be accepted"}
-              onClick={() => run(() => postVerb(project, "merge", { feature }))}
+              onClick={() => run("merge", () => postVerb(project, "merge", { feature }))}
             >
               Merge {feature}
             </Button>

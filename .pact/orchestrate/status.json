@@ -1,1 +1,1 @@
-{"feature":"finishstep","task":"t-finish","seat":"oc-finish","action":"run_owner","phase":"owner working","escalated":false,"done":false,"total":1,"accepted":0,"iter":0,"updated_at":"20260614-001953"}
+{"feature":"finishstep","task":"","seat":"","action":"merge","phase":"merging feature","escalated":false,"done":false,"total":1,"accepted":1,"iter":2,"updated_at":"20260614-002449"}

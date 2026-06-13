@@ -57,3 +57,18 @@ pactify serve   # relay 禁用
 ```
 
 （release.sh 待 CLI 实现后创建）
+
+## orchestrate 自主驱动（pactify orchestrate）
+写好任务图（assign 各 task + owner/reviewer/deps + 每个 task 规格里加一行机器可读 `verify: <命令>`），然后让 orchestrate 跑到底：
+
+```bash
+# 在 repo 根（含 .pact/）运行；为每个参与座席指定 headless runner kind
+pactify orchestrate \
+  --seat-kind w=opencode \
+  --seat-kind orch=claude-code
+```
+- **座席→kind**：`--seat-kind seat=kind`（可重复）。有 headless runner 的 kind：`opencode`/`claude-code`/`gemini-cli`。GUI/桌面 agent（antigravity、*-desktop）无法被驱动——那一棒换 CLI 座席或人工。
+- **task 规格 `verify:` 字段**：硬测试门与 reviewer 都用它跑验收，例 `verify: go test ./internal/serve/ -run Relay`。缺失则退化为全量 `go build ./... && go test ./...`。**只放一行专用 `verify:` 指令，勿写成散文**（首条 `verify:` 行胜出；`>`/`-`/`#` 前缀的不计）。
+- **flags**：`--feature <id>`（只跑某 feature）、`--dry-run`（只打印下一动作不拉 agent）、`--max-rework`(3)/`--max-fails`(2)/`--max-iters`(50)。
+- **卡住升级**：返工/失败超阈值或硬门失败 → orchestrate 暂停，写 `.pact/orchestrate/escalation-<ts>.md`（含 task/原因/evidence/建议）并通知。人工修复（改实现/改规格/修协议）后**重跑同一命令即续行**（状态已前进；`--resume` 是文档性同义）。
+- **secrets**：runner 不在命令行传 token；agent 自身凭据由其自身配置/Keychain 管。

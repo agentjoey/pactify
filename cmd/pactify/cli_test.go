@@ -234,3 +234,89 @@ func TestCLIOrchestrateHelpAndDryRun(t *testing.T) {
 		t.Fatalf("orchestrate --dry-run: %v %s", err, out)
 	}
 }
+
+// TestCLIPlanApply smoke-tests the plan command: --help surfaces the planner
+// flags, `plan apply --help` carries --run, and `plan apply <feature>` over a
+// committed plan manifest + spec assigns its tasks. The smoke exercises only the
+// apply path — launching a real planner agent needs a live LLM and is covered by
+// integration acceptance, not this unit smoke.
+func TestCLIPlanApply(t *testing.T) {
+	bin := buildBinary(t)
+	dir := t.TempDir()
+	run := func(env []string, args ...string) (string, error) {
+		c := exec.Command(bin, args...)
+		c.Dir = dir
+		c.Env = append(os.Environ(), env...)
+		out, err := c.CombinedOutput()
+		return string(out), err
+	}
+
+	planHelp, err := run(nil, "plan", "--help")
+	if err != nil {
+		t.Fatalf("plan --help: %v %s", err, planHelp)
+	}
+	for _, flag := range []string{"--feature", "--auto", "--run", "--planner-kind"} {
+		if !strings.Contains(planHelp, flag) {
+			t.Fatalf("plan --help missing %s:\n%s", flag, planHelp)
+		}
+	}
+
+	applyHelp, err := run(nil, "plan", "apply", "--help")
+	if err != nil {
+		t.Fatalf("plan apply --help: %v %s", err, applyHelp)
+	}
+	if !strings.Contains(applyHelp, "--run") {
+		t.Fatalf("plan apply --help missing --run:\n%s", applyHelp)
+	}
+
+	for _, a := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t.t"}, {"config", "user.name", "t"}} {
+		c := exec.Command("git", a...)
+		c.Dir = dir
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", a, err, out)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "base.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "base"}} {
+		c := exec.Command("git", a...)
+		c.Dir = dir
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", a, err, out)
+		}
+	}
+
+	env := []string{"PACT_AGENT_ID=claude"}
+	if out, err := run(env, "init", "--project", "p", "--seat", "claude:orchestrator,reviewer:CLAUDE.md", "--seat", "w:worker:AGENTS.md"); err != nil {
+		t.Fatalf("init: %v %s", err, out)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".pact", "tasks"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".pact", "tasks", "f1-t1.md"), []byte("# t1\n\nverify: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	planJSON := `{
+  "feature": "f1",
+  "branch": "feat-f1",
+  "tasks": [
+    {"id": "t1", "owner": "w", "reviewer": "claude", "spec": ".pact/tasks/f1-t1.md", "verify": "true", "deps": []}
+  ]
+}`
+	if err := os.WriteFile(filepath.Join(dir, ".pact", "plan-f1.json"), []byte(planJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if out, err := run(env, "plan", "apply", "f1"); err != nil {
+		t.Fatalf("plan apply f1: %v %s", err, out)
+	}
+
+	st, err := run(env, "status")
+	if err != nil {
+		t.Fatalf("status: %v %s", err, st)
+	}
+	if !strings.Contains(st, "id: t1") || !strings.Contains(st, "status: assigned") {
+		t.Fatalf("plan apply did not assign t1:\n%s", st)
+	}
+}

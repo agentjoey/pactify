@@ -8,7 +8,7 @@ import { Tooltip } from "./ui/Tooltip";
 import { Ant } from "./ui/ants/Ant";
 import { casteForRoles, padGradient } from "../lib/ants";
 
-export type View = "kanban" | "canvas" | "ops" | "live";
+export type View = "kanban" | "canvas" | "ops" | "live" | "plan";
 
 // The three-color cable mini-mark (board3 `.logo` svg). Also used as the
 // favicon (index.html, static data-URI) and the no-project hero (NoProjects).
@@ -27,6 +27,7 @@ const VIEWS: ReadonlyArray<{ v: View; label: string; key: string }> = [
   { v: "canvas", label: "Canvas", key: "2" },
   { v: "ops", label: "Ops", key: "3" },
   { v: "live", label: "Live", key: "4" },
+  { v: "plan", label: "Plan", key: "5" },
 ];
 
 export function TopBar({

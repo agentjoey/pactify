@@ -8,6 +8,7 @@ import type {
   WireResult,
   Timeline,
   OrchestrateStatusResponse,
+  PlanReviewResponse,
 } from "./types";
 import type { LayoutJSON } from "./canvas";
 
@@ -153,6 +154,9 @@ export async function unregisterAgent(kind: string): Promise<void> {
 
 export const getOrchestrateStatus = (project: string) =>
   getJSON<OrchestrateStatusResponse>(`/api/projects/${project}/orchestrate/status`);
+
+export const getPlanReview = (project: string, feature: string) =>
+  getJSON<PlanReviewResponse>(`/api/projects/${project}/plan/${feature}`);
 
 // subscribeEvents opens an SSE stream; returns an unsubscribe fn.
 // onLive (optional) reports connection state: true on open, false on error/drop.

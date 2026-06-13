@@ -10,6 +10,7 @@ import { Popover } from "./Popover";
 import { Tooltip } from "./Tooltip";
 import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
+import { Alert } from "./Alert";
 
 describe("Button", () => {
   it("renders the primary variant by default with role-design bg + dark text", () => {
@@ -337,5 +338,27 @@ describe("Button loading", () => {
   it("has an active-press transform class for tactile feedback", () => {
     render(<Button>x</Button>);
     expect(screen.getByRole("button").className).toMatch(/active:scale-\[0\.97\]/);
+  });
+});
+
+describe("Alert", () => {
+  it("renders the tone, title and body with role=alert", () => {
+    render(<Alert tone="danger" title="Load failed">network error</Alert>);
+    const a = screen.getByRole("alert");
+    expect(a.getAttribute("data-tone")).toBe("danger");
+    expect(a.textContent).toContain("Load failed");
+    expect(a.textContent).toContain("network error");
+  });
+
+  it("renders a retry action that fires onRetry", () => {
+    const onRetry = vi.fn();
+    render(<Alert tone="warn" onRetry={onRetry} retryLabel="Try again">x</Alert>);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it("omits the retry button when no onRetry is given", () => {
+    render(<Alert>just info</Alert>);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

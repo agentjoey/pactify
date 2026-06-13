@@ -8,6 +8,7 @@ import { casteForRoles } from "../lib/ants";
 import { Ant } from "./ui/ants/Ant";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
+import { Alert } from "./ui/Alert";
 
 // RightRail v2 — task detail panel (plan T11, mockup board4 §④).
 //
@@ -336,7 +337,13 @@ export function RightRail({
           </div>
         )}
 
-        {err && <p className="px-4 pb-4 whitespace-pre-wrap text-[11px] text-[var(--color-danger)]">{err}</p>}
+        {err && (
+          <div className="px-4 pb-4">
+            <Alert tone="danger" title="Action failed">
+              {err}
+            </Alert>
+          </div>
+        )}
       </aside>
     </>
   );

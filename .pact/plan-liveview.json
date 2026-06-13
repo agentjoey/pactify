@@ -1,0 +1,30 @@
+{
+  "feature": "liveview",
+  "branch": "feat-liveview",
+  "tasks": [
+    {
+      "id": "step1",
+      "owner": "opencode-worker",
+      "reviewer": "claude",
+      "spec": ".pact/tasks/liveview-step1.md",
+      "verify": "go test ./internal/orchestrate/",
+      "deps": []
+    },
+    {
+      "id": "step2",
+      "owner": "gemini-worker",
+      "reviewer": "claude",
+      "spec": ".pact/tasks/liveview-step2.md",
+      "verify": "go test ./internal/serve/",
+      "deps": ["step1"]
+    },
+    {
+      "id": "step3",
+      "owner": "opencode-worker",
+      "reviewer": "claude",
+      "spec": ".pact/tasks/liveview-step3.md",
+      "verify": "npm run -C web test",
+      "deps": ["step2"]
+    }
+  ]
+}

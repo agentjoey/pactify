@@ -22,3 +22,10 @@ features:
         spec: .pact/tasks/watcher-hook.md
         evidence: ok   github.com/agentjoey/pactify/internal/serve 14.669s
         deps: [t1]
+      - id: t3
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/integration-docs.md
+        evidence: null
+        deps: [t2]

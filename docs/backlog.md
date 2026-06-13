@@ -59,3 +59,9 @@
 ## 来自 greet live demo 真跑（2026-06-13）
 - **`join` 冷启动被未来任务的 dep 误杀（真 bug）**：worker `pactify join <seat>` 冷启动会校验该座席**全部** assigned 任务，若某个**未来**任务（如 t2）合法 blocked by unaccepted dep（t1 还没验收），join 直接硬失败 exit 1，且在 checkout feature 分支**之前**就挂——导致 feat 分支没被创建。worker 本轮手动 `git checkout -b feat-greet` 绕过。正解：join 冷启动只需保证「我即将要干的可运行任务」能开工，不该因未来 gated 任务而失败；dep 门控应在该任务**真正开工时**校验，而非 join 时全量校验。
 - **live demo 全链路验证 ✓**：claude 单 binary 扮 orchestrator+reviewer+worker(opencode 座席)，per-task 翻转满足 owner≠reviewer，reviewer 每棒独立重跑验收命令；t1→t2→t3（带 deps 链）全自动 worked→reviewed→accepted→merged→shipped（iter=8），CLI 实测可用。status.json 实时刷新驱动 live 面板四态流转正常。
+
+## ✅ 已实现（2026-06-14，8h 自主交付）—— 详见 docs/roadmap-next.md
+本 backlog 中以下条目已 shipped 到 main + 推 origin：
+- #1 项目设置向导（CLI + endpoint；UI 待做）、#3 并行编排、#4 作用域权限、#5 收尾交付步、#6 session 清理、#7 planner review UI、#8 drivability 标记、#9 权限姿态、#10 per-agent 模型、#11 配方、#12 UI polish（部分）、#5 错误处理（idle-timeout）。
+**仍未实现的（汇总见 `docs/roadmap-next.md` A 部分）**：#4 人审门/review gate、自然语言命令面板、gemini 降级修复、join 冷启动 bug、错误处理完整设计、成本/可观测、plan apply 事务化、post-merge STATE 滞后、make install 自检、各后端 feature 的 UI（见 roadmap-next.md B 部分）。
+**新 agent 接入候选**：见 `docs/agent-integration-candidates.md`（13 agent 联网调研，Codex/Goose/Kimi/Cursor/Amp 一等可接）。

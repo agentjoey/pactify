@@ -277,3 +277,27 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 - **硬测试门**（gate.go）：merge 前 orchestrate 独立复跑 feature 的验收命令（task 规格 `verify:` 行，缺则全量 `go build && go test` 回退），不过不 merge——给 LLM 评审垫确定性安全网（LLM accept ≠ 可 merge）。
 - **升级=暂停非终止**：返工/失败阈值或硬门失败 → 写 `.pact/orchestrate/escalation-*.md` + 通知 + 暂停；人修后重跑续行。agent 瞬时崩溃算软失败（重试至 MaxFails），不杀驱动；ctx 取消透传。
 - **测试**：纯函数单测 + 注入 fake Runner/cmdExec 的端到端集成（happy/返工/升级/硬门拦截/崩溃软失败/dry-run），不用真 LLM。
+
+### 8h 自主交付新增子系统（2026-06-14，12 功能）
+
+**per-agent 配置体系（`internal/agentcfg` + `agent/launch.go`）**：把硬编码的 model pin / 权限 flag / drivability 参数化。`RunnerProfile` 用 per-kind builder 闭包渲染 argv（默认输出 = 历史硬编码 args，保持契约）；`PermPosture`（blanket 自动批准 ↔ scoped allowlist）支持作用域权限；`agentcfg.Resolve(kind)` 把机器注册表的 per-agent override（model/权限）叠加到内置默认上。orchestrate runner 改走 `agentcfg.Resolve`。CLI `agent config <kind> --model/--allowed-tools/--restricted`；`agent scan` 显示 drivable/manual。
+
+**idle-timeout（`internal/orchestrate/runner_idle.go`）**：子进程 stdio tee 到 `idleTracker`，watchdog 在【无输出】N 分钟后杀进程（`errIdle` → 软失败 → 重试 worker）。比钝的总超时精准——既不过杀挂死、也不误杀合法慢任务。重试时 worker briefing 加"续接半成品"段（查 git status/diff 续或重做，worker 始终是干活的人）。
+
+**并行编排（`internal/orchestrate/parallel.go` + `gitx/worktree.go`，#3）**：feature 级并行——每 feature 在独立 git worktree 推进（`driveFeature`：owner/reviewer 循环，不 merge），最多 `MaxConcurrency` 个并发；merge 串行回 base。**关键约束/洞察**：
+- pact.Merge 内部 `git checkout base`，而 base 同一时刻只能一个 worktree 持有 → **主树 park 到一次性分支释放 base，各 worktree 在 mergeMu 锁下串行完成 merge**（复用 pact.Merge 不改协议引擎）。
+- **并行 merge 的 ledger 冲突**：两 feature 从同一 base 独立追加 log.jsonl/STATE.yml，第二个 merge 撞冲突。解法靠"StateProjection 从 log.jsonl 重算、STATE.yml 只是缓存"这一事实——`.gitattributes` 给 `.pact/log.jsonl` + `.pact/STATE.yml` 设 `merge=union`（log union=全部事件正确；STATE 变 garbage 但无所谓），`.pact/orchestrate/` 运行时文件入 .gitignore。
+- pact.Merge 把 merge 事件 append 到工作树但不 commit（串行流程读工作树即可）；并行流程 RemoveWorktree 会丢它 → merge 后须显式 commit merge 事件。
+- CLI `orchestrate --max-concurrency N`（=1 串行回退；与 --feature/--dry-run 互斥）。
+
+**收尾交付步（`internal/finish`，#5）**：merge 到本地 main 后 push / 开 PR（`gh pr create`，gh 缺时降级打印手动命令）。CLI `pactify finish`。
+
+**session 清理（`internal/sessions`，#6）**：按 kind 声明 list/prune 命令的框架，gemini 已接，其余优雅 unsupported（no-op 报告，非 error）。CLI `sessions list/prune`。
+
+**配方（`internal/recipe`，#11）**：命名任务图模板（add-tests/review-harden/spec-to-plan），`{{goal}}` 占位展开成 pact 任务 spec。CLI `recipe list/show`。把门槛从"手写任务图"降到"选配方"。
+
+**项目设置向导（`internal/wizard`，#1）**：从机器注册的 agents 建议项目座席 roster（claude 系 lead=orchestrator+reviewer，其余 worker），`Validate` 查角色覆盖。CLI `setup suggest`（打印 roster + gaps + 精确 apply 命令）；`GET /api/setup/suggest`。是"注册 agent → 能干活"的桥。
+
+**planner review（serve `plan.go` + web `PlanReview.tsx`，#7）**：`GET /api/projects/{id}/plan/{feature}` 读 plan manifest + 校验；Plan 视图（key 5）展示任务图（owner→reviewer/deps/verify）+ valid 徽章 + apply 提示。
+
+**UI polish（#12，部分）**：Spinner / Button-loading / Alert 原语 + 微交互（active-press / hover-lift / fade-rise，全 prefers-reduced-motion 兼容）+ RightRail 三动作 loading + Alert 错误。后续 UI 规划见 `docs/roadmap-next.md`。

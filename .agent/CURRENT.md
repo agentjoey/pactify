@@ -2,9 +2,22 @@
 
 Version:        v0.3.0（✅ 已发布，首个 GitHub Release，2026-06-10）
 Sprint:         003
-Sprint Status:  🚧 进行中（… + Canvas P0 ✅（PR #20-#22）+ M3.4 relay ✅（pact self-host dogfood，feature shipped）；剩 M2.3、relay/orchestrate 推 origin）
-Last Updated:   2026-06-12 by claude (fable-5 控制端)
+Sprint Status:  🚧 进行中（… + Canvas P0 ✅ + M3.4 relay ✅ + orchestrate 驱动器 ✅ + planner ✅ + liveview ✅ + **8h 自主交付 12 功能 ✅（2026-06-14，已推 origin c2a297f）**）
+Last Updated:   2026-06-14 by claude (opus-4.8)
 Sprint File:    .agent/sprints/sprint-003.md
+
+## 8h 自主交付 12 功能（2026-06-14，全部 shipped + 推 origin）
+claude=planner/orchestrator/designer/reviewer+复杂核心，opencode=worker（真跑 4 feature）。
+- **配置体系**（#10 model+#9 权限姿态+#4 作用域权限+#8 drivability）：`internal/agentcfg` + `agent/launch.go` 参数化 RunnerProfile + `agent config` CLI + scan drivable
+- **错误处理**（#5）：idle-timeout watchdog（`runner_idle.go`，无输出 N min 杀）+ 重试续接 briefing + `--idle-timeout`
+- **收尾交付步**（#5）：`internal/finish` + `pactify finish`（push/PR）— opencode
+- **并行编排**（#3）：`RunParallel`（worktree 隔离并行 + 串行 merge + .gitattributes union 驱动 ledger + 提交 merge 事件）+ `--max-concurrency`
+- **session 清理**（#6）：`internal/sessions` + `sessions list/prune` — opencode
+- **配方**（#11）：`internal/recipe`（3 配方）+ `recipe list/show` — opencode
+- **项目设置向导**（#1）：`internal/wizard` + `setup suggest` + `GET /api/setup/suggest`
+- **UI polish**（#12，部分）：Spinner/Button-loading/Alert 原语 + 微交互 + RightRail loading/Alert
+- **planner review UI**（#7）：`GET /api/projects/{id}/plan/{feature}` + PlanReview 面板（Plan 视图 key 5）
+后续规划见 `docs/roadmap-next.md`（未实现 + UI 规划）、`docs/agent-integration-candidates.md`（13 agent 接入调研）、`docs/retrospective-8h-2026-06-14.md`（复盘）。
 
 ## Open Bugs（P0/P1 必须本 Sprint 修复）
 🟢 无已知 P0/P1 bug。

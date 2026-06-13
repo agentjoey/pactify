@@ -20,7 +20,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var feature string
 	var resume bool
 	var maxRework, maxFails, maxIters int
-	var runTimeoutMin int
+	var runTimeoutMin, idleTimeoutMin int
 	var dryRun bool
 	var seatKinds []string
 	var asSeat string
@@ -76,6 +76,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				Now:          func() string { return time.Now().Format("20060102-150405") },
 				SeatKind:     func(seat string) string { return km[seat] },
 				RunTimeout:   time.Duration(runTimeoutMin) * time.Minute,
+				IdleTimeout:  time.Duration(idleTimeoutMin) * time.Minute,
 				Orchestrator: orchestrator,
 			}
 			if err := orchestrate.Run(ctx, opts); err != nil {
@@ -92,7 +93,8 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().IntVar(&maxRework, "max-rework", 3, "escalate after this many changes-requested rounds on a task")
 	cmd.Flags().IntVar(&maxFails, "max-fails", 2, "escalate after this many failed agent runs on a task")
 	cmd.Flags().IntVar(&maxIters, "max-iters", 50, "global iteration cap (backstop against a non-converging loop)")
-	cmd.Flags().IntVar(&runTimeoutMin, "run-timeout", 30, "minutes to wait for one agent run before killing it as a soft failure (0 = no timeout)")
+	cmd.Flags().IntVar(&runTimeoutMin, "run-timeout", 30, "minutes for one agent run end-to-end before killing it as a soft failure (0 = no timeout)")
+	cmd.Flags().IntVar(&idleTimeoutMin, "idle-timeout", 5, "minutes of NO output before killing an agent as hung (soft failure → retry); 0 = no idle watchdog")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")
 	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")

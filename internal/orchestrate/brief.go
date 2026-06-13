@@ -15,7 +15,7 @@ import (
 // rule are always present. When changesReason is non-empty (a rework launch
 // after the reviewer requested changes) the verbatim reason is carried in so
 // the worker addresses it.
-func workerBrief(seat projection.Seat, task projection.Task, changesReason string) string {
+func workerBrief(seat projection.Seat, task projection.Task, changesReason string, retrying bool) string {
 	roles := strings.Join(seat.Roles, ",")
 
 	var b strings.Builder
@@ -30,6 +30,14 @@ func workerBrief(seat projection.Seat, task projection.Task, changesReason strin
 	fmt.Fprintf(&b, "- 读规格：`%s`。只碰该 spec 列出的文件。\n", task.Spec)
 	b.WriteString("- TDD：先写失败测试，再实现，跑该 task 规格里的验收命令直到通过。\n")
 	fmt.Fprintf(&b, "- 完成后 `pactify checkpoint %s` 并附上 evidence（验收命令输出）交回给 reviewer。\n\n", task.ID)
+
+	if retrying {
+		b.WriteString("## 这是重试棒（上一轮没干完/被超时杀掉）\n")
+		b.WriteString("上一轮这个 task 的 agent 运行没能把它推进到 awaiting_review（崩溃、超时、或卡死被杀）。\n")
+		b.WriteString("- 先 `git status` / `git diff` 看清楚工作树里**已有的半成品**——上一轮可能已经写了一部分。\n")
+		b.WriteString("- 能续就续（在半成品基础上补完），续不动或半成品是残状态就 `git checkout -- <file>` 重来该文件，别被半残状态带偏。\n")
+		b.WriteString("- 目标不变：跑通验收命令后 `pactify checkpoint` 交回。你始终是干活的人，不要指望别人接手。\n\n")
+	}
 
 	if changesReason != "" {
 		b.WriteString("## 上次评审的返工原因\n")

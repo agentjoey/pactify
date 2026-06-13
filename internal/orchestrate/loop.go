@@ -41,12 +41,16 @@ type Options struct {
 	// (Merge). "" falls back to PACT_AGENT_ID (tests rely on the env fallback; the
 	// CLI resolves it from --as / PACT_AGENT_ID and fail-fasts when both are empty).
 	Orchestrator string
-	// RunTimeout bounds a single agent run. A hung agent (e.g. its model stalls
-	// after finishing the work, never returning) would otherwise block the serial
-	// driver forever. On expiry the agent subprocess is killed and the run counts
-	// as a soft failure (retry → escalate). 0 = no timeout (tests use the fake
-	// runner which returns instantly).
+	// RunTimeout bounds a single agent run end-to-end (a hard backstop). On expiry
+	// the agent subprocess is killed and the run counts as a soft failure (retry →
+	// escalate). 0 = no timeout (tests use the fake runner which returns instantly).
 	RunTimeout time.Duration
+	// IdleTimeout kills an agent that produces NO output for this long — the
+	// precise fix for a hung agent (vs the blunt total RunTimeout, which either
+	// over-shoots a hang or under-shoots a legitimately slow task). An idle kill is
+	// a soft failure (retry the worker). 0 = no idle watchdog. Plumbed into the
+	// default CmdRunner; ignored when a custom Run is injected (tests).
+	IdleTimeout time.Duration
 }
 
 // launchAgent runs one agent under an optional per-run timeout. The timeout is a
@@ -179,7 +183,12 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		return fmt.Errorf("orchestrate: task %s not found for RunOwner", act.Task)
 	}
 	reason := lastChangesReason(opts.Dir, act.Task)
-	brief := workerBrief(seatFor(st, act.Seat, seat), task, reason)
+	// A prior soft failure (crash / timeout / idle-kill) on this task means the
+	// worker may have left half-done work in the tree; tell it so it continues or
+	// cleanly redoes rather than starting blind (error-handling design: retry the
+	// worker, never hand off to the orchestrator).
+	retrying := h.Fails[act.Task] > 0
+	brief := workerBrief(seatFor(st, act.Seat, seat), task, reason, retrying)
 
 	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief); runErr != nil {
 		if ctx.Err() != nil {

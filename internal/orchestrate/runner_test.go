@@ -119,8 +119,8 @@ func TestCmdRunner_ExecError_Propagates(t *testing.T) {
 // NewCmdRunner wires the production execFn; smoke-check it is non-nil so the
 // constructor cannot silently regress to a nil exec (which would panic on Run).
 func TestNewCmdRunner_HasExec(t *testing.T) {
-	if NewCmdRunner().Exec == nil {
-		t.Fatal("NewCmdRunner().Exec is nil")
+	if NewCmdRunner(0).Exec == nil {
+		t.Fatal("NewCmdRunner(0).Exec is nil")
 	}
 }
 

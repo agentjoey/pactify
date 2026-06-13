@@ -29,7 +29,7 @@ func (shellExec) Run(ctx context.Context, dir, command string) (int, string, err
 // here is the only way the command layer can use the real gate executor.
 func (opts Options) withDefaults() Options {
 	if opts.Run == nil {
-		opts.Run = NewCmdRunner()
+		opts.Run = NewCmdRunner(opts.IdleTimeout)
 	}
 	if opts.Exec == nil {
 		opts.Exec = shellExec{}

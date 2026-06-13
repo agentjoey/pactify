@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/agentcfg"
@@ -34,12 +35,14 @@ type execFn func(ctx context.Context, name string, args []string, dir string, en
 // via its Exec seam.
 type CmdRunner struct{ Exec execFn }
 
-// NewCmdRunner returns a CmdRunner wired to the real os/exec-backed execFn. The
-// production execFn builds the child environment from os.Environ() plus the
-// caller-supplied additions (so PACT_AGENT_ID is appended on top of the inherited
-// env) and runs the process to completion, streaming stdio to the parent.
-func NewCmdRunner() CmdRunner {
-	return CmdRunner{Exec: osExec}
+// NewCmdRunner returns a CmdRunner wired to the real os/exec-backed execFn. When
+// idle>0 the execFn kills a child that produces no output for that long (errIdle
+// → soft failure → worker retry); idle<=0 keeps the plain run-to-completion
+// behavior. The production execFn builds the child environment from os.Environ()
+// plus the caller-supplied additions (so PACT_AGENT_ID is appended on top of the
+// inherited env) and streams stdio to the parent.
+func NewCmdRunner(idle time.Duration) CmdRunner {
+	return CmdRunner{Exec: osExecIdle(idle)}
 }
 
 // osExec is the production execFn: it merges the inherited process environment

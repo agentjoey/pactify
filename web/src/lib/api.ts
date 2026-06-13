@@ -8,6 +8,7 @@ import type {
   WireResult,
   Timeline,
   OrchestrateStatusResponse,
+  ParallelStatusResponse,
   PlanReviewResponse,
 } from "./types";
 import type { LayoutJSON } from "./canvas";
@@ -154,6 +155,9 @@ export async function unregisterAgent(kind: string): Promise<void> {
 
 export const getOrchestrateStatus = (project: string) =>
   getJSON<OrchestrateStatusResponse>(`/api/projects/${project}/orchestrate/status`);
+
+export const getParallelOrchestrate = (project: string) =>
+  getJSON<ParallelStatusResponse>(`/api/projects/${project}/orchestrate/parallel`);
 
 export const getPlanReview = (project: string, feature: string) =>
   getJSON<PlanReviewResponse>(`/api/projects/${project}/plan/${feature}`);

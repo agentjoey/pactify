@@ -406,52 +406,13 @@ func tripped(task string, h History, th Thresholds) (string, bool) {
 // emitLoopStatus writes a per-iteration status snapshot for the current action.
 // Write errors are silently ignored (status is observation, not a transaction source).
 func (opts Options) emitLoopStatus(view projection.State, act Action, h History) {
-	total, accepted := progress(view)
-	s := Status{
-		Feature:   act.Feature,
-		Task:      act.Task,
-		Seat:      act.Seat,
-		Action:    actionString(act.Kind),
-		Phase:     phaseFor(act),
-		Total:     total,
-		Accepted:  accepted,
-		Iter:      h.Iters,
-		UpdatedAt: statusNow(opts.Now),
-	}
-	writeStatus(opts.Dir, s)
+	writeStatus(opts.Dir, buildLoopStatus(view, act, h, func() string { return statusNow(opts.Now) }))
 }
 
 // emitEscalatedStatus writes an escalated status snapshot.
 // Write errors are silently ignored (status is observation, not a transaction source).
 func (opts Options) emitEscalatedStatus(view projection.State, task, reason string, h History) {
-	total, accepted := progress(view)
-	s := Status{
-		Feature:   task,
-		Action:    "stuck",
-		Phase:     "stuck",
-		Escalated: true,
-		Reason:    reason,
-		Total:     total,
-		Accepted:  accepted,
-		Iter:      h.Iters,
-		UpdatedAt: statusNow(opts.Now),
-	}
-	if task != "" {
-		for _, f := range view.Features {
-			if f.ID == task {
-				break
-			}
-			for _, t := range f.Tasks {
-				if t.ID == task {
-					s.Feature = f.ID
-					s.Task = task
-					s.Seat = t.Owner
-					break
-				}
-			}
-		}
-	}
-	writeStatus(opts.Dir, s)
+	writeStatus(opts.Dir, buildEscalatedStatus(view, task, reason, h, func() string { return statusNow(opts.Now) }))
 }
 
 // --- small state/log helpers -------------------------------------------------

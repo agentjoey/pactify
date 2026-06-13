@@ -91,11 +91,11 @@ func (s spec) Runner() (RunnerSpec, bool) {
 }
 
 var registry = map[string]spec{
-	"opencode":       {"opencode", "AGENTS.md", "opencode.json", Project, JSONOpencode, false, "opencode", []string{"run", "{briefing}"}, "opencode"},
+	"opencode":       {"opencode", "AGENTS.md", "opencode.json", Project, JSONOpencode, false, "opencode", []string{"run", "-m", "deepseek/deepseek-v4-pro", "{briefing}"}, "opencode"},
 	// claude-code: -p is non-interactive (headless); --dangerously-skip-permissions
 	// is REQUIRED for autonomous tool use (no human to approve Edit/Bash) — without
 	// it `claude -p` stalls on permission prompts and cannot develop/review.
-	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude", []string{"-p", "--dangerously-skip-permissions", "{briefing}"}, "claude"},
+	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude", []string{"-p", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}, "claude"},
 	// gemini-cli: prompt must immediately follow -p (else -p swallows the next
 	// flag); --approval-mode yolo + --skip-trust are REQUIRED for headless
 	// autonomous tool use (trusted-folder + auto-approve). -m pins the model

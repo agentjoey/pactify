@@ -78,6 +78,13 @@ export interface OrchestrateStatusResponse {
   status?: OrchestrateStatus;
 }
 
+// Aggregated per-feature statuses from a parallel orchestrate run (one entry per
+// concurrent feature). present=false when no parallel run has happened.
+export interface ParallelStatusResponse {
+  present: boolean;
+  features?: OrchestrateStatus[];
+}
+
 // Planner-generated task graph surfaced for human review before `plan apply`
 // assigns it (#7 planner review).
 export interface PlanTaskReview {

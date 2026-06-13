@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -69,6 +70,51 @@ func TestOrchestrateStatus(t *testing.T) {
 		handler.ServeHTTP(rr, req)
 		if rr.Code != http.StatusInternalServerError {
 			t.Errorf("expected 500, got %d", rr.Code)
+		}
+	})
+}
+
+func TestOrchestrateParallel(t *testing.T) {
+	dir := t.TempDir()
+	s := New([]registry.Project{{Name: "p1", Path: dir}})
+	handler := s.Handler()
+
+	get := func() (*httptest.ResponseRecorder, ParallelStatusDTO) {
+		req := httptest.NewRequest("GET", "/api/projects/p1/orchestrate/parallel", nil)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		var dto ParallelStatusDTO
+		_ = json.Unmarshal(rr.Body.Bytes(), &dto)
+		return rr, dto
+	}
+
+	t.Run("no parallel dir → present=false", func(t *testing.T) {
+		rr, dto := get()
+		if rr.Code != http.StatusOK || dto.Present {
+			t.Fatalf("want 200 present=false, got %d present=%v", rr.Code, dto.Present)
+		}
+	})
+
+	t.Run("aggregates per-feature files sorted by id", func(t *testing.T) {
+		pdir := filepath.Join(dir, ".pact", "orchestrate", "parallel")
+		if err := os.MkdirAll(pdir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		os.WriteFile(filepath.Join(pdir, "fb.json"), []byte(`{"feature":"fb","action":"run_owner"}`), 0o644)
+		os.WriteFile(filepath.Join(pdir, "fa.json"), []byte(`{"feature":"fa","action":"merge"}`), 0o644)
+		os.WriteFile(filepath.Join(pdir, "junk.txt"), []byte(`ignore me`), 0o644)
+		rr, dto := get()
+		if rr.Code != http.StatusOK || !dto.Present {
+			t.Fatalf("want 200 present=true, got %d present=%v", rr.Code, dto.Present)
+		}
+		if len(dto.Features) != 2 {
+			t.Fatalf("want 2 features, got %d", len(dto.Features))
+		}
+		// sorted by filename: fa before fb
+		var first struct{ Feature string `json:"feature"` }
+		json.Unmarshal(dto.Features[0], &first)
+		if first.Feature != "fa" {
+			t.Errorf("first feature = %q, want fa (sorted)", first.Feature)
 		}
 	})
 }

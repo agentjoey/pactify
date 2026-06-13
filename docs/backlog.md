@@ -65,3 +65,18 @@
 - #1 项目设置向导（CLI + endpoint；UI 待做）、#3 并行编排、#4 作用域权限、#5 收尾交付步、#6 session 清理、#7 planner review UI、#8 drivability 标记、#9 权限姿态、#10 per-agent 模型、#11 配方、#12 UI polish（部分）、#5 错误处理（idle-timeout）。
 **仍未实现的（汇总见 `docs/roadmap-next.md` A 部分）**：#4 人审门/review gate、自然语言命令面板、gemini 降级修复、join 冷启动 bug、错误处理完整设计、成本/可观测、plan apply 事务化、post-merge STATE 滞后、make install 自检、各后端 feature 的 UI（见 roadmap-next.md B 部分）。
 **新 agent 接入候选**：见 `docs/agent-integration-candidates.md`（13 agent 联网调研，Codex/Goose/Kimi/Cursor/Amp 一等可接）。
+
+## 新 agent 接入候选（2026-06-14 联网调研，详见 docs/agent-integration-candidates.md）
+按"接入价值 × headless 可行性"排（接 runner 前必须装上跑 `--help` 实测，禁止凭文档断言）：
+- **一等（drivable runner，照搬现有 pattern）**：
+  - **codex-cli**（kind 已在、只差 runner）：`codex exec "{briefing}" --sandbox workspace-write`，MCP TOML `[mcp_servers.*]`，binary `codex`。**最低成本增量**。
+  - **goose**（Block）：`GOOSE_MODE=auto goose run -t "{briefing}" --no-session`，MCP-native（extensions），`~/.config/goose/config.yaml`，binary `goose`。
+  - **kimi-cli**（MoonshotAI/kimi-code）：`kimi -p "{briefing}"`（默认 auto），entry `AGENTS.md`，MCP `.kimi-code/mcp.json` JSON `mcpServers`，binary `kimi`。与 Claude Code 几乎同构。
+  - **cursor-cli**：`cursor-agent -p --force "{briefing}"`，entry `AGENTS.md`/`.cursor/rules`，MCP `.cursor/mcp.json`，binary `cursor-agent`。
+  - **amp**（Sourcegraph）：`amp -x "{briefing}"` + `AMP_API_KEY`，entry `AGENTS.md`，MCP `amp.mcpServers`（`.amp/settings.json`），binary `amp`。
+- **二等（小适配）**：continue（`cn -p --auto`，binary `cn`）、cline（`cline -y --json`）、crush（`crush run --yolo`，flag 位置待测）、devin-cli（原 Windsurf，`devin -p --permission-mode bypass`，JSON 输出待测）、aider（`aider --message --yes`，**无 MCP** 走 entry `CONVENTIONS.md` + shell fallback）。
+- **三等（需 adapter）**：hermes（Nous，`hermes -z --yolo`，MCP 用 **YAML `mcp_servers` 全局** 需新 Format+Global 适配，entry 不明）、q-developer（AWS，`q chat --no-interactive --trust-all-tools`，**trust 有已知 bug 约 50% 生效需重试包裹**）。
+- **仅座席/人工交接**：zed（内置 agent 无 headless，但可挂 pact context server）、各 desktop/GUI kind。
+- **不接**：openclaw（self-hosted 消息网关/个人助手，非仓库内 coding 座席）。
+- **协议层扩展方向**：若 Pactify 自身说 ACP（Agent Client Protocol），Zed/JetBrains/Kimi 可 host Pactify 驱动的 agent——单列调研。
+- **配套**：每个新 kind 接入后，`agent config`（model/权限姿态）即时可用；Codex 的 `--sandbox` 分级提示 PermPosture 未来可加"sandbox 级别"维度。

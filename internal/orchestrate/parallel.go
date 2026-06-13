@@ -68,6 +68,10 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 		return fmt.Errorf("orchestrate: ensure union merge attrs: %w", err)
 	}
 
+	// Start from a clean per-feature status dir so the dashboard doesn't show a
+	// previous run's features.
+	clearParallelStatus(opts.Dir)
+
 	// Park the primary tree off base so worktrees can take base for their merges.
 	if err := gitx.CheckoutOrCreate(opts.Dir, park); err != nil {
 		return fmt.Errorf("orchestrate: park primary tree: %w", err)
@@ -146,6 +150,12 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 			_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
 			if merr != nil {
 				dispatchErr = merr
+			} else {
+				// Mark the feature shipped in the aggregated view.
+				_ = writeFeatureStatus(opts.Dir, r.feature, Status{
+					Feature: r.feature, Action: "done", Phase: "done", Done: true,
+					UpdatedAt: statusNow(opts.Now),
+				})
 			}
 		}
 		if dispatchErr != nil {
@@ -225,6 +235,10 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 	o.Dir = worktreeDir
 	o.Feature = feature
 	h := History{Rework: map[string]int{}, Fails: map[string]int{}}
+	// Per-feature status goes to the PRIMARY tree (opts.Dir) so the dashboard can
+	// aggregate all concurrent features; o.Dir is the isolated worktree.
+	now := func() string { return statusNow(opts.Now) }
+	emit := func(s Status) { _ = writeFeatureStatus(opts.Dir, feature, s) }
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -250,18 +264,18 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 		}
 		if act.Kind == ActRunOwner || act.Kind == ActRunReviewer {
 			if reason, isTripped := tripped(act.Task, h, o.Th); isTripped {
-				o.emitEscalatedStatus(view, act.Task, reason, h)
+				emit(buildEscalatedStatus(view, act.Task, reason, h, now))
 				return false, true, o.escalate(act.Task, reason, evidenceFor(st, act.Task),
 					"人工介入后 pactify orchestrate 续跑")
 			}
 		}
 		if o.Th.MaxIters > 0 && h.Iters >= o.Th.MaxIters {
-			o.emitEscalatedStatus(view, "", "iteration limit exceeded", h)
+			emit(buildEscalatedStatus(view, "", "iteration limit exceeded", h, now))
 			return false, true, o.escalate("", "iteration limit exceeded", "(global cap)",
 				"放宽 --max-iters 或检查为何 task 图迟迟不收敛")
 		}
 
-		o.emitLoopStatus(view, act, h)
+		emit(buildLoopStatus(view, act, h, now))
 		switch act.Kind {
 		case ActMerge:
 			return true, false, nil

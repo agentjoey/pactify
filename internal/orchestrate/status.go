@@ -27,6 +27,91 @@ type Status struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+// buildLoopStatus assembles the per-iteration snapshot for an action (pure, so
+// the serial loop and the parallel driver build identical statuses).
+func buildLoopStatus(view projection.State, act Action, h History, now func() string) Status {
+	total, accepted := progress(view)
+	return Status{
+		Feature:   act.Feature,
+		Task:      act.Task,
+		Seat:      act.Seat,
+		Action:    actionString(act.Kind),
+		Phase:     phaseFor(act),
+		Total:     total,
+		Accepted:  accepted,
+		Iter:      h.Iters,
+		UpdatedAt: now(),
+	}
+}
+
+// buildEscalatedStatus assembles an escalated snapshot, resolving the
+// feature/task/seat when task names a real task (vs a feature-level escalation).
+func buildEscalatedStatus(view projection.State, task, reason string, h History, now func() string) Status {
+	total, accepted := progress(view)
+	s := Status{
+		Feature:   task,
+		Action:    "stuck",
+		Phase:     "stuck",
+		Escalated: true,
+		Reason:    reason,
+		Total:     total,
+		Accepted:  accepted,
+		Iter:      h.Iters,
+		UpdatedAt: now(),
+	}
+	if task != "" {
+		for _, f := range view.Features {
+			if f.ID == task {
+				break
+			}
+			for _, t := range f.Tasks {
+				if t.ID == task {
+					s.Feature = f.ID
+					s.Task = task
+					s.Seat = t.Owner
+					break
+				}
+			}
+		}
+	}
+	return s
+}
+
+// parallelStatusDir is where the parallel driver writes one status file per
+// in-flight feature, so the dashboard can aggregate concurrent runs (the serial
+// status.json holds only one). Kept under the primary tree's orchestrate dir.
+func parallelStatusDir(dir string) string {
+	return filepath.Join(dir, ".pact", "orchestrate", "parallel")
+}
+
+// writeFeatureStatus atomically writes a feature's status to
+// <dir>/.pact/orchestrate/parallel/<feature>.json. feature is reduced to a bare
+// filename so a stray id can't escape the directory.
+func writeFeatureStatus(dir, feature string, s Status) error {
+	outDir := parallelStatusDir(dir)
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return err
+	}
+	name := filepath.Base(feature)
+	if name == "" || name == "." || name == ".." {
+		return fmt.Errorf("invalid feature id %q", feature)
+	}
+	final := filepath.Join(outDir, name+".json")
+	tmp := final + ".tmp"
+	data, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, final)
+}
+
+// clearParallelStatus removes stale per-feature status files at the start of a
+// parallel run so a fresh run doesn't show a previous run's features.
+func clearParallelStatus(dir string) { _ = os.RemoveAll(parallelStatusDir(dir)) }
+
 // writeStatus atomically writes s to <dir>/.pact/orchestrate/status.json
 // (temp file + rename), creating the orchestrate dir if absent.
 func writeStatus(dir string, s Status) error {

@@ -57,3 +57,23 @@ export interface WireResult {
   docOnly: boolean;
   snippet?: string;
 }
+
+export interface OrchestrateStatus {
+  feature: string;
+  task: string;
+  seat: string;
+  action: "run_owner" | "run_reviewer" | "merge" | "stuck" | "idle" | "done";
+  phase: string;
+  escalated: boolean;
+  reason?: string;
+  done: boolean;
+  total: number;
+  accepted: number;
+  iter: number;
+  updated_at: string;
+}
+
+export interface OrchestrateStatusResponse {
+  present: boolean;
+  status?: OrchestrateStatus;
+}

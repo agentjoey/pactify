@@ -70,8 +70,8 @@ describe("TopBar", () => {
       setup({ view: "canvas" });
       const group = screen.getByRole("group", { name: "view toggle" });
       const buttons = within(group).getAllByRole("button");
-      expect(buttons.map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "true", "false"]);
-      ["1", "2", "3"].forEach((k) => expect(within(group).getByText(k)).toBeInTheDocument());
+      expect(buttons.map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "true", "false", "false"]);
+      ["1", "2", "3", "4"].forEach((k) => expect(within(group).getByText(k)).toBeInTheDocument());
     });
 
     it("fires onView on click", () => {

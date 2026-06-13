@@ -2,6 +2,7 @@ package orchestrate
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -313,5 +314,82 @@ func TestLoopDryRunNoSideEffects(t *testing.T) {
 	}
 	if got := featureStatus(t, dir, "F"); got == "shipped" {
 		t.Fatal("dry-run shipped the feature")
+	}
+}
+
+// crashRunner errors on the worker for its first `crashes` calls (simulating a
+// transient agent crash / non-zero exit), then checkpoints normally; the reviewer
+// always accepts. Used to exercise the soft-failure handling (review C1/I2).
+type crashRunner struct {
+	dir     string
+	crashes int
+	wcalls  int
+}
+
+func (r *crashRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir string) error {
+	task := taskIDFromBrief(briefing)
+	if isWorker(briefing) {
+		r.wcalls++
+		if r.wcalls <= r.crashes {
+			return fmt.Errorf("simulated agent crash %d", r.wcalls)
+		}
+		return pact.At(r.dir).As(seatID).Checkpoint(task, "ok")
+	}
+	return pact.At(r.dir).As(seatID).Accept(task)
+}
+
+// (C1) a single transient runner crash must NOT kill the driver: it counts as a
+// soft failure, the next iteration retries, and the feature still ships.
+func TestLoopRunnerCrashIsSoftFailure(t *testing.T) {
+	dir := newProject(t)
+	spec := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f1", "feat-f1", spec)
+
+	run := &crashRunner{dir: dir, crashes: 1} // crash once, then succeed
+	notify := &recNotify{}
+	if err := Run(context.Background(), baseOpts(dir, run, &okExec{}, notify)); err != nil {
+		t.Fatalf("driver returned error on a transient crash (should be soft): %v", err)
+	}
+	if got := featureStatus(t, dir, "f1"); got != "shipped" {
+		t.Fatalf("feature status = %q, want shipped (crash survived + retried)", got)
+	}
+}
+
+// (C1) a worker that always crashes must escalate at MaxFails, NOT return a
+// driver-killing error.
+func TestLoopRunnerCrashEscalatesAtFailLimit(t *testing.T) {
+	dir := newProject(t)
+	spec := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f1", "feat-f1", spec)
+
+	run := &crashRunner{dir: dir, crashes: 99} // never succeeds
+	notify := &recNotify{}
+	if err := Run(context.Background(), baseOpts(dir, run, &okExec{}, notify)); err != nil {
+		t.Fatalf("always-crash should escalate (paused), not error: %v", err)
+	}
+	if got := featureStatus(t, dir, "f1"); got == "shipped" {
+		t.Fatalf("feature shipped despite a worker that never checkpoints")
+	}
+	paused := false
+	for _, m := range notify.msgs {
+		if strings.Contains(m, "paused") {
+			paused = true
+		}
+	}
+	if !paused {
+		t.Fatalf("expected an escalation/paused notification, got %v", notify.msgs)
+	}
+}
+
+// (I3) escalate must not panic when Now is nil — it falls back to wall-clock.
+func TestEscalateNilNowDoesNotPanic(t *testing.T) {
+	dir := newProject(t)
+	opts := Options{Dir: dir, Notify: &recNotify{}} // Now intentionally nil
+	if err := opts.escalate("t1", "stuck", "evidence", "do X then resume"); err != nil {
+		t.Fatalf("escalate with nil Now: %v", err)
+	}
+	entries, err := os.ReadDir(filepath.Join(dir, ".pact", "orchestrate"))
+	if err != nil || len(entries) == 0 {
+		t.Fatalf("escalation file not written: err=%v entries=%d", err, len(entries))
 	}
 }

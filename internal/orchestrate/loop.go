@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/pact"
@@ -138,8 +139,15 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	reason := lastChangesReason(opts.Dir, act.Task)
 	brief := workerBrief(seatFor(st, act.Seat, seat), task, reason)
 
-	if err := opts.Run.Run(ctx, task.Owner, opts.kind(task.Owner), brief, opts.Dir); err != nil {
-		return fmt.Errorf("orchestrate: run owner %s on %s: %w", task.Owner, task.ID, err)
+	if runErr := opts.Run.Run(ctx, task.Owner, opts.kind(task.Owner), brief, opts.Dir); runErr != nil {
+		if ctx.Err() != nil {
+			return runErr // cancellation: propagate, don't count as a task failure
+		}
+		// A transient agent crash (OOM / timeout / non-zero exit) is a soft failure,
+		// not a driver-killer (spec §2.5): count it and let the next iteration's
+		// tripped() guard escalate if it persists.
+		h.Fails[act.Task]++
+		return nil
 	}
 
 	after, err := pact.At(opts.Dir).StateProjection()
@@ -148,6 +156,8 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	}
 	if _, t, ok := find(after, act.Feature, act.Task); !ok || t.Status != "awaiting_review" {
 		h.Fails[act.Task]++
+	} else {
+		h.Fails[act.Task] = 0 // consecutive: a successful checkpoint clears the run
 	}
 	return nil
 }
@@ -162,8 +172,12 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 	}
 	brief := reviewerBrief(projection.Seat{ID: act.Seat}, task)
 
-	if err := opts.Run.Run(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, opts.Dir); err != nil {
-		return fmt.Errorf("orchestrate: run reviewer %s on %s: %w", task.Reviewer, task.ID, err)
+	if runErr := opts.Run.Run(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, opts.Dir); runErr != nil {
+		if ctx.Err() != nil {
+			return runErr // cancellation: propagate, don't count as a task failure
+		}
+		h.Fails[act.Task]++ // transient agent crash → soft failure (spec §2.5)
+		return nil
 	}
 
 	after, err := pact.At(opts.Dir).StateProjection()
@@ -174,8 +188,9 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 	switch {
 	case ok && t.Status == "changes_requested":
 		h.Rework[act.Task]++
+		h.Fails[act.Task] = 0 // the review ran (progress): clear the consecutive count
 	case ok && t.Status == "accepted":
-		// expected; no counter
+		h.Fails[act.Task] = 0
 	default:
 		h.Fails[act.Task]++
 	}
@@ -243,7 +258,13 @@ func gateCommands(dir string, f projection.Feature) []string {
 // because escalation is a pause, not a hard stop — but a write error is a real
 // IO failure worth surfacing.
 func (opts Options) escalate(task, reason, evidence, suggestion string) error {
-	path, err := writeEscalation(opts.Dir, opts.Now(), task, reason, evidence, suggestion)
+	// Now is injected for deterministic test filenames; fall back to wall-clock so
+	// a caller that forgets to wire it doesn't panic at the worst moment (escalation).
+	ts := time.Now().Format("20060102-150405")
+	if opts.Now != nil {
+		ts = opts.Now()
+	}
+	path, err := writeEscalation(opts.Dir, ts, task, reason, evidence, suggestion)
 	if err != nil {
 		return fmt.Errorf("orchestrate: write escalation: %w", err)
 	}

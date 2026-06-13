@@ -50,3 +50,17 @@ plan：docs/superpowers/plans/2026-06-13-headless-dogfood-m3.4-relay.md
 - 根因：orchestrator 角色是被动 CLI 驱动；协议靠 .pact/ 文件协调，但没有"orchestrator 监听 log.jsonl 状态变迁并自动接手"的回路。serve 有 watcher/SSE，但服务于 dashboard，未反哺 orchestrator 决策。
 - 处置（本轮，运营层）：orchestrator 起后台轮询盯 .pact/log.jsonl 的 checkpoint 事件，worker checkpoint 即自动醒来 review，用户只当"启动按钮"。
 - 候选改进（产品层）：① `pactify watch --seat claude --on-checkpoint <cmd>` 之类的 orchestrator 守护，状态变迁触发回调；② 正是 M3.4 relay 的延伸——事件流反哺编排端；③ orchestrator 也是 MCP 客户端，用 resource subscription 订阅 STATE 变更。**这条直接关系到协议"消灭人肉中继"的核心价值能否在 orchestrator 层兑现，优先级高。**
+
+### #7 共享单工作树致 orchestrator 提交落错分支
+- 阶段：t1 review
+- 现象：我架完后台观测后提交 #6 stability log，commit 落到了 feat-relay 而非 main——因为此时 opencode worker 已把【共享工作树】切到 feat-relay。`git log main..feat-relay` 里混入了 orchestrator 的文档提交。
+- 根因：F1 单工作树——orchestrator 与 worker 共用一个 git HEAD，worker 切分支后 orchestrator 的任何提交都落到 worker 的分支。
+- 处置：本轮容忍（#6/#7/#8 文档随 feature merge 回 main）；记录危害。
+- 候选改进：orchestrator 与 worker 各用 git worktree（F1 并发隔离，Phase 1 backlog 已列）；或 orchestrator 文档提交前显式确认分支。
+
+### #8 checkpoint 的 CommitAll 无差别扫入工具垃圾
+- 阶段：t1 review
+- 现象：worker 交付里混入 `data/state.json`（内容 `{"nextAgent":"build","nextModel":{deepseek-v4-pro}}`——opencode 自己的会话状态文件），范围外。
+- 根因：`pactify checkpoint` 调 `gitx.CommitAll`（engine.go:335，stages everything），把工作树里任何工具生成的文件都扫进 feature commit。worker 非故意。
+- 处置：changes 退回要求 git rm + gitignore；记录。
+- 候选改进：checkpoint 应限定暂存范围（如只 task spec 声明的路径 + 显式变更），或对意外文件告警；或 init 时为常见工具状态目录补 .gitignore。

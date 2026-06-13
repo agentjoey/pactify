@@ -29,3 +29,41 @@ features:
         spec: .pact/tasks/integration-docs.md
         evidence: === RUN   TestRelayIntegrationFullChain --- PASS: TestRelayIntegrationFullChain (0.17s) === RUN   TestRelayIntegrationFailureIsolation --- PASS: TestRelayIntegrationFailureIsolation (0.16s) === RUN   TestRelayNilOnEmptyURL --- PASS: TestRelayNilOnEmptyURL (0.00s) === RUN   TestRelayNilEnqueueNoPanic --- PASS: TestRelayNilEnqueueNoPanic (0.00s) === RUN   TestRelayAuthHeader --- PASS: TestRelayAuthHeader (0.20s) === RUN   TestRelayBodyEnvelope --- PASS: TestRelayBodyEnvelope (0.20s) === RUN   TestRelayQueueFullDropsOldest --- PASS: TestRelayQueueFullDropsOldest (0.00s) === RUN   TestRelayServerErrorRetriesAndDrops --- PASS: TestRelayServerErrorRetriesAndDrops (10.00s) === RUN   TestRelayBadJSONLineSafe --- PASS: TestRelayBadJSONLineSafe (0.20s) ... (65 tests total, all PASS)  === FULL SUITE === ok  github.com/agentjoey/pactify/cmd/pactify      2.827s ok  github.com/agentjoey/pactify/internal/agent ok  github.com/agentjoey/pactify/internal/doctor ok  github.com/agentjoey/pactify/internal/event ok  github.com/agentjoey/pactify/internal/gitx ok  github.com/agentjoey/pactify/internal/mcp ok  github.com/agentjoey/pactify/internal/pact ok  github.com/agentjoey/pactify/internal/paths ok  github.com/agentjoey/pactify/internal/projection ok  github.com/agentjoey/pactify/internal/registry ok  github.com/agentjoey/pactify/internal/serve      15.493s  Files changed: - internal/serve/relay_integration_test.go (NEW): 2 integration tests exercising full fsnotify→drainNew→relay chain - docs/architecture.md: added M3.4 relay section (mount point, semantics, config, wire format) - docs/operations.md: added relay ops section (enable, token via Keychain, monitoring, disable)
         deps: [t2]
+  - id: agents
+    branch: feat-agents
+    status: in_progress
+    tasks:
+      - id: scan
+        owner: claude
+        status: assigned
+        reviewer: opencode-worker
+        spec: .pact/tasks/agents-scan.md
+        evidence: null
+      - id: reg
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/agents-reg.md
+        evidence: null
+        deps: [scan]
+      - id: cli
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/agents-cli.md
+        evidence: null
+        deps: [reg]
+      - id: serve
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/agents-serve.md
+        evidence: null
+        deps: [cli]
+      - id: ui
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/agents-ui.md
+        evidence: null
+        deps: [serve]

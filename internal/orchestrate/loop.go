@@ -16,7 +16,7 @@ import (
 
 // Run is the package entry point: it drives opts to completion (or pause). See
 // Options.run for the loop semantics.
-func Run(ctx context.Context, opts Options) error { return opts.run(ctx) }
+func Run(ctx context.Context, opts Options) error { return opts.withDefaults().run(ctx) }
 
 // fallbackGate is the conservative full command run when a feature's tasks
 // declare no machine-readable `verify:` command. It is intentionally broad so

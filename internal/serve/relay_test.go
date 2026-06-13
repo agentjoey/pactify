@@ -94,7 +94,7 @@ func TestRelayQueueFullDropsOldest(t *testing.T) {
 
 	r := newRelay(srv.URL, "")
 	r.enqueue("p", `"first"`) // bait: one item for the worker to pick up and block on
-	<-ready                    // wait until worker has dequeued it and is blocked in handler
+	<-ready                   // wait until worker has dequeued it and is blocked in handler
 
 	for i := 0; i < cap+N; i++ {
 		r.enqueue("p", `{"i":`+strconv.Itoa(i)+`}`)

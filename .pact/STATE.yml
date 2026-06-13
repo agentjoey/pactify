@@ -104,16 +104,16 @@ features:
     tasks:
       - id: step1
         owner: opencode-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/liveview-step1.md
         evidence: === VERIFY === go test ./internal/orchestrate/ -count=1 -v ok   github.com/agentjoey/pactify/internal/orchestrate  2.281s  All 67 tests PASS (0 regressions): - 12 new tests: WriteStatus (3), Progress (3), StatusJSONTags (1), Loop integration (5) - 55 existing tests: brief (4), decide (17), escalate (4), gate (5), loop (7), runner (5)  === FILES CHANGED === - internal/orchestrate/status.go (NEW): Status struct with exact contract JSON tags, writeStatus (atomic temp+rename), progress() helper, actionString/phaseFor/statusNow helpers - internal/orchestrate/status_test.go (NEW): 12 tests covering writeStatus atomicity/dir-creation, progress counting, JSON tag contract matching, loop-integration (happy, dry-run no-write, rework escalation, gate failure escalation, fail limit escalation, per-iteration) - internal/orchestrate/loop.go (MODIFIED): emitLoopStatus + emitEscalatedStatus methods on Options; status write points at per-iteration pre-dispatch, ActDone ({done:true}), escalate paths (tripped/MaxIters/ActStuck/ActIdle/gate-failure → {escalated:true, reason}); DryRun path excludes writes; merge() signature extended with view+History for gate-failure status  === ACCEPTANCE CHECKLIST === 1. go test ./internal/orchestrate/ — 全绿 ✓ 2. JSON tags match contract verbatim (verified by TestStatusJSONTagsMatchContract) ✓ 3. Happy-path loop writes status.json, DryRun does not (TestLoopWritesStatusAfterRunOwnerRound, TestLoopDryRunDoesNotWriteStatus) ✓ 4. Escalation paths write escalated:true with reason (TestLoopWritesEscalatedStatusOnReworkLimit/GateFailure/FailLimit) ✓ 5. No serve/web/cmd dependencies introduced; all existing tests unregressed ✓
       - id: step2
         owner: gemini-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/liveview-step2.md
-        evidence: null
+        evidence: === VERIFY === go test ./internal/serve/ -run TestOrchestrateStatus -v === RUN   TestOrchestrateStatus === RUN   TestOrchestrateStatus/Unknown_Project === RUN   TestOrchestrateStatus/No_File === RUN   TestOrchestrateStatus/Valid_File === RUN   TestOrchestrateStatus/Invalid_File --- PASS: TestOrchestrateStatus (0.00s) PASS  go test ./internal/serve/ ok   github.com/agentjoey/pactify/internal/serve 15.089s  All test paths verified. Route correctly handles the scope with 404. Raw bytes passed without decoding overhead (no orchestrate pkg imports).
         deps: [step1]
       - id: step3
         owner: opencode-worker

@@ -88,9 +88,18 @@ func nextAction(st projection.State, h History, th Thresholds) Action {
 	}
 
 	// 5. Unfinished work but nothing actionable → threshold checks → Stuck, else Idle.
-	//    Per-task thresholds first (so the offending task id is reported).
+	//    Per-task thresholds first (so the offending task id is reported). Skip
+	//    shipped features and already-accepted tasks: a completed task can carry a
+	//    stale Rework/Fails count from before it shipped, and must never trip Stuck
+	//    (that would mask ActDone and name a done task in the escalation).
 	for _, f := range st.Features {
+		if f.Status == "shipped" {
+			continue
+		}
 		for _, t := range f.Tasks {
+			if t.Status == "accepted" {
+				continue
+			}
 			if th.MaxRework > 0 && h.Rework[t.ID] >= th.MaxRework {
 				return Action{Kind: ActStuck, Feature: f.ID, Task: t.ID, Reason: "rework limit exceeded"}
 			}

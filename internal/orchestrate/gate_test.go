@@ -117,3 +117,23 @@ func TestGate_RunGate_ExecErrorFails(t *testing.T) {
 		t.Fatalf("runGate: detail should include exec error, got %q", detail)
 	}
 }
+
+// TestGate_ExtractVerify_RejectsMarkupPrefix (review #2): markdown markup lines
+// that merely contain "verify:" after a prefix (blockquote/list/heading) must
+// NOT be matched as the verify directive — only a bare `verify:` line is.
+func TestGate_ExtractVerify_RejectsMarkupPrefix(t *testing.T) {
+	for _, md := range []string{
+		"> verify: not a command",
+		"- verify: not a command",
+		"# verify: not a command",
+		"see verify: above",
+	} {
+		if cmd, ok := extractVerify(md); ok {
+			t.Fatalf("markup line %q wrongly matched as verify=%q", md, cmd)
+		}
+	}
+	// A real bare directive still works.
+	if cmd, ok := extractVerify("verify: go test ./..."); !ok || cmd != "go test ./..." {
+		t.Fatalf("bare verify line: got (%q,%v)", cmd, ok)
+	}
+}

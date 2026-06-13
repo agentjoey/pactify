@@ -382,3 +382,21 @@ func TestNextAction_DepsScopedToOwnFeature(t *testing.T) {
 		t.Fatalf("got kind=%v feature=%q task=%q, want Merge f1 (t2 dep is cross-feature → blocked)", act.Kind, act.Feature, act.Task)
 	}
 }
+
+// TestNextAction_ShippedTaskDoesNotTripStuck (review #1+#3): a shipped feature's
+// task with a stale rework count must not preempt ActDone for a non-shipped
+// feature that simply has no action available this tick (and accepted tasks in a
+// live feature must not be named as the stuck cause).
+func TestNextAction_ShippedTaskDoesNotTripStuck(t *testing.T) {
+	st := projection.State{Features: []projection.Feature{
+		{ID: "f1", Status: "shipped", Tasks: []projection.Task{
+			{ID: "t1", Status: "accepted", Owner: "w", Reviewer: "r"},
+		}},
+	}}
+	h := History{Rework: map[string]int{"t1": 5}, Fails: map[string]int{}}
+	th := Thresholds{MaxRework: 3, MaxFails: 3, MaxIters: 50}
+	got := nextAction(st, h, th)
+	if got.Kind != ActDone {
+		t.Fatalf("shipped feature with stale rework count: got %v, want ActDone", got)
+	}
+}

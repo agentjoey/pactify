@@ -34,7 +34,9 @@ func workerBrief(seat projection.Seat, task projection.Task, changesReason strin
 	if changesReason != "" {
 		b.WriteString("## 上次评审的返工原因\n")
 		b.WriteString("reviewer 打回了这个 task，原因如下，必须逐条解决：\n\n")
-		b.WriteString("> " + changesReason + "\n\n")
+		// Keep a multi-line reason inside the blockquote: a raw newline would drop
+		// later lines out of the quote and bleed into the next section.
+		b.WriteString("> " + strings.ReplaceAll(changesReason, "\n", "\n> ") + "\n\n")
 	}
 
 	b.WriteString("## 边界\n")

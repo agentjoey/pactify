@@ -80,3 +80,14 @@ func TestReviewerBrief(t *testing.T) {
 		t.Errorf("reviewer brief should forbid editing the implementation:\n%s", body)
 	}
 }
+
+// TestWorkerBrief_MultilineReasonStaysQuoted (review #4): a multi-line changes
+// reason must stay entirely inside the markdown blockquote.
+func TestWorkerBrief_MultilineReasonStaysQuoted(t *testing.T) {
+	seat := projection.Seat{ID: "w", Roles: []string{"worker"}}
+	task := projection.Task{ID: "t1", Spec: ".pact/tasks/t1.md"}
+	out := workerBrief(seat, task, "line one\nline two")
+	if !strings.Contains(out, "> line one\n> line two") {
+		t.Fatalf("multi-line reason not fully quoted:\n%s", out)
+	}
+}

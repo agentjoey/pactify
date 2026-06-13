@@ -7,11 +7,13 @@ import (
 	"os/exec"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/agentcfg"
 )
 
-// briefingPlaceholder is the literal token a kind's RunnerSpec.Args carries where
-// the real briefing text must be substituted (e.g. opencode → ["run","{briefing}"]).
-const briefingPlaceholder = "{briefing}"
+// briefingPlaceholder is the literal token the resolved Args carry where the real
+// briefing text must be substituted (e.g. opencode → ["run","-m",model,"{briefing}"]).
+// Kept equal to agentcfg.Placeholder, the token agentcfg.Resolve emits.
+const briefingPlaceholder = agentcfg.Placeholder
 
 // Runner headless-launches a seat's agent with a briefing, blocking until that
 // turn ends. seatID + kind identify the agent (the orchestrate loop holds a
@@ -57,17 +59,18 @@ func osExec(ctx context.Context, name string, args []string, dir string, env []s
 // seat. A kind with no headless runner (GUI/desktop kinds, or an unknown kind)
 // fails closed: no process is spawned and an actionable error is returned.
 func (r CmdRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir string) error {
-	ad, ok := agent.Get(kind)
-	if !ok {
+	if _, known := agent.Get(kind); !known {
 		return fmt.Errorf("orchestrate: unknown agent kind %q — 改用 CLI 座席或人工那一棒", kind)
 	}
-	spec, ok := ad.Runner()
+	// Resolve the effective launch config: built-in profile overlaid with any
+	// per-agent override (model / scoped permissions) from the machine registry.
+	eff, ok := agentcfg.Resolve(kind)
 	if !ok {
 		return fmt.Errorf("orchestrate: kind %q 无 headless runner，改用 CLI 座席或人工那一棒", kind)
 	}
 
-	args := make([]string, len(spec.Args))
-	for i, a := range spec.Args {
+	args := make([]string, len(eff.Args))
+	for i, a := range eff.Args {
 		if a == briefingPlaceholder {
 			args[i] = briefing
 		} else {
@@ -79,5 +82,5 @@ func (r CmdRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir stri
 	// passes this as an addition; the production execFn appends it onto
 	// os.Environ(), while test execFns assert it is present.
 	env := []string{"PACT_AGENT_ID=" + seatID}
-	return r.Exec(ctx, spec.Command, args, repoDir, env)
+	return r.Exec(ctx, eff.Command, args, repoDir, env)
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/agentcfg"
 	"github.com/agentjoey/pactify/internal/agentreg"
 	"github.com/spf13/cobra"
 )
@@ -97,11 +98,23 @@ func newAgentCmd() *cobra.Command {
 				if r.Installed {
 					mark = "installed"
 				}
+				// Drivability (#8): can orchestrate launch this kind headlessly?
+				drive := "manual"
+				if agent.Drivable(r.Kind) {
+					drive = "drivable"
+				}
 				tag := ""
 				if reg.Has(r.Kind) {
 					tag = "  [registered]"
+					if eff, ok := agentcfg.Resolve(r.Kind); ok {
+						scoped := ""
+						if eff.Scoped {
+							scoped = " scoped"
+						}
+						tag += fmt.Sprintf(" model=%s%s", eff.Model, scoped)
+					}
 				}
-				fmt.Fprintf(c.OutOrStdout(), "%-15s %-10s %-45s%s\n", r.Kind, mark, r.Detail, tag)
+				fmt.Fprintf(c.OutOrStdout(), "%-15s %-10s %-9s %-40s%s\n", r.Kind, mark, drive, r.Detail, tag)
 			}
 			return nil
 		}}
@@ -139,6 +152,82 @@ func newAgentCmd() *cobra.Command {
 			return reg.Save()
 		}}
 
-	a.AddCommand(add, docs, scan, register, unregister)
+	var cfgModel, cfgTools string
+	var cfgRestricted, cfgClear bool
+	config := &cobra.Command{Use: "config <kind>", Args: cobra.ExactArgs(1),
+		Short: "set per-agent launch overrides (model pin, scoped permissions)",
+		Long: `config sets per-agent launch overrides used by orchestrate when it drives this
+kind headlessly:
+
+  --model         override the kind's default model pin (#10 per-agent model)
+  --restricted    use scoped permissions: pass --allowed-tools instead of the
+                  blanket auto-approve posture (#4/#9 scoped permissions)
+  --allowed-tools comma-separated tool allowlist (effective with --restricted)
+  --clear         remove all overrides for this kind
+
+Only flags you pass are changed; others keep their current value. The agent must
+be registered first (pactify agent register <kind>).`,
+		RunE: func(c *cobra.Command, args []string) error {
+			kind := args[0]
+			reg, err := agentreg.Load()
+			if err != nil {
+				return err
+			}
+			if !reg.Has(kind) {
+				return fmt.Errorf("%q is not registered — run `pactify agent register %s` first", kind, kind)
+			}
+			if cfgClear {
+				if err := reg.SetConfig(kind, "", nil, false); err != nil {
+					return err
+				}
+				if err := reg.Save(); err != nil {
+					return err
+				}
+				fmt.Fprintf(c.OutOrStdout(), "cleared overrides for %s\n", kind)
+				return nil
+			}
+			// Only mutate fields whose flags were explicitly set, so a partial
+			// `config --model X` doesn't wipe an existing scoped-permissions setting.
+			curModel, curTools, curRestricted := reg.Config(kind)
+			model, tools, restricted := curModel, curTools, curRestricted
+			if c.Flags().Changed("model") {
+				model = cfgModel
+			}
+			if c.Flags().Changed("allowed-tools") {
+				tools = splitCSV(cfgTools)
+			}
+			if c.Flags().Changed("restricted") {
+				restricted = cfgRestricted
+			}
+			if err := reg.SetConfig(kind, model, tools, restricted); err != nil {
+				return err
+			}
+			if err := reg.Save(); err != nil {
+				return err
+			}
+			if eff, ok := agentcfg.Resolve(kind); ok {
+				fmt.Fprintf(c.OutOrStdout(), "%s → model=%s scoped=%v\n", kind, eff.Model, eff.Scoped)
+			} else {
+				fmt.Fprintf(c.OutOrStdout(), "%s configured (not headless-drivable; overrides stored)\n", kind)
+			}
+			return nil
+		}}
+	config.Flags().StringVar(&cfgModel, "model", "", "override the model pin")
+	config.Flags().StringVar(&cfgTools, "allowed-tools", "", "comma-separated tool allowlist (with --restricted)")
+	config.Flags().BoolVar(&cfgRestricted, "restricted", false, "scoped permissions (allowed-tools) instead of blanket auto-approve")
+	config.Flags().BoolVar(&cfgClear, "clear", false, "clear all overrides for this kind")
+
+	a.AddCommand(add, docs, scan, register, unregister, config)
 	return a
+}
+
+// splitCSV splits a comma-separated list, trimming spaces and dropping empties.
+func splitCSV(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

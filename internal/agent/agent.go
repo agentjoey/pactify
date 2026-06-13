@@ -56,15 +56,13 @@ type Adapter interface {
 }
 
 type spec struct {
-	kind       string
-	entry      string
-	cfgPath    string
-	scope      Scope
-	format     Format
-	desktop    bool
-	runnerCmd  string   // "" = no headless runner
-	runnerArgs []string // includes "{briefing}" placeholder
-	detectBin  string   // CLI binary to LookPath for install detection; "" = desktop kind (detect via Config().Path)
+	kind      string
+	entry     string
+	cfgPath   string
+	scope     Scope
+	format    Format
+	desktop   bool
+	detectBin string // CLI binary to LookPath for install detection; "" = desktop kind (detect via Config().Path)
 }
 
 func (s spec) Kind() string         { return s.kind }
@@ -81,32 +79,32 @@ func (s spec) Invocation(seatID, repoAbs string) Invoke {
 	return Invoke{Command: "pactify", Args: args, Env: map[string]string{"PACT_AGENT_ID": seatID}}
 }
 
-// Runner returns the headless runner spec for this kind; ok=false when runnerCmd
-// is empty (GUI/desktop kinds, or CLIs whose headless mode is unverified).
+// Runner returns the headless runner spec for this kind; ok=false for kinds with
+// no verified headless runner. It delegates to the kind's RunnerProfile (single
+// source of truth for launch argv) rendered with the default model and the
+// default blanket permission posture, preserving the historical Args contract.
+// agentcfg.Resolve is the parametric path used by orchestrate (model/posture
+// overrides); Runner() is the zero-config default kept for back-compat callers.
 func (s spec) Runner() (RunnerSpec, bool) {
-	if s.runnerCmd == "" {
+	p, ok := RunnerProfileFor(s.kind)
+	if !ok {
 		return RunnerSpec{}, false
 	}
-	return RunnerSpec{Command: s.runnerCmd, Args: s.runnerArgs}, true
+	return RunnerSpec{Command: p.Command, Args: p.BuildArgs(p.DefaultModel, PermPosture{}, briefingToken)}, true
 }
 
+// briefingToken is the placeholder Runner() emits in its default Args (callers
+// substitute the real prompt). agentcfg/orchestrate render the briefing directly.
+const briefingToken = "{briefing}"
+
 var registry = map[string]spec{
-	"opencode":       {"opencode", "AGENTS.md", "opencode.json", Project, JSONOpencode, false, "opencode", []string{"run", "-m", "deepseek/deepseek-v4-pro", "{briefing}"}, "opencode"},
-	// claude-code: -p is non-interactive (headless); --dangerously-skip-permissions
-	// is REQUIRED for autonomous tool use (no human to approve Edit/Bash) — without
-	// it `claude -p` stalls on permission prompts and cannot develop/review.
-	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude", []string{"-p", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}, "claude"},
-	// gemini-cli: prompt must immediately follow -p (else -p swallows the next
-	// flag); --approval-mode yolo + --skip-trust are REQUIRED for headless
-	// autonomous tool use (trusted-folder + auto-approve). -m pins the model
-	// (gemini-3.1-pro-preview, verified) until per-agent model config lands.
-	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}, "gemini"},
-	// codex-cli: codex headless not yet verified; keep no runner conservatively
-	// (set runnerCmd once `codex exec`-style headless mode is confirmed).
-	"codex-cli":      {"codex-cli", "AGENTS.md", ".codex/config.toml", Project, TOML, false, "", nil, "codex"},
-	"claude-desktop": {"claude-desktop", "", "~/Library/Application Support/Claude/claude_desktop_config.json", Global, JSONMcpServers, true, "", nil, ""},
-	"antigravity":    {"antigravity", "", "~/.gemini/config/mcp_config.json", Global, JSONMcpServers, true, "", nil, ""},
-	"codex-app":      {"codex-app", "AGENTS.md", "~/.codex/config.toml", Global, TOML, true, "", nil, ""},
+	"opencode":       {"opencode", "AGENTS.md", "opencode.json", Project, JSONOpencode, false, "opencode"},
+	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude"},
+	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, "gemini"},
+	"codex-cli":      {"codex-cli", "AGENTS.md", ".codex/config.toml", Project, TOML, false, "codex"},
+	"claude-desktop": {"claude-desktop", "", "~/Library/Application Support/Claude/claude_desktop_config.json", Global, JSONMcpServers, true, ""},
+	"antigravity":    {"antigravity", "", "~/.gemini/config/mcp_config.json", Global, JSONMcpServers, true, ""},
+	"codex-app":      {"codex-app", "AGENTS.md", "~/.codex/config.toml", Global, TOML, true, ""},
 }
 
 // Get returns the adapter for kind.

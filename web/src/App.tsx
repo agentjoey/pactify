@@ -337,7 +337,7 @@ export default function App() {
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
       <TopBar projects={projects} current={current} onSelect={setCurrent} live={live} replaying={replaying} view={view} onView={setView} author={author} seat={seat} agents={shownState.agents} />
-      <Agents state={shownState} events={events} onPick={() => {}} />
+      <Agents author={author} onChanged={refreshProjects} />
       {projectsLoaded && projects.length === 0
         ? <NoProjects onRegistered={refreshProjects} />
         : view === "ops"

@@ -41,6 +41,7 @@ beforeEach(() => {
   globalThis.EventSource = makeFakeESClass() as unknown as typeof EventSource;
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
+    if (url === "/api/agents") return { ok: true, json: async () => [] };
     if (url.includes("/timeline")) return { ok: true, json: async () => ({ total: 0, events: [] }) };
     return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
   }));
@@ -52,13 +53,13 @@ describe("App", () => {
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
     // The TopBar project chip shows the current project name.
     await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
-    await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
   });
 
   it("incoming pact event triggers a state re-fetch", async () => {
     render(<App />);
     // Wait for initial load (project list + initial state fetch)
-    await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
 
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
     const callsBefore = fetchMock.mock.calls.filter(([url]) =>
@@ -96,11 +97,12 @@ describe("App", () => {
           { id: "other", name: "other", path: "/y", project: "other", feature_count: 0, awaiting_count: 0 },
         ],
       };
+      if (url === "/api/agents") return { ok: true, json: async () => [] };
       return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
 
     // Fire a pact event to populate events list
     await act(async () => {
@@ -127,6 +129,7 @@ describe("App", () => {
     function stubReplayFetch() {
       vi.stubGlobal("fetch", vi.fn(async (url: string) => {
         if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
+        if (url === "/api/agents") return { ok: true, json: async () => [] };
         if (url.includes("/timeline")) return {
           ok: true,
           json: async () => ({
@@ -147,7 +150,7 @@ describe("App", () => {
       window.history.replaceState(null, "", "/?at=2");
       stubReplayFetch();
       render(<App />);
-      await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
 
       // Replay is entered: the LIVE button (resume live) becomes enabled and the
       // URL still carries ?at=2 (normalized through enterReplay's replaceState).
@@ -165,7 +168,7 @@ describe("App", () => {
       window.history.replaceState(null, "", "/");
       stubReplayFetch();
       render(<App />);
-      await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
       // Fresh load with no ?at stays live: no param written.
       expect(window.location.search).toBe("");
 
@@ -180,7 +183,7 @@ describe("App", () => {
   describe("global view shortcuts", () => {
     it("1/2/3 switch views; ignored while typing in an input", async () => {
       render(<App />);
-      await waitFor(() => expect(screen.getByText(/claude-opus/)).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
 
       const group = () => screen.getByRole("group", { name: "view toggle" });
       const pressed = () =>

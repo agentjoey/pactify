@@ -130,6 +130,26 @@ export async function postWire(
 export const getSeats = (project: string) =>
   getJSON<SeatInfo[]>(`/api/projects/${project}/seats`);
 
+export interface AgentRow {
+  kind: string;
+  installed: boolean;
+  detail: string;
+  registered: boolean;
+  label?: string;
+}
+
+export const getAgents = () => getJSON<AgentRow[]>("/api/agents");
+
+export async function registerAgent(kind: string, label?: string): Promise<void> {
+  const body: { label?: string } = {};
+  if (label) body.label = label;
+  await writeJSON(`/api/agents/${encodeURIComponent(kind)}/register`, "POST", body);
+}
+
+export async function unregisterAgent(kind: string): Promise<void> {
+  await writeJSON(`/api/agents/${encodeURIComponent(kind)}/register`, "DELETE", undefined);
+}
+
 // subscribeEvents opens an SSE stream; returns an unsubscribe fn.
 // onLive (optional) reports connection state: true on open, false on error/drop.
 export function subscribeEvents(

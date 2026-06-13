@@ -42,3 +42,8 @@
 - 何时放弃重试转人工：每次全量重试重做+烧 token，代价高，阈值/成本上限怎么定。
 - 分类恢复："活干完只是 checkpoint 挂" vs "活没干完挂了"——能否更聪明地分类（前者只补 checkpoint，后者续/重做）。
 - 空闲超时（无输出 N min）vs 总超时：空闲更快兜挂死、又不误杀合法慢任务（需 osExec 包输出活动检测）。
+
+## 来自 liveview 三 agent 自主建（2026-06-13）
+- **agent 任务 session 清理**：orchestrator 驱动每棒都 spawn 一个 agent session（opencode run / claude -p / gemini -p），跨多 task + 返工 + 重试/超时会累积大量 session，可能拖累 agent（存储/上下文/性能）。是否在任务完成后让 worker 清理掉执行该任务的相关 session。设计点：清哪些（只清本任务的 vs 也清陈旧的）、谁触发（worker checkpoint 后自清 vs orchestrate accept 后清）、保留 vs 清理权衡（审计/debug 要留）、各 agent session API 不同（gemini `--list-sessions`/`--delete-session`、opencode `opencode session`、claude session 管理）。
+- **--run-timeout 15min 太短/钝超时误杀慢任务**：本轮 step3（前端面板）合法慢，15min 超时杀了一次→重试续建才完成。默认 30min 较合理；正解 = 空闲超时（无输出 N min 才杀，不误伤慢任务），已记。本轮也验证了"超时→重试→读半成品续建"恢复链可用。
+- **（待查）merge 后 STATE.yml 可能滞后**：liveview merge 后工作树 STATE 一度显 shipped、但 HEAD 提交的 STATE.yml 显 in_progress——疑似 pact Merge 的 STATE 提交时序问题，需查（feature 实际已 merged、代码在 main、测试绿，仅 STATE 文件可能滞后）。

@@ -115,3 +115,13 @@
 4. **B4 Agent Config** + **B8 Sessions**（配置面）
 
 > 注：UI 改动走 CLAUDE.md 的画布合并门（vitest + Playwright e2e 双绿）。office-zoom 既有 flake 需先单独修或隔离，避免污染门禁。
+
+## UI 实施进度（2026-06-14）
+已交付并合入 main + 推 origin：
+- ✅ **并行视图聚合**（#3）：`GET .../orchestrate/parallel` + Live 面板多 feature 卡片。
+- ✅ **B1 Setup 视图**（#1 UI）：建议 roster + 角色 toggle + 实时 warnings + 复制 apply 命令（安全切片）。
+- ✅ **B2 Recipes 视图**（#11 UI）+ 端点（opencode）：选配方 + 目标 → 实时预览任务图。
+- ✅ **B4 Agent Config 面板**（#10/#9/#4 UI）+ 端点（opencode）：per-agent model + 权限姿态（blanket↔scoped）。
+- ✅ **B9 #12 polish 收尾（部分）**：Ops 三面板 Alert+retry / EmptyState / loading Spinner。
+dashboard 现 7 视图（键 1-7）。opencode 真跑交付 3 个后端端点 feature（recipeserve / agentcfgserve + 之前的）。
+**剩余 UI**（需有副作用 HTTP 操作的确认/安全 UX 设计）：B3 Plan apply、B5 Run+命令面板、B6 Review Gate、B7 Ship 按钮、B8 Sessions、setup/apply 一键。

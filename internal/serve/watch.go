@@ -122,6 +122,7 @@ func (s *Server) drainNew(id, lp string) {
 		off += int64(len(line)) // len includes the '\n'
 		if t := strings.TrimRight(line, "\n"); t != "" {
 			s.hub.broadcast(id, t)
+			s.relay.enqueue(id, t)
 		}
 	}
 	s.pmu.Lock()
@@ -134,9 +135,12 @@ func (s *Server) drainNew(id, lp string) {
 	s.pmu.Unlock()
 }
 
-// Stop closes the fsnotify watcher.
+// Stop closes the fsnotify watcher and the relay.
 func (s *Server) Stop() {
 	if s.watcher != nil {
 		_ = s.watcher.Close()
+	}
+	if s.relay != nil {
+		s.relay.stop()
 	}
 }

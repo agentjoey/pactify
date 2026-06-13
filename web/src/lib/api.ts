@@ -146,6 +146,29 @@ export interface AgentRow {
 
 export const getAgents = () => getJSON<AgentRow[]>("/api/agents");
 
+// Per-agent launch config (#10 model / #9 posture / #4 scoped tools).
+export interface AgentConfig {
+  kind: string;
+  registered: boolean;
+  drivable: boolean;
+  model: string;
+  allowed_tools: string[] | null;
+  restricted: boolean;
+  effective_model: string;
+  effective_scoped: boolean;
+}
+
+export const getAgentConfig = (kind: string) =>
+  getJSON<AgentConfig>(`/api/agents/${kind}/config`);
+
+export const setAgentConfig = (
+  kind: string,
+  body: { model: string; allowed_tools: string[]; restricted: boolean },
+) =>
+  writeJSON(`/api/agents/${kind}/config`, "POST", body).then(
+    (r) => r.json() as Promise<AgentConfig>,
+  );
+
 export async function registerAgent(kind: string, label?: string): Promise<void> {
   const body: { label?: string } = {};
   if (label) body.label = label;

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -34,7 +35,6 @@ func TestRelayAuthHeader(t *testing.T) {
 	if r == nil {
 		t.Fatal("newRelay with URL must return non-nil")
 	}
-	r.start()
 	defer r.stop()
 
 	r.enqueue("p", `{"event":"x"}`)
@@ -59,7 +59,6 @@ func TestRelayBodyEnvelope(t *testing.T) {
 	defer srv.Close()
 
 	r := newRelay(srv.URL, "")
-	r.start()
 	defer r.stop()
 
 	r.enqueue("pactify", `{"event_id":"1","type":"test"}`)
@@ -84,7 +83,18 @@ func TestRelayQueueFullDropsOldest(t *testing.T) {
 	const cap = 256
 	const N = 100
 
-	r := newRelay("http://x", "")
+	ready := make(chan struct{})
+	block := make(chan struct{})
+	var once sync.Once
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		once.Do(func() { close(ready) })
+		<-block
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := newRelay(srv.URL, "")
+	r.enqueue("p", `"first"`) // bait: one item for the worker to pick up and block on
+	<-ready                    // wait until worker has dequeued it and is blocked in handler
 
 	for i := 0; i < cap+N; i++ {
 		r.enqueue("p", `{"i":`+strconv.Itoa(i)+`}`)
@@ -92,11 +102,15 @@ func TestRelayQueueFullDropsOldest(t *testing.T) {
 
 	dropped := atomic.LoadInt64(&r.dropped)
 	if dropped < int64(N) {
-		t.Fatalf("dropped = %d, want >= %d (pushed %d items into cap %d queue)", dropped, N, cap+N, cap)
+		t.Fatalf("dropped = %d, want >= %d (1 dequeued + %d pushed, cap %d)", dropped, N, cap+N, cap)
 	}
 	if n := r.queueLen(); n > cap {
 		t.Fatalf("queue len = %d, want <= %d", n, cap)
 	}
+
+	close(block)
+	srv.Close()
+	r.stop()
 }
 
 func TestRelayServerErrorRetriesAndDrops(t *testing.T) {
@@ -108,7 +122,6 @@ func TestRelayServerErrorRetriesAndDrops(t *testing.T) {
 	defer srv.Close()
 
 	r := newRelay(srv.URL, "")
-	r.start()
 	defer r.stop()
 
 	r.enqueue("p", `{"x":1}`)
@@ -141,7 +154,6 @@ func TestRelayBadJSONLineSafe(t *testing.T) {
 	defer srv.Close()
 
 	r := newRelay(srv.URL, "")
-	r.start()
 	defer r.stop()
 
 	r.enqueue("p", `not json`)

@@ -1,6 +1,6 @@
-# Task t2 · agentreg
+# Task reg · agentreg
 
-**Feature:** agents · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** t1
+**Feature:** agents · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** scan
 
 ## 目标
 机器级 agent 注册表，镜像 internal/registry（file() 用 PACTIFY_HOME 否则 ~/.pactify，Load 缺文件=空，Save 建父目录原子写）。
@@ -34,4 +34,4 @@ go test ./internal/agentreg/
 ```
 
 ## 完成方式
-TDD。你是座席 opencode-worker。`pactify checkpoint t2` 附 verify 输出。不要自标 accepted。
+TDD。你是座席 opencode-worker。`pactify checkpoint reg` 附 verify 输出。不要自标 accepted。

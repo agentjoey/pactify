@@ -1,6 +1,6 @@
-# Task t3 · cli
+# Task cli · cli
 
-**Feature:** agents · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** t2
+**Feature:** agents · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** reg
 
 ## 目标
 `pactify agent scan/register/unregister` 子命令，挂在已有 `pactify agent` 下（与 add/docs 并列，见 cmd/pactify/cmd_agent.go 的 newAgentCmd）。
@@ -23,4 +23,4 @@ go test ./cmd/pactify/ -run Agent
 ```
 
 ## 完成方式
-TDD。座席 opencode-worker。checkpoint t3 附 verify 输出。不自标 accepted。
+TDD。座席 opencode-worker。checkpoint cli 附 verify 输出。不自标 accepted。

@@ -1,4 +1,4 @@
-# Task t1 · scan-detect
+# Task scan · scan-detect
 
 **Feature:** agents · **Owner:** claude · **Reviewer:** opencode-worker · **Deps:** 无
 
@@ -35,4 +35,4 @@ go test ./internal/agent/ -run Scan
 ```
 
 ## 完成方式
-TDD。你是座席 claude（owner）。`pactify checkpoint t1` 附 verify 输出。不要自标 accepted——reviewer 是 opencode-worker。
+TDD。你是座席 claude（owner）。`pactify checkpoint scan` 附 verify 输出。不要自标 accepted——reviewer 是 opencode-worker。

@@ -1,6 +1,6 @@
-# Task t5 · ui
+# Task ui · ui
 
-**Feature:** agents · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** t4
+**Feature:** agents · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** serve
 
 ## 目标
 dashboard Agents 面板——空注册表即 onboarding 第一屏，非空即管理器。机器级（非项目内）。
@@ -23,4 +23,4 @@ cd web && npx vitest run src/components/Agents
 ```
 
 ## 完成方式
-TDD。座席 opencode-worker。**web/src 改动同 commit 重建 dist：`cd web && npm run build`**。checkpoint t5 附 verify 输出。不自标 accepted。
+TDD。座席 opencode-worker。**web/src 改动同 commit 重建 dist：`cd web && npm run build`**。checkpoint ui 附 verify 输出。不自标 accepted。

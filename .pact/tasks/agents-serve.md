@@ -1,6 +1,6 @@
-# Task t4 · serve
+# Task serve · serve
 
-**Feature:** agents · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** t3
+**Feature:** agents · **Owner:** opencode-worker · **Reviewer:** claude · **Deps:** cli
 
 ## 目标
 机器级 agent 端点，镜像 internal/serve/wiring.go 的注册模式。
@@ -23,4 +23,4 @@ go test ./internal/serve/ -run Agents
 ```
 
 ## 完成方式
-TDD。座席 opencode-worker。checkpoint t4 附 verify 输出。不自标 accepted。
+TDD。座席 opencode-worker。checkpoint serve 附 verify 输出。不自标 accepted。

@@ -4,6 +4,9 @@ import { getSeats } from "../../lib/api";
 import { roleColorVar } from "../../lib/canvas";
 import { relativeTime } from "../../lib/ops";
 import { Badge } from "../ui/Badge";
+import { Alert } from "../ui/Alert";
+import { EmptyState } from "../ui/EmptyState";
+import { Spinner } from "../ui/Spinner";
 
 // Seats renders the roster table with join provenance. It is read-only (the
 // point of provenance is observability), so it shows in observe-only mode too.
@@ -11,6 +14,8 @@ import { Badge } from "../ui/Badge";
 export function Seats({ project, refreshKey }: { project: string; refreshKey?: number }) {
   const [seats, setSeats] = useState<SeatInfo[]>([]);
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (!project) {
@@ -18,17 +23,27 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
       return;
     }
     let alive = true;
+    setLoading(true);
     getSeats(project)
       .then((s) => { if (alive) { setSeats(s); setErr(""); } })
-      .catch((e) => { if (alive) setErr(e instanceof Error ? e.message : String(e)); });
+      .catch((e) => { if (alive) setErr(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [project, refreshKey]);
+  }, [project, refreshKey, tick]);
 
   return (
     <section data-testid="ops-seats" className="mb-4">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase mb-2">Seats · provenance</h2>
-      {err && <p className="text-[11px] text-[#f85149] whitespace-pre-wrap">{err}</p>}
-      {!err && seats.length === 0 && <p className="text-[11px] text-gray-600">no seats</p>}
+      <h2 className="flex items-center gap-2 text-[10px] font-semibold text-[var(--color-text-3)] uppercase mb-2">
+        Seats · provenance {loading && <Spinner size="xs" />}
+      </h2>
+      {err && (
+        <Alert tone="danger" onRetry={() => setTick((t) => t + 1)}>
+          {err}
+        </Alert>
+      )}
+      {!err && !loading && seats.length === 0 && (
+        <EmptyState title="还没有座席" hint="座席在 agent join 时注册（pactify join <seat>），或用 Setup 视图配置。" />
+      )}
       {seats.length > 0 && (
         <table className="w-full text-[11px]">
           <thead>

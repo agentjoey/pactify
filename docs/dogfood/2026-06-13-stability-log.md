@@ -43,3 +43,10 @@ plan：docs/superpowers/plans/2026-06-13-headless-dogfood-m3.4-relay.md
 
 ## 协议稳定性结论（持续更新）
 - 待 worker 进场后补充。
+
+### #6 orchestrator 缺自主观测，退化成人肉 bus
+- 阶段：t1 派发后
+- 现象：worker 启动后，orchestrator（claude）无内建机制感知 worker 何时 checkpoint，需用户口头传"干完了去 review"——人肉中继没消灭，只是从"传任务内容"退化成"传状态信号"。用户一针见血："还是我手动做这个 bus，那有什么意义？"
+- 根因：orchestrator 角色是被动 CLI 驱动；协议靠 .pact/ 文件协调，但没有"orchestrator 监听 log.jsonl 状态变迁并自动接手"的回路。serve 有 watcher/SSE，但服务于 dashboard，未反哺 orchestrator 决策。
+- 处置（本轮，运营层）：orchestrator 起后台轮询盯 .pact/log.jsonl 的 checkpoint 事件，worker checkpoint 即自动醒来 review，用户只当"启动按钮"。
+- 候选改进（产品层）：① `pactify watch --seat claude --on-checkpoint <cmd>` 之类的 orchestrator 守护，状态变迁触发回调；② 正是 M3.4 relay 的延伸——事件流反哺编排端；③ orchestrator 也是 MCP 客户端，用 resource subscription 订阅 STATE 变更。**这条直接关系到协议"消灭人肉中继"的核心价值能否在 orchestrator 层兑现，优先级高。**

@@ -10,6 +10,7 @@ import type {
   OrchestrateStatusResponse,
   ParallelStatusResponse,
   PlanReviewResponse,
+  SetupSuggestResponse,
 } from "./types";
 import type { LayoutJSON } from "./canvas";
 
@@ -158,6 +159,8 @@ export const getOrchestrateStatus = (project: string) =>
 
 export const getParallelOrchestrate = (project: string) =>
   getJSON<ParallelStatusResponse>(`/api/projects/${project}/orchestrate/parallel`);
+
+export const getSetupSuggest = () => getJSON<SetupSuggestResponse>(`/api/setup/suggest`);
 
 export const getPlanReview = (project: string, feature: string) =>
   getJSON<PlanReviewResponse>(`/api/projects/${project}/plan/${feature}`);

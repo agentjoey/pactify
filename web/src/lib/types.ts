@@ -85,6 +85,20 @@ export interface ParallelStatusResponse {
   features?: OrchestrateStatus[];
 }
 
+// Project setup wizard (#1): proposed seat roster from the machine's registered
+// agents + any gaps that would block the pact loop.
+export interface SetupBinding {
+  seat: string;
+  kind: string;
+  roles: string[];
+  drivable: boolean;
+}
+
+export interface SetupSuggestResponse {
+  bindings: SetupBinding[];
+  warnings: string[];
+}
+
 // Planner-generated task graph surfaced for human review before `plan apply`
 // assigns it (#7 planner review).
 export interface PlanTaskReview {

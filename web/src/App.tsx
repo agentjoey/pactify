@@ -7,6 +7,7 @@ import { Board } from "./components/Board";
 import { Canvas } from "./components/Canvas";
 import { LiveOrchestrate } from "./components/LiveOrchestrate";
 import { PlanReview } from "./components/PlanReview";
+import { Setup } from "./components/Setup";
 import { OpsView } from "./components/ops/OpsView";
 import { ReplayBar } from "./components/ReplayBar";
 import { RightRail } from "./components/RightRail";
@@ -134,6 +135,7 @@ export default function App() {
       else if (e.key === "3") setView("ops");
       else if (e.key === "4") setView("live");
       else if (e.key === "5") setView("plan");
+      else if (e.key === "6") setView("setup");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -350,6 +352,8 @@ export default function App() {
         ? <LiveOrchestrate project={current} refreshTick={refreshTick} />
         : view === "plan"
         ? <PlanReview project={current} features={shownState.features.map((f) => f.id)} />
+        : view === "setup"
+        ? <Setup />
         : (
           <>
             {/* relative so the slide-over detail panel + its scrim position

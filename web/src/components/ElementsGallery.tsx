@@ -197,7 +197,7 @@ export function ElementsGallery() {
                 <StatusPill status="in_progress" />
               </div>
               <div className="mt-1 text-[11px] text-[var(--color-text-2)]">orchestrator · reviewer</div>
-              <div className="mt-1.5 flex gap-1.5">
+              <div className="mt-1.5 flex items-center gap-1.5">
                 <Badge color="role-dev">drivable</Badge>
                 <span className="text-[10.5px] text-[var(--color-text-3)]">model claude-opus-4-8</span>
               </div>
@@ -435,9 +435,10 @@ function NodeCard({
         width: 230,
       }}
     >
-      {/* status pill floating clearly ABOVE the card (Dify "Wait for running") —
-          anchored a few px over the top edge so it never overlaps the frame. */}
-      <div className="absolute right-2" style={{ bottom: "calc(100% + 6px)" }}>
+      {/* status pill floating just above the card's top-left, aligned over the
+          header (Dify "Wait for running") — left-anchored so it reads as this
+          node's status label and stays clear of the right-edge "+" handle. */}
+      <div className="absolute left-1" style={{ bottom: "calc(100% + 5px)" }}>
         <StatusPill status={status} />
       </div>
       {/* header: role-tinted icon tile + title */}
@@ -536,8 +537,9 @@ function GridLensDemo() {
       className="grid-lens relative h-[300px] overflow-hidden rounded-xl border border-[var(--color-border-subtle)]"
       style={{ background: "linear-gradient(180deg,#ffffff,var(--color-bg-page))" }}
     >
-      {/* a frosted, translucent card floating over the lensed grid */}
-      <div className="card-frost absolute left-8 top-10 w-[260px] rounded-xl border border-[var(--color-border-subtle)] p-4 shadow-[var(--shadow-raised)]">
+      {/* a frosted, translucent card floating over the lensed grid (z-[1] so the
+          dot grid sits beneath it, not painted on top) */}
+      <div className="card-frost absolute left-8 top-10 z-[1] w-[260px] rounded-xl border border-[var(--color-border-subtle)] p-4 shadow-[var(--shadow-raised)]">
         <div className="flex items-center justify-between">
           <span className="mono text-[12px] font-medium">p-manifest</span>
           <StatusPill status="in_progress" />
@@ -547,7 +549,7 @@ function GridLensDemo() {
         </div>
         <div className="mt-2 text-[10.5px] text-[var(--color-text-3)]">半透明磨砂卡片 · 网格透过</div>
       </div>
-      <div className="card-frost absolute right-10 bottom-12 w-[220px] rounded-xl border border-[var(--color-border-subtle)] p-3 shadow-[var(--shadow-raised)]">
+      <div className="card-frost absolute right-10 bottom-12 z-[1] w-[220px] rounded-xl border border-[var(--color-border-subtle)] p-3 shadow-[var(--shadow-raised)]">
         <div className="flex items-center justify-between">
           <span className="text-[12px] font-[650]">claude</span>
           <StatusPill status="awaiting_review" />

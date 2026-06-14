@@ -146,7 +146,9 @@ body {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent);
+  /* a clearly visible light-gray block on a white surface (the old surface-70%
+     value was nearly invisible on #fff). */
+  background: rgba(26, 29, 39, 0.10);
   border-radius: 6px;
 }
 .skeleton::after {
@@ -154,10 +156,11 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
+  /* a brighter band sweeping across the gray base reads as the shimmer. */
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--color-text-3) 14%, transparent),
+    rgba(255, 255, 255, 0.65),
     transparent
   );
 }
@@ -228,6 +231,9 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* sit BELOW the cards (which take z-index ≥ 1) so the dot grid reads as a
+     backdrop the cards float over, never painting on top of them. */
+  z-index: 0;
   background-image: radial-gradient(rgba(18, 22, 31, 0.06) 1px, transparent 1px);
   background-size: 20px 20px;
 }
@@ -259,7 +265,11 @@ body {
 .hover-lift:hover .connect-plus { opacity: 1; }
 .connect-plus:hover {
   opacity: 1;
-  transform: scale(1.22) translateY(-50%);
+  /* translate FIRST then scale (matrix order: scale applied to the point, then a
+     constant -50% shift) so the handle grows from its own center and never
+     drifts out from under the cursor — the old `scale() translateY()` order
+     scaled the offset, which moved the hit-box and caused hover flicker. */
+  transform: translateY(-50%) scale(1.15);
 }
 
 /* Frosted card (Stitch-style): translucent surface + backdrop blur, so cards on

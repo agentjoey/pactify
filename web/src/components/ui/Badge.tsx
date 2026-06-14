@@ -33,7 +33,9 @@ export function Badge({
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full px-2 py-px text-[10px] font-medium leading-[18px]",
+        // UPPERCASE so badges (roles / capability tags) read distinctly from the
+        // lowercase pact-state pills — state = lowercase, badge = UPPERCASE.
+        "inline-flex items-center rounded-full px-2 py-px text-[10px] font-medium uppercase tracking-[.4px] leading-[18px]",
         className,
       ].join(" ")}
       style={{

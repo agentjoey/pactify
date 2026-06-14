@@ -44,7 +44,7 @@ export function PlanReview({
   }, [project, feature]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-5">
+    <div className="flex-1 overflow-y-auto px-6 py-5 view-enter">
       <div className="mb-4 flex items-center gap-3">
         <h2 className="text-[15px] font-[650] text-[var(--color-text-1)]">Plan review</h2>
         {features.length > 0 && (
@@ -101,11 +101,12 @@ export function PlanReview({
           )}
 
           <ol className="flex flex-col gap-2">
-            {(data.tasks ?? []).map((t) => (
+            {(data.tasks ?? []).map((t, i) => (
               <li
                 key={t.id}
                 data-testid="plan-task"
-                className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 hover-lift"
+                style={{ animationDelay: `${i * 40}ms` }}
+                className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 hover-lift fade-rise"
               >
                 <div className="flex items-center gap-2">
                   <span className="mono text-[12px] font-medium text-[var(--color-text-1)]">{t.id}</span>

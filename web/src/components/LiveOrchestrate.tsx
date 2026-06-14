@@ -52,7 +52,7 @@ export function LiveOrchestrate({
     <div
       data-testid="live-orchestrate"
       aria-label="orchestrate live view"
-      className="flex-1 overflow-y-auto p-5"
+      className="flex-1 overflow-y-auto p-5 view-enter"
     >
       {error && (
         <div className="text-xs text-[var(--color-danger)] mb-3">{error}</div>
@@ -66,8 +66,8 @@ export function LiveOrchestrate({
             <Badge color="role-design">{parallelSorted.length} features</Badge>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {parallelSorted.map((f) => (
-              <FeatureCard key={f.feature} s={f} />
+            {parallelSorted.map((f, i) => (
+              <FeatureCard key={f.feature} s={f} delay={i * 40} />
             ))}
           </div>
         </div>
@@ -129,13 +129,14 @@ export function LiveOrchestrate({
 
 // FeatureCard is one feature's status in the parallel grid: id + phase + progress,
 // tinted by state (escalated=danger, done=success, else running).
-function FeatureCard({ s }: { s: OrchestrateStatus }) {
+function FeatureCard({ s, delay = 0 }: { s: OrchestrateStatus; delay?: number }) {
   const tone = s.escalated ? "danger" : s.done ? "success" : "role-design";
   const phase = s.escalated ? "升级" : s.done ? "done" : s.phase;
   return (
     <div
       data-testid="parallel-feature"
-      className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 hover-lift"
+      style={{ animationDelay: `${delay}ms` }}
+      className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 hover-lift fade-rise"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="mono text-[12px] font-medium text-[var(--color-text-1)]">{s.feature}</span>

@@ -781,20 +781,20 @@ body {
   transition: transform 0.18s var(--motion-ease), box-shadow 0.18s var(--motion-ease), filter 0.18s var(--motion-ease);
 }
 .desk.busy {
-  border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
-  transform: translateY(-3px);
-  box-shadow: 0 16px 32px -10px color-mix(in srgb, var(--color-success) 30%, transparent), var(--shadow-raised);
+  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 26px 46px -14px color-mix(in srgb, var(--color-success) 40%, transparent), 0 6px 16px rgba(18,22,31,.12);
 }
 .desk.review_due, .desk.waiting {
-  border-color: color-mix(in srgb, var(--color-warn) 40%, transparent);
-  transform: translateY(-2px);
-  box-shadow: 0 13px 28px -10px color-mix(in srgb, var(--color-warn) 26%, transparent), var(--shadow-raised);
+  border-color: color-mix(in srgb, var(--color-warn) 52%, transparent);
+  transform: translateY(-5px) scale(1.008);
+  box-shadow: 0 18px 36px -14px color-mix(in srgb, var(--color-warn) 34%, transparent), 0 4px 12px rgba(18,22,31,.1);
 }
 .desk.idle {
-  opacity: 0.72;
-  filter: saturate(0.5);
-  transform: translateY(2px) scale(0.985);
-  box-shadow: var(--shadow-card);
+  opacity: 0.6;
+  filter: saturate(0.32);
+  transform: translateY(5px) scale(0.94);
+  box-shadow: 0 2px 6px rgba(18,22,31,.06);
 }
 .desk.drop-target { border-color: var(--color-role-dev); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-role-dev) 45%, transparent); }
 .desk .dhead { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
@@ -852,7 +852,8 @@ body {
 
 /* Shipped tray — board5 `.tray` (fixed bottom-right). */
 .office-tray {
-  position: absolute; right: 18px; bottom: 18px; width: 200px; z-index: 10;
+  /* lifted above the bottom-right zoom HUD (canvas-hud, bottom:16) so they don't overlap. */
+  position: absolute; right: 18px; bottom: 60px; width: 200px; z-index: 10;
   background: color-mix(in srgb, var(--color-success) 6%, transparent);
   border: 1px dashed color-mix(in srgb, var(--color-success) 30%, transparent);
   border-radius: 12px; padding: 10px 14px;

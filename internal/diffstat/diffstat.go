@@ -5,6 +5,7 @@ package diffstat
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -25,6 +26,25 @@ func gitRun(dir string, args ...string) (string, error) {
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	return string(out), err
+}
+
+// IsRepoRoot reports whether repoDir is the ROOT of its own git repo (not a
+// subdirectory of an enclosing one). A project living inside a monorepo (e.g. a
+// hand-authored seed under dev/) would otherwise diff the OUTER repo's branches
+// and show bogus code volume — this gates that out.
+func IsRepoRoot(repoDir string) bool {
+	out, err := gitRun(repoDir, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return false
+	}
+	top := strings.TrimSpace(out)
+	resolve := func(p string) string {
+		if r, e := filepath.EvalSymlinks(p); e == nil {
+			return filepath.Clean(r)
+		}
+		return filepath.Clean(p)
+	}
+	return resolve(top) == resolve(repoDir)
 }
 
 // NumStat returns the added/deleted/files for `git diff --numstat from..to` in

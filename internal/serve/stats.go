@@ -59,9 +59,12 @@ func locForProject(repoPath string, evs []event.Event) func(string) (int, int) {
 			branch[f.ID] = f.Branch
 		}
 	}
+	// Only compute LOC for a project that is its OWN git root — a seed living
+	// inside this monorepo (dev/showcase) would otherwise diff the outer repo.
+	isRoot := diffstat.IsRepoRoot(repoPath)
 	return func(feature string) (int, int) {
 		b := branch[feature]
-		if b == "" || b == base {
+		if b == "" || b == base || !isRoot {
 			return 0, 0
 		}
 		// Exclude .pact/* protocol bookkeeping so "code volume" reflects the

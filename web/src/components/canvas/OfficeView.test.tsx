@@ -188,11 +188,12 @@ describe("OfficeView", () => {
   // context menus, desk materialization idempotence.
   // ===================================================================
 
-  it("renders the zoom HUD and minimap inside the office flow", async () => {
+  it("renders the zoom HUD but NOT the minimap (office hides it to free the dock corner)", async () => {
     const { container } = render(<OfficeView {...baseProps} />);
     await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
     expect(screen.getByTestId("canvas-hud")).toBeInTheDocument();
-    expect(container.querySelector(".react-flow__minimap")).not.toBeNull();
+    // Office passes Hud minimap={false} — the minimap collided with the dock.
+    expect(container.querySelector(".react-flow__minimap")).toBeNull();
   });
 
   it("author + zero drafts shows the dock with a New task entry; click opens TaskEditor", async () => {

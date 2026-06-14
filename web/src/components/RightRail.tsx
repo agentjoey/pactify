@@ -174,7 +174,7 @@ export function RightRail({
       <div
         data-testid="panel-scrim"
         onClick={close}
-        className="absolute inset-0 z-40 bg-black/45"
+        className="absolute inset-0 z-40 bg-black/10"
         style={
           reduced
             ? undefined
@@ -190,7 +190,7 @@ export function RightRail({
         role="dialog"
         aria-modal="true"
         aria-label={`Task ${task.id}`}
-        className="absolute right-0 top-0 bottom-0 z-50 flex w-[340px] flex-col overflow-y-auto border-l border-[var(--color-border-subtle)] bg-[#20222F] shadow-[0_10px_32px_rgba(0,0,0,.4)]"
+        className="absolute right-3 top-3 bottom-3 z-50 flex w-[330px] flex-col overflow-y-auto rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] shadow-[var(--shadow-raised)]"
         style={
           reduced
             ? undefined
@@ -198,7 +198,7 @@ export function RightRail({
         }
       >
         {/* Header */}
-        <div className="border-b border-white/[0.07] bg-[linear-gradient(170deg,rgba(147,180,242,.08),transparent_70%)] px-4 pb-3 pt-3.5">
+        <div className="rounded-t-2xl border-b border-[var(--color-border-subtle)] bg-[linear-gradient(170deg,color-mix(in_srgb,var(--color-role-design)_8%,transparent),transparent_70%)] px-4 pb-3 pt-3.5">
           <div className="mono text-[11px] text-[var(--color-text-3)]">
             {task.id} · {feature}
           </div>
@@ -231,14 +231,14 @@ export function RightRail({
         </div>
 
         {/* Spec */}
-        <div className="border-b border-white/[0.06] px-4 py-3">
+        <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">
           <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">
             Spec{task.spec && specIsPath(task.spec) ? ` · ${task.spec}` : ""}
           </div>
           {task.spec ? (
             specIsPath(task.spec) ? (
               <div>
-                <div className="mono text-[10.5px] text-[#9FE8BE]">{task.spec}</div>
+                <div className="mono text-[10.5px] text-[var(--color-role-dev-ink)]">{task.spec}</div>
                 <div className="mt-1 text-[10px] text-[var(--color-text-3)]">(task spec file in repo)</div>
               </div>
             ) : (
@@ -250,12 +250,12 @@ export function RightRail({
         </div>
 
         {/* Evidence */}
-        <div className="border-b border-white/[0.06] px-4 py-3">
+        <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">
           <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">Evidence</div>
           <pre
             className={[
               "mono whitespace-pre-wrap text-[10.5px] leading-[1.6]",
-              task.evidence ? "text-[#9FE8BE]" : "text-[var(--color-text-3)]",
+              task.evidence ? "text-[var(--color-role-dev-ink)]" : "text-[var(--color-text-3)]",
             ].join(" ")}
           >
             {task.evidence || "(none yet)"}
@@ -263,7 +263,7 @@ export function RightRail({
         </div>
 
         {/* Timeline */}
-        <div className="border-b border-white/[0.06] px-4 py-3">
+        <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">
           <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">
             Timeline <span className="text-[var(--color-text-3)]">· this session</span>
           </div>

@@ -825,7 +825,7 @@ function OfficeViewInner({
       >
         {/* Zoom HUD + minimap (shared with Plan) — gives Office real zoom
             controls (spec §3/#4). Must live inside <ReactFlow> (reads the store). */}
-        <Hud />
+        <Hud minimap={false} />
         {/* transit overlay (single lane + carrier ant carrying the parcel) —
             INSIDE <ReactFlow> so it can read the live viewport and draw the lane
             in screen space (flow→screen), tracking pan/zoom/fitView. */}

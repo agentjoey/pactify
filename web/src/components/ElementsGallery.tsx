@@ -13,6 +13,7 @@ import { Skeleton } from "./Skeleton";
 import { Ant } from "./ui/ants/Ant";
 import { StatusPill, type PactStatus } from "./ui/StatusPill";
 import { Icon, ICON_NAMES } from "../lib/icons";
+import { AgentLogo, AGENT_LOGO_KINDS } from "../lib/agentLogos";
 
 // ElementsGallery — the living design system (Phase 0). Reached at `?gallery`.
 // Every basic element is shown in light theme across its states, so they can be
@@ -124,6 +125,27 @@ export function ElementsGallery() {
                 <Icon name={name} size={22} />
                 <span className="text-[9.5px] text-[var(--color-text-3)] [overflow-wrap:anywhere] text-center">{name}</span>
               </div>
+            ))}
+          </div>
+        </Section>
+
+        {/* Agent logos — unified stylized brand marks (v1) */}
+        <Section title="Agent logos · v1（统一风格）" note="每个 kind 同一画框 + 品牌 accent 低饱底 + 单色 glyph，浅色适配。替换 agent 卡片现用概念图标（待批准）">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2.5">
+            {AGENT_LOGO_KINDS.map((k) => (
+              <div key={k} className="flex flex-col items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-2 py-3">
+                <AgentLogo kind={k} size={34} />
+                <span className="mono text-[9.5px] text-[var(--color-text-3)] [overflow-wrap:anywhere] text-center">{k}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-3 py-2.5">
+            <span className="text-[10.5px] uppercase tracking-[.5px] text-[var(--color-text-3)]">卡片内</span>
+            {["claude-code", "opencode", "gemini-cli", "kimi-cli", "codex-cli"].map((k) => (
+              <span key={k} className="inline-flex items-center gap-1.5">
+                <AgentLogo kind={k} size={22} />
+                <span className="mono text-[11px] font-medium text-[var(--color-text-1)]">{k}</span>
+              </span>
             ))}
           </div>
         </Section>

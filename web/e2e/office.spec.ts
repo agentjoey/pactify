@@ -30,13 +30,14 @@ test("office-zoom: wheel + HUD buttons change viewport scale; fit resets", async
 
   const base = await scaleOf(page);
 
-  // Wheel zoom at the canvas center (negative deltaY = zoom in for RF). Assert it
-  // CHANGED the scale (direction not asserted: a small graph can fit near RF's
-  // maxZoom, where zoom-in saturates — see the HUD assertions below for direction).
+  // Wheel zoom at the canvas center. Zoom OUT (positive deltaY for RF): the
+  // baseline is fitView, which for a small graph sits at/near RF's maxZoom, so a
+  // zoom-IN would saturate and not change the scale (the old flaky assertion).
+  // Zoom-out always has headroom from fit, so the scale reliably changes.
   const stage = page.locator('[data-testid="office-view"]');
   const c = await centerOf(stage);
   await page.mouse.move(c.x, c.y);
-  await page.mouse.wheel(0, -400);
+  await page.mouse.wheel(0, 400);
   await page.waitForTimeout(200);
   const afterWheel = await scaleOf(page);
   expect(afterWheel).not.toBeCloseTo(base, 3);

@@ -15,6 +15,7 @@
   "dependencies": {
     "@xyflow/react": "^12.11.0",
     "cmdk": "^1.1.1",
+    "lucide-react": "^1.18.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

@@ -7,6 +7,7 @@ import { EmptyState } from "./ui/EmptyState";
 import { Spinner } from "./ui/Spinner";
 import { Input } from "./ui/Input";
 import { StatusPill, type PactStatus } from "./ui/StatusPill";
+import { Icon, ICONS } from "../lib/icons";
 
 // ElementsGallery — the living design system (Phase 0). Reached at `?gallery`.
 // Every basic element is shown in light theme across its states, so they can be
@@ -85,6 +86,21 @@ export function ElementsGallery() {
               <Swatch key={c} label={c} bg={`var(--color-${c})`} solid />
             ))}
           </Row>
+        </Section>
+
+        {/* Icon library */}
+        <Section title="Icon library" note="lucide-react · role / agent kind / 状态 / 动作 / 视图 — 统一线性图标">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(108px,1fr))] gap-2.5">
+            {Object.keys(ICONS).map((name) => (
+              <div
+                key={name}
+                className="flex flex-col items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-2 py-2.5"
+              >
+                <Icon name={name} size={18} className="text-[var(--color-text-1)]" />
+                <span className="text-[9.5px] text-[var(--color-text-3)] [overflow-wrap:anywhere] text-center">{name}</span>
+              </div>
+            ))}
+          </div>
         </Section>
 
         {/* StatusPill — the state language */}
@@ -168,8 +184,8 @@ export function ElementsGallery() {
         <Section title="节点卡 · 连接 + 关系" note="dify 式节点卡 + 边上“+”连接手柄（建依赖）· Make Grid 式 Links 方向 pill">
           <div className="grid grid-cols-2 gap-8 pt-5">
             <div className="flex flex-col gap-9">
-              <NodeCard role="dev" icon="opencode" title="t-manifest" status="in_progress" sub="opencode → claude" meta="model deepseek-v4-pro" />
-              <NodeCard role="design" icon="claude" title="claude" status="awaiting_review" sub="orchestrator · reviewer" meta="drivable · claude-opus-4-8" selected />
+              <NodeCard role="dev" iconName="node-task" title="t-manifest" status="in_progress" sub="opencode → claude" meta="model deepseek-v4-pro" />
+              <NodeCard role="design" iconName="kind-claude-code" title="claude" status="awaiting_review" sub="orchestrator · reviewer" meta="drivable · claude-opus-4-8" selected />
             </div>
             <div>
               <div className="mb-2 text-[11px] uppercase tracking-[.5px] text-[var(--color-text-3)]">Links · 关系（方向 pill）</div>
@@ -256,7 +272,7 @@ export function ElementsGallery() {
 // dependency to a downstream card — Dify's edge "+").
 function NodeCard({
   role,
-  icon,
+  iconName,
   title,
   sub,
   meta,
@@ -264,7 +280,7 @@ function NodeCard({
   selected,
 }: {
   role: "product" | "design" | "dev";
-  icon: string;
+  iconName: string;
   title: string;
   sub: string;
   meta?: string;
@@ -277,8 +293,8 @@ function NodeCard({
       data-testid="node-card"
       className="relative rounded-xl bg-[var(--color-bg-surface)] p-3 shadow-[var(--shadow-card)] hover-lift"
       style={{
-        border: `1px solid ${selected ? c : "var(--color-border-subtle)"}`,
-        boxShadow: selected ? `0 0 0 3px color-mix(in srgb, ${c} 22%, transparent), var(--shadow-card)` : undefined,
+        // Selected = a single clean blue frame (Dify), no double-ring halo.
+        border: selected ? `1.5px solid ${c}` : "1px solid var(--color-border-subtle)",
         width: 230,
       }}
     >
@@ -290,10 +306,10 @@ function NodeCard({
       {/* header: role-tinted icon tile + title */}
       <div className="flex items-center gap-2">
         <span
-          className="grid h-7 w-7 place-items-center rounded-lg text-[12px] font-bold"
+          className="grid h-7 w-7 place-items-center rounded-lg"
           style={{ background: `color-mix(in srgb, ${c} 16%, transparent)`, color: `var(--color-role-${role}-ink, ${c})` }}
         >
-          {icon[0].toUpperCase()}
+          <Icon name={iconName} size={15} />
         </span>
         <span className="mono text-[12.5px] font-[650] text-[var(--color-text-1)]">{title}</span>
       </div>

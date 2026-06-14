@@ -34,7 +34,7 @@ export function AntActivity({ status }: { status: string }) {
   return (
     <div className={`ant-act ${spec.cls}`} data-testid="ant-activity" data-activity={status} aria-hidden>
       <span className="ant-act-runner">
-        <svg width="20" height="13" viewBox="-12 -7 24 14">
+        <svg width="13" height="9" viewBox="-12 -7 24 14">
           <Ant color={spec.color} />
         </svg>
       </span>

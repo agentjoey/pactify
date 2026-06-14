@@ -273,16 +273,19 @@ body {
 }
 
 /* Ant activity (Phase 3 increment A): an always-on, state-driven ant motion
-   overlay pinned to a canvas task node's top-right corner. Three motions encode
-   the live status — crawl (working) / orbit (awaiting review) / fret (rework).
-   All gated by prefers-reduced-motion (AntActivity renders nothing otherwise, so
-   no static clutter and no lost info — the StatusPill carries the state). */
+   overlay. DECISION: it sits INSIDE the card's top-right corner (not an outside
+   overhang) so the node's bounding box stays clean on a dense canvas — no
+   collision with edges/handles/neighbors — and the motion reads as "this card's
+   live state". Small + subtle. Three motions encode the live status — crawl
+   (working) / orbit (awaiting review) / fret (rework). All gated by
+   prefers-reduced-motion (AntActivity renders nothing otherwise, so no static
+   clutter and no lost info — the StatusPill carries the state). */
 .ant-act {
   position: absolute;
-  top: -10px;
-  right: -8px;
-  width: 24px;
-  height: 16px;
+  top: 5px;
+  right: 5px;
+  width: 15px;
+  height: 11px;
   pointer-events: none;
   z-index: 6;
 }
@@ -299,19 +302,19 @@ body {
   .ant-changes .ant-act-runner { animation: ant-fret 0.7s ease-in-out infinite; }
 }
 @keyframes ant-crawl {
-  0%   { transform: translate(-50%, -50%) translateX(-7px); }
-  48%  { transform: translate(-50%, -50%) translateX(7px); }
-  50%  { transform: translate(-50%, -50%) translateX(7px) scaleX(-1); }
-  98%  { transform: translate(-50%, -50%) translateX(-7px) scaleX(-1); }
-  100% { transform: translate(-50%, -50%) translateX(-7px); }
+  0%   { transform: translate(-50%, -50%) translateX(-4px); }
+  48%  { transform: translate(-50%, -50%) translateX(4px); }
+  50%  { transform: translate(-50%, -50%) translateX(4px) scaleX(-1); }
+  98%  { transform: translate(-50%, -50%) translateX(-4px) scaleX(-1); }
+  100% { transform: translate(-50%, -50%) translateX(-4px); }
 }
 @keyframes ant-orbit {
-  from { transform: translate(-50%, -50%) rotate(0deg) translateX(8px) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg) translateX(8px) rotate(-360deg); }
+  from { transform: translate(-50%, -50%) rotate(0deg) translateX(5px) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg) translateX(5px) rotate(-360deg); }
 }
 @keyframes ant-fret {
-  0%, 100% { transform: translate(-50%, -50%) translateX(-3px); }
-  50%      { transform: translate(-50%, -50%) translateX(3px); }
+  0%, 100% { transform: translate(-50%, -50%) translateX(-2px); }
+  50%      { transform: translate(-50%, -50%) translateX(2px); }
 }
 
 /* Frosted card (Stitch-style): translucent surface + backdrop blur, so cards on

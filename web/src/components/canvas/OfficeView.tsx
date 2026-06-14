@@ -16,6 +16,7 @@ import { deriveOffice, type DeskModel, type DeskStatus } from "../../lib/office"
 import { casteForRoles, padGradient } from "../../lib/ants";
 import { Ant } from "../ui/ants/Ant";
 import { StatusPill, type PactStatus } from "../ui/StatusPill";
+import { getStats, fmtDuration, type AgentStat } from "../../lib/api";
 import { statusColorVar } from "../../lib/lifecycle";
 import { CarrierAnt } from "./edges/AntEdge";
 import { Hud } from "./Hud";
@@ -418,6 +419,7 @@ function TransitOverlay({
 interface OfficeViewProps {
   state: State;
   layout: LayoutJSON;
+  project?: string; // for the Cost lens stats fetch (Phase 4.3)
   // Author-and-live: drop-to-dispatch + click-dispatch only when true. App
   // already passes author=false while replaying; `replaying` is a belt-and-
   // suspenders guard echoing the Plan canvas.
@@ -460,6 +462,7 @@ export function OfficeView(props: OfficeViewProps) {
 function OfficeViewInner({
   state,
   layout,
+  project,
   author,
   replaying,
   pulses,
@@ -492,6 +495,16 @@ function OfficeViewInner({
   // so it doesn't churn the desk node data.
   const [linksSeat, setLinksSeat] = useState<string | null>(null);
   const onSelectSeat = useCallback((id: string) => setLinksSeat((s) => (s === id ? null : id)), []);
+  // Phase 4.3 lens: the top-right board switches between Features (activity) and
+  // Cost (per-seat ⏱/LOC/tokens). Cost data is fetched on demand.
+  const [lens, setLens] = useState<"activity" | "cost">("activity");
+  const [agentStats, setAgentStats] = useState<AgentStat[]>([]);
+  useEffect(() => {
+    if (lens !== "cost" || !project) return;
+    let alive = true;
+    getStats(project).then((s) => alive && setAgentStats(s.agents)).catch(() => {});
+    return () => { alive = false; };
+  }, [lens, project, state]);
   const { fitView } = useReactFlow();
 
   // Single draft → click-dispatch convenience target. Idle desks ONLY (the file
@@ -836,17 +849,43 @@ function OfficeViewInner({
           sit INSIDE the office-view div, so their right-click would bubble to the
           stage's onContextMenu and open the pane menu over the panel. Stop it. */}
       <div className="office-wall" data-testid="office-wall" onContextMenu={(e) => e.stopPropagation()}>
-        <div className="wt">📋 Wall board · features</div>
-        {wallRows.length === 0 && <div className="dempty">No features</div>}
-        {wallRows.map((r) => (
-          <div className="wrow" key={r.id} style={{ opacity: r.total === 0 ? 0.55 : 1 }}>
-            <span className="mono" style={{ fontSize: 10 }}>{r.id}</span>
-            <span className="wbar"><i style={{ width: `${r.pct}%` }} /></span>
-            <span className="mono" style={{ fontSize: 9, color: "var(--color-text-3)" }}>
-              {r.accepted}/{r.total}
-            </span>
-          </div>
-        ))}
+        {/* Lens toggle (Phase 4.3): switch the board's data view. */}
+        <div className="office-lens" data-testid="office-lens">
+          {(["activity", "cost"] as const).map((l) => (
+            <button key={l} type="button" className={lens === l ? "on" : ""} onClick={() => setLens(l)}>
+              {l === "activity" ? "Activity" : "Cost"}
+            </button>
+          ))}
+        </div>
+        {lens === "activity" ? (
+          <>
+            {wallRows.length === 0 && <div className="dempty">No features</div>}
+            {wallRows.map((r) => (
+              <div className="wrow" key={r.id} style={{ opacity: r.total === 0 ? 0.55 : 1 }}>
+                <span className="mono" style={{ fontSize: 10 }}>{r.id}</span>
+                <span className="wbar"><i style={{ width: `${r.pct}%` }} /></span>
+                <span className="mono" style={{ fontSize: 9, color: "var(--color-text-3)" }}>
+                  {r.accepted}/{r.total}
+                </span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            {agentStats.length === 0 && <div className="dempty">No cost data</div>}
+            {agentStats.map((a) => (
+              <div className="wrow" key={a.seat} style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 2 }}>
+                <span className="mono" style={{ fontSize: 10, color: "var(--color-text-1)" }}>{a.seat}</span>
+                <span style={{ fontSize: 9, color: "var(--color-text-3)", display: "flex", gap: 8 }}>
+                  <span>⏱ {fmtDuration(a.duration_sec)}</span>
+                  <span style={{ color: "var(--color-role-dev-ink)" }}>+{a.added}</span>
+                  <span style={{ color: "var(--color-danger)" }}>−{a.deleted}</span>
+                  {a.tokens > 0 && <span>⛁ {a.tokens.toLocaleString()}</span>}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Links panel (Phase 4): the selected seat's relationships, right slide-over. */}

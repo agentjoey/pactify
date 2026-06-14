@@ -846,6 +846,10 @@ body {
   border: 1px solid var(--color-border-strong); border-radius: 12px; padding: 12px 14px;
 }
 .office-wall .wt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-text-3); margin-bottom: 9px; }
+/* Phase 4.3 lens toggle inside the wall panel. */
+.office-lens { display: flex; gap: 2px; margin-bottom: 9px; background: var(--color-bg-inset); border-radius: 7px; padding: 2px; }
+.office-lens button { flex: 1; font-size: 9.5px; font-weight: 600; padding: 3px 0; border-radius: 5px; color: var(--color-text-3); transition: background 0.12s var(--motion-ease), color 0.12s var(--motion-ease); }
+.office-lens button.on { background: var(--color-bg-surface); color: var(--color-text-1); box-shadow: var(--shadow-card); }
 .office-wall .wrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; color: var(--color-text-2); }
 .office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(18,22,31, 0.08); overflow: hidden; }
 .office-wall .wbar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 70%, white)); }

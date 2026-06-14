@@ -1013,6 +1013,7 @@ export function Canvas({
         <OfficeView
           state={state}
           layout={layout}
+          project={project}
           author={author}
           replaying={replaying}
           pulses={pulses}

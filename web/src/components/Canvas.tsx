@@ -326,20 +326,27 @@ export function Canvas({
   );
 
   // Dep edges render as ant-crawl edges (type:"ant"): a carrier ant + cargo
-  // cube crawls source→target. The base dashed look is unchanged (style
-  // passthrough); `ant` is decided by the cap pass in `display` below.
-  const edges: Edge[] = useMemo(
-    () =>
-      graph.edges.map((e) => ({
+  // cube crawls source→target. The stroke + ant are COLORED BY THE DOWNSTREAM
+  // task's status (the ant motion grammar's "color encodes state") — work
+  // flowing INTO an in_progress task is blue, awaiting_review amber, accepted
+  // green, etc. `ant` (whether it animates) is decided by the cap pass below.
+  const edges: Edge[] = useMemo(() => {
+    const statusOf = new Map<string, string>();
+    for (const f of state.features) for (const t of f.tasks) statusOf.set(t.id, t.status);
+    return graph.edges.map((e) => {
+      const target = e.target.replace(/^(task|draft):/, "");
+      const st = statusOf.get(target);
+      const color = st ? statusColor(st) : "rgba(18,22,31,.28)";
+      return {
         id: e.id,
         source: e.source,
         target: e.target,
         type: "ant",
-        style: { stroke: "rgba(18,22,31,.28)", strokeDasharray: "5 4" },
-        data: { kind: "dep" as const, color: "rgba(18,22,31,.28)", ant: false },
-      })),
-    [graph.edges],
-  );
+        style: { stroke: `color-mix(in srgb, ${color} 50%, transparent)`, strokeDasharray: "5 4" },
+        data: { kind: "dep" as const, color, ant: false },
+      };
+    });
+  }, [graph.edges, state.features]);
 
   // injectCallbacks re-attaches the per-node callbacks (draft onDispatch /
   // feature onFocus) and the stale marker onto the merged node array. mergeNodes

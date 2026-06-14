@@ -57,18 +57,22 @@
   --color-text-2: rgba(26, 29, 39, 0.64);
   --color-text-3: rgba(26, 29, 39, 0.42);
 
-  /* Role colors — deepened from the dark-theme desaturated hues so they keep
-     contrast on white while preserving the same identity (gold/blue/green). */
-  --color-role-product: #c0871b; /* orchestrator/编排 — gold */
-  --color-role-design: #3f74d6;  /* reviewer/评审   — blue */
-  --color-role-dev: #2f9e5e;     /* worker/开发     — green */
+  /* Role colors — the three brand mains (yellow / blue / green) tuned VIVID for
+     high recognizability on white (2026-06-14), with a darker -ink companion for
+     small text where the vivid hue alone is too light (yellow especially). */
+  --color-role-product: #eca400; /* orchestrator/编排 — vivid gold/yellow */
+  --color-role-design: #2563eb;  /* reviewer/评审   — vivid blue */
+  --color-role-dev: #12a150;     /* worker/开发     — vivid green */
+  --color-role-product-ink: #9a6b00; /* legible text/icon shade of product */
+  --color-role-design-ink: #1d4ed8;
+  --color-role-dev-ink: #0f8a44;
 
-  /* Role colors — extended roster (deepened for light). */
-  --color-role-qa: #1f9d96;
-  --color-role-pm: #cf7c2e;
-  --color-role-designer: #6a57cf;
-  --color-role-research: #a651c0;
-  --color-role-ops: #cf6a37;
+  /* Role colors — extended roster (vivid for light). */
+  --color-role-qa: #0d9488;
+  --color-role-pm: #e07c1e;
+  --color-role-designer: #6d4ee0;
+  --color-role-research: #b13fce;
+  --color-role-ops: #e0612e;
 
   /* Semantic (light-bg legible). */
   --color-danger: #d63d38;

@@ -57,3 +57,16 @@
 - **D2 Office 走多"3D"**：make grid 是**完整等距 3D**；我们 Office 是伪 3D desks。做到等距 3D（惊艳但工程重、且画布工艺规约几何严格）还是"2.5D 增强"（凸起/阴影/着色但不全等距）？
 - **D3 范围/优先级**：①Agent Config 用 dify TOOLS 模式重做（近期、独立、高 ROI）②Comms/Links 面板（office 核心）③proximity-connect 编排 ④edge-routing ⑤Lenses ⑥状态 pill 系统统一。先打哪几个？
 - **D4 蚂蚁爬线**：保留为 signature 并和 edge-routing/proximity 组合，对吗？
+
+## 补充：Stitch（画布风格）+ 画布背景特效（2026-06-14）
+**Stitch（Google，stitch.withgoogle.com）**：AI 原生**无限画布**（Figma 感）——生成的屏幕做成**精致卡片**摆在画布上、连成 **flow**，可 Play 预览交互。风格关键词：现代精致、一致排版、**渐变**、图标、完整交互态（含 delete 态）、**微动效**、风格跨生成保持一致。
+- 来源：https://www.nxcode.io/resources/news/google-stitch-complete-guide-vibe-design-2026 ，https://alternativeto.net/news/2026/3/you-can-now-use-google-stitch-to-vibe-design-uis-on-an-infinite-canvas-using-your-voice （用户给的具体项目 URL 需登录，未取到其私有内容）
+- **→ Pactify 画布映射**：无限画布 + 精致卡片（dify 节点卡）+ 连成 flow（pact 依赖/交接）+ 微动效（蚂蚁）+ 现代渐变背景。强化"卡片优先 + 干净画布 + 渐变深度"的方向。
+
+**画布背景特效（已落地基线，Phase 2 继续打磨）**：
+- `.canvas-stage` 改为**三主色 ambient 极光**（金右上 / 蓝左上 / 绿底部，低透明 color-mix）叠在 **白→page 竖向渐变**上 —— 呼应三品牌色身份 + 给画布深度（Stitch 式）。
+- 细化 masked **点网格**（22px、低透明深点、中心可见边缘渐隐）。
+- 待 Phase 2/4 把节点/desk 卡转浅后，这套背景才完整显现；可加**极慢极光漂移**（reduced-motion 关）增"活"感。
+
+## 三主色（提辨识度，2026-06-14）
+orchestrator/reviewer/worker 调为 **vivid 黄/蓝/绿**（`#eca400`/`#2563eb`/`#12a150`），辨识度显著提升；小字用 `-ink` 深色伴生（如 `--color-role-product-ink`）保证可读。

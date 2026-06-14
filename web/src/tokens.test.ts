@@ -13,7 +13,7 @@ describe("dashboard v2 tokens.css", () => {
   it("declares the light-theme palette hexes (2026-06-14 D1)", () => {
     // Light theme: page light gray-blue, cards white, role hues deepened for
     // contrast on white while keeping identity (gold/blue/green).
-    const palette = ["#f5f6f8", "#ffffff", "#c0871b", "#3f74d6", "#2f9e5e"];
+    const palette = ["#f5f6f8", "#ffffff", "#eca400", "#2563eb", "#12a150"];
     const lower = tokensCss.toLowerCase();
     for (const hex of palette) {
       expect(lower, `missing light token ${hex}`).toContain(hex.toLowerCase());
@@ -26,9 +26,9 @@ describe("dashboard v2 tokens.css", () => {
     expect(tokensCss).toMatch(/--role-product:\s*var\(--color-role-product\)/);
     expect(tokensCss).toMatch(/--role-design:\s*var\(--color-role-design\)/);
     expect(tokensCss).toMatch(/--role-dev:\s*var\(--color-role-dev\)/);
-    expect(tokensCss.toLowerCase()).toContain("--color-role-product: #c0871b");
-    expect(tokensCss.toLowerCase()).toContain("--color-role-design: #3f74d6");
-    expect(tokensCss.toLowerCase()).toContain("--color-role-dev: #2f9e5e");
+    expect(tokensCss.toLowerCase()).toContain("--color-role-product: #eca400");
+    expect(tokensCss.toLowerCase()).toContain("--color-role-design: #2563eb");
+    expect(tokensCss.toLowerCase()).toContain("--color-role-dev: #12a150");
   });
 
   it("self-hosts the fonts with font-display: swap and no external URLs", () => {

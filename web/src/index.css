@@ -192,20 +192,24 @@ body {
    Two ambient role-color radial glows over the page token, plus a masked dot
    grid layer. Purely decorative; the React Flow pane sits transparent on top. */
 .canvas-stage {
+  /* Three brand-color ambient auroras (gold top-right · blue top-left · green
+     bottom) over a white→page vertical wash — a polished, modern canvas that
+     carries the three-role identity and gives depth (Stitch-style). */
   background:
-    radial-gradient(1200px 500px at 70% -10%, color-mix(in srgb, var(--color-role-design) 6%, transparent), transparent 60%),
-    radial-gradient(900px 400px at 10% 110%, color-mix(in srgb, var(--color-role-dev) 5%, transparent), transparent 60%),
-    var(--color-bg-page);
+    radial-gradient(900px 480px at 80% -8%, color-mix(in srgb, var(--color-role-product) 9%, transparent), transparent 62%),
+    radial-gradient(820px 460px at 10% 6%, color-mix(in srgb, var(--color-role-design) 8%, transparent), transparent 60%),
+    radial-gradient(1100px 540px at 50% 118%, color-mix(in srgb, var(--color-role-dev) 8%, transparent), transparent 62%),
+    linear-gradient(180deg, #ffffff 0%, var(--color-bg-page) 100%);
 }
 .canvas-grid {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: radial-gradient(rgba(18,22,31, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
-  mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%);
+  background-image: radial-gradient(rgba(18, 22, 31, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 35%, transparent 92%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 35%, transparent 92%);
 }
 
 /* Frosted toolbar (top-left) — board2-canvas-v2 `.tbar`/`.tbtn`. */

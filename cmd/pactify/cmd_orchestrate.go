@@ -105,7 +105,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().IntVar(&maxFails, "max-fails", 2, "escalate after this many failed agent runs on a task")
 	cmd.Flags().IntVar(&maxIters, "max-iters", 50, "global iteration cap (backstop against a non-converging loop)")
 	cmd.Flags().IntVar(&runTimeoutMin, "run-timeout", 30, "minutes for one agent run end-to-end before killing it as a soft failure (0 = no timeout)")
-	cmd.Flags().IntVar(&idleTimeoutMin, "idle-timeout", 5, "minutes of NO output before killing an agent as hung (soft failure → retry); 0 = no idle watchdog")
+	cmd.Flags().IntVar(&idleTimeoutMin, "idle-timeout", 5, "patrol window: kill an agent as hung only after this many minutes of NO output AND NO working-tree changes (a quiet-but-writing agent keeps running); soft failure → retry; 0 = no idle watchdog")
 	cmd.Flags().IntVar(&maxConc, "max-concurrency", 1, "drive up to N independent features in parallel (isolated worktrees, serialized merges); 1 = serial. Ignored with --feature/--dry-run")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")

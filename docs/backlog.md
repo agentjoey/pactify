@@ -9,6 +9,13 @@
 ## 差异化备忘（对 AgentHub）
 - AgentHub 靠中心化 "Hub"（服务器）协调，更新日志在反复修"Hub 连接不稳定"。Pactify 用 git+文件当唯一事实源、零服务器——**主打"没有 Hub 可以掉线、你的 repo 就是协调层"**，是 ADR-001"守 Team"之外更底层的技术护城河。
 
+## 差异化备忘（对 Mind Agency，2026-06-14 调研）
+[Toufumind/mind-agency](https://github.com/Toufumind/mind-agency)：「From Agent to Agency — 一个 AI 做不了的事，一群 AI 可以」，Multi-Agent Collaboration Platform，Apache-2.0，v0.8 beta（2026-06-05 建，活跃）。**同品类/同口号/同时代/同中文圈**，是定位上的 peer/竞品，但**架构相反、非技术冲突**：
+- **它 = 厚客户端 App**（Electron + Next.js 前端 + Node WebSocket 后端，端口 3000/3001），内置自己的 agent 运行时（Claude Agent SDK 跑 Alice/Bob/Charlie 角色人格），群聊@/邮件/投票/多轮辩论/对抗评审 + 内存 EventBus + 本地 filesystem（Agents/、Groups/、.audit/、.mind/）信号。**单机、需常驻后端进程（本质就是个本地 Hub）**。
+- **Pactify = 协议 + 薄 CLI**（Go 单二进制），git+`.pact/` 文件当唯一事实源、**零服务器**；不自带 agent，而是**协调你已装的真实 agent CLI**（claude-code/opencode/codex/kimi/cursor…），headless orchestrate 驱动；**跨机/跨 repo 走 git**，审计在 git 历史。
+- **护城河对照**：Mind Agency 是"做一个能跑 agent 社会的桌面工作台"（GUI-first、共识/辩论功能更厚）；Pactify 是"做 agent 之间的协调协议"（infra-first、骑现有厂商 CLI、no-Hub、git-native、多机）。**可能互补**而非互斥（Pactify 协调跨机/跨仓，Mind Agency 是单机工作台）。
+- **要盯的点**：① 命名/口号撞车（都打"agency / 一个 AI 不行一群行"，都中文起家）→ 营销同渠道会被直接比较；Pactify 要强化"协议非平台 / no-Hub / 骑你的真 agent / git 多机"的差异话术。② 它的共识投票/多轮辩论/对抗评审是 Pactify 没有的 agent-society 功能 → 是要不要追的取舍（Pactify 的"评审"是两条硬规则的协议约束，不是辩论）。
+
 ## 链路完善候选（2026-06-13 链路走查）
 按用户旅程：①装+扫描注册 ✓ → ②建项目/配座席 → ③定义活 → ④orchestrate 跑 ✓ → ⑤看进展/介入 → ⑥交付远端
 - **[#1] 项目设置向导（座席绑定）**：扫描注册完 agent 后，引导"用我注册的 agent 配这个项目"（选 agent→派座席+角色），接通"注册完"到"能干活"。是 #2/#3 的前置。

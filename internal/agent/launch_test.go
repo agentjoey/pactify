@@ -19,6 +19,7 @@ func TestLaunchProfile_DefaultsMatchRunner(t *testing.T) {
 		{"claude-code", "claude", []string{"-p", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}},
 		{"gemini-cli", "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}},
 		{"kimi-cli", "kimi", []string{"-p", "{briefing}", "-y", "-m", "kimi-for-coding"}},
+		{"codex-cli", "codex", []string{"exec", "--sandbox", "workspace-write", "{briefing}"}},
 	}
 	for _, c := range cases {
 		p, ok := RunnerProfileFor(c.kind)
@@ -78,7 +79,7 @@ func TestLaunchProfile_OpencodeIgnoresPosture(t *testing.T) {
 
 // Non-drivable kinds have no profile.
 func TestLaunchProfile_NonDrivable(t *testing.T) {
-	for _, k := range []string{"antigravity", "claude-desktop", "codex-cli", "no-such"} {
+	for _, k := range []string{"antigravity", "claude-desktop", "codex-app", "no-such"} {
 		if _, ok := RunnerProfileFor(k); ok {
 			t.Errorf("%s: expected no runner profile, got ok=true", k)
 		}

@@ -81,10 +81,30 @@ var runnerProfiles = map[string]RunnerProfile{
 			return []string{"-p", briefing, "-y", "-m", model}
 		},
 	},
+	// codex-cli: `codex exec` is headless. The blanket posture maps to
+	// --sandbox workspace-write — the worker can edit the repo tree without
+	// per-command approval while staying sandboxed from network/system
+	// (--dangerously-bypass-approvals-and-sandbox is the full-trust escalation,
+	// not used by default). codex has no per-tool allowlist, so a scoped posture
+	// can't be expressed; posture is otherwise ignored. -m is omitted when no
+	// model is pinned, so codex falls back to its own configured default (the
+	// current default model name isn't asserted here). Verified against
+	// codex-cli v0.139.0 (codex exec --help).
+	"codex-cli": {
+		Command:      "codex",
+		DefaultModel: "",
+		BuildArgs: func(model string, _ PermPosture, briefing string) []string {
+			args := []string{"exec", "--sandbox", "workspace-write"}
+			if model != "" {
+				args = append(args, "-m", model)
+			}
+			return append(args, briefing)
+		},
+	},
 }
 
 // RunnerProfileFor returns the launch profile for a drivable kind; ok=false for
-// kinds with no verified headless runner (GUI/desktop, codex, unknown).
+// kinds with no verified headless runner (GUI/desktop, unknown).
 func RunnerProfileFor(kind string) (RunnerProfile, bool) {
 	p, ok := runnerProfiles[kind]
 	return p, ok

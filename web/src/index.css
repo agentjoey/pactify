@@ -192,13 +192,14 @@ body {
    Two ambient role-color radial glows over the page token, plus a masked dot
    grid layer. Purely decorative; the React Flow pane sits transparent on top. */
 .canvas-stage {
-  /* Three brand-color ambient auroras (gold top-right · blue top-left · green
-     bottom) over a white→page vertical wash — a polished, modern canvas that
-     carries the three-role identity and gives depth (Stitch-style). */
+  /* Airy, restrained canvas (Stitch-style): a very subtle three-brand-color
+     ambient tint (gold top-right · blue top-left · green bottom) over a
+     white→page vertical wash. Kept faint so cards float on a clean surface
+     rather than a busy gradient. */
   background:
-    radial-gradient(900px 480px at 80% -8%, color-mix(in srgb, var(--color-role-product) 9%, transparent), transparent 62%),
-    radial-gradient(820px 460px at 10% 6%, color-mix(in srgb, var(--color-role-design) 8%, transparent), transparent 60%),
-    radial-gradient(1100px 540px at 50% 118%, color-mix(in srgb, var(--color-role-dev) 8%, transparent), transparent 62%),
+    radial-gradient(900px 480px at 82% -10%, color-mix(in srgb, var(--color-role-product) 5%, transparent), transparent 60%),
+    radial-gradient(820px 460px at 8% 4%, color-mix(in srgb, var(--color-role-design) 4%, transparent), transparent 58%),
+    radial-gradient(1100px 540px at 50% 120%, color-mix(in srgb, var(--color-role-dev) 4%, transparent), transparent 60%),
     linear-gradient(180deg, #ffffff 0%, var(--color-bg-page) 100%);
 }
 .canvas-grid {

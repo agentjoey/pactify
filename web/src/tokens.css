@@ -58,19 +58,21 @@
   --color-text-3: rgba(26, 29, 39, 0.42);
 
   /* Role colors — the three brand mains (yellow / blue / green) tuned VIVID for
-     high recognizability on white (2026-06-14), with a darker -ink companion for
-     small text where the vivid hue alone is too light (yellow especially). */
-  --color-role-product: #eca400; /* orchestrator/编排 — vivid gold/yellow */
+     high recognizability on white (2026-06-14). gold brightened + greener-yellow
+     so it reads distinctly as "the yellow one"; green to a vivid brand emerald;
+     blue kept. -ink companions are darker shades for small text where the vivid
+     hue alone is too light (gold especially). */
+  --color-role-product: #f2b50a; /* orchestrator/编排 — bright gold-yellow */
   --color-role-design: #2563eb;  /* reviewer/评审   — vivid blue */
-  --color-role-dev: #12a150;     /* worker/开发     — vivid green */
-  --color-role-product-ink: #9a6b00; /* legible text/icon shade of product */
+  --color-role-dev: #16a85a;     /* worker/开发     — vivid emerald (brand) */
+  --color-role-product-ink: #8a6200; /* legible text/icon shade of product */
   --color-role-design-ink: #1d4ed8;
   --color-role-dev-ink: #0f8a44;
 
-  /* Role colors — extended roster (vivid for light). */
+  /* Role colors — extended roster (vivid for light). designer = brand violet. */
   --color-role-qa: #0d9488;
   --color-role-pm: #e07c1e;
-  --color-role-designer: #6d4ee0;
+  --color-role-designer: #9b3fd4;
   --color-role-research: #b13fce;
   --color-role-ops: #e0612e;
 

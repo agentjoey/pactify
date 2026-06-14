@@ -70,6 +70,40 @@ export const fetchState = (id: string) =>
 
 export const getActingSeat = () => getJSON<{ seat: string }>("/api/acting-seat");
 
+// --- Work stats (D1) ---
+// Per-task + per-agent duration (LOC / tokens best-effort, 0 until later slices).
+export type TaskStat = {
+  task_id: string;
+  feature: string;
+  owner: string;
+  reviewer: string;
+  status: string;
+  duration_sec: number;
+  added: number;
+  deleted: number;
+  tokens: number;
+};
+export type AgentStat = {
+  seat: string;
+  tasks: number;
+  duration_sec: number;
+  added: number;
+  deleted: number;
+  tokens: number;
+};
+export type ProjectStats = { tasks: TaskStat[]; agents: AgentStat[] };
+export const getStats = (id: string) => getJSON<ProjectStats>(`/api/projects/${id}/stats`);
+
+// fmtDuration renders seconds as a compact "2h 5m" / "14m" / "45s".
+export function fmtDuration(sec: number): string {
+  if (sec <= 0) return "—";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (m > 0) return `${m}m`;
+  return `${sec}s`;
+}
+
 // --- Replay (M3.3b) ---
 //
 // getTimeline reads the lightweight log index once on entering replay.

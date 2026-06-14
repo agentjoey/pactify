@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { State, PactEvent } from "../lib/types";
 import { findTask, canMergeFeature } from "../lib/derive";
-import { postVerb } from "../lib/api";
+import { postVerb, getStats, fmtDuration } from "../lib/api";
 import { humanizeError } from "../lib/protocolErrors";
 import { relTime } from "../lib/reltime";
 import { casteForRoles } from "../lib/ants";
@@ -70,6 +70,23 @@ export function RightRail({
   // pending names the in-flight action so only the clicked button shows its
   // spinner (busy still disables them all, server is authoritative).
   const [pending, setPending] = useState("");
+  // Work duration (D1) for the selected task, fetched from the stats endpoint.
+  const [durationSec, setDurationSec] = useState<number | null>(null);
+  useEffect(() => {
+    if (!selected || !project) {
+      setDurationSec(null);
+      return;
+    }
+    let alive = true;
+    getStats(project)
+      .then((s) => {
+        if (alive) setDurationSec(s.tasks.find((t) => t.task_id === selected)?.duration_sec ?? null);
+      })
+      .catch(() => alive && setDurationSec(null));
+    return () => {
+      alive = false;
+    };
+  }, [selected, project]);
 
   const close = () => onSelect?.("");
   // Whether the panel actually RENDERS. `selected` alone is not enough: after a
@@ -198,6 +215,9 @@ export function RightRail({
               <span className="mono">{task.reviewer || "—"}</span>
             </span>
             {inFlight && <span>{inFlight} in flight</span>}
+            {durationSec != null && durationSec > 0 && (
+              <span data-testid="task-duration">⏱ {fmtDuration(durationSec)}</span>
+            )}
           </div>
         </div>
 

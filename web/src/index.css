@@ -213,6 +213,38 @@ body {
   -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 35%, transparent 92%);
 }
 
+/* Grid magnifier (Stitch-style): a cursor-following "lens" where the dot grid
+   sharpens (darker, slightly larger dots) inside a soft circle. The container
+   sets --mx/--my from the mouse; ::before is the faint base grid, ::after is the
+   crisper lensed grid masked to the cursor. Decorative; pointer-events none. */
+.grid-lens {
+  position: relative;
+  --mx: 50%;
+  --my: 50%;
+}
+.grid-lens::before,
+.grid-lens::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(18, 22, 31, 0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.grid-lens::after {
+  background-image: radial-gradient(rgba(18, 22, 31, 0.22) 1.5px, transparent 1.5px);
+  -webkit-mask: radial-gradient(circle 120px at var(--mx) var(--my), #000 0%, transparent 68%);
+  mask: radial-gradient(circle 120px at var(--mx) var(--my), #000 0%, transparent 68%);
+}
+
+/* Frosted card (Stitch-style): translucent surface + backdrop blur, so cards on
+   the canvas let the grid faintly show through. Pair with a token border/shadow. */
+.card-frost {
+  background: color-mix(in srgb, var(--color-bg-surface) 62%, transparent);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+}
+
 /* Frosted toolbar (top-left) — board2-canvas-v2 `.tbar`/`.tbtn`. */
 .canvas-tbar {
   position: absolute;

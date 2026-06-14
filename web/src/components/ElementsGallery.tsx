@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
 import { Alert } from "./ui/Alert";
@@ -211,6 +211,11 @@ export function ElementsGallery() {
           </div>
         </Section>
 
+        {/* Stitch-inspired canvas effects */}
+        <Section title="画布效果 · 借鉴 Stitch" note="细点网格 + 光标放大镜（移动鼠标）· 半透明磨砂卡片">
+          <GridLensDemo />
+        </Section>
+
         {/* Feedback */}
         <Section title="Feedback" note="Alert（4 色）/ EmptyState / Spinner">
           <div className="flex flex-col gap-2">
@@ -226,6 +231,47 @@ export function ElementsGallery() {
             </div>
           </div>
         </Section>
+      </div>
+    </div>
+  );
+}
+
+function GridLensDemo() {
+  const ref = useRef<HTMLDivElement>(null);
+  return (
+    <div
+      ref={ref}
+      data-testid="grid-lens-demo"
+      onMouseMove={(e) => {
+        const el = ref.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+        el.style.setProperty("--my", `${e.clientY - r.top}px`);
+      }}
+      className="grid-lens relative h-[300px] overflow-hidden rounded-xl border border-[var(--color-border-subtle)]"
+      style={{ background: "linear-gradient(180deg,#ffffff,var(--color-bg-page))" }}
+    >
+      {/* a frosted, translucent card floating over the lensed grid */}
+      <div className="card-frost absolute left-8 top-10 w-[260px] rounded-xl border border-[var(--color-border-subtle)] p-4 shadow-[var(--shadow-raised)]">
+        <div className="flex items-center justify-between">
+          <span className="mono text-[12px] font-medium">p-manifest</span>
+          <StatusPill status="in_progress" />
+        </div>
+        <div className="mt-1.5 text-[11px] text-[var(--color-text-2)]">
+          opencode <span className="text-[var(--color-text-3)]">→</span> claude
+        </div>
+        <div className="mt-2 text-[10.5px] text-[var(--color-text-3)]">半透明磨砂卡片 · 网格透过</div>
+      </div>
+      <div className="card-frost absolute right-10 bottom-12 w-[220px] rounded-xl border border-[var(--color-border-subtle)] p-3 shadow-[var(--shadow-raised)]">
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-[650]">claude</span>
+          <StatusPill status="awaiting_review" />
+        </div>
+        <div className="mt-1 text-[11px] text-[var(--color-text-2)]">orchestrator · reviewer</div>
+      </div>
+      <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 text-[10.5px] text-[var(--color-text-3)]">
+        ← 在此区域移动鼠标，看网格放大镜
       </div>
     </div>
   );

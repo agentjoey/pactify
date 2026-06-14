@@ -61,7 +61,10 @@
 ## 补充：Stitch（画布风格）+ 画布背景特效（2026-06-14）
 **Stitch（Google，stitch.withgoogle.com）**：AI 原生**无限画布**（Figma 感）——生成的屏幕做成**精致卡片**摆在画布上、连成 **flow**，可 Play 预览交互。风格关键词：现代精致、一致排版、**渐变**、图标、完整交互态（含 delete 态）、**微动效**、风格跨生成保持一致。
 - 来源：https://www.nxcode.io/resources/news/google-stitch-complete-guide-vibe-design-2026 ，https://alternativeto.net/news/2026/3/you-can-now-use-google-stitch-to-vibe-design-uis-on-an-infinite-canvas-using-your-voice （用户给的具体项目 URL 需登录，未取到其私有内容）
-- **→ Pactify 画布映射**：无限画布 + 精致卡片（dify 节点卡）+ 连成 flow（pact 依赖/交接）+ 微动效（蚂蚁）+ 现代渐变背景。强化"卡片优先 + 干净画布 + 渐变深度"的方向。
+- **定位澄清（用户）**：Stitch 产品定位与 Pactify 不同；**Pactify 功能形态对标 Dify（主参考）**。Stitch 只取两点：
+  - **细点网格 + 光标放大镜**：光标处网格点变深/变锐的 lens（`.grid-lens`，跟随鼠标的 radial mask）。
+  - **半透明磨砂卡片**：translucent + backdrop-blur（`.card-frost`），画布网格从卡片下隐约透出。
+  - 两者已在 `?gallery` 做成可交互 demo，Phase 2 接进真画布。
 
 **画布背景特效（已落地基线，Phase 2 继续打磨）**：
 - `.canvas-stage` 改为**三主色 ambient 极光**（金右上 / 蓝左上 / 绿底部，低透明 color-mix）叠在 **白→page 竖向渐变**上 —— 呼应三品牌色身份 + 给画布深度（Stitch 式）。

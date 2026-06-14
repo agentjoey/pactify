@@ -266,7 +266,7 @@ Config:
 
 ## kimi-cli
 
-- config: `.kimi-code/mcp.json` (project, committed in repo)
+- config: `~/.kimi/mcp.json` (machine-global)
 - entry file: `AGENTS.md`
 
 Entry block:

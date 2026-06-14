@@ -1,90 +1,98 @@
-// Pactify icon library — a curated mapping of Pactify concepts onto a clean,
-// consistent line-icon set (lucide-react). One <Icon name="…"/> everywhere keeps
-// role/kind/state/action/view glyphs uniform across cards, nodes, the top bar,
-// and the gallery. Add a concept here, not a raw lucide import in a component.
+// Pactify icon library — Phosphor duotone, role-colored per concept. One
+// <Icon name="…"/> everywhere keeps the bold/rounded/two-tone glyphs and their
+// semantic colors uniform across cards, nodes, the top bar, and the gallery.
+// Add a concept here (icon + color), not a raw phosphor import in a component.
 import {
-  Waypoints,
+  Compass,
   Eye,
   Hammer,
-  Sparkles,
-  SquareTerminal,
-  Gem,
-  Braces,
-  MousePointer2,
-  Bot,
+  Sparkle,
+  TerminalWindow,
+  Diamond,
+  Code,
+  Cursor,
+  Robot,
   FileText,
-  Loader,
+  Spinner,
   Hourglass,
-  CircleCheck,
-  Ship,
-  TriangleAlert,
+  ArrowCounterClockwise,
+  CheckCircle,
+  RocketLaunch,
+  Warning,
   Moon,
-  RotateCcw,
   Plus,
   GitMerge,
-  Send,
+  PaperPlaneRight,
   Play,
-  SquareKanban,
-  Network,
-  SlidersHorizontal,
-  Radio,
+  Kanban,
+  Graph,
+  FadersHorizontal,
+  Broadcast,
   ListChecks,
-  Wand2,
-  BookOpen,
-  type LucideIcon,
-} from "lucide-react";
+  MagicWand,
+  ChatTeardropText,
+  type Icon as PhIcon,
+} from "@phosphor-icons/react";
 
-export const ICONS: Record<string, LucideIcon> = {
+type Entry = { I: PhIcon; color: string };
+
+// color uses the -ink companion where the vivid hue is too light for a small
+// glyph; otherwise the semantic token.
+const MAP: Record<string, Entry> = {
   // roles
-  "role-orchestrator": Waypoints,
-  "role-reviewer": Eye,
-  "role-worker": Hammer,
-  // agent kinds
-  "kind-claude-code": Sparkles,
-  "kind-opencode": SquareTerminal,
-  "kind-gemini-cli": Gem,
-  "kind-codex-cli": Braces,
-  "kind-cursor-cli": MousePointer2,
-  "kind-agent": Bot,
+  "role-orchestrator": { I: Compass, color: "var(--color-role-product-ink)" },
+  "role-reviewer": { I: Eye, color: "var(--color-role-design-ink)" },
+  "role-worker": { I: Hammer, color: "var(--color-role-dev-ink)" },
+  // agent kinds (each a distinct hue)
+  "kind-claude-code": { I: Sparkle, color: "var(--color-role-design-ink)" },
+  "kind-opencode": { I: TerminalWindow, color: "var(--color-role-dev-ink)" },
+  "kind-gemini-cli": { I: Diamond, color: "var(--color-role-research)" },
+  "kind-codex-cli": { I: Code, color: "var(--color-role-ops)" },
+  "kind-cursor-cli": { I: Cursor, color: "var(--color-role-qa)" },
+  "kind-agent": { I: Robot, color: "var(--color-text-2)" },
   // task
-  "node-task": FileText,
+  "node-task": { I: FileText, color: "var(--color-text-1)" },
   // pact states
-  "state-in_progress": Loader,
-  "state-awaiting_review": Hourglass,
-  "state-changes_requested": RotateCcw,
-  "state-accepted": CircleCheck,
-  "state-shipped": Ship,
-  "state-escalated": TriangleAlert,
-  "state-idle": Moon,
+  "state-in_progress": { I: Spinner, color: "var(--color-role-design-ink)" },
+  "state-awaiting_review": { I: Hourglass, color: "var(--color-warn)" },
+  "state-changes_requested": { I: ArrowCounterClockwise, color: "var(--color-role-ops)" },
+  "state-accepted": { I: CheckCircle, color: "var(--color-success)" },
+  "state-shipped": { I: RocketLaunch, color: "var(--color-role-dev-ink)" },
+  "state-escalated": { I: Warning, color: "var(--color-danger)" },
+  "state-idle": { I: Moon, color: "var(--color-text-3)" },
   // actions
-  "action-connect": Plus,
-  "action-merge": GitMerge,
-  "action-dispatch": Send,
-  "action-run": Play,
+  "action-connect": { I: Plus, color: "var(--color-role-design-ink)" },
+  "action-merge": { I: GitMerge, color: "var(--color-role-design-ink)" },
+  "action-dispatch": { I: PaperPlaneRight, color: "var(--color-role-design-ink)" },
+  "action-run": { I: Play, color: "var(--color-success)" },
   // dashboard views
-  "view-kanban": SquareKanban,
-  "view-canvas": Network,
-  "view-ops": SlidersHorizontal,
-  "view-live": Radio,
-  "view-plan": ListChecks,
-  "view-setup": Wand2,
-  "view-recipes": BookOpen,
+  "view-kanban": { I: Kanban, color: "var(--color-text-2)" },
+  "view-canvas": { I: Graph, color: "var(--color-text-2)" },
+  "view-ops": { I: FadersHorizontal, color: "var(--color-text-2)" },
+  "view-live": { I: Broadcast, color: "var(--color-text-2)" },
+  "view-plan": { I: ListChecks, color: "var(--color-text-2)" },
+  "view-setup": { I: MagicWand, color: "var(--color-text-2)" },
+  "view-recipes": { I: ChatTeardropText, color: "var(--color-text-2)" },
 };
 
-export type IconName = keyof typeof ICONS;
+export type IconName = keyof typeof MAP;
+export const ICON_NAMES = Object.keys(MAP);
 
 export function Icon({
   name,
   size = 16,
   className,
-  strokeWidth = 2,
+  color,
+  weight = "duotone",
 }: {
   name: string;
   size?: number;
   className?: string;
-  strokeWidth?: number;
+  color?: string;
+  weight?: "thin" | "light" | "regular" | "bold" | "fill" | "duotone";
 }) {
-  const C = ICONS[name];
-  if (!C) return null;
-  return <C size={size} className={className} strokeWidth={strokeWidth} aria-hidden />;
+  const e = MAP[name];
+  if (!e) return null;
+  const C = e.I;
+  return <C size={size} weight={weight} color={color ?? e.color} className={className} aria-hidden />;
 }

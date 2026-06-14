@@ -7,21 +7,7 @@ import { EmptyState } from "./ui/EmptyState";
 import { Spinner } from "./ui/Spinner";
 import { Input } from "./ui/Input";
 import { StatusPill, type PactStatus } from "./ui/StatusPill";
-import { Icon, ICONS } from "../lib/icons";
-import {
-  Compass,
-  Eye as PhEye,
-  Hammer as PhHammer,
-  Sparkle,
-  TerminalWindow,
-  Diamond,
-  PaperPlaneRight,
-  FileText as PhFileText,
-  ChatTeardropText,
-  RocketLaunch,
-  Hourglass as PhHourglass,
-  CheckCircle,
-} from "@phosphor-icons/react";
+import { Icon, ICON_NAMES } from "../lib/icons";
 
 // ElementsGallery — the living design system (Phase 0). Reached at `?gallery`.
 // Every basic element is shown in light theme across its states, so they can be
@@ -102,20 +88,15 @@ export function ElementsGallery() {
           </Row>
         </Section>
 
-        {/* Icon style sample — Phosphor (bolder, rounded, duotone, role-colored) */}
-        <Section title="图标风格 · Phosphor（样张）" note="更粗/圆/有性格 + duotone 双色调 + 按 role 上色（不单一蓝）。对比 lucide 选风格">
-          <PhosphorSample />
-        </Section>
-
-        {/* Icon library */}
-        <Section title="Icon library · lucide（当前）" note="lucide-react · role / agent kind / 状态 / 动作 / 视图 — 统一线性图标">
+        {/* Icon library — Phosphor duotone, role-colored per concept */}
+        <Section title="Icon library" note="Phosphor duotone · role / agent kind / 状态 / 动作 / 视图 — 按概念上色（不单一蓝）">
           <div className="grid grid-cols-[repeat(auto-fill,minmax(108px,1fr))] gap-2.5">
-            {Object.keys(ICONS).map((name) => (
+            {ICON_NAMES.map((name) => (
               <div
                 key={name}
                 className="flex flex-col items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-2 py-2.5"
               >
-                <Icon name={name} size={18} className="text-[var(--color-text-1)]" />
+                <Icon name={name} size={22} />
                 <span className="text-[9.5px] text-[var(--color-text-3)] [overflow-wrap:anywhere] text-center">{name}</span>
               </div>
             ))}
@@ -285,46 +266,6 @@ export function ElementsGallery() {
   );
 }
 
-// PhosphorSample — a side-by-side of the bolder, rounded, duotone icon style
-// (Phosphor) in role colors, vs the current thin lucide set, so the user can
-// pick the icon aesthetic. duotone = a bold outline + a faint same-hue fill.
-function PhosphorSample() {
-  const items = [
-    { I: Compass, label: "orchestrator", c: "var(--color-role-product-ink)", bg: "var(--color-role-product)" },
-    { I: PhEye, label: "reviewer", c: "var(--color-role-design-ink)", bg: "var(--color-role-design)" },
-    { I: PhHammer, label: "worker", c: "var(--color-role-dev-ink)", bg: "var(--color-role-dev)" },
-    { I: Sparkle, label: "claude", c: "var(--color-role-design-ink)", bg: "var(--color-role-design)" },
-    { I: TerminalWindow, label: "opencode", c: "var(--color-role-dev-ink)", bg: "var(--color-role-dev)" },
-    { I: Diamond, label: "gemini", c: "var(--color-role-research)", bg: "var(--color-role-research)" },
-    { I: PaperPlaneRight, label: "dispatch", c: "var(--color-role-design-ink)", bg: "var(--color-role-design)" },
-    { I: PhFileText, label: "task", c: "var(--color-text-1)", bg: "var(--color-text-3)" },
-    { I: ChatTeardropText, label: "recipes", c: "var(--color-role-product-ink)", bg: "var(--color-role-product)" },
-    { I: RocketLaunch, label: "shipped", c: "var(--color-role-dev-ink)", bg: "var(--color-role-dev)" },
-    { I: PhHourglass, label: "review", c: "var(--color-warn)", bg: "var(--color-warn)" },
-    { I: CheckCircle, label: "accepted", c: "var(--color-success)", bg: "var(--color-success)" },
-  ];
-  const Grid = ({ weight }: { weight: "duotone" | "bold" }) => (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2.5">
-      {items.map(({ I, label, c, bg }) => (
-        <div key={weight + label} className="flex flex-col items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-2 py-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${bg} 16%, transparent)` }}>
-            <I size={22} weight={weight} color={c} />
-          </span>
-          <span className="text-[9.5px] text-[var(--color-text-3)]">{label}</span>
-        </div>
-      ))}
-    </div>
-  );
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="text-[11px] uppercase tracking-[.5px] text-[var(--color-text-3)]">duotone · 双色调（role 色，tinted tile）</div>
-      <Grid weight="duotone" />
-      <div className="mt-2 text-[11px] uppercase tracking-[.5px] text-[var(--color-text-3)]">bold · 粗线（role 色）</div>
-      <Grid weight="bold" />
-    </div>
-  );
-}
-
 // NodeCard — the refined canvas node (Dify-style): role-tinted icon tile, title,
 // a floating status pill above the card, a summary meta row, a selected blue
 // ring, and "+" connect handles on the right edge (the affordance to draw a
@@ -366,9 +307,9 @@ function NodeCard({
       <div className="flex items-center gap-2">
         <span
           className="grid h-7 w-7 place-items-center rounded-lg"
-          style={{ background: `color-mix(in srgb, ${c} 16%, transparent)`, color: `var(--color-role-${role}-ink, ${c})` }}
+          style={{ background: `color-mix(in srgb, ${c} 16%, transparent)` }}
         >
-          <Icon name={iconName} size={15} />
+          <Icon name={iconName} size={16} color={`var(--color-role-${role}-ink)`} />
         </span>
         <span className="mono text-[12.5px] font-[650] text-[var(--color-text-1)]">{title}</span>
       </div>

@@ -82,6 +82,36 @@ func TestCmdRunner_ClaudeCode(t *testing.T) {
 	}
 }
 
+func TestGLMEnv(t *testing.T) {
+	orig := glmToken
+	t.Cleanup(func() { glmToken = orig })
+
+	// non-GLM command/model → no GLM env, token fn never consulted.
+	glmToken = func() (string, error) { t.Fatal("glmToken should not be called"); return "", nil }
+	if env, err := glmEnv("claude", "claude-opus-4-8"); err != nil || env != nil {
+		t.Fatalf("non-glm claude: env=%v err=%v, want nil,nil", env, err)
+	}
+	if env, err := glmEnv("opencode", "glm-4.7"); err != nil || env != nil {
+		t.Fatalf("glm on non-claude: env=%v err=%v, want nil,nil", env, err)
+	}
+
+	// GLM seat → base URL + token injected.
+	glmToken = func() (string, error) { return "zai-secret", nil }
+	env, err := glmEnv("claude", "glm-4.7")
+	if err != nil {
+		t.Fatalf("glm claude: %v", err)
+	}
+	if !hasEnv(env, "ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic") || !hasEnv(env, "ANTHROPIC_AUTH_TOKEN=zai-secret") {
+		t.Fatalf("glm env = %v, want base URL + token", env)
+	}
+
+	// GLM seat but missing token → actionable error.
+	glmToken = func() (string, error) { return "", errors.New("not in Keychain") }
+	if _, err := glmEnv("claude", "glm-4.6"); err == nil {
+		t.Fatal("expected error when GLM token missing")
+	}
+}
+
 func TestCmdRunner_GUIKind_Errors(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}

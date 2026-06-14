@@ -5,11 +5,22 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/agentcfg"
+	"github.com/agentjoey/pactify/internal/secret"
 )
+
+// glmBaseURL is the Z.ai (智谱 GLM) Anthropic-compatible endpoint. A claude-code
+// seat whose effective model is a `glm-*` model runs against this endpoint with
+// a Keychain-sourced token (GLM is not a separate kind — it's claude-code pointed
+// at Z.ai; see docs/agent-integration-candidates.md).
+const glmBaseURL = "https://api.z.ai/api/anthropic"
+
+// glmToken is overridable in tests; production reads the Keychain.
+var glmToken = secret.GLMToken
 
 // briefingPlaceholder is the literal token the resolved Args carry where the real
 // briefing text must be substituted (e.g. opencode → ["run","-m",model,"{briefing}"]).
@@ -85,5 +96,28 @@ func (r CmdRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir stri
 	// passes this as an addition; the production execFn appends it onto
 	// os.Environ(), while test execFns assert it is present.
 	env := []string{"PACT_AGENT_ID=" + seatID}
+
+	// GLM: a claude-code seat on a glm-* model runs against the Z.ai endpoint with
+	// a Keychain-sourced token (no plaintext). Not a new kind — claude-code pointed
+	// elsewhere. Fail closed with an actionable error if the token is missing.
+	gEnv, err := glmEnv(eff.Command, eff.Model)
+	if err != nil {
+		return fmt.Errorf("orchestrate: %w", err)
+	}
+	env = append(env, gEnv...)
 	return r.Exec(ctx, eff.Command, args, repoDir, env)
+}
+
+// glmEnv returns the Z.ai endpoint env (base URL + Keychain token) for a
+// claude-code seat on a glm-* model; (nil, nil) for any other command/model. It
+// errors only when the seat IS a GLM seat but the token is missing.
+func glmEnv(command, model string) ([]string, error) {
+	if command != "claude" || !strings.HasPrefix(model, "glm") {
+		return nil, nil
+	}
+	tok, err := glmToken()
+	if err != nil {
+		return nil, fmt.Errorf("GLM model %q on claude-code needs a Z.ai token — %w", model, err)
+	}
+	return []string{"ANTHROPIC_BASE_URL=" + glmBaseURL, "ANTHROPIC_AUTH_TOKEN=" + tok}, nil
 }

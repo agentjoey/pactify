@@ -70,6 +70,17 @@ var runnerProfiles = map[string]RunnerProfile{
 			return append(args, "--skip-trust")
 		},
 	},
+	// kimi-cli: -p supplies the prompt; -y is the blanket auto-approve. kimi has
+	// no per-tool allowlist flag, so a scoped posture can't be expressed — posture
+	// is ignored (always blanket), like opencode. -m pins the model. Verified
+	// against the installed `kimi` v1.44.0 (--help + package source).
+	"kimi-cli": {
+		Command:      "kimi",
+		DefaultModel: "kimi-for-coding",
+		BuildArgs: func(model string, _ PermPosture, briefing string) []string {
+			return []string{"-p", briefing, "-y", "-m", model}
+		},
+	},
 }
 
 // RunnerProfileFor returns the launch profile for a drivable kind; ok=false for

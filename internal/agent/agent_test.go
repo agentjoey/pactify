@@ -76,7 +76,7 @@ func TestKimiCliAdapter(t *testing.T) {
 		t.Fatalf("entry = %q, want AGENTS.md", a.DefaultEntry())
 	}
 	c := a.Config()
-	if c.Path != ".kimi-code/mcp.json" || c.Scope != Project || c.Format != JSONMcpServers {
+	if c.Path != "~/.kimi/mcp.json" || c.Scope != Global || c.Format != JSONMcpServers {
 		t.Fatalf("config = %+v", c)
 	}
 	inv := a.Invocation("kimi-cli", "/repo")
@@ -112,6 +112,7 @@ func TestRunnerCLIKinds(t *testing.T) {
 		{"opencode", "opencode", []string{"run", "-m", "deepseek/deepseek-v4-pro", "{briefing}"}},
 		{"claude-code", "claude", []string{"-p", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}},
 		{"gemini-cli", "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}},
+		{"kimi-cli", "kimi", []string{"-p", "{briefing}", "-y", "-m", "kimi-for-coding"}},
 	}
 	for _, tc := range cases {
 		a, ok := Get(tc.kind)
@@ -132,7 +133,7 @@ func TestRunnerCLIKinds(t *testing.T) {
 }
 
 func TestRunnerNoHeadless(t *testing.T) {
-	for _, kind := range []string{"antigravity", "claude-desktop", "codex-app", "codex-cli", "cursor-cli", "kimi-cli"} {
+	for _, kind := range []string{"antigravity", "claude-desktop", "codex-app", "codex-cli", "cursor-cli"} {
 		a, ok := Get(kind)
 		if !ok {
 			t.Fatalf("%s not registered", kind)

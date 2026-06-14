@@ -233,7 +233,7 @@ export function Wiring({
             <span
               data-testid={`wire-dot-${row.kind}`}
               title={row.wired ? "wired" : "not wired"}
-              className={`inline-block h-2 w-2 rounded-full ${row.wired ? "bg-[#3fb950]" : "bg-[#484f58]"}`}
+              className={`inline-block h-2 w-2 rounded-full ${row.wired ? "bg-[var(--color-success)]" : "bg-[rgba(18,22,31,.28)]"}`}
             />
             <span className="font-semibold text-[var(--color-text-1)]">{row.kind}</span>
             <span className="text-[var(--color-text-2)]">{row.detail}</span>

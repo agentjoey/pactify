@@ -333,8 +333,8 @@ export function Canvas({
         source: e.source,
         target: e.target,
         type: "ant",
-        style: { stroke: "#484f58", strokeDasharray: "5 4" },
-        data: { kind: "dep" as const, color: "#484f58", ant: false },
+        style: { stroke: "rgba(18,22,31,.28)", strokeDasharray: "5 4" },
+        data: { kind: "dep" as const, color: "rgba(18,22,31,.28)", ant: false },
       })),
     [graph.edges],
   );

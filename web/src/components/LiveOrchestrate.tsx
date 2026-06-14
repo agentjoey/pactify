@@ -162,7 +162,7 @@ function FeatureCard({ s, delay = 0 }: { s: OrchestrateStatus; delay?: number })
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-[var(--color-border-subtle)] bg-[rgba(255,255,255,.02)] px-3 py-2">
+    <div className="rounded-md border border-[var(--color-border-subtle)] bg-[rgba(18,22,31,.02)] px-3 py-2">
       <div className="text-[10px] text-[var(--color-text-3)]">{label}</div>
       <div className="text-sm text-[var(--color-text-1)] mono">{value || "—"}</div>
     </div>

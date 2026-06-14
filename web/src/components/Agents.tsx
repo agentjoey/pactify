@@ -52,9 +52,9 @@ export function Agents({ author, onChanged }: { author: boolean; onChanged: () =
   if (hasRegistered) return null;
 
   return (
-    <div className="border-b border-gray-800 px-3 py-2">
+    <div className="border-b border-[var(--color-border-subtle)] px-3 py-2">
       {!hasRegistered && (
-        <div className="text-xs text-gray-400 mb-2">
+        <div className="text-xs text-[var(--color-text-2)] mb-2">
           扫描到这些 agent，选择注册以开始
         </div>
       )}

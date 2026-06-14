@@ -192,7 +192,7 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(18,22,31, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
   mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%);
   -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%);
@@ -226,7 +226,7 @@ body {
   gap: 6px;
   transition: background 0.12s var(--motion-ease);
 }
-.canvas-tbar .tbtn:hover { background: rgba(255, 255, 255, 0.06); }
+.canvas-tbar .tbtn:hover { background: rgba(18,22,31, 0.06); }
 .canvas-tbar .tbtn:disabled { opacity: 0.4; }
 .canvas-tbar .tbtn .ic { opacity: 0.6; font-size: 11px; }
 .canvas-tbar .tbtn.on {
@@ -289,7 +289,7 @@ body {
   color: var(--color-text-2);
   transition: background 0.12s var(--motion-ease);
 }
-.canvas-hud button:hover { background: rgba(255, 255, 255, 0.06); color: var(--color-text-1); }
+.canvas-hud button:hover { background: rgba(18,22,31, 0.06); color: var(--color-text-1); }
 .canvas-hud .pct { font-size: 11px; color: var(--color-text-3); }
 
 /* Frosted MiniMap (bottom-left) — board2-canvas-v2 `.mmap`. React Flow renders
@@ -393,7 +393,7 @@ body {
   text-align: left;
   transition: background 0.1s var(--motion-ease);
 }
-.canvas-ctx .ci:hover { background: rgba(255, 255, 255, 0.06); }
+.canvas-ctx .ci:hover { background: rgba(18,22,31, 0.06); }
 .canvas-ctx .ci.hot {
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-role-design) 20%, transparent), color-mix(in srgb, var(--color-role-design) 10%, transparent));
 }
@@ -403,7 +403,7 @@ body {
   margin-left: auto;
   font-size: 9.5px;
   color: var(--color-text-3);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(18,22,31, 0.07);
   border: 1px solid var(--color-border-strong);
   border-radius: 4px;
   padding: 1px 5px;
@@ -481,7 +481,7 @@ body {
   width: 64px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(18,22,31, 0.09);
   overflow: hidden;
 }
 .feature-frame .fbar i {
@@ -525,7 +525,7 @@ body {
   transition: border-color 0.12s ease, box-shadow 0.2s ease;
 }
 .task-card:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(18,22,31, 0.16);
 }
 .task-card.dashed {
   border-style: dashed;
@@ -567,14 +567,14 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(18,22,31, 0.14);
 }
 
 .task-card .life i {
   width: 11px;
   height: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(18,22,31, 0.1);
   display: inline-block;
 }
 .task-card .life i.done {
@@ -637,7 +637,7 @@ body {
   transition: background 0.12s var(--motion-ease), color 0.12s var(--motion-ease);
 }
 .office-modeseg button.on {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(180deg, rgba(18,22,31, 0.1), rgba(18,22,31, 0.06));
   color: var(--color-text-1);
 }
 
@@ -661,7 +661,7 @@ body {
 .desk .dava {
   position: relative; width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(18,22,31, 0.16);
 }
 .desk .presence { position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid #232532; }
 .desk .dname { font-size: 14px; font-weight: 650; color: var(--color-text-1); }
@@ -684,7 +684,7 @@ body {
   font-size: 8.5px; letter-spacing: 0.7px; text-transform: uppercase; color: var(--color-text-3);
   margin: 7px 2px 5px; display: flex; align-items: center; gap: 6px;
 }
-.desk .zlab .zc { background: rgba(255, 255, 255, 0.07); border-radius: 999px; padding: 0 6px; font-size: 8.5px; color: var(--color-text-2); }
+.desk .zlab .zc { background: rgba(18,22,31, 0.07); border-radius: 999px; padding: 0 6px; font-size: 8.5px; color: var(--color-text-2); }
 .parcel {
   display: flex; align-items: center; gap: 7px;
   background: rgba(13, 14, 20, 0.5); border: 1px solid var(--color-border-subtle);
@@ -707,7 +707,7 @@ body {
 }
 .office-wall .wt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-text-3); margin-bottom: 9px; }
 .office-wall .wrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; color: var(--color-text-2); }
-.office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(18,22,31, 0.08); overflow: hidden; }
 .office-wall .wbar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 70%, white)); }
 
 /* Shipped tray — board5 `.tray` (fixed bottom-right). */

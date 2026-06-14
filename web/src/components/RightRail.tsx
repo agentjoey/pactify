@@ -182,18 +182,18 @@ export function RightRail({
       >
         {/* Header */}
         <div className="border-b border-white/[0.07] bg-[linear-gradient(170deg,rgba(147,180,242,.08),transparent_70%)] px-4 pb-3 pt-3.5">
-          <div className="mono text-[11px] text-white/45">
+          <div className="mono text-[11px] text-[var(--color-text-3)]">
             {task.id} · {feature}
           </div>
-          <div className="mt-0.5 flex items-center gap-[9px] text-[15px] font-[650] text-white">
+          <div className="mt-0.5 flex items-center gap-[9px] text-[15px] font-[650] text-[var(--color-text-1)]">
             <span>{task.id}</span>
             <Badge color="role-design">{task.status.replace(/_/g, " ")}</Badge>
           </div>
-          <div className="mt-[9px] flex gap-3.5 text-[10.5px] text-white/50">
+          <div className="mt-[9px] flex gap-3.5 text-[10.5px] text-[var(--color-text-1)]/50">
             <span className="flex items-center gap-1">
               {task.owner && <Ant caste={ownerCaste} size={14} title={task.owner} />}
               <span className="mono">{task.owner || "—"}</span>
-              <span className="text-white/30">→</span>
+              <span className="text-[var(--color-text-3)]">→</span>
               {task.reviewer && <Ant caste={reviewerCaste} size={14} title={task.reviewer} />}
               <span className="mono">{task.reviewer || "—"}</span>
             </span>
@@ -203,30 +203,30 @@ export function RightRail({
 
         {/* Spec */}
         <div className="border-b border-white/[0.06] px-4 py-3">
-          <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-white/35">
+          <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">
             Spec{task.spec && specIsPath(task.spec) ? ` · ${task.spec}` : ""}
           </div>
           {task.spec ? (
             specIsPath(task.spec) ? (
               <div>
                 <div className="mono text-[10.5px] text-[#9FE8BE]">{task.spec}</div>
-                <div className="mt-1 text-[10px] text-white/35">(task spec file in repo)</div>
+                <div className="mt-1 text-[10px] text-[var(--color-text-3)]">(task spec file in repo)</div>
               </div>
             ) : (
-              <div className="text-[11.5px] leading-[1.65] text-white/75">{task.spec}</div>
+              <div className="text-[11.5px] leading-[1.65] text-[var(--color-text-1)]">{task.spec}</div>
             )
           ) : (
-            <div className="text-[11.5px] text-white/40">(no spec)</div>
+            <div className="text-[11.5px] text-[var(--color-text-3)]">(no spec)</div>
           )}
         </div>
 
         {/* Evidence */}
         <div className="border-b border-white/[0.06] px-4 py-3">
-          <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-white/35">Evidence</div>
+          <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">Evidence</div>
           <pre
             className={[
               "mono whitespace-pre-wrap text-[10.5px] leading-[1.6]",
-              task.evidence ? "text-[#9FE8BE]" : "text-white/40",
+              task.evidence ? "text-[#9FE8BE]" : "text-[var(--color-text-3)]",
             ].join(" ")}
           >
             {task.evidence || "(none yet)"}
@@ -235,11 +235,11 @@ export function RightRail({
 
         {/* Timeline */}
         <div className="border-b border-white/[0.06] px-4 py-3">
-          <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-white/35">
-            Timeline <span className="text-white/25">· this session</span>
+          <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">
+            Timeline <span className="text-[var(--color-text-3)]">· this session</span>
           </div>
           {timeline.length === 0 ? (
-            <div className="text-[11px] text-white/40">(no events this session)</div>
+            <div className="text-[11px] text-[var(--color-text-3)]">(no events this session)</div>
           ) : (
             timeline.map((e) => {
               const caste = casteForRoles(rolesOf(state, e.agent_id));
@@ -250,11 +250,11 @@ export function RightRail({
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px]">
                     <Ant caste={caste} size={14} title={e.agent_id} />
                   </span>
-                  <div className="text-[11px] leading-[1.45] text-white/75">
+                  <div className="text-[11px] leading-[1.45] text-[var(--color-text-1)]">
                     <b>{e.event_type}</b>
                     {e.feature ? <> · {e.feature}</> : null}
                     <br />
-                    <span className="mono text-[10px] text-white/40">
+                    <span className="mono text-[10px] text-[var(--color-text-3)]">
                       {e.agent_id} · {relTime(e.ts) || "now"}
                     </span>
                   </div>
@@ -291,7 +291,7 @@ export function RightRail({
               <div className="mt-2">
                 <textarea
                   aria-label="changes reason"
-                  className="h-16 w-full resize-y rounded border border-[var(--color-border-subtle)] bg-[#0d1117] px-1.5 py-1 text-[11px] text-[var(--color-text-1)]"
+                  className="h-16 w-full resize-y rounded border border-[var(--color-border-subtle)] bg-[#f1f3f5] px-1.5 py-1 text-[11px] text-[var(--color-text-1)]"
                   placeholder="reason (required to request changes)"
                   value={reason}
                   onChange={(ev) => setReason(ev.target.value)}
@@ -322,7 +322,7 @@ export function RightRail({
             the feature is accepted (server is authoritative). */}
         {author && project && (
           <div className="px-4 pb-4 pt-1">
-            <div className="mb-1 text-[9.5px] uppercase tracking-[.6px] text-white/35">
+            <div className="mb-1 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">
               Feature · {feature}
             </div>
             <Button

@@ -28,8 +28,8 @@ describe("Wiring", () => {
     render(<Wiring project="demo" author={false} />);
     await waitFor(() => expect(screen.getByTestId("wiring-row-opencode")).toBeInTheDocument());
 
-    expect(screen.getByTestId("wire-dot-opencode")).toHaveClass("bg-[#3fb950]");
-    expect(screen.getByTestId("wire-dot-claude-desktop")).toHaveClass("bg-[#484f58]");
+    expect(screen.getByTestId("wire-dot-opencode")).toHaveClass("bg-[var(--color-success)]");
+    expect(screen.getByTestId("wire-dot-claude-desktop")).toHaveClass("bg-[rgba(18,22,31,.28)]");
     // machine-global tag only on the global (desktop) kind.
     expect(screen.getByText("machine-global")).toBeInTheDocument();
   });

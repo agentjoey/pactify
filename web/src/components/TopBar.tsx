@@ -90,7 +90,7 @@ export function TopBar({
       // ⌘K) above the main content area, which is a later `relative` sibling that
       // would otherwise intercept pointer events over the dropdowns (a click on a
       // project option was being swallowed by the board behind it).
-      className="relative z-50 flex items-center gap-3.5 px-4 py-2.5 border-b border-[var(--color-border-subtle)] bg-[rgba(32,34,47,.7)] backdrop-blur-[10px]"
+      className="relative z-50 flex items-center gap-3.5 px-4 py-2.5 border-b border-[var(--color-border-subtle)] bg-[rgba(18,22,31,.8)] backdrop-blur-[10px]"
     >
       {/* logo */}
       <div className="flex items-center gap-2 shrink-0">
@@ -110,7 +110,7 @@ export function TopBar({
             aria-haspopup="listbox"
             aria-expanded={projOpen}
             onClick={() => setProjOpen((o) => !o)}
-            className="flex items-center gap-[7px] rounded-lg border border-[var(--color-border-strong)] bg-[rgba(255,255,255,.05)] px-2.5 py-[5px] text-[12.5px] text-[var(--color-text-1)]"
+            className="flex items-center gap-[7px] rounded-lg border border-[var(--color-border-strong)] bg-[rgba(18,22,31,.05)] px-2.5 py-[5px] text-[12.5px] text-[var(--color-text-1)]"
           >
             <span className="mono text-[11.5px]">{currentName || "—"}</span>
             <span className="text-[9px] text-[var(--color-text-3)]">▾</span>
@@ -160,7 +160,7 @@ export function TopBar({
       <div
         role="group"
         aria-label="view toggle"
-        className="mx-auto flex rounded-[9px] border border-[var(--color-border-subtle)] bg-[rgba(13,14,20,.5)] p-[3px]"
+        className="mx-auto flex rounded-[9px] border border-[var(--color-border-subtle)] bg-[rgba(18,22,31,.04)] p-[3px]"
       >
         {VIEWS.map(({ v, label, key }) => {
           const on = view === v;
@@ -175,8 +175,8 @@ export function TopBar({
                 "transition-[background-color,color,box-shadow,transform] duration-[var(--motion-micro)] ease-[var(--motion-ease)]",
                 "active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-role-design)_40%,transparent)]",
                 on
-                  ? "bg-gradient-to-b from-[rgba(255,255,255,.1)] to-[rgba(255,255,255,.06)] text-white shadow-[0_1px_3px_rgba(0,0,0,.3)]"
-                  : "text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:bg-[rgba(255,255,255,.04)]",
+                  ? "bg-[var(--color-bg-surface)] text-[var(--color-text-1)] shadow-[var(--shadow-card)]"
+                  : "text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:bg-[rgba(18,22,31,.05)]",
               ].join(" ")}
             >
               {label}
@@ -192,7 +192,7 @@ export function TopBar({
         data-testid="cmdk-hint"
         aria-label="command palette"
         onClick={() => window.dispatchEvent(new CustomEvent("pactify:cmdk"))}
-        className="flex items-center gap-[5px] rounded-[7px] border border-[var(--color-border-strong)] bg-[rgba(255,255,255,.04)] px-2.5 py-[4.5px] text-[11px] text-[var(--color-text-2)]"
+        className="flex items-center gap-[5px] rounded-[7px] border border-[var(--color-border-strong)] bg-[rgba(18,22,31,.04)] px-2.5 py-[4.5px] text-[11px] text-[var(--color-text-2)]"
       >
         <span className="text-[10px]">⌘K</span>
       </button>
@@ -208,7 +208,7 @@ export function TopBar({
             className="flex h-[22px] w-[22px] items-center justify-center rounded-[7px] shrink-0"
             style={{
               background: `linear-gradient(135deg, ${pad.from}, ${pad.to})`,
-              boxShadow: "inset 0 0 0 1px rgba(255,255,255,.16)",
+              boxShadow: "inset 0 0 0 1px rgba(18,22,31,.16)",
             }}
           >
             <Ant caste={caste} size={22} title={`acting as ${seat} — ${caste}`} />
@@ -256,7 +256,7 @@ function LiveBadge({ live, replaying }: { live: boolean; replaying: boolean }) {
     <span
       data-testid="live-badge"
       data-state="offline"
-      className="flex items-center gap-1.5 rounded-full border border-[var(--color-border-strong)] bg-[rgba(255,255,255,.03)] px-2.5 py-1 text-[11px] text-[var(--color-text-3)]"
+      className="flex items-center gap-1.5 rounded-full border border-[var(--color-border-strong)] bg-[rgba(18,22,31,.03)] px-2.5 py-1 text-[11px] text-[var(--color-text-3)]"
     >
       <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-text-3)]" />
       offline

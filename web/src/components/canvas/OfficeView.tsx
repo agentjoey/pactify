@@ -66,7 +66,7 @@ function statusBadge(status: DeskStatus): { label: string; color: string; eq: bo
 function presenceColor(status: DeskStatus): string {
   if (status === "busy") return "var(--color-success)";
   if (status === "review_due" || status === "waiting") return "var(--color-warn)";
-  return "rgba(255,255,255,.25)";
+  return "rgba(18,22,31,.25)";
 }
 
 // Parcel chip. `dim` = parked output (waiting-on / shipped tray), `glow` = inbox.

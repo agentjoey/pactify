@@ -84,22 +84,22 @@ export function Projects({
           <div
             key={e.name}
             data-testid={`project-card-${e.name}`}
-            className="flex items-center gap-2 rounded border border-gray-800 bg-[#0d1117] px-2 py-1.5 text-[11px]"
+            className="flex items-center gap-2 rounded border border-[var(--color-border-subtle)] bg-[#f1f3f5] px-2 py-1.5 text-[11px]"
           >
             {e.status.valid ? (
-              <span data-testid={`project-badge-${e.name}`} title="valid" className="text-[#3fb950]">✓</span>
+              <span data-testid={`project-badge-${e.name}`} title="valid" className="text-[var(--color-success)]">✓</span>
             ) : (
-              <span data-testid={`project-badge-${e.name}`} title="error" className="text-[#f85149]">✗</span>
+              <span data-testid={`project-badge-${e.name}`} title="error" className="text-[var(--color-danger)]">✗</span>
             )}
-            <span className="font-semibold text-[#e6edf3]">{e.name}</span>
-            <span className="font-mono text-gray-600 truncate" title={e.path}>{e.path}</span>
+            <span className="font-semibold text-[#1a1d27]">{e.name}</span>
+            <span className="font-mono text-[var(--color-text-3)] truncate" title={e.path}>{e.path}</span>
             {e.status.valid ? (
-              <span className="ml-auto flex items-center gap-2 text-gray-500">
+              <span className="ml-auto flex items-center gap-2 text-[var(--color-text-3)]">
                 <span>{e.status.seats} seat{e.status.seats === 1 ? "" : "s"}</span>
                 <span className="font-mono">{relativeTime(e.status.lastEventTs)}</span>
               </span>
             ) : (
-              <span className="ml-auto text-[#f85149] whitespace-pre-wrap">{e.status.error || "invalid"}</span>
+              <span className="ml-auto text-[var(--color-danger)] whitespace-pre-wrap">{e.status.error || "invalid"}</span>
             )}
             {author && (
               <Button
@@ -117,8 +117,8 @@ export function Projects({
       </div>
 
       {author && (
-        <div data-testid="register-form" className="rounded border border-gray-800 bg-[#0d1117] p-2">
-          <div className="text-[10px] font-semibold text-gray-500 uppercase mb-1.5">Register a project</div>
+        <div data-testid="register-form" className="rounded border border-[var(--color-border-subtle)] bg-[#f1f3f5] p-2">
+          <div className="text-[10px] font-semibold text-[var(--color-text-3)] uppercase mb-1.5">Register a project</div>
           <div className="flex gap-2 mb-1.5">
             <Input
               aria-label="path"

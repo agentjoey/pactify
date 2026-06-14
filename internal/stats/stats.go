@@ -169,6 +169,34 @@ func (s Stats) WithLOC(loc func(feature string) (added, deleted int)) Stats {
 	return out
 }
 
+// WithTokens fills per-task token usage from a taskID→tokens provider and adds
+// it to the per-agent rollup (summed across the seat's owned tasks).
+func (s Stats) WithTokens(get func(taskID string) int) Stats {
+	tok := map[string]int{}
+	for i := range s.Tasks {
+		n := get(s.Tasks[i].TaskID)
+		s.Tasks[i].Tokens = n
+		tok[s.Tasks[i].TaskID] = n
+	}
+	roll := map[string]*AgentStat{}
+	for i := range s.Agents {
+		cp := s.Agents[i]
+		cp.Tokens = 0
+		roll[s.Agents[i].Seat] = &cp
+	}
+	for _, t := range s.Tasks {
+		if a := roll[t.Owner]; a != nil {
+			a.Tokens += tok[t.TaskID]
+		}
+	}
+	out := s
+	out.Agents = make([]AgentStat, 0, len(s.Agents))
+	for i := range s.Agents {
+		out.Agents = append(out.Agents, *roll[s.Agents[i].Seat])
+	}
+	return out
+}
+
 func durationSec(t *timing, status string, now time.Time) int64 {
 	if t == nil || t.assign.IsZero() {
 		return 0

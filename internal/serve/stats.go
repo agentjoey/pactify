@@ -9,6 +9,7 @@ import (
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/projection"
 	"github.com/agentjoey/pactify/internal/stats"
+	"github.com/agentjoey/pactify/internal/tokens"
 )
 
 func (s *Server) registerStatsRoutes(mux *http.ServeMux) {
@@ -34,6 +35,8 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	}
 	res := stats.Compute(evs, time.Now().UTC())
 	res = res.WithLOC(locForProject(p.Path, evs))
+	tk := tokens.Load(p.Path)
+	res = res.WithTokens(tk.Get)
 	writeJSON(w, http.StatusOK, res)
 }
 

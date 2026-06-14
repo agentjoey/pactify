@@ -62,7 +62,7 @@ export function LiveOrchestrate({
       {parallelSorted && (
         <div data-testid="parallel-panel">
           <div className="mb-3 flex items-center gap-2">
-            <span className="text-[13px] font-[650] text-[var(--color-text-1)]">并行编排</span>
+            <span className="text-[13px] font-[650] text-[var(--color-text-1)]">Parallel orchestration</span>
             <Badge color="role-design">{parallelSorted.length} features</Badge>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -76,7 +76,7 @@ export function LiveOrchestrate({
       {/* Serial fallback (no parallel run). */}
       {!parallelSorted && present === false && (
         <div className="text-sm text-[var(--color-text-3)] mt-8 text-center">
-          orchestrate 尚未运行
+          orchestrate hasn't run yet
         </div>
       )}
 
@@ -86,7 +86,7 @@ export function LiveOrchestrate({
           className="rounded-lg border border-[color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] p-4 mb-4"
         >
           <div className="text-sm font-medium text-[var(--color-danger)] mb-1">
-            编排已升级 — 需人工介入
+            Orchestration escalated — needs manual intervention
           </div>
           {status.reason && (
             <div className="text-xs text-[var(--color-danger)] opacity-80">
@@ -98,7 +98,7 @@ export function LiveOrchestrate({
 
       {!parallelSorted && present === true && status && status.done && (
         <div className="text-sm text-[var(--color-success)] mt-8 text-center">
-          已收工 / 全部交付
+          Wrapped up / all delivered
         </div>
       )}
 
@@ -113,7 +113,7 @@ export function LiveOrchestrate({
             <Field label="Iter" value={String(status.iter)} />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--color-text-3)]">进度</span>
+            <span className="text-xs text-[var(--color-text-3)]">Progress</span>
             <Badge color="success">
               {status.accepted}/{status.total}
             </Badge>
@@ -131,7 +131,7 @@ export function LiveOrchestrate({
 // tinted by state (escalated=danger, done=success, else running).
 function FeatureCard({ s, delay = 0 }: { s: OrchestrateStatus; delay?: number }) {
   const tone = s.escalated ? "danger" : s.done ? "success" : "role-design";
-  const phase = s.escalated ? "升级" : s.done ? "done" : s.phase;
+  const phase = s.escalated ? "escalated" : s.done ? "done" : s.phase;
   return (
     <div
       data-testid="parallel-feature"

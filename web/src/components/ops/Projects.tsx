@@ -78,7 +78,7 @@ export function Projects({
 
       <div className="flex flex-col gap-1.5 mb-3">
         {entries.length === 0 && !loadErr && (
-          <EmptyState title="还没有注册的项目" hint="注册一个有 .pact/ 的 git repo（下方表单），dashboard 即可观察它。" />
+          <EmptyState title="No projects registered yet" hint="Register a git repo that has a .pact/ directory (form below), and the dashboard can observe it." />
         )}
         {entries.map((e) => (
           <div

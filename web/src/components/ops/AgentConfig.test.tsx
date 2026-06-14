@@ -60,7 +60,7 @@ describe("AgentConfig panel", () => {
     fireEvent.click(screen.getByTestId("scoped-opencode")); // blanket → scoped
     await waitFor(() => expect(screen.getByTestId("tools-opencode")).toBeTruthy());
     fireEvent.change(screen.getByTestId("tools-opencode"), { target: { value: "Read, Edit" } });
-    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       expect(setAgentConfig).toHaveBeenCalledWith("opencode", {
@@ -75,7 +75,7 @@ describe("AgentConfig panel", () => {
     getAgents.mockResolvedValue([{ kind: "opencode", installed: true, detail: "", registered: false }]);
     render(<AgentConfig />);
     await waitFor(() => {
-      expect(screen.getByText("没有已注册的 agent")).toBeTruthy();
+      expect(screen.getByText("No agents registered")).toBeTruthy();
     });
   });
 });

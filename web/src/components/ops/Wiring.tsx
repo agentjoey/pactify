@@ -225,7 +225,7 @@ export function Wiring({
         </Alert>
       )}
       {!err && !loading && rows.length === 0 && (
-        <EmptyState title="无 agent wiring" hint="把 agent 接进项目：pactify agent add <kind>，或用 Setup 视图。" />
+        <EmptyState title="No agent wiring" hint="Wire an agent into the project: pactify agent add <kind>, or use the Setup view." />
       )}
       {rows.map((row) => (
         <div key={row.kind} data-testid={`wiring-row-${row.kind}`} className="border-t border-[var(--color-border-subtle)] py-1.5">

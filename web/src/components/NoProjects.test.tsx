@@ -14,7 +14,7 @@ describe("NoProjects hero", () => {
   it("renders the hero copy, cable mark and register form", () => {
     render(<NoProjects onRegistered={() => {}} />);
     expect(screen.getByTestId("no-projects")).toBeTruthy();
-    expect(screen.getByText("还没有接入任何 repo")).toBeTruthy();
+    expect(screen.getByText("No repos connected yet")).toBeTruthy();
     expect(screen.getByTestId("no-projects-form")).toBeTruthy();
     // cable mark svg is present inside the hero
     expect(screen.getByTestId("no-projects").querySelector("svg")).toBeTruthy();

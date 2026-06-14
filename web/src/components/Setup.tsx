@@ -55,9 +55,9 @@ function kindIcon(kind: string): string {
 function validate(bindings: SetupBinding[]): string[] {
   const has = (r: Role) => bindings.some((b) => b.roles.includes(r));
   const warns: string[] = [];
-  if (!has("orchestrator")) warns.push("缺 orchestrator 座席 — orchestrate 需要一个来驱动合并");
-  if (!has("reviewer")) warns.push("缺 reviewer 座席 — 任务无法被 accept（只有 reviewer 能 accept）");
-  if (!has("worker")) warns.push("缺 worker 座席 — worker 不能自接受，orchestrator/reviewer 不能既干活又评审；加一个 worker");
+  if (!has("orchestrator")) warns.push("No orchestrator seat — orchestrate needs one to drive merges");
+  if (!has("reviewer")) warns.push("No reviewer seat — tasks can't be accepted (only a reviewer can accept)");
+  if (!has("worker")) warns.push("No worker seat — a worker can't self-accept, and an orchestrator/reviewer can't both build and review. Add a worker.");
   return warns;
 }
 
@@ -112,21 +112,21 @@ export function Setup() {
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 view-enter" data-testid="setup-view">
       <div className="mb-1 flex items-center gap-3">
-        <h2 className="text-[15px] font-[650] text-[var(--color-text-1)]">Setup · 把注册的 agent 配进项目</h2>
+        <h2 className="text-[15px] font-[650] text-[var(--color-text-1)]">Setup · wire your registered agents into the project</h2>
         {loading && <Spinner size="sm" />}
         {ready && (
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
             style={{ color: "var(--color-success)", background: "color-mix(in srgb, var(--color-success) 12%, transparent)" }}>
-            <Icon name="state-accepted" size={12} /> 角色齐备
+            <Icon name="state-accepted" size={12} /> Roles complete
           </span>
         )}
       </div>
       <p className="mb-4 text-[12px] text-[var(--color-text-3)]">
-        从你机器上已注册的 agent 建议座席分工。改好角色后，复制下面的命令在项目根执行。
+        Suggested seat assignments from the agents registered on this machine. Adjust the roles, then copy the commands below and run them from the project root.
       </p>
 
       {error && (
-        <Alert tone="danger" title="加载失败" onRetry={load}>
+        <Alert tone="danger" title="Failed to load" onRetry={load}>
           {error}
         </Alert>
       )}
@@ -141,8 +141,8 @@ export function Setup() {
 
       {!error && bindings && bindings.length === 0 && (
         <EmptyState
-          title="还没有注册的 agent"
-          hint="先去 Ops 视图扫描并注册 agent（或 CLI: pactify agent register <kind>），再回来配座席。"
+          title="No agents registered yet"
+          hint="Scan and register agents in the Ops view (or via CLI: pactify agent register <kind>), then come back to assign seats."
         />
       )}
 
@@ -207,7 +207,7 @@ export function Setup() {
 
           <div className="mt-5">
             <ConfigSection
-              label="应用命令"
+              label="Apply commands"
               action={
                 <Button
                   size="sm"
@@ -218,7 +218,7 @@ export function Setup() {
                     setTimeout(() => setCopied(false), 1500);
                   }}
                 >
-                  {copied ? "已复制 ✓" : "复制"}
+                  {copied ? "Copied ✓" : "Copy"}
                 </Button>
               }
             >

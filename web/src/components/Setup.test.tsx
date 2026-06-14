@@ -15,7 +15,7 @@ describe("Setup view", () => {
     getSetupSuggest.mockResolvedValue({ bindings: [], warnings: [] });
     render(<Setup />);
     await waitFor(() => {
-      expect(screen.getByText("还没有注册的 agent")).toBeTruthy();
+      expect(screen.getByText("No agents registered yet")).toBeTruthy();
     });
   });
 
@@ -48,10 +48,10 @@ describe("Setup view", () => {
     });
     render(<Setup />);
     await waitFor(() => expect(screen.getAllByTestId("setup-row")).toHaveLength(2));
-    // toggle the only worker off → a "缺 worker" warning appears
+    // toggle the only worker off → a "No worker seat" warning appears
     fireEvent.click(screen.getByTestId("role-opencode-worker"));
     await waitFor(() => {
-      expect(screen.getByText(/缺 worker 座席/)).toBeTruthy();
+      expect(screen.getByText(/No worker seat/)).toBeTruthy();
     });
     // the apply command for opencode now has empty roles (no worker)
     const cmds = screen.getByTestId("setup-commands").textContent ?? "";

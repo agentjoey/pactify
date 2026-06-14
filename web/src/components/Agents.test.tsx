@@ -26,7 +26,7 @@ describe("Agents panel", () => {
     ]);
     render(<Agents author={true} onChanged={() => {}} />);
     await waitFor(() => {
-      expect(screen.getByText("扫描到这些 agent，选择注册以开始")).toBeTruthy();
+      expect(screen.getByText("Found these agents — register one to begin")).toBeTruthy();
     });
     expect(screen.getByText("opencode")).toBeTruthy();
     expect(screen.getByText("gemini")).toBeTruthy();
@@ -43,7 +43,7 @@ describe("Agents panel", () => {
     await waitFor(() => {
       expect(getAgents).toHaveBeenCalled();
     });
-    expect(screen.queryByText("扫描到这些 agent，选择注册以开始")).toBeNull();
+    expect(screen.queryByText("Found these agents — register one to begin")).toBeNull();
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -54,13 +54,13 @@ describe("Agents panel", () => {
     registerAgent.mockResolvedValue(undefined);
     render(<Agents author={true} onChanged={() => {}} />);
     await waitFor(() => {
-      expect(screen.getByText("注册")).toBeTruthy();
+      expect(screen.getByText("Register")).toBeTruthy();
     });
-    fireEvent.click(screen.getByText("注册"));
+    fireEvent.click(screen.getByText("Register"));
     expect(registerAgent).toHaveBeenCalledWith("opencode");
     // optimistic toggle → hasRegistered → the onboarding bar removes itself.
     await waitFor(() => {
-      expect(screen.queryByText("扫描到这些 agent，选择注册以开始")).toBeNull();
+      expect(screen.queryByText("Found these agents — register one to begin")).toBeNull();
     });
   });
 
@@ -72,7 +72,7 @@ describe("Agents panel", () => {
     await waitFor(() => {
       expect(screen.getByText("gemini")).toBeTruthy();
     });
-    const btn = screen.getByRole("button", { name: "注册" }) as HTMLButtonElement;
+    const btn = screen.getByRole("button", { name: "Register" }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
 
@@ -82,9 +82,9 @@ describe("Agents panel", () => {
     ]);
     render(<Agents author={false} onChanged={() => {}} />);
     await waitFor(() => {
-      expect(screen.getByText("注册")).toBeTruthy();
+      expect(screen.getByText("Register")).toBeTruthy();
     });
-    const btn = screen.getByRole("button", { name: "注册" }) as HTMLButtonElement;
+    const btn = screen.getByRole("button", { name: "Register" }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
 
@@ -92,7 +92,7 @@ describe("Agents panel", () => {
     getAgents.mockRejectedValue(new Error("network"));
     render(<Agents author={true} onChanged={() => {}} />);
     await waitFor(() => {
-      expect(screen.queryByText("扫描到这些 agent")).toBeFalsy();
+      expect(screen.queryByText(/Found these agents/)).toBeFalsy();
     });
   });
 });

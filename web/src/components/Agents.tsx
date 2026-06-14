@@ -55,7 +55,7 @@ export function Agents({ author, onChanged }: { author: boolean; onChanged: () =
     <div className="border-b border-[var(--color-border-subtle)] px-3 py-2">
       {!hasRegistered && (
         <div className="text-xs text-[var(--color-text-2)] mb-2">
-          扫描到这些 agent，选择注册以开始
+          Found these agents — register one to begin
         </div>
       )}
       <div className="space-y-1.5">
@@ -66,7 +66,7 @@ export function Agents({ author, onChanged }: { author: boolean; onChanged: () =
           >
             <span className="font-medium min-w-[80px]">{a.kind}</span>
             <Badge color={a.installed ? "success" : "warn"}>
-              {a.installed ? "已安装" : "未检测到"}
+              {a.installed ? "Installed" : "Not detected"}
             </Badge>
             <Button
               variant={a.registered ? "ghost" : "primary"}
@@ -74,7 +74,7 @@ export function Agents({ author, onChanged }: { author: boolean; onChanged: () =
               disabled={!a.installed || !canAct}
               onClick={() => toggle(a.kind, a.registered)}
             >
-              {a.registered ? "已注册" : "注册"}
+              {a.registered ? "Registered" : "Register"}
             </Button>
           </div>
         ))}

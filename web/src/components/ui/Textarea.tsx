@@ -42,7 +42,7 @@ export function Textarea({
           onClick={() => setExpanded((x) => !x)}
           className="rounded px-1.5 py-0.5 transition-colors hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-text-2)]"
         >
-          {expanded ? "收起" : "展开"}
+          {expanded ? "Collapse" : "Expand"}
         </button>
       </div>
     </div>

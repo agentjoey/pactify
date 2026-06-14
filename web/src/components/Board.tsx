@@ -20,11 +20,11 @@ const ORDER: Column[] = [
 
 // Per-column empty-state copy (board3 ghost text).
 const GHOST: Record<string, string> = {
-  assigned: "没有待派发的任务",
-  in_progress: "没有进行中的任务",
-  awaiting_review: "没有待评审的任务",
-  changes_requested: "没有需要返工的任务",
-  accepted: "还没有已验收的任务",
+  assigned: "No tasks to assign",
+  in_progress: "No tasks in progress",
+  awaiting_review: "No tasks awaiting review",
+  changes_requested: "No tasks needing rework",
+  accepted: "No accepted tasks yet",
 };
 
 export function Board({
@@ -79,7 +79,7 @@ export function Board({
             </Tooltip>
             <div className="flex flex-col gap-[9px]">
               {tasks.length === 0 ? (
-                <div className="kb-ghost">{GHOST[c] ?? "暂无任务"}</div>
+                <div className="kb-ghost">{GHOST[c] ?? "No tasks"}</div>
               ) : (
                 tasks.map((bt) => {
                   const pulsing = pulses?.has(bt.task.id);

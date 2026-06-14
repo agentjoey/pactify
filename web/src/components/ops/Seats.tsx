@@ -42,7 +42,7 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
         </Alert>
       )}
       {!err && !loading && seats.length === 0 && (
-        <EmptyState title="还没有座席" hint="座席在 agent join 时注册（pactify join <seat>），或用 Setup 视图配置。" />
+        <EmptyState title="No seats yet" hint="Seats are registered when an agent joins (pactify join <seat>), or configure them in the Setup view." />
       )}
       {seats.length > 0 && (
         <table className="w-full text-[11px]">

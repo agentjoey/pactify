@@ -31,7 +31,7 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
   return (
     <section data-testid="ops-agent-config" className="mb-4">
       <h2 className="text-[10px] font-semibold text-[var(--color-text-3)] uppercase mb-2">
-        Agent config · model + 权限姿态
+        Agent config · model + permission posture
       </h2>
       {error && (
         <Alert tone="danger" onRetry={load}>
@@ -40,8 +40,8 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
       )}
       {!error && kinds && kinds.length === 0 && (
         <EmptyState
-          title="没有已注册的 agent"
-          hint="注册 agent 后可在这里配置 model 与权限姿态：pactify agent register <kind>。"
+          title="No agents registered"
+          hint="Register an agent to configure its model and permission posture here: pactify agent register <kind>."
         />
       )}
       {!error && kinds && kinds.length > 0 && (
@@ -112,7 +112,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
         )}
         {cfg && (
           <span className="text-[10.5px] text-[var(--color-text-3)]">
-            有效: {cfg.effective_model}
+            effective: {cfg.effective_model}
             {cfg.effective_scoped ? " · scoped" : ""}
           </span>
         )}
@@ -126,7 +126,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
             data-testid={`model-${kind}`}
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            placeholder="默认"
+            placeholder="default"
             className="w-52 text-[11px]"
           />
           <button
@@ -140,7 +140,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                 ? "bg-[color-mix(in_srgb,var(--color-warn)_22%,transparent)] text-[var(--color-text-1)]"
                 : "bg-[var(--color-bg-raised)] text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
             ].join(" ")}
-            title="scoped = 用 allowed-tools 白名单替代全量自动批准"
+            title="scoped = use an allowed-tools allowlist instead of blanket auto-approval"
           >
             {restricted ? "scoped" : "blanket"}
           </button>
@@ -154,7 +154,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
             />
           )}
           <Button size="sm" loading={saving} onClick={save}>
-            {saved ? "已保存 ✓" : "保存"}
+            {saved ? "Saved ✓" : "Save"}
           </Button>
         </div>
       )}

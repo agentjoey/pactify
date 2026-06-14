@@ -323,9 +323,9 @@ export function CommandK({
 
             {/* footer hints */}
             <div className="flex gap-3.5 border-t border-white/[0.07] px-4 py-[9px] text-[9.5px] text-[var(--color-text-3)]">
-              <span>↑↓ 导航</span>
-              <span>↵ 执行</span>
-              <span>观察模式自动隐藏写操作</span>
+              <span>↑↓ Navigate</span>
+              <span>↵ Run</span>
+              <span>Write actions hidden in observe mode</span>
             </div>
           </Command>
         </div>

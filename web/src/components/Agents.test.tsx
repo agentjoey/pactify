@@ -32,20 +32,22 @@ describe("Agents panel", () => {
     expect(screen.getByText("gemini")).toBeTruthy();
   });
 
-  it("renders manager when some agents registered", async () => {
+  it("hides entirely once any agent is registered (onboarding-only bar)", async () => {
+    // The global bar is a first-run nudge; with an agent already registered,
+    // management lives in the Setup view + Ops panel, so the bar renders nothing.
     getAgents.mockResolvedValue([
       { kind: "opencode", installed: true, detail: "/usr/local/bin/opencode", registered: true, label: "My Code" },
       { kind: "gemini", installed: false, detail: "not found", registered: false },
     ]);
-    const onChanged = vi.fn();
-    render(<Agents author={true} onChanged={onChanged} />);
+    const { container } = render(<Agents author={true} onChanged={() => {}} />);
     await waitFor(() => {
-      expect(screen.getByText("已注册")).toBeTruthy();
+      expect(getAgents).toHaveBeenCalled();
     });
-    expect(screen.getByText("opencode")).toBeTruthy();
+    expect(screen.queryByText("扫描到这些 agent，选择注册以开始")).toBeNull();
+    expect(container).toBeEmptyDOMElement();
   });
 
-  it("clicking register calls registerAgent and optimistically toggles", async () => {
+  it("clicking register calls registerAgent and the onboarding bar then disappears", async () => {
     getAgents.mockResolvedValue([
       { kind: "opencode", installed: true, detail: "/usr/local/bin/opencode", registered: false },
     ]);
@@ -56,27 +58,10 @@ describe("Agents panel", () => {
     });
     fireEvent.click(screen.getByText("注册"));
     expect(registerAgent).toHaveBeenCalledWith("opencode");
+    // optimistic toggle → hasRegistered → the onboarding bar removes itself.
     await waitFor(() => {
-      expect(screen.getByText("已注册")).toBeTruthy();
+      expect(screen.queryByText("扫描到这些 agent，选择注册以开始")).toBeNull();
     });
-  });
-
-  it("clicking registered calls unregisterAgent", async () => {
-    getAgents.mockResolvedValue([
-      { kind: "opencode", installed: true, detail: "/usr/local/bin/opencode", registered: true, label: "X" },
-    ]);
-    unregisterAgent.mockResolvedValue(undefined);
-    const onChanged = vi.fn();
-    render(<Agents author={true} onChanged={onChanged} />);
-    await waitFor(() => {
-      expect(screen.getByText("已注册")).toBeTruthy();
-    });
-    fireEvent.click(screen.getByText("已注册"));
-    expect(unregisterAgent).toHaveBeenCalledWith("opencode");
-    await waitFor(() => {
-      expect(screen.getByText("注册")).toBeTruthy();
-    });
-    expect(onChanged).toHaveBeenCalled();
   });
 
   it("not-installed rows are grayed and toggle disabled", async () => {

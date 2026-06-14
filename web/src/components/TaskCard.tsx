@@ -116,11 +116,14 @@ export function TaskCard({
         )}
       </div>
 
-      <div className="task-card-bot mt-[9px] ml-[28px] flex items-center gap-[5px]">
+      <div className="task-card-bot mt-[9px] ml-[28px] flex items-center gap-[4px]">
         {task.owner && (
           <span className="task-card-ant">
             <Ant caste={ownerCaste} size={14} title={task.owner} />
           </span>
+        )}
+        {task.owner && (
+          <span className="mono max-w-[68px] truncate text-[9px] text-[var(--color-text-2)]">{task.owner}</span>
         )}
         {showReviewer && (
           <>
@@ -128,6 +131,7 @@ export function TaskCard({
             <span className="task-card-ant">
               <Ant caste={reviewerCaste} size={14} title={task.reviewer} />
             </span>
+            <span className="mono max-w-[60px] truncate text-[9px] text-[var(--color-text-2)]">{task.reviewer}</span>
           </>
         )}
         <span className="life ml-auto flex gap-[2.5px]">

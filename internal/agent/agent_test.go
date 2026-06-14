@@ -7,7 +7,7 @@ import (
 
 func TestKindsSortedAndComplete(t *testing.T) {
 	got := strings.Join(Kinds(), ",")
-	want := "antigravity,claude-code,claude-desktop,codex-app,codex-cli,gemini-cli,opencode"
+	want := "antigravity,claude-code,claude-desktop,codex-app,codex-cli,cursor-cli,gemini-cli,kimi-cli,opencode"
 	if got != want {
 		t.Fatalf("Kinds() = %q, want %q", got, want)
 	}
@@ -67,6 +67,42 @@ func TestUnknownKind(t *testing.T) {
 	}
 }
 
+func TestKimiCliAdapter(t *testing.T) {
+	a, ok := Get("kimi-cli")
+	if !ok {
+		t.Fatal("kimi-cli not registered")
+	}
+	if a.DefaultEntry() != "AGENTS.md" {
+		t.Fatalf("entry = %q, want AGENTS.md", a.DefaultEntry())
+	}
+	c := a.Config()
+	if c.Path != ".kimi-code/mcp.json" || c.Scope != Project || c.Format != JSONMcpServers {
+		t.Fatalf("config = %+v", c)
+	}
+	inv := a.Invocation("kimi-cli", "/repo")
+	if inv.Command != "pactify" || strings.Join(inv.Args, " ") != "mcp" || inv.Env["PACT_AGENT_ID"] != "kimi-cli" {
+		t.Fatalf("invocation = %+v", inv)
+	}
+}
+
+func TestCursorCliAdapter(t *testing.T) {
+	a, ok := Get("cursor-cli")
+	if !ok {
+		t.Fatal("cursor-cli not registered")
+	}
+	if a.DefaultEntry() != "AGENTS.md" {
+		t.Fatalf("entry = %q, want AGENTS.md", a.DefaultEntry())
+	}
+	c := a.Config()
+	if c.Path != ".cursor/mcp.json" || c.Scope != Project || c.Format != JSONMcpServers {
+		t.Fatalf("config = %+v", c)
+	}
+	inv := a.Invocation("cursor-cli", "/repo")
+	if inv.Command != "pactify" || strings.Join(inv.Args, " ") != "mcp" || inv.Env["PACT_AGENT_ID"] != "cursor-cli" {
+		t.Fatalf("invocation = %+v", inv)
+	}
+}
+
 func TestRunnerCLIKinds(t *testing.T) {
 	cases := []struct {
 		kind    string
@@ -96,7 +132,7 @@ func TestRunnerCLIKinds(t *testing.T) {
 }
 
 func TestRunnerNoHeadless(t *testing.T) {
-	for _, kind := range []string{"antigravity", "claude-desktop", "codex-app", "codex-cli"} {
+	for _, kind := range []string{"antigravity", "claude-desktop", "codex-app", "codex-cli", "cursor-cli", "kimi-cli"} {
 		a, ok := Get(kind)
 		if !ok {
 			t.Fatalf("%s not registered", kind)

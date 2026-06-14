@@ -776,13 +776,26 @@ body {
   background: linear-gradient(165deg, color-mix(in srgb, var(--color-bg-surface) 92%, transparent), color-mix(in srgb, var(--color-bg-inset) 55%, white));
   border: 1px solid var(--color-border-subtle);
   box-shadow: var(--shadow-raised);
+  /* Phase 4 (Make-Grid): depth encodes state — active desks raise + glow,
+     idle desks flatten + desaturate + sink. Animated so transitions read. */
+  transition: transform 0.18s var(--motion-ease), box-shadow 0.18s var(--motion-ease), filter 0.18s var(--motion-ease);
 }
 .desk.busy {
   border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
-  box-shadow: var(--shadow-raised), 0 0 22px color-mix(in srgb, var(--color-success) 16%, transparent);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px -10px color-mix(in srgb, var(--color-success) 30%, transparent), var(--shadow-raised);
 }
-.desk.review_due, .desk.waiting { border-color: color-mix(in srgb, var(--color-warn) 40%, transparent); }
-.desk.idle { opacity: 0.62; }
+.desk.review_due, .desk.waiting {
+  border-color: color-mix(in srgb, var(--color-warn) 40%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 13px 28px -10px color-mix(in srgb, var(--color-warn) 26%, transparent), var(--shadow-raised);
+}
+.desk.idle {
+  opacity: 0.72;
+  filter: saturate(0.5);
+  transform: translateY(2px) scale(0.985);
+  box-shadow: var(--shadow-card);
+}
 .desk.drop-target { border-color: var(--color-role-dev); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-role-dev) 45%, transparent); }
 .desk .dhead { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
 .desk .dava {

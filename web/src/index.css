@@ -237,6 +237,31 @@ body {
   mask: radial-gradient(circle 120px at var(--mx) var(--my), #000 0%, transparent 68%);
 }
 
+/* connect-plus (Dify edge "+"): a small circular handle on a node card's edge —
+   the affordance to draw a dependency to a downstream card. Dim until the card
+   is hovered, then it brightens; hover on itself scales + glows. */
+.connect-plus {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--color-role-design);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 600;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-role-design) 45%, transparent);
+  opacity: 0.35;
+  transition: opacity var(--motion-micro) var(--motion-ease),
+    transform var(--motion-micro) var(--motion-ease);
+}
+.hover-lift:hover .connect-plus { opacity: 1; }
+.connect-plus:hover {
+  opacity: 1;
+  transform: scale(1.22) translateY(-50%);
+}
+
 /* Frosted card (Stitch-style): translucent surface + backdrop blur, so cards on
    the canvas let the grid faintly show through. Pair with a token border/shadow. */
 .card-frost {

@@ -164,6 +164,20 @@ export function ElementsGallery() {
           </div>
         </Section>
 
+        {/* Node card — Dify-style with connect "+" handles + Make-Grid Links */}
+        <Section title="节点卡 · 连接 + 关系" note="dify 式节点卡 + 边上“+”连接手柄（建依赖）· Make Grid 式 Links 方向 pill">
+          <div className="grid grid-cols-2 gap-8">
+            <div className="flex flex-col gap-7">
+              <NodeCard role="dev" icon="opencode" title="t-manifest" status="in_progress" sub="opencode → claude" meta="model deepseek-v4-pro" />
+              <NodeCard role="design" icon="claude" title="claude" status="awaiting_review" sub="orchestrator · reviewer" meta="drivable · claude-opus-4-8" selected />
+            </div>
+            <div>
+              <div className="mb-2 text-[11px] uppercase tracking-[.5px] text-[var(--color-text-3)]">Links · 关系（方向 pill）</div>
+              <LinksDemo />
+            </div>
+          </div>
+        </Section>
+
         {/* Inputs */}
         <Section title="Input" note="文本 / toggle / 分段控件 / chip">
           <div className="flex flex-col gap-3">
@@ -232,6 +246,93 @@ export function ElementsGallery() {
           </div>
         </Section>
       </div>
+    </div>
+  );
+}
+
+// NodeCard — the refined canvas node (Dify-style): role-tinted icon tile, title,
+// a floating status pill above the card, a summary meta row, a selected blue
+// ring, and "+" connect handles on the right edge (the affordance to draw a
+// dependency to a downstream card — Dify's edge "+").
+function NodeCard({
+  role,
+  icon,
+  title,
+  sub,
+  meta,
+  status,
+  selected,
+}: {
+  role: "product" | "design" | "dev";
+  icon: string;
+  title: string;
+  sub: string;
+  meta?: string;
+  status: PactStatus;
+  selected?: boolean;
+}) {
+  const c = `var(--color-role-${role})`;
+  return (
+    <div
+      data-testid="node-card"
+      className="relative rounded-xl bg-[var(--color-bg-surface)] p-3 shadow-[var(--shadow-card)] hover-lift"
+      style={{
+        border: `1px solid ${selected ? c : "var(--color-border-subtle)"}`,
+        boxShadow: selected ? `0 0 0 3px color-mix(in srgb, ${c} 22%, transparent), var(--shadow-card)` : undefined,
+        width: 230,
+      }}
+    >
+      {/* floating status pill above the card (Dify "Wait for running") */}
+      <div className="absolute -top-2.5 right-3">
+        <StatusPill status={status} />
+      </div>
+      {/* header: role-tinted icon tile + title */}
+      <div className="flex items-center gap-2">
+        <span
+          className="grid h-7 w-7 place-items-center rounded-lg text-[12px] font-bold"
+          style={{ background: `color-mix(in srgb, ${c} 16%, transparent)`, color: `var(--color-role-${role}-ink, ${c})` }}
+        >
+          {icon[0].toUpperCase()}
+        </span>
+        <span className="mono text-[12.5px] font-[650] text-[var(--color-text-1)]">{title}</span>
+      </div>
+      <div className="mt-1.5 text-[11px] text-[var(--color-text-2)]">{sub}</div>
+      {meta && <div className="mt-1 text-[10.5px] text-[var(--color-text-3)]">{meta}</div>}
+      {/* connect "+" handle on the right edge */}
+      <ConnectPlus className="-right-2.5 top-1/2 -translate-y-1/2" />
+    </div>
+  );
+}
+
+function ConnectPlus({ className = "" }: { className?: string }) {
+  return (
+    <button type="button" aria-label="connect" className={`connect-plus absolute ${className}`}>
+      +
+    </button>
+  );
+}
+
+// LinksDemo — Make-Grid relationship rows: [source] —[direction pill]— [target].
+function LinksDemo() {
+  const rows: { dir: string; tone: string; target: string; ti: string; tc: string }[] = [
+    { dir: "owns →", tone: "var(--color-role-dev)", target: "t-manifest", ti: "T", tc: "var(--color-role-dev)" },
+    { dir: "← reviewed by", tone: "var(--color-role-design)", target: "claude", ti: "C", tc: "var(--color-role-design)" },
+    { dir: "depends on →", tone: "var(--color-role-product)", target: "t-prompt", ti: "T", tc: "var(--color-role-product)" },
+    { dir: "hands off →", tone: "var(--color-role-design)", target: "claude (review)", ti: "C", tc: "var(--color-role-design)" },
+  ];
+  return (
+    <div className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-3 shadow-[var(--shadow-card)]">
+      <div className="flex flex-col gap-2.5">
+        {rows.map((r) => (
+          <div key={r.dir + r.target} className="flex items-center gap-2">
+            <span className="grid h-6 w-6 place-items-center rounded-md text-[10px] font-bold" style={{ background: "color-mix(in srgb, var(--color-role-dev) 16%, transparent)", color: "var(--color-role-dev-ink)" }}>O</span>
+            <span className="rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ color: r.tone, background: `color-mix(in srgb, ${r.tone} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${r.tone} 28%, transparent)` }}>{r.dir}</span>
+            <span className="grid h-6 w-6 place-items-center rounded-md text-[10px] font-bold" style={{ background: `color-mix(in srgb, ${r.tc} 16%, transparent)`, color: r.tc }}>{r.ti}</span>
+            <span className="text-[11px] text-[var(--color-text-2)]">{r.target}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 text-[10.5px] text-[var(--color-role-design-ink)]">View all (4) →</div>
     </div>
   );
 }

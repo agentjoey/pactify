@@ -91,3 +91,4 @@
 - **B8 Sessions prune**：Ops 内每 agent prune 按钮（`sessions prune`，加确认）。
 - **setup/apply 一键**：Setup 视图「Apply」直接 init+wire（`POST /api/setup/apply`，mutate .pact 需确认）。
 - **横切设计**：有副作用 HTTP 操作的**确认弹窗 + acting-seat 校验 + 安全/沙箱** 规范，先定再实现。
+- **[UI] agent logo 统一接入（用于 agent 卡片）**：收集各 agent 品牌 logo（claude-code/opencode/gemini/codex/cursor/kimi/amp/goose/aider/…），**统一风格处理**（同一描边/留白/圆角画框、duotone 或单色化以适配浅色主题、统一尺寸），做成 `kind → logo` 资产/组件，替换 agent 卡片现用的 Phosphor 概念图标（`kind-*`）。来源：2026-06-14 用户。关联元素库 Icon library。

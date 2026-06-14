@@ -42,7 +42,11 @@ describe("AgentConfig panel", () => {
       expect(screen.getByTestId("agent-config-opencode")).toBeTruthy();
     });
     expect(screen.queryByTestId("agent-config-gemini-cli")).toBeNull();
-    expect(screen.getByText(/deepseek\/deepseek-v4-pro/)).toBeTruthy();
+    // effective model comes from the row's own async getAgentConfig — wait for it
+    // (was a flaky sync assertion racing the fetch).
+    await waitFor(() => {
+      expect(screen.getByText(/deepseek\/deepseek-v4-pro/)).toBeTruthy();
+    });
   });
 
   it("saves model + scoped posture with allowed tools", async () => {

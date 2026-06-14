@@ -15,6 +15,7 @@ import type { Draft, LayoutJSON } from "../../lib/canvas";
 import { deriveOffice, type DeskModel, type DeskStatus } from "../../lib/office";
 import { casteForRoles, padGradient } from "../../lib/ants";
 import { Ant } from "../ui/ants/Ant";
+import { StatusPill, type PactStatus } from "../ui/StatusPill";
 import { statusColorVar } from "../../lib/lifecycle";
 import { CarrierAnt } from "./edges/AntEdge";
 import { Hud } from "./Hud";
@@ -113,6 +114,7 @@ interface DeskNodeData {
   onSelectTask?: (id: string) => void;
   onDeskClick?: (seatId: string) => void;
   onDeskContextMenu?: (e: ReactMouseEvent, seatId: string) => void;
+  onSelectSeat?: (seatId: string) => void; // Phase 4: open the Links panel
   [key: string]: unknown;
 }
 
@@ -137,7 +139,12 @@ function DeskNode({ data }: NodeProps) {
       onClick={() => d.onDeskClick?.(desk.seatId)}
       onContextMenu={(e) => d.onDeskContextMenu?.(e, desk.seatId)}
     >
-      <div className="dhead">
+      <div
+        className="dhead"
+        style={{ cursor: "pointer" }}
+        title="View relationships"
+        onClick={(e) => { e.stopPropagation(); d.onSelectSeat?.(desk.seatId); }}
+      >
         <span className="dava" style={{ background: `linear-gradient(135deg, ${pad.from}, ${pad.to})` }}>
           <Ant caste={caste} size={34} title={`${caste} — ${roleLine}`} />
           <span className="presence" style={{ background: presenceColor(desk.status) }} />
@@ -204,6 +211,79 @@ function DeskNode({ data }: NodeProps) {
 }
 
 const nodeTypes: NodeTypes = { desk: DeskNode };
+
+// LinksPanel — Phase 4 (Make-Grid "Links" gold mine): the selected seat's
+// relationships as directional pills. owns → its tasks (each with status + who
+// reviews it); reviews → tasks it reviews. A fixed slide-over on the right.
+function LinkRow({ dir, dirColor, taskId, status, sub, onClick }: {
+  dir: string; dirColor: string; taskId: string; status: PactStatus; sub?: React.ReactNode; onClick?: () => void;
+}) {
+  return (
+    <button type="button" onClick={onClick} className="flex w-full flex-col gap-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-2.5 py-2 text-left transition-colors hover:border-[var(--color-text-3)]">
+      <div className="flex items-center gap-2">
+        <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[.3px]" style={{ color: dirColor, background: `color-mix(in srgb, ${dirColor} 14%, transparent)`, border: `1px solid color-mix(in srgb, ${dirColor} 28%, transparent)` }}>{dir}</span>
+        <span className="mono text-[11.5px] font-[650] text-[var(--color-text-1)]">{taskId}</span>
+        <span className="ml-auto"><StatusPill status={status} /></span>
+      </div>
+      {sub && <div className="pl-0.5 text-[10px] text-[var(--color-text-3)]">{sub}</div>}
+    </button>
+  );
+}
+
+function LinksPanel({ seat, state, onClose, onSelectTask }: {
+  seat: string; state: State; onClose: () => void; onSelectTask?: (id: string) => void;
+}) {
+  const roles = state.agents.find((a) => a.id === seat)?.roles ?? [];
+  const all = state.features.flatMap((f) => f.tasks.map((t) => ({ ...t })));
+  const owns = all.filter((t) => t.owner === seat);
+  const reviews = all.filter((t) => t.reviewer === seat);
+  const ST = (s: string) => (s as PactStatus);
+  return (
+    <aside
+      data-testid="office-links"
+      className="card-frost absolute right-0 top-0 bottom-0 z-20 flex w-[262px] flex-col gap-3 overflow-y-auto border-l border-[var(--color-border-subtle)] px-3.5 py-3 shadow-[var(--shadow-raised)]"
+    >
+      <div className="flex items-center gap-2">
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--color-bg-inset)]"><Ant caste={casteForRoles(roles)} size={20} /></span>
+        <div className="min-w-0 flex-1">
+          <div className="mono text-[13px] font-[680] text-[var(--color-text-1)]">{seat}</div>
+          <div className="text-[10px] text-[var(--color-text-3)]">{roles.join(" · ") || "seat"}</div>
+        </div>
+        <button type="button" onClick={onClose} title="Close" className="grid h-5 w-5 place-items-center rounded text-[var(--color-text-3)] hover:bg-[var(--color-bg-inset)] hover:text-[var(--color-text-1)]">×</button>
+      </div>
+
+      {owns.length > 0 && (
+        <div>
+          <div className="mb-1.5 text-[9.5px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-3)]">owns · {owns.length}</div>
+          <div className="flex flex-col gap-1.5">
+            {owns.map((t) => (
+              <LinkRow key={t.id} dir="owns →" dirColor="var(--color-role-dev)" taskId={t.id} status={ST(t.status)}
+                sub={t.reviewer && t.reviewer !== seat ? <>← reviewed by <span className="mono">{t.reviewer}</span></> : undefined}
+                onClick={() => onSelectTask?.(t.id)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {reviews.length > 0 && (
+        <div>
+          <div className="mb-1.5 text-[9.5px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-3)]">reviews · {reviews.length}</div>
+          <div className="flex flex-col gap-1.5">
+            {reviews.map((t) => (
+              <LinkRow key={t.id} dir="reviews →" dirColor="var(--color-role-design)" taskId={t.id} status={ST(t.status)}
+                sub={<>owned by <span className="mono">{t.owner}</span></>}
+                onClick={() => onSelectTask?.(t.id)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {owns.length === 0 && reviews.length === 0 && (
+        <div className="text-[11px] italic text-[var(--color-text-3)]">No task relationships yet.</div>
+      )}
+    </aside>
+  );
+}
 
 // Default grid placement: 2 columns, 300px pitch (≈ desk width + gap).
 const GRID_COLS = 2;
@@ -408,6 +488,10 @@ function OfficeViewInner({
   // dockPulse flashes the dock when an idle desk is clicked with >1 draft (the
   // guided "go drag from the dock" cue). Cleared after 1.5s by an effect below.
   const [dockPulse, setDockPulse] = useState(false);
+  // Phase 4: the seat whose Links (relationships) panel is open. Stable callback
+  // so it doesn't churn the desk node data.
+  const [linksSeat, setLinksSeat] = useState<string | null>(null);
+  const onSelectSeat = useCallback((id: string) => setLinksSeat((s) => (s === id ? null : id)), []);
   const { fitView } = useReactFlow();
 
   // Single draft → click-dispatch convenience target. Idle desks ONLY (the file
@@ -495,6 +579,7 @@ function OfficeViewInner({
             ex.onSelectTask === onSelectTask &&
             ex.onDeskClick === onDeskClick &&
             ex.onDeskContextMenu === onDeskContextMenu &&
+            ex.onSelectSeat === onSelectSeat &&
             existing.draggable === !replaying
           ) {
             return existing;
@@ -510,6 +595,7 @@ function OfficeViewInner({
               onSelectTask,
               onDeskClick,
               onDeskContextMenu,
+              onSelectSeat,
             } satisfies DeskNodeData,
           };
         }
@@ -524,12 +610,13 @@ function OfficeViewInner({
             onSelectTask,
             onDeskClick,
             onDeskContextMenu,
+            onSelectSeat,
           } satisfies DeskNodeData,
           draggable: !replaying,
         };
       });
     });
-  }, [desks, layout.office, replaying, onSelectTask, onDeskClick, onDeskContextMenu, onMaterializeOffice]);
+  }, [desks, layout.office, replaying, onSelectTask, onDeskClick, onDeskContextMenu, onSelectSeat, onMaterializeOffice]);
 
   // Clear the dock pulse 1.5s after it fires.
   useEffect(() => {
@@ -761,6 +848,11 @@ function OfficeViewInner({
           </div>
         ))}
       </div>
+
+      {/* Links panel (Phase 4): the selected seat's relationships, right slide-over. */}
+      {linksSeat && (
+        <LinksPanel seat={linksSeat} state={state} onClose={() => setLinksSeat(null)} onSelectTask={onSelectTask} />
+      )}
 
       {/* Shipped tray (fixed bottom-right) — board5 `.tray`. */}
       <div className="office-tray" data-testid="office-tray" ref={trayRef} onContextMenu={(e) => e.stopPropagation()}>

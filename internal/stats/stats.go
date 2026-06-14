@@ -118,6 +118,57 @@ func Compute(events []event.Event, now time.Time) Stats {
 	return out
 }
 
+// WithLOC fills per-task code volume from a feature→(added,deleted) provider
+// (git diff base..featureBranch) and rebuilds the per-agent rollup. LOC is
+// feature-branch level: each task shows its feature branch's diff (precise
+// per-task attribution would need the protocol to record commit SHAs at
+// checkpoint — a later enhancement). The agent rollup counts each (owner,
+// feature) pair ONCE so a seat owning two tasks on one branch isn't double-counted.
+func (s Stats) WithLOC(loc func(feature string) (added, deleted int)) Stats {
+	featLOC := map[string][2]int{}
+	get := func(f string) [2]int {
+		if v, ok := featLOC[f]; ok {
+			return v
+		}
+		a, d := loc(f)
+		v := [2]int{a, d}
+		featLOC[f] = v
+		return v
+	}
+	for i := range s.Tasks {
+		v := get(s.Tasks[i].Feature)
+		s.Tasks[i].Added, s.Tasks[i].Deleted = v[0], v[1]
+	}
+	// rebuild agent rollup: duration sums per task, but LOC dedups per (seat,feature).
+	roll := map[string]*AgentStat{}
+	for _, a := range s.Agents {
+		cp := a
+		cp.Added, cp.Deleted = 0, 0
+		roll[a.Seat] = &cp
+	}
+	seen := map[string]bool{}
+	for _, t := range s.Tasks {
+		a := roll[t.Owner]
+		if a == nil {
+			continue
+		}
+		key := t.Owner + "\x00" + t.Feature
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		v := get(t.Feature)
+		a.Added += v[0]
+		a.Deleted += v[1]
+	}
+	out := s
+	out.Agents = make([]AgentStat, 0, len(roll))
+	for _, a := range s.Agents {
+		out.Agents = append(out.Agents, *roll[a.Seat])
+	}
+	return out
+}
+
 func durationSec(t *timing, status string, now time.Time) int64 {
 	if t == nil || t.assign.IsZero() {
 		return 0

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { State, PactEvent } from "../lib/types";
 import { findTask, canMergeFeature } from "../lib/derive";
-import { postVerb, getStats, fmtDuration } from "../lib/api";
+import { postVerb, getStats, fmtDuration, type TaskStat } from "../lib/api";
 import { humanizeError } from "../lib/protocolErrors";
 import { relTime } from "../lib/reltime";
 import { casteForRoles } from "../lib/ants";
@@ -70,19 +70,19 @@ export function RightRail({
   // pending names the in-flight action so only the clicked button shows its
   // spinner (busy still disables them all, server is authoritative).
   const [pending, setPending] = useState("");
-  // Work duration (D1) for the selected task, fetched from the stats endpoint.
-  const [durationSec, setDurationSec] = useState<number | null>(null);
+  // Work stats (D1) for the selected task: duration + code volume (LOC).
+  const [taskStat, setTaskStat] = useState<TaskStat | null>(null);
   useEffect(() => {
     if (!selected || !project) {
-      setDurationSec(null);
+      setTaskStat(null);
       return;
     }
     let alive = true;
     getStats(project)
       .then((s) => {
-        if (alive) setDurationSec(s.tasks.find((t) => t.task_id === selected)?.duration_sec ?? null);
+        if (alive) setTaskStat(s.tasks.find((t) => t.task_id === selected) ?? null);
       })
-      .catch(() => alive && setDurationSec(null));
+      .catch(() => alive && setTaskStat(null));
     return () => {
       alive = false;
     };
@@ -215,8 +215,17 @@ export function RightRail({
               <span className="mono">{task.reviewer || "—"}</span>
             </span>
             {inFlight && <span>{inFlight} in flight</span>}
-            {durationSec != null && durationSec > 0 && (
-              <span data-testid="task-duration">⏱ {fmtDuration(durationSec)}</span>
+            {taskStat && taskStat.duration_sec > 0 && (
+              <span data-testid="task-duration">⏱ {fmtDuration(taskStat.duration_sec)}</span>
+            )}
+            {taskStat && (taskStat.added > 0 || taskStat.deleted > 0) && (
+              <span data-testid="task-loc">
+                <span className="text-[var(--color-success)]">+{taskStat.added}</span>{" "}
+                <span className="text-[var(--color-danger)]">−{taskStat.deleted}</span>
+              </span>
+            )}
+            {taskStat && taskStat.tokens > 0 && (
+              <span data-testid="task-tokens">⛁ {taskStat.tokens.toLocaleString()}</span>
             )}
           </div>
         </div>

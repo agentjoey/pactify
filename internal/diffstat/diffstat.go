@@ -29,12 +29,19 @@ func gitRun(dir string, args ...string) (string, error) {
 
 // NumStat returns the added/deleted/files for `git diff --numstat from..to` in
 // repoDir. Binary files (numstat "-") count toward Files but contribute 0 lines.
-func NumStat(repoDir, from, to string) (Stat, error) {
-	return numStatWith(gitRun, repoDir, from, to)
+// Optional pathspecs are passed after `--` (e.g. ":(exclude).pact" to drop
+// protocol bookkeeping).
+func NumStat(repoDir, from, to string, pathspec ...string) (Stat, error) {
+	return numStatWith(gitRun, repoDir, from, to, pathspec...)
 }
 
-func numStatWith(run runner, repoDir, from, to string) (Stat, error) {
-	out, err := run(repoDir, "diff", "--numstat", from+".."+to)
+func numStatWith(run runner, repoDir, from, to string, pathspec ...string) (Stat, error) {
+	args := []string{"diff", "--numstat", from + ".." + to}
+	if len(pathspec) > 0 {
+		args = append(args, "--")
+		args = append(args, pathspec...)
+	}
+	out, err := run(repoDir, args...)
 	if err != nil {
 		return Stat{}, fmt.Errorf("diffstat: git diff %s..%s: %w", from, to, err)
 	}

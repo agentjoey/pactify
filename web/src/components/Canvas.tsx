@@ -42,6 +42,7 @@ import { ContextMenu, type MenuTarget } from "./canvas/ContextMenu";
 import { Toolbar } from "./canvas/Toolbar";
 import { Hud } from "./canvas/Hud";
 import { AntEdge } from "./canvas/edges/AntEdge";
+import { SeatRoster } from "./canvas/SeatRoster";
 import { OfficeView } from "./canvas/OfficeView";
 import { ConnectionLine } from "./canvas/ConnectionLine";
 import { ConnectingFlag } from "./canvas/ConnectingFlag";
@@ -946,6 +947,10 @@ export function Canvas({
           (page token sits behind via the .canvas-stage background) + a masked
           dot grid. Both purely decorative, behind the flow. */}
       <div className="canvas-grid" aria-hidden />
+
+      {/* Always-on seat roster (participating agents + roles), pinned to the
+          stage so it stays visible regardless of pan/zoom or mode. */}
+      <SeatRoster agents={state.agents} />
 
       {/* Mode segment (top-left) — Office | Plan. Office is the default landing
           (spec §3). Session-local; not persisted. */}

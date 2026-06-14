@@ -50,7 +50,7 @@ export function Hud({ minimap = true }: { minimap?: boolean }) {
           zoomable
           nodeColor={minimapNodeColor}
           nodeStrokeWidth={0}
-          maskColor="rgba(25,27,38,.6)"
+          maskColor="rgba(245,246,248,.66)"
           bgColor="transparent"
         />
       )}

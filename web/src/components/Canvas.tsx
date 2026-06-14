@@ -557,15 +557,15 @@ export function Canvas({
       const to = raw(c.target);
       if (from === to) return;
       if (committedTaskIds.has(to)) {
-        flashNotice("依赖在 assign 时已固定,不能再改");
+        flashNotice("Dependencies are locked once assigned");
         return;
       }
       if (featureOfId(from) !== featureOfId(to)) {
-        flashNotice("依赖必须和任务在同一个 feature 内");
+        flashNotice("A dependency must be in the same feature");
         return;
       }
       if (!isValidDep(depGraph, from, to)) {
-        flashNotice("依赖关系会形成环");
+        flashNotice("That dependency would create a cycle");
         return;
       }
       setDrafts((ds) => applyConnect(ds, c.source, c.target));
@@ -594,15 +594,15 @@ export function Canvas({
       const to = raw(toNode.id);
       if (from === to) return;
       if (committedTaskIds.has(to)) {
-        flashNotice("依赖在 assign 时已固定,不能再改");
+        flashNotice("Dependencies are locked once assigned");
         return;
       }
       if (featureOfId(from) !== featureOfId(to)) {
-        flashNotice("依赖必须和任务在同一个 feature 内");
+        flashNotice("A dependency must be in the same feature");
         return;
       }
       if (!isValidDep(depGraph, from, to)) {
-        flashNotice("依赖关系会形成环");
+        flashNotice("That dependency would create a cycle");
       }
     },
     [author, replaying, committedTaskIds, featureOfId, flashNotice, depGraph],
@@ -1019,7 +1019,7 @@ export function Canvas({
           data-testid="focus-chip"
           className="absolute right-3 top-2 z-20 flex items-center gap-1.5 rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-1)] shadow-[var(--shadow-raised)] hover:border-[var(--color-text-3)]"
           onClick={() => setFocusFeature(null)}
-          title="退出聚焦(Esc)"
+          title="Exit focus (Esc)"
         >
           <span>
             focusing <span className="mono">«{focusFeature}»</span>

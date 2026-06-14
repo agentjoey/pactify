@@ -12,7 +12,7 @@ export function SeatNode({ id, data }: NodeProps) {
   const pad = padGradient(seatId, caste);
 
   return (
-    <div className="rounded-lg bg-[#161b22] border border-[#30363d] text-xs px-2.5 py-2 min-w-[150px]">
+    <div className="rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)] shadow-[var(--shadow-card)] text-xs px-2.5 py-2 min-w-[150px]">
       <Handle type="source" position={Position.Right} style={{ background: "rgba(18,22,31,.28)" }} />
       {/* Target handle for comms wait edges (task → waited-on seat). Hidden until
           an edge anchors to it; the draft-drop seat→task flow uses the source. */}
@@ -27,9 +27,9 @@ export function SeatNode({ id, data }: NodeProps) {
         >
           <Ant caste={caste} size={22} title={`${caste} — ${roles.join(" · ") || "seat"}`} />
         </span>
-        <span className="font-semibold text-[#1a1d27]">{seatId}</span>
+        <span className="font-semibold text-[var(--color-text-1)]">{seatId}</span>
       </div>
-      <div className="mt-1 text-[10px] text-[#8b949e]">{roles.join(" · ") || "—"}</div>
+      <div className="mt-1 text-[10px] text-[var(--color-text-3)]">{roles.join(" · ") || "—"}</div>
     </div>
   );
 }

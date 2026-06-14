@@ -150,10 +150,10 @@ test("connect: wiring to a committed task is rejected (edge count held + notice)
 
   // No edge appears — the invalid wiring was rejected (load-bearing assertion).
   await expect(page.locator(".react-flow__edge")).toHaveCount(edgesBefore);
-  // And the author got the "已固定" notice explaining why.
+  // And the author got the "locked" notice explaining why.
   const notice = page.locator('[data-testid="canvas-notice"]');
   await expect(notice).toBeVisible();
-  await expect(notice).toContainText("已固定");
+  await expect(notice).toContainText("locked");
 });
 
 // connect (negative, spec §4 case② first half): a cross-feature dep is rejected.
@@ -200,10 +200,10 @@ test("connect: cross-feature wiring is rejected (edge count held + notice)", asy
 
   // No edge appears — the cross-feature wiring was rejected (load-bearing).
   await expect(page.locator(".react-flow__edge")).toHaveCount(edgesBefore);
-  // And the author got the "同一个 feature" notice explaining why.
+  // And the author got the "same feature" notice explaining why.
   const notice = page.locator('[data-testid="canvas-notice"]');
   await expect(notice).toBeVisible();
-  await expect(notice).toContainText("同一个 feature");
+  await expect(notice).toContainText("same feature");
 });
 
 // Bug #1 (SSE variant): a snapshot arriving mid-drag must not teleport the node

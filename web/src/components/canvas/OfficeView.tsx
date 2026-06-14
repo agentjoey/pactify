@@ -161,32 +161,32 @@ function DeskNode({ data }: NodeProps) {
       </div>
 
       <div className="dzone">
-        {/* 手上 doing */}
+        {/* doing */}
         <div className="zlab">
-          手上 · doing <span className="zc">{desk.doing.length}</span>
+          Doing <span className="zc">{desk.doing.length}</span>
         </div>
         {desk.doing.length === 0 ? (
-          <div className="dempty">{desk.status === "idle" ? "闲——拖一个任务到这张桌子即派发" : "空"}</div>
+          <div className="dempty">{desk.status === "idle" ? "Idle — drop a task on this desk to dispatch" : "Empty"}</div>
         ) : (
           desk.doing.map((t) => <Parcel key={t.id} task={t} onClick={() => d.onSelectTask?.(t.id)} />)
         )}
 
-        {/* 收件 inbox */}
+        {/* inbox */}
         <div className="zlab">
-          收件 · inbox <span className="zc">{desk.inbox.length}</span>
+          Inbox <span className="zc">{desk.inbox.length}</span>
         </div>
         {desk.inbox.length === 0 ? (
-          <div className="dempty">空</div>
+          <div className="dempty">Empty</div>
         ) : (
           desk.inbox.map((t) => <Parcel key={t.id} task={t} glow onClick={() => d.onSelectTask?.(t.id)} />)
         )}
 
-        {/* 等回音 waiting on */}
+        {/* waiting on */}
         <div className="zlab">
-          等回音 · waiting on <span className="zc">{desk.waitingOn.length}</span>
+          Waiting on <span className="zc">{desk.waitingOn.length}</span>
         </div>
         {desk.waitingOn.length === 0 ? (
-          <div className="dempty">空</div>
+          <div className="dempty">Empty</div>
         ) : (
           desk.waitingOn.map((w) => (
             <Parcel
@@ -749,8 +749,8 @@ function OfficeViewInner({
           sit INSIDE the office-view div, so their right-click would bubble to the
           stage's onContextMenu and open the pane menu over the panel. Stop it. */}
       <div className="office-wall" data-testid="office-wall" onContextMenu={(e) => e.stopPropagation()}>
-        <div className="wt">📋 墙上看板 · features</div>
-        {wallRows.length === 0 && <div className="dempty">无 feature</div>}
+        <div className="wt">📋 Wall board · features</div>
+        {wallRows.length === 0 && <div className="dempty">No features</div>}
         {wallRows.map((r) => (
           <div className="wrow" key={r.id} style={{ opacity: r.total === 0 ? 0.55 : 1 }}>
             <span className="mono" style={{ fontSize: 10 }}>{r.id}</span>
@@ -764,8 +764,8 @@ function OfficeViewInner({
 
       {/* Shipped tray (fixed bottom-right) — board5 `.tray`. */}
       <div className="office-tray" data-testid="office-tray" ref={trayRef} onContextMenu={(e) => e.stopPropagation()}>
-        <div className="tt">✓ shipped 出货托盘</div>
-        {trayVisible.length === 0 && <div className="dempty">尚无出货</div>}
+        <div className="tt">✓ Shipped tray</div>
+        {trayVisible.length === 0 && <div className="dempty">Nothing shipped yet</div>}
         {trayVisible.map((t) => (
           <Parcel key={t.id} task={t} onClick={() => onSelectTask?.(t.id)} />
         ))}
@@ -790,7 +790,7 @@ function OfficeViewInner({
               data-testid="dock-new-task"
               onClick={() => onOpenNewTask?.()}
             >
-              ＋ 新建任务
+              ＋ New task
             </button>
           ) : (
             drafts.map((d) => (
@@ -848,7 +848,7 @@ function OfficeViewInner({
           )}
           {menu.kind === "desk" && (
             drafts.length === 0 ? (
-              <div className="ci" style={{ opacity: 0.6 }}>无 draft 可派发</div>
+              <div className="ci" style={{ opacity: 0.6 }}>No drafts to dispatch</div>
             ) : (
               drafts.map((d) => (
                 <button
@@ -857,7 +857,7 @@ function OfficeViewInner({
                   data-testid={`office-ctx-dispatch-${d.id}`}
                   onClick={() => { onDispatchDraft(d, menu.seatId); setMenu(null); }}
                 >
-                  <span className="ci-ic">⚡</span>派发 {d.id} → {menu.seatId}
+                  <span className="ci-ic">⚡</span>Dispatch {d.id} → {menu.seatId}
                 </button>
               ))
             )

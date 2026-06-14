@@ -28,7 +28,7 @@ export function FeatureGroup({ data }: NodeProps) {
         className={`fhead pointer-events-auto${allDone ? " done" : ""}${d.onFocus ? " cursor-pointer" : ""}`}
         data-testid="feature-frame-head"
         onClick={d.onFocus ? (e) => { e.stopPropagation(); d.onFocus!(); } : undefined}
-        title={d.onFocus ? "聚焦此 feature(Esc 退出)" : undefined}
+        title={d.onFocus ? "Focus this feature (Esc to exit)" : undefined}
       >
         <span className="fname">{d.id}</span>
         {d.branch && <span className="fbranch mono">{d.branch}</span>}

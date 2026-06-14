@@ -56,7 +56,7 @@ export function Recipes() {
   const current = recipes?.find((r) => r.name === selected);
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-5" data-testid="recipes-view">
+    <div className="flex-1 overflow-y-auto px-6 py-5 view-enter" data-testid="recipes-view">
       <h2 className="mb-1 text-[15px] font-[650] text-[var(--color-text-1)]">Recipes</h2>
       <p className="mb-4 text-[12px] text-[var(--color-text-3)]">
         选一个配方 + 说一句话目标，预览它展开的任务图。门槛从"手写任务图"降到"选配方"。
@@ -84,7 +84,7 @@ export function Recipes() {
                 aria-pressed={r.name === selected}
                 onClick={() => setSelected(r.name)}
                 className={[
-                  "rounded-md border px-3 py-2 text-left transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2",
+                  "rounded-md border px-3 py-2 text-left press transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2",
                   r.name === selected
                     ? "border-[color-mix(in_srgb,var(--color-role-design)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-role-design)_12%,transparent)]"
                     : "border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] hover:border-[var(--color-border-strong)]",
@@ -121,11 +121,12 @@ export function Recipes() {
 
             {tasks && (
               <ol className="mt-2 flex flex-col gap-2 fade-rise">
-                {tasks.map((t) => (
+                {tasks.map((t, i) => (
                   <li
                     key={t.id}
                     data-testid="recipe-task"
-                    className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 hover-lift"
+                    style={{ animationDelay: `${i * 40}ms` }}
+                    className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 hover-lift fade-rise"
                   >
                     <div className="flex items-center gap-2">
                       <span className="mono text-[12px] font-medium text-[var(--color-text-1)]">{t.id}</span>

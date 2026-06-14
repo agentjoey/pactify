@@ -89,6 +89,37 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* view-enter: the whole-panel entrance played when a dashboard view mounts
+   (switching tabs remounts the panel component, so the animation fires on every
+   view change). A slightly larger fade+rise than a single card, so a tab switch
+   reads as a deliberate transition rather than an instant swap. reduced-motion
+   safe. */
+@media (prefers-reduced-motion: no-preference) {
+  .view-enter { animation: view-enter var(--motion-layout, 200ms) var(--motion-ease); }
+}
+@keyframes view-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* stagger-N: list items that share a fade-rise but cascade in. The component
+   sets `style={{ animationDelay }}` per index; these just provide a capped,
+   reduced-motion-safe ceiling so a long list doesn't drip forever. The cascade
+   is what makes a freshly-rendered list feel alive instead of popping at once. */
+@media (prefers-reduced-motion: reduce) {
+  .fade-rise { animation: none !important; }
+  .view-enter { animation: none !important; }
+}
+
+/* press: a tactile active-scale for clickable non-button surfaces (cards, rows,
+   chips) so a tap visibly registers. Buttons already do this via Button. */
+.press {
+  transition: transform var(--motion-micro) var(--motion-ease);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .press:active { transform: scale(0.985); }
+}
+
 /* hover-lift: a reusable card affordance — on hover the card raises (shadow +
    1px translate) so it reads as interactive. Pair with a token shadow. */
 .hover-lift {

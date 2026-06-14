@@ -24,7 +24,7 @@ export function OpsView({
   loading?: boolean;
 }) {
   return (
-    <div data-testid="ops-view" className="flex-1 overflow-auto p-4 text-[#e6edf3]">
+    <div data-testid="ops-view" className="flex-1 overflow-auto p-4 text-[var(--color-text-1)] view-enter">
       <Projects author={author} onChanged={onRegistryChanged} />
       <AgentConfig refreshKey={refreshTick} />
       {loading ? (

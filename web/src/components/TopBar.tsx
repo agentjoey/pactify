@@ -167,10 +167,12 @@ export function TopBar({
               onClick={() => onView(v)}
               aria-pressed={on}
               className={[
-                "flex items-center gap-[7px] rounded-md px-3.5 py-[4.5px] text-xs font-medium transition-colors",
+                "flex items-center gap-[7px] rounded-md px-3.5 py-[4.5px] text-xs font-medium outline-none",
+                "transition-[background-color,color,box-shadow,transform] duration-[var(--motion-micro)] ease-[var(--motion-ease)]",
+                "active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-role-design)_40%,transparent)]",
                 on
                   ? "bg-gradient-to-b from-[rgba(255,255,255,.1)] to-[rgba(255,255,255,.06)] text-white shadow-[0_1px_3px_rgba(0,0,0,.3)]"
-                  : "text-[var(--color-text-2)]",
+                  : "text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:bg-[rgba(255,255,255,.04)]",
               ].join(" ")}
             >
               {label}

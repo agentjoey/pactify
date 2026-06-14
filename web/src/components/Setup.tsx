@@ -84,7 +84,7 @@ export function Setup() {
   const commands = bindings ? applyCommands(bindings) : "";
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-5" data-testid="setup-view">
+    <div className="flex-1 overflow-y-auto px-6 py-5 view-enter" data-testid="setup-view">
       <div className="mb-1 flex items-center gap-3">
         <h2 className="text-[15px] font-[650] text-[var(--color-text-1)]">Setup · 把注册的 agent 配进项目</h2>
         {loading && <Spinner size="sm" />}
@@ -109,11 +109,12 @@ export function Setup() {
       {!error && bindings && bindings.length > 0 && (
         <div className="fade-rise">
           <div className="flex flex-col gap-2">
-            {bindings.map((b) => (
+            {bindings.map((b, i) => (
               <div
                 key={b.seat}
                 data-testid="setup-row"
-                className="flex flex-wrap items-center gap-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 hover-lift"
+                style={{ animationDelay: `${i * 40}ms` }}
+                className="flex flex-wrap items-center gap-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 hover-lift fade-rise"
               >
                 <span className="mono text-[12px] font-medium text-[var(--color-text-1)] w-24">{b.seat}</span>
                 <span className="text-[11px] text-[var(--color-text-2)] w-28">{b.kind}</span>
@@ -131,7 +132,7 @@ export function Setup() {
                         aria-pressed={on}
                         onClick={() => toggleRole(b.seat, r)}
                         className={[
-                          "rounded px-2 py-0.5 text-[10.5px] transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2",
+                          "rounded px-2 py-0.5 text-[10.5px] press transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2",
                           on
                             ? "bg-[color-mix(in_srgb,var(--color-role-design)_22%,transparent)] text-[var(--color-text-1)]"
                             : "bg-[var(--color-bg-raised)] text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",

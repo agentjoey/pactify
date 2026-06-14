@@ -80,3 +80,14 @@
 - **不接**：openclaw（self-hosted 消息网关/个人助手，非仓库内 coding 座席）。
 - **协议层扩展方向**：若 Pactify 自身说 ACP（Agent Client Protocol），Zed/JetBrains/Kimi 可 host Pactify 驱动的 agent——单列调研。
 - **配套**：每个新 kind 接入后，`agent config`（model/权限姿态）即时可用；Codex 的 `--sandbox` 分级提示 PermPosture 未来可加"sandbox 级别"维度。
+
+## 剩余 UI（2026-06-14 暂停，待后续）—— 详见 docs/roadmap-next.md + ui-design-spec.md
+已做：Setup(#1)、Recipes(#11)、Plan 只读(#7)、Live 并行聚合(#3)、Agent Config(#10/#9/#4)、Ops polish(#12 部分)。
+**剩余（都是有副作用 HTTP 操作，需先设计确认/安全 UX）**：
+- **B3 Plan apply**：Plan 视图内编辑 owner/reviewer/deps + Apply（`POST .../plan/{feature}/apply`，含事务化）+ Run。
+- **B5 Run + 自然语言命令面板**：dashboard 启动 orchestrate（选 feature/并发）+ 一句话→拆解→预览→跑（`POST /api/projects/{id}/orchestrate`，需沙箱/权限设计）。
+- **B6 Review Gate / 升级 UX**：Live 里暂停态显「为什么停/看 diff/批准/打回/接手/续跑」（resume endpoint）。
+- **B7 Ship 按钮**：shipped 后 push/开 PR（`POST /api/projects/{id}/finish`，加确认弹窗）。
+- **B8 Sessions prune**：Ops 内每 agent prune 按钮（`sessions prune`，加确认）。
+- **setup/apply 一键**：Setup 视图「Apply」直接 init+wire（`POST /api/setup/apply`，mutate .pact 需确认）。
+- **横切设计**：有副作用 HTTP 操作的**确认弹窗 + acting-seat 校验 + 安全/沙箱** 规范，先定再实现。

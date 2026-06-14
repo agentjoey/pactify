@@ -46,8 +46,8 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
       )}
       {!error && kinds && kinds.length > 0 && (
         <div className="flex flex-col gap-2">
-          {kinds.map((k) => (
-            <AgentConfigRow key={k} kind={k} />
+          {kinds.map((k, i) => (
+            <AgentConfigRow key={k} kind={k} delay={i * 40} />
           ))}
         </div>
       )}
@@ -55,7 +55,7 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
   );
 }
 
-function AgentConfigRow({ kind }: { kind: string }) {
+function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [model, setModel] = useState("");
   const [restricted, setRestricted] = useState(false);
@@ -100,7 +100,8 @@ function AgentConfigRow({ kind }: { kind: string }) {
   return (
     <div
       data-testid={`agent-config-${kind}`}
-      className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5"
+      style={{ animationDelay: `${delay}ms` }}
+      className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 fade-rise"
     >
       <div className="flex items-center gap-2">
         <span className="mono text-[12px] font-medium text-[var(--color-text-1)]">{kind}</span>
@@ -134,7 +135,7 @@ function AgentConfigRow({ kind }: { kind: string }) {
             aria-pressed={restricted}
             onClick={() => setRestricted((s) => !s)}
             className={[
-              "rounded px-2 py-0.5 text-[10.5px] transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2",
+              "rounded px-2 py-0.5 text-[10.5px] press transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2",
               restricted
                 ? "bg-[color-mix(in_srgb,var(--color-warn)_22%,transparent)] text-[var(--color-text-1)]"
                 : "bg-[var(--color-bg-raised)] text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",

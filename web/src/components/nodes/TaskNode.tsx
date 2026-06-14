@@ -1,6 +1,7 @@
 import { Handle, Position, useConnection, type NodeProps } from "@xyflow/react";
 import type { Task } from "../../lib/types";
 import { TaskCard } from "../TaskCard";
+import { AntActivity } from "../canvas/AntActivity";
 
 // TaskNode renders both committed tasks and in-flight drafts (data.draft) by
 // wrapping the shared TaskCard genome in React Flow Handles. The pulse / comms
@@ -46,9 +47,12 @@ export function TaskNode({ id, data }: NodeProps) {
 
   return (
     <div
-      className={`task-node min-w-[176px]${isValidTarget ? " connect-target" : ""}`}
+      className={`task-node relative min-w-[176px]${isValidTarget ? " connect-target" : ""}`}
       data-testid="task-node"
     >
+      {/* always-on, state-driven ant motion (committed tasks only — drafts have
+          no live status to animate) */}
+      {!d.draft && <AntActivity status={task.status} />}
       <Handle
         type="target"
         position={Position.Top}

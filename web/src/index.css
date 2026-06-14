@@ -272,6 +272,48 @@ body {
   transform: translateY(-50%) scale(1.15);
 }
 
+/* Ant activity (Phase 3 increment A): an always-on, state-driven ant motion
+   overlay pinned to a canvas task node's top-right corner. Three motions encode
+   the live status — crawl (working) / orbit (awaiting review) / fret (rework).
+   All gated by prefers-reduced-motion (AntActivity renders nothing otherwise, so
+   no static clutter and no lost info — the StatusPill carries the state). */
+.ant-act {
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  width: 24px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 6;
+}
+.ant-act-runner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  transform: translate(-50%, -50%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ant-work .ant-act-runner { animation: ant-crawl 1.7s ease-in-out infinite; }
+  .ant-wait .ant-act-runner { animation: ant-orbit 2.4s linear infinite; }
+  .ant-changes .ant-act-runner { animation: ant-fret 0.7s ease-in-out infinite; }
+}
+@keyframes ant-crawl {
+  0%   { transform: translate(-50%, -50%) translateX(-7px); }
+  48%  { transform: translate(-50%, -50%) translateX(7px); }
+  50%  { transform: translate(-50%, -50%) translateX(7px) scaleX(-1); }
+  98%  { transform: translate(-50%, -50%) translateX(-7px) scaleX(-1); }
+  100% { transform: translate(-50%, -50%) translateX(-7px); }
+}
+@keyframes ant-orbit {
+  from { transform: translate(-50%, -50%) rotate(0deg) translateX(8px) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg) translateX(8px) rotate(-360deg); }
+}
+@keyframes ant-fret {
+  0%, 100% { transform: translate(-50%, -50%) translateX(-3px); }
+  50%      { transform: translate(-50%, -50%) translateX(3px); }
+}
+
 /* Frosted card (Stitch-style): translucent surface + backdrop blur, so cards on
    the canvas let the grid faintly show through. Pair with a token border/shadow. */
 .card-frost {

@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 import type { State } from "../lib/types";
 import { boardColumns, type Column } from "../lib/derive";
-import { roleColorVar } from "../lib/canvas";
 import { statusColorVar } from "../lib/lifecycle";
 import { TaskCard } from "./TaskCard";
+import { statusColor } from "./ui/StatusPill";
 import { Tooltip } from "./ui/Tooltip";
 import { BoardSkeleton } from "./Skeleton";
 
@@ -83,7 +83,6 @@ export function Board({
               ) : (
                 tasks.map((bt) => {
                   const pulsing = pulses?.has(bt.task.id);
-                  const roleVar = roleColorVar(rolesOf(bt.task.owner));
                   return (
                     <div
                       key={bt.task.id}
@@ -91,7 +90,7 @@ export function Board({
                       className={pulsing ? "pulse rounded-[11px]" : undefined}
                       style={
                         pulsing
-                          ? ({ "--pulse-color": `var(${roleVar})` } as CSSProperties)
+                          ? ({ "--pulse-color": statusColor(bt.task.status) } as CSSProperties)
                           : undefined
                       }
                     >

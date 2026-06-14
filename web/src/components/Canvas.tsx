@@ -43,6 +43,7 @@ import { Toolbar } from "./canvas/Toolbar";
 import { Hud } from "./canvas/Hud";
 import { AntEdge } from "./canvas/edges/AntEdge";
 import { SeatRoster } from "./canvas/SeatRoster";
+import { statusColor } from "./ui/StatusPill";
 import { OfficeView } from "./canvas/OfficeView";
 import { ConnectionLine } from "./canvas/ConnectionLine";
 import { ConnectingFlag } from "./canvas/ConnectingFlag";
@@ -882,11 +883,15 @@ export function Canvas({
       out = out.map((n) => {
         const raw = n.id.replace(/^(task|draft):/, "");
         if ((n.type === "task" || n.type === "draft") && pulses.has(raw)) {
-          const roleVar = (n.data as { roleColor?: string }).roleColor ?? "--role-dev";
+          // Transition pulse colored by the task's NEW status (the pact-state
+          // language): accepted→green "delivered", changes→amber, awaiting→warn,
+          // working→blue. So the one-shot ring tells you WHAT just happened.
+          const status = (n.data as { task?: { status?: string } }).task?.status;
+          const color = status ? statusColor(status) : "var(--color-role-design)";
           return {
             ...n,
             className: [n.className, "pulse"].filter(Boolean).join(" "),
-            style: { ...n.style, ["--pulse-color" as string]: `var(${roleVar})` },
+            style: { ...n.style, ["--pulse-color" as string]: color },
           };
         }
         return n;

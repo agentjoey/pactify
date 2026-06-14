@@ -48,6 +48,14 @@ export function normalizeStatus(s: string): PactStatus {
   }
 }
 
+// statusColor resolves any task/phase string to the pact-state language color
+// (the same hue the StatusPill shows), so transition cues elsewhere (the canvas
+// pulse) read with the SAME color vocabulary: accepted→green, changes→amber,
+// awaiting→warn, working→blue, escalated→red.
+export function statusColor(s: string): string {
+  return MAP[normalizeStatus(s)].color;
+}
+
 export function StatusPill({
   status,
   label,

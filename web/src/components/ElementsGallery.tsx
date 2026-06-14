@@ -166,8 +166,8 @@ export function ElementsGallery() {
 
         {/* Node card — Dify-style with connect "+" handles + Make-Grid Links */}
         <Section title="节点卡 · 连接 + 关系" note="dify 式节点卡 + 边上“+”连接手柄（建依赖）· Make Grid 式 Links 方向 pill">
-          <div className="grid grid-cols-2 gap-8">
-            <div className="flex flex-col gap-7">
+          <div className="grid grid-cols-2 gap-8 pt-5">
+            <div className="flex flex-col gap-9">
               <NodeCard role="dev" icon="opencode" title="t-manifest" status="in_progress" sub="opencode → claude" meta="model deepseek-v4-pro" />
               <NodeCard role="design" icon="claude" title="claude" status="awaiting_review" sub="orchestrator · reviewer" meta="drivable · claude-opus-4-8" selected />
             </div>
@@ -282,8 +282,9 @@ function NodeCard({
         width: 230,
       }}
     >
-      {/* floating status pill above the card (Dify "Wait for running") */}
-      <div className="absolute -top-2.5 right-3">
+      {/* status pill floating clearly ABOVE the card (Dify "Wait for running") —
+          anchored a few px over the top edge so it never overlaps the frame. */}
+      <div className="absolute right-2" style={{ bottom: "calc(100% + 6px)" }}>
         <StatusPill status={status} />
       </div>
       {/* header: role-tinted icon tile + title */}

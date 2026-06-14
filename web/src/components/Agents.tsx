@@ -45,6 +45,11 @@ export function Agents({ author, onChanged }: { author: boolean; onChanged: () =
 
   if (loading) return null;
   if (error) return null;
+  // This global bar is a FIRST-RUN onboarding nudge ("scan → register to begin").
+  // Once any agent is registered, agent management lives in the Setup view and
+  // the Ops Agent-config panel — so the bar disappears instead of bleeding a raw
+  // agent list above every view.
+  if (hasRegistered) return null;
 
   return (
     <div className="border-b border-gray-800 px-3 py-2">

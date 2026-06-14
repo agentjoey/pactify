@@ -120,6 +120,16 @@ body {
   .press:active { transform: scale(0.985); }
 }
 
+/* status-pill-dot-live: a gentle breathing dot for "in flight" states
+   (working / escalated). reduced-motion → static dot. */
+@media (prefers-reduced-motion: no-preference) {
+  .status-pill-dot-live { animation: status-pill-breath 1.6s ease-in-out infinite; }
+}
+@keyframes status-pill-breath {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+
 /* hover-lift: a reusable card affordance — on hover the card raises (shadow +
    1px translate) so it reads as interactive. Pair with a token shadow. */
 .hover-lift {

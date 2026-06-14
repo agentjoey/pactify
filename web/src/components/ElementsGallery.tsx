@@ -6,6 +6,11 @@ import { Alert } from "./ui/Alert";
 import { EmptyState } from "./ui/EmptyState";
 import { Spinner } from "./ui/Spinner";
 import { Input } from "./ui/Input";
+import { Select } from "./ui/Select";
+import { ConfigSection, Inset } from "./ui/ConfigSection";
+import { Textarea } from "./ui/Textarea";
+import { Skeleton } from "./Skeleton";
+import { Ant } from "./ui/ants/Ant";
 import { StatusPill, type PactStatus } from "./ui/StatusPill";
 import { Icon, ICON_NAMES } from "../lib/icons";
 
@@ -41,6 +46,18 @@ const ALL_STATUS: PactStatus[] = [
   "idle",
 ];
 
+// caste → the delivery-chain role it stands for (for the silhouette labels).
+const ANT_CASTES = [
+  ["queen", "orchestrator"],
+  ["guard", "reviewer"],
+  ["builder", "worker"],
+  ["catcher", "qa"],
+  ["brewer", "product"],
+  ["painter", "design"],
+  ["scout", "research"],
+  ["keeper", "ops"],
+] as const;
+
 const ROLE_VARS = [
   ["product", "orchestrator"],
   ["design", "reviewer"],
@@ -55,6 +72,14 @@ export function ElementsGallery() {
   const [loading, setLoading] = useState(false);
   const [toggle, setToggle] = useState(true);
   const [seg, setSeg] = useState("high");
+  const [skelLoading, setSkelLoading] = useState(true);
+  const [tools, setTools] = useState<Record<string, boolean>>({
+    Read: true,
+    Edit: true,
+    Write: false,
+    Bash: false,
+    Grep: true,
+  });
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-page)] text-[var(--color-text-1)]">
@@ -241,6 +266,118 @@ export function ElementsGallery() {
           </div>
         </Section>
 
+        {/* Config surface — dify-style grouped sections (RightRail / AgentConfig) */}
+        <Section
+          title="配置面板元素 · 借鉴 dify"
+          note="ConfigSection 分组（大写标签 + 必填 *）· Inset 控件底 · Select · Textarea（字数 / {x} 变量 / 展开）· TOOLS LIST（allowed-tools 开关行）"
+        >
+          <div className="grid grid-cols-2 gap-5">
+            {/* left column — a model + temperature + prompt config card */}
+            <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-4 shadow-[var(--shadow-card)]">
+              <ConfigSection label="Model" required action={<span className="mono">opus-4-8</span>}>
+                <Select defaultValue="claude-opus-4-8">
+                  <option value="claude-opus-4-8">claude-opus-4-8</option>
+                  <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                  <option value="gemini-3-pro">gemini-3-pro</option>
+                </Select>
+              </ConfigSection>
+              <ConfigSection label="Temperature">
+                <Inset>0.2 · 偏确定</Inset>
+              </ConfigSection>
+              <ConfigSection label="System prompt" action="变量可用">
+                <Textarea
+                  variables
+                  defaultValue="你是 reviewer，逐任务翻转 accepted/changes。"
+                  placeholder="输入系统提示…"
+                />
+              </ConfigSection>
+            </div>
+
+            {/* right column — dify TOOLS LIST: allowed-tools toggle rows */}
+            <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-4 shadow-[var(--shadow-card)]">
+              <ConfigSection
+                label="Tools list"
+                action={`${Object.values(tools).filter(Boolean).length}/${Object.keys(tools).length}`}
+              >
+                <div className="flex flex-col gap-1">
+                  {Object.entries(tools).map(([name, on]) => (
+                    <ToolRow key={name} name={name} on={on} onToggle={() => setTools((t) => ({ ...t, [name]: !t[name] }))} />
+                  ))}
+                </div>
+              </ConfigSection>
+              <div className="mt-1 text-[10.5px] text-[var(--color-text-3)]">
+                scoped 姿态下，只有开启的工具会进入 worker 的 allowed-tools。
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Skeleton — first-paint placeholders */}
+        <Section title="Skeleton · 骨架屏" note="SSE 首帧前的占位（shimmer，尊重 reduced-motion）">
+          <Row>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setSkelLoading(true); setTimeout(() => setSkelLoading(false), 1400); }}
+            >
+              重放
+            </Button>
+            <span className="text-[11px] text-[var(--color-text-3)]">点重放看 shimmer→内容</span>
+          </Row>
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-3 shadow-[var(--shadow-card)]">
+              {skelLoading ? (
+                <div className="flex flex-col gap-2">
+                  <Skeleton width={120} height={11} />
+                  <Skeleton height={44} />
+                  <Skeleton width="70%" height={11} />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <span className="mono text-[12px] font-medium">t-manifest</span>
+                  <div className="text-[11px] text-[var(--color-text-2)]">opencode → claude</div>
+                  <StatusPill status="awaiting_review" />
+                </div>
+              )}
+            </div>
+            <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-3 shadow-[var(--shadow-card)]">
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} height={28} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Ant silhouettes — colony glyphs,备料 for the ant motion engine */}
+        <Section
+          title="蚂蚁剪影 · 蚁群引擎备料"
+          note="八工种印章蚁（charcoal 身 + 工种色腹带）· 14 chip / 22 seat / 34 pad — 蚂蚁动效语言的素材"
+        >
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2.5">
+            {ANT_CASTES.map(([caste, role]) => (
+              <div
+                key={caste}
+                className="flex flex-col items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-2 py-3"
+              >
+                <Ant caste={caste} size={34} title={caste} />
+                <span className="text-[10.5px] font-medium text-[var(--color-text-2)]">{caste}</span>
+                <span className="text-[9.5px] text-[var(--color-text-3)]">{role}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-4 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-3 py-2.5">
+            <span className="text-[10.5px] uppercase tracking-[.5px] text-[var(--color-text-3)]">尺寸阶</span>
+            {[14, 22, 34].map((s) => (
+              <div key={s} className="flex items-center gap-1.5">
+                <Ant caste="builder" size={s} />
+                <span className="text-[10px] text-[var(--color-text-3)]">{s}px</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+
         {/* Stitch-inspired canvas effects */}
         <Section title="画布效果 · 借鉴 Stitch" note="细点网格 + 光标放大镜（移动鼠标）· 半透明磨砂卡片">
           <GridLensDemo />
@@ -326,6 +463,35 @@ function ConnectPlus({ className = "" }: { className?: string }) {
     <button type="button" aria-label="connect" className={`connect-plus absolute ${className}`}>
       +
     </button>
+  );
+}
+
+// ToolRow — one allowed-tools entry in the dify TOOLS LIST: the tool icon-chip +
+// name on the left, an iOS-style toggle on the right. On = role-dev green.
+function ToolRow({ name, on, onToggle }: { name: string; on: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex items-center justify-between rounded-md px-1.5 py-1 transition-colors hover:bg-[var(--color-bg-inset)]">
+      <div className="flex items-center gap-2">
+        <span className="grid h-5 w-5 place-items-center rounded bg-[var(--color-bg-inset)] mono text-[10px] text-[var(--color-text-2)]">
+          {name[0]}
+        </span>
+        <span className="mono text-[11.5px] text-[var(--color-text-1)]">{name}</span>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={name}
+        onClick={onToggle}
+        className="press relative h-[18px] w-[30px] rounded-full transition-colors"
+        style={{ background: on ? "var(--color-role-dev)" : "var(--color-bg-inset)" }}
+      >
+        <span
+          className="absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-[left]"
+          style={{ left: on ? 14 : 2 }}
+        />
+      </button>
+    </div>
   );
 }
 

@@ -130,7 +130,7 @@ export function ElementsGallery() {
         </Section>
 
         {/* Agent logos — unified stylized brand marks (v1) */}
-        <Section title="Agent logos · v1（统一风格）" note="每个 kind 同一画框 + 品牌 accent 低饱底 + 单色 glyph，浅色适配。替换 agent 卡片现用概念图标（待批准）">
+        <Section title="Agent logos · v1（统一风格）" note="app-icon 质感：品牌渐变实色底 + 白 glyph + 软阴影，刻意区别于扁平 icon/button。替换 agent 卡片现用概念图标（待批准）">
           <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2.5">
             {AGENT_LOGO_KINDS.map((k) => (
               <div key={k} className="flex flex-col items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-2 py-3">

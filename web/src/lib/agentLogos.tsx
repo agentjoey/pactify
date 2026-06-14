@@ -32,8 +32,13 @@ const KNOT = (
     <ellipse cx="12" cy="12" rx="7" ry="3.1" transform="rotate(120 12 12)" />
   </g>
 );
+// Cursor's mark reads as an angular extruded cube — two stacked parallelograms
+// forming a 3D corner.
 const CURSOR = (
-  <path d="M7 5l11 5.2-4.7 1.5-1.5 4.8L7 5z" fill="currentColor" />
+  <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+    <path d="M12 4l7 4v8l-7 4-7-4V8z" />
+    <path d="M12 12l7-4M12 12v8M12 12L5 8" />
+  </g>
 );
 const MOON = (
   <path d="M15.5 5.2A7 7 0 1 0 18.8 15 5.6 5.6 0 0 1 15.5 5.2z" fill="currentColor" />
@@ -87,9 +92,14 @@ export const AGENT_LOGO_KINDS = [
   "antigravity",
 ];
 
+// AgentLogo renders the kind's mark as a small APP-ICON: a solid brand-gradient
+// tile (squircle-ish radius, soft drop shadow + a subtle top inner highlight)
+// with a WHITE glyph. The solid, shadowed, gradient treatment deliberately reads
+// as a "logo / app icon" — distinct from the flat token-colored Phosphor icons
+// and from buttons (which sit on the page surface).
 export function AgentLogo({ kind, size = 28 }: { kind: string; size?: number }) {
   const { accent, glyph } = resolve(kind);
-  const pad = Math.round(size * 0.18);
+  const pad = Math.round(size * 0.2);
   return (
     <span
       data-testid="agent-logo"
@@ -97,13 +107,13 @@ export function AgentLogo({ kind, size = 28 }: { kind: string; size?: number }) 
       style={{
         width: size,
         height: size,
-        background: `color-mix(in srgb, ${accent} 13%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${accent} 26%, transparent)`,
-        borderRadius: Math.round(size * 0.28),
+        background: `linear-gradient(155deg, color-mix(in srgb, ${accent} 86%, white), ${accent} 55%, color-mix(in srgb, ${accent} 82%, black))`,
+        borderRadius: Math.round(size * 0.26),
         display: "inline-grid",
         placeItems: "center",
-        color: accent,
+        color: "#fff",
         flexShrink: 0,
+        boxShadow: `0 1px 2px rgba(18,22,31,.18), 0 4px 10px -3px color-mix(in srgb, ${accent} 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35)`,
       }}
     >
       <svg width={size - pad * 2} height={size - pad * 2} viewBox="0 0 24 24" aria-hidden>

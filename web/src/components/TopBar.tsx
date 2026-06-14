@@ -86,7 +86,11 @@ export function TopBar({
   return (
     <div
       data-testid="topbar"
-      className="flex items-center gap-3.5 px-4 py-2.5 border-b border-[var(--color-border-subtle)] bg-[rgba(32,34,47,.7)] backdrop-blur-[10px]"
+      // relative z-50: lift the header (and its dropdowns — project switcher,
+      // ⌘K) above the main content area, which is a later `relative` sibling that
+      // would otherwise intercept pointer events over the dropdowns (a click on a
+      // project option was being swallowed by the board behind it).
+      className="relative z-50 flex items-center gap-3.5 px-4 py-2.5 border-b border-[var(--color-border-subtle)] bg-[rgba(32,34,47,.7)] backdrop-blur-[10px]"
     >
       {/* logo */}
       <div className="flex items-center gap-2 shrink-0">

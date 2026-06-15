@@ -1,11 +1,11 @@
 ---
-import Base from './Base.astro';
+import DocsLayout from './DocsLayout.astro';
 const { title, description } = Astro.props;
 ---
-<Base title={`${title} — pactify`} description={description}>
-  <main class="wrap doc" style="padding-top:32px;font-size:14px">
+<DocsLayout title={title} description={description}>
+  <div class="doc">
     <slot />
-  </main>
+  </div>
   <style is:global>
     .doc h1, .doc h2, .doc h3 { color: var(--bright); letter-spacing: -0.3px; }
     .doc h1 { font-size: 26px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
@@ -16,4 +16,4 @@ const { title, description } = Astro.props;
     .doc th, .doc td { border: 1px solid var(--line2); padding: 6px 10px; text-align: left; }
     .doc blockquote { border-left: 3px solid var(--line2); margin-left: 0; padding-left: 14px; color: var(--dim); }
   </style>
-</Base>
+</DocsLayout>

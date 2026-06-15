@@ -1,0 +1,93 @@
+---
+import Base from './Base.astro';
+import { docsNav } from '../lib/docsNav';
+
+// DocsLayout — the docs shell: a sticky left directory (the TOC, modeled on
+// Dify's sidebar) and a right content column. Markdown pages wrap this via
+// Doc.astro (which adds prose styles); the hand-authored Introduction page uses
+// it directly. Active state: the current page's items highlight by pathname; a
+// scrollspy script promotes the in-view section among same-page anchor links.
+const { title, description } = Astro.props;
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+
+function itemPath(href: string): string {
+  const p = href.split('#')[0].replace(/\/$/, '');
+  return p === '' ? '/' : p;
+}
+function isExternal(href: string): boolean {
+  return href.startsWith('http');
+}
+---
+<Base title={`${title} — pactify`} description={description}>
+  <div class="docs">
+    <aside class="docs-aside" aria-label="Documentation">
+      <nav class="docs-nav">
+        {docsNav.map((group) => (
+          <div class="docs-group">
+            <div class="docs-group-h">{group.title}</div>
+            {group.items.map((it) => (
+              <a
+                href={it.href}
+                class="docs-link"
+                data-spy={!isExternal(it.href) && it.href.includes('#') && itemPath(it.href) === path ? it.href.split('#')[1] : null}
+                aria-current={!it.href.includes('#') && itemPath(it.href) === path ? 'page' : null}
+              >
+                {it.label}
+                {isExternal(it.href) && <span class="docs-ext" aria-hidden="true">↗</span>}
+              </a>
+            ))}
+          </div>
+        ))}
+      </nav>
+    </aside>
+    <main class="docs-main">
+      <slot />
+    </main>
+  </div>
+
+  <style>
+    .docs { max-width: 1100px; margin: 0 auto; padding: 0 20px; display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 40px; align-items: start; }
+    .docs-aside { position: sticky; top: 18px; align-self: start; padding-top: 26px; max-height: calc(100vh - 36px); overflow-y: auto; }
+    .docs-nav { display: flex; flex-direction: column; gap: 20px; }
+    .docs-group-h { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dimmer); margin-bottom: 8px; }
+    .docs-link { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--dim); padding: 4px 10px; border-radius: 6px; border-left: 2px solid transparent; line-height: 1.5; }
+    .docs-link:hover { color: var(--fg); text-decoration: none; background: var(--bg2); }
+    .docs-link[aria-current] { color: var(--bright); background: var(--bg2); border-left-color: var(--green); }
+    .docs-ext { font-size: 9px; color: var(--dimmer); }
+    .docs-main { min-width: 0; padding-top: 28px; padding-bottom: 8px; font-size: 14px; }
+
+    @media (max-width: 820px) {
+      .docs { grid-template-columns: 1fr; gap: 0; }
+      .docs-aside { position: static; max-height: none; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 8px; }
+      .docs-nav { flex-direction: row; flex-wrap: wrap; gap: 14px 22px; }
+    }
+  </style>
+
+  <script>
+    // Scrollspy: promote the sidebar link whose section is currently in view.
+    const spies = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[data-spy]'));
+    if (spies.length) {
+      const byId = new Map(spies.map((a) => [a.dataset.spy!, a]));
+      const targets = spies
+        .map((a) => document.getElementById(a.dataset.spy!))
+        .filter((el): el is HTMLElement => el !== null);
+      let current: string | null = null;
+      const setActive = (id: string | null) => {
+        if (id === current) return;
+        current = id;
+        spies.forEach((a) => a.removeAttribute('aria-current'));
+        if (id && byId.has(id)) byId.get(id)!.setAttribute('aria-current', 'true');
+      };
+      const obs = new IntersectionObserver(
+        (entries) => {
+          const visible = entries
+            .filter((e) => e.isIntersecting)
+            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          if (visible.length) setActive(visible[0].target.id);
+        },
+        { rootMargin: '-12% 0px -70% 0px', threshold: 0 },
+      );
+      targets.forEach((t) => obs.observe(t));
+    }
+  </script>
+</Base>

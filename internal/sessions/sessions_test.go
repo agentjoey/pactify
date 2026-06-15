@@ -11,7 +11,7 @@ func TestSupported(t *testing.T) {
 		want bool
 	}{
 		{"gemini-cli", true},
-		{"opencode", false},
+		{"opencode", true},
 		{"nope", false},
 	}
 	for _, tt := range tests {
@@ -73,11 +73,11 @@ func TestList(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "opencode unsupported",
+			name:    "opencode lists with session list",
 			kind:    "opencode",
-			fake:    &fakeRun{},
-			wantErr: true,
-			wantMsg: `sessions: listing not supported for kind "opencode"`,
+			fake:    &fakeRun{out: "Session ID  Title\nses_1  pact:dev"},
+			wantOut: "Session ID  Title\nses_1  pact:dev",
+			wantErr: false,
 		},
 		{
 			name:    "nope unsupported",
@@ -119,7 +119,16 @@ func TestList(t *testing.T) {
 					t.Errorf("Run args = %v, want %v", call.args, wantArgs)
 				}
 			}
-			if tt.kind == "opencode" || tt.kind == "nope" {
+			if tt.kind == "opencode" {
+				if len(tt.fake.calls) != 1 {
+					t.Fatalf("expected 1 Run call, got %d", len(tt.fake.calls))
+				}
+				call := tt.fake.calls[0]
+				if call.name != "opencode" || !equalSlice(call.args, []string{"session", "list"}) {
+					t.Errorf("Run = %q %v, want opencode [session list]", call.name, call.args)
+				}
+			}
+			if tt.kind == "nope" {
 				if len(tt.fake.calls) != 0 {
 					t.Errorf("expected no Run calls for unsupported kind, got %d", len(tt.fake.calls))
 				}
@@ -256,6 +265,80 @@ func TestPruneWithKind(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "prune failed") {
 			t.Errorf("error = %q, want containing %q", err.Error(), "prune failed")
+		}
+	})
+}
+
+func TestCanCleanup(t *testing.T) {
+	if !CanCleanup("opencode") {
+		t.Error("opencode has list+delete → CanCleanup should be true")
+	}
+	if CanCleanup("gemini-cli") {
+		t.Error("gemini-cli has no delete-by-id → CanCleanup should be false")
+	}
+	if CanCleanup("nope") {
+		t.Error("unknown kind → CanCleanup should be false")
+	}
+}
+
+func TestCleanupByTitle(t *testing.T) {
+	t.Run("opencode deletes only rows matching the tag", func(t *testing.T) {
+		list := "Session ID   Title         Updated\n" +
+			"────────────────────────────────\n" +
+			"ses_aaa111  pact:dev      11:00\n" +
+			"ses_bbb222  someone-else  10:00\n" +
+			"ses_ccc333  pact:dev      09:00\n"
+		fake := &fakeRun{out: list}
+		m := Manager{Run: fake.Run}
+		deleted, skipped, err := m.CleanupByTitle("opencode", SessionTag("dev"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if skipped {
+			t.Fatal("expected skipped=false for opencode")
+		}
+		if !equalSlice(deleted, []string{"ses_aaa111", "ses_ccc333"}) {
+			t.Fatalf("deleted = %v, want [ses_aaa111 ses_ccc333]", deleted)
+		}
+		// 1 list + 2 deletes, in order.
+		if len(fake.calls) != 3 {
+			t.Fatalf("expected 3 Run calls, got %d", len(fake.calls))
+		}
+		if fake.calls[0].name != "opencode" || !equalSlice(fake.calls[0].args, []string{"session", "list"}) {
+			t.Errorf("list call = %q %v", fake.calls[0].name, fake.calls[0].args)
+		}
+		if !equalSlice(fake.calls[1].args, []string{"session", "delete", "ses_aaa111"}) {
+			t.Errorf("delete 1 args = %v", fake.calls[1].args)
+		}
+		if !equalSlice(fake.calls[2].args, []string{"session", "delete", "ses_ccc333"}) {
+			t.Errorf("delete 2 args = %v", fake.calls[2].args)
+		}
+	})
+
+	t.Run("unsupported kind → skipped no-op", func(t *testing.T) {
+		fake := &fakeRun{}
+		m := Manager{Run: fake.Run}
+		deleted, skipped, err := m.CleanupByTitle("claude-code", SessionTag("dev"))
+		if err != nil || !skipped || deleted != nil {
+			t.Fatalf("want nil,true,nil; got %v,%v,%v", deleted, skipped, err)
+		}
+		if len(fake.calls) != 0 {
+			t.Errorf("expected no Run calls, got %d", len(fake.calls))
+		}
+	})
+
+	t.Run("no matching tag → only the list call, no deletes", func(t *testing.T) {
+		fake := &fakeRun{out: "ses_zzz999  other-title  10:00\n"}
+		m := Manager{Run: fake.Run}
+		deleted, _, err := m.CleanupByTitle("opencode", SessionTag("dev"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(deleted) != 0 {
+			t.Errorf("expected 0 deletes, got %v", deleted)
+		}
+		if len(fake.calls) != 1 {
+			t.Errorf("expected only the list call, got %d calls", len(fake.calls))
 		}
 	})
 }

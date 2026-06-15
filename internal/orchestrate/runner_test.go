@@ -3,6 +3,7 @@ package orchestrate
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -122,6 +123,25 @@ func TestGLMEnv(t *testing.T) {
 	glmToken = func() (string, error) { return "", errors.New("not in Keychain") }
 	if _, err := glmEnv("claude", "glm-4.6"); err == nil {
 		t.Fatal("expected error when GLM token missing")
+	}
+}
+
+func TestTagOpencodeSession(t *testing.T) {
+	// opencode run args get a per-seat --title inserted right after "run".
+	got := tagOpencodeSession("opencode", "dev", []string{"run", "-m", "deepseek/deepseek-v4-pro", "do the thing"})
+	want := []string{"run", "--title", "pact:dev", "-m", "deepseek/deepseek-v4-pro", "do the thing"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("opencode tag = %v, want %v", got, want)
+	}
+	// Non-opencode commands are untouched.
+	claude := []string{"-p", "--model", "claude-opus-4-8", "brief"}
+	if got := tagOpencodeSession("claude", "dev", claude); !reflect.DeepEqual(got, claude) {
+		t.Errorf("claude args mutated: %v", got)
+	}
+	// Defensive: opencode args not starting with "run" are left alone.
+	odd := []string{"models"}
+	if got := tagOpencodeSession("opencode", "dev", odd); !reflect.DeepEqual(got, odd) {
+		t.Errorf("non-run opencode args mutated: %v", got)
 	}
 }
 

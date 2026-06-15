@@ -28,16 +28,28 @@ func TestHandleSessionsList(t *testing.T) {
 		t.Fatalf("resp = %+v, want supported with output", resp)
 	}
 
-	// opencode has no session command → supported=false, no output, no run.
+	// claude-code has no verified session command → supported=false, no output, no run.
 	sessionRunFn = func(_ string, _ ...string) (string, error) { t.Fatal("runner should not be called"); return "", nil }
-	r2 := httptest.NewRequest("GET", "/api/agents/opencode/sessions", nil)
-	r2.SetPathValue("kind", "opencode")
+	r2 := httptest.NewRequest("GET", "/api/agents/claude-code/sessions", nil)
+	r2.SetPathValue("kind", "claude-code")
 	w2 := httptest.NewRecorder()
 	s.handleSessionsList(w2, r2)
 	var resp2 sessionsListResp
 	json.NewDecoder(w2.Body).Decode(&resp2)
 	if resp2.Supported {
-		t.Fatalf("opencode should be unsupported: %+v", resp2)
+		t.Fatalf("claude-code should be unsupported: %+v", resp2)
+	}
+
+	// opencode IS supported now (session list + delete-by-id) → output flows through.
+	sessionRunFn = func(_ string, _ ...string) (string, error) { return "ses_1  pact:dev\n", nil }
+	r3 := httptest.NewRequest("GET", "/api/agents/opencode/sessions", nil)
+	r3.SetPathValue("kind", "opencode")
+	w3 := httptest.NewRecorder()
+	s.handleSessionsList(w3, r3)
+	var resp3 sessionsListResp
+	json.NewDecoder(w3.Body).Decode(&resp3)
+	if !resp3.Supported || resp3.Output != "ses_1  pact:dev\n" {
+		t.Fatalf("opencode resp = %+v, want supported with output", resp3)
 	}
 }
 

@@ -37,5 +37,18 @@ func (opts Options) withDefaults() Options {
 	if opts.Notify == nil {
 		opts.Notify = StdoutNotifier{}
 	}
+	// Wire the real session-management runner only when cleanup is enabled, so the
+	// loop never spawns a session CLI unless the operator asked for it (and tests,
+	// which leave both unset, stay hermetic).
+	if opts.CleanupSessions && opts.SessionRun == nil {
+		opts.SessionRun = execSessionRun
+	}
 	return opts
+}
+
+// execSessionRun is the production session-CLI runner: spawn the binary, return
+// combined output. Used by accept-time session cleanup.
+func execSessionRun(name string, args ...string) (string, error) {
+	out, err := exec.Command(name, args...).CombinedOutput()
+	return string(out), err
 }

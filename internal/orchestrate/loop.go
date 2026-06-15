@@ -12,6 +12,7 @@ import (
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
+	"github.com/agentjoey/pactify/internal/sessions"
 )
 
 // Run is the package entry point: it drives opts to completion (or pause). See
@@ -51,6 +52,14 @@ type Options struct {
 	// a soft failure (retry the worker). 0 = no idle watchdog. Plumbed into the
 	// default CmdRunner; ignored when a custom Run is injected (tests).
 	IdleTimeout time.Duration
+	// SessionRun is the injected runner for agent session-management CLIs (close a
+	// finished task's sessions). nil disables session cleanup entirely — the safe
+	// default for tests (no CLI spawn). withDefaults wires the real exec runner only
+	// when CleanupSessions is set, so cleanup never runs unless explicitly enabled.
+	SessionRun sessions.Runner
+	// CleanupSessions enables closing an agent's sessions once its task is accepted
+	// (opencode-only today; see internal/sessions). Off → sessions are kept.
+	CleanupSessions bool
 }
 
 // launchAgent runs one agent under an optional per-run timeout. The timeout is a
@@ -242,10 +251,42 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 		h.Fails[act.Task] = 0 // the review ran (progress): clear the consecutive count
 	case ok && t.Status == "accepted":
 		h.Fails[act.Task] = 0
+		// Task is done: close the owner's & reviewer's sessions for it (opencode-
+		// only today). Best-effort — a cleanup failure never blocks the loop.
+		opts.cleanupTaskSessions(task)
 	default:
 		h.Fails[act.Task]++
 	}
 	return nil
+}
+
+// cleanupTaskSessions closes the sessions an accepted task's agents created,
+// matched by the per-seat title the runner stamped (sessions.SessionTag). No-op
+// when cleanup is disabled (SessionRun nil) or the seat's kind has no verified
+// list+delete support. Reports what it closed via Notify; failures are logged,
+// never fatal.
+func (opts Options) cleanupTaskSessions(task projection.Task) {
+	if opts.SessionRun == nil {
+		return
+	}
+	seen := map[string]bool{}
+	for _, seat := range []string{task.Owner, task.Reviewer} {
+		if seat == "" || seen[seat] {
+			continue
+		}
+		seen[seat] = true
+		kind := opts.kind(seat)
+		if !sessions.CanCleanup(kind) {
+			continue
+		}
+		ids, _, err := (sessions.Manager{Run: opts.SessionRun}).CleanupByTitle(kind, sessions.SessionTag(seat))
+		switch {
+		case err != nil && opts.Notify != nil:
+			opts.Notify.Notify(fmt.Sprintf("session cleanup: seat %s (%s): %v", seat, kind, err))
+		case len(ids) > 0 && opts.Notify != nil:
+			opts.Notify.Notify(fmt.Sprintf("closed %d %s session(s) for seat %s after task %s accepted", len(ids), kind, seat, task.ID))
+		}
+	}
 }
 
 // merge runs the independent hard gate over the feature's tasks, then merges on

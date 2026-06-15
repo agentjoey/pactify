@@ -7,7 +7,8 @@ import { Alert } from "./ui/Alert";
 import { EmptyState } from "./ui/EmptyState";
 import { Spinner } from "./ui/Spinner";
 import { ConfigSection } from "./ui/ConfigSection";
-import { Icon, ICON_NAMES } from "../lib/icons";
+import { Icon } from "../lib/icons";
+import { AgentLogo } from "../lib/agentLogos";
 
 // Setup (#1) — the entry-point view bridging "I registered my agents" to "this
 // project can do work". Reads the proposed seat roster from the machine's
@@ -36,17 +37,6 @@ function entryFor(kind: string): string {
   if (kind.startsWith("claude")) return "CLAUDE.md";
   if (kind.startsWith("gemini")) return "GEMINI.md";
   return "AGENTS.md";
-}
-
-// kindIcon maps a binding kind onto the icon-library concept (kind-*), falling
-// back by family then to the generic robot.
-function kindIcon(kind: string): string {
-  if (ICON_NAMES.includes(`kind-${kind}`)) return `kind-${kind}`;
-  if (kind.startsWith("claude")) return "kind-claude-code";
-  if (kind.startsWith("gemini")) return "kind-gemini-cli";
-  if (kind.startsWith("codex")) return "kind-codex-cli";
-  if (kind.startsWith("cursor")) return "kind-cursor-cli";
-  return "kind-agent";
 }
 
 // validate mirrors internal/wizard.Validate: a runnable roster needs an
@@ -156,10 +146,8 @@ export function Setup() {
                 style={{ animationDelay: `${i * 40}ms` }}
                 className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 shadow-[var(--shadow-card)] hover-lift fade-rise"
               >
-                {/* kind icon tile — identifies the agent at a glance */}
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--color-bg-inset)]">
-                  <Icon name={kindIcon(b.kind)} size={18} />
-                </span>
+                {/* agent logo — identifies the agent kind at a glance */}
+                <AgentLogo kind={b.kind} size={32} />
                 <div className="flex min-w-0 flex-col">
                   <span className="mono text-[12px] font-[650] text-[var(--color-text-1)] leading-tight">{b.seat}</span>
                   <span className="text-[10.5px] text-[var(--color-text-3)] leading-tight">{b.kind}</span>

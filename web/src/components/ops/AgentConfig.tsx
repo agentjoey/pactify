@@ -6,6 +6,7 @@ import { Input } from "../ui/Input";
 import { Alert } from "../ui/Alert";
 import { EmptyState } from "../ui/EmptyState";
 import { Spinner } from "../ui/Spinner";
+import { AgentLogo } from "../../lib/agentLogos";
 
 // AgentConfig (#10 model / #9 permission posture / #4 scoped tools) — per
 // registered agent, edit the model pin and the permission posture orchestrate
@@ -104,6 +105,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 fade-rise"
     >
       <div className="flex items-center gap-2">
+        <AgentLogo kind={kind} size={24} />
         <span className="mono text-[12px] font-medium text-[var(--color-text-1)]">{kind}</span>
         {cfg && (
           <Badge color={cfg.drivable ? "role-dev" : "role-design"}>

@@ -3,6 +3,7 @@ import type { AgentRow } from "../lib/api";
 import { getAgents, registerAgent, unregisterAgent } from "../lib/api";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
+import { AgentLogo } from "../lib/agentLogos";
 
 export function Agents({ author, onChanged }: { author: boolean; onChanged: () => void }) {
   const [rows, setRows] = useState<AgentRow[]>([]);
@@ -64,6 +65,7 @@ export function Agents({ author, onChanged }: { author: boolean; onChanged: () =
             key={a.kind}
             className={`flex items-center gap-2 text-sm ${!a.installed ? "opacity-40" : ""}`}
           >
+            <AgentLogo kind={a.kind} size={22} />
             <span className="font-medium min-w-[80px]">{a.kind}</span>
             <Badge color={a.installed ? "success" : "warn"}>
               {a.installed ? "Installed" : "Not detected"}

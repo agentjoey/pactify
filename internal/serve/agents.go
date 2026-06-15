@@ -112,14 +112,15 @@ func (s *Server) handleAgentUnregister(w http.ResponseWriter, r *http.Request) {
 }
 
 type agentConfigDTO struct {
-	Kind         string   `json:"kind"`
-	Registered   bool     `json:"registered"`
-	Drivable     bool     `json:"drivable"`
-	Model        string   `json:"model"`
-	AllowedTools []string `json:"allowed_tools"`
-	Restricted   bool     `json:"restricted"`
-	EffModel     string   `json:"effective_model"`
-	EffScoped    bool     `json:"effective_scoped"`
+	Kind            string   `json:"kind"`
+	Registered      bool     `json:"registered"`
+	Drivable        bool     `json:"drivable"`
+	Model           string   `json:"model"`
+	AllowedTools    []string `json:"allowed_tools"`
+	Restricted      bool     `json:"restricted"`
+	EffModel        string   `json:"effective_model"`
+	EffScoped       bool     `json:"effective_scoped"`
+	CandidateModels []string `json:"candidate_models"`
 }
 
 func (s *Server) handleAgentConfigGet(w http.ResponseWriter, r *http.Request) {
@@ -137,6 +138,7 @@ func (s *Server) handleAgentConfigGet(w http.ResponseWriter, r *http.Request) {
 	dto := agentConfigDTO{
 		Kind: kind, Registered: reg.Has(kind), Drivable: agent.Drivable(kind),
 		Model: model, AllowedTools: tools, Restricted: restricted,
+		CandidateModels: agent.CandidateModels(kind),
 	}
 	if eff, ok := agentcfg.Resolve(kind); ok {
 		dto.EffModel, dto.EffScoped = eff.Model, eff.Scoped
@@ -182,6 +184,7 @@ func (s *Server) handleAgentConfigSet(w http.ResponseWriter, r *http.Request) {
 	dto := agentConfigDTO{
 		Kind: kind, Registered: true, Drivable: agent.Drivable(kind),
 		Model: model, AllowedTools: tools, Restricted: restricted,
+		CandidateModels: agent.CandidateModels(kind),
 	}
 	if eff, ok := agentcfg.Resolve(kind); ok {
 		dto.EffModel, dto.EffScoped = eff.Model, eff.Scoped

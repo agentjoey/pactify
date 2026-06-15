@@ -3,6 +3,7 @@ import { getAgents, getAgentConfig, setAgentConfig, type AgentConfig as Config }
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
+import { Select } from "../ui/Select";
 import { Alert } from "../ui/Alert";
 import { EmptyState } from "../ui/EmptyState";
 import { Spinner } from "../ui/Spinner";
@@ -64,12 +65,18 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState(false);
+  // customMode: the model dropdown's "custom…" branch is active — the loaded
+  // model isn't one of the curated candidates (or the user picked custom),
+  // so the free-text field is shown.
+  const [customMode, setCustomMode] = useState(false);
 
   function apply(c: Config) {
     setCfg(c);
     setModel(c.model);
     setRestricted(c.restricted);
     setTools((c.allowed_tools ?? []).join(", "));
+    const candidates = c.candidate_models ?? [];
+    setCustomMode(c.model !== "" && !candidates.includes(c.model));
   }
 
   useEffect(() => {
@@ -124,13 +131,51 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       {cfg && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <label className="text-[10.5px] text-[var(--color-text-3)]">model</label>
-          <Input
-            data-testid={`model-${kind}`}
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="default"
-            className="w-52 text-[11px]"
-          />
+          {(cfg.candidate_models ?? []).length > 0 ? (
+            <>
+              {/* curated dropdown — "default" (empty = kind's own default),
+                  the candidates, then a "custom…" escape hatch to free-text. */}
+              <Select
+                data-testid={`model-select-${kind}`}
+                value={customMode ? "__custom__" : model}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "__custom__") {
+                    setCustomMode(true);
+                  } else {
+                    setCustomMode(false);
+                    setModel(v);
+                  }
+                }}
+                className="w-52 text-[11px]"
+              >
+                <option value="">default</option>
+                {(cfg.candidate_models ?? []).map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+                <option value="__custom__">custom…</option>
+              </Select>
+              {customMode && (
+                <Input
+                  data-testid={`model-${kind}`}
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="model id"
+                  className="w-52 text-[11px]"
+                />
+              )}
+            </>
+          ) : (
+            <Input
+              data-testid={`model-${kind}`}
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="default"
+              className="w-52 text-[11px]"
+            />
+          )}
           <button
             type="button"
             data-testid={`scoped-${kind}`}

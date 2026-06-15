@@ -71,6 +71,49 @@ describe("AgentConfig panel", () => {
     });
   });
 
+  it("renders a model dropdown from candidate_models and saves the picked model", async () => {
+    getAgents.mockResolvedValue([{ kind: "claude-code", installed: true, detail: "", registered: true }]);
+    getAgentConfig.mockResolvedValue(
+      cfg({
+        kind: "claude-code",
+        model: "",
+        effective_model: "claude-opus-4-8",
+        candidate_models: ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"],
+      }),
+    );
+    setAgentConfig.mockResolvedValue(
+      cfg({ kind: "claude-code", model: "claude-sonnet-4-6", candidate_models: ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"] }),
+    );
+    render(<AgentConfig />);
+
+    // dropdown is shown (not the free-text field) when candidates exist.
+    await waitFor(() => expect(screen.getByTestId("model-select-claude-code")).toBeTruthy());
+    expect(screen.queryByTestId("model-claude-code")).toBeNull();
+    expect(screen.getByRole("option", { name: "claude-sonnet-4-6" })).toBeTruthy();
+
+    fireEvent.change(screen.getByTestId("model-select-claude-code"), { target: { value: "claude-sonnet-4-6" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(setAgentConfig).toHaveBeenCalledWith("claude-code", {
+        model: "claude-sonnet-4-6",
+        restricted: false,
+        allowed_tools: [],
+      });
+    });
+  });
+
+  it("reveals a free-text field when the model dropdown switches to custom…", async () => {
+    getAgents.mockResolvedValue([{ kind: "claude-code", installed: true, detail: "", registered: true }]);
+    getAgentConfig.mockResolvedValue(
+      cfg({ kind: "claude-code", model: "", candidate_models: ["claude-opus-4-8", "claude-sonnet-4-6"] }),
+    );
+    render(<AgentConfig />);
+    await waitFor(() => expect(screen.getByTestId("model-select-claude-code")).toBeTruthy());
+    expect(screen.queryByTestId("model-claude-code")).toBeNull();
+    fireEvent.change(screen.getByTestId("model-select-claude-code"), { target: { value: "__custom__" } });
+    await waitFor(() => expect(screen.getByTestId("model-claude-code")).toBeTruthy());
+  });
+
   it("shows an empty state when no agents are registered", async () => {
     getAgents.mockResolvedValue([{ kind: "opencode", installed: true, detail: "", registered: false }]);
     render(<AgentConfig />);

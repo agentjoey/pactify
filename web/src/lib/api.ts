@@ -190,6 +190,9 @@ export interface AgentConfig {
   restricted: boolean;
   effective_model: string;
   effective_scoped: boolean;
+  // Curated model IDs for this kind, driving the model dropdown. Null/empty →
+  // the UI falls back to a free-text model field. Always offers a custom escape.
+  candidate_models: string[] | null;
 }
 
 export const getAgentConfig = (kind: string) =>

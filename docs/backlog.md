@@ -100,7 +100,8 @@
 - **横切设计**：有副作用 HTTP 操作的**确认弹窗 + acting-seat 校验 + 安全/沙箱** 规范，先定再实现。
 - **[UI] agent logo 统一接入（用于 agent 卡片）**：收集各 agent 品牌 logo（claude-code/opencode/gemini/codex/cursor/kimi/amp/goose/aider/…），**统一风格处理**（同一描边/留白/圆角画框、duotone 或单色化以适配浅色主题、统一尺寸），做成 `kind → logo` 资产/组件，替换 agent 卡片现用的 Phosphor 概念图标（`kind-*`）。来源：2026-06-14 用户。关联元素库 Icon library。✅ 已做（2026-06-15，commit 8b467a5）：AgentLogo 组件已接进 Setup / Agents 引导条 / Ops AgentConfig 真卡片。
 
-- **[UI] Settings 视图 agent 管理三件套**（来源：2026-06-15 用户）：
-  1. **一键自动扫描本地 agent**：扫描机器上已安装、且在 Pactify 支持列表内的 agent（已有 `getAgents` 的 installed 检测，封一个「Scan」按钮一键刷新+批量呈现可注册项）。
-  2. **手动添加 agent**：支持手动登记一个 agent（kind 选择/自定义入口），覆盖自动扫描漏检或自定义 binary 路径的情况。
-  3. **已添加 agent 的模型下拉可选**：AgentConfig 的 model 字段从纯文本输入升级为「下拉可选 + 可自定义」——按 kind 给出该 agent 已知可用模型列表（claude-opus-4-8/… · gemini-3.1-pro · deepseek-v4-pro …）做下拉，仍保留手填。需后端给每 kind 暴露候选模型清单（或前端维护静态表，先静态后接口）。
+- **[UI] Settings 视图 agent 管理三件套**（来源：2026-06-15 用户）✅ 已做（2026-06-15，commit af9fe8b）：
+  1. ✅ **一键自动扫描**：Ops/Settings 新增 `AgentRoster` 面板，Scan 按钮重拉实时探测（`GET /api/agents` 每次 `agent.Scan()` 重探），一键 Register 已装未注册的 agent。
+  2. ✅ **手动添加（已知 kind）**：「Add manually」展开列"支持但未检测到"的 kind，Register anyway 登记。**自定义 binary 路径延后** → 后端 register 端点暂不收 path。
+  3. ✅ **模型下拉**：新增 `agent.CandidateModels(kind)`（每 RunnerProfile 一份候选），经 config DTO 的 `candidate_models` 暴露；model 字段升级为下拉（default · 候选 · custom…），无候选回退纯文本（codex-cli 不 pin 默认→纯文本）。
+  - **遗留后端 backlog**：① register 收自定义 binary 路径（启用真·自定义手动添加 + scan 探测自定义安装）；② 候选模型清单做大/可配（当前 opencode/kimi 各仅默认 1 项）。

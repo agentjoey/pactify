@@ -13,14 +13,29 @@ import (
 	"github.com/agentjoey/pactify/internal/secret"
 )
 
-// glmBaseURL is the Z.ai (智谱 GLM) Anthropic-compatible endpoint. A claude-code
-// seat whose effective model is a `glm-*` model runs against this endpoint with
-// a Keychain-sourced token (GLM is not a separate kind — it's claude-code pointed
-// at Z.ai; see docs/agent-integration-candidates.md).
-const glmBaseURL = "https://api.z.ai/api/anthropic"
+// glmDefaultBaseURL is the GLM Coding Plan's GLOBAL Anthropic-compatible endpoint.
+// The CHINA plan uses a different host (open.bigmodel.cn), so the endpoint is
+// overridable via the Keychain (see glmBaseURL). A claude-code seat whose
+// effective model is a `glm-*` model runs against this endpoint with a
+// Keychain-sourced token (GLM is not a separate kind — it's claude-code pointed
+// at the GLM endpoint; see docs/agent-integration-candidates.md).
+const glmDefaultBaseURL = "https://api.z.ai/api/anthropic"
 
 // glmToken is overridable in tests; production reads the Keychain.
 var glmToken = secret.GLMToken
+
+// glmBaseURL resolves the GLM endpoint: a Keychain override (service "pactify",
+// account "glm-base-url") if set and non-empty — e.g. the china coding plan's
+// https://open.bigmodel.cn/api/anthropic — else the global default. Overridable
+// in tests. Never errors: a missing override silently falls back to the default.
+var glmBaseURL = func() string {
+	if v, err := secret.Keychain("pactify", "glm-base-url"); err == nil {
+		if v = strings.TrimSpace(v); v != "" {
+			return v
+		}
+	}
+	return glmDefaultBaseURL
+}
 
 // briefingPlaceholder is the literal token the resolved Args carry where the real
 // briefing text must be substituted (e.g. opencode → ["run","-m",model,"{briefing}"]).
@@ -119,5 +134,5 @@ func glmEnv(command, model string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GLM model %q on claude-code needs a Z.ai token — %w", model, err)
 	}
-	return []string{"ANTHROPIC_BASE_URL=" + glmBaseURL, "ANTHROPIC_AUTH_TOKEN=" + tok}, nil
+	return []string{"ANTHROPIC_BASE_URL=" + glmBaseURL(), "ANTHROPIC_AUTH_TOKEN=" + tok}, nil
 }

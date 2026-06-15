@@ -83,8 +83,11 @@ func TestCmdRunner_ClaudeCode(t *testing.T) {
 }
 
 func TestGLMEnv(t *testing.T) {
-	orig := glmToken
-	t.Cleanup(func() { glmToken = orig })
+	origTok, origURL := glmToken, glmBaseURL
+	t.Cleanup(func() { glmToken, glmBaseURL = origTok, origURL })
+	// Pin the endpoint to the global default for the base cases (so the test
+	// never reads the host's real Keychain override).
+	glmBaseURL = func() string { return glmDefaultBaseURL }
 
 	// non-GLM command/model → no GLM env, token fn never consulted.
 	glmToken = func() (string, error) { t.Fatal("glmToken should not be called"); return "", nil }
@@ -103,6 +106,16 @@ func TestGLMEnv(t *testing.T) {
 	}
 	if !hasEnv(env, "ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic") || !hasEnv(env, "ANTHROPIC_AUTH_TOKEN=zai-secret") {
 		t.Fatalf("glm env = %v, want base URL + token", env)
+	}
+
+	// Keychain endpoint override (china coding plan) flows into the env.
+	glmBaseURL = func() string { return "https://open.bigmodel.cn/api/anthropic" }
+	env, err = glmEnv("claude", "glm-4.6")
+	if err != nil {
+		t.Fatalf("glm claude (china): %v", err)
+	}
+	if !hasEnv(env, "ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic") {
+		t.Fatalf("china glm env = %v, want open.bigmodel.cn base URL", env)
 	}
 
 	// GLM seat but missing token → actionable error.

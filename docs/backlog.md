@@ -89,6 +89,9 @@
 - **协议层扩展方向**：若 Pactify 自身说 ACP（Agent Client Protocol），Zed/JetBrains/Kimi 可 host Pactify 驱动的 agent——单列调研。
 - **配套**：每个新 kind 接入后，`agent config`（model/权限姿态）即时可用；Codex 的 `--sandbox` 分级提示 PermPosture 未来可加"sandbox 级别"维度。
 
+## 自定义 agent 接入标准 API（2026-06-16 用户，待具体讨论）
+- **设计一套标准 API/契约，让用户自定义 agent 可接入**：当前接入新 agent 需在 `internal/agent` 硬编码 spec + RunnerProfile（kind/entry/MCP format/runner argv/权限姿态/候选模型）。候选 = 把这套抽象成**用户可声明的契约**（如一个 `agent manifest` 文件：binary、headless argv 模板、entry 文件、MCP 配置形态、权限 flag、候选模型），让用户无需改 Go 源码即可接入自有/小众 agent。关联：现有 RunnerProfile/spec/CandidateModels、agent-integration-candidates.md（13 agent 调研）、ACP 协议方向。回头细化范围与 schema 再开 spec。
+
 ## 剩余 UI（2026-06-14 暂停，待后续）—— 详见 docs/roadmap-next.md + ui-design-spec.md
 已做：Setup(#1)、Recipes(#11)、Plan 只读(#7)、Live 并行聚合(#3)、Agent Config(#10/#9/#4)、Ops polish(#12 部分)。
 **剩余（都是有副作用 HTTP 操作，需先设计确认/安全 UX）**：

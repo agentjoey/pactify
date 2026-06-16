@@ -165,9 +165,15 @@ env := []string{
 }
 ```
 - `runner.Run` currently takes `(seatID, kind, briefing, repoDir)`; it has no task
-  id. **Thread the task id into the launch** (either widen the Runner seam or pass
-  via a small launch-context struct). This is the one cross-cutting change to the
-  orchestrate runner — §16 notes the interface impact.
+  id. **Decided: replace the loose params with a `LaunchContext` struct** —
+  `Run(ctx, LaunchContext{Seat, Kind, Task, Project, Briefing, RepoDir}) error`.
+  Blast radius (measured): the `Runner` interface, `CmdRunner.Run`, the single
+  `launchAgent` helper + its two callers (runOwner/runReviewer already hold the
+  task), and 3 test fakes (`fakeRunner`/`crashRunner`/`parFakeRunner`); the
+  parallel path reuses `launchAgent` (no extra site). ~7 mechanical edits, no
+  protocol/behavior change beyond the new env vars (inert when no hook installed).
+  The struct (vs more positional params) avoids future signature churn when audit
+  correlation grows.
 - Manual runs (human invokes claude directly): env absent → `seat`/`task` empty,
   still recorded and correlated by `repo` + `session`.
 
@@ -327,11 +333,12 @@ Each phase ships independently green (go test; web gate for D).
 
 ---
 
-## Open questions for review
-- D2 store location: machine-level `~/.pactify/audit` (chosen) vs in-repo
-  `.pact/audit/` gitignored — confirm.
-- D3 scope: ship claude-code only in the first cut, or claude+opencode together?
-- §7 runner seam: widen `Runner.Run` signature to carry the task id, or pass a
-  small `LaunchContext{seat,task,project}` struct? (Prefer the struct — fewer
-  call-site churns, room for future fields.)
-- Dashboard lens (phase D): in scope for v1, or CLI-only first?
+## Resolved decisions (review closed 2026-06-16)
+- **D2 store location:** `~/.pactify/audit/<project>/YYYY-MM-DD.jsonl` (machine-
+  level). Audit is a **first-class product feature**, not an incidental log file.
+- **D3 v1 client scope:** **claude-code + opencode together** (both wired in v1).
+  codex fast-follow once its runner lands; gemini-cli deferred (no PreToolUse).
+- **§7 runner seam:** **`LaunchContext` struct** (see §7).
+- **Dashboard lens:** **in v1** — built as the last phase (D) so A/B/C ship first,
+  but it IS part of the v1 deliverable (the product surface for the audit log),
+  not a later follow-up.

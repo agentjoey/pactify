@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/audit"
@@ -19,8 +20,80 @@ func newAuditCmd() *cobra.Command {
 		Use:   "audit",
 		Short: "permission audit log — capture, query, and manage per-seat tool-call records",
 	}
-	cmd.AddCommand(newAuditHookCmd(), newAuditLogCmd(), newAuditSummaryCmd(), newAuditPruneCmd())
+	cmd.AddCommand(newAuditHookCmd(), newAuditLogCmd(), newAuditSummaryCmd(), newAuditPruneCmd(),
+		newAuditInstallCmd(), newAuditUninstallCmd())
 	return cmd
+}
+
+func newAuditInstallCmd() *cobra.Command {
+	var claudeCode, opencode, detect bool
+	c := &cobra.Command{
+		Use:   "install [--claude-code] [--opencode] [--detect]",
+		Short: "wire the audit PreToolUse hook into a client's project settings (.claude/settings.json)",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			dir, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			out := cmd.OutOrStdout()
+			if detect {
+				for _, s := range audit.Detect(dir) {
+					mark := "—"
+					if s.Installed {
+						mark = "installed"
+					}
+					fmt.Fprintf(out, "%-12s %s\n", s.Kind, mark)
+				}
+				return nil
+			}
+			did := false
+			for kind, on := range map[string]bool{"claude-code": claudeCode, "opencode": opencode} {
+				if !on {
+					continue
+				}
+				if err := audit.Install(kind, dir); err != nil {
+					return err
+				}
+				fmt.Fprintf(out, "installed audit hook for %s (%s/.claude/settings.json)\n", kind, dir)
+				did = true
+			}
+			if !did {
+				return fmt.Errorf("specify a client: --claude-code and/or --opencode (or --detect)")
+			}
+			return nil
+		},
+	}
+	c.Flags().BoolVar(&claudeCode, "claude-code", false, "install the hook for Claude Code")
+	c.Flags().BoolVar(&opencode, "opencode", false, "install the hook for opencode")
+	c.Flags().BoolVar(&detect, "detect", false, "show per-client install status instead of installing")
+	return c
+}
+
+func newAuditUninstallCmd() *cobra.Command {
+	var claudeCode, opencode bool
+	c := &cobra.Command{
+		Use:   "uninstall [--claude-code] [--opencode]",
+		Short: "remove the audit PreToolUse hook from a client's project settings",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			dir, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			for kind, on := range map[string]bool{"claude-code": claudeCode, "opencode": opencode} {
+				if !on {
+					continue
+				}
+				if err := audit.Uninstall(kind, dir); err != nil {
+					return err
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "removed audit hook for %s\n", kind)
+			}
+			return nil
+		},
+	}
+	c.Flags().BoolVar(&claudeCode, "claude-code", false, "uninstall the hook for Claude Code")
+	c.Flags().BoolVar(&opencode, "opencode", false, "uninstall the hook for opencode")
+	return c
 }
 
 func newAuditLogCmd() *cobra.Command {

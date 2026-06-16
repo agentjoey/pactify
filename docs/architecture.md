@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Last updated: 2026-06-16 | Status: 协议 v1 冻结 · Go CLI + MCP + dashboard 已发布（v0.3.0）· orchestrate 自主驱动可用 · 主线另有未发布增量（cost/observability、session 清理升级、GLM 端点可配、Settings agent 管理）在 `feat-light-theme`
+> Last updated: 2026-06-16 | Status: **v0.4.0 已发布** — 协议 v1 冻结 · Go CLI + MCP + dashboard · orchestrate 自主驱动 + planner · 成本/可观测(D1) + 巡检(D2) · session 清理(opencode) · GLM 端点可配 · Settings agent 管理 · 浅色 dashboard · native audit layer(claude-code hook + opencode 插件) · pactify.dev 文档站。下方「增量子系统」段记录这些子系统的细节。
 
 ## Overview
 
@@ -302,7 +302,7 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 
 **UI polish（#12，部分）**：Spinner / Button-loading / Alert 原语 + 微交互（active-press / hover-lift / fade-rise，全 prefers-reduced-motion 兼容）+ RightRail 三动作 loading + Alert 错误。后续 UI 规划见 `docs/roadmap-next.md`。
 
-### 增量子系统（2026-06-14~15，未发布在 `feat-light-theme`）
+### 增量子系统（2026-06-14~16，v0.4.0）
 
 **成本 / 可观测 D1（`internal/stats` + `internal/diffstat` + `internal/tokens`）**：per-task / per-agent 的工时、代码量、token 统计，纯派生 + 真实数据。
 - `stats.Compute(events, now)` 从 log 时间戳算每任务/座席工作时长（pure derived）；`WithLOC` 叠加代码量、`WithTokens` 叠加 token。
@@ -324,3 +324,10 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 **dashboard 浅色化 + 信号语言（web/，未发布）**：light theme token 体系；office「Activity / Cost」镜头切换；**蚂蚁运动语言**（in_progress 爬行 / awaiting 绕行 / changes 顿挫 + status-colored 脉冲 + dep 边行进蚁）；RightRail 改 Dify 式浮层圆角卡。Canvas 合并门 = vitest + Playwright e2e 双绿（工艺规约见 CLAUDE.md）。
 
 **pactify.dev 文档站外壳（`site/`，已上线生产）**：Astro 站新增 `DocsLayout`（左目录 `docsNav` + 右内容，scrollspy active），`/introduction` 重做为文档落地页，`/protocol`·`/onboarding` 共用同一外壳。
+
+**native audit layer（`internal/audit` + serve + web，spec `docs/superpowers/specs/2026-06-16-native-audit-layer-design.md`）**：本地优先的工具调用权限审计。
+- **捕获**：`pactify audit hook --kind <kind>` 读客户端 PreToolUse JSON（stdin）→ `FromHook` 归一（per-kind tool 映射 + 脱敏）→ 追加一行 JSONL 到 `~/.pactify/audit/<project>/<date>.jsonl`；log-only（恒 allow，永不阻断 agent）。治理(deny/ask)/预设是同一条缝上的 P2。
+- **归属**：orchestrate runner（`LaunchContext`）把 `PACT_AGENT_ID/PACT_TASK_ID/PACT_PROJECT` 注入 agent env，hook 读出 → 每条记录带座席/任务/项目。
+- **客户端接入**（实测）：claude-code 用命令式 PreToolUse hook（`.claude/settings.json`，`audit install --claude-code`）；opencode 无命令 hook → JS 插件 `.opencode/plugin/pact-audit.ts`（`tool.execute.before` → shell out hook，`audit install --opencode`，真 run 端到端验证）。
+- **读取**：CLI `audit log/summary/prune` + serve `GET /api/projects/{id}/audit` + dashboard RightRail 的 Audit 镜头（紧挨 D1 Cost）。
+- **门控**：`Options.SessionRun` 式注入，测试不 spawn CLI。脱敏：summary 短截断 + 掩 `Bearer/sk-/token` 等。

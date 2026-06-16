@@ -120,3 +120,6 @@
 **实测结论**：opencode 无命令式 PreToolUse hook，工具拦截唯一入口是 **JS 插件**（`@opencode-ai/plugin` 的 `tool.execute.before(input:{tool,sessionID}, output:{args})`），自动从 `.opencode/plugin/*.ts` 加载。
 **已做**：`pactify audit install --opencode` 写 `.opencode/plugin/pact-audit.ts`——其 `tool.execute.before` 把 opencode 工具调用（实测 `tool="write" args.filePath` / bash `args.command`）翻成 claude-style JSON 喂 `pactify audit hook --kind opencode`，best-effort 不阻断工具。**真 opencode run 端到端验证**：write 调用被捕获进审计日志、归属正确、文件照写。Detect 按插件文件在否报告；Uninstall 删文件。
 **遗留**：opencode 的 MCP 工具名映射（当前只接 bash/write/edit/read/patch）；codex hook 形态待查。
+
+## CI: 升级 GitHub Actions 到 Node 24（2026-06-16 发布时告警）
+v0.4.0 发布与 CI run 均报：`actions/checkout@v4`、`actions/setup-node@v4`、`actions/setup-go@v5`、`goreleaser/goreleaser-action@v6` 跑在 **Node.js 20**，GitHub 自 2026-06-16 起强制 Node 24、9-16 移除 Node 20。非阻断，但需升级这些 action 到支持 Node 24 的版本（或暂时 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`）。改 `.github/workflows/ci.yml` + `release.yml`。

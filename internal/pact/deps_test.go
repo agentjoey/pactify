@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/pact"
 )
 
@@ -120,6 +121,27 @@ func TestJoinGateBlockedByUnacceptedDep(t *testing.T) {
 	// Now w2 join succeeds.
 	if err := w2.Join("w2", "worker"); err != nil {
 		t.Fatalf("w2 join after T1 accepted must succeed, got %v", err)
+	}
+}
+
+// Regression: one seat owning a runnable task AND a future dep-blocked task must
+// still be able to join (the old gate failed the whole join on the blocked task,
+// so the feature branch was never created).
+func TestJoinGateRunnableTaskNotStrandedByFutureDep(t *testing.T) {
+	repo, orch := depsRepo(t)
+	// w owns BOTH T1 (no deps, runnable) and T2 (deps[T1], blocked).
+	if err := orch.Assign("T1", "F", "feat/x", "w", "rev", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := orch.Assign("T2", "F", "feat/x", "w", "rev", "", []string{"T1"}); err != nil {
+		t.Fatal(err)
+	}
+	w := pact.At(repo).As("w")
+	if err := w.Join("w", "worker"); err != nil {
+		t.Fatalf("join must succeed when a runnable task exists, got %v", err)
+	}
+	if cur, _ := gitx.CurrentBranch(repo); cur != "feat/x" {
+		t.Fatalf("feature branch should be checked out after join, on %q", cur)
 	}
 }
 

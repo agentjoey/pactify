@@ -110,21 +110,43 @@ func checkDeps(st projection.State, taskID, feature string, deps []string) error
 	return nil
 }
 
-// checkJoinGate blocks a seat's join while any task it owns has a dep that has
-// not reached `accepted`. Task-level (not a third global rule).
+// checkJoinGate blocks a seat's join ONLY when it has startable work that is all
+// dep-blocked — i.e. nothing it could legitimately begin yet. A seat with at least
+// one runnable task may join; a future task's unmet dep must not strand a ready
+// one (the old gate failed the whole join, leaving the feature branch uncreated).
+// The dep gate is then enforced when each task is actually started (orchestrate's
+// nextAction checks depsSatisfied), not across the whole roster at join time.
 func checkJoinGate(st projection.State, seatID string) error {
+	startable, runnable := 0, 0
+	firstBlocked, firstBlockedDep := "", ""
 	for _, f := range st.Features {
 		for _, t := range f.Tasks {
-			if t.Owner != seatID || len(t.Deps) == 0 {
+			if t.Owner != seatID {
 				continue
 			}
+			// Only assigned/changes_requested tasks are "startable" at join; an
+			// already accepted/shipped/in_progress task doesn't gate a (re)join.
+			if t.Status != "assigned" && t.Status != "changes_requested" {
+				continue
+			}
+			startable++
+			blockedDep := ""
 			for _, d := range t.Deps {
 				dep, _ := findTask(st, d)
 				if dep == nil || dep.Status != "accepted" {
-					return fmt.Errorf("pactify join: task %s blocked by unaccepted dep %s", t.ID, d)
+					blockedDep = d
+					break
 				}
 			}
+			if blockedDep == "" {
+				runnable++
+			} else if firstBlocked == "" {
+				firstBlocked, firstBlockedDep = t.ID, blockedDep
+			}
 		}
+	}
+	if startable > 0 && runnable == 0 {
+		return fmt.Errorf("pactify join: task %s blocked by unaccepted dep %s (no runnable task to start)", firstBlocked, firstBlockedDep)
 	}
 	return nil
 }

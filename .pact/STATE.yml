@@ -178,14 +178,14 @@ features:
     tasks:
       - id: t-audit-store
         owner: opencode-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/audit-store.md
         evidence: === RUN   TestAppendAndStorePath --- PASS: TestAppendAndStorePath (0.00s) === RUN   TestAppendDateBucketsByUTC --- PASS: TestAppendDateBucketsByUTC (0.00s) PASS ok   github.com/agentjoey/pactify/internal/audit 0.377s  go build ./... — clean (no output).  Files created: - internal/audit/audit.go (NEW): Record struct, home(), dayOf(), storePath(), Append() - internal/audit/audit_test.go (NEW): 2 tests — store path/append, date bucketing by UTC
       - id: t-audit-query
         owner: opencode-worker
-        status: in_progress
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/audit-query.md
-        evidence: null
+        evidence: === RUN   TestAppendAndStorePath --- PASS: TestAppendAndStorePath (0.00s) === RUN   TestAppendDateBucketsByUTC --- PASS: TestAppendDateBucketsByUTC (0.00s) === RUN   TestQueryFiltersAndOrder --- PASS: TestQueryFiltersAndOrder (0.00s) === RUN   TestQuerySkipsTornLines --- PASS: TestQuerySkipsTornLines (0.00s) === RUN   TestSummarize --- PASS: TestSummarize (0.00s) PASS ok   github.com/agentjoey/pactify/internal/audit 0.730s  go build ./... — clean (no output).  Files changed: - internal/audit/audit.go: added Filter struct + match(), Query(), Summary struct, Summarize() - internal/audit/audit_test.go: added TestQueryFiltersAndOrder, TestQuerySkipsTornLines, TestSummarize
         deps: [t-audit-store]

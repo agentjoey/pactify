@@ -5,11 +5,14 @@
 package audit
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 )
 
 // Record is one captured tool call. Forward-compatible: readers ignore unknown
@@ -90,3 +93,102 @@ func Append(r Record) error {
 }
 
 var _ = strings.TrimSpace
+
+// Filter selects records on read. "" / zero = match any.
+type Filter struct {
+	Project, Seat, Task, Session, Risk string
+	Since, Until                       time.Time
+}
+
+func (f Filter) match(r Record) bool {
+	if f.Seat != "" && r.Seat != f.Seat {
+		return false
+	}
+	if f.Task != "" && r.Task != f.Task {
+		return false
+	}
+	if f.Session != "" && r.Session != f.Session {
+		return false
+	}
+	if f.Risk != "" && r.Risk != f.Risk {
+		return false
+	}
+	if !f.Since.IsZero() || !f.Until.IsZero() {
+		ts, err := time.Parse(time.RFC3339, r.TS)
+		if err != nil {
+			return false
+		}
+		if !f.Since.IsZero() && ts.Before(f.Since) {
+			return false
+		}
+		if !f.Until.IsZero() && ts.After(f.Until) {
+			return false
+		}
+	}
+	return true
+}
+
+// Query folds the project's day-files, returns matches newest-first, and skips
+// unparseable (torn) lines rather than failing the whole read.
+func Query(f Filter) ([]Record, error) {
+	h, err := home()
+	if err != nil {
+		return nil, err
+	}
+	proj := f.Project
+	if proj == "" {
+		proj = "_unknown"
+	}
+	dir := filepath.Join(h, "audit", proj)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil // no audit yet → empty, not an error
+		}
+		return nil, err
+	}
+	var out []Record
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".jsonl") {
+			continue
+		}
+		file, err := os.Open(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		sc := bufio.NewScanner(file)
+		sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		for sc.Scan() {
+			var r Record
+			if json.Unmarshal(sc.Bytes(), &r) != nil {
+				continue // torn/garbage line
+			}
+			if f.match(r) {
+				out = append(out, r)
+			}
+		}
+		file.Close()
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].TS > out[j].TS }) // newest-first
+	return out, nil
+}
+
+// Summary aggregates counts for a digest.
+type Summary struct {
+	Total  int
+	ByTool map[string]int
+	ByRisk map[string]int
+	BySeat map[string]int
+}
+
+// Summarize counts records by tool/risk/seat.
+func Summarize(rs []Record) Summary {
+	s := Summary{ByTool: map[string]int{}, ByRisk: map[string]int{}, BySeat: map[string]int{}}
+	for _, r := range rs {
+		s.Total++
+		s.ByTool[r.Tool]++
+		s.ByRisk[r.Risk]++
+		s.BySeat[r.Seat]++
+	}
+	return s
+}

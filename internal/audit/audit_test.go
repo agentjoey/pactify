@@ -48,4 +48,59 @@ func mustAppend(t *testing.T, r Record) {
 	}
 }
 
+func TestQueryFiltersAndOrder(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("PACTIFY_HOME", home)
+	mustAppend(t, Record{Project: "p", TS: "2026-06-16T01:00:00Z", Seat: "dev", Task: "t1", Tool: "bash", Risk: "exec"})
+	mustAppend(t, Record{Project: "p", TS: "2026-06-16T02:00:00Z", Seat: "rev", Task: "t1", Tool: "fs.read", Risk: "read"})
+	mustAppend(t, Record{Project: "p", TS: "2026-06-16T03:00:00Z", Seat: "dev", Task: "t2", Tool: "fs.write", Risk: "write"})
+
+	// Filter by seat=dev → 2 records, newest-first.
+	got, err := Query(Filter{Project: "p", Seat: "dev"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Task != "t2" || got[1].Task != "t1" {
+		t.Fatalf("seat filter = %+v", got)
+	}
+	// Filter by task=t1 → 2 records.
+	if got, _ := Query(Filter{Project: "p", Task: "t1"}); len(got) != 2 {
+		t.Fatalf("task filter len = %d, want 2", len(got))
+	}
+	// Filter by risk=write → 1.
+	if got, _ := Query(Filter{Project: "p", Risk: "write"}); len(got) != 1 {
+		t.Fatalf("risk filter len = %d, want 1", len(got))
+	}
+}
+
+func TestQuerySkipsTornLines(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("PACTIFY_HOME", home)
+	mustAppend(t, Record{Project: "p", TS: "2026-06-16T01:00:00Z", Tool: "bash"})
+	// Append a torn/garbage line directly.
+	p := home + "/.pactify/audit/p/2026-06-16.jsonl"
+	f, _ := os.OpenFile(p, os.O_APPEND|os.O_WRONLY, 0o644)
+	f.WriteString("{not json\n")
+	f.Close()
+	got, err := Query(Filter{Project: "p"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("want 1 valid record (torn line skipped), got %d", len(got))
+	}
+}
+
+func TestSummarize(t *testing.T) {
+	rs := []Record{
+		{Tool: "bash", Risk: "exec", Seat: "dev"},
+		{Tool: "bash", Risk: "exec", Seat: "dev"},
+		{Tool: "fs.write", Risk: "write", Seat: "rev"},
+	}
+	s := Summarize(rs)
+	if s.Total != 3 || s.ByRisk["exec"] != 2 || s.BySeat["dev"] != 2 || s.ByTool["bash"] != 2 {
+		t.Fatalf("summary = %+v", s)
+	}
+}
+
 var _ = time.Now

@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Last updated: 2026-06-13 | Status: Draft（地基决策已锁，CLI 待实现）
+> Last updated: 2026-06-16 | Status: 协议 v1 冻结 · Go CLI + MCP + dashboard 已发布（v0.3.0）· orchestrate 自主驱动可用 · 主线另有未发布增量（cost/observability、session 清理升级、GLM 端点可配、Settings agent 管理）在 `feat-light-theme`
 
 ## Overview
 
@@ -292,7 +292,7 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 
 **收尾交付步（`internal/finish`，#5）**：merge 到本地 main 后 push / 开 PR（`gh pr create`，gh 缺时降级打印手动命令）。CLI `pactify finish`。
 
-**session 清理（`internal/sessions`，#6）**：按 kind 声明 list/prune 命令的框架，gemini 已接，其余优雅 unsupported（no-op 报告，非 error）。CLI `sessions list/prune`。
+**session 清理（`internal/sessions`，#6）**：按 kind 声明 list/prune 命令的框架，gemini 已接，其余优雅 unsupported（no-op 报告，非 error）。CLI `sessions list/prune`。**（2026-06-15 升级见下「session 清理升级」。）**
 
 **配方（`internal/recipe`，#11）**：命名任务图模板（add-tests/review-harden/spec-to-plan），`{{goal}}` 占位展开成 pact 任务 spec。CLI `recipe list/show`。把门槛从"手写任务图"降到"选配方"。
 
@@ -301,3 +301,26 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 **planner review（serve `plan.go` + web `PlanReview.tsx`，#7）**：`GET /api/projects/{id}/plan/{feature}` 读 plan manifest + 校验；Plan 视图（key 5）展示任务图（owner→reviewer/deps/verify）+ valid 徽章 + apply 提示。
 
 **UI polish（#12，部分）**：Spinner / Button-loading / Alert 原语 + 微交互（active-press / hover-lift / fade-rise，全 prefers-reduced-motion 兼容）+ RightRail 三动作 loading + Alert 错误。后续 UI 规划见 `docs/roadmap-next.md`。
+
+### 增量子系统（2026-06-14~15，未发布在 `feat-light-theme`）
+
+**成本 / 可观测 D1（`internal/stats` + `internal/diffstat` + `internal/tokens`）**：per-task / per-agent 的工时、代码量、token 统计，纯派生 + 真实数据。
+- `stats.Compute(events, now)` 从 log 时间戳算每任务/座席工作时长（pure derived）；`WithLOC` 叠加代码量、`WithTokens` 叠加 token。
+- `diffstat.NumStat(repoDir, from, to, pathspec…)` 用 `git numstat` 算 added/deleted/files；`IsRepoRoot` 守卫（仅当路径是自身 git root 才算 LOC，避免 monorepo 误算）。
+- `tokens` 在 `.pact/orchestrate/tokens.json` 存 per-task token，`Parse(kind, output)` 解析各 agent 输出（claude `usage.input+output` 已验证；JSONL last-usage + 顶层 fallback）。
+- 经 `GET /api/projects/{id}/stats` 暴露；dashboard RightRail inspector + office「Cost」镜头展示（⏱ 时长 · +added/−deleted · ⛁ token）。
+
+**巡检 watchdog D2（`internal/orchestrate/runner_idle.go`）**：把钝的"无输出即杀"升级为**进度感知巡检**——`fsProgress(dir)`（有界 mtime 遍历，跳过 .git/node_modules，可注入）；仅当 `idleFor() >= idle 且 fsProgress() >= idle`（既无输出又无落盘）才杀，否则发"⟳ patrol: still working"通知。安静但在写盘的 agent 不被误杀。
+
+**GLM 端点可配（`internal/orchestrate/runner.go` + `internal/secret`）**：GLM 不是独立 kind，是 claude-code 指向 GLM 的 Anthropic 兼容端点（glm-* 模型时经 `glmEnv` 注入 `ANTHROPIC_BASE_URL` + Keychain token）。端点按计划可配：Keychain `pactify/glm-base-url` 有值用之（中国版 `open.bigmodel.cn`），否则全球默认 `api.z.ai`；解析永不报错（缺省回退）。token 存 Keychain `pactify/glm`。
+
+**Settings agent 管理（`internal/agent` + serve `agents.go` + web `ops/`）**：
+- **一键扫描 + 手动添加**（`AgentRoster.tsx`）：`GET /api/agents` 每次实时 `agent.Scan()` 重探安装情况；Scan 按钮重拉、一键 Register 已装未注册项；「Add manually」登记支持清单内未检测到的 kind（自定义 binary 路径延后）。
+- **模型下拉**：`agent.CandidateModels(kind)`（每 `RunnerProfile` 一份候选清单）经 config DTO 的 `candidate_models` 暴露；AgentConfig 的 model 字段升级为下拉（default · 候选 · custom…），无候选回退纯文本。
+- **统一 agent logo**（`web/src/lib/agentLogos.tsx`）：`kind → AgentLogo` 品牌渐变实色块，接进 Setup / Agents 引导条 / Ops AgentConfig 真卡片。
+
+**session 清理升级（`internal/sessions`，opencode-first，2026-06-15）**：从"按 kind 框架（gemini 仅 list）"升级为**任务 accept 后自动关闭该棒 session**。实测各 agent session CLI 后定 opencode 优先（唯一有干净 `session list` + `session delete <id>`，且常驻 daemon 最该清）。机制：runner 给 opencode `run` 打 `--title pact:<seat>`（不改输出格式）→ accept 后 `sessions.CleanupByTitle` list→匹配 title→按 id 删 owner+reviewer 的 session；门控在 `Options.SessionRun`（仅 `CleanupSessions` 开时注入真 exec，测试不 spawn）；CLI 默认开、`--keep-sessions` 关。gemini（按 index）/codex（archive）/kimi/claude（无 CLI）延后。
+
+**dashboard 浅色化 + 信号语言（web/，未发布）**：light theme token 体系；office「Activity / Cost」镜头切换；**蚂蚁运动语言**（in_progress 爬行 / awaiting 绕行 / changes 顿挫 + status-colored 脉冲 + dep 边行进蚁）；RightRail 改 Dify 式浮层圆角卡。Canvas 合并门 = vitest + Playwright e2e 双绿（工艺规约见 CLAUDE.md）。
+
+**pactify.dev 文档站外壳（`site/`，已上线生产）**：Astro 站新增 `DocsLayout`（左目录 `docsNav` + 右内容，scrollspy active），`/introduction` 重做为文档落地页，`/protocol`·`/onboarding` 共用同一外壳。

@@ -11,7 +11,7 @@ cat .agent/CURRENT.md
 协议核心：`.pact/` 文件契约；CLI 是协议的标准实现；各厂商入口是薄封装。
 **Location:** ~/AgentWorks/Code_Claude/pactify
 **GitHub:**   agentjoey/pactify
-**Version:**  v0.1.0
+**Version:**  v0.3.0（已发布）· 主线另有大量未发布功能在 `feat-light-theme`（见 docs/architecture.md / .agent/CURRENT.md）
 
 **Technical docs:** [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Operations](docs/operations.md)
 

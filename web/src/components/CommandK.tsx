@@ -207,26 +207,26 @@ export function CommandK({
           >
             {/* input row */}
             <div className="flex items-center gap-2.5 border-b border-white/[0.08] px-4 py-[13px]">
-              <span className="text-white/35">⌕</span>
+              <span className="text-[var(--color-text-3)]">⌕</span>
               <Command.Input
                 value={search}
                 onValueChange={setSearch}
                 autoFocus
                 placeholder="Jump to a task, action, view, or project…"
-                className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/30"
+                className="flex-1 bg-transparent text-sm text-[var(--color-text-1)] outline-none placeholder:text-[var(--color-text-3)]"
               />
               <Kbd>esc</Kbd>
             </div>
 
             <Command.List className="max-h-[360px] overflow-y-auto py-1.5">
-              <Command.Empty className="px-4 py-6 text-center text-[12px] text-white/40">
+              <Command.Empty className="px-4 py-6 text-center text-[12px] text-[var(--color-text-3)]">
                 No results.
               </Command.Empty>
 
               {/* Tasks */}
               <Command.Group
                 heading="Tasks"
-                className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-white/30"
+                className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-[var(--color-text-3)]"
               >
                 {tasks.map((b) => (
                   <Command.Item
@@ -234,13 +234,13 @@ export function CommandK({
                     value={`task ${b.task.id}`}
                     keywords={[b.task.id, b.feature, b.task.status]}
                     onSelect={() => focusTask(b.task.id)}
-                    className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/85 data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
+                    className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-text-1)] data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
                   >
                     <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[11px]">
                       {statusIcon(b.task.status)}
                     </span>
                     <span className="mono text-[12px]">{b.task.id}</span>
-                    <span className="ml-auto text-[10.5px] text-white/40">
+                    <span className="ml-auto text-[10.5px] text-[var(--color-text-3)]">
                       {b.task.status.replace(/_/g, " ")} · {b.feature}
                     </span>
                     <Kbd className="ml-2">↵</Kbd>
@@ -252,7 +252,7 @@ export function CommandK({
               {showActions && awaiting.length > 0 && (
                 <Command.Group
                   heading="Actions"
-                  className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-white/30"
+                  className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-[var(--color-text-3)]"
                 >
                   {awaiting.map((b) => (
                     <Command.Item
@@ -260,7 +260,7 @@ export function CommandK({
                       value={`accept ${b.task.id}`}
                       keywords={[b.task.id, "accept"]}
                       onSelect={() => runAction("accept", b.task.id)}
-                      className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/85 data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
+                      className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-text-1)] data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
                     >
                       <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[11px]">✓</span>
                       <span>Accept <span className="mono text-[11px]">{b.task.id}</span></span>
@@ -273,7 +273,7 @@ export function CommandK({
                       value={`request changes ${b.task.id}`}
                       keywords={[b.task.id, "changes", "request"]}
                       onSelect={() => runAction("changes", b.task.id)}
-                      className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/85 data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
+                      className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-text-1)] data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
                     >
                       <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[11px]">↺</span>
                       <span>Request changes… <span className="mono text-[11px]">{b.task.id}</span></span>
@@ -285,7 +285,7 @@ export function CommandK({
               {/* Navigate */}
               <Command.Group
                 heading="Navigate"
-                className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-white/30"
+                className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-[var(--color-text-3)]"
               >
                 {([
                   { v: "kanban" as View, label: "Kanban", key: "1", ico: "▤" },
@@ -297,11 +297,11 @@ export function CommandK({
                     value={`switch view ${o.label}`}
                     keywords={["view", o.label]}
                     onSelect={() => { setView(o.v); close(); }}
-                    className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/85 data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
+                    className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-text-1)] data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
                   >
                     <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[11px]">{o.ico}</span>
                     Switch view: {o.label}
-                    {view === o.v && <span className="text-[10px] text-white/40">·</span>}
+                    {view === o.v && <span className="text-[10px] text-[var(--color-text-3)]">·</span>}
                     <Kbd className="ml-auto">{o.key}</Kbd>
                   </Command.Item>
                 ))}
@@ -311,7 +311,7 @@ export function CommandK({
                     value={`switch project ${p.name} ${p.id}`}
                     keywords={["project", p.name, p.id]}
                     onSelect={() => switchProject(p.id)}
-                    className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-white/85 data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
+                    className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-text-1)] data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
                   >
                     <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[11px]">⌂</span>
                     <span>Switch project: <span className="mono text-[12px]">{p.name}</span></span>
@@ -322,10 +322,10 @@ export function CommandK({
             </Command.List>
 
             {/* footer hints */}
-            <div className="flex gap-3.5 border-t border-white/[0.07] px-4 py-[9px] text-[9.5px] text-white/35">
-              <span>↑↓ 导航</span>
-              <span>↵ 执行</span>
-              <span>观察模式自动隐藏写操作</span>
+            <div className="flex gap-3.5 border-t border-white/[0.07] px-4 py-[9px] text-[9.5px] text-[var(--color-text-3)]">
+              <span>↑↓ Navigate</span>
+              <span>↵ Run</span>
+              <span>Write actions hidden in observe mode</span>
             </div>
           </Command>
         </div>

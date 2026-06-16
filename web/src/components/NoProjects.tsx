@@ -41,11 +41,11 @@ export function NoProjects({ onRegistered }: { onRegistered: () => void }) {
         <CableMark />
       </div>
       <h2 className="text-lg font-semibold text-[var(--color-text-1)]">
-        还没有接入任何 repo
+        No repos connected yet
       </h2>
       <p className="mt-2 max-w-md text-sm text-[var(--color-text-3)]">
-        Pactify 通过 <span className="mono">.pact/</span> 文件契约协同多个 agent。
-        填入一个仓库的绝对路径,把它接入这块看板。
+        Pactify coordinates multiple agents through the <span className="mono">.pact/</span> file contract.
+        Enter a repo's absolute path to connect it to this board.
       </p>
 
       <div

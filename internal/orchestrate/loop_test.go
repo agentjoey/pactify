@@ -117,7 +117,8 @@ func newFakeRunner(t *testing.T, dir string) *fakeRunner {
 	return &fakeRunner{t: t, dir: dir, reviewSeen: map[string]int{}}
 }
 
-func (f *fakeRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir string) error {
+func (f *fakeRunner) Run(ctx context.Context, lc LaunchContext) error {
+	seatID, briefing := lc.Seat, lc.Briefing
 	task := taskIDFromBrief(briefing)
 	if task == "" {
 		f.t.Fatalf("could not parse task id from brief:\n%s", briefing)
@@ -326,7 +327,8 @@ type crashRunner struct {
 	wcalls  int
 }
 
-func (r *crashRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir string) error {
+func (r *crashRunner) Run(ctx context.Context, lc LaunchContext) error {
+	seatID, briefing := lc.Seat, lc.Briefing
 	task := taskIDFromBrief(briefing)
 	if isWorker(briefing) {
 		r.wcalls++

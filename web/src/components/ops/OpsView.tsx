@@ -1,6 +1,7 @@
 import { Projects } from "./Projects";
 import { Wiring } from "./Wiring";
 import { Seats } from "./Seats";
+import { AgentRoster } from "./AgentRoster";
 import { AgentConfig } from "./AgentConfig";
 import { OpsSkeleton } from "../Skeleton";
 
@@ -26,6 +27,7 @@ export function OpsView({
   return (
     <div data-testid="ops-view" className="flex-1 overflow-auto p-4 text-[var(--color-text-1)] view-enter">
       <Projects author={author} onChanged={onRegistryChanged} />
+      <AgentRoster author={author} refreshKey={refreshTick} onChanged={onRegistryChanged} />
       <AgentConfig refreshKey={refreshTick} />
       {loading ? (
         <OpsSkeleton />

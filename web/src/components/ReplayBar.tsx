@@ -178,12 +178,12 @@ export function ReplayBar({
   return (
     <div
       data-testid="replay-bar"
-      className="relative border-t border-gray-800 bg-[#0f1419] px-4 pt-4 pb-1.5 text-xs"
+      className="relative border-t border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-bg-surface)_88%,var(--color-bg-page))] px-4 pt-4 pb-1.5 text-xs"
     >
       <div className="flex items-center gap-3">
         <button
           aria-label="step back"
-          className="rounded border border-gray-700 px-1.5 py-0.5 text-gray-300 disabled:opacity-40 hover:border-gray-500"
+          className="rounded border border-[var(--color-border-strong)] px-1.5 py-0.5 text-[var(--color-text-2)] disabled:opacity-40 hover:border-gray-500"
           onClick={() => go(pos - 1)}
           disabled={pos <= 0}
         >
@@ -208,13 +208,13 @@ export function ReplayBar({
           {hoverEv && (
             <div
               data-testid="replay-evcard"
-              className="pointer-events-none absolute bottom-[30px] -translate-x-1/2 rounded-lg border border-white/15 bg-[#2F3246] px-2.5 py-1.5 font-mono text-[10.5px] text-white/85 shadow-[0_10px_28px_rgba(0,0,0,0.55)] whitespace-nowrap"
+              className="card-frost pointer-events-none absolute bottom-[30px] -translate-x-1/2 rounded-lg border border-[var(--color-border-subtle)] px-2.5 py-1.5 font-mono text-[10.5px] text-[var(--color-text-1)] shadow-[var(--shadow-raised)] whitespace-nowrap"
               style={{ left: `${pct(hoverEv.n)}%` }}
             >
               <span style={{ color: "var(--color-role-design)" }}>#{hoverEv.n} {hoverEv.type}</span>
               {" · "}{hoverEv.actor}
               {hoverEv.task ? <> · {hoverEv.task}</> : null}
-              <span className="text-white/40"> · {hoverEv.ts}</span>
+              <span className="text-[var(--color-text-3)]"> · {hoverEv.ts}</span>
             </div>
           )}
           {/* base track */}
@@ -261,21 +261,21 @@ export function ReplayBar({
             aria-valuenow={pos}
             data-testid="replay-handle"
             onKeyDown={onKeyDown}
-            className="absolute top-1 h-[17px] w-[17px] -translate-x-1/2 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.5)] outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-role-design)]"
+            className="absolute top-1 h-[17px] w-[17px] -translate-x-1/2 rounded-full bg-white shadow-[var(--shadow-card)] outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-role-design)]"
             style={{ left: `${pct(pos)}%`, border: "3.5px solid var(--color-role-design)" }}
           />
         </div>
 
         <button
           aria-label="step forward"
-          className="rounded border border-gray-700 px-1.5 py-0.5 text-gray-300 disabled:opacity-40 hover:border-gray-500"
+          className="rounded border border-[var(--color-border-strong)] px-1.5 py-0.5 text-[var(--color-text-2)] disabled:opacity-40 hover:border-gray-500"
           onClick={() => go(pos + 1)}
           disabled={pos >= total}
         >
           ▶
         </button>
 
-        <span className="min-w-[16ch] max-w-[28ch] truncate font-mono text-gray-400" title={caption}>
+        <span className="min-w-[16ch] max-w-[28ch] truncate font-mono text-[var(--color-text-2)]" title={caption}>
           {caption}
         </span>
 
@@ -283,8 +283,8 @@ export function ReplayBar({
           aria-label="resume live"
           className={`ml-auto flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold ${
             replaying
-              ? "border-[color:var(--color-warn)]/50 bg-[color:var(--color-warn)]/10 text-[#E8C27A]"
-              : "border-gray-700 text-gray-600"
+              ? "border-[color:var(--color-warn)]/50 bg-[color:var(--color-warn)]/10 text-[var(--color-warn)]"
+              : "border-[var(--color-border-strong)] text-[var(--color-text-3)]"
           }`}
           onClick={live}
           disabled={!replaying}

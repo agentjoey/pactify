@@ -39,47 +39,57 @@
   --font-sans: "InterVariable", "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
 
-  /* Background — 4 layers (B · Indigo). */
-  --color-bg-page: #191b26;
-  --color-bg-surface: #20222f;
-  --color-bg-raised: #272a3a;
-  --color-bg-overlay: #2f3246;
+  /* Background — 4 layers (LIGHT theme, 2026-06-14 D1). page = light gray-blue,
+     cards = white, raised/overlay lean on border + shadow rather than fill. */
+  --color-bg-page: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-raised: #ffffff;
+  --color-bg-overlay: #ffffff;
+  /* A soft-gray control fill (dify-style inputs/segments) for inside cards. */
+  --color-bg-inset: #f1f3f5;
 
-  /* Borders. */
-  --color-border-subtle: rgba(255, 255, 255, 0.07);
-  --color-border-strong: rgba(255, 255, 255, 0.1);
+  /* Borders (dark hairlines on light). */
+  --color-border-subtle: rgba(18, 22, 31, 0.09);
+  --color-border-strong: rgba(18, 22, 31, 0.16);
 
-  /* Text — 3 layers. */
-  --color-text-1: rgba(255, 255, 255, 0.92);
-  --color-text-2: rgba(255, 255, 255, 0.6);
-  --color-text-3: rgba(255, 255, 255, 0.38);
+  /* Text — 3 layers (dark on light). */
+  --color-text-1: #1a1d27;
+  --color-text-2: rgba(26, 29, 39, 0.64);
+  --color-text-3: rgba(26, 29, 39, 0.42);
 
-  /* Role colors — protocol-hard (desaturated from legacy brand hues). */
-  --color-role-product: #ecc678; /* orchestrator/编排 — desaturated from legacy brand yellow */
-  --color-role-design: #93b4f2;  /* reviewer/评审   — desaturated from legacy brand blue */
-  --color-role-dev: #7bd8a0;     /* worker/开发     — desaturated from legacy brand green */
+  /* Role colors — the three brand mains (yellow / blue / green) tuned VIVID for
+     high recognizability on white (2026-06-14). gold brightened + greener-yellow
+     so it reads distinctly as "the yellow one"; green to a vivid brand emerald;
+     blue kept. -ink companions are darker shades for small text where the vivid
+     hue alone is too light (gold especially). */
+  --color-role-product: #f2b50a; /* orchestrator/编排 — bright gold-yellow */
+  --color-role-design: #2563eb;  /* reviewer/评审   — vivid blue */
+  --color-role-dev: #16a85a;     /* worker/开发     — vivid emerald (brand) */
+  --color-role-product-ink: #8a6200; /* legible text/icon shade of product */
+  --color-role-design-ink: #1d4ed8;
+  --color-role-dev-ink: #0f8a44;
 
-  /* Role colors — extended roster (caste hue families). */
-  --color-role-qa: #5fc8c3;
-  --color-role-pm: #e8a85c;
-  --color-role-designer: #a89bf0;
-  --color-role-research: #c99bd8;
-  --color-role-ops: #ee9a6b;
+  /* Role colors — extended roster (vivid for light). designer = brand violet. */
+  --color-role-qa: #0d9488;
+  --color-role-pm: #e07c1e;
+  --color-role-designer: #9b3fd4;
+  --color-role-research: #b13fce;
+  --color-role-ops: #e0612e;
 
-  /* Semantic. */
-  --color-danger: #e5615c;
-  --color-warn: #d9a23d;
-  --color-success: #7bd8a0;
+  /* Semantic (light-bg legible). */
+  --color-danger: #d63d38;
+  --color-warn: #b9821a;
+  --color-success: #2f9e5e;
 
   /* Radius. */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
 
-  /* Shadows — 3 steps (matching the boards). */
-  --shadow-card: 0 3px 12px rgba(0, 0, 0, 0.35);
-  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.4);
-  --shadow-overlay: 0 16px 40px rgba(0, 0, 0, 0.6);
+  /* Shadows — soft, light-theme (subtle elevation, not heavy black). */
+  --shadow-card: 0 1px 2px rgba(18, 22, 31, 0.06), 0 1px 3px rgba(18, 22, 31, 0.08);
+  --shadow-raised: 0 4px 14px rgba(18, 22, 31, 0.1), 0 1px 3px rgba(18, 22, 31, 0.06);
+  --shadow-overlay: 0 12px 32px rgba(18, 22, 31, 0.16), 0 2px 8px rgba(18, 22, 31, 0.08);
 }
 
 /* Motion + legacy role re-pointing. The legacy vars --role-product/-design/-dev

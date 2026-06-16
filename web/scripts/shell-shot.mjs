@@ -1,0 +1,12 @@
+import { chromium } from "@playwright/test";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 780 }, deviceScaleFactor: 1.6 });
+await page.goto("http://127.0.0.1:7777/?shell", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(1000);
+await page.screenshot({ path: "/tmp/pactify-shots/shell.png" });
+console.log("shot: shell expanded");
+await page.locator('button[title="Hide sidebar"]').click();
+await page.waitForTimeout(450);
+await page.screenshot({ path: "/tmp/pactify-shots/shell-collapsed.png" });
+console.log("shot: shell collapsed");
+await browser.close();

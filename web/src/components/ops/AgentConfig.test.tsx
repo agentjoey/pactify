@@ -42,7 +42,11 @@ describe("AgentConfig panel", () => {
       expect(screen.getByTestId("agent-config-opencode")).toBeTruthy();
     });
     expect(screen.queryByTestId("agent-config-gemini-cli")).toBeNull();
-    expect(screen.getByText(/deepseek\/deepseek-v4-pro/)).toBeTruthy();
+    // effective model comes from the row's own async getAgentConfig — wait for it
+    // (was a flaky sync assertion racing the fetch).
+    await waitFor(() => {
+      expect(screen.getByText(/deepseek\/deepseek-v4-pro/)).toBeTruthy();
+    });
   });
 
   it("saves model + scoped posture with allowed tools", async () => {
@@ -56,7 +60,7 @@ describe("AgentConfig panel", () => {
     fireEvent.click(screen.getByTestId("scoped-opencode")); // blanket → scoped
     await waitFor(() => expect(screen.getByTestId("tools-opencode")).toBeTruthy());
     fireEvent.change(screen.getByTestId("tools-opencode"), { target: { value: "Read, Edit" } });
-    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       expect(setAgentConfig).toHaveBeenCalledWith("opencode", {
@@ -67,11 +71,54 @@ describe("AgentConfig panel", () => {
     });
   });
 
+  it("renders a model dropdown from candidate_models and saves the picked model", async () => {
+    getAgents.mockResolvedValue([{ kind: "claude-code", installed: true, detail: "", registered: true }]);
+    getAgentConfig.mockResolvedValue(
+      cfg({
+        kind: "claude-code",
+        model: "",
+        effective_model: "claude-opus-4-8",
+        candidate_models: ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"],
+      }),
+    );
+    setAgentConfig.mockResolvedValue(
+      cfg({ kind: "claude-code", model: "claude-sonnet-4-6", candidate_models: ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"] }),
+    );
+    render(<AgentConfig />);
+
+    // dropdown is shown (not the free-text field) when candidates exist.
+    await waitFor(() => expect(screen.getByTestId("model-select-claude-code")).toBeTruthy());
+    expect(screen.queryByTestId("model-claude-code")).toBeNull();
+    expect(screen.getByRole("option", { name: "claude-sonnet-4-6" })).toBeTruthy();
+
+    fireEvent.change(screen.getByTestId("model-select-claude-code"), { target: { value: "claude-sonnet-4-6" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(setAgentConfig).toHaveBeenCalledWith("claude-code", {
+        model: "claude-sonnet-4-6",
+        restricted: false,
+        allowed_tools: [],
+      });
+    });
+  });
+
+  it("reveals a free-text field when the model dropdown switches to custom…", async () => {
+    getAgents.mockResolvedValue([{ kind: "claude-code", installed: true, detail: "", registered: true }]);
+    getAgentConfig.mockResolvedValue(
+      cfg({ kind: "claude-code", model: "", candidate_models: ["claude-opus-4-8", "claude-sonnet-4-6"] }),
+    );
+    render(<AgentConfig />);
+    await waitFor(() => expect(screen.getByTestId("model-select-claude-code")).toBeTruthy());
+    expect(screen.queryByTestId("model-claude-code")).toBeNull();
+    fireEvent.change(screen.getByTestId("model-select-claude-code"), { target: { value: "__custom__" } });
+    await waitFor(() => expect(screen.getByTestId("model-claude-code")).toBeTruthy());
+  });
+
   it("shows an empty state when no agents are registered", async () => {
     getAgents.mockResolvedValue([{ kind: "opencode", installed: true, detail: "", registered: false }]);
     render(<AgentConfig />);
     await waitFor(() => {
-      expect(screen.getByText("没有已注册的 agent")).toBeTruthy();
+      expect(screen.getByText("No agents registered")).toBeTruthy();
     });
   });
 });

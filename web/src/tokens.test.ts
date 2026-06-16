@@ -10,23 +10,25 @@ const tokensCss = readFileSync(resolve(process.cwd(), "src/tokens.css"), "utf8")
 const indexCss = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
 
 describe("dashboard v2 tokens.css", () => {
-  it("declares the six locked palette hexes (spec §1)", () => {
-    const locked = ["#191B26", "#20222F", "#272A3A", "#2F3246", "#ECC678", "#93B4F2"];
+  it("declares the light-theme palette hexes (2026-06-14 D1)", () => {
+    // Light theme: page light gray-blue, cards white, role hues deepened for
+    // contrast on white while keeping identity (gold/blue/green).
+    const palette = ["#f5f6f8", "#ffffff", "#f2b50a", "#2563eb", "#16a85a"];
     const lower = tokensCss.toLowerCase();
-    for (const hex of locked) {
-      expect(lower, `missing locked token ${hex}`).toContain(hex.toLowerCase());
+    for (const hex of palette) {
+      expect(lower, `missing light token ${hex}`).toContain(hex.toLowerCase());
     }
   });
 
-  it("re-points the legacy role vars to the new desaturated palette", () => {
+  it("re-points the legacy role vars to the light role palette", () => {
     // --role-product/-design/-dev are read via var() by canvas components; they
-    // must resolve to the new role colors (directly or via indirection).
+    // must resolve to the role colors (directly or via indirection).
     expect(tokensCss).toMatch(/--role-product:\s*var\(--color-role-product\)/);
     expect(tokensCss).toMatch(/--role-design:\s*var\(--color-role-design\)/);
     expect(tokensCss).toMatch(/--role-dev:\s*var\(--color-role-dev\)/);
-    expect(tokensCss.toLowerCase()).toContain("--color-role-product: #ecc678");
-    expect(tokensCss.toLowerCase()).toContain("--color-role-design: #93b4f2");
-    expect(tokensCss.toLowerCase()).toContain("--color-role-dev: #7bd8a0");
+    expect(tokensCss.toLowerCase()).toContain("--color-role-product: #f2b50a");
+    expect(tokensCss.toLowerCase()).toContain("--color-role-design: #2563eb");
+    expect(tokensCss.toLowerCase()).toContain("--color-role-dev: #16a85a");
   });
 
   it("self-hosts the fonts with font-display: swap and no external URLs", () => {

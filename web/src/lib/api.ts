@@ -70,6 +70,40 @@ export const fetchState = (id: string) =>
 
 export const getActingSeat = () => getJSON<{ seat: string }>("/api/acting-seat");
 
+// --- Work stats (D1) ---
+// Per-task + per-agent duration (LOC / tokens best-effort, 0 until later slices).
+export type TaskStat = {
+  task_id: string;
+  feature: string;
+  owner: string;
+  reviewer: string;
+  status: string;
+  duration_sec: number;
+  added: number;
+  deleted: number;
+  tokens: number;
+};
+export type AgentStat = {
+  seat: string;
+  tasks: number;
+  duration_sec: number;
+  added: number;
+  deleted: number;
+  tokens: number;
+};
+export type ProjectStats = { tasks: TaskStat[]; agents: AgentStat[] };
+export const getStats = (id: string) => getJSON<ProjectStats>(`/api/projects/${id}/stats`);
+
+// fmtDuration renders seconds as a compact "2h 5m" / "14m" / "45s".
+export function fmtDuration(sec: number): string {
+  if (sec <= 0) return "—";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (m > 0) return `${m}m`;
+  return `${sec}s`;
+}
+
 // --- Replay (M3.3b) ---
 //
 // getTimeline reads the lightweight log index once on entering replay.
@@ -146,6 +180,25 @@ export interface AgentRow {
 
 export const getAgents = () => getJSON<AgentRow[]>("/api/agents");
 
+// Permission audit log — one captured tool call per record (read-only lens).
+export interface AuditRecord {
+  ts: string;
+  project?: string;
+  repo?: string;
+  seat: string;
+  task: string;
+  kind?: string;
+  session?: string;
+  tool: string;
+  summary: string;
+  risk: string;
+  decision: string;
+}
+export const getAudit = (project: string, params: Record<string, string> = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return getJSON<AuditRecord[]>(`/api/projects/${project}/audit${qs ? `?${qs}` : ""}`);
+};
+
 // Per-agent launch config (#10 model / #9 posture / #4 scoped tools).
 export interface AgentConfig {
   kind: string;
@@ -156,6 +209,9 @@ export interface AgentConfig {
   restricted: boolean;
   effective_model: string;
   effective_scoped: boolean;
+  // Curated model IDs for this kind, driving the model dropdown. Null/empty →
+  // the UI falls back to a free-text model field. Always offers a custom escape.
+  candidate_models: string[] | null;
 }
 
 export const getAgentConfig = (kind: string) =>

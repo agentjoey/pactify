@@ -52,7 +52,7 @@ describe("Recipes view", () => {
     getRecipes.mockResolvedValue([]);
     render(<Recipes />);
     await waitFor(() => {
-      expect(screen.getByText("没有可用配方")).toBeTruthy();
+      expect(screen.getByText("No recipes available")).toBeTruthy();
     });
   });
 

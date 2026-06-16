@@ -17,10 +17,11 @@ export async function resetServer(page: Page) {
 // gotoApp loads the SPA and waits for the canvas stage to mount.
 export async function gotoApp(page: Page) {
   await page.goto("/");
-  // App boots on the kanban view; switch to the canvas (keyboard "2", ignored
-  // while typing — we're not). Then wait for the stage root.
+  // App boots on the canvas view (the primary lens); pressing "1" selects it
+  // explicitly (canvas-primary keymap; ignored while typing — we're not). Then
+  // wait for the stage root.
   await page.locator('[data-testid="app-root"]').waitFor();
-  await page.keyboard.press("2");
+  await page.keyboard.press("1");
   await page.locator('[data-testid="canvas-root"], [data-testid="office-view"]').first().waitFor();
 }
 

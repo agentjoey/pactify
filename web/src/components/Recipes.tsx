@@ -59,17 +59,17 @@ export function Recipes() {
     <div className="flex-1 overflow-y-auto px-6 py-5 view-enter" data-testid="recipes-view">
       <h2 className="mb-1 text-[15px] font-[650] text-[var(--color-text-1)]">Recipes</h2>
       <p className="mb-4 text-[12px] text-[var(--color-text-3)]">
-        选一个配方 + 说一句话目标，预览它展开的任务图。门槛从"手写任务图"降到"选配方"。
+        Pick a recipe and state a one-line goal to preview the task graph it expands to. No more hand-writing the graph — just pick a recipe.
       </p>
 
       {error && (
-        <Alert tone="danger" title="出错了" className="mb-3">
+        <Alert tone="danger" title="Something went wrong" className="mb-3">
           {error}
         </Alert>
       )}
 
       {recipes && recipes.length === 0 && (
-        <EmptyState title="没有可用配方" hint="配方由 internal/recipe 提供（add-tests / review-harden / spec-to-plan）。" />
+        <EmptyState title="No recipes available" hint="Recipes are provided by internal/recipe (add-tests / review-harden / spec-to-plan)." />
       )}
 
       {recipes && recipes.length > 0 && (
@@ -99,24 +99,24 @@ export function Recipes() {
           {/* goal + preview */}
           <div>
             <label className="mb-1 block text-[11px] uppercase tracking-[.5px] text-[var(--color-text-3)]">
-              目标（一句话）
+              Goal (one line)
             </label>
             <input
               data-testid="recipe-goal"
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
-              placeholder={current ? `用 ${current.name} 做…` : "目标…"}
+              placeholder={current ? `Use ${current.name} to…` : "Goal…"}
               className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-3 py-2 text-[13px] text-[var(--color-text-1)] outline-none focus-visible:ring-2"
             />
 
             <div className="mt-3 flex items-center gap-2">
-              <span className="text-[11px] uppercase tracking-[.5px] text-[var(--color-text-3)]">展开预览</span>
+              <span className="text-[11px] uppercase tracking-[.5px] text-[var(--color-text-3)]">Preview</span>
               {expanding && <Spinner size="xs" />}
               {tasks && <Badge color="role-design">{tasks.length} tasks</Badge>}
             </div>
 
             {!goal.trim() && (
-              <div className="mt-2 text-[12px] text-[var(--color-text-3)]">输入目标后实时预览任务图。</div>
+              <div className="mt-2 text-[12px] text-[var(--color-text-3)]">Enter a goal to preview the task graph live.</div>
             )}
 
             {tasks && (
@@ -144,9 +144,9 @@ export function Recipes() {
 
             {tasks && tasks.length > 0 && (
               <div className="mt-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-3 py-2 text-[11px] text-[var(--color-text-2)]">
-                满意？接下来用{" "}
+                Looks good? Next, run{" "}
                 <span className="mono text-[var(--color-text-1)]">pactify plan {selected}</span>{" "}
-                生成任务图 manifest，到 Plan 视图复审 → orchestrate 跑。
+                to generate the task-graph manifest, review it in the Plan view → run orchestrate.
               </div>
             )}
           </div>

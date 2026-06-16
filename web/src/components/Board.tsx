@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 import type { State } from "../lib/types";
 import { boardColumns, type Column } from "../lib/derive";
-import { roleColorVar } from "../lib/canvas";
 import { statusColorVar } from "../lib/lifecycle";
 import { TaskCard } from "./TaskCard";
+import { statusColor } from "./ui/StatusPill";
 import { Tooltip } from "./ui/Tooltip";
 import { BoardSkeleton } from "./Skeleton";
 
@@ -20,11 +20,11 @@ const ORDER: Column[] = [
 
 // Per-column empty-state copy (board3 ghost text).
 const GHOST: Record<string, string> = {
-  assigned: "没有待派发的任务",
-  in_progress: "没有进行中的任务",
-  awaiting_review: "没有待评审的任务",
-  changes_requested: "没有需要返工的任务",
-  accepted: "还没有已验收的任务",
+  assigned: "No tasks to assign",
+  in_progress: "No tasks in progress",
+  awaiting_review: "No tasks awaiting review",
+  changes_requested: "No tasks needing rework",
+  accepted: "No accepted tasks yet",
 };
 
 export function Board({
@@ -79,11 +79,10 @@ export function Board({
             </Tooltip>
             <div className="flex flex-col gap-[9px]">
               {tasks.length === 0 ? (
-                <div className="kb-ghost">{GHOST[c] ?? "暂无任务"}</div>
+                <div className="kb-ghost">{GHOST[c] ?? "No tasks"}</div>
               ) : (
                 tasks.map((bt) => {
                   const pulsing = pulses?.has(bt.task.id);
-                  const roleVar = roleColorVar(rolesOf(bt.task.owner));
                   return (
                     <div
                       key={bt.task.id}
@@ -91,7 +90,7 @@ export function Board({
                       className={pulsing ? "pulse rounded-[11px]" : undefined}
                       style={
                         pulsing
-                          ? ({ "--pulse-color": `var(${roleVar})` } as CSSProperties)
+                          ? ({ "--pulse-color": statusColor(bt.task.status) } as CSSProperties)
                           : undefined
                       }
                     >

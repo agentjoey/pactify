@@ -170,14 +170,15 @@ func TestAgentConfigGetUnregistered(t *testing.T) {
 		t.Fatalf("want 200 got %d", resp.StatusCode)
 	}
 	var dto struct {
-		Kind         string   `json:"kind"`
-		Registered   bool     `json:"registered"`
-		Drivable     bool     `json:"drivable"`
-		Model        string   `json:"model"`
-		AllowedTools []string `json:"allowed_tools"`
-		Restricted   bool     `json:"restricted"`
-		EffModel     string   `json:"effective_model"`
-		EffScoped    bool     `json:"effective_scoped"`
+		Kind            string   `json:"kind"`
+		Registered      bool     `json:"registered"`
+		Drivable        bool     `json:"drivable"`
+		Model           string   `json:"model"`
+		AllowedTools    []string `json:"allowed_tools"`
+		Restricted      bool     `json:"restricted"`
+		EffModel        string   `json:"effective_model"`
+		EffScoped       bool     `json:"effective_scoped"`
+		CandidateModels []string `json:"candidate_models"`
 	}
 	json.NewDecoder(resp.Body).Decode(&dto)
 	if dto.Registered {
@@ -188,6 +189,11 @@ func TestAgentConfigGetUnregistered(t *testing.T) {
 	}
 	if dto.EffModel == "" {
 		t.Fatal("expected non-empty effective_model (default)")
+	}
+	// candidate_models drives the config model dropdown; opencode curates its
+	// default model.
+	if len(dto.CandidateModels) == 0 || dto.CandidateModels[0] != "deepseek/deepseek-v4-pro" {
+		t.Fatalf("expected candidate_models to lead with the opencode default, got %v", dto.CandidateModels)
 	}
 }
 

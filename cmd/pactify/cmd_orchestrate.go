@@ -25,6 +25,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var dryRun bool
 	var seatKinds []string
 	var asSeat string
+	var keepSessions bool
 
 	cmd := &cobra.Command{
 		Use:   "orchestrate",
@@ -76,9 +77,10 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				DryRun:       dryRun,
 				Now:          func() string { return time.Now().Format("20060102-150405") },
 				SeatKind:     func(seat string) string { return km[seat] },
-				RunTimeout:   time.Duration(runTimeoutMin) * time.Minute,
-				IdleTimeout:  time.Duration(idleTimeoutMin) * time.Minute,
-				Orchestrator: orchestrator,
+				RunTimeout:      time.Duration(runTimeoutMin) * time.Minute,
+				IdleTimeout:     time.Duration(idleTimeoutMin) * time.Minute,
+				Orchestrator:    orchestrator,
+				CleanupSessions: !keepSessions,
 			}
 			// --max-concurrency > 1 drives independent features in parallel, each in
 			// an isolated worktree, merges serialized onto base. Incompatible with
@@ -105,8 +107,9 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().IntVar(&maxFails, "max-fails", 2, "escalate after this many failed agent runs on a task")
 	cmd.Flags().IntVar(&maxIters, "max-iters", 50, "global iteration cap (backstop against a non-converging loop)")
 	cmd.Flags().IntVar(&runTimeoutMin, "run-timeout", 30, "minutes for one agent run end-to-end before killing it as a soft failure (0 = no timeout)")
-	cmd.Flags().IntVar(&idleTimeoutMin, "idle-timeout", 5, "minutes of NO output before killing an agent as hung (soft failure → retry); 0 = no idle watchdog")
+	cmd.Flags().IntVar(&idleTimeoutMin, "idle-timeout", 5, "patrol window: kill an agent as hung only after this many minutes of NO output AND NO working-tree changes (a quiet-but-writing agent keeps running); soft failure → retry; 0 = no idle watchdog")
 	cmd.Flags().IntVar(&maxConc, "max-concurrency", 1, "drive up to N independent features in parallel (isolated worktrees, serialized merges); 1 = serial. Ignored with --feature/--dry-run")
+	cmd.Flags().BoolVar(&keepSessions, "keep-sessions", false, "keep each agent's sessions after its task is accepted (default: close them — opencode only, matched by the pact:<seat> title the runner stamps)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")
 	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")

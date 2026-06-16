@@ -13,7 +13,7 @@ export function Kbd({
     <kbd
       className={[
         "inline-flex items-center rounded-[3.5px] border border-[var(--color-border-strong)]",
-        "bg-[rgba(255,255,255,.07)] px-1.5 text-[9px] leading-[15px] text-[var(--color-text-3)] font-mono",
+        "bg-[rgba(18,22,31,.07)] px-1.5 text-[9px] leading-[15px] text-[var(--color-text-3)] font-mono",
         className,
       ].join(" ")}
     >

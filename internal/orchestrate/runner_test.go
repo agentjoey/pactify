@@ -3,6 +3,7 @@ package orchestrate
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -40,7 +41,7 @@ func hasEnv(env []string, want string) bool {
 func TestCmdRunner_Opencode(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), "w1", "opencode", "do the work", "/repo")
+	err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", Briefing: "do the work", RepoDir: "/repo"})
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
 	}
@@ -67,7 +68,7 @@ func TestCmdRunner_Opencode(t *testing.T) {
 func TestCmdRunner_ClaudeCode(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), "r1", "claude-code", "review task t1", "/work")
+	err := r.Run(context.Background(), LaunchContext{Seat: "r1", Kind: "claude-code", Briefing: "review task t1", RepoDir: "/work"})
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
 	}
@@ -82,10 +83,84 @@ func TestCmdRunner_ClaudeCode(t *testing.T) {
 	}
 }
 
+func TestRunnerStampsTaskAndProjectEnv(t *testing.T) {
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	lc := LaunchContext{Seat: "dev", Kind: "opencode", Task: "t7", Project: "demo", Briefing: "B", RepoDir: "/repo"}
+	if err := r.Run(context.Background(), lc); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if !hasEnv(cap.env, "PACT_AGENT_ID=dev") || !hasEnv(cap.env, "PACT_TASK_ID=t7") || !hasEnv(cap.env, "PACT_PROJECT=demo") {
+		t.Fatalf("env missing task/project stamp: %v", cap.env)
+	}
+}
+
+func TestGLMEnv(t *testing.T) {
+	origTok, origURL := glmToken, glmBaseURL
+	t.Cleanup(func() { glmToken, glmBaseURL = origTok, origURL })
+	// Pin the endpoint to the global default for the base cases (so the test
+	// never reads the host's real Keychain override).
+	glmBaseURL = func() string { return glmDefaultBaseURL }
+
+	// non-GLM command/model → no GLM env, token fn never consulted.
+	glmToken = func() (string, error) { t.Fatal("glmToken should not be called"); return "", nil }
+	if env, err := glmEnv("claude", "claude-opus-4-8"); err != nil || env != nil {
+		t.Fatalf("non-glm claude: env=%v err=%v, want nil,nil", env, err)
+	}
+	if env, err := glmEnv("opencode", "glm-4.7"); err != nil || env != nil {
+		t.Fatalf("glm on non-claude: env=%v err=%v, want nil,nil", env, err)
+	}
+
+	// GLM seat → base URL + token injected.
+	glmToken = func() (string, error) { return "zai-secret", nil }
+	env, err := glmEnv("claude", "glm-4.7")
+	if err != nil {
+		t.Fatalf("glm claude: %v", err)
+	}
+	if !hasEnv(env, "ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic") || !hasEnv(env, "ANTHROPIC_AUTH_TOKEN=zai-secret") {
+		t.Fatalf("glm env = %v, want base URL + token", env)
+	}
+
+	// Keychain endpoint override (china coding plan) flows into the env.
+	glmBaseURL = func() string { return "https://open.bigmodel.cn/api/anthropic" }
+	env, err = glmEnv("claude", "glm-4.6")
+	if err != nil {
+		t.Fatalf("glm claude (china): %v", err)
+	}
+	if !hasEnv(env, "ANTHROPIC_BASE_URL=https://open.bigmodel.cn/api/anthropic") {
+		t.Fatalf("china glm env = %v, want open.bigmodel.cn base URL", env)
+	}
+
+	// GLM seat but missing token → actionable error.
+	glmToken = func() (string, error) { return "", errors.New("not in Keychain") }
+	if _, err := glmEnv("claude", "glm-4.6"); err == nil {
+		t.Fatal("expected error when GLM token missing")
+	}
+}
+
+func TestTagOpencodeSession(t *testing.T) {
+	// opencode run args get a per-seat --title inserted right after "run".
+	got := tagOpencodeSession("opencode", "dev", []string{"run", "-m", "deepseek/deepseek-v4-pro", "do the thing"})
+	want := []string{"run", "--title", "pact:dev", "-m", "deepseek/deepseek-v4-pro", "do the thing"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("opencode tag = %v, want %v", got, want)
+	}
+	// Non-opencode commands are untouched.
+	claude := []string{"-p", "--model", "claude-opus-4-8", "brief"}
+	if got := tagOpencodeSession("claude", "dev", claude); !reflect.DeepEqual(got, claude) {
+		t.Errorf("claude args mutated: %v", got)
+	}
+	// Defensive: opencode args not starting with "run" are left alone.
+	odd := []string{"models"}
+	if got := tagOpencodeSession("opencode", "dev", odd); !reflect.DeepEqual(got, odd) {
+		t.Errorf("non-run opencode args mutated: %v", got)
+	}
+}
+
 func TestCmdRunner_GUIKind_Errors(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), "g1", "antigravity", "brief", "/repo")
+	err := r.Run(context.Background(), LaunchContext{Seat: "g1", Kind: "antigravity", Briefing: "brief", RepoDir: "/repo"})
 	if err == nil {
 		t.Fatal("expected error for GUI kind antigravity, got nil")
 	}
@@ -97,7 +172,7 @@ func TestCmdRunner_GUIKind_Errors(t *testing.T) {
 func TestCmdRunner_UnknownKind_Errors(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), "x1", "no-such-kind", "brief", "/repo")
+	err := r.Run(context.Background(), LaunchContext{Seat: "x1", Kind: "no-such-kind", Briefing: "brief", RepoDir: "/repo"})
 	if err == nil {
 		t.Fatal("expected error for unknown kind, got nil")
 	}
@@ -110,7 +185,7 @@ func TestCmdRunner_ExecError_Propagates(t *testing.T) {
 	want := errors.New("boom")
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, want)}
-	err := r.Run(context.Background(), "w1", "opencode", "brief", "/repo")
+	err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", Briefing: "brief", RepoDir: "/repo"})
 	if !errors.Is(err, want) {
 		t.Fatalf("Run error = %v, want %v", err, want)
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
+	"github.com/agentjoey/pactify/internal/sessions"
 )
 
 // Run is the package entry point: it drives opts to completion (or pause). See
@@ -51,21 +52,36 @@ type Options struct {
 	// a soft failure (retry the worker). 0 = no idle watchdog. Plumbed into the
 	// default CmdRunner; ignored when a custom Run is injected (tests).
 	IdleTimeout time.Duration
+	// SessionRun is the injected runner for agent session-management CLIs (close a
+	// finished task's sessions). nil disables session cleanup entirely — the safe
+	// default for tests (no CLI spawn). withDefaults wires the real exec runner only
+	// when CleanupSessions is set, so cleanup never runs unless explicitly enabled.
+	SessionRun sessions.Runner
+	// CleanupSessions enables closing an agent's sessions once its task is accepted
+	// (opencode-only today; see internal/sessions). Off → sessions are kept.
+	CleanupSessions bool
 }
 
 // launchAgent runs one agent under an optional per-run timeout. The timeout is a
 // CHILD of ctx, so a per-run expiry cancels just that subprocess (soft failure),
 // while a parent-ctx cancellation (Ctrl-C) propagates. Callers distinguish the
 // two by checking the PARENT ctx.Err() after a non-nil return.
-func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief string) error {
+func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task string) error {
 	runCtx := ctx
 	if opts.RunTimeout > 0 {
 		var cancel context.CancelFunc
 		runCtx, cancel = context.WithTimeout(ctx, opts.RunTimeout)
 		defer cancel()
 	}
-	return opts.Run.Run(runCtx, seatID, kind, brief, opts.Dir)
+	return opts.Run.Run(runCtx, LaunchContext{
+		Seat: seatID, Kind: kind, Task: task, Project: projectID(opts.Dir),
+		Briefing: brief, RepoDir: opts.Dir,
+	})
 }
+
+// projectID derives a stable project name from the repo dir (its base name) — the
+// same fallback the audit hook uses when PACT_PROJECT is unset, so they agree.
+func projectID(dir string) string { return filepath.Base(dir) }
 
 // Run drives the pact state machine for opts.Dir until the targeted work is
 // shipped, escalated, or (dry-run) previewed. It is serial: read state →
@@ -190,7 +206,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	retrying := h.Fails[act.Task] > 0
 	brief := workerBrief(seatFor(st, act.Seat, seat), task, reason, retrying)
 
-	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief); runErr != nil {
+	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
@@ -223,7 +239,7 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 	}
 	brief := reviewerBrief(projection.Seat{ID: act.Seat}, task)
 
-	if runErr := opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief); runErr != nil {
+	if runErr := opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
@@ -242,10 +258,42 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 		h.Fails[act.Task] = 0 // the review ran (progress): clear the consecutive count
 	case ok && t.Status == "accepted":
 		h.Fails[act.Task] = 0
+		// Task is done: close the owner's & reviewer's sessions for it (opencode-
+		// only today). Best-effort — a cleanup failure never blocks the loop.
+		opts.cleanupTaskSessions(task)
 	default:
 		h.Fails[act.Task]++
 	}
 	return nil
+}
+
+// cleanupTaskSessions closes the sessions an accepted task's agents created,
+// matched by the per-seat title the runner stamped (sessions.SessionTag). No-op
+// when cleanup is disabled (SessionRun nil) or the seat's kind has no verified
+// list+delete support. Reports what it closed via Notify; failures are logged,
+// never fatal.
+func (opts Options) cleanupTaskSessions(task projection.Task) {
+	if opts.SessionRun == nil {
+		return
+	}
+	seen := map[string]bool{}
+	for _, seat := range []string{task.Owner, task.Reviewer} {
+		if seat == "" || seen[seat] {
+			continue
+		}
+		seen[seat] = true
+		kind := opts.kind(seat)
+		if !sessions.CanCleanup(kind) {
+			continue
+		}
+		ids, _, err := (sessions.Manager{Run: opts.SessionRun}).CleanupByTitle(kind, sessions.SessionTag(seat))
+		switch {
+		case err != nil && opts.Notify != nil:
+			opts.Notify.Notify(fmt.Sprintf("session cleanup: seat %s (%s): %v", seat, kind, err))
+		case len(ids) > 0 && opts.Notify != nil:
+			opts.Notify.Notify(fmt.Sprintf("closed %d %s session(s) for seat %s after task %s accepted", len(ids), kind, seat, task.ID))
+		}
+	}
 }
 
 // merge runs the independent hard gate over the feature's tasks, then merges on

@@ -18,6 +18,8 @@ func TestLaunchProfile_DefaultsMatchRunner(t *testing.T) {
 		{"opencode", "opencode", []string{"run", "-m", "deepseek/deepseek-v4-pro", "{briefing}"}},
 		{"claude-code", "claude", []string{"-p", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}},
 		{"gemini-cli", "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}},
+		{"kimi-cli", "kimi", []string{"-p", "{briefing}", "-y", "-m", "kimi-for-coding"}},
+		{"codex-cli", "codex", []string{"exec", "--sandbox", "workspace-write", "{briefing}"}},
 	}
 	for _, c := range cases {
 		p, ok := RunnerProfileFor(c.kind)
@@ -77,9 +79,50 @@ func TestLaunchProfile_OpencodeIgnoresPosture(t *testing.T) {
 
 // Non-drivable kinds have no profile.
 func TestLaunchProfile_NonDrivable(t *testing.T) {
-	for _, k := range []string{"antigravity", "claude-desktop", "codex-cli", "no-such"} {
+	for _, k := range []string{"antigravity", "claude-desktop", "codex-app", "no-such"} {
 		if _, ok := RunnerProfileFor(k); ok {
 			t.Errorf("%s: expected no runner profile, got ok=true", k)
 		}
+	}
+}
+
+// CandidateModels returns each drivable kind's curated list (default first),
+// nil for kinds with no curated list or no profile.
+func TestCandidateModels(t *testing.T) {
+	got := CandidateModels("claude-code")
+	want := []string{"claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("claude-code candidates = %v, want %v", got, want)
+	}
+	// DefaultModel must appear in the curated list for kinds that pin one.
+	for _, k := range []string{"opencode", "claude-code", "gemini-cli", "kimi-cli"} {
+		p, _ := RunnerProfileFor(k)
+		if p.DefaultModel == "" {
+			continue
+		}
+		models := CandidateModels(k)
+		found := false
+		for _, m := range models {
+			if m == p.DefaultModel {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("%s: DefaultModel %q not in candidates %v", k, p.DefaultModel, models)
+		}
+	}
+	// Returned slice is a copy — mutating it must not corrupt the profile.
+	c := CandidateModels("claude-code")
+	c[0] = "MUTATED"
+	if CandidateModels("claude-code")[0] != "claude-opus-4-8" {
+		t.Error("CandidateModels returned a shared slice; mutation leaked")
+	}
+	// codex-cli pins no default and curates nothing → nil.
+	if got := CandidateModels("codex-cli"); got != nil {
+		t.Errorf("codex-cli candidates = %v, want nil", got)
+	}
+	// Non-drivable / unknown → nil.
+	if got := CandidateModels("antigravity"); got != nil {
+		t.Errorf("antigravity candidates = %v, want nil", got)
 	}
 }

@@ -120,6 +120,16 @@ body {
   .press:active { transform: scale(0.985); }
 }
 
+/* status-pill-dot-live: a gentle breathing dot for "in flight" states
+   (working / escalated). reduced-motion → static dot. */
+@media (prefers-reduced-motion: no-preference) {
+  .status-pill-dot-live { animation: status-pill-breath 1.6s ease-in-out infinite; }
+}
+@keyframes status-pill-breath {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+
 /* hover-lift: a reusable card affordance — on hover the card raises (shadow +
    1px translate) so it reads as interactive. Pair with a token shadow. */
 .hover-lift {
@@ -136,7 +146,9 @@ body {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: color-mix(in srgb, var(--color-bg-surface) 70%, transparent);
+  /* a clearly visible light-gray block on a white surface (the old surface-70%
+     value was nearly invisible on #fff). */
+  background: rgba(26, 29, 39, 0.10);
   border-radius: 6px;
 }
 .skeleton::after {
@@ -144,10 +156,11 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
+  /* a brighter band sweeping across the gray base reads as the shimmer. */
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in srgb, var(--color-text-3) 14%, transparent),
+    rgba(255, 255, 255, 0.65),
     transparent
   );
 }
@@ -182,20 +195,134 @@ body {
    Two ambient role-color radial glows over the page token, plus a masked dot
    grid layer. Purely decorative; the React Flow pane sits transparent on top. */
 .canvas-stage {
+  /* Airy, restrained canvas (Stitch-style): a very subtle three-brand-color
+     ambient tint (gold top-right · blue top-left · green bottom) over a
+     white→page vertical wash. Kept faint so cards float on a clean surface
+     rather than a busy gradient. */
   background:
-    radial-gradient(1200px 500px at 70% -10%, color-mix(in srgb, var(--color-role-design) 6%, transparent), transparent 60%),
-    radial-gradient(900px 400px at 10% 110%, color-mix(in srgb, var(--color-role-dev) 5%, transparent), transparent 60%),
-    var(--color-bg-page);
+    radial-gradient(900px 480px at 82% -10%, color-mix(in srgb, var(--color-role-product) 5%, transparent), transparent 60%),
+    radial-gradient(820px 460px at 8% 4%, color-mix(in srgb, var(--color-role-design) 4%, transparent), transparent 58%),
+    radial-gradient(1100px 540px at 50% 120%, color-mix(in srgb, var(--color-role-dev) 4%, transparent), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, var(--color-bg-page) 100%);
 }
 .canvas-grid {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
-  mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 95%);
+  background-image: radial-gradient(rgba(18, 22, 31, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 35%, transparent 92%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 35%, transparent 92%);
+}
+
+/* Grid magnifier (Stitch-style): a cursor-following "lens" where the dot grid
+   sharpens (darker, slightly larger dots) inside a soft circle. The container
+   sets --mx/--my from the mouse; ::before is the faint base grid, ::after is the
+   crisper lensed grid masked to the cursor. Decorative; pointer-events none. */
+.grid-lens {
+  position: relative;
+  --mx: 50%;
+  --my: 50%;
+}
+.grid-lens::before,
+.grid-lens::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* sit BELOW the cards (which take z-index ≥ 1) so the dot grid reads as a
+     backdrop the cards float over, never painting on top of them. */
+  z-index: 0;
+  background-image: radial-gradient(rgba(18, 22, 31, 0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.grid-lens::after {
+  background-image: radial-gradient(rgba(18, 22, 31, 0.22) 1.5px, transparent 1.5px);
+  -webkit-mask: radial-gradient(circle 120px at var(--mx) var(--my), #000 0%, transparent 68%);
+  mask: radial-gradient(circle 120px at var(--mx) var(--my), #000 0%, transparent 68%);
+}
+
+/* connect-plus (Dify edge "+"): a small circular handle on a node card's edge —
+   the affordance to draw a dependency to a downstream card. Dim until the card
+   is hovered, then it brightens; hover on itself scales + glows. */
+.connect-plus {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--color-role-design);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 600;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-role-design) 45%, transparent);
+  opacity: 0.35;
+  transition: opacity var(--motion-micro) var(--motion-ease),
+    transform var(--motion-micro) var(--motion-ease);
+}
+.hover-lift:hover .connect-plus { opacity: 1; }
+.connect-plus:hover {
+  opacity: 1;
+  /* translate FIRST then scale (matrix order: scale applied to the point, then a
+     constant -50% shift) so the handle grows from its own center and never
+     drifts out from under the cursor — the old `scale() translateY()` order
+     scaled the offset, which moved the hit-box and caused hover flicker. */
+  transform: translateY(-50%) scale(1.15);
+}
+
+/* Ant activity (Phase 3 increment A): an always-on, state-driven ant motion
+   overlay. DECISION: it sits INSIDE the card's top-right corner (not an outside
+   overhang) so the node's bounding box stays clean on a dense canvas — no
+   collision with edges/handles/neighbors — and the motion reads as "this card's
+   live state". Small + subtle. Three motions encode the live status — crawl
+   (working) / orbit (awaiting review) / fret (rework). All gated by
+   prefers-reduced-motion (AntActivity renders nothing otherwise, so no static
+   clutter and no lost info — the StatusPill carries the state). */
+.ant-act {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 15px;
+  height: 11px;
+  pointer-events: none;
+  z-index: 6;
+}
+.ant-act-runner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  transform: translate(-50%, -50%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ant-work .ant-act-runner { animation: ant-crawl 1.7s ease-in-out infinite; }
+  .ant-wait .ant-act-runner { animation: ant-orbit 2.4s linear infinite; }
+  .ant-changes .ant-act-runner { animation: ant-fret 0.7s ease-in-out infinite; }
+}
+@keyframes ant-crawl {
+  0%   { transform: translate(-50%, -50%) translateX(-4px); }
+  48%  { transform: translate(-50%, -50%) translateX(4px); }
+  50%  { transform: translate(-50%, -50%) translateX(4px) scaleX(-1); }
+  98%  { transform: translate(-50%, -50%) translateX(-4px) scaleX(-1); }
+  100% { transform: translate(-50%, -50%) translateX(-4px); }
+}
+@keyframes ant-orbit {
+  from { transform: translate(-50%, -50%) rotate(0deg) translateX(5px) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg) translateX(5px) rotate(-360deg); }
+}
+@keyframes ant-fret {
+  0%, 100% { transform: translate(-50%, -50%) translateX(-2px); }
+  50%      { transform: translate(-50%, -50%) translateX(2px); }
+}
+
+/* Frosted card (Stitch-style): translucent surface + backdrop blur, so cards on
+   the canvas let the grid faintly show through. Pair with a token border/shadow. */
+.card-frost {
+  background: color-mix(in srgb, var(--color-bg-surface) 62%, transparent);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
 }
 
 /* Frosted toolbar (top-left) — board2-canvas-v2 `.tbar`/`.tbtn`. */
@@ -226,7 +353,7 @@ body {
   gap: 6px;
   transition: background 0.12s var(--motion-ease);
 }
-.canvas-tbar .tbtn:hover { background: rgba(255, 255, 255, 0.06); }
+.canvas-tbar .tbtn:hover { background: rgba(18,22,31, 0.06); }
 .canvas-tbar .tbtn:disabled { opacity: 0.4; }
 .canvas-tbar .tbtn .ic { opacity: 0.6; font-size: 11px; }
 .canvas-tbar .tbtn.on {
@@ -289,7 +416,7 @@ body {
   color: var(--color-text-2);
   transition: background 0.12s var(--motion-ease);
 }
-.canvas-hud button:hover { background: rgba(255, 255, 255, 0.06); color: var(--color-text-1); }
+.canvas-hud button:hover { background: rgba(18,22,31, 0.06); color: var(--color-text-1); }
 .canvas-hud .pct { font-size: 11px; color: var(--color-text-3); }
 
 /* Frosted MiniMap (bottom-left) — board2-canvas-v2 `.mmap`. React Flow renders
@@ -393,7 +520,7 @@ body {
   text-align: left;
   transition: background 0.1s var(--motion-ease);
 }
-.canvas-ctx .ci:hover { background: rgba(255, 255, 255, 0.06); }
+.canvas-ctx .ci:hover { background: rgba(18,22,31, 0.06); }
 .canvas-ctx .ci.hot {
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-role-design) 20%, transparent), color-mix(in srgb, var(--color-role-design) 10%, transparent));
 }
@@ -403,7 +530,7 @@ body {
   margin-left: auto;
   font-size: 9.5px;
   color: var(--color-text-3);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(18,22,31, 0.07);
   border: 1px solid var(--color-border-strong);
   border-radius: 4px;
   padding: 1px 5px;
@@ -481,7 +608,7 @@ body {
   width: 64px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(18,22,31, 0.09);
   overflow: hidden;
 }
 .feature-frame .fbar i {
@@ -525,7 +652,7 @@ body {
   transition: border-color 0.12s ease, box-shadow 0.2s ease;
 }
 .task-card:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(18,22,31, 0.16);
 }
 .task-card.dashed {
   border-style: dashed;
@@ -567,14 +694,14 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(18,22,31, 0.14);
 }
 
 .task-card .life i {
   width: 11px;
   height: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(18,22,31, 0.1);
   display: inline-block;
 }
 .task-card .life i.done {
@@ -637,7 +764,7 @@ body {
   transition: background 0.12s var(--motion-ease), color 0.12s var(--motion-ease);
 }
 .office-modeseg button.on {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(180deg, rgba(18,22,31, 0.1), rgba(18,22,31, 0.06));
   color: var(--color-text-1);
 }
 
@@ -645,25 +772,38 @@ body {
 .desk {
   width: 264px;
   border-radius: 16px;
-  backdrop-filter: blur(8px);
-  background: linear-gradient(165deg, rgba(47, 50, 70, 0.92), rgba(32, 34, 47, 0.94));
-  border: 1px solid var(--color-border-strong);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px) saturate(1.1);
+  background: linear-gradient(165deg, color-mix(in srgb, var(--color-bg-surface) 92%, transparent), color-mix(in srgb, var(--color-bg-inset) 55%, white));
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-raised);
+  /* Phase 4 (Make-Grid): depth encodes state — active desks raise + glow,
+     idle desks flatten + desaturate + sink. Animated so transitions read. */
+  transition: transform 0.18s var(--motion-ease), box-shadow 0.18s var(--motion-ease), filter 0.18s var(--motion-ease);
 }
 .desk.busy {
-  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 24px color-mix(in srgb, var(--color-success) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 26px 46px -14px color-mix(in srgb, var(--color-success) 40%, transparent), 0 6px 16px rgba(18,22,31,.12);
 }
-.desk.review_due, .desk.waiting { border-color: color-mix(in srgb, var(--color-warn) 40%, transparent); }
-.desk.idle { opacity: 0.62; }
+.desk.review_due, .desk.waiting {
+  border-color: color-mix(in srgb, var(--color-warn) 52%, transparent);
+  transform: translateY(-5px) scale(1.008);
+  box-shadow: 0 18px 36px -14px color-mix(in srgb, var(--color-warn) 34%, transparent), 0 4px 12px rgba(18,22,31,.1);
+}
+.desk.idle {
+  opacity: 0.6;
+  filter: saturate(0.32);
+  transform: translateY(5px) scale(0.94);
+  box-shadow: 0 2px 6px rgba(18,22,31,.06);
+}
 .desk.drop-target { border-color: var(--color-role-dev); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-role-dev) 45%, transparent); }
 .desk .dhead { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
 .desk .dava {
   position: relative; width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(18,22,31, 0.16);
 }
-.desk .presence { position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid #232532; }
+.desk .presence { position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid var(--color-bg-surface); }
 .desk .dname { font-size: 14px; font-weight: 650; color: var(--color-text-1); }
 .desk .dvend { font-size: 9.5px; color: var(--color-text-3); margin-top: 1px; }
 .desk .dstat {
@@ -684,10 +824,10 @@ body {
   font-size: 8.5px; letter-spacing: 0.7px; text-transform: uppercase; color: var(--color-text-3);
   margin: 7px 2px 5px; display: flex; align-items: center; gap: 6px;
 }
-.desk .zlab .zc { background: rgba(255, 255, 255, 0.07); border-radius: 999px; padding: 0 6px; font-size: 8.5px; color: var(--color-text-2); }
+.desk .zlab .zc { background: rgba(18,22,31, 0.07); border-radius: 999px; padding: 0 6px; font-size: 8.5px; color: var(--color-text-2); }
 .parcel {
   display: flex; align-items: center; gap: 7px;
-  background: rgba(13, 14, 20, 0.5); border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-inset); border: 1px solid var(--color-border-subtle);
   border-left: 3px solid var(--st, #888);
   border-radius: 7px; padding: 6px 9px; margin-bottom: 5px; font-size: 11px; color: var(--color-text-1);
 }
@@ -706,13 +846,18 @@ body {
   border: 1px solid var(--color-border-strong); border-radius: 12px; padding: 12px 14px;
 }
 .office-wall .wt { font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--color-text-3); margin-bottom: 9px; }
+/* Phase 4.3 lens toggle inside the wall panel. */
+.office-lens { display: flex; gap: 2px; margin-bottom: 9px; background: var(--color-bg-inset); border-radius: 7px; padding: 2px; }
+.office-lens button { flex: 1; font-size: 9.5px; font-weight: 600; padding: 3px 0; border-radius: 5px; color: var(--color-text-3); transition: background 0.12s var(--motion-ease), color 0.12s var(--motion-ease); }
+.office-lens button.on { background: var(--color-bg-surface); color: var(--color-text-1); box-shadow: var(--shadow-card); }
 .office-wall .wrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; color: var(--color-text-2); }
-.office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(18,22,31, 0.08); overflow: hidden; }
 .office-wall .wbar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 70%, white)); }
 
 /* Shipped tray — board5 `.tray` (fixed bottom-right). */
 .office-tray {
-  position: absolute; right: 18px; bottom: 18px; width: 200px; z-index: 10;
+  /* lifted above the bottom-right zoom HUD (canvas-hud, bottom:16) so they don't overlap. */
+  position: absolute; right: 18px; bottom: 60px; width: 200px; z-index: 10;
   background: color-mix(in srgb, var(--color-success) 6%, transparent);
   border: 1px dashed color-mix(in srgb, var(--color-success) 30%, transparent);
   border-radius: 12px; padding: 10px 14px;

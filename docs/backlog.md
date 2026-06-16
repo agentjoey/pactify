@@ -9,6 +9,13 @@
 ## 差异化备忘（对 AgentHub）
 - AgentHub 靠中心化 "Hub"（服务器）协调，更新日志在反复修"Hub 连接不稳定"。Pactify 用 git+文件当唯一事实源、零服务器——**主打"没有 Hub 可以掉线、你的 repo 就是协调层"**，是 ADR-001"守 Team"之外更底层的技术护城河。
 
+## 差异化备忘（对 Mind Agency，2026-06-14 调研）
+[Toufumind/mind-agency](https://github.com/Toufumind/mind-agency)：「From Agent to Agency — 一个 AI 做不了的事，一群 AI 可以」，Multi-Agent Collaboration Platform，Apache-2.0，v0.8 beta（2026-06-05 建，活跃）。**同品类/同口号/同时代/同中文圈**，是定位上的 peer/竞品，但**架构相反、非技术冲突**：
+- **它 = 厚客户端 App**（Electron + Next.js 前端 + Node WebSocket 后端，端口 3000/3001），内置自己的 agent 运行时（Claude Agent SDK 跑 Alice/Bob/Charlie 角色人格），群聊@/邮件/投票/多轮辩论/对抗评审 + 内存 EventBus + 本地 filesystem（Agents/、Groups/、.audit/、.mind/）信号。**单机、需常驻后端进程（本质就是个本地 Hub）**。
+- **Pactify = 协议 + 薄 CLI**（Go 单二进制），git+`.pact/` 文件当唯一事实源、**零服务器**；不自带 agent，而是**协调你已装的真实 agent CLI**（claude-code/opencode/codex/kimi/cursor…），headless orchestrate 驱动；**跨机/跨 repo 走 git**，审计在 git 历史。
+- **护城河对照**：Mind Agency 是"做一个能跑 agent 社会的桌面工作台"（GUI-first、共识/辩论功能更厚）；Pactify 是"做 agent 之间的协调协议"（infra-first、骑现有厂商 CLI、no-Hub、git-native、多机）。**可能互补**而非互斥（Pactify 协调跨机/跨仓，Mind Agency 是单机工作台）。
+- **要盯的点**：① 命名/口号撞车（都打"agency / 一个 AI 不行一群行"，都中文起家）→ 营销同渠道会被直接比较；Pactify 要强化"协议非平台 / no-Hub / 骑你的真 agent / git 多机"的差异话术。② 它的共识投票/多轮辩论/对抗评审是 Pactify 没有的 agent-society 功能 → 是要不要追的取舍（Pactify 的"评审"是两条硬规则的协议约束，不是辩论）。
+
 ## 链路完善候选（2026-06-13 链路走查）
 按用户旅程：①装+扫描注册 ✓ → ②建项目/配座席 → ③定义活 → ④orchestrate 跑 ✓ → ⑤看进展/介入 → ⑥交付远端
 - **[#1] 项目设置向导（座席绑定）**：扫描注册完 agent 后，引导"用我注册的 agent 配这个项目"（选 agent→派座席+角色），接通"注册完"到"能干活"。是 #2/#3 的前置。
@@ -44,9 +51,16 @@
 - 空闲超时（无输出 N min）vs 总超时：空闲更快兜挂死、又不误杀合法慢任务（需 osExec 包输出活动检测）。
 
 ## 来自 liveview 三 agent 自主建（2026-06-13）
-- **agent 任务 session 清理**：orchestrator 驱动每棒都 spawn 一个 agent session（opencode run / claude -p / gemini -p），跨多 task + 返工 + 重试/超时会累积大量 session，可能拖累 agent（存储/上下文/性能）。是否在任务完成后让 worker 清理掉执行该任务的相关 session。设计点：清哪些（只清本任务的 vs 也清陈旧的）、谁触发（worker checkpoint 后自清 vs orchestrate accept 后清）、保留 vs 清理权衡（审计/debug 要留）、各 agent session API 不同（gemini `--list-sessions`/`--delete-session`、opencode `opencode session`、claude session 管理）。
+- **agent 任务 session 清理** ✅ 已做（2026-06-15，commit 55b829a，opencode-first）：task accept 后自动关闭该棒 owner+reviewer 的 session。**实测各 agent session CLI 后定 opencode 优先**：只有 opencode 有干净的 `session list` + `session delete <id>`（且最该清——常驻 daemon、重 session DB）；gemini 按易变 index 删、codex 只 archive、kimi/claude 无 headless 删除。机制：runner 给 opencode run 打 `--title pact:<seat>` → accept 后 `CleanupByTitle` list→匹配 title→按 id 删；CLI 默认开、`--keep-sessions` 关。已对真 opencode CLI 端到端验证。
+  - **遗留**：① gemini（按 index 删，需 list→解析 index）/ codex（archive）/ kimi/claude（无 CLI，文件级）后续接；② 触发点目前是 accept 后（设计点「worker checkpoint 自清 vs orchestrate accept 后清」选了后者——orchestrate 集中清、worker 无需关心）；③ 保留 vs 清理：默认清，留 `--keep-sessions` 给要审计/debug 的场景。
 - **--run-timeout 15min 太短/钝超时误杀慢任务**：本轮 step3（前端面板）合法慢，15min 超时杀了一次→重试续建才完成。默认 30min 较合理；正解 = 空闲超时（无输出 N min 才杀，不误伤慢任务），已记。本轮也验证了"超时→重试→读半成品续建"恢复链可用。
 - **（待查）merge 后 STATE.yml 可能滞后**：liveview merge 后工作树 STATE 一度显 shipped、但 HEAD 提交的 STATE.yml 显 in_progress——疑似 pact Merge 的 STATE 提交时序问题，需查（feature 实际已 merged、代码在 main、测试绿，仅 STATE 文件可能滞后）。
+
+## orchestrate merge 分支不匹配（2026-06-16 audit-layer 真跑发现，真 bug）
+**现象**：`pactify assign <task> --feature F --branch feat-X` 后跑**串行** `orchestrate --feature F`，两 task 都 worked→accepted，但 `pact merge F` 失败 `exit status 1`：`Please specify which branch you want to merge with`，且把工作树 `git checkout` 到了 base（main），人需手动 `git checkout` 回去。
+**根因**：串行单树 orchestrate 的 worker **就地在 orchestrate 启动分支上干活+提交**（join 没真的切到 feat-X），但 `pact.Merge` 仍按 STATE 里记录的 feature 分支 `feat-X` 去 `git merge feat-X`——该分支从未被创建 → git 报错。merge 的 `git checkout base` 已执行、merge 本身失败 → 树停在 base。
+**影响**：feature 卡在 accepted-but-not-shipped；代码其实已就地提交在启动分支（本次 = feat-audit-layer，`git checkout feat-audit-layer` 即恢复，无丢失）。
+**正解候选**：① 串行 orchestrate 检测"feature 提交已在当前分支"→ merge 变 no-op（只置 shipped + 提交 merge 事件）；② 或 assign 时 `--branch` 与串行运行分支一致性校验/忽略；③ 文档明确：串行就地跑别设异名 feature 分支。关联并行 merge 逻辑（worktree park base）。
 
 ## gemini-cli 免费档静默降级 flash —— 模型 pin 不可靠（2026-06-13）
 **现象**：liveview step2 由 gemini 跑时，用户在 live 里看到模型是 `gemini-3-flash-preview`，而非 runner pin 的 `gemini-3.1-pro-preview`。
@@ -81,6 +95,9 @@
 - **协议层扩展方向**：若 Pactify 自身说 ACP（Agent Client Protocol），Zed/JetBrains/Kimi 可 host Pactify 驱动的 agent——单列调研。
 - **配套**：每个新 kind 接入后，`agent config`（model/权限姿态）即时可用；Codex 的 `--sandbox` 分级提示 PermPosture 未来可加"sandbox 级别"维度。
 
+## 自定义 agent 接入标准 API（2026-06-16 用户，待具体讨论）
+- **设计一套标准 API/契约，让用户自定义 agent 可接入**：当前接入新 agent 需在 `internal/agent` 硬编码 spec + RunnerProfile（kind/entry/MCP format/runner argv/权限姿态/候选模型）。候选 = 把这套抽象成**用户可声明的契约**（如一个 `agent manifest` 文件：binary、headless argv 模板、entry 文件、MCP 配置形态、权限 flag、候选模型），让用户无需改 Go 源码即可接入自有/小众 agent。关联：现有 RunnerProfile/spec/CandidateModels、agent-integration-candidates.md（13 agent 调研）、ACP 协议方向。回头细化范围与 schema 再开 spec。
+
 ## 剩余 UI（2026-06-14 暂停，待后续）—— 详见 docs/roadmap-next.md + ui-design-spec.md
 已做：Setup(#1)、Recipes(#11)、Plan 只读(#7)、Live 并行聚合(#3)、Agent Config(#10/#9/#4)、Ops polish(#12 部分)。
 **剩余（都是有副作用 HTTP 操作，需先设计确认/安全 UX）**：
@@ -91,3 +108,15 @@
 - **B8 Sessions prune**：Ops 内每 agent prune 按钮（`sessions prune`，加确认）。
 - **setup/apply 一键**：Setup 视图「Apply」直接 init+wire（`POST /api/setup/apply`，mutate .pact 需确认）。
 - **横切设计**：有副作用 HTTP 操作的**确认弹窗 + acting-seat 校验 + 安全/沙箱** 规范，先定再实现。
+- **[UI] agent logo 统一接入（用于 agent 卡片）**：收集各 agent 品牌 logo（claude-code/opencode/gemini/codex/cursor/kimi/amp/goose/aider/…），**统一风格处理**（同一描边/留白/圆角画框、duotone 或单色化以适配浅色主题、统一尺寸），做成 `kind → logo` 资产/组件，替换 agent 卡片现用的 Phosphor 概念图标（`kind-*`）。来源：2026-06-14 用户。关联元素库 Icon library。✅ 已做（2026-06-15，commit 8b467a5）：AgentLogo 组件已接进 Setup / Agents 引导条 / Ops AgentConfig 真卡片。
+
+- **[UI] Settings 视图 agent 管理三件套**（来源：2026-06-15 用户）✅ 已做（2026-06-15，commit af9fe8b）：
+  1. ✅ **一键自动扫描**：Ops/Settings 新增 `AgentRoster` 面板，Scan 按钮重拉实时探测（`GET /api/agents` 每次 `agent.Scan()` 重探），一键 Register 已装未注册的 agent。
+  2. ✅ **手动添加（已知 kind）**：「Add manually」展开列"支持但未检测到"的 kind，Register anyway 登记。**自定义 binary 路径延后** → 后端 register 端点暂不收 path。
+  3. ✅ **模型下拉**：新增 `agent.CandidateModels(kind)`（每 RunnerProfile 一份候选），经 config DTO 的 `candidate_models` 暴露；model 字段升级为下拉（default · 候选 · custom…），无候选回退纯文本（codex-cli 不 pin 默认→纯文本）。
+  - **遗留后端 backlog**：① register 收自定义 binary 路径（启用真·自定义手动添加 + scan 探测自定义安装）；② 候选模型清单做大/可配（当前 opencode/kimi 各仅默认 1 项）。
+
+## audit 层 opencode 捕获（JS 插件）✅ 已做（2026-06-16，实测 + 端到端验证）
+**实测结论**：opencode 无命令式 PreToolUse hook，工具拦截唯一入口是 **JS 插件**（`@opencode-ai/plugin` 的 `tool.execute.before(input:{tool,sessionID}, output:{args})`），自动从 `.opencode/plugin/*.ts` 加载。
+**已做**：`pactify audit install --opencode` 写 `.opencode/plugin/pact-audit.ts`——其 `tool.execute.before` 把 opencode 工具调用（实测 `tool="write" args.filePath` / bash `args.command`）翻成 claude-style JSON 喂 `pactify audit hook --kind opencode`，best-effort 不阻断工具。**真 opencode run 端到端验证**：write 调用被捕获进审计日志、归属正确、文件照写。Detect 按插件文件在否报告；Uninstall 删文件。
+**遗留**：opencode 的 MCP 工具名映射（当前只接 bash/write/edit/read/patch）；codex hook 形态待查。

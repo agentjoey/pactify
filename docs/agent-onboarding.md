@@ -172,10 +172,102 @@ args = ["mcp"]
 env = { PACT_AGENT_ID = "SEAT_ID" }
 ```
 
+## cursor-cli
+
+- config: `.cursor/mcp.json` (project, committed in repo)
+- entry file: `AGENTS.md`
+
+Entry block:
+
+````markdown
+# pact protocol — seat `SEAT_ID`
+
+This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+
+**Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
+(status / join / assign / checkpoint / accept / changes / merge / list) and resources
+(`pact://state`, `pact://log`). Cold start: call `status`, then `join`
+(registers your seat and checks out your feature branch).
+
+**Fallback — shell** (if MCP is unavailable):
+```bash
+export PACT_AGENT_ID=SEAT_ID
+pactify join SEAT_ID --roles ROLES
+```
+then `pactify help` for the verbs.
+
+**The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
+feature cannot merge until all its tasks are accepted.
+````
+
+Config:
+
+```
+{
+  "mcpServers": {
+    "pact": {
+      "args": [
+        "mcp"
+      ],
+      "command": "pactify",
+      "env": {
+        "PACT_AGENT_ID": "SEAT_ID"
+      }
+    }
+  }
+}
+```
+
 ## gemini-cli
 
 - config: `.gemini/settings.json` (project, committed in repo)
 - entry file: `GEMINI.md`
+
+Entry block:
+
+````markdown
+# pact protocol — seat `SEAT_ID`
+
+This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+
+**Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
+(status / join / assign / checkpoint / accept / changes / merge / list) and resources
+(`pact://state`, `pact://log`). Cold start: call `status`, then `join`
+(registers your seat and checks out your feature branch).
+
+**Fallback — shell** (if MCP is unavailable):
+```bash
+export PACT_AGENT_ID=SEAT_ID
+pactify join SEAT_ID --roles ROLES
+```
+then `pactify help` for the verbs.
+
+**The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
+feature cannot merge until all its tasks are accepted.
+````
+
+Config:
+
+```
+{
+  "mcpServers": {
+    "pact": {
+      "args": [
+        "mcp"
+      ],
+      "command": "pactify",
+      "env": {
+        "PACT_AGENT_ID": "SEAT_ID"
+      }
+    }
+  }
+}
+```
+
+## kimi-cli
+
+- config: `~/.kimi/mcp.json` (machine-global)
+- entry file: `AGENTS.md`
 
 Entry block:
 

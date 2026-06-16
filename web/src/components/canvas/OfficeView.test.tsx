@@ -63,7 +63,7 @@ describe("OfficeView", () => {
     await waitFor(() => expect(screen.getByTestId("desk-dave")).toBeInTheDocument());
     const dave = container.querySelector('[data-testid="desk-dave"]')!;
     expect(dave.className).toContain("idle");
-    expect(dave.textContent).toContain("拖一个任务到这张桌子即派发");
+    expect(dave.textContent).toContain("drop a task on this desk to dispatch");
   });
 
   it("shows zone counts and parcels in the right zones", async () => {
@@ -71,11 +71,11 @@ describe("OfficeView", () => {
     await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
     // bob's doing zone holds T1 (in_progress); waiting-on holds T2 (own awaiting).
     const bob = screen.getByTestId("desk-bob");
-    expect(bob.textContent).toContain("手上 · doing");
+    expect(bob.textContent).toContain("Doing");
     expect(screen.getAllByTestId("parcel-T1").length).toBeGreaterThan(0);
     // alice's inbox holds T2 (she reviews it).
     const alice = screen.getByTestId("desk-alice");
-    expect(alice.textContent).toContain("收件 · inbox");
+    expect(alice.textContent).toContain("Inbox");
   });
 
   it("wall chart shows per-feature progress and tray shows shipped parcels", async () => {
@@ -188,11 +188,12 @@ describe("OfficeView", () => {
   // context menus, desk materialization idempotence.
   // ===================================================================
 
-  it("renders the zoom HUD and minimap inside the office flow", async () => {
+  it("renders the zoom HUD but NOT the minimap (office hides it to free the dock corner)", async () => {
     const { container } = render(<OfficeView {...baseProps} />);
     await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
     expect(screen.getByTestId("canvas-hud")).toBeInTheDocument();
-    expect(container.querySelector(".react-flow__minimap")).not.toBeNull();
+    // Office passes Hud minimap={false} — the minimap collided with the dock.
+    expect(container.querySelector(".react-flow__minimap")).toBeNull();
   });
 
   it("author + zero drafts shows the dock with a New task entry; click opens TaskEditor", async () => {

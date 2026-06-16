@@ -2,9 +2,18 @@
 
 Version:        v0.3.0（✅ 已发布，首个 GitHub Release，2026-06-10）
 Sprint:         003
-Sprint Status:  🚧 进行中（… + Canvas P0 ✅ + M3.4 relay ✅ + orchestrate 驱动器 ✅ + planner ✅ + liveview ✅ + **8h 自主交付 12 功能 ✅（2026-06-14，已推 origin c2a297f）**）
-Last Updated:   2026-06-14 by claude (opus-4.8)
+Sprint Status:  🚧 进行中（… + Canvas P0 ✅ + M3.4 relay ✅ + orchestrate 驱动器 ✅ + planner ✅ + liveview ✅ + 8h 自主交付 12 功能 ✅（2026-06-14）+ **2026-06-15 增量（cost/observability D1 · 巡检 D2 · GLM 端点可配 · Settings agent 管理 · session 清理升级 · dashboard 浅色化 · pactify.dev 文档站）在 `feat-light-theme`**）
+Last Updated:   2026-06-16 by claude (opus-4.8)
 Sprint File:    .agent/sprints/sprint-003.md
+
+## 2026-06-15 增量（未发布，`feat-light-theme`；详见 docs/architecture.md「增量子系统」）
+- **成本/可观测 D1**：`internal/stats`+`internal/diffstat`+`internal/tokens` — per-task/agent 工时·代码量·token，`GET /api/projects/{id}/stats`，RightRail + office Cost 镜头。
+- **巡检 watchdog D2**：`runner_idle.go` 进度感知（无输出**且**无落盘才杀，否则 patrol 通知）。
+- **GLM 端点可配**：claude-code 指向 GLM 端点；Keychain `pactify/glm-base-url`（china=open.bigmodel.cn）覆盖默认 `api.z.ai`；token 存 Keychain `pactify/glm`。**待用户配 Keychain 后实测座席。**
+- **Settings agent 管理**：AgentRoster（扫描+手动添加）、模型下拉（`agent.CandidateModels`/`candidate_models`）、统一 AgentLogo 接进真卡片。
+- **session 清理升级（opencode-first）**：accept 后按 `--title pact:<seat>` 关 owner+reviewer session；CLI 默认开、`--keep-sessions` 关。
+- **dashboard 浅色化 + 蚂蚁信号语言**；**pactify.dev 文档站外壳**（左目录+右内容，已上线生产）。
+- 门禁基线：go test 全包绿 · web vitest 437/437 · Playwright e2e 7/7。
 
 ## 8h 自主交付 12 功能（2026-06-14，全部 shipped + 推 origin）
 claude=planner/orchestrator/designer/reviewer+复杂核心，opencode=worker（真跑 4 feature）。
@@ -68,4 +77,6 @@ backlog：M6（join roles inert）、I5（task_status grep 脆弱）、F1 worktr
 ## Version History（最近 5 版）
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.3.0 | 2026-06-10 | 首个 GitHub Release：协议 v1 + Go CLI + MCP + 多项目 SSE dashboard |
+| (未发布) | 2026-06-14~15 | orchestrate 自主驱动 + planner + 8h 12 功能 + cost/观测 D1 + 巡检 D2 + GLM 端点可配 + Settings agent 管理 + session 清理升级 + dashboard 浅色化 + pactify.dev 文档站（`feat-light-theme`）|
 | v0.1.0 | 2026-06-09 | Repo 初始化 + roadmap 锁定（三产品/守 Team）+ 技术地基决策（Go/MCP/React）|

@@ -24,13 +24,14 @@ const fixture: State = {
 };
 
 describe("Board — live pulse", () => {
-  it("a task id in pulses gets the pulse class + role-colored --pulse-color", () => {
+  it("a task id in pulses gets the pulse class + status-colored --pulse-color", () => {
     render(<Board state={fixture} selected="" onSelect={() => {}} pulses={new Set(["T1"])} />);
     const pulsing = screen.getByTestId("board-pulse");
     expect(pulsing.className).toContain("pulse");
-    // bob is a worker → role-dev token drives the glow color.
+    // T1 is awaiting_review → the pact-state color (warn) drives the glow, so the
+    // transition pulse reads in the same vocabulary as the StatusPill.
     expect(pulsing.getAttribute("style")).toContain("--pulse-color");
-    expect(pulsing.getAttribute("style")).toContain("--role-dev");
+    expect(pulsing.getAttribute("style")).toContain("--color-warn");
     // T1 carries the data-testid; T2 (not pulsing) does not.
     expect(pulsing.textContent).toContain("T1");
   });

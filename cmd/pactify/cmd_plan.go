@@ -69,7 +69,9 @@ By default plan stops after generation so you can review the manifest, then run
 
 			out := c.OutOrStdout()
 			fmt.Fprintf(out, "plan: launching planner (%s) for feature %q…\n", plannerKind, feature)
-			if err := orchestrate.NewCmdRunner(0).Run(ctx, "planner", plannerKind, prompt, dir); err != nil {
+			if err := orchestrate.NewCmdRunner(0).Run(ctx, orchestrate.LaunchContext{
+				Seat: "planner", Kind: plannerKind, Briefing: prompt, RepoDir: dir,
+			}); err != nil {
 				return fmt.Errorf("plan: planner agent failed: %w", err)
 			}
 

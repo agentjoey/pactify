@@ -42,6 +42,8 @@ import { ContextMenu, type MenuTarget } from "./canvas/ContextMenu";
 import { Toolbar } from "./canvas/Toolbar";
 import { Hud } from "./canvas/Hud";
 import { AntEdge } from "./canvas/edges/AntEdge";
+import { SeatRoster } from "./canvas/SeatRoster";
+import { statusColor } from "./ui/StatusPill";
 import { OfficeView } from "./canvas/OfficeView";
 import { ConnectionLine } from "./canvas/ConnectionLine";
 import { ConnectingFlag } from "./canvas/ConnectingFlag";
@@ -324,20 +326,27 @@ export function Canvas({
   );
 
   // Dep edges render as ant-crawl edges (type:"ant"): a carrier ant + cargo
-  // cube crawls source→target. The base dashed look is unchanged (style
-  // passthrough); `ant` is decided by the cap pass in `display` below.
-  const edges: Edge[] = useMemo(
-    () =>
-      graph.edges.map((e) => ({
+  // cube crawls source→target. The stroke + ant are COLORED BY THE DOWNSTREAM
+  // task's status (the ant motion grammar's "color encodes state") — work
+  // flowing INTO an in_progress task is blue, awaiting_review amber, accepted
+  // green, etc. `ant` (whether it animates) is decided by the cap pass below.
+  const edges: Edge[] = useMemo(() => {
+    const statusOf = new Map<string, string>();
+    for (const f of state.features) for (const t of f.tasks) statusOf.set(t.id, t.status);
+    return graph.edges.map((e) => {
+      const target = e.target.replace(/^(task|draft):/, "");
+      const st = statusOf.get(target);
+      const color = st ? statusColor(st) : "rgba(18,22,31,.28)";
+      return {
         id: e.id,
         source: e.source,
         target: e.target,
         type: "ant",
-        style: { stroke: "#484f58", strokeDasharray: "5 4" },
-        data: { kind: "dep" as const, color: "#484f58", ant: false },
-      })),
-    [graph.edges],
-  );
+        style: { stroke: `color-mix(in srgb, ${color} 50%, transparent)`, strokeDasharray: "5 4" },
+        data: { kind: "dep" as const, color, ant: false },
+      };
+    });
+  }, [graph.edges, state.features]);
 
   // injectCallbacks re-attaches the per-node callbacks (draft onDispatch /
   // feature onFocus) and the stale marker onto the merged node array. mergeNodes
@@ -557,15 +566,15 @@ export function Canvas({
       const to = raw(c.target);
       if (from === to) return;
       if (committedTaskIds.has(to)) {
-        flashNotice("依赖在 assign 时已固定,不能再改");
+        flashNotice("Dependencies are locked once assigned");
         return;
       }
       if (featureOfId(from) !== featureOfId(to)) {
-        flashNotice("依赖必须和任务在同一个 feature 内");
+        flashNotice("A dependency must be in the same feature");
         return;
       }
       if (!isValidDep(depGraph, from, to)) {
-        flashNotice("依赖关系会形成环");
+        flashNotice("That dependency would create a cycle");
         return;
       }
       setDrafts((ds) => applyConnect(ds, c.source, c.target));
@@ -594,15 +603,15 @@ export function Canvas({
       const to = raw(toNode.id);
       if (from === to) return;
       if (committedTaskIds.has(to)) {
-        flashNotice("依赖在 assign 时已固定,不能再改");
+        flashNotice("Dependencies are locked once assigned");
         return;
       }
       if (featureOfId(from) !== featureOfId(to)) {
-        flashNotice("依赖必须和任务在同一个 feature 内");
+        flashNotice("A dependency must be in the same feature");
         return;
       }
       if (!isValidDep(depGraph, from, to)) {
-        flashNotice("依赖关系会形成环");
+        flashNotice("That dependency would create a cycle");
       }
     },
     [author, replaying, committedTaskIds, featureOfId, flashNotice, depGraph],
@@ -881,11 +890,15 @@ export function Canvas({
       out = out.map((n) => {
         const raw = n.id.replace(/^(task|draft):/, "");
         if ((n.type === "task" || n.type === "draft") && pulses.has(raw)) {
-          const roleVar = (n.data as { roleColor?: string }).roleColor ?? "--role-dev";
+          // Transition pulse colored by the task's NEW status (the pact-state
+          // language): accepted→green "delivered", changes→amber, awaiting→warn,
+          // working→blue. So the one-shot ring tells you WHAT just happened.
+          const status = (n.data as { task?: { status?: string } }).task?.status;
+          const color = status ? statusColor(status) : "var(--color-role-design)";
           return {
             ...n,
             className: [n.className, "pulse"].filter(Boolean).join(" "),
-            style: { ...n.style, ["--pulse-color" as string]: `var(${roleVar})` },
+            style: { ...n.style, ["--pulse-color" as string]: color },
           };
         }
         return n;
@@ -947,6 +960,10 @@ export function Canvas({
           dot grid. Both purely decorative, behind the flow. */}
       <div className="canvas-grid" aria-hidden />
 
+      {/* Always-on seat roster (participating agents + roles), pinned to the
+          stage so it stays visible regardless of pan/zoom or mode. */}
+      <SeatRoster agents={state.agents} />
+
       {/* Mode segment (top-left) — Office | Plan. Office is the default landing
           (spec §3). Session-local; not persisted. */}
       <div className="office-modeseg" data-testid="canvas-modeseg">
@@ -996,6 +1013,7 @@ export function Canvas({
         <OfficeView
           state={state}
           layout={layout}
+          project={project}
           author={author}
           replaying={replaying}
           pulses={pulses}
@@ -1019,7 +1037,7 @@ export function Canvas({
           data-testid="focus-chip"
           className="absolute right-3 top-2 z-20 flex items-center gap-1.5 rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-2.5 py-1 text-[11px] text-[var(--color-text-1)] shadow-[var(--shadow-raised)] hover:border-[var(--color-text-3)]"
           onClick={() => setFocusFeature(null)}
-          title="退出聚焦(Esc)"
+          title="Exit focus (Esc)"
         >
           <span>
             focusing <span className="mono">«{focusFeature}»</span>

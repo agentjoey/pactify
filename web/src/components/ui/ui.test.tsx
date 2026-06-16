@@ -11,6 +11,7 @@ import { Tooltip } from "./Tooltip";
 import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
 import { Alert } from "./Alert";
+import { StatusPill } from "./StatusPill";
 
 describe("Button", () => {
   it("renders the primary variant by default with role-design bg + dark text", () => {
@@ -360,5 +361,30 @@ describe("Alert", () => {
   it("omits the retry button when no onRetry is given", () => {
     render(<Alert>just info</Alert>);
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("StatusPill", () => {
+  it("renders the pact-state label + status attr, with a live dot for in-flight states", () => {
+    render(<StatusPill status="in_progress" />);
+    const p = screen.getByTestId("status-pill");
+    expect(p.getAttribute("data-status")).toBe("in_progress");
+    expect(p.textContent).toContain("working");
+    expect(p.querySelector(".status-pill-dot-live")).toBeTruthy();
+  });
+
+  it("renders shipped as a filled pill (no live dot)", () => {
+    render(<StatusPill status="shipped" />);
+    const p = screen.getByTestId("status-pill");
+    expect(p.textContent).toContain("shipped");
+    expect(p.querySelector(".status-pill-dot-live")).toBeNull();
+  });
+
+  it("normalizes orchestrate phases onto pact statuses", async () => {
+    const { normalizeStatus } = await import("./StatusPill");
+    expect(normalizeStatus("run_owner")).toBe("in_progress");
+    expect(normalizeStatus("stuck")).toBe("escalated");
+    expect(normalizeStatus("done")).toBe("shipped");
+    expect(normalizeStatus("accepted")).toBe("accepted");
   });
 });

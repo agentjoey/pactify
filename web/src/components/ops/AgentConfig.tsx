@@ -3,9 +3,11 @@ import { getAgents, getAgentConfig, setAgentConfig, type AgentConfig as Config }
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
+import { Select } from "../ui/Select";
 import { Alert } from "../ui/Alert";
 import { EmptyState } from "../ui/EmptyState";
 import { Spinner } from "../ui/Spinner";
+import { AgentLogo } from "../../lib/agentLogos";
 
 // AgentConfig (#10 model / #9 permission posture / #4 scoped tools) — per
 // registered agent, edit the model pin and the permission posture orchestrate
@@ -31,7 +33,7 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
   return (
     <section data-testid="ops-agent-config" className="mb-4">
       <h2 className="text-[10px] font-semibold text-[var(--color-text-3)] uppercase mb-2">
-        Agent config · model + 权限姿态
+        Agent config · model + permission posture
       </h2>
       {error && (
         <Alert tone="danger" onRetry={load}>
@@ -40,8 +42,8 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
       )}
       {!error && kinds && kinds.length === 0 && (
         <EmptyState
-          title="没有已注册的 agent"
-          hint="注册 agent 后可在这里配置 model 与权限姿态：pactify agent register <kind>。"
+          title="No agents registered"
+          hint="Register an agent to configure its model and permission posture here: pactify agent register <kind>."
         />
       )}
       {!error && kinds && kinds.length > 0 && (
@@ -63,12 +65,18 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState(false);
+  // customMode: the model dropdown's "custom…" branch is active — the loaded
+  // model isn't one of the curated candidates (or the user picked custom),
+  // so the free-text field is shown.
+  const [customMode, setCustomMode] = useState(false);
 
   function apply(c: Config) {
     setCfg(c);
     setModel(c.model);
     setRestricted(c.restricted);
     setTools((c.allowed_tools ?? []).join(", "));
+    const candidates = c.candidate_models ?? [];
+    setCustomMode(c.model !== "" && !candidates.includes(c.model));
   }
 
   useEffect(() => {
@@ -104,6 +112,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 fade-rise"
     >
       <div className="flex items-center gap-2">
+        <AgentLogo kind={kind} size={24} />
         <span className="mono text-[12px] font-medium text-[var(--color-text-1)]">{kind}</span>
         {cfg && (
           <Badge color={cfg.drivable ? "role-dev" : "role-design"}>
@@ -112,7 +121,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
         )}
         {cfg && (
           <span className="text-[10.5px] text-[var(--color-text-3)]">
-            有效: {cfg.effective_model}
+            effective: {cfg.effective_model}
             {cfg.effective_scoped ? " · scoped" : ""}
           </span>
         )}
@@ -122,13 +131,51 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       {cfg && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <label className="text-[10.5px] text-[var(--color-text-3)]">model</label>
-          <Input
-            data-testid={`model-${kind}`}
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="默认"
-            className="w-52 text-[11px]"
-          />
+          {(cfg.candidate_models ?? []).length > 0 ? (
+            <>
+              {/* curated dropdown — "default" (empty = kind's own default),
+                  the candidates, then a "custom…" escape hatch to free-text. */}
+              <Select
+                data-testid={`model-select-${kind}`}
+                value={customMode ? "__custom__" : model}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "__custom__") {
+                    setCustomMode(true);
+                  } else {
+                    setCustomMode(false);
+                    setModel(v);
+                  }
+                }}
+                className="w-52 text-[11px]"
+              >
+                <option value="">default</option>
+                {(cfg.candidate_models ?? []).map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+                <option value="__custom__">custom…</option>
+              </Select>
+              {customMode && (
+                <Input
+                  data-testid={`model-${kind}`}
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="model id"
+                  className="w-52 text-[11px]"
+                />
+              )}
+            </>
+          ) : (
+            <Input
+              data-testid={`model-${kind}`}
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="default"
+              className="w-52 text-[11px]"
+            />
+          )}
           <button
             type="button"
             data-testid={`scoped-${kind}`}
@@ -140,7 +187,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                 ? "bg-[color-mix(in_srgb,var(--color-warn)_22%,transparent)] text-[var(--color-text-1)]"
                 : "bg-[var(--color-bg-raised)] text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
             ].join(" ")}
-            title="scoped = 用 allowed-tools 白名单替代全量自动批准"
+            title="scoped = use an allowed-tools allowlist instead of blanket auto-approval"
           >
             {restricted ? "scoped" : "blanket"}
           </button>
@@ -154,7 +201,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
             />
           )}
           <Button size="sm" loading={saving} onClick={save}>
-            {saved ? "已保存 ✓" : "保存"}
+            {saved ? "Saved ✓" : "Save"}
           </Button>
         </div>
       )}

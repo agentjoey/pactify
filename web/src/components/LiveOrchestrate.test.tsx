@@ -22,7 +22,7 @@ describe("LiveOrchestrate panel", () => {
     getOrchestrateStatus.mockResolvedValue({ present: false });
     render(<LiveOrchestrate project="p1" refreshTick={0} />);
     await waitFor(() => {
-      expect(screen.getByText("orchestrate 尚未运行")).toBeTruthy();
+      expect(screen.getByText("orchestrate hasn't run yet")).toBeTruthy();
     });
   });
 
@@ -46,7 +46,7 @@ describe("LiveOrchestrate panel", () => {
     });
     render(<LiveOrchestrate project="p1" refreshTick={0} />);
     await waitFor(() => {
-      expect(screen.getByText("编排已升级 — 需人工介入")).toBeTruthy();
+      expect(screen.getByText("Orchestration escalated — needs manual intervention")).toBeTruthy();
       expect(screen.getByText("hit rework limit")).toBeTruthy();
     });
   });
@@ -99,7 +99,7 @@ describe("LiveOrchestrate panel", () => {
     });
     render(<LiveOrchestrate project="p1" refreshTick={0} />);
     await waitFor(() => {
-      expect(screen.getByText("已收工 / 全部交付")).toBeTruthy();
+      expect(screen.getByText("Wrapped up / all delivered")).toBeTruthy();
     });
   });
 
@@ -121,7 +121,7 @@ describe("LiveOrchestrate panel", () => {
     // both feature ids shown; serial single-status panel is NOT rendered
     expect(screen.getByText("fa")).toBeTruthy();
     expect(screen.getByText("fb")).toBeTruthy();
-    expect(screen.queryByText("orchestrate 尚未运行")).toBeNull();
+    expect(screen.queryByText("orchestrate hasn't run yet")).toBeNull();
   });
 
   it("escalated feature in the parallel grid shows its reason", async () => {

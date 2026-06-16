@@ -1,0 +1,10 @@
+import { chromium } from "@playwright/test";
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 980, height: 700 }, deviceScaleFactor: 2 });
+await p.goto("http://127.0.0.1:7777/?gallery", { waitUntil: "domcontentloaded" });
+await p.waitForTimeout(1000);
+const h = p.locator("h2", { hasText: "Agent logos" }).first();
+const sec = h.locator("xpath=ancestor::section[1]");
+await sec.scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
+await sec.screenshot({ path: "/tmp/pactify-shots/agent-logos.png" });
+console.log("logos shot"); await b.close();

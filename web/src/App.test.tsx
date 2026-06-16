@@ -52,14 +52,14 @@ describe("App", () => {
     render(<App />);
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
     // The TopBar project chip shows the current project name.
-    await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
-    await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
   });
 
   it("incoming pact event triggers a state re-fetch", async () => {
     render(<App />);
     // Wait for initial load (project list + initial state fetch)
-    await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
 
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
     const callsBefore = fetchMock.mock.calls.filter(([url]) =>
@@ -102,7 +102,7 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
 
     // Fire a pact event to populate events list
     await act(async () => {
@@ -111,13 +111,10 @@ describe("App", () => {
       );
     });
 
-    // Switch project — events should reset (new EventSource created). Open the
-    // TopBar project switcher Popover and pick "other".
+    // Switch project — events should reset (new EventSource created). The
+    // project list now lives in the Sidebar; click its "other" item.
     await act(async () => {
-      fireEvent.click(screen.getByTestId("project-chip"));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("option", { name: /other/ }));
+      fireEvent.click(screen.getByTestId("sidebar-project-other"));
     });
 
     // After switching, the old ES should have been closed
@@ -150,7 +147,7 @@ describe("App", () => {
       window.history.replaceState(null, "", "/?at=2");
       stubReplayFetch();
       render(<App />);
-      await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
+      await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
 
       // Replay is entered: the LIVE button (resume live) becomes enabled and the
       // URL still carries ?at=2 (normalized through enterReplay's replaceState).
@@ -168,7 +165,7 @@ describe("App", () => {
       window.history.replaceState(null, "", "/");
       stubReplayFetch();
       render(<App />);
-      await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
+      await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
       // Fresh load with no ?at stays live: no param written.
       expect(window.location.search).toBe("");
 
@@ -181,28 +178,29 @@ describe("App", () => {
   });
 
   describe("global view shortcuts", () => {
-    it("1/2/3 switch views; ignored while typing in an input", async () => {
+    it("1/2 switch lenses; ignored while typing in an input", async () => {
       render(<App />);
-      await waitFor(() => expect(screen.getByTestId("project-chip")).toHaveTextContent("demo"));
+      await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
 
-      const group = () => screen.getByRole("group", { name: "view toggle" });
+      // The Toolbar lens segmented control (canvas/board/live/plan).
+      const group = () => screen.getByRole("group", { name: "lens" });
       const pressed = () =>
         within(group()).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"));
 
-      // default = kanban (first button pressed)
-      expect(pressed()).toEqual(["true", "false", "false", "false", "false", "false", "false"]);
+      // default lens = canvas (first button pressed)
+      expect(pressed()).toEqual(["true", "false", "false", "false"]);
 
-      await act(async () => { fireEvent.keyDown(window, { key: "2" }); });
-      expect(pressed()).toEqual(["false", "true", "false", "false", "false", "false", "false"]);
+      await act(async () => { fireEvent.keyDown(window, { key: "2" }); }); // board
+      expect(pressed()).toEqual(["false", "true", "false", "false"]);
 
-      await act(async () => { fireEvent.keyDown(window, { key: "1" }); });
-      expect(pressed()).toEqual(["true", "false", "false", "false", "false", "false", "false"]);
+      await act(async () => { fireEvent.keyDown(window, { key: "1" }); }); // canvas
+      expect(pressed()).toEqual(["true", "false", "false", "false"]);
 
       // typing guard: a keydown originating from an INPUT must not switch.
       const input = document.createElement("input");
       document.body.appendChild(input);
       await act(async () => { fireEvent.keyDown(input, { key: "2" }); });
-      expect(pressed()).toEqual(["true", "false", "false", "false", "false", "false", "false"]);
+      expect(pressed()).toEqual(["true", "false", "false", "false"]);
       input.remove();
     });
   });

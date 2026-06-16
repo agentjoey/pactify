@@ -42,12 +42,12 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
         </Alert>
       )}
       {!err && !loading && seats.length === 0 && (
-        <EmptyState title="还没有座席" hint="座席在 agent join 时注册（pactify join <seat>），或用 Setup 视图配置。" />
+        <EmptyState title="No seats yet" hint="Seats are registered when an agent joins (pactify join <seat>), or configure them in the Setup view." />
       )}
       {seats.length > 0 && (
         <table className="w-full text-[11px]">
           <thead>
-            <tr className="text-left text-gray-500">
+            <tr className="text-left text-[var(--color-text-3)]">
               <th className="font-normal py-1 pr-3">seat</th>
               <th className="font-normal py-1 pr-3">roles</th>
               <th className="font-normal py-1">last join</th>
@@ -55,9 +55,9 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
           </thead>
           <tbody>
             {seats.map((s) => (
-              <tr key={s.id} className="border-t border-gray-800 align-top">
+              <tr key={s.id} className="border-t border-[var(--color-border-subtle)] align-top">
                 <td className="py-1.5 pr-3">
-                  <span className="font-semibold text-[#e6edf3]">{s.id}</span>
+                  <span className="font-semibold text-[#1a1d27]">{s.id}</span>
                   {s.clientChanged && (
                     <span
                       data-testid={`seat-warn-${s.id}`}
@@ -73,7 +73,7 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
                     ))}
                   </span>
                 </td>
-                <td className="py-1.5 text-gray-400 font-mono">
+                <td className="py-1.5 text-[var(--color-text-2)] font-mono">
                   {s.lastJoin ? (
                     s.lastJoin.client ? (
                       <span>
@@ -84,14 +84,14 @@ export function Seats({ project, refreshKey }: { project: string; refreshKey?: n
                     ) : (
                       // A join with no self-reported client: show a dim placeholder
                       // and skip the "v ·" version artifact.
-                      <span className="text-gray-600">
+                      <span className="text-[var(--color-text-3)]">
                         unknown client
                         {" · "}
                         {relativeTime(s.lastJoin.ts)}
                       </span>
                     )
                   ) : (
-                    <span className="text-gray-600">never joined</span>
+                    <span className="text-[var(--color-text-3)]">never joined</span>
                   )}
                 </td>
               </tr>

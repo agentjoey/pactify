@@ -71,7 +71,7 @@ describe("Seats polish states", () => {
     getSeats.mockResolvedValue([]);
     render(<Seats project="p1" />);
     await waitFor(() => {
-      expect(screen.getByText("还没有座席")).toBeInTheDocument();
+      expect(screen.getByText("No seats yet")).toBeInTheDocument();
     });
   });
 });

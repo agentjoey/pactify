@@ -92,3 +92,21 @@
 ### 配套
 - 新增 kind 后，`agent config`（P1）的 model/权限姿态对它们即时可用；`setup suggest`（#1）的 lead 启发式可纳入（claude 系仍 lead，新 kind 默认 worker）。
 - 每个新 runner 的自动批准 flag 实测验证后再标 drivable（参照当时 claude/gemini/opencode 的实测纪律——禁止凭文档断言就开 runner）。
+
+---
+
+## 已接入：智谱 GLM（claude-code 端点预设，2026-06-14）
+
+GLM **不是新 kind** —— 它是把 `claude-code` 指向 Z.ai 的 Anthropic 兼容端点。实现（`internal/orchestrate/runner.go` 的 `glmEnv` + `internal/secret`）：当某个 claude-code 座席的**有效 model 以 `glm` 开头**（如 `glm-4.7`），orchestrate 启动时注入：
+- `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic`
+- `ANTHROPIC_AUTH_TOKEN=<从 Keychain 读取>`（service `pactify` / account `glm`，禁止明文）
+
+**用法：**
+1. 把 Z.ai token 存进 Keychain：
+   ```bash
+   security add-generic-password -s pactify -a glm -w '<your-zai-token>'
+   ```
+2. 把 claude-code 座席的 model 设为 GLM 模型（dashboard Agent Config 或 `pactify agent config`），如 `glm-4.7`。
+3. orchestrate 驱动该座席时即走 GLM 端点；token 缺失会 fail-closed 报可操作错误。
+
+**限制：** agentcfg 是 per-kind 而非 per-seat —— 同一台机器上 claude-code 的 model 是全局的，无法让一个 claude-code 座席跑 opus、另一个跑 GLM。需要并存时是后续 per-seat override 的活。

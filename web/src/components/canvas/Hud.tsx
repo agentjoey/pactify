@@ -31,7 +31,9 @@ function minimapNodeColor(n: Node): string {
   return "var(--color-text-3)";
 }
 
-export function Hud() {
+// minimap defaults on (Plan canvas); Office passes minimap={false} since its few
+// desks don't need one and it collided with the bottom-left draft dock.
+export function Hud({ minimap = true }: { minimap?: boolean }) {
   const { zoomIn, zoomOut, fitView, zoomTo } = useReactFlow();
   const { zoom } = useViewport();
   const pct = Math.round(zoom * 100);
@@ -41,15 +43,17 @@ export function Hud() {
       {/* NOTE: React Flow's MiniMap does NOT forward unknown props (a
           data-testid here would be silently dropped) — tests select via the
           .react-flow__minimap class instead. */}
-      <MiniMap
-        className="canvas-minimap"
-        pannable
-        zoomable
-        nodeColor={minimapNodeColor}
-        nodeStrokeWidth={0}
-        maskColor="rgba(25,27,38,.6)"
-        bgColor="transparent"
-      />
+      {minimap && (
+        <MiniMap
+          className="canvas-minimap"
+          pannable
+          zoomable
+          nodeColor={minimapNodeColor}
+          nodeStrokeWidth={0}
+          maskColor="rgba(245,246,248,.66)"
+          bgColor="transparent"
+        />
+      )}
       <div className="canvas-hud" data-testid="canvas-hud">
         <button aria-label="zoom out" onClick={() => zoomOut({ duration: 120 })}>
           −

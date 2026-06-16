@@ -10,8 +10,25 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 )
+
+// killGroup terminates the child AND any subprocesses it spawned. The child is
+// started in its own process group (Setpgid), so killing the negative pgid
+// reaches reparented grandchildren (e.g. `sh -c "sleep 5"` leaving a `sleep` that
+// would otherwise hold the stdout pipe open and block cmd.Wait). Falls back to a
+// direct kill if the pgid can't be resolved.
+func killGroup(cmd *exec.Cmd) {
+	if cmd.Process == nil {
+		return
+	}
+	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil {
+		_ = syscall.Kill(-pgid, syscall.SIGKILL)
+		return
+	}
+	_ = cmd.Process.Kill()
+}
 
 // fsProgress reports how long ago the working tree under dir last changed (the
 // newest regular-file mtime, skipping .git/node_modules). It is the second
@@ -89,6 +106,10 @@ func osExecIdle(idle time.Duration) execFn {
 		cmd.Dir = dir
 		cmd.Env = append(os.Environ(), env...)
 		cmd.Stdin = os.Stdin
+		// Run the child in its own process group so the idle-kill can reap the
+		// whole tree (a killed `sh -c` leaves a child holding the stdout pipe,
+		// which would block cmd.Wait until the child exits on its own).
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		tr := &idleTracker{last: time.Now()}
 		cmd.Stdout = io.MultiWriter(os.Stdout, tr)
 		cmd.Stderr = io.MultiWriter(os.Stderr, tr)
@@ -132,7 +153,7 @@ func osExecIdle(idle time.Duration) execFn {
 				}
 				// Truly stalled: no output AND no file changes for the window → kill
 				// as hung (soft failure → the loop retries the worker).
-				_ = cmd.Process.Kill()
+				killGroup(cmd)
 				<-done // reap the killed process
 				fmt.Fprintf(os.Stdout, "⟳ patrol: stalled — no output AND no file changes for %s — killed, will retry\n", idle)
 				return fmt.Errorf("%w: no output and no progress for %s — killed", errIdle, idle)

@@ -240,8 +240,14 @@ func (p *Project) Merge(feature string) error {
 	if err := checkMerge(st, feature); err != nil {
 		return err
 	}
+	// Only run the git merge when the feature has its OWN branch that actually
+	// exists. If that branch was never created — the worker ran in-place on the
+	// current branch (a serial run where join didn't check out a separate branch),
+	// the feature's commits already live here, so there is nothing to git-merge.
+	// (The old code unconditionally checked out base then merged the missing
+	// branch, which failed and stranded the working tree on base.)
 	branch := featureBranch(st, feature)
-	if branch != "" {
+	if branch != "" && gitx.BranchExists(p.dir, branch) {
 		if ch, _ := gitx.HasChanges(p.dir); ch {
 			if err := gitx.CommitAll(p.dir, "pact "+feature+": ledger before merge"); err != nil {
 				return err

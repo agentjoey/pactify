@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/gitx"
 )
 
 // newRepo makes a temp git repo, sets PACT_DIR + chdir, returns repo dir.
@@ -337,6 +338,42 @@ func TestMergeSucceedsFeatureShipped(t *testing.T) {
 	}
 	if out, _ := exec.Command("git", "log", "--oneline").Output(); !strings.Contains(string(out), "Merge") {
 		t.Fatalf("no merge commit: %s", out)
+	}
+}
+
+// Regression: a feature whose branch was never created (the worker ran in-place
+// without joining — a serial-orchestrate case) must still merge — record the
+// merge event + ship — instead of checking out base and failing on the missing
+// branch (which stranded the working tree on base).
+func TestMergeInPlaceWhenFeatureBranchNeverCreated(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	Assign("T1", "F", "feat/inplace", "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
+	before, _ := execBranch() // never joined → still on the base/in-place branch
+
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	os.WriteFile("impl.txt", []byte("c"), 0o644)
+	if err := Checkpoint("T1", "ok"); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	if err := Accept("T1"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Merge("F"); err != nil {
+		t.Fatalf("in-place merge (branch never created) should succeed, got %v", err)
+	}
+	if after, _ := execBranch(); after != before {
+		t.Fatalf("merge should stay on the in-place branch %q, on %q", before, after)
+	}
+	if gitx.BranchExists(".", "feat/inplace") {
+		t.Fatal("feat/inplace should not have been created")
+	}
+	b, _ := os.ReadFile(".pact/STATE.yml")
+	if !strings.Contains(string(b), "status: shipped") {
+		t.Fatalf("feature not shipped: %s", b)
 	}
 }
 

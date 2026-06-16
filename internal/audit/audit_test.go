@@ -104,3 +104,25 @@ func TestSummarize(t *testing.T) {
 }
 
 var _ = time.Now
+
+func TestPruneRemovesOldDayFiles(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("PACTIFY_HOME", home)
+	// An old day-file (well past 30d) and a recent one (today).
+	mustAppend(t, Record{Project: "p", TS: "2026-01-01T00:00:00Z", Tool: "bash"})
+	today := time.Now().UTC().Format("2006-01-02")
+	mustAppend(t, Record{Project: "p", TS: today + "T00:00:00Z", Tool: "bash"})
+	n, err := Prune(30 * 24 * time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("pruned %d, want 1 (only the old day-file)", n)
+	}
+	if _, err := os.Stat(home + "/.pactify/audit/p/2026-01-01.jsonl"); !os.IsNotExist(err) {
+		t.Error("old day-file should be gone")
+	}
+	if _, err := os.Stat(home + "/.pactify/audit/p/" + today + ".jsonl"); err != nil {
+		t.Error("today's day-file should remain")
+	}
+}

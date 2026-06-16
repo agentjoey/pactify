@@ -192,3 +192,49 @@ func Summarize(rs []Record) Summary {
 	}
 	return s
 }
+
+// Prune deletes audit day-files whose date is older than olderThan, across all
+// projects, returning the count removed. A day-file's date is parsed from its
+// name (YYYY-MM-DD.jsonl); unparseable names are left alone.
+func Prune(olderThan time.Duration) (int, error) {
+	h, err := home()
+	if err != nil {
+		return 0, err
+	}
+	root := filepath.Join(h, "audit")
+	cutoff := time.Now().Add(-olderThan)
+	projects, err := os.ReadDir(root)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	removed := 0
+	for _, p := range projects {
+		if !p.IsDir() {
+			continue
+		}
+		pdir := filepath.Join(root, p.Name())
+		files, err := os.ReadDir(pdir)
+		if err != nil {
+			continue
+		}
+		for _, f := range files {
+			name := f.Name()
+			if !strings.HasSuffix(name, ".jsonl") {
+				continue
+			}
+			d, err := time.Parse("2006-01-02", strings.TrimSuffix(name, ".jsonl"))
+			if err != nil {
+				continue
+			}
+			if d.Before(cutoff) {
+				if os.Remove(filepath.Join(pdir, name)) == nil {
+					removed++
+				}
+			}
+		}
+	}
+	return removed, nil
+}

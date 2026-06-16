@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { State, PactEvent } from "../lib/types";
 import { findTask, canMergeFeature } from "../lib/derive";
 import { postVerb, getStats, fmtDuration, type TaskStat } from "../lib/api";
+import { AuditLens } from "./AuditLens";
 import { humanizeError } from "../lib/protocolErrors";
 import { relTime } from "../lib/reltime";
 import { casteForRoles } from "../lib/ants";
@@ -229,6 +230,13 @@ export function RightRail({
             )}
           </div>
         </div>
+
+        {/* Permission audit (read-only lens, sibling of the D1 cost stats) */}
+        {project && (
+          <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">
+            <AuditLens project={project} task={task.id} />
+          </div>
+        )}
 
         {/* Spec */}
         <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">

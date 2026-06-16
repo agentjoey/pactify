@@ -15,7 +15,8 @@ import (
 // worker brief → Checkpoint in repoDir; reviewer brief → Accept in repoDir.
 type parFakeRunner struct{ t *testing.T }
 
-func (f parFakeRunner) Run(_ context.Context, seatID, _, briefing, repoDir string) error {
+func (f parFakeRunner) Run(_ context.Context, lc LaunchContext) error {
+	seatID, briefing, repoDir := lc.Seat, lc.Briefing, lc.RepoDir
 	task := taskIDFromBrief(briefing)
 	if task == "" {
 		f.t.Fatalf("no task id in brief:\n%s", briefing)

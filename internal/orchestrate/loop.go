@@ -66,15 +66,22 @@ type Options struct {
 // CHILD of ctx, so a per-run expiry cancels just that subprocess (soft failure),
 // while a parent-ctx cancellation (Ctrl-C) propagates. Callers distinguish the
 // two by checking the PARENT ctx.Err() after a non-nil return.
-func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief string) error {
+func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task string) error {
 	runCtx := ctx
 	if opts.RunTimeout > 0 {
 		var cancel context.CancelFunc
 		runCtx, cancel = context.WithTimeout(ctx, opts.RunTimeout)
 		defer cancel()
 	}
-	return opts.Run.Run(runCtx, seatID, kind, brief, opts.Dir)
+	return opts.Run.Run(runCtx, LaunchContext{
+		Seat: seatID, Kind: kind, Task: task, Project: projectID(opts.Dir),
+		Briefing: brief, RepoDir: opts.Dir,
+	})
 }
+
+// projectID derives a stable project name from the repo dir (its base name) — the
+// same fallback the audit hook uses when PACT_PROJECT is unset, so they agree.
+func projectID(dir string) string { return filepath.Base(dir) }
 
 // Run drives the pact state machine for opts.Dir until the targeted work is
 // shipped, escalated, or (dry-run) previewed. It is serial: read state →
@@ -199,7 +206,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	retrying := h.Fails[act.Task] > 0
 	brief := workerBrief(seatFor(st, act.Seat, seat), task, reason, retrying)
 
-	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief); runErr != nil {
+	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
@@ -232,7 +239,7 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 	}
 	brief := reviewerBrief(projection.Seat{ID: act.Seat}, task)
 
-	if runErr := opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief); runErr != nil {
+	if runErr := opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}

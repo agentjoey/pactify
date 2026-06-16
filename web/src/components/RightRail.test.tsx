@@ -6,6 +6,7 @@ import type { State, PactEvent, Task } from "../lib/types";
 vi.mock("../lib/api", () => ({
   postVerb: vi.fn(() => Promise.resolve()),
   getStats: vi.fn(() => Promise.resolve({ tasks: [], agents: [] })),
+  getAudit: vi.fn(() => Promise.resolve([])),
   fmtDuration: (s: number) => `${s}s`,
 }));
 import { postVerb } from "../lib/api";

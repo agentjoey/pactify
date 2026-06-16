@@ -1,0 +1,91 @@
+project: showcase
+working_tree_holder: null
+agents:
+  - { id: claude, roles: [orchestrator, reviewer] }
+  - { id: opencode, roles: [worker] }
+  - { id: gemini, roles: [worker] }
+features:
+  - id: relay
+    branch: feat-relay
+    status: in_progress
+    tasks:
+      - id: t1
+        owner: opencode
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/relay-client.md
+        evidence: go test ./internal/relay — 18/18 PASS
+      - id: t2
+        owner: opencode
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/relay-retry.md
+        evidence: retry cap now configurable (RELAY_MAX_RETRY); 9/9 PASS
+        deps: [t1]
+      - id: t3
+        owner: gemini
+        status: in_progress
+        reviewer: claude
+        spec: .pact/tasks/relay-tests.md
+        evidence: null
+        deps: [t2]
+      - id: t7
+        owner: gemini
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/t7.md
+        evidence: null
+  - id: office-ui
+    branch: feat-office
+    status: in_progress
+    tasks:
+      - id: t4
+        owner: gemini
+        status: changes_requested
+        reviewer: claude
+        spec: .pact/tasks/office-desks.md
+        evidence: desks render; snapshot tests added
+      - id: t5
+        owner: opencode
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/office-wall.md
+        evidence: null
+        deps: [t4]
+      - id: t6
+        owner: gemini
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/office-tray.md
+        evidence: null
+        deps: [t4]
+      - id: t89
+        owner: gemini
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/t89.md
+        evidence: null
+  - id: f19
+    branch: sync-book
+    status: in_progress
+    tasks:
+      - id: t191
+        owner: opencode
+        status: assigned
+        reviewer: gemini
+        spec: .pact/tasks/t191.md
+        evidence: null
+      - id: t192
+        owner: opencode
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/t192.md
+        evidence: null
+        deps: [t191]
+      - id: t193
+        owner: opencode
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/t193.md
+        evidence: null
+        deps: [t191]

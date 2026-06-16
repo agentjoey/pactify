@@ -93,6 +93,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerWiringRoutes(mux)
 	s.registerAgentRoutes(mux)
 	s.registerSessionRoutes(mux)
+	s.registerAuditRoutes(mux)
 	s.registerStatsRoutes(mux)
 	s.registerSeatsRoutes(mux)
 	s.registerTimelineRoutes(mux)

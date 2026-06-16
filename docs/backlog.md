@@ -56,6 +56,12 @@
 - **--run-timeout 15min 太短/钝超时误杀慢任务**：本轮 step3（前端面板）合法慢，15min 超时杀了一次→重试续建才完成。默认 30min 较合理；正解 = 空闲超时（无输出 N min 才杀，不误伤慢任务），已记。本轮也验证了"超时→重试→读半成品续建"恢复链可用。
 - **（待查）merge 后 STATE.yml 可能滞后**：liveview merge 后工作树 STATE 一度显 shipped、但 HEAD 提交的 STATE.yml 显 in_progress——疑似 pact Merge 的 STATE 提交时序问题，需查（feature 实际已 merged、代码在 main、测试绿，仅 STATE 文件可能滞后）。
 
+## orchestrate merge 分支不匹配（2026-06-16 audit-layer 真跑发现，真 bug）
+**现象**：`pactify assign <task> --feature F --branch feat-X` 后跑**串行** `orchestrate --feature F`，两 task 都 worked→accepted，但 `pact merge F` 失败 `exit status 1`：`Please specify which branch you want to merge with`，且把工作树 `git checkout` 到了 base（main），人需手动 `git checkout` 回去。
+**根因**：串行单树 orchestrate 的 worker **就地在 orchestrate 启动分支上干活+提交**（join 没真的切到 feat-X），但 `pact.Merge` 仍按 STATE 里记录的 feature 分支 `feat-X` 去 `git merge feat-X`——该分支从未被创建 → git 报错。merge 的 `git checkout base` 已执行、merge 本身失败 → 树停在 base。
+**影响**：feature 卡在 accepted-but-not-shipped；代码其实已就地提交在启动分支（本次 = feat-audit-layer，`git checkout feat-audit-layer` 即恢复，无丢失）。
+**正解候选**：① 串行 orchestrate 检测"feature 提交已在当前分支"→ merge 变 no-op（只置 shipped + 提交 merge 事件）；② 或 assign 时 `--branch` 与串行运行分支一致性校验/忽略；③ 文档明确：串行就地跑别设异名 feature 分支。关联并行 merge 逻辑（worktree park base）。
+
 ## gemini-cli 免费档静默降级 flash —— 模型 pin 不可靠（2026-06-13）
 **现象**：liveview step2 由 gemini 跑时，用户在 live 里看到模型是 `gemini-3-flash-preview`，而非 runner pin 的 `gemini-3.1-pro-preview`。
 **根因（已查 gemini-cli 0.46.0 bundle 证实）**：不是我们 runner 的 bug——隔离短跑 `gemini -p ... -m gemini-3.1-pro-preview --output-format json` 实测 `stats.models` 就是 `gemini-3.1-pro-preview`，`-m` pin 生效。问题是 gemini CLI 内置 `FLASH_FALLBACK`/`fallbackModelHandler`，**仅在 `authType === "oauth-personal"`（免费 Google 登录档）或 `compute-default-credentials` 下挂载**；当免费档 pro/preview 撞配额(429/quota)时**静默降级到 `gemini-3-flash-preview`**。当前 `~/.gemini/settings.json` 正是 `oauth-personal`，长任务（liveview 多轮、上万 token）把免费 pro 配额跑光后被自动降级。
@@ -109,3 +115,8 @@
   2. ✅ **手动添加（已知 kind）**：「Add manually」展开列"支持但未检测到"的 kind，Register anyway 登记。**自定义 binary 路径延后** → 后端 register 端点暂不收 path。
   3. ✅ **模型下拉**：新增 `agent.CandidateModels(kind)`（每 RunnerProfile 一份候选），经 config DTO 的 `candidate_models` 暴露；model 字段升级为下拉（default · 候选 · custom…），无候选回退纯文本（codex-cli 不 pin 默认→纯文本）。
   - **遗留后端 backlog**：① register 收自定义 binary 路径（启用真·自定义手动添加 + scan 探测自定义安装）；② 候选模型清单做大/可配（当前 opencode/kimi 各仅默认 1 项）。
+
+## audit 层 opencode 捕获需 JS 插件（2026-06-16 实测发现）
+**背景**：native audit layer v1 用 PreToolUse 命令 hook 捕获工具调用，claude-code 走 `.claude/settings.json`（已接）。**实测 opencode 无命令式 hook**：其 config（opencode.json，`$schema https://opencode.ai/config.json`）只有 `mcp`/`plugin`，工具拦截唯一入口是 **JS 插件**（`tool.execute.before`，独立 npm module）。
+**现状**：`pactify audit install --opencode` 返回可执行错误（不写 opencode 不读的文件）；capture 路径 `pactify audit hook --kind opencode` 已就绪，缺的是触发它的插件。
+**后续候选**：写一个最小 opencode 插件（`tool.execute.before` → shell out `pactify audit hook --kind opencode` 喂 stdin），随 `audit install --opencode` 落地到 `.opencode/plugin/` 或经 `opencode plugin <module>`。需实测插件 API 的 stdin/字段形态。codex 同理待查（其 hook 形态）。

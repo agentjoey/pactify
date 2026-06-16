@@ -91,3 +91,12 @@ func TestDetect(t *testing.T) {
 		t.Fatalf("claude-code should be detected as installed: %+v", got)
 	}
 }
+
+func TestInstallOpencodeDeferred(t *testing.T) {
+	// opencode capture needs a JS plugin, not a command hook — Install must say so
+	// (an actionable error), not silently write a file opencode ignores.
+	err := Install("opencode", t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "plugin") {
+		t.Fatalf("opencode install should return an actionable plugin error, got: %v", err)
+	}
+}

@@ -115,3 +115,8 @@
   2. ✅ **手动添加（已知 kind）**：「Add manually」展开列"支持但未检测到"的 kind，Register anyway 登记。**自定义 binary 路径延后** → 后端 register 端点暂不收 path。
   3. ✅ **模型下拉**：新增 `agent.CandidateModels(kind)`（每 RunnerProfile 一份候选），经 config DTO 的 `candidate_models` 暴露；model 字段升级为下拉（default · 候选 · custom…），无候选回退纯文本（codex-cli 不 pin 默认→纯文本）。
   - **遗留后端 backlog**：① register 收自定义 binary 路径（启用真·自定义手动添加 + scan 探测自定义安装）；② 候选模型清单做大/可配（当前 opencode/kimi 各仅默认 1 项）。
+
+## audit 层 opencode 捕获需 JS 插件（2026-06-16 实测发现）
+**背景**：native audit layer v1 用 PreToolUse 命令 hook 捕获工具调用，claude-code 走 `.claude/settings.json`（已接）。**实测 opencode 无命令式 hook**：其 config（opencode.json，`$schema https://opencode.ai/config.json`）只有 `mcp`/`plugin`，工具拦截唯一入口是 **JS 插件**（`tool.execute.before`，独立 npm module）。
+**现状**：`pactify audit install --opencode` 返回可执行错误（不写 opencode 不读的文件）；capture 路径 `pactify audit hook --kind opencode` 已就绪，缺的是触发它的插件。
+**后续候选**：写一个最小 opencode 插件（`tool.execute.before` → shell out `pactify audit hook --kind opencode` 喂 stdin），随 `audit install --opencode` 落地到 `.opencode/plugin/` 或经 `opencode plugin <module>`。需实测插件 API 的 stdin/字段形态。codex 同理待查（其 hook 形态）。

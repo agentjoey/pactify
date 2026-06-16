@@ -12,14 +12,22 @@ import (
 // rebuilds: it calls the `pactify` on PATH (install assumes pactify is installed).
 func hookCommand(kind string) string { return "pactify audit hook --kind " + kind }
 
-// Install registers the project-scoped PreToolUse audit hook for kind at
-// repoDir/.claude/settings.json (claude-code; opencode shares the shape until
-// verified otherwise — see install_opencode notes). Idempotent: a prior pact
-// audit entry is removed before inserting.
+// Install registers the project-scoped PreToolUse audit hook for kind.
+//
+// claude-code uses a command-style PreToolUse hook in .claude/settings.json
+// (project-scoped) — fully supported here. opencode, verified 2026-06-16, has NO
+// command-style hook: its only tool-call interception is a JS plugin
+// (`tool.execute.before`), a separate npm module — out of scope for this v1, so
+// it returns an actionable error rather than writing a file opencode ignores.
+// The capture path (`pactify audit hook --kind opencode`) already exists for when
+// that plugin lands.
 func Install(kind, repoDir string) error {
 	switch kind {
-	case "claude-code", "opencode":
+	case "claude-code":
 		return installClaudeStyle(kind, filepath.Join(repoDir, ".claude", "settings.json"))
+	case "opencode":
+		return fmt.Errorf("audit install: opencode tool-call capture needs a JS plugin " +
+			"(tool.execute.before), not a command hook — not yet supported; use --claude-code for now")
 	default:
 		return fmt.Errorf("audit install: unsupported kind %q", kind)
 	}
@@ -37,20 +45,21 @@ type Status struct {
 }
 
 // Detect reports, per supported kind, whether the project-scoped audit hook is
-// installed in repoDir.
+// installed in repoDir. Only claude-code has a command-hook install path today
+// (see Install); opencode is reported but always uninstalled until its plugin
+// path lands.
 func Detect(repoDir string) []Status {
-	out := []Status{}
-	for _, kind := range []string{"claude-code", "opencode"} {
-		s := readSettings(filepath.Join(repoDir, ".claude", "settings.json"))
-		installed := false
-		for _, e := range sliceOf(mapOf(s, "hooks"), "PreToolUse") {
-			if isAuditEntry(e) {
-				installed = true
-			}
+	s := readSettings(filepath.Join(repoDir, ".claude", "settings.json"))
+	claudeInstalled := false
+	for _, e := range sliceOf(mapOf(s, "hooks"), "PreToolUse") {
+		if isAuditEntry(e) {
+			claudeInstalled = true
 		}
-		out = append(out, Status{Kind: kind, Installed: installed})
 	}
-	return out
+	return []Status{
+		{Kind: "claude-code", Installed: claudeInstalled},
+		{Kind: "opencode", Installed: false},
+	}
 }
 
 func installClaudeStyle(kind, settingsPath string) error {

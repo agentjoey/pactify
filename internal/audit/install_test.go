@@ -92,11 +92,33 @@ func TestDetect(t *testing.T) {
 	}
 }
 
-func TestInstallOpencodeDeferred(t *testing.T) {
-	// opencode capture needs a JS plugin, not a command hook — Install must say so
-	// (an actionable error), not silently write a file opencode ignores.
-	err := Install("opencode", t.TempDir())
-	if err == nil || !strings.Contains(err.Error(), "plugin") {
-		t.Fatalf("opencode install should return an actionable plugin error, got: %v", err)
+func TestInstallOpencodeWritesPlugin(t *testing.T) {
+	repo := t.TempDir()
+	if err := Install("opencode", repo); err != nil {
+		t.Fatalf("opencode install: %v", err)
+	}
+	path := filepath.Join(repo, ".opencode", "plugin", "pact-audit.ts")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("plugin not written: %v", err)
+	}
+	if !strings.Contains(string(b), "tool.execute.before") || !strings.Contains(string(b), "audit hook --kind opencode") {
+		t.Fatalf("plugin content wrong:\n%s", b)
+	}
+	// Detect reports it installed; Uninstall removes it.
+	found := false
+	for _, s := range Detect(repo) {
+		if s.Kind == "opencode" && s.Installed {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("opencode should be detected as installed after Install")
+	}
+	if err := Uninstall("opencode", repo); err != nil {
+		t.Fatalf("uninstall: %v", err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("plugin should be gone after Uninstall")
 	}
 }

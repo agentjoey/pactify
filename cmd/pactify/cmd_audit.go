@@ -54,7 +54,11 @@ func newAuditInstallCmd() *cobra.Command {
 				if err := audit.Install(kind, dir); err != nil {
 					return err
 				}
-				fmt.Fprintf(out, "installed audit hook for %s (%s/.claude/settings.json)\n", kind, dir)
+				target := ".claude/settings.json"
+				if kind == "opencode" {
+					target = ".opencode/plugin/pact-audit.ts"
+				}
+				fmt.Fprintf(out, "installed audit capture for %s (%s/%s)\n", kind, dir, target)
 				did = true
 			}
 			if !did {

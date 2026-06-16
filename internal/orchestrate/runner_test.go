@@ -95,6 +95,29 @@ func TestRunnerStampsTaskAndProjectEnv(t *testing.T) {
 	}
 }
 
+func TestGeminiEnv(t *testing.T) {
+	orig := geminiKey
+	t.Cleanup(func() { geminiKey = orig })
+
+	// non-gemini command → never injects, key fn not consulted.
+	geminiKey = func() (string, error) { t.Fatal("geminiKey should not be called"); return "", nil }
+	if env := geminiEnv("claude"); env != nil {
+		t.Fatalf("non-gemini: env=%v, want nil", env)
+	}
+
+	// gemini seat with a Keychain key → GEMINI_API_KEY injected (trimmed).
+	geminiKey = func() (string, error) { return "  AIza-secret  ", nil }
+	if env := geminiEnv("gemini"); !hasEnv(env, "GEMINI_API_KEY=AIza-secret") {
+		t.Fatalf("gemini env = %v, want GEMINI_API_KEY", env)
+	}
+
+	// gemini seat with NO key → no-op (keeps existing auth), never errors.
+	geminiKey = func() (string, error) { return "", errors.New("not in Keychain") }
+	if env := geminiEnv("gemini"); env != nil {
+		t.Fatalf("gemini without key should be a no-op, got %v", env)
+	}
+}
+
 func TestGLMEnv(t *testing.T) {
 	origTok, origURL := glmToken, glmBaseURL
 	t.Cleanup(func() { glmToken, glmBaseURL = origTok, origURL })

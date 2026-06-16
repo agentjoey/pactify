@@ -56,13 +56,13 @@
 - **--run-timeout 15min 太短/钝超时误杀慢任务**：本轮 step3（前端面板）合法慢，15min 超时杀了一次→重试续建才完成。默认 30min 较合理；正解 = 空闲超时（无输出 N min 才杀，不误伤慢任务），已记。本轮也验证了"超时→重试→读半成品续建"恢复链可用。
 - **（待查）merge 后 STATE.yml 可能滞后**：liveview merge 后工作树 STATE 一度显 shipped、但 HEAD 提交的 STATE.yml 显 in_progress——疑似 pact Merge 的 STATE 提交时序问题，需查（feature 实际已 merged、代码在 main、测试绿，仅 STATE 文件可能滞后）。
 
-## orchestrate merge 分支不匹配（2026-06-16 audit-layer 真跑发现，真 bug）
+## orchestrate merge 分支不匹配 ✅ 已修（2026-06-16，commit c3235f0）
 **现象**：`pactify assign <task> --feature F --branch feat-X` 后跑**串行** `orchestrate --feature F`，两 task 都 worked→accepted，但 `pact merge F` 失败 `exit status 1`：`Please specify which branch you want to merge with`，且把工作树 `git checkout` 到了 base（main），人需手动 `git checkout` 回去。
 **根因**：串行单树 orchestrate 的 worker **就地在 orchestrate 启动分支上干活+提交**（join 没真的切到 feat-X），但 `pact.Merge` 仍按 STATE 里记录的 feature 分支 `feat-X` 去 `git merge feat-X`——该分支从未被创建 → git 报错。merge 的 `git checkout base` 已执行、merge 本身失败 → 树停在 base。
 **影响**：feature 卡在 accepted-but-not-shipped；代码其实已就地提交在启动分支（本次 = feat-audit-layer，`git checkout feat-audit-layer` 即恢复，无丢失）。
 **正解候选**：① 串行 orchestrate 检测"feature 提交已在当前分支"→ merge 变 no-op（只置 shipped + 提交 merge 事件）；② 或 assign 时 `--branch` 与串行运行分支一致性校验/忽略；③ 文档明确：串行就地跑别设异名 feature 分支。关联并行 merge 逻辑（worktree park base）。
 
-## gemini-cli 免费档静默降级 flash —— 模型 pin 不可靠（2026-06-13）
+## gemini-cli 免费档静默降级 flash ✅ 已修（2026-06-16）：runner 在 gemini 座席注入 Keychain `pactify/gemini` 的 `GEMINI_API_KEY`（切 API-key 档，绕开 oauth 免费档的 FLASH_FALLBACK，-m pin 才 hold）；无 key 时 no-op。用户设 `security add-generic-password -s pactify -a gemini -w <key>` 即生效。可选增强：`--output-format json` 解析 stats.models 在实际≠pin 时告警（仍未做）。原记录：
 **现象**：liveview step2 由 gemini 跑时，用户在 live 里看到模型是 `gemini-3-flash-preview`，而非 runner pin 的 `gemini-3.1-pro-preview`。
 **根因（已查 gemini-cli 0.46.0 bundle 证实）**：不是我们 runner 的 bug——隔离短跑 `gemini -p ... -m gemini-3.1-pro-preview --output-format json` 实测 `stats.models` 就是 `gemini-3.1-pro-preview`，`-m` pin 生效。问题是 gemini CLI 内置 `FLASH_FALLBACK`/`fallbackModelHandler`，**仅在 `authType === "oauth-personal"`（免费 Google 登录档）或 `compute-default-credentials` 下挂载**；当免费档 pro/preview 撞配额(429/quota)时**静默降级到 `gemini-3-flash-preview`**。当前 `~/.gemini/settings.json` 正是 `oauth-personal`，长任务（liveview 多轮、上万 token）把免费 pro 配额跑光后被自动降级。
 **修复方向（需用户决策，涉及成本/密钥）**：
@@ -71,7 +71,7 @@
 - 关联 [per-agent 模型配置]：模型 pin 落地后，gemini 棒的认证方式应一并配置化。
 
 ## 来自 greet live demo 真跑（2026-06-13）
-- **`join` 冷启动被未来任务的 dep 误杀（真 bug）**：worker `pactify join <seat>` 冷启动会校验该座席**全部** assigned 任务，若某个**未来**任务（如 t2）合法 blocked by unaccepted dep（t1 还没验收），join 直接硬失败 exit 1，且在 checkout feature 分支**之前**就挂——导致 feat 分支没被创建。worker 本轮手动 `git checkout -b feat-greet` 绕过。正解：join 冷启动只需保证「我即将要干的可运行任务」能开工，不该因未来 gated 任务而失败；dep 门控应在该任务**真正开工时**校验，而非 join 时全量校验。
+- **`join` 冷启动被未来任务的 dep 误杀（真 bug）✅ 已修（2026-06-16，commit c3235f0：checkJoinGate 只在「所有可开工任务都被 dep 卡」时拦，可运行任务不再被未来 gated 任务拖累）**：worker `pactify join <seat>` 冷启动会校验该座席**全部** assigned 任务，若某个**未来**任务（如 t2）合法 blocked by unaccepted dep（t1 还没验收），join 直接硬失败 exit 1，且在 checkout feature 分支**之前**就挂——导致 feat 分支没被创建。worker 本轮手动 `git checkout -b feat-greet` 绕过。正解：join 冷启动只需保证「我即将要干的可运行任务」能开工，不该因未来 gated 任务而失败；dep 门控应在该任务**真正开工时**校验，而非 join 时全量校验。
 - **live demo 全链路验证 ✓**：claude 单 binary 扮 orchestrator+reviewer+worker(opencode 座席)，per-task 翻转满足 owner≠reviewer，reviewer 每棒独立重跑验收命令；t1→t2→t3（带 deps 链）全自动 worked→reviewed→accepted→merged→shipped（iter=8），CLI 实测可用。status.json 实时刷新驱动 live 面板四态流转正常。
 
 ## ✅ 已实现（2026-06-14，8h 自主交付）—— 详见 docs/roadmap-next.md

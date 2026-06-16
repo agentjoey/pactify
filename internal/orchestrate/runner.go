@@ -137,6 +137,13 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 		return fmt.Errorf("orchestrate: %w", err)
 	}
 	env = append(env, gEnv...)
+
+	// gemini: a Keychain API key (pactify/gemini) switches gemini-cli to the
+	// API-key auth tier, which honors the -m model pin. The free oauth-personal
+	// tier silently falls back to flash on quota (FLASH_FALLBACK only mounts under
+	// oauth/compute-default creds), making the pin unreliable. Inert when no key is
+	// set — the seat keeps its current auth.
+	env = append(env, geminiEnv(eff.Command)...)
 	return r.Exec(ctx, eff.Command, args, lc.RepoDir, env)
 }
 
@@ -150,6 +157,26 @@ func tagOpencodeSession(command, seatID string, args []string) []string {
 	}
 	tagged := []string{args[0], "--title", sessions.SessionTag(seatID)}
 	return append(tagged, args[1:]...)
+}
+
+// geminiKey is overridable in tests; production reads the Keychain (pactify/gemini).
+var geminiKey = func() (string, error) { return secret.Keychain("pactify", "gemini") }
+
+// geminiEnv returns GEMINI_API_KEY env for a gemini-cli seat when a Keychain key
+// is set (switching it to the API-key auth tier so the model pin holds); nil for
+// any other command or when no key is configured. Never errors — a missing key is
+// a no-op (the seat keeps its existing auth), unlike GLM where the token is
+// required once the seat is GLM.
+func geminiEnv(command string) []string {
+	if command != "gemini" {
+		return nil
+	}
+	if k, err := geminiKey(); err == nil {
+		if k = strings.TrimSpace(k); k != "" {
+			return []string{"GEMINI_API_KEY=" + k}
+		}
+	}
+	return nil
 }
 
 // glmEnv returns the Z.ai endpoint env (base URL + Keychain token) for a

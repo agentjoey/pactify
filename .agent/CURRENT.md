@@ -77,6 +77,6 @@ backlog：M6（join roles inert）、I5（task_status grep 脆弱）、F1 worktr
 ## Version History（最近 5 版）
 | Version | Date | Summary |
 |---------|------|---------|
+| **v0.4.0** | **2026-06-16** | **orchestrate 自主驱动 + planner + 8h 12 功能 + cost/观测 D1 + 巡检 D2 + GLM 端点可配 + Settings agent 管理 + session 清理(opencode) + dashboard 浅色化 + native audit layer(claude-code hook + opencode 插件) + pactify.dev 文档站。CI test/e2e/site 全绿。** |
 | v0.3.0 | 2026-06-10 | 首个 GitHub Release：协议 v1 + Go CLI + MCP + 多项目 SSE dashboard |
-| (未发布) | 2026-06-14~15 | orchestrate 自主驱动 + planner + 8h 12 功能 + cost/观测 D1 + 巡检 D2 + GLM 端点可配 + Settings agent 管理 + session 清理升级 + dashboard 浅色化 + pactify.dev 文档站（`feat-light-theme`）|
 | v0.1.0 | 2026-06-09 | Repo 初始化 + roadmap 锁定（三产品/守 Team）+ 技术地基决策（Go/MCP/React）|

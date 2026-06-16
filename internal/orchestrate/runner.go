@@ -43,13 +43,20 @@ var glmBaseURL = func() string {
 // Kept equal to agentcfg.Placeholder, the token agentcfg.Resolve emits.
 const briefingPlaceholder = agentcfg.Placeholder
 
-// Runner headless-launches a seat's agent with a briefing, blocking until that
-// turn ends. seatID + kind identify the agent (the orchestrate loop holds a
-// projection.State whose Seat has no Kind field, so the loop maps seat id → kind
-// from the roster and passes both explicitly); briefing is the prompt; repoDir is
-// the working directory the agent runs in.
+// LaunchContext carries everything needed to launch one agent stint. It replaces
+// the former loose (seatID, kind, briefing, repoDir) params so audit attribution
+// (Task, Project) — stamped into the agent's env for the audit hook — and future
+// fields add without churning the signature.
+type LaunchContext struct {
+	Seat, Kind, Task, Project, Briefing, RepoDir string
+}
+
+// Runner headless-launches a seat's agent for one stint, blocking until that turn
+// ends. Seat + Kind identify the agent (the loop maps seat id → kind from the
+// roster); Briefing is the prompt; RepoDir is the working directory; Task/Project
+// are stamped into the child env (PACT_TASK_ID/PACT_PROJECT) for audit.
 type Runner interface {
-	Run(ctx context.Context, seatID, kind, briefing, repoDir string) error
+	Run(ctx context.Context, lc LaunchContext) error
 }
 
 // execFn abstracts process spawn so the production path (os/exec) and the test
@@ -88,21 +95,21 @@ func osExec(ctx context.Context, name string, args []string, dir string, env []s
 // it in repoDir with PACT_AGENT_ID=seatID injected so the agent joins the right
 // seat. A kind with no headless runner (GUI/desktop kinds, or an unknown kind)
 // fails closed: no process is spawned and an actionable error is returned.
-func (r CmdRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir string) error {
-	if _, known := agent.Get(kind); !known {
-		return fmt.Errorf("orchestrate: unknown agent kind %q — 改用 CLI 座席或人工那一棒", kind)
+func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
+	if _, known := agent.Get(lc.Kind); !known {
+		return fmt.Errorf("orchestrate: unknown agent kind %q — 改用 CLI 座席或人工那一棒", lc.Kind)
 	}
 	// Resolve the effective launch config: built-in profile overlaid with any
 	// per-agent override (model / scoped permissions) from the machine registry.
-	eff, ok := agentcfg.Resolve(kind)
+	eff, ok := agentcfg.Resolve(lc.Kind)
 	if !ok {
-		return fmt.Errorf("orchestrate: kind %q 无 headless runner，改用 CLI 座席或人工那一棒", kind)
+		return fmt.Errorf("orchestrate: kind %q 无 headless runner，改用 CLI 座席或人工那一棒", lc.Kind)
 	}
 
 	args := make([]string, len(eff.Args))
 	for i, a := range eff.Args {
 		if a == briefingPlaceholder {
-			args[i] = briefing
+			args[i] = lc.Briefing
 		} else {
 			args[i] = a
 		}
@@ -111,12 +118,16 @@ func (r CmdRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir stri
 	// opencode session tagging: stamp each run with a per-seat title so the driver
 	// can find and delete exactly this seat's sessions once the task is accepted
 	// (session cleanup). No format change — --title is just metadata on the run.
-	args = tagOpencodeSession(eff.Command, seatID, args)
+	args = tagOpencodeSession(eff.Command, lc.Seat, args)
 
-	// Inject the seat id so the launched agent joins as the right seat. The seam
-	// passes this as an addition; the production execFn appends it onto
-	// os.Environ(), while test execFns assert it is present.
-	env := []string{"PACT_AGENT_ID=" + seatID}
+	// Inject the seat id so the launched agent joins as the right seat, plus the
+	// task/project so the audit PreToolUse hook can attribute each tool call. The
+	// production execFn appends these onto os.Environ(); test execFns assert them.
+	env := []string{
+		"PACT_AGENT_ID=" + lc.Seat,
+		"PACT_TASK_ID=" + lc.Task,
+		"PACT_PROJECT=" + lc.Project,
+	}
 
 	// GLM: a claude-code seat on a glm-* model runs against the Z.ai endpoint with
 	// a Keychain-sourced token (no plaintext). Not a new kind — claude-code pointed
@@ -126,7 +137,7 @@ func (r CmdRunner) Run(ctx context.Context, seatID, kind, briefing, repoDir stri
 		return fmt.Errorf("orchestrate: %w", err)
 	}
 	env = append(env, gEnv...)
-	return r.Exec(ctx, eff.Command, args, repoDir, env)
+	return r.Exec(ctx, eff.Command, args, lc.RepoDir, env)
 }
 
 // tagOpencodeSession inserts `--title pact:<seat>` right after opencode's "run"

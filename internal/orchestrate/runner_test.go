@@ -41,7 +41,7 @@ func hasEnv(env []string, want string) bool {
 func TestCmdRunner_Opencode(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), "w1", "opencode", "do the work", "/repo")
+	err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", Briefing: "do the work", RepoDir: "/repo"})
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestCmdRunner_Opencode(t *testing.T) {
 func TestCmdRunner_ClaudeCode(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), "r1", "claude-code", "review task t1", "/work")
+	err := r.Run(context.Background(), LaunchContext{Seat: "r1", Kind: "claude-code", Briefing: "review task t1", RepoDir: "/work"})
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
 	}
@@ -80,6 +80,18 @@ func TestCmdRunner_ClaudeCode(t *testing.T) {
 	}
 	if !hasEnv(cap.env, "PACT_AGENT_ID=r1") {
 		t.Fatalf("env missing PACT_AGENT_ID=r1: %v", cap.env)
+	}
+}
+
+func TestRunnerStampsTaskAndProjectEnv(t *testing.T) {
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	lc := LaunchContext{Seat: "dev", Kind: "opencode", Task: "t7", Project: "demo", Briefing: "B", RepoDir: "/repo"}
+	if err := r.Run(context.Background(), lc); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if !hasEnv(cap.env, "PACT_AGENT_ID=dev") || !hasEnv(cap.env, "PACT_TASK_ID=t7") || !hasEnv(cap.env, "PACT_PROJECT=demo") {
+		t.Fatalf("env missing task/project stamp: %v", cap.env)
 	}
 }
 
@@ -148,7 +160,7 @@ func TestTagOpencodeSession(t *testing.T) {
 func TestCmdRunner_GUIKind_Errors(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), "g1", "antigravity", "brief", "/repo")
+	err := r.Run(context.Background(), LaunchContext{Seat: "g1", Kind: "antigravity", Briefing: "brief", RepoDir: "/repo"})
 	if err == nil {
 		t.Fatal("expected error for GUI kind antigravity, got nil")
 	}
@@ -160,7 +172,7 @@ func TestCmdRunner_GUIKind_Errors(t *testing.T) {
 func TestCmdRunner_UnknownKind_Errors(t *testing.T) {
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), "x1", "no-such-kind", "brief", "/repo")
+	err := r.Run(context.Background(), LaunchContext{Seat: "x1", Kind: "no-such-kind", Briefing: "brief", RepoDir: "/repo"})
 	if err == nil {
 		t.Fatal("expected error for unknown kind, got nil")
 	}
@@ -173,7 +185,7 @@ func TestCmdRunner_ExecError_Propagates(t *testing.T) {
 	want := errors.New("boom")
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, want)}
-	err := r.Run(context.Background(), "w1", "opencode", "brief", "/repo")
+	err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", Briefing: "brief", RepoDir: "/repo"})
 	if !errors.Is(err, want) {
 		t.Fatalf("Run error = %v, want %v", err, want)
 	}

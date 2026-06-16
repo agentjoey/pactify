@@ -180,6 +180,25 @@ export interface AgentRow {
 
 export const getAgents = () => getJSON<AgentRow[]>("/api/agents");
 
+// Permission audit log — one captured tool call per record (read-only lens).
+export interface AuditRecord {
+  ts: string;
+  project?: string;
+  repo?: string;
+  seat: string;
+  task: string;
+  kind?: string;
+  session?: string;
+  tool: string;
+  summary: string;
+  risk: string;
+  decision: string;
+}
+export const getAudit = (project: string, params: Record<string, string> = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return getJSON<AuditRecord[]>(`/api/projects/${project}/audit${qs ? `?${qs}` : ""}`);
+};
+
 // Per-agent launch config (#10 model / #9 posture / #4 scoped tools).
 export interface AgentConfig {
   kind: string;

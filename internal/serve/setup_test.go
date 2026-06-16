@@ -42,7 +42,10 @@ func TestSetupSuggestGET(t *testing.T) {
 	postJSON(t, ts.URL+"/api/agents/claude-code/register", map[string]any{})
 	postJSON(t, ts.URL+"/api/agents/opencode/register", map[string]any{})
 
-	resp2, _ := http.Get(ts.URL + "/api/setup/suggest")
+	resp2, err := http.Get(ts.URL + "/api/setup/suggest")
+	if err != nil {
+		t.Fatalf("GET setup/suggest: %v", err)
+	}
 	defer resp2.Body.Close()
 	json.NewDecoder(resp2.Body).Decode(&dto)
 	if len(dto.Bindings) != 2 {

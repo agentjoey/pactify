@@ -304,7 +304,10 @@ func TestRegistryRename(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
 	}
-	listResp, _ := http.Get(srv.URL + "/api/registry")
+	listResp, err := http.Get(srv.URL + "/api/registry")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
 	defer listResp.Body.Close()
 	var items []registryItem
 	_ = json.NewDecoder(listResp.Body).Decode(&items)
@@ -321,7 +324,10 @@ func TestRegistryRenameNoSeatRejected(t *testing.T) {
 	defer srv.Close()
 	req, _ := http.NewRequest("PUT", srv.URL+"/api/registry/old",
 		strings.NewReader(`{"new_name":"fresh"}`))
-	resp, _ := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do: %v", err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 422 {
 		t.Fatalf("status = %d, want 422 (no acting seat)", resp.StatusCode)
@@ -336,9 +342,33 @@ func TestRegistryRenameUnknownIs404(t *testing.T) {
 	defer srv.Close()
 	req, _ := http.NewRequest("PUT", srv.URL+"/api/registry/ghost",
 		strings.NewReader(`{"new_name":"x"}`))
-	resp, _ := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do: %v", err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 404 {
 		t.Fatalf("status = %d, want 404", resp.StatusCode)
+	}
+}
+
+func TestRegistryRenameCollisionIs409(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	s := New([]registry.Project{
+		{Name: "old", Path: t.TempDir()},
+		{Name: "taken", Path: t.TempDir()},
+	})
+	s.seat = "claude"
+	srv := httptest.NewServer(s.Handler())
+	defer srv.Close()
+	req, _ := http.NewRequest("PUT", srv.URL+"/api/registry/old",
+		strings.NewReader(`{"new_name":"taken"}`))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 409 {
+		t.Fatalf("status = %d, want 409 (name collision)", resp.StatusCode)
 	}
 }

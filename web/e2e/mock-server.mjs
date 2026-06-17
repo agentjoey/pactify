@@ -3,12 +3,18 @@
 // Serves the built SPA (../internal/serve/dist) plus the subset of the real
 // pactify HTTP API the dashboard reads on boot, with NO Go backend. Shapes match
 // internal/serve exactly (see fixtures.mjs for the field-by-field alignment):
-//   GET  /api/projects              → [{id,name,path,project,feature_count,awaiting_count}]
+//   GET  /api/projects              → [{id,name,path,project,feature_count,awaiting_count,group?}]
+//   GET  /api/registry              → [{name,path,group?,status}]
 //   GET  /api/acting-seat           → {seat}            (author identity)
 //   GET  /api/projects/p1/state     → StateDTO          (mutable working copy)
 //   GET  /api/projects/p1/squad/layout  → stored layout, or {} when none
 //   PUT  /api/projects/p1/squad/layout  → store verbatim + echo {status:"ok"}
 //   GET  /api/projects/p1/events    → SSE stream ("event: pact\ndata: …\n\n")
+//   GET  /api/fs/browse?path=       → {path,parent,entries}
+//   GET  /api/setup/suggest         → {bindings,warnings}
+//   POST /api/setup/apply           → {inited,wired,notes}
+//   POST /api/registry              → {name}
+//   DELETE /api/registry/:name      → {name}
 //   (unhandled /api/* → 404; everything else → SPA fallback to index.html)
 //
 // Test hooks (NOT part of the real API):
@@ -28,8 +34,11 @@ import { dirname, join, normalize, extname } from "node:path";
 import {
   PROJECT_ID,
   ACTING_SEAT,
-  projects,
+  registry as makeRegistry,
+  projects as makeProjects,
   initialState,
+  browseTree,
+  setupSuggest,
 } from "./fixtures.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -41,11 +50,14 @@ let state = initialState();
 let layout = null; // null ⇒ none stored yet (GET returns {})
 const puts = []; // ordered list of PUT layout bodies (for /__test/puts asserts)
 const sseClients = new Set(); // live SSE response objects
+let registry = makeRegistry();
+const fsTree = browseTree();
 
 function resetState() {
   state = initialState();
   layout = null;
   puts.length = 0;
+  registry = makeRegistry();
 }
 
 const MIME = {
@@ -156,7 +168,10 @@ const server = createServer(async (req, res) => {
 
   // --- real API surface ---
   if (url === "/api/projects" && method === "GET") {
-    return sendJSON(res, 200, projects());
+    return sendJSON(res, 200, makeProjects(registry));
+  }
+  if (url === "/api/registry" && method === "GET") {
+    return sendJSON(res, 200, registry);
   }
   if (url === "/api/acting-seat" && method === "GET") {
     return sendJSON(res, 200, { seat: ACTING_SEAT });
@@ -198,6 +213,37 @@ const server = createServer(async (req, res) => {
       sseClients.delete(res);
     });
     return;
+  }
+
+  if (url === "/api/fs/browse" && method === "GET") {
+    const pathParam = decodeURIComponent((req.url || "").split("?path=")[1] || "");
+    const node = fsTree[pathParam || "/tmp"];
+    if (!node) return sendJSON(res, 400, { error: "path does not exist or is not a directory" });
+    return sendJSON(res, 200, node);
+  }
+
+  if (url === "/api/setup/suggest" && method === "GET") {
+    return sendJSON(res, 200, setupSuggest());
+  }
+
+  if (url === "/api/setup/apply" && method === "POST") {
+    const body = JSON.parse(await readBody(req));
+    const name = body.project || "unknown";
+    registry.push({ name, path: body.path, group: body.group || "", status: { valid: true, seats: (body.seats || []).length } });
+    return sendJSON(res, 200, { inited: true, wired: [], notes: [] });
+  }
+
+  if (url === "/api/registry" && method === "POST") {
+    const body = JSON.parse(await readBody(req));
+    const name = body.name || body.path.split("/").filter(Boolean).pop() || "project";
+    registry.push({ name, path: body.path, group: body.group || "", status: { valid: true, seats: 0 } });
+    return sendJSON(res, 200, { name });
+  }
+
+  if (url.startsWith("/api/registry/") && method === "DELETE") {
+    const name = decodeURIComponent(url.slice("/api/registry/".length));
+    registry = registry.filter((p) => p.name !== name);
+    return sendJSON(res, 200, { name });
   }
 
   // Unhandled /api/* → 404 (do NOT fall back to the SPA for API paths).

@@ -41,6 +41,7 @@ beforeEach(() => {
   globalThis.EventSource = makeFakeESClass() as unknown as typeof EventSource;
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
+    if (url === "/api/registry") return { ok: true, json: async () => [] };
     if (url === "/api/agents") return { ok: true, json: async () => [] };
     if (url.includes("/timeline")) return { ok: true, json: async () => ({ total: 0, events: [] }) };
     return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
@@ -97,6 +98,7 @@ describe("App", () => {
           { id: "other", name: "other", path: "/y", project: "other", feature_count: 0, awaiting_count: 0 },
         ],
       };
+      if (url === "/api/registry") return { ok: true, json: async () => [] };
       if (url === "/api/agents") return { ok: true, json: async () => [] };
       return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
     }));
@@ -126,6 +128,7 @@ describe("App", () => {
     function stubReplayFetch() {
       vi.stubGlobal("fetch", vi.fn(async (url: string) => {
         if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
+        if (url === "/api/registry") return { ok: true, json: async () => [] };
         if (url === "/api/agents") return { ok: true, json: async () => [] };
         if (url.includes("/timeline")) return {
           ok: true,

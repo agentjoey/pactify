@@ -13,6 +13,7 @@ import type {
   SetupSuggestResponse,
   RecipeItem,
   ExpandedTaskItem,
+  FsBrowseResponse,
 } from "./types";
 import type { LayoutJSON } from "./canvas";
 
@@ -64,7 +65,23 @@ function normalizeState(s: WireState): State {
   };
 }
 
-export const fetchProjects = () => getJSON<ProjectMeta[]>("/api/projects");
+export async function fetchProjects(): Promise<ProjectMeta[]> {
+  const [projects, registry] = await Promise.all([
+    getJSON<ProjectMeta[]>("/api/projects"),
+    getJSON<RegistryEntry[]>("/api/registry").catch(() => [] as RegistryEntry[]),
+  ]);
+  const groupFor = new Map<string, string>();
+  for (const r of registry) {
+    if (r.group) {
+      groupFor.set(r.path, r.group);
+      groupFor.set(r.name, r.group);
+    }
+  }
+  return projects.map((p) => ({
+    ...p,
+    group: p.group ?? groupFor.get(p.path) ?? groupFor.get(p.name),
+  }));
+}
 export const fetchState = (id: string) =>
   getJSON<State>(`/api/projects/${id}/state`).then(normalizeState);
 
@@ -144,9 +161,17 @@ export async function putLayout(project: string, layout: LayoutJSON): Promise<vo
 
 export const getRegistry = () => getJSON<RegistryEntry[]>("/api/registry");
 
-export async function postRegister(path: string, name?: string): Promise<{ name: string }> {
-  const body: { path: string; name?: string } = { path };
-  if (name) body.name = name;
+export async function postRegister(
+  path: string,
+  opts?: string | { name?: string; group?: string },
+): Promise<{ name: string }> {
+  const body: { path: string; name?: string; group?: string } = { path };
+  if (typeof opts === "string") {
+    body.name = opts;
+  } else if (opts) {
+    if (opts.name) body.name = opts.name;
+    if (opts.group) body.group = opts.group;
+  }
   const r = await writeJSON("/api/registry", "POST", body);
   return (await r.json()) as { name: string };
 }
@@ -267,6 +292,7 @@ export async function setupApply(body: {
   path: string;
   project: string;
   seats: SetupApplySeat[];
+  group?: string;
 }): Promise<SetupApplyResponse> {
   const r = await writeJSON("/api/setup/apply", "POST", body);
   return (await r.json()) as SetupApplyResponse;
@@ -371,6 +397,11 @@ export const createManifest = async (toml: string): Promise<{ kind: string }> =>
 };
 export const deleteManifest = (kind: string) =>
   fetch(`/api/manifests/${encodeURIComponent(kind)}`, { method: "DELETE" });
+
+export const browseFs = (path?: string) => {
+  const qs = path ? `?path=${encodeURIComponent(path)}` : "";
+  return getJSON<FsBrowseResponse>(`/api/fs/browse${qs}`);
+};
 
 // subscribeEvents opens an SSE stream; returns an unsubscribe fn.
 // onLive (optional) reports connection state: true on open, false on error/drop.

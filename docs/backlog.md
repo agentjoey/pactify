@@ -172,3 +172,13 @@ SP2/SP3 的 dashboard 驱动 UI（Plan Apply / Live Run·Resume·diff·Ship / Se
 - **`pactify run "<目标>"`** 一条命令串 plan → 预览确认 → orchestrate → finish。
 - **`pactify setup --yes`** 零交互（用 wizard.Suggest 默认 roster）。
 - **目标**：接入到跑 = `pactify setup` + `pactify run "..."` 两条命令，用户**完全不碰** seat 格式 / seat-kind 映射 / 分步动词。dashboard 侧同理（Setup Apply + 一个 Run 输入框）。
+
+## token capture 缺数据源：没有 agent 输出 usage（2026-06-17 实测，⛁ 始终为 0）
+**现象**：RightRail 的 ⛁ token 数始终不显示（=0）；代码行数 `+/−` 正常（git 算的）。
+**根因（实测 `internal/agent/launch.go` 各 kind BuildArgs）**：token 写入管道接通了（runner tailWriter siphon stdout → `tokens.Parse` → `recordTokens` → `.pact/orchestrate/tokens.json` → ⛁），但**没有一个 agent 的启动参数含产出 usage JSON 的 flag**——claude 缺 `--output-format`、opencode/gemini/kimi/codex 同样默认文本/流输出。捕获到的 stdout 无 usage → Parse 恒 false → token=0。**「token capture D1 闭环」实际只有管道、没有数据源。**
+**做法（逐 agent 实测，禁凭文档断言）**：
+- **claude-code**：加 `--output-format stream-json`（JSONL，末行带 usage，tailWriter 取尾正好；比 `json` 更不破坏流式）。tokens.Parse 已支持 usage.input/output_tokens。
+- **gemini**：`--output-format json` 的 stats.tokens。
+- **opencode**：研究 token 输出（注意 `--format json` 变输出形态的已知坑）。
+- **kimi/codex**：实测有无 usage 输出。
+- 每接一个 kind，tokens.Parse 加解析分支 + run-verify；权衡输出形态对 dashboard live 流式可读性的影响。

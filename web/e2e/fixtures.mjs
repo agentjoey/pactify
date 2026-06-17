@@ -1,8 +1,10 @@
 // E2E fixtures — the hermetic protocol snapshot the mock server serves. Shapes
 // are byte-for-byte the real serve JSON (internal/serve/dto.go + api.go):
-//   • /api/projects item: {id,name,path,project,feature_count,awaiting_count}
-//     (NO author/seat field — author identity comes from GET /api/acting-seat).
-//   • /api/projects/{id}/state: StateDTO {project,agents,features[…tasks],awaiting_count}.
+//   • /api/projects item: {id,name,path,project,feature_count,awaiting_count,group?}
+//   • /api/registry item: {name,path,group?,status:{valid,seats,lastEventTs?}}
+//   • /api/fs/browse: {path,parent,entries:[{name,path,isGit,hasPact}]}
+//   • /api/setup/suggest: {bindings:[{seat,kind,roles,drivable}],warnings}
+//   • /api/setup/apply: {inited,wired:[{kind,seat,wrote,path,docOnly,snippet?}],notes}
 //   • GET /api/acting-seat: {seat} — non-empty ⇒ the dashboard authors.
 //
 // Roster (spec §4 / Task 5): claude-opus = orchestrator+reviewer, opencode = worker.
@@ -19,16 +21,24 @@ export const PROJECT_ID = "p1";
 // The acting seat — author view. claude-opus can author (orchestrator).
 export const ACTING_SEAT = "claude-opus";
 
-export const projects = () => [
-  {
-    id: PROJECT_ID,
-    name: PROJECT_ID,
-    path: `/tmp/${PROJECT_ID}`,
-    project: PROJECT_ID,
-    feature_count: 1,
+// Mutable registry used by the mock server. resetRegistry returns a fresh copy.
+export function registry() {
+  return [
+    { name: PROJECT_ID, path: `/tmp/${PROJECT_ID}`, group: "", status: { valid: true, seats: 2, lastEventTs: "2026-01-01T00:00:00Z" } },
+  ];
+}
+
+export function projects(registryRows) {
+  return registryRows.map((p) => ({
+    id: p.name,
+    name: p.name,
+    path: p.path,
+    project: p.name,
+    feature_count: p.name === PROJECT_ID ? 1 : 0,
     awaiting_count: 0,
-  },
-];
+    group: p.group || undefined,
+  }));
+}
 
 // initialState returns a FRESH StateDTO object each call (the mock server mutates
 // its working copy via /__test/snapshot, so the seed must never be aliased).
@@ -78,4 +88,31 @@ export function snapshotT2InProgress() {
   const s = initialState();
   s.features[0].tasks[1].status = "in_progress";
   return s;
+}
+
+// Fs browse tree used by the project wizard e2e. /tmp/p1 already exists; /tmp/new
+// is a git repo without .pact/; /tmp/existing has .pact/ and is not pre-registered.
+export function browseTree() {
+  return {
+    "/": { path: "/", parent: "/", entries: [{ name: "tmp", path: "/tmp", isGit: false, hasPact: false }] },
+    "/tmp": {
+      path: "/tmp",
+      parent: "/",
+      entries: [
+        { name: "p1", path: "/tmp/p1", isGit: true, hasPact: true },
+        { name: "new", path: "/tmp/new", isGit: true, hasPact: false },
+        { name: "existing", path: "/tmp/existing", isGit: true, hasPact: true },
+      ],
+    },
+  };
+}
+
+export function setupSuggest() {
+  return {
+    bindings: [
+      { seat: "claude-opus", kind: "claude-code", roles: ["orchestrator", "reviewer"], drivable: true },
+      { seat: "opencode", kind: "opencode", roles: ["worker"], drivable: true },
+    ],
+    warnings: [],
+  };
 }

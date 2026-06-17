@@ -1,6 +1,11 @@
+import { useMemo, useState } from "react";
 import type { ProjectMeta } from "../../lib/types";
 import type { View } from "../TopBar";
 import { Icon } from "../../lib/icons";
+import { AddProjectWizard } from "./AddProjectWizard";
+import { deleteRegistry } from "../../lib/api";
+import { Modal } from "../ui/Modal";
+import { Button } from "../ui/Button";
 
 // Sidebar — the macOS source list (Option A shell). Holds the primary
 // navigation axis (Projects) plus machine-level destinations in the footer
@@ -19,6 +24,7 @@ export function Sidebar({
   onView,
   collapsed,
   onToggleCollapse,
+  onChanged,
 }: {
   projects: ProjectMeta[];
   current: string;
@@ -27,9 +33,25 @@ export function Sidebar({
   onView: (v: View) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  onChanged?: () => void;
 }) {
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [toDelete, setToDelete] = useState<ProjectMeta | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // a lens view (canvas/kanban/live/plan) means "Projects" is the active context.
   const onProjects = view === "canvas" || view === "kanban" || view === "live" || view === "plan";
+
+  async function confirmDelete() {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      await deleteRegistry(toDelete.id);
+      onChanged?.();
+    } catch { /* error surfaced by toast in a full app; here we just close */ }
+    setDeleting(false);
+    setToDelete(null);
+  }
 
   if (collapsed) {
     return (
@@ -54,45 +76,191 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex w-[188px] shrink-0 flex-col border-r border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-bg-inset)_60%,var(--color-bg-surface))] py-3">
-      <div className="flex-1 overflow-y-auto px-2">
-        <div className="mb-1 flex items-center justify-between px-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-3)]">Projects</span>
-          <button type="button" onClick={onToggleCollapse} title="Hide sidebar" aria-label="hide sidebar"
-            className="grid h-5 w-5 place-items-center rounded text-[var(--color-text-3)] transition-colors hover:bg-[var(--color-bg-inset)] hover:text-[var(--color-text-1)]">
-            <ChevronLeft />
-          </button>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          {projects.map((p) => {
-            const active = current === p.id && onProjects;
-            return (
+    <>
+      <aside className="flex w-[188px] shrink-0 flex-col border-r border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-bg-inset)_60%,var(--color-bg-surface))] py-3">
+        <div className="flex-1 overflow-y-auto px-2">
+          <div className="mb-1 flex items-center justify-between px-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-3)]">Projects</span>
+            <div className="flex items-center gap-0.5">
               <button
-                key={p.id}
                 type="button"
-                data-testid={`sidebar-project-${p.id}`}
-                onClick={() => { onSelect(p.id); if (!onProjects) onView("canvas"); }}
-                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-[var(--color-bg-inset)]"
-                style={active ? { background: "color-mix(in srgb, var(--color-role-design) 14%, transparent)" } : undefined}
+                data-testid="sidebar-add-project"
+                onClick={() => setWizardOpen(true)}
+                title="Create project"
+                aria-label="create project"
+                className="grid h-5 w-5 place-items-center rounded text-[var(--color-text-3)] transition-colors hover:bg-[var(--color-bg-inset)] hover:text-[var(--color-role-design)]"
               >
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded text-[10px] font-bold"
-                  style={{ background: active ? "color-mix(in srgb, var(--color-role-design) 22%, transparent)" : "var(--color-bg-inset)", color: active ? "var(--color-role-design-ink)" : "var(--color-text-3)" }}>
-                  {(p.name || p.id)[0]?.toUpperCase()}
-                </span>
-                <span className={`flex-1 truncate text-[12px] ${active ? "font-[650] text-[var(--color-text-1)]" : "text-[var(--color-text-2)]"}`}>{p.name || p.id}</span>
+                <PlusGlyph />
               </button>
-            );
-          })}
+              <button type="button" onClick={onToggleCollapse} title="Hide sidebar" aria-label="hide sidebar"
+                className="grid h-5 w-5 place-items-center rounded text-[var(--color-text-3)] transition-colors hover:bg-[var(--color-bg-inset)] hover:text-[var(--color-text-1)]">
+                <ChevronLeft />
+              </button>
+            </div>
+          </div>
+          <ProjectList projects={projects} current={current} onSelect={onSelect} onView={onView} onProjects={onProjects} onRequestDelete={setToDelete} />
         </div>
-      </div>
 
-      {/* footer — machine-level destinations */}
-      <div className="flex flex-col gap-0.5 px-2 pt-1">
-        <FooterItem label="Setup" icon="view-setup" active={view === "setup"} onClick={() => onView("setup")} />
-        <FooterItem label="Recipes" icon="view-recipes" active={view === "recipes"} onClick={() => onView("recipes")} />
-        <FooterItem label="Settings" icon="view-ops" active={view === "ops"} onClick={() => onView("ops")} />
-      </div>
-    </aside>
+        {/* footer — machine-level destinations */}
+        <div className="flex flex-col gap-0.5 px-2 pt-1">
+          <FooterItem label="Setup" icon="view-setup" active={view === "setup"} onClick={() => onView("setup")} />
+          <FooterItem label="Recipes" icon="view-recipes" active={view === "recipes"} onClick={() => onView("recipes")} />
+          <FooterItem label="Settings" icon="view-ops" active={view === "ops"} onClick={() => onView("ops")} />
+        </div>
+      </aside>
+
+      <AddProjectWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onAdded={() => { setWizardOpen(false); onChanged?.(); }} />
+
+      {toDelete && (
+        <Modal
+          testId="delete-project-modal"
+          variant="danger"
+          title="Remove project?"
+          onClose={() => setToDelete(null)}
+          footer={
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setToDelete(null)} disabled={deleting}>Cancel</Button>
+              <Button data-testid="delete-project-confirm" variant="danger" size="sm" loading={deleting} onClick={confirmDelete}>Remove</Button>
+            </>
+          }
+        >
+          <p className="text-[12px] text-[var(--color-text-2)]">
+            Remove <span className="font-medium text-[var(--color-text-1)]">{toDelete.name || toDelete.id}</span> from the dashboard? Its files and <code className="mono">.pact/</code> directory will not be touched.
+          </p>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function ProjectList({
+  projects,
+  current,
+  onSelect,
+  onView,
+  onProjects,
+  onRequestDelete,
+}: {
+  projects: ProjectMeta[];
+  current: string;
+  onSelect: (id: string) => void;
+  onView: (v: View) => void;
+  onProjects: boolean;
+  onRequestDelete: (p: ProjectMeta) => void;
+}) {
+  const { grouped, ungrouped } = useMemo(() => {
+    const grouped = new Map<string, ProjectMeta[]>();
+    const ungrouped: ProjectMeta[] = [];
+    for (const p of projects) {
+      if (p.group) {
+        const list = grouped.get(p.group) ?? [];
+        list.push(p);
+        grouped.set(p.group, list);
+      } else {
+        ungrouped.push(p);
+      }
+    }
+    return { grouped, ungrouped };
+  }, [projects]);
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  function toggleGroup(name: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {ungrouped.map((p) => (
+        <ProjectRow
+          key={p.id}
+          project={p}
+          active={current === p.id && onProjects}
+          onSelect={onSelect}
+          onView={onView}
+          onProjects={onProjects}
+          onRequestDelete={onRequestDelete}
+        />
+      ))}
+      {Array.from(grouped.entries()).map(([group, items]) => (
+        <div key={group} data-testid={`sidebar-group-${group}`}>
+          <button
+            type="button"
+            onClick={() => toggleGroup(group)}
+            className="group flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-[var(--color-bg-inset)]"
+          >
+            <span className="text-[10px] text-[var(--color-text-3)] transition-transform" style={{ transform: expanded.has(group) ? "rotate(90deg)" : "rotate(0deg)" }}>
+              <ChevronRight />
+            </span>
+            <span className="flex-1 truncate text-[11px] font-semibold text-[var(--color-text-2)]">{group}</span>
+          </button>
+          {expanded.has(group) && (
+            <div className="ml-2 flex flex-col gap-0.5 border-l border-[var(--color-border-subtle)] pl-1.5">
+              {items.map((p) => (
+                <ProjectRow
+                  key={p.id}
+                  project={p}
+                  active={current === p.id && onProjects}
+                  onSelect={onSelect}
+                  onView={onView}
+                  onProjects={onProjects}
+                  onRequestDelete={onRequestDelete}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProjectRow({
+  project,
+  active,
+  onSelect,
+  onView,
+  onProjects,
+  onRequestDelete,
+}: {
+  project: ProjectMeta;
+  active: boolean;
+  onSelect: (id: string) => void;
+  onView: (v: View) => void;
+  onProjects: boolean;
+  onRequestDelete: (p: ProjectMeta) => void;
+}) {
+  return (
+    <div
+      key={project.id}
+      data-testid={`sidebar-project-${project.id}`}
+      onClick={() => { onSelect(project.id); if (!onProjects) onView("canvas"); }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(project.id); if (!onProjects) onView("canvas"); }}}
+      className="group flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-[var(--color-bg-inset)]"
+      style={active ? { background: "color-mix(in srgb, var(--color-role-design) 14%, transparent)" } : undefined}
+    >
+      <span className="grid h-5 w-5 shrink-0 place-items-center rounded text-[10px] font-bold"
+        style={{ background: active ? "color-mix(in srgb, var(--color-role-design) 22%, transparent)" : "var(--color-bg-inset)", color: active ? "var(--color-role-design-ink)" : "var(--color-text-3)" }}>
+        {(project.name || project.id)[0]?.toUpperCase()}
+      </span>
+      <span className={`flex-1 truncate text-[12px] ${active ? "font-[650] text-[var(--color-text-1)]" : "text-[var(--color-text-2)]"}`}>{project.name || project.id}</span>
+      <button
+        type="button"
+        data-testid={`sidebar-delete-${project.id}`}
+        onClick={(e) => { e.stopPropagation(); onRequestDelete(project); }}
+        aria-label={`remove ${project.name || project.id}`}
+        className="grid h-5 w-5 place-items-center rounded text-[var(--color-text-3)] opacity-0 transition-colors hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-danger)] group-hover:opacity-100"
+      >
+        <TrashGlyph />
+      </button>
+    </div>
   );
 }
 
@@ -128,5 +296,14 @@ function SidebarGlyph() {
   );
 }
 function ChevronLeft() {
-  return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden><path d="M10 3 L5.5 8 L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  return <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M10 3 L5.5 8 L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+function ChevronRight() {
+  return <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M6 3 L10.5 8 L6 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+function PlusGlyph() {
+  return <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3 V13 M3 8 H13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>;
+}
+function TrashGlyph() {
+  return <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4 H13 M6 4 V2 H10 V4 M5 4 V13 H11 V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }

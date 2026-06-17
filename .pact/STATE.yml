@@ -189,3 +189,20 @@ features:
         spec: .pact/tasks/audit-query.md
         evidence: === RUN   TestAppendAndStorePath --- PASS: TestAppendAndStorePath (0.00s) === RUN   TestAppendDateBucketsByUTC --- PASS: TestAppendDateBucketsByUTC (0.00s) === RUN   TestQueryFiltersAndOrder --- PASS: TestQueryFiltersAndOrder (0.00s) === RUN   TestQuerySkipsTornLines --- PASS: TestQuerySkipsTornLines (0.00s) === RUN   TestSummarize --- PASS: TestSummarize (0.00s) PASS ok   github.com/agentjoey/pactify/internal/audit 0.730s  go build ./... — clean (no output).  Files changed: - internal/audit/audit.go: added Filter struct + match(), Query(), Summary struct, Summarize() - internal/audit/audit_test.go: added TestQueryFiltersAndOrder, TestQuerySkipsTornLines, TestSummarize
         deps: [t-audit-store]
+  - id: manifest-cd
+    branch: feat-manifest-cd
+    status: shipped
+    tasks:
+      - id: t-serve-manifests
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/serve-manifests.md
+        evidence: === RUN   TestManifestsCRUD --- PASS: TestManifestsCRUD (0.00s) PASS ok   github.com/agentjoey/pactify/internal/serve 0.409s  go build ./... — clean (no output).  Full serve suite: go test ./internal/serve/ ok 15.829s — all green, zero regressions.  Note: DELETE route changed from /api/agents/manifests/{kind} to /api/manifests/{kind} to resolve Go 1.22+ mux ambiguity with existing DELETE /api/agents/{kind}/register route. GET and POST also moved to /api/manifests for namespace consistency.  Files changed: - internal/serve/manifests.go (NEW): registerManifestRoutes + handleManifestList (GET) + handleManifestCreate (POST, 422 on invalid) + handleManifestDelete (DELETE) — uses agentmanifest.Load/Install/Remove - internal/serve/manifests_test.go (NEW): TestManifestsCRUD — POST valid (file written), POST invalid (422), GET list, DELETE - internal/serve/api.go: wired s.registerManifestRoutes(mux) next to registerAuditRoutes
+      - id: t-web-customagent
+        owner: gemini-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/web-customagent-form.md
+        evidence: npx tsc --noEmit clean. npm test -- CustomAgentForm: 1 file, 2 tests PASS. Full web vitest: 53 files, 441 tests PASS. Playwright e2e: 7/7 PASS. Files: web/src/lib/api.ts (+ManifestRow/listManifests/createManifest/deleteManifest on /api/manifests), web/src/components/ops/CustomAgentForm.tsx + .test.tsx, web/src/components/ops/OpsView.tsx (mount). Built dist committed.
+        deps: [t-serve-manifests]

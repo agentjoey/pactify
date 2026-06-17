@@ -3,6 +3,7 @@
 package agent
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -123,6 +124,86 @@ func Kinds() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// ParseFormat maps a manifest format string onto the Format enum.
+func ParseFormat(s string) (Format, bool) {
+	switch s {
+	case "mcpServers":
+		return JSONMcpServers, true
+	case "opencode":
+		return JSONOpencode, true
+	case "toml":
+		return TOML, true
+	default:
+		return 0, false
+	}
+}
+
+// ParseScope maps a manifest scope string onto the Scope enum.
+func ParseScope(s string) (Scope, bool) {
+	switch s {
+	case "project":
+		return Project, true
+	case "global":
+		return Global, true
+	default:
+		return 0, false
+	}
+}
+
+// External is a custom agent declared by a user manifest, mapped into the registry
+// by RegisterExternal. Runner is nil for a non-drivable (manual) kind; HasMCP=false
+// means no MCP wiring (cfgPath left empty).
+type External struct {
+	Kind, Entry, Binary string
+	HasMCP              bool
+	MCPConfigPath       string
+	MCPScope            Scope
+	MCPFormat           Format
+	Desktop             bool
+	Runner              *RunnerProfile
+}
+
+// builtinKinds is the fixed compiled-in set, captured before any RegisterExternal
+// runs, so add-only/unregister can never touch a built-in.
+var builtinKinds = func() map[string]bool {
+	m := map[string]bool{}
+	for k := range registry {
+		m[k] = true
+	}
+	return m
+}()
+
+// RegisterExternal inserts a custom agent into the registry (add-only): a kind that
+// collides with a built-in is rejected, so a manifest can never shadow a verified
+// built-in. In-package, so it can build the unexported spec.
+func RegisterExternal(e External) error {
+	if builtinKinds[e.Kind] {
+		return fmt.Errorf("custom agent %q collides with a built-in kind (manifests are add-only)", e.Kind)
+	}
+	cfg := ""
+	if e.HasMCP {
+		cfg = e.MCPConfigPath
+	}
+	registry[e.Kind] = spec{
+		kind: e.Kind, entry: e.Entry, cfgPath: cfg,
+		scope: e.MCPScope, format: e.MCPFormat, desktop: e.Desktop, detectBin: e.Binary,
+	}
+	if e.Runner != nil {
+		runnerProfiles[e.Kind] = *e.Runner
+	}
+	return nil
+}
+
+// UnregisterExternal removes a custom kind (no-op for built-ins). For `agent
+// manifest remove` and test cleanup.
+func UnregisterExternal(kind string) {
+	if builtinKinds[kind] {
+		return
+	}
+	delete(registry, kind)
+	delete(runnerProfiles, kind)
 }
 
 // ExpandPath expands a leading ~ to the user's home dir; other paths pass through.

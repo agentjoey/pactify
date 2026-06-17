@@ -1,1 +1,1 @@
-{"feature":"audit-core","task":"","seat":"","action":"merge","phase":"merging feature","escalated":false,"done":false,"total":2,"accepted":2,"iter":4,"updated_at":"20260616-163210"}
+{"feature":"manifest-cd","task":"t-web-customagent","seat":"gemini-worker","action":"run_owner","phase":"owner working","escalated":false,"done":false,"total":2,"accepted":1,"iter":1,"updated_at":"20260617-085810"}

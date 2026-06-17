@@ -5,6 +5,8 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/agentjoey/pactify/internal/agent"
 )
 
 // runCapture records the arguments a fake execFn was invoked with, so tests can
@@ -230,4 +232,24 @@ func argsHave(args []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func TestRunnerSubstitutesSeatToken(t *testing.T) {
+	rp := agent.RunnerProfile{Command: "myagent", DefaultModel: "m1",
+		BuildArgs: func(model string, _ agent.PermPosture, briefing string) []string {
+			return []string{"run", "--id", "{seat}", briefing}
+		}}
+	if err := agent.RegisterExternal(agent.External{Kind: "seatkind", Binary: "myagent", Runner: &rp}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { agent.UnregisterExternal("seatkind") })
+
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "dev", Kind: "seatkind", Briefing: "B", RepoDir: "/r"}); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if argsHave(cap.args, "{seat}") || !argsHave(cap.args, "dev") {
+		t.Fatalf("args = %v, want {seat}->dev", cap.args)
+	}
 }

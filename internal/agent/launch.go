@@ -84,8 +84,8 @@ var runnerProfiles = map[string]RunnerProfile{
 	// against the installed `kimi` v1.44.0 (--help + package source).
 	"kimi-cli": {
 		Command:      "kimi",
-		DefaultModel: "kimi-for-coding",
-		Models:       []string{"kimi-for-coding"},
+		DefaultModel: "kimi-code/kimi-for-coding",
+		Models:       []string{"kimi-code/kimi-for-coding"},
 		BuildArgs: func(model string, _ PermPosture, briefing string) []string {
 			return []string{"-p", briefing, "-y", "-m", model}
 		},

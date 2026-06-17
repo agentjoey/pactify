@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
-import type { State } from "../lib/types";
+import { useMemo, useState, type CSSProperties } from "react";
+import type { State, Task } from "../lib/types";
 import { boardColumns, type Column } from "../lib/derive";
 import { statusColorVar } from "../lib/lifecycle";
 import { TaskCard } from "./TaskCard";
@@ -50,6 +50,30 @@ export function Board({
   const rolesMap = new Map(state.agents.map((a) => [a.id, a.roles]));
   const rolesOf = (seat: string): string[] => rolesMap.get(seat) ?? [];
 
+  // --- accepted column: grouped + collapsible ---
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const acceptedByFeature = useMemo(() => {
+    const shippedIds = new Set(state.features.filter((f) => f.status === "merged").map((f) => f.id));
+    const groups: { feature: string; shipped: boolean; tasks: Task[] }[] = [];
+    for (const f of state.features) {
+      const accepted = f.tasks.filter((t) => t.status === "accepted");
+      if (accepted.length) groups.push({ feature: f.id, shipped: shippedIds.has(f.id), tasks: accepted });
+    }
+    return groups;
+  }, [state.features]);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const acceptedTotal = useMemo(
+    () => acceptedByFeature.reduce((n, g) => n + g.tasks.length, 0),
+    [acceptedByFeature],
+  );
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [acceptedOpen, setAcceptedOpen] = useState(false);
+  // openGroups toggles: shipped groups are closed by default (open when id IN set);
+  // active groups are open by default (closed when id IN set).
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const LIMIT = 20;
+
   return (
     <div
       className="grid flex-1 gap-3 overflow-x-auto p-4"
@@ -78,7 +102,69 @@ export function Board({
               </div>
             </Tooltip>
             <div className="flex flex-col gap-[9px]">
-              {tasks.length === 0 ? (
+              {c === "accepted" ? (
+                <>
+                  <button
+                    type="button"
+                    data-testid="accepted-summary"
+                    className="w-full rounded-md border border-[var(--color-success)]/30 bg-[var(--color-success)]/8 px-2 py-1.5 text-left text-[11px]"
+                    onClick={() => setAcceptedOpen((o) => !o)}
+                  >
+                    {acceptedOpen ? "▾" : "▸"} {acceptedTotal} accepted
+                  </button>
+                  {acceptedOpen && acceptedByFeature.map((g) => {
+                    const open = g.shipped ? openGroups.has(g.feature) : !openGroups.has(g.feature);
+                    const shown = g.tasks.slice(0, LIMIT);
+                    return (
+                      <div key={g.feature} className="mt-1">
+                        <button
+                          type="button"
+                          data-testid={`accepted-group-${g.feature}`}
+                          className="w-full text-left text-[10px] text-[var(--color-text-3)]"
+                          onClick={() => setOpenGroups((s) => {
+                            const n = new Set(s);
+                            if (n.has(g.feature)) n.delete(g.feature); else n.add(g.feature);
+                            return n;
+                          })}
+                        >
+                          {open ? "▾" : "▸"} {g.feature}{g.shipped ? " · shipped" : ""} ({g.tasks.length})
+                        </button>
+                        {open && shown.map((t) => {
+                          const pulsing = pulses?.has(t.id);
+                          return (
+                            <div
+                              key={t.id}
+                              className="mt-1"
+                              data-testid={pulsing ? "board-pulse" : undefined}
+                              style={
+                                pulsing
+                                  ? ({ "--pulse-color": statusColor(t.status) } as CSSProperties)
+                                  : undefined
+                              }
+                            >
+                              <TaskCard
+                                task={t}
+                                featureId={g.feature}
+                                ownerRoles={rolesOf(t.owner)}
+                                reviewerRoles={rolesOf(t.reviewer)}
+                                stale={staleTasks?.has(t.id)}
+                                selected={selected === t.id}
+                                onClick={() => onSelect(t.id)}
+                              />
+                            </div>
+                          );
+                        })}
+                        {open && g.tasks.length > LIMIT && (
+                          <div className="mt-1 text-[10px] text-[var(--color-text-3)]">+{g.tasks.length - LIMIT} more — refine via search</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {acceptedTotal === 0 && (
+                    <div className="kb-ghost">{GHOST.accepted}</div>
+                  )}
+                </>
+              ) : tasks.length === 0 ? (
                 <div className="kb-ghost">{GHOST[c] ?? "No tasks"}</div>
               ) : (
                 tasks.map((bt) => {

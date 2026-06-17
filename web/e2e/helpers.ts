@@ -14,19 +14,29 @@ export async function resetServer(page: Page) {
   expect(r.ok()).toBeTruthy();
 }
 
-// gotoApp loads the SPA and waits for the canvas stage to mount.
+// gotoApp loads the SPA and waits for the app shell to mount. View-agnostic:
+// it does NOT navigate to any specific lens — callers use switchToCanvas /
+// switchToOffice / etc. to reach the lens they need.
 export async function gotoApp(page: Page) {
   await page.goto("/");
-  // App boots on the canvas view (the primary lens); pressing "1" selects it
-  // explicitly (canvas-primary keymap; ignored while typing — we're not). Then
-  // wait for the stage root.
   await page.locator('[data-testid="app-root"]').waitFor();
-  await page.keyboard.press("1");
-  await page.locator('[data-testid="canvas-root"], [data-testid="office-view"]').first().waitFor();
 }
 
-// switchToPlan / switchToOffice click the mode segment. Office is the default
-// landing; Plan must be selected explicitly for the plan-mode specs.
+// switchToCanvas presses "2" (IA v2 keymap) and waits for the canvas stage.
+export async function switchToCanvas(page: Page) {
+  await page.keyboard.press("2");
+  await page.locator('[data-testid="canvas-root"]').waitFor();
+}
+
+// switchToOffice presses "2" to reach the Canvas view (which defaults to
+// office mode), then waits for the office surface to mount.
+export async function switchToOffice(page: Page) {
+  await page.keyboard.press("2");
+  await page.locator('[data-testid="office-view"]').waitFor();
+}
+
+// switchToPlan clicks the Plan mode segment inside the Canvas view. Callers
+// must already be on the canvas view (switchToCanvas) before calling this.
 export async function switchToPlan(page: Page) {
   await page.locator('[data-testid="mode-plan"]').click();
   await page.locator('[data-testid="canvas-root"]').waitFor();

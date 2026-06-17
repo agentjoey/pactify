@@ -1,14 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { resetServer, gotoApp, centerOf, html5DragTo } from "./helpers";
+import { resetServer, gotoApp, switchToOffice, centerOf, html5DragTo } from "./helpers";
 
 // Office-mode regressions — bugs #3 (no authoring surface) and #4 (no zoom).
-// Office is the DEFAULT landing mode, so no mode switch is needed.
+// Office lives inside the Canvas lens (key 2); Canvas defaults to office mode.
 
 test.beforeEach(async ({ page }) => {
   await resetServer(page);
   await gotoApp(page);
-  // Confirm we are on the office surface (the default).
-  await page.locator('[data-testid="office-view"]').waitFor();
+  // Navigate to Canvas view (key 2); Canvas defaults to office mode, so
+  // switchToOffice presses 2 and waits for the office surface to mount.
+  await switchToOffice(page);
 });
 
 // scaleOf reads the scale() factor off the react-flow viewport transform.

@@ -6,9 +6,12 @@ test.beforeEach(async ({ page }) => {
   await gotoApp(page);
 });
 
-test("add-project: browse folders, init a new repo, and see it grouped in the sidebar", async ({ page }) => {
-  // Open the add-project wizard from the sidebar.
-  await page.getByTestId("sidebar-add-project").click();
+test("add-project: browse folders, init a new repo, and see it grouped in the project menu", async ({ page }) => {
+  // Open the add-project wizard from the ProjectMenu header dropdown.
+  await page.getByTestId("project-menu-trigger").click();
+  await page.getByTestId("project-menu").waitFor();
+  await page.getByTestId("project-menu-add").click();
+
   const wizard = page.getByTestId("add-project-wizard");
   await wizard.waitFor();
 
@@ -31,21 +34,34 @@ test("add-project: browse folders, init a new repo, and see it grouped in the si
   // Close the wizard; the parent refreshes the project list.
   await wizard.getByRole("button", { name: "Done" }).click();
   await expect(wizard).toBeHidden();
-  const group = page.getByTestId("sidebar-group-demo-group");
-  await expect(group).toBeVisible();
-  await group.click();
-  await expect(page.getByTestId("sidebar-project-new")).toBeVisible();
+
+  // Verify the new project appears grouped in the ProjectMenu dropdown.
+  await page.getByTestId("project-menu-trigger").click();
+  const menu = page.getByTestId("project-menu");
+  await menu.waitFor();
+  // The group header text and the new project row should both be visible.
+  await expect(menu.getByText("demo-group")).toBeVisible();
+  await expect(menu.getByText("new")).toBeVisible();
 });
 
-test("delete-project: removes a project from the sidebar", async ({ page }) => {
-  // p1 is in the seed registry. Hover the row to reveal the delete button.
-  const row = page.getByTestId(`sidebar-project-${"p1"}`);
-  await row.hover();
-  await page.getByTestId("sidebar-delete-p1").click();
+test("delete-project: removes a project from the project menu", async ({ page }) => {
+  // Register the dialog handler BEFORE triggering the delete so it intercepts
+  // the window.confirm that onDeleteProject fires.
+  page.on("dialog", (d) => d.accept());
 
-  const modal = page.getByTestId("delete-project-modal");
-  await modal.waitFor();
-  await modal.getByTestId("delete-project-confirm").click();
+  // Open the ProjectMenu and click the delete button for p1.
+  await page.getByTestId("project-menu-trigger").click();
+  await page.getByTestId("project-menu").waitFor();
+  await page.getByRole("button", { name: "delete p1" }).click();
 
-  await expect(row).toBeHidden();
+  // After the confirm dialog auto-accepts and the registry DELETE resolves,
+  // the project list refreshes. Re-open the menu and assert p1 is gone.
+  await expect
+    .poll(async () => {
+      // Re-open the dropdown on each poll iteration if it closed.
+      const isOpen = await page.getByTestId("project-menu").isVisible().catch(() => false);
+      if (!isOpen) await page.getByTestId("project-menu-trigger").click();
+      return page.getByRole("button", { name: "delete p1" }).isVisible().catch(() => false);
+    }, { timeout: 5000 })
+    .toBe(false);
 });

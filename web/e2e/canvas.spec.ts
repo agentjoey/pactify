@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   resetServer,
   gotoApp,
+  switchToCanvas,
   switchToPlan,
   rfNode,
   awaitMeasured,
@@ -23,6 +24,7 @@ import { snapshotT2InProgress } from "./fixtures.mjs";
 test.beforeEach(async ({ page }) => {
   await resetServer(page);
   await gotoApp(page);
+  await switchToCanvas(page);
   await switchToPlan(page);
 });
 

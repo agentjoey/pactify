@@ -89,6 +89,43 @@ func Load() (manifests []Manifest, warnings []string) {
 	return manifests, warnings
 }
 
+// Install validates a manifest and writes it to ~/.pactify/agents/<kind>.toml.
+func Install(b []byte) (string, error) {
+	m, err := Parse(b)
+	if err != nil {
+		return "", err
+	}
+	if errs := Validate(m); len(errs) != 0 {
+		return "", fmt.Errorf("invalid manifest: %s", strings.Join(errs, "; "))
+	}
+	p, err := PathFor(m.Kind)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return "", err
+	}
+	return m.Kind, os.WriteFile(p, b, 0o644)
+}
+
+// Remove deletes a custom manifest by kind (refuses built-ins).
+func Remove(kind string) error {
+	if builtinSet[kind] {
+		return fmt.Errorf("%q is a built-in kind", kind)
+	}
+	p, err := PathFor(kind)
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(p); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("no custom manifest for %q", kind)
+		}
+		return err
+	}
+	return nil
+}
+
 // LoadAndRegister loads valid manifests and registers them (add-only), returning
 // all warnings (invalid files + registration collisions). Never fatal.
 func LoadAndRegister() []string {

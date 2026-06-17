@@ -11,8 +11,44 @@ import (
 
 func newAgentManifestCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "manifest", Short: "manage custom-agent manifests (~/.pactify/agents/*.toml)"}
-	cmd.AddCommand(newManifestValidateCmd(), newManifestListCmd(), newManifestShowCmd())
+	cmd.AddCommand(newManifestValidateCmd(), newManifestListCmd(), newManifestShowCmd(),
+		newManifestAddCmd(), newManifestRemoveCmd())
 	return cmd
+}
+
+func newManifestAddCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "add <file.toml>",
+		Short: "validate + install a manifest into ~/.pactify/agents/",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, a []string) error {
+			b, err := os.ReadFile(a[0])
+			if err != nil {
+				return err
+			}
+			kind, err := agentmanifest.Install(b)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(c.OutOrStdout(), "installed custom agent %q\n", kind)
+			return nil
+		},
+	}
+}
+
+func newManifestRemoveCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "remove <kind>",
+		Short: "delete a custom manifest",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, a []string) error {
+			if err := agentmanifest.Remove(a[0]); err != nil {
+				return err
+			}
+			fmt.Fprintf(c.OutOrStdout(), "removed custom agent %q\n", a[0])
+			return nil
+		},
+	}
 }
 
 func newManifestValidateCmd() *cobra.Command {

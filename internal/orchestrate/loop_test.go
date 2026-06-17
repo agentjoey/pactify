@@ -366,7 +366,10 @@ func TestLoopRunnerCrashEscalatesAtFailLimit(t *testing.T) {
 
 	run := &crashRunner{dir: dir, crashes: 99} // never succeeds
 	notify := &recNotify{}
-	if err := Run(context.Background(), baseOpts(dir, run, &okExec{}, notify)); err != nil {
+	// failExec → the recovery classifier's verify also fails (work genuinely
+	// incomplete), so soft-fails accumulate to the limit and escalate. (With a
+	// passing verify the driver would auto-checkpoint and recover instead.)
+	if err := Run(context.Background(), baseOpts(dir, run, &failExec{}, notify)); err != nil {
 		t.Fatalf("always-crash should escalate (paused), not error: %v", err)
 	}
 	if got := featureStatus(t, dir, "f1"); got == "shipped" {

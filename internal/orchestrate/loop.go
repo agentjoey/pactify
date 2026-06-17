@@ -211,8 +211,18 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
 		// A transient agent crash (OOM / timeout / non-zero exit) is a soft failure,
-		// not a driver-killer (spec §2.5): count it and let the next iteration's
-		// tripped() guard escalate if it persists.
+		// not a driver-killer (spec §2.5). Before counting it, classify: if the
+		// task's verify command now passes, the work is actually done and only the
+		// checkpoint was missing — record it (as owner) and let the next iteration
+		// route to the reviewer, instead of re-burning the worker.
+		if opts.classifyAndCheckpoint(ctx, act.Task, task) {
+			if after, err := pact.At(opts.Dir).StateProjection(); err == nil {
+				if _, t, ok := find(after, act.Feature, act.Task); ok && t.Status == "awaiting_review" {
+					h.Fails[act.Task] = 0
+					return nil
+				}
+			}
+		}
 		h.Fails[act.Task]++
 		return nil
 	}

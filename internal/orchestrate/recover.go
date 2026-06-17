@@ -1,0 +1,30 @@
+package orchestrate
+
+import (
+	"context"
+
+	"github.com/agentjoey/pactify/internal/pact"
+	"github.com/agentjoey/pactify/internal/projection"
+)
+
+// classifyAndCheckpoint runs the recovery classification after a worker soft-fail:
+// it re-runs the task's verify command and, if it now passes, the work is actually
+// finished and only the checkpoint was missing — it records a checkpoint as the
+// owner (carrying the gate output as evidence) and returns true, so the driver
+// routes the task to its reviewer instead of re-burning the worker. A failing or
+// erroring verify returns false: the work is genuinely incomplete, keep retrying.
+//
+// It uses the task's own `verify:` line (per-task, not the feature-wide gate),
+// falling back to fallbackGate when the spec carries none.
+func (opts Options) classifyAndCheckpoint(ctx context.Context, taskID string, task projection.Task) bool {
+	cmd, ok := extractVerify(readSpec(opts.Dir, task.Spec))
+	if !ok {
+		cmd = fallbackGate
+	}
+	passed, detail := runGate(ctx, opts.Exec, opts.Dir, cmd)
+	if !passed {
+		return false
+	}
+	ev := "verify passed on recovery:\n" + summarize(detail)
+	return pact.At(opts.Dir).As(task.Owner).Checkpoint(taskID, ev) == nil
+}

@@ -306,7 +306,9 @@ func TestLoopWritesEscalatedStatusOnFailLimit(t *testing.T) {
 	assign(t, dir, "t1", "f1", "feat-f1", spec)
 
 	run := &crashRunner{dir: dir, crashes: 99}
-	opts := baseOpts(dir, run, &okExec{}, &recNotify{})
+	// failExec → recovery verify also fails (work incomplete) so the fail limit is
+	// reached and escalation fires; a passing verify would auto-checkpoint instead.
+	opts := baseOpts(dir, run, &failExec{}, &recNotify{})
 	if err := Run(context.Background(), opts); err != nil {
 		t.Fatalf("Run: %v", err)
 	}

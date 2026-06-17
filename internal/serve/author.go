@@ -196,15 +196,60 @@ func (s *Server) actingFor(w http.ResponseWriter, r *http.Request) (*pact.Projec
 	return proj, id, true
 }
 
-// handleAuthorAccept runs the accept verb (reviewer-only) as the acting seat.
+// reviewerOf returns the reviewer seat of taskID in dir's current state ("" if not
+// found) — used to detect human-in-the-loop tasks whose reviewer is "human".
+func reviewerOf(dir, taskID string) string {
+	st, err := pact.At(dir).StateProjection()
+	if err != nil {
+		return ""
+	}
+	for _, f := range st.Features {
+		for _, t := range f.Tasks {
+			if t.ID == taskID {
+				return t.Reviewer
+			}
+		}
+	}
+	return ""
+}
+
+// actingSeatForReview resolves the project handle for a review verb (accept/
+// changes) on taskID. "human" is a RESERVED reviewer for human-in-the-loop tasks:
+// it is not a roster seat, so the authenticated dashboard user acts as "human"
+// (gated by requireSeat + the front door's Cloudflare Access, NOT roster
+// membership). Any other reviewer goes through the normal acting-seat path (the
+// configured seat, which must be in the roster).
+func (s *Server) actingSeatForReview(w http.ResponseWriter, dir, taskID string) (*pact.Project, bool) {
+	if reviewerOf(dir, taskID) == "human" {
+		if !s.requireSeat(w) {
+			return nil, false
+		}
+		return pact.At(dir).As("human"), true
+	}
+	proj, err := s.actingProject(dir)
+	if err != nil {
+		writeErr(w, http.StatusUnprocessableEntity, err.Error())
+		return nil, false
+	}
+	return proj, true
+}
+
+// handleAuthorAccept runs the accept verb (reviewer-only). For a human-reviewed
+// task the dashboard user accepts as "human"; otherwise as the acting seat.
 func (s *Server) handleAuthorAccept(w http.ResponseWriter, r *http.Request) {
-	proj, id, ok := s.actingFor(w, r)
+	id := r.PathValue("id")
+	_, dir, ok := s.project(id)
 	if !ok {
+		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
 	var req verbReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	proj, ok := s.actingSeatForReview(w, dir, req.Task)
+	if !ok {
 		return
 	}
 	mu := s.projectMu(id)
@@ -221,8 +266,10 @@ func (s *Server) handleAuthorAccept(w http.ResponseWriter, r *http.Request) {
 // engine does not enforce a non-empty reason, so the API rejects an empty
 // reason with 400 before touching the log.
 func (s *Server) handleAuthorChanges(w http.ResponseWriter, r *http.Request) {
-	proj, id, ok := s.actingFor(w, r)
+	id := r.PathValue("id")
+	_, dir, ok := s.project(id)
 	if !ok {
+		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
 	var req verbReq
@@ -232,6 +279,10 @@ func (s *Server) handleAuthorChanges(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Reason == "" {
 		writeErr(w, http.StatusBadRequest, "reason is required")
+		return
+	}
+	proj, ok := s.actingSeatForReview(w, dir, req.Task)
+	if !ok {
 		return
 	}
 	mu := s.projectMu(id)

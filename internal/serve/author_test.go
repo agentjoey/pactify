@@ -451,3 +451,58 @@ func putBytes(t *testing.T, url string, body []byte) *http.Response {
 	}
 	return resp
 }
+
+// A task whose reviewer is the reserved "human" is accepted by the authenticated
+// dashboard user acting as "human" — even though the configured seat is something
+// else (claude-opus) and "human" is not in the roster. This is the human-in-the-
+// loop review gate: the front door (Cloudflare Access) + requireSeat are the
+// authorization, not roster membership.
+func TestAcceptHumanReviewedTask(t *testing.T) {
+	dir := newAuthorRepo(t)
+	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "t-human.md"), []byte("# t-human\n"), 0o644)
+	if err := pact.At(dir).As("claude-opus").Assign("t-human", "F", "feat-F", "opencode", "human", ".pact/tasks/t-human.md", nil); err != nil {
+		t.Fatalf("assign: %v", err)
+	}
+	c := exec.Command("git", "checkout", "-q", "-B", "feat-F")
+	c.Dir = dir
+	c.Run()
+	if err := pact.At(dir).As("opencode").Checkpoint("t-human", "done"); err != nil {
+		t.Fatalf("checkpoint: %v", err)
+	}
+	// Dashboard's configured seat is claude-opus — NOT the "human" reviewer.
+	ts := authorServer(t, dir, "claude-opus")
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/accept", map[string]any{"task": "t-human"})
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("accept human-reviewed task: status=%d, want 200; body=%s", resp.StatusCode, body)
+	}
+	st, _ := pact.At(dir).StateProjection()
+	got := ""
+	for _, f := range st.Features {
+		for _, tk := range f.Tasks {
+			if tk.ID == "t-human" {
+				got = tk.Status
+			}
+		}
+	}
+	if got != "accepted" {
+		t.Fatalf("t-human status=%q, want accepted", got)
+	}
+}
+
+// A human-reviewed task still fails closed when no acting seat is configured at
+// all (requireSeat gate) — the front door must authenticate someone.
+func TestAcceptHumanReviewed_NoSeatRejected(t *testing.T) {
+	dir := newAuthorRepo(t)
+	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "t-h2.md"), []byte("# t-h2\n"), 0o644)
+	pact.At(dir).As("claude-opus").Assign("t-h2", "F", "feat-F", "opencode", "human", ".pact/tasks/t-h2.md", nil)
+	c := exec.Command("git", "checkout", "-q", "-B", "feat-F")
+	c.Dir = dir
+	c.Run()
+	pact.At(dir).As("opencode").Checkpoint("t-h2", "done")
+	ts := authorServer(t, dir, "") // no acting seat configured
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/accept", map[string]any{"task": "t-h2"})
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("no-seat human accept: status=%d, want 422", resp.StatusCode)
+	}
+}

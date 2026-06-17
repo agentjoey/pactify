@@ -160,3 +160,15 @@ SP2/SP3 的 dashboard 驱动 UI（Plan Apply / Live Run·Resume·diff·Ship / Se
 - **kimi** ⚠️ 实测**无 headless delete 命令**（只 `--session` resume + `export`）。session 是文件：`~/.kimi/sessions/` + `~/.kimi/kimi.json` 的 work_dirs map（path→last_session_id）。文件级删除跨 kimi 版本脆弱、且 kimi session 非常驻 daemon（堆积影响小）→ **不自动清理**（避免脆弱代码）。手动：删 `~/.kimi/sessions/<id>` + 清 kimi.json work_dirs 对应项。
 - **codex** 仍未接（archive-only，待实测）。
 - **自动 accept-后-cleanup 能力矩阵**：opencode ✅（title+id）；gemini/kimi/codex ❌（无 title 标记或无 delete CLI）。手动 prune：opencode + gemini ✅，kimi/codex 文件级/手动。
+
+## 端到端「接入 + 跑」UX 太复杂 — 协议概念泄漏（2026-06-17 用户反馈，下个 sprint 核心）
+**问题**：给用户的接入 + 跑流程太复杂，「完全不可给用户使用」。根因 = 协议内部概念（seat 格式 `id:roles:entry:kind`、seat→kind 映射）泄漏到 CLI + 流程过度分步。
+**核实发现**：
+- ① `pactify setup` **其实已一条命令 init+wire**（runSetup 调 pact.Init + agent.Wire）——之前指导误给手动 6 条命令，是失误。
+- ② `orchestrate` **强制手填 `--seat-kind`**：因 `projection.Seat` 不投影 kind（init seats 带 kind 但 roster 投影丢了），驱动器无法自动推断 → 用户必须懂映射 + 手写一长串 flag。
+- ③ plan → apply → orchestrate → finish 四步分离，用户要逐条跑。
+**简化方向（与 SP2/SP3 UI 返工合并为「端到端 UX 重做」sprint）**：
+- **roster 投影 kind**：`projection.Seat` 加 kind 字段（来自 init seats 第 4 段）→ `orchestrate` 自动推断 `--seat-kind`，删掉手填。
+- **`pactify run "<目标>"`** 一条命令串 plan → 预览确认 → orchestrate → finish。
+- **`pactify setup --yes`** 零交互（用 wizard.Suggest 默认 roster）。
+- **目标**：接入到跑 = `pactify setup` + `pactify run "..."` 两条命令，用户**完全不碰** seat 格式 / seat-kind 映射 / 分步动词。dashboard 侧同理（Setup Apply + 一个 Run 输入框）。

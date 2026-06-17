@@ -29,6 +29,7 @@ export function Toolbar({
   agents,
   projects,
   running,
+  runningByProject,
   onSelectProject,
   onRenameProject,
   onDeleteProject,
@@ -44,6 +45,7 @@ export function Toolbar({
   agents?: Seat[];
   projects: ProjectMeta[];
   running: boolean;
+  runningByProject?: Record<string, boolean>;
   onSelectProject: (name: string) => void;
   onRenameProject: (name: string) => void;
   onDeleteProject: (name: string) => void;
@@ -71,6 +73,7 @@ export function Toolbar({
           projects={projects}
           current={projectName}
           running={running}
+          runningByProject={runningByProject}
           onSelect={onSelectProject}
           onRename={onRenameProject}
           onDelete={onDeleteProject}

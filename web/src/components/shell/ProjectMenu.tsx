@@ -5,6 +5,7 @@ export function ProjectMenu({
   projects,
   current,
   running,
+  runningByProject,
   onSelect,
   onRename,
   onDelete,
@@ -13,6 +14,7 @@ export function ProjectMenu({
   projects: ProjectMeta[];
   current: string;
   running: boolean;
+  runningByProject?: Record<string, boolean>;
   onSelect: (name: string) => void;
   onRename: (name: string) => void;
   onDelete: (name: string) => void;
@@ -70,13 +72,13 @@ export function ProjectMenu({
           className="absolute left-0 top-full z-30 mt-1 w-56 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-overlay)] p-1 shadow-[var(--shadow-overlay)]"
         >
           {flat.map((p) => (
-            <ProjectRow key={p.name} p={p} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} />
+            <ProjectRow key={p.name} p={p} running={!!runningByProject?.[p.name]} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} />
           ))}
           {grouped.map(([group, items]) => (
             <div key={group} className="mt-1">
               <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--color-text-3)]">{group}</div>
               {items.map((p) => (
-                <ProjectRow key={p.name} p={p} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} />
+                <ProjectRow key={p.name} p={p} running={!!runningByProject?.[p.name]} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} />
               ))}
             </div>
           ))}
@@ -95,15 +97,24 @@ export function ProjectMenu({
 }
 
 function ProjectRow({
-  p, onSelect, onRename, onDelete,
+  p, running, onSelect, onRename, onDelete,
 }: {
   p: ProjectMeta;
+  running: boolean;
   onSelect: (name: string) => void;
   onRename: (name: string) => void;
   onDelete: (name: string) => void;
 }) {
   return (
-    <div className="group flex items-center rounded-md px-2 py-1.5 text-[12px] hover:bg-white/5">
+    <div className="group flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[12px] hover:bg-white/5">
+      <span
+        data-testid={`project-row-light-${p.name}`}
+        data-running={running ? "true" : "false"}
+        className={[
+          "h-[6px] w-[6px] shrink-0 rounded-full",
+          running ? "animate-pulse bg-[var(--color-success)] shadow-[0_0_5px_var(--color-success)]" : "bg-[var(--color-text-3)]/50",
+        ].join(" ")}
+      />
       <button type="button" className="flex-1 text-left" onClick={() => onSelect(p.name)}>{p.name}</button>
       <button type="button" aria-label={`rename ${p.name}`} className="px-1 opacity-0 group-hover:opacity-100" onClick={() => onRename(p.name)}>✎</button>
       <button type="button" aria-label={`delete ${p.name}`} className="px-1 opacity-0 group-hover:opacity-100" onClick={() => onDelete(p.name)}>🗑</button>

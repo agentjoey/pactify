@@ -52,7 +52,9 @@ export default function App() {
   const [settingsSeat, setSettingsSeat] = useState<string | null>(null);
   const openSettings = (seat: string | null) => { setSettingsSeat(seat); setSettingsOpen(true); };
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [running, setRunning] = useState(false);
+  // running status per project name → drives the status light on the ProjectMenu
+  // trigger AND every row in the dropdown (spec §4.1: each project shows a light).
+  const [runningByProject, setRunningByProject] = useState<Record<string, boolean>>({});
   const [author, setAuthor] = useState(false);
   // The acting seat id (empty when observing) — TopBar resolves its roles from
   // state.agents to pick the ant caste for the seat avatar.
@@ -141,17 +143,25 @@ export default function App() {
 
   // ProjectMenu status light: poll orchestrate status for the current project so
   // the header dot pulses while a run is active (present, not done/escalated).
+  const projectNames = projects.map((p) => p.name).join(",");
   useEffect(() => {
-    if (!current) { setRunning(false); return; }
+    const names = projectNames ? projectNames.split(",") : [];
+    if (names.length === 0) { setRunningByProject({}); return; }
     let alive = true;
-    const tick = () => getOrchestrateStatus(current).then((s) => {
-      if (!alive) return;
-      setRunning(Boolean(s.present && s.status && !s.status.done && !s.status.escalated));
-    }).catch(() => { if (alive) setRunning(false); });
+    const tick = async () => {
+      const entries = await Promise.all(
+        names.map((name) =>
+          getOrchestrateStatus(name)
+            .then((s) => [name, Boolean(s.present && s.status && !s.status.done && !s.status.escalated)] as const)
+            .catch(() => [name, false] as const),
+        ),
+      );
+      if (alive) setRunningByProject(Object.fromEntries(entries));
+    };
     tick();
     const t = setInterval(tick, 4000);
     return () => { alive = false; clearInterval(t); };
-  }, [current]);
+  }, [projectNames]);
 
   // Project rename/delete (moved from Sidebar into the header ProjectMenu).
   const onRenameProject = async (name: string) => {
@@ -299,7 +309,7 @@ export default function App() {
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={running} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} />
+      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} />
       <div className="relative flex flex-1 overflow-hidden">
         <RosterDock seats={shownState.agents} onSeatSettings={(seatId) => openSettings(seatId)} />
         <div className="pointer-events-none absolute left-3 top-[210px] z-20 w-[200px]">

@@ -40,6 +40,17 @@ describe("ProjectMenu", () => {
     expect(within(menu).queryByText(/ungrouped/i)).toBeNull();
   });
 
+  it("shows a per-row status light reflecting each project's running state", () => {
+    render(
+      <ProjectMenu projects={projects} current="alpha" running={true}
+        runningByProject={{ alpha: true, beta: false }}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+    expect(screen.getByTestId("project-row-light-alpha")).toHaveAttribute("data-running", "true");
+    expect(screen.getByTestId("project-row-light-beta")).toHaveAttribute("data-running", "false");
+  });
+
   it("invokes onAdd from the footer add-project item", () => {
     const onAdd = vi.fn();
     render(

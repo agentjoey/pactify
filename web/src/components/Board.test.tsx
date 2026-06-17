@@ -42,44 +42,50 @@ describe("Board — live pulse", () => {
   });
 });
 
-describe("Board — accepted column folding", () => {
-  it("collapses the accepted column into a summary bar by default", () => {
-    const st: State = {
-      project: "demo", awaiting_count: 0,
-      agents: [{ id: "a", roles: ["orchestrator"] }],
-      features: [
-        { id: "f1", branch: "feat-1", status: "merged", tasks: [
-          { id: "t1", owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "" },
-          { id: "t2", owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "" },
-        ]},
-        { id: "f2", branch: "feat-2", status: "active", tasks: [
-          { id: "t3", owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "" },
-        ]},
-      ],
-    };
-    render(<Board state={st} selected="" onSelect={() => {}} />);
-    expect(screen.getByTestId("accepted-summary")).toHaveTextContent("3");
-    expect(screen.queryByText("t1")).toBeNull();
+describe("Board — accepted column recent + fold", () => {
+  // 13 accepted tasks across two features, in log order t01..t13.
+  const manyAccepted: State = {
+    project: "demo", awaiting_count: 0,
+    agents: [{ id: "a", roles: ["orchestrator"] }],
+    features: [
+      { id: "f1", branch: "feat-1", status: "merged",
+        tasks: Array.from({ length: 8 }, (_, i) => ({
+          id: `t${String(i + 1).padStart(2, "0")}`, owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "",
+        })) },
+      { id: "f2", branch: "feat-2", status: "active",
+        tasks: Array.from({ length: 5 }, (_, i) => ({
+          id: `t${String(i + 9).padStart(2, "0")}`, owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "",
+        })) },
+    ],
+  };
+
+  it("shows the 10 most-recent accepted cards and folds the rest behind a 'more' button", () => {
+    render(<Board state={manyAccepted} selected="" onSelect={() => {}} />);
+    // Most-recent-first: t13 (newest) is visible, t01 (oldest, 13th) is folded.
+    expect(screen.getAllByText("t13").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("t01")).toHaveLength(0);
+    // 13 total − 10 shown = 3 folded.
+    expect(screen.getByTestId("accepted-more")).toHaveTextContent("3 more accepted");
   });
 
-  it("expands the accepted column and groups by feature with shipped groups collapsed", () => {
-    const st: State = {
+  it("expands to show all accepted, then collapses back to recent 10", () => {
+    render(<Board state={manyAccepted} selected="" onSelect={() => {}} />);
+    fireEvent.click(screen.getByTestId("accepted-more"));
+    expect(screen.getAllByText("t01").length).toBeGreaterThan(0); // folded one now visible
+    fireEvent.click(screen.getByTestId("accepted-less"));
+    expect(screen.queryAllByText("t01")).toHaveLength(0); // folded again
+  });
+
+  it("does not render a fold button when 10 or fewer accepted", () => {
+    const few: State = {
       project: "demo", awaiting_count: 0,
       agents: [{ id: "a", roles: ["orchestrator"] }],
-      features: [
-        { id: "f1", branch: "feat-1", status: "merged", tasks: [
-          { id: "t1", owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "" },
-        ]},
-        { id: "f2", branch: "feat-2", status: "active", tasks: [
-          { id: "t3", owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "" },
-        ]},
-      ],
+      features: [{ id: "f1", branch: "feat-1", status: "active", tasks: [
+        { id: "only", owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "" },
+      ]}],
     };
-    render(<Board state={st} selected="" onSelect={() => {}} />);
-    fireEvent.click(screen.getByTestId("accepted-summary"));
-    expect(screen.getAllByText("t3").length).toBeGreaterThan(0);
-    expect(screen.queryAllByText("t1")).toHaveLength(0);
-    fireEvent.click(screen.getByTestId("accepted-group-f1"));
-    expect(screen.getAllByText("t1").length).toBeGreaterThan(0);
+    render(<Board state={few} selected="" onSelect={() => {}} />);
+    expect(screen.getAllByText("only").length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("accepted-more")).toBeNull();
   });
 });

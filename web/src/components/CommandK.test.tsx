@@ -41,7 +41,7 @@ function setup(over: Partial<Parameters<typeof CommandK>[0]> = {}) {
     projects,
     current: "greet",
     state: baseState(),
-    view: "kanban" as const,
+    view: "board" as const,
     setView,
     setSelected,
     onSelectProject,
@@ -152,9 +152,9 @@ describe("CommandK — command palette", () => {
     const { setView } = setup();
     pressCmdK();
     const palette = await screen.findByTestId("cmdk");
-    const entry = within(palette).getByText("Switch view: Ops").closest("[cmdk-item]") as HTMLElement;
+    const entry = within(palette).getByText("Switch view: Live").closest("[cmdk-item]") as HTMLElement;
     fireEvent.click(entry);
-    expect(setView).toHaveBeenCalledWith("ops");
+    expect(setView).toHaveBeenCalledWith("live");
   });
 
   it("Esc closes the palette", async () => {

@@ -12,14 +12,13 @@ import { casteForRoles, padGradient } from "../../lib/ants";
 // badge, and the acting-seat avatar. Project SWITCHING and machine-level
 // destinations live in the Sidebar, not here. Light theme, English copy.
 //
-// `view` keeps the legacy union (kanban/canvas/ops/live/plan/setup/recipes); the
-// toolbar surfaces only the four lenses and maps "Board" → the kanban view.
+// The toolbar surfaces the three lenses (Board / Canvas / Live), the reduced
+// View union after the IA v2 view reduction.
 
 const LENSES: ReadonlyArray<{ v: View; label: string; icon: string }> = [
+  { v: "board", label: "Board", icon: "view-kanban" },
   { v: "canvas", label: "Canvas", icon: "view-canvas" },
-  { v: "kanban", label: "Board", icon: "view-kanban" },
   { v: "live", label: "Live", icon: "view-live" },
-  { v: "plan", label: "Plan", icon: "view-plan" },
 ];
 
 export function Toolbar({

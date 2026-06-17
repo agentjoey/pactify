@@ -8,10 +8,6 @@ import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
 import { Canvas } from "./components/Canvas";
 import { LiveOrchestrate } from "./components/LiveOrchestrate";
-import { PlanReview } from "./components/PlanReview";
-import { Setup } from "./components/Setup";
-import { Recipes } from "./components/Recipes";
-import { OpsView } from "./components/ops/OpsView";
 import { ReplayBar } from "./components/ReplayBar";
 import { RightRail } from "./components/RightRail";
 import { CommandK } from "./components/CommandK";
@@ -44,7 +40,7 @@ export default function App() {
   const [events, setEvents] = useState<PactEvent[]>([]);
   const [selected, setSelected] = useState("");
   const [live, setLive] = useState(false);
-  const [view, setView] = useState<View>("canvas");
+  const [view, setView] = useState<View>("board");
   // Sidebar collapse (Option A shell): collapsed → a function-icon rail.
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [author, setAuthor] = useState(false);
@@ -135,14 +131,10 @@ export default function App() {
       const tag = t?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t?.isContentEditable) return;
       if (document.querySelector('[role="dialog"]')) return;
-      // Canvas-primary shell: lenses on 1-4, machine-level on 5-7.
-      if (e.key === "1") setView("canvas");
-      else if (e.key === "2") setView("kanban");
+      // Three lenses: 1 → board, 2 → canvas, 3 → live.
+      if (e.key === "1") setView("board");
+      else if (e.key === "2") setView("canvas");
       else if (e.key === "3") setView("live");
-      else if (e.key === "4") setView("plan");
-      else if (e.key === "5") setView("ops");
-      else if (e.key === "6") setView("setup");
-      else if (e.key === "7") setView("recipes");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -357,25 +349,21 @@ export default function App() {
           <Agents author={author} onChanged={refreshProjects} />
           {projectsLoaded && projects.length === 0
             ? <NoProjects onRegistered={refreshProjects} />
-            : view === "ops"
-            ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} loading={firstLoad} />
             : view === "live"
-            ? <LiveOrchestrate project={current} refreshTick={refreshTick} author={author} agents={shownState.agents} onNotify={(msg, kind) => pushToast(msg, kind)} />
-            : view === "plan"
-            ? <PlanReview project={current} features={shownState.features.map((f) => f.id)} onApplied={(msg) => pushToast(msg)} />
-            : view === "setup"
-            ? <Setup />
-            : view === "recipes"
-            ? <Recipes />
+            ? (
+              <div data-testid="view-live" className="flex-1 overflow-hidden">
+                <LiveOrchestrate project={current} refreshTick={refreshTick} author={author} agents={shownState.agents} onNotify={(msg, kind) => pushToast(msg, kind)} />
+              </div>
+            )
             : (
               <>
                 {/* relative so the slide-over detail panel + its scrim position
-                    within this row, overlaying kanban/canvas (not ops). The board
-                    and canvas now take the full width — the panel is absolute. */}
+                    within this row, overlaying board/canvas. The board and canvas
+                    now take the full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
                   {view === "canvas"
-                    ? <Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} />
-                    : <Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} staleTasks={staleTasks} loading={firstLoad} />}
+                    ? <div data-testid="view-canvas" className="flex flex-1 overflow-hidden"><Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} /></div>
+                    : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} staleTasks={staleTasks} loading={firstLoad} /></div>}
                   <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} onSelect={setSelected} />
                 </div>
                 <ReplayBar project={current} replayAt={replayAt} refreshTick={refreshTick} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />

@@ -288,9 +288,9 @@ export function CommandK({
                 className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-[var(--color-text-3)]"
               >
                 {([
-                  { v: "kanban" as View, label: "Kanban", key: "1", ico: "▤" },
+                  { v: "board" as View, label: "Board", key: "1", ico: "▤" },
                   { v: "canvas" as View, label: "Canvas", key: "2", ico: "▦" },
-                  { v: "ops" as View, label: "Ops", key: "3", ico: "⚙" },
+                  { v: "live" as View, label: "Live", key: "3", ico: "◉" },
                 ]).map((o) => (
                   <Command.Item
                     key={o.v}
@@ -339,9 +339,9 @@ export function CommandK({
 // CheatSheet — static shortcut reference (plan T13.4). A ui/Modal so it inherits
 // the overlay token, Esc-closes and focus trap.
 const SHORTCUTS: ReadonlyArray<{ keys: string[]; what: string }> = [
-  { keys: ["1"], what: "Kanban view" },
+  { keys: ["1"], what: "Board view" },
   { keys: ["2"], what: "Canvas view" },
-  { keys: ["3"], what: "Ops view" },
+  { keys: ["3"], what: "Live view" },
   { keys: ["⌘", "K"], what: "Command palette" },
   { keys: ["Shift", "drag"], what: "Marquee select (canvas)" },
   { keys: ["Del"], what: "Delete selected draft (canvas)" },

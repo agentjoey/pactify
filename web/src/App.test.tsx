@@ -181,29 +181,39 @@ describe("App", () => {
   });
 
   describe("global view shortcuts", () => {
-    it("1/2 switch lenses; ignored while typing in an input", async () => {
+    it("defaults to the Board view and switches with keys 1/2/3", async () => {
+      render(<App />);
+      await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
+      expect(screen.getByTestId("view-board")).toBeInTheDocument();
+      fireEvent.keyDown(window, { key: "2" });
+      await waitFor(() => expect(screen.getByTestId("view-canvas")).toBeInTheDocument());
+      fireEvent.keyDown(window, { key: "3" });
+      await waitFor(() => expect(screen.getByTestId("view-live")).toBeInTheDocument());
+    });
+
+    it("the lens control reflects board/canvas/live and ignores keys while typing", async () => {
       render(<App />);
       await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
 
-      // The Toolbar lens segmented control (canvas/board/live/plan).
+      // The Toolbar lens segmented control (board/canvas/live).
       const group = () => screen.getByRole("group", { name: "lens" });
       const pressed = () =>
         within(group()).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"));
 
-      // default lens = canvas (first button pressed)
-      expect(pressed()).toEqual(["true", "false", "false", "false"]);
+      // default lens = board (first button pressed)
+      expect(pressed()).toEqual(["true", "false", "false"]);
 
-      await act(async () => { fireEvent.keyDown(window, { key: "2" }); }); // board
-      expect(pressed()).toEqual(["false", "true", "false", "false"]);
+      await act(async () => { fireEvent.keyDown(window, { key: "2" }); }); // canvas
+      expect(pressed()).toEqual(["false", "true", "false"]);
 
-      await act(async () => { fireEvent.keyDown(window, { key: "1" }); }); // canvas
-      expect(pressed()).toEqual(["true", "false", "false", "false"]);
+      await act(async () => { fireEvent.keyDown(window, { key: "1" }); }); // board
+      expect(pressed()).toEqual(["true", "false", "false"]);
 
       // typing guard: a keydown originating from an INPUT must not switch.
       const input = document.createElement("input");
       document.body.appendChild(input);
       await act(async () => { fireEvent.keyDown(input, { key: "2" }); });
-      expect(pressed()).toEqual(["true", "false", "false", "false"]);
+      expect(pressed()).toEqual(["true", "false", "false"]);
       input.remove();
     });
   });

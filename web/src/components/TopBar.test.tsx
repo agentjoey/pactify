@@ -22,7 +22,7 @@ function setup(overrides: Partial<React.ComponentProps<typeof TopBar>> = {}) {
     onSelect,
     live: true,
     replaying: false,
-    view: "kanban" as View,
+    view: "board" as View,
     onView,
     author: true,
     seat: "claude-opus",
@@ -70,15 +70,15 @@ describe("TopBar", () => {
       setup({ view: "canvas" });
       const group = screen.getByRole("group", { name: "view toggle" });
       const buttons = within(group).getAllByRole("button");
-      expect(buttons.map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "true", "false", "false", "false", "false", "false"]);
-      ["1", "2", "3", "4"].forEach((k) => expect(within(group).getByText(k)).toBeInTheDocument());
+      expect(buttons.map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "true", "false"]);
+      ["1", "2", "3"].forEach((k) => expect(within(group).getByText(k)).toBeInTheDocument());
     });
 
     it("fires onView on click", () => {
       const { onView } = setup();
       const group = screen.getByRole("group", { name: "view toggle" });
-      fireEvent.click(within(group).getByText("Ops"));
-      expect(onView).toHaveBeenCalledWith("ops");
+      fireEvent.click(within(group).getByText("Live"));
+      expect(onView).toHaveBeenCalledWith("live");
     });
   });
 

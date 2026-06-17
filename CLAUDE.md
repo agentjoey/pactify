@@ -11,7 +11,7 @@ cat .agent/CURRENT.md
 协议核心：`.pact/` 文件契约；CLI 是协议的标准实现；各厂商入口是薄封装。
 **Location:** ~/AgentWorks/Code_Claude/pactify
 **GitHub:**   agentjoey/pactify
-**Version:**  v0.5.1（已发布）— orchestrate runner 接通 per-task token 捕获写入侧（execFn capture 旁路 + tailWriter → tokens.json，D1 成本链路闭环）；承接 v0.5.0：custom-agent manifest API（TOML，add-only，CLI + serve + Settings「Add custom agent」表单）+ 引擎修复（join-gate / in-place merge / gemini key / kimi model-id）；v0.4.0：orchestrate 自主驱动 + planner + 成本/可观测 + session 清理 + GLM 端点可配 + Settings agent 管理 + 浅色 dashboard + native audit layer + pactify.dev 文档站
+**Version:**  v0.5.2（已发布）— SSE 反代健壮性修复（连上即发初始帧 + 25s 心跳 + X-Accel-Buffering，dashboard 经 Cloudflare Tunnel 等缓冲代理保持 live）；承接 v0.5.1：orchestrate per-task token 捕获写入侧（tokens.json，D1 闭环）；v0.5.0：custom-agent manifest API（TOML，add-only，CLI + serve + Settings 表单）+ 引擎修复；v0.4.0：orchestrate 自主驱动 + planner + 成本/可观测 + session 清理 + GLM 端点可配 + Settings agent 管理 + 浅色 dashboard + native audit layer + pactify.dev 文档站
 
 **Technical docs:** [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Operations](docs/operations.md)
 

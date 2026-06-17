@@ -1,3 +1,6 @@
+// The three dashboard lenses (IA v2). Was historically defined in TopBar.tsx.
+export type View = "board" | "canvas" | "live";
+
 export interface Seat { id: string; roles: string[]; kind?: string }
 export interface Task { id: string; owner: string; status: string; reviewer: string; spec: string; evidence: string; deps?: string[] }
 export interface Feature { id: string; branch: string; status: string; tasks: Task[] }

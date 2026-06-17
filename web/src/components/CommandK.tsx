@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Command } from "cmdk";
 import type { ProjectMeta, State, RecipeItem } from "../lib/types";
-import type { View } from "./TopBar";
+import type { View } from "../lib/types";
 import { allTasks } from "../lib/derive";
 import { postVerb } from "../lib/api";
 import { humanizeError } from "../lib/protocolErrors";

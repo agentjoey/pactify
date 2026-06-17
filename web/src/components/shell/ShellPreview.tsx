@@ -122,10 +122,6 @@ export function ShellPreview() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button type="button" disabled title="Needs B5: dashboard-driven orchestration (backend pending)"
-                className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] px-2.5 py-1 text-[11.5px] font-medium text-[var(--color-text-3)] opacity-60">
-                <Icon name="action-run" size={13} color="var(--color-text-3)" /> Orchestrate
-              </button>
               <span className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-1.5 py-1 text-[11px] text-[var(--color-text-3)]">⌘K</span>
               <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium" style={{ color: "var(--color-success)", background: "color-mix(in srgb, var(--color-success) 12%, transparent)" }}>
                 <span className="status-pill-dot-live" style={{ width: 5, height: 5, borderRadius: 999, background: "var(--color-success)", display: "inline-block" }} /> live

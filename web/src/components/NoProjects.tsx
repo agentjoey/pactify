@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { postRegister } from "../lib/api";
 import { humanizeError } from "../lib/protocolErrors";
-import { CableMark } from "./TopBar";
+import { CableMark } from "./shell/CableMark";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 

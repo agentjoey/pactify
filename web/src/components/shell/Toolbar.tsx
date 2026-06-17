@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { Seat, ProjectMeta } from "../../lib/types";
-import type { View } from "../TopBar";
-import { CableMark } from "../TopBar";
+import type { View } from "../../lib/types";
+import { CableMark } from "./CableMark";
 import { Icon } from "../../lib/icons";
 import { Ant } from "../ui/ants/Ant";
 import { casteForRoles, padGradient } from "../../lib/ants";

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
 import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes } from "./lib/api";
-import { type View } from "./components/TopBar";
+import { type View } from "./lib/types";
 import { Toolbar } from "./components/shell/Toolbar";
 import { RosterDock } from "./components/shell/RosterDock";
 import { PlanDock } from "./components/shell/PlanDock";

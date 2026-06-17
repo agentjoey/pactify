@@ -94,6 +94,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerAgentRoutes(mux)
 	s.registerSessionRoutes(mux)
 	s.registerAuditRoutes(mux)
+	s.registerManifestRoutes(mux)
 	s.registerStatsRoutes(mux)
 	s.registerSeatsRoutes(mux)
 	s.registerTimelineRoutes(mux)

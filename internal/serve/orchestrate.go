@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/finish"
 )
 
@@ -128,8 +129,39 @@ func (s *Server) handleOrchestrateStatus(w http.ResponseWriter, r *http.Request)
 }
 
 type orchestrateRunReq struct {
-	Feature        string `json:"feature"`
-	MaxConcurrency int    `json:"max_concurrency"`
+	Feature        string            `json:"feature"`
+	MaxConcurrency int               `json:"max_concurrency"`
+	SeatKinds      map[string]string `json:"seat_kinds"`
+}
+
+func seatKindsFromInit(dir string) map[string]string {
+	evs, err := event.ReadAll(logPath(dir))
+	if err != nil {
+		return nil
+	}
+	for i := len(evs) - 1; i >= 0; i-- {
+		if evs[i].EventType != "init" {
+			continue
+		}
+		seats, ok := evs[i].Payload["seats"].([]any)
+		if !ok {
+			break
+		}
+		out := map[string]string{}
+		for _, s := range seats {
+			m, _ := s.(map[string]any)
+			id, _ := m["id"].(string)
+			kind, _ := m["kind"].(string)
+			if id != "" && kind != "" {
+				out[id] = kind
+			}
+		}
+		if len(out) > 0 {
+			return out
+		}
+		break
+	}
+	return nil
 }
 
 func (s *Server) orchestrateRunning(dir string) bool {
@@ -184,7 +216,18 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	km := seatKindsFromInit(dir)
+	if km == nil {
+		km = map[string]string{}
+	}
+	for seat, kind := range req.SeatKinds {
+		km[seat] = kind
+	}
+
 	args := []string{"orchestrate", "--as", s.seat}
+	for seat, kind := range km {
+		args = append(args, "--seat-kind", seat+"="+kind)
+	}
 	if req.Feature != "" {
 		args = append(args, "--feature", req.Feature)
 	}
@@ -291,6 +334,8 @@ func defaultGitDiff(dir string, staged bool) (string, error) {
 	return string(out), err
 }
 
+// handleOrchestrateDiff is intentionally ungated (no actingProject check):
+// it is a read-only operation (git diff) safe for any observer.
 func (s *Server) handleOrchestrateDiff(w http.ResponseWriter, r *http.Request) {
 	_, dir, ok := s.project(r.PathValue("id"))
 	if !ok {

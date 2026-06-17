@@ -117,6 +117,73 @@ func TestRunSuccess(t *testing.T) {
 	}
 }
 
+func TestRunSeatKindsFromBody(t *testing.T) {
+	root := seedOrchRepo(t)
+	fake := &fakeOrchRunner{}
+	srv := New([]registry.Project{{Name: "p", Path: root}})
+	srv.SetSeat("claude")
+	srv.SetExecOrchestrate(fake.run)
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	resp := postJSON(t, ts.URL+"/api/projects/p/orchestrate/run", map[string]any{
+		"feature":    "f1",
+		"seat_kinds": map[string]string{"alice": "opencode", "claude": "claude-code"},
+	})
+	defer resp.Body.Close()
+	if resp.StatusCode != 202 {
+		var body map[string]any
+		json.NewDecoder(resp.Body).Decode(&body)
+		t.Fatalf("status=%d body=%v, want 202", resp.StatusCode, body)
+	}
+
+	fake.mu.Lock()
+	defer fake.mu.Unlock()
+	if !fake.called {
+		t.Fatal("runner should be called")
+	}
+	args := strings.Join(fake.args, " ")
+	if !strings.Contains(args, "--seat-kind alice=opencode") {
+		t.Errorf("args %q should contain --seat-kind alice=opencode", args)
+	}
+	if !strings.Contains(args, "--seat-kind claude=claude-code") {
+		t.Errorf("args %q should contain --seat-kind claude=claude-code", args)
+	}
+}
+
+func TestRunSeatKindsFromInit(t *testing.T) {
+	root := t.TempDir()
+	pactDir := filepath.Join(root, ".pact")
+	os.MkdirAll(filepath.Join(pactDir, "tasks"), 0o755)
+	initLine := `{"event_id":"1","ts":"2026-01-01T00:00:00Z","agent_id":"claude","role":"orchestrator","event_type":"init","task_id":"","feature":"","payload":{"project":"testp","protocol_version":1,"seats":[{"id":"claude","roles":["orchestrator","reviewer"],"entry":"CLAUDE.md","kind":"claude-code"},{"id":"alice","roles":["worker"],"entry":"A.md","kind":"opencode"}],"base_branch":"main"}}` + "\n"
+	os.WriteFile(filepath.Join(pactDir, "log.jsonl"), []byte(initLine), 0o644)
+
+	fake := &fakeOrchRunner{}
+	srv := New([]registry.Project{{Name: "p", Path: root}})
+	srv.SetSeat("claude")
+	srv.SetExecOrchestrate(fake.run)
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	resp := postJSON(t, ts.URL+"/api/projects/p/orchestrate/run", map[string]any{"feature": "f1"})
+	defer resp.Body.Close()
+	if resp.StatusCode != 202 {
+		var body map[string]any
+		json.NewDecoder(resp.Body).Decode(&body)
+		t.Fatalf("status=%d body=%v, want 202", resp.StatusCode, body)
+	}
+
+	fake.mu.Lock()
+	defer fake.mu.Unlock()
+	args := strings.Join(fake.args, " ")
+	if !strings.Contains(args, "--seat-kind alice=opencode") {
+		t.Errorf("args %q should contain --seat-kind alice=opencode", args)
+	}
+	if !strings.Contains(args, "--seat-kind claude=claude-code") {
+		t.Errorf("args %q should contain --seat-kind claude=claude-code", args)
+	}
+}
+
 func TestResumeHasResumeFlag(t *testing.T) {
 	root := seedOrchRepo(t)
 	orchDir := filepath.Join(root, ".pact", "orchestrate")

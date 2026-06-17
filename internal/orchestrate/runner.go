@@ -108,9 +108,14 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 
 	args := make([]string, len(eff.Args))
 	for i, a := range eff.Args {
-		if a == briefingPlaceholder {
+		switch a {
+		case briefingPlaceholder:
 			args[i] = lc.Briefing
-		} else {
+		case "{seat}":
+			// A custom-agent manifest with identity.via=arg carries {seat} in its
+			// argv; substitute the acting seat id at exec (built-in kinds never emit it).
+			args[i] = lc.Seat
+		default:
 			args[i] = a
 		}
 	}

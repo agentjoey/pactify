@@ -206,3 +206,19 @@ features:
         spec: .pact/tasks/web-customagent-form.md
         evidence: npx tsc --noEmit clean. npm test -- CustomAgentForm: 1 file, 2 tests PASS. Full web vitest: 53 files, 441 tests PASS. Playwright e2e: 7/7 PASS. Files: web/src/lib/api.ts (+ManifestRow/listManifests/createManifest/deleteManifest on /api/manifests), web/src/components/ops/CustomAgentForm.tsx + .test.tsx, web/src/components/ops/OpsView.tsx (mount). Built dist committed.
         deps: [t-serve-manifests]
+  - id: sp1-backend
+    branch: feat-sp1-backend
+    status: in_progress
+    tasks:
+      - id: t-plan-apply
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/t-plan-apply.md
+        evidence: null
+      - id: t-acting-seat
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/t-acting-seat.md
+        evidence: null

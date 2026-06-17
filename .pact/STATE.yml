@@ -189,3 +189,20 @@ features:
         spec: .pact/tasks/audit-query.md
         evidence: === RUN   TestAppendAndStorePath --- PASS: TestAppendAndStorePath (0.00s) === RUN   TestAppendDateBucketsByUTC --- PASS: TestAppendDateBucketsByUTC (0.00s) === RUN   TestQueryFiltersAndOrder --- PASS: TestQueryFiltersAndOrder (0.00s) === RUN   TestQuerySkipsTornLines --- PASS: TestQuerySkipsTornLines (0.00s) === RUN   TestSummarize --- PASS: TestSummarize (0.00s) PASS ok   github.com/agentjoey/pactify/internal/audit 0.730s  go build ./... — clean (no output).  Files changed: - internal/audit/audit.go: added Filter struct + match(), Query(), Summary struct, Summarize() - internal/audit/audit_test.go: added TestQueryFiltersAndOrder, TestQuerySkipsTornLines, TestSummarize
         deps: [t-audit-store]
+  - id: manifest-cd
+    branch: feat-manifest-cd
+    status: in_progress
+    tasks:
+      - id: t-serve-manifests
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/serve-manifests.md
+        evidence: null
+      - id: t-web-customagent
+        owner: gemini-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/web-customagent-form.md
+        evidence: null
+        deps: [t-serve-manifests]

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/agentjoey/pactify/internal/projection"
 )
 
 func TestProjectStateReadsAndMaps(t *testing.T) {
@@ -108,6 +110,23 @@ func TestProjectStateEmptyListsMarshalAsArrays(t *testing.T) {
 	}
 	if strings.Contains(js, `"features":null`) || strings.Contains(js, `"agents":null`) {
 		t.Fatalf("no list field may marshal as null: %s", js)
+	}
+}
+
+func TestToDTOIncludesSeatKind(t *testing.T) {
+	st := projection.State{
+		Project: "p",
+		Agents: []projection.Seat{
+			{ID: "claude", Roles: []string{"orchestrator"}, Kind: "claude-code"},
+			{ID: "legacy", Roles: []string{"worker"}}, // no kind → ""
+		},
+	}
+	d := toDTO(st)
+	if d.Agents[0].Kind != "claude-code" {
+		t.Errorf("agent[0].Kind = %q, want claude-code", d.Agents[0].Kind)
+	}
+	if d.Agents[1].Kind != "" {
+		t.Errorf("agent[1].Kind = %q, want empty for legacy seat", d.Agents[1].Kind)
 	}
 }
 

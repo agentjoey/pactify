@@ -11,6 +11,7 @@ import (
 type SeatDTO struct {
 	ID    string   `json:"id"`
 	Roles []string `json:"roles"`
+	Kind  string   `json:"kind,omitempty"`
 }
 
 type TaskDTO struct {
@@ -67,7 +68,7 @@ func toDTO(st projection.State) StateDTO {
 	// features would otherwise crash the canvas client-side.
 	d := StateDTO{Project: st.Project, Agents: []SeatDTO{}, Features: []FeatureDTO{}}
 	for _, a := range st.Agents {
-		d.Agents = append(d.Agents, SeatDTO{ID: a.ID, Roles: a.Roles})
+		d.Agents = append(d.Agents, SeatDTO{ID: a.ID, Roles: a.Roles, Kind: a.Kind})
 	}
 	for _, f := range st.Features {
 		// Tasks seeded for the same []-not-null contract as Agents/Features above.

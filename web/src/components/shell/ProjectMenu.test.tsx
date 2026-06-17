@@ -1,0 +1,53 @@
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, within } from "@testing-library/react";
+import { ProjectMenu } from "./ProjectMenu";
+import type { ProjectMeta } from "../../lib/types";
+
+const projects: ProjectMeta[] = [
+  { name: "alpha", path: "/a", group: "team-x" } as ProjectMeta,
+  { name: "beta", path: "/b" } as ProjectMeta,
+];
+
+describe("ProjectMenu", () => {
+  it("shows the current project name and a running status light when running", () => {
+    render(
+      <ProjectMenu projects={projects} current="alpha" running={true}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("alpha");
+    expect(screen.getByTestId("project-status-light")).toHaveAttribute("data-running", "true");
+  });
+
+  it("opens the menu and selects another project", () => {
+    const onSelect = vi.fn();
+    render(
+      <ProjectMenu projects={projects} current="alpha" running={false}
+        onSelect={onSelect} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+    fireEvent.click(screen.getByText("beta"));
+    expect(onSelect).toHaveBeenCalledWith("beta");
+  });
+
+  it("groups projects but never prints the word 'ungrouped'", () => {
+    render(
+      <ProjectMenu projects={projects} current="alpha" running={false}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+    const menu = screen.getByTestId("project-menu");
+    expect(within(menu).getByText("team-x")).toBeInTheDocument();
+    expect(within(menu).queryByText(/ungrouped/i)).toBeNull();
+  });
+
+  it("invokes onAdd from the footer add-project item", () => {
+    const onAdd = vi.fn();
+    render(
+      <ProjectMenu projects={projects} current="alpha" running={false}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={onAdd} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+    fireEvent.click(screen.getByTestId("project-menu-add"));
+    expect(onAdd).toHaveBeenCalled();
+  });
+});

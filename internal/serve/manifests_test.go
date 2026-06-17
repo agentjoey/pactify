@@ -13,7 +13,7 @@ import (
 func TestManifestsCRUD(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("PACTIFY_HOME", home)
-	s := &Server{}
+	s := &Server{seat: "test"}
 
 	body := []byte("kind=\"webx\"\nbinary=\"webx\"\n[runner]\nargs=[\"run\",\"{briefing}\"]\n")
 	r := httptest.NewRequest("POST", "/api/agents/manifests", bytes.NewReader(body))

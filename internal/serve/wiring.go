@@ -53,6 +53,10 @@ func (s *Server) handleWire(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
+	if _, err := s.actingProject(dir); err != nil {
+		writeErr(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
 	kind := r.PathValue("kind")
 	a, ok := agent.Get(kind)
 	if !ok {

@@ -60,7 +60,7 @@ func TestHandleSessionsPrune_UnsupportedIsGracefulNoop(t *testing.T) {
 	// an error or a process spawn.
 	sessionRunFn = func(_ string, _ ...string) (string, error) { t.Fatal("runner should not be called"); return "", nil }
 
-	s := &Server{}
+	s := &Server{seat: "test"}
 	r := httptest.NewRequest("POST", "/api/agents/gemini-cli/sessions/prune", nil)
 	r.SetPathValue("kind", "gemini-cli")
 	w := httptest.NewRecorder()

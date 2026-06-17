@@ -22,6 +22,7 @@ func registryServer(t *testing.T) (*Server, *httptest.Server) {
 	t.Helper()
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	srv := New(nil)
+	srv.SetSeat("test")
 	if err := srv.StartWatchers(); err != nil {
 		t.Fatalf("start watchers: %v", err)
 	}

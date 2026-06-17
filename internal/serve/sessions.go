@@ -51,6 +51,9 @@ type sessionsPruneResp struct {
 // handleSessionsPrune prunes the kind's sessions. Unsupported kinds return
 // skipped=true (a no-op, not an error) so the UI can say "nothing to prune".
 func (s *Server) handleSessionsPrune(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	kind := r.PathValue("kind")
 	out, skipped, err := sessions.Manager{Run: sessionRunFn}.Prune(kind)
 	if err != nil {

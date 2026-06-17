@@ -66,6 +66,14 @@ func (s *Server) actingProject(dir string) (*pact.Project, error) {
 	return nil, fmt.Errorf("acting seat %q is not in the project roster", s.seat)
 }
 
+func (s *Server) requireSeat(w http.ResponseWriter) bool {
+	if s.seat == "" {
+		writeErr(w, http.StatusUnprocessableEntity, "no acting seat configured (set --seat or PACT_AGENT_ID)")
+		return false
+	}
+	return true
+}
+
 func (s *Server) handleActingSeat(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"seat": s.seat})
 }

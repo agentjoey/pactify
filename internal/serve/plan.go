@@ -32,6 +32,7 @@ type planTaskDTO struct {
 
 func (s *Server) registerPlanRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/projects/{id}/plan/{feature}", s.handlePlanReview)
+	mux.HandleFunc("POST /api/projects/{id}/plan/{feature}/apply", s.handlePlanApply)
 }
 
 // handlePlanReview reads .pact/plan-<feature>.json, parses + validates it against
@@ -79,6 +80,39 @@ func (s *Server) handlePlanReview(w http.ResponseWriter, r *http.Request) {
 		dto.Error = verr.Error()
 	}
 	writeJSON(w, http.StatusOK, dto)
+}
+
+func (s *Server) handlePlanApply(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	_, dir, ok := s.project(id)
+	if !ok {
+		writeErr(w, http.StatusNotFound, "unknown project")
+		return
+	}
+	if _, err := s.actingProject(dir); err != nil {
+		writeErr(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	feature := r.PathValue("feature")
+	b, err := os.ReadFile(filepath.Join(dir, ".pact", "plan-"+feature+".json"))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "plan manifest not found")
+		return
+	}
+	plan, err := planner.Parse(b)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	mu := s.projectMu(id)
+	mu.Lock()
+	defer mu.Unlock()
+	n, err := planner.ApplyTx(dir, plan, rosterOf(dir), s.seat)
+	if err != nil {
+		writeErr(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"assigned": n})
 }
 
 // rosterOf returns the project's seat ids for plan validation; an unreadable

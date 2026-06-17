@@ -38,6 +38,9 @@ type expandedTaskDTO struct {
 }
 
 func (s *Server) handleRecipeExpand(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	name := r.PathValue("name")
 	rec, ok := recipe.Get(name)
 	if !ok {

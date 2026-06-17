@@ -3,7 +3,7 @@ export interface Task { id: string; owner: string; status: string; reviewer: str
 export interface Feature { id: string; branch: string; status: string; tasks: Task[] }
 export interface State { project: string; agents: Seat[]; features: Feature[]; awaiting_count: number }
 export interface PactEvent { event_id: string; ts: string; agent_id: string; role: string; event_type: string; task_id: string; feature: string; payload: Record<string, unknown> }
-export interface ProjectMeta { id: string; name: string; path: string; project: string; feature_count: number; awaiting_count: number }
+export interface ProjectMeta { id: string; name: string; path: string; project: string; feature_count: number; awaiting_count: number; group?: string }
 export interface BoardTask { task: Task; feature: string }
 
 // --- Replay (M3.3b) ---
@@ -22,6 +22,7 @@ export interface Timeline { total: number; events: TimelineEvent[] }
 export interface RegistryEntry {
   name: string;
   path: string;
+  group?: string;
   status: { valid: boolean; error?: string; seats: number; lastEventTs?: string };
 }
 
@@ -110,6 +111,19 @@ export interface SetupBinding {
 export interface SetupSuggestResponse {
   bindings: SetupBinding[];
   warnings: string[];
+}
+
+export interface FsBrowseEntry {
+  name: string;
+  path: string;
+  isGit: boolean;
+  hasPact: boolean;
+}
+
+export interface FsBrowseResponse {
+  path: string;
+  parent: string;
+  entries: FsBrowseEntry[];
 }
 
 // Planner-generated task graph surfaced for human review before `plan apply`

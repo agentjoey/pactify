@@ -10,6 +10,7 @@ import (
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/agentreg"
 	"github.com/agentjoey/pactify/internal/pact"
+	"github.com/agentjoey/pactify/internal/registry"
 	"github.com/agentjoey/pactify/internal/wizard"
 )
 
@@ -57,6 +58,7 @@ type setupApplyReq struct {
 	Path    string           `json:"path"`
 	Project string           `json:"project"`
 	Seats   []setupApplySeat `json:"seats"`
+	Group   string           `json:"group"`
 }
 
 type setupApplySeat struct {
@@ -145,6 +147,22 @@ func (s *Server) handleSetupApply(w http.ResponseWriter, r *http.Request) {
 			result.Snippet = snippet
 		}
 		wired = append(wired, result)
+	}
+
+	reg, regErr := registry.Load()
+	if regErr == nil {
+		if addErr := reg.Add(req.Project, req.Path, req.Group); addErr == nil {
+			if saveErr := reg.Save(); saveErr == nil {
+				added := reg.Projects[len(reg.Projects)-1]
+				_ = s.AddProject(added)
+			} else {
+				notes = append(notes, fmt.Sprintf("registry save: %v", saveErr))
+			}
+		} else {
+			notes = append(notes, fmt.Sprintf("registry add: %v", addErr))
+		}
+	} else {
+		notes = append(notes, fmt.Sprintf("registry load: %v", regErr))
 	}
 
 	writeJSON(w, http.StatusOK, setupApplyResp{Inited: true, Wired: wired, Notes: notes})

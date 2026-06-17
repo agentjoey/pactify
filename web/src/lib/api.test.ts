@@ -1,14 +1,59 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchProjects, fetchState, subscribeEvents } from "./api";
+import { fetchProjects, fetchState, subscribeEvents, browseFs, postRegister, setupApply } from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("api", () => {
-  it("fetchProjects GETs /api/projects", async () => {
+  it("fetchProjects GETs /api/projects and merges group from /api/registry", async () => {
     const data = [{ id: "p", name: "p", path: "/x", project: "p", feature_count: 0, awaiting_count: 0 }];
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => data })));
-    expect(await fetchProjects()).toEqual(data);
+    const registry = [{ name: "p", path: "/x", group: "g1", status: { valid: true, seats: 0 } }];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "/api/projects") return { ok: true, json: async () => data };
+      if (url === "/api/registry") return { ok: true, json: async () => registry };
+      return { ok: true, json: async () => ({}) };
+    }));
+    expect(await fetchProjects()).toEqual([{ ...data[0], group: "g1" }]);
     expect(fetch).toHaveBeenCalledWith("/api/projects");
+    expect(fetch).toHaveBeenCalledWith("/api/registry");
+  });
+
+  it("fetchProjects survives a missing /api/registry", async () => {
+    const data = [{ id: "p", name: "p", path: "/x", project: "p", feature_count: 0, awaiting_count: 0 }];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "/api/projects") return { ok: true, json: async () => data };
+      return { ok: false, status: 500, json: async () => ({ error: "nope" }) };
+    }));
+    expect(await fetchProjects()).toEqual(data);
+  });
+
+  it("browseFs GETs /api/fs/browse with encoded path", async () => {
+    const resp = { path: "/home", parent: "/", entries: [{ name: "a", path: "/home/a", isGit: false, hasPact: false }] };
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "/api/fs/browse?path=%2Fhome") return { ok: true, json: async () => resp };
+      return { ok: false, status: 404, json: async () => ({}) };
+    }));
+    expect(await browseFs("/home")).toEqual(resp);
+  });
+
+  it("postRegister sends name and group", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ name: "p" }) })));
+    await postRegister("/x", { name: "n", group: "g" });
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body).toEqual({ path: "/x", name: "n", group: "g" });
+  });
+
+  it("postRegister keeps backward-compatible string name", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ name: "p" }) })));
+    await postRegister("/x", "n");
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body).toEqual({ path: "/x", name: "n" });
+  });
+
+  it("setupApply sends group when provided", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ inited: true, wired: [], notes: [] }) })));
+    await setupApply({ path: "/x", project: "p", seats: [], group: "g" });
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.group).toBe("g");
   });
   it("fetchState GETs the project state", async () => {
     const st = { project: "p", agents: [], features: [], awaiting_count: 0 };

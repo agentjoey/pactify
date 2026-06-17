@@ -352,7 +352,7 @@ export default function App() {
     <div data-testid="app-root" className="h-screen flex flex-col">
       <Toolbar projectName={currentName} view={view} onView={setView} live={live} replaying={replaying} author={author} seat={seat} agents={shownState.agents} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar projects={projects} current={current} onSelect={setCurrent} view={view} onView={setView} collapsed={navCollapsed} onToggleCollapse={() => setNavCollapsed((c) => !c)} />
+        <Sidebar projects={projects} current={current} onSelect={setCurrent} view={view} onView={setView} collapsed={navCollapsed} onToggleCollapse={() => setNavCollapsed((c) => !c)} onChanged={refreshProjects} />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Agents author={author} onChanged={refreshProjects} />
           {projectsLoaded && projects.length === 0

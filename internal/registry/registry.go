@@ -11,8 +11,9 @@ import (
 )
 
 type Project struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
+	Name  string `json:"name"`
+	Path  string `json:"path"`
+	Group string `json:"group,omitempty"`
 }
 
 type Registry struct {
@@ -65,7 +66,7 @@ func (r Registry) Save() error {
 }
 
 // Add registers a project. An empty name defaults to the slug of the path's basename.
-func (r *Registry) Add(name, path string) error {
+func (r *Registry) Add(name, path, group string) error {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return err
@@ -82,7 +83,7 @@ func (r *Registry) Add(name, path string) error {
 			return fmt.Errorf("registry: name %q already registered", name)
 		}
 	}
-	r.Projects = append(r.Projects, Project{Name: name, Path: abs})
+	r.Projects = append(r.Projects, Project{Name: name, Path: abs, Group: group})
 	return nil
 }
 

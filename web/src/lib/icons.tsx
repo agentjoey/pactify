@@ -31,6 +31,8 @@ import {
   ListChecks,
   MagicWand,
   ChatTeardropText,
+  CaretUp,
+  Folder,
   type Icon as PhIcon,
 } from "@phosphor-icons/react";
 
@@ -73,6 +75,8 @@ const MAP: Record<string, Entry> = {
   "view-plan": { I: ListChecks, color: "var(--color-text-2)" },
   "view-setup": { I: MagicWand, color: "var(--color-text-2)" },
   "view-recipes": { I: ChatTeardropText, color: "var(--color-text-2)" },
+  "chevron-up": { I: CaretUp, color: "var(--color-text-3)" },
+  folder: { I: Folder, color: "var(--color-text-3)" },
 };
 
 export type IconName = keyof typeof MAP;

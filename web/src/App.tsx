@@ -47,6 +47,10 @@ export default function App() {
   // IA v2 shell: ⚙ Settings sheet + AddProjectWizard now owned by App (moved out
   // of the dropped Sidebar). `running` drives the ProjectMenu status light.
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // The seat a RosterDock gear was clicked from (null = opened from the toolbar
+  // ⚙, no seat focus). Drives SettingsModal's jump-to-project-seats behavior.
+  const [settingsSeat, setSettingsSeat] = useState<string | null>(null);
+  const openSettings = (seat: string | null) => { setSettingsSeat(seat); setSettingsOpen(true); };
   const [wizardOpen, setWizardOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [author, setAuthor] = useState(false);
@@ -295,9 +299,9 @@ export default function App() {
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={running} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={running} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} />
       <div className="relative flex flex-1 overflow-hidden">
-        <RosterDock seats={shownState.agents} onSeatSettings={() => setSettingsOpen(true)} />
+        <RosterDock seats={shownState.agents} onSeatSettings={(seatId) => openSettings(seatId)} />
         <div className="pointer-events-none absolute left-3 top-[210px] z-20 w-[200px]">
           <PlanDock project={current} features={shownState.features.map((f) => f.id)} />
         </div>
@@ -327,7 +331,7 @@ export default function App() {
         </div>
       </div>
       <Toasts toasts={toasts} />
-      {settingsOpen && <SettingsModal project={current} author={author} onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsModal project={current} author={author} focusSeat={settingsSeat} onClose={() => setSettingsOpen(false)} />}
       <AddProjectWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onAdded={() => { setWizardOpen(false); refreshProjects(); }} />
       <CommandK
         projects={projects}

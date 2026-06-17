@@ -25,4 +25,14 @@ describe("SettingsModal", () => {
     fireEvent.click(screen.getByLabelText("close"));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("surfaces the focused seat in the project-seats section when opened from a roster gear", () => {
+    render(<SettingsModal project="demo" author={true} focusSeat="kimi" onClose={() => {}} />);
+    expect(screen.getByTestId("settings-project-seats")).toHaveTextContent("kimi");
+  });
+
+  it("shows no seat focus when opened from the toolbar gear (focusSeat null)", () => {
+    render(<SettingsModal project="demo" author={true} focusSeat={null} onClose={() => {}} />);
+    expect(screen.getByTestId("settings-project-seats")).not.toHaveTextContent("· kimi");
+  });
 });

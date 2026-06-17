@@ -10,6 +10,7 @@ func TestSetupSuggestGET(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("PACTIFY_HOME", home)
 	srv := New(nil)
+	srv.SetSeat("test")
 	ts := newTestServer(t, srv)
 	defer ts.Close()
 

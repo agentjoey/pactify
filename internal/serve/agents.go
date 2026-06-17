@@ -60,6 +60,9 @@ type agentRegisterReq struct {
 }
 
 func (s *Server) handleAgentRegister(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	kind := r.PathValue("kind")
 	if _, ok := agent.Get(kind); !ok {
 		writeErr(w, http.StatusBadRequest, fmt.Sprintf("unknown agent kind %q (supported: %v)", kind, agent.Kinds()))
@@ -90,6 +93,9 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAgentUnregister(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	kind := r.PathValue("kind")
 	if _, ok := agent.Get(kind); !ok {
 		writeErr(w, http.StatusBadRequest, fmt.Sprintf("unknown agent kind %q (supported: %v)", kind, agent.Kinds()))
@@ -153,6 +159,9 @@ type agentConfigReq struct {
 }
 
 func (s *Server) handleAgentConfigSet(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	kind := r.PathValue("kind")
 	if _, ok := agent.Get(kind); !ok {
 		writeErr(w, http.StatusNotFound, "unknown kind")

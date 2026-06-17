@@ -1,1 +1,1 @@
-{"feature":"sp1-backend","task":"t-plan-apply","seat":"opencode-worker","action":"run_owner","phase":"owner working","escalated":false,"done":false,"total":2,"accepted":0,"iter":0,"updated_at":"20260617-161734"}
+{"feature":"sp1-backend","task":"t-acting-seat","seat":"opencode-worker","action":"run_owner","phase":"owner working","escalated":false,"done":false,"total":2,"accepted":1,"iter":2,"updated_at":"20260617-162655"}

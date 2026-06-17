@@ -78,7 +78,7 @@ func TestWiringGETDetectsWired(t *testing.T) {
 func TestWirePOSTProjectKind(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	dir := newAuthorRepo(t)
-	ts := authorServer(t, dir, "")
+	ts := authorServer(t, dir, "claude-opus")
 	resp := postJSON(t, ts.URL+"/api/projects/pactify/wiring/opencode", map[string]any{"seat": "opencode", "roles": "worker"})
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("wire opencode: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
@@ -109,7 +109,7 @@ func TestWirePOSTDesktopGlobal(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	dir := newAuthorRepo(t)
-	ts := authorServer(t, dir, "")
+	ts := authorServer(t, dir, "claude-opus")
 	resp := postJSON(t, ts.URL+"/api/projects/pactify/wiring/claude-desktop", map[string]any{"seat": "opencode", "roles": "worker"})
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("wire claude-desktop: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
@@ -140,7 +140,7 @@ func TestWirePOSTDesktopGlobal(t *testing.T) {
 func TestWirePOSTCodexDocOnly(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	dir := newAuthorRepo(t)
-	ts := authorServer(t, dir, "")
+	ts := authorServer(t, dir, "claude-opus")
 	resp := postJSON(t, ts.URL+"/api/projects/pactify/wiring/codex-cli", map[string]any{"seat": "opencode", "roles": "worker"})
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("wire codex-cli: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
@@ -167,7 +167,7 @@ func TestWirePOSTCodexDocOnly(t *testing.T) {
 func TestWirePOSTBadInputs(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	dir := newAuthorRepo(t)
-	ts := authorServer(t, dir, "")
+	ts := authorServer(t, dir, "claude-opus")
 
 	// unknown kind → 400 listing supported kinds.
 	resp := postJSON(t, ts.URL+"/api/projects/pactify/wiring/nope", map[string]any{"seat": "opencode", "roles": "worker"})

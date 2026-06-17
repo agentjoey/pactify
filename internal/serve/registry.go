@@ -119,6 +119,9 @@ type registerReq struct {
 // registry file (Load/Add/Save), then registers + starts a live watcher. A
 // duplicate name is 409; validation failures are 400 with the reason.
 func (s *Server) handleRegistryAdd(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	var req registerReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid JSON body")
@@ -192,6 +195,9 @@ func (s *Server) handleRegistryAdd(w http.ResponseWriter, r *http.Request) {
 // handleRegistryDelete removes a project from the ~/.pactify registry file and
 // stops its live watcher (files untouched). Unknown name is 404.
 func (s *Server) handleRegistryDelete(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	name := r.PathValue("name")
 	if err := s.RemoveProject(name); err != nil {
 		writeErr(w, http.StatusNotFound, err.Error())

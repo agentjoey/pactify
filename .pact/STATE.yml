@@ -212,13 +212,13 @@ features:
     tasks:
       - id: t-plan-apply
         owner: opencode-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/t-plan-apply.md
         evidence: === VERIFY === go test ./internal/planner/ ./internal/serve/ ok github.com/agentjoey/pactify/internal/planner 0.906s ok github.com/agentjoey/pactify/internal/serve 15.594s go vet ./internal/planner/ ./internal/serve/ — clean === ApplyTx tests (2 new) === TestApplyTx_AllOrNothing_Success PASS — 3 tasks assigned transactionally TestApplyTx_RejectsAtomically PASS — invalid deps rejected, log.jsonl unchanged === Endpoint test (1 new) === TestHandlePlanApply PASS — POST .../plan/F/apply → 200 {assigned:2}; no seat → 422 === FILES CHANGED === internal/planner/apply.go: added ApplyTx(dir, plan, roster, seat) + rerenderState helper; Validate→spec-exists precheck→log-size snapshot→loop Assign→on-error truncate+rerender rollback internal/planner/apply_tx_test.go (NEW): seedPlan helper + 2 tests (success + atomic rejection) internal/serve/plan.go: registerPlanRoutes +POST route + handlePlanApply (project→actingProject→parse→lock→ApplyTx→200) internal/serve/plan_apply_test.go (NEW): seedProjectWithPlan helper + 1 test (200 with seat + 422 without seat)
       - id: t-acting-seat
         owner: opencode-worker
-        status: in_progress
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/t-acting-seat.md
-        evidence: null
+        evidence: === VERIFY === go test ./internal/serve/ -count=1 ok github.com/agentjoey/pactify/internal/serve 15.175s go vet ./internal/serve/ — clean === NEW TESTS (3 in acting_seat_test.go) === TestMachineEndpoints_RequireSeat PASS — POST/DELETE to 9 machine endpoints without seat → all 422 TestMachineEndpoints_PassWithSeat PASS — with seat configured, recipe expand not blocked by seat gate TestWire_RequiresActingProject PASS — wire POST without seat → 422 mentioning "acting seat" === FILES CHANGED === internal/serve/author.go: added requireSeat(w) bool method (seat=="" → writeErr 422 + false) internal/serve/agents.go: added requireSeat guard to handleAgentRegister, handleAgentUnregister, handleAgentConfigSet internal/serve/manifests.go: added requireSeat guard to handleManifestCreate, handleManifestDelete internal/serve/registry.go: added requireSeat guard to handleRegistryAdd, handleRegistryDelete internal/serve/sessions.go: added requireSeat guard to handleSessionsPrune internal/serve/recipes.go: added requireSeat guard to handleRecipeExpand internal/serve/wiring.go: added actingProject guard to handleWire (project-scoped, roster check) internal/serve/acting_seat_test.go (NEW): 3 tests covering no-seat→422, with-seat→pass, wire→actingProject === EXISTING TESTS FIXED (SetSeat added) === agents_test.go (4 tests), manifests_test.go, registry_test.go, sessions_test.go, recipes_test.go, wiring_test.go (4 tests), setup_test.go — all updated to set seat before calling write endpoints

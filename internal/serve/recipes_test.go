@@ -48,6 +48,7 @@ func TestRecipeList(t *testing.T) {
 
 func TestRecipeExpand(t *testing.T) {
 	srv := New(nil)
+	srv.SetSeat("test")
 	ts := newTestServer(t, srv)
 	defer ts.Close()
 

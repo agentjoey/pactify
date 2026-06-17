@@ -28,6 +28,9 @@ func (s *Server) handleManifestList(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleManifestCreate(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
@@ -42,6 +45,9 @@ func (s *Server) handleManifestCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleManifestDelete(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
 	kind := r.PathValue("kind")
 	if err := agentmanifest.Remove(kind); err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())

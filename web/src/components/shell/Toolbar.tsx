@@ -24,7 +24,6 @@ export function Toolbar({
   view,
   onView,
   live,
-  replaying,
   author,
   seat,
   agents,
@@ -40,7 +39,6 @@ export function Toolbar({
   view: View;
   onView: (v: View) => void;
   live: boolean;
-  replaying?: boolean;
   author: boolean;
   seat?: string;
   agents?: Seat[];
@@ -110,7 +108,7 @@ export function Toolbar({
       >
         ⌘K
       </button>
-      <LiveBadge live={live} replaying={!!replaying} />
+      <LiveBadge live={live} />
       {author && seat && pad ? (
         <span
           data-testid="seat-avatar"
@@ -154,18 +152,16 @@ export function Toolbar({
   );
 }
 
-// LiveBadge — three states (light theme): live = green breathing dot,
-// replay = amber, offline = gray.
-function LiveBadge({ live, replaying }: { live: boolean; replaying: boolean }) {
-  const map = replaying
-    ? { c: "var(--color-warn)", label: "replay", dot: false }
-    : live
-      ? { c: "var(--color-success)", label: "live", dot: true }
-      : { c: "var(--color-text-3)", label: "offline", dot: false };
+// LiveBadge — two states (light theme): live = green breathing dot,
+// offline = gray.
+function LiveBadge({ live }: { live: boolean }) {
+  const map = live
+    ? { c: "var(--color-success)", label: "live", dot: true }
+    : { c: "var(--color-text-3)", label: "offline", dot: false };
   return (
     <span
       data-testid="live-badge"
-      data-state={replaying ? "replay" : live ? "live" : "offline"}
+      data-state={live ? "live" : "offline"}
       className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
       style={{ color: map.c, background: `color-mix(in srgb, ${map.c} 12%, transparent)` }}
     >

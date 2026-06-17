@@ -129,60 +129,10 @@ describe("App", () => {
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
   });
 
-  describe("?at deep link (spec §6.6)", () => {
-    function stubReplayFetch() {
-      vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-        if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
-        if (url === "/api/registry") return { ok: true, json: async () => [] };
-        if (url === "/api/agents") return { ok: true, json: async () => [] };
-        if (url.includes("/timeline")) return {
-          ok: true,
-          json: async () => ({
-            total: 3,
-            events: [
-              { n: 1, ts: "t1", type: "join", actor: "alice" },
-              { n: 2, ts: "t2", type: "assign", actor: "alice", task: "T1" },
-              { n: 3, ts: "t3", type: "checkpoint", actor: "bob", task: "T1" },
-            ],
-          }),
-        };
-        // state and state?at=N both fold to a demo state.
-        return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
-      }));
-    }
-
-    it("reads ?at on load → enters replay, then LIVE clears the param", async () => {
-      window.history.replaceState(null, "", "/?at=2");
-      stubReplayFetch();
-      render(<App />);
-      await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
-
-      // Replay is entered: the LIVE button (resume live) becomes enabled and the
-      // URL still carries ?at=2 (normalized through enterReplay's replaceState).
-      const liveBtn = await screen.findByLabelText("resume live");
-      await waitFor(() => expect(liveBtn).toBeEnabled());
-      expect(window.location.search).toBe("?at=2");
-
-      // Resume live clears the param.
-      await act(async () => { fireEvent.click(liveBtn); });
-      expect(window.location.search).toBe("");
-      window.history.replaceState(null, "", "/");
-    });
-
-    it("scrubbing writes ?at into the URL; absent on a fresh live load", async () => {
-      window.history.replaceState(null, "", "/");
-      stubReplayFetch();
-      render(<App />);
-      await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
-      // Fresh load with no ?at stays live: no param written.
-      expect(window.location.search).toBe("");
-
-      // Step back on the timeline (drives enterReplay) → ?at appears.
-      const stepBack = await screen.findByLabelText("step back");
-      await act(async () => { fireEvent.click(stepBack); });
-      await waitFor(() => expect(window.location.search).toBe("?at=2"));
-      window.history.replaceState(null, "", "/");
-    });
+  it("no longer renders the replay scrubber", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
+    expect(screen.queryByRole("slider", { name: "replay position" })).toBeNull();
   });
 
   it("opens the Settings modal from the toolbar gear", async () => {

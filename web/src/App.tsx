@@ -10,7 +10,6 @@ import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
 import { Canvas } from "./components/Canvas";
 import { LiveOrchestrate } from "./components/LiveOrchestrate";
-import { ReplayBar } from "./components/ReplayBar";
 import { RightRail } from "./components/RightRail";
 import { CommandK } from "./components/CommandK";
 import { NoProjects } from "./components/NoProjects";
@@ -18,7 +17,6 @@ import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
 import { docTitle } from "./lib/docTitle";
-import { readAt, writeAt } from "./lib/replayUrl";
 import type { Draft, DraftFeature } from "./lib/canvas";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
@@ -58,16 +56,6 @@ export default function App() {
   // [current] effect below), since drafts are scoped to one project's canvas.
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
-  // Replay (M3.3b): replayAt is the scrubber position (null = live). When set,
-  // replayState holds the fetched HISTORICAL snapshot, which takes display
-  // precedence over the live `state`. Historical snapshots never pass through
-  // applyState (so the firstSnapshot toast/pulse guard stays live-only) — they
-  // render directly via replayState.
-  const [replayAt, setReplayAt] = useState<number | null>(null);
-  // null until the first historical snapshot arrives — the display falls back to
-  // the live state meanwhile, so entering replay never flashes an empty board.
-  const [replayState, setReplayState] = useState<State | null>(null);
-  const replaying = replayAt !== null;
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
   // Live pulse (M3.3b C4): task ids whose status changed on the latest applied
@@ -82,22 +70,8 @@ export default function App() {
 
   const prevState = useRef<State>(EMPTY);
   const toastId = useRef(0);
-  // Mirror of `replayAt` readable inside callbacks that close over stale state
-  // (the SSE handler, and the stale-response guard in showReplaySnapshot). While
-  // replaying we still append to the event log but do NOT apply snapshots — the
-  // historical replayState owns the display. Written SYNCHRONOUSLY in
-  // enterReplay/resumeLive (not via an effect) so an SSE event landing between
-  // the state update and the next render can't slip a toast through.
-  const replayAtRef = useRef<number | null>(null);
   // Mirror of `current` for guarding late async responses after a project switch.
   const currentRef = useRef("");
-  // Replay deep link (spec §6.6): the `?at=N` value read ONCE on mount, applied
-  // as enterReplay(N) the moment the first project becomes current (ReplayBar
-  // clamps N to the timeline bounds). Cleared after it fires so a later project
-  // switch doesn't re-trigger it.
-  const pendingAt = useRef<number | null>(readAt(window.location.search));
-  // Debounce handle for `?at` URL writes during scrubs (see enterReplay).
-  const urlTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // task id → epoch ms when first observed in_progress this session.
   const inProgressSince = useRef<Map<string, number>>(new Map());
   // tick forces stale re-evaluation on an interval even without state changes.
@@ -260,14 +234,6 @@ export default function App() {
     setDrafts([]);
     setDraftFeatures([]);
     if (pulseTimer.current) clearTimeout(pulseTimer.current);
-    // Exit replay on project switch — the new project starts live, UNLESS a
-    // pending `?at` deep link is waiting to be applied to the FIRST project that
-    // becomes current (consumed once so later switches start live as normal).
-    const at = pendingAt.current;
-    pendingAt.current = null;
-    replayAtRef.current = at;
-    setReplayAt(at);
-    setReplayState(null);
     // Clear the displayed snapshot IMMEDIATELY: rendering the previous
     // project's state under the new project id both flashes stale data and
     // made Canvas's FitOnEntry frame the OLD graph (then never refit).
@@ -279,10 +245,6 @@ export default function App() {
     const off = subscribeEvents(current, (e) => {
       if (!alive) return;
       setEvents((prev) => [...prev, e]);
-      // While replaying, SSE-applied snapshots are IGNORED (the displayed snapshot
-      // is the fetched historical one). We keep the subscription open but skip the
-      // refetch+apply so toasts/pulse stay live-only.
-      if (replayAtRef.current !== null) return;
       fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => {});
     }, (v) => { if (alive) setLive(v); });
     return () => {
@@ -306,67 +268,15 @@ export default function App() {
     });
   }, [state, tick]);
 
-  // --- Replay handlers (M3.3b) ----------------------------------------------
-  // ReplayBar owns the debounced getStateAt fetch; App just records position
-  // (onEnter) and parks the fetched historical snapshot (onSnapshot) which takes
-  // display precedence over the live state. Historical snapshots never pass
-  // through applyState, so the firstSnapshot toast/pulse guard stays live-only.
-  function enterReplay(at: number) {
-    replayAtRef.current = at;
-    setReplayAt(at);
-    // Reflect the scrub position in the URL (spec §6.6) without a history entry,
-    // so the view is shareable/reloadable. ReplayBar stays URL-agnostic — App
-    // owns the `?at` param. A pending deep-link read is now consumed.
-    pendingAt.current = null;
-    // DEBOUNCED: a pointer drag calls enterReplay per move; WebKit caps
-    // replaceState at ~100 calls / 30s (SecurityError beyond) — write the URL
-    // at the same cadence as the snapshot fetch instead of per-move.
-    if (urlTimer.current) clearTimeout(urlTimer.current);
-    urlTimer.current = setTimeout(() => {
-      const next = writeAt(window.location.search, at);
-      if (next !== window.location.search) {
-        window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
-      }
-    }, 150);
-  }
-  function showReplaySnapshot(at: number, s: State) {
-    // Drop stale responses: a slow fetch for an old position must not override
-    // the snapshot for where the scrubber is now (or live mode).
-    if (at !== replayAtRef.current) return;
-    setReplayState(s);
-  }
-
-  // Return to live: drop the historical snapshot, refetch fresh live state (do
-  // NOT trust the last SSE-applied state), and resume applying SSE.
-  function resumeLive() {
-    replayAtRef.current = null;
-    setReplayAt(null);
-    setReplayState(null);
-    // Clear the `?at` deep link on return to live (spec §6.6) — immediately,
-    // cancelling any debounced scrub write still in flight.
-    if (urlTimer.current) clearTimeout(urlTimer.current);
-    const next = writeAt(window.location.search, null);
-    if (next !== window.location.search) {
-      window.history.replaceState(null, "", `${window.location.pathname}${next}${window.location.hash}`);
-    }
-    const p = current;
-    fetchState(p)
-      .then((s) => { if (p === currentRef.current) applyState(s); })
-      .catch(() => {});
-  }
-
-  // Snapshot shown by kanban/canvas: historical while replaying (falling back to
-  // the live state until the first replay snapshot lands), else live.
-  const shownState = replaying ? (replayState ?? state) : state;
+  const shownState = state;
 
   // First-load skeleton signal (T15): a project is current but its very first
   // live snapshot hasn't been applied yet (state is still the EMPTY sentinel).
-  // Not while replaying (replay has its own fallback) and only when there ARE
-  // projects (the no-project hero owns the empty-registry case).
-  const firstLoad = !!current && state === EMPTY && !replaying && !loadFailed;
+  // Only when there ARE projects (the no-project hero owns the empty-registry case).
+  const firstLoad = !!current && state === EMPTY && !loadFailed;
 
   // Dynamic document title (spec §6.5): «project» · N awaiting ●. Driven from
-  // the currently displayed (live or replay) state's awaiting count.
+  // the currently displayed state's awaiting count.
   useEffect(() => {
     const name = projects.find((p) => p.id === current)?.name ?? current;
     document.title = docTitle(name, shownState.awaiting_count);
@@ -375,7 +285,7 @@ export default function App() {
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <Toolbar projectName={currentName} view={view} onView={setView} live={live} replaying={replaying} author={author} seat={seat} agents={shownState.agents} projects={projects} running={running} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={running} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
       <div className="relative flex flex-1 overflow-hidden">
         <RosterDock seats={shownState.agents} onSeatSettings={() => setSettingsOpen(true)} />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -395,11 +305,10 @@ export default function App() {
                     now take the full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
                   {view === "canvas"
-                    ? <div data-testid="view-canvas" className="flex flex-1 overflow-hidden"><Canvas project={current} state={shownState} author={author && !replaying} replaying={replaying} staleTasks={staleTasks} pulses={replaying ? undefined : pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} /></div>
-                    : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} selected={selected} onSelect={setSelected} pulses={replaying ? undefined : pulses} staleTasks={staleTasks} loading={firstLoad} /></div>}
-                  <RightRail state={shownState} events={events} selected={selected} project={current} author={author && !replaying} onSelect={setSelected} />
+                    ? <div data-testid="view-canvas" className="flex flex-1 overflow-hidden"><Canvas project={current} state={shownState} author={author} replaying={false} staleTasks={staleTasks} pulses={pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} /></div>
+                    : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} /></div>}
+                  <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />
                 </div>
-                <ReplayBar project={current} replayAt={replayAt} refreshTick={refreshTick} onEnter={enterReplay} onSnapshot={showReplaySnapshot} onLive={resumeLive} />
               </>
             )}
         </div>
@@ -416,7 +325,7 @@ export default function App() {
         setSelected={setSelected}
         onSelectProject={setCurrent}
         author={author}
-        replaying={replaying}
+        replaying={false}
         notify={(text) => pushToast(text, "error")}
       />
     </div>

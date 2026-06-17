@@ -212,13 +212,13 @@ features:
     tasks:
       - id: t-plan-apply
         owner: opencode-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/t-plan-apply.md
-        evidence: null
+        evidence: === VERIFY === go test ./internal/planner/ ./internal/serve/ ok github.com/agentjoey/pactify/internal/planner 0.906s ok github.com/agentjoey/pactify/internal/serve 15.594s go vet ./internal/planner/ ./internal/serve/ — clean === ApplyTx tests (2 new) === TestApplyTx_AllOrNothing_Success PASS — 3 tasks assigned transactionally TestApplyTx_RejectsAtomically PASS — invalid deps rejected, log.jsonl unchanged === Endpoint test (1 new) === TestHandlePlanApply PASS — POST .../plan/F/apply → 200 {assigned:2}; no seat → 422 === FILES CHANGED === internal/planner/apply.go: added ApplyTx(dir, plan, roster, seat) + rerenderState helper; Validate→spec-exists precheck→log-size snapshot→loop Assign→on-error truncate+rerender rollback internal/planner/apply_tx_test.go (NEW): seedPlan helper + 2 tests (success + atomic rejection) internal/serve/plan.go: registerPlanRoutes +POST route + handlePlanApply (project→actingProject→parse→lock→ApplyTx→200) internal/serve/plan_apply_test.go (NEW): seedProjectWithPlan helper + 1 test (200 with seat + 422 without seat)
       - id: t-acting-seat
         owner: opencode-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/t-acting-seat.md
         evidence: null

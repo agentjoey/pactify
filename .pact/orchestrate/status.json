@@ -1,1 +1,1 @@
-{"feature":"manifest-cd","task":"t-web-customagent","seat":"gemini-worker","action":"run_owner","phase":"owner working","escalated":false,"done":false,"total":2,"accepted":1,"iter":1,"updated_at":"20260617-085810"}
+{"feature":"sp1-backend","task":"t-plan-apply","seat":"opencode-worker","action":"run_owner","phase":"owner working","escalated":false,"done":false,"total":2,"accepted":0,"iter":0,"updated_at":"20260617-161734"}

@@ -1,8 +1,12 @@
 package agentmanifest
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/agentjoey/pactify/internal/agent"
 )
 
 const validTOML = `
@@ -70,5 +74,37 @@ func TestValidateViolations(t *testing.T) {
 				t.Fatalf("validate errs %q, want sub %q", joined, c.wantSub)
 			}
 		})
+	}
+}
+
+func TestLoadAndRegisterFromHome(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("PACTIFY_HOME", home)
+	dir := filepath.Join(home, ".pactify", "agents")
+	os.MkdirAll(dir, 0o755)
+	os.WriteFile(filepath.Join(dir, "myagent.toml"), []byte(validTOML), 0o644)
+	os.WriteFile(filepath.Join(dir, "bad.toml"), []byte("kind=\"opencode\"\nbinary=\"x\"\n"), 0o644)
+	t.Cleanup(func() { agent.UnregisterExternal("myagent") })
+
+	warns := LoadAndRegister()
+	if len(warns) == 0 {
+		t.Fatal("expected a warning for the built-in-colliding manifest")
+	}
+	if _, ok := agent.Get("myagent"); !ok {
+		t.Fatal("myagent should be registered")
+	}
+	rp, ok := agent.RunnerProfileFor("myagent")
+	if !ok {
+		t.Fatal("myagent runner profile missing")
+	}
+	got := rp.BuildArgs("m1", agent.PermPosture{}, "{briefing}")
+	want := []string{"run", "-m", "m1", "--yolo", "{briefing}"}
+	if len(got) != len(want) {
+		t.Fatalf("BuildArgs = %v, want %v", got, want)
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Fatalf("BuildArgs = %v, want %v", got, want)
+		}
 	}
 }

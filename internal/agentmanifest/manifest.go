@@ -3,12 +3,103 @@ package agentmanifest
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/agentjoey/pactify/internal/agent"
 	toml "github.com/pelletier/go-toml/v2"
 )
+
+// agentsDir resolves ~/.pactify/agents honoring PACTIFY_HOME (mirrors internal/registry).
+func agentsDir() (string, error) {
+	if h := os.Getenv("PACTIFY_HOME"); h != "" {
+		return filepath.Join(h, ".pactify", "agents"), nil
+	}
+	h, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(h, ".pactify", "agents"), nil
+}
+
+// PathFor returns the manifest file path for a kind (~/.pactify/agents/<kind>.toml).
+func PathFor(kind string) (string, error) {
+	dir, err := agentsDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, kind+".toml"), nil
+}
+
+// toExternal maps a validated manifest onto the agent.External DTO.
+func (m Manifest) toExternal() agent.External {
+	e := agent.External{Kind: m.Kind, Entry: m.Entry, Binary: m.Binary}
+	if m.MCP != nil {
+		e.HasMCP = true
+		e.MCPConfigPath = m.MCP.ConfigPath
+		e.MCPScope, _ = agent.ParseScope(m.MCP.Scope)
+		e.MCPFormat, _ = agent.ParseFormat(m.MCP.Format)
+	}
+	if m.Runner != nil {
+		r := *m.Runner
+		rp := agent.RunnerProfile{
+			Command: m.Binary, DefaultModel: r.DefaultModel, Models: r.Models,
+			BuildArgs: func(model string, posture agent.PermPosture, briefing string) []string {
+				return RenderArgs(r.Args, r.Permission, posture, model, briefing)
+			},
+		}
+		e.Runner = &rp
+	}
+	return e
+}
+
+// Load reads every ~/.pactify/agents/*.toml, parses + validates each, returning the
+// valid manifests and a warning per skipped (unreadable/invalid) file.
+func Load() (manifests []Manifest, warnings []string) {
+	dir, err := agentsDir()
+	if err != nil {
+		return nil, []string{"agentmanifest: " + err.Error()}
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, nil // no manifests dir → nothing to load (not an error)
+	}
+	for _, ent := range entries {
+		if ent.IsDir() || !strings.HasSuffix(ent.Name(), ".toml") {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(dir, ent.Name()))
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s: %v", ent.Name(), err))
+			continue
+		}
+		m, err := Parse(b)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s: %v", ent.Name(), err))
+			continue
+		}
+		if errs := Validate(m); len(errs) != 0 {
+			warnings = append(warnings, fmt.Sprintf("%s: %s", ent.Name(), strings.Join(errs, "; ")))
+			continue
+		}
+		manifests = append(manifests, m)
+	}
+	return manifests, warnings
+}
+
+// LoadAndRegister loads valid manifests and registers them (add-only), returning
+// all warnings (invalid files + registration collisions). Never fatal.
+func LoadAndRegister() []string {
+	manifests, warnings := Load()
+	for _, m := range manifests {
+		if err := agent.RegisterExternal(m.toExternal()); err != nil {
+			warnings = append(warnings, err.Error())
+		}
+	}
+	return warnings
+}
 
 // Manifest is a parsed custom-agent TOML manifest.
 type Manifest struct {

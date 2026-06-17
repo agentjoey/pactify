@@ -360,9 +360,9 @@ export default function App() {
             : view === "ops"
             ? <OpsView project={current} author={author} refreshTick={refreshTick} onRegistryChanged={refreshProjects} loading={firstLoad} />
             : view === "live"
-            ? <LiveOrchestrate project={current} refreshTick={refreshTick} />
+            ? <LiveOrchestrate project={current} refreshTick={refreshTick} author={author} agents={shownState.agents} onNotify={(msg, kind) => pushToast(msg, kind)} />
             : view === "plan"
-            ? <PlanReview project={current} features={shownState.features.map((f) => f.id)} />
+            ? <PlanReview project={current} features={shownState.features.map((f) => f.id)} onApplied={(msg) => pushToast(msg)} />
             : view === "setup"
             ? <Setup />
             : view === "recipes"

@@ -244,13 +244,13 @@ features:
     tasks:
       - id: t-sp2-frontend
         owner: gemini-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/t-sp2-frontend.md
         evidence: null
       - id: t-sp3-frontend
         owner: gemini-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/t-sp3-frontend.md
         evidence: null

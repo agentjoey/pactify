@@ -4,10 +4,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const getAgents = vi.fn();
 const registerAgent = vi.fn();
 const unregisterAgent = vi.fn();
+const pruneSessions = vi.fn();
 vi.mock("../../lib/api", () => ({
   getAgents: (...a: unknown[]) => getAgents(...a),
   registerAgent: (...a: unknown[]) => registerAgent(...a),
   unregisterAgent: (...a: unknown[]) => unregisterAgent(...a),
+  pruneSessions: (...a: unknown[]) => pruneSessions(...a),
 }));
 
 import { AgentRoster } from "./AgentRoster";
@@ -17,6 +19,7 @@ describe("AgentRoster panel", () => {
     getAgents.mockReset();
     registerAgent.mockReset();
     unregisterAgent.mockReset();
+    pruneSessions.mockReset();
   });
 
   it("lists installed agents and registers an undetected-but-supported one", async () => {
@@ -74,5 +77,30 @@ describe("AgentRoster panel", () => {
     getAgents.mockResolvedValue([]);
     render(<AgentRoster author={true} onChanged={() => {}} />);
     await waitFor(() => expect(screen.getByText("No supported agents detected")).toBeTruthy());
+  });
+
+  it("prunes sessions for an installed agent", async () => {
+    getAgents.mockResolvedValue([
+      { kind: "opencode", installed: true, detail: "/usr/local/bin/opencode", registered: true },
+    ]);
+    pruneSessions.mockResolvedValue({ kind: "opencode", skipped: false, output: "closed 3 sessions" });
+    render(<AgentRoster author={true} onChanged={() => {}} />);
+
+    await waitFor(() => expect(screen.getByTestId("roster-opencode")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Prune sessions" }));
+    await waitFor(() => expect(pruneSessions).toHaveBeenCalledWith("opencode"));
+    await waitFor(() => expect(screen.getByText("closed 3 sessions")).toBeTruthy());
+  });
+
+  it("shows 'Nothing to prune' when prune is skipped", async () => {
+    getAgents.mockResolvedValue([
+      { kind: "claude", installed: true, detail: "/usr/local/bin/claude", registered: true },
+    ]);
+    pruneSessions.mockResolvedValue({ kind: "claude", skipped: true, output: "" });
+    render(<AgentRoster author={true} onChanged={() => {}} />);
+
+    await waitFor(() => expect(screen.getByTestId("roster-claude")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Prune sessions" }));
+    await waitFor(() => expect(screen.getByText("Nothing to prune")).toBeTruthy());
   });
 });

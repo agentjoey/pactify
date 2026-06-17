@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import type { PlanReviewResponse } from "../lib/types";
-import { getPlanReview } from "../lib/api";
+import { getPlanReview, applyPlan } from "../lib/api";
 import { Badge } from "./ui/Badge";
 import { Alert } from "./ui/Alert";
+import { Button } from "./ui/Button";
 import { EmptyState } from "./ui/EmptyState";
 import { Spinner } from "./ui/Spinner";
 
@@ -14,14 +15,18 @@ import { Spinner } from "./ui/Spinner";
 export function PlanReview({
   project,
   features,
+  onApplied,
 }: {
   project: string;
   features: string[];
+  onApplied?: (message: string) => void;
 }) {
   const [feature, setFeature] = useState<string>(features[0] ?? "");
   const [data, setData] = useState<PlanReviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState("");
 
   // Keep a selected feature valid as the project/feature list changes.
   useEffect(() => {
@@ -34,14 +39,35 @@ export function PlanReview({
       return;
     }
     setLoading(true);
+    loadReview();
+  }, [project, feature]);
+
+  function loadReview() {
+    setLoading(true);
     getPlanReview(project, feature)
       .then((r) => {
         setData(r);
         setError("");
+        setApplyError("");
       })
       .catch(() => setError("Failed to load plan"))
       .finally(() => setLoading(false));
-  }, [project, feature]);
+  }
+
+  async function handleApply() {
+    if (!data?.feature) return;
+    setApplying(true);
+    setApplyError("");
+    try {
+      const r = await applyPlan(project, data.feature);
+      onApplied?.(`${r.assigned} task${r.assigned === 1 ? "" : "s"} assigned`);
+      await loadReview();
+    } catch (e) {
+      setApplyError(e instanceof Error ? e.message : "Apply failed");
+    } finally {
+      setApplying(false);
+    }
+  }
 
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 view-enter">
@@ -130,9 +156,18 @@ export function PlanReview({
           </ol>
 
           {data.valid && (
-            <div className="mt-4 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-3 py-2 text-[11px] text-[var(--color-text-2)]">
-              Looks good? Apply with{" "}
-              <span className="mono text-[var(--color-text-1)]">pactify plan apply {data.feature}</span>
+            <div className="mt-4 flex flex-col gap-2 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Button size="sm" loading={applying} onClick={handleApply}>
+                  Apply plan
+                </Button>
+                <span className="text-[11px] text-[var(--color-text-3)]">
+                  writes tasks to .pact/log.jsonl
+                </span>
+              </div>
+              {applyError && (
+                <div className="text-[11px] text-[var(--color-danger)]">{applyError}</div>
+              )}
             </div>
           )}
         </div>

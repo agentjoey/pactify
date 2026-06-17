@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Command } from "cmdk";
-import type { ProjectMeta, State } from "../lib/types";
+import type { ProjectMeta, State, RecipeItem } from "../lib/types";
 import type { View } from "./TopBar";
 import { allTasks } from "../lib/derive";
 import { postVerb } from "../lib/api";
@@ -56,6 +56,8 @@ export function CommandK({
   author,
   replaying,
   notify,
+  recipes,
+  onRunRecipe,
 }: {
   projects: ProjectMeta[];
   current: string;
@@ -71,6 +73,10 @@ export function CommandK({
   // Surfaces palette-action failures on the app toast stack (a failed accept
   // produces no SSE event, so nothing else would ever report it).
   notify?: (text: string) => void;
+  // Recipes / Templates: list of named workflow templates. Selecting one fires
+  // onRunRecipe(name) which App uses to open the Recipes modal.
+  recipes?: RecipeItem[];
+  onRunRecipe?: (name: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -319,6 +325,27 @@ export function CommandK({
                   </Command.Item>
                 ))}
               </Command.Group>
+
+              {/* Templates (Recipes) */}
+              {recipes && recipes.length > 0 && (
+                <Command.Group
+                  heading="Templates"
+                  className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-[var(--color-text-3)]"
+                >
+                  {recipes.map((rc) => (
+                    <Command.Item
+                      key={rc.name}
+                      value={`recipe ${rc.name} ${rc.description}`}
+                      onSelect={() => { close(); onRunRecipe?.(rc.name); }}
+                      className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-text-1)] data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
+                    >
+                      <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[11px]">⬡</span>
+                      {rc.name}
+                      <span className="ml-2 text-[var(--color-text-3)]">{rc.description}</span>
+                    </Command.Item>
+                  ))}
+                </Command.Group>
+              )}
             </Command.List>
 
             {/* footer hints */}

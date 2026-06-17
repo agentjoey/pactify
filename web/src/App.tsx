@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { ProjectMeta, State, PactEvent } from "./lib/types";
-import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus } from "./lib/api";
+import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
+import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes } from "./lib/api";
 import { type View } from "./components/TopBar";
 import { Toolbar } from "./components/shell/Toolbar";
 import { RosterDock } from "./components/shell/RosterDock";
@@ -14,6 +14,8 @@ import { LiveOrchestrate } from "./components/LiveOrchestrate";
 import { RightRail } from "./components/RightRail";
 import { CommandK } from "./components/CommandK";
 import { NoProjects } from "./components/NoProjects";
+import { Recipes } from "./components/Recipes";
+import { Modal } from "./components/ui/Modal";
 import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
@@ -59,6 +61,8 @@ export default function App() {
   const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
+  const [recipes, setRecipes] = useState<RecipeItem[]>([]);
+  const [recipeOpen, setRecipeOpen] = useState(false);
   // Live pulse (M3.3b C4): task ids whose status changed on the latest applied
   // LIVE snapshot. Canvas/Board apply a transient `pulse` class; the set is
   // cleared after the keyframe duration so the glow plays exactly once. Replay
@@ -101,6 +105,11 @@ export default function App() {
       setSeat(r?.seat ?? "");
     }).catch(() => { setAuthor(false); setSeat(""); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch recipes once on mount; feed into the ⌘K Templates group.
+  useEffect(() => {
+    getRecipes().then(setRecipes).catch(() => setRecipes([]));
+  }, []);
 
   // Global view shortcuts: 1/2/3 switch kanban/canvas/ops. Ignored while typing
   // (input/textarea/select or contentEditable) or while a modal/dialog is open.
@@ -331,7 +340,14 @@ export default function App() {
         author={author}
         replaying={false}
         notify={(text) => pushToast(text, "error")}
+        recipes={recipes}
+        onRunRecipe={() => setRecipeOpen(true)}
       />
+      {recipeOpen && (
+        <Modal testId="recipes-modal" title="Generate from template" width="720px" onClose={() => setRecipeOpen(false)}>
+          <Recipes />
+        </Modal>
+      )}
     </div>
   );
 }

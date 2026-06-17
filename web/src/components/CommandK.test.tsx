@@ -164,6 +164,21 @@ describe("CommandK — command palette", () => {
     fireEvent.keyDown(palette, { key: "Escape" });
     await waitFor(() => expect(screen.queryByTestId("cmdk")).toBeNull());
   });
+
+  it("lists recipes as commands and fires onRunRecipe on select", async () => {
+    const onRunRecipe = vi.fn();
+    setup({
+      recipes: [{ name: "review-harden", description: "implement + harden" }],
+      onRunRecipe,
+    });
+    pressCmdK();
+    await screen.findByTestId("cmdk");
+    const input = screen.getByPlaceholderText(/Jump to a task/i);
+    fireEvent.change(input, { target: { value: "harden" } });
+    await waitFor(() => expect(screen.getByText("review-harden")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("review-harden"));
+    expect(onRunRecipe).toHaveBeenCalledWith("review-harden");
+  });
 });
 
 describe("CommandK — cheat sheet", () => {

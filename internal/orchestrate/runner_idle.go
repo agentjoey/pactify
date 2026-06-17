@@ -101,7 +101,7 @@ func osExecIdle(idle time.Duration) execFn {
 	if idle <= 0 {
 		return osExec
 	}
-	return func(ctx context.Context, name string, args []string, dir string, env []string) error {
+	return func(ctx context.Context, name string, args []string, dir string, env []string, capture io.Writer) error {
 		cmd := exec.CommandContext(ctx, name, args...)
 		cmd.Dir = dir
 		cmd.Env = append(os.Environ(), env...)
@@ -111,7 +111,13 @@ func osExecIdle(idle time.Duration) execFn {
 		// which would block cmd.Wait until the child exits on its own).
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		tr := &idleTracker{last: time.Now()}
-		cmd.Stdout = io.MultiWriter(os.Stdout, tr)
+		// stdout tees to the parent, the idle tracker, and (when set) the token
+		// capture sink.
+		stdoutW := []io.Writer{os.Stdout, tr}
+		if capture != nil {
+			stdoutW = append(stdoutW, capture)
+		}
+		cmd.Stdout = io.MultiWriter(stdoutW...)
 		cmd.Stderr = io.MultiWriter(os.Stderr, tr)
 
 		if err := cmd.Start(); err != nil {

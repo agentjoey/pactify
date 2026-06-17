@@ -129,6 +129,6 @@ v0.4.0 发布与 CI run 均报：`actions/checkout@v4`、`actions/setup-node@v4`
 - **serve 路由命名要避让既有 `{kind}` 通配（Go 1.22 ServeMux）** ✅ 已修（C 改 `/api/manifests`）：`DELETE /api/agents/manifests/{kind}` 与既有 `DELETE /api/agents/{kind}/register` 在同段歧义 → 启动 panic。新 endpoint 别塞进已有 `{kind}` 通配的命名空间。
 - **D2 进度感知巡检现场验证 ✓**：kimi 停滞 5min（无输出+无落盘）被 patrol 杀+重试，最终收敛。
 
-## token 捕获未接进 orchestrate runner（D1 遗留「最后一块」）
-**现状**：读取侧已全接（`internal/serve/stats.go` → `tokens.Load/Get` → RightRail `⛁` + office Cost 镜头 + `GET /api/projects/{id}/stats`），`tokens.Parse(kind,output)` 也已实现（claude usage / opencode jsonl）。**缺写入侧**：orchestrate runner 没有用 `--output-format json` 捕获 agent 输出、`Parse` 它、`tokens.Add` 写 `.pact/orchestrate/tokens.json`——所以 store 空、dashboard token 显示不出。
-**做法**：runner 对支持 json 输出的 kind（claude/opencode/gemini）加 `--output-format json` 旁路捕获 → `tokens.Parse` → `tokens.Add(taskID, n)`；注意不破坏现有 streaming/session-title 逻辑（参考 opencode `--format json` 会变输出形态的坑）。
+## ~~token 捕获未接进 orchestrate runner（D1 遗留「最后一块」）~~ ✅ DONE 2026-06-17
+**已完成**：写入侧接通——`CmdRunner.Run` 经 execFn 的 `capture io.Writer` 旁路（`tailWriter`，1 MiB tail 上限，不改 streaming/idle/session-title）siphon agent stdout → `tokens.Parse(kind,output)` → `recordTokens` 写 `.pact/orchestrate/tokens.json`（keyed by task；空 task 或无 usage 静默 no-op；失败 run 仍记已产生用量）。无锁安全：串行循环一次一棒，并行特性各自独立 worktree（不同 RepoDir）。读取侧（stats.go → RightRail `⛁` + Cost 镜头）原已接好，闭环打通。
+**已知边界（可接受）**：① 未捕获的现有 kind 输出若不带 usage JSON 则无数据（best-effort 遥测）；② claude 单体 pretty-JSON 若 >1 MiB 会被 tail 截断导致整体解析失败（极少见，token 暂缺一棒，不影响 run）；③ 并行 worktree 的 tokens.json 随 worktree 清理而丢——并行成本视图待后续统一回主 repo。

@@ -4,6 +4,7 @@ import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegist
 import { type View } from "./components/TopBar";
 import { Toolbar } from "./components/shell/Toolbar";
 import { RosterDock } from "./components/shell/RosterDock";
+import { PlanDock } from "./components/shell/PlanDock";
 import { SettingsModal } from "./components/shell/SettingsModal";
 import { AddProjectWizard } from "./components/shell/AddProjectWizard";
 import { Agents } from "./components/Agents";
@@ -288,6 +289,9 @@ export default function App() {
       <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={running} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
       <div className="relative flex flex-1 overflow-hidden">
         <RosterDock seats={shownState.agents} onSeatSettings={() => setSettingsOpen(true)} />
+        <div className="pointer-events-none absolute left-3 top-[210px] z-20 w-[200px]">
+          <PlanDock project={current} features={shownState.features.map((f) => f.id)} />
+        </div>
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Agents author={author} onChanged={refreshProjects} />
           {projectsLoaded && projects.length === 0

@@ -27,7 +27,7 @@ func TestCanPrune(t *testing.T) {
 		kind string
 		want bool
 	}{
-		{"gemini-cli", false},
+		{"gemini-cli", true}, // list + --delete-session by index → bulk prune
 		{"opencode", false},
 		{"nope", false},
 	}
@@ -138,21 +138,34 @@ func TestList(t *testing.T) {
 }
 
 func TestPrune(t *testing.T) {
-	t.Run("gemini-cli returns skipped (Prune empty)", func(t *testing.T) {
-		fake := &fakeRun{}
+	t.Run("gemini-cli index-prunes from highest index down", func(t *testing.T) {
+		list := "Available sessions for this project (2):\n" +
+			"  1. foo (4 days ago) [uuid1]\n" +
+			"  2. bar (3 days ago) [uuid2]\n"
+		fake := &fakeRun{out: list}
 		m := Manager{Run: fake.Run}
 		out, skipped, err := m.Prune("gemini-cli")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if !skipped {
-			t.Error("expected skipped=true")
+		if skipped {
+			t.Error("expected skipped=false (gemini has index-delete)")
 		}
-		if out != "" {
-			t.Errorf("expected empty output, got %q", out)
+		// 1 list + 2 deletes; deletes go HIGH→LOW so indices don't shift mid-prune.
+		if len(fake.calls) != 3 {
+			t.Fatalf("expected 3 Run calls, got %d: %v", len(fake.calls), fake.calls)
 		}
-		if len(fake.calls) != 0 {
-			t.Errorf("expected no Run calls, got %d", len(fake.calls))
+		if fake.calls[0].name != "gemini" || !equalSlice(fake.calls[0].args, []string{"--list-sessions"}) {
+			t.Errorf("call 0 should list: %q %v", fake.calls[0].name, fake.calls[0].args)
+		}
+		if !equalSlice(fake.calls[1].args, []string{"--delete-session", "2"}) {
+			t.Errorf("delete should start at highest index 2, got %v", fake.calls[1].args)
+		}
+		if !equalSlice(fake.calls[2].args, []string{"--delete-session", "1"}) {
+			t.Errorf("then index 1, got %v", fake.calls[2].args)
+		}
+		if !strings.Contains(out, "pruned 2") {
+			t.Errorf("output = %q, want 'pruned 2'", out)
 		}
 	})
 

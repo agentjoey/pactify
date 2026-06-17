@@ -154,3 +154,9 @@ v0.4.0 发布与 CI run 均报：`actions/checkout@v4`、`actions/setup-node@v4`
 
 ## SP2/SP3 新 UI 功能 + 流程再调一版（下个 sprint，2026-06-17 用户）
 SP2/SP3 的 dashboard 驱动 UI（Plan Apply / Live Run·Resume·diff·Ship / Setup apply / Ops prune）已 ship 并上线常驻 serve，但需**在实际任务中实测**后，对**整体功能与流程**再调一版（**不是页面风格，是功能/流程**）。作为下一个 sprint。待用户实测反馈后细化具体调整点（哪些流程别扭/缺步骤/交互不顺）再开 spec。
+
+## session 清理：gemini index-prune 已接 ✅ / kimi 文件级限制（2026-06-17 实测）
+- **gemini-cli** ✅：实测 `--list-sessions`（`<idx>. <title> (...) [uuid]`）+ `--delete-session <index>`。接进 `internal/sessions`：`Prune(gemini-cli)` = list → 从**高 index 到低** delete（避免删除时 index 漂移），`CanPrune(gemini-cli)=true`，手动 `sessions prune gemini-cli` 可用。**但 gemini 无 `pact:<seat>` title 标记** → accept 后**自动精确** cleanup（CleanupByTitle）不适用，仍 opencode-only。
+- **kimi** ⚠️ 实测**无 headless delete 命令**（只 `--session` resume + `export`）。session 是文件：`~/.kimi/sessions/` + `~/.kimi/kimi.json` 的 work_dirs map（path→last_session_id）。文件级删除跨 kimi 版本脆弱、且 kimi session 非常驻 daemon（堆积影响小）→ **不自动清理**（避免脆弱代码）。手动：删 `~/.kimi/sessions/<id>` + 清 kimi.json work_dirs 对应项。
+- **codex** 仍未接（archive-only，待实测）。
+- **自动 accept-后-cleanup 能力矩阵**：opencode ✅（title+id）；gemini/kimi/codex ❌（无 title 标记或无 delete CLI）。手动 prune：opencode + gemini ✅，kimi/codex 文件级/手动。

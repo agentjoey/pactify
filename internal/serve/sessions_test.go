@@ -56,13 +56,14 @@ func TestHandleSessionsList(t *testing.T) {
 func TestHandleSessionsPrune_UnsupportedIsGracefulNoop(t *testing.T) {
 	orig := sessionRunFn
 	t.Cleanup(func() { sessionRunFn = orig })
-	// No kind has a verified prune command yet → prune is a skipped no-op, never
-	// an error or a process spawn.
+	// claude-code has no session spec → prune is a skipped no-op, never an error or
+	// a process spawn. (gemini-cli now supports index-prune, so it is no longer the
+	// "unsupported" example.)
 	sessionRunFn = func(_ string, _ ...string) (string, error) { t.Fatal("runner should not be called"); return "", nil }
 
 	s := &Server{seat: "test"}
-	r := httptest.NewRequest("POST", "/api/agents/gemini-cli/sessions/prune", nil)
-	r.SetPathValue("kind", "gemini-cli")
+	r := httptest.NewRequest("POST", "/api/agents/claude-code/sessions/prune", nil)
+	r.SetPathValue("kind", "claude-code")
 	w := httptest.NewRecorder()
 	s.handleSessionsPrune(w, r)
 	if w.Code != http.StatusOK {

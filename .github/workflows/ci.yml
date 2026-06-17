@@ -20,7 +20,7 @@ jobs:
           go-version-file: go.mod
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: go mod tidy check
@@ -37,6 +37,11 @@ jobs:
         run: bats tests/
       - name: web tests
         run: cd web && npm ci && npm test
+      - name: embedded dist in sync with web source
+        run: |
+          cd web && npm run build && cd ..
+          git diff --exit-code -- internal/serve/dist || {
+            echo "::error::internal/serve/dist is stale — run 'cd web && npm run build' and commit it"; exit 1; }
 
   e2e:
     runs-on: ubuntu-latest
@@ -45,7 +50,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: install deps
@@ -69,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: site/package-lock.json
       - name: build site

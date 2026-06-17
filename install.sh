@@ -67,6 +67,14 @@ main() {
   mkdir -p "$bindir"
   install -m 0755 "$tmp/pactify" "$bindir/pactify"
 
+  # macOS: goreleaser builds the darwin binary on a Linux runner, so it ships with
+  # an invalid ad-hoc signature that Gatekeeper SIGKILLs on first run (arm64). Re-sign
+  # ad-hoc and strip any quarantine flag so it runs. No-op / best-effort on linux.
+  if [ "$os" = "darwin" ]; then
+    codesign -s - --force "$bindir/pactify" >/dev/null 2>&1 || true
+    xattr -c "$bindir/pactify" >/dev/null 2>&1 || true
+  fi
+
   echo "✅ pactify installed to $bindir/pactify"
   case ":$PATH:" in *":$bindir:"*) ;; *) echo "⚠️  $bindir is not on your PATH — add it, e.g.: export PATH=\"$bindir:\$PATH\"" ;; esac
   echo "Next: run \`pactify setup\` in your repo to get started."

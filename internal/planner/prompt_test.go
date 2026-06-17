@@ -153,3 +153,19 @@ func TestPromptDeterministic(t *testing.T) {
 		t.Error("BuildPrompt is not deterministic for identical input")
 	}
 }
+
+func TestPromptStatesNamingConvention(t *testing.T) {
+	out := planner.BuildPrompt(samplePromptInput())
+	for _, want := range []string{"kebab-case", "lowercase"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("prompt missing naming guidance %q", want)
+		}
+	}
+}
+
+func TestPromptNamingExampleIsSlug(t *testing.T) {
+	out := planner.BuildPrompt(samplePromptInput())
+	if !strings.Contains(out, "add-2fa-login") {
+		t.Error("prompt should show a concrete kebab-case feature id example")
+	}
+}

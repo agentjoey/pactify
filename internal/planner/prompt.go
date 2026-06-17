@@ -82,6 +82,12 @@ func BuildPrompt(in PromptInput) string {
 	b.WriteString("  e.g. `verify: go test ./internal/<pkg>/` or `verify: npm run -C web test`.\n")
 	b.WriteString("  Every task MUST have a `verify:` line.\n\n")
 
+	b.WriteString("## Naming rules (REQUIRED — ids are validated and rejected if violated)\n")
+	b.WriteString("- feature id: kebab-case, lowercase, a short verb phrase describing the goal\n")
+	b.WriteString("  (e.g. \"add-2fa-login\"), max 40 chars, matching ^[a-z0-9][a-z0-9-]*$.\n")
+	b.WriteString("- task id: kebab-case slug, ideally <feature>-<step> (e.g. \"add-2fa-otp-gen\"),\n")
+	b.WriteString("  matching ^[a-z0-9][a-z0-9-]*$, unique within the feature.\n\n")
+
 	b.WriteString("## Plan manifest\n")
 	fmt.Fprintf(&b, "Write the manifest to `.pact/plan-%s.json` (i.e. `.pact/plan-%s.json`).\n", in.Feature, in.Feature)
 	b.WriteString("It MUST match this schema (Plan / PlanTask). Example:\n")

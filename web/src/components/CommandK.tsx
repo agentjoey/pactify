@@ -373,7 +373,6 @@ const SHORTCUTS: ReadonlyArray<{ keys: string[]; what: string }> = [
   { keys: ["Shift", "drag"], what: "Marquee select (canvas)" },
   { keys: ["Del"], what: "Delete selected draft (canvas)" },
   { keys: ["Esc"], what: "Close panel / menu / cancel draft" },
-  { keys: ["←", "→"], what: "Step replay (one event)" },
   { keys: ["?"], what: "This cheat sheet" },
 ];
 

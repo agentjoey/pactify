@@ -217,7 +217,7 @@ be registered first (pactify agent register <kind>).`,
 	config.Flags().BoolVar(&cfgRestricted, "restricted", false, "scoped permissions (allowed-tools) instead of blanket auto-approve")
 	config.Flags().BoolVar(&cfgClear, "clear", false, "clear all overrides for this kind")
 
-	a.AddCommand(add, docs, scan, register, unregister, config)
+	a.AddCommand(add, docs, scan, register, unregister, config, newAgentManifestCmd())
 	return a
 }
 

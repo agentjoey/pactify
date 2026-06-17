@@ -326,12 +326,9 @@ func (opts Options) mergeFromWorktree(ctx context.Context, worktreeDir, feature 
 	if err := pact.At(worktreeDir).As(opts.Orchestrator).Merge(feature); err != nil {
 		return fmt.Errorf("orchestrate: merge %s from worktree: %w", feature, err)
 	}
-	// pact.Merge appends the merge event to the working-tree log but does not
-	// commit it (the serial driver just reads it back from the same tree). In
-	// parallel we discard this worktree right after, so persist the merge event to
-	// base now — otherwise the feature's code merges but it never reads as shipped.
-	if err := gitx.CommitAll(worktreeDir, "pact "+feature+": merge event"); err != nil {
-		return fmt.Errorf("orchestrate: commit merge event %s: %w", feature, err)
-	}
+	// pact.Merge now commits the merge event + shipped STATE itself, so this
+	// worktree's HEAD already carries the shipped state before we discard it.
+	// (The old explicit CommitAll here is gone — it would now be a redundant second
+	// commit and fail with nothing-to-commit.)
 	return nil
 }

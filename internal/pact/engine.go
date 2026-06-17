@@ -263,10 +263,19 @@ func (p *Project) Merge(feature string) error {
 			return err
 		}
 	}
-	return p.appendAndRender(event.Event{
+	if err := p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("merge"), EventType: "merge",
 		Feature: feature, Payload: map[string]any{},
-	})
+	}); err != nil {
+		return err
+	}
+	// Commit the merge event + re-rendered STATE.yml (now shipped) so HEAD matches
+	// the working tree. appendAndRender only writes these to the tree; without this
+	// final commit the merge commit captured the pre-merge STATE and HEAD lagged.
+	if ch, _ := gitx.HasChanges(p.dir); ch {
+		return gitx.CommitAll(p.dir, "pact "+feature+": merge (state shipped)")
+	}
+	return nil
 }
 
 func initBaseBranch(evs []event.Event) string {

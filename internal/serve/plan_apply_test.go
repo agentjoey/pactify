@@ -20,10 +20,10 @@ func seedProjectWithPlan(t *testing.T) string {
 	initLine := `{"event_id":"1","ts":"2026-01-01T00:00:00Z","agent_id":"claude","role":"orchestrator","event_type":"init","task_id":"","feature":"","payload":{"project":"testp","protocol_version":1,"seats":[{"id":"claude","roles":["orchestrator","reviewer"],"entry":"CLAUDE.md"},{"id":"alice","roles":["worker"],"entry":"A.md"},{"id":"bob","roles":["worker"],"entry":"B.md"}],"base_branch":"main"}}` + "\n"
 	os.WriteFile(filepath.Join(pactDir, "log.jsonl"), []byte(initLine), 0o644)
 
-	manifest := `{"feature":"F","branch":"feat/x","tasks":[{"id":"T1","owner":"alice","reviewer":"bob","spec":".pact/tasks/T1.md","verify":"go test"},{"id":"T2","owner":"bob","reviewer":"alice","spec":".pact/tasks/T2.md","verify":"go test","deps":["T1"]}]}`
-	os.WriteFile(filepath.Join(pactDir, "plan-F.json"), []byte(manifest), 0o644)
-	os.WriteFile(filepath.Join(pactDir, "tasks", "T1.md"), []byte("# T1"), 0o644)
-	os.WriteFile(filepath.Join(pactDir, "tasks", "T2.md"), []byte("# T2"), 0o644)
+	manifest := `{"feature":"demo-feature","branch":"feat-demo","tasks":[{"id":"t1","owner":"alice","reviewer":"bob","spec":".pact/tasks/t1.md","verify":"go test"},{"id":"t2","owner":"bob","reviewer":"alice","spec":".pact/tasks/t2.md","verify":"go test","deps":["t1"]}]}`
+	os.WriteFile(filepath.Join(pactDir, "plan-demo-feature.json"), []byte(manifest), 0o644)
+	os.WriteFile(filepath.Join(pactDir, "tasks", "t1.md"), []byte("# t1"), 0o644)
+	os.WriteFile(filepath.Join(pactDir, "tasks", "t2.md"), []byte("# t2"), 0o644)
 
 	return root
 }
@@ -35,7 +35,7 @@ func TestHandlePlanApply(t *testing.T) {
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 
-	resp, err := http.Post(ts.URL+"/api/projects/p/plan/F/apply", "application/json", nil)
+	resp, err := http.Post(ts.URL+"/api/projects/p/plan/demo-feature/apply", "application/json", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestHandlePlanApply(t *testing.T) {
 	srv2 := New([]registry.Project{{Name: "p", Path: root}})
 	ts2 := httptest.NewServer(srv2.Handler())
 	defer ts2.Close()
-	r2, err := http.Post(ts2.URL+"/api/projects/p/plan/F/apply", "application/json", nil)
+	r2, err := http.Post(ts2.URL+"/api/projects/p/plan/demo-feature/apply", "application/json", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

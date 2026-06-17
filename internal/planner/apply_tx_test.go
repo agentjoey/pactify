@@ -26,7 +26,7 @@ func seedPlan(t *testing.T, n int) (dir string, plan planner.Plan, roster []stri
 	os.MkdirAll(filepath.Join(dir, ".pact", "tasks"), 0o755)
 	tasks := make([]planner.PlanTask, n)
 	for i := 0; i < n; i++ {
-		id := "T" + string(rune('1'+i))
+		id := "t" + string(rune('1'+i))
 		specRel := ".pact/tasks/" + id + ".md"
 		os.WriteFile(filepath.Join(dir, specRel), []byte("# "+id), 0o644)
 		owner, reviewer := "alice", "bob"
@@ -35,14 +35,14 @@ func seedPlan(t *testing.T, n int) (dir string, plan planner.Plan, roster []stri
 		}
 		var deps []string
 		if i > 0 {
-			deps = []string{"T" + string(rune('1'+i-1))}
+			deps = []string{"t" + string(rune('1'+i-1))}
 		}
 		tasks[i] = planner.PlanTask{
 			ID: id, Owner: owner, Reviewer: reviewer,
 			Spec: specRel, Verify: "go test", Deps: deps,
 		}
 	}
-	plan = planner.Plan{Feature: "F", Branch: "feat/x", Tasks: tasks}
+	plan = planner.Plan{Feature: "demo-feature", Branch: "feat-demo", Tasks: tasks}
 	roster = []string{"alice", "bob", "claude"}
 	return
 }

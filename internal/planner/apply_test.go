@@ -45,15 +45,15 @@ func TestApplyValidPlan(t *testing.T) {
 	}
 
 	os.MkdirAll(filepath.Join(dir, ".pact", "tasks"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "T1.md"), []byte("# T1"), 0o644)
-	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "T2.md"), []byte("# T2"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "t1.md"), []byte("# t1"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "t2.md"), []byte("# t2"), 0o644)
 
 	plan := planner.Plan{
-		Feature: "F",
-		Branch:  "feat/x",
+		Feature: "demo-feature",
+		Branch:  "feat-demo",
 		Tasks: []planner.PlanTask{
-			{ID: "T1", Owner: "alice", Reviewer: "bob", Spec: ".pact/tasks/T1.md", Verify: "go test"},
-			{ID: "T2", Owner: "bob", Reviewer: "alice", Spec: ".pact/tasks/T2.md", Verify: "go test", Deps: []string{"T1"}},
+			{ID: "t1", Owner: "alice", Reviewer: "bob", Spec: ".pact/tasks/t1.md", Verify: "go test"},
+			{ID: "t2", Owner: "bob", Reviewer: "alice", Spec: ".pact/tasks/t2.md", Verify: "go test", Deps: []string{"t1"}},
 		},
 	}
 	roster := []string{"alice", "bob", "claude"}
@@ -73,7 +73,7 @@ func TestApplyValidPlan(t *testing.T) {
 
 	var feat *struct{ ID, Branch, Status string }
 	for i := range st.Features {
-		if st.Features[i].ID == "F" {
+		if st.Features[i].ID == "demo-feature" {
 			feat = &struct{ ID, Branch, Status string }{
 				st.Features[i].ID, st.Features[i].Branch, st.Features[i].Status,
 			}
@@ -81,9 +81,9 @@ func TestApplyValidPlan(t *testing.T) {
 		}
 	}
 	if feat == nil {
-		t.Fatal("feature F not found in state")
+		t.Fatal("feature demo-feature not found in state")
 	}
-	if feat.Branch != "feat/x" {
+	if feat.Branch != "feat-demo" {
 		t.Fatalf("branch = %q", feat.Branch)
 	}
 
@@ -93,25 +93,25 @@ func TestApplyValidPlan(t *testing.T) {
 		for _, tk := range f.Tasks {
 			found[tk.ID] = true
 			switch tk.ID {
-			case "T1":
-				if tk.Owner != "alice" || tk.Reviewer != "bob" || tk.Spec != ".pact/tasks/T1.md" || tk.Status != "assigned" {
-					t.Fatalf("T1: owner=%s reviewer=%s spec=%s status=%s", tk.Owner, tk.Reviewer, tk.Spec, tk.Status)
+			case "t1":
+				if tk.Owner != "alice" || tk.Reviewer != "bob" || tk.Spec != ".pact/tasks/t1.md" || tk.Status != "assigned" {
+					t.Fatalf("t1: owner=%s reviewer=%s spec=%s status=%s", tk.Owner, tk.Reviewer, tk.Spec, tk.Status)
 				}
 				if len(tk.Deps) != 0 {
-					t.Fatalf("T1 deps = %v, want empty", tk.Deps)
+					t.Fatalf("t1 deps = %v, want empty", tk.Deps)
 				}
-			case "T2":
-				if tk.Owner != "bob" || tk.Reviewer != "alice" || tk.Spec != ".pact/tasks/T2.md" || tk.Status != "assigned" {
-					t.Fatalf("T2: owner=%s reviewer=%s spec=%s status=%s", tk.Owner, tk.Reviewer, tk.Spec, tk.Status)
+			case "t2":
+				if tk.Owner != "bob" || tk.Reviewer != "alice" || tk.Spec != ".pact/tasks/t2.md" || tk.Status != "assigned" {
+					t.Fatalf("t2: owner=%s reviewer=%s spec=%s status=%s", tk.Owner, tk.Reviewer, tk.Spec, tk.Status)
 				}
-				if len(tk.Deps) != 1 || tk.Deps[0] != "T1" {
-					t.Fatalf("T2 deps = %v, want [T1]", tk.Deps)
+				if len(tk.Deps) != 1 || tk.Deps[0] != "t1" {
+					t.Fatalf("t2 deps = %v, want [t1]", tk.Deps)
 				}
 			}
 		}
 	}
-	if !found["T1"] || !found["T2"] {
-		t.Fatalf("tasks T1/T2 not found in state: %v", found)
+	if !found["t1"] || !found["t2"] {
+		t.Fatalf("tasks t1/t2 not found in state: %v", found)
 	}
 }
 
@@ -130,10 +130,10 @@ func TestApplySpecMissing(t *testing.T) {
 
 	// Do NOT create the spec file
 	plan := planner.Plan{
-		Feature: "F",
-		Branch:  "feat/x",
+		Feature: "demo-feature",
+		Branch:  "feat-demo",
 		Tasks: []planner.PlanTask{
-			{ID: "T1", Owner: "alice", Reviewer: "claude", Spec: ".pact/tasks/T1.md", Verify: "go test"},
+			{ID: "t1", Owner: "alice", Reviewer: "claude", Spec: ".pact/tasks/t1.md", Verify: "go test"},
 		},
 	}
 	roster := []string{"alice", "claude"}
@@ -168,14 +168,14 @@ func TestApplyInvalidPlan(t *testing.T) {
 	}
 
 	os.MkdirAll(filepath.Join(dir, ".pact", "tasks"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "T1.md"), []byte("# T1"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "t1.md"), []byte("# t1"), 0o644)
 
 	// owner == reviewer: invalid
 	plan := planner.Plan{
-		Feature: "F",
-		Branch:  "feat/x",
+		Feature: "demo-feature",
+		Branch:  "feat-demo",
 		Tasks: []planner.PlanTask{
-			{ID: "T1", Owner: "alice", Reviewer: "alice", Spec: ".pact/tasks/T1.md", Verify: "go test"},
+			{ID: "t1", Owner: "alice", Reviewer: "alice", Spec: ".pact/tasks/t1.md", Verify: "go test"},
 		},
 	}
 	roster := []string{"alice", "claude"}

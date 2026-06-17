@@ -8,24 +8,24 @@ import (
 )
 
 var validJSON = []byte(`{
-  "feature": "F",
-  "branch": "feat/x",
+  "feature": "demo-feature",
+  "branch": "feat-demo",
   "tasks": [
     {
-      "id": "T1",
+      "id": "t1",
       "owner": "alice",
       "reviewer": "bob",
-      "spec": ".pact/tasks/T1.md",
+      "spec": ".pact/tasks/t1.md",
       "verify": "go test ./...",
       "deps": []
     },
     {
-      "id": "T2",
+      "id": "t2",
       "owner": "bob",
       "reviewer": "alice",
-      "spec": ".pact/tasks/T2.md",
+      "spec": ".pact/tasks/t2.md",
       "verify": "go test ./...",
-      "deps": ["T1"]
+      "deps": ["t1"]
     }
   ]
 }`)
@@ -57,19 +57,19 @@ func TestParseRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Feature != "F" {
+	if p.Feature != "demo-feature" {
 		t.Fatalf("Feature = %q", p.Feature)
 	}
-	if p.Branch != "feat/x" {
+	if p.Branch != "feat-demo" {
 		t.Fatalf("Branch = %q", p.Branch)
 	}
 	if len(p.Tasks) != 2 {
 		t.Fatalf("len Tasks = %d", len(p.Tasks))
 	}
-	if p.Tasks[0].ID != "T1" {
+	if p.Tasks[0].ID != "t1" {
 		t.Fatalf("T0 ID = %q", p.Tasks[0].ID)
 	}
-	if len(p.Tasks[1].Deps) != 1 || p.Tasks[1].Deps[0] != "T1" {
+	if len(p.Tasks[1].Deps) != 1 || p.Tasks[1].Deps[0] != "t1" {
 		t.Fatalf("T1 Deps = %v", p.Tasks[1].Deps)
 	}
 }
@@ -100,8 +100,8 @@ func TestValidateValidPlan(t *testing.T) {
 }
 
 func TestValidateEmptyFeature(t *testing.T) {
-	p := planner.Plan{Branch: "feat/x", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v"},
+	p := planner.Plan{Branch: "feat-x", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "feature") {
@@ -110,8 +110,8 @@ func TestValidateEmptyFeature(t *testing.T) {
 }
 
 func TestValidateEmptyBranch(t *testing.T) {
-	p := planner.Plan{Feature: "F", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v"},
+	p := planner.Plan{Feature: "feat-x", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "branch") {
@@ -120,7 +120,7 @@ func TestValidateEmptyBranch(t *testing.T) {
 }
 
 func TestValidateMissingTaskID(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
 		{Owner: "a", Reviewer: "b", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
@@ -130,8 +130,8 @@ func TestValidateMissingTaskID(t *testing.T) {
 }
 
 func TestValidateMissingOwner(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Reviewer: "b", Spec: "s", Verify: "v"},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Reviewer: "b", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "owner") {
@@ -140,8 +140,8 @@ func TestValidateMissingOwner(t *testing.T) {
 }
 
 func TestValidateMissingReviewer(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Spec: "s", Verify: "v"},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "reviewer") {
@@ -150,8 +150,8 @@ func TestValidateMissingReviewer(t *testing.T) {
 }
 
 func TestValidateMissingSpec(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "b", Verify: "v"},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "spec") {
@@ -160,8 +160,8 @@ func TestValidateMissingSpec(t *testing.T) {
 }
 
 func TestValidateMissingVerify(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "b", Spec: "s"},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "verify") {
@@ -170,8 +170,8 @@ func TestValidateMissingVerify(t *testing.T) {
 }
 
 func TestValidateUnknownOwner(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "nobody", Reviewer: "b", Spec: "s", Verify: "v"},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "nobody", Reviewer: "b", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "nobody") {
@@ -180,8 +180,8 @@ func TestValidateUnknownOwner(t *testing.T) {
 }
 
 func TestValidateUnknownReviewer(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "nobody", Spec: "s", Verify: "v"},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "nobody", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "nobody") {
@@ -190,8 +190,8 @@ func TestValidateUnknownReviewer(t *testing.T) {
 }
 
 func TestValidateOwnerEqualsReviewer(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "a", Spec: "s", Verify: "v"},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "a", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "owner") || !strings.Contains(err.Error(), "reviewer") {
@@ -200,18 +200,18 @@ func TestValidateOwnerEqualsReviewer(t *testing.T) {
 }
 
 func TestValidateDepNotExist(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v", Deps: []string{"T99"}},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v", Deps: []string{"t99"}},
 	}}
 	err := p.Validate([]string{"a", "b"})
-	if err == nil || !strings.Contains(err.Error(), "T99") || !strings.Contains(err.Error(), "dep") {
+	if err == nil || !strings.Contains(err.Error(), "t99") || !strings.Contains(err.Error(), "dep") {
 		t.Fatalf("want unknown dep error, got %v", err)
 	}
 }
 
 func TestValidateDepSelfReferencing(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v", Deps: []string{"T1"}},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v", Deps: []string{"t1"}},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "self") {
@@ -220,9 +220,9 @@ func TestValidateDepSelfReferencing(t *testing.T) {
 }
 
 func TestValidateDepCycle(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v", Deps: []string{"T2"}},
-		{ID: "T2", Owner: "b", Reviewer: "a", Spec: "s", Verify: "v", Deps: []string{"T1"}},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v", Deps: []string{"t2"}},
+		{ID: "t2", Owner: "b", Reviewer: "a", Spec: "s", Verify: "v", Deps: []string{"t1"}},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "cycle") {
@@ -231,9 +231,9 @@ func TestValidateDepCycle(t *testing.T) {
 }
 
 func TestValidateDuplicateTaskID(t *testing.T) {
-	p := planner.Plan{Feature: "F", Branch: "b", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v"},
-		{ID: "T1", Owner: "b", Reviewer: "a", Spec: "s", Verify: "v"},
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v"},
+		{ID: "t1", Owner: "b", Reviewer: "a", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil || !strings.Contains(err.Error(), "duplicate") {
@@ -243,7 +243,7 @@ func TestValidateDuplicateTaskID(t *testing.T) {
 
 func TestValidateMultipleErrorsAggregated(t *testing.T) {
 	p := planner.Plan{Feature: "", Branch: "", Tasks: []planner.PlanTask{
-		{ID: "T1", Owner: "a", Reviewer: "a", Spec: "s", Verify: "v"},
+		{ID: "t1", Owner: "a", Reviewer: "a", Spec: "s", Verify: "v"},
 	}}
 	err := p.Validate([]string{"a", "b"})
 	if err == nil {
@@ -252,5 +252,45 @@ func TestValidateMultipleErrorsAggregated(t *testing.T) {
 	s := err.Error()
 	if strings.Count(s, "\n") < 2 {
 		t.Fatalf("want at least 3 aggregated errors, got: %s", s)
+	}
+}
+
+func TestValidateRejectsNonSlugFeature(t *testing.T) {
+	js := []byte(`{"feature":"Add_2FA","branch":"feat-2fa","tasks":[
+		{"id":"add-2fa-otp","owner":"alice","reviewer":"bob","spec":".pact/tasks/x.md","verify":"go test ./..."}]}`)
+	p, err := planner.Parse(js)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if err := p.Validate([]string{"alice", "bob"}); err == nil {
+		t.Fatal("non-slug feature id must be rejected")
+	}
+}
+
+func TestValidateRejectsNonSlugTaskID(t *testing.T) {
+	js := []byte(`{"feature":"add-2fa","branch":"feat-2fa","tasks":[
+		{"id":"OTP_Gen","owner":"alice","reviewer":"bob","spec":".pact/tasks/x.md","verify":"go test ./..."}]}`)
+	p, _ := planner.Parse(js)
+	if err := p.Validate([]string{"alice", "bob"}); err == nil {
+		t.Fatal("non-slug task id must be rejected")
+	}
+}
+
+func TestValidateRejectsOverlongFeature(t *testing.T) {
+	long := "a-" + strings.Repeat("x", 45) // > 40 chars
+	js := []byte(`{"feature":"` + long + `","branch":"feat-x","tasks":[
+		{"id":"t1","owner":"alice","reviewer":"bob","spec":".pact/tasks/x.md","verify":"go test ./..."}]}`)
+	p, _ := planner.Parse(js)
+	if err := p.Validate([]string{"alice", "bob"}); err == nil {
+		t.Fatal("feature id over 40 chars must be rejected")
+	}
+}
+
+func TestValidateAcceptsSlugNames(t *testing.T) {
+	js := []byte(`{"feature":"add-2fa-login","branch":"feat-2fa","tasks":[
+		{"id":"add-2fa-otp-gen","owner":"alice","reviewer":"bob","spec":".pact/tasks/x.md","verify":"go test ./..."}]}`)
+	p, _ := planner.Parse(js)
+	if err := p.Validate([]string{"alice", "bob"}); err != nil {
+		t.Fatalf("valid slug plan must pass: %v", err)
 	}
 }

@@ -4,8 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+// slugRe matches kebab-case ids: lowercase alphanumerics and dashes, starting
+// with an alphanumeric. Used for both feature ids and task ids.
+var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 
 type PlanTask struct {
 	ID       string   `json:"id"`
@@ -39,6 +44,12 @@ func (p Plan) Validate(roster []string) error {
 	if p.Feature == "" {
 		errs = append(errs, "feature must not be empty")
 	}
+	if p.Feature != "" && !slugRe.MatchString(p.Feature) {
+		errs = append(errs, fmt.Sprintf("feature %q must be a kebab-case slug (^[a-z0-9][a-z0-9-]*$)", p.Feature))
+	}
+	if len(p.Feature) > 40 {
+		errs = append(errs, fmt.Sprintf("feature %q exceeds 40 chars", p.Feature))
+	}
 	if p.Branch == "" {
 		errs = append(errs, "branch must not be empty")
 	}
@@ -57,6 +68,9 @@ func (p Plan) Validate(roster []string) error {
 		if t.ID == "" {
 			errs = append(errs, prefix+"id must not be empty")
 			prefix = fmt.Sprintf("task %d (no id): ", i)
+		}
+		if t.ID != "" && !slugRe.MatchString(t.ID) {
+			errs = append(errs, prefix+fmt.Sprintf("id %q must be a kebab-case slug", t.ID))
 		}
 		if t.Owner == "" {
 			errs = append(errs, prefix+"owner must not be empty")

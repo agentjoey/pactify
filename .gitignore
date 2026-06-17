@@ -16,3 +16,17 @@ data/
 *.key
 # Brainstorm visual companion
 .superpowers/
+
+# Internal dev records — not part of the public product (kept locally, not published)
+.agent/
+docs/backlog.md
+docs/ROADMAP.md
+docs/roadmap-next.md
+docs/retrospective-8h-2026-06-14.md
+docs/ui-design-spec.md
+docs/agent-integration-candidates.md
+docs/brand.md
+docs/design/
+docs/dogfood/
+docs/superpowers/
+docs/decisions/

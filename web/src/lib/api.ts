@@ -253,6 +253,28 @@ export const expandRecipe = (name: string, goal: string) =>
 export const getPlanReview = (project: string, feature: string) =>
   getJSON<PlanReviewResponse>(`/api/projects/${project}/plan/${feature}`);
 
+// --- Custom-agent manifests (Phase D) ---
+export interface ManifestRow { kind: string; binary: string; drivable: boolean }
+export const listManifests = () => getJSON<ManifestRow[]>("/api/manifests");
+export const createManifest = async (toml: string): Promise<{ kind: string }> => {
+  const r = await fetch("/api/manifests", {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: toml,
+  });
+  if (!r.ok) {
+    let m = `${r.status}`;
+    try {
+      const j = (await r.json()) as { error?: string };
+      if (j.error) m = j.error;
+    } catch { /* non-JSON body; keep status line */ }
+    throw new Error(m);
+  }
+  return r.json() as Promise<{ kind: string }>;
+};
+export const deleteManifest = (kind: string) =>
+  fetch(`/api/manifests/${encodeURIComponent(kind)}`, { method: "DELETE" });
+
 // subscribeEvents opens an SSE stream; returns an unsubscribe fn.
 // onLive (optional) reports connection state: true on open, false on error/drop.
 export function subscribeEvents(

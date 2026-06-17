@@ -132,3 +132,8 @@ v0.4.0 发布与 CI run 均报：`actions/checkout@v4`、`actions/setup-node@v4`
 ## ~~token 捕获未接进 orchestrate runner（D1 遗留「最后一块」）~~ ✅ DONE 2026-06-17
 **已完成**：写入侧接通——`CmdRunner.Run` 经 execFn 的 `capture io.Writer` 旁路（`tailWriter`，1 MiB tail 上限，不改 streaming/idle/session-title）siphon agent stdout → `tokens.Parse(kind,output)` → `recordTokens` 写 `.pact/orchestrate/tokens.json`（keyed by task；空 task 或无 usage 静默 no-op；失败 run 仍记已产生用量）。无锁安全：串行循环一次一棒，并行特性各自独立 worktree（不同 RepoDir）。读取侧（stats.go → RightRail `⛁` + Cost 镜头）原已接好，闭环打通。
 **已知边界（可接受）**：① 未捕获的现有 kind 输出若不带 usage JSON 则无数据（best-effort 遥测）；② claude 单体 pretty-JSON 若 >1 MiB 会被 tail 截断导致整体解析失败（极少见，token 暂缺一棒，不影响 run）；③ 并行 worktree 的 tokens.json 随 worktree 清理而丢——并行成本视图待后续统一回主 repo。
+
+## goreleaser darwin 产物 arm64 首跑 SIGKILL（签名无效）
+**现象**：从 GitHub release 下载的 `pactify_darwin_arm64`（goreleaser 产物）签名是 `Identifier=a.out` 的无效 ad-hoc 签名，arm64 macOS 直接 SIGKILL（exit 137，`--help` 无输出）。需 `codesign -s - --force <bin>` 重新 ad-hoc 签名后才能跑。
+**影响**：用 install.sh 在 Apple Silicon 首次安装的用户可能遇到二进制跑不起来。
+**做法**：① install.sh 安装后加 `codesign -s - --force` 兜底；或 ② goreleaser 配置里对 darwin 产物做有效 ad-hoc 签名（`codesign` hook / gon / quill）。Linux 不受影响。

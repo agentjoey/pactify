@@ -257,10 +257,15 @@ Each phase ships green independently (go test; web gate for D).
 
 ---
 
-## Open questions for review
-- TOML parser choice: `pelletier/go-toml/v2` (chosen — strict decode, maintained)
-  vs `BurntSushi/toml`. Confirm.
-- `{model}`-empty drop heuristic (§3): drop a *preceding lone* `-m`/`--model` — is
-  that the right rule, or should empty-model kinds just omit `{model}` from the
-  template and not pin at all? (Built-in codex omits `-m` when unset via closure;
-  the manifest needs an equivalent — the drop rule is the proposal.)
+## Resolved decisions (review closed 2026-06-17)
+- **TOML parser**: `github.com/pelletier/go-toml/v2` (strict decode via
+  `toml.Decoder.DisallowUnknownFields`, actively maintained).
+- **`{model}`-empty handling**: the drop rule (§3, option A) — the author writes
+  `-m {model}` (or `--model {model}`) naturally; when the effective model is empty
+  (Settings "default" / a kind with no `default_model`), the renderer drops the
+  `{model}` token **and** an immediately-preceding lone `-m`/`--model` flag. This
+  keeps one template working for both a pinned model and a cleared/default model,
+  matching the built-in behavior (e.g. codex omits `-m` when unset) and the
+  existing Settings model-dropdown "default" option. RenderArgs §10 tests pin the
+  exact rule (only a directly-preceding `-m`/`--model`, not an arbitrary earlier
+  flag, is dropped).

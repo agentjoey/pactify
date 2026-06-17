@@ -165,7 +165,9 @@ export function AddProjectWizard({
             out.push({ path: entry.path, ok: false, error: humanizeError(e instanceof Error ? e.message : String(e)) });
           }
         } else {
-          const seats = rosters.get(entry.path) ?? [];
+          // Only agents the user gave at least one role join the project; agents
+          // left with no roles are simply not added (not an error).
+          const seats = (rosters.get(entry.path) ?? []).filter((s) => s.roles.length > 0);
           try {
             const r = await setupApply({
               path: entry.path,
@@ -186,12 +188,18 @@ export function AddProjectWizard({
     }
   }
 
+  // rosterGaps returns which required roles a folder's *joined* agents (those with
+  // ≥1 role) don't cover — a new project needs orchestrator + reviewer + worker to
+  // be runnable. Empty = ready.
+  function rosterGaps(path: string): Role[] {
+    const seats = (rosters.get(path) ?? []).filter((s) => s.roles.length > 0);
+    const have = new Set(seats.flatMap((s) => s.roles));
+    return (["orchestrator", "reviewer", "worker"] as Role[]).filter((r) => !have.has(r));
+  }
+
   function canSubmitStep2(): boolean {
     for (const entry of selectedEntries) {
-      if (!entry.hasPact) {
-        const seats = rosters.get(entry.path) ?? [];
-        if (seats.length === 0) return false;
-      }
+      if (!entry.hasPact && rosterGaps(entry.path).length > 0) return false;
     }
     return true;
   }
@@ -357,9 +365,12 @@ function RosterEditor({
     <div className="flex flex-col gap-1.5">
       {seats.map((s) => (
         <div key={s.id} className="flex items-center justify-between gap-2">
-          <div className="flex flex-col">
+          <div className="flex flex-col" style={s.roles.length === 0 ? { opacity: 0.5 } : undefined}>
             <span className="text-[11px] font-medium text-[var(--color-text-1)]">{s.id}</span>
-            <span className="text-[10px] text-[var(--color-text-3)]">{s.kind}</span>
+            <span className="text-[10px] text-[var(--color-text-3)]">
+              {s.kind}
+              {s.roles.length === 0 && <span className="ml-1 italic" data-testid={`not-added-${s.id}`}>· not added</span>}
+            </span>
           </div>
           <div className="flex items-center gap-1">
             {ALL_ROLES.map((role) => {

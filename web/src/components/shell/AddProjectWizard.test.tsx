@@ -114,4 +114,43 @@ describe("AddProjectWizard", () => {
     expect(screen.queryByRole("button", { name: /Done/i })).toBeNull();
     expect(onAdded).not.toHaveBeenCalled();
   });
+
+  it("excludes agents with no roles (marks them 'not added', doesn't send them)", async () => {
+    getSetupSuggest.mockResolvedValue({
+      bindings: [
+        { seat: "claude", kind: "claude-code", roles: ["orchestrator", "reviewer", "worker"], drivable: true },
+        { seat: "opencode", kind: "opencode", roles: ["worker"], drivable: true },
+        { seat: "gemini", kind: "gemini-cli", roles: ["worker"], drivable: true },
+      ],
+      warnings: [],
+    });
+    setupApply.mockResolvedValue({ inited: true, wired: [], notes: [] });
+    render(<AddProjectWizard open onClose={() => {}} onAdded={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("folder-entry-new-checkbox")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("folder-entry-new-checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    await waitFor(() => expect(screen.getByTestId("wizard-step2")).toBeTruthy());
+    // Remove gemini's only role → it's "not added", but claude still covers o+r+w.
+    fireEvent.click(screen.getByTestId("role-gemini-worker"));
+    expect(screen.getByTestId("not-added-gemini")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Submit/i }));
+    await waitFor(() => expect(setupApply).toHaveBeenCalled());
+    const seats = setupApply.mock.calls[0][0].seats as { id: string }[];
+    expect(seats.map((s) => s.id).sort()).toEqual(["claude", "opencode"]);
+    expect(seats.find((s) => s.id === "gemini")).toBeUndefined();
+  });
+
+  it("blocks submit when the joined roster misses a required role", async () => {
+    getSetupSuggest.mockResolvedValue({
+      bindings: [{ seat: "opencode", kind: "opencode", roles: ["worker"], drivable: true }],
+      warnings: [],
+    });
+    render(<AddProjectWizard open onClose={() => {}} onAdded={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("folder-entry-new-checkbox")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("folder-entry-new-checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    await waitFor(() => expect(screen.getByTestId("wizard-step2")).toBeTruthy());
+    // Only opencode(worker) → missing orchestrator + reviewer → Submit disabled.
+    expect(screen.getByRole("button", { name: /Submit/i })).toBeDisabled();
+  });
 });

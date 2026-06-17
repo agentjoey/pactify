@@ -27,7 +27,7 @@ single load in `main()` covers CLI + serve. CLI + serve endpoints + a Settings f
 - `internal/agentmanifest/render_test.go`
 - `cmd/pactify/cmd_agent_manifest.go` — `agent manifest list/validate/show/add/remove`.
 - `cmd/pactify/cmd_agent_manifest_test.go`
-- `internal/serve/manifests.go` — GET/POST/DELETE `/api/agents/manifests`.
+- `internal/serve/manifests.go` — GET/POST/DELETE `/api/manifests`.
 - `internal/serve/manifests_test.go`
 - `web/src/components/ops/CustomAgentForm.tsx` + `.test.tsx`
 
@@ -1141,7 +1141,7 @@ CLI `add <file>` reads the file → `Install` → prints "installed <kind>"; `re
 
 ## Phase C — serve endpoints
 
-### Task C1: GET/POST/DELETE `/api/agents/manifests`
+### Task C1: GET/POST/DELETE `/api/manifests`
 
 **Files:** `internal/serve/manifests.go`, `internal/serve/manifests_test.go`, wire `registerManifestRoutes` in `internal/serve/api.go`.
 
@@ -1167,7 +1167,7 @@ func TestManifestsCRUD(t *testing.T) {
 
 	// POST valid
 	body := []byte("kind=\"webx\"\nbinary=\"webx\"\n[runner]\nargs=[\"run\",\"{briefing}\"]\n")
-	r := httptest.NewRequest("POST", "/api/agents/manifests", bytes.NewReader(body))
+	r := httptest.NewRequest("POST", "/api/manifests", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 	s.handleManifestCreate(w, r)
 	if w.Code != http.StatusOK {
@@ -1178,7 +1178,7 @@ func TestManifestsCRUD(t *testing.T) {
 	}
 
 	// POST invalid → 422
-	r2 := httptest.NewRequest("POST", "/api/agents/manifests", bytes.NewReader([]byte("binary=\"x\"\n")))
+	r2 := httptest.NewRequest("POST", "/api/manifests", bytes.NewReader([]byte("binary=\"x\"\n")))
 	w2 := httptest.NewRecorder()
 	s.handleManifestCreate(w2, r2)
 	if w2.Code != http.StatusUnprocessableEntity {
@@ -1186,7 +1186,7 @@ func TestManifestsCRUD(t *testing.T) {
 	}
 
 	// GET list
-	r3 := httptest.NewRequest("GET", "/api/agents/manifests", nil)
+	r3 := httptest.NewRequest("GET", "/api/manifests", nil)
 	w3 := httptest.NewRecorder()
 	s.handleManifestList(w3, r3)
 	var got []map[string]any
@@ -1196,7 +1196,7 @@ func TestManifestsCRUD(t *testing.T) {
 	}
 
 	// DELETE
-	r4 := httptest.NewRequest("DELETE", "/api/agents/manifests/webx", nil)
+	r4 := httptest.NewRequest("DELETE", "/api/manifests/webx", nil)
 	r4.SetPathValue("kind", "webx")
 	w4 := httptest.NewRecorder()
 	s.handleManifestDelete(w4, r4)
@@ -1221,9 +1221,9 @@ import (
 )
 
 func (s *Server) registerManifestRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/agents/manifests", s.handleManifestList)
-	mux.HandleFunc("POST /api/agents/manifests", s.handleManifestCreate)
-	mux.HandleFunc("DELETE /api/agents/manifests/{kind}", s.handleManifestDelete)
+	mux.HandleFunc("GET /api/manifests", s.handleManifestList)
+	mux.HandleFunc("POST /api/manifests", s.handleManifestCreate)
+	mux.HandleFunc("DELETE /api/manifests/{kind}", s.handleManifestDelete)
 }
 
 func (s *Server) handleManifestList(w http.ResponseWriter, _ *http.Request) {
@@ -1266,7 +1266,7 @@ func (s *Server) handleManifestDelete(w http.ResponseWriter, r *http.Request) {
 Wire `s.registerManifestRoutes(mux)` next to `registerAuditRoutes` in api.go.
 
 - [ ] **Step 4: Run** `go test ./internal/serve/ -run Manifest` → PASS.
-- [ ] **Step 5: Commit** `git commit -am "feat(serve): GET/POST/DELETE /api/agents/manifests"`
+- [ ] **Step 5: Commit** `git commit -am "feat(serve): GET/POST/DELETE /api/manifests"`
 
 ---
 
@@ -1319,14 +1319,14 @@ describe("CustomAgentForm", () => {
 `web/src/lib/api.ts`:
 ```ts
 export interface ManifestRow { kind: string; binary: string; drivable: boolean }
-export const listManifests = () => getJSON<ManifestRow[]>("/api/agents/manifests");
+export const listManifests = () => getJSON<ManifestRow[]>("/api/manifests");
 export const createManifest = async (toml: string): Promise<{ kind: string }> => {
-  const r = await fetch("/api/agents/manifests", { method: "POST", headers: { "Content-Type": "text/plain" }, body: toml });
+  const r = await fetch("/api/manifests", { method: "POST", headers: { "Content-Type": "text/plain" }, body: toml });
   if (!r.ok) { let m = `${r.status}`; try { const j = await r.json() as {error?:string}; if (j.error) m = j.error; } catch {} throw new Error(m); }
   return r.json() as Promise<{ kind: string }>;
 };
 export const deleteManifest = (kind: string) =>
-  fetch(`/api/agents/manifests/${encodeURIComponent(kind)}`, { method: "DELETE" });
+  fetch(`/api/manifests/${encodeURIComponent(kind)}`, { method: "DELETE" });
 ```
 
 `web/src/components/ops/CustomAgentForm.tsx`: a small form (kind, binary, entry,

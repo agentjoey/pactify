@@ -144,11 +144,11 @@ pactify agent manifest show <kind>          # effective manifest (incl. built-in
 ```
 
 **Serve**:
-- `GET  /api/agents/manifests` → list user manifests + validity.
-- `POST /api/agents/manifests` (author-gated) → body = manifest fields (or raw
+- `GET  /api/manifests` → list user manifests + validity.
+- `POST /api/manifests` (author-gated) → body = manifest fields (or raw
   TOML); validate → write `~/.pactify/agents/<kind>.toml`; 422 with field errors on
   invalid; refuses built-in collisions.
-- `DELETE /api/agents/manifests/{kind}` (author-gated).
+- `DELETE /api/manifests/{kind}` (author-gated).
 
 **Settings UI** (Ops, beside AgentRoster): an **"Add custom agent"** form —
 kind/binary/entry, the runner argv (with a live placeholder hint), default+models,

@@ -123,3 +123,12 @@
 
 ## CI: 升级 GitHub Actions 到 Node 24（2026-06-16 发布时告警）
 v0.4.0 发布与 CI run 均报：`actions/checkout@v4`、`actions/setup-node@v4`、`actions/setup-go@v5`、`goreleaser/goreleaser-action@v6` 跑在 **Node.js 20**，GitHub 自 2026-06-16 起强制 Node 24、9-16 移除 Node 20。非阻断，但需升级这些 action 到支持 Node 24 的版本（或暂时 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`）。改 `.github/workflows/ci.yml` + `release.yml`。
+
+## 多 agent 真跑（2026-06-17，manifest C+D）发现
+- **kimi-cli headless 需全 key 模型 id** ✅ 已修（commit e459c51）：runner pin `kimi-for-coding`（短名）→ kimi 报 `LLM not set`；正解是配置全 key `kimi-code/kimi-for-coding`（=K2.7 Code）。教训：接 CLI runner 的模型 id 要用该 CLI 配置里的**完整 key**，别用底层短名。kimi 交互登录不影响 headless——问题是模型 id。
+- **serve 路由命名要避让既有 `{kind}` 通配（Go 1.22 ServeMux）** ✅ 已修（C 改 `/api/manifests`）：`DELETE /api/agents/manifests/{kind}` 与既有 `DELETE /api/agents/{kind}/register` 在同段歧义 → 启动 panic。新 endpoint 别塞进已有 `{kind}` 通配的命名空间。
+- **D2 进度感知巡检现场验证 ✓**：kimi 停滞 5min（无输出+无落盘）被 patrol 杀+重试，最终收敛。
+
+## token 捕获未接进 orchestrate runner（D1 遗留「最后一块」）
+**现状**：读取侧已全接（`internal/serve/stats.go` → `tokens.Load/Get` → RightRail `⛁` + office Cost 镜头 + `GET /api/projects/{id}/stats`），`tokens.Parse(kind,output)` 也已实现（claude usage / opencode jsonl）。**缺写入侧**：orchestrate runner 没有用 `--output-format json` 捕获 agent 输出、`Parse` 它、`tokens.Add` 写 `.pact/orchestrate/tokens.json`——所以 store 空、dashboard token 显示不出。
+**做法**：runner 对支持 json 输出的 kind（claude/opencode/gemini）加 `--output-format json` 旁路捕获 → `tokens.Parse` → `tokens.Add(taskID, n)`；注意不破坏现有 streaming/session-title 逻辑（参考 opencode `--format json` 会变输出形态的坑）。

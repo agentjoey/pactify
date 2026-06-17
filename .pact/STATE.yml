@@ -255,3 +255,20 @@ features:
         reviewer: claude
         spec: .pact/tasks/t-sp3-frontend.md
         evidence:   RUN  v4.1.8 /Users/xtation/AgentWorks/Code_Claude/pactify/web    Test Files  53 passed (53)       Tests  454 passed (454)    Start at  18:58:14    Duration  4.99s (transform 1.75s, setup 1.88s, import 6.90s, tests 7.43s, environment 21.71s)
+  - id: projwiz
+    branch: feat-projwiz
+    status: in_progress
+    tasks:
+      - id: t-projwiz-backend
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/t-projwiz-backend.md
+        evidence: null
+      - id: t-projwiz-frontend
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/t-projwiz-frontend.md
+        evidence: null
+        deps: [t-projwiz-backend]

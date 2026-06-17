@@ -137,3 +137,7 @@ v0.4.0 发布与 CI run 均报：`actions/checkout@v4`、`actions/setup-node@v4`
 **现象**：从 GitHub release 下载的 `pactify_darwin_arm64`（goreleaser 产物）签名是 `Identifier=a.out` 的无效 ad-hoc 签名，arm64 macOS 直接 SIGKILL（exit 137，`--help` 无输出）。需 `codesign -s - --force <bin>` 重新 ad-hoc 签名后才能跑。
 **影响**：用 install.sh 在 Apple Silicon 首次安装的用户可能遇到二进制跑不起来。
 **做法**：① install.sh 安装后加 `codesign -s - --force` 兜底；或 ② goreleaser 配置里对 darwin 产物做有效 ad-hoc 签名（`codesign` hook / gon / quill）。Linux 不受影响。
+
+## 前端 orchestrate task 的 embedded dist 同步债（2026-06-17 SP2/SP3 dogfood 发现）
+**现象**：前端 task 的 verify（tsc + vitest + e2e）跑源码，**不校验/不 rebuild** `internal/serve/dist`（go:embed 的 dashboard 产物）。SP3 改了 Setup.tsx 但 worker checkpoint 的 dist 仍是 SP2 时的 → dashboard 实际不显示新 UI，需手工 `npm run build` 补提交。
+**做法**：① 前端 task 的 verify 末尾加 `npm run build` 并把 dist 纳入 checkpoint；或 ② reviewer 校验 dist 与源码同步；或 ③ 干脆 dist 不入库、改由 CI/发版统一 build（去掉 go:embed 入库产物）。③ 最干净但改动大。

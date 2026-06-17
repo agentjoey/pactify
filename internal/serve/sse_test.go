@@ -13,6 +13,48 @@ import (
 	"github.com/agentjoey/pactify/internal/registry"
 )
 
+// The stream must emit a flushed frame the instant it opens — before any pact
+// event — so a buffering reverse proxy (Cloudflare Tunnel) forwards the response
+// head and the client's EventSource fires onopen (dashboard goes "live"). Without
+// this a quiet project shows "offline" forever behind such a proxy.
+func TestSSEEmitsInitialFrameImmediately(t *testing.T) {
+	root := t.TempDir()
+	seedProject(t, root, "pactify")
+	srv := New([]registry.Project{{Name: "pactify", Path: root}})
+	if err := srv.StartWatchers(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	req, _ := http.NewRequest("GET", ts.URL+"/api/projects/pactify/events", nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if got := resp.Header.Get("X-Accel-Buffering"); got != "no" {
+		t.Fatalf("X-Accel-Buffering=%q, want no", got)
+	}
+
+	// Read the first bytes WITHOUT appending any event; they must arrive promptly.
+	got := make(chan string, 1)
+	go func() {
+		buf := make([]byte, 64)
+		n, _ := resp.Body.Read(buf)
+		got <- string(buf[:n])
+	}()
+	select {
+	case frame := <-got:
+		if !strings.Contains(frame, "retry:") && !strings.HasPrefix(strings.TrimSpace(frame), ":") {
+			t.Fatalf("initial frame = %q, want a flushed comment/retry frame", frame)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("no initial frame before any event — onopen would stall behind a proxy")
+	}
+}
+
 func TestSSEStreamsAppendedEvents(t *testing.T) {
 	root := t.TempDir()
 	seedProject(t, root, "pactify")

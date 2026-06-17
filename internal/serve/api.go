@@ -2,12 +2,20 @@ package serve
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/registry"
 	"github.com/fsnotify/fsnotify"
 )
+
+// sseHeartbeat is the interval between SSE keep-alive comment frames. It must sit
+// comfortably under the idle timeout of any reverse proxy in front of serve
+// (Cloudflare Tunnel cuts idle streams around 100s), so a quiet project's live
+// connection is not dropped.
+const sseHeartbeat = 25 * time.Second
 
 // Server holds the watched projects and the SSE hub.
 type Server struct {
@@ -177,8 +185,21 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+	// Tell reverse proxies (nginx and friends) not to buffer this response.
+	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
+	// Emit an initial frame and flush it immediately. A proxy that buffers the
+	// response until the first body byte (Cloudflare Tunnel does this) would
+	// otherwise hold the 200 back until the first real event — so EventSource never
+	// fires onopen and the dashboard shows "offline" on a quiet project. The retry
+	// directive also sets the client's reconnect backoff.
+	_, _ = io.WriteString(w, "retry: 3000\n: ok\n\n")
 	fl.Flush()
+
+	// Heartbeat keeps the stream non-idle so a proxy doesn't drop it (and re-flushes
+	// periodically). Comment frames (": ...") are ignored by EventSource.
+	hb := time.NewTicker(sseHeartbeat)
+	defer hb.Stop()
 
 	for {
 		select {
@@ -187,6 +208,9 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			_, _ = w.Write([]byte("event: pact\ndata: " + line + "\n\n"))
+			fl.Flush()
+		case <-hb.C:
+			_, _ = io.WriteString(w, ": ping\n\n")
 			fl.Flush()
 		case <-r.Context().Done():
 			return

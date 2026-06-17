@@ -1,14 +1,31 @@
 import { useEffect, useRef, useState } from "react";
-import type { OrchestrateStatus } from "../lib/types";
-import { getOrchestrateStatus, getParallelOrchestrate } from "../lib/api";
+import type { OrchestrateStatus, Seat } from "../lib/types";
+import {
+  getOrchestrateStatus,
+  getParallelOrchestrate,
+  runOrchestrate,
+  resumeOrchestrate,
+  shipFeature,
+  getDiff,
+} from "../lib/api";
 import { Badge } from "./ui/Badge";
+import { Button } from "./ui/Button";
+import { Modal } from "./ui/Modal";
+import { Input } from "./ui/Input";
+import { Textarea } from "./ui/Textarea";
 
 export function LiveOrchestrate({
   project,
   refreshTick,
+  author,
+  agents,
+  onNotify,
 }: {
   project: string;
   refreshTick: number;
+  author: boolean;
+  agents: Seat[];
+  onNotify?: (message: string, kind?: "error") => void;
 }) {
   const [status, setStatus] = useState<OrchestrateStatus | null>(null);
   const [present, setPresent] = useState<boolean | null>(null);
@@ -17,6 +34,17 @@ export function LiveOrchestrate({
   // single serial status.json.
   const [parallel, setParallel] = useState<OrchestrateStatus[] | null>(null);
   const [error, setError] = useState("");
+  const [running, setRunning] = useState(false);
+  const [resuming, setResuming] = useState(false);
+  const [shipping, setShipping] = useState(false);
+  const [diffText, setDiffText] = useState("");
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [loadingDiff, setLoadingDiff] = useState(false);
+  const [shipOpen, setShipOpen] = useState(false);
+  const [shipTitle, setShipTitle] = useState("");
+  const [shipBody, setShipBody] = useState("");
+  const [shipHead, setShipHead] = useState("");
+  const [shipResult, setShipResult] = useState<{ prUrl?: string; error?: string } | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function load() {
@@ -29,6 +57,71 @@ export function LiveOrchestrate({
         setError("");
       })
       .catch(() => setError("Failed to load orchestrate status"));
+  }
+
+  const rosterComplete = agents.length >= 2;
+  const canRun = author && rosterComplete && !running && !resuming;
+
+  async function handleRun() {
+    if (!canRun) return;
+    setRunning(true);
+    try {
+      await runOrchestrate(project);
+      onNotify?.("Orchestrate run started");
+      load();
+    } catch (e) {
+      onNotify?.(e instanceof Error ? e.message : "Run failed", "error");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function handleResume() {
+    if (!author || resuming || running) return;
+    setResuming(true);
+    try {
+      await resumeOrchestrate(project);
+      onNotify?.("Orchestrate resumed");
+      setDiffOpen(false);
+      load();
+    } catch (e) {
+      onNotify?.(e instanceof Error ? e.message : "Resume failed", "error");
+    } finally {
+      setResuming(false);
+    }
+  }
+
+  async function handleViewDiff() {
+    setLoadingDiff(true);
+    setDiffOpen(true);
+    try {
+      const r = await getDiff(project);
+      setDiffText(r.diff);
+    } catch (e) {
+      setDiffText(e instanceof Error ? e.message : "Failed to load diff");
+    } finally {
+      setLoadingDiff(false);
+    }
+  }
+
+  async function handleShip() {
+    if (!author || shipping) return;
+    if (!shipTitle || !shipHead) {
+      setShipResult({ error: "Head branch and title are required" });
+      return;
+    }
+    setShipping(true);
+    try {
+      const r = await shipFeature(project, { pr: true, head: shipHead, title: shipTitle, body: shipBody });
+      setShipResult({ prUrl: r.pr_url });
+      onNotify?.(r.pr_url ? `PR opened: ${r.pr_url}` : "Pushed");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Ship failed";
+      setShipResult({ error: msg });
+      onNotify?.(msg, "error");
+    } finally {
+      setShipping(false);
+    }
   }
 
   useEffect(() => {
@@ -75,30 +168,66 @@ export function LiveOrchestrate({
 
       {/* Serial fallback (no parallel run). */}
       {!parallelSorted && present === false && (
-        <div className="text-sm text-[var(--color-text-3)] mt-8 text-center">
-          orchestrate hasn't run yet
+        <div className="text-center">
+          <div className="text-sm text-[var(--color-text-3)] mt-8 mb-3">
+            orchestrate hasn't run yet
+          </div>
+          {author && !rosterComplete && (
+            <div className="text-xs text-[var(--color-warn)] mb-3">
+              Wire at least two seats before running
+            </div>
+          )}
+          <Button size="sm" loading={running} disabled={!canRun} onClick={handleRun}>
+            Run
+          </Button>
         </div>
       )}
 
       {!parallelSorted && present === true && status && status.escalated && (
-        <div
-          data-testid="escalated-banner"
-          className="rounded-lg border border-[color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] p-4 mb-4"
-        >
-          <div className="text-sm font-medium text-[var(--color-danger)] mb-1">
-            Orchestration escalated — needs manual intervention
+        <>
+          <div
+            data-testid="escalated-banner"
+            className="rounded-lg border border-[color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] p-4 mb-4"
+          >
+            <div className="text-sm font-medium text-[var(--color-danger)] mb-1">
+              Orchestration escalated — needs manual intervention
+            </div>
+            {status.reason && (
+              <div className="text-xs text-[var(--color-danger)] opacity-80">
+                {status.reason}
+              </div>
+            )}
           </div>
-          {status.reason && (
-            <div className="text-xs text-[var(--color-danger)] opacity-80">
-              {status.reason}
+          {author && (
+            <div className="mb-4 flex items-center gap-2">
+              <Button size="sm" loading={resuming} onClick={handleResume}>
+                Resume
+              </Button>
+              <Button size="sm" variant="ghost" loading={loadingDiff} onClick={handleViewDiff}>
+                View diff
+              </Button>
             </div>
           )}
-        </div>
+        </>
       )}
 
       {!parallelSorted && present === true && status && status.done && (
-        <div className="text-sm text-[var(--color-success)] mt-8 text-center">
-          Wrapped up / all delivered
+        <div className="text-center">
+          <div className="text-sm text-[var(--color-success)] mt-8 mb-3">
+            Wrapped up / all delivered
+          </div>
+          {author && (
+            <>
+              <Button size="sm" loading={shipping} onClick={() => { setShipOpen(true); setShipResult(null); }}>
+                Ship
+              </Button>
+              {shipResult?.prUrl && (
+                <div className="mt-3 text-xs text-[var(--color-text-2)]">
+                  PR: <a href={shipResult.prUrl} target="_blank" rel="noreferrer" className="text-[var(--color-role-design)] underline">{shipResult.prUrl}</a>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -122,6 +251,49 @@ export function LiveOrchestrate({
             updated: {status.updated_at}
           </div>
         </div>
+      )}
+
+      {diffOpen && (
+        <Modal title="Working diff" onClose={() => setDiffOpen(false)} width="720px">
+          {loadingDiff ? (
+            <div className="text-xs text-[var(--color-text-3)]">Loading diff…</div>
+          ) : (
+            <pre className="max-h-[60vh] overflow-auto rounded-md bg-[var(--color-bg-inset)] p-3 text-[11px] text-[var(--color-text-1)]">
+              {diffText || "(no diff)"}
+            </pre>
+          )}
+        </Modal>
+      )}
+
+      {shipOpen && (
+        <Modal
+          title="Ship feature"
+          onClose={() => setShipOpen(false)}
+          footer={
+            <>
+              <Button size="sm" loading={shipping} onClick={handleShip}>Open PR</Button>
+              <Button size="sm" variant="ghost" onClick={() => setShipOpen(false)}>Cancel</Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3">
+            {shipResult?.error && (
+              <div className="text-xs text-[var(--color-danger)]">{shipResult.error}</div>
+            )}
+            <div>
+              <label className="mb-1 block text-[11px] text-[var(--color-text-3)]">Head branch</label>
+              <Input value={shipHead} onChange={(e) => setShipHead(e.target.value)} placeholder="feat-xyz" />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] text-[var(--color-text-3)]">PR title</label>
+              <Input value={shipTitle} onChange={(e) => setShipTitle(e.target.value)} placeholder="feat: …" />
+            </div>
+            <div>
+              <label className="mb-1 block text-[11px] text-[var(--color-text-3)]">PR body</label>
+              <Textarea value={shipBody} onChange={(e) => setShipBody(e.target.value)} placeholder="" />
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

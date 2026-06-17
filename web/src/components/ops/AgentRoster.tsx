@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAgents, registerAgent, unregisterAgent, type AgentRow } from "../../lib/api";
+import { getAgents, registerAgent, unregisterAgent, pruneSessions, type AgentRow } from "../../lib/api";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { Alert } from "../ui/Alert";
@@ -28,6 +28,8 @@ export function AgentRoster({
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [pruneBusy, setPruneBusy] = useState<string | null>(null);
+  const [pruneResult, setPruneResult] = useState<{ kind: string; skipped: boolean; output: string } | null>(null);
   const [showManual, setShowManual] = useState(false);
 
   function load(scan = false) {
@@ -60,6 +62,20 @@ export function AgentRoster({
       await load();
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function handlePrune(kind: string) {
+    if (!author) return;
+    setPruneBusy(kind);
+    setPruneResult(null);
+    try {
+      const r = await pruneSessions(kind);
+      setPruneResult(r);
+    } catch {
+      setPruneResult({ kind, skipped: false, output: "Failed to prune sessions" });
+    } finally {
+      setPruneBusy(null);
     }
   }
 
@@ -103,7 +119,10 @@ export function AgentRoster({
               row={a}
               author={author}
               busy={busy === a.kind}
+              pruneBusy={pruneBusy === a.kind}
+              pruneResult={pruneResult?.kind === a.kind ? pruneResult : null}
               onToggle={() => toggle(a.kind, a.registered)}
+              onPrune={() => handlePrune(a.kind)}
             />
           ))}
 
@@ -129,8 +148,11 @@ export function AgentRoster({
                       row={a}
                       author={author}
                       busy={busy === a.kind}
+                      pruneBusy={pruneBusy === a.kind}
+                      pruneResult={pruneResult?.kind === a.kind ? pruneResult : null}
                       manual
                       onToggle={() => toggle(a.kind, a.registered)}
+                      onPrune={() => handlePrune(a.kind)}
                     />
                   ))}
                 </div>
@@ -147,14 +169,20 @@ function RosterRow({
   row,
   author,
   busy,
+  pruneBusy,
+  pruneResult,
   manual = false,
   onToggle,
+  onPrune,
 }: {
   row: AgentRow;
   author: boolean;
   busy: boolean;
+  pruneBusy?: boolean;
+  pruneResult?: { skipped: boolean; output: string } | null;
   manual?: boolean;
   onToggle: () => void;
+  onPrune?: () => void;
 }) {
   return (
     <div
@@ -193,7 +221,17 @@ function RosterRow({
             {manual ? "Register anyway" : "Register"}
           </Button>
         )}
+        {author && (
+          <Button size="sm" variant="ghost" loading={pruneBusy} onClick={onPrune}>
+            Prune sessions
+          </Button>
+        )}
       </div>
+      {pruneResult && (
+        <div className="col-span-full mt-2 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-2.5 py-1.5 text-[10.5px] text-[var(--color-text-2)]">
+          {pruneResult.skipped ? "Nothing to prune" : <pre className="whitespace-pre-wrap [overflow-wrap:anywhere]">{pruneResult.output}</pre>}
+        </div>
+      )}
     </div>
   );
 }

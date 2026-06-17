@@ -243,6 +243,35 @@ export const getParallelOrchestrate = (project: string) =>
 
 export const getSetupSuggest = () => getJSON<SetupSuggestResponse>(`/api/setup/suggest`);
 
+export interface SetupApplySeat {
+  id: string;
+  roles: string[];
+  entry: string;
+  kind: string;
+}
+
+export interface SetupApplyResponse {
+  inited: boolean;
+  wired: {
+    kind: string;
+    seat: string;
+    wrote: boolean;
+    path: string;
+    docOnly: boolean;
+    snippet?: string;
+  }[];
+  notes: string[];
+}
+
+export async function setupApply(body: {
+  path: string;
+  project: string;
+  seats: SetupApplySeat[];
+}): Promise<SetupApplyResponse> {
+  const r = await writeJSON("/api/setup/apply", "POST", body);
+  return (await r.json()) as SetupApplyResponse;
+}
+
 export const getRecipes = () => getJSON<RecipeItem[]>(`/api/recipes`);
 
 export const expandRecipe = (name: string, goal: string) =>
@@ -252,6 +281,74 @@ export const expandRecipe = (name: string, goal: string) =>
 
 export const getPlanReview = (project: string, feature: string) =>
   getJSON<PlanReviewResponse>(`/api/projects/${project}/plan/${feature}`);
+
+export async function applyPlan(
+  project: string,
+  feature: string,
+): Promise<{ assigned: number }> {
+  const r = await writeJSON(
+    `/api/projects/${project}/plan/${encodeURIComponent(feature)}/apply`,
+    "POST",
+    {},
+  );
+  return (await r.json()) as { assigned: number };
+}
+
+// --- Orchestrate drive (SP2) ---
+
+export type RunOrchestrateBody = {
+  feature?: string;
+  max_concurrency?: number;
+  seat_kinds?: Record<string, string>;
+};
+
+export async function runOrchestrate(
+  project: string,
+  body: RunOrchestrateBody = {},
+): Promise<{ status_url: string }> {
+  const r = await writeJSON(`/api/projects/${project}/orchestrate/run`, "POST", body);
+  return (await r.json()) as { status_url: string };
+}
+
+export async function resumeOrchestrate(
+  project: string,
+  body: RunOrchestrateBody = {},
+): Promise<{ status_url: string }> {
+  const r = await writeJSON(`/api/projects/${project}/orchestrate/resume`, "POST", body);
+  return (await r.json()) as { status_url: string };
+}
+
+export type ShipBody = {
+  remote?: string;
+  branch?: string;
+  pr?: boolean;
+  head?: string;
+  title?: string;
+  body?: string;
+};
+
+export async function shipFeature(
+  project: string,
+  body: ShipBody,
+): Promise<{ pushed: boolean; pr_url?: string }> {
+  const r = await writeJSON(`/api/projects/${project}/orchestrate/ship`, "POST", body);
+  return (await r.json()) as { pushed: boolean; pr_url?: string };
+}
+
+export async function getDiff(project: string): Promise<{ diff: string }> {
+  return getJSON<{ diff: string }>(`/api/projects/${project}/orchestrate/diff`);
+}
+
+export async function pruneSessions(
+  kind: string,
+): Promise<{ kind: string; skipped: boolean; output: string }> {
+  const r = await writeJSON(
+    `/api/agents/${encodeURIComponent(kind)}/sessions/prune`,
+    "POST",
+    {},
+  );
+  return (await r.json()) as { kind: string; skipped: boolean; output: string };
+}
 
 // --- Custom-agent manifests (Phase D) ---
 export interface ManifestRow { kind: string; binary: string; drivable: boolean }

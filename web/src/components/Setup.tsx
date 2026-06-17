@@ -1,25 +1,20 @@
 import { useEffect, useState } from "react";
 import type { SetupBinding } from "../lib/types";
-import { getSetupSuggest } from "../lib/api";
+import { getSetupSuggest, setupApply, type SetupApplySeat, type SetupApplyResponse } from "../lib/api";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Alert } from "./ui/Alert";
 import { EmptyState } from "./ui/EmptyState";
 import { Spinner } from "./ui/Spinner";
-import { ConfigSection } from "./ui/ConfigSection";
+import { ConfigSection, Inset } from "./ui/ConfigSection";
 import { Icon } from "../lib/icons";
 import { AgentLogo } from "../lib/agentLogos";
 
 // Setup (#1) — the entry-point view bridging "I registered my agents" to "this
 // project can do work". Reads the proposed seat roster from the machine's
 // registered agents, lets the user toggle roles per seat, recomputes role-gap
-// warnings live, and generates the exact `init` + `agent add` commands to apply
-// the roster. Apply is copy-the-commands (zero side effects) in this cut;
-// one-click apply via HTTP (which would mutate .pact) is a deliberate follow-up.
-//
-// Phase 1 rebuild: composed from the locked Phase 0 elements — per-kind icon
-// tiles, role-colored toggle chips (the three-main-color language), and a
-// ConfigSection for the apply block.
+// warnings live, and either generates the exact CLI commands to apply the
+// roster or runs one-click setup via POST /api/setup/apply.
 
 const ALL_ROLES = ["orchestrator", "reviewer", "worker"] as const;
 type Role = (typeof ALL_ROLES)[number];
@@ -37,6 +32,12 @@ function entryFor(kind: string): string {
   if (kind.startsWith("claude")) return "CLAUDE.md";
   if (kind.startsWith("gemini")) return "GEMINI.md";
   return "AGENTS.md";
+}
+
+// basename mirrors path.basename for the project-name default.
+function basename(p: string): string {
+  const normal = p.replace(/\\/g, "/").replace(/\/$/, "");
+  return normal.split("/").filter(Boolean).pop() ?? "";
 }
 
 // validate mirrors internal/wizard.Validate: a runnable roster needs an
@@ -68,6 +69,12 @@ export function Setup() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const [path, setPath] = useState("");
+  const [project, setProject] = useState("");
+  const [applying, setApplying] = useState(false);
+  const [result, setResult] = useState<SetupApplyResponse | null>(null);
+  const [applyError, setApplyError] = useState("");
+
   function load() {
     setLoading(true);
     getSetupSuggest()
@@ -95,9 +102,36 @@ export function Setup() {
     );
   }
 
+  function handlePathChange(value: string) {
+    setPath(value);
+    setProject(basename(value));
+  }
+
+  async function handleApply() {
+    if (!bindings || !path || !project) return;
+    setApplying(true);
+    setApplyError("");
+    setResult(null);
+    const seats: SetupApplySeat[] = bindings.map((b) => ({
+      id: b.seat,
+      roles: b.roles,
+      entry: entryFor(b.kind),
+      kind: b.kind,
+    }));
+    try {
+      const r = await setupApply({ path, project, seats });
+      setResult(r);
+    } catch (e) {
+      setApplyError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setApplying(false);
+    }
+  }
+
   const warnings = bindings ? validate(bindings) : [];
   const commands = bindings ? applyCommands(bindings) : "";
   const ready = bindings != null && bindings.length > 0 && warnings.length === 0;
+  const canApply = ready;
 
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 view-enter" data-testid="setup-view">
@@ -112,7 +146,7 @@ export function Setup() {
         )}
       </div>
       <p className="mb-4 text-[12px] text-[var(--color-text-3)]">
-        Suggested seat assignments from the agents registered on this machine. Adjust the roles, then copy the commands below and run them from the project root.
+        Suggested seat assignments from the agents registered on this machine. Adjust the roles, pick a project path, then apply in one click or copy the commands below.
       </p>
 
       {error && (
@@ -190,6 +224,117 @@ export function Setup() {
                   {wn}
                 </Alert>
               ))}
+            </div>
+          )}
+
+          <div className="mt-5">
+            <ConfigSection label="Project location" required>
+              <Inset className="flex flex-col gap-2">
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[10.5px] font-medium text-[var(--color-text-3)]">Project path</span>
+                  <input
+                    data-testid="setup-path"
+                    type="text"
+                    value={path}
+                    onChange={(e) => handlePathChange(e.target.value)}
+                    placeholder="/path/to/new-project"
+                    className="w-full rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] px-2 py-1.5 text-[12px] text-[var(--color-text-1)] outline-none focus-visible:border-[var(--color-role-design)]"
+                  />
+                </label>
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[10.5px] font-medium text-[var(--color-text-3)]">Project name</span>
+                  <input
+                    data-testid="setup-project"
+                    type="text"
+                    value={project}
+                    onChange={(e) => setProject(e.target.value)}
+                    placeholder="new-project"
+                    className="w-full rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] px-2 py-1.5 text-[12px] text-[var(--color-text-1)] outline-none focus-visible:border-[var(--color-role-design)]"
+                  />
+                </label>
+              </Inset>
+            </ConfigSection>
+          </div>
+
+          <div className="mt-4 flex items-center gap-3">
+            <Button
+              data-testid="setup-apply-btn"
+              onClick={handleApply}
+              disabled={!canApply}
+              loading={applying}
+            >
+              Apply
+            </Button>
+            {!ready && (
+              <span className="text-[11px] text-[var(--color-text-3)]">
+                Complete all three roles before applying.
+              </span>
+            )}
+          </div>
+
+          {(applyError || result) && (
+            <div className="mt-4" data-testid="setup-result">
+              {applyError && (
+                <Alert tone="danger" title="Apply failed">
+                  {applyError}
+                </Alert>
+              )}
+              {result?.inited && !applyError && (
+                <Alert tone="success" title="Project initialized">
+                  {result.wired.length === 0
+                    ? "No agent wiring was required."
+                    : `${result.wired.filter((w) => w.wrote && !w.docOnly).length} agent file(s) written.`}
+                </Alert>
+              )}
+              {result && result.wired.length > 0 && (
+                <div className="mt-3 flex flex-col gap-2">
+                  {result.wired.map((w) => (
+                    <div
+                      key={`${w.kind}-${w.seat}`}
+                      data-testid="setup-wired"
+                      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5"
+                    >
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="text-[12px] font-[650] text-[var(--color-text-1)]">{w.kind}</span>
+                        <Badge color={w.docOnly ? "role-design" : w.wrote ? "role-dev" : "role-design"}>
+                          {w.docOnly ? "doc-only" : w.wrote ? "wired" : "skipped"}
+                        </Badge>
+                        <span className="ml-auto text-[11px] text-[var(--color-text-3)]">{w.path}</span>
+                      </div>
+                      {w.docOnly && w.snippet && (
+                        <div className="mt-2">
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="text-[10.5px] text-[var(--color-text-3)]">Copy snippet</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                void navigator.clipboard?.writeText(w.snippet ?? "");
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 1500);
+                              }}
+                            >
+                              {copied ? "Copied ✓" : "Copy"}
+                            </Button>
+                          </div>
+                          <pre className="whitespace-pre-wrap rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-3 py-2 mono text-[11px] text-[var(--color-text-2)]">
+                            {w.snippet}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {result && result.notes.length > 0 && (
+                <div className="mt-3 flex flex-col gap-1.5">
+                  {result.notes.map((note, i) => (
+                    <Alert key={i} tone="warn">
+                      {note}
+                    </Alert>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

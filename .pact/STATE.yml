@@ -4,6 +4,7 @@ agents:
   - { id: claude, roles: [orchestrator, reviewer] }
   - { id: opencode-worker, roles: [worker] }
   - { id: gemini-worker, roles: [worker] }
+  - { id: kimi-worker, roles: [worker] }
 features:
   - id: relay
     branch: feat-relay

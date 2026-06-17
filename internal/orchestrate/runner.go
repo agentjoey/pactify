@@ -3,6 +3,7 @@ package orchestrate
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/agentjoey/pactify/internal/agentcfg"
 	"github.com/agentjoey/pactify/internal/secret"
 	"github.com/agentjoey/pactify/internal/sessions"
+	"github.com/agentjoey/pactify/internal/tokens"
 )
 
 // glmDefaultBaseURL is the GLM Coding Plan's GLOBAL Anthropic-compatible endpoint.
@@ -61,8 +63,11 @@ type Runner interface {
 
 // execFn abstracts process spawn so the production path (os/exec) and the test
 // fakes share one seam — keeping test stubs out of production code (spec §7). env
-// is the full child environment; dir is the working directory.
-type execFn func(ctx context.Context, name string, args []string, dir string, env []string) error
+// is the full child environment; dir is the working directory. capture (when
+// non-nil) receives a copy of the child's stdout so the caller can parse token
+// usage from the agent's headless JSON; the child's stdio still streams to the
+// parent unchanged.
+type execFn func(ctx context.Context, name string, args []string, dir string, env []string, capture io.Writer) error
 
 // CmdRunner is the production Runner: it resolves agent.Get(kind).Runner(),
 // substitutes the {briefing} placeholder, injects PACT_AGENT_ID=seatID, and execs
@@ -80,15 +85,27 @@ func NewCmdRunner(idle time.Duration) CmdRunner {
 }
 
 // osExec is the production execFn: it merges the inherited process environment
-// with the supplied env, then runs the command to completion in dir.
-func osExec(ctx context.Context, name string, args []string, dir string, env []string) error {
+// with the supplied env, then runs the command to completion in dir. When capture
+// is non-nil the child's stdout is tee'd to it (for token parsing) while still
+// streaming to the parent.
+func osExec(ctx context.Context, name string, args []string, dir string, env []string, capture io.Writer) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), env...)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = teeStdout(capture)
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// teeStdout returns the writer the child's stdout should target: os.Stdout alone
+// when capture is nil, else a MultiWriter that also feeds the capture sink. Keeps
+// the live parent stream intact while siphoning a copy for token parsing.
+func teeStdout(capture io.Writer) io.Writer {
+	if capture == nil {
+		return os.Stdout
+	}
+	return io.MultiWriter(os.Stdout, capture)
 }
 
 // Run resolves the headless runner for kind, substitutes the briefing, and execs
@@ -149,8 +166,58 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// oauth/compute-default creds), making the pin unreliable. Inert when no key is
 	// set — the seat keeps its current auth.
 	env = append(env, geminiEnv(eff.Command)...)
-	return r.Exec(ctx, eff.Command, args, lc.RepoDir, env)
+
+	// Siphon a bounded tail of the child's stdout so we can parse token usage from
+	// its headless JSON (the read side surfaces it on the dashboard). Best-effort
+	// telemetry: capture and recording never affect the run's result.
+	cap := &tailWriter{max: tokenCaptureCap}
+	err = r.Exec(ctx, eff.Command, args, lc.RepoDir, env, cap)
+	recordTokens(lc, cap.String())
+	return err
 }
+
+// tokenCaptureCap bounds the stdout tail kept for token parsing — enough to hold
+// an agent's final usage JSON (a claude result object or the last stream-json
+// line) without buffering an entire long run. Usage lives at the END of JSONL
+// output, so a tail is the right window.
+const tokenCaptureCap = 1 << 20 // 1 MiB
+
+// recordTokens parses token usage from an agent stint's captured stdout and
+// accumulates it into the repo's token store, keyed by task. Pure best-effort: a
+// missing task, unparseable output, or a write error are all silent no-ops — token
+// telemetry must never break a run. Concurrency-safe by construction: the serial
+// loop runs one stint at a time, and parallel features each run in their own
+// worktree (distinct RepoDir), so no two callers touch the same tokens.json.
+func recordTokens(lc LaunchContext, output string) {
+	if lc.Task == "" {
+		return
+	}
+	n, ok := tokens.Parse(lc.Kind, output)
+	if !ok || n <= 0 {
+		return
+	}
+	s := tokens.Load(lc.RepoDir)
+	s.Add(lc.Task, n)
+	_ = tokens.Save(lc.RepoDir, s)
+}
+
+// tailWriter keeps only the last max bytes written to it. Splicing it into the
+// child's stdout bounds memory regardless of how chatty an agent is, while
+// preserving the tail where the final usage JSON lives.
+type tailWriter struct {
+	max int
+	buf []byte
+}
+
+func (w *tailWriter) Write(p []byte) (int, error) {
+	w.buf = append(w.buf, p...)
+	if len(w.buf) > w.max {
+		w.buf = w.buf[len(w.buf)-w.max:]
+	}
+	return len(p), nil
+}
+
+func (w *tailWriter) String() string { return string(w.buf) }
 
 // tagOpencodeSession inserts `--title pact:<seat>` right after opencode's "run"
 // subcommand (so it's a flag on the run, not swallowed by the trailing

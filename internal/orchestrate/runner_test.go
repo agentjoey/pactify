@@ -3,10 +3,12 @@ package orchestrate
 import (
 	"context"
 	"errors"
+	"io"
 	"reflect"
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/tokens"
 )
 
 // runCapture records the arguments a fake execFn was invoked with, so tests can
@@ -21,7 +23,7 @@ type runCapture struct {
 
 // fakeRunExec returns an execFn that records its inputs into cap and returns ret.
 func fakeRunExec(cap *runCapture, ret error) execFn {
-	return func(_ context.Context, name string, args []string, dir string, env []string) error {
+	return func(_ context.Context, name string, args []string, dir string, env []string, _ io.Writer) error {
 		cap.called = true
 		cap.name = name
 		cap.args = args
@@ -213,6 +215,87 @@ func TestCmdRunner_ExecError_Propagates(t *testing.T) {
 	err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", Briefing: "brief", RepoDir: "/repo"})
 	if !errors.Is(err, want) {
 		t.Fatalf("Run error = %v, want %v", err, want)
+	}
+}
+
+// emitExec returns an execFn that writes out to the capture sink (simulating an
+// agent's headless stdout) before returning ret — so token-recording can be tested
+// without spawning a real process.
+func emitExec(out string, ret error) execFn {
+	return func(_ context.Context, _ string, _ []string, _ string, _ []string, capture io.Writer) error {
+		if capture != nil {
+			_, _ = io.WriteString(capture, out)
+		}
+		return ret
+	}
+}
+
+// A run whose stdout carries usage JSON records the parsed total into the repo's
+// token store, keyed by task — the write side the dashboard's cost lens reads.
+func TestCmdRunner_RecordsTokens(t *testing.T) {
+	dir := t.TempDir()
+	r := CmdRunner{Exec: emitExec(`{"usage":{"input_tokens":120,"output_tokens":80}}`+"\n", nil)}
+	err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "claude-code", Task: "t-x", Briefing: "go", RepoDir: dir})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := tokens.Load(dir).Get("t-x"); got != 200 {
+		t.Fatalf("recorded tokens for t-x = %d, want 200", got)
+	}
+}
+
+// Two stints on the same task accumulate (Add sums); a failing run still records
+// the usage it emitted before failing (telemetry is independent of the verdict).
+func TestCmdRunner_RecordsTokens_AccumulatesAcrossRuns(t *testing.T) {
+	dir := t.TempDir()
+	lc := LaunchContext{Seat: "w1", Kind: "claude-code", Task: "t-y", Briefing: "go", RepoDir: dir}
+	r1 := CmdRunner{Exec: emitExec(`{"usage":{"input_tokens":50,"output_tokens":50}}`, nil)}
+	if err := r1.Run(context.Background(), lc); err != nil {
+		t.Fatalf("run 1: %v", err)
+	}
+	r2 := CmdRunner{Exec: emitExec(`{"usage":{"input_tokens":30,"output_tokens":40}}`, errors.New("rework"))}
+	_ = r2.Run(context.Background(), lc)
+	if got := tokens.Load(dir).Get("t-y"); got != 170 {
+		t.Fatalf("accumulated tokens for t-y = %d, want 170", got)
+	}
+	if runs := tokens.Load(dir).Tasks["t-y"].Runs; runs != 2 {
+		t.Fatalf("runs for t-y = %d, want 2", runs)
+	}
+}
+
+// No task id (a non-orchestrated launch) records nothing and never panics; output
+// with no usage block is likewise a silent no-op.
+func TestCmdRunner_RecordsTokens_NoopWithoutTaskOrUsage(t *testing.T) {
+	dir := t.TempDir()
+	noTask := CmdRunner{Exec: emitExec(`{"usage":{"input_tokens":9,"output_tokens":9}}`, nil)}
+	if err := noTask.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "claude-code", Briefing: "go", RepoDir: dir}); err != nil {
+		t.Fatalf("run (no task): %v", err)
+	}
+	noUsage := CmdRunner{Exec: emitExec("just some chatter, no json\n", nil)}
+	if err := noUsage.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "claude-code", Task: "t-z", Briefing: "go", RepoDir: dir}); err != nil {
+		t.Fatalf("run (no usage): %v", err)
+	}
+	if got := tokens.Load(dir).Get("t-z"); got != 0 {
+		t.Fatalf("tokens for t-z = %d, want 0 (no usage in output)", got)
+	}
+	if len(tokens.Load(dir).Tasks) != 0 {
+		t.Fatalf("token store should be empty, got %d entries", len(tokens.Load(dir).Tasks))
+	}
+}
+
+// tailWriter must bound memory yet preserve the trailing usage line a chatty
+// stream-json run emits, so token parsing still finds it after truncation.
+func TestTailWriter_KeepsTailUnderCap(t *testing.T) {
+	w := &tailWriter{max: 64}
+	for i := 0; i < 100; i++ {
+		_, _ = io.WriteString(w, "noise noise noise\n")
+	}
+	_, _ = io.WriteString(w, `{"usage":{"input_tokens":7,"output_tokens":3}}`+"\n")
+	if len(w.buf) > 64 {
+		t.Fatalf("tail buffer = %d bytes, want <= 64 (cap not enforced)", len(w.buf))
+	}
+	if n, ok := tokens.Parse("claude-code", w.String()); !ok || n != 10 {
+		t.Fatalf("Parse(tail) = (%d,%v), want (10,true) — trailing usage line lost", n, ok)
 	}
 }
 

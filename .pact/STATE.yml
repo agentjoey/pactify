@@ -228,13 +228,13 @@ features:
     tasks:
       - id: t-sp2-backend
         owner: opencode-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/t-sp2-backend.md
-        evidence: null
+        evidence: === NEW TESTS (7 in orchestrate_drive_test.go) === TestRunNoSeat PASS — POST run without seat → 422 TestRunAlreadyRunning PASS — POST run with active status.json → 409, fake runner not called TestRunSuccess PASS — POST run valid → 202 + status_url + fake runner gets --feature f1 --as claude --max-concurrency 3 TestResumeHasResumeFlag PASS — POST resume → 202 + args include --resume TestShipPush PASS — POST ship push → 200 {pushed:true}, finish runner called TestShipPR PASS — POST ship PR → 200 {pushed:true, pr_url:"..."} TestDiff PASS — GET diff → 200 {diff:"..."}, GET diff?staged → staged output  === go vet ./internal/serve/ === clean  === Full serve suite === go test ./internal/serve/ -count=1 ok github.com/agentjoey/pactify/internal/serve 15.159s — all green, zero regressions  === FILES CHANGED === - internal/serve/orchestrate.go (MODIFIED): 4 new routes (POST run/resume/ship, GET diff) + handlers + 3 setter methods (SetExecOrchestrate/SetFinishRunner/SetGitDiff) + anti-reentry via status.json (running && !done && !escalated → 409) + exec runner seam (prod=os/exec Start, test=fake) + finish.Finisher integration + git diff with ?staged - internal/serve/orchestrate_drive_test.go (NEW): 7 httptest tests covering no-seat→422, reentry→409, valid run→202+argv, resume→--resume, ship push, ship PR, diff+staged - internal/serve/api.go (MODIFIED): +3 seam fields on Server (execOrchestrate, finishRunner, gitDiffFn) for test injection
       - id: t-sp3-backend
         owner: opencode-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/t-sp3-backend.md
         evidence: null

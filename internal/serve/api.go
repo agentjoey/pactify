@@ -43,6 +43,10 @@ type Server struct {
 	mu      map[string]*sync.Mutex
 
 	relay *relay
+
+	execOrchestrate func(dir string, args, env []string) error
+	finishRunner    func(dir, name string, args ...string) (string, error)
+	gitDiffFn       func(dir string, staged bool) (string, error)
 }
 
 // SetSeat configures the acting seat used for author (write) endpoints.

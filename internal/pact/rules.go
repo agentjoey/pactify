@@ -44,6 +44,41 @@ func checkAssign(st projection.State, taskID, owner, reviewer string) error {
 	return nil
 }
 
+// checkAddSeat validates an add-seat: the acting seat must have the orchestrator
+// role (roster management is the orchestrator's job), the new seat id must be
+// unique across the roster, and its roles must be known.
+func checkAddSeat(st projection.State, actingID string, seat Seat) error {
+	if !seatHasRole(st, actingID, "orchestrator") {
+		return fmt.Errorf("pactify seat add: acting seat %q must have the orchestrator role", actingID)
+	}
+	for _, a := range st.Agents {
+		if a.ID == seat.ID {
+			return fmt.Errorf("pactify seat add: seat id %q already exists", seat.ID)
+		}
+	}
+	for _, r := range seat.Roles {
+		if r != "orchestrator" && r != "reviewer" && r != "worker" {
+			return fmt.Errorf("pactify seat add: invalid role %q (want orchestrator/reviewer/worker)", r)
+		}
+	}
+	return nil
+}
+
+// seatHasRole reports whether the roster seat id carries role.
+func seatHasRole(st projection.State, id, role string) bool {
+	for _, a := range st.Agents {
+		if a.ID != id {
+			continue
+		}
+		for _, r := range a.Roles {
+			if r == role {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // checkDeps validates a new task's deps at assign time (additive v1):
 //   - no self-dependency,
 //   - every dep already exists in the SAME feature,

@@ -90,7 +90,7 @@ func (p *Project) Init(project string, seatSpecs []string) error {
 		for i, r := range s.Roles {
 			roles[i] = r
 		}
-		seatPayload = append(seatPayload, map[string]any{"id": s.ID, "roles": roles, "entry": s.Entry})
+		seatPayload = append(seatPayload, map[string]any{"id": s.ID, "roles": roles, "entry": s.Entry, "kind": s.Kind})
 		if err := BakeEntry(p.dir, s); err != nil {
 			return err
 		}
@@ -110,6 +110,38 @@ func (p *Project) Init(project string, seatSpecs []string) error {
 			"seats":            seatPayload,
 			"base_branch":      base,
 		},
+	})
+}
+
+// AddSeat appends a new seat to the roster after init — fixing the "roster frozen
+// at init" rigidity (the protocol has no remove-seat yet; YAGNI). Only an acting
+// seat with the orchestrator role may add one, and the seat id must be unique. The
+// seat's kind is recorded so the roster carries it (init seats now do too — this
+// lets orchestrate infer --seat-kind from the roster). It does NOT bake the entry
+// file: wiring stays a separate step (pactify agent add), matching init/wire split.
+func (p *Project) AddSeat(spec string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	seat, err := ParseSeat(spec)
+	if err != nil {
+		return err
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := checkAddSeat(st, id, seat); err != nil {
+		return err
+	}
+	roles := make([]any, len(seat.Roles))
+	for i, r := range seat.Roles {
+		roles[i] = r
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: "orchestrator", EventType: "add-seat",
+		Payload: map[string]any{"id": seat.ID, "roles": roles, "entry": seat.Entry, "kind": seat.Kind},
 	})
 }
 
@@ -399,6 +431,8 @@ func (p *Project) Validate() error { return p.validateLog() }
 
 // Init scaffolds .pact/ in the current working directory.
 func Init(project string, seatSpecs []string) error { return At(".").Init(project, seatSpecs) }
+
+func AddSeat(spec string) error { return At(".").AddSeat(spec) }
 
 // Join registers the seat in the current working directory's repo (CLI client
 // identity: pactify-cli + ClientVersion).

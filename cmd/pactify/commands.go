@@ -122,7 +122,26 @@ func newRootCmd() *cobra.Command {
 	validateCmd := &cobra.Command{Use: "validate", Short: "check v1 conformance",
 		RunE: func(_ *cobra.Command, _ []string) error { return pact.Validate() }}
 
-	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, statusCmd, logCmd, validateCmd,
+	var seatRoles, seatEntry, seatKind string
+	seatAddCmd := &cobra.Command{Use: "add <id>", Args: cobra.ExactArgs(1), Short: "add a seat to the roster (orchestrator only)",
+		RunE: func(c *cobra.Command, a []string) error {
+			s := a[0] + ":" + seatRoles + ":" + seatEntry
+			if seatKind != "" {
+				s += ":" + seatKind
+			}
+			if err := pact.AddSeat(s); err != nil {
+				return err
+			}
+			fmt.Fprintf(c.OutOrStdout(), "seat add: %q added to roster\n", a[0])
+			return nil
+		}}
+	seatAddCmd.Flags().StringVar(&seatRoles, "roles", "", "comma-separated roles (orchestrator/reviewer/worker)")
+	seatAddCmd.Flags().StringVar(&seatEntry, "entry", "AGENTS.md", "entry file for the seat's agent")
+	seatAddCmd.Flags().StringVar(&seatKind, "kind", "", "agent kind (wiring + orchestrate seat-kind inference)")
+	seatCmd := &cobra.Command{Use: "seat", Short: "manage roster seats"}
+	seatCmd.AddCommand(seatAddCmd)
+
+	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, statusCmd, logCmd, validateCmd, seatCmd,
 		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd())
 	return root
 }

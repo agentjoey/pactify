@@ -6,6 +6,8 @@ import "github.com/agentjoey/pactify/internal/event"
 type Seat struct {
 	ID    string
 	Roles []string
+	Entry string
+	Kind  string // agent kind (from init/add-seat payload); "" = shell/legacy
 }
 
 type Task struct {
@@ -34,6 +36,17 @@ func str(v any) string {
 	return s
 }
 
+// seatFromPayload builds a Seat from an init/add-seat payload map (id/roles/entry/kind).
+func seatFromPayload(m map[string]any) Seat {
+	seat := Seat{ID: str(m["id"]), Entry: str(m["entry"]), Kind: str(m["kind"])}
+	if rs, ok := m["roles"].([]any); ok {
+		for _, r := range rs {
+			seat.Roles = append(seat.Roles, str(r))
+		}
+	}
+	return seat
+}
+
 // Project folds events into State, preserving first-assign order for
 // features/tasks and init order for seats. Unknown event_types are ignored.
 func Project(evs []event.Event) State {
@@ -50,13 +63,7 @@ func Project(evs []event.Event) State {
 		if seats, ok := p["seats"].([]any); ok {
 			for _, s := range seats {
 				m, _ := s.(map[string]any)
-				seat := Seat{ID: str(m["id"])}
-				if rs, ok := m["roles"].([]any); ok {
-					for _, r := range rs {
-						seat.Roles = append(seat.Roles, str(r))
-					}
-				}
-				st.Agents = append(st.Agents, seat)
+				st.Agents = append(st.Agents, seatFromPayload(m))
 			}
 		}
 		break
@@ -85,6 +92,17 @@ func Project(evs []event.Event) State {
 	// concurrent-feature support ever makes dangling events real. See M1.2 design.
 	for _, e := range evs {
 		switch e.EventType {
+		case "add-seat":
+			seat := seatFromPayload(e.Payload)
+			exists := false
+			for _, a := range st.Agents {
+				if a.ID == seat.ID {
+					exists = true
+				}
+			}
+			if !exists {
+				st.Agents = append(st.Agents, seat)
+			}
 		case "assign":
 			fi, ok := fIdx[e.Feature]
 			if !ok {

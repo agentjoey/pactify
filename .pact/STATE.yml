@@ -244,13 +244,13 @@ features:
     tasks:
       - id: t-sp2-frontend
         owner: gemini-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/t-sp2-frontend.md
         evidence:   RUN  v4.1.8 /Users/xtation/AgentWorks/Code_Claude/pactify/web    Test Files  53 passed (53)       Tests  450 passed (450)    Start at  18:44:56    Duration  4.95s (transform 1.61s, setup 1.88s, import 7.01s, tests 7.46s, environment 21.46s)   Running 7 tests using 1 worker    ✓  1 [chromium] › e2e/canvas.spec.ts:30:1 › drag-isolation: dragging one node leaves the others put (2.2s)   ✓  2 [chromium] › e2e/canvas.spec.ts:75:1 › connect: wiring two drafts adds an edge (972ms)   ✓  3 [chromium] › e2e/canvas.spec.ts:123:1 › connect: wiring to a committed task is rejected (edge count held + notice) (908ms)   ✓  4 [chromium] › e2e/canvas.spec.ts:165:1 › connect: cross-feature wiring is rejected (edge count held + notice) (1.0s)   ✓  5 [chromium] › e2e/canvas.spec.ts:211:1 › drag-during-sse: an SSE snapshot mid-drag does not teleport the dragged node (1.4s)   ✓  6 [chromium] › e2e/office.spec.ts:25:1 › office-zoom: wheel + HUD buttons change viewport scale; fit resets (1.9s)   ✓  7 [chromium] › e2e/office.spec.ts:72:1 › office-author: new feature + task, dock drag to idle desk opens dispatch (265ms)    7 passed (9.1s)
       - id: t-sp3-frontend
         owner: gemini-worker
-        status: in_progress
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/t-sp3-frontend.md
-        evidence: null
+        evidence:   RUN  v4.1.8 /Users/xtation/AgentWorks/Code_Claude/pactify/web    Test Files  53 passed (53)       Tests  454 passed (454)    Start at  18:58:14    Duration  4.99s (transform 1.75s, setup 1.88s, import 6.90s, tests 7.43s, environment 21.71s)

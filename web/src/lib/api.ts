@@ -243,6 +243,35 @@ export const getParallelOrchestrate = (project: string) =>
 
 export const getSetupSuggest = () => getJSON<SetupSuggestResponse>(`/api/setup/suggest`);
 
+export interface SetupApplySeat {
+  id: string;
+  roles: string[];
+  entry: string;
+  kind: string;
+}
+
+export interface SetupApplyResponse {
+  inited: boolean;
+  wired: {
+    kind: string;
+    seat: string;
+    wrote: boolean;
+    path: string;
+    docOnly: boolean;
+    snippet?: string;
+  }[];
+  notes: string[];
+}
+
+export async function setupApply(body: {
+  path: string;
+  project: string;
+  seats: SetupApplySeat[];
+}): Promise<SetupApplyResponse> {
+  const r = await writeJSON("/api/setup/apply", "POST", body);
+  return (await r.json()) as SetupApplyResponse;
+}
+
 export const getRecipes = () => getJSON<RecipeItem[]>(`/api/recipes`);
 
 export const expandRecipe = (name: string, goal: string) =>

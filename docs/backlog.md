@@ -141,3 +141,16 @@ v0.4.0 发布与 CI run 均报：`actions/checkout@v4`、`actions/setup-node@v4`
 ## 前端 orchestrate task 的 embedded dist 同步债（2026-06-17 SP2/SP3 dogfood 发现）
 **现象**：前端 task 的 verify（tsc + vitest + e2e）跑源码，**不校验/不 rebuild** `internal/serve/dist`（go:embed 的 dashboard 产物）。SP3 改了 Setup.tsx 但 worker checkpoint 的 dist 仍是 SP2 时的 → dashboard 实际不显示新 UI，需手工 `npm run build` 补提交。
 **做法**：① 前端 task 的 verify 末尾加 `npm run build` 并把 dist 纳入 checkpoint；或 ② reviewer 校验 dist 与源码同步；或 ③ 干脆 dist 不入库、改由 CI/发版统一 build（去掉 go:embed 入库产物）。③ 最干净但改动大。
+
+## 差异化备忘（对 OpenAgents Workspace，2026-06-17 代码审查）
+[openagents-org/openagents](https://github.com/openagents-org/openagents)：「The Collaboration OS for Agents」，Apache-2.0，活跃。**同品类、架构相反**，是 AgentHub/Mind Agency 之后又一个 platform-first 竞品。**代码已审查，宣传与实现基本一致（非 vaporware）**。
+- **架构对照**：OpenAgents = 中心化 workspace hub（`workspace/backend` FastAPI + alembic DB + nginx + docker-compose + Railway 部署），workspace URL 持久；Pactify = git+`.pact/` 文件零服务器、去中心化。**hub 掉线则协作断；Pactify 离线/跨机靠 git**。
+- **代码量**：OpenAgents ≈ **339k 行**（py 151.6k〔测试 27%〕+ tsx 119.2k + ts 35.7k + js 20.2k + **swift 12.3k**），全平台（FastAPI backend + 2 个 GUI〔Electron launcher + web studio〕+ Swift 原生 app + Python SDK + gRPC proto）。Pactify ≈ **43.4k 行**（go 22.8k + tsx 15.5k + ts 4.5k + sh 0.6k），单 Go 二进制 + 1 dashboard。**≈ 7.8×**——「广撒网做平台」vs「窄而深做协议」。
+- **协作模型**：OpenAgents = threads/@mentions/shared browser 群聊式自由协作（无强制评审规则）；Pactify = 任务图（owner/reviewer/deps/verify）+ 两条铁律——为「可信自主交付」而非「协作聊天室」设计。
+- **独有能力审查结论**：
+  - **shared browser**（`browser.py` BrowserManager singleton）：**真实但小众**。云端依赖外部服务 **Browser Fabric**（违 no-Hub），有 `_global_lock` → 多 agent 不能真并发操作一个浏览器（实为「共享可见 + 接力串行」）；对编码交付无关。**不追**（要 web 能力让 agent 自己的 browser MCP 做即可）。
+  - **A2A**（`models/a2a.py`）：实现的是 **Google A2A 标准 0.3**（AgentCard/.well-known discovery + Task/Artifact），真协议非自造。但**生态极早期、当下刚需有限，本质是卡位押注**（像早期押 MCP）。**关注不急**——和 ADR backlog 的 ACP 方向一起单列调研；可考虑让 Pactify「说 A2A」作对外互操作接口（外部 A2A agent 参与 pact 项目），v1 之后的生态卡位。
+- **差异话术**：协议非平台 / no-Hub / git 多机 / 工程纪律（评审铁律 + verify gate）保质量 / 单二进制零依赖（43k vs 339k）/ 窄而深「把可信自主交付一件事做透」。
+
+## SP2/SP3 新 UI 功能 + 流程再调一版（下个 sprint，2026-06-17 用户）
+SP2/SP3 的 dashboard 驱动 UI（Plan Apply / Live Run·Resume·diff·Ship / Setup apply / Ops prune）已 ship 并上线常驻 serve，但需**在实际任务中实测**后，对**整体功能与流程**再调一版（**不是页面风格，是功能/流程**）。作为下一个 sprint。待用户实测反馈后细化具体调整点（哪些流程别扭/缺步骤/交互不顺）再开 spec。

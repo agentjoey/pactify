@@ -72,3 +72,45 @@ func TestAddGroupPersists(t *testing.T) {
 		t.Fatalf("group=%q want %q", r2.Projects[0].Group, "mygroup")
 	}
 }
+
+func TestRenamePreservesPathAndGroup(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	var r Registry
+	if err := r.Add("old-name", "/tmp/proj", "team-a"); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	if err := r.Rename("old-name", "new-name"); err != nil {
+		t.Fatalf("rename: %v", err)
+	}
+	if len(r.Projects) != 1 {
+		t.Fatalf("want 1 project, got %d", len(r.Projects))
+	}
+	p := r.Projects[0]
+	if p.Name != "new-name" {
+		t.Errorf("name = %q, want new-name", p.Name)
+	}
+	if p.Group != "team-a" {
+		t.Errorf("group = %q, want team-a (preserved)", p.Group)
+	}
+	if p.Path == "" {
+		t.Errorf("path was cleared, want preserved")
+	}
+}
+
+func TestRenameUnknownIsError(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	var r Registry
+	if err := r.Rename("ghost", "x"); err == nil {
+		t.Fatal("renaming an unknown project must error")
+	}
+}
+
+func TestRenameToExistingNameIsError(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	var r Registry
+	_ = r.Add("a", "/tmp/a", "")
+	_ = r.Add("b", "/tmp/b", "")
+	if err := r.Rename("a", "b"); err == nil {
+		t.Fatal("renaming onto an existing name must error")
+	}
+}

@@ -98,3 +98,27 @@ func (r *Registry) Remove(name string) error {
 	}
 	return fmt.Errorf("registry: name %q not found", name)
 }
+
+// Rename changes a project's registry name, preserving its path and group. The
+// new name is slugged (same rule as Add). Errors if oldName is unknown or the
+// slugged newName is empty or already taken by a different project.
+func (r *Registry) Rename(oldName, newName string) error {
+	oldName = Slug(oldName)
+	newName = Slug(newName)
+	if newName == "" {
+		return fmt.Errorf("registry: new name is empty after slugging")
+	}
+	idx := -1
+	for i, p := range r.Projects {
+		if p.Name == oldName {
+			idx = i
+		} else if p.Name == newName {
+			return fmt.Errorf("registry: name %q already registered", newName)
+		}
+	}
+	if idx == -1 {
+		return fmt.Errorf("registry: name %q not found", oldName)
+	}
+	r.Projects[idx].Name = newName
+	return nil
+}

@@ -44,6 +44,8 @@ beforeEach(() => {
     if (url === "/api/registry") return { ok: true, json: async () => [] };
     if (url === "/api/agents") return { ok: true, json: async () => [] };
     if (url.includes("/timeline")) return { ok: true, json: async () => ({ total: 0, events: [] }) };
+    // SettingsModal mounts ops panels that read array-shaped endpoints.
+    if (url.includes("/wiring") || url.includes("/seats")) return { ok: true, json: async () => [] };
     return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
   }));
 });
@@ -114,9 +116,12 @@ describe("App", () => {
     });
 
     // Switch project — events should reset (new EventSource created). The
-    // project list now lives in the Sidebar; click its "other" item.
+    // project list now lives in the header ProjectMenu; open it and pick "other".
     await act(async () => {
-      fireEvent.click(screen.getByTestId("sidebar-project-other"));
+      fireEvent.click(screen.getByTestId("project-menu-trigger"));
+    });
+    await act(async () => {
+      fireEvent.click(within(screen.getByTestId("project-menu")).getByText("other"));
     });
 
     // After switching, the old ES should have been closed
@@ -178,6 +183,13 @@ describe("App", () => {
       await waitFor(() => expect(window.location.search).toBe("?at=2"));
       window.history.replaceState(null, "", "/");
     });
+  });
+
+  it("opens the Settings modal from the toolbar gear", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("toolbar-settings"));
+    await waitFor(() => expect(screen.getByTestId("settings-modal")).toBeInTheDocument());
   });
 
   describe("global view shortcuts", () => {

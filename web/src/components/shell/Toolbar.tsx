@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import type { Seat } from "../../lib/types";
+import type { Seat, ProjectMeta } from "../../lib/types";
 import type { View } from "../TopBar";
 import { CableMark } from "../TopBar";
 import { Icon } from "../../lib/icons";
 import { Ant } from "../ui/ants/Ant";
 import { casteForRoles, padGradient } from "../../lib/ants";
+import { ProjectMenu } from "./ProjectMenu";
 
 // Toolbar — the macOS-style unified toolbar (Option A shell). Holds the brand +
 // current project label, the centered lens segmented control (the four ways to
@@ -30,6 +31,13 @@ export function Toolbar({
   author,
   seat,
   agents,
+  projects,
+  running,
+  onSelectProject,
+  onRenameProject,
+  onDeleteProject,
+  onAddProject,
+  onOpenSettings,
 }: {
   projectName: string;
   view: View;
@@ -39,6 +47,13 @@ export function Toolbar({
   author: boolean;
   seat?: string;
   agents?: Seat[];
+  projects: ProjectMeta[];
+  running: boolean;
+  onSelectProject: (name: string) => void;
+  onRenameProject: (name: string) => void;
+  onDeleteProject: (name: string) => void;
+  onAddProject: () => void;
+  onOpenSettings: () => void;
 }) {
   const seatRoles = useMemo(
     () => (seat ? agents?.find((a) => a.id === seat)?.roles ?? [] : []),
@@ -52,16 +67,20 @@ export function Toolbar({
       data-testid="toolbar"
       className="relative z-50 flex items-center gap-3 border-b border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-bg-surface)_88%,var(--color-bg-page))] px-3.5 py-2.5 backdrop-blur-[10px]"
     >
-      {/* brand + current project */}
+      {/* brand + project menu */}
       <div className="flex items-center gap-2 shrink-0">
         <CableMark />
         <span className="text-[13px] font-[680] text-[var(--color-text-1)]">pactify</span>
-        {projectName && (
-          <>
-            <span className="text-[var(--color-text-3)]">·</span>
-            <span className="mono text-[12px] font-medium text-[var(--color-text-2)]">{projectName}</span>
-          </>
-        )}
+        <span className="text-[var(--color-text-3)]">·</span>
+        <ProjectMenu
+          projects={projects}
+          current={projectName}
+          running={running}
+          onSelect={onSelectProject}
+          onRename={onRenameProject}
+          onDelete={onDeleteProject}
+          onAdd={onAddProject}
+        />
       </div>
 
       {/* centered lens segmented control */}
@@ -84,15 +103,7 @@ export function Toolbar({
         })}
       </div>
 
-      {/* right cluster: reserved Orchestrate (disabled until B5) · ⌘K · live · seat */}
-      <button
-        type="button"
-        disabled
-        title="Needs B5: dashboard-driven orchestration (backend pending)"
-        className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] px-2.5 py-1 text-[11.5px] font-medium text-[var(--color-text-3)] opacity-60"
-      >
-        <Icon name="action-run" size={13} color="var(--color-text-3)" /> Orchestrate
-      </button>
+      {/* right cluster: ⌘K · live · seat · ⚙ settings · 👤 profile */}
       <button
         type="button"
         data-testid="cmdk-hint"
@@ -122,6 +133,25 @@ export function Toolbar({
           observing
         </span>
       ) : null}
+      <button
+        type="button"
+        data-testid="toolbar-settings"
+        aria-label="settings"
+        title="Settings"
+        onClick={onOpenSettings}
+        className="grid h-[26px] w-[26px] place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+      >
+        ⚙
+      </button>
+      <button
+        type="button"
+        data-testid="toolbar-profile"
+        aria-label="profile"
+        title="Profile (coming soon)"
+        className="grid h-[26px] w-[26px] place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+      >
+        👤
+      </button>
     </div>
   );
 }

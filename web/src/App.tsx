@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent } from "./lib/types";
-import { fetchProjects, fetchState, subscribeEvents, getActingSeat } from "./lib/api";
+import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus } from "./lib/api";
 import { type View } from "./components/TopBar";
 import { Toolbar } from "./components/shell/Toolbar";
-import { Sidebar } from "./components/shell/Sidebar";
+import { RosterDock } from "./components/shell/RosterDock";
+import { SettingsModal } from "./components/shell/SettingsModal";
+import { AddProjectWizard } from "./components/shell/AddProjectWizard";
 import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
 import { Canvas } from "./components/Canvas";
@@ -41,8 +43,11 @@ export default function App() {
   const [selected, setSelected] = useState("");
   const [live, setLive] = useState(false);
   const [view, setView] = useState<View>("board");
-  // Sidebar collapse (Option A shell): collapsed → a function-icon rail.
-  const [navCollapsed, setNavCollapsed] = useState(false);
+  // IA v2 shell: ⚙ Settings sheet + AddProjectWizard now owned by App (moved out
+  // of the dropped Sidebar). `running` drives the ProjectMenu status light.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [running, setRunning] = useState(false);
   const [author, setAuthor] = useState(false);
   // The acting seat id (empty when observing) — TopBar resolves its roles from
   // state.agents to pick the ant caste for the seat avatar.
@@ -145,6 +150,34 @@ export default function App() {
     const t = setInterval(() => setTick((n) => n + 1), 60_000);
     return () => clearInterval(t);
   }, []);
+
+  // ProjectMenu status light: poll orchestrate status for the current project so
+  // the header dot pulses while a run is active (present, not done/escalated).
+  useEffect(() => {
+    if (!current) { setRunning(false); return; }
+    let alive = true;
+    const tick = () => getOrchestrateStatus(current).then((s) => {
+      if (!alive) return;
+      setRunning(Boolean(s.present && s.status && !s.status.done && !s.status.escalated));
+    }).catch(() => { if (alive) setRunning(false); });
+    tick();
+    const t = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(t); };
+  }, [current]);
+
+  // Project rename/delete (moved from Sidebar into the header ProjectMenu).
+  const onRenameProject = async (name: string) => {
+    const next = window.prompt(`Rename "${name}" to:`, name);
+    if (!next || next === name) return;
+    try { await renameRegistry(name, next); } catch (e) { pushToast(e instanceof Error ? e.message : String(e), "error"); return; }
+    if (current === name) setCurrent(next);
+    refreshProjects();
+  };
+  const onDeleteProject = async (name: string) => {
+    if (!window.confirm(`Unregister "${name}"? (.pact files are kept)`)) return;
+    try { await deleteRegistry(name); } catch (e) { pushToast(e instanceof Error ? e.message : String(e), "error"); return; }
+    refreshProjects();
+  };
 
   // pushToast surfaces a one-off message on the shared toast stack (review
   // notifications and palette-action failures ride the same rail). `kind:
@@ -342,9 +375,9 @@ export default function App() {
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <Toolbar projectName={currentName} view={view} onView={setView} live={live} replaying={replaying} author={author} seat={seat} agents={shownState.agents} />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar projects={projects} current={current} onSelect={setCurrent} view={view} onView={setView} collapsed={navCollapsed} onToggleCollapse={() => setNavCollapsed((c) => !c)} onChanged={refreshProjects} />
+      <Toolbar projectName={currentName} view={view} onView={setView} live={live} replaying={replaying} author={author} seat={seat} agents={shownState.agents} projects={projects} running={running} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+      <div className="relative flex flex-1 overflow-hidden">
+        <RosterDock seats={shownState.agents} onSeatSettings={() => setSettingsOpen(true)} />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Agents author={author} onChanged={refreshProjects} />
           {projectsLoaded && projects.length === 0
@@ -372,6 +405,8 @@ export default function App() {
         </div>
       </div>
       <Toasts toasts={toasts} />
+      {settingsOpen && <SettingsModal project={current} author={author} onClose={() => setSettingsOpen(false)} />}
+      <AddProjectWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onAdded={() => { setWizardOpen(false); refreshProjects(); }} />
       <CommandK
         projects={projects}
         current={current}

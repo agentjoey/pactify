@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectMeta } from "../../lib/types";
 
 export function ProjectMenu({
@@ -19,6 +19,18 @@ export function ProjectMenu({
   onAdd: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Dismiss the dropdown on any click outside its root (standard header-menu UX).
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
   const { grouped, flat } = useMemo(() => {
     const g = new Map<string, ProjectMeta[]>();
     const f: ProjectMeta[] = [];
@@ -35,7 +47,7 @@ export function ProjectMenu({
   }, [projects]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <button
         type="button"
         data-testid="project-menu-trigger"

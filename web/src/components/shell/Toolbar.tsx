@@ -8,13 +8,10 @@ import { casteForRoles, padGradient } from "../../lib/ants";
 import { ProjectMenu } from "./ProjectMenu";
 
 // Toolbar — the macOS-style unified toolbar (Option A shell). Holds the brand +
-// current project label, the centered lens segmented control (the four ways to
-// view a project: Canvas / Board / Live / Plan), a ⌘K affordance, the live
-// badge, and the acting-seat avatar. Project SWITCHING and machine-level
-// destinations live in the Sidebar, not here. Light theme, English copy.
-//
-// The toolbar surfaces the three lenses (Board / Canvas / Live), the reduced
-// View union after the IA v2 view reduction.
+// the ProjectMenu dropdown (project switching / rename / delete / add lives here
+// after IA v2), the centered lens segmented control (the three lenses: Board /
+// Canvas / Live), a ⌘K affordance, the live badge, the ⚙ Settings and 👤 Profile
+// buttons, and the acting-seat avatar. Light theme, English copy.
 
 const LENSES: ReadonlyArray<{ v: View; label: string; icon: string }> = [
   { v: "board", label: "Board", icon: "view-kanban" },
@@ -147,8 +144,9 @@ export function Toolbar({
         type="button"
         data-testid="toolbar-profile"
         aria-label="profile"
+        aria-disabled="true"
         title="Profile (coming soon)"
-        className="grid h-[26px] w-[26px] place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+        className="grid h-[26px] w-[26px] cursor-not-allowed place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] text-[var(--color-text-3)] opacity-60"
       >
         👤
       </button>

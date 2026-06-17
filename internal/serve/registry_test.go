@@ -284,3 +284,61 @@ func appendLine(t *testing.T, dir, line string) {
 	}
 	f.Close()
 }
+
+func TestRegistryRename(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	s := New([]registry.Project{{Name: "old", Path: dir, Group: "g"}})
+	s.seat = "claude" // satisfy requireSeat
+	srv := httptest.NewServer(s.Handler())
+	defer srv.Close()
+
+	req, _ := http.NewRequest("PUT", srv.URL+"/api/registry/old",
+		strings.NewReader(`{"new_name":"fresh"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	listResp, _ := http.Get(srv.URL + "/api/registry")
+	defer listResp.Body.Close()
+	var items []registryItem
+	_ = json.NewDecoder(listResp.Body).Decode(&items)
+	if len(items) != 1 || items[0].Name != "fresh" {
+		t.Fatalf("registry list = %+v, want one item named fresh", items)
+	}
+}
+
+func TestRegistryRenameNoSeatRejected(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	s := New([]registry.Project{{Name: "old", Path: dir}})
+	srv := httptest.NewServer(s.Handler())
+	defer srv.Close()
+	req, _ := http.NewRequest("PUT", srv.URL+"/api/registry/old",
+		strings.NewReader(`{"new_name":"fresh"}`))
+	resp, _ := http.DefaultClient.Do(req)
+	defer resp.Body.Close()
+	if resp.StatusCode != 422 {
+		t.Fatalf("status = %d, want 422 (no acting seat)", resp.StatusCode)
+	}
+}
+
+func TestRegistryRenameUnknownIs404(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	s := New([]registry.Project{})
+	s.seat = "claude"
+	srv := httptest.NewServer(s.Handler())
+	defer srv.Close()
+	req, _ := http.NewRequest("PUT", srv.URL+"/api/registry/ghost",
+		strings.NewReader(`{"new_name":"x"}`))
+	resp, _ := http.DefaultClient.Do(req)
+	defer resp.Body.Close()
+	if resp.StatusCode != 404 {
+		t.Fatalf("status = %d, want 404", resp.StatusCode)
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/pact"
@@ -53,10 +54,36 @@ func (s *Server) RemoveProject(name string) error {
 	return nil
 }
 
+// RenameProject changes a live project's registry name in the in-memory map and
+// display order, preserving its path (and therefore its running fsnotify watch).
+// Errors if oldName is unknown or newName is already taken.
+func (s *Server) RenameProject(oldName, newName string) error {
+	s.pmu.Lock()
+	defer s.pmu.Unlock()
+	p, ok := s.projects[oldName]
+	if !ok {
+		return fmt.Errorf("project %q not registered", oldName)
+	}
+	if _, taken := s.projects[newName]; taken {
+		return fmt.Errorf("project %q already registered", newName)
+	}
+	p.Name = newName
+	delete(s.projects, oldName)
+	s.projects[newName] = p
+	for i, id := range s.order {
+		if id == oldName {
+			s.order[i] = newName
+			break
+		}
+	}
+	return nil
+}
+
 // registerRegistryRoutes wires the registry CRUD endpoints onto mux.
 func (s *Server) registerRegistryRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/registry", s.handleRegistryList)
 	mux.HandleFunc("POST /api/registry", s.handleRegistryAdd)
+	mux.HandleFunc("PUT /api/registry/{name}", s.handleRegistryRename)
 	mux.HandleFunc("DELETE /api/registry/{name}", s.handleRegistryDelete)
 }
 
@@ -219,6 +246,50 @@ func (s *Server) handleRegistryDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"name": name})
+}
+
+type renameReq struct {
+	NewName string `json:"new_name"`
+}
+
+// handleRegistryRename renames a project in the live server map and the
+// ~/.pactify registry file. The path is preserved, so the project's watch keeps
+// streaming. Unknown name is 404; a collision with an existing name is 409.
+func (s *Server) handleRegistryRename(w http.ResponseWriter, r *http.Request) {
+	if !s.requireSeat(w) {
+		return
+	}
+	old := r.PathValue("name")
+	var req renameReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	newName := registry.Slug(req.NewName)
+	if newName == "" {
+		writeErr(w, http.StatusBadRequest, "new_name is empty")
+		return
+	}
+	if err := s.RenameProject(old, newName); err != nil {
+		if strings.Contains(err.Error(), "already registered") {
+			writeErr(w, http.StatusConflict, err.Error())
+		} else {
+			writeErr(w, http.StatusNotFound, err.Error())
+		}
+		return
+	}
+	reg, err := registry.Load()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := reg.Rename(old, newName); err == nil {
+		if err := reg.Save(); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"name": newName})
 }
 
 // isGitRepo reports whether dir is inside a git working tree, via

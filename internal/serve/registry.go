@@ -70,6 +70,7 @@ type registryStatus struct {
 type registryItem struct {
 	Name   string         `json:"name"`
 	Path   string         `json:"path"`
+	Group  string         `json:"group,omitempty"`
 	Status registryStatus `json:"status"`
 }
 
@@ -86,7 +87,7 @@ func (s *Server) handleRegistryList(w http.ResponseWriter, _ *http.Request) {
 
 	out := []registryItem{}
 	for _, p := range projs {
-		out = append(out, registryItem{Name: p.Name, Path: p.Path, Status: foldStatus(p.Path)})
+		out = append(out, registryItem{Name: p.Name, Path: p.Path, Group: p.Group, Status: foldStatus(p.Path)})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -110,8 +111,9 @@ func foldStatus(dir string) registryStatus {
 }
 
 type registerReq struct {
-	Path string `json:"path"`
-	Name string `json:"name"`
+	Path  string `json:"path"`
+	Name  string `json:"name"`
+	Group string `json:"group"`
 }
 
 // handleRegistryAdd validates a candidate path IN ORDER (absolute → exists+dir →
@@ -169,7 +171,7 @@ func (s *Server) handleRegistryAdd(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := reg.Add(req.Name, req.Path); err != nil {
+	if err := reg.Add(req.Name, req.Path, req.Group); err != nil {
 		// Add's only user-facing failure here is a duplicate name.
 		writeErr(w, http.StatusConflict, err.Error())
 		return

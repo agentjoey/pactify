@@ -15,7 +15,7 @@ func newRegisterCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := r.Add(name, a[0]); err != nil {
+			if err := r.Add(name, a[0], ""); err != nil {
 				return err
 			}
 			return r.Save()

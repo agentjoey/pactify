@@ -114,6 +114,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerSetupRoutes(mux)
 	s.registerRecipeRoutes(mux)
 	s.registerPlanRoutes(mux)
+	s.registerFsBrowseRoutes(mux)
 	mux.Handle("/", dashboardHandler())
 	return mux
 }

@@ -44,6 +44,11 @@ pactify setup
 your seat. Then launch your agent — it joins via the pact MCP tools. Run `pactify doctor`
 anytime to verify install + wiring.
 
+**New to Pactify?** [`docs/onboarding.md`](docs/onboarding.md) walks a fresh project from zero
+to shipped in 5 minutes (register agents → setup → plan → run → ship), with seat definitions and
+dashboard deployment. Running the dashboard? `pactify serve` needs `--seat <id>` for write
+endpoints (assign / orchestrate / ship); without it they fail closed (read-only still works).
+
 ## Claude Code (one-click)
 
 Inside Claude Code:

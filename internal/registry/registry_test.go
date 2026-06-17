@@ -92,8 +92,17 @@ func TestRenamePreservesPathAndGroup(t *testing.T) {
 	if p.Group != "team-a" {
 		t.Errorf("group = %q, want team-a (preserved)", p.Group)
 	}
-	if p.Path == "" {
-		t.Errorf("path was cleared, want preserved")
+	if p.Path != "/tmp/proj" {
+		t.Errorf("path = %q, want /tmp/proj (preserved)", p.Path)
+	}
+}
+
+func TestRenameEmptyNewNameIsError(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	var r Registry
+	_ = r.Add("a", "/tmp/a", "")
+	if err := r.Rename("a", "!!!"); err == nil {
+		t.Fatal("new name that slugs to empty must error")
 	}
 }
 

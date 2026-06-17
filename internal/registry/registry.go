@@ -119,6 +119,9 @@ func (r *Registry) Rename(oldName, newName string) error {
 	if idx == -1 {
 		return fmt.Errorf("registry: name %q not found", oldName)
 	}
+	// Renaming to the same slug is a documented no-op (the newName-collision
+	// branch above is skipped for the matched project), so this just rewrites
+	// the identical name and returns nil.
 	r.Projects[idx].Name = newName
 	return nil
 }

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchProjects, fetchState, subscribeEvents, browseFs, postRegister, setupApply } from "./api";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { fetchProjects, fetchState, subscribeEvents, browseFs, postRegister, setupApply, renameRegistry } from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -120,5 +120,24 @@ describe("api", () => {
     // Unsubscribe closes the EventSource
     off();
     expect(lastES!.closed).toBe(true);
+  });
+});
+
+describe("renameRegistry", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ name: "fresh" }), { status: 200 })),
+    );
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("PUTs new_name to /api/registry/{name}", async () => {
+    await renameRegistry("old", "fresh");
+    const f = fetch as unknown as ReturnType<typeof vi.fn>;
+    const [url, init] = f.mock.calls[0];
+    expect(url).toBe("/api/registry/old");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body)).toEqual({ new_name: "fresh" });
   });
 });

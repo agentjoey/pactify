@@ -180,6 +180,15 @@ export async function deleteRegistry(name: string): Promise<void> {
   await writeJSON(`/api/registry/${encodeURIComponent(name)}`, "DELETE", undefined);
 }
 
+export async function renameRegistry(name: string, newName: string): Promise<{ name: string }> {
+  const r = await writeJSON(
+    `/api/registry/${encodeURIComponent(name)}`,
+    "PUT",
+    { new_name: newName },
+  );
+  return (await r.json()) as { name: string };
+}
+
 export const getWiring = (project: string) =>
   getJSON<WiringStatus[]>(`/api/projects/${project}/wiring`);
 

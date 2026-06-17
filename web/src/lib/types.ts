@@ -1,4 +1,4 @@
-export interface Seat { id: string; roles: string[] }
+export interface Seat { id: string; roles: string[]; kind?: string }
 export interface Task { id: string; owner: string; status: string; reviewer: string; spec: string; evidence: string; deps?: string[] }
 export interface Feature { id: string; branch: string; status: string; tasks: Task[] }
 export interface State { project: string; agents: Seat[]; features: Feature[]; awaiting_count: number }

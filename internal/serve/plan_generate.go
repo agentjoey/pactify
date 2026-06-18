@@ -2,6 +2,7 @@ package serve
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -80,7 +81,26 @@ func (s *Server) defaultRunPlanner(dir string, args, env []string) error {
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), env...)
-	return cmd.Run()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return wrapRunErr(err, out)
+	}
+	return nil
+}
+
+// wrapRunErr appends the tail of a failed subprocess's combined output to its
+// error, so the planner's real failure (e.g. `exec: "claude": not found`)
+// surfaces in plan-gen/status instead of a bare "exit status 1".
+func wrapRunErr(err error, out []byte) error {
+	tail := strings.TrimSpace(string(out))
+	const max = 600
+	if len(tail) > max {
+		tail = "…" + tail[len(tail)-max:]
+	}
+	if tail == "" {
+		return err
+	}
+	return fmt.Errorf("%w: %s", err, tail)
 }
 
 func stateProjection(dir string) (projection.State, error) {

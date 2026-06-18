@@ -2,6 +2,7 @@ package serve
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -147,5 +148,18 @@ func TestPlanGenerateNoSeatRejected(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != 422 {
 		t.Fatalf("status = %d, want 422", resp.StatusCode)
+	}
+}
+
+func TestWrapRunErrSurfacesOutputTail(t *testing.T) {
+	base := errors.New("exit status 1")
+	// empty output → bare error passes through.
+	if got := wrapRunErr(base, []byte("   \n")); got.Error() != "exit status 1" {
+		t.Errorf("empty output should pass through, got %q", got.Error())
+	}
+	// non-empty output → the real cause is appended to the error.
+	got := wrapRunErr(base, []byte(`Error: exec: "claude": executable file not found in $PATH`+"\n"))
+	if !strings.Contains(got.Error(), "claude") || !strings.Contains(got.Error(), "exit status 1") {
+		t.Errorf("want wrapped error carrying the output tail, got %q", got.Error())
 	}
 }

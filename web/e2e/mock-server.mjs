@@ -246,6 +246,37 @@ const server = createServer(async (req, res) => {
     return sendJSON(res, 200, { name });
   }
 
+  // --- DispatchPanel plan generation + apply mocks ---
+  if (url === `/api/projects/${PROJECT_ID}/plan/generate` && method === "POST") {
+    return sendJSON(res, 202, { status_url: "/x", feature: "add-2fa" });
+  }
+  if (url === `/api/projects/${PROJECT_ID}/plan/generate/status` && method === "GET") {
+    return sendJSON(res, 200, { state: "done", feature: "add-2fa" });
+  }
+  if (url === `/api/projects/${PROJECT_ID}/plan/add-2fa` && method === "GET") {
+    return sendJSON(res, 200, {
+      present: true,
+      feature: "add-2fa",
+      branch: "feat-2fa",
+      valid: true,
+      tasks: [
+        {
+          id: "add-2fa-otp",
+          owner: "kimi",
+          reviewer: "claude-opus",
+          spec: ".pact/tasks/x.md",
+          verify: "go test ./...",
+        },
+      ],
+    });
+  }
+  if (url === `/api/projects/${PROJECT_ID}/plan/add-2fa/apply` && method === "POST") {
+    return sendJSON(res, 200, { assigned: 1 });
+  }
+  if (url === `/api/projects/${PROJECT_ID}/orchestrate/run` && method === "POST") {
+    return sendJSON(res, 202, { status_url: "/x" });
+  }
+
   // Unhandled /api/* → 404 (do NOT fall back to the SPA for API paths).
   if (url.startsWith("/api/")) {
     return sendJSON(res, 404, { error: "not found" });

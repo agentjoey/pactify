@@ -12,6 +12,9 @@ import (
 // with an alphanumeric. Used for both feature ids and task ids.
 var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 
+// ValidSlug reports whether s is a kebab-case id (same rule Validate enforces).
+func ValidSlug(s string) bool { return slugRe.MatchString(s) }
+
 type PlanTask struct {
 	ID       string   `json:"id"`
 	Owner    string   `json:"owner"`

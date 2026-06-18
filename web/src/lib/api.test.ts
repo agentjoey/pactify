@@ -141,3 +141,27 @@ describe("renameRegistry", () => {
     expect(JSON.parse(init.body)).toEqual({ new_name: "fresh" });
   });
 });
+
+import { generatePlan, getPlanGenStatus } from "./api";
+
+describe("generatePlan / getPlanGenStatus", () => {
+  it("POSTs goal+feature to plan/generate", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ status_url: "/x", feature: "add-2fa" }), { status: 202 })));
+    await generatePlan("p1", { goal: "add 2fa", feature: "add-2fa" });
+    const f = fetch as unknown as ReturnType<typeof vi.fn>;
+    const [url, init] = f.mock.calls[0];
+    expect(url).toBe("/api/projects/p1/plan/generate");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ goal: "add 2fa", feature: "add-2fa" });
+    vi.unstubAllGlobals();
+  });
+
+  it("GETs the generation status", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ state: "running", feature: "add-2fa" }), { status: 200 })));
+    const st = await getPlanGenStatus("p1");
+    expect(st.state).toBe("running");
+    vi.unstubAllGlobals();
+  });
+});

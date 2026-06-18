@@ -294,3 +294,16 @@ func TestValidateAcceptsSlugNames(t *testing.T) {
 		t.Fatalf("valid slug plan must pass: %v", err)
 	}
 }
+
+func TestValidSlug(t *testing.T) {
+	for _, ok := range []string{"add-2fa", "feat1", "a"} {
+		if !planner.ValidSlug(ok) {
+			t.Errorf("ValidSlug(%q) = false, want true", ok)
+		}
+	}
+	for _, bad := range []string{"", "Add_2FA", "-x", "a b"} {
+		if planner.ValidSlug(bad) {
+			t.Errorf("ValidSlug(%q) = true, want false", bad)
+		}
+	}
+}

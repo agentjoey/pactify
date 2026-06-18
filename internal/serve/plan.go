@@ -31,6 +31,8 @@ type planTaskDTO struct {
 }
 
 func (s *Server) registerPlanRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/projects/{id}/plan/generate/status", s.handlePlanGenStatus)
+	mux.HandleFunc("POST /api/projects/{id}/plan/generate", s.handlePlanGenerate)
 	mux.HandleFunc("GET /api/projects/{id}/plan/{feature}", s.handlePlanReview)
 	mux.HandleFunc("POST /api/projects/{id}/plan/{feature}/apply", s.handlePlanApply)
 }

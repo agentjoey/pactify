@@ -142,6 +142,13 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByTestId("settings-modal")).toBeInTheDocument());
   });
 
+  it("opens the Dispatch panel from the toolbar", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("toolbar-dispatch"));
+    await waitFor(() => expect(screen.getByTestId("dispatch-panel")).toBeInTheDocument());
+  });
+
   describe("global view shortcuts", () => {
     it("defaults to the Board view and switches with keys 1/2/3", async () => {
       render(<App />);

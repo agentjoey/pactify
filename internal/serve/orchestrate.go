@@ -29,6 +29,12 @@ func (s *Server) SetExecOrchestrate(fn func(dir string, args, env []string) erro
 	s.execOrchestrate = fn
 }
 
+// SetPlannerRunner overrides how plan generate launches the planner (tests stub
+// it). Default shells out to `pactify plan` and waits.
+func (s *Server) SetPlannerRunner(fn func(dir string, args, env []string) error) {
+	s.runPlanner = fn
+}
+
 func (s *Server) SetFinishRunner(fn func(dir, name string, args ...string) (string, error)) {
 	s.finishRunner = fn
 }

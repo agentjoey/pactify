@@ -329,6 +329,23 @@ export async function applyPlan(
   return (await r.json()) as { assigned: number };
 }
 
+export interface PlanGenStatus {
+  state: "idle" | "running" | "done" | "error";
+  feature?: string;
+  error?: string;
+}
+
+export async function generatePlan(
+  project: string,
+  body: { goal: string; feature: string; planner_kind?: string },
+): Promise<{ status_url: string; feature: string }> {
+  const r = await writeJSON(`/api/projects/${project}/plan/generate`, "POST", body);
+  return (await r.json()) as { status_url: string; feature: string };
+}
+
+export const getPlanGenStatus = (project: string) =>
+  getJSON<PlanGenStatus>(`/api/projects/${project}/plan/generate/status`);
+
 // --- Orchestrate drive (SP2) ---
 
 export type RunOrchestrateBody = {

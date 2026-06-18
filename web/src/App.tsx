@@ -7,6 +7,7 @@ import { RosterDock } from "./components/shell/RosterDock";
 import { PlanDock } from "./components/shell/PlanDock";
 import { SettingsModal } from "./components/shell/SettingsModal";
 import { AddProjectWizard } from "./components/shell/AddProjectWizard";
+import { DispatchPanel } from "./components/shell/DispatchPanel";
 import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
 import { Canvas } from "./components/Canvas";
@@ -52,6 +53,7 @@ export default function App() {
   const [settingsSeat, setSettingsSeat] = useState<string | null>(null);
   const openSettings = (seat: string | null) => { setSettingsSeat(seat); setSettingsOpen(true); };
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [dispatchOpen, setDispatchOpen] = useState(false);
   // running status per project name → drives the status light on the ProjectMenu
   // trigger AND every row in the dropdown (spec §4.1: each project shows a light).
   const [runningByProject, setRunningByProject] = useState<Record<string, boolean>>({});
@@ -309,7 +311,7 @@ export default function App() {
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} />
+      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} onOpenDispatch={() => setDispatchOpen(true)} />
       <div className="relative flex flex-1 overflow-hidden">
         {/* Floating left dock: two detached cards (seated agents, then plan),
             gapped off the header — not attached to header/footer. Board-only:
@@ -350,6 +352,13 @@ export default function App() {
       <Toasts toasts={toasts} />
       {settingsOpen && <SettingsModal project={current} author={author} focusSeat={settingsSeat} onClose={() => setSettingsOpen(false)} />}
       <AddProjectWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onAdded={() => { setWizardOpen(false); refreshProjects(); }} />
+      <DispatchPanel
+        project={current}
+        roster={shownState.agents}
+        open={dispatchOpen}
+        onClose={() => setDispatchOpen(false)}
+        onGoLive={() => { setView("live"); setDispatchOpen(false); }}
+      />
       <CommandK
         projects={projects}
         current={current}

@@ -35,6 +35,7 @@ export function Toolbar({
   onDeleteProject,
   onAddProject,
   onOpenSettings,
+  onOpenDispatch,
 }: {
   projectName: string;
   view: View;
@@ -51,6 +52,7 @@ export function Toolbar({
   onDeleteProject: (name: string) => void;
   onAddProject: () => void;
   onOpenSettings: () => void;
+  onOpenDispatch: () => void;
 }) {
   const seatRoles = useMemo(
     () => (seat ? agents?.find((a) => a.id === seat)?.roles ?? [] : []),
@@ -131,6 +133,16 @@ export function Toolbar({
           observing
         </span>
       ) : null}
+      <button
+        type="button"
+        data-testid="toolbar-dispatch"
+        aria-label="dispatch"
+        title="Dispatch a task from a goal"
+        onClick={onOpenDispatch}
+        className="grid h-[26px] w-[26px] place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+      >
+        ◉
+      </button>
       <button
         type="button"
         data-testid="toolbar-settings"

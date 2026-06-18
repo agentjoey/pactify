@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { RosterDock } from "./RosterDock";
 import type { Seat } from "../../lib/types";
 
@@ -10,25 +10,40 @@ const seats: Seat[] = [
 ];
 
 describe("RosterDock", () => {
-  it("renders one card per seat with name + roles", () => {
+  it("renders a single card with seats grouped by role (one logo per seat)", () => {
     render(<RosterDock seats={seats} onSeatSettings={() => {}} />);
-    const cards = screen.getAllByTestId("roster-card");
-    expect(cards).toHaveLength(3);
-    expect(within(cards[0]).getByText("claude")).toBeInTheDocument();
-    expect(within(cards[0]).getByText(/orchestrator/)).toBeInTheDocument();
+    expect(screen.getByTestId("roster-dock")).toBeInTheDocument();
+    expect(screen.getByTestId("roster-role-orchestrator")).toBeInTheDocument();
+    expect(screen.getByTestId("roster-role-worker")).toBeInTheDocument();
+    expect(screen.getByTestId("roster-logo-claude")).toBeInTheDocument();
+    expect(screen.getByTestId("roster-logo-opencode")).toBeInTheDocument();
+    expect(screen.getByTestId("roster-logo-kimi")).toBeInTheDocument();
   });
 
-  it("puts the orchestrator seat first regardless of input order", () => {
+  it("places a multi-role seat under its highest-priority role only", () => {
     render(<RosterDock seats={seats} onSeatSettings={() => {}} />);
-    const cards = screen.getAllByTestId("roster-card");
-    expect(within(cards[0]).getByText("claude")).toBeInTheDocument();
+    // claude (orchestrator+reviewer) shows once, in the orchestrator row.
+    expect(screen.getByTestId("roster-role-orchestrator")).toContainElement(
+      screen.getByTestId("roster-logo-claude"),
+    );
+    expect(screen.queryByTestId("roster-role-reviewer")).toBeNull();
   });
 
-  it("calls onSeatSettings with the seat id when its gear is clicked", () => {
+  it("orders role rows orchestrator-first", () => {
+    render(<RosterDock seats={seats} onSeatSettings={() => {}} />);
+    const rows = screen.getAllByTestId(/^roster-role-/);
+    expect(rows[0]).toHaveAttribute("data-testid", "roster-role-orchestrator");
+  });
+
+  it("calls onSeatSettings with the seat id when its logo is clicked", () => {
     const onSeatSettings = vi.fn();
     render(<RosterDock seats={seats} onSeatSettings={onSeatSettings} />);
-    const cards = screen.getAllByTestId("roster-card");
-    fireEvent.click(within(cards[0]).getByTestId("roster-card-settings"));
-    expect(onSeatSettings).toHaveBeenCalledWith("claude");
+    fireEvent.click(screen.getByTestId("roster-logo-kimi"));
+    expect(onSeatSettings).toHaveBeenCalledWith("kimi");
+  });
+
+  it("renders nothing when there are no seats", () => {
+    const { container } = render(<RosterDock seats={[]} onSeatSettings={() => {}} />);
+    expect(container.firstChild).toBeNull();
   });
 });

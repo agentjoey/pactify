@@ -311,10 +311,17 @@ export default function App() {
     <div data-testid="app-root" className="h-screen flex flex-col">
       <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} />
       <div className="relative flex flex-1 overflow-hidden">
-        <RosterDock seats={shownState.agents} onSeatSettings={(seatId) => openSettings(seatId)} />
-        <div className="pointer-events-none absolute left-3 top-[210px] z-20 w-[200px]">
-          <PlanDock project={current} features={shownState.features.map((f) => f.id)} />
-        </div>
+        {/* Floating left dock: two detached cards (seated agents, then plan),
+            gapped off the header — not attached to header/footer. Board-only:
+            Canvas has its own toolbar + Office desks, Live its own layout, so the
+            dock would overlay their chrome. The Board reserves a left gutter
+            (Board.tsx pl) so columns clear it. */}
+        {view === "board" && (
+          <div className="pointer-events-none absolute left-3 top-4 z-20 flex w-[200px] flex-col gap-3">
+            <RosterDock seats={shownState.agents} onSeatSettings={(seatId) => openSettings(seatId)} />
+            <PlanDock project={current} features={shownState.features.map((f) => f.id)} />
+          </div>
+        )}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Agents author={author} onChanged={refreshProjects} />
           {projectsLoaded && projects.length === 0

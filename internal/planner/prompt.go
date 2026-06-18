@@ -88,6 +88,14 @@ func BuildPrompt(in PromptInput) string {
 	b.WriteString("- task id: kebab-case slug, ideally <feature>-<step> (e.g. \"add-2fa-otp-gen\"),\n")
 	b.WriteString("  matching ^[a-z0-9][a-z0-9-]*$, unique within the feature.\n\n")
 
+	b.WriteString("\nVerify rules (REQUIRED — each task's verify must be SCOPED to that task):\n")
+	b.WriteString("- The verify command must validate THIS task's change, runnable headless, and\n")
+	b.WriteString("  must NOT fail on pre-existing debt in files this task does not touch.\n")
+	b.WriteString("- Prefer `test`/`build` gates (a broken import fails them). Do NOT use a\n")
+	b.WriteString("  whole-repo linter (e.g. `eslint .`) as a task verify — it trips on unrelated\n")
+	b.WriteString("  pre-existing issues the task owner must not fix. Lint only the touched files if at all.\n")
+	b.WriteString("- The owner must never modify out-of-scope files just to satisfy a verify.\n\n")
+
 	b.WriteString("## Plan manifest\n")
 	fmt.Fprintf(&b, "Write the manifest to `.pact/plan-%s.json` (i.e. `.pact/plan-%s.json`).\n", in.Feature, in.Feature)
 	b.WriteString("It MUST match this schema (Plan / PlanTask). Example:\n")

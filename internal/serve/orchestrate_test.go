@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/registry"
 )
@@ -111,10 +112,63 @@ func TestOrchestrateParallel(t *testing.T) {
 			t.Fatalf("want 2 features, got %d", len(dto.Features))
 		}
 		// sorted by filename: fa before fb
-		var first struct{ Feature string `json:"feature"` }
+		var first struct {
+			Feature string `json:"feature"`
+		}
 		json.Unmarshal(dto.Features[0], &first)
 		if first.Feature != "fa" {
 			t.Errorf("first feature = %q, want fa (sorted)", first.Feature)
 		}
 	})
+}
+
+func TestOrchestrateRunningStaleGuard(t *testing.T) {
+	mk := func(dir, body string) {
+		p := filepath.Join(dir, ".pact", "orchestrate")
+		_ = os.MkdirAll(p, 0o755)
+		_ = os.WriteFile(filepath.Join(p, "status.json"), []byte(body), 0o644)
+	}
+	s := New(nil)
+	recent := time.Now().UTC().Format(time.RFC3339)
+	old := time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339)
+
+	d1 := t.TempDir()
+	mk(d1, `{"done":false,"escalated":false,"updated_at":"`+recent+`"}`)
+	if !s.orchestrateRunning(d1) {
+		t.Error("recent active run should be running")
+	}
+
+	d2 := t.TempDir()
+	mk(d2, `{"done":false,"escalated":false,"updated_at":"`+old+`"}`)
+	if s.orchestrateRunning(d2) {
+		t.Error("30-min-old run must be treated as stale (not running)")
+	}
+
+	d3 := t.TempDir()
+	mk(d3, `{"done":false,"escalated":false,"updated_at":"20260617-231101"}`)
+	if s.orchestrateRunning(d3) {
+		t.Error("unparseable old-format timestamp must be stale (not running)")
+	}
+
+	d4 := t.TempDir()
+	mk(d4, `{"done":true,"escalated":false,"updated_at":"`+recent+`"}`)
+	if s.orchestrateRunning(d4) {
+		t.Error("done run is not running")
+	}
+}
+
+func TestInferKindFromName(t *testing.T) {
+	known := []string{"claude-code", "opencode", "gemini-cli", "kimi-cli"}
+	cases := map[string]string{
+		"opencode-worker": "opencode",
+		"gemini-worker":   "gemini-cli",
+		"kimi-worker":     "kimi-cli",
+		"claude":          "claude-code",
+		"weird-seat":      "",
+	}
+	for seat, want := range cases {
+		if got := inferKindFromName(seat, known); got != want {
+			t.Errorf("inferKindFromName(%q) = %q, want %q", seat, got, want)
+		}
+	}
 }

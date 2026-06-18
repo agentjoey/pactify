@@ -169,3 +169,12 @@ func TestPromptNamingExampleIsSlug(t *testing.T) {
 		t.Error("prompt should show a concrete kebab-case feature id example")
 	}
 }
+
+func TestPromptStatesVerifyScoping(t *testing.T) {
+	out := planner.BuildPrompt(samplePromptInput())
+	for _, want := range []string{"Verify rules", "whole-repo", "touched files"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("prompt missing verify-scoping guidance %q", want)
+		}
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/registry"
 )
@@ -58,7 +59,8 @@ func TestRunAlreadyRunning(t *testing.T) {
 	root := seedOrchRepo(t)
 	orchDir := filepath.Join(root, ".pact", "orchestrate")
 	os.MkdirAll(orchDir, 0o755)
-	os.WriteFile(filepath.Join(orchDir, "status.json"), []byte(`{"done":false,"escalated":false,"phase":"act"}`), 0o644)
+	recent := time.Now().UTC().Format(time.RFC3339)
+	os.WriteFile(filepath.Join(orchDir, "status.json"), []byte(`{"done":false,"escalated":false,"phase":"act","updated_at":"`+recent+`"}`), 0o644)
 
 	fake := &fakeOrchRunner{}
 	srv := New([]registry.Project{{Name: "p", Path: root}})

@@ -9,9 +9,12 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/finish"
+	"github.com/agentjoey/pactify/internal/pact"
 )
 
 // OrchestrateStatusDTO wraps the orchestrate runtime snapshot. Present is false
@@ -171,19 +174,93 @@ func seatKindsFromInit(dir string) map[string]string {
 }
 
 func (s *Server) orchestrateRunning(dir string) bool {
-	path := orchestrateStatusPath(dir)
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(orchestrateStatusPath(dir))
 	if err != nil {
 		return false
 	}
 	var st struct {
-		Done      bool `json:"done"`
-		Escalated bool `json:"escalated"`
+		Done      bool   `json:"done"`
+		Escalated bool   `json:"escalated"`
+		UpdatedAt string `json:"updated_at"`
 	}
 	if json.Unmarshal(b, &st) != nil {
 		return false
 	}
-	return !st.Done && !st.Escalated
+	if st.Done || st.Escalated {
+		return false
+	}
+	// Stale guard: a crashed/abandoned run leaves done=false forever. Treat it as
+	// running ONLY if its status updated recently (RFC3339). An old or unparseable
+	// timestamp means a dead run that must not block new ones.
+	t, err := time.Parse(time.RFC3339, st.UpdatedAt)
+	if err != nil {
+		return false
+	}
+	return time.Since(t) < 10*time.Minute
+}
+
+// inferKindFromName derives an agent kind from a seat name by stripping a
+// trailing role suffix (-worker/-reviewer/-orchestrator) and matching the
+// resulting base against the known kind list. It returns the kind if it is an
+// exact match or the unique kind that has the base as a prefix; returns "" when
+// there is no match or the match is ambiguous.
+func inferKindFromName(seat string, known []string) string {
+	base := seat
+	for _, sfx := range []string{"-worker", "-reviewer", "-orchestrator"} {
+		if strings.HasSuffix(seat, sfx) {
+			base = strings.TrimSuffix(seat, sfx)
+			break
+		}
+	}
+	// exact match first
+	for _, k := range known {
+		if k == base {
+			return k
+		}
+	}
+	// unique prefix match
+	var match string
+	for _, k := range known {
+		if strings.HasPrefix(k, base) {
+			if match != "" {
+				return "" // ambiguous
+			}
+			match = k
+		}
+	}
+	return match
+}
+
+// resolveSeatKinds builds the seat→kind map for an orchestrate run: start from
+// init-event kinds, then fill any gaps from the current projection roster's Kind
+// (add-seat kinds), then from a name heuristic against known agent kinds
+// (seat "opencode-worker" → "opencode", "gemini-worker" → "gemini-cli").
+func (s *Server) resolveSeatKinds(dir string) map[string]string {
+	km := seatKindsFromInit(dir)
+	if km == nil {
+		km = map[string]string{}
+	}
+
+	// Fill gaps from projection roster (picks up add-seat events with a kind).
+	if st, err := pact.At(dir).StateProjection(); err == nil {
+		for _, a := range st.Agents {
+			if _, already := km[a.ID]; !already && a.Kind != "" {
+				km[a.ID] = a.Kind
+			}
+		}
+		// Name heuristic for seats still without a kind.
+		known := agent.Kinds()
+		for _, a := range st.Agents {
+			if _, already := km[a.ID]; already {
+				continue
+			}
+			if inferred := inferKindFromName(a.ID, known); inferred != "" {
+				km[a.ID] = inferred
+			}
+		}
+	}
+
+	return km
 }
 
 func (s *Server) defaultExecOrchestrate(dir string, args, env []string) error {
@@ -222,10 +299,7 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	km := seatKindsFromInit(dir)
-	if km == nil {
-		km = map[string]string{}
-	}
+	km := s.resolveSeatKinds(dir)
 	for seat, kind := range req.SeatKinds {
 		km[seat] = kind
 	}

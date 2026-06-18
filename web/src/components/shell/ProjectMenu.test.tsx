@@ -61,4 +61,17 @@ describe("ProjectMenu", () => {
     fireEvent.click(screen.getByTestId("project-menu-add"));
     expect(onAdd).toHaveBeenCalled();
   });
+
+  it("nests worktrees under a project when there is more than one", () => {
+    const onSelectWorktree = vi.fn();
+    render(
+      <ProjectMenu projects={projects} current="alpha" running={false}
+        worktreesByProject={{ alpha: [{ branch: "main", path: "/a", primary: true }, { branch: "feat-x", path: "/a-fe", primary: false }] }}
+        currentWorktree="" onSelectWorktree={onSelectWorktree}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+    fireEvent.click(screen.getByTestId("worktree-alpha-feat-x"));
+    expect(onSelectWorktree).toHaveBeenCalledWith("alpha", "feat-x");
+  });
 });

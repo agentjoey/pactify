@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
-import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes } from "./lib/api";
+import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
+import type { Worktree } from "./lib/api";
 import { type View } from "./lib/types";
 import { Toolbar } from "./components/shell/Toolbar";
 import { RosterDock } from "./components/shell/RosterDock";
@@ -61,6 +62,11 @@ export default function App() {
   // The acting seat id (empty when observing) — TopBar resolves its roles from
   // state.agents to pick the ant caste for the seat avatar.
   const [seat, setSeat] = useState("");
+  // Worktree selection: "" means primary; a non-empty branch name switches the
+  // board to that worktree's .pact state (polled, no SSE).
+  const [currentWorktree, setCurrentWorktree] = useState("");
+  const [worktreesByProject, setWorktreesByProject] = useState<Record<string, Worktree[]>>({});
+
   // Canvas build-mode drafts live HERE (not inside Canvas) so they survive the
   // Canvas unmount that view switching causes — switching canvas→ops→canvas
   // would otherwise wipe every in-flight draft. Reset on project switch (the
@@ -142,6 +148,16 @@ export default function App() {
     const t = setInterval(() => setTick((n) => n + 1), 60_000);
     return () => clearInterval(t);
   }, []);
+
+  // Fetch worktrees for all known projects whenever the project list changes.
+  const projectNamesForWt = projects.map((p) => p.name).join(",");
+  useEffect(() => {
+    const names = projectNamesForWt ? projectNamesForWt.split(",") : [];
+    let alive = true;
+    Promise.all(names.map((n) => getWorktrees(n).then((w) => [n, w] as const).catch(() => [n, []] as const)))
+      .then((entries) => { if (alive) setWorktreesByProject(Object.fromEntries(entries)); });
+    return () => { alive = false; };
+  }, [projectNamesForWt]);
 
   // ProjectMenu status light: poll orchestrate status for the current project so
   // the header dot pulses while a run is active (present, not done/escalated).
@@ -265,21 +281,30 @@ export default function App() {
     // made Canvas's FitOnEntry frame the OLD graph (then never refit).
     setState(EMPTY);
     setLoadFailed(false);
-    fetchState(current)
+    const wt = currentWorktree || undefined;
+    fetchState(current, wt)
       .then((s) => { if (alive) applyState(s); })
       .catch(() => { if (alive) { setState(EMPTY); setLoadFailed(true); } });
-    const off = subscribeEvents(current, (e) => {
-      if (!alive) return;
-      setEvents((prev) => [...prev, e]);
-      fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => {});
-    }, (v) => { if (alive) setLive(v); });
-    return () => {
-      alive = false;
-      off();
-      setLive(false);
-      if (pulseTimer.current) clearTimeout(pulseTimer.current);
-    };
-  }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!currentWorktree) {
+      const off = subscribeEvents(current, (e) => {
+        if (!alive) return;
+        setEvents((prev) => [...prev, e]);
+        fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => {});
+      }, (v) => { if (alive) setLive(v); });
+      return () => {
+        alive = false;
+        off();
+        setLive(false);
+        if (pulseTimer.current) clearTimeout(pulseTimer.current);
+      };
+    }
+    // non-primary worktree: poll every 3s, no SSE
+    setLive(false);
+    const poll = setInterval(() => {
+      fetchState(current, currentWorktree).then((s) => { if (alive) applyState(s); }).catch(() => {});
+    }, 3000);
+    return () => { alive = false; clearInterval(poll); if (pulseTimer.current) clearTimeout(pulseTimer.current); };
+  }, [current, currentWorktree]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recompute the stale set from the timestamp map whenever state or tick moves.
   useEffect(() => {
@@ -311,7 +336,7 @@ export default function App() {
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={setCurrent} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} onOpenDispatch={() => setDispatchOpen(true)} />
+      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} onOpenDispatch={() => setDispatchOpen(true)} worktreesByProject={worktreesByProject} currentWorktree={currentWorktree} onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }} />
       <div className="relative flex flex-1 overflow-hidden">
         {/* Floating left dock: two detached cards (seated agents, then plan),
             gapped off the header — not attached to header/footer. Board-only:

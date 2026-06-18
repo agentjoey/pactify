@@ -1,24 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectMeta } from "../../lib/types";
+import type { Worktree } from "../../lib/api";
 
 export function ProjectMenu({
   projects,
   current,
   running,
   runningByProject,
+  worktreesByProject,
+  currentWorktree,
   onSelect,
   onRename,
   onDelete,
   onAdd,
+  onSelectWorktree,
 }: {
   projects: ProjectMeta[];
   current: string;
   running: boolean;
   runningByProject?: Record<string, boolean>;
+  worktreesByProject?: Record<string, Worktree[]>;
+  currentWorktree?: string;
   onSelect: (name: string) => void;
   onRename: (name: string) => void;
   onDelete: (name: string) => void;
   onAdd: () => void;
+  onSelectWorktree?: (project: string, branch: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -72,13 +79,13 @@ export function ProjectMenu({
           className="absolute left-0 top-full z-30 mt-1 w-56 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-overlay)] p-1 shadow-[var(--shadow-overlay)]"
         >
           {flat.map((p) => (
-            <ProjectRow key={p.name} p={p} running={!!runningByProject?.[p.name]} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} />
+            <ProjectEntry key={p.name} p={p} running={!!runningByProject?.[p.name]} worktrees={worktreesByProject?.[p.name]} currentWorktree={currentWorktree} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} onSelectWorktree={(proj, branch) => { onSelectWorktree?.(proj, branch); setOpen(false); }} />
           ))}
           {grouped.map(([group, items]) => (
             <div key={group} className="mt-1">
               <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-[var(--color-text-3)]">{group}</div>
               {items.map((p) => (
-                <ProjectRow key={p.name} p={p} running={!!runningByProject?.[p.name]} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} />
+                <ProjectEntry key={p.name} p={p} running={!!runningByProject?.[p.name]} worktrees={worktreesByProject?.[p.name]} currentWorktree={currentWorktree} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} onSelectWorktree={(proj, branch) => { onSelectWorktree?.(proj, branch); setOpen(false); }} />
               ))}
             </div>
           ))}
@@ -90,6 +97,42 @@ export function ProjectMenu({
           >
             ＋ Add project
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectEntry({
+  p, running, worktrees, currentWorktree, onSelect, onRename, onDelete, onSelectWorktree,
+}: {
+  p: ProjectMeta;
+  running: boolean;
+  worktrees?: Worktree[];
+  currentWorktree?: string;
+  onSelect: (name: string) => void;
+  onRename: (name: string) => void;
+  onDelete: (name: string) => void;
+  onSelectWorktree: (project: string, branch: string) => void;
+}) {
+  return (
+    <div>
+      <ProjectRow p={p} running={running} onSelect={onSelect} onRename={onRename} onDelete={onDelete} />
+      {worktrees && worktrees.length > 1 && (
+        <div className="ml-4 border-l border-[var(--color-border-subtle)] pl-1">
+          {worktrees.map((w) => (
+            <button
+              key={w.branch || w.path}
+              type="button"
+              data-testid={`worktree-${p.name}-${w.branch}`}
+              onClick={() => onSelectWorktree(p.name, w.primary ? "" : w.branch)}
+              className={["flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] hover:bg-white/5",
+                ((w.primary && currentWorktree === "") || currentWorktree === w.branch) ? "text-[var(--color-text-1)]" : "text-[var(--color-text-3)]"].join(" ")}
+            >
+              <span className="h-[5px] w-[5px] shrink-0 rounded-full bg-[var(--color-text-3)]/50" />
+              {w.branch || "(detached)"}{w.primary ? " · main" : ""}
+            </button>
+          ))}
         </div>
       )}
     </div>

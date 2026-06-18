@@ -6,6 +6,7 @@ import { Icon } from "../../lib/icons";
 import { Ant } from "../ui/ants/Ant";
 import { casteForRoles, padGradient } from "../../lib/ants";
 import { ProjectMenu } from "./ProjectMenu";
+import type { Worktree } from "../../lib/api";
 
 // Toolbar — the macOS-style unified toolbar (Option A shell). Holds the brand +
 // the ProjectMenu dropdown (project switching / rename / delete / add lives here
@@ -36,6 +37,9 @@ export function Toolbar({
   onAddProject,
   onOpenSettings,
   onOpenDispatch,
+  worktreesByProject,
+  currentWorktree,
+  onSelectWorktree,
 }: {
   projectName: string;
   view: View;
@@ -53,6 +57,9 @@ export function Toolbar({
   onAddProject: () => void;
   onOpenSettings: () => void;
   onOpenDispatch: () => void;
+  worktreesByProject?: Record<string, Worktree[]>;
+  currentWorktree?: string;
+  onSelectWorktree?: (project: string, branch: string) => void;
 }) {
   const seatRoles = useMemo(
     () => (seat ? agents?.find((a) => a.id === seat)?.roles ?? [] : []),
@@ -76,10 +83,13 @@ export function Toolbar({
           current={projectName}
           running={running}
           runningByProject={runningByProject}
+          worktreesByProject={worktreesByProject}
+          currentWorktree={currentWorktree}
           onSelect={onSelectProject}
           onRename={onRenameProject}
           onDelete={onDeleteProject}
           onAdd={onAddProject}
+          onSelectWorktree={onSelectWorktree}
         />
       </div>
 

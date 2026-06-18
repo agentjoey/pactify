@@ -82,8 +82,8 @@ export async function fetchProjects(): Promise<ProjectMeta[]> {
     group: p.group ?? groupFor.get(p.path) ?? groupFor.get(p.name),
   }));
 }
-export const fetchState = (id: string) =>
-  getJSON<State>(`/api/projects/${id}/state`).then(normalizeState);
+export const fetchState = (id: string, wt?: string) =>
+  getJSON<State>(`/api/projects/${id}/state${wt ? `?wt=${encodeURIComponent(wt)}` : ""}`).then(normalizeState);
 
 export const getActingSeat = () => getJSON<{ seat: string }>("/api/acting-seat");
 
@@ -158,6 +158,10 @@ export async function putLayout(project: string, layout: LayoutJSON): Promise<vo
 //
 // Registry/wiring/seats reads use getJSON (status-line errors on non-2xx);
 // mutations use writeJSON so the server's {"error":msg} surfaces verbatim.
+
+export interface Worktree { branch: string; path: string; primary: boolean }
+export const getWorktrees = (project: string) =>
+  getJSON<Worktree[]>(`/api/projects/${project}/worktrees`);
 
 export const getRegistry = () => getJSON<RegistryEntry[]>("/api/registry");
 

@@ -165,3 +165,21 @@ describe("generatePlan / getPlanGenStatus", () => {
     vi.unstubAllGlobals();
   });
 });
+
+import { getWorktrees } from "./api";
+describe("worktrees api", () => {
+  it("getWorktrees GETs the worktrees endpoint", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([{ branch: "main", path: "/r", primary: true }]), { status: 200 })));
+    const wts = await getWorktrees("p1");
+    expect(wts[0].branch).toBe("main");
+    vi.unstubAllGlobals();
+  });
+  it("fetchState passes ?wt= when given", async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify({ project: "p", agents: [], features: [], awaiting_count: 0 }), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    await fetchState("p1", "feat-x");
+    const calls = f.mock.calls as unknown as [string, ...unknown[]][];
+    expect(calls[0][0]).toContain("?wt=feat-x");
+    vi.unstubAllGlobals();
+  });
+});

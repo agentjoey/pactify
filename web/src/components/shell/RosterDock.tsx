@@ -11,10 +11,10 @@ function topRole(s: Seat): string {
   return s.roles[0] ?? "seat";
 }
 
-// RosterDock — a single floating card listing seated agents grouped by role,
-// each row a short role label + that role's agent logos. Clicking a logo opens
-// the seat's settings. Card 1 of the floating left dock (PlanDock is card 2);
-// positioning + the gap from the header live in the App-side container.
+// RosterDock — a refined "seated agents" card: a vertical identity list (logo +
+// name + role tag), grouped by role with a thin divider between groups. Clicking
+// a row opens that seat's settings. Card 1 of the floating left dock (PlanDock is
+// card 2); positioning lives in the App-side container.
 export function RosterDock({
   seats,
   onSeatSettings,
@@ -40,29 +40,34 @@ export function RosterDock({
   return (
     <div
       data-testid="roster-dock"
-      className="pointer-events-auto rounded-2xl border border-white/10 bg-[var(--color-bg-overlay)]/60 p-3 shadow-[var(--shadow-overlay)] backdrop-blur-md"
+      className="pointer-events-auto w-full rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-overlay)]/70 p-2.5 shadow-[var(--shadow-overlay)] backdrop-blur-md"
     >
-      <div className="flex flex-col gap-2.5">
-        {groups.map((g) => (
-          <div key={g.role} data-testid={`roster-role-${g.role}`} className="flex items-center gap-2">
-            <span className="w-[74px] shrink-0 whitespace-nowrap text-[9px] font-medium uppercase tracking-wide text-[var(--color-text-3)]">
-              {g.role}
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {g.seats.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  data-testid={`roster-logo-${s.id}`}
-                  title={`${s.id} · ${s.roles.join(", ")}`}
-                  aria-label={`settings for ${s.id}`}
-                  onClick={() => onSeatSettings(s.id)}
-                  className="rounded-lg transition-transform hover:scale-110"
-                >
-                  <AgentLogo kind={s.kind ?? ""} size={24} />
-                </button>
-              ))}
-            </div>
+      <div className="mb-1.5 px-1 text-[9.5px] font-semibold uppercase tracking-[0.6px] text-[var(--color-text-3)]">
+        Seated
+      </div>
+      <div className="flex flex-col">
+        {groups.map((g, gi) => (
+          <div key={g.role} data-testid={`roster-role-${g.role}`}>
+            {gi > 0 && <div className="mx-1 my-1 h-px bg-[var(--color-border-subtle)]" />}
+            {g.seats.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                data-testid={`roster-logo-${s.id}`}
+                title={`${s.id} · ${s.roles.join(", ")} — open seat settings`}
+                aria-label={`settings for ${s.id}`}
+                onClick={() => onSeatSettings(s.id)}
+                className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-white/[.06]"
+              >
+                <AgentLogo kind={s.kind ?? ""} size={20} />
+                <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[var(--color-text-1)]">
+                  {s.id}
+                </span>
+                <span className="shrink-0 text-[9px] font-medium uppercase tracking-wide text-[var(--color-text-3)]">
+                  {g.role}
+                </span>
+              </button>
+            ))}
           </div>
         ))}
       </div>

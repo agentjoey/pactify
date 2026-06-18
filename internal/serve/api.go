@@ -100,6 +100,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/projects", s.handleProjects)
 	mux.HandleFunc("GET /api/projects/{id}/state", s.handleState)
+	mux.HandleFunc("GET /api/projects/{id}/worktrees", s.handleWorktrees)
 	mux.HandleFunc("GET /api/projects/{id}/events", s.handleEvents)
 	s.registerRegistryRoutes(mux)
 	s.registerAuthorRoutes(mux)
@@ -161,7 +162,16 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	if !present {
 		at = -1 // all events
 	}
-	dto, err := ProjectStateAt(p.Path, at)
+	statePath := p.Path
+	if wt := r.URL.Query().Get("wt"); wt != "" {
+		wp, ok := resolveWorktreePath(p.Path, wt)
+		if !ok {
+			writeErr(w, http.StatusBadRequest, "unknown worktree: "+wt)
+			return
+		}
+		statePath = wp
+	}
+	dto, err := ProjectStateAt(statePath, at)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

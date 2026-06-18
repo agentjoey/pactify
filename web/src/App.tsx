@@ -317,7 +317,7 @@ export default function App() {
             dock would overlay their chrome. The Board reserves a left gutter
             (Board.tsx pl) so columns clear it. */}
         {view === "board" && (
-          <div className="pointer-events-none absolute left-3 top-4 z-20 flex w-[200px] flex-col gap-3">
+          <div className="pointer-events-none absolute left-3 top-[40%] z-20 flex w-[200px] -translate-y-1/2 flex-col gap-3">
             <RosterDock seats={shownState.agents} onSeatSettings={(seatId) => openSettings(seatId)} />
             <PlanDock project={current} features={shownState.features.map((f) => f.id)} />
           </div>

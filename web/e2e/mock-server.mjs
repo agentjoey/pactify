@@ -18,11 +18,7 @@
 //   (unhandled /api/* → 404; everything else → SPA fallback to index.html)
 //
 // Test hooks (NOT part of the real API):
-//   POST /__test/snapshot  → replace the working state + push a pact event to all
-//                            SSE clients (the dashboard refetches state on each
-//                            event, exactly as against real serve).
-//   GET  /__test/puts      → the ordered list of PUT layout bodies received.
-//   POST /__test/reset     → restore the seed state + clear layout/puts (per-test).
+//   POST /__test/reset     → restore the seed state + clear layout (per-test).
 //
 // Draft state is NOT server-side — drafts are browser-local; the connect/author
 // tests create them through the UI.
@@ -48,7 +44,6 @@ const PORT = Number(process.env.PORT || 4173);
 // --- mutable per-process state (reset via /__test/reset between tests) --------
 let state = initialState();
 let layout = null; // null ⇒ none stored yet (GET returns {})
-const puts = []; // ordered list of PUT layout bodies (for /__test/puts asserts)
 const sseClients = new Set(); // live SSE response objects
 let registry = makeRegistry();
 const fsTree = browseTree();
@@ -56,7 +51,6 @@ const fsTree = browseTree();
 function resetState() {
   state = initialState();
   layout = null;
-  puts.length = 0;
   registry = makeRegistry();
 }
 
@@ -139,28 +133,6 @@ const server = createServer(async (req, res) => {
   const url = (req.url || "/").split("?")[0];
 
   // --- test hooks ---
-  if (url === "/__test/snapshot" && method === "POST") {
-    const raw = await readBody(req);
-    try {
-      state = JSON.parse(raw);
-    } catch {
-      return sendJSON(res, 400, { error: "invalid snapshot JSON" });
-    }
-    pushEvent({
-      event_id: `e${Date.now()}`,
-      ts: new Date().toISOString(),
-      agent_id: ACTING_SEAT,
-      role: "orchestrator",
-      event_type: "snapshot",
-      task_id: "",
-      feature: "",
-      payload: {},
-    });
-    return sendJSON(res, 200, { status: "ok" });
-  }
-  if (url === "/__test/puts" && method === "GET") {
-    return sendJSON(res, 200, puts);
-  }
   if (url === "/__test/reset" && method === "POST") {
     resetState();
     return sendJSON(res, 200, { status: "ok" });
@@ -192,7 +164,6 @@ const server = createServer(async (req, res) => {
       return sendJSON(res, 400, { error: "layout body is not valid JSON" });
     }
     layout = raw;
-    puts.push(JSON.parse(raw));
     return sendJSON(res, 200, { status: "ok" });
   }
   if (url === `/api/projects/${PROJECT_ID}/events` && method === "GET") {

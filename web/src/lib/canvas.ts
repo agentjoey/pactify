@@ -1,28 +1,4 @@
 import type { Node } from "@xyflow/react";
-import type { State } from "./types";
-
-// nextId returns the smallest `${prefix}${N}` (N≥1) not already present in
-// `existing`. Used to seed the draft task/feature id forms with a sensible
-// default so authors don't have to hand-type ids (the value stays editable and
-// slug validation is unchanged). Ids that don't match `${prefix}<positive int>`
-// are ignored — only the numeric series for THIS prefix participates.
-//
-//   nextId([], "t")            → "t1"
-//   nextId(["t1","t2"], "t")   → "t3"
-//   nextId(["t1","t3"], "t")   → "t2"   (smallest free, not t4)
-//   nextId(["foo","t2"], "t")  → "t1"   (non-matching ids ignored)
-export function nextId(existing: string[], prefix: string): string {
-  const taken = new Set<number>();
-  // prefix must be a literal slug ("t"/"f") — it is interpolated unescaped.
-  const re = new RegExp(`^${prefix}([1-9][0-9]*)$`);
-  for (const id of existing) {
-    const m = re.exec(id);
-    if (m) taken.add(Number(m[1]));
-  }
-  let n = 1;
-  while (taken.has(n)) n++;
-  return `${prefix}${n}`;
-}
 
 // Draft is a task being authored in the canvas but not yet assigned (no event
 // in the log). It carries the in-flight spec markdown plus its target feature
@@ -76,8 +52,6 @@ export function mergeOfficePos(
   return { ...layout, office: { ...(layout.office ?? {}), [seatId]: pos } };
 }
 
-export type FlowEdge = { id: string; source: string; target: string; kind: "dep" };
-
 // roleColorVar maps a seat's protocol roles to a brand --role-* token.
 //
 // Priority: orchestrator → '--role-product', then reviewer → '--role-design',
@@ -126,109 +100,16 @@ export function featureStyle(rows: number): { width: number; height: number } {
 }
 
 // GraphNode is the position-LESS node identity the materialization pipeline
-// works with: id + type + parentId + data, exactly as deriveFlow produces them
-// but with NO position. Positions are owned solely by `layout` (computed once by
-// placeNew at first appearance, thereafter only changed by user drag). deriveGraph
-// produces GraphNode[]; placeNew assigns initial coords; mergeNodes folds graph +
-// layout into the React Flow node array (merge-by-id, never a full rebuild).
+// works with: id + type + parentId + data. Positions are owned solely by
+// `layout` (computed once by placeNew at first appearance, thereafter only
+// changed by user drag). placeNew assigns initial coords; mergeNodes folds graph
+// + layout into the React Flow node array (merge-by-id, never a full rebuild).
 export type GraphNode = {
   id: string;
   type: "task" | "seat" | "feature" | "draft";
   parentId?: string;
   data: Record<string, unknown>;
 };
-
-// deriveGraph is deriveFlow minus position: it folds protocol state + in-flight
-// drafts into the node IDENTITIES (+ data + parentId) and the dep edges the
-// canvas renders. Node/edge identity, data fields (ownerRoles/reviewerRoles/
-// roleColor/feature progress/draft spec) and edge prefixes are byte-for-byte the
-// same as deriveFlow — only `position` is gone (layout owns it now). Pure and
-// deterministic.
-export function deriveGraph(
-  state: State,
-  drafts: Draft[],
-  draftFeatures: DraftFeature[] = [],
-): { nodes: GraphNode[]; edges: FlowEdge[] } {
-  const nodes: GraphNode[] = [];
-  const edges: FlowEdge[] = [];
-
-  // Index seat roles so task nodes can color by their owner's roles.
-  const rolesOf = new Map<string, string[]>();
-  for (const a of state.agents) rolesOf.set(a.id, a.roles);
-
-  // Seat nodes: left rail (position assigned later by placeNew).
-  for (const a of state.agents) {
-    nodes.push({
-      id: `seat:${a.id}`,
-      type: "seat",
-      data: { roles: a.roles, roleColor: roleColorVar(a.roles) },
-    });
-  }
-
-  // Committed features + their tasks.
-  for (const f of state.features) {
-    const featId = `feature:${f.id}`;
-    const total = f.tasks.length;
-    const accepted = f.tasks.filter((t) => t.status === "accepted").length;
-    nodes.push({
-      id: featId,
-      type: "feature",
-      data: { id: f.id, branch: f.branch, status: f.status, accepted, total },
-    });
-    for (const t of f.tasks) {
-      const id = `task:${t.id}`;
-      const ownerRoles = rolesOf.get(t.owner) ?? [];
-      nodes.push({
-        id,
-        type: "task",
-        parentId: featId,
-        data: {
-          task: t,
-          feature: f.id,
-          ownerRoles,
-          reviewerRoles: rolesOf.get(t.reviewer) ?? [],
-          roleColor: roleColorVar(ownerRoles),
-        },
-      });
-      for (const from of t.deps ?? []) {
-        edges.push({ id: `dep:${from}→${t.id}`, source: `task:${from}`, target: id, kind: "dep" });
-      }
-    }
-  }
-
-  // Draft feature groups (authored but not yet in protocol state).
-  const committedIds = new Set(state.features.map((f) => f.id));
-  for (const df of draftFeatures) {
-    if (committedIds.has(df.id)) continue;
-    nodes.push({
-      id: `feature:${df.id}`,
-      type: "feature",
-      data: { id: df.id, branch: df.branch, status: "draft", draft: true, accepted: 0, total: 0 },
-    });
-  }
-
-  // Draft nodes parented to their target feature.
-  for (const d of drafts) {
-    const id = `draft:${d.id}`;
-    nodes.push({
-      id,
-      type: "draft",
-      parentId: `feature:${d.feature}`,
-      data: { draft: true, specMd: d.specMd, deps: d.deps },
-    });
-    for (const from of d.deps) {
-      const fromIsDraft = drafts.some((x) => x.id === from);
-      edges.push({
-        id: `dep:${from}→${d.id}`,
-        source: `${fromIsDraft ? "draft" : "task"}:${from}`,
-        target: id,
-        kind: "dep",
-      });
-    }
-  }
-
-  return { nodes, edges };
-}
 
 // placeNew assigns a one-time initial position to every graph node that has NO
 // entry in layout.positions yet. It is idempotent: an id already present in the
@@ -285,13 +166,13 @@ export function placeNew(
   }
 
   // Defensive de-dup: skip any id that appears more than once in graph.nodes
-  // (first wins). deriveGraph already guarantees unique ids; this guards against
-  // a malformed graph silently double-counting columns/rows or overwriting `add`.
+  // (first wins). This guards against a malformed graph silently double-counting
+  // columns/rows or overwriting `add`.
   const seenIds = new Set<string>();
 
   // Running feature column index: the Nth feature node placed (committed first,
   // then draft features in graph order) lands in column (N+1)*COL_W — matching
-  // v1's (fi+1)/(committed+1+dfi) scheme since deriveGraph emits them in order.
+  // v1's (fi+1)/(committed+1+dfi) scheme.
   let featCol = 0;
   // Per-feature next child grid row, advanced as children are placed.
   const childRow = new Map<string, number>();
@@ -337,7 +218,7 @@ export function placeNew(
 }
 
 // seatIndex returns a seat node's roster index among the seat nodes in graph
-// order (seats are emitted first, in roster order, by deriveGraph).
+// order (seats are emitted first, in roster order).
 function seatIndex(nodes: GraphNode[], id: string): number {
   let i = 0;
   for (const n of nodes) {
@@ -408,10 +289,7 @@ export function mergeNodes(
         // Reference stability: when nothing observable changed — same data
         // reference AND same computed style (width/height) — return the prev
         // object untouched so React Flow sees an identical reference and skips
-        // re-render. NOTE: deriveGraph currently produces a FRESH `data` object
-        // every call, so `existing.data === n.data` is rarely true today; deeper
-        // structural sharing in deriveGraph is a P1 perf item (spec §6). This
-        // establishes the contract now so the merge layer is ready for it.
+        // re-render.
         const ex = existing.style as { width?: number; height?: number } | undefined;
         if (existing.data === n.data && ex?.width === style.width && ex?.height === style.height) {
           return existing;
@@ -429,8 +307,7 @@ export function mergeNodes(
     // seat / task / draft
     if (existing) {
       // Reference stability: same data reference → return prev untouched (no new
-      // object) so RF skips re-render. As above, deriveGraph produces fresh data
-      // each call today (P1 perf item, spec §6); this fixes the contract now.
+      // object) so RF skips re-render.
       if (existing.data === n.data) return existing;
       return { ...existing, data: n.data };
     }
@@ -454,69 +331,6 @@ export function mergeNodes(
   for (const n of graph.nodes) if (n.type === "feature") out.push(build(n));
   for (const n of graph.nodes) if (n.type !== "feature") out.push(build(n));
   return out;
-}
-
-// applyConnect folds a new dep edge drawn in the canvas into the drafts list.
-// Node ids arrive in their flow form ("task:T1" / "draft:D1"); we strip the
-// prefix to the raw task id. Semantics: an edge A→B means "B depends on A", so
-// the SOURCE is the prerequisite and the TARGET gains the source in its deps.
-//
-// Only a DRAFT target can change — its deps are still editable. If the target
-// is a committed task, deps are fixed at assign time, so we return the drafts
-// unchanged (the UI surfaces a toast explaining why). Same-feature constraint
-// is enforced by the caller (Canvas) before invoking this helper.
-//
-// Pure: returns a new array (and a new Draft object for the touched draft);
-// never mutates its input. A duplicate dep is a no-op.
-export function applyConnect(
-  drafts: Draft[],
-  sourceId: string,
-  targetId: string,
-): Draft[] {
-  const raw = (id: string) => id.replace(/^(task|draft):/, "");
-  const from = raw(sourceId); // prerequisite (A)
-  const to = raw(targetId);   // dependent (B) — must be a draft to change deps
-  return drafts.map((d) => {
-    if (d.id !== to) return d;
-    if (d.deps.includes(from)) return d; // already a dep — no-op
-    return { ...d, deps: [...d.deps, from] };
-  });
-}
-
-// DepGraph is the minimal view isValidDep needs: every task/draft id mapped to
-// its current dep ids, plus a feature lookup. Built by Canvas from committed
-// tasks + drafts.
-export interface DepGraph {
-  deps: Map<string, string[]>;      // id → its prerequisite ids
-  featureOf: (id: string) => string | undefined;
-  committed: Set<string>;           // committed task ids (deps fixed at assign)
-}
-
-// isValidDep is the single source of truth for whether a dep edge A→B ("B
-// depends on A") may be drawn. Rules (acceptance feedback 2.5, surfaced as the
-// not-allowed cursor via React Flow's isValidConnection):
-//   • no self-loop (A === B)
-//   • same feature (deps are same-feature by protocol)
-//   • target must be a DRAFT (committed-task deps are fixed at assign time)
-//   • no cycle: A must not already (transitively) depend on B
-// Pure: reads only its arguments. fromId/toId are RAW ids (no flow prefix).
-export function isValidDep(g: DepGraph, fromId: string, toId: string): boolean {
-  if (fromId === toId) return false;
-  if (g.committed.has(toId)) return false;
-  if (g.featureOf(fromId) !== g.featureOf(toId)) return false;
-  // Cycle check: would B become a prerequisite of A while A already (transitively)
-  // depends on B? Adding A→B means B depends on A; a cycle exists iff A already
-  // reaches B through the existing dep chain.
-  const seen = new Set<string>();
-  const stack = [fromId];
-  while (stack.length) {
-    const cur = stack.pop()!;
-    if (cur === toId) return false; // A reaches B → adding B→…→A closes a loop
-    if (seen.has(cur)) continue;
-    seen.add(cur);
-    for (const d of g.deps.get(cur) ?? []) stack.push(d);
-  }
-  return true;
 }
 
 // AntEdgeKind classifies an ant-bearing edge for the AntEdge renderer:

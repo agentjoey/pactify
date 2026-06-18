@@ -370,8 +370,6 @@ const SHORTCUTS: ReadonlyArray<{ keys: string[]; what: string }> = [
   { keys: ["2"], what: "Canvas view" },
   { keys: ["3"], what: "Live view" },
   { keys: ["⌘", "K"], what: "Command palette" },
-  { keys: ["Shift", "drag"], what: "Marquee select (canvas)" },
-  { keys: ["Del"], what: "Delete selected draft (canvas)" },
   { keys: ["Esc"], what: "Close panel / menu / cancel draft" },
   { keys: ["?"], what: "This cheat sheet" },
 ];

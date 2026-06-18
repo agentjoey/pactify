@@ -1,15 +1,5 @@
-// Toolbar (T7) — the frosted top-left canvas toolbar per board2-canvas-v2
-// `.tbar`. Holds the author build-mode affordances (Feature / Task) and the
-// always-available Comms display-lens toggle pill. All handlers + testids are
-// passed in from Canvas (comms-toggle, comms-legend, the New-feature inline
-// form, + New task) so behavior is unchanged — this is a presentation extract.
-
 export interface ToolbarProps {
   author: boolean;
-  // Comms display lens.
-  comms: boolean;
-  onToggleComms: () => void;
-  // New-feature inline form state (author only).
   newFeatureOpen: boolean;
   onOpenNewFeature: () => void;
   onCloseNewFeature: () => void;
@@ -21,19 +11,12 @@ export interface ToolbarProps {
   nfIdBad: boolean;
   nfBranchBad: boolean;
   onAddFeature: () => void;
-  // New-task editor.
   onOpenNewTask: () => void;
   newTaskDisabled: boolean;
-  // Comms is a Plan-only display lens. Office shares this Toolbar for authoring
-  // (Feature / Task) but must hide the comms pill. Defaults true so Plan callers
-  // are unaffected; Office passes showComms={false} (Task 4).
-  showComms?: boolean;
 }
 
 export function Toolbar({
   author,
-  comms,
-  onToggleComms,
   newFeatureOpen,
   onOpenNewFeature,
   onCloseNewFeature,
@@ -47,7 +30,6 @@ export function Toolbar({
   onAddFeature,
   onOpenNewTask,
   newTaskDisabled,
-  showComms = true,
 }: ToolbarProps) {
   return (
     <div className="canvas-tbar" data-testid="canvas-toolbar">
@@ -102,19 +84,6 @@ export function Toolbar({
             </button>
           </>
         ))}
-
-      {author && showComms && <span className="tbar-div" aria-hidden />}
-
-      {showComms && (
-        <button
-          data-testid="comms-toggle"
-          aria-pressed={comms}
-          className={`tbtn${comms ? " on" : ""}`}
-          onClick={onToggleComms}
-        >
-          <span className="ic">◉</span>Comms {comms ? "on" : "off"}
-        </button>
-      )}
     </div>
   );
 }

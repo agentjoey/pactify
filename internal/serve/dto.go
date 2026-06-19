@@ -44,6 +44,17 @@ func logPath(projectRoot string) string {
 	return filepath.Join(projectRoot, ".pact", "log.jsonl")
 }
 
+// splitNonEmptyLines splits s on newlines, trimming \r and dropping blanks.
+func splitNonEmptyLines(s string) []string {
+	out := []string{}
+	for _, ln := range strings.Split(s, "\n") {
+		if ln = strings.TrimRight(ln, "\r"); ln != "" {
+			out = append(out, ln)
+		}
+	}
+	return out
+}
+
 // tailLog returns the last n non-empty lines of the log at lp (oldest→newest).
 // Missing/empty file → nil. Used to backfill a new SSE subscriber with recent
 // history so Live shows the log.jsonl tail on open, not just events that arrive
@@ -54,12 +65,7 @@ func tailLog(lp string, n int) []string {
 	if err != nil {
 		return nil
 	}
-	lines := []string{}
-	for _, ln := range strings.Split(string(b), "\n") {
-		if ln = strings.TrimRight(ln, "\r"); ln != "" {
-			lines = append(lines, ln)
-		}
-	}
+	lines := splitNonEmptyLines(string(b))
 	if len(lines) > n {
 		lines = lines[len(lines)-n:]
 	}

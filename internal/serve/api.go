@@ -107,6 +107,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects/{id}/state", s.handleState)
 	mux.HandleFunc("GET /api/projects/{id}/worktrees", s.handleWorktrees)
 	mux.HandleFunc("GET /api/projects/{id}/events", s.handleEvents)
+	mux.HandleFunc("GET /api/projects/{id}/orchestrate/stream/{task}", s.handleAgentStream)
 	s.registerRegistryRoutes(mux)
 	s.registerAuthorRoutes(mux)
 	s.registerWiringRoutes(mux)

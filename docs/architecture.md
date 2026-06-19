@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Last updated: 2026-06-16 | Status: **v0.4.0 已发布** — 协议 v1 冻结 · Go CLI + MCP + dashboard · orchestrate 自主驱动 + planner · 成本/可观测(D1) + 巡检(D2) · session 清理(opencode) · GLM 端点可配 · Settings agent 管理 · 浅色 dashboard · native audit layer(claude-code hook + opencode 插件) · pactify.dev 文档站。下方「增量子系统」段记录这些子系统的细节。
+> Last updated: 2026-06-19 | Status: **v0.7.3 已发布** + **dark product UI refresh（本地 main，未发布）** — 协议 v1 冻结 · Go CLI + MCP + dashboard · orchestrate 自主驱动 + planner · 成本/可观测(D1) + 巡检(D2) · session 清理(opencode) · GLM 端点可配 · Settings agent 管理 · **深色 dashboard（dark product UI，6 屏照设计稿重制）** · native audit layer(claude-code hook + opencode 插件) · pactify.dev 文档站。下方「增量子系统」段记录这些子系统的细节。
 
 ## Overview
 
@@ -218,10 +218,13 @@ The embedded dashboard was rebuilt to the locked design system (spec
 boards in `docs/superpowers/mockups/dashboard-v2/`) — still **zero protocol changes**;
 the only sidecar growth is an additive `office` key in the opaque layout JSON:
 
-- **Token foundation** (`web/src/tokens.css`, Tailwind v4 `@theme static`): B·Indigo
-  4-layer backgrounds, 8 role colors, semantic tokens, self-hosted Inter + JetBrains
-  Mono. Legacy `--role-*` vars are re-pointed, so all components shifted hue without
-  edits. `ui/` primitives (Button/Modal/Popover/Badge/…) are the sole control source.
+- **Token foundation** (`web/src/tokens.css`, Tailwind v4 `@theme static`): a **dark**
+  4-layer background ramp (`#0a0e14` void → `#10151e` surface → `#171e2a` raised →
+  `#0c1119` inset), role + semantic tokens, self-hosted Inter + JetBrains Mono. Because
+  almost every component reads tokens via `var()`, swapping this `@theme` block migrates
+  the whole app light↔dark with no component edits; legacy `--role-*` vars are re-pointed
+  too. `ui/` primitives (Button/Modal/Popover/Badge/MetricStrip/…) are the sole control
+  source. (Earlier light-theme mockup: B·Indigo; the shipped theme is dark.)
 - **Ant colony avatars** (`web/src/components/ui/ants/`): one colony, eight castes
   (queen=orchestrator, guard=reviewer, builder=worker + qa/pm/designer/research/ops by
   roster-role keyword, fallback builder); seat individuality = deterministic pad-gradient
@@ -305,8 +308,9 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 ### 增量子系统（2026-06-14~16，v0.4.0）
 
 **成本 / 可观测 D1（`internal/stats` + `internal/diffstat` + `internal/tokens`）**：per-task / per-agent 的工时、代码量、token 统计，纯派生 + 真实数据。
-- `stats.Compute(events, now)` 从 log 时间戳算每任务/座席工作时长（pure derived）；`WithLOC` 叠加代码量、`WithTokens` 叠加 token。
-- `diffstat.NumStat(repoDir, from, to, pathspec…)` 用 `git numstat` 算 added/deleted/files；`IsRepoRoot` 守卫（仅当路径是自身 git root 才算 LOC，避免 monorepo 误算）。
+- `stats.Compute(events, now)` 从 log 时间戳算每任务/座席工作时长（pure derived）；`WithTaskLOC` 叠加代码量、`WithTokens` 叠加 token。
+- `diffstat.NumStat(repoDir, from, to, pathspec…)` 用 `git numstat` 算 added/deleted/files；`diffstat.Commits(repoDir, rev, grepFixed)` 按 commit subject 字面匹配找一个任务自己的 checkpoint commits；`IsRepoRoot` 守卫（仅当路径是自身 git root 才算 LOC，避免 monorepo 误算）。
+- **LOC 按任务精确归因（2026-06-19 修复）**：旧 `WithLOC` 对整条 feature 分支 `base..branch` 做一次 diff，导致同一分支上每个任务都显示相同的分支总量；改为 `WithTaskLOC`——对每个任务**自己的** checkpoint commits（subject `pact <task>:`，经 `diffstat.Commits` 找到）逐个 `sha~1..sha` numstat 求和，排除 `.pact` 簿记。每任务 LOC 各异，与 `WithTokens` 同形。
 - `tokens` 在 `.pact/orchestrate/tokens.json` 存 per-task token，`Parse(kind, output)` 解析各 agent 输出（claude `usage.input+output` 已验证；JSONL last-usage + 顶层 fallback）。
 - 经 `GET /api/projects/{id}/stats` 暴露；dashboard RightRail inspector + office「Cost」镜头展示（⏱ 时长 · +added/−deleted · ⛁ token）。
 
@@ -321,7 +325,7 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 
 **session 清理升级（`internal/sessions`，opencode-first，2026-06-15）**：从"按 kind 框架（gemini 仅 list）"升级为**任务 accept 后自动关闭该棒 session**。实测各 agent session CLI 后定 opencode 优先（唯一有干净 `session list` + `session delete <id>`，且常驻 daemon 最该清）。机制：runner 给 opencode `run` 打 `--title pact:<seat>`（不改输出格式）→ accept 后 `sessions.CleanupByTitle` list→匹配 title→按 id 删 owner+reviewer 的 session；门控在 `Options.SessionRun`（仅 `CleanupSessions` 开时注入真 exec，测试不 spawn）；CLI 默认开、`--keep-sessions` 关。gemini（按 index）/codex（archive）/kimi/claude（无 CLI）延后。
 
-**dashboard 浅色化 + 信号语言（web/，未发布）**：light theme token 体系；office「Activity / Cost」镜头切换；**蚂蚁运动语言**（in_progress 爬行 / awaiting 绕行 / changes 顿挫 + status-colored 脉冲 + dep 边行进蚁）；RightRail 改 Dify 式浮层圆角卡。Canvas 合并门 = vitest + Playwright e2e 双绿（工艺规约见 CLAUDE.md）。
+**dark product UI refresh（web/，本地 main 未发布，2026-06-19）**：dashboard 从浅色切到**深色**，照 `design_handoff_dark_product_ui` 设计稿把全部 6 屏重制。本质是 **token swap + 少量新 pattern**——`tokens.css` 的 `@theme` 改深色（背景/边框/文字/语义；role 三色回归 brand.md 一直定义的深色基底 `#ffd479/#8ab4ff/#6ee7a0`，≈70% 的 app 经 `var()` 自动迁移）+ `index.css` 中硬编码浅色值（`canvas-stage`/`skeleton`/`rgba(18,22,31,…)` hover/inset）逐一 re-tone。新 pattern：`ui/MetricStrip`（mono `RUN/TOK/×iter` 统计条，live 值蓝、估算斜体）；**Board** 全宽 5 列（Assigned/Working/Review/Accepted/Shipped）+ 上下文头条（feature 过滤 chip + 座席簇 + New task）+ 卡片统计条 + Review 列内联 Accept/Changes，去掉固定左 dock（座席并入头条），accepted+shipped 折叠到最近 6；**Canvas** 底部中央 NL 命令坞（目标 + 配方 chip + 并发段 + Run，接现有 dispatch）；**Live** 两栏 + 右侧事件流终端（`#07090d`，pact log 着色 + 座席在场）；**Setup** 旅程步进器 + 角色切换 pill + scope 交叉链；**Settings** scope 双栏（Project/Machine/Account）。早先的**蚂蚁运动语言**（in_progress 爬行 / awaiting 绕行 / changes 顿挫 + status-colored 脉冲 + dep 边行进蚁）保留。Canvas 合并门 = vitest + Playwright e2e 双绿（工艺规约见 CLAUDE.md）。
 
 **pactify.dev 文档站外壳（`site/`，已上线生产）**：Astro 站新增 `DocsLayout`（左目录 `docsNav` + 右内容，scrollspy active），`/introduction` 重做为文档落地页，`/protocol`·`/onboarding` 共用同一外壳。
 

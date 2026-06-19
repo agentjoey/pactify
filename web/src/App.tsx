@@ -358,7 +358,7 @@ export default function App() {
                     now take the full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
                   {view === "canvas"
-                    ? <div data-testid="view-canvas" className="flex flex-1 overflow-hidden"><Canvas key={current} project={current} state={shownState} author={author} replaying={false} pulses={pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} onRun={(goal) => { setDispatchGoal(goal); setDispatchOpen(true); }} /></div>
+                    ? <div data-testid="view-canvas" className="flex flex-1 overflow-hidden"><Canvas key={current} project={current} state={shownState} author={author} replaying={false} pulses={pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} /></div>
                     : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>}
                   <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />
                 </div>

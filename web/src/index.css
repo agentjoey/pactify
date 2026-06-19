@@ -130,6 +130,15 @@ body {
   50% { opacity: 0.45; transform: scale(0.82); }
 }
 
+/* Live view: equalizer bars on an actively-working task chip, and the terminal
+   cursor blink in the event stream. reduced-motion → static. */
+@media (prefers-reduced-motion: no-preference) {
+  .live-eq-bar { animation: live-eq 1s ease-in-out infinite; }
+  .live-cursor { animation: live-blink 1.1s step-end infinite; }
+}
+@keyframes live-eq { 50% { transform: scaleY(0.4); } }
+@keyframes live-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
 /* hover-lift: a reusable card affordance — on hover the card raises (shadow +
    1px translate) so it reads as interactive. Pair with a token shadow. */
 .hover-lift {

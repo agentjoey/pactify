@@ -348,7 +348,7 @@ export default function App() {
             : view === "live"
             ? (
               <div data-testid="view-live" className="flex-1 overflow-hidden">
-                <LiveOrchestrate project={current} refreshTick={refreshTick} author={author} agents={shownState.agents} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} />
+                <LiveOrchestrate project={current} state={shownState} refreshTick={refreshTick} author={author} agents={shownState.agents} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} />
               </div>
             )
             : (

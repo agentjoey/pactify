@@ -15,6 +15,7 @@ vi.mock("../lib/api", () => ({
   resumeOrchestrate: (...args: unknown[]) => resumeOrchestrate(...args),
   shipFeature: (...args: unknown[]) => shipFeature(...args),
   getDiff: (...args: unknown[]) => getDiff(...args),
+  subscribeAgentStream: () => () => {},
 }));
 
 import { LiveOrchestrate } from "./LiveOrchestrate";
@@ -148,5 +149,15 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     getOrchestrateStatus.mockResolvedValue({ present: false });
     renderLive();
     await waitFor(() => expect(screen.getByTestId("event-stream")).toBeTruthy());
+  });
+
+  it("expands the first working lane's agent terminal by default", async () => {
+    getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}) });
+    renderLive({
+      state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
+        task("t1", "accepted"), task("t2", "in_progress"),
+      ] }]),
+    });
+    await waitFor(() => expect(screen.getByTestId("agent-terminal")).toBeTruthy());
   });
 });

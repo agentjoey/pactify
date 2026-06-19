@@ -8,6 +8,7 @@ import {
   shipFeature,
   getDiff,
 } from "../lib/api";
+import { AgentTerminal } from "./live/AgentTerminal";
 import { taskTokens, fmtTokens, canMergeFeature } from "../lib/derive";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
@@ -44,6 +45,7 @@ export function LiveOrchestrate({
   const [running, setRunning] = useState(false);
   const [resuming, setResuming] = useState(false);
   const [shipping, setShipping] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [diffText, setDiffText] = useState("");
   const [diffOpen, setDiffOpen] = useState(false);
   const [loadingDiff, setLoadingDiff] = useState(false);
@@ -158,6 +160,13 @@ export function LiveOrchestrate({
     });
   }, [state.features, parallel, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (expanded === null) {
+      const firstWorking = lanes.find((f) => { const o = osFor(f.id); return o && !o.done && !o.escalated; });
+      if (firstWorking) setExpanded(firstWorking.id);
+    }
+  }, [lanes]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const totals = useMemo(() => {
     let tok = 0, accepted = 0, total = 0;
     for (const f of lanes) {
@@ -235,6 +244,9 @@ export function LiveOrchestrate({
             loadingDiff={loadingDiff}
             onResume={handleResume}
             onDiff={handleViewDiff}
+            expanded={expanded === f.id}
+            onToggle={() => setExpanded(expanded === f.id ? null : f.id)}
+            project={project}
           />
         ))}
       </div>
@@ -344,12 +356,14 @@ function chipKindFor(t: Task, os: OrchestrateStatus | null): ChipKind {
 }
 
 // FeatureLane — one feature's card: header (name/branch/status pill/meta) +
-// horizontal task pipeline + (when its hard gate failed) the review gate.
+// horizontal task pipeline + (when its hard gate failed) the review gate +
+// (when working and expanded) live agent terminal.
 function FeatureLane({
-  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff,
+  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, expanded, onToggle, project,
 }: {
   feature: Feature; os: OrchestrateStatus | null; events: PactEvent[]; state: State;
   author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void;
+  expanded: boolean; onToggle: () => void; project: string;
 }) {
   const gate = !!os?.escalated;
   const accepted = feature.tasks.filter((t) => t.status === "accepted" || t.status === "shipped").length;
@@ -389,6 +403,11 @@ function FeatureLane({
           {(gate || working) && <span className="status-pill-dot-live h-[5px] w-[5px] rounded-full" style={{ background: pill.c }} />}
           {pill.txt}
         </span>
+        {working && (
+          <button onClick={onToggle} className="ml-2 rounded-[6px] border border-[color-mix(in_srgb,var(--color-role-design)_30%,transparent)] px-2 py-[3px] text-[9.5px] text-[var(--color-role-design)]">
+            {expanded ? "▴ 收起" : "▾ 看执行"}
+          </button>
+        )}
         <span className="ml-auto flex items-center gap-2 text-[10px] font-medium text-[var(--color-text-3)]">
           <span className="mono">{tok > 0 ? `${fmtTokens(tok)} tok` : "—"}{os?.iter != null ? ` · ×${os.iter}` : ""}</span>
           <span className="opacity-40">·</span>
@@ -421,6 +440,12 @@ function FeatureLane({
           onResume={onResume}
           onDiff={onDiff}
         />
+      )}
+
+      {expanded && working && os?.task && (
+        <div className="mt-3">
+          <AgentTerminal project={project} task={os.task} seat={os.seat} />
+        </div>
       )}
     </div>
   );

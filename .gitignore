@@ -14,6 +14,9 @@ data/
 # Secrets
 .env
 *.key
+# Frontend self-review screenshots (web/scripts/shots.mjs output + ad-hoc debug
+# shots land in web/ root) — never shipped. Real assets live in web/public/.
+web/*.png
 # Brainstorm visual companion
 .superpowers/
 

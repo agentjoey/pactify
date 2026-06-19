@@ -1,29 +1,29 @@
 // shots.mjs — UI self-review screenshot harness.
 //
-// Captures each dashboard view (and a few notable states) to PNGs so the
-// developer/agent can VISUALLY review the rendered UI instead of working blind.
-// Point it at a running `pactify serve` (real data) or the e2e mock-server.
+// Captures each dashboard view to PNGs so the developer/agent can VISUALLY review
+// the rendered UI instead of working blind. Point it at a running `pactify serve`
+// (real data, the launchd default :17082) or a `vite` dev server.
 //
 // Usage:
-//   node web/scripts/shots.mjs                 # → /tmp/pactify-shots, BASE=127.0.0.1:7777
+//   node web/scripts/shots.mjs                 # all views → /tmp/pactify-shots
+//   node web/scripts/shots.mjs board           # just one view
 //   SHOT_BASE=http://localhost:5173 SHOT_OUT=./shots node web/scripts/shots.mjs
 import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 
-const BASE = process.env.SHOT_BASE || "http://127.0.0.1:7777";
+const BASE = process.env.SHOT_BASE || "http://127.0.0.1:17082";
 const OUT = process.env.SHOT_OUT || "/tmp/pactify-shots";
 
+// IA v2: three lens views (keys 1/2/3) + Settings as a modal (⚙). Older 7-view
+// keymap is gone — keep this list in sync with shell/Toolbar LENSES.
 const VIEWS = [
-  ["kanban", "1"],
+  ["board", "1"],
   ["canvas", "2"],
-  ["ops", "3"],
-  ["live", "4"],
-  ["plan", "5"],
-  ["setup", "6"],
-  ["recipes", "7"],
+  ["live", "3"],
 ];
 
 async function main() {
+  const only = process.argv[2]; // optional single view name
   await mkdir(OUT, { recursive: true });
   const browser = await chromium.launch();
   const page = await browser.newPage({
@@ -35,39 +35,29 @@ async function main() {
   // open, so the network is never idle.
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForSelector('[data-testid="app-root"]', { timeout: 15000 });
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1200);
 
   for (const [name, key] of VIEWS) {
+    if (only && only !== name) continue;
     await page.keyboard.press(key);
-    await page.waitForTimeout(900); // let view-enter + data settle
+    await page.waitForTimeout(1000); // let view-enter + data settle
     await page.screenshot({ path: `${OUT}/${name}.png` });
     console.log(`shot: ${name}`);
   }
 
-  // Notable state: Recipes with a goal typed (live expand preview).
-  await page.keyboard.press("7");
-  await page.waitForTimeout(400);
-  const goal = page.locator('[data-testid="recipe-goal"]');
-  if (await goal.count()) {
-    await goal.fill("给 relay 加重试上限可配");
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: `${OUT}/recipes-filled.png` });
-    console.log("shot: recipes-filled");
-  }
-
-  // Notable state: Ops scrolled down to the Agent config panel.
-  await page.keyboard.press("3");
-  await page.waitForTimeout(600);
-  const acfg = page.locator('[data-testid="ops-agent-config"]');
-  if (await acfg.count()) {
-    await acfg.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: `${OUT}/ops-agent-config.png` });
-    console.log("shot: ops-agent-config");
+  // Settings modal (opened from the toolbar ⚙, not a lens key).
+  if (!only || only === "settings") {
+    const gear = page.locator('[data-testid="toolbar-settings"]');
+    if (await gear.count()) {
+      await gear.click();
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${OUT}/settings.png` });
+      console.log("shot: settings");
+    }
   }
 
   await browser.close();
-  console.log(`\n${VIEWS.length + 2} shots → ${OUT}`);
+  console.log(`\nshots → ${OUT}`);
 }
 
 main().catch((e) => {

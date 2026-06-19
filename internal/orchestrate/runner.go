@@ -177,7 +177,12 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	if lc.Task != "" {
 		if sink, serr := OpenStreamSink(lc.RepoDir, lc.Task); serr == nil {
 			defer sink.Close()
-			capture = io.MultiWriter(cap, sink)
+			// bestEffortWriter is REQUIRED here: io.MultiWriter aborts the whole
+			// write on any sub-writer error, which would propagate up through the
+			// child's stdout pipe and stall (hang) the agent. Swallowing the sink's
+			// errors keeps the live mirror truly best-effort — a failing stream file
+			// never affects the run.
+			capture = io.MultiWriter(cap, bestEffortWriter{sink})
 		}
 	}
 	err = r.Exec(ctx, eff.Command, args, lc.RepoDir, env, capture)
@@ -227,6 +232,17 @@ func (w *tailWriter) Write(p []byte) (int, error) {
 }
 
 func (w *tailWriter) String() string { return string(w.buf) }
+
+// bestEffortWriter forwards writes to w but always reports success, so a failing
+// or slow live-stream sink can never abort an io.MultiWriter write and stall the
+// child process's stdout (which would hang the agent). The mirror is telemetry —
+// it must never affect the run.
+type bestEffortWriter struct{ w io.Writer }
+
+func (b bestEffortWriter) Write(p []byte) (int, error) {
+	_, _ = b.w.Write(p)
+	return len(p), nil
+}
 
 // tagOpencodeSession inserts `--title pact:<seat>` right after opencode's "run"
 // subcommand (so it's a flag on the run, not swallowed by the trailing

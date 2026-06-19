@@ -12,6 +12,7 @@ import { getLayout, putLayout } from "../lib/api";
 import { TaskEditor, type FeatureOption } from "./TaskEditor";
 import { DispatchModal } from "./DispatchModal";
 import { Toolbar } from "./canvas/Toolbar";
+import { CommandDock } from "./canvas/CommandDock";
 import { SeatRoster } from "./canvas/SeatRoster";
 import { OfficeView } from "./canvas/OfficeView";
 import { CanvasSkeleton } from "./Skeleton";
@@ -46,6 +47,7 @@ export function Canvas({
   draftFeatures,
   setDraftFeatures,
   loading,
+  onRun,
 }: {
   project: string;
   state: State;
@@ -58,6 +60,8 @@ export function Canvas({
   draftFeatures: DraftFeature[];
   setDraftFeatures: Dispatch<SetStateAction<DraftFeature[]>>;
   loading?: boolean;
+  // Hands a natural-language goal to the dispatch flow (the signature NL dock).
+  onRun?: (goal: string, opts: { concurrency: number }) => void;
 }) {
   const [layout, setLayout] = useState<LayoutJSON>({ v: LAYOUT_V });
   const [layoutLoaded, setLayoutLoaded] = useState(false);
@@ -282,6 +286,8 @@ export function Canvas({
           onClose={() => setDispatch(undefined)}
         />
       )}
+
+      {author && onRun && <CommandDock onRun={onRun} />}
     </div>
   );
 }

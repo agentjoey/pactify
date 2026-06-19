@@ -328,7 +328,7 @@ export function RightRail({
               <div className="mt-2">
                 <textarea
                   aria-label="changes reason"
-                  className="h-16 w-full resize-y rounded border border-[var(--color-border-subtle)] bg-[#f1f3f5] px-1.5 py-1 text-[11px] text-[var(--color-text-1)]"
+                  className="h-16 w-full resize-y rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-1.5 py-1 text-[11px] text-[var(--color-text-1)]"
                   placeholder="reason (required to request changes)"
                   value={reason}
                   onChange={(ev) => setReason(ev.target.value)}

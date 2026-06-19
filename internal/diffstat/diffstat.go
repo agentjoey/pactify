@@ -85,3 +85,26 @@ func numStatWith(run runner, repoDir, from, to string, pathspec ...string) (Stat
 	}
 	return s, nil
 }
+
+// Commits returns the SHAs of commits reachable from rev whose subject/body
+// contains grepFixed (a literal substring, not a regex), newest first. Used to
+// attribute per-task code volume to the checkpoint commits a task produced —
+// their subject carries the task id (e.g. "pact <task>: checkpoint by <seat>").
+// Merge commits are skipped.
+func Commits(repoDir, rev, grepFixed string) ([]string, error) {
+	return commitsWith(gitRun, repoDir, rev, grepFixed)
+}
+
+func commitsWith(run runner, repoDir, rev, grepFixed string) ([]string, error) {
+	out, err := run(repoDir, "log", rev, "--no-merges", "--fixed-strings", "--grep="+grepFixed, "--format=%H")
+	if err != nil {
+		return nil, fmt.Errorf("diffstat: git log %s grep %q: %w", rev, grepFixed, err)
+	}
+	var shas []string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		if s := strings.TrimSpace(line); s != "" {
+			shas = append(shas, s)
+		}
+	}
+	return shas, nil
+}

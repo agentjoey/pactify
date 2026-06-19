@@ -34,45 +34,54 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res := stats.Compute(evs, time.Now().UTC())
-	res = res.WithLOC(locForProject(p.Path, evs))
+	res = res.WithTaskLOC(taskLocForProject(p.Path, evs))
 	tk := tokens.Load(p.Path)
 	res = res.WithTokens(tk.Get)
 	writeJSON(w, http.StatusOK, res)
 }
 
-// locForProject returns a feature→(added,deleted) provider that diffs each
-// feature's branch against the project's base branch via git numstat. Failures
-// (missing branch, non-git, no base) yield 0 — LOC is best-effort.
-func locForProject(repoPath string, evs []event.Event) func(string) (int, int) {
-	base := "main"
-	for _, e := range evs {
-		if e.EventType == "init" {
-			if b, ok := e.Payload["base_branch"].(string); ok && b != "" {
-				base = b
-			}
-			break
-		}
-	}
-	branch := map[string]string{} // feature id → branch
-	for _, f := range projection.Project(evs).Features {
-		if f.Branch != "" {
-			branch[f.ID] = f.Branch
-		}
-	}
+// taskLocForProject returns a taskID→(added,deleted) provider that diffs each
+// task's OWN checkpoint commits (subject "pact <taskID>:") against their parents
+// via git numstat, excluding .pact bookkeeping. This attributes code volume to
+// the task that produced it, instead of showing every task on a branch the same
+// branch-level total. Failures (non-root repo, missing branch/commits) yield 0 —
+// LOC is best-effort.
+func taskLocForProject(repoPath string, evs []event.Event) func(string) (int, int) {
 	// Only compute LOC for a project that is its OWN git root — a seed living
 	// inside this monorepo (dev/showcase) would otherwise diff the outer repo.
-	isRoot := diffstat.IsRepoRoot(repoPath)
-	return func(feature string) (int, int) {
-		b := branch[feature]
-		if b == "" || b == base || !isRoot {
-			return 0, 0
+	if !diffstat.IsRepoRoot(repoPath) {
+		return func(string) (int, int) { return 0, 0 }
+	}
+	taskBranch := map[string]string{} // task id → its feature branch
+	for _, f := range projection.Project(evs).Features {
+		if f.Branch == "" {
+			continue
 		}
-		// Exclude .pact/* protocol bookkeeping so "code volume" reflects the
-		// agent's actual deliverable, not STATE.yml/log churn.
-		st, err := diffstat.NumStat(repoPath, base, b, ":(exclude).pact")
-		if err != nil {
-			return 0, 0
+		for _, t := range f.Tasks {
+			taskBranch[t.ID] = f.Branch
 		}
-		return st.Added, st.Deleted
+	}
+	cache := map[string][2]int{}
+	return func(taskID string) (int, int) {
+		if v, ok := cache[taskID]; ok {
+			return v[0], v[1]
+		}
+		res := [2]int{}
+		if branch := taskBranch[taskID]; branch != "" {
+			// A task's deliverable = the diff of each checkpoint commit it
+			// produced (the subject carries the task id), summed.
+			if shas, err := diffstat.Commits(repoPath, branch, "pact "+taskID+":"); err == nil {
+				for _, sha := range shas {
+					st, err := diffstat.NumStat(repoPath, sha+"~1", sha, ":(exclude).pact")
+					if err != nil {
+						continue
+					}
+					res[0] += st.Added
+					res[1] += st.Deleted
+				}
+			}
+		}
+		cache[taskID] = res
+		return res[0], res[1]
 	}
 }

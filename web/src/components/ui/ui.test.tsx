@@ -126,6 +126,13 @@ describe("Kbd", () => {
     expect(el.tagName).toBe("KBD");
     expect(el.className).toMatch(/font-mono/);
   });
+
+  it("uses a raised surface with shadow", () => {
+    render(<Kbd>1</Kbd>);
+    const el = screen.getByText("1");
+    expect(el.className).toMatch(/bg-\[var\(--color-bg-raised\)\]/);
+    expect(el.className).toMatch(/shadow-\[var\(--shadow-raised\)\]/);
+  });
 });
 
 describe("Modal", () => {
@@ -362,6 +369,12 @@ describe("Alert", () => {
     render(<Alert>just info</Alert>);
     expect(screen.queryByRole("button")).toBeNull();
   });
+
+  it("uses a 28% alpha tone border", () => {
+    render(<Alert tone="danger" title="Load failed">network error</Alert>);
+    const a = screen.getByRole("alert");
+    expect(a.style.borderColor).toMatch(/28%/);
+  });
 });
 
 describe("StatusPill", () => {
@@ -378,6 +391,13 @@ describe("StatusPill", () => {
     const p = screen.getByTestId("status-pill");
     expect(p.textContent).toContain("shipped");
     expect(p.querySelector(".status-pill-dot-live")).toBeNull();
+  });
+
+  it("renders shipped with dark page text on the success background", () => {
+    render(<StatusPill status="shipped" />);
+    const p = screen.getByTestId("status-pill");
+    expect(p).toHaveStyle({ color: "var(--color-bg-page)" });
+    expect(p).toHaveStyle({ background: "var(--color-success)" });
   });
 
   it("normalizes orchestrate phases onto pact statuses", async () => {

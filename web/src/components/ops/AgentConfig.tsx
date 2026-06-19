@@ -32,9 +32,19 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
 
   return (
     <section data-testid="ops-agent-config" className="mb-4">
-      <h2 className="text-[10px] font-semibold text-[var(--color-text-3)] uppercase mb-2">
-        Agent config · model + permission posture
-      </h2>
+      <div
+        data-testid="agent-config-scope-banner"
+        className="mb-3 flex items-center gap-2 rounded-lg border border-[rgba(110,231,160,0.28)] bg-[rgba(110,231,160,0.10)] px-3 py-2"
+      >
+        <span className="h-1.5 w-1.5 rounded-[2px] bg-[#6ee7a0]" />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#6ee7a0]">
+          MACHINE · all projects
+        </span>
+        <span className="text-[10.5px] text-[rgba(234,238,245,0.55)]">
+          Model and permissions are machine-level — seat assignments live under Project · Seats &amp; roles.
+        </span>
+      </div>
+
       {error && (
         <Alert tone="danger" onRetry={load}>
           {error}
@@ -47,7 +57,7 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
         />
       )}
       {!error && kinds && kinds.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {kinds.map((k, i) => (
             <AgentConfigRow key={k} kind={k} delay={i * 40} />
           ))}
@@ -105,109 +115,179 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
     }
   };
 
+  const parsedTools = tools
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  const dim = cfg ? !cfg.drivable : false;
+
   return (
     <div
       data-testid={`agent-config-${kind}`}
       style={{ animationDelay: `${delay}ms` }}
-      className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 fade-rise"
+      className={[
+        "rounded-xl border px-4 py-3.5 fade-rise",
+        dim
+          ? "border-[rgba(255,255,255,0.07)] bg-[var(--color-bg-inset)] opacity-[.62]"
+          : "border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-surface)]",
+      ].join(" ")}
     >
-      <div className="flex items-center gap-2">
-        <AgentLogo kind={kind} size={24} />
-        <span className="mono text-[12px] font-medium text-[var(--color-text-1)]">{kind}</span>
+      <div className="flex items-center gap-3">
+        <AgentLogo kind={kind} size={30} />
+        <div>
+          <div className="font-mono text-[13px] font-[650] text-[var(--color-text-1)]">{kind}</div>
+          {cfg && (
+            <div className="text-[10px] text-[var(--color-text-3)]">
+              effective {cfg.effective_model}
+              {cfg.effective_scoped ? " · scoped" : ""}
+            </div>
+          )}
+        </div>
         {cfg && (
           <Badge color={cfg.drivable ? "role-dev" : "role-design"}>
             {cfg.drivable ? "drivable" : "manual"}
           </Badge>
         )}
-        {cfg && (
-          <span className="text-[10.5px] text-[var(--color-text-3)]">
-            effective: {cfg.effective_model}
-            {cfg.effective_scoped ? " · scoped" : ""}
-          </span>
-        )}
         {!cfg && <Spinner size="xs" />}
       </div>
 
-      {cfg && (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <label className="text-[10.5px] text-[var(--color-text-3)]">model</label>
-          {(cfg.candidate_models ?? []).length > 0 ? (
-            <>
-              {/* curated dropdown — "default" (empty = kind's own default),
-                  the candidates, then a "custom…" escape hatch to free-text. */}
-              <Select
-                data-testid={`model-select-${kind}`}
-                value={customMode ? "__custom__" : model}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "__custom__") {
-                    setCustomMode(true);
-                  } else {
-                    setCustomMode(false);
-                    setModel(v);
-                  }
-                }}
-                className="w-52 text-[11px]"
+      {cfg && cfg.drivable && (
+        <div className="mt-3.5 flex flex-wrap gap-4">
+          <label className="flex min-w-[230px] flex-1 flex-col gap-1.5">
+            <span className="text-[10px] font-medium text-[var(--color-text-3)]">Model</span>
+            {(cfg.candidate_models ?? []).length > 0 ? (
+              <>
+                <Select
+                  data-testid={`model-select-${kind}`}
+                  value={customMode ? "__custom__" : model}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "__custom__") {
+                      setCustomMode(true);
+                    } else {
+                      setCustomMode(false);
+                      setModel(v);
+                    }
+                  }}
+                  className="w-full text-xs"
+                >
+                  <option value="">default</option>
+                  {(cfg.candidate_models ?? []).map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                  <option value="__custom__">custom…</option>
+                </Select>
+                {customMode && (
+                  <Input
+                    data-testid={`model-${kind}`}
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    placeholder="model id"
+                    className="w-full text-xs"
+                  />
+                )}
+              </>
+            ) : (
+              <Input
+                data-testid={`model-${kind}`}
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="default"
+                className="w-full text-xs"
+              />
+            )}
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-medium text-[var(--color-text-3)]">Permission posture</span>
+            <div className="inline-flex rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] p-0.5">
+              <button
+                type="button"
+                data-testid={`posture-blanket-${kind}`}
+                aria-pressed={!restricted}
+                onClick={() => setRestricted(false)}
+                className={[
+                  "rounded-md px-3.5 py-1.5 text-[11px] font-medium transition-all duration-[var(--motion-micro)]",
+                  !restricted
+                    ? "bg-[#222b3a] text-[var(--color-text-1)] shadow-[0_1px_2px_rgba(0,0,0,.4)]"
+                    : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
+                ].join(" ")}
               >
-                <option value="">default</option>
-                {(cfg.candidate_models ?? []).map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-                <option value="__custom__">custom…</option>
-              </Select>
-              {customMode && (
-                <Input
-                  data-testid={`model-${kind}`}
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="model id"
-                  className="w-52 text-[11px]"
-                />
-              )}
-            </>
-          ) : (
-            <Input
-              data-testid={`model-${kind}`}
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder="default"
-              className="w-52 text-[11px]"
-            />
-          )}
-          <button
-            type="button"
-            data-testid={`scoped-${kind}`}
-            aria-pressed={restricted}
-            onClick={() => setRestricted((s) => !s)}
-            className={[
-              "rounded px-2 py-0.5 text-[10.5px] press transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2",
-              restricted
-                ? "bg-[color-mix(in_srgb,var(--color-warn)_22%,transparent)] text-[var(--color-text-1)]"
-                : "bg-[var(--color-bg-raised)] text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
-            ].join(" ")}
-            title="scoped = use an allowed-tools allowlist instead of blanket auto-approval"
-          >
-            {restricted ? "scoped" : "blanket"}
-          </button>
-          {restricted && (
+                Blanket
+              </button>
+              <button
+                type="button"
+                data-testid={`posture-scoped-${kind}`}
+                aria-pressed={restricted}
+                onClick={() => setRestricted(true)}
+                className={[
+                  "rounded-md px-3.5 py-1.5 text-[11px] font-medium transition-all duration-[var(--motion-micro)]",
+                  restricted
+                    ? "bg-[#222b3a] text-[var(--color-text-1)] shadow-[0_1px_2px_rgba(0,0,0,.4)]"
+                    : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
+                ].join(" ")}
+              >
+                Scoped
+              </button>
+            </div>
+          </label>
+        </div>
+      )}
+
+      {cfg && cfg.drivable && restricted && (
+        <div className="mt-3">
+          <span className="text-[10px] font-medium text-[var(--color-text-3)]">Allowed tools</span>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {parsedTools.map((t) => (
+              <span
+                key={t}
+                data-testid="allowed-tool-chip"
+                className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10.5px] font-medium"
+                style={{
+                  color: "#8ab4ff",
+                  background: "rgba(138,180,255,0.1)",
+                  borderColor: "rgba(138,180,255,0.28)",
+                }}
+              >
+                {t}
+              </span>
+            ))}
             <Input
               data-testid={`tools-${kind}`}
               value={tools}
               onChange={(e) => setTools(e.target.value)}
               placeholder="Read, Edit, Bash"
-              className="w-44 text-[11px]"
+              className="min-w-[140px] flex-1 border-dashed border-[rgba(255,255,255,0.16)] bg-transparent text-xs placeholder:text-[var(--color-text-3)]"
             />
-          )}
+          </div>
+        </div>
+      )}
+
+      {cfg && cfg.drivable && (
+        <div className="mt-3 flex items-center gap-2">
           <Button size="sm" loading={saving} onClick={save}>
             {saved ? "Saved ✓" : "Save"}
           </Button>
+          {/* Keep the legacy scoped toggle so existing tests that target
+              `scoped-${kind}` continue to flip the posture. */}
+          <button
+            type="button"
+            data-testid={`scoped-${kind}`}
+            aria-pressed={restricted}
+            onClick={() => setRestricted((s) => !s)}
+            className="sr-only"
+            tabIndex={-1}
+          >
+            {restricted ? "scoped" : "blanket"}
+          </button>
         </div>
       )}
 
       {err && (
-        <div className="mt-1.5">
+        <div className="mt-2">
           <Alert tone="danger">{err}</Alert>
         </div>
       )}

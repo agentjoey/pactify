@@ -5,10 +5,10 @@ import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Alert } from "./ui/Alert";
 import { EmptyState } from "./ui/EmptyState";
-import { Spinner } from "./ui/Spinner";
 import { ConfigSection, Inset } from "./ui/ConfigSection";
 import { Icon } from "../lib/icons";
-import { AgentLogo } from "../lib/agentLogos";
+import { CableMark } from "./shell/CableMark";
+import { casteForRoles } from "../lib/ants";
 
 // Setup (#1) — the entry-point view bridging "I registered my agents" to "this
 // project can do work". Reads the proposed seat roster from the machine's
@@ -26,6 +26,14 @@ const ROLE_COLOR: Record<Role, { main: string; ink: string }> = {
   reviewer: { main: "var(--color-role-design)", ink: "var(--color-role-design-ink)" },
   worker: { main: "var(--color-role-dev)", ink: "var(--color-role-dev-ink)" },
 };
+
+const JOURNEY_STEPS = [
+  { index: 0, label: "Setup" },
+  { index: 1, label: "Plan" },
+  { index: 2, label: "Run" },
+  { index: 3, label: "Review" },
+  { index: 4, label: "Ship" },
+] as const;
 
 // entryFor mirrors the CLI's kind→entry-file convention for the init command.
 function entryFor(kind: string): string {
@@ -61,6 +69,19 @@ function applyCommands(bindings: SetupBinding[]): string {
     lines.push(`pactify agent add ${b.kind} --id ${b.seat} --roles ${b.roles.join(",")}`);
   }
   return lines.join("\n");
+}
+
+// Bright role-gradient avatar used on Setup seat rows (orchestrator gold,
+// reviewer blue, worker green).
+function roleGradient(roles: string[]): { from: string; to: string } {
+  const caste = casteForRoles(roles);
+  if (caste === "queen") return { from: "#ffd479", to: "#e0a93a" };
+  if (caste === "guard") return { from: "#8ab4ff", to: "#5c8bd6" };
+  return { from: "#6ee7a0", to: "#39b97a" };
+}
+
+function initials(seat: string): string {
+  return seat.slice(0, 2).toLowerCase();
 }
 
 export function Setup() {
@@ -134,237 +155,374 @@ export function Setup() {
   const canApply = ready;
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-5 view-enter" data-testid="setup-view">
-      <div className="mb-1 flex items-center gap-3">
-        <h2 className="text-[15px] font-[650] text-[var(--color-text-1)]">Setup · wire your registered agents into the project</h2>
-        {loading && <Spinner size="sm" />}
-        {ready && (
-          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
-            style={{ color: "var(--color-success)", background: "color-mix(in srgb, var(--color-success) 12%, transparent)" }}>
-            <Icon name="state-accepted" size={12} /> Roles complete
+    <div className="flex h-screen flex-col" data-testid="setup-view">
+      {/* Slim toolbar: breadcrumb replaces the centered lens on Setup. */}
+      <div className="relative z-50 flex min-h-[46px] shrink-0 items-center gap-3 border-b border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-bg-surface)_82%,var(--color-bg-page))] px-3.5 py-2.5 backdrop-blur-[12px]">
+        <div className="flex items-center gap-2">
+          <CableMark />
+          <span className="text-[13px] font-[680] text-[var(--color-text-1)]">pactify</span>
+          <span className="text-[var(--color-text-3)]">·</span>
+          <span className="text-[12px] font-medium text-[var(--color-text-2)]">
+            {project ? `${project} › Setup` : "Setup"}
           </span>
-        )}
-      </div>
-      <p className="mb-4 text-[12px] text-[var(--color-text-3)]">
-        Suggested seat assignments from the agents registered on this machine. Adjust the roles, pick a project path, then apply in one click or copy the commands below.
-      </p>
-
-      {error && (
-        <Alert tone="danger" title="Failed to load" onRetry={load}>
-          {error}
-        </Alert>
-      )}
-
-      {!error && !bindings && loading && (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="skeleton" style={{ height: 52, borderRadius: 8 }} />
-          ))}
         </div>
-      )}
+        <div className="ml-auto flex items-center gap-2.5">
+          <button
+            type="button"
+            aria-label="command palette"
+            onClick={() => window.dispatchEvent(new CustomEvent("pactify:cmdk"))}
+            className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-1.5 py-1 text-[11px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+          >
+            ⌘K
+          </button>
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
+            style={{ color: "var(--color-warn)", background: "color-mix(in srgb, var(--color-warn) 12%, transparent)" }}
+          >
+            setting up
+          </span>
+        </div>
+      </div>
 
-      {!error && bindings && bindings.length === 0 && (
-        <EmptyState
-          title="No agents registered yet"
-          hint="Scan and register agents in the Ops view (or via CLI: pactify agent register <kind>), then come back to assign seats."
-        />
-      )}
+      <div className="flex-1 overflow-y-auto" style={{ background: "radial-gradient(820px 460px at 50% -8%, rgba(255,212,121,0.06), transparent 62%), var(--color-bg-page)" }}>
+        <div className="mx-auto max-w-[780px] px-7 pb-20 pt-[34px]">
+          {/* Journey stepper */}
+          <div className="mb-[34px] flex flex-wrap items-center gap-0" data-testid="journey-stepper">
+            {JOURNEY_STEPS.map((step, i) => {
+              const active = step.index === 0;
+              const dimColor = "rgba(234,238,245,0.5)";
+              return (
+                <div key={step.label} className="flex items-center">
+                  <div
+                    className="inline-flex items-center gap-[7px] rounded-full px-3 py-1.5"
+                    style={
+                      active
+                        ? { background: "rgba(255,212,121,0.1)", border: "1px solid rgba(255,212,121,0.35)" }
+                        : { padding: "6px 12px" }
+                    }
+                  >
+                    <span
+                      className="grid h-[18px] w-[18px] place-items-center rounded-full text-[10px] font-semibold"
+                      style={
+                        active
+                          ? { background: "#ffd479", color: "#0a0e14" }
+                          : { border: "1px solid rgba(255,255,255,0.18)", color: dimColor }
+                      }
+                    >
+                      {step.index}
+                    </span>
+                    <span
+                      className="text-[11.5px] font-medium"
+                      style={active ? { color: "#ffd479" } : { color: dimColor }}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+                  {i < JOURNEY_STEPS.length - 1 && (
+                    <span
+                      className="mx-1 inline-block w-[30px]"
+                      style={{ height: 2, background: i === 0 ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)" }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-      {!error && bindings && bindings.length > 0 && (
-        <div className="fade-rise">
-          <div className="flex flex-col gap-2">
-            {bindings.map((b, i) => (
-              <div
-                key={b.seat}
-                data-testid="setup-row"
-                style={{ animationDelay: `${i * 40}ms` }}
-                className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5 shadow-[var(--shadow-card)] hover-lift fade-rise"
+          {/* Heading */}
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <h1 className="text-[24px] font-semibold leading-[1.2] tracking-[-0.02em] text-[var(--color-text-1)]">
+              Wire your agents into the project
+            </h1>
+            {project && (
+              <span
+                data-testid="scope-chip"
+                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
+                style={{ color: "#ffd479", background: "rgba(255,212,121,0.12)", borderColor: "rgba(255,212,121,0.28)" }}
               >
-                {/* agent logo — identifies the agent kind at a glance */}
-                <AgentLogo kind={b.kind} size={32} />
-                <div className="flex min-w-0 flex-col">
-                  <span className="mono text-[12px] font-[650] text-[var(--color-text-1)] leading-tight">{b.seat}</span>
-                  <span className="text-[10.5px] text-[var(--color-text-3)] leading-tight">{b.kind}</span>
-                </div>
-                <Badge color={b.drivable ? "role-dev" : "role-design"}>
-                  {b.drivable ? "drivable" : "manual"}
-                </Badge>
-                <div className="ml-auto flex items-center gap-1.5">
-                  {ALL_ROLES.map((r) => {
-                    const on = b.roles.includes(r);
-                    const c = ROLE_COLOR[r];
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        data-testid={`role-${b.seat}-${r}`}
-                        aria-pressed={on}
-                        onClick={() => toggleRole(b.seat, r)}
-                        className="press inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2"
-                        style={
-                          on
-                            ? { color: c.ink, background: `color-mix(in srgb, ${c.main} 16%, transparent)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${c.main} 32%, transparent)` }
-                            : { color: "var(--color-text-3)", background: "var(--color-bg-inset)" }
-                        }
-                      >
-                        <span aria-hidden style={{ width: 5, height: 5, borderRadius: 999, background: on ? c.main : "var(--color-text-3)", opacity: on ? 1 : 0.5 }} />
-                        {r}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {warnings.length > 0 && (
-            <div className="mt-3 flex flex-col gap-1.5">
-              {warnings.map((wn) => (
-                <Alert key={wn} tone="warn">
-                  {wn}
-                </Alert>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-5">
-            <ConfigSection label="Project location" required>
-              <Inset className="flex flex-col gap-2">
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[10.5px] font-medium text-[var(--color-text-3)]">Project path</span>
-                  <input
-                    data-testid="setup-path"
-                    type="text"
-                    value={path}
-                    onChange={(e) => handlePathChange(e.target.value)}
-                    placeholder="/path/to/new-project"
-                    className="w-full rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] px-2 py-1.5 text-[12px] text-[var(--color-text-1)] outline-none focus-visible:border-[var(--color-role-design)]"
-                  />
-                </label>
-                <label className="flex flex-col gap-0.5">
-                  <span className="text-[10.5px] font-medium text-[var(--color-text-3)]">Project name</span>
-                  <input
-                    data-testid="setup-project"
-                    type="text"
-                    value={project}
-                    onChange={(e) => setProject(e.target.value)}
-                    placeholder="new-project"
-                    className="w-full rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] px-2 py-1.5 text-[12px] text-[var(--color-text-1)] outline-none focus-visible:border-[var(--color-role-design)]"
-                  />
-                </label>
-              </Inset>
-            </ConfigSection>
-          </div>
-
-          <div className="mt-4 flex items-center gap-3">
-            <Button
-              data-testid="setup-apply-btn"
-              onClick={handleApply}
-              disabled={!canApply}
-              loading={applying}
-            >
-              Apply
-            </Button>
-            {!ready && (
-              <span className="text-[11px] text-[var(--color-text-3)]">
-                Complete all three roles before applying.
+                <span className="h-[5px] w-[5px] rounded-sm" style={{ background: "#ffd479" }} />
+                PROJECT · {project}
+              </span>
+            )}
+            {ready && (
+              <span
+                data-testid="roles-complete-chip"
+                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10.5px] font-medium"
+                style={{ color: "var(--color-success)", background: "color-mix(in srgb, var(--color-success) 12%, transparent)", borderColor: "color-mix(in srgb, var(--color-success) 30%, transparent)" }}
+              >
+                <Icon name="state-accepted" size={12} />
+                Roles complete
               </span>
             )}
           </div>
 
-          {(applyError || result) && (
-            <div className="mt-4" data-testid="setup-result">
-              {applyError && (
-                <Alert tone="danger" title="Apply failed">
-                  {applyError}
-                </Alert>
-              )}
-              {result?.inited && !applyError && (
-                <Alert tone="success" title="Project initialized">
-                  {result.wired.length === 0
-                    ? "No agent wiring was required."
-                    : `${result.wired.filter((w) => w.wrote && !w.docOnly).length} agent file(s) written.`}
-                </Alert>
-              )}
-              {result && result.wired.length > 0 && (
-                <div className="mt-3 flex flex-col gap-2">
-                  {result.wired.map((w) => (
+          {/* Intro note */}
+          <p className="mb-[26px] max-w-[600px] text-[13.5px] leading-[1.6] text-[var(--color-text-2)]">
+            Suggested seat assignments from the agents registered on this machine. Adjust the roles, set a path, then apply in one click or copy the commands below.
+            <br />
+            <span className="text-[var(--color-text-3)]">
+              Agents themselves are registered once on your machine — manage models & permissions in{" "}
+              <span className="text-[var(--color-success)]">Settings · Machine</span>.
+            </span>
+          </p>
+
+          {error && (
+            <Alert tone="danger" title="Failed to load" onRetry={load}>
+              {error}
+            </Alert>
+          )}
+
+          {!error && !bindings && loading && (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="skeleton" style={{ height: 52, borderRadius: 8 }} />
+              ))}
+            </div>
+          )}
+
+          {!error && bindings && bindings.length === 0 && (
+            <EmptyState
+              title="No agents registered yet"
+              hint="Scan and register agents in the Ops view (or via CLI: pactify agent register <kind>), then come back to assign seats."
+            />
+          )}
+
+          {!error && bindings && bindings.length > 0 && (
+            <div className="fade-rise">
+              {/* Seat rows */}
+              <div className="mb-[18px] flex flex-col gap-2.5">
+                {bindings.map((b, i) => {
+                  const pad = roleGradient(b.roles);
+                  return (
                     <div
-                      key={`${w.kind}-${w.seat}`}
-                      data-testid="setup-wired"
-                      className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5"
+                      key={b.seat}
+                      data-testid="setup-row"
+                      style={{ animationDelay: `${i * 40}ms` }}
+                      className="flex flex-wrap items-center gap-[13px] rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-[15px] py-[13px] shadow-[var(--shadow-card)] hover-lift fade-rise"
                     >
-                      <div className="mb-1 flex items-center gap-2">
-                        <span className="text-[12px] font-[650] text-[var(--color-text-1)]">{w.kind}</span>
-                        <Badge color={w.docOnly ? "role-design" : w.wrote ? "role-dev" : "role-design"}>
-                          {w.docOnly ? "doc-only" : w.wrote ? "wired" : "skipped"}
-                        </Badge>
-                        <span className="ml-auto text-[11px] text-[var(--color-text-3)]">{w.path}</span>
+                      <span
+                        className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] font-mono text-[12px] font-semibold"
+                        style={{ background: `linear-gradient(135deg, ${pad.from}, ${pad.to})`, color: "#0a0e14" }}
+                      >
+                        {initials(b.seat)}
+                      </span>
+                      <div className="flex min-w-0 flex-col">
+                        <span className="font-mono text-[12.5px] font-[650] leading-tight text-[var(--color-text-1)]">{b.seat}</span>
+                        <span className="text-[10px] leading-tight text-[var(--color-text-3)]">{b.kind}</span>
                       </div>
-                      {w.docOnly && w.snippet && (
-                        <div className="mt-2">
-                          <div className="mb-1 flex items-center justify-between">
-                            <span className="text-[10.5px] text-[var(--color-text-3)]">Copy snippet</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                void navigator.clipboard?.writeText(w.snippet ?? "");
-                                setCopied(true);
-                                setTimeout(() => setCopied(false), 1500);
-                              }}
-                            >
-                              {copied ? "Copied ✓" : "Copy"}
-                            </Button>
-                          </div>
-                          <pre className="whitespace-pre-wrap rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-3 py-2 mono text-[11px] text-[var(--color-text-2)]">
-                            {w.snippet}
-                          </pre>
-                        </div>
-                      )}
+                      <Badge color={b.drivable ? "role-dev" : "role-design"}>
+                        {b.drivable ? "drivable" : "manual"}
+                      </Badge>
+                      <div className="ml-auto flex items-center gap-[7px]">
+                        {ALL_ROLES.map((r) => {
+                          const on = b.roles.includes(r);
+                          const c = ROLE_COLOR[r];
+                          return (
+                            <span key={r} data-testid="role-toggle" data-role={r}>
+                              <button
+                                type="button"
+                                data-testid={`role-${b.seat}-${r}`}
+                                aria-pressed={on}
+                                onClick={() => toggleRole(b.seat, r)}
+                                className="press inline-flex items-center gap-[5px] rounded-full px-[11px] py-1 text-[10.5px] font-medium transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2"
+                                style={
+                                  on
+                                    ? {
+                                        color: c.ink,
+                                        background: `color-mix(in srgb, ${c.main} 16%, transparent)`,
+                                        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${c.main} 32%, transparent)`,
+                                      }
+                                    : {
+                                        color: "var(--color-text-3)",
+                                        background: "var(--color-bg-page)",
+                                        border: "1px solid var(--color-border-subtle)",
+                                      }
+                                }
+                              >
+                                <span
+                                  aria-hidden
+                                  style={{
+                                    width: 5,
+                                    height: 5,
+                                    borderRadius: 999,
+                                    background: on ? c.main : "var(--color-text-3)",
+                                    opacity: on ? 1 : 0.5,
+                                  }}
+                                />
+                                {r}
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-              {result && result.notes.length > 0 && (
-                <div className="mt-3 flex flex-col gap-1.5">
-                  {result.notes.map((note, i) => (
-                    <Alert key={i} tone="warn">
-                      {note}
+                  );
+                })}
+              </div>
+
+              {/* Role-gap warnings / success note */}
+              {ready ? (
+                <Alert tone="success" className="mb-6">
+                  Separation of duties holds — orchestrator, reviewer and worker are all staffed, and no seat is both building and accepting its own work.
+                </Alert>
+              ) : (
+                <div className="mb-6 flex flex-col gap-1.5">
+                  {warnings.map((wn) => (
+                    <Alert key={wn} tone="warn">
+                      {wn}
                     </Alert>
                   ))}
                 </div>
               )}
+
+              {/* Project location */}
+              <div className="mb-[22px]">
+                <ConfigSection label="Project location" required>
+                  <Inset className="flex flex-col gap-3 rounded-[11px] bg-[var(--color-bg-page)] px-[14px] py-[14px]">
+                    <label className="flex flex-col gap-[5px]">
+                      <span className="text-[10px] font-medium text-[var(--color-text-3)]">Project path</span>
+                      <input
+                        data-testid="setup-path"
+                        type="text"
+                        value={path}
+                        onChange={(e) => handlePathChange(e.target.value)}
+                        placeholder="/path/to/new-project"
+                        className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-[11px] py-[9px] font-mono text-[12px] text-[var(--color-text-1)] outline-none focus-visible:border-[var(--color-role-design)]"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-[5px]">
+                      <span className="text-[10px] font-medium text-[var(--color-text-3)]">Project name</span>
+                      <input
+                        data-testid="setup-project"
+                        type="text"
+                        value={project}
+                        onChange={(e) => setProject(e.target.value)}
+                        placeholder="new-project"
+                        className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-[11px] py-[9px] font-mono text-[12px] text-[var(--color-text-1)] outline-none focus-visible:border-[var(--color-role-design)]"
+                      />
+                    </label>
+                  </Inset>
+                </ConfigSection>
+              </div>
+
+              {/* Apply */}
+              <div className="mb-[26px] flex items-center gap-3">
+                <Button
+                  data-testid="setup-apply-btn"
+                  onClick={handleApply}
+                  disabled={!canApply}
+                  loading={applying}
+                >
+                  Apply · init + wire →
+                </Button>
+                {!ready && (
+                  <span className="text-[11px] text-[var(--color-text-3)]">
+                    Complete all three roles before applying.
+                  </span>
+                )}
+              </div>
+
+              {/* Apply result */}
+              {(applyError || result) && (
+                <div className="mb-4" data-testid="setup-result">
+                  {applyError && (
+                    <Alert tone="danger" title="Apply failed">
+                      {applyError}
+                    </Alert>
+                  )}
+                  {result?.inited && !applyError && (
+                    <Alert tone="success" title="Project initialized">
+                      {result.wired.length === 0
+                        ? "No agent wiring was required."
+                        : `${result.wired.filter((w) => w.wrote && !w.docOnly).length} agent file(s) written.`}
+                    </Alert>
+                  )}
+                  {result && result.wired.length > 0 && (
+                    <div className="mt-3 flex flex-col gap-2">
+                      {result.wired.map((w) => (
+                        <div
+                          key={`${w.kind}-${w.seat}`}
+                          data-testid="setup-wired"
+                          className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2.5"
+                        >
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="text-[12px] font-[650] text-[var(--color-text-1)]">{w.kind}</span>
+                            <Badge color={w.docOnly ? "role-design" : w.wrote ? "role-dev" : "role-design"}>
+                              {w.docOnly ? "doc-only" : w.wrote ? "wired" : "skipped"}
+                            </Badge>
+                            <span className="ml-auto text-[11px] text-[var(--color-text-3)]">{w.path}</span>
+                          </div>
+                          {w.docOnly && w.snippet && (
+                            <div className="mt-2">
+                              <div className="mb-1 flex items-center justify-between">
+                                <span className="text-[10.5px] text-[var(--color-text-3)]">Copy snippet</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    void navigator.clipboard?.writeText(w.snippet ?? "");
+                                    setCopied(true);
+                                    setTimeout(() => setCopied(false), 1500);
+                                  }}
+                                >
+                                  {copied ? "Copied ✓" : "Copy"}
+                                </Button>
+                              </div>
+                              <pre className="mono whitespace-pre-wrap rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-3 py-2 text-[11px] text-[var(--color-text-2)]">
+                                {w.snippet}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {result && result.notes.length > 0 && (
+                    <div className="mt-3 flex flex-col gap-1.5">
+                      {result.notes.map((note, i) => (
+                        <Alert key={i} tone="warn">
+                          {note}
+                        </Alert>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Commands */}
+              <div>
+                <ConfigSection
+                  label="Or copy the commands"
+                  action={
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(commands);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      }}
+                    >
+                      {copied ? "Copied ✓" : "Copy"}
+                    </Button>
+                  }
+                >
+                  <pre
+                    data-testid="setup-commands"
+                    className="mono whitespace-pre-wrap rounded-[11px] border border-[var(--color-border-subtle)] bg-[#07090d] px-[16px] py-[14px] text-[11.5px] leading-[1.85] text-[var(--color-text-2)] [overflow-wrap:anywhere]"
+                  >
+                    {commands.split("\n").map((line, idx) => (
+                      <span key={idx} className="block">
+                        <span className="text-[var(--color-success)]">$</span> {line}
+                      </span>
+                    ))}
+                  </pre>
+                </ConfigSection>
+              </div>
             </div>
           )}
-
-          <div className="mt-5">
-            <ConfigSection
-              label="Apply commands"
-              action={
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    void navigator.clipboard?.writeText(commands);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1500);
-                  }}
-                >
-                  {copied ? "Copied ✓" : "Copy"}
-                </Button>
-              }
-            >
-              <pre
-                data-testid="setup-commands"
-                className="whitespace-pre-wrap rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-3 py-2.5 mono text-[11px] leading-[1.7] text-[var(--color-text-2)] [overflow-wrap:anywhere]"
-              >
-                {commands}
-              </pre>
-            </ConfigSection>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

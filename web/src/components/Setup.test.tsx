@@ -43,6 +43,24 @@ describe("Setup view", () => {
     expect(cmds).toContain("pactify agent add opencode --id opencode --roles worker");
   });
 
+  it("renders the journey stepper, scope chip, and role toggle pills", async () => {
+    getSetupSuggest.mockResolvedValue({
+      bindings: [
+        { seat: "claude", kind: "claude-code", roles: ["orchestrator", "reviewer"], drivable: true },
+        { seat: "opencode", kind: "opencode", roles: ["worker"], drivable: true },
+      ],
+      warnings: [],
+    });
+    render(<Setup />);
+    await waitFor(() => expect(screen.getAllByTestId("setup-row")).toHaveLength(2));
+    expect(screen.getByTestId("journey-stepper")).toBeTruthy();
+    expect(screen.getAllByTestId("role-toggle")).toHaveLength(6);
+    fireEvent.change(screen.getByTestId("setup-path"), { target: { value: "/tmp/relay-core" } });
+    await waitFor(() => {
+      expect(screen.getByTestId("scope-chip").textContent).toContain("PROJECT · relay-core");
+    });
+  });
+
   it("recomputes warnings live when roles are toggled off", async () => {
     getSetupSuggest.mockResolvedValue({
       bindings: [

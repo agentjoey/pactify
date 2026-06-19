@@ -4,8 +4,6 @@ import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegist
 import type { Worktree } from "./lib/api";
 import { type View } from "./lib/types";
 import { Toolbar } from "./components/shell/Toolbar";
-import { RosterDock } from "./components/shell/RosterDock";
-import { PlanDock } from "./components/shell/PlanDock";
 import { SettingsModal } from "./components/shell/SettingsModal";
 import { AddProjectWizard } from "./components/shell/AddProjectWizard";
 import { DispatchPanel } from "./components/shell/DispatchPanel";
@@ -55,6 +53,8 @@ export default function App() {
   const openSettings = (seat: string | null) => { setSettingsSeat(seat); setSettingsOpen(true); };
   const [wizardOpen, setWizardOpen] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
+  // Goal seeded into the DispatchPanel from the canvas NL command dock.
+  const [dispatchGoal, setDispatchGoal] = useState("");
   // running status per project name → drives the status light on the ProjectMenu
   // trigger AND every row in the dropdown (spec §4.1: each project shows a light).
   const [runningByProject, setRunningByProject] = useState<Record<string, boolean>>({});
@@ -338,17 +338,9 @@ export default function App() {
     <div data-testid="app-root" className="h-screen flex flex-col">
       <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} onOpenDispatch={() => setDispatchOpen(true)} worktreesByProject={worktreesByProject} currentWorktree={currentWorktree} onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }} />
       <div className="relative flex flex-1 overflow-hidden">
-        {/* Floating left dock: two detached cards (seated agents, then plan),
-            gapped off the header — not attached to header/footer. Board-only:
-            Canvas has its own toolbar + Office desks, Live its own layout, so the
-            dock would overlay their chrome. The Board reserves a left gutter
-            (Board.tsx pl) so columns clear it. */}
-        {view === "board" && (
-          <div className="pointer-events-none absolute left-3 top-[40%] z-20 flex w-[200px] -translate-y-1/2 flex-col gap-3">
-            <RosterDock seats={shownState.agents} onSeatSettings={(seatId) => openSettings(seatId)} />
-            <PlanDock project={current} features={shownState.features.map((f) => f.id)} />
-          </div>
-        )}
+        {/* The dark-handoff Board carries its seated cluster in its own context
+            header (Board.tsx), so the old floating left dock is gone — the board
+            is full-width with no permanent left column. */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Agents author={author} onChanged={refreshProjects} />
           {projectsLoaded && projects.length === 0
@@ -356,7 +348,7 @@ export default function App() {
             : view === "live"
             ? (
               <div data-testid="view-live" className="flex-1 overflow-hidden">
-                <LiveOrchestrate project={current} refreshTick={refreshTick} author={author} agents={shownState.agents} onNotify={(msg, kind) => pushToast(msg, kind)} />
+                <LiveOrchestrate project={current} refreshTick={refreshTick} author={author} agents={shownState.agents} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} />
               </div>
             )
             : (
@@ -366,8 +358,8 @@ export default function App() {
                     now take the full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
                   {view === "canvas"
-                    ? <div data-testid="view-canvas" className="flex flex-1 overflow-hidden"><Canvas key={current} project={current} state={shownState} author={author} replaying={false} pulses={pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} /></div>
-                    : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} /></div>}
+                    ? <div data-testid="view-canvas" className="flex flex-1 overflow-hidden"><Canvas key={current} project={current} state={shownState} author={author} replaying={false} pulses={pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} onRun={(goal) => { setDispatchGoal(goal); setDispatchOpen(true); }} /></div>
+                    : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>}
                   <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />
                 </div>
               </>
@@ -381,8 +373,9 @@ export default function App() {
         project={current}
         roster={shownState.agents}
         open={dispatchOpen}
-        onClose={() => setDispatchOpen(false)}
+        onClose={() => { setDispatchOpen(false); setDispatchGoal(""); }}
         onGoLive={() => { setView("live"); setDispatchOpen(false); }}
+        initialGoal={dispatchGoal}
       />
       <CommandK
         projects={projects}

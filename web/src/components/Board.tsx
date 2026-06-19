@@ -1,171 +1,329 @@
-import { useState, type CSSProperties } from "react";
-import type { State } from "../lib/types";
-import { boardColumns, type Column } from "../lib/derive";
+import { useMemo, useState, type CSSProperties } from "react";
+import type { State, BoardTask } from "../lib/types";
+import { designBoard, taskMetrics, taskTokens, fmtTokens, type DesignColumn } from "../lib/derive";
+import type { PactEvent } from "../lib/types";
 import { statusColorVar } from "../lib/lifecycle";
 import { TaskCard } from "./TaskCard";
 import { statusColor } from "./ui/StatusPill";
-import { Tooltip } from "./ui/Tooltip";
 import { BoardSkeleton } from "./Skeleton";
+import { casteForRoles, padGradient } from "../lib/ants";
+import { postVerb } from "../lib/api";
 
-// Kanban column order + presentation per board3 / spec §4 (note: distinct from
-// derive's COLUMNS order — that one is derivation-internal; this is the visual
-// left→right flow assigned → in_progress → awaiting → changes → accepted).
-const ORDER: Column[] = [
-  "assigned",
-  "in_progress",
-  "awaiting_review",
-  "changes_requested",
-  "accepted",
+// The five dark-handoff columns, left→right. `review` merges awaiting_review +
+// changes_requested; `shipped` collects delivered features (see derive.designBoard).
+const COLS: { key: DesignColumn; label: string }[] = [
+  { key: "assigned", label: "assigned" },
+  { key: "working", label: "working" },
+  { key: "review", label: "review" },
+  { key: "accepted", label: "accepted" },
+  { key: "shipped", label: "shipped" },
 ];
 
-// Per-column empty-state copy (board3 ghost text).
-const GHOST: Record<string, string> = {
+const GHOST: Record<DesignColumn, string> = {
   assigned: "No tasks to assign",
-  in_progress: "No tasks in progress",
-  awaiting_review: "No tasks awaiting review",
-  changes_requested: "No tasks needing rework",
+  working: "No tasks in progress",
+  review: "No tasks under review",
   accepted: "No accepted tasks yet",
+  shipped: "Nothing shipped yet",
 };
 
 export function Board({
   state,
+  events = [],
   selected,
   onSelect,
   pulses,
   staleTasks,
   loading,
+  project,
+  author,
+  onChanged,
 }: {
   state: State;
+  events?: PactEvent[];
   selected: string;
   onSelect: (id: string) => void;
   pulses?: Set<string>;
   staleTasks?: Set<string>;
-  // First-load only: a project is current but its first snapshot hasn't landed.
   loading?: boolean;
+  project?: string;
+  author?: boolean;
+  // Bump the parent refresh tick after a pact verb so the board re-reads state.
+  onChanged?: () => void;
 }) {
-  // accepted column: show the most recent N cards, fold the rest behind a
-  // "+K more" expander (state hooks live above the loading early-return so the
-  // hook order is stable across the loading→loaded transition).
-  const RECENT = 10;
-  const [acceptedExpanded, setAcceptedExpanded] = useState(false);
+  // accepted + shipped are terminal columns that grow unbounded; show only the
+  // most recent RECENT and fold the rest behind a per-column expander.
+  const RECENT = 6;
+  const FOLD_COLS: DesignColumn[] = ["accepted", "shipped"];
+  const [expandedCols, setExpandedCols] = useState<Set<DesignColumn>>(new Set());
+  const [featureFilter, setFeatureFilter] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
+
+  // Per-feature rollup for the context-header filter chips (accepted/total +
+  // token volume). Memoized so it doesn't recompute on every hover/selection.
+  const featureChips = useMemo(
+    () =>
+      state.features.map((f) => ({
+        id: f.id,
+        accepted: f.tasks.filter((t) => t.status === "accepted" || t.status === "shipped").length,
+        total: f.tasks.length,
+        tokens: f.tasks.reduce((n, t) => n + taskTokens(t.id, events), 0),
+      })),
+    [state.features, events],
+  );
+
+  const totalTasks = state.features.reduce((n, f) => n + f.tasks.length, 0);
+  const totalTokens = featureChips.reduce((n, c) => n + c.tokens, 0);
+  const seated = state.agents.filter((a) => a.roles.length > 0);
 
   if (loading) return <BoardSkeleton />;
-  const cols = boardColumns(state);
-  // rolesOf indexes seat → roles so a pulsing card glows in its owner's color
-  // and the ant chips pick the right caste.
-  const rolesMap = new Map(state.agents.map((a) => [a.id, a.roles]));
-  const rolesOf = (seat: string): string[] => rolesMap.get(seat) ?? [];
 
-  // Most-recent-first: the board derivation appends in log order, so reversing
-  // surfaces the latest-accepted tasks at the top of the column.
-  const acceptedAll = [...(cols.accepted ?? [])].reverse();
-  const acceptedShown = acceptedExpanded ? acceptedAll : acceptedAll.slice(0, RECENT);
+  const rolesMap = new Map(state.agents.map((a) => [a.id, a.roles]));
+  const rolesOf = (seatId: string): string[] => rolesMap.get(seatId) ?? [];
+
+  // Apply the feature filter (null = all) before bucketing.
+  const filtered: State =
+    featureFilter == null
+      ? state
+      : { ...state, features: state.features.filter((f) => f.id === featureFilter) };
+  const cols = designBoard(filtered);
+
+  async function verb(taskId: string, v: "accept" | "changes", reason?: string) {
+    if (!project) return;
+    setPending(taskId + v);
+    try {
+      await postVerb(project, v, reason ? { task: taskId, reason } : { task: taskId });
+      onChanged?.();
+    } finally {
+      setPending(null);
+    }
+  }
+
+  function renderCard(bt: BoardTask, col: DesignColumn) {
+    const pulsing = pulses?.has(bt.task.id);
+    const isReview = col === "review";
+    const reviewActions =
+      isReview && author && project ? (
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            data-testid="card-accept"
+            disabled={pending === bt.task.id + "accept"}
+            onClick={(e) => {
+              e.stopPropagation();
+              verb(bt.task.id, "accept");
+            }}
+            className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium disabled:opacity-50"
+            style={{ background: "var(--color-success)", color: "var(--color-bg-page)" }}
+          >
+            ✓ Accept
+          </button>
+          <button
+            type="button"
+            data-testid="card-changes"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(bt.task.id); // open the detail rail for the reason textarea
+            }}
+            className="rounded-[6px] border px-2.5 py-1 text-[11px] font-medium"
+            style={{
+              color: "var(--color-role-ops)",
+              borderColor: "color-mix(in srgb, var(--color-role-ops) 40%, transparent)",
+              background: "color-mix(in srgb, var(--color-role-ops) 14%, transparent)",
+            }}
+          >
+            ↺ Changes
+          </button>
+        </div>
+      ) : undefined;
+
+    return (
+      <div
+        key={bt.task.id}
+        data-testid={pulsing ? "board-pulse" : undefined}
+        className={pulsing ? "pulse rounded-[11px]" : undefined}
+        style={pulsing ? ({ "--pulse-color": statusColor(bt.task.status) } as CSSProperties) : undefined}
+      >
+        <TaskCard
+          task={bt.task}
+          featureId={bt.feature}
+          ownerRoles={rolesOf(bt.task.owner)}
+          reviewerRoles={rolesOf(bt.task.reviewer)}
+          stale={staleTasks?.has(bt.task.id)}
+          selected={selected === bt.task.id}
+          metrics={taskMetrics(bt.task, events)}
+          reviewActions={reviewActions}
+          onClick={() => onSelect(bt.task.id)}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div
-      // pl gutter clears the floating RosterDock/PlanDock (left strip) so the
-      // first kanban column is never hidden behind it.
-      className="grid flex-1 gap-3 overflow-x-auto py-4 pr-4 pl-[216px]"
-      style={{ gridTemplateColumns: `repeat(${ORDER.length}, minmax(140px, 1fr))` }}
-    >
-      {ORDER.map((c) => {
-        const tasks = cols[c] ?? [];
-        const dot = statusColorVar(c);
-        return (
-          <div key={c} className={`min-h-[360px] ${c === "accepted" ? "opacity-[.82]" : ""}`}>
-            <Tooltip label="status flows through pact verbs">
+    <div className="flex flex-1 flex-col overflow-hidden">
+      {/* Context header — feature filter chips + seated cluster + new task */}
+      <div
+        data-testid="board-context-header"
+        className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] px-[18px] py-[9px]"
+        style={{ background: "var(--color-bg-inset)" }}
+      >
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <FilterChip
+            label={`All tasks ${totalTasks}`}
+            active={featureFilter == null}
+            onClick={() => setFeatureFilter(null)}
+          />
+          {featureChips.map((c) => (
+            <FilterChip
+              key={c.id}
+              label={c.id}
+              active={featureFilter === c.id}
+              progress={c.total ? c.accepted / c.total : 0}
+              tokens={c.tokens ? fmtTokens(c.tokens) : undefined}
+              onClick={() => setFeatureFilter((f) => (f === c.id ? null : c.id))}
+            />
+          ))}
+        </div>
+
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center">
+            {seated.slice(0, 6).map((a, i) => {
+              const caste = casteForRoles(a.roles);
+              const pad = padGradient(a.id, caste);
+              return (
+                <span
+                  key={a.id}
+                  title={a.id}
+                  className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-[10px] font-semibold"
+                  style={{
+                    background: `linear-gradient(135deg, ${pad.from}, ${pad.to})`,
+                    color: "var(--color-bg-page)",
+                    marginLeft: i === 0 ? 0 : -7,
+                    boxShadow: "0 0 0 2px var(--color-bg-page)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {a.id.slice(0, 2)}
+                </span>
+              );
+            })}
+          </div>
+          <span className="mono whitespace-nowrap text-[10.5px] text-[var(--color-text-2)]">
+            {seated.length} seated · {totalTasks} tasks · {fmtTokens(totalTokens)} tok
+          </span>
+          <span className="h-4 w-px bg-[var(--color-border-strong)]" />
+          <button
+            type="button"
+            data-testid="board-new-task"
+            onClick={() => window.dispatchEvent(new CustomEvent("pactify:cmdk"))}
+            className="rounded-[6px] px-3 py-1 text-[11.5px] font-medium"
+            style={{ background: "var(--color-role-design)", color: "var(--color-bg-page)" }}
+          >
+            ＋ New task
+          </button>
+        </div>
+      </div>
+
+      {/* Columns — full-width 5-col grid (no fixed left dock) */}
+      <div
+        className="grid flex-1 gap-4 overflow-x-auto p-[18px]"
+        style={{ gridTemplateColumns: `repeat(${COLS.length}, minmax(248px, 1fr))` }}
+      >
+        {COLS.map(({ key, label }) => {
+          const tasks = cols[key] ?? [];
+          const dot = statusColorVar(key === "working" ? "in_progress" : key === "review" ? "awaiting_review" : key);
+          const dueCount = key === "review" ? tasks.filter((t) => t.task.status === "awaiting_review").length : 0;
+          // accepted + shipped fold to the most-recent RECENT (newest first).
+          const foldable = FOLD_COLS.includes(key);
+          const ordered = foldable ? [...tasks].reverse() : tasks;
+          const shown = foldable && !expandedCols.has(key) ? ordered.slice(0, RECENT) : ordered;
+          return (
+            <div key={key} className="min-h-[360px]">
               <div className="flex items-center gap-[7px] px-1 pb-2.5 pt-0.5">
                 <span
                   className="h-[7px] w-[7px] rounded-full"
-                  style={{
-                    background: dot,
-                    boxShadow: c === "awaiting_review" ? `0 0 6px ${dot}` : undefined,
-                  }}
+                  style={{ background: dot, boxShadow: key === "review" ? `0 0 6px ${dot}` : undefined }}
                 />
                 <span className="text-[11px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-2)]">
-                  {c.replace(/_/g, " ")}
+                  {label}
                 </span>
                 <span className="mono ml-auto rounded-full bg-white/[.06] px-[7px] py-px text-[10px] tabular-nums text-[var(--color-text-3)]">
                   {tasks.length}
                 </span>
+                {dueCount > 0 && (
+                  <span
+                    className="rounded-full px-1.5 py-px text-[9.5px] font-medium"
+                    style={{ color: "var(--color-warn)", background: "color-mix(in srgb, var(--color-warn) 14%, transparent)" }}
+                  >
+                    {dueCount} due
+                  </span>
+                )}
               </div>
-            </Tooltip>
-            <div className="flex flex-col gap-[9px]">
-              {c === "accepted" ? (
-                acceptedAll.length === 0 ? (
-                  <div className="kb-ghost">{GHOST.accepted}</div>
+              <div className="flex flex-col gap-[11px]">
+                {tasks.length === 0 ? (
+                  <div className="kb-ghost">{GHOST[key]}</div>
                 ) : (
                   <>
-                    {acceptedShown.map((bt) => {
-                      const pulsing = pulses?.has(bt.task.id);
-                      return (
-                        <div
-                          key={bt.task.id}
-                          data-testid={pulsing ? "board-pulse" : undefined}
-                          className={pulsing ? "pulse rounded-[11px]" : undefined}
-                          style={
-                            pulsing
-                              ? ({ "--pulse-color": statusColor(bt.task.status) } as CSSProperties)
-                              : undefined
-                          }
-                        >
-                          <TaskCard
-                            task={bt.task}
-                            featureId={bt.feature}
-                            ownerRoles={rolesOf(bt.task.owner)}
-                            reviewerRoles={rolesOf(bt.task.reviewer)}
-                            stale={staleTasks?.has(bt.task.id)}
-                            selected={selected === bt.task.id}
-                            onClick={() => onSelect(bt.task.id)}
-                          />
-                        </div>
-                      );
-                    })}
-                    {acceptedAll.length > RECENT && (
+                    {shown.map((bt) => renderCard(bt, key))}
+                    {foldable && ordered.length > RECENT && (
                       <button
                         type="button"
-                        data-testid={acceptedExpanded ? "accepted-less" : "accepted-more"}
+                        data-testid={`${key}-${expandedCols.has(key) ? "less" : "more"}`}
                         className="mt-1 w-full rounded-md border border-[var(--color-success)]/30 bg-[var(--color-success)]/8 px-2 py-1.5 text-left text-[11px] text-[var(--color-text-2)]"
-                        onClick={() => setAcceptedExpanded((o) => !o)}
+                        onClick={() =>
+                          setExpandedCols((prev) => {
+                            const next = new Set(prev);
+                            next.has(key) ? next.delete(key) : next.add(key);
+                            return next;
+                          })
+                        }
                       >
-                        {acceptedExpanded ? `▾ show recent ${RECENT}` : `▸ ${acceptedAll.length - RECENT} more accepted`}
+                        {expandedCols.has(key) ? `▾ show recent ${RECENT}` : `▸ ${ordered.length - RECENT} more ${key}`}
                       </button>
                     )}
                   </>
-                )
-              ) : tasks.length === 0 ? (
-                <div className="kb-ghost">{GHOST[c] ?? "No tasks"}</div>
-              ) : (
-                tasks.map((bt) => {
-                  const pulsing = pulses?.has(bt.task.id);
-                  return (
-                    <div
-                      key={bt.task.id}
-                      data-testid={pulsing ? "board-pulse" : undefined}
-                      className={pulsing ? "pulse rounded-[11px]" : undefined}
-                      style={
-                        pulsing
-                          ? ({ "--pulse-color": statusColor(bt.task.status) } as CSSProperties)
-                          : undefined
-                      }
-                    >
-                      <TaskCard
-                        task={bt.task}
-                        featureId={bt.feature}
-                        ownerRoles={rolesOf(bt.task.owner)}
-                        reviewerRoles={rolesOf(bt.task.reviewer)}
-                        stale={staleTasks?.has(bt.task.id)}
-                        selected={selected === bt.task.id}
-                        onClick={() => onSelect(bt.task.id)}
-                      />
-                    </div>
-                  );
-                })
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
+  );
+}
+
+function FilterChip({
+  label,
+  active,
+  progress,
+  tokens,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  progress?: number;
+  tokens?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      data-testid="feature-chip"
+      onClick={onClick}
+      className="flex shrink-0 items-center gap-2 rounded-[8px] border px-3 py-1.5 text-[11.5px] font-medium"
+      style={{
+        color: active ? "var(--color-text-1)" : "var(--color-text-2)",
+        background: active ? "rgba(255,255,255,.07)" : "transparent",
+        borderColor: active ? "var(--color-border-strong)" : "transparent",
+      }}
+    >
+      <span className="mono">{label}</span>
+      {progress != null && (
+        <span className="h-1 w-[34px] overflow-hidden rounded-full bg-white/10">
+          <span className="block h-full rounded-full" style={{ width: `${Math.round(progress * 100)}%`, background: "var(--color-success)" }} />
+        </span>
+      )}
+      {tokens && <span className="mono text-[10px] text-[var(--color-text-3)]">{tokens}</span>}
+    </button>
   );
 }

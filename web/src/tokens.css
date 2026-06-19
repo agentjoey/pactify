@@ -39,57 +39,51 @@
   --font-sans: "InterVariable", "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
 
-  /* Background — 4 layers (LIGHT theme, 2026-06-14 D1). page = light gray-blue,
-     cards = white, raised/overlay lean on border + shadow rather than fill. */
-  --color-bg-page: #f5f6f8;
-  --color-bg-surface: #ffffff;
-  --color-bg-raised: #ffffff;
-  --color-bg-overlay: #ffffff;
-  /* A soft-gray control fill (dify-style inputs/segments) for inside cards. */
-  --color-bg-inset: #f1f3f5;
+  /* Background — 4 layers (DARK theme, 2026-06-19 handoff). page = near-black
+     void, cards/panels = deep slate, raised/overlay = slightly lighter. */
+  --color-bg-page:    #0a0e14;
+  --color-bg-surface: #10151e;
+  --color-bg-raised:  #171e2a;
+  --color-bg-overlay: #171e2a;
+  /* A recessed well fill (inputs/segments/terminals) on dark surfaces. */
+  --color-bg-inset:   #0c1119;
 
-  /* Borders (dark hairlines on light). */
-  --color-border-subtle: rgba(18, 22, 31, 0.09);
-  --color-border-strong: rgba(18, 22, 31, 0.16);
+  /* Borders (light hairlines on dark). */
+  --color-border-subtle: rgba(255,255,255,0.07);
+  --color-border-strong: rgba(255,255,255,0.13);
 
-  /* Text — 3 layers (dark on light). */
-  --color-text-1: #1a1d27;
-  --color-text-2: rgba(26, 29, 39, 0.64);
-  --color-text-3: rgba(26, 29, 39, 0.42);
+  /* Text — 3 layers (cool near-white on dark). */
+  --color-text-1: #eaeef5;
+  --color-text-2: rgba(234,238,245,0.62);
+  --color-text-3: rgba(234,238,245,0.40);
 
-  /* Role colors — the three brand mains (yellow / blue / green) tuned VIVID for
-     high recognizability on white (2026-06-14). gold brightened + greener-yellow
-     so it reads distinctly as "the yellow one"; green to a vivid brand emerald;
-     blue kept. -ink companions are darker shades for small text where the vivid
-     hue alone is too light (gold especially). */
-  --color-role-product: #f2b50a; /* orchestrator/编排 — bright gold-yellow */
-  --color-role-design: #2563eb;  /* reviewer/评审   — vivid blue */
-  --color-role-dev: #16a85a;     /* worker/开发     — vivid emerald (brand) */
-  --color-role-product-ink: #8a6200; /* legible text/icon shade of product */
-  --color-role-design-ink: #1d4ed8;
-  --color-role-dev-ink: #0f8a44;
+  /* Role colors — original brand hexes tuned for dark. On dark they read as
+     text directly, so the -ink companions equal the main hue. */
+  --color-role-product: #ffd479;  --color-role-product-ink: #ffd479;
+  --color-role-design:  #8ab4ff;  --color-role-design-ink:  #8ab4ff;
+  --color-role-dev:     #6ee7a0;  --color-role-dev-ink:     #6ee7a0;
 
-  /* Role colors — extended roster (vivid for light). designer = brand violet. */
+  /* Role colors — extended roster (dark-tuned). */
   --color-role-qa: #0d9488;
   --color-role-pm: #e07c1e;
   --color-role-designer: #9b3fd4;
   --color-role-research: #b13fce;
-  --color-role-ops: #e0612e;
+  --color-role-ops: #e0884a;
 
-  /* Semantic (light-bg legible). */
-  --color-danger: #d63d38;
-  --color-warn: #b9821a;
-  --color-success: #2f9e5e;
+  /* Semantic (legible on dark). */
+  --color-danger:  #f97066;
+  --color-warn:    #f5c451;
+  --color-success: #6ee7a0;
 
   /* Radius. */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
 
-  /* Shadows — soft, light-theme (subtle elevation, not heavy black). */
-  --shadow-card: 0 1px 2px rgba(18, 22, 31, 0.06), 0 1px 3px rgba(18, 22, 31, 0.08);
-  --shadow-raised: 0 4px 14px rgba(18, 22, 31, 0.1), 0 1px 3px rgba(18, 22, 31, 0.06);
-  --shadow-overlay: 0 12px 32px rgba(18, 22, 31, 0.16), 0 2px 8px rgba(18, 22, 31, 0.08);
+  /* Shadows — deep, for dark surfaces. */
+  --shadow-card:    0 1px 2px rgba(0,0,0,.40);
+  --shadow-raised:  0 8px 22px rgba(0,0,0,.45);
+  --shadow-overlay: 0 18px 44px rgba(0,0,0,.60);
 }
 
 /* Motion + legacy role re-pointing. The legacy vars --role-product/-design/-dev
@@ -102,10 +96,10 @@
   --motion-layout: 200ms;
   --motion-ease: cubic-bezier(0.25, 1, 0.5, 1);
 
-  /* Legacy role vars → new desaturated hexes (supersedes index.css :root). */
-  --role-product: var(--color-role-product); /* #ECC678 */
-  --role-design: var(--color-role-design);   /* #93B4F2 */
-  --role-dev: var(--color-role-dev);         /* #7BD8A0 */
+  /* Legacy role vars → new dark brand hexes (supersedes index.css :root). */
+  --role-product: var(--color-role-product);
+  --role-design: var(--color-role-design);
+  --role-dev: var(--color-role-dev);
 
   /* Semantic shorthands consumed by existing CSS (e.g. .comms-blocked uses
      var(--warn)) — without these the declarations are invalid and silently

@@ -41,7 +41,7 @@ export function Alert({
         className,
       ].join(" ")}
       style={{
-        borderColor: `color-mix(in srgb, ${t.color} 35%, transparent)`,
+        borderColor: `color-mix(in srgb, ${t.color} 28%, transparent)`,
         background: `color-mix(in srgb, ${t.color} 8%, transparent)`,
       }}
     >

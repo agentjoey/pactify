@@ -71,7 +71,7 @@ export function Toolbar({
   return (
     <div
       data-testid="toolbar"
-      className="relative z-50 flex items-center gap-3 border-b border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-bg-surface)_88%,var(--color-bg-page))] px-3.5 py-2.5 backdrop-blur-[10px]"
+      className="relative z-50 flex min-h-[46px] items-center gap-3 border-b border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-bg-surface)_82%,var(--color-bg-page))] px-3.5 py-2.5 backdrop-blur-[12px]"
     >
       {/* brand + project menu */}
       <div className="flex items-center gap-2 shrink-0">
@@ -104,7 +104,7 @@ export function Toolbar({
               onClick={() => onView(l.v)}
               aria-pressed={on}
               className="inline-flex items-center gap-1.5 rounded-[7px] px-3 py-1 text-[11.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-role-design)_40%,transparent)]"
-              style={on ? { background: "var(--color-bg-surface)", color: "var(--color-text-1)", boxShadow: "var(--shadow-card)" } : { color: "var(--color-text-2)" }}
+              style={on ? { background: "var(--color-bg-raised)", color: "var(--color-text-1)", boxShadow: "var(--shadow-card)" } : { color: "var(--color-text-2)" }}
             >
               <Icon name={l.icon} size={13} color={on ? "var(--color-text-1)" : "var(--color-text-3)"} />
               {l.label}
@@ -128,7 +128,7 @@ export function Toolbar({
         <span
           data-testid="seat-avatar"
           className="grid h-[24px] w-[24px] shrink-0 place-items-center rounded-[7px]"
-          style={{ background: `linear-gradient(135deg, ${pad.from}, ${pad.to})`, boxShadow: "inset 0 0 0 1px rgba(18,22,31,.16)" }}
+          style={{ background: `linear-gradient(135deg, ${pad.from}, ${pad.to})`, boxShadow: "inset 0 0 0 1px rgba(255,255,255,.16)" }}
           title={`acting as ${seat} — ${caste}`}
         >
           <Ant caste={caste} size={22} />

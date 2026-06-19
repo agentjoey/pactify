@@ -121,4 +121,32 @@ describe("AgentConfig panel", () => {
       expect(screen.getByText("No agents registered")).toBeTruthy();
     });
   });
+
+  it("renders the machine scope banner", async () => {
+    getAgents.mockResolvedValue([]);
+    render(<AgentConfig />);
+    await waitFor(() => {
+      expect(screen.getByTestId("agent-config-scope-banner")).toHaveTextContent("MACHINE · all projects");
+    });
+  });
+
+  it("renders Blanket/Scoped segmented posture and allowed-tools chips", async () => {
+    getAgents.mockResolvedValue([{ kind: "claude-code", installed: true, detail: "", registered: true }]);
+    getAgentConfig.mockResolvedValue(
+      cfg({ kind: "claude-code", restricted: true, allowed_tools: ["Read", "Edit", "Bash"] }),
+    );
+    render(<AgentConfig />);
+    await waitFor(() => expect(screen.getByTestId("posture-scoped-claude-code")).toBeTruthy());
+    expect(screen.getByTestId("posture-blanket-claude-code")).toBeTruthy();
+    expect(screen.getByTestId("posture-scoped-claude-code")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByTestId("allowed-tool-chip").length).toBe(3);
+  });
+
+  it("dims manual (non-drivable) agents", async () => {
+    getAgents.mockResolvedValue([{ kind: "antigravity", installed: true, detail: "", registered: true }]);
+    getAgentConfig.mockResolvedValue(cfg({ kind: "antigravity", drivable: false, model: "", restricted: false }));
+    render(<AgentConfig />);
+    await waitFor(() => expect(screen.getByText("manual")).toBeTruthy());
+    expect(screen.getByTestId("agent-config-antigravity")).toHaveClass("opacity-[.62]");
+  });
 });

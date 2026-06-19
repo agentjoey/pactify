@@ -3,6 +3,7 @@ import type { Task } from "../lib/types";
 import { lifecycleStage, statusColorVar } from "../lib/lifecycle";
 import { casteForRoles } from "../lib/ants";
 import { Ant } from "./ui/ants/Ant";
+import { MetricStrip, type MetricItem } from "./ui/MetricStrip";
 
 // Empty default so callers that omit owner/reviewer roles fall back to the
 // worker caste (casteForRoles([]) === "builder").
@@ -43,6 +44,12 @@ export interface TaskCardProps {
   stale?: boolean;
   draft?: boolean;
   selected?: boolean;
+  // Compact RUN/TOK/×iter stat strip (dark handoff), computed by the caller via
+  // taskMetrics(task, events). Omitted on cards with no stat context.
+  metrics?: MetricItem[];
+  // Inline reviewer actions (Accept / Changes) that REPLACE the owner→reviewer
+  // bottom row on review-column cards. The caller owns the pact verb calls.
+  reviewActions?: ReactNode;
   onClick?: () => void;
   onMenu?: (e: React.MouseEvent) => void;
   // Extra content injected at the card top (e.g. the canvas draft "dispatch →"
@@ -59,6 +66,8 @@ export function TaskCard({
   stale,
   draft,
   selected,
+  metrics,
+  reviewActions,
   onClick,
   onMenu,
   children,
@@ -82,7 +91,7 @@ export function TaskCard({
       className={[
         "task-card",
         draft ? "dashed" : "",
-        status === "awaiting_review" ? "glow" : "",
+        status === "in_progress" ? "glow" : "",
         selected ? "selected" : "",
         onClick ? "cursor-pointer hover-lift" : "",
       ]
@@ -116,6 +125,15 @@ export function TaskCard({
         )}
       </div>
 
+      {metrics && metrics.length > 0 && (
+        <div className="mt-[8px] ml-[28px]">
+          <MetricStrip items={metrics} />
+        </div>
+      )}
+
+      {reviewActions ? (
+        <div className="task-card-bot mt-[9px] ml-[28px]">{reviewActions}</div>
+      ) : (
       <div className="task-card-bot mt-[9px] ml-[28px] flex items-center gap-[4px]">
         {task.owner && (
           <span className="task-card-ant">
@@ -143,6 +161,7 @@ export function TaskCard({
           })}
         </span>
       </div>
+      )}
     </div>
   );
 }

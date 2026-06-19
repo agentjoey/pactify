@@ -11,12 +11,15 @@ export function DispatchPanel({
   open,
   onClose,
   onGoLive,
+  initialGoal,
 }: {
   project: string;
   roster: Seat[];
   open: boolean;
   onClose: () => void;
   onGoLive: () => void;
+  // Seeds the goal field when the panel opens (e.g. from the canvas NL dock).
+  initialGoal?: string;
 }) {
   const [phase, setPhase] = useState<Phase>("compose");
   const [goal, setGoal] = useState("");
@@ -33,6 +36,14 @@ export function DispatchPanel({
   }, [goal, featureTouched]);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  // Seed the goal from the canvas NL dock when the panel opens with one.
+  useEffect(() => {
+    if (open && initialGoal) {
+      setGoal(initialGoal);
+      setPhase("compose");
+    }
+  }, [open, initialGoal]);
 
   if (!open) return null;
 

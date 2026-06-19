@@ -148,7 +148,7 @@ body {
   overflow: hidden;
   /* a clearly visible light-gray block on a white surface (the old surface-70%
      value was nearly invisible on #fff). */
-  background: rgba(26, 29, 39, 0.10);
+  background: rgba(255,255,255,0.05);
   border-radius: 6px;
 }
 .skeleton::after {
@@ -160,7 +160,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.65),
+    rgba(255,255,255,0.10),
     transparent
   );
 }
@@ -200,17 +200,17 @@ body {
      white→page vertical wash. Kept faint so cards float on a clean surface
      rather than a busy gradient. */
   background:
-    radial-gradient(900px 480px at 82% -10%, color-mix(in srgb, var(--color-role-product) 5%, transparent), transparent 60%),
-    radial-gradient(820px 460px at 8% 4%, color-mix(in srgb, var(--color-role-design) 4%, transparent), transparent 58%),
-    radial-gradient(1100px 540px at 50% 120%, color-mix(in srgb, var(--color-role-dev) 4%, transparent), transparent 60%),
-    linear-gradient(180deg, #ffffff 0%, var(--color-bg-page) 100%);
+    radial-gradient(900px 480px at 82% -10%, color-mix(in srgb, var(--color-role-product) 7%, transparent), transparent 60%),
+    radial-gradient(820px 460px at 8% 4%, color-mix(in srgb, var(--color-role-design) 7%, transparent), transparent 58%),
+    radial-gradient(1100px 540px at 50% 120%, color-mix(in srgb, var(--color-role-dev) 6%, transparent), transparent 60%),
+    var(--color-bg-page);
 }
 .canvas-grid {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: radial-gradient(rgba(18, 22, 31, 0.05) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
   background-size: 22px 22px;
   mask-image: radial-gradient(ellipse at 50% 45%, #000 35%, transparent 92%);
   -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 35%, transparent 92%);
@@ -234,11 +234,11 @@ body {
   /* sit BELOW the cards (which take z-index ≥ 1) so the dot grid reads as a
      backdrop the cards float over, never painting on top of them. */
   z-index: 0;
-  background-image: radial-gradient(rgba(18, 22, 31, 0.06) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 .grid-lens::after {
-  background-image: radial-gradient(rgba(18, 22, 31, 0.22) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(rgba(255,255,255,0.16) 1.5px, transparent 1.5px);
   -webkit-mask: radial-gradient(circle 120px at var(--mx) var(--my), #000 0%, transparent 68%);
   mask: radial-gradient(circle 120px at var(--mx) var(--my), #000 0%, transparent 68%);
 }
@@ -353,7 +353,7 @@ body {
   gap: 6px;
   transition: background 0.12s var(--motion-ease);
 }
-.canvas-tbar .tbtn:hover { background: rgba(18,22,31, 0.06); }
+.canvas-tbar .tbtn:hover { background: rgba(255,255,255,0.06); }
 .canvas-tbar .tbtn:disabled { opacity: 0.4; }
 .canvas-tbar .tbtn .ic { opacity: 0.6; font-size: 11px; }
 .canvas-tbar .tbtn.on {
@@ -416,7 +416,7 @@ body {
   color: var(--color-text-2);
   transition: background 0.12s var(--motion-ease);
 }
-.canvas-hud button:hover { background: rgba(18,22,31, 0.06); color: var(--color-text-1); }
+.canvas-hud button:hover { background: rgba(255,255,255,0.06); color: var(--color-text-1); }
 .canvas-hud .pct { font-size: 11px; color: var(--color-text-3); }
 
 /* Frosted MiniMap (bottom-left) — board2-canvas-v2 `.mmap`. React Flow renders
@@ -520,7 +520,7 @@ body {
   text-align: left;
   transition: background 0.1s var(--motion-ease);
 }
-.canvas-ctx .ci:hover { background: rgba(18,22,31, 0.06); }
+.canvas-ctx .ci:hover { background: rgba(255,255,255,0.06); }
 .canvas-ctx .ci.hot {
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-role-design) 20%, transparent), color-mix(in srgb, var(--color-role-design) 10%, transparent));
 }
@@ -530,7 +530,7 @@ body {
   margin-left: auto;
   font-size: 9.5px;
   color: var(--color-text-3);
-  background: rgba(18,22,31, 0.07);
+  background: rgba(255,255,255,0.07);
   border: 1px solid var(--color-border-strong);
   border-radius: 4px;
   padding: 1px 5px;
@@ -608,7 +608,7 @@ body {
   width: 64px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(18,22,31, 0.09);
+  background: rgba(255,255,255,0.09);
   overflow: hidden;
 }
 .feature-frame .fbar i {
@@ -652,7 +652,7 @@ body {
   transition: border-color 0.12s ease, box-shadow 0.2s ease;
 }
 .task-card:hover {
-  border-color: rgba(18,22,31, 0.16);
+  border-color: rgba(255,255,255,0.16);
 }
 .task-card.dashed {
   border-style: dashed;
@@ -694,14 +694,14 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(18,22,31, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
 }
 
 .task-card .life i {
   width: 11px;
   height: 3px;
   border-radius: 2px;
-  background: rgba(18,22,31, 0.1);
+  background: rgba(255,255,255,0.1);
   display: inline-block;
 }
 .task-card .life i.done {
@@ -764,7 +764,7 @@ body {
   transition: background 0.12s var(--motion-ease), color 0.12s var(--motion-ease);
 }
 .office-modeseg button.on {
-  background: linear-gradient(180deg, rgba(18,22,31, 0.1), rgba(18,22,31, 0.06));
+  background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.06));
   color: var(--color-text-1);
 }
 
@@ -783,25 +783,25 @@ body {
 .desk.busy {
   border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 26px 46px -14px color-mix(in srgb, var(--color-success) 40%, transparent), 0 6px 16px rgba(18,22,31,.12);
+  box-shadow: 0 26px 46px -14px color-mix(in srgb, var(--color-success) 40%, transparent), 0 6px 16px rgba(255,255,255,.12);
 }
 .desk.review_due, .desk.waiting {
   border-color: color-mix(in srgb, var(--color-warn) 52%, transparent);
   transform: translateY(-5px) scale(1.008);
-  box-shadow: 0 18px 36px -14px color-mix(in srgb, var(--color-warn) 34%, transparent), 0 4px 12px rgba(18,22,31,.1);
+  box-shadow: 0 18px 36px -14px color-mix(in srgb, var(--color-warn) 34%, transparent), 0 4px 12px rgba(255,255,255,.1);
 }
 .desk.idle {
   opacity: 0.6;
   filter: saturate(0.32);
   transform: translateY(5px) scale(0.94);
-  box-shadow: 0 2px 6px rgba(18,22,31,.06);
+  box-shadow: 0 2px 6px rgba(255,255,255,.06);
 }
 .desk.drop-target { border-color: var(--color-role-dev); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-role-dev) 45%, transparent); }
 .desk .dhead { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
 .desk .dava {
   position: relative; width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(18,22,31, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
 }
 .desk .presence { position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid var(--color-bg-surface); }
 .desk .dname { font-size: 14px; font-weight: 650; color: var(--color-text-1); }
@@ -824,7 +824,7 @@ body {
   font-size: 8.5px; letter-spacing: 0.7px; text-transform: uppercase; color: var(--color-text-3);
   margin: 7px 2px 5px; display: flex; align-items: center; gap: 6px;
 }
-.desk .zlab .zc { background: rgba(18,22,31, 0.07); border-radius: 999px; padding: 0 6px; font-size: 8.5px; color: var(--color-text-2); }
+.desk .zlab .zc { background: rgba(255,255,255,0.07); border-radius: 999px; padding: 0 6px; font-size: 8.5px; color: var(--color-text-2); }
 .parcel {
   display: flex; align-items: center; gap: 7px;
   background: var(--color-bg-inset); border: 1px solid var(--color-border-subtle);
@@ -851,7 +851,7 @@ body {
 .office-lens button { flex: 1; font-size: 9.5px; font-weight: 600; padding: 3px 0; border-radius: 5px; color: var(--color-text-3); transition: background 0.12s var(--motion-ease), color 0.12s var(--motion-ease); }
 .office-lens button.on { background: var(--color-bg-surface); color: var(--color-text-1); box-shadow: var(--shadow-card); }
 .office-wall .wrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; color: var(--color-text-2); }
-.office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(18,22,31, 0.08); overflow: hidden; }
+.office-wall .wbar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
 .office-wall .wbar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--color-success), color-mix(in srgb, var(--color-success) 70%, white)); }
 
 /* Shipped tray — board5 `.tray` (fixed bottom-right). */

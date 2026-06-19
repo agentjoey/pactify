@@ -63,13 +63,17 @@ describe("TaskCard — genome", () => {
     expect([...bars].every((b) => b.className.includes("done"))).toBe(true);
   });
 
-  it("awaiting_review shows owner→reviewer ant chips and the soft glow", () => {
+  it("awaiting_review shows owner→reviewer ant chips", () => {
     const { container } = render(
       <TaskCard task={task({ status: "awaiting_review" })} {...roleProps} />,
     );
     // two ant svgs (owner + reviewer) in the bottom row
     const ants = container.querySelectorAll('[data-testid="task-card"] .task-card-bot svg');
     expect(ants.length).toBe(2);
+  });
+
+  it("in_progress (working) gets the blue focus glow", () => {
+    render(<TaskCard task={task({ status: "in_progress" })} {...roleProps} />);
     expect(screen.getByTestId("task-card").className).toContain("glow");
   });
 

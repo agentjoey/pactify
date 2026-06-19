@@ -2,6 +2,7 @@ package diffstat
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -35,5 +36,32 @@ func TestNumStatWith_Parse(t *testing.T) {
 				t.Fatalf("stat = %+v, want A=%d D=%d F=%d", s, c.wantA, c.wantD, c.wantF)
 			}
 		})
+	}
+}
+
+func TestCommitsWith_Parse(t *testing.T) {
+	var gotArgs []string
+	run := func(_ string, args ...string) (string, error) {
+		gotArgs = args
+		return "abc123\ndef456\n\n", nil
+	}
+	shas, err := commitsWith(run, "/repo", "feat-x", "pact t1:")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(shas) != 2 || shas[0] != "abc123" || shas[1] != "def456" {
+		t.Fatalf("shas = %v, want [abc123 def456]", shas)
+	}
+	// the grep must be a literal (fixed-strings) so "t1:" never matches "t10:".
+	joined := strings.Join(gotArgs, " ")
+	if !strings.Contains(joined, "--fixed-strings") || !strings.Contains(joined, "--grep=pact t1:") {
+		t.Fatalf("args = %v, want fixed-strings grep", gotArgs)
+	}
+}
+
+func TestCommitsWith_Error(t *testing.T) {
+	run := func(_ string, _ ...string) (string, error) { return "", errors.New("boom") }
+	if _, err := commitsWith(run, "/repo", "feat-x", "pact t1:"); err == nil {
+		t.Fatal("expected error")
 	}
 }

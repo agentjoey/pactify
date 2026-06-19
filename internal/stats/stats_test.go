@@ -57,23 +57,26 @@ func TestCompute_Duration(t *testing.T) {
 		t.Fatalf("agent w = %+v, want 2 tasks / 2100s", s.Agents[0])
 	}
 
-	// WithLOC: both t1 and t2 are in feature "f" owned by w. The feature diff
-	// (10/+2) must show on each task, but the agent rollup counts (w, f) ONCE.
-	loc := func(feature string) (int, int) {
-		if feature == "f" {
+	// WithTaskLOC: each task is attributed ONLY its own commits' diff, so t1 and
+	// t2 differ; the agent rollup sums across the seat's owned tasks.
+	loc := func(taskID string) (int, int) {
+		switch taskID {
+		case "t1":
 			return 10, 2
+		case "t2":
+			return 5, 1
 		}
 		return 0, 0
 	}
-	withLOC := s.WithLOC(loc)
+	withLOC := s.WithTaskLOC(loc)
 	byID2 := map[string]TaskStat{}
 	for _, ts := range withLOC.Tasks {
 		byID2[ts.TaskID] = ts
 	}
-	if byID2["t1"].Added != 10 || byID2["t2"].Added != 10 {
-		t.Fatalf("per-task LOC = t1:%d t2:%d, want 10 each", byID2["t1"].Added, byID2["t2"].Added)
+	if byID2["t1"].Added != 10 || byID2["t2"].Added != 5 {
+		t.Fatalf("per-task LOC = t1:+%d t2:+%d, want 10 and 5", byID2["t1"].Added, byID2["t2"].Added)
 	}
-	if withLOC.Agents[0].Added != 10 || withLOC.Agents[0].Deleted != 2 {
-		t.Fatalf("agent LOC = +%d/-%d, want +10/-2 (deduped per feature)", withLOC.Agents[0].Added, withLOC.Agents[0].Deleted)
+	if withLOC.Agents[0].Added != 15 || withLOC.Agents[0].Deleted != 3 {
+		t.Fatalf("agent LOC = +%d/-%d, want +15/-3 (sum of owned tasks)", withLOC.Agents[0].Added, withLOC.Agents[0].Deleted)
 	}
 }

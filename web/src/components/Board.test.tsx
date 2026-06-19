@@ -59,16 +59,16 @@ describe("Board — accepted column recent + fold", () => {
     ],
   };
 
-  it("shows the 10 most-recent accepted cards and folds the rest behind a 'more' button", () => {
+  it("shows the 6 most-recent accepted cards and folds the rest behind a 'more' button", () => {
     render(<Board state={manyAccepted} selected="" onSelect={() => {}} />);
     // Most-recent-first: t13 (newest) is visible, t01 (oldest, 13th) is folded.
     expect(screen.getAllByText("t13").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("t01")).toHaveLength(0);
-    // 13 total − 10 shown = 3 folded.
-    expect(screen.getByTestId("accepted-more")).toHaveTextContent("3 more accepted");
+    // 13 total − 6 shown = 7 folded.
+    expect(screen.getByTestId("accepted-more")).toHaveTextContent("7 more accepted");
   });
 
-  it("expands to show all accepted, then collapses back to recent 10", () => {
+  it("expands to show all accepted, then collapses back to recent 6", () => {
     render(<Board state={manyAccepted} selected="" onSelect={() => {}} />);
     fireEvent.click(screen.getByTestId("accepted-more"));
     expect(screen.getAllByText("t01").length).toBeGreaterThan(0); // folded one now visible
@@ -76,7 +76,22 @@ describe("Board — accepted column recent + fold", () => {
     expect(screen.queryAllByText("t01")).toHaveLength(0); // folded again
   });
 
-  it("does not render a fold button when 10 or fewer accepted", () => {
+  it("folds the shipped column to the recent 6 as well", () => {
+    const manyShipped: State = {
+      project: "demo", awaiting_count: 0,
+      agents: [{ id: "a", roles: ["orchestrator"] }],
+      features: [{ id: "g", branch: "feat-g", status: "shipped",
+        tasks: Array.from({ length: 9 }, (_, i) => ({
+          id: `s${String(i + 1).padStart(2, "0")}`, owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "",
+        })) }],
+    };
+    render(<Board state={manyShipped} selected="" onSelect={() => {}} />);
+    expect(screen.getAllByText("s09").length).toBeGreaterThan(0); // newest shown
+    expect(screen.queryAllByText("s01")).toHaveLength(0); // oldest folded
+    expect(screen.getByTestId("shipped-more")).toHaveTextContent("3 more shipped");
+  });
+
+  it("does not render a fold button when 6 or fewer accepted", () => {
     const few: State = {
       project: "demo", awaiting_count: 0,
       agents: [{ id: "a", roles: ["orchestrator"] }],

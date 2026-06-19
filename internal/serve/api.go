@@ -17,6 +17,11 @@ import (
 // connection is not dropped.
 const sseHeartbeat = 25 * time.Second
 
+// eventBackfill caps how many trailing log.jsonl events a new SSE subscriber is
+// replayed on connect — enough to populate the Live event stream with recent
+// history, matching the client's render window.
+const eventBackfill = 200
+
 // Server holds the watched projects and the SSE hub.
 type Server struct {
 	// pmu guards the project registry maps + watcher bookkeeping (projects,
@@ -182,7 +187,7 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	s.pmu.RLock()
-	_, known := s.projects[id]
+	p, known := s.projects[id]
 	s.pmu.RUnlock()
 	if !known {
 		http.Error(w, "unknown project", http.StatusNotFound)
@@ -210,6 +215,16 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	// fires onopen and the dashboard shows "offline" on a quiet project. The retry
 	// directive also sets the client's reconnect backoff.
 	_, _ = io.WriteString(w, "retry: 3000\n: ok\n\n")
+	fl.Flush()
+
+	// Backfill: replay the tail of log.jsonl so a client opening Live on an
+	// already-active project sees recent history immediately — the hub only
+	// carries events appended after subscribe. Lines are replayed verbatim in the
+	// same frame shape; the client dedupes by event_id against any live event that
+	// raced in between subscribe and this read.
+	for _, line := range tailLog(logPath(p.Path), eventBackfill) {
+		_, _ = w.Write([]byte("event: pact\ndata: " + line + "\n\n"))
+	}
 	fl.Flush()
 
 	// Heartbeat keeps the stream non-idle so a proxy doesn't drop it (and re-flushes

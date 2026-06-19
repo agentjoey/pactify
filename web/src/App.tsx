@@ -288,7 +288,9 @@ export default function App() {
     if (!currentWorktree) {
       const off = subscribeEvents(current, (e) => {
         if (!alive) return;
-        setEvents((prev) => [...prev, e]);
+        // Dedupe by event_id: the SSE backfill replays the log tail, which can
+        // overlap a live event that raced in between subscribe and replay.
+        setEvents((prev) => (prev.some((x) => x.event_id === e.event_id) ? prev : [...prev, e]));
         fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => {});
       }, (v) => { if (alive) setLive(v); });
       return () => {

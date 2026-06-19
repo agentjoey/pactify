@@ -2,7 +2,9 @@
 package serve
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/projection"
@@ -40,6 +42,28 @@ type StateDTO struct {
 
 func logPath(projectRoot string) string {
 	return filepath.Join(projectRoot, ".pact", "log.jsonl")
+}
+
+// tailLog returns the last n non-empty lines of the log at lp (oldest→newest).
+// Missing/empty file → nil. Used to backfill a new SSE subscriber with recent
+// history so Live shows the log.jsonl tail on open, not just events that arrive
+// after connect. log.jsonl is small for dashboards, so a whole-file read is
+// fine; switch to a reverse chunk read if logs ever grow large.
+func tailLog(lp string, n int) []string {
+	b, err := os.ReadFile(lp)
+	if err != nil {
+		return nil
+	}
+	lines := []string{}
+	for _, ln := range strings.Split(string(b), "\n") {
+		if ln = strings.TrimRight(ln, "\r"); ln != "" {
+			lines = append(lines, ln)
+		}
+	}
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return lines
 }
 
 // ProjectState reads a project's log and folds the whole log into a JSON DTO.

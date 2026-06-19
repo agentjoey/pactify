@@ -171,7 +171,16 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// its headless JSON (the read side surfaces it on the dashboard). Best-effort
 	// telemetry: capture and recording never affect the run's result.
 	cap := &tailWriter{max: tokenCaptureCap}
-	err = r.Exec(ctx, eff.Command, args, lc.RepoDir, env, cap)
+	// Mirror this stint's stdout to the per-task live stream (best-effort: a sink
+	// error just means no live mirror this run, never a run failure).
+	var capture io.Writer = cap
+	if lc.Task != "" {
+		if sink, serr := OpenStreamSink(lc.RepoDir, lc.Task); serr == nil {
+			defer sink.Close()
+			capture = io.MultiWriter(cap, sink)
+		}
+	}
+	err = r.Exec(ctx, eff.Command, args, lc.RepoDir, env, capture)
 	recordTokens(lc, cap.String())
 	return err
 }

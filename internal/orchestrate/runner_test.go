@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 	"reflect"
 	"testing"
 
@@ -304,6 +305,22 @@ func TestTailWriter_KeepsTailUnderCap(t *testing.T) {
 func TestNewCmdRunner_HasExec(t *testing.T) {
 	if NewCmdRunner(0).Exec == nil {
 		t.Fatal("NewCmdRunner(0).Exec is nil")
+	}
+}
+
+func TestRunMirrorsStdoutToStreamFile(t *testing.T) {
+	dir := t.TempDir()
+	r := CmdRunner{Exec: func(ctx context.Context, name string, args []string, d string, env []string, capture io.Writer) error {
+		capture.Write([]byte("hello from agent\n"))
+		return nil
+	}}
+	err := r.Run(context.Background(), LaunchContext{Kind: "opencode", Seat: "opencode", Task: "t1", Project: "p", RepoDir: dir, Briefing: "b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.ReadFile(StreamPath(dir, "t1"))
+	if string(got) != "hello from agent\n" {
+		t.Fatalf("stream file = %q", got)
 	}
 }
 

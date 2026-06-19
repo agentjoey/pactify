@@ -38,6 +38,12 @@ cat .agent/CURRENT.md
 1. .agent/CURRENT.md：补充 Version History 描述
 2. 更新 Current Sprint Summary
 3. 如有架构变更：更新 docs/architecture.md
+4. squash-to-main 时强制过一遍 CLAUDE.md 的 Version 行 + docs/architecture.md 状态行（2026-06-19 复盘：两者曾分别滞后到 v0.3/v0.4，与 main 脱节）
+
+## 工程约定（2026-06-19 dark-ui 复盘）
+- **已知妥协必登记**：在代码注释里写下 later/TODO/「精确做法需…」之类的妥协时，**同步在 docs/backlog.md 加一行**，否则债隐形——`internal/stats` 的 per-task LOC bug（每任务都显示整分支 +842/−307）正是 `WithLOC` 注释自承认「精确归因需 commit SHA」却搁置成债，直到用户肉眼发现才修。
+- **前端改动看效果走 dev proxy**：`cd web && npm run dev` 经 vite proxy 直连常驻 serve（PACTIFY_SERVE_URL，默认 :17082）热重载；只有最终验收 / 要 live 才 `npm run build` + 重建二进制 + `launchctl kickstart`。
+- **视觉门**：UI 改动提交前必须 playwright 截图实测（`node web/scripts/shots.mjs [view]`；escalated/review-gate 等无法按需触发的态用 `live-gate-shot.mjs` 注入 mock）——vitest/tsc 绿 ≠ 视觉对。
 
 <!-- pact:begin (managed by pactify — edit outside this block) -->
 # pact protocol — seat `claude`

@@ -433,6 +433,18 @@ export const browseFs = (path?: string) => {
   return getJSON<FsBrowseResponse>(`/api/fs/browse${qs}`);
 };
 
+// subscribeAgentStream opens an SSE stream of a task's raw agent output lines.
+// Returns an unsubscribe fn. Each `stream` event's data is one raw output line.
+export function subscribeAgentStream(
+  project: string,
+  task: string,
+  onLine: (line: string) => void,
+): () => void {
+  const es = new EventSource(`/api/projects/${project}/orchestrate/stream/${task}`);
+  es.addEventListener("stream", (e) => onLine((e as MessageEvent).data));
+  return () => es.close();
+}
+
 // subscribeEvents opens an SSE stream; returns an unsubscribe fn.
 // onLive (optional) reports connection state: true on open, false on error/drop.
 export function subscribeEvents(

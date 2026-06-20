@@ -9,8 +9,10 @@ import (
 
 // sessionRunFn runs an agent CLI and returns its combined output. A package var
 // so tests fake the CLIs without spawning processes.
-var sessionRunFn sessions.Runner = func(name string, args ...string) (string, error) {
-	out, err := exec.Command(name, args...).CombinedOutput()
+var sessionRunFn sessions.Runner = func(dir, name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
 

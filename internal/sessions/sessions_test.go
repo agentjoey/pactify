@@ -48,7 +48,7 @@ type fakeRun struct {
 	err error
 }
 
-func (f *fakeRun) Run(name string, args ...string) (string, error) {
+func (f *fakeRun) Run(_ /*dir*/, name string, args ...string) (string, error) {
 	f.calls = append(f.calls, struct {
 		name string
 		args []string

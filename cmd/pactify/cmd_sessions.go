@@ -14,8 +14,10 @@ func newSessionsCmd() *cobra.Command {
 		Short: "manage agent session cleanup",
 	}
 
-	runner := func(name string, args ...string) (string, error) {
-		out, err := exec.Command(name, args...).CombinedOutput()
+	runner := func(dir, name string, args ...string) (string, error) {
+		cmd := exec.Command(name, args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
 		return string(out), err
 	}
 

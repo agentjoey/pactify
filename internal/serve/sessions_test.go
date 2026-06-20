@@ -10,7 +10,7 @@ import (
 func TestHandleSessionsList(t *testing.T) {
 	orig := sessionRunFn
 	t.Cleanup(func() { sessionRunFn = orig })
-	sessionRunFn = func(_ string, _ ...string) (string, error) { return "session-A\nsession-B\n", nil }
+	sessionRunFn = func(_, _ string, _ ...string) (string, error) { return "session-A\nsession-B\n", nil }
 
 	s := &Server{}
 
@@ -29,7 +29,7 @@ func TestHandleSessionsList(t *testing.T) {
 	}
 
 	// claude-code has no verified session command → supported=false, no output, no run.
-	sessionRunFn = func(_ string, _ ...string) (string, error) { t.Fatal("runner should not be called"); return "", nil }
+	sessionRunFn = func(_, _ string, _ ...string) (string, error) { t.Fatal("runner should not be called"); return "", nil }
 	r2 := httptest.NewRequest("GET", "/api/agents/claude-code/sessions", nil)
 	r2.SetPathValue("kind", "claude-code")
 	w2 := httptest.NewRecorder()
@@ -41,7 +41,7 @@ func TestHandleSessionsList(t *testing.T) {
 	}
 
 	// opencode IS supported now (session list + delete-by-id) → output flows through.
-	sessionRunFn = func(_ string, _ ...string) (string, error) { return "ses_1  pact:dev\n", nil }
+	sessionRunFn = func(_, _ string, _ ...string) (string, error) { return "ses_1  pact:dev\n", nil }
 	r3 := httptest.NewRequest("GET", "/api/agents/opencode/sessions", nil)
 	r3.SetPathValue("kind", "opencode")
 	w3 := httptest.NewRecorder()
@@ -59,7 +59,7 @@ func TestHandleSessionsPrune_UnsupportedIsGracefulNoop(t *testing.T) {
 	// claude-code has no session spec → prune is a skipped no-op, never an error or
 	// a process spawn. (gemini-cli now supports index-prune, so it is no longer the
 	// "unsupported" example.)
-	sessionRunFn = func(_ string, _ ...string) (string, error) { t.Fatal("runner should not be called"); return "", nil }
+	sessionRunFn = func(_, _ string, _ ...string) (string, error) { t.Fatal("runner should not be called"); return "", nil }
 
 	s := &Server{seat: "test"}
 	r := httptest.NewRequest("POST", "/api/agents/claude-code/sessions/prune", nil)

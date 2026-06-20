@@ -14,8 +14,8 @@ const sessionList = "Session ID  Title     Updated\n" +
 	"ses_c3  unrelated  09:00\n"
 
 // fakeSessionRun returns the list on `session list` and records delete ids.
-func fakeSessionRun(deletes *[]string) func(string, ...string) (string, error) {
-	return func(_ string, args ...string) (string, error) {
+func fakeSessionRun(deletes *[]string) func(string, string, ...string) (string, error) {
+	return func(_, _ string, args ...string) (string, error) {
 		if len(args) >= 2 && args[0] == "session" && args[1] == "list" {
 			return sessionList, nil
 		}
@@ -57,6 +57,30 @@ func TestCleanupTaskSessions_OpencodeDeletesOwnerAndReviewer(t *testing.T) {
 	}
 }
 
+// opencode (and other session CLIs) scope their session store to the cwd, so
+// cleanup MUST run the CLI in opts.Dir — the worktree in parallel runs, the repo
+// in serial. If it runs in the wrong dir it lists the wrong project's sessions and
+// deletes nothing (the worktree-session leak). Assert opts.Dir is threaded through.
+func TestCleanupTaskSessions_RunsInOptsDir(t *testing.T) {
+	var gotDir string
+	opts := Options{
+		Dir: "/tmp/feature-worktree",
+		SessionRun: func(dir, _ string, args ...string) (string, error) {
+			if len(args) >= 2 && args[0] == "session" && args[1] == "list" {
+				gotDir = dir
+				return sessionList, nil
+			}
+			return "", nil
+		},
+		SeatKind: func(string) string { return "opencode" },
+		Notify:   &recNotify{},
+	}
+	opts.cleanupTaskSessions(projection.Task{ID: "t1", Owner: "dev", Reviewer: "rev"})
+	if gotDir != "/tmp/feature-worktree" {
+		t.Fatalf("session CLI ran in %q, want opts.Dir %q", gotDir, "/tmp/feature-worktree")
+	}
+}
+
 func TestCleanupTaskSessions_DisabledWhenRunnerNil(t *testing.T) {
 	// SessionRun nil = cleanup disabled (test/default): never touches a CLI.
 	opts := Options{
@@ -71,7 +95,7 @@ func TestCleanupTaskSessions_NonCleanupKindSkipped(t *testing.T) {
 	var deletes []string
 	called := false
 	opts := Options{
-		SessionRun: func(_ string, _ ...string) (string, error) { called = true; return "", nil },
+		SessionRun: func(_, _ string, _ ...string) (string, error) { called = true; return "", nil },
 		SeatKind:   func(string) string { return "claude-code" }, // no list+delete support
 		Notify:     &recNotify{},
 	}

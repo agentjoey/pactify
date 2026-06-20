@@ -46,9 +46,14 @@ func (opts Options) withDefaults() Options {
 	return opts
 }
 
-// execSessionRun is the production session-CLI runner: spawn the binary, return
-// combined output. Used by accept-time session cleanup.
-func execSessionRun(name string, args ...string) (string, error) {
-	out, err := exec.Command(name, args...).CombinedOutput()
+// execSessionRun is the production session-CLI runner: spawn the binary in dir
+// and return combined output. dir is the agent's repo/worktree — required because
+// opencode scopes its session store to the cwd, so cleanup must list/delete in the
+// same dir the agent ran in (empty inherits the process cwd). Used by accept-time
+// session cleanup.
+func execSessionRun(dir, name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
 	return string(out), err
 }

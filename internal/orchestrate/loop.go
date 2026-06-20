@@ -305,7 +305,11 @@ func (opts Options) cleanupTaskSessions(task projection.Task) {
 		if !sessions.CanCleanup(kind) {
 			continue
 		}
-		ids, _, err := (sessions.Manager{Run: opts.SessionRun}).CleanupByTitle(kind, sessions.SessionTag(seat))
+		// Run the session CLI in opts.Dir — the worktree (parallel) or repo (serial)
+		// the agent worked in. opencode scopes its session store to the cwd, so a
+		// cleanup in the wrong dir lists the wrong project and deletes nothing.
+		mgr := sessions.Manager{Run: opts.SessionRun, Dir: opts.Dir}
+		ids, _, err := mgr.CleanupByTitle(kind, sessions.SessionTag(seat))
 		switch {
 		case err != nil && opts.Notify != nil:
 			opts.Notify.Notify(fmt.Sprintf("session cleanup: seat %s (%s): %v", seat, kind, err))

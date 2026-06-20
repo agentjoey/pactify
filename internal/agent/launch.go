@@ -78,16 +78,20 @@ var runnerProfiles = map[string]RunnerProfile{
 			return append(args, "--skip-trust")
 		},
 	},
-	// kimi-cli: -p supplies the prompt; -y is the blanket auto-approve. kimi has
-	// no per-tool allowlist flag, so a scoped posture can't be expressed — posture
-	// is ignored (always blanket), like opencode. -m pins the model. Verified
-	// against the installed `kimi` v1.44.0 (--help + package source).
+	// kimi-cli: -p runs one prompt non-interactively and ALREADY auto-approves
+	// every tool (verified on kimi-code 0.18: `kimi -p "<task>"` created a file
+	// unattended). kimi-code 0.18 actively REJECTS approval flags in -p mode
+	// ("Cannot combine --prompt with --yolo/--auto"), so -y must NOT be passed — it
+	// was a v1.44-ism that breaks the worker on 0.18. -m pins the model; kimi has no
+	// per-tool allowlist, so a scoped posture can't be expressed (always blanket,
+	// like opencode). NB: the rich/streaming path for kimi 0.18 is ACP (`kimi acp`)
+	// — see docs/backlog; this headless -p form is the minimal worker.
 	"kimi-cli": {
 		Command:      "kimi",
 		DefaultModel: "kimi-code/kimi-for-coding",
 		Models:       []string{"kimi-code/kimi-for-coding"},
 		BuildArgs: func(model string, _ PermPosture, briefing string) []string {
-			return []string{"-p", briefing, "-y", "-m", model}
+			return []string{"-p", briefing, "-m", model}
 		},
 	},
 	// codex-cli: `codex exec` is headless. The blanket posture maps to

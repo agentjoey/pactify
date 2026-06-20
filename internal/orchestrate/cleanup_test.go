@@ -87,17 +87,17 @@ func TestCleanupTaskSessions_RunsInOptsDir(t *testing.T) {
 // kimi has no list/delete CLI, so its sessions are cleaned by file ops: the
 // accepted task's kimi seat → delete the on-disk session dirs the briefing tagged.
 func TestCleanupTaskSessions_KimiClosesSessionFiles(t *testing.T) {
-	root := t.TempDir()
-	mine := filepath.Join(root, "h1", "u1")
+	home := t.TempDir()
+	mine := filepath.Join(home, "sessions", "wd_a", "session_u1")
 	if err := os.MkdirAll(mine, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(mine, "state.json"),
-		[]byte("{\"custom_title\":\"# pact worker — seat `kimi-worker` (roles: worker)\"}"), 0o644)
+		[]byte("{\"title\":\"# pact worker — seat `kimi-worker` (roles: worker)\"}"), 0o644)
 
-	orig := sessions.KimiSessionsDir
-	sessions.KimiSessionsDir = func() string { return root }
-	defer func() { sessions.KimiSessionsDir = orig }()
+	orig := sessions.KimiHome
+	sessions.KimiHome = func() string { return home }
+	defer func() { sessions.KimiHome = orig }()
 
 	opts := Options{
 		Dir:        "/repo",

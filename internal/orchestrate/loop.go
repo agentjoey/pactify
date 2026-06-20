@@ -307,7 +307,7 @@ func (opts Options) cleanupTaskSessions(task projection.Task) {
 		// filesystem level, matched by the seat marker the briefing leaves in each
 		// session's title (see sessions.CleanupKimiSeat).
 		if sessions.IsKimi(kind) {
-			ids, err := sessions.CleanupKimiSeat(sessions.KimiSessionsDir(), seat)
+			ids, err := sessions.CleanupKimiSeat(sessions.KimiHome(), seat)
 			opts.notifyCleanup(task, seat, kind, ids, err)
 			continue
 		}

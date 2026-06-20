@@ -1,6 +1,7 @@
 package sessions
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -8,33 +9,41 @@ import (
 	"testing"
 )
 
-// writeKimiSession creates a fake kimi session dir root/<hash>/<uuid>/state.json
-// with the given custom_title.
-func writeKimiSession(t *testing.T, root, hash, uuid, title string) string {
+// writeKimiSession creates a fake kimi-code session dir
+// home/sessions/<wd>/<session>/state.json with the given title, and appends the
+// matching session_index.jsonl entry — mirroring kimi-code 0.18's on-disk layout.
+func writeKimiSession(t *testing.T, home, wd, session, title string) string {
 	t.Helper()
-	dir := filepath.Join(root, hash, uuid)
+	dir := filepath.Join(home, "sessions", wd, session)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "state.json"),
-		[]byte(`{"version":1,"custom_title":`+strconv.Quote(title)+`}`), 0o644); err != nil {
+		[]byte(`{"title":`+strconv.Quote(title)+`,"isCustomTitle":false}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	idx := filepath.Join(home, "session_index.jsonl")
+	f, err := os.OpenFile(idx, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	fmt.Fprintf(f, `{"sessionId":%q,"sessionDir":%q,"workDir":"/some/repo"}`+"\n", session, dir)
 	return dir
 }
 
 func TestCleanupKimiSeat_DeletesOnlyMatchingSeatPactSessions(t *testing.T) {
-	root := t.TempDir()
-	mine := writeKimiSession(t, root, "h1", "u1", "# pact worker — seat `kimi-worker` (roles: worker)")
-	other := writeKimiSession(t, root, "h1", "u2", "# pact reviewer — seat `claude`")
-	user := writeKimiSession(t, root, "h2", "u3", "fix the login bug")
+	home := t.TempDir()
+	mine := writeKimiSession(t, home, "wd_a", "session_u1", "# pact worker — seat `kimi-worker` (roles: worker)")
+	other := writeKimiSession(t, home, "wd_a", "session_u2", "# pact reviewer — seat `claude`")
+	user := writeKimiSession(t, home, "wd_b", "session_u3", "fix the login bug")
 
-	deleted, err := CleanupKimiSeat(root, "kimi-worker")
+	deleted, err := CleanupKimiSeat(home, "kimi-worker")
 	if err != nil {
 		t.Fatalf("CleanupKimiSeat: %v", err)
 	}
-	if len(deleted) != 1 || deleted[0] != "u1" {
-		t.Fatalf("deleted = %v, want [u1]", deleted)
+	if len(deleted) != 1 || deleted[0] != "session_u1" {
+		t.Fatalf("deleted = %v, want [session_u1]", deleted)
 	}
 	if _, err := os.Stat(mine); !os.IsNotExist(err) {
 		t.Error("the seat's pact session was not removed")
@@ -44,6 +53,14 @@ func TestCleanupKimiSeat_DeletesOnlyMatchingSeatPactSessions(t *testing.T) {
 	}
 	if _, err := os.Stat(user); err != nil {
 		t.Error("a non-pact user session was wrongly removed")
+	}
+	// the deleted session's index line must be pruned; the survivors' kept.
+	idx, _ := os.ReadFile(filepath.Join(home, "session_index.jsonl"))
+	if strings.Contains(string(idx), "session_u1") {
+		t.Error("session_index.jsonl still references the deleted session")
+	}
+	if !strings.Contains(string(idx), "session_u2") || !strings.Contains(string(idx), "session_u3") {
+		t.Error("session_index.jsonl dropped a surviving session's entry")
 	}
 }
 

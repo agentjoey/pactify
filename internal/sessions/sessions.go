@@ -42,10 +42,11 @@ type Spec struct {
 //   - gemini-cli: `--list-sessions` + `--delete-session <INDEX>` (no stable id, no
 //     pact title) → bulk prune only (IndexDelete), no targeted cleanup.
 //   - kimi: NO headless list/delete CLI and no --title flag (re-probed against
-//     kimi-code 0.18, 2026-06-20). Sessions live as files under ~/.kimi/sessions/
-//     <workdirhash>/<uuid>/state.json. It is therefore absent from this CLI-command
-//     map and cleaned at the filesystem level instead — see CleanupKimiSeat, which
-//     matches the seat marker the briefing leaves in each session's custom_title.
+//     kimi-code 0.18, 2026-06-20). Sessions live as files under ~/.kimi-code/
+//     sessions/<wd>/<session>/state.json (indexed in ~/.kimi-code/session_index.jsonl).
+//     It is therefore absent from this CLI-command map and cleaned at the filesystem
+//     level instead — see CleanupKimiSeat, which matches the seat marker the briefing
+//     leaves in each session's title.
 //   - claude/codex: no verified headless prune/delete; intentionally absent.
 var specs = map[string]Spec{
 	"opencode":   {Command: "opencode", List: []string{"session", "list"}, Delete: []string{"session", "delete"}},
@@ -191,46 +192,51 @@ func (m Manager) CleanupByTitle(kind, tag string) (deleted []string, skipped boo
 }
 
 // kimiSeatMarker is the substring a pact briefing leaves in a kimi session's
-// custom_title. The worker/reviewer briefs both open with
+// title. The worker/reviewer briefs both open with
 // "# pact {worker,reviewer} — seat `<seat>`", and kimi (which has no --title flag)
 // adopts that first line as the session title — so the backtick-wrapped seat is a
-// stable, pact-specific key that never matches a user's own kimi session.
+// stable, pact-specific key that never matches a user's own kimi session. Matching
+// on the title (not the recorded workDir) also sidesteps symlink-resolution
+// mismatches (kimi stores /private/tmp where the repo path is /tmp).
 func kimiSeatMarker(seat string) string { return "seat `" + seat + "`" }
 
-// KimiSessionsDir returns the on-disk kimi session store (root/<workdirhash>/
-// <uuid>/state.json). Overridable in tests. kimi-code 0.18 dropped the headless
-// title flag and never had a delete CLI, so its sessions can only be cleaned at
-// the filesystem level (see CleanupKimiSeat).
-var KimiSessionsDir = func() string {
+// KimiHome returns the kimi-code data dir (~/.kimi-code), overridable in tests.
+// kimi-code 0.18 keeps sessions under <home>/sessions/<wd>/<session>/state.json
+// (state.json carries the prompt-derived `title`) and indexes them in
+// <home>/session_index.jsonl. It has no --title flag and no delete CLI, so its
+// sessions can only be closed at the filesystem level (see CleanupKimiSeat).
+var KimiHome = func() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".kimi", "sessions")
+	return filepath.Join(home, ".kimi-code")
 }
 
 // IsKimi reports whether kind is the kimi runner — the one kind whose sessions are
 // cleaned by file ops (CleanupKimiSeat) rather than a session CLI.
 func IsKimi(kind string) bool { return kind == "kimi-cli" }
 
-// CleanupKimiSeat removes the kimi session directories a pact seat created under
-// root, identified by the seat marker the briefing stamps into each session's
-// custom_title. kimi has no headless list/delete command, so this is the only way
-// to close them. Best-effort: it deletes every match it can, returning the deleted
-// session ids (the <uuid> dir names) and the first removal error. A missing root
-// is a graceful no-op (nil, nil).
-func CleanupKimiSeat(root, seat string) (deleted []string, err error) {
+// CleanupKimiSeat removes the kimi-code session directories a pact seat created
+// under home, identified by the seat marker the briefing stamps into each
+// session's title, and prunes their lines from session_index.jsonl. kimi has no
+// headless list/delete command, so this is the only way to close them.
+// Best-effort: it deletes every match it can, returning the deleted session ids
+// (the session_<uuid> dir names) and the first removal error. A missing home is a
+// graceful no-op (nil, nil).
+func CleanupKimiSeat(home, seat string) (deleted []string, err error) {
 	marker := kimiSeatMarker(seat)
-	matches, _ := filepath.Glob(filepath.Join(root, "*", "*", "state.json"))
+	matches, _ := filepath.Glob(filepath.Join(home, "sessions", "*", "*", "state.json"))
+	var removedDirs []string
 	for _, sj := range matches {
 		b, e := os.ReadFile(sj)
 		if e != nil {
 			continue
 		}
 		var st struct {
-			CustomTitle string `json:"custom_title"`
+			Title string `json:"title"`
 		}
-		if json.Unmarshal(b, &st) != nil || !strings.Contains(st.CustomTitle, marker) {
+		if json.Unmarshal(b, &st) != nil || !strings.Contains(st.Title, marker) {
 			continue
 		}
-		dir := filepath.Dir(sj) // the <uuid> session dir
+		dir := filepath.Dir(sj) // the session_<uuid> dir
 		if e := os.RemoveAll(dir); e != nil {
 			if err == nil {
 				err = fmt.Errorf("sessions: remove kimi session %s: %w", filepath.Base(dir), e)
@@ -238,6 +244,42 @@ func CleanupKimiSeat(root, seat string) (deleted []string, err error) {
 			continue
 		}
 		deleted = append(deleted, filepath.Base(dir))
+		removedDirs = append(removedDirs, dir)
+	}
+	if len(removedDirs) > 0 {
+		pruneKimiIndex(filepath.Join(home, "session_index.jsonl"), removedDirs)
 	}
 	return deleted, err
+}
+
+// pruneKimiIndex rewrites session_index.jsonl, dropping the lines whose sessionDir
+// is one of removedDirs. Best-effort: a missing or unwritable index is ignored
+// (the session files are already gone — a stale index line resolves to nothing).
+func pruneKimiIndex(path string, removedDirs []string) {
+	b, e := os.ReadFile(path)
+	if e != nil {
+		return
+	}
+	gone := make(map[string]bool, len(removedDirs))
+	for _, d := range removedDirs {
+		gone[d] = true
+	}
+	var keep []string
+	for _, line := range strings.Split(string(b), "\n") {
+		if line == "" {
+			continue
+		}
+		var e struct {
+			SessionDir string `json:"sessionDir"`
+		}
+		if json.Unmarshal([]byte(line), &e) == nil && gone[e.SessionDir] {
+			continue
+		}
+		keep = append(keep, line)
+	}
+	out := strings.Join(keep, "\n")
+	if out != "" {
+		out += "\n"
+	}
+	_ = os.WriteFile(path, []byte(out), 0o644)
 }

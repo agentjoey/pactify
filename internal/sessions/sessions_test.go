@@ -1,9 +1,51 @@
 package sessions
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
+
+// writeKimiSession creates a fake kimi session dir root/<hash>/<uuid>/state.json
+// with the given custom_title.
+func writeKimiSession(t *testing.T, root, hash, uuid, title string) string {
+	t.Helper()
+	dir := filepath.Join(root, hash, uuid)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "state.json"),
+		[]byte(`{"version":1,"custom_title":`+strconv.Quote(title)+`}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func TestCleanupKimiSeat_DeletesOnlyMatchingSeatPactSessions(t *testing.T) {
+	root := t.TempDir()
+	mine := writeKimiSession(t, root, "h1", "u1", "# pact worker — seat `kimi-worker` (roles: worker)")
+	other := writeKimiSession(t, root, "h1", "u2", "# pact reviewer — seat `claude`")
+	user := writeKimiSession(t, root, "h2", "u3", "fix the login bug")
+
+	deleted, err := CleanupKimiSeat(root, "kimi-worker")
+	if err != nil {
+		t.Fatalf("CleanupKimiSeat: %v", err)
+	}
+	if len(deleted) != 1 || deleted[0] != "u1" {
+		t.Fatalf("deleted = %v, want [u1]", deleted)
+	}
+	if _, err := os.Stat(mine); !os.IsNotExist(err) {
+		t.Error("the seat's pact session was not removed")
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Error("a different seat's session was wrongly removed")
+	}
+	if _, err := os.Stat(user); err != nil {
+		t.Error("a non-pact user session was wrongly removed")
+	}
+}
 
 func TestSupported(t *testing.T) {
 	tests := []struct {

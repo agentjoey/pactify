@@ -1,9 +1,12 @@
 package orchestrate
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/projection"
+	"github.com/agentjoey/pactify/internal/sessions"
 )
 
 // sessionList is the table an opencode `session list` returns in these tests.
@@ -78,6 +81,34 @@ func TestCleanupTaskSessions_RunsInOptsDir(t *testing.T) {
 	opts.cleanupTaskSessions(projection.Task{ID: "t1", Owner: "dev", Reviewer: "rev"})
 	if gotDir != "/tmp/feature-worktree" {
 		t.Fatalf("session CLI ran in %q, want opts.Dir %q", gotDir, "/tmp/feature-worktree")
+	}
+}
+
+// kimi has no list/delete CLI, so its sessions are cleaned by file ops: the
+// accepted task's kimi seat → delete the on-disk session dirs the briefing tagged.
+func TestCleanupTaskSessions_KimiClosesSessionFiles(t *testing.T) {
+	root := t.TempDir()
+	mine := filepath.Join(root, "h1", "u1")
+	if err := os.MkdirAll(mine, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(mine, "state.json"),
+		[]byte("{\"custom_title\":\"# pact worker — seat `kimi-worker` (roles: worker)\"}"), 0o644)
+
+	orig := sessions.KimiSessionsDir
+	sessions.KimiSessionsDir = func() string { return root }
+	defer func() { sessions.KimiSessionsDir = orig }()
+
+	opts := Options{
+		Dir:        "/repo",
+		SessionRun: func(_, _ string, _ ...string) (string, error) { return "", nil }, // enables cleanup
+		SeatKind:   func(string) string { return "kimi-cli" },
+		Notify:     &recNotify{},
+	}
+	opts.cleanupTaskSessions(projection.Task{ID: "t1", Owner: "kimi-worker", Reviewer: "claude"})
+
+	if _, err := os.Stat(mine); !os.IsNotExist(err) {
+		t.Fatal("kimi seat's session dir was not removed by cleanup")
 	}
 }
 

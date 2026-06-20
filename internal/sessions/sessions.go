@@ -1,7 +1,10 @@
 package sessions
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -38,10 +41,11 @@ type Spec struct {
 //     It's also the one most worth cleaning (persistent daemon, heavy session DB).
 //   - gemini-cli: `--list-sessions` + `--delete-session <INDEX>` (no stable id, no
 //     pact title) → bulk prune only (IndexDelete), no targeted cleanup.
-//   - kimi: re-probed 2026-06-17 — NO headless delete command. Sessions live as
-//     files under ~/.kimi/sessions + a work_dirs map in ~/.kimi/kimi.json. File-level
-//     deletion is brittle across kimi versions and kimi sessions aren't a persistent
-//     daemon, so it is intentionally NOT wired (manual cleanup; see docs/backlog).
+//   - kimi: NO headless list/delete CLI and no --title flag (re-probed against
+//     kimi-code 0.18, 2026-06-20). Sessions live as files under ~/.kimi/sessions/
+//     <workdirhash>/<uuid>/state.json. It is therefore absent from this CLI-command
+//     map and cleaned at the filesystem level instead — see CleanupKimiSeat, which
+//     matches the seat marker the briefing leaves in each session's custom_title.
 //   - claude/codex: no verified headless prune/delete; intentionally absent.
 var specs = map[string]Spec{
 	"opencode":   {Command: "opencode", List: []string{"session", "list"}, Delete: []string{"session", "delete"}},
@@ -184,4 +188,56 @@ func (m Manager) CleanupByTitle(kind, tag string) (deleted []string, skipped boo
 		deleted = append(deleted, id)
 	}
 	return deleted, false, firstErr
+}
+
+// kimiSeatMarker is the substring a pact briefing leaves in a kimi session's
+// custom_title. The worker/reviewer briefs both open with
+// "# pact {worker,reviewer} — seat `<seat>`", and kimi (which has no --title flag)
+// adopts that first line as the session title — so the backtick-wrapped seat is a
+// stable, pact-specific key that never matches a user's own kimi session.
+func kimiSeatMarker(seat string) string { return "seat `" + seat + "`" }
+
+// KimiSessionsDir returns the on-disk kimi session store (root/<workdirhash>/
+// <uuid>/state.json). Overridable in tests. kimi-code 0.18 dropped the headless
+// title flag and never had a delete CLI, so its sessions can only be cleaned at
+// the filesystem level (see CleanupKimiSeat).
+var KimiSessionsDir = func() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".kimi", "sessions")
+}
+
+// IsKimi reports whether kind is the kimi runner — the one kind whose sessions are
+// cleaned by file ops (CleanupKimiSeat) rather than a session CLI.
+func IsKimi(kind string) bool { return kind == "kimi-cli" }
+
+// CleanupKimiSeat removes the kimi session directories a pact seat created under
+// root, identified by the seat marker the briefing stamps into each session's
+// custom_title. kimi has no headless list/delete command, so this is the only way
+// to close them. Best-effort: it deletes every match it can, returning the deleted
+// session ids (the <uuid> dir names) and the first removal error. A missing root
+// is a graceful no-op (nil, nil).
+func CleanupKimiSeat(root, seat string) (deleted []string, err error) {
+	marker := kimiSeatMarker(seat)
+	matches, _ := filepath.Glob(filepath.Join(root, "*", "*", "state.json"))
+	for _, sj := range matches {
+		b, e := os.ReadFile(sj)
+		if e != nil {
+			continue
+		}
+		var st struct {
+			CustomTitle string `json:"custom_title"`
+		}
+		if json.Unmarshal(b, &st) != nil || !strings.Contains(st.CustomTitle, marker) {
+			continue
+		}
+		dir := filepath.Dir(sj) // the <uuid> session dir
+		if e := os.RemoveAll(dir); e != nil {
+			if err == nil {
+				err = fmt.Errorf("sessions: remove kimi session %s: %w", filepath.Base(dir), e)
+			}
+			continue
+		}
+		deleted = append(deleted, filepath.Base(dir))
+	}
+	return deleted, err
 }

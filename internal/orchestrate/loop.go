@@ -302,6 +302,16 @@ func (opts Options) cleanupTaskSessions(task projection.Task) {
 		}
 		seen[seat] = true
 		kind := opts.kind(seat)
+
+		// kimi has no headless list/delete CLI, so its sessions are cleaned at the
+		// filesystem level, matched by the seat marker the briefing leaves in each
+		// session's title (see sessions.CleanupKimiSeat).
+		if sessions.IsKimi(kind) {
+			ids, err := sessions.CleanupKimiSeat(sessions.KimiSessionsDir(), seat)
+			opts.notifyCleanup(task, seat, kind, ids, err)
+			continue
+		}
+
 		if !sessions.CanCleanup(kind) {
 			continue
 		}
@@ -310,12 +320,22 @@ func (opts Options) cleanupTaskSessions(task projection.Task) {
 		// cleanup in the wrong dir lists the wrong project and deletes nothing.
 		mgr := sessions.Manager{Run: opts.SessionRun, Dir: opts.Dir}
 		ids, _, err := mgr.CleanupByTitle(kind, sessions.SessionTag(seat))
-		switch {
-		case err != nil && opts.Notify != nil:
-			opts.Notify.Notify(fmt.Sprintf("session cleanup: seat %s (%s): %v", seat, kind, err))
-		case len(ids) > 0 && opts.Notify != nil:
-			opts.Notify.Notify(fmt.Sprintf("closed %d %s session(s) for seat %s after task %s accepted", len(ids), kind, seat, task.ID))
-		}
+		opts.notifyCleanup(task, seat, kind, ids, err)
+	}
+}
+
+// notifyCleanup reports the outcome of one seat's session cleanup: an error, or
+// the count closed (silent when nothing matched). Shared by the CLI-based
+// (opencode) and file-based (kimi) cleanup paths.
+func (opts Options) notifyCleanup(task projection.Task, seat, kind string, ids []string, err error) {
+	if opts.Notify == nil {
+		return
+	}
+	switch {
+	case err != nil:
+		opts.Notify.Notify(fmt.Sprintf("session cleanup: seat %s (%s): %v", seat, kind, err))
+	case len(ids) > 0:
+		opts.Notify.Notify(fmt.Sprintf("closed %d %s session(s) for seat %s after task %s accepted", len(ids), kind, seat, task.ID))
 	}
 }
 

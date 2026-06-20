@@ -245,6 +245,34 @@ func TestLoopScaffoldsRuntimeGitignore(t *testing.T) {
 	}
 }
 
+// ensureRuntimeIgnored commits the .gitignore entry, but must NOT vacuum the
+// user's unrelated in-flight working-tree changes into that commit — on the
+// single-run path it now fires at the start of a run against the user's real
+// branch, so a `git add -A` there would silently commit their dirty files.
+func TestEnsureRuntimeIgnoredDoesNotCommitDirtyTree(t *testing.T) {
+	dir := newProject(t)
+	if err := os.WriteFile(filepath.Join(dir, "wip.txt"), []byte("in progress"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ensureRuntimeIgnored(dir); err != nil {
+		t.Fatalf("ensureRuntimeIgnored: %v", err)
+	}
+
+	ci := exec.Command("git", "check-ignore", ".pact/orchestrate/streams/x.log")
+	ci.Dir = dir
+	if out, err := ci.CombinedOutput(); err != nil {
+		t.Fatalf("runtime path not ignored after scaffold (%v): %s", err, out)
+	}
+
+	st := exec.Command("git", "status", "--porcelain", "wip.txt")
+	st.Dir = dir
+	out, _ := st.CombinedOutput()
+	if strings.TrimSpace(string(out)) == "" {
+		t.Fatal("user's unrelated dirty file was swept into the ignore commit; want it left uncommitted")
+	}
+}
+
 // (2) rework: reviewer requests changes once, then accepts → shipped, worker re-launched.
 func TestLoopReworkThenShips(t *testing.T) {
 	dir := newProject(t)

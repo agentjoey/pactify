@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"os"
@@ -37,12 +38,20 @@ func (s *Server) handleAgentStream(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "retry: 3000\n: ok\n\n")
 	fl.Flush()
 
+	// Backfill from a single read so the resume offset is the exact byte boundary
+	// of the bytes we delivered — never a separate Stat that could race an append
+	// in between and re-deliver those bytes on the first tick. off lands on the
+	// last newline; any trailing partial line waits for drainStream to emit it whole.
 	var off int64
-	if fi, err := os.Stat(lp); err == nil {
-		for _, line := range tailLog(lp, eventBackfill) {
+	if data, err := os.ReadFile(lp); err == nil {
+		lines, consumed := completeLines(data)
+		if len(lines) > eventBackfill {
+			lines = lines[len(lines)-eventBackfill:]
+		}
+		for _, line := range lines {
 			io.WriteString(w, "event: stream\ndata: "+line+"\n\n")
 		}
-		off = fi.Size()
+		off = int64(consumed)
 		fl.Flush()
 	}
 
@@ -82,10 +91,25 @@ func drainStream(w io.Writer, lp string, off int64) int64 {
 		return off
 	}
 	defer f.Close()
-	f.Seek(off, 0)
+	if _, err := f.Seek(off, 0); err != nil {
+		return off
+	}
 	b, _ := io.ReadAll(f)
-	for _, line := range splitNonEmptyLines(string(b)) {
+	lines, consumed := completeLines(b)
+	for _, line := range lines {
 		io.WriteString(w, "event: stream\ndata: "+line+"\n\n")
 	}
-	return off + int64(len(b))
+	return off + int64(consumed)
+}
+
+// completeLines returns the non-empty lines fully terminated by a newline in b,
+// plus the byte count consumed (the offset just past the last '\n'). A trailing
+// partial line (no newline yet) is left unconsumed so a later read emits it whole
+// — agent output is never split mid-line across SSE frames.
+func completeLines(b []byte) (lines []string, consumed int) {
+	nl := bytes.LastIndexByte(b, '\n')
+	if nl < 0 {
+		return nil, 0
+	}
+	return splitNonEmptyLines(string(b[:nl+1])), nl + 1
 }

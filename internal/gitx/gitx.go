@@ -54,6 +54,17 @@ func CommitAll(dir, msg string) error {
 	return err
 }
 
+// CommitPaths stages only the given paths and commits with msg — the safe variant
+// for committing a known set of files (e.g. .gitignore scaffolding) without
+// vacuuming the user's unrelated working-tree changes the way `add -A` would.
+func CommitPaths(dir, msg string, paths ...string) error {
+	if _, err := run(dir, append([]string{"add", "--"}, paths...)...); err != nil {
+		return err
+	}
+	_, err := run(dir, "commit", "-q", "-m", msg)
+	return err
+}
+
 // MergeNoFF performs a --no-ff merge of branch into the current branch.
 func MergeNoFF(dir, branch, msg string) error {
 	_, err := run(dir, "merge", "--no-ff", "-m", msg, branch)

@@ -200,7 +200,9 @@ func ensureRuntimeIgnored(dir string) error {
 	if err != nil || !changed {
 		return err
 	}
-	return gitx.CommitAll(dir, "chore(pact): ignore .pact/orchestrate/ runtime files")
+	// Commit only .gitignore — never `add -A`, which on the single-run path would
+	// vacuum the user's unrelated in-flight changes into this chore commit.
+	return gitx.CommitPaths(dir, "chore(pact): ignore .pact/orchestrate/ runtime files", ".gitignore")
 }
 
 // ensureUnionAttrs makes the repo safe for concurrent feature merges and commits
@@ -225,7 +227,8 @@ func ensureUnionAttrs(dir string) error {
 	if !changed {
 		return nil
 	}
-	return gitx.CommitAll(dir, "chore(pact): union merge driver + ignore runtime files (parallel orchestration)")
+	return gitx.CommitPaths(dir, "chore(pact): union merge driver + ignore runtime files (parallel orchestration)",
+		".gitattributes", ".gitignore")
 }
 
 // ensureFileContains makes sure path contains marker, appending block (or creating

@@ -220,6 +220,31 @@ func TestLoopHappyPathShipsFeature(t *testing.T) {
 	}
 }
 
+// A single-run orchestrate scaffolds the .pact/orchestrate/ gitignore so runtime
+// files (per-task stream logs, status.json, escalation records) written during
+// the run never pollute the user's repo nor get swept into an agent's
+// `git add -A` during verify. The parallel path already does this via
+// ensureUnionAttrs; the single-run path must too.
+func TestLoopScaffoldsRuntimeGitignore(t *testing.T) {
+	dir := newProject(t)
+	s1 := writeSpec(t, dir, "T1", "go test ./...")
+	assign(t, dir, "T1", "F", "feat/x", s1)
+
+	if err := Run(context.Background(), baseOpts(dir, newFakeRunner(t, dir), &okExec{}, &recNotify{})); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	rel, err := filepath.Rel(dir, StreamPath(dir, "T1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := exec.Command("git", "check-ignore", rel)
+	c.Dir = dir
+	if out, err := c.CombinedOutput(); err != nil {
+		t.Fatalf("runtime file %s not gitignored after single run (check-ignore: %v): %s", rel, err, out)
+	}
+}
+
 // (2) rework: reviewer requests changes once, then accepts → shipped, worker re-launched.
 func TestLoopReworkThenShips(t *testing.T) {
 	dir := newProject(t)

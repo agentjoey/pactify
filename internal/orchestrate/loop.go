@@ -93,6 +93,15 @@ func projectID(dir string) string { return filepath.Base(dir) }
 // failed; a human fixes the cause and reruns to resume. A genuine error
 // (unreadable state, a Runner/Merge failure) is returned.
 func (opts Options) run(ctx context.Context) error {
+	// Ignore .pact/orchestrate/ before any runtime file (stream logs, status.json,
+	// escalation records) is written, so they never land in the user's git status
+	// or an agent's `git add -A`. DryRun stays side-effect-free, so skip it there.
+	if !opts.DryRun {
+		if err := ensureRuntimeIgnored(opts.Dir); err != nil {
+			return fmt.Errorf("orchestrate: ignore runtime files: %w", err)
+		}
+	}
+
 	h := History{Rework: map[string]int{}, Fails: map[string]int{}}
 
 	for {

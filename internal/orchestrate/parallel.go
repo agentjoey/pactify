@@ -184,6 +184,25 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 // log on the next read).
 const unionAttrs = ".pact/log.jsonl merge=union\n.pact/STATE.yml merge=union\n"
 
+// runtimeIgnoreMarker is the .gitignore entry covering every per-run artifact
+// orchestrate writes under .pact/orchestrate/ (status.json, escalation records,
+// and per-task stream logs). Ignoring the dir keeps these out of the user's
+// `git status` so an agent's `git add -A` during verify can't sweep them up.
+const runtimeIgnoreMarker = ".pact/orchestrate/"
+
+// ensureRuntimeIgnored makes sure the repo ignores .pact/orchestrate/ (runtime
+// artifacts) and commits the .gitignore change on the current branch if it added
+// the entry. Idempotent: a repo already carrying it is left untouched (no empty
+// commit). Both the single-run (loop.run) and parallel (RunParallel via
+// ensureUnionAttrs) paths rely on this before writing any runtime file.
+func ensureRuntimeIgnored(dir string) error {
+	changed, err := ensureFileContains(filepath.Join(dir, ".gitignore"), runtimeIgnoreMarker, runtimeIgnoreMarker+"\n")
+	if err != nil || !changed {
+		return err
+	}
+	return gitx.CommitAll(dir, "chore(pact): ignore .pact/orchestrate/ runtime files")
+}
+
 // ensureUnionAttrs makes the repo safe for concurrent feature merges and commits
 // the change to the current (base) branch if anything changed. Two things:
 //   - .gitattributes union rules on the pact ledger (above), and
@@ -198,7 +217,7 @@ func ensureUnionAttrs(dir string) error {
 	} else {
 		changed = changed || c
 	}
-	if c, err := ensureFileContains(filepath.Join(dir, ".gitignore"), ".pact/orchestrate/", ".pact/orchestrate/\n"); err != nil {
+	if c, err := ensureFileContains(filepath.Join(dir, ".gitignore"), runtimeIgnoreMarker, runtimeIgnoreMarker+"\n"); err != nil {
 		return err
 	} else {
 		changed = changed || c

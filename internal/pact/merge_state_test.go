@@ -15,6 +15,10 @@ import (
 func TestMergeHEADStateMatchesWorktree(t *testing.T) {
 	newRepo(t)
 	toAwaiting(t)
+	// toAwaiting checkpoints in-place without joining; create the declared feature
+	// branch so the merge integrates it (bug-1-fix puts the worker on this branch in
+	// real runs, so a declared branch always exists by merge time).
+	exec.Command("git", "branch", "feat/x").Run()
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	if err := Accept("T1"); err != nil {
 		t.Fatal(err)

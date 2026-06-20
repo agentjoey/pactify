@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
@@ -82,6 +83,16 @@ func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task s
 // projectID derives a stable project name from the repo dir (its base name) — the
 // same fallback the audit hook uses when PACT_PROJECT is unset, so they agree.
 func projectID(dir string) string { return filepath.Base(dir) }
+
+// featureBranchIn returns the declared branch of the named feature ("" if none).
+func featureBranchIn(st projection.State, feature string) string {
+	for _, f := range st.Features {
+		if f.ID == feature {
+			return f.Branch
+		}
+	}
+	return ""
+}
 
 // Run drives the pact state machine for opts.Dir until the targeted work is
 // shipped, escalated, or (dry-run) previewed. It is serial: read state →
@@ -214,6 +225,16 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	// worker, never hand off to the orchestrator).
 	retrying := h.Fails[act.Task] > 0
 	brief := workerBrief(seatFor(st, act.Seat, seat), task, reason, retrying)
+
+	// Check out THIS task's feature branch before launching the worker, so a seat
+	// that owns tasks in several features commits to the right branch — not whichever
+	// branch the worker's `pactify join` happens to pick first. Parallel runs already
+	// start in the feature's worktree, so this is a no-op there.
+	if br := featureBranchIn(st, act.Feature); br != "" {
+		if err := gitx.CheckoutOrCreate(opts.Dir, br); err != nil {
+			return fmt.Errorf("orchestrate: checkout feature branch %q for task %s: %w", br, act.Task, err)
+		}
+	}
 
 	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {

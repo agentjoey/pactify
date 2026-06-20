@@ -341,16 +341,45 @@ func TestMergeSucceedsFeatureShipped(t *testing.T) {
 	}
 }
 
-// Regression: a feature whose branch was never created (the worker ran in-place
-// without joining — a serial-orchestrate case) must still merge — record the
-// merge event + ship — instead of checking out base and failing on the missing
-// branch (which stranded the working tree on base).
-func TestMergeInPlaceWhenFeatureBranchNeverCreated(t *testing.T) {
+// In-place work — a feature that declares the BASE branch (no separate feature
+// branch) — ships without a git merge: the work already lives on base.
+func TestMergeInPlaceOnBaseBranchShips(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("T1", "F", "feat/inplace", "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
-	before, _ := execBranch() // never joined → still on the base/in-place branch
+	base, _ := execBranch() // the base branch — declaring it means "work in-place"
+	Assign("T1", "F", base, "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
+
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	os.WriteFile("impl.txt", []byte("c"), 0o644)
+	if err := Checkpoint("T1", "ok"); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	if err := Accept("T1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Merge("F"); err != nil {
+		t.Fatalf("in-place merge on base should succeed, got %v", err)
+	}
+	if after, _ := execBranch(); after != base {
+		t.Fatalf("in-place merge should stay on base %q, on %q", base, after)
+	}
+	b, _ := os.ReadFile(".pact/STATE.yml")
+	if !strings.Contains(string(b), "status: shipped") {
+		t.Fatalf("feature not shipped: %s", b)
+	}
+}
+
+// A feature that declares its OWN (non-base) branch which was never created must
+// NOT be recorded as shipped — the work never landed on that branch (the owner
+// likely committed elsewhere, e.g. the join-wrong-branch bug). Merge must refuse,
+// so pact's state can't run ahead of git.
+func TestMergeRefusesMissingDeclaredBranch(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	Assign("T1", "F", "feat/missing", "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
 
 	t.Setenv("PACT_AGENT_ID", "opencode")
 	os.WriteFile("impl.txt", []byte("c"), 0o644)
@@ -362,18 +391,36 @@ func TestMergeInPlaceWhenFeatureBranchNeverCreated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Merge("F"); err != nil {
-		t.Fatalf("in-place merge (branch never created) should succeed, got %v", err)
-	}
-	if after, _ := execBranch(); after != before {
-		t.Fatalf("merge should stay on the in-place branch %q, on %q", before, after)
-	}
-	if gitx.BranchExists(".", "feat/inplace") {
-		t.Fatal("feat/inplace should not have been created")
+	if err := Merge("F"); err == nil {
+		t.Fatal("merge recorded shipped despite the declared branch feat/missing never existing")
 	}
 	b, _ := os.ReadFile(".pact/STATE.yml")
-	if !strings.Contains(string(b), "status: shipped") {
-		t.Fatalf("feature not shipped: %s", b)
+	if strings.Contains(string(b), "status: shipped") {
+		t.Fatalf("feature must not be shipped when its branch is missing:\n%s", b)
+	}
+}
+
+// Join must NOT yank a seat that owns tasks in several features onto the FIRST
+// feature's branch. The orchestrator checks out the specific task's branch before
+// launching the worker; if the tree is already on a branch the seat owns a task
+// in, join stays. (Old bug: join checked out the first owned feature's branch, so
+// a multi-feature worker committed to the wrong branch.)
+func TestJoinStaysOnSeatBranchNotFirstFeature(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	Assign("A1", "fa", "feat/a", "opencode", "claude-opus", ".pact/tasks/A1.md", nil) // first feature
+	Assign("B1", "fb", "feat/b", "opencode", "claude-opus", ".pact/tasks/B1.md", nil)
+	if err := gitx.CheckoutOrCreate(".", "feat/b"); err != nil { // orchestrator set THIS task's branch
+		t.Fatal(err)
+	}
+
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	if err := Join("opencode", "worker"); err != nil {
+		t.Fatal(err)
+	}
+	if cur, _ := execBranch(); cur != "feat/b" {
+		t.Fatalf("join yanked the seat off its task branch to %q, want feat/b", cur)
 	}
 }
 

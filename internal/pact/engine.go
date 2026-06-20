@@ -2,6 +2,7 @@ package pact
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/agentjoey/pactify/internal/event"
@@ -194,12 +195,41 @@ func (p *Project) JoinWithClient(seatID, roles, clientName, clientVersion string
 	if err != nil {
 		return err
 	}
+	// Move the seat onto the branch for the work it's about to do. If the working
+	// tree is ALREADY on a branch one of the seat's tasks targets, STAY there — the
+	// orchestrator checks out the specific task's branch before launching the
+	// worker, and a seat that owns tasks in several features must not be yanked onto
+	// some other feature's branch (the old code checked out the FIRST owned
+	// feature's branch, so multi-feature seats committed to the wrong branch).
+	// Otherwise prefer the first actionable (not-yet-accepted) owned task's branch,
+	// then any owned task's branch.
+	cur, _ := gitx.CurrentBranch(p.dir)
+	var actionable, anyOwned string
 	for _, f := range st.Features {
+		if f.Branch == "" {
+			continue
+		}
 		for _, tk := range f.Tasks {
-			if tk.Owner == seatID && f.Branch != "" {
-				return gitx.CheckoutOrCreate(p.dir, f.Branch)
+			if tk.Owner != seatID {
+				continue
+			}
+			if cur != "" && f.Branch == cur {
+				return nil // already on a branch this seat works — don't override
+			}
+			if anyOwned == "" {
+				anyOwned = f.Branch
+			}
+			if actionable == "" && tk.Status != "accepted" {
+				actionable = f.Branch
 			}
 		}
+	}
+	target := actionable
+	if target == "" {
+		target = anyOwned
+	}
+	if target != "" {
+		return gitx.CheckoutOrCreate(p.dir, target)
 	}
 	return nil
 }
@@ -279,14 +309,23 @@ func (p *Project) Merge(feature string) error {
 	// (The old code unconditionally checked out base then merged the missing
 	// branch, which failed and stranded the working tree on base.)
 	branch := featureBranch(st, feature)
-	if branch != "" && gitx.BranchExists(p.dir, branch) {
+	base := initBaseBranch(evs)
+	// A feature that declares its own branch (≠ base) MUST have that branch, and the
+	// merge MUST integrate it into base. If the declared branch is missing, the
+	// feature's work never landed there (e.g. the owner committed to a different
+	// branch) — refuse to record a no-op merge as `shipped`, which would let pact's
+	// state run ahead of git. A feature worked in-place declares no branch (or
+	// branch == base): nothing to merge, ship as-is.
+	if branch != "" && branch != base && !gitx.BranchExists(p.dir, branch) {
+		return fmt.Errorf("merge %s: feature branch %q does not exist — its work never landed there (the owner likely committed to a different branch); refusing to record a no-op merge as shipped", feature, branch)
+	}
+	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) {
 		if ch, _ := gitx.HasChanges(p.dir); ch {
 			if err := gitx.CommitAll(p.dir, "pact "+feature+": ledger before merge"); err != nil {
 				return err
 			}
 		}
-		base := initBaseBranch(evs)
-		if base != "" && base != branch {
+		if base != "" {
 			if err := gitx.Checkout(p.dir, base); err != nil {
 				return err
 			}

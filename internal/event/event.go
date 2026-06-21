@@ -15,6 +15,7 @@ type Event struct {
 
 var roleByType = map[string]string{
 	"init": "orchestrator", "assign": "orchestrator", "merge": "orchestrator",
+	"cancel": "orchestrator", "withdraw": "orchestrator",
 	"join": "worker", "checkpoint": "worker",
 	"accept": "reviewer", "changes_requested": "reviewer",
 }

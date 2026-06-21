@@ -71,6 +71,8 @@ func Project(evs []event.Event) State {
 
 	fIdx := map[string]int{}
 	tIdx := map[string]map[string]int{}
+	cancelled := map[string]bool{} // feature\x00task — retired task, excluded from the projection
+	withdrawn := map[string]bool{} // feature — retired feature, excluded from the projection
 	find := func(feature, task string) *Task {
 		fi, ok := fIdx[feature]
 		if !ok {
@@ -151,7 +153,32 @@ func Project(evs []event.Event) State {
 			if fi, ok := fIdx[e.Feature]; ok {
 				st.Features[fi].Status = "shipped"
 			}
+		case "cancel":
+			cancelled[e.Feature+"\x00"+e.TaskID] = true
+		case "withdraw":
+			withdrawn[e.Feature] = true
 		}
+	}
+
+	// Retire cancelled tasks and withdrawn features. Excluding them here (rather
+	// than mutating during the fold) keeps the event handlers simple and order-
+	// independent: a cancel/withdraw anywhere in the log removes the target.
+	if len(cancelled) > 0 || len(withdrawn) > 0 {
+		kept := st.Features[:0]
+		for _, f := range st.Features {
+			if withdrawn[f.ID] {
+				continue
+			}
+			tasks := f.Tasks[:0]
+			for _, t := range f.Tasks {
+				if !cancelled[f.ID+"\x00"+t.ID] {
+					tasks = append(tasks, t)
+				}
+			}
+			f.Tasks = tasks
+			kept = append(kept, f)
+		}
+		st.Features = kept
 	}
 	return st
 }

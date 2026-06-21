@@ -497,6 +497,67 @@ func Accept(taskID string) error { return At(".").Accept(taskID) }
 // Changes sends a task back in the current working directory's repo.
 func Changes(taskID, reason string) error { return At(".").Changes(taskID, reason) }
 
+// Cancel retires a single task in the current working directory's repo.
+func Cancel(taskID string) error { return At(".").Cancel(taskID) }
+
+// Withdraw retires a whole feature in the current working directory's repo.
+func Withdraw(feature string) error { return At(".").Withdraw(feature) }
+
+// Cancel records a cancel event that excludes taskID from the projection — the
+// structured way to retire a task without hand-editing the log. Append-only: the
+// task's history stays in the log; the projection simply drops it.
+func (p *Project) Cancel(taskID string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	feature := ""
+	for _, f := range st.Features {
+		for _, t := range f.Tasks {
+			if t.ID == taskID {
+				feature = f.ID
+			}
+		}
+	}
+	if feature == "" {
+		return fmt.Errorf("cancel: task %q not found", taskID)
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("cancel"), EventType: "cancel",
+		Feature: feature, TaskID: taskID, Payload: map[string]any{},
+	})
+}
+
+// Withdraw records a withdraw event that excludes the whole feature from the
+// projection. The feature's branch/commits stay in git untouched (retire ≠ delete).
+func (p *Project) Withdraw(feature string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	found := false
+	for _, f := range st.Features {
+		if f.ID == feature {
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf("withdraw: feature %q not found", feature)
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("withdraw"), EventType: "withdraw",
+		Feature: feature, Payload: map[string]any{},
+	})
+}
+
 // Checkpoint submits a task for review in the current working directory's repo.
 func Checkpoint(taskID, evidence string) error { return At(".").Checkpoint(taskID, evidence) }
 

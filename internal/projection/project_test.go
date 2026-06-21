@@ -24,6 +24,38 @@ func TestProjectSeatsAndProject(t *testing.T) {
 	}
 }
 
+// cancel excludes a single task from the projection; withdraw excludes an entire
+// feature — the structured way to retire work without hand-editing the log.
+func TestProjectCancelAndWithdraw(t *testing.T) {
+	asg := func(task, feat, branch string) event.Event {
+		return event.Event{EventType: "assign", TaskID: task, Feature: feat, Payload: map[string]any{
+			"owner": "opencode", "reviewer": "claude-opus", "branch": branch, "spec": "s"}}
+	}
+	evs := []event.Event{
+		initEv(),
+		asg("T1", "F", "feat/x"),
+		asg("T2", "F", "feat/x"),
+		asg("G1", "G", "feat/g"),
+		{EventType: "cancel", TaskID: "T2", Feature: "F"},
+		{EventType: "withdraw", Feature: "G"},
+	}
+	st := Project(evs)
+	if len(st.Features) != 1 || st.Features[0].ID != "F" {
+		t.Fatalf("withdraw should drop feature G: %+v", featureIDs(st))
+	}
+	if len(st.Features[0].Tasks) != 1 || st.Features[0].Tasks[0].ID != "T1" {
+		t.Fatalf("cancel should drop only T2: %+v", st.Features[0].Tasks)
+	}
+}
+
+func featureIDs(st State) []string {
+	ids := []string{}
+	for _, f := range st.Features {
+		ids = append(ids, f.ID)
+	}
+	return ids
+}
+
 func TestProjectStateMachine(t *testing.T) {
 	evs := []event.Event{
 		initEv(),

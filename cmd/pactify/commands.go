@@ -94,6 +94,14 @@ func newRootCmd() *cobra.Command {
 	mergeCmd := &cobra.Command{Use: "merge <feature>", Args: cobra.ExactArgs(1), Short: "merge a feature",
 		RunE: func(_ *cobra.Command, a []string) error { return pact.Merge(a[0]) }}
 
+	cancelCmd := &cobra.Command{Use: "cancel <task>", Args: cobra.ExactArgs(1),
+		Short: "retire a task (excluded from state; git untouched)",
+		RunE:  func(_ *cobra.Command, a []string) error { return pact.Cancel(a[0]) }}
+
+	withdrawCmd := &cobra.Command{Use: "withdraw <feature>", Args: cobra.ExactArgs(1),
+		Short: "retire a whole feature (excluded from state; git untouched)",
+		RunE:  func(_ *cobra.Command, a []string) error { return pact.Withdraw(a[0]) }}
+
 	statusCmd := &cobra.Command{Use: "status", Short: "print STATE.yml",
 		RunE: func(c *cobra.Command, _ []string) error {
 			s, err := pact.Status()
@@ -141,7 +149,7 @@ func newRootCmd() *cobra.Command {
 	seatCmd := &cobra.Command{Use: "seat", Short: "manage roster seats"}
 	seatCmd.AddCommand(seatAddCmd)
 
-	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, statusCmd, logCmd, validateCmd, seatCmd,
+	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, cancelCmd, withdrawCmd, statusCmd, logCmd, validateCmd, seatCmd,
 		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd())
 	return root
 }

@@ -2,6 +2,7 @@
 package gitx
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -86,6 +87,13 @@ func IsAncestor(dir, a, b string) bool {
 
 // MergeNoFF performs a --no-ff merge of branch into the current branch.
 func MergeNoFF(dir, branch, msg string) error {
-	_, err := run(dir, "merge", "--no-ff", "-m", msg, branch)
-	return err
+	out, err := run(dir, "merge", "--no-ff", "-m", msg, branch)
+	if err != nil {
+		// On conflict (or any failure) git leaves a half-merged, conflicted working
+		// tree. Abort to restore a clean tree on the base branch — never leave the
+		// repo mid-merge — and surface a clear error for the caller to escalate.
+		_, _ = run(dir, "merge", "--abort")
+		return fmt.Errorf("merge %s failed and was aborted (tree restored clean): %s", branch, strings.TrimSpace(out))
+	}
+	return nil
 }

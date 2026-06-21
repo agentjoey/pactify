@@ -27,6 +27,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var seatKinds []string
 	var asSeat string
 	var keepSessions bool
+	var sandbox bool
 
 	cmd := &cobra.Command{
 		Use:   "orchestrate",
@@ -103,6 +104,17 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				fmt.Fprintln(c.OutOrStdout(), "orchestrate: stopped — work shipped, paused for escalation (see .pact/orchestrate/)")
 				return nil
 			}
+			// --sandbox runs the serial driver in an isolated worktree so workers
+			// never touch the user's active tree (only the final merged result lands
+			// on base). Incompatible with --dry-run (no side effects) and parallel
+			// (which already isolates per-feature in worktrees).
+			if sandbox && !dryRun {
+				if err := orchestrate.RunSandbox(ctx, opts); err != nil {
+					return err
+				}
+				fmt.Fprintln(c.OutOrStdout(), "orchestrate: stopped (sandbox) — work shipped, paused for escalation (see .pact/orchestrate/)")
+				return nil
+			}
 			if err := orchestrate.Run(ctx, opts); err != nil {
 				return err
 			}
@@ -121,6 +133,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().IntVar(&idleTimeoutMin, "idle-timeout", 5, "patrol window: kill an agent as hung only after this many minutes of NO output AND NO working-tree changes (a quiet-but-writing agent keeps running); soft failure → retry; 0 = no idle watchdog")
 	cmd.Flags().IntVar(&maxConc, "max-concurrency", 1, "drive up to N independent features in parallel (isolated worktrees, serialized merges); 1 = serial. Ignored with --feature/--dry-run")
 	cmd.Flags().BoolVar(&keepSessions, "keep-sessions", false, "keep each agent's sessions after its task is accepted (default: close them — opencode only, matched by the pact:<seat> title the runner stamps)")
+	cmd.Flags().BoolVar(&sandbox, "sandbox", false, "run in an isolated git worktree so workers never touch your active tree (only the merged result lands on base; the .pact ledger is copied in/out)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")
 	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")

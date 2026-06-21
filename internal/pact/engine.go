@@ -333,6 +333,12 @@ func (p *Project) Merge(feature string) error {
 		if err := gitx.MergeNoFF(p.dir, branch, "Merge "+feature+" ("+branch+")"); err != nil {
 			return err
 		}
+		// Post-verify the ship transition: base must now actually contain the
+		// feature branch. Guards against recording `shipped` when the integration
+		// didn't land (the "pact state ahead of git" class of bug).
+		if base != "" && !gitx.IsAncestor(p.dir, branch, base) {
+			return fmt.Errorf("merge %s: branch %q is not contained in base %q after merge — refusing to record shipped", feature, branch, base)
+		}
 	}
 	if err := p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("merge"), EventType: "merge",

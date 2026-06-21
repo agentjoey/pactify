@@ -65,6 +65,14 @@ func CommitPaths(dir, msg string, paths ...string) error {
 	return err
 }
 
+// IsAncestor reports whether commit-ish a is an ancestor of (or identical to) b.
+// Used to verify a merge actually landed: after merging a feature branch, base
+// must contain it.
+func IsAncestor(dir, a, b string) bool {
+	_, err := run(dir, "merge-base", "--is-ancestor", a, b)
+	return err == nil
+}
+
 // MergeNoFF performs a --no-ff merge of branch into the current branch.
 func MergeNoFF(dir, branch, msg string) error {
 	_, err := run(dir, "merge", "--no-ff", "-m", msg, branch)

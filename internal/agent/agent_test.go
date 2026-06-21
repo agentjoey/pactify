@@ -76,7 +76,7 @@ func TestKimiCliAdapter(t *testing.T) {
 		t.Fatalf("entry = %q, want AGENTS.md", a.DefaultEntry())
 	}
 	c := a.Config()
-	if c.Path != "~/.kimi/mcp.json" || c.Scope != Global || c.Format != JSONMcpServers {
+	if c.Path != "~/.kimi-code/mcp.json" || c.Scope != Global || c.Format != JSONMcpServers {
 		t.Fatalf("config = %+v", c)
 	}
 	inv := a.Invocation("kimi-cli", "/repo")

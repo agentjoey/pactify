@@ -103,7 +103,7 @@ var registry = map[string]spec{
 	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude"},
 	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, "gemini"},
 	"codex-cli":      {"codex-cli", "AGENTS.md", ".codex/config.toml", Project, TOML, false, "codex"},
-	"kimi-cli":       {"kimi-cli", "AGENTS.md", "~/.kimi/mcp.json", Global, JSONMcpServers, false, "kimi"},
+	"kimi-cli":       {"kimi-cli", "AGENTS.md", "~/.kimi-code/mcp.json", Global, JSONMcpServers, false, "kimi"},
 	"cursor-cli":     {"cursor-cli", "AGENTS.md", ".cursor/mcp.json", Project, JSONMcpServers, false, "cursor-agent"},
 	"claude-desktop": {"claude-desktop", "", "~/Library/Application Support/Claude/claude_desktop_config.json", Global, JSONMcpServers, true, ""},
 	"antigravity":    {"antigravity", "", "~/.gemini/config/mcp_config.json", Global, JSONMcpServers, true, ""},

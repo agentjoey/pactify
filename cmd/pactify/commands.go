@@ -102,6 +102,11 @@ func newRootCmd() *cobra.Command {
 		Short: "retire a whole feature (excluded from state; git untouched)",
 		RunE:  func(_ *cobra.Command, a []string) error { return pact.Withdraw(a[0]) }}
 
+	configCmd := &cobra.Command{Use: "config", Short: "project configuration"}
+	configCmd.AddCommand(&cobra.Command{Use: "base-branch <branch>", Args: cobra.ExactArgs(1),
+		Short: "set the integration base branch (corrects an init that captured a feature branch)",
+		RunE:  func(_ *cobra.Command, a []string) error { return pact.ConfigBaseBranch(a[0]) }})
+
 	statusCmd := &cobra.Command{Use: "status", Short: "print STATE.yml",
 		RunE: func(c *cobra.Command, _ []string) error {
 			s, err := pact.Status()
@@ -149,7 +154,7 @@ func newRootCmd() *cobra.Command {
 	seatCmd := &cobra.Command{Use: "seat", Short: "manage roster seats"}
 	seatCmd.AddCommand(seatAddCmd)
 
-	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, cancelCmd, withdrawCmd, statusCmd, logCmd, validateCmd, seatCmd,
+	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, cancelCmd, withdrawCmd, configCmd, statusCmd, logCmd, validateCmd, seatCmd,
 		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd())
 	return root
 }

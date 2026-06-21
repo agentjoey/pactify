@@ -65,6 +65,17 @@ func CommitPaths(dir, msg string, paths ...string) error {
 	return err
 }
 
+// DefaultBranch returns the repo's default branch via origin/HEAD (e.g. "main"),
+// or "" when it can't be determined (no origin, or origin/HEAD unset). Used to
+// catch a pact base branch that was accidentally captured as a feature branch.
+func DefaultBranch(dir string) string {
+	out, err := run(dir, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+	if err != nil || out == "" {
+		return ""
+	}
+	return strings.TrimPrefix(out, "origin/")
+}
+
 // IsAncestor reports whether commit-ish a is an ancestor of (or identical to) b.
 // Used to verify a merge actually landed: after merging a feature branch, base
 // must contain it.

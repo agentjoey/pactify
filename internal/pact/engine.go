@@ -309,7 +309,17 @@ func (p *Project) Merge(feature string) error {
 	// (The old code unconditionally checked out base then merged the missing
 	// branch, which failed and stranded the working tree on base.)
 	branch := featureBranch(st, feature)
-	base := initBaseBranch(evs)
+	base, explicit := baseBranch(evs)
+	// Base sanity: if the base was captured implicitly at init (not set via
+	// `config base-branch`) and it differs from the repo's actual default branch,
+	// init almost certainly recorded a feature branch as the base — every merge
+	// would integrate into the wrong branch and never reach the default. Refuse and
+	// point at the fix, rather than silently shipping onto the wrong base.
+	if !explicit {
+		if def := gitx.DefaultBranch(p.dir); def != "" && base != def {
+			return fmt.Errorf("merge %s: pact base branch is %q but the repo default is %q — init likely captured a feature branch as the base; run `pactify config base-branch %s` to correct it", feature, base, def, def)
+		}
+	}
 	// A feature that declares its own branch (≠ base) MUST have that branch, and the
 	// merge MUST integrate it into base. If the declared branch is missing, the
 	// feature's work never landed there (e.g. the owner committed to a different
@@ -353,6 +363,22 @@ func (p *Project) Merge(feature string) error {
 		return gitx.CommitAll(p.dir, "pact "+feature+": merge (state shipped)")
 	}
 	return nil
+}
+
+// baseBranch returns the project's integration base and whether it was set
+// EXPLICITLY via `config base-branch` (a rebaseline event) rather than captured
+// implicitly at init. A later rebaseline overrides the init-time base — the way to
+// correct a project whose init recorded a feature branch as the base.
+func baseBranch(evs []event.Event) (branch string, explicit bool) {
+	branch = initBaseBranch(evs)
+	for _, e := range evs {
+		if e.EventType == "rebaseline" {
+			if s, ok := e.Payload["base_branch"].(string); ok && s != "" {
+				branch, explicit = s, true
+			}
+		}
+	}
+	return branch, explicit
 }
 
 func initBaseBranch(evs []event.Event) string {
@@ -508,6 +534,26 @@ func Cancel(taskID string) error { return At(".").Cancel(taskID) }
 
 // Withdraw retires a whole feature in the current working directory's repo.
 func Withdraw(feature string) error { return At(".").Withdraw(feature) }
+
+// ConfigBaseBranch sets the integration base in the current working directory's repo.
+func ConfigBaseBranch(branch string) error { return At(".").ConfigBaseBranch(branch) }
+
+// ConfigBaseBranch records a rebaseline event that overrides the init-time base
+// branch — used to correct a project whose init captured a feature branch as the
+// base (so merges would target the wrong branch). Append-only.
+func (p *Project) ConfigBaseBranch(branch string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	if branch == "" {
+		return fmt.Errorf("config base-branch: branch is required")
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("rebaseline"), EventType: "rebaseline",
+		Payload: map[string]any{"base_branch": branch},
+	})
+}
 
 // Cancel records a cancel event that excludes taskID from the projection — the
 // structured way to retire a task without hand-editing the log. Append-only: the

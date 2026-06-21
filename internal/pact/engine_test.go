@@ -424,6 +424,27 @@ func TestJoinStaysOnSeatBranchNotFirstFeature(t *testing.T) {
 	}
 }
 
+// config base-branch overrides the base pact captured at init — the fix for a
+// project whose init recorded a feature branch as the base (so merges targeted the
+// wrong branch and never reached the default).
+func TestConfigBaseBranchOverridesInitBase(t *testing.T) {
+	dir := newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+
+	evs, _ := event.ReadAll(filepath.Join(dir, ".pact", "log.jsonl"))
+	if _, explicit := baseBranch(evs); explicit {
+		t.Fatal("init base should be implicit, not explicit")
+	}
+	if err := ConfigBaseBranch("main"); err != nil {
+		t.Fatal(err)
+	}
+	evs, _ = event.ReadAll(filepath.Join(dir, ".pact", "log.jsonl"))
+	if b, explicit := baseBranch(evs); b != "main" || !explicit {
+		t.Fatalf("after override baseBranch = %q explicit=%v, want main/true", b, explicit)
+	}
+}
+
 func TestStatusReturnsRenderedState(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")

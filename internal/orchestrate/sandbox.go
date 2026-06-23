@@ -32,7 +32,7 @@ func RunSandbox(ctx context.Context, opts Options) error {
 		return fmt.Errorf("sandbox: cannot determine base branch (set origin/HEAD or check out a branch)")
 	}
 	if dirty, _ := gitx.HasChanges(dir); dirty {
-		return fmt.Errorf("sandbox: working tree is dirty — commit/stash before an isolated run (parking needs a clean tree)")
+		return fmt.Errorf("sandbox: working tree is dirty — commit/stash before an isolated run, or pass --in-place to run directly in your tree (parking needs a clean tree)")
 	}
 
 	orig, _ := gitx.CurrentBranch(dir)
@@ -66,6 +66,11 @@ func RunSandbox(ctx context.Context, opts Options) error {
 
 	o := opts
 	o.Dir = sbDir
+	// Dashboard-observable runtime (status.json, streams, escalation) goes to the
+	// MAIN dir, not the throwaway worktree — else serve, watching <main>/.pact/
+	// orchestrate/, sees nothing and the worktree's copy vanishes at teardown
+	// (spec coordination-authority P0b). Git work still happens in sbDir.
+	o.RuntimeDir = dir
 	runErr := o.withDefaults().run(ctx)
 
 	ledger := readLedger(sbDir) // capture the advanced ledger before the worktree goes

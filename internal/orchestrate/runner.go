@@ -51,6 +51,18 @@ const briefingPlaceholder = agentcfg.Placeholder
 // fields add without churning the signature.
 type LaunchContext struct {
 	Seat, Kind, Task, Project, Briefing, RepoDir string
+	// StreamDir is where the per-task live stream is mirrored (dashboard-observable).
+	// "" falls back to RepoDir. A sandbox run sets it to the MAIN dir while RepoDir
+	// is the worktree, so serve tails a path that survives worktree teardown.
+	StreamDir string
+}
+
+// streamDir is StreamDir when set, else RepoDir.
+func (lc LaunchContext) streamDir() string {
+	if lc.StreamDir != "" {
+		return lc.StreamDir
+	}
+	return lc.RepoDir
 }
 
 // Runner headless-launches a seat's agent for one stint, blocking until that turn
@@ -175,7 +187,7 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// error just means no live mirror this run, never a run failure).
 	var capture io.Writer = cap
 	if lc.Task != "" {
-		if sink, serr := OpenStreamSink(lc.RepoDir, lc.Task); serr == nil {
+		if sink, serr := OpenStreamSink(lc.streamDir(), lc.Task); serr == nil {
 			defer sink.Close()
 			// bestEffortWriter is REQUIRED here: io.MultiWriter aborts the whole
 			// write on any sub-writer error, which would propagate up through the

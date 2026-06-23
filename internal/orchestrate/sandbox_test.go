@@ -57,6 +57,36 @@ func TestRunSandbox_ShipsAndCleansUp(t *testing.T) {
 	}
 }
 
+// A sandbox run must write its dashboard-observable runtime status (status.json,
+// streams, escalation) to the MAIN repo dir, not the throwaway worktree — else
+// serve, which watches <main>/.pact/orchestrate/status.json, sees no live progress
+// (the worktree's copy is removed at teardown). Spec: coordination-authority P0b.
+func TestRunSandbox_WritesStatusToMainDir(t *testing.T) {
+	dir := newProject(t)
+	writeSpec(t, dir, "ta", "true")
+	assignNoCheckout(t, dir, "ta", "fa", "feat-a", filepath.Join(".pact", "tasks", "ta.md"))
+	gitCommitAll(t, dir, "assign fa")
+
+	opts := Options{
+		Dir:          dir,
+		Th:           Thresholds{MaxRework: 3, MaxFails: 3, MaxIters: 50},
+		Run:          parFakeRunner{t: t},
+		Exec:         &okExec{},
+		Notify:       StdoutNotifier{},
+		Now:          func() string { return "20260621-000000" },
+		SeatKind:     func(string) string { return "claude-code" },
+		Orchestrator: "orch",
+	}
+	if err := RunSandbox(context.Background(), opts); err != nil {
+		t.Fatalf("RunSandbox: %v", err)
+	}
+
+	// status.json landed in the MAIN dir (survives worktree teardown).
+	if _, err := os.Stat(filepath.Join(dir, ".pact", "orchestrate", "status.json")); err != nil {
+		t.Fatalf("no status.json in main dir after sandbox run (dashboard would see nothing): %v", err)
+	}
+}
+
 func branchOf(t *testing.T, dir string) string {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join(dir, ".git", "HEAD"))

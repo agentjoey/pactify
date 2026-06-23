@@ -4,6 +4,7 @@ package gitx
 import (
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -12,6 +13,20 @@ func run(dir string, args ...string) (string, error) {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	return strings.TrimRight(string(out), "\n"), err
+}
+
+// GitPath resolves a path inside the git dir (e.g. "info/exclude"), correctly
+// handling worktrees where .git is a file pointing at a separate gitdir. Returns
+// an absolute path rooted at dir when git reports it relative.
+func GitPath(dir, rel string) (string, error) {
+	out, err := run(dir, "rev-parse", "--git-path", rel)
+	if err != nil {
+		return "", fmt.Errorf("git rev-parse --git-path %s: %w (%s)", rel, err, out)
+	}
+	if filepath.IsAbs(out) {
+		return out, nil
+	}
+	return filepath.Join(dir, out), nil
 }
 
 // CurrentBranch returns the current branch name.

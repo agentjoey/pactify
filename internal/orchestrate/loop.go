@@ -61,6 +61,21 @@ type Options struct {
 	// CleanupSessions enables closing an agent's sessions once its task is accepted
 	// (opencode-only today; see internal/sessions). Off → sessions are kept.
 	CleanupSessions bool
+	// RuntimeDir is the repo dir under which dashboard-observable runtime artifacts
+	// (.pact/orchestrate/status.json, streams/, escalation records) are written.
+	// "" = Dir. A sandbox run sets it to the user's MAIN dir while Dir is the
+	// throwaway worktree, so serve keeps seeing live progress (spec
+	// coordination-authority P0b). Git work (checkout/commit/merge) always uses Dir.
+	RuntimeDir string
+}
+
+// runtimeDir is the base for dashboard-observable runtime artifacts: RuntimeDir
+// when set, else Dir (the in-place default).
+func (opts Options) runtimeDir() string {
+	if opts.RuntimeDir != "" {
+		return opts.RuntimeDir
+	}
+	return opts.Dir
 }
 
 // launchAgent runs one agent under an optional per-run timeout. The timeout is a
@@ -76,7 +91,7 @@ func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task s
 	}
 	return opts.Run.Run(runCtx, LaunchContext{
 		Seat: seatID, Kind: kind, Task: task, Project: projectID(opts.Dir),
-		Briefing: brief, RepoDir: opts.Dir,
+		Briefing: brief, RepoDir: opts.Dir, StreamDir: opts.runtimeDir(),
 	})
 }
 
@@ -106,10 +121,13 @@ func featureBranchIn(st projection.State, feature string) string {
 func (opts Options) run(ctx context.Context) error {
 	// Ignore .pact/orchestrate/ before any runtime file (stream logs, status.json,
 	// escalation records) is written, so they never land in the user's git status
-	// or an agent's `git add -A`. DryRun stays side-effect-free, so skip it there.
+	// or an agent's `git add -A`. Routed through .git/info/exclude (local, never
+	// committed) so the driver never writes a chore commit to base out from under a
+	// concurrent writer (spec coordination-authority P0a). DryRun stays
+	// side-effect-free, so skip it there.
 	if !opts.DryRun {
-		if err := ensureRuntimeIgnored(opts.Dir); err != nil {
-			return fmt.Errorf("orchestrate: ignore runtime files: %w", err)
+		if err := ensureRuntimeExcludedLocal(opts.Dir); err != nil {
+			return fmt.Errorf("orchestrate: exclude runtime files: %w", err)
 		}
 	}
 
@@ -170,7 +188,7 @@ func (opts Options) run(ctx context.Context) error {
 				Iter:      h.Iters,
 				UpdatedAt: statusNow(opts.Now),
 			}
-			writeStatus(opts.Dir, s)
+			writeStatus(opts.runtimeDir(), s)
 			return nil
 
 		case ActRunOwner:
@@ -433,7 +451,7 @@ func (opts Options) escalate(task, reason, evidence, suggestion string) error {
 	if opts.Now != nil {
 		ts = opts.Now()
 	}
-	path, err := writeEscalation(opts.Dir, ts, task, reason, evidence, suggestion)
+	path, err := writeEscalation(opts.runtimeDir(), ts, task, reason, evidence, suggestion)
 	if err != nil {
 		return fmt.Errorf("orchestrate: write escalation: %w", err)
 	}
@@ -518,13 +536,13 @@ func tripped(task string, h History, th Thresholds) (string, bool) {
 // emitLoopStatus writes a per-iteration status snapshot for the current action.
 // Write errors are silently ignored (status is observation, not a transaction source).
 func (opts Options) emitLoopStatus(view projection.State, act Action, h History) {
-	writeStatus(opts.Dir, buildLoopStatus(view, act, h, func() string { return statusNow(opts.Now) }))
+	writeStatus(opts.runtimeDir(), buildLoopStatus(view, act, h, func() string { return statusNow(opts.Now) }))
 }
 
 // emitEscalatedStatus writes an escalated status snapshot.
 // Write errors are silently ignored (status is observation, not a transaction source).
 func (opts Options) emitEscalatedStatus(view projection.State, task, reason string, h History) {
-	writeStatus(opts.Dir, buildEscalatedStatus(view, task, reason, h, func() string { return statusNow(opts.Now) }))
+	writeStatus(opts.runtimeDir(), buildEscalatedStatus(view, task, reason, h, func() string { return statusNow(opts.Now) }))
 }
 
 // --- small state/log helpers -------------------------------------------------

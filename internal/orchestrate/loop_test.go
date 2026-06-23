@@ -83,7 +83,7 @@ func assign(t *testing.T, dir, taskID, feature, branch, spec string) {
 	}
 }
 
-// taskIDFromBrief extracts the task id from a briefing (briefs render `task `<id>``).
+// taskIDFromBrief extracts the task id from a briefing (briefs render `task `<id>“).
 func taskIDFromBrief(brief string) string {
 	// Both worker and reviewer briefs contain: working/reviewing task `<id>`
 	i := strings.Index(brief, "task `")
@@ -245,32 +245,59 @@ func TestLoopScaffoldsRuntimeGitignore(t *testing.T) {
 	}
 }
 
-// ensureRuntimeIgnored commits the .gitignore entry, but must NOT vacuum the
-// user's unrelated in-flight working-tree changes into that commit — on the
-// single-run path it now fires at the start of a run against the user's real
-// branch, so a `git add -A` there would silently commit their dirty files.
-func TestEnsureRuntimeIgnoredDoesNotCommitDirtyTree(t *testing.T) {
+// ensureRuntimeExcludedLocal ignores runtime artifacts via .git/info/exclude — a
+// per-clone, NEVER-committed file — so it must create no commit (and thus never
+// move base out from under a concurrent writer; see spec coordination-authority
+// P0a, replacing the old committing ensureRuntimeIgnored / bcf9bf8 collision).
+func TestEnsureRuntimeExcludedLocalNeverCommits(t *testing.T) {
 	dir := newProject(t)
-	if err := os.WriteFile(filepath.Join(dir, "wip.txt"), []byte("in progress"), 0o644); err != nil {
-		t.Fatal(err)
+	before := headOf(t, dir)
+
+	if err := ensureRuntimeExcludedLocal(dir); err != nil {
+		t.Fatalf("ensureRuntimeExcludedLocal: %v", err)
 	}
 
-	if err := ensureRuntimeIgnored(dir); err != nil {
-		t.Fatalf("ensureRuntimeIgnored: %v", err)
-	}
-
+	// runtime artifacts are ignored...
 	ci := exec.Command("git", "check-ignore", ".pact/orchestrate/streams/x.log")
 	ci.Dir = dir
 	if out, err := ci.CombinedOutput(); err != nil {
-		t.Fatalf("runtime path not ignored after scaffold (%v): %s", err, out)
+		t.Fatalf("runtime path not ignored after local exclude (%v): %s", err, out)
+	}
+	// ...but no commit was made — base is exactly where it was.
+	if after := headOf(t, dir); after != before {
+		t.Fatalf("ensureRuntimeExcludedLocal moved HEAD %s→%s; it must never write a tracked branch", before, after)
+	}
+}
+
+// The serial driver must never commit a runtime-ignore chore to base. It used to,
+// via ensureRuntimeIgnored (linx bcf9bf8), which moved base under a concurrent
+// ff-merge. Runtime artifacts are now excluded locally. Spec: coordination-authority P0a.
+func TestLoopDoesNotCommitIgnoreToBase(t *testing.T) {
+	dir := newProject(t)
+	s1 := writeSpec(t, dir, "T1", "go test ./...")
+	assign(t, dir, "T1", "F", "feat/x", s1)
+
+	if err := Run(context.Background(), baseOpts(dir, newFakeRunner(t, dir), &okExec{}, &recNotify{})); err != nil {
+		t.Fatalf("Run: %v", err)
 	}
 
-	st := exec.Command("git", "status", "--porcelain", "wip.txt")
-	st.Dir = dir
-	out, _ := st.CombinedOutput()
-	if strings.TrimSpace(string(out)) == "" {
-		t.Fatal("user's unrelated dirty file was swept into the ignore commit; want it left uncommitted")
+	lg := exec.Command("git", "log", "--all", "--oneline", "--grep", "ignore .pact/orchestrate")
+	lg.Dir = dir
+	out, _ := lg.CombinedOutput()
+	if strings.TrimSpace(string(out)) != "" {
+		t.Fatalf("serial run committed a runtime-ignore chore to a tracked branch; want none:\n%s", out)
 	}
+}
+
+func headOf(t *testing.T, dir string) string {
+	t.Helper()
+	c := exec.Command("git", "rev-parse", "HEAD")
+	c.Dir = dir
+	out, err := c.CombinedOutput()
+	if err != nil {
+		t.Fatalf("rev-parse HEAD: %v %s", err, out)
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // (2) rework: reviewer requests changes once, then accepts → shipped, worker re-launched.

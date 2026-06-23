@@ -72,6 +72,7 @@ pact 现在只协调了两个**次要**资源(工作树 `working_tree_holder` + 
 - **P3-4 merge 默认不 push ✅**:引擎 `Merge` 从不 push(全仓只有 `finish`/serve ship 流显式 push);CLI 加 `--push`(默认 false),合后推 `origin <base>`。
 - **P3-5 半自动模式文档 ✅**:`docs/operations.md` 新增「半自动模式(不跑 orchestrate)」+「base 写入契约」两节,写明 `assign → join → checkpoint → accept → orchestrator 单独 merge[--push]`。
 - **P3-6 空 feature 分支拒绝 ✅(2026-06-23)**:`Merge` 当 feature 声明了分支、分支存在、但**无任何 base 之外的提交**(`IsAncestor(branch, base)`,即 base 已含全部 branch)时**拒绝 ship**——否则记 `shipped` 但 base 纹丝不动(phantom ship,pact 状态领先 git)。**触发本修复的现场**:linx 的 `relay-health-k`,kimi 记了 checkpoint 但因 `.pact` gitignored、又没产出实际文件,分支停在 base、merge 成空操作却 ship。沙箱传播本身没坏(`TestRunSandbox_LandsMergeOnBase[_WithOrigin]` 证明有真实提交时 merge commit 正常落到主仓 base);坏的是「空分支被当成 shipped」。测试 `TestMergeRefusesEmptyFeatureBranch`。
+- **P3-7 机器提交 `--no-verify`(phantom 的根因修复)✅(2026-06-23)**:pactify 产生的**所有** git 提交(`CommitAll`=checkpoint、`CommitPaths`=ledger/setup、`MergeNoFF`=merge)一律加 `--no-verify`,**不跑用户仓的人类提交钩子**(commitlint/lint-staged)。**P3-6 现场的真根因**:linx 的 commitlint/lint-staged pre-commit 钩子拒了 kimi 的机器提交 → checkpoint 的 commit 失败、work 从未落盘 → 空分支 → phantom ship。`--no-verify` 从源头消除;P3-6 是纵深防御(其它原因导致空分支也会响亮拒绝)。也让外部「让 commitlint 忽略 merge commit」的 workaround 不再需要。测试 `TestCommitAll/CommitPaths/MergeNoFFBypassesHooks`。
 
 ## 5. P0a 验收标准(TDD 目标)
 1. `ensureRuntimeIgnored`(或继任者)在 serial `run()` 路径下**不产生任何 git commit**。

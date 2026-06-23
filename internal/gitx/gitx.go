@@ -61,23 +61,27 @@ func HasChanges(dir string) (bool, error) {
 	return out != "", err
 }
 
-// CommitAll stages everything and commits with msg.
+// CommitAll stages everything and commits with msg. --no-verify: pactify commits
+// are machine-generated and must never run the repo's HUMAN commit hooks
+// (commitlint/lint-staged) — a rejecting pre-commit hook would otherwise drop the
+// work and leave the ledger ahead of git (the checkpoint-phantom).
 func CommitAll(dir, msg string) error {
 	if _, err := run(dir, "add", "-A"); err != nil {
 		return err
 	}
-	_, err := run(dir, "commit", "-q", "-m", msg)
+	_, err := run(dir, "commit", "-q", "--no-verify", "-m", msg)
 	return err
 }
 
 // CommitPaths stages only the given paths and commits with msg — the safe variant
 // for committing a known set of files (e.g. .gitignore scaffolding) without
 // vacuuming the user's unrelated working-tree changes the way `add -A` would.
+// --no-verify for the same reason as CommitAll: machine commits skip human hooks.
 func CommitPaths(dir, msg string, paths ...string) error {
 	if _, err := run(dir, append([]string{"add", "--"}, paths...)...); err != nil {
 		return err
 	}
-	_, err := run(dir, "commit", "-q", "-m", msg)
+	_, err := run(dir, "commit", "-q", "--no-verify", "-m", msg)
 	return err
 }
 
@@ -101,8 +105,10 @@ func IsAncestor(dir, a, b string) bool {
 }
 
 // MergeNoFF performs a --no-ff merge of branch into the current branch.
+// --no-verify: the merge commit is machine-generated and must not run the repo's
+// human merge/commit hooks (pre-merge-commit / commit-msg, e.g. commitlint).
 func MergeNoFF(dir, branch, msg string) error {
-	out, err := run(dir, "merge", "--no-ff", "-m", msg, branch)
+	out, err := run(dir, "merge", "--no-ff", "--no-verify", "-m", msg, branch)
 	if err != nil {
 		// On conflict (or any failure) git leaves a half-merged, conflicted working
 		// tree. Abort to restore a clean tree on the base branch — never leave the

@@ -97,6 +97,8 @@ pactify merge F --push     # 或合并后顺手推 origin
 ## base 写入契约（spec coordination-authority P3）
 保证「main 只被 orchestrator 显式 merge 写」:
 - **只有 `pactify merge` 写 base**。`init/join/assign/accept/changes` 只追加 ledger、不 commit；`checkpoint` 提交到**你当前的 feature 分支**——若任务 feature 声明了独立分支而你 HEAD 还在 base,checkpoint **直接报错**(先切到 feature 分支)。
+- **机器提交不跑人类钩子**:pactify 的所有 git 提交(checkpoint / merge / setup)都用 `--no-verify`,**绕过仓库的 commitlint/lint-staged 等 pre-commit 钩子**。否则钩子拒掉机器提交会让 work 没落盘、ledger 领先 git(phantom ship)。所以仓库无需为机器提交做「让 commitlint 忽略」之类的特例。
+- **空 feature 分支拒绝 ship**:`merge` 当分支无 base 之外的提交(没真实活)时报错而非记 shipped。
 - **`accept` 永不触发 merge**,即使是 feature 的最后一个 task;merge 永远是独立显式的一步。
 - **`merge` fetch-aware、不分叉**:有 `origin` 时,merge 前先 `git fetch origin <base>` → 本地 base ff 到 `origin/<base>`(分叉则报错)→ feature rebase 到其上(不干净则报错并 abort)→ 再合。无远端的纯本地项目走原路径。
 - **`merge` 默认不 push**:本地合完由你决定何时 `git push`,或 `pactify merge --push` 一并推。origin/main 何时前进完全在 orchestrator 手里。

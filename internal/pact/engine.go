@@ -358,6 +358,26 @@ func (p *Project) Merge(feature string) error {
 				return err
 			}
 		}
+		// Fetch-aware integration (spec coordination-authority P3-3): when a remote
+		// exists, sync base to origin and rebase the feature on top BEFORE merging, so
+		// the result is a clean descendant of the current origin base — never a
+		// divergent merge that would fork on push. If base diverged from origin, or the
+		// feature can't cleanly rebase, refuse here rather than build a forked history.
+		// No remote → purely local project → skip (unchanged local-first behavior).
+		if base != "" && gitx.HasRemote(p.dir, "origin") {
+			if err := gitx.Fetch(p.dir, "origin", base); err != nil {
+				return fmt.Errorf("merge %s: %w", feature, err)
+			}
+			if gitx.RemoteBranchExists(p.dir, "origin", base) {
+				ref := "origin/" + base
+				if err := gitx.FastForwardTo(p.dir, base, ref); err != nil {
+					return fmt.Errorf("merge %s: base %q diverged from %s — reconcile base with origin before merging (refusing a divergent merge): %w", feature, base, ref, err)
+				}
+				if err := gitx.RebaseOnto(p.dir, branch, ref); err != nil {
+					return fmt.Errorf("merge %s: feature %q does not cleanly rebase onto %s — resolve the conflict and retry (refusing a divergent merge): %w", feature, branch, ref, err)
+				}
+			}
+		}
 		if base != "" {
 			if err := gitx.Checkout(p.dir, base); err != nil {
 				return err
@@ -461,13 +481,23 @@ func (p *Project) Checkpoint(taskID, evidence string) error {
 	if err != nil {
 		return err
 	}
-	st, _, err := p.state()
+	st, evs, err := p.state()
 	if err != nil {
 		return err
 	}
 	f, err := checkCheckpoint(st, id, taskID, evidence)
 	if err != nil {
 		return err
+	}
+	// Base-write guard (spec coordination-authority P3-1): if this task's feature
+	// declares its own branch, the work MUST land there — never on base. A checkpoint
+	// made while HEAD is on base would commit straight to the integration branch,
+	// which only `pactify merge` may write. Refuse and point at the fix. (An in-place
+	// feature that declares no branch is unaffected — backward compatible.)
+	if base, _ := baseBranch(evs); f.Branch != "" && f.Branch != base {
+		if cur, _ := gitx.CurrentBranch(p.dir); cur == base {
+			return fmt.Errorf("checkpoint %s: HEAD is on base %q but feature %q declares branch %q — check out the feature branch first (only `pactify merge` writes base)", taskID, base, f.ID, f.Branch)
+		}
 	}
 	if err := p.appendAndRender(event.Event{
 		AgentID:   id,

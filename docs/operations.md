@@ -72,3 +72,28 @@ pactify orchestrate \
 - **flags**：`--feature <id>`（只跑某 feature）、`--dry-run`（只打印下一动作不拉 agent）、`--max-rework`(3)/`--max-fails`(2)/`--max-iters`(50)。
 - **卡住升级**：返工/失败超阈值或硬门失败 → orchestrate 暂停，写 `.pact/orchestrate/escalation-<ts>.md`（含 task/原因/evidence/建议）并通知。人工修复（改实现/改规格/修协议）后**重跑同一命令即续行**（状态已前进；`--resume` 是文档性同义）。
 - **secrets**：runner 不在命令行传 token；agent 自身凭据由其自身配置/Keychain 管。
+
+## 半自动模式（不跑 orchestrate）
+全自动不是唯一路径。verbs 本身就支持人/agent 手动走完整条链，orchestrator 只在最后单独合并:
+
+```bash
+# orchestrator: 派活
+pactify assign T1 --feature F --branch feat/x --owner w --reviewer rev --spec .pact/tasks/T1.md
+# worker(座席 w): 上自己的分支干活 → 提交评审
+pactify join w --roles worker            # 切到 feat/x
+#   ...写代码（必须在 feat/x 上，不在 base 上）...
+pactify checkpoint T1 --evidence "tests pass"
+# reviewer(座席 rev): 验收（只标记，绝不连带 merge）
+pactify accept T1
+# orchestrator: 自己决定何时合、何时推
+pactify merge F            # 默认只本地合
+pactify merge F --push     # 或合并后顺手推 origin
+```
+谁来当 worker/reviewer 无所谓——任何能读文件、能跑 `pactify`(或 pact MCP)的 agent 都行。orchestrate 只是把这套循环自动化，不是前提。
+
+## base 写入契约（spec coordination-authority P3）
+保证「main 只被 orchestrator 显式 merge 写」:
+- **只有 `pactify merge` 写 base**。`init/join/assign/accept/changes` 只追加 ledger、不 commit；`checkpoint` 提交到**你当前的 feature 分支**——若任务 feature 声明了独立分支而你 HEAD 还在 base,checkpoint **直接报错**(先切到 feature 分支)。
+- **`accept` 永不触发 merge**,即使是 feature 的最后一个 task;merge 永远是独立显式的一步。
+- **`merge` fetch-aware、不分叉**:有 `origin` 时,merge 前先 `git fetch origin <base>` → 本地 base ff 到 `origin/<base>`(分叉则报错)→ feature rebase 到其上(不干净则报错并 abort)→ 再合。无远端的纯本地项目走原路径。
+- **`merge` 默认不 push**:本地合完由你决定何时 `git push`,或 `pactify merge --push` 一并推。origin/main 何时前进完全在 orchestrator 手里。

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/spf13/cobra"
 )
@@ -91,8 +92,32 @@ func newRootCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, a []string) error { return pact.Changes(a[0], reason) }}
 	changesCmd.Flags().StringVar(&reason, "reason", "", "reason")
 
+	var mergePush bool
 	mergeCmd := &cobra.Command{Use: "merge <feature>", Args: cobra.ExactArgs(1), Short: "merge a feature",
-		RunE: func(_ *cobra.Command, a []string) error { return pact.Merge(a[0]) }}
+		RunE: func(c *cobra.Command, a []string) error {
+			if err := pact.Merge(a[0]); err != nil {
+				return err
+			}
+			// Default: local merge only — origin advances only when the orchestrator
+			// decides (spec coordination-authority P3-4). --push opts into pushing the
+			// base branch (HEAD after a merge) to origin as part of this command.
+			if mergePush {
+				dir, err := os.Getwd()
+				if err != nil {
+					return err
+				}
+				base, err := gitx.CurrentBranch(dir)
+				if err != nil || base == "" {
+					return fmt.Errorf("merge --push: cannot resolve base branch to push: %w", err)
+				}
+				if err := gitx.Push(dir, "origin", base); err != nil {
+					return err
+				}
+				fmt.Fprintf(c.OutOrStdout(), "pushed %s to origin\n", base)
+			}
+			return nil
+		}}
+	mergeCmd.Flags().BoolVar(&mergePush, "push", false, "after a successful local merge, push the base branch to origin (default: local only — push when you decide)")
 
 	cancelCmd := &cobra.Command{Use: "cancel <task>", Args: cobra.ExactArgs(1),
 		Short: "retire a task (excluded from state; git untouched)",

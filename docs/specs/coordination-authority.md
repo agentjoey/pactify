@@ -71,6 +71,7 @@ pact 现在只协调了两个**次要**资源(工作树 `working_tree_holder` + 
 - **P3-3 merge fetch-aware、不分叉 ✅**:有 `origin` 时,merge 前 `gitx.Fetch(origin,base)` → `FastForwardTo(base, origin/base)`(分叉则报错)→ `RebaseOnto(feature, origin/base)`(不干净则 abort+报错)→ 再合。无 origin 走旧路径。测试 `TestMergeFetchAwareIntegratesAdvancedBase` / `TestMergeFetchAwareRefusesUnrebasable`。
 - **P3-4 merge 默认不 push ✅**:引擎 `Merge` 从不 push(全仓只有 `finish`/serve ship 流显式 push);CLI 加 `--push`(默认 false),合后推 `origin <base>`。
 - **P3-5 半自动模式文档 ✅**:`docs/operations.md` 新增「半自动模式(不跑 orchestrate)」+「base 写入契约」两节,写明 `assign → join → checkpoint → accept → orchestrator 单独 merge[--push]`。
+- **P3-6 空 feature 分支拒绝 ✅(2026-06-23)**:`Merge` 当 feature 声明了分支、分支存在、但**无任何 base 之外的提交**(`IsAncestor(branch, base)`,即 base 已含全部 branch)时**拒绝 ship**——否则记 `shipped` 但 base 纹丝不动(phantom ship,pact 状态领先 git)。**触发本修复的现场**:linx 的 `relay-health-k`,kimi 记了 checkpoint 但因 `.pact` gitignored、又没产出实际文件,分支停在 base、merge 成空操作却 ship。沙箱传播本身没坏(`TestRunSandbox_LandsMergeOnBase[_WithOrigin]` 证明有真实提交时 merge commit 正常落到主仓 base);坏的是「空分支被当成 shipped」。测试 `TestMergeRefusesEmptyFeatureBranch`。
 
 ## 5. P0a 验收标准(TDD 目标)
 1. `ensureRuntimeIgnored`(或继任者)在 serial `run()` 路径下**不产生任何 git commit**。

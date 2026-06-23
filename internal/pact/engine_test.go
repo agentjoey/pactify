@@ -159,6 +159,11 @@ func TestCheckpointBlockedByUnacceptedDep(t *testing.T) {
 	if err := orch.Assign("T2", "F", "feat/x", "opencode", "claude-opus", "", []string{"T1"}); err != nil {
 		t.Fatal(err)
 	}
+	// The worker checkpoints from its feature branch (a real worker checks it out at
+	// join; the P3-1 guard refuses a checkpoint made on base when a branch is declared).
+	if err := gitx.CheckoutOrCreate(dir, "feat/x"); err != nil {
+		t.Fatalf("checkout feat/x: %v", err)
+	}
 	// T2 checkpoint must now fail at the checkpoint gate — T1 is not accepted.
 	os.WriteFile(filepath.Join(dir, "impl.txt"), []byte("c"), 0o644)
 	if err := At(dir).As("opencode").Checkpoint("T2", "ok"); err == nil {
@@ -376,12 +381,18 @@ func TestMergeInPlaceOnBaseBranchShips(t *testing.T) {
 // likely committed elsewhere, e.g. the join-wrong-branch bug). Merge must refuse,
 // so pact's state can't run ahead of git.
 func TestMergeRefusesMissingDeclaredBranch(t *testing.T) {
-	newRepo(t)
+	dir := newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
 	Assign("T1", "F", "feat/missing", "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
 
 	t.Setenv("PACT_AGENT_ID", "opencode")
+	// The owner commits ELSEWHERE (not on base — the P3-1 guard forbids that — and not
+	// on the declared feat/missing): simulates the wrong-branch bug. The declared
+	// branch still never gets created, so merge must refuse.
+	if err := gitx.CheckoutOrCreate(dir, "feat/elsewhere"); err != nil {
+		t.Fatalf("checkout feat/elsewhere: %v", err)
+	}
 	os.WriteFile("impl.txt", []byte("c"), 0o644)
 	if err := Checkpoint("T1", "ok"); err != nil {
 		t.Fatal(err)

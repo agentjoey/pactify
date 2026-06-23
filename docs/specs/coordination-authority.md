@@ -64,6 +64,14 @@ pact 现在只协调了两个**次要**资源(工作树 `working_tree_holder` + 
   - 测试:`TestProjectAddressingByName`(launch dir=alpha,`status project=beta` 读到 beta;未知名报错列出已知;`projects` 列出 beta)。
   - 已知约束:解析走 `pact.At(path)`,而 `PACT_DIR`(绝对)会经 `DirIn` 覆盖一切 base——真实 MCP 启动只设 `PACT_AGENT_ID`、不设 `PACT_DIR`,故无碍;但若某启动设了绝对 `PACT_DIR`,按名寻址会被它劫持(后续可让命名路径绕过 `PACT_DIR`)。
 
+### P3 — base 写入契约(OCRC 半自动工作流)✅ DONE(2026-06-23)
+来源:OCRC 的 4 条核心 + 1 可选要求。一句话:**main 只能被 orchestrator 显式 `pactify merge` 写;merge 要先 fetch+ff/rebase、失败即报错、默认不 push;accept 不连带 merge;init/assign/accept 等绝不碰 main。**
+- **P3-1 只有 merge 写 base ✅**:非-merge verb 走 `appendAndRender`(只写 ledger 文件、不 commit),本就不碰 base;新护栏——`Checkpoint` 当任务 feature 声明了独立分支却 HEAD 在 base 时**拒绝提交**(work 必须落 feature 分支)。in-place(未声明分支)保留向后兼容。测试 `TestCheckpointRefusesOnBaseWhenFeatureHasBranch` / `TestCheckpointCommitsOnFeatureBranch`。
+- **P3-2 accept 不触发 merge ✅**:`Accept` 仅 `appendAndRender`,无 commit/merge;回归测试 `TestAcceptDoesNotMergeLastTask`(最后一个 task accept 后 feature 未 shipped、feat/x 未进 base)。
+- **P3-3 merge fetch-aware、不分叉 ✅**:有 `origin` 时,merge 前 `gitx.Fetch(origin,base)` → `FastForwardTo(base, origin/base)`(分叉则报错)→ `RebaseOnto(feature, origin/base)`(不干净则 abort+报错)→ 再合。无 origin 走旧路径。测试 `TestMergeFetchAwareIntegratesAdvancedBase` / `TestMergeFetchAwareRefusesUnrebasable`。
+- **P3-4 merge 默认不 push ✅**:引擎 `Merge` 从不 push(全仓只有 `finish`/serve ship 流显式 push);CLI 加 `--push`(默认 false),合后推 `origin <base>`。
+- **P3-5 半自动模式文档 ✅**:`docs/operations.md` 新增「半自动模式(不跑 orchestrate)」+「base 写入契约」两节,写明 `assign → join → checkpoint → accept → orchestrator 单独 merge[--push]`。
+
 ## 5. P0a 验收标准(TDD 目标)
 1. `ensureRuntimeIgnored`(或继任者)在 serial `run()` 路径下**不产生任何 git commit**。
 2. 跑完后 `.pact/orchestrate/` 下的 runtime 文件不出现在 `git status`(被 `.git/info/exclude` 或已提交的 `.gitignore` 覆盖)。

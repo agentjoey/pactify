@@ -112,3 +112,69 @@ func MergeNoFF(dir, branch, msg string) error {
 	}
 	return nil
 }
+
+// HasRemote reports whether the named remote is configured.
+func HasRemote(dir, name string) bool {
+	_, err := run(dir, "remote", "get-url", name)
+	return err == nil
+}
+
+// Push pushes branch to remote.
+func Push(dir, remote, branch string) error {
+	if out, err := run(dir, "push", remote, branch); err != nil {
+		return fmt.Errorf("push %s %s: %s", remote, branch, strings.TrimSpace(out))
+	}
+	return nil
+}
+
+// Fetch updates remote-tracking refs for ref from remote (e.g. "origin", "main").
+func Fetch(dir, remote, ref string) error {
+	if out, err := run(dir, "fetch", "--quiet", remote, ref); err != nil {
+		return fmt.Errorf("fetch %s %s: %s", remote, ref, strings.TrimSpace(out))
+	}
+	return nil
+}
+
+// RemoteBranchExists reports whether the remote-tracking ref remote/branch exists
+// locally (after a fetch).
+func RemoteBranchExists(dir, remote, branch string) bool {
+	_, err := run(dir, "rev-parse", "--verify", "--quiet", "refs/remotes/"+remote+"/"+branch)
+	return err == nil
+}
+
+// FastForwardTo fast-forwards local branch to ref (e.g. origin/main), checking it
+// out first. It refuses (errors) when branch has diverged — i.e. carries commits
+// not on ref — rather than creating a merge: base must only ever advance, never
+// fork. A no-op when branch is already at/ahead-containing ref.
+func FastForwardTo(dir, branch, ref string) error {
+	if err := Checkout(dir, branch); err != nil {
+		return err
+	}
+	// Already contains ref → nothing to pull forward (local is at or ahead of ref).
+	if IsAncestor(dir, ref, branch) {
+		return nil
+	}
+	out, err := run(dir, "merge", "--ff-only", ref)
+	if err != nil {
+		return fmt.Errorf("local %s diverged from %s (cannot fast-forward): %s", branch, ref, strings.TrimSpace(out))
+	}
+	return nil
+}
+
+// RebaseOnto rebases branch onto ref (checking branch out first). On any failure
+// (conflict) it aborts the rebase to restore a clean tree and returns an error —
+// never leaving the repo mid-rebase. A no-op when branch already sits on ref.
+func RebaseOnto(dir, branch, ref string) error {
+	if err := Checkout(dir, branch); err != nil {
+		return err
+	}
+	if IsAncestor(dir, ref, branch) {
+		return nil // already on top of ref
+	}
+	out, err := run(dir, "rebase", ref, branch)
+	if err != nil {
+		_, _ = run(dir, "rebase", "--abort")
+		return fmt.Errorf("rebase %s onto %s failed and was aborted (tree restored clean): %s", branch, ref, strings.TrimSpace(out))
+	}
+	return nil
+}

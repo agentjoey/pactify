@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Last updated: 2026-06-19 | Status: **v0.7.3 已发布** + **dark product UI refresh（本地 main，未发布）** — 协议 v1 冻结 · Go CLI + MCP + dashboard · orchestrate 自主驱动 + planner · 成本/可观测(D1) + 巡检(D2) · session 清理(opencode) · GLM 端点可配 · Settings agent 管理 · **深色 dashboard（dark product UI，6 屏照设计稿重制）** · native audit layer(claude-code hook + opencode 插件) · pactify.dev 文档站。下方「增量子系统」段记录这些子系统的细节。
+> Last updated: 2026-06-23 | Status: **v0.8.0 已发布**（coordination-authority + dark product UI）— 协议 v1 冻结 · Go CLI + MCP + dashboard · orchestrate 自主驱动 + planner · 成本/可观测(D1) + 巡检(D2) · session 清理(opencode) · GLM 端点可配 · Settings agent 管理 · **深色 dashboard（dark product UI，6 屏照设计稿重制）** · native audit layer(claude-code hook + opencode 插件) · pactify.dev 文档站 · **coordination-authority**(base hygiene `.git/info/exclude` · autonomous 默认 sandbox · merge 跨进程 flock 锁 · MCP 项目按名寻址 · base 写入契约「只 merge 写 base / fetch-aware 不分叉 / 默认不 push / accept 不连 merge / checkpoint base 守卫」· per-project `config gate` · 空分支拒绝 ship · 机器提交 `--no-verify`)。下方「增量子系统」段记录这些子系统的细节。
 
 ## Overview
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
@@ -606,6 +607,45 @@ func (p *Project) ConfigBaseBranch(branch string) error {
 		AgentID: id, Role: event.RoleFor("rebaseline"), EventType: "rebaseline",
 		Payload: map[string]any{"base_branch": branch},
 	})
+}
+
+// ConfigGate sets the project hard-gate command in the current working directory's repo.
+func ConfigGate(command string) error { return At(".").ConfigGate(command) }
+
+// ConfigGate records a config_gate event setting the hard-gate command the
+// orchestrate driver runs before every merge for tasks that declare no per-task
+// `verify:` line. A later config_gate overrides an earlier one. Append-only.
+func (p *Project) ConfigGate(command string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(command) == "" {
+		return fmt.Errorf("config gate: command is required")
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("config_gate"), EventType: "config_gate",
+		Payload: map[string]any{"gate": command},
+	})
+}
+
+// GateConfig returns the project's configured hard-gate command (the latest
+// `config gate` setting) and whether one was set. orchestrate uses it ahead of a
+// project-type-inferred default.
+func (p *Project) GateConfig() (string, bool) {
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	if err != nil {
+		return "", false
+	}
+	gate, ok := "", false
+	for _, e := range evs {
+		if e.EventType == "config_gate" {
+			if s, o := e.Payload["gate"].(string); o && s != "" {
+				gate, ok = s, true
+			}
+		}
+	}
+	return gate, ok
 }
 
 // Cancel records a cancel event that excludes taskID from the projection — the

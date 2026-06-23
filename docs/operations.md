@@ -68,7 +68,10 @@ pactify orchestrate \
   --seat-kind orch=claude-code
 ```
 - **座席→kind**：`--seat-kind seat=kind`（可重复）。有 headless runner 的 kind：`opencode`/`claude-code`/`gemini-cli`。GUI/桌面 agent（antigravity、*-desktop）无法被驱动——那一棒换 CLI 座席或人工。
-- **task 规格 `verify:` 字段**：硬测试门与 reviewer 都用它跑验收，例 `verify: go test ./internal/serve/ -run Relay`。缺失则退化为全量 `go build ./... && go test ./...`。**只放一行专用 `verify:` 指令，勿写成散文**（首条 `verify:` 行胜出；`>`/`-`/`#` 前缀的不计）。
+- **task 规格 `verify:` 字段**：硬测试门与 reviewer 都用它跑验收，例 `verify: go test ./internal/serve/ -run Relay`。缺失则退化为**项目门**（见下）。**只放一行专用 `verify:` 指令，勿写成散文**（首条 `verify:` 行胜出；`>`/`-`/`#` 前缀的不计）。
+- **项目硬门（`pactify config gate`）**：task 无 `verify:` 时的回退门按**项目**配置，优先级 task `verify:` > `config gate` > 按项目类型推断的默认。
+  - 类型默认：`pnpm-lock.yaml`→`pnpm build && pnpm test`；`package.json`→`npm run build && npm test`；`Cargo.toml`→`cargo build && cargo test`；`go.mod`→`go build ./... && go test ./...`。
+  - 显式设（build-first 例）：`pactify config gate "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"`（写入 ledger 的 `config_gate` 事件，后设覆盖先设）。
 - **flags**：`--feature <id>`（只跑某 feature）、`--dry-run`（只打印下一动作不拉 agent）、`--max-rework`(3)/`--max-fails`(2)/`--max-iters`(50)。
 - **卡住升级**：返工/失败超阈值或硬门失败 → orchestrate 暂停，写 `.pact/orchestrate/escalation-<ts>.md`（含 task/原因/evidence/建议）并通知。人工修复（改实现/改规格/修协议）后**重跑同一命令即续行**（状态已前进；`--resume` 是文档性同义）。
 - **secrets**：runner 不在命令行传 token；agent 自身凭据由其自身配置/Keychain 管。

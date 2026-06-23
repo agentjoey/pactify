@@ -131,6 +131,20 @@ func newRootCmd() *cobra.Command {
 	configCmd.AddCommand(&cobra.Command{Use: "base-branch <branch>", Args: cobra.ExactArgs(1),
 		Short: "set the integration base branch (corrects an init that captured a feature branch)",
 		RunE:  func(_ *cobra.Command, a []string) error { return pact.ConfigBaseBranch(a[0]) }})
+	configCmd.AddCommand(&cobra.Command{Use: "gate <command>", Args: cobra.ExactArgs(1),
+		Short: "set the hard-gate command orchestrate runs before every merge (default: inferred from project type — pnpm/npm/cargo/go)",
+		Long: `Set the project's hard test gate — the command orchestrate runs independently
+before merging a feature whose tasks declare no per-task ` + "`verify:`" + ` line.
+
+Without this, the gate defaults to one inferred from the project type:
+  pnpm-lock.yaml → pnpm build && pnpm test
+  package.json   → npm run build && npm test
+  Cargo.toml     → cargo build && cargo test
+  go.mod         → go build ./... && go test ./...
+
+Example (build-first JS gate):
+  pactify config gate "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"`,
+		RunE: func(_ *cobra.Command, a []string) error { return pact.ConfigGate(a[0]) }})
 
 	statusCmd := &cobra.Command{Use: "status", Short: "print STATE.yml",
 		RunE: func(c *cobra.Command, _ []string) error {

@@ -418,6 +418,10 @@ func (opts Options) merge(ctx context.Context, st, view projection.State, act Ac
 // conservative full fallback command instead, so the feature is never merged
 // unverified.
 func gateCommands(dir string, f projection.Feature) []string {
+	// The fallback for a task with no `verify:` line is the project gate: an explicit
+	// `pactify config gate` if set, else a default inferred from the project type
+	// (pnpm/npm/cargo/go) — see resolveGate. Resolved once per feature.
+	gate := resolveGate(dir)
 	seen := map[string]bool{}
 	var cmds []string
 	add := func(c string) {
@@ -431,11 +435,11 @@ func gateCommands(dir string, f projection.Feature) []string {
 		if cmd, ok := extractVerify(spec); ok {
 			add(cmd)
 		} else {
-			add(fallbackGate)
+			add(gate)
 		}
 	}
 	if len(cmds) == 0 {
-		cmds = append(cmds, fallbackGate)
+		cmds = append(cmds, gate)
 	}
 	return cmds
 }

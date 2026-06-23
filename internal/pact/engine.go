@@ -338,6 +338,15 @@ func (p *Project) Merge(feature string) error {
 	if branch != "" && branch != base && !gitx.BranchExists(p.dir, branch) {
 		return fmt.Errorf("merge %s: feature branch %q does not exist — its work never landed there (the owner likely committed to a different branch); refusing to record a no-op merge as shipped", feature, branch)
 	}
+	// Empty-feature guard: the branch exists but carries NO commits over base (base
+	// already contains all of it) → the merge would integrate nothing, and recording
+	// `shipped` would leave base unchanged (a phantom ship, pact state ahead of git —
+	// e.g. a worker that checkpointed without committing any work). Refuse so it
+	// escalates loudly instead of silently shipping. In sandbox runs this is what
+	// makes "shipped but main unchanged" surface as an error rather than pass.
+	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) && gitx.IsAncestor(p.dir, branch, base) {
+		return fmt.Errorf("merge %s: feature branch %q has no commits over base %q — no work was committed there (base would be unchanged); refusing to record shipped", feature, branch, base)
+	}
 	// Serialize base-branch integration across processes/worktrees: hold an advisory
 	// lock for the whole checkout→merge→event→commit critical section (which all
 	// write base) so a concurrent `pactify merge` — another orchestrate run, or a

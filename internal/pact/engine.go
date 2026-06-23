@@ -1,15 +1,23 @@
 package pact
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/gitx"
+	"github.com/agentjoey/pactify/internal/lockx"
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
 )
+
+// baseIntegrationLockTimeout bounds how long a merge waits for the base lock
+// before giving up — long enough to queue behind a real merge, short enough that a
+// stale/crashed holder doesn't hang a run forever. A var so tests can shrink it.
+var baseIntegrationLockTimeout = 3 * time.Minute
 
 var errNoAgent = errors.New("pactify: PACT_AGENT_ID not set; source your entry file")
 
@@ -328,6 +336,21 @@ func (p *Project) Merge(feature string) error {
 	// branch == base): nothing to merge, ship as-is.
 	if branch != "" && branch != base && !gitx.BranchExists(p.dir, branch) {
 		return fmt.Errorf("merge %s: feature branch %q does not exist — its work never landed there (the owner likely committed to a different branch); refusing to record a no-op merge as shipped", feature, branch)
+	}
+	// Serialize base-branch integration across processes/worktrees: hold an advisory
+	// lock for the whole checkout→merge→event→commit critical section (which all
+	// write base) so a concurrent `pactify merge` — another orchestrate run, or a
+	// worktree sharing this .git — queues instead of racing on base (spec
+	// coordination-authority P1). The lock file lives in the shared git common dir,
+	// so every worktree of this repo contends on the same handle.
+	if lockPath, lerr := gitx.GitPath(p.dir, "pactify-base.lock"); lerr == nil {
+		lctx, cancel := context.WithTimeout(context.Background(), baseIntegrationLockTimeout)
+		defer cancel()
+		release, aerr := lockx.Acquire(lctx, lockPath)
+		if aerr != nil {
+			return fmt.Errorf("merge %s: acquire base-integration lock: %w", feature, aerr)
+		}
+		defer release()
 	}
 	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) {
 		if ch, _ := gitx.HasChanges(p.dir); ch {

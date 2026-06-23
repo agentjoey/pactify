@@ -190,45 +190,43 @@ const unionAttrs = ".pact/log.jsonl merge=union\n.pact/STATE.yml merge=union\n"
 // `git status` so an agent's `git add -A` during verify can't sweep them up.
 const runtimeIgnoreMarker = ".pact/orchestrate/"
 
-// ensureRuntimeIgnored makes sure the repo ignores .pact/orchestrate/ (runtime
-// artifacts) and commits the .gitignore change on the current branch if it added
-// the entry. Idempotent: a repo already carrying it is left untouched (no empty
-// commit). Both the single-run (loop.run) and parallel (RunParallel via
-// ensureUnionAttrs) paths rely on this before writing any runtime file.
-func ensureRuntimeIgnored(dir string) error {
-	changed, err := ensureFileContains(filepath.Join(dir, ".gitignore"), runtimeIgnoreMarker, runtimeIgnoreMarker+"\n")
+// ensureRuntimeExcludedLocal makes the repo ignore .pact/orchestrate/ runtime
+// artifacts via .git/info/exclude — a per-clone, NEVER-committed ignore file.
+// Unlike the old ensureRuntimeIgnored (which committed .gitignore to the active
+// branch and could move base out from under a concurrent writer — linx bcf9bf8;
+// see spec coordination-authority P0a), this writes nothing to any tracked branch,
+// so the driver is no longer a second writer to base just for runtime hygiene.
+// Idempotent: a clone already carrying the entry is left untouched. Both the
+// single-run (loop.run) and parallel (RunParallel via ensureUnionAttrs) paths
+// rely on it before writing any runtime file.
+func ensureRuntimeExcludedLocal(dir string) error {
+	excl, err := gitx.GitPath(dir, "info/exclude")
+	if err != nil {
+		return err
+	}
+	_, err = ensureFileContains(excl, runtimeIgnoreMarker, runtimeIgnoreMarker+"\n")
+	return err
+}
+
+// ensureUnionAttrs makes the repo safe for concurrent feature merges. Two things:
+//   - .gitattributes union rules on the pact ledger, committed to the (base) branch
+//     so feature branches off base inherit them — they MUST be tracked to govern how
+//     concurrent merges fold log.jsonl/STATE.yml; and
+//   - the runtime ignore for .pact/orchestrate/, routed through .git/info/exclude
+//     (local, never committed) so this setup never lands a .gitignore commit on base.
+//
+// Idempotent: a repo already carrying the union attrs is left untouched (no empty
+// commit).
+func ensureUnionAttrs(dir string) error {
+	if err := ensureRuntimeExcludedLocal(dir); err != nil {
+		return err
+	}
+	changed, err := ensureFileContains(filepath.Join(dir, ".gitattributes"), "log.jsonl merge=union", unionAttrs)
 	if err != nil || !changed {
 		return err
 	}
-	// Commit only .gitignore — never `add -A`, which on the single-run path would
-	// vacuum the user's unrelated in-flight changes into this chore commit.
-	return gitx.CommitPaths(dir, "chore(pact): ignore .pact/orchestrate/ runtime files", ".gitignore")
-}
-
-// ensureUnionAttrs makes the repo safe for concurrent feature merges and commits
-// the change to the current (base) branch if anything changed. Two things:
-//   - .gitattributes union rules on the pact ledger (above), and
-//   - .gitignore for .pact/orchestrate/ so the runtime status/escalation files
-//     (written per-worktree during a run) never get committed and thus never
-//     conflict when two features merge.
-// Idempotent: a repo already carrying both is left untouched (no empty commit).
-func ensureUnionAttrs(dir string) error {
-	changed := false
-	if c, err := ensureFileContains(filepath.Join(dir, ".gitattributes"), "log.jsonl merge=union", unionAttrs); err != nil {
-		return err
-	} else {
-		changed = changed || c
-	}
-	if c, err := ensureFileContains(filepath.Join(dir, ".gitignore"), runtimeIgnoreMarker, runtimeIgnoreMarker+"\n"); err != nil {
-		return err
-	} else {
-		changed = changed || c
-	}
-	if !changed {
-		return nil
-	}
-	return gitx.CommitPaths(dir, "chore(pact): union merge driver + ignore runtime files (parallel orchestration)",
-		".gitattributes", ".gitignore")
+	return gitx.CommitPaths(dir, "chore(pact): union merge driver for the pact ledger (parallel orchestration)",
+		".gitattributes")
 }
 
 // ensureFileContains makes sure path contains marker, appending block (or creating

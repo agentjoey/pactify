@@ -15,9 +15,11 @@ func briefing(seatID, roles string) string {
 This repo uses the **pact protocol** (v1). You are seat `+"`%s`"+`, roles: %s.
 
 **Primary — MCP:** the `+"`pact`"+` MCP server is wired into your config. Use its tools
-(status / join / assign / checkpoint / accept / changes / merge / list) and resources
-(`+"`pact://state`"+`, `+"`pact://log`"+`). Cold start: call `+"`status`"+`, then `+"`join`"+`
-(registers your seat and checks out your feature branch).
+(projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
+resources (`+"`pact://state`"+`, `+"`pact://log`"+`). Cold start: call `+"`status`"+`, then `+"`join`"+`
+(registers your seat and checks out your feature branch). Every action tool takes an
+optional `+"`project`"+` (a name from `+"`projects`"+`) to act on another registered repo without
+restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
 `+"```bash"+`

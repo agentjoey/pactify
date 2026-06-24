@@ -31,9 +31,10 @@ type Action struct {
 // History is the driver-maintained mutable state (NOT protocol state): per-task
 // rework and consecutive-failure counts plus a global iteration count.
 type History struct {
-	Rework map[string]int // taskID -> observed changes_requested rounds
-	Fails  map[string]int // taskID -> consecutive "no expected transition" failures after exec
-	Iters  int            // total actions executed
+	Rework   map[string]int    // taskID -> observed changes_requested rounds
+	Fails    map[string]int    // taskID -> consecutive "no expected transition" failures after exec
+	LastFail map[string]string // taskID -> human-readable cause of the most recent failure (for escalation text)
+	Iters    int               // total actions executed
 }
 
 // Thresholds bound the driver before it escalates to a human.

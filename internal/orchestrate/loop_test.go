@@ -320,6 +320,42 @@ func TestLoopReworkThenShips(t *testing.T) {
 	}
 }
 
+// A worker that exits cleanly but never checkpoints (reports done yet delivers
+// nothing — the opencode class) must escalate with a SPECIFIC cause, not a bare
+// "failure limit exceeded".
+func TestEscalationNamesNoCheckpointCause(t *testing.T) {
+	dir := newProject(t)
+	s1 := writeSpec(t, dir, "T1", "true")
+	assign(t, dir, "T1", "F", "feat/x", s1)
+
+	opts := baseOpts(dir, noCheckpointRunner{}, &okExec{}, &recNotify{})
+	opts.Th.MaxFails = 2
+	notify := opts.Notify.(*recNotify)
+	if err := Run(context.Background(), opts); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	joined := strings.Join(notify.msgs, "\n")
+	if !strings.Contains(joined, "no checkpoint") {
+		t.Fatalf("escalation should name the no-checkpoint cause, got: %q", joined)
+	}
+	// And the escalation record carries it too.
+	esc := filepath.Join(dir, ".pact", "orchestrate", "escalation-"+fixedNow()+".md")
+	b, err := os.ReadFile(esc)
+	if err != nil {
+		t.Fatalf("escalation file missing: %v", err)
+	}
+	if !strings.Contains(string(b), "no checkpoint") {
+		t.Fatalf("escalation record should name the no-checkpoint cause:\n%s", b)
+	}
+}
+
+// noCheckpointRunner simulates a worker that runs to completion (no error) but
+// never checkpoints — the task never reaches awaiting_review.
+type noCheckpointRunner struct{}
+
+func (noCheckpointRunner) Run(_ context.Context, _ LaunchContext) error { return nil }
+
 // (3) escalation: reviewer always requests changes → rework limit → escalation file, no merge.
 func TestLoopRebuffsEscalatesAtReworkLimit(t *testing.T) {
 	dir := newProject(t)

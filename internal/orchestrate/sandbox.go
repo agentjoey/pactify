@@ -1,12 +1,16 @@
 package orchestrate
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/gitx"
+	"github.com/agentjoey/pactify/internal/projection"
 )
 
 // sandboxDirName is where the isolated orchestration worktree lives (under the
@@ -90,11 +94,61 @@ func readLedger(dir string) map[string][]byte {
 	return m
 }
 
-// writeLedger restores a snapshot taken by readLedger into dir/.pact.
+// writeLedger MERGES a sandbox ledger snapshot back into dir/.pact (回灌). The log
+// is an append-only event stream, so it is unioned by event_id (not overwritten)
+// — any event appended to main between seed and copy-back survives — and STATE.yml
+// is reprojected from the merged log (authoritative) rather than copied from the
+// sandbox's stale projection.
 func writeLedger(dir string, m map[string][]byte) {
-	for f, b := range m {
-		_ = os.WriteFile(filepath.Join(dir, ".pact", f), b, 0o644)
+	sandboxLog := m["log.jsonl"]
+	if sandboxLog == nil {
+		return
 	}
+	logPath := filepath.Join(dir, ".pact", "log.jsonl")
+	mainLog, _ := os.ReadFile(logPath)
+	if err := os.WriteFile(logPath, mergeEventLines(mainLog, sandboxLog), 0o644); err != nil {
+		return
+	}
+	if evs, err := event.ReadAll(logPath); err == nil {
+		_ = projection.WriteState(filepath.Join(dir, ".pact", "STATE.yml"), projection.Project(evs))
+	}
+}
+
+// mergeEventLines unions two append-only JSONL event logs by event_id, preserving
+// order: every line of base first, then lines of extra whose event_id is new.
+// Lines with no event_id are kept as-is (never deduped).
+func mergeEventLines(base, extra []byte) []byte {
+	seen := map[string]bool{}
+	var out [][]byte
+	add := func(b []byte) {
+		for _, line := range bytes.Split(b, []byte("\n")) {
+			if len(bytes.TrimSpace(line)) == 0 {
+				continue
+			}
+			if id := lineEventID(line); id != "" {
+				if seen[id] {
+					continue
+				}
+				seen[id] = true
+			}
+			out = append(out, line)
+		}
+	}
+	add(base)
+	add(extra)
+	if len(out) == 0 {
+		return nil
+	}
+	return append(bytes.Join(out, []byte("\n")), '\n')
+}
+
+// lineEventID extracts the event_id from a JSONL event line ("" if absent/unparsable).
+func lineEventID(line []byte) string {
+	var e struct {
+		EventID string `json:"event_id"`
+	}
+	_ = json.Unmarshal(line, &e)
+	return e.EventID
 }
 
 // syncPact copies the pact ledger from src/.pact into dst/.pact. On seed it also

@@ -131,7 +131,7 @@ func (opts Options) run(ctx context.Context) error {
 		}
 	}
 
-	h := History{Rework: map[string]int{}, Fails: map[string]int{}}
+	h := History{Rework: map[string]int{}, Fails: map[string]int{}, LastFail: map[string]string{}}
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -271,6 +271,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 				}
 			}
 		}
+		h.LastFail[act.Task] = "agent run failed (crash, timeout, or non-zero exit)"
 		h.Fails[act.Task]++
 		return nil
 	}
@@ -280,6 +281,11 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		return fmt.Errorf("orchestrate: reproject after owner: %w", err)
 	}
 	if _, t, ok := find(after, act.Feature, act.Task); !ok || t.Status != "awaiting_review" {
+		// The worker exited cleanly but the task never reached awaiting_review: it
+		// reported done yet recorded no checkpoint (its commit never landed on the
+		// branch / never reached the driver's ledger — the opencode delivery class).
+		// Name it so the escalation isn't a bare "failure limit".
+		h.LastFail[act.Task] = "worker finished but recorded no checkpoint — no commit landed on the feature branch (delivery did not reach the driver's ledger)"
 		h.Fails[act.Task]++
 	} else {
 		h.Fails[act.Task] = 0 // consecutive: a successful checkpoint clears the run
@@ -530,7 +536,11 @@ func tripped(task string, h History, th Thresholds) (string, bool) {
 		return "rework limit exceeded", true
 	}
 	if th.MaxFails > 0 && h.Fails[task] >= th.MaxFails {
-		return "failure limit exceeded", true
+		reason := "failure limit exceeded"
+		if c := h.LastFail[task]; c != "" {
+			reason += ": " + c
+		}
+		return reason, true
 	}
 	return "", false
 }

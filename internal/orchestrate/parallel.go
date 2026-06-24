@@ -254,7 +254,7 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 	o := opts
 	o.Dir = worktreeDir
 	o.Feature = feature
-	h := History{Rework: map[string]int{}, Fails: map[string]int{}}
+	h := History{Rework: map[string]int{}, Fails: map[string]int{}, LastFail: map[string]string{}}
 	// Per-feature status goes to the PRIMARY tree (opts.Dir) so the dashboard can
 	// aggregate all concurrent features; o.Dir is the isolated worktree.
 	now := func() string { return statusNow(opts.Now) }

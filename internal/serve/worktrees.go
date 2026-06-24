@@ -47,7 +47,31 @@ func gitWorktrees(repoPath string) []WorktreeDTO {
 		return []WorktreeDTO{{Path: repoPath, Primary: true}}
 	}
 	res[0].Primary = true
-	return res
+	return filterInternalWorktrees(res)
+}
+
+// filterInternalWorktrees drops pact's OWN run worktrees from the project list:
+// the sandbox/parallel trees live under .pact/orchestrate/ and a parked main sits
+// on a pact-*-park branch. These hold transient, mid-run-divergent ledger state
+// (the worker's live .pact vs the parked main's seed) — surfacing them as
+// selectable boards is what made "same task, two trees, inconsistent status". The
+// primary is always kept (a parked main is still the project's canonical view).
+func filterInternalWorktrees(ws []WorktreeDTO) []WorktreeDTO {
+	kept := ws[:0]
+	for i, w := range ws {
+		if i == 0 { // primary: always the project itself
+			kept = append(kept, w)
+			continue
+		}
+		if strings.Contains(w.Path, "/.pact/orchestrate/") {
+			continue
+		}
+		if w.Branch == "pact-sandbox-park" || w.Branch == "pact-parallel-park" {
+			continue
+		}
+		kept = append(kept, w)
+	}
+	return kept
 }
 
 // resolveWorktreePath returns the on-disk path of the worktree on branch `wt`

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -157,10 +158,23 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// Inject the seat id so the launched agent joins as the right seat, plus the
 	// task/project so the audit PreToolUse hook can attribute each tool call. The
 	// production execFn appends these onto os.Environ(); test execFns assert them.
+	//
+	// PACT_DIR pins the worker's pact (its checkpoint via the cwd-bound MCP server)
+	// to the DRIVER's worktree, regardless of where the agent's MCP server resolves
+	// its own cwd/project root. Absolute, so paths.Dir + pact.At honor it over cwd.
+	// Without this, an agent (notably opencode, whose MCP is project-scoped and
+	// resolves the root independently) checkpoints into a divergent .pact and its
+	// commit never reaches the driver — the worker "delivers" but the branch stays
+	// empty and the driver escalates "failure limit / no checkpoint evidence".
+	pactDir := filepath.Join(lc.RepoDir, ".pact")
+	if abs, aerr := filepath.Abs(pactDir); aerr == nil {
+		pactDir = abs
+	}
 	env := []string{
 		"PACT_AGENT_ID=" + lc.Seat,
 		"PACT_TASK_ID=" + lc.Task,
 		"PACT_PROJECT=" + lc.Project,
+		"PACT_DIR=" + pactDir,
 	}
 
 	// GLM: a claude-code seat on a glm-* model runs against the Z.ai endpoint with

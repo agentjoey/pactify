@@ -98,6 +98,11 @@ func TestRunnerStampsTaskAndProjectEnv(t *testing.T) {
 	if !hasEnv(cap.env, "PACT_AGENT_ID=dev") || !hasEnv(cap.env, "PACT_TASK_ID=t7") || !hasEnv(cap.env, "PACT_PROJECT=demo") {
 		t.Fatalf("env missing task/project stamp: %v", cap.env)
 	}
+	// PACT_DIR pins the worker's pact to the driver's worktree (absolute) so its
+	// checkpoint can't land in a divergent ledger.
+	if !hasEnv(cap.env, "PACT_DIR=/repo/.pact") {
+		t.Fatalf("env missing PACT_DIR pin to the worktree: %v", cap.env)
+	}
 }
 
 func TestGeminiEnv(t *testing.T) {

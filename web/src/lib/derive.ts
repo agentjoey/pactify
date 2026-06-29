@@ -147,11 +147,16 @@ export function fmtCost(usd: number): string {
   return `~$${usd.toFixed(2)}`;
 }
 
-// taskRuntimeMs measures the span from the task's first in_progress event to
-// its accept event (accepted) or now (everything else). Returns 0 when no
-// in_progress event has been recorded yet.
+// taskRuntimeMs measures the span from the task's first `assign` to its terminal
+// moment: accept (accepted), the last checkpoint (awaiting_review |
+// changes_requested), else now (anything ongoing). Returns 0 when the task has
+// no assign event yet. Mirrors the backend stats.durationSec exactly.
+//
+// NOTE: the pact protocol has NO "in_progress" event — in_progress is a projected
+// STATUS, not a logged event. The previous implementation keyed off a nonexistent
+// "in_progress" event, so the lookup always missed and every card rendered RUN 0s.
 export function taskRuntimeMs(task: Task, events: PactEvent[], nowMs: number = Date.now()): number {
-  const startEv = events.find((e) => e.task_id === task.id && e.event_type === "in_progress");
+  const startEv = events.find((e) => e.task_id === task.id && e.event_type === "assign");
   if (!startEv) return 0;
   const start = parseTs(startEv.ts);
   if (start === 0) return 0;
@@ -162,6 +167,10 @@ export function taskRuntimeMs(task: Task, events: PactEvent[], nowMs: number = D
       const t = parseTs(acceptEv.ts);
       if (t > 0) end = t;
     }
+  } else if (task.status === "awaiting_review" || task.status === "changes_requested") {
+    const checkpoints = events.filter((e) => e.task_id === task.id && e.event_type === "checkpoint");
+    const lastCp = checkpoints.length ? parseTs(checkpoints[checkpoints.length - 1].ts) : 0;
+    if (lastCp > 0) end = lastCp;
   }
   return Math.max(0, end - start);
 }

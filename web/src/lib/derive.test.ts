@@ -116,22 +116,30 @@ describe("stat helpers", () => {
   });
 
   describe("taskRuntimeMs", () => {
-    it("measures in_progress → now", () => {
+    it("measures assign → now for ongoing tasks", () => {
       const events: PactEvent[] = [
-        { event_id: "1", ts: iso(1_000_000), agent_id: "w", role: "worker", event_type: "in_progress", task_id: "T", feature: "F", payload: {} },
+        { event_id: "1", ts: iso(1_000_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: {} },
       ];
       expect(taskRuntimeMs(mkTask("in_progress"), events, 1_012_000)).toBe(12_000);
     });
 
-    it("measures in_progress → accept for accepted tasks", () => {
+    it("measures assign → accept for accepted tasks", () => {
       const events: PactEvent[] = [
-        { event_id: "1", ts: iso(1_000_000), agent_id: "w", role: "worker", event_type: "in_progress", task_id: "T", feature: "F", payload: {} },
+        { event_id: "1", ts: iso(1_000_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: {} },
         { event_id: "2", ts: iso(1_015_000), agent_id: "r", role: "reviewer", event_type: "accept", task_id: "T", feature: "F", payload: {} },
       ];
       expect(taskRuntimeMs(mkTask("accepted"), events, 9_999_000)).toBe(15_000);
     });
 
-    it("returns 0 when no in_progress event exists", () => {
+    it("measures assign → last checkpoint while awaiting_review", () => {
+      const events: PactEvent[] = [
+        { event_id: "1", ts: iso(1_000_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: {} },
+        { event_id: "2", ts: iso(1_020_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: {} },
+      ];
+      expect(taskRuntimeMs(mkTask("awaiting_review"), events, 9_999_000)).toBe(20_000);
+    });
+
+    it("returns 0 when no assign event exists", () => {
       expect(taskRuntimeMs(mkTask("assigned"), [], 1_000_000)).toBe(0);
     });
   });
@@ -139,7 +147,7 @@ describe("stat helpers", () => {
   describe("taskMetrics", () => {
     it("renders live RUN/TOK for in_progress tasks with session metadata", () => {
       const events: PactEvent[] = [
-        { event_id: "1", ts: iso(1_000_000), agent_id: "w", role: "worker", event_type: "in_progress", task_id: "T", feature: "F", payload: { session: { tokens: 12_400, iter: 2 } } },
+        { event_id: "1", ts: iso(1_000_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: { session: { tokens: 12_400, iter: 2 } } },
       ];
       const items = taskMetrics(mkTask("in_progress"), events, 1_182_000);
       expect(items).toEqual([
@@ -163,9 +171,9 @@ describe("stat helpers", () => {
 
     it("falls back to — and checkpoint count when session metadata is absent", () => {
       const events: PactEvent[] = [
-        { event_id: "1", ts: iso(1_000_000), agent_id: "w", role: "worker", event_type: "in_progress", task_id: "T", feature: "F", payload: {} },
-        { event_id: "2", ts: iso(1_010_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: {} },
-        { event_id: "3", ts: iso(1_020_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: {} },
+        { event_id: "0", ts: iso(990_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: {} },
+        { event_id: "1", ts: iso(1_000_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: {} },
+        { event_id: "2", ts: iso(1_020_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: {} },
       ];
       const items = taskMetrics(mkTask("awaiting_review"), events, 1_030_000);
       expect(items).toEqual([

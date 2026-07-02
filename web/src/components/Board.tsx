@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { State, BoardTask } from "../lib/types";
 import { designBoard, taskMetrics, taskTokens, fmtTokens, type DesignColumn } from "../lib/derive";
 import type { PactEvent } from "../lib/types";
@@ -8,6 +8,8 @@ import { statusColor } from "./ui/StatusPill";
 import { BoardSkeleton } from "./Skeleton";
 import { casteForRoles, padGradient } from "../lib/ants";
 import { postVerb } from "../lib/api";
+import { humanizeError } from "../lib/protocolErrors";
+import { Alert } from "./ui/Alert";
 
 // The five dark-handoff columns, left→right. `review` merges awaiting_review +
 // changes_requested; `shipped` collects delivered features (see derive.designBoard).
@@ -58,6 +60,20 @@ export function Board({
   const [expandedCols, setExpandedCols] = useState<Set<DesignColumn>>(new Set());
   const [featureFilter, setFeatureFilter] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+
+  // A successful verb keeps `pending` set until the refreshed state moves the
+  // task out of awaiting_review — clearing eagerly would re-enable Accept in
+  // the SSE round-trip window (double submit). This effect releases it once
+  // the card has actually left review, so a task that re-enters review later
+  // (changes → re-review) gets a live button again.
+  useEffect(() => {
+    if (!pending) return;
+    const stillAwaiting = state.features.some((f) =>
+      f.tasks.some((t) => t.id === pending && t.status === "awaiting_review"),
+    );
+    if (!stillAwaiting) setPending(null);
+  }, [state, pending]);
 
   // Per-feature rollup for the context-header filter chips (accepted/total +
   // token volume). Memoized so it doesn't recompute on every hover/selection.
@@ -90,11 +106,13 @@ export function Board({
 
   async function verb(taskId: string, v: "accept" | "changes", reason?: string) {
     if (!project) return;
-    setPending(taskId + v);
+    setPending(taskId);
+    setErr("");
     try {
       await postVerb(project, v, reason ? { task: taskId, reason } : { task: taskId });
       onChanged?.();
-    } finally {
+    } catch (e) {
+      setErr(humanizeError(e instanceof Error ? e.message : String(e)));
       setPending(null);
     }
   }
@@ -108,7 +126,7 @@ export function Board({
           <button
             type="button"
             data-testid="card-accept"
-            disabled={pending === bt.task.id + "accept"}
+            disabled={pending === bt.task.id}
             onClick={(e) => {
               e.stopPropagation();
               verb(bt.task.id, "accept");
@@ -223,6 +241,16 @@ export function Board({
           </button>
         </div>
       </div>
+
+      {/* Inline-action failures persist here (same Alert pattern as RightRail);
+          a toast would vanish before the reviewer reads why the accept bounced. */}
+      {err && (
+        <div data-testid="board-verb-error" className="px-[18px] pt-3">
+          <Alert tone="danger" title="Action failed" onRetry={() => setErr("")} retryLabel="Dismiss">
+            {err}
+          </Alert>
+        </div>
+      )}
 
       {/* Columns — full-width 5-col grid (no fixed left dock) */}
       <div

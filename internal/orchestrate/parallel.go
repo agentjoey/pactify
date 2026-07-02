@@ -93,6 +93,42 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 	var mergeMu sync.Mutex
 	var dispatchErr error
 
+	// settle applies one feature result's terminal handling. Shared by the main
+	// loop and the drain loop so a sibling's dispatchErr can't change the outcome
+	// for a feature that finished its own work: mergeable results still merge (or
+	// escalate on a failed gate), escalation records written by driveFeature stay,
+	// and only then is the worktree discarded. The first error wins dispatchErr.
+	settle := func(r result) {
+		switch {
+		case r.err != nil:
+			_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
+			if dispatchErr == nil {
+				dispatchErr = r.err
+			}
+		case r.mergeable:
+			// Serialize merges: only one worktree holds base at a time.
+			mergeMu.Lock()
+			merr := opts.mergeFromWorktree(ctx, r.worktree, r.feature)
+			mergeMu.Unlock()
+			_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
+			if merr != nil {
+				if dispatchErr == nil {
+					dispatchErr = merr
+				}
+			} else {
+				// Mark the feature shipped in the aggregated view.
+				_ = writeFeatureStatus(opts.Dir, r.feature, Status{
+					Feature: r.feature, Action: "done", Phase: "done", Done: true,
+					UpdatedAt: statusNow(opts.Now),
+				})
+			}
+		default:
+			// Escalated (record already written by driveFeature) or nothing left to
+			// do — the worktree is all that remains.
+			_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
+		}
+	}
+
 	for {
 		if err := ctx.Err(); err != nil {
 			dispatchErr = err
@@ -136,28 +172,7 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 		delete(inflight, r.feature)
 		done[r.feature] = true // terminal unless we re-open it below
 
-		switch {
-		case r.err != nil:
-			_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
-			dispatchErr = r.err
-		case r.escalated:
-			_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
-		case r.mergeable:
-			// Serialize merges: only one worktree holds base at a time.
-			mergeMu.Lock()
-			merr := opts.mergeFromWorktree(ctx, r.worktree, r.feature)
-			mergeMu.Unlock()
-			_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
-			if merr != nil {
-				dispatchErr = merr
-			} else {
-				// Mark the feature shipped in the aggregated view.
-				_ = writeFeatureStatus(opts.Dir, r.feature, Status{
-					Feature: r.feature, Action: "done", Phase: "done", Done: true,
-					UpdatedAt: statusNow(opts.Now),
-				})
-			}
-		}
+		settle(r)
 		if dispatchErr != nil {
 			break
 		}
@@ -169,10 +184,13 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 	}
 
 	// Drain any still-running goroutines so we don't leak them or their worktrees.
+	// Each drained result gets the SAME terminal handling as on the dispatch path:
+	// a sibling's error must not silently discard a feature that reached mergeable
+	// (all tasks accepted) or drop its escalation.
 	for len(inflight) > 0 {
 		r := <-results
 		delete(inflight, r.feature)
-		_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
+		settle(r)
 	}
 	return dispatchErr
 }

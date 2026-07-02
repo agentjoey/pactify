@@ -12,8 +12,8 @@ import (
 // sessionList is the table an opencode `session list` returns in these tests.
 const sessionList = "Session ID  Title     Updated\n" +
 	"────────────────────────────\n" +
-	"ses_a1  pact:dev  11:00\n" +
-	"ses_b2  pact:rev  10:00\n" +
+	"ses_a1  [pact:dev]  11:00\n" +
+	"ses_b2  [pact:rev]  10:00\n" +
 	"ses_c3  unrelated  09:00\n"
 
 // fakeSessionRun returns the list on `session list` and records delete ids.

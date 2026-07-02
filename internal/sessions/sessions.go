@@ -36,7 +36,7 @@ type Spec struct {
 
 // specs holds the per-kind session commands, filled from real `--help` + live
 // probing (2026-06-15, gemini/kimi re-probed 2026-06-17).
-//   - opencode: list + delete-by-id, AND sessions carry the `pact:<seat>` title the
+//   - opencode: list + delete-by-id, AND sessions carry the `[pact:<seat>]` title the
 //     runner stamps → the only kind with verified TARGETED cleanup (CleanupByTitle).
 //     It's also the one most worth cleaning (persistent daemon, heavy session DB).
 //   - gemini-cli: `--list-sessions` + `--delete-session <INDEX>` (no stable id, no
@@ -62,8 +62,10 @@ var geminiIndexRe = regexp.MustCompile(`(?m)^\s*(\d+)\.`)
 // SessionTag is the per-seat title an orchestrated agent stamps on its session so
 // the driver can find and delete exactly its own sessions later. Kept here as the
 // single source of truth shared by the runner (tags at launch) and CleanupByTitle
-// (matches at cleanup).
-func SessionTag(seat string) string { return "pact:" + seat }
+// (matches at cleanup). The brackets make the tag self-delimiting: seat ids are
+// free-form, so an open-ended "pact:w1" would substring-match seat w10's session
+// and cleanup would delete another seat's possibly-live session.
+func SessionTag(seat string) string { return "[pact:" + seat + "]" }
 
 // Manager prunes/lists sessions via an injected Runner. Dir is the working
 // directory the session CLI runs in (the agent's repo/worktree); empty inherits

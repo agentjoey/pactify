@@ -55,8 +55,10 @@ func (s *Server) RemoveProject(name string) error {
 }
 
 // RenameProject changes a live project's registry name in the in-memory map and
-// display order, preserving its path (and therefore its running fsnotify watch).
-// Errors if oldName is unknown or newName is already taken.
+// display order, and rekeys the watch bookkeeping (watchPaths/offsets) to the
+// new name — SSE subscribers subscribe by name, so a stale key would keep
+// broadcasting under the old name and silently freeze the project's live
+// stream. Errors if oldName is unknown or newName is already taken.
 func (s *Server) RenameProject(oldName, newName string) error {
 	s.pmu.Lock()
 	defer s.pmu.Unlock()
@@ -70,6 +72,13 @@ func (s *Server) RenameProject(oldName, newName string) error {
 	p.Name = newName
 	delete(s.projects, oldName)
 	s.projects[newName] = p
+	// watchProjectLocked reseeds the offset to the current file size. pmu does
+	// NOT stop an external process appending to log.jsonl in this window, so a
+	// line landing mid-rename is skipped for live SSE delivery — acceptable: the
+	// client refetches full state on reconnect/next event, and state reads fold
+	// the whole log regardless.
+	s.unwatchProjectLocked(oldName, p.Path)
+	s.watchProjectLocked(newName, p.Path)
 	for i, id := range s.order {
 		if id == oldName {
 			s.order[i] = newName

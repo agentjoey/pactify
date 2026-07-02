@@ -322,6 +322,17 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		// The worker exited cleanly but the task never reached awaiting_review: it
 		// reported done yet recorded no checkpoint (its commit never landed on the
 		// branch / never reached the driver's ledger — the opencode delivery class).
+		// Same rescue as the crash path above: if the task's verify command passes,
+		// the work IS done and only the delivery was lost — checkpoint on the
+		// worker's behalf instead of burning failures toward escalation.
+		if opts.classifyAndCheckpoint(ctx, act.Task, task) {
+			if rescued, err := pact.At(opts.Dir).StateProjection(); err == nil {
+				if _, t, ok := find(rescued, act.Feature, act.Task); ok && t.Status == "awaiting_review" {
+					h.Fails[act.Task] = 0
+					return nil
+				}
+			}
+		}
 		// Name it so the escalation isn't a bare "failure limit".
 		h.LastFail[act.Task] = "worker finished but recorded no checkpoint — no commit landed on the feature branch (delivery did not reach the driver's ledger)"
 		h.Fails[act.Task]++

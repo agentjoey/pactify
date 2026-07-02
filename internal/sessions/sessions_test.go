@@ -357,9 +357,9 @@ func TestCleanupByTitle(t *testing.T) {
 	t.Run("opencode deletes only rows matching the tag", func(t *testing.T) {
 		list := "Session ID   Title         Updated\n" +
 			"────────────────────────────────\n" +
-			"ses_aaa111  pact:dev      11:00\n" +
+			"ses_aaa111  [pact:dev]    11:00\n" +
 			"ses_bbb222  someone-else  10:00\n" +
-			"ses_ccc333  pact:dev      09:00\n"
+			"ses_ccc333  [pact:dev]    09:00\n"
 		fake := &fakeRun{out: list}
 		m := Manager{Run: fake.Run}
 		deleted, skipped, err := m.CleanupByTitle("opencode", SessionTag("dev"))

@@ -174,7 +174,7 @@ func TestGLMEnv(t *testing.T) {
 func TestTagOpencodeSession(t *testing.T) {
 	// opencode run args get a per-seat --title inserted right after "run".
 	got := tagOpencodeSession("opencode", "dev", []string{"run", "-m", "deepseek/deepseek-v4-pro", "do the thing"})
-	want := []string{"run", "--title", "pact:dev", "-m", "deepseek/deepseek-v4-pro", "do the thing"}
+	want := []string{"run", "--title", "[pact:dev]", "-m", "deepseek/deepseek-v4-pro", "do the thing"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("opencode tag = %v, want %v", got, want)
 	}

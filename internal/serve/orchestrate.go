@@ -9,11 +9,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/finish"
+	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/pact"
 )
 
@@ -173,6 +175,34 @@ func seatKindsFromInit(dir string) map[string]string {
 	return nil
 }
 
+// orchRunning tracks project dirs with a driver spawned by this process that
+// has not exited yet. The status.json check alone cannot serialize rapid POSTs:
+// the child takes seconds before its first status write (and on a first run the
+// file doesn't exist at all), so two quick clicks would both pass the file check
+// and spawn two drivers against the same ledger/branches. Keyed by dir (not a
+// Server field) so any two spawners into the same project exclude each other.
+var orchRunning = struct {
+	sync.Mutex
+	dirs map[string]bool
+}{dirs: map[string]bool{}}
+
+// orchMarkRunning claims dir for a new driver; false means one is already live.
+func orchMarkRunning(dir string) bool {
+	orchRunning.Lock()
+	defer orchRunning.Unlock()
+	if orchRunning.dirs[dir] {
+		return false
+	}
+	orchRunning.dirs[dir] = true
+	return true
+}
+
+func orchClearRunning(dir string) {
+	orchRunning.Lock()
+	delete(orchRunning.dirs, dir)
+	orchRunning.Unlock()
+}
+
 func (s *Server) orchestrateRunning(dir string) bool {
 	b, err := os.ReadFile(orchestrateStatusPath(dir))
 	if err != nil {
@@ -271,7 +301,54 @@ func (s *Server) defaultExecOrchestrate(dir string, args, env []string) error {
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), env...)
-	return cmd.Start()
+	logf := driverLogFile(dir)
+	if logf != nil {
+		cmd.Stdout = logf
+		cmd.Stderr = logf
+	}
+	if err := cmd.Start(); err != nil {
+		if logf != nil {
+			logf.Close()
+		}
+		return err
+	}
+	// Reap the child: serve is a long-lived daemon, so an un-Waited driver
+	// lingers as a zombie. On failure leave a trace — a driver that dies before
+	// its first status.json write otherwise reports nothing anywhere.
+	go func() {
+		werr := cmd.Wait()
+		if logf != nil {
+			logf.Close()
+		}
+		orchClearRunning(dir)
+		if werr != nil {
+			writeDriverError(dir, werr)
+		}
+	}()
+	return nil
+}
+
+// driverLogFile opens .pact/orchestrate/driver.log (truncated per run) for the
+// child's stdout/stderr; nil means the output is discarded as before.
+func driverLogFile(dir string) *os.File {
+	p := filepath.Join(dir, ".pact", "orchestrate", "driver.log")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return nil
+	}
+	f, err := os.Create(p)
+	if err != nil {
+		return nil
+	}
+	return f
+}
+
+func writeDriverError(dir string, err error) {
+	p := filepath.Join(dir, ".pact", "orchestrate", "driver-error.log")
+	if os.MkdirAll(filepath.Dir(p), 0o755) != nil {
+		return
+	}
+	msg := time.Now().UTC().Format(time.RFC3339) + " orchestrate driver exited: " + err.Error() + " (output in driver.log)\n"
+	_ = os.WriteFile(p, []byte(msg), 0o644)
 }
 
 func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Request, resume bool) {
@@ -286,17 +363,24 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if s.orchestrateRunning(dir) {
-		writeErr(w, http.StatusConflict, "orchestrate is already running")
-		return
-	}
-
 	var req orchestrateRunReq
 	if r.Body != nil && r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeErr(w, http.StatusBadRequest, "invalid JSON body")
 			return
 		}
+	}
+
+	// Claim the in-memory marker BEFORE the file check: it is the only guard
+	// with no window between check and spawn (see orchRunning).
+	if !orchMarkRunning(dir) {
+		writeErr(w, http.StatusConflict, "orchestrate is already running")
+		return
+	}
+	if s.orchestrateRunning(dir) {
+		orchClearRunning(dir)
+		writeErr(w, http.StatusConflict, "orchestrate is already running")
+		return
 	}
 
 	km := s.resolveSeatKinds(dir)
@@ -320,12 +404,19 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 	env := []string{"PACT_AGENT_ID=" + s.seat}
 
 	execFn := s.execOrchestrate
-	if execFn == nil {
+	injected := execFn != nil
+	if !injected {
 		execFn = s.defaultExecOrchestrate
 	}
 	if err := execFn(dir, args, env); err != nil {
+		orchClearRunning(dir)
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	// The default exec clears the marker from its reaper when the child exits;
+	// an injected fn (tests) has no child to reap, so clear once it returns.
+	if injected {
+		orchClearRunning(dir)
 	}
 	writeJSON(w, http.StatusAccepted, map[string]string{
 		"status_url": "/api/projects/" + id + "/orchestrate/status",
@@ -384,7 +475,7 @@ func (s *Server) handleOrchestrateShip(w http.ResponseWriter, r *http.Request) {
 		req.Remote = "origin"
 	}
 	if req.Branch == "" {
-		req.Branch = "main"
+		req.Branch = shipBaseBranch(dir)
 	}
 
 	if req.PR {
@@ -403,6 +494,38 @@ func (s *Server) handleOrchestrateShip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"pushed": true})
+}
+
+// shipBaseBranch resolves the project's integration base for a ship with no
+// explicit branch: ledger rebaseline overrides init base_branch (the same
+// precedence internal/pact applies), then origin/HEAD, then "main" as last
+// resort. The dashboard never sends a branch, so a hardcoded "main" default
+// shipped/PR'd against the wrong base on projects whose base differs.
+func shipBaseBranch(dir string) string {
+	if evs, err := event.ReadAll(logPath(dir)); err == nil {
+		base := ""
+		for _, e := range evs {
+			switch e.EventType {
+			case "init":
+				if base == "" {
+					if b, ok := e.Payload["base_branch"].(string); ok {
+						base = b
+					}
+				}
+			case "rebaseline":
+				if b, ok := e.Payload["base_branch"].(string); ok && b != "" {
+					base = b
+				}
+			}
+		}
+		if base != "" {
+			return base
+		}
+	}
+	if def := gitx.DefaultBranch(dir); def != "" {
+		return def
+	}
+	return "main"
 }
 
 func defaultGitDiff(dir string, staged bool) (string, error) {

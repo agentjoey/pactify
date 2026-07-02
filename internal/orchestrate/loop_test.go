@@ -322,13 +322,15 @@ func TestLoopReworkThenShips(t *testing.T) {
 
 // A worker that exits cleanly but never checkpoints (reports done yet delivers
 // nothing — the opencode class) must escalate with a SPECIFIC cause, not a bare
-// "failure limit exceeded".
+// "failure limit exceeded". Verify must FAIL here: a passing verify now means
+// the work is done and the driver rescues it with a checkpoint instead (see
+// TestCleanExitNoCheckpointRescuedByVerify).
 func TestEscalationNamesNoCheckpointCause(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "true")
+	s1 := writeSpec(t, dir, "T1", "false")
 	assign(t, dir, "T1", "F", "feat/x", s1)
 
-	opts := baseOpts(dir, noCheckpointRunner{}, &okExec{}, &recNotify{})
+	opts := baseOpts(dir, noCheckpointRunner{}, &failExec{}, &recNotify{})
 	opts.Th.MaxFails = 2
 	notify := opts.Notify.(*recNotify)
 	if err := Run(context.Background(), opts); err != nil {

@@ -443,68 +443,6 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-/* Task connect ports (Canvas P0 §2) — Dify / Easy-Connect bar handles. The
-   handle is a full-width, 16px-tall TRANSPARENT hit strip glued to the card's
-   top (target) / bottom (source) edge; a small central `.port-mark` is the only
-   visible affordance (default half-shown so the port is DISCOVERABLE without
-   hover, unlike the old opacity:0 dot). Hover the strip → mark enlarges + lights.
-   Connecting state uses React Flow v12's REAL handle classes (`connectingfrom` /
-   `valid`); the canvas-level `.connecting` class is added by <ConnectingFlag>
-   (v12 applies no connection-state class at the root/pane). */
-.react-flow__handle.task-port {
-  width: 100%;
-  height: 16px;
-  left: 0;
-  transform: none;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  min-width: 0;
-  min-height: 0;
-}
-/* Compound `.react-flow__handle.task-port-*` (0,2,0) so these always beat RF's
-   own `.react-flow__handle-top/bottom` (0,1,0) regardless of stylesheet load
-   order — RF's style.css may load after ours. */
-.react-flow__handle.task-port-in { top: -8px; }
-.react-flow__handle.task-port-out { bottom: -8px; }
-.task-port .port-mark {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 14px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-role-design);
-  opacity: 0.45;
-  transition: opacity 0.12s var(--motion-ease), transform 0.12s var(--motion-ease);
-}
-.task-port:hover .port-mark {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1.3);
-}
-/* While a connection is dragged, light up every node's INPUT port so the valid
-   drop targets are obvious (the canvas-level class comes from ConnectingFlag). */
-.connecting .task-port-in .port-mark { opacity: 0.9; }
-/* v12 real handle classes: the source the drag started from, and a hovered
-   valid target — both get the dev role color. */
-.react-flow__handle.task-port.connectingfrom .port-mark,
-.react-flow__handle.task-port.valid .port-mark {
-  opacity: 1;
-  background: var(--color-role-dev);
-}
-/* Observer / replay surfaces must NOT show the port marks (they aren't
-   interactive there — a visible mark would falsely invite a connection). The
-   stage gets the `author` class only when author && !replaying. */
-.canvas-stage:not(.author) .port-mark { display: none; }
-.task-node.connect-target {
-  border-radius: 12px;
-  box-shadow: 0 0 0 2px var(--color-role-dev), 0 0 14px color-mix(in srgb, var(--color-role-dev) 45%, transparent);
-}
-@media (prefers-reduced-motion: reduce) {
-  .task-port .port-mark { transition: none; }
-}
-
 /* Context menu (T8) — board2-canvas-v2 `.ctx`. Frosted, Kbd hints. */
 .canvas-ctx {
   position: absolute;

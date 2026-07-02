@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/projection"
@@ -75,6 +76,67 @@ func tailLog(lp string, n int) []string {
 // ProjectState reads a project's log and folds the whole log into a JSON DTO.
 func ProjectState(projectRoot string) (StateDTO, error) {
 	return ProjectStateAt(projectRoot, -1)
+}
+
+// stateMemo is one project's cached full-fold read: the folded DTO plus the
+// parsed events it was folded from, stamped with the log file identity
+// (path, size, mtime) it was read at.
+type stateMemo struct {
+	logPath string
+	size    int64
+	modTime time.Time
+	dto     StateDTO
+	evs     []event.Event
+}
+
+// projectStateFull returns the full-fold state DTO plus the parsed events it
+// was folded from, memoized per project id. The memo covers ONLY this case —
+// prefix folds (`at`) and worktree reads (`wt`) go through ProjectStateAt. A
+// hit requires the log's path, size and mtime to all match the cached stamp;
+// any mismatch (or a missing log) refolds from disk, so external writers that
+// bypass fsnotify still surface on the next read. Callers must treat both
+// return values as read-only: they are shared across requests.
+func (s *Server) projectStateFull(id, projectRoot string) (StateDTO, []event.Event, error) {
+	lp := logPath(projectRoot)
+	fi, err := os.Stat(lp)
+	if err != nil {
+		// No stat, no stamp: read uncached (ReadAll folds a missing file to the
+		// empty state, matching ProjectState).
+		evs, rerr := event.ReadAll(lp)
+		if rerr != nil {
+			return StateDTO{}, nil, rerr
+		}
+		return toDTO(projection.Project(evs)), evs, nil
+	}
+	s.memoMu.Lock()
+	m, ok := s.stateMemos[id]
+	s.memoMu.Unlock()
+	if ok && m.logPath == lp && m.size == fi.Size() && m.modTime.Equal(fi.ModTime()) {
+		return m.dto, m.evs, nil
+	}
+	evs, err := event.ReadAll(lp)
+	if err != nil {
+		return StateDTO{}, nil, err
+	}
+	dto := toDTO(projection.Project(evs))
+	// The stamp was taken before the read: if an append landed in between, the
+	// cached content is NEWER than the stamp, so the next stat mismatches and
+	// refolds — never serves stale.
+	s.memoMu.Lock()
+	if s.stateMemos == nil {
+		s.stateMemos = map[string]stateMemo{}
+	}
+	s.stateMemos[id] = stateMemo{logPath: lp, size: fi.Size(), modTime: fi.ModTime(), dto: dto, evs: evs}
+	s.memoMu.Unlock()
+	return dto, evs, nil
+}
+
+// dropStateMemo forgets a project's cached full-fold state so a removed or
+// renamed id doesn't linger in the memo.
+func (s *Server) dropStateMemo(id string) {
+	s.memoMu.Lock()
+	delete(s.stateMemos, id)
+	s.memoMu.Unlock()
 }
 
 // ProjectStateAt reads a project's log and folds the first `at` events into a

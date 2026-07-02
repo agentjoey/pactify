@@ -1,7 +1,21 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State } from "../lib/types";
 import { Board } from "./Board";
+import { getStats } from "../lib/api";
+
+// Board pulls per-task tokens from GET /stats (the event log never carries
+// token counts); mock the api module so tests control the response.
+vi.mock("../lib/api", () => ({
+  getStats: vi.fn(),
+  postVerb: vi.fn(),
+}));
+const getStatsMock = vi.mocked(getStats);
+
+beforeEach(() => {
+  getStatsMock.mockReset();
+  getStatsMock.mockResolvedValue({ tasks: [], agents: [] });
+});
 
 const fixture: State = {
   project: "demo",
@@ -102,5 +116,38 @@ describe("Board — accepted column recent + fold", () => {
     render(<Board state={few} selected="" onSelect={() => {}} />);
     expect(screen.getAllByText("only").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("accepted-more")).toBeNull();
+  });
+});
+
+describe("Board — stats-fed TOK", () => {
+  it("does not fetch stats without a project", () => {
+    render(<Board state={fixture} selected="" onSelect={() => {}} />);
+    expect(getStatsMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches /stats for the project and renders per-task TOK + chip rollup", async () => {
+    getStatsMock.mockResolvedValue({
+      tasks: [
+        { task_id: "T1", feature: "F1", owner: "bob", reviewer: "alice", status: "awaiting_review", duration_sec: 30, added: 0, deleted: 0, tokens: 12_400 },
+        { task_id: "T2", feature: "F1", owner: "bob", reviewer: "alice", status: "in_progress", duration_sec: 5, added: 0, deleted: 0, tokens: 0 },
+      ],
+      agents: [],
+    });
+    render(<Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" />);
+    // T1's card TOK and the F1 feature chip rollup both show the stats value
+    // once the debounced fetch lands.
+    const hits = await screen.findAllByText("12.4k");
+    expect(hits.length).toBeGreaterThanOrEqual(2);
+    expect(getStatsMock).toHaveBeenCalledWith("demo");
+    // T2 has tokens=0 (unknown) → its strip falls back to "—".
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  it("keeps rendering with the — fallback when the stats fetch fails", async () => {
+    getStatsMock.mockRejectedValue(new Error("boom"));
+    render(<Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" />);
+    // Both cards' TOK stay at the no-data fallback; the board itself renders.
+    const dashes = await screen.findAllByText("—");
+    expect(dashes.length).toBeGreaterThanOrEqual(2);
   });
 });

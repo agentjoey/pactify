@@ -129,6 +129,63 @@ describe("App", () => {
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
   });
 
+  it("shows the fetch-stale indicator after 3 consecutive refresh failures and clears it on success", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    let failState = true;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
+      if (url === "/api/registry" || url === "/api/agents") return { ok: true, json: async () => [] };
+      if (url === "/api/projects/demo/state" && failState) return { ok: false, status: 500, json: async () => ({}) };
+      return { ok: true, json: async () => ({ project: "demo", agents: [], features: [], awaiting_count: 0 }) };
+    });
+
+    // Each pact event triggers one state re-fetch; unique ids pass the dedupe.
+    const fire = (id: string) => act(async () => {
+      lastES?.pactListeners.forEach((fn) =>
+        fn({ data: JSON.stringify({ event_id: id, ts: "t", agent_id: "a", role: "worker", event_type: "join", task_id: "", feature: "", payload: {} }) } as MessageEvent)
+      );
+    });
+
+    await fire("f1");
+    await fire("f2");
+    expect(screen.queryByTestId("fetch-stale")).toBeNull(); // below threshold
+    await fire("f3");
+    await waitFor(() => expect(screen.getByTestId("fetch-stale")).toBeInTheDocument());
+
+    failState = false;
+    await fire("f4");
+    await waitFor(() => expect(screen.queryByTestId("fetch-stale")).toBeNull());
+  });
+
+  it("non-primary worktree view fetches events from the REST log endpoint", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
+      if (url === "/api/registry" || url === "/api/agents") return { ok: true, json: async () => [] };
+      if (url.includes("/worktrees")) return { ok: true, json: async () => [{ branch: "main", path: "/x", primary: true }, { branch: "feat-x", path: "/x-fx", primary: false }] };
+      if (url.includes("/events/log")) return { ok: true, json: async () => [{ event_id: "w1", ts: "t", agent_id: "a", role: "worker", event_type: "assign", task_id: "t1", feature: "f", payload: {} }] };
+      if (url.includes("/orchestrate/status")) return { ok: true, json: async () => ({ present: false }) };
+      return { ok: true, json: async () => ({ project: "demo", agents: [], features: [], awaiting_count: 0 }) };
+    }));
+
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+
+    // Pick the non-primary worktree from the header project menu.
+    await act(async () => { fireEvent.click(screen.getByTestId("project-menu-trigger")); });
+    await waitFor(() => expect(screen.getByTestId("worktree-demo-feat-x")).toBeInTheDocument());
+    await act(async () => { fireEvent.click(screen.getByTestId("worktree-demo-feat-x")); });
+
+    const fetchMock = fetch as ReturnType<typeof vi.fn>;
+    await waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([u]) => u as string);
+      expect(urls.some((u) => u.includes("/api/projects/demo/events/log?wt=feat-x"))).toBe(true);
+      expect(urls.some((u) => u.includes("/api/projects/demo/state?wt=feat-x"))).toBe(true);
+    });
+  });
+
   it("no longer renders the replay scrubber", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());

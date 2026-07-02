@@ -29,6 +29,26 @@ func GitPath(dir, rel string) (string, error) {
 	return filepath.Join(dir, out), nil
 }
 
+// GitCommonPath resolves a path inside the SHARED git common dir — .git of the
+// main tree even when dir is a linked worktree (where GitPath resolves into the
+// per-worktree gitdir). This is the handle for repo-wide resources like the
+// base-integration lock: every worktree must contend on the same file.
+func GitCommonPath(dir, rel string) (string, error) {
+	out, err := run(dir, "rev-parse", "--path-format=absolute", "--git-common-dir")
+	if err != nil {
+		// Older git (<2.31) lacks --path-format; the bare query may print a
+		// dir-relative path, rooted at dir below (same handling as GitPath).
+		out, err = run(dir, "rev-parse", "--git-common-dir")
+		if err != nil {
+			return "", fmt.Errorf("git rev-parse --git-common-dir: %w (%s)", err, out)
+		}
+	}
+	if !filepath.IsAbs(out) {
+		out = filepath.Join(dir, out)
+	}
+	return filepath.Join(out, rel), nil
+}
+
 // ValidBranchName reports whether name is a well-formed git branch name (per
 // `git check-ref-format --branch`). Two shapes are rejected up front, before any
 // shell-out: a dash-prefixed name, because check-ref-format takes the name as a

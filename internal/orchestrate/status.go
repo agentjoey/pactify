@@ -112,6 +112,86 @@ func writeFeatureStatus(dir, feature string, s Status) error {
 // parallel run so a fresh run doesn't show a previous run's features.
 func clearParallelStatus(dir string) { _ = os.RemoveAll(parallelStatusDir(dir)) }
 
+// --- failure-history persistence ----------------------------------------------
+
+// persistedHistory is the crash-safe slice of History. Fails/LastFail are
+// process-internal (an agent crash leaves no ledger event), so a driver restart
+// would otherwise hand a persistently-failing task a fresh MaxFails budget
+// forever and tripped() would never fire across restarts. Rework is NOT stored:
+// it is reconstructed from the ledger's changes_requested events (seedRework).
+type persistedHistory struct {
+	Fails    map[string]int    `json:"fails"`
+	LastFail map[string]string `json:"last_fail"`
+}
+
+// historyScopeAll names the history file for an unfiltered serial run (one
+// History spans every feature). Scoped runs use the feature id.
+const historyScopeAll = "all"
+
+// historyScope maps a serial run's feature filter to its history scope.
+func historyScope(feature string) string {
+	if feature == "" {
+		return historyScopeAll
+	}
+	return feature
+}
+
+// historyPath is <dir>/.pact/orchestrate/history/<scope>.json. The scope is
+// reduced to a bare filename so a stray id can't escape the directory (same
+// guard as writeFeatureStatus). Kept beside status.json in the runtime dir so
+// it survives a sandbox/parallel worktree's teardown.
+func historyPath(dir, scope string) string {
+	name := filepath.Base(scope)
+	if name == "" || name == "." || name == ".." {
+		name = historyScopeAll
+	}
+	return filepath.Join(dir, ".pact", "orchestrate", "history", name+".json")
+}
+
+// writeHistory persists h's process-internal counters for scope, atomically
+// (temp + rename) like writeStatus. Callers ignore the error: persistence is a
+// crash guard, never a loop blocker.
+func writeHistory(dir, scope string, h History) error {
+	final := historyPath(dir, scope)
+	if err := os.MkdirAll(filepath.Dir(final), 0o755); err != nil {
+		return err
+	}
+	data, err := json.Marshal(persistedHistory{Fails: h.Fails, LastFail: h.LastFail})
+	if err != nil {
+		return err
+	}
+	tmp := final + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, final)
+}
+
+// loadHistory merges scope's persisted failure counters into h, so a restarted
+// driver resumes the previous run's threshold budget instead of resetting it.
+// A missing or unreadable file is a clean start.
+func loadHistory(dir, scope string, h *History) {
+	b, err := os.ReadFile(historyPath(dir, scope))
+	if err != nil {
+		return
+	}
+	var p persistedHistory
+	if json.Unmarshal(b, &p) != nil {
+		return
+	}
+	for task, n := range p.Fails {
+		h.Fails[task] = n
+	}
+	for task, cause := range p.LastFail {
+		h.LastFail[task] = cause
+	}
+}
+
+// clearHistory removes scope's persisted failure counters — called when the
+// run reaches its terminal done state, so a completed run cannot poison the
+// next one's thresholds.
+func clearHistory(dir, scope string) { _ = os.Remove(historyPath(dir, scope)) }
+
 // writeStatus atomically writes s to <dir>/.pact/orchestrate/status.json
 // (temp file + rename), creating the orchestrate dir if absent.
 func writeStatus(dir string, s Status) error {

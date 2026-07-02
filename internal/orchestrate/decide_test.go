@@ -350,10 +350,12 @@ func TestNextAction_DepsScopedToOwnFeature(t *testing.T) {
 		},
 	}
 	act := nextAction(st, emptyHistory(), defaultTh())
-	// f1 has all tasks accepted → mergeable. f2.t2 is blocked (dep "shared" not in
-	// f2). So the only available action is Merge f1.
-	if act.Kind != ActMerge || act.Feature != "f1" {
-		t.Fatalf("got kind=%v feature=%q task=%q, want Merge f1 (t2 dep is cross-feature → blocked)", act.Kind, act.Feature, act.Task)
+	// Deps are validated same-feature at assign, so a dep id absent from t2's own
+	// feature was cancelled — it can never reach accepted, and blocking t2 forever
+	// would deadlock the run (depsSatisfied treats it as vacuously satisfied). t2
+	// is runnable, and RunOwner outranks Merge.
+	if act.Kind != ActRunOwner || act.Feature != "f2" || act.Task != "t2" {
+		t.Fatalf("got kind=%v feature=%q task=%q, want RunOwner f2/t2 (dep absent from own feature → vacuously satisfied)", act.Kind, act.Feature, act.Task)
 	}
 }
 

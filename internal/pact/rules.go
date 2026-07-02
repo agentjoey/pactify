@@ -200,8 +200,12 @@ func checkJoinGate(st projection.State, seatID string) error {
 			startable++
 			blockedDep := ""
 			for _, d := range t.Deps {
+				// A dep absent from the projection was cancelled: it can never
+				// reach accepted, so blocking the dependent forever is strictly
+				// worse — the orchestrator retired it deliberately. Vacuously
+				// satisfied; only a still-present unaccepted dep blocks.
 				dep, _ := findTask(st, d)
-				if dep == nil || dep.Status != "accepted" {
+				if dep != nil && dep.Status != "accepted" {
 					blockedDep = d
 					break
 				}
@@ -234,8 +238,11 @@ func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*pro
 	// could otherwise checkpoint a still-blocked task. Re-apply the same dep gate
 	// the join uses, but for this single task.
 	for _, d := range tk.Deps {
+		// A dep absent from the projection was cancelled: it can never reach
+		// accepted, so blocking this task forever is strictly worse — the
+		// orchestrator retired it deliberately. Vacuously satisfied.
 		dep, _ := findTask(st, d)
-		if dep == nil || dep.Status != "accepted" {
+		if dep != nil && dep.Status != "accepted" {
 			return nil, fmt.Errorf("pactify checkpoint: task %s blocked by unaccepted dep %s", taskID, d)
 		}
 	}

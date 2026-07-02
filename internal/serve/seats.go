@@ -35,17 +35,13 @@ type seatProvenanceDTO struct {
 // clientChanged flag when the two most recent joins both name a client and the
 // names differ.
 func (s *Server) handleSeats(w http.ResponseWriter, r *http.Request) {
-	_, dir, ok := s.project(r.PathValue("id"))
+	name, dir, ok := s.project(r.PathValue("id"))
 	if !ok {
 		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
-	dto, err := ProjectState(dir)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	evs, err := event.ReadAll(logPath(dir))
+	// One (memoized) read serves both the folded roster and the raw join scan.
+	dto, evs, err := s.projectStateFull(name, dir)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

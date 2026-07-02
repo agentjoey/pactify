@@ -100,11 +100,30 @@ func baseName(p string) string {
 	return p
 }
 
-var secretRe = regexp.MustCompile(`(?i)(bearer\s+|token[=:]\s*|secret[=:]\s*|sk-)[A-Za-z0-9._\-]+`)
+// secretRes are applied in order; each keeps the introducer and replaces the
+// secret run with "***". Summaries land in plaintext under ~/.pactify/audit,
+// so the net must catch env-var/flag assignments and well-known token shapes,
+// while KEY=VALUE stays anchored to a token start (start / whitespace / quote)
+// so ordinary words like "feature/keyboard" pass through untouched.
+var secretRes = []struct {
+	re   *regexp.Regexp
+	repl string
+}{
+	// scheme://user:pass@host — mask the basic-auth credentials part.
+	{regexp.MustCompile(`([A-Za-z][A-Za-z0-9+.\-]*://)[^\s/@:]+:[^\s/@]+@`), `$1***@`},
+	// KEY=VALUE where KEY smells secret-ish (AWS_SECRET_ACCESS_KEY=, --api-key=,
+	// --password=, PGPASSWORD=, PWD-suffixed vars, …).
+	{regexp.MustCompile(`(?i)(^|[\s"'])([A-Za-z0-9_\-]*(?:key|token|secret|password|passwd|pwd)[A-Za-z0-9_\-]*=)[^\s"']+`), `$1$2***`},
+	// bare well-known token shapes: GitHub tokens / PATs, AWS access key ids.
+	{regexp.MustCompile(`\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b`), `***`},
+	{regexp.MustCompile(`(?i)(bearer\s+|token[=:]\s*|secret[=:]\s*|sk-)[A-Za-z0-9._\-]+`), `$1***`},
+}
 
 // redact masks secret-ish runs and truncates to summaryCap chars.
 func redact(s string) string {
-	s = secretRe.ReplaceAllString(s, "$1***")
+	for _, r := range secretRes {
+		s = r.re.ReplaceAllString(s, r.repl)
+	}
 	if len(s) > summaryCap {
 		s = s[:summaryCap] + "…"
 	}

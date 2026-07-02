@@ -178,7 +178,13 @@ func (opts Options) run(ctx context.Context) error {
 		}
 	}
 
-	h := History{Rework: map[string]int{}, Fails: map[string]int{}, LastFail: map[string]string{}}
+	// Reconstruct threshold history so a driver restart (crash, session limit,
+	// supervisor restart) cannot hand a persistently-failing task a fresh budget:
+	// rework rounds are re-counted from the ledger, and the process-internal
+	// failure counters are reloaded from the persisted history file.
+	scope := historyScope(opts.Feature)
+	h := History{Rework: seedRework(opts.Dir), Fails: map[string]int{}, LastFail: map[string]string{}}
+	loadHistory(opts.runtimeDir(), scope, &h)
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -206,6 +212,13 @@ func (opts Options) run(ctx context.Context) error {
 		if !opts.DryRun && (act.Kind == ActRunOwner || act.Kind == ActRunReviewer) {
 			if reason, tripped := tripped(act.Task, h, opts.Th); tripped {
 				opts.emitEscalatedStatus(view, act.Task, reason, h)
+				// The threshold has fired and the human is being notified: drop this
+				// task's persisted failure budget so a post-fix rerun resumes instead
+				// of re-tripping on the loaded count (rework is ledger-derived and
+				// stands until a human accepts the task or raises the bound).
+				delete(h.Fails, act.Task)
+				delete(h.LastFail, act.Task)
+				_ = writeHistory(opts.runtimeDir(), scope, h)
 				return opts.escalate(act.Task, reason, evidenceFor(st, act.Task),
 					"人工介入后 pactify orchestrate 续跑")
 			}
@@ -241,17 +254,21 @@ func (opts Options) run(ctx context.Context) error {
 				UpdatedAt: statusNow(opts.Now),
 			}
 			writeStatus(opts.runtimeDir(), s)
+			// A completed run's failure history must not poison the next run.
+			clearHistory(opts.runtimeDir(), scope)
 			return nil
 
 		case ActRunOwner:
 			if err := opts.runOwner(ctx, st, &h, act); err != nil {
 				return err
 			}
+			_ = writeHistory(opts.runtimeDir(), scope, h)
 
 		case ActRunReviewer:
 			if err := opts.runReviewer(ctx, st, &h, act); err != nil {
 				return err
 			}
+			_ = writeHistory(opts.runtimeDir(), scope, h)
 
 		case ActMerge:
 			done, err := opts.merge(ctx, st, view, act, &h)
@@ -659,6 +676,25 @@ func seatFor(st projection.State, seatID string, fallback projection.Seat) proje
 		}
 	}
 	return fallback
+}
+
+// seedRework reconstructs per-task rework counts from the ledger's
+// changes_requested events, so MaxRework bounds the task's total review rounds
+// across driver restarts (History is otherwise zeroed at loop start and a
+// restart would grant a churning task a fresh budget forever). An unreadable
+// log seeds nothing — a clean start, matching the old behavior.
+func seedRework(dir string) map[string]int {
+	rework := map[string]int{}
+	evs, err := event.ReadAll(paths.LogIn(dir))
+	if err != nil {
+		return rework
+	}
+	for _, e := range evs {
+		if e.EventType == "changes_requested" && e.TaskID != "" {
+			rework[e.TaskID]++
+		}
+	}
+	return rework
 }
 
 // lastChangesReason returns the reason from the most recent changes_requested

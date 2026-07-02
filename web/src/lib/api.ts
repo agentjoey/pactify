@@ -434,16 +434,34 @@ export const browseFs = (path?: string) => {
 };
 
 // subscribeAgentStream opens an SSE stream of a task's raw agent output lines.
-// Returns an unsubscribe fn. Each `stream` event's data is one raw output line.
+// Returns an unsubscribe fn. Each `stream` event's data is one raw output line;
+// lastEventId is the server's 1-based line ordinal (empty if the server sent no
+// id) so callers can drop lines re-delivered by EventSource auto-reconnect.
 export function subscribeAgentStream(
   project: string,
   task: string,
-  onLine: (line: string) => void,
+  onLine: (line: string, lastEventId?: string) => void,
 ): () => void {
   const es = new EventSource(`/api/projects/${project}/orchestrate/stream/${task}`);
-  es.addEventListener("stream", (e) => onLine((e as MessageEvent).data));
+  es.addEventListener("stream", (e) => {
+    const me = e as MessageEvent;
+    onLine(me.data, me.lastEventId);
+  });
   return () => es.close();
 }
+
+// fetchEventsLog reads the last `n` events straight from a project's log via
+// REST — byte-identical objects to the SSE `pact` frames, so PactEvent applies.
+// Non-primary worktree views have no SSE stream to accumulate from; they poll
+// this alongside state so task metrics stay live. No `wt` → primary; server
+// defaults n=500 (cap 2000).
+export const fetchEventsLog = (id: string, wt?: string, n?: number) => {
+  const qs = new URLSearchParams();
+  if (wt) qs.set("wt", wt);
+  if (n !== undefined) qs.set("n", String(n));
+  const s = qs.toString();
+  return getJSON<PactEvent[]>(`/api/projects/${id}/events/log${s ? `?${s}` : ""}`);
+};
 
 // subscribeEvents opens an SSE stream; returns an unsubscribe fn.
 // onLive (optional) reports connection state: true on open, false on error/drop.

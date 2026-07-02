@@ -36,6 +36,16 @@ func str(v any) string {
 	return s
 }
 
+// taskInFeature returns the feature's task with the given id, or nil.
+func taskInFeature(f *Feature, taskID string) *Task {
+	for ti := range f.Tasks {
+		if f.Tasks[ti].ID == taskID {
+			return &f.Tasks[ti]
+		}
+	}
+	return nil
+}
+
 // seatFromPayload builds a Seat from an init/add-seat payload map (id/roles/entry/kind).
 func seatFromPayload(m map[string]any) Seat {
 	seat := Seat{ID: str(m["id"]), Entry: str(m["entry"]), Kind: str(m["kind"])}
@@ -127,11 +137,37 @@ func Project(evs []event.Event) State {
 				tIdx[e.Feature][e.TaskID] = len(st.Features[fi].Tasks) - 1
 			}
 		case "join":
+			// Seat-scoped cold-start signal: lift ONLY the seat's first actionable
+			// owned task — assigned with every dep accepted — mirroring the branch
+			// Join itself checks out (engine JoinWithClient). Flipping every
+			// assigned task the seat owns corrupted the board: dep-blocked and
+			// never-started tasks showed in_progress, and the join gate lost its
+			// startable set. Task-scoped `start` covers the orchestrate path.
+			lifted := false
 			for fi := range st.Features {
-				for ti := range st.Features[fi].Tasks {
-					t := &st.Features[fi].Tasks[ti]
-					if t.Owner == e.AgentID && t.Status == "assigned" {
+				if lifted {
+					break
+				}
+				f := &st.Features[fi]
+				for ti := range f.Tasks {
+					t := &f.Tasks[ti]
+					if t.Owner != e.AgentID || t.Status != "assigned" || cancelled[f.ID+"\x00"+t.ID] {
+						continue
+					}
+					ready := true
+					for _, d := range t.Deps {
+						// A dep cancelled so far in the log (or absent) can never
+						// reach accepted; it does not hold this task back.
+						dep := taskInFeature(f, d)
+						if dep != nil && !cancelled[f.ID+"\x00"+d] && dep.Status != "accepted" {
+							ready = false
+							break
+						}
+					}
+					if ready {
 						t.Status = "in_progress"
+						lifted = true
+						break
 					}
 				}
 			}

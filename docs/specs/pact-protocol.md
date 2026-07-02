@@ -125,7 +125,7 @@ them MUST ignore them (§2.2).
 
 | event_type | role | scope | semantics |
 |---|---|---|---|
-| `start` | `orchestrator` | task | The orchestrate driver launched the task's owner. Projects `assigned → in_progress` for exactly the named task (unlike `join`, which is seat-scoped and lifts every assigned task the joining seat owns). Payload: `owner` (string, seat slug). Never rewinds a task that has progressed past `assigned`. |
+| `start` | `orchestrator` | task | The orchestrate driver launched the task's owner. Projects `assigned → in_progress` for exactly the named task (unlike `join`, which is seat-scoped and lifts the joining seat's first actionable owned task). Payload: `owner` (string, seat slug). Never rewinds a task that has progressed past `assigned`. |
 | `cancel` | `orchestrator` | task | Excludes the task from the projection (structured retirement; the log is never hand-edited). |
 | `withdraw` | `orchestrator` | feature | Excludes the entire feature from the projection. |
 | `config_gate` | `orchestrator` | project | Sets the project's hard verification gate command (see `pactify config gate`). |
@@ -201,7 +201,7 @@ todo → assigned → in_progress → awaiting_review → accepted
 
 - `todo`: task exists in the backlog but has not been assigned via an `assign` event.
 - `assigned`: an `assign` event has been emitted for this task; the owner has not yet joined.
-- `in_progress`: work is underway — the owner has joined (via a `join` event) or the orchestrate driver has launched the owner (via a `start` event, §2.6); or the task has been returned from `changes_requested`.
+- `in_progress`: work is underway — the owner has joined (a `join` event lifts the seat's first actionable owned task: the first `assigned` task whose dependencies are all `accepted`) or the orchestrate driver has launched the owner (via a `start` event, §2.6); or the task has been returned from `changes_requested`.
 - `awaiting_review`: a `checkpoint` event has been emitted; the reviewer must now act.
 - `accepted`: an `accept` event has been emitted by the designated reviewer while the task was `awaiting_review`. This is a terminal state.
 - `changes_requested`: a `changes_requested` event has been emitted by the designated reviewer while the task was `awaiting_review`. The task returns to `in_progress` for the owner to address.

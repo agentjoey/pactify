@@ -372,7 +372,7 @@ func (p *Project) Merge(feature string) error {
 	// LOCK ORDER: this base lock FIRST, then the ledger log lock (withLedgerLock
 	// below) — Merge is the only verb holding both; keep this order everywhere or
 	// two processes can deadlock against a verb holding the log lock alone.
-	if lockPath, lerr := gitx.GitPath(p.dir, "pactify-base.lock"); lerr == nil {
+	if lockPath, lerr := gitx.GitCommonPath(p.dir, "pactify-base.lock"); lerr == nil {
 		lctx, cancel := context.WithTimeout(context.Background(), baseIntegrationLockTimeout)
 		defer cancel()
 		release, aerr := lockx.Acquire(lctx, lockPath)

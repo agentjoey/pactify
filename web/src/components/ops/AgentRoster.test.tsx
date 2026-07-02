@@ -63,6 +63,23 @@ describe("AgentRoster panel", () => {
     expect(registerAgent).toHaveBeenCalledWith("opencode");
   });
 
+  it("shows a danger alert when a register toggle fails", async () => {
+    getAgents.mockResolvedValue([
+      { kind: "opencode", installed: true, detail: "", registered: false },
+    ]);
+    registerAgent.mockRejectedValue(new Error("register opencode: exit status 1"));
+    render(<AgentRoster author={true} onChanged={() => {}} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Register" })).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+    const alert = await screen.findByTestId("alert");
+    expect(alert.getAttribute("data-tone")).toBe("danger");
+    expect(alert.textContent).toContain("register opencode: exit status 1");
+    // the reload after the failure must not clear the banner, and the
+    // optimistic flip is rolled back to a Register button.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Register" })).toBeTruthy());
+    expect(screen.getByTestId("alert")).toBeTruthy();
+  });
+
   it("observe mode (author=false) disables register", async () => {
     getAgents.mockResolvedValue([
       { kind: "opencode", installed: true, detail: "", registered: false },

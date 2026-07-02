@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/registry"
 )
@@ -51,6 +50,7 @@ func (s *Server) RemoveProject(name string) error {
 			break
 		}
 	}
+	s.dropStateMemo(name)
 	return nil
 }
 
@@ -85,6 +85,8 @@ func (s *Server) RenameProject(oldName, newName string) error {
 			break
 		}
 	}
+	// The memo is keyed by name; the new name repopulates lazily on next read.
+	s.dropStateMemo(oldName)
 	return nil
 }
 
@@ -123,25 +125,26 @@ func (s *Server) handleRegistryList(w http.ResponseWriter, _ *http.Request) {
 
 	out := []registryItem{}
 	for _, p := range projs {
-		out = append(out, registryItem{Name: p.Name, Path: p.Path, Group: p.Group, Status: foldStatus(p.Path)})
+		out = append(out, registryItem{Name: p.Name, Path: p.Path, Group: p.Group, Status: s.foldStatus(p.Name, p.Path)})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
 
 // foldStatus computes a project's status. Validity is reported via
-// pact.At(dir).Validate(); seats and lastEventTs come from the log so a project
-// that fails strict validation still surfaces useful counts where possible.
-func foldStatus(dir string) registryStatus {
+// pact.At(dir).Validate(); seats and lastEventTs come from a single (memoized)
+// log read so a project that fails strict validation still surfaces useful
+// counts where possible.
+func (s *Server) foldStatus(name, dir string) registryStatus {
 	st := registryStatus{Valid: true}
 	if err := pact.At(dir).Validate(); err != nil {
 		st.Valid = false
 		st.Error = err.Error()
 	}
-	if dto, err := ProjectState(dir); err == nil {
+	if dto, evs, err := s.projectStateFull(name, dir); err == nil {
 		st.Seats = len(dto.Agents)
-	}
-	if evs, err := event.ReadAll(logPath(dir)); err == nil && len(evs) > 0 {
-		st.LastEventTs = evs[len(evs)-1].TS
+		if len(evs) > 0 {
+			st.LastEventTs = evs[len(evs)-1].TS
+		}
 	}
 	return st
 }

@@ -5,7 +5,7 @@ import { Ant } from "../ui/ants/Ant";
 // SeatRoster — a fixed, always-on strip of the project's participating seats and
 // their roles, pinned to the canvas (it does NOT pan/zoom with the flow, unlike
 // the SeatNodes / desks). So "who's playing, in what role" stays visible no
-// matter where you've panned, in both Plan and Office modes.
+// matter where you've panned around the Office.
 
 // role → brand color (the three-main-color language); unknown roles fall back to
 // a neutral chip.

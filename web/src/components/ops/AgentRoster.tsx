@@ -5,6 +5,7 @@ import { Badge } from "../ui/Badge";
 import { Alert } from "../ui/Alert";
 import { EmptyState } from "../ui/EmptyState";
 import { AgentLogo } from "../../lib/agentLogos";
+import { humanizeError } from "../../lib/protocolErrors";
 
 // AgentRoster — the Settings agent-management panel. Three jobs (backlog
 // 2026-06-15):
@@ -26,6 +27,10 @@ export function AgentRoster({
 }) {
   const [rows, setRows] = useState<AgentRow[] | null>(null);
   const [error, setError] = useState("");
+  // register/unregister failures — separate from the load `error` so the
+  // reload after a failed toggle doesn't clear the banner (siblings' pattern:
+  // Projects keeps regErr apart from loadErr).
+  const [actionErr, setActionErr] = useState("");
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [pruneBusy, setPruneBusy] = useState<string | null>(null);
@@ -50,6 +55,7 @@ export function AgentRoster({
   async function toggle(kind: string, registered: boolean) {
     if (!author) return;
     setBusy(kind);
+    setActionErr("");
     setRows((prev) => (prev ?? []).map((a) => (a.kind === kind ? { ...a, registered: !registered } : a)));
     try {
       if (registered) {
@@ -58,7 +64,8 @@ export function AgentRoster({
         await registerAgent(kind);
       }
       onChanged?.();
-    } catch {
+    } catch (e) {
+      setActionErr(humanizeError(e instanceof Error ? e.message : String(e)));
       await load();
     } finally {
       setBusy(null);
@@ -102,6 +109,12 @@ export function AgentRoster({
         <Alert tone="danger" onRetry={() => load()}>
           {error}
         </Alert>
+      )}
+
+      {actionErr && (
+        <div className="mb-2">
+          <Alert tone="danger">{actionErr}</Alert>
+        </div>
       )}
 
       {!error && rows && (

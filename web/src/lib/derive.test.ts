@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   boardColumns, allTasks, agentActivity, lastAction, findTask, canMergeFeature, COLUMNS,
   fmtDuration, fmtTokens, fmtCost, taskRuntimeMs, taskMetrics, designBoard,
+  eventsByTask, statsByTask, taskTokens,
 } from "./derive";
+import type { TaskStat } from "./api";
 import type { State, PactEvent, Task } from "./types";
 
 const state: State = {
@@ -139,37 +141,40 @@ describe("stat helpers", () => {
       expect(taskRuntimeMs(mkTask("awaiting_review"), events, 9_999_000)).toBe(20_000);
     });
 
+    it("keeps ticking to now during changes_requested (active rework)", () => {
+      // Backend contract: changes_requested does NOT freeze at the last
+      // checkpoint — the clock runs until the rework is checkpointed again.
+      const events: PactEvent[] = [
+        { event_id: "1", ts: iso(1_000_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: {} },
+        { event_id: "2", ts: iso(1_020_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: {} },
+      ];
+      expect(taskRuntimeMs(mkTask("changes_requested"), events, 1_050_000)).toBe(50_000);
+    });
+
     it("returns 0 when no assign event exists", () => {
       expect(taskRuntimeMs(mkTask("assigned"), [], 1_000_000)).toBe(0);
     });
   });
 
+  const mkStat = (tokens: number): TaskStat => ({
+    task_id: "T", feature: "F", owner: "kimi-worker", reviewer: "claude",
+    status: "in_progress", duration_sec: 0, added: 0, deleted: 0, tokens,
+  });
+
   describe("taskMetrics", () => {
-    it("renders live RUN/TOK for in_progress tasks with session metadata", () => {
+    it("renders live RUN + stats-fed TOK for in_progress tasks", () => {
       const events: PactEvent[] = [
-        { event_id: "1", ts: iso(1_000_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: { session: { tokens: 12_400, iter: 2 } } },
+        { event_id: "1", ts: iso(1_000_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: {} },
       ];
-      const items = taskMetrics(mkTask("in_progress"), events, 1_182_000);
+      const items = taskMetrics(mkTask("in_progress"), events, 1_182_000, mkStat(12_400));
       expect(items).toEqual([
-        { label: "RUN", value: "3m02s", live: true, est: false },
-        { label: "TOK", value: "12.4k", live: true, est: false },
-        { label: "", value: "×2", live: true, est: false },
+        { label: "RUN", value: "3m02s", live: true },
+        { label: "TOK", value: "12.4k", live: true },
+        { label: "", value: "×1", live: true },
       ]);
     });
 
-    it("renders italic estimates for assigned tasks", () => {
-      const events: PactEvent[] = [
-        { event_id: "1", ts: iso(1_000_000), agent_id: "w", role: "worker", event_type: "assign", task_id: "T", feature: "F", payload: { session: { duration_ms: 120_000, tokens: 6_000 } } },
-      ];
-      const items = taskMetrics(mkTask("assigned"), events, 1_000_000);
-      expect(items).toEqual([
-        { label: "RUN", value: "~2m00s", live: false, est: true },
-        { label: "TOK", value: "~6k", live: false, est: true },
-        { label: "", value: "×1", live: false, est: true },
-      ]);
-    });
-
-    it("falls back to — and checkpoint count when session metadata is absent", () => {
+    it("falls back to — and checkpoint count without a stats entry", () => {
       const events: PactEvent[] = [
         { event_id: "0", ts: iso(990_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: {} },
         { event_id: "1", ts: iso(1_000_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: {} },
@@ -177,10 +182,50 @@ describe("stat helpers", () => {
       ];
       const items = taskMetrics(mkTask("awaiting_review"), events, 1_030_000);
       expect(items).toEqual([
-        { label: "RUN", value: "30s", live: false, est: false },
-        { label: "TOK", value: "—", live: false, est: false },
-        { label: "", value: "×2", live: false, est: false },
+        { label: "RUN", value: "30s", live: false },
+        { label: "TOK", value: "—", live: false },
+        { label: "", value: "×2", live: false },
       ]);
+    });
+
+    it("treats tokens=0 in stats as unknown (—), not zero spend", () => {
+      const items = taskMetrics(mkTask("assigned"), [], 1_000_000, mkStat(0));
+      expect(items[1]).toEqual({ label: "TOK", value: "—", live: false });
+    });
+  });
+
+  describe("eventsByTask", () => {
+    it("groups events by task_id, preserving log order, skipping task-less events", () => {
+      const evs: PactEvent[] = [
+        { event_id: "1", ts: iso(1_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "A", feature: "F", payload: {} },
+        { event_id: "2", ts: iso(2_000), agent_id: "o", role: "orchestrator", event_type: "join", task_id: "", feature: "", payload: {} },
+        { event_id: "3", ts: iso(3_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "A", feature: "F", payload: {} },
+        { event_id: "4", ts: iso(4_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "B", feature: "F", payload: {} },
+      ];
+      const m = eventsByTask(evs);
+      expect(m.get("A")?.map((e) => e.event_id)).toEqual(["1", "3"]);
+      expect(m.get("B")?.map((e) => e.event_id)).toEqual(["4"]);
+      expect(m.has("")).toBe(false);
+    });
+  });
+
+  describe("statsByTask / taskTokens", () => {
+    it("indexes stats by task id and reads tokens via taskTokens", () => {
+      const m = statsByTask({ tasks: [{ ...mkStat(9_500), task_id: "X" }], agents: [] });
+      expect(taskTokens("X", m)).toBe(9_500);
+      expect(taskTokens("missing", m)).toBe(0);
+    });
+
+    it("returns an empty index for un-fetched stats", () => {
+      expect(statsByTask(null).size).toBe(0);
+      expect(statsByTask(undefined).size).toBe(0);
+    });
+
+    it("legacy event-array callers get 0 (events never carried tokens)", () => {
+      const evs: PactEvent[] = [
+        { event_id: "1", ts: iso(1_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: { tokens: 999 } },
+      ];
+      expect(taskTokens("T", evs)).toBe(0);
     });
   });
 });

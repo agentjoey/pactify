@@ -39,6 +39,14 @@ type Server struct {
 	hub     *hub
 	watcher *fsnotify.Watcher
 
+	// memoMu guards stateMemos, the per-project full-fold state cache used by
+	// the hot read paths (GET /state without at/wt, GET /api/projects, registry
+	// list, seats). Freshness is stat-based (log size+mtime), so writers that
+	// bypass fsnotify still invalidate on the next read. Separate from pmu:
+	// memo fills happen after a log read and must not block registry lookups.
+	memoMu     sync.Mutex
+	stateMemos map[string]stateMemo
+
 	seat string // acting seat for author writes ("" = none configured)
 
 	// mu serializes author writes per project: authoring verbs append to the
@@ -107,6 +115,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/projects/{id}/state", s.handleState)
 	mux.HandleFunc("GET /api/projects/{id}/worktrees", s.handleWorktrees)
 	mux.HandleFunc("GET /api/projects/{id}/events", s.handleEvents)
+	mux.HandleFunc("GET /api/projects/{id}/events/log", s.handleEventsLog)
 	mux.HandleFunc("GET /api/projects/{id}/orchestrate/stream/{task}", s.handleAgentStream)
 	s.registerRegistryRoutes(mux)
 	s.registerAuthorRoutes(mux)
@@ -144,15 +153,16 @@ func (s *Server) handleProjects(w http.ResponseWriter, _ *http.Request) {
 	s.pmu.RUnlock()
 	out := []item{}
 	for _, p := range projs {
-		dto, _ := ProjectState(p.Path)
+		dto, _, _ := s.projectStateFull(p.Name, p.Path)
 		out = append(out, item{ID: p.Name, Name: p.Name, Path: p.Path, Project: dto.Project, FeatureCount: len(dto.Features), AwaitingCount: dto.AwaitingCount})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
 	s.pmu.RLock()
-	p, ok := s.projects[r.PathValue("id")]
+	p, ok := s.projects[id]
 	s.pmu.RUnlock()
 	if !ok {
 		writeErr(w, http.StatusNotFound, "unknown project")
@@ -169,7 +179,8 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 		at = -1 // all events
 	}
 	statePath := p.Path
-	if wt := r.URL.Query().Get("wt"); wt != "" {
+	wt := r.URL.Query().Get("wt")
+	if wt != "" {
 		wp, ok := resolveWorktreePath(p.Path, wt)
 		if !ok {
 			writeErr(w, http.StatusBadRequest, "unknown worktree: "+wt)
@@ -177,7 +188,15 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 		}
 		statePath = wp
 	}
-	dto, err := ProjectStateAt(statePath, at)
+	var dto StateDTO
+	var err error
+	if !present && wt == "" {
+		// Full fold of the primary path: the memoized hot path — the dashboard
+		// refetches this on every SSE event.
+		dto, _, err = s.projectStateFull(id, p.Path)
+	} else {
+		dto, err = ProjectStateAt(statePath, at)
+	}
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
-import { fetchProjects, fetchState, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
+import { fetchProjects, fetchState, fetchEventsLog, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
 import type { Worktree } from "./lib/api";
 import { type View } from "./lib/types";
 import { Toolbar } from "./components/shell/Toolbar";
@@ -31,6 +31,18 @@ const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 
 // during a live session without parsing the log. Cleared when the task leaves
 // in_progress. A 60s ticker re-evaluates the elapsed window.
 const STALE_MS = 30 * 60 * 1000;
+
+// Retained-events cap: the SSE stream accumulates for the whole session, so the
+// array is trimmed to the most recent EVENTS_CAP after each append (dedup is
+// O(1) via the seenEventIds set). Tradeoff: taskRuntimeMs anchors on a task's
+// `assign` event, which for an ancient task can fall off the window — such
+// long-shipped cards then show runtime 0 (derive's documented no-assign
+// fallback), acceptable in exchange for bounded memory and O(1) appends.
+const EVENTS_CAP = 2000;
+
+// Consecutive mid-session state-fetch failures before the non-blocking
+// "updates interrupted" indicator shows (first-load failures own loadFailed).
+const FETCH_FAIL_THRESHOLD = 3;
 
 export default function App() {
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
@@ -93,6 +105,19 @@ export default function App() {
   const currentRef = useRef("");
   // task id → epoch ms when first observed in_progress this session.
   const inProgressSince = useRef<Map<string, number>>(new Map());
+  // event_id set mirroring `events` appends — makes SSE dedup O(1) instead of
+  // an O(n) scan per event. Ids of trimmed events stay in the set (they must:
+  // an SSE reconnect can replay an event the cap already evicted).
+  const seenEventIds = useRef<Set<string>>(new Set());
+  // Mid-session fetchState failure streak (FETCH_FAIL_THRESHOLD consecutive
+  // misses → fetchStale indicator; any success clears both).
+  const failStreak = useRef(0);
+  const [fetchStale, setFetchStale] = useState(false);
+  const noteFetchOk = () => { failStreak.current = 0; setFetchStale(false); };
+  const noteFetchFail = () => {
+    failStreak.current += 1;
+    if (failStreak.current >= FETCH_FAIL_THRESHOLD) setFetchStale(true);
+  };
   // tick forces stale re-evaluation on an interval even without state changes.
   const [tick, setTick] = useState(0);
 
@@ -265,6 +290,9 @@ export default function App() {
     let alive = true;
     currentRef.current = current;
     setEvents([]);
+    seenEventIds.current = new Set();
+    failStreak.current = 0;
+    setFetchStale(false);
     prevState.current = EMPTY;
     inProgressSince.current = new Map();
     setStaleTasks(new Set());
@@ -283,15 +311,25 @@ export default function App() {
     setLoadFailed(false);
     const wt = currentWorktree || undefined;
     fetchState(current, wt)
-      .then((s) => { if (alive) applyState(s); })
-      .catch(() => { if (alive) { setState(EMPTY); setLoadFailed(true); } });
+      .then((s) => { if (alive) { noteFetchOk(); applyState(s); } })
+      .catch(() => { if (alive) { noteFetchFail(); setState(EMPTY); setLoadFailed(true); } });
     if (!currentWorktree) {
       const off = subscribeEvents(current, (e) => {
         if (!alive) return;
         // Dedupe by event_id: the SSE backfill replays the log tail, which can
         // overlap a live event that raced in between subscribe and replay.
-        setEvents((prev) => (prev.some((x) => x.event_id === e.event_id) ? prev : [...prev, e]));
-        fetchState(current).then((s) => { if (alive) applyState(s); }).catch(() => {});
+        // Checked against the seen-set OUTSIDE the updater (O(1), and keeps the
+        // updater pure), then trimmed to the EVENTS_CAP most recent.
+        if (!seenEventIds.current.has(e.event_id)) {
+          seenEventIds.current.add(e.event_id);
+          setEvents((prev) => {
+            const next = [...prev, e];
+            return next.length > EVENTS_CAP ? next.slice(-EVENTS_CAP) : next;
+          });
+        }
+        fetchState(current)
+          .then((s) => { if (alive) { noteFetchOk(); applyState(s); } })
+          .catch(() => { if (alive) noteFetchFail(); });
       }, (v) => { if (alive) setLive(v); });
       return () => {
         alive = false;
@@ -300,10 +338,21 @@ export default function App() {
         if (pulseTimer.current) clearTimeout(pulseTimer.current);
       };
     }
-    // non-primary worktree: poll every 3s, no SSE
+    // non-primary worktree: poll every 3s, no SSE. Events come from the REST
+    // log endpoint (same objects as the SSE `pact` frames) so task metrics
+    // aren't dead in worktree views; the response is already recency-capped
+    // server-side, so it replaces `events` wholesale.
     setLive(false);
+    const pollEvents = () =>
+      fetchEventsLog(current, currentWorktree)
+        .then((evs) => { if (alive) setEvents(evs); })
+        .catch(() => {});
+    pollEvents();
     const poll = setInterval(() => {
-      fetchState(current, currentWorktree).then((s) => { if (alive) applyState(s); }).catch(() => {});
+      fetchState(current, currentWorktree)
+        .then((s) => { if (alive) { noteFetchOk(); applyState(s); } })
+        .catch(() => { if (alive) noteFetchFail(); });
+      pollEvents();
     }, 3000);
     return () => { alive = false; clearInterval(poll); if (pulseTimer.current) clearTimeout(pulseTimer.current); };
   }, [current, currentWorktree]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -369,6 +418,18 @@ export default function App() {
         </div>
       </div>
       <Toasts toasts={toasts} />
+      {/* Persistent (not a 5s toast: it must outlive the outage) non-blocking
+          indicator for a mid-session refresh outage; toast-styled, bottom-left
+          so it doesn't stack with the toast rail. Cleared on the next success. */}
+      {fetchStale && (
+        <div
+          data-testid="fetch-stale"
+          role="status"
+          className="pointer-events-none fixed bottom-4 left-4 z-[60] rounded-md border border-[var(--color-border-subtle)] border-l-2 border-l-[var(--color-danger)] bg-[var(--color-bg-raised)] px-3 py-2 text-xs text-[var(--color-text-1)] shadow-[var(--shadow-raised)]"
+        >
+          Live updates interrupted — retrying…
+        </div>
+      )}
       {settingsOpen && <SettingsModal project={current} author={author} focusSeat={settingsSeat} onClose={() => setSettingsOpen(false)} />}
       <AddProjectWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onAdded={() => { setWizardOpen(false); refreshProjects(); }} />
       <DispatchPanel

@@ -272,7 +272,12 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 	o := opts
 	o.Dir = worktreeDir
 	o.Feature = feature
-	h := History{Rework: map[string]int{}, Fails: map[string]int{}, LastFail: map[string]string{}}
+	// Reconstruct threshold history across driver restarts: rework rounds from
+	// the worktree's ledger, failure counters from the PRIMARY tree's persisted
+	// file (opts.Dir — the worktree is destroyed at run end). One file per
+	// feature, so concurrent driveFeatures never contend.
+	h := History{Rework: seedRework(o.Dir), Fails: map[string]int{}, LastFail: map[string]string{}}
+	loadHistory(opts.Dir, feature, &h)
 	// Per-feature status goes to the PRIMARY tree (opts.Dir) so the dashboard can
 	// aggregate all concurrent features; o.Dir is the isolated worktree.
 	now := func() string { return statusNow(opts.Now) }
@@ -294,15 +299,23 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 			}
 		}
 		if f == nil {
+			clearHistory(opts.Dir, feature)
 			return false, false, nil
 		}
 		act, ok := featureAction(*f, h, o.Th)
 		if !ok {
+			clearHistory(opts.Dir, feature)
 			return false, false, nil
 		}
 		if act.Kind == ActRunOwner || act.Kind == ActRunReviewer {
 			if reason, isTripped := tripped(act.Task, h, o.Th); isTripped {
 				emit(buildEscalatedStatus(view, act.Task, reason, h, now))
+				// Threshold fired, human notified: drop the task's persisted failure
+				// budget so a post-fix rerun resumes instead of re-tripping on the
+				// loaded count (mirrors the serial loop; rework is ledger-derived).
+				delete(h.Fails, act.Task)
+				delete(h.LastFail, act.Task)
+				_ = writeHistory(opts.Dir, feature, h)
 				return false, true, o.escalate(act.Task, reason, evidenceFor(st, act.Task),
 					"人工介入后 pactify orchestrate 续跑")
 			}
@@ -316,15 +329,20 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 		emit(buildLoopStatus(view, act, h, now))
 		switch act.Kind {
 		case ActMerge:
+			// All tasks accepted — no further agent runs for this feature, so its
+			// failure history is spent and must not poison a later run.
+			clearHistory(opts.Dir, feature)
 			return true, false, nil
 		case ActRunOwner:
 			if err := o.runOwner(ctx, st, &h, act); err != nil {
 				return false, false, err
 			}
+			_ = writeHistory(opts.Dir, feature, h)
 		case ActRunReviewer:
 			if err := o.runReviewer(ctx, st, &h, act); err != nil {
 				return false, false, err
 			}
+			_ = writeHistory(opts.Dir, feature, h)
 		default:
 			return false, false, nil
 		}

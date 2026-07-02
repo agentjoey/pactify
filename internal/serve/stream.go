@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/orchestrate"
@@ -38,20 +39,36 @@ func (s *Server) handleAgentStream(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "retry: 3000\n: ok\n\n")
 	fl.Flush()
 
+	// A reconnecting EventSource replays Last-Event-ID: the 1-based ordinal of the
+	// last line it received. Resuming past it (instead of re-sending the tail-200)
+	// keeps reconnects from duplicating backfill in the terminal.
+	lastID := -1
+	if v := r.Header.Get("Last-Event-ID"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			lastID = n
+		}
+	}
+
 	// Backfill from a single read so the resume offset is the exact byte boundary
 	// of the bytes we delivered — never a separate Stat that could race an append
 	// in between and re-deliver those bytes on the first tick. off lands on the
 	// last newline; any trailing partial line waits for drainStream to emit it whole.
 	var off int64
+	var ord int
 	if data, err := os.ReadFile(lp); err == nil {
 		lines, consumed := completeLines(data)
-		if len(lines) > eventBackfill {
-			lines = lines[len(lines)-eventBackfill:]
+		start := 0
+		switch {
+		case lastID >= 0:
+			start = min(lastID, len(lines))
+		case len(lines) > eventBackfill:
+			start = len(lines) - eventBackfill
 		}
-		for _, line := range lines {
-			io.WriteString(w, "event: stream\ndata: "+line+"\n\n")
+		for i := start; i < len(lines); i++ {
+			writeStreamFrame(w, i+1, lines[i])
 		}
 		off = int64(consumed)
+		ord = len(lines)
 		fl.Flush()
 	}
 
@@ -67,7 +84,7 @@ func (s *Server) handleAgentStream(w http.ResponseWriter, r *http.Request) {
 			io.WriteString(w, ": ping\n\n")
 			fl.Flush()
 		case <-tick.C:
-			off = drainStream(w, lp, off)
+			off, ord = drainStreamFrom(w, lp, off, ord)
 			fl.Flush()
 		}
 	}
@@ -76,30 +93,45 @@ func (s *Server) handleAgentStream(w http.ResponseWriter, r *http.Request) {
 // drainStream writes any bytes appended past off as SSE frames and returns the
 // new offset. Re-reads from 0 if the file shrank (truncation/branch swap).
 func drainStream(w io.Writer, lp string, off int64) int64 {
+	off, _ = drainStreamFrom(w, lp, off, 0)
+	return off
+}
+
+// drainStreamFrom is drainStream carrying ord, the 1-based ordinal of the last
+// line emitted, so live frames get SSE ids that continue the backfill's sequence.
+// Ordinals restart with the byte offset when the file shrank.
+func drainStreamFrom(w io.Writer, lp string, off int64, ord int) (int64, int) {
 	fi, err := os.Stat(lp)
 	if err != nil {
-		return off
+		return off, ord
 	}
 	if fi.Size() < off {
-		off = 0
+		off, ord = 0, 0
 	}
 	if fi.Size() == off {
-		return off
+		return off, ord
 	}
 	f, err := os.Open(lp)
 	if err != nil {
-		return off
+		return off, ord
 	}
 	defer f.Close()
 	if _, err := f.Seek(off, 0); err != nil {
-		return off
+		return off, ord
 	}
 	b, _ := io.ReadAll(f)
 	lines, consumed := completeLines(b)
 	for _, line := range lines {
-		io.WriteString(w, "event: stream\ndata: "+line+"\n\n")
+		ord++
+		writeStreamFrame(w, ord, line)
 	}
-	return off + int64(consumed)
+	return off + int64(consumed), ord
+}
+
+// writeStreamFrame emits one agent-output line as an SSE frame whose id is the
+// line's 1-based ordinal in the stream file — the reconnect resume cursor.
+func writeStreamFrame(w io.Writer, ord int, line string) {
+	io.WriteString(w, "id: "+strconv.Itoa(ord)+"\nevent: stream\ndata: "+line+"\n\n")
 }
 
 // completeLines returns the non-empty lines fully terminated by a newline in b,

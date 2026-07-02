@@ -24,9 +24,11 @@ func TestRelayNilEnqueueNoPanic(t *testing.T) {
 }
 
 func TestRelayAuthHeader(t *testing.T) {
-	var gotAuth string
+	// The handler runs on the server goroutine — hand results back over a
+	// channel (never a bare shared variable + Sleep, which races under -race).
+	authCh := make(chan string, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotAuth = r.Header.Get("Authorization")
+		authCh <- r.Header.Get("Authorization")
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -38,22 +40,25 @@ func TestRelayAuthHeader(t *testing.T) {
 	defer r.stop()
 
 	r.enqueue("p", `{"event":"x"}`)
-	time.Sleep(200 * time.Millisecond)
-
-	if gotAuth != "Bearer secret-token" {
-		t.Fatalf("Authorization = %q, want Bearer secret-token", gotAuth)
+	select {
+	case gotAuth := <-authCh:
+		if gotAuth != "Bearer secret-token" {
+			t.Fatalf("Authorization = %q, want Bearer secret-token", gotAuth)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("relay never posted to the server")
 	}
 }
 
 func TestRelayBodyEnvelope(t *testing.T) {
-	var gotBody []byte
+	bodyCh := make(chan []byte, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/json" {
 			t.Errorf("Content-Type = %q", r.Header.Get("Content-Type"))
 		}
 		body := make([]byte, r.ContentLength)
 		r.Body.Read(body)
-		gotBody = body
+		bodyCh <- body
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -62,7 +67,12 @@ func TestRelayBodyEnvelope(t *testing.T) {
 	defer r.stop()
 
 	r.enqueue("pactify", `{"event_id":"1","type":"test"}`)
-	time.Sleep(200 * time.Millisecond)
+	var gotBody []byte
+	select {
+	case gotBody = <-bodyCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("relay never posted to the server")
+	}
 
 	var envelope struct {
 		Project string          `json:"project"`
@@ -144,11 +154,11 @@ func TestRelayServerErrorRetriesAndDrops(t *testing.T) {
 }
 
 func TestRelayBadJSONLineSafe(t *testing.T) {
-	var gotBody []byte
+	bodyCh := make(chan []byte, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body := make([]byte, r.ContentLength)
 		r.Body.Read(body)
-		gotBody = body
+		bodyCh <- body
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -157,7 +167,12 @@ func TestRelayBadJSONLineSafe(t *testing.T) {
 	defer r.stop()
 
 	r.enqueue("p", `not json`)
-	time.Sleep(200 * time.Millisecond)
+	var gotBody []byte
+	select {
+	case gotBody = <-bodyCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("relay never posted to the server")
+	}
 
 	if len(gotBody) == 0 {
 		t.Fatal("expected a body even for bad JSON line")

@@ -61,8 +61,8 @@ func nextAction(st projection.State, h History, th Thresholds) Action {
 	}
 
 	// 2. RunOwner: any task assigned/changes_requested/in_progress whose deps are
-	//    all accepted. in_progress is included because `pactify join` flips EVERY
-	//    of a seat's assigned tasks to in_progress at once (projection.go), so a
+	//    all accepted. in_progress is included because `pactify join` (and the
+	//    driver's own `start`) lifts a task to in_progress (projection.go), so a
 	//    task the worker hasn't checkpointed yet sits in in_progress — the driver
 	//    must (re-)launch the owner to work it (this also gives crash-retry: a
 	//    worker that died mid-task is relaunched until the Fails threshold trips).
@@ -146,25 +146,21 @@ func nextActions(st projection.State, h History, th Thresholds) []Action {
 	return acts
 }
 
-// depsSatisfied reports whether every dependency of t is an accepted task within
-// the SAME feature. Dep ids are scoped to the feature; a dep id not present in f
-// is treated as unsatisfied.
+// depsSatisfied reports whether every dependency of t is satisfied: a dep still
+// present in the SAME feature must be accepted. A dep id absent from f was
+// cancelled (deps are validated same-feature at assign) — it can never reach
+// accepted, so treating it as unsatisfied would deadlock its dependents forever;
+// the orchestrator retired it deliberately, so it is vacuously satisfied (same
+// semantics as the pact join/checkpoint gates).
 func depsSatisfied(f projection.Feature, t projection.Task) bool {
 	for _, dep := range t.Deps {
-		if !acceptedInFeature(f, dep) {
-			return false
+		for _, other := range f.Tasks {
+			if other.ID == dep && other.Status != "accepted" {
+				return false
+			}
 		}
 	}
 	return true
-}
-
-func acceptedInFeature(f projection.Feature, taskID string) bool {
-	for _, t := range f.Tasks {
-		if t.ID == taskID {
-			return t.Status == "accepted"
-		}
-	}
-	return false
 }
 
 func allAccepted(f projection.Feature) bool {

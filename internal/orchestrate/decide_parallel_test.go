@@ -60,14 +60,14 @@ func TestNextActions_SkipsShippedAndIdle(t *testing.T) {
 		{ID: "done", Status: "shipped", Tasks: []projection.Task{
 			{ID: "d1", Status: "accepted"},
 		}},
-		{ID: "blocked", Status: "in_progress", Tasks: []projection.Task{
-			{ID: "x1", Owner: "w", Reviewer: "r", Status: "accepted"},
-			{ID: "x2", Owner: "w", Reviewer: "r", Status: "assigned", Deps: []string{"x9-missing"}},
-		}},
+		// A feature with no tasks has no runnable work. (A dep-blocked idle feature
+		// can no longer be constructed here: a dep absent from the feature was
+		// cancelled and is vacuously satisfied — see depsSatisfied — while a live
+		// unaccepted dep is itself runnable work.)
+		{ID: "idle", Status: "in_progress", Tasks: nil},
 	}}
 	acts := nextActions(st, emptyHistory(), defaultTh())
-	// 'done' is shipped → skip. 'blocked': x1 accepted, x2's dep missing → not
-	// runnable, and not all-accepted → no merge. So no actions.
+	// 'done' is shipped → skip. 'idle' has nothing runnable. So no actions.
 	if len(acts) != 0 {
 		t.Fatalf("want 0 actions, got %d: %+v", len(acts), acts)
 	}

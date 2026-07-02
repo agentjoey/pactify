@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { State, BoardTask } from "../lib/types";
-import { designBoard, taskMetrics, taskTokens, fmtTokens, type DesignColumn } from "../lib/derive";
+import { designBoard, taskMetrics, fmtTokens, eventsByTask, statsByTask, type DesignColumn } from "../lib/derive";
 import type { PactEvent } from "../lib/types";
 import { statusColorVar } from "../lib/lifecycle";
 import { TaskCard } from "./TaskCard";
 import { statusColor } from "./ui/StatusPill";
 import { BoardSkeleton } from "./Skeleton";
 import { casteForRoles, padGradient } from "../lib/ants";
-import { postVerb } from "../lib/api";
+import { postVerb, getStats, type ProjectStats } from "../lib/api";
 import { humanizeError } from "../lib/protocolErrors";
 import { Alert } from "./ui/Alert";
 
@@ -61,6 +61,34 @@ export function Board({
   const [featureFilter, setFeatureFilter] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [stats, setStats] = useState<ProjectStats | null>(null);
+
+  // Per-task tokens live in GET /stats, not the event log (no pact event carries
+  // token counts). Re-fetch when the project or its state changes; the short
+  // debounce coalesces SSE refresh bursts into one request. Failures keep the
+  // last snapshot — TOK degrades to "—", never blocks the board.
+  useEffect(() => {
+    if (!project) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      getStats(project)
+        .then((s) => {
+          if (!cancelled) setStats(s);
+        })
+        .catch(() => {});
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [project, state]);
+
+  // Once-per-render indexes: per-task event slices + per-task stats entries, so
+  // each card does O(own events) work instead of scanning the whole log.
+  const byTask = useMemo(() => eventsByTask(events), [events]);
+  const statMap = useMemo(() => statsByTask(stats), [stats]);
+  // Single clock per render — every card's RUN ticks from the same instant.
+  const nowMs = Date.now();
 
   // A successful verb keeps `pending` set until the refreshed state moves the
   // task out of awaiting_review — clearing eagerly would re-enable Accept in
@@ -83,9 +111,9 @@ export function Board({
         id: f.id,
         accepted: f.tasks.filter((t) => t.status === "accepted" || t.status === "shipped").length,
         total: f.tasks.length,
-        tokens: f.tasks.reduce((n, t) => n + taskTokens(t.id, events), 0),
+        tokens: f.tasks.reduce((n, t) => n + (statMap.get(t.id)?.tokens ?? 0), 0),
       })),
-    [state.features, events],
+    [state.features, statMap],
   );
 
   const totalTasks = state.features.reduce((n, f) => n + f.tasks.length, 0);
@@ -169,7 +197,7 @@ export function Board({
           reviewerRoles={rolesOf(bt.task.reviewer)}
           stale={staleTasks?.has(bt.task.id)}
           selected={selected === bt.task.id}
-          metrics={taskMetrics(bt.task, events)}
+          metrics={taskMetrics(bt.task, byTask.get(bt.task.id) ?? [], nowMs, statMap.get(bt.task.id))}
           reviewActions={reviewActions}
           onClick={() => onSelect(bt.task.id)}
         />

@@ -1,5 +1,6 @@
 import type { State, BoardTask, PactEvent, Task } from "./types";
 import type { MetricItem } from "../components/ui/MetricStrip";
+import type { TaskStat, ProjectStats } from "./api";
 
 // Board columns shown left→right (shipped is feature-level, not a task column).
 export const COLUMNS = ["assigned", "in_progress", "awaiting_review", "accepted", "changes_requested"] as const;
@@ -53,9 +54,8 @@ export function designBoard(state: State): Record<DesignColumn, BoardTask[]> {
         case "accepted":
           cols.accepted.push(bt);
           break;
-        case "shipped":
-          cols.shipped.push(bt);
-          break;
+        // No task-level "shipped" case: shipped is a FEATURE status (projection
+        // only sets it on features); the shippedFeature branch above covers it.
         default:
           cols.assigned.push(bt);
       }
@@ -89,40 +89,44 @@ export function canMergeFeature(state: State, featureId: string): boolean {
 
 // --- Stat helpers (T3) ------------------------------------------------------
 
-interface TaskSession {
-  tokens?: number;
-  cost_usd?: number;
-  duration_ms?: number;
-  iter?: number;
-}
-
-function readSession(taskId: string, events: PactEvent[]): TaskSession {
-  let session: TaskSession = {};
-  for (const e of events) {
-    if (e.task_id !== taskId) continue;
-    const p = e.payload;
-    if (!p || typeof p !== "object") continue;
-    if ("session" in p && p.session && typeof p.session === "object") {
-      session = { ...session, ...(p.session as TaskSession) };
-    }
-    if ("tokens" in p && typeof p.tokens === "number") session.tokens = p.tokens;
-    if ("cost_usd" in p && typeof p.cost_usd === "number") session.cost_usd = p.cost_usd;
-    if ("duration_ms" in p && typeof p.duration_ms === "number") session.duration_ms = p.duration_ms;
-    if ("iter" in p && typeof p.iter === "number") session.iter = p.iter;
-  }
-  return session;
-}
-
 function parseTs(ts: string): number {
   const n = Date.parse(ts);
   return Number.isNaN(n) ? 0 : n;
 }
 
-// taskTokens returns a task's token count from its session metadata (0 when
-// none recorded). Exposed so the board's feature chips and seated rollup can sum
-// token volume without re-deriving the whole MetricStrip.
-export function taskTokens(taskId: string, events: PactEvent[]): number {
-  return readSession(taskId, events).tokens ?? 0;
+// eventsByTask groups the flat event log by task_id so per-card helpers scan
+// only their own slice instead of the whole log. Build once per render (Board
+// memoizes on the events array identity).
+export function eventsByTask(events: PactEvent[]): Map<string, PactEvent[]> {
+  const m = new Map<string, PactEvent[]>();
+  for (const e of events) {
+    if (!e.task_id) continue;
+    const arr = m.get(e.task_id);
+    if (arr) arr.push(e);
+    else m.set(e.task_id, [e]);
+  }
+  return m;
+}
+
+// statsByTask indexes a GET /api/projects/{id}/stats response by task id for
+// O(1) per-card lookup. Null/undefined (stats not fetched yet) → empty map.
+export function statsByTask(stats: ProjectStats | null | undefined): Map<string, TaskStat> {
+  const m = new Map<string, TaskStat>();
+  for (const t of stats?.tasks ?? []) m.set(t.task_id, t);
+  return m;
+}
+
+// taskTokens returns a task's token count from the per-task /stats index (0
+// when the entry is absent or the backend hasn't attributed tokens yet).
+// The legacy PactEvent[] form always returns 0 — pact events never carried
+// token counts, so callers still passing the log (LiveOrchestrate) get exactly
+// the behavior they always had until they migrate to the stats index.
+export function taskTokens(
+  taskId: string,
+  source: ReadonlyMap<string, TaskStat> | readonly PactEvent[],
+): number {
+  if (Array.isArray(source)) return 0;
+  return (source as ReadonlyMap<string, TaskStat>).get(taskId)?.tokens ?? 0;
 }
 
 // fmtDuration renders milliseconds as a compact "3m02s" / "12s" / "1h04m".
@@ -148,14 +152,17 @@ export function fmtCost(usd: number): string {
 }
 
 // taskRuntimeMs measures the span from the task's first `assign` to its terminal
-// moment: accept (accepted), the last checkpoint (awaiting_review |
-// changes_requested), else now (anything ongoing). Returns 0 when the task has
-// no assign event yet. Mirrors the backend stats.durationSec exactly.
+// moment, mirroring the backend stats.durationSec contract exactly:
+//   accepted           → the accept event's ts
+//   awaiting_review    → the last checkpoint's ts
+//   changes_requested  → now (rework is active working time — clock keeps ticking)
+//   anything else      → now (ongoing)
+// Returns 0 when the task has no assign event yet. `nowMs` is required so callers
+// pass ONE per-render Date.now() (purity: same inputs → same output).
 //
 // NOTE: the pact protocol has NO "in_progress" event — in_progress is a projected
-// STATUS, not a logged event. The previous implementation keyed off a nonexistent
-// "in_progress" event, so the lookup always missed and every card rendered RUN 0s.
-export function taskRuntimeMs(task: Task, events: PactEvent[], nowMs: number = Date.now()): number {
+// STATUS, not a logged event; only assign/checkpoint/accept anchor the clock.
+export function taskRuntimeMs(task: Task, events: PactEvent[], nowMs: number): number {
   const startEv = events.find((e) => e.task_id === task.id && e.event_type === "assign");
   if (!startEv) return 0;
   const start = parseTs(startEv.ts);
@@ -167,7 +174,7 @@ export function taskRuntimeMs(task: Task, events: PactEvent[], nowMs: number = D
       const t = parseTs(acceptEv.ts);
       if (t > 0) end = t;
     }
-  } else if (task.status === "awaiting_review" || task.status === "changes_requested") {
+  } else if (task.status === "awaiting_review") {
     const checkpoints = events.filter((e) => e.task_id === task.id && e.event_type === "checkpoint");
     const lastCp = checkpoints.length ? parseTs(checkpoints[checkpoints.length - 1].ts) : 0;
     if (lastCp > 0) end = lastCp;
@@ -175,32 +182,25 @@ export function taskRuntimeMs(task: Task, events: PactEvent[], nowMs: number = D
   return Math.max(0, end - start);
 }
 
-// taskMetrics builds the compact RUN / TOK / ×iter strip for a task. Values are
-// live (blue) while in_progress, italic estimates while assigned/draft, and
-// neutral once accepted/shipped. Tokens and iteration come from session metadata
-// when present; otherwise they fall back to "—" or the checkpoint count.
-export function taskMetrics(task: Task, events: PactEvent[], nowMs: number = Date.now()): MetricItem[] {
-  const session = readSession(task.id, events);
+// taskMetrics builds the compact RUN / TOK / ×iter strip for a task. RUN comes
+// from the event log (contract above); TOK from the task's /stats entry ("—"
+// until the backend attributes tokens — 0 means unknown, not zero spend); iter
+// is the checkpoint count (min 1). Values render live (blue) while in_progress.
+// `events` should be the task's own slice (see eventsByTask); `nowMs` is the
+// caller's per-render clock.
+export function taskMetrics(task: Task, events: PactEvent[], nowMs: number, stat?: TaskStat): MetricItem[] {
   const runtime = taskRuntimeMs(task, events, nowMs);
   const live = task.status === "in_progress";
-  const est = task.status === "assigned" || task.status === "draft";
 
-  const runMs = est ? (session.duration_ms ?? runtime) : runtime;
-  const runValue = est ? `~${fmtDuration(runMs)}` : fmtDuration(runMs);
-
-  let tokValue: string;
-  if (session.tokens != null) {
-    tokValue = est ? `~${fmtTokens(session.tokens)}` : fmtTokens(session.tokens);
-  } else {
-    tokValue = est ? "~—" : "—";
-  }
+  const tokens = stat?.tokens ?? 0;
+  const tokValue = tokens > 0 ? fmtTokens(tokens) : "—";
 
   const checkpoints = events.filter((e) => e.task_id === task.id && e.event_type === "checkpoint").length;
-  const iter = session.iter ?? Math.max(1, checkpoints);
+  const iter = Math.max(1, checkpoints);
 
   return [
-    { label: "RUN", value: runValue, live, est },
-    { label: "TOK", value: tokValue, live, est },
-    { label: "", value: `×${iter}`, live, est },
+    { label: "RUN", value: fmtDuration(runtime), live },
+    { label: "TOK", value: tokValue, live },
+    { label: "", value: `×${iter}`, live },
   ];
 }

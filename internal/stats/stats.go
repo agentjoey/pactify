@@ -51,8 +51,8 @@ type timing struct {
 // Compute derives stats from the ordered event log. `now` is the clock used to
 // time still-running tasks (injected for testability). Duration is measured from
 // a task's first `assign` to its terminal moment: accept (accepted), the last
-// checkpoint (awaiting_review / changes_requested), else `now` (assigned /
-// in_progress).
+// checkpoint (awaiting_review), else `now` (assigned / in_progress /
+// changes_requested — rework is active working time).
 func Compute(events []event.Event, now time.Time) Stats {
 	state := projection.Project(events)
 
@@ -188,9 +188,9 @@ func durationSec(t *timing, status string, now time.Time) int64 {
 	switch status {
 	case "accepted":
 		end = t.accept
-	case "awaiting_review", "changes_requested":
+	case "awaiting_review":
 		end = t.lastCheckpoint
-	default: // assigned / in_progress / anything ongoing
+	default: // assigned / in_progress / changes_requested (rework) / anything ongoing
 		end = now
 	}
 	if end.IsZero() {

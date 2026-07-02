@@ -9,9 +9,18 @@ export function AgentTerminal({ project, task, seat }: { project: string; task: 
 
   useEffect(() => {
     setLines([]);
-    const off = subscribeAgentStream(project, task, (line) =>
-      setLines((prev) => (prev.length > 500 ? [...prev.slice(-499), line] : [...prev, line])),
-    );
+    // Server tags each line with its 1-based stream ordinal (SSE id). Tracking
+    // the highest one seen drops any re-delivered backfill after an EventSource
+    // auto-reconnect — belt and braces with the server's Last-Event-ID resume.
+    let last = 0;
+    const off = subscribeAgentStream(project, task, (line, id) => {
+      const n = id ? Number(id) : NaN;
+      if (Number.isFinite(n)) {
+        if (n <= last) return;
+        last = n;
+      }
+      setLines((prev) => (prev.length > 500 ? [...prev.slice(-499), line] : [...prev, line]));
+    });
     return off;
   }, [project, task]);
 

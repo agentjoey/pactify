@@ -2,6 +2,7 @@ package serve
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 
@@ -40,7 +41,11 @@ func (s *Server) watchProjectLocked(id, root string) {
 	}
 	s.watchPaths[id] = lp
 	if s.watcher != nil {
-		_ = s.watcher.Add(root + "/.pact")
+		// A failed watch (inotify limit, permissions, missing dir) means this
+		// project's SSE never streams — surface it instead of going silently dark.
+		if err := s.watcher.Add(root + "/.pact"); err != nil {
+			fmt.Fprintf(os.Stderr, "pactify serve: watch %s/.pact: %v\n", root, err)
+		}
 	}
 }
 
@@ -48,7 +53,9 @@ func (s *Server) watchProjectLocked(id, root string) {
 // bookkeeping. Caller must hold s.pmu (write).
 func (s *Server) unwatchProjectLocked(id, root string) {
 	if s.watcher != nil {
-		_ = s.watcher.Remove(root + "/.pact")
+		if err := s.watcher.Remove(root + "/.pact"); err != nil {
+			fmt.Fprintf(os.Stderr, "pactify serve: unwatch %s/.pact: %v\n", root, err)
+		}
 	}
 	delete(s.watchPaths, id)
 	delete(s.offsets, id)
@@ -79,10 +86,11 @@ func (s *Server) watchLoop() {
 			if hitID != "" {
 				s.drainNew(hitID, hitLP)
 			}
-		case _, ok := <-s.watcher.Errors:
+		case err, ok := <-s.watcher.Errors:
 			if !ok {
 				return
 			}
+			fmt.Fprintf(os.Stderr, "pactify serve: watcher error: %v\n", err)
 		}
 	}
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fetchProjects, fetchState, subscribeEvents, browseFs, postRegister, setupApply, renameRegistry } from "./api";
+import { fetchProjects, fetchState, subscribeEvents, subscribeAgentStream, browseFs, postRegister, setupApply, renameRegistry } from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -121,6 +121,35 @@ describe("api", () => {
     off();
     expect(lastES!.closed).toBe(true);
   });
+
+  it("subscribeAgentStream forwards each line with its SSE lastEventId", () => {
+    let lastES: { closed: boolean } | null = null;
+    const streamListeners: Array<(ev: MessageEvent) => void> = [];
+
+    class FakeES {
+      closed = false;
+      url: string;
+      addEventListener(name: string, fn: (ev: MessageEvent) => void) {
+        if (name === "stream") streamListeners.push(fn);
+      }
+      close() { this.closed = true; }
+      constructor(url: string) {
+        this.url = url;
+        lastES = this;
+      }
+    }
+    vi.stubGlobal("EventSource", FakeES);
+
+    const got: Array<[string, string | undefined]> = [];
+    const off = subscribeAgentStream("p", "t1", (line, id) => got.push([line, id]));
+
+    streamListeners[0]({ data: "hello", lastEventId: "7" } as MessageEvent);
+    streamListeners[0]({ data: "no-id", lastEventId: "" } as MessageEvent);
+    expect(got).toEqual([["hello", "7"], ["no-id", ""]]);
+
+    off();
+    expect(lastES!.closed).toBe(true);
+  });
 });
 
 describe("renameRegistry", () => {
@@ -180,6 +209,35 @@ describe("worktrees api", () => {
     await fetchState("p1", "feat-x");
     const calls = f.mock.calls as unknown as [string, ...unknown[]][];
     expect(calls[0][0]).toContain("?wt=feat-x");
+    vi.unstubAllGlobals();
+  });
+});
+
+import { fetchEventsLog } from "./api";
+describe("fetchEventsLog", () => {
+  it("GETs the primary events log with no params", async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify([
+      { event_id: "e1", ts: "t", agent_id: "a", role: "worker", event_type: "assign", task_id: "t1", feature: "f", payload: {} },
+    ]), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    const evs = await fetchEventsLog("p1");
+    expect((f.mock.calls as unknown as [string][])[0][0]).toBe("/api/projects/p1/events/log");
+    expect(evs).toHaveLength(1);
+    expect(evs[0].event_id).toBe("e1");
+    vi.unstubAllGlobals();
+  });
+
+  it("passes wt and n as query params", async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify([]), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    await fetchEventsLog("p1", "feat-x", 100);
+    expect((f.mock.calls as unknown as [string][])[0][0]).toBe("/api/projects/p1/events/log?wt=feat-x&n=100");
+    vi.unstubAllGlobals();
+  });
+
+  it("throws on a non-2xx response", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("bad wt", { status: 400 })));
+    await expect(fetchEventsLog("p1", "nope")).rejects.toThrow("400");
     vi.unstubAllGlobals();
   });
 });

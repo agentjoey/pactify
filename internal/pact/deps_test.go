@@ -35,7 +35,7 @@ func depsRepo(t *testing.T) (repo string, orch *pact.Project) {
 
 func TestAssignUnknownDep(t *testing.T) {
 	_, orch := depsRepo(t)
-	err := orch.Assign("T2", "F", "feat/x", "w", "rev", "", []string{"T0"})
+	err := orch.Assign("t2", "f", "feat/x", "w", "rev", "", []string{"t0"})
 	if err == nil || !strings.Contains(err.Error(), "unknown dep") {
 		t.Fatalf("want 'unknown dep' error, got %v", err)
 	}
@@ -43,10 +43,10 @@ func TestAssignUnknownDep(t *testing.T) {
 
 func TestAssignDepCrossFeature(t *testing.T) {
 	_, orch := depsRepo(t)
-	if err := orch.Assign("T1", "FA", "feat/a", "w", "rev", "", nil); err != nil {
+	if err := orch.Assign("t1", "fa", "feat/a", "w", "rev", "", nil); err != nil {
 		t.Fatal(err)
 	}
-	err := orch.Assign("T2", "FB", "feat/b", "w2", "rev", "", []string{"T1"})
+	err := orch.Assign("t2", "fb", "feat/b", "w2", "rev", "", []string{"t1"})
 	if err == nil || !strings.Contains(err.Error(), "same feature") {
 		t.Fatalf("want 'same feature' error, got %v", err)
 	}
@@ -58,15 +58,15 @@ func TestAssignDepCrossFeature(t *testing.T) {
 // reachable from itself. A self-listed dep closes the smallest cycle.
 func TestAssignDepCycle(t *testing.T) {
 	_, orch := depsRepo(t)
-	if err := orch.Assign("T1", "F", "feat/x", "w", "rev", "", nil); err != nil {
+	if err := orch.Assign("t1", "f", "feat/x", "w", "rev", "", nil); err != nil {
 		t.Fatal(err)
 	}
-	// T2 deps[T1] — valid DAG edge.
-	if err := orch.Assign("T2", "F", "feat/x", "w2", "rev", "", []string{"T1"}); err != nil {
+	// t2 deps[t1] — valid DAG edge.
+	if err := orch.Assign("t2", "f", "feat/x", "w2", "rev", "", []string{"t1"}); err != nil {
 		t.Fatal(err)
 	}
-	// T3 deps[T2, T3]: the self edge closes a cycle T3 -> T3.
-	err := orch.Assign("T3", "F", "feat/x", "w", "rev", "", []string{"T2", "T3"})
+	// t3 deps[t2, t3]: the self edge closes a cycle t3 -> t3.
+	err := orch.Assign("t3", "f", "feat/x", "w", "rev", "", []string{"t2", "t3"})
 	if err == nil || !strings.Contains(err.Error(), "cycle") {
 		t.Fatalf("want 'cycle' error, got %v", err)
 	}
@@ -76,51 +76,51 @@ func TestAssignDepCycle(t *testing.T) {
 // (A <- B <- C, plus a diamond) must assign cleanly.
 func TestAssignDepDAGAccepted(t *testing.T) {
 	_, orch := depsRepo(t)
-	if err := orch.Assign("A", "F", "feat/x", "w", "rev", "", nil); err != nil {
+	if err := orch.Assign("a", "f", "feat/x", "w", "rev", "", nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := orch.Assign("B", "F", "feat/x", "w2", "rev", "", []string{"A"}); err != nil {
+	if err := orch.Assign("b", "f", "feat/x", "w2", "rev", "", []string{"a"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := orch.Assign("C", "F", "feat/x", "w", "rev", "", []string{"A", "B"}); err != nil {
+	if err := orch.Assign("c", "f", "feat/x", "w", "rev", "", []string{"a", "b"}); err != nil {
 		t.Fatalf("diamond DAG must be accepted, got %v", err)
 	}
 }
 
 func TestJoinGateBlockedByUnacceptedDep(t *testing.T) {
 	repo, orch := depsRepo(t)
-	// T1: owner w, reviewer rev, no deps.
-	if err := orch.Assign("T1", "F", "feat/x", "w", "rev", "", nil); err != nil {
+	// t1: owner w, reviewer rev, no deps.
+	if err := orch.Assign("t1", "f", "feat/x", "w", "rev", "", nil); err != nil {
 		t.Fatal(err)
 	}
-	// T2: owner w2, deps[T1].
-	if err := orch.Assign("T2", "F", "feat/x", "w2", "rev", "", []string{"T1"}); err != nil {
+	// t2: owner w2, deps[t1].
+	if err := orch.Assign("t2", "f", "feat/x", "w2", "rev", "", []string{"t1"}); err != nil {
 		t.Fatal(err)
 	}
 
-	// w2 join while T1 not accepted -> blocked.
+	// w2 join while t1 not accepted -> blocked.
 	w2 := pact.At(repo).As("w2")
 	err := w2.Join("w2", "worker")
-	if err == nil || !strings.Contains(err.Error(), "blocked by") || !strings.Contains(err.Error(), "T1") {
-		t.Fatalf("want join blocked-by-T1 error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "blocked by") || !strings.Contains(err.Error(), "t1") {
+		t.Fatalf("want join blocked-by-t1 error, got %v", err)
 	}
 
-	// Drive T1 to accepted: w joins, checkpoints; rev accepts.
+	// Drive t1 to accepted: w joins, checkpoints; rev accepts.
 	w := pact.At(repo).As("w")
 	if err := w.Join("w", "worker"); err != nil {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(repo, "impl.txt"), []byte("x"), 0o644)
-	if err := w.Checkpoint("T1", "ok"); err != nil {
+	if err := w.Checkpoint("t1", "ok"); err != nil {
 		t.Fatal(err)
 	}
-	if err := orch.As("rev").Accept("T1"); err != nil {
+	if err := orch.As("rev").Accept("t1"); err != nil {
 		t.Fatal(err)
 	}
 
 	// Now w2 join succeeds.
 	if err := w2.Join("w2", "worker"); err != nil {
-		t.Fatalf("w2 join after T1 accepted must succeed, got %v", err)
+		t.Fatalf("w2 join after t1 accepted must succeed, got %v", err)
 	}
 }
 
@@ -129,11 +129,11 @@ func TestJoinGateBlockedByUnacceptedDep(t *testing.T) {
 // so the feature branch was never created).
 func TestJoinGateRunnableTaskNotStrandedByFutureDep(t *testing.T) {
 	repo, orch := depsRepo(t)
-	// w owns BOTH T1 (no deps, runnable) and T2 (deps[T1], blocked).
-	if err := orch.Assign("T1", "F", "feat/x", "w", "rev", "", nil); err != nil {
+	// w owns BOTH t1 (no deps, runnable) and t2 (deps[t1], blocked).
+	if err := orch.Assign("t1", "f", "feat/x", "w", "rev", "", nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := orch.Assign("T2", "F", "feat/x", "w", "rev", "", []string{"T1"}); err != nil {
+	if err := orch.Assign("t2", "f", "feat/x", "w", "rev", "", []string{"t1"}); err != nil {
 		t.Fatal(err)
 	}
 	w := pact.At(repo).As("w")
@@ -147,10 +147,10 @@ func TestJoinGateRunnableTaskNotStrandedByFutureDep(t *testing.T) {
 
 func TestProjectionDepsLine(t *testing.T) {
 	repo, orch := depsRepo(t)
-	if err := orch.Assign("T1", "F", "feat/x", "w", "rev", "", nil); err != nil {
+	if err := orch.Assign("t1", "f", "feat/x", "w", "rev", "", nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := orch.Assign("T2", "F", "feat/x", "w2", "rev", "", []string{"T1"}); err != nil {
+	if err := orch.Assign("t2", "f", "feat/x", "w2", "rev", "", []string{"t1"}); err != nil {
 		t.Fatal(err)
 	}
 	st, err := os.ReadFile(filepath.Join(repo, ".pact/STATE.yml"))
@@ -158,11 +158,11 @@ func TestProjectionDepsLine(t *testing.T) {
 		t.Fatal(err)
 	}
 	state := string(st)
-	if !strings.Contains(state, "deps: [T1]") {
-		t.Fatalf("STATE must contain 'deps: [T1]' under T2:\n%s", state)
+	if !strings.Contains(state, "deps: [t1]") {
+		t.Fatalf("STATE must contain 'deps: [t1]' under t2:\n%s", state)
 	}
-	// T1 has no deps -> exactly one deps line in the whole STATE.
+	// t1 has no deps -> exactly one deps line in the whole STATE.
 	if n := strings.Count(state, "deps:"); n != 1 {
-		t.Fatalf("expected exactly one deps line (T2 only), got %d:\n%s", n, state)
+		t.Fatalf("expected exactly one deps line (t2 only), got %d:\n%s", n, state)
 	}
 }

@@ -13,14 +13,14 @@ import (
 func TestClassifyAndCheckpoint_VerifyPasses(t *testing.T) {
 	dir := newProject(t)
 	spec := writeSpec(t, dir, "t1", "true")
-	assign(t, dir, "t1", "F", "feat-F", spec)
+	assign(t, dir, "t1", "f", "feat-f", spec)
 
 	opts := Options{Dir: dir, Exec: &okExec{}}
 	st, err := pact.At(dir).StateProjection()
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, task, ok := find(st, "F", "t1")
+	_, task, ok := find(st, "f", "t1")
 	if !ok {
 		t.Fatal("task t1 not found")
 	}
@@ -29,7 +29,7 @@ func TestClassifyAndCheckpoint_VerifyPasses(t *testing.T) {
 		t.Fatal("verify passing should return true (checkpoint recorded)")
 	}
 	after, _ := pact.At(dir).StateProjection()
-	if _, t1, _ := find(after, "F", "t1"); t1.Status != "awaiting_review" {
+	if _, t1, _ := find(after, "f", "t1"); t1.Status != "awaiting_review" {
 		t.Fatalf("status=%q, want awaiting_review", t1.Status)
 	}
 }
@@ -39,17 +39,17 @@ func TestClassifyAndCheckpoint_VerifyPasses(t *testing.T) {
 func TestClassifyAndCheckpoint_VerifyFails(t *testing.T) {
 	dir := newProject(t)
 	spec := writeSpec(t, dir, "t1", "false")
-	assign(t, dir, "t1", "F", "feat-F", spec)
+	assign(t, dir, "t1", "f", "feat-f", spec)
 
 	opts := Options{Dir: dir, Exec: &failExec{}}
 	st, _ := pact.At(dir).StateProjection()
-	_, task, _ := find(st, "F", "t1")
+	_, task, _ := find(st, "f", "t1")
 
 	if opts.classifyAndCheckpoint(context.Background(), "t1", task) {
 		t.Fatal("verify failing should return false")
 	}
 	after, _ := pact.At(dir).StateProjection()
-	if _, t1, _ := find(after, "F", "t1"); t1.Status != "assigned" {
+	if _, t1, _ := find(after, "f", "t1"); t1.Status != "assigned" {
 		t.Fatalf("status=%q, want assigned (no checkpoint on fail)", t1.Status)
 	}
 }

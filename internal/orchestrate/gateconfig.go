@@ -13,7 +13,16 @@ import (
 // project type. This replaces a single hardcoded gate so polyglot repos (pnpm /
 // go / cargo …) get a sensible build+test gate, and any project can pin its own.
 func resolveGate(dir string) string {
-	if g, ok := pact.At(dir).GateConfig(); ok {
+	g, ok, err := pact.At(dir).GateConfig()
+	if err != nil {
+		// Fail closed: an unreadable log means we cannot know whether a gate was
+		// configured, and degrading to the type-default here would silently strip a
+		// configured safety gate at merge time. resolveGate's callers (gateCommands →
+		// the pre-merge hard gate) have no error channel, so surface the failure as a
+		// command that always fails loudly — the gate blocks instead of waving through.
+		return `echo "pact: gate config unreadable (.pact/log.jsonl) — refusing type-default gate; fix the log and retry" && false`
+	}
+	if ok {
 		return g
 	}
 	return detectDefaultGate(dir)

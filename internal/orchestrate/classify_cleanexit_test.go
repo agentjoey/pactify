@@ -35,8 +35,8 @@ func (f *silentWorkerRunner) Run(ctx context.Context, lc LaunchContext) error {
 // toward escalation.
 func TestCleanExitNoCheckpointRescuedByVerify(t *testing.T) {
 	dir := newProject(t)
-	spec := writeSpec(t, dir, "T1", "true")
-	assign(t, dir, "T1", "F", "feat/x", spec)
+	spec := writeSpec(t, dir, "t1", "true")
+	assign(t, dir, "t1", "f", "feat/x", spec)
 
 	runner := &silentWorkerRunner{t: t, dir: dir}
 	notify := &recNotify{}
@@ -44,7 +44,7 @@ func TestCleanExitNoCheckpointRescuedByVerify(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	if got := featureStatus(t, dir, "F"); got != "shipped" {
+	if got := featureStatus(t, dir, "f"); got != "shipped" {
 		t.Fatalf("feature status = %q, want shipped (rescue should checkpoint); notify=%v", got, notify.msgs)
 	}
 	if runner.workerCalls != 1 {
@@ -56,8 +56,8 @@ func TestCleanExitNoCheckpointRescuedByVerify(t *testing.T) {
 // genuine failure: it keeps burning fails and escalates with the named cause.
 func TestCleanExitNoCheckpointStillEscalatesWhenVerifyFails(t *testing.T) {
 	dir := newProject(t)
-	spec := writeSpec(t, dir, "T1", "false")
-	assign(t, dir, "T1", "F", "feat/x", spec)
+	spec := writeSpec(t, dir, "t1", "false")
+	assign(t, dir, "t1", "f", "feat/x", spec)
 
 	notify := &recNotify{}
 	if err := Run(context.Background(), baseOpts(dir, &silentWorkerRunner{t: t, dir: dir}, &failExec{}, notify)); err != nil {
@@ -68,7 +68,7 @@ func TestCleanExitNoCheckpointStillEscalatesWhenVerifyFails(t *testing.T) {
 	if !strings.Contains(joined, "recorded no checkpoint") {
 		t.Fatalf("escalation should name the no-checkpoint cause; notify=%v", notify.msgs)
 	}
-	if got := featureStatus(t, dir, "F"); got == "shipped" {
+	if got := featureStatus(t, dir, "f"); got == "shipped" {
 		t.Fatal("feature shipped despite failing verify; want escalation")
 	}
 }

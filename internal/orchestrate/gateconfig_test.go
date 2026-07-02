@@ -58,8 +58,8 @@ func TestGateCommandsUsesProjectGate(t *testing.T) {
 	t.Setenv("PACT_DIR", "")
 	t.Setenv("PACT_AGENT_ID", "orch")
 	dir := newProject(t)
-	writeSpec(t, dir, "T1", "") // spec with no verify: line
-	assign(t, dir, "T1", "F", "feat/x", filepath.Join(".pact", "tasks", "T1.md"))
+	writeSpec(t, dir, "t1", "") // spec with no verify: line
+	assign(t, dir, "t1", "f", "feat/x", filepath.Join(".pact", "tasks", "t1.md"))
 
 	custom := "pnpm build && pnpm test"
 	if err := pact.At(dir).As("orch").ConfigGate(custom); err != nil {
@@ -67,7 +67,7 @@ func TestGateCommandsUsesProjectGate(t *testing.T) {
 	}
 	st, _ := pact.At(dir).StateProjection()
 	for _, f := range st.Features {
-		if f.ID != "F" {
+		if f.ID != "f" {
 			continue
 		}
 		cmds := gateCommands(dir, f)

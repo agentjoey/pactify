@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
 )
@@ -31,12 +32,31 @@ func findTask(st projection.State, taskID string) (*projection.Task, *projection
 	return nil, nil
 }
 
-func checkAssign(st projection.State, taskID, owner, reviewer string) error {
+func checkAssign(st projection.State, actingID, taskID, feature, branch, owner, reviewer string) error {
+	if err := requireOrchestrator(st, "assign", actingID); err != nil {
+		return err
+	}
 	if owner == "" || reviewer == "" {
 		return fmt.Errorf("pactify assign: --owner and --reviewer required")
 	}
 	if owner == reviewer {
 		return fmt.Errorf("pactify assign: owner (%s) must differ from reviewer (separation of duties)", owner)
+	}
+	// Identifier hygiene: taskID and feature flow unquoted into git argv and
+	// commit messages later (CheckoutOrCreate, MergeNoFF, AddWorktree), where a
+	// crafted value (leading "-", spaces) reads as a git flag. Hold both to the
+	// seat-id slug pattern so nothing hostile ever reaches git.
+	if !IsSlug(taskID) {
+		return fmt.Errorf("pactify assign: task id %q is not a slug (lowercase kebab, e.g. t1-parse-args)", taskID)
+	}
+	if !IsSlug(feature) {
+		return fmt.Errorf("pactify assign: feature %q is not a slug (lowercase kebab)", feature)
+	}
+	// A branch legitimately contains "/" so it is not a slug; vet it as a git
+	// branch name instead. Empty stays allowed — an in-place feature declares no
+	// branch.
+	if branch != "" && !gitx.ValidBranchName(branch) {
+		return fmt.Errorf("pactify assign: branch %q is not a valid git branch name", branch)
 	}
 	if taskExists(st, taskID) {
 		return fmt.Errorf("pactify assign: task %s already exists", taskID)
@@ -60,6 +80,19 @@ func checkAddSeat(st projection.State, actingID string, seat Seat) error {
 		if r != "orchestrator" && r != "reviewer" && r != "worker" {
 			return fmt.Errorf("pactify seat add: invalid role %q (want orchestrator/reviewer/worker)", r)
 		}
+	}
+	return nil
+}
+
+// requireOrchestrator gates a coordination verb: only a roster seat carrying the
+// orchestrator role may drive it (same construction as checkAddSeat's gate). This
+// is what keeps a registered worker seat from fabricating assignments, retiring
+// someone's work (cancel/withdraw), rewriting the safety gate or base branch, or
+// driving merges — those verbs shape the shared plan, and the roster's role
+// declaration is the authority for who may.
+func requireOrchestrator(st projection.State, verb, actingID string) error {
+	if !seatHasRole(st, actingID, "orchestrator") {
+		return fmt.Errorf("pactify %s: acting seat %q must have the orchestrator role", verb, actingID)
 	}
 	return nil
 }
@@ -209,7 +242,10 @@ func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*pro
 	return f, nil
 }
 
-func checkMerge(st projection.State, feature string) error {
+func checkMerge(st projection.State, actingID, feature string) error {
+	if err := requireOrchestrator(st, "merge", actingID); err != nil {
+		return err
+	}
 	var feat *projection.Feature
 	for fi := range st.Features {
 		if st.Features[fi].ID == feature {

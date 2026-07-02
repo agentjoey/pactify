@@ -21,11 +21,11 @@ interop_repo() {
   source .pact/bin/pact.sh
   export PACT_AGENT_ID=claude-opus
   pact_init --project p --seat "claude-opus:orchestrator,reviewer:CLAUDE.md" --seat "opencode:worker:AGENTS.md"
-  pact_assign T1 --feature F --branch feat/x --owner opencode --reviewer claude-opus --spec .pact/tasks/T1.md
+  pact_assign t1 --feature f --branch feat/x --owner opencode --reviewer claude-opus --spec .pact/tasks/t1.md
   export PACT_AGENT_ID=opencode; "$BIN" join opencode --roles worker
   echo code > impl.txt
-  "$BIN" checkpoint T1 --evidence "ok"
-  export PACT_AGENT_ID=claude-opus; "$BIN" accept T1; "$BIN" merge F
+  "$BIN" checkpoint t1 --evidence "ok"
+  export PACT_AGENT_ID=claude-opus; "$BIN" accept t1; "$BIN" merge f
   grep -q "status: shipped" .pact/STATE.yml
   "$BIN" validate
   source .pact/bin/pact.sh && pact_validate
@@ -38,12 +38,12 @@ interop_repo() {
   interop_repo
   export PACT_AGENT_ID=claude-opus
   "$BIN" init --project p --seat "claude-opus:orchestrator,reviewer:CLAUDE.md" --seat "opencode:worker:AGENTS.md"
-  "$BIN" assign T1 --feature F --branch feat/y --owner opencode --reviewer claude-opus --spec .pact/tasks/T1.md
+  "$BIN" assign t1 --feature f --branch feat/y --owner opencode --reviewer claude-opus --spec .pact/tasks/t1.md
   source .pact/bin/pact.sh
   export PACT_AGENT_ID=opencode; pact_join opencode --roles worker
   echo code > impl.txt
-  pact_checkpoint T1 --evidence "ok"
-  export PACT_AGENT_ID=claude-opus; pact_accept T1; pact_merge F
+  pact_checkpoint t1 --evidence "ok"
+  export PACT_AGENT_ID=claude-opus; pact_accept t1; pact_merge f
   grep -q "status: shipped" .pact/STATE.yml
   pact_validate
   "$BIN" validate

@@ -42,7 +42,7 @@ setup() {
   # n=3: assign t1 over the API so the log carries a task+feature event.
   curl -s -o /dev/null -X POST "$BASE/api/projects/demo/verbs/assign" \
     -H 'content-type: application/json' \
-    -d '{"task":"t1","feature":"F","branch":"feat/x","owner":"opencode","reviewer":"claude-opus","spec":".pact/tasks/t1.md"}'
+    -d '{"task":"t1","feature":"f","branch":"feat/x","owner":"opencode","reviewer":"claude-opus","spec":".pact/tasks/t1.md"}'
 }
 
 teardown() {
@@ -71,7 +71,7 @@ teardown() {
   assign_task=$(jq -r '.events[] | select(.type=="assign") | .task' <<<"$output")
   assign_feat=$(jq -r '.events[] | select(.type=="assign") | .feature' <<<"$output")
   [ "$assign_task" = "t1" ]
-  [ "$assign_feat" = "F" ]
+  [ "$assign_feat" = "f" ]
 }
 
 @test "comms API: state?at=1 shows only the init fold; plain state equals at=total" {
@@ -87,7 +87,7 @@ teardown() {
   # the full (live) state, by contrast, has the assigned feature F.
   run curl -s "$BASE/api/projects/demo/state"
   [ "$(jq '.features | length' <<<"$output")" -eq 1 ]
-  [ "$(jq -r '.features[0].id' <<<"$output")" = "F" ]
+  [ "$(jq -r '.features[0].id' <<<"$output")" = "f" ]
 
   # plain /state must be byte-identical to /state?at=<total> (clamp == live).
   total=$(curl -s "$BASE/api/projects/demo/timeline" | jq '.total')

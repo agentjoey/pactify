@@ -44,7 +44,7 @@ func TestMergeRefusesEmptyFeatureBranch(t *testing.T) {
 			t.Fatalf("git %v: %v %s", a, err, out)
 		}
 	}
-	if err := p.Assign("T1", "F", "feat/x", "w", "rev", ".pact/tasks/T1.md", nil); err != nil {
+	if err := p.Assign("t1", "f", "feat/x", "w", "rev", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 	wk := At(repo).As("w")
@@ -53,13 +53,13 @@ func TestMergeRefusesEmptyFeatureBranch(t *testing.T) {
 	}
 	// Checkpoint WITHOUT writing any file → no commit (ledger is gitignored) → feat/x
 	// stays at base.
-	if err := wk.Checkpoint("T1", "ok"); err != nil {
+	if err := wk.Checkpoint("t1", "ok"); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.As("rev").Accept("T1"); err != nil {
+	if err := p.As("rev").Accept("t1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.As("rev").Merge("F"); err == nil {
+	if err := p.As("rev").Merge("f"); err == nil {
 		t.Fatal("merge shipped an empty feature branch (no commits over base) — should refuse")
 	}
 }

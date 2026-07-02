@@ -200,10 +200,10 @@ func baseOpts(dir string, run Runner, exec cmdExec, notify Notifier) Options {
 // (1) happy: two tasks → feature shipped.
 func TestLoopHappyPathShipsFeature(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	s2 := writeSpec(t, dir, "T2", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
-	assign(t, dir, "T2", "F", "feat/x", s2)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	s2 := writeSpec(t, dir, "t2", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
+	assign(t, dir, "t2", "f", "feat/x", s2)
 
 	runner := newFakeRunner(t, dir)
 	exec := &okExec{}
@@ -212,7 +212,7 @@ func TestLoopHappyPathShipsFeature(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	if got := featureStatus(t, dir, "F"); got != "shipped" {
+	if got := featureStatus(t, dir, "f"); got != "shipped" {
 		t.Fatalf("feature status = %q, want shipped", got)
 	}
 	if exec.calls == 0 {
@@ -227,14 +227,14 @@ func TestLoopHappyPathShipsFeature(t *testing.T) {
 // ensureUnionAttrs; the single-run path must too.
 func TestLoopScaffoldsRuntimeGitignore(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	if err := Run(context.Background(), baseOpts(dir, newFakeRunner(t, dir), &okExec{}, &recNotify{})); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
-	rel, err := filepath.Rel(dir, StreamPath(dir, "T1"))
+	rel, err := filepath.Rel(dir, StreamPath(dir, "t1"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,8 +274,8 @@ func TestEnsureRuntimeExcludedLocalNeverCommits(t *testing.T) {
 // ff-merge. Runtime artifacts are now excluded locally. Spec: coordination-authority P0a.
 func TestLoopDoesNotCommitIgnoreToBase(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	if err := Run(context.Background(), baseOpts(dir, newFakeRunner(t, dir), &okExec{}, &recNotify{})); err != nil {
 		t.Fatalf("Run: %v", err)
@@ -303,8 +303,8 @@ func headOf(t *testing.T, dir string) string {
 // (2) rework: reviewer requests changes once, then accepts → shipped, worker re-launched.
 func TestLoopReworkThenShips(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir)
 	runner.changesBeforeAccept = 1 // one changes round, then accept
@@ -312,7 +312,7 @@ func TestLoopReworkThenShips(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	if got := featureStatus(t, dir, "F"); got != "shipped" {
+	if got := featureStatus(t, dir, "f"); got != "shipped" {
 		t.Fatalf("feature status = %q, want shipped", got)
 	}
 	if runner.workerCalls < 2 {
@@ -327,8 +327,8 @@ func TestLoopReworkThenShips(t *testing.T) {
 // TestCleanExitNoCheckpointRescuedByVerify).
 func TestEscalationNamesNoCheckpointCause(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "false")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "false")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	opts := baseOpts(dir, noCheckpointRunner{}, &failExec{}, &recNotify{})
 	opts.Th.MaxFails = 2
@@ -361,8 +361,8 @@ func (noCheckpointRunner) Run(_ context.Context, _ LaunchContext) error { return
 // (3) escalation: reviewer always requests changes → rework limit → escalation file, no merge.
 func TestLoopRebuffsEscalatesAtReworkLimit(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir)
 	runner.alwaysChanges = true
@@ -373,7 +373,7 @@ func TestLoopRebuffsEscalatesAtReworkLimit(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	if got := featureStatus(t, dir, "F"); got == "shipped" {
+	if got := featureStatus(t, dir, "f"); got == "shipped" {
 		t.Fatal("feature shipped despite repeated changes_requested")
 	}
 	esc := filepath.Join(dir, ".pact", "orchestrate", "escalation-"+fixedNow()+".md")
@@ -388,8 +388,8 @@ func TestLoopRebuffsEscalatesAtReworkLimit(t *testing.T) {
 // (4) hard gate intercept: all tasks accepted but gate fails → no merge, escalation.
 func TestLoopHardGateBlocksMerge(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir) // accepts immediately
 	exec := &failExec{}
@@ -398,7 +398,7 @@ func TestLoopHardGateBlocksMerge(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	if got := featureStatus(t, dir, "F"); got == "shipped" {
+	if got := featureStatus(t, dir, "f"); got == "shipped" {
 		t.Fatal("feature merged despite failing hard gate")
 	}
 	if exec.calls == 0 {
@@ -413,8 +413,8 @@ func TestLoopHardGateBlocksMerge(t *testing.T) {
 // (5) dry-run: no Runner invocations, feature not shipped.
 func TestLoopDryRunNoSideEffects(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir)
 	exec := &okExec{}
@@ -431,7 +431,7 @@ func TestLoopDryRunNoSideEffects(t *testing.T) {
 	if exec.calls != 0 {
 		t.Fatal("dry-run invoked gate exec")
 	}
-	if got := featureStatus(t, dir, "F"); got == "shipped" {
+	if got := featureStatus(t, dir, "f"); got == "shipped" {
 		t.Fatal("dry-run shipped the feature")
 	}
 }

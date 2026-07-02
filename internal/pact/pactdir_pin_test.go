@@ -21,7 +21,7 @@ func TestCheckpointHonorsAbsolutePactDir(t *testing.T) {
 	if err := At(repo).As("orch").Init("p", []string{"orch:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := At(repo).As("orch").Assign("T1", "F", "feat/x", "w", "orch", ".pact/tasks/T1.md", nil); err != nil {
+	if err := At(repo).As("orch").Assign("t1", "f", "feat/x", "w", "orch", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 	base, _ := gitx.CurrentBranch(repo)
@@ -41,7 +41,7 @@ func TestCheckpointHonorsAbsolutePactDir(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "work.txt"), []byte("real work\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := At(".").Checkpoint("T1", "ok"); err != nil {
+	if err := At(".").Checkpoint("t1", "ok"); err != nil {
 		t.Fatalf("checkpoint from foreign cwd with abs PACT_DIR: %v", err)
 	}
 

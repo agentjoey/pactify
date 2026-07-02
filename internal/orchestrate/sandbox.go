@@ -7,15 +7,26 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/gitx"
+	"github.com/agentjoey/pactify/internal/lockx"
 	"github.com/agentjoey/pactify/internal/projection"
 )
 
 // sandboxDirName is where the isolated orchestration worktree lives (under the
 // already-ignored .pact/orchestrate/ runtime tree).
 const sandboxDirName = "sandbox"
+
+// parkBranch is the scratch branch the user's main tree is parked on for the
+// duration of a sandbox run, freeing base for the sandbox worktree's merges.
+const parkBranch = "pact-sandbox-park"
+
+// logCopybackLockTimeout bounds how long a ledger 回灌 waits for the cross-process
+// log lock. A var so tests can shrink it. On expiry the write is SKIPPED — the
+// copy-back is best-effort observation, so a busy lock must never stall the loop.
+var logCopybackLockTimeout = 30 * time.Second
 
 // RunSandbox drives the serial loop in an ISOLATED git worktree so agent workers
 // never checkout/write in the user's active working tree (the build/deploy tree).
@@ -35,15 +46,29 @@ func RunSandbox(ctx context.Context, opts Options) error {
 	if base == "" {
 		return fmt.Errorf("sandbox: cannot determine base branch (set origin/HEAD or check out a branch)")
 	}
+	// Crash guard: a surviving park marker (or a tree still sitting on the park
+	// branch) means a previous sandbox run died before restoring the user's branch.
+	// Re-parking would capture the park branch itself as "orig" and permanently lose
+	// the real branch; auto-restoring is unsafe too (the post-crash tree state is
+	// unknown). Refuse, name the recorded branch, and let a human look.
+	if err := checkStalePark(dir); err != nil {
+		return err
+	}
 	if dirty, _ := gitx.HasChanges(dir); dirty {
 		return fmt.Errorf("sandbox: working tree is dirty — commit/stash before an isolated run, or pass --in-place to run directly in your tree (parking needs a clean tree)")
 	}
 
 	orig, _ := gitx.CurrentBranch(dir)
-	park := "pact-sandbox-park"
 	sbDir := filepath.Join(dir, ".pact", "orchestrate", sandboxDirName)
 
-	if err := gitx.CheckoutOrCreate(dir, park); err != nil {
+	// Persist the parked branch's identity BEFORE parking: the in-memory orig dies
+	// with the process, and after a mid-run crash CurrentBranch reads the park
+	// branch itself — the marker is the only record of where the user really was.
+	if err := writeParkMarker(dir, orig); err != nil {
+		return fmt.Errorf("sandbox: record park marker: %w", err)
+	}
+	if err := gitx.CheckoutOrCreate(dir, parkBranch); err != nil {
+		removeParkMarker(dir) // never parked — the marker must not strand a healthy tree
 		return fmt.Errorf("sandbox: park main tree: %w", err)
 	}
 	// teardown removes the worktree and restores the user's branch. It runs BEFORE
@@ -52,14 +77,14 @@ func RunSandbox(ctx context.Context, opts Options) error {
 	teardown := func() {
 		_ = gitx.RemoveWorktree(dir, sbDir)
 		_ = os.RemoveAll(sbDir)
-		if orig != "" {
-			_ = gitx.Checkout(dir, orig)
+		if orig != "" && gitx.Checkout(dir, orig) == nil {
+			removeParkMarker(dir) // only a CONFIRMED restore clears the crash guard
 		}
 	}
 
 	_ = gitx.RemoveWorktree(dir, sbDir)
 	_ = os.RemoveAll(sbDir)
-	if err := gitx.AddWorktree(dir, sbDir, base, park); err != nil {
+	if err := gitx.AddWorktree(dir, sbDir, base, parkBranch); err != nil {
 		teardown()
 		return fmt.Errorf("sandbox: create worktree on %q: %w", base, err)
 	}
@@ -75,12 +100,77 @@ func RunSandbox(ctx context.Context, opts Options) error {
 	// orchestrate/, sees nothing and the worktree's copy vanishes at teardown
 	// (spec coordination-authority P0b). Git work still happens in sbDir.
 	o.RuntimeDir = dir
-	runErr := o.withDefaults().run(ctx)
+	// mirrorLedger's "is .pact ignored in the runtime dir" probe cannot change
+	// mid-run; wiring the memo here means steady-state loop iterations don't spawn
+	// `git check-ignore` (see Options.pactIgnored).
+	o.pactIgnoredMemo = &ignoredMemo{}
+	// The epilogue runs in a defer so a panic inside the driver loop cannot skip
+	// it — that would orphan the worktree, strand the main tree on the park branch,
+	// and lose the advanced ledger (the panic still propagates). Ordering is
+	// load-bearing: snapshot the sandbox ledger BEFORE the worktree is removed,
+	// restore the branch (still-clean tree), then 回灌 onto the restored tree. The
+	// setup-failure paths above return before this defer is installed, so the
+	// epilogue can never run twice.
+	defer func() {
+		ledger := readLedger(sbDir)
+		teardown()
+		writeLedger(dir, ledger)
+	}()
+	return o.withDefaults().run(ctx)
+}
 
-	ledger := readLedger(sbDir) // capture the advanced ledger before the worktree goes
-	teardown()                  // remove worktree + restore the main tree (still clean)
-	writeLedger(dir, ledger)    // 回灌 onto the restored tree
-	return runErr
+// --- park marker (crash-safe park identity) ------------------------------------
+
+// parkMarker records on disk which branch the main tree was on before RunSandbox
+// parked it, so a crash mid-run (SIGKILL/reboot) cannot erase the user's branch.
+type parkMarker struct {
+	OrigBranch string `json:"orig_branch"`
+	TS         string `json:"ts"`
+}
+
+// parkMarkerPath is where the park identity lives (under the runtime tree, next
+// to the sandbox worktree it guards).
+func parkMarkerPath(dir string) string {
+	return filepath.Join(dir, ".pact", "orchestrate", "park.json")
+}
+
+// writeParkMarker persists the parked tree's original branch before the park
+// checkout happens.
+func writeParkMarker(dir, orig string) error {
+	b, err := json.Marshal(parkMarker{OrigBranch: orig, TS: time.Now().UTC().Format(time.RFC3339)})
+	if err != nil {
+		return err
+	}
+	path := parkMarkerPath(dir)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0o644)
+}
+
+// removeParkMarker clears the crash guard; only called once the tree is known
+// restored (or was never parked).
+func removeParkMarker(dir string) { _ = os.Remove(parkMarkerPath(dir)) }
+
+// checkStalePark refuses to run over the debris of a crashed sandbox run. It
+// never removes the marker or restores the branch itself: the tree state after a
+// crash is unknown, so recovery is a deliberate human act, and the error spells
+// out exactly which commands perform it.
+func checkStalePark(dir string) error {
+	cur, _ := gitx.CurrentBranch(dir)
+	b, rerr := os.ReadFile(parkMarkerPath(dir))
+	if rerr != nil && cur != parkBranch {
+		return nil // no marker, not parked: a clean tree
+	}
+	orig := "<your-branch>" // marker missing/unreadable: find it via `git reflog`
+	if rerr == nil {
+		var m parkMarker
+		if json.Unmarshal(b, &m) == nil && m.OrigBranch != "" {
+			orig = m.OrigBranch
+		}
+	}
+	return fmt.Errorf("sandbox: a previous sandbox run did not restore this tree (currently on %q, recorded original branch %q) — inspect the tree, then recover with: git -C %s checkout %s && rm -f %s",
+		cur, orig, dir, orig, parkMarkerPath(dir))
 }
 
 // readLedger snapshots the pact ledger (log + projection) from dir/.pact.
@@ -104,14 +194,67 @@ func writeLedger(dir string, m map[string][]byte) {
 	if sandboxLog == nil {
 		return
 	}
+	// The read-merge-write below must be atomic against every other pactify log
+	// writer (CLI verbs, serve) — an event they append between our read and our
+	// rewrite would otherwise be silently dropped (TOCTOU). Serialize on the shared
+	// cross-process log lock: GitPath resolves this dir's OWN gitdir (per-worktree
+	// in a linked worktree), which matches the ledger's per-worktree scope — every
+	// writer of dir's ledger agrees on one lock file. Lock ORDER when both apply:
+	// the base-integration lock (pactify-base.lock, held by pact.Merge) is acquired
+	// FIRST, then this log lock — never take the base lock while holding the log
+	// lock, or two processes deadlock. Best-effort like the rest of the mirror: an
+	// unresolvable lock path (dir not a repo) proceeds unlocked, and a timeout
+	// SKIPS this copy cycle rather than stalling the loop.
+	if lockPath, lerr := gitx.GitPath(dir, "pactify-log.lock"); lerr == nil {
+		lctx, cancel := context.WithTimeout(context.Background(), logCopybackLockTimeout)
+		defer cancel()
+		release, aerr := lockx.Acquire(lctx, lockPath)
+		if aerr != nil {
+			return
+		}
+		defer release()
+	}
 	logPath := filepath.Join(dir, ".pact", "log.jsonl")
 	mainLog, _ := os.ReadFile(logPath)
-	if err := os.WriteFile(logPath, mergeEventLines(mainLog, sandboxLog), 0o644); err != nil {
+	// Temp-file-in-same-dir + rename (atomic on one filesystem) so a concurrent
+	// event.ReadAll never observes the log mid-truncate — the same pattern
+	// projection.WriteState already uses for STATE.yml.
+	if err := atomicWriteFile(logPath, mergeEventLines(mainLog, sandboxLog)); err != nil {
 		return
 	}
 	if evs, err := event.ReadAll(logPath); err == nil {
 		_ = projection.WriteState(filepath.Join(dir, ".pact", "STATE.yml"), projection.Project(evs))
 	}
+}
+
+// atomicWriteFile writes b to path via a temp file in path's own directory plus
+// os.Rename, so readers only ever see the old or the new content, never a torn
+// intermediate. Same-dir keeps the rename on one filesystem (where it is atomic).
+func atomicWriteFile(path string, b []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	if _, err := f.Write(b); err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	// CreateTemp opens 0600; the ledger is world-readable like every pact file.
+	if err := os.Chmod(tmp, 0o644); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 // mergeEventLines unions two append-only JSONL event logs by event_id, preserving

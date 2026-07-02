@@ -58,20 +58,20 @@ func TestCLIHelpAndFullFlow(t *testing.T) {
 	if out, err := run(orch, "init", "--project", "p", "--seat", "claude-opus:orchestrator,reviewer:CLAUDE.md", "--seat", "opencode:worker:AGENTS.md"); err != nil {
 		t.Fatalf("init: %v %s", err, out)
 	}
-	if out, err := run(orch, "assign", "T1", "--feature", "F", "--branch", "feat/x", "--owner", "opencode", "--reviewer", "claude-opus", "--spec", ".pact/tasks/T1.md"); err != nil {
+	if out, err := run(orch, "assign", "t1", "--feature", "f", "--branch", "feat/x", "--owner", "opencode", "--reviewer", "claude-opus", "--spec", ".pact/tasks/t1.md"); err != nil {
 		t.Fatalf("assign: %v %s", err, out)
 	}
 	if out, err := run(work, "join", "opencode", "--roles", "worker"); err != nil {
 		t.Fatalf("join: %v %s", err, out)
 	}
 	os.WriteFile(filepath.Join(dir, "impl.txt"), []byte("c"), 0o644)
-	if out, err := run(work, "checkpoint", "T1", "--evidence", "ok"); err != nil {
+	if out, err := run(work, "checkpoint", "t1", "--evidence", "ok"); err != nil {
 		t.Fatalf("checkpoint: %v %s", err, out)
 	}
-	if out, err := run(orch, "accept", "T1"); err != nil {
+	if out, err := run(orch, "accept", "t1"); err != nil {
 		t.Fatalf("accept: %v %s", err, out)
 	}
-	if out, err := run(orch, "merge", "F"); err != nil {
+	if out, err := run(orch, "merge", "f"); err != nil {
 		t.Fatalf("merge: %v %s", err, out)
 	}
 	if out, err := run(orch, "validate"); err != nil {

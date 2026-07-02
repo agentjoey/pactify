@@ -17,11 +17,11 @@ func TestStartFlipsAssignedTaskToInProgress(t *testing.T) {
 	if err := p.Init("p", []string{"orch:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Assign("T1", "F", "feat/x", "w", "orch", ".pact/tasks/T1.md", nil); err != nil {
+	if err := p.Assign("t1", "f", "feat/x", "w", "orch", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := p.Start("T1"); err != nil {
+	if err := p.Start("t1"); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 	st, err := p.StateProjection()
@@ -34,7 +34,7 @@ func TestStartFlipsAssignedTaskToInProgress(t *testing.T) {
 
 	// A second start is refused (task is no longer assigned) — the loop's
 	// retry path must not stack duplicate starts.
-	if err := p.Start("T1"); err == nil || !strings.Contains(err.Error(), "not assigned") {
+	if err := p.Start("t1"); err == nil || !strings.Contains(err.Error(), "not assigned") {
 		t.Fatalf("re-start should be refused with a not-assigned error, got: %v", err)
 	}
 	// And an unknown task is an explicit error.

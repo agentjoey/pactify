@@ -43,7 +43,7 @@ func TestProjectLifecycleFromForeignCwd(t *testing.T) {
 	if err := p.Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md", nil); err != nil {
+	if err := p.Assign("t1", "f", "feat/x", "opencode", "claude-opus", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -53,16 +53,16 @@ func TestProjectLifecycleFromForeignCwd(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(repo, "impl.txt"), []byte("x"), 0o644)
-	if err := w.Checkpoint("T1", "ok"); err != nil {
+	if err := w.Checkpoint("t1", "ok"); err != nil {
 		t.Fatal(err)
 	}
-	if err := w.Accept("T1"); err == nil {
+	if err := w.Accept("t1"); err == nil {
 		t.Fatal("worker self-accept must fail through the dir-aware path")
 	}
-	if err := p.As("claude-opus").Accept("T1"); err != nil {
+	if err := p.As("claude-opus").Accept("t1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.As("claude-opus").Merge("F"); err != nil {
+	if err := p.As("claude-opus").Merge("f"); err != nil {
 		t.Fatal(err)
 	}
 

@@ -20,6 +20,12 @@ import (
 // stale/crashed holder doesn't hang a run forever. A var so tests can shrink it.
 var baseIntegrationLockTimeout = 3 * time.Minute
 
+// ledgerWriteLockTimeout bounds how long a mutating verb waits for the ledger
+// write lock. Verbs are short (read log → check → append), so a minute is ample
+// queueing headroom while still surfacing a stale/crashed holder. A var so tests
+// can shrink it.
+var ledgerWriteLockTimeout = time.Minute
+
 var errNoAgent = errors.New("pactify: PACT_AGENT_ID not set; source your entry file")
 
 // ClientVersion is the version string the CLI stamps onto join events as the
@@ -56,6 +62,38 @@ func (p *Project) state() (projection.State, []event.Event, error) {
 	return projection.Project(evs), evs, nil
 }
 
+// withLedgerLock serializes a mutating verb's read→check→append critical section
+// against every other pact process writing the same ledger (CLI, MCP host,
+// orchestrate driver). Without it two concurrent verbs both read the same state,
+// both pass their rule check, and both append — e.g. two Assigns for one task id
+// both clear checkAssign's uniqueness check and the projection silently keeps the
+// later definition (TOCTOU). The lock file lives in the git dir GitPath resolves
+// for THIS working dir — the per-worktree gitdir in a linked worktree, .git in
+// the main tree. That is the right scope: .pact ledgers are per-worktree, so
+// every writer of a given ledger resolves the same lock file, while writers of
+// different worktrees' ledgers (different files) correctly don't contend.
+//
+// LOCK ORDER: when a caller also holds the base-integration lock
+// (pactify-base.lock) it must be acquired FIRST, then this log lock — Merge is
+// the only verb that holds both today; any future dual-holder must keep that
+// order or two processes can deadlock.
+func (p *Project) withLedgerLock(fn func() error) error {
+	lockPath, err := gitx.GitPath(p.dir, "pactify-log.lock")
+	if err != nil {
+		// Not a git repo (or git unavailable): there is no shared lock handle to
+		// contend on — run unserialized, mirroring Merge's soft-skip of the base lock.
+		return fn()
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), ledgerWriteLockTimeout)
+	defer cancel()
+	release, err := lockx.Acquire(ctx, lockPath)
+	if err != nil {
+		return fmt.Errorf("pact: acquire ledger write lock: %w", err)
+	}
+	defer release()
+	return fn()
+}
+
 func (p *Project) appendAndRender(ev event.Event) error {
 	if err := event.Append(paths.LogIn(p.dir), ev); err != nil {
 		return err
@@ -69,6 +107,10 @@ func (p *Project) appendAndRender(ev event.Event) error {
 
 // Init scaffolds .pact/, bakes entry files, and writes the init event.
 func (p *Project) Init(project string, seatSpecs []string) error {
+	return p.withLedgerLock(func() error { return p.initLocked(project, seatSpecs) })
+}
+
+func (p *Project) initLocked(project string, seatSpecs []string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -130,6 +172,10 @@ func (p *Project) Init(project string, seatSpecs []string) error {
 // lets orchestrate infer --seat-kind from the roster). It does NOT bake the entry
 // file: wiring stays a separate step (pactify agent add), matching init/wire split.
 func (p *Project) AddSeat(spec string) error {
+	return p.withLedgerLock(func() error { return p.addSeatLocked(spec) })
+}
+
+func (p *Project) addSeatLocked(spec string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -171,6 +217,12 @@ func (p *Project) Join(seatID, roles string) error {
 // byte-identical to pre-feature logs. Provenance lives in the log only — it is
 // never projected into STATE.yml.
 func (p *Project) JoinWithClient(seatID, roles, clientName, clientVersion string) error {
+	return p.withLedgerLock(func() error {
+		return p.joinWithClientLocked(seatID, roles, clientName, clientVersion)
+	})
+}
+
+func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -260,6 +312,12 @@ func splitCSV(s string) []any {
 // assign time (existence, same-feature, no self-dep, acyclic) and is recorded
 // in the payload ONLY when non-empty so deps-free logs stay byte-identical.
 func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
+	return p.withLedgerLock(func() error {
+		return p.assignLocked(taskID, feature, branch, owner, reviewer, spec, deps)
+	})
+}
+
+func (p *Project) assignLocked(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -268,7 +326,7 @@ func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string, 
 	if err != nil {
 		return err
 	}
-	if err := checkAssign(st, taskID, owner, reviewer); err != nil {
+	if err := checkAssign(st, id, taskID, feature, branch, owner, reviewer); err != nil {
 		return err
 	}
 	if err := checkDeps(st, taskID, feature, deps); err != nil {
@@ -304,11 +362,34 @@ func (p *Project) Merge(feature string) error {
 	if err != nil {
 		return err
 	}
+	// Serialize base-branch integration across processes/worktrees: hold an advisory
+	// lock for the whole checkout→merge→event→commit critical section (which all
+	// write base) so a concurrent `pactify merge` — another orchestrate run, or a
+	// worktree sharing this .git — queues instead of racing on base (spec
+	// coordination-authority P1). The lock file lives in the shared git common dir,
+	// so every worktree of this repo contends on the same handle.
+	//
+	// LOCK ORDER: this base lock FIRST, then the ledger log lock (withLedgerLock
+	// below) — Merge is the only verb holding both; keep this order everywhere or
+	// two processes can deadlock against a verb holding the log lock alone.
+	if lockPath, lerr := gitx.GitPath(p.dir, "pactify-base.lock"); lerr == nil {
+		lctx, cancel := context.WithTimeout(context.Background(), baseIntegrationLockTimeout)
+		defer cancel()
+		release, aerr := lockx.Acquire(lctx, lockPath)
+		if aerr != nil {
+			return fmt.Errorf("merge %s: acquire base-integration lock: %w", feature, aerr)
+		}
+		defer release()
+	}
+	return p.withLedgerLock(func() error { return p.mergeLocked(id, feature) })
+}
+
+func (p *Project) mergeLocked(id, feature string) error {
 	st, evs, err := p.state()
 	if err != nil {
 		return err
 	}
-	if err := checkMerge(st, feature); err != nil {
+	if err := checkMerge(st, id, feature); err != nil {
 		return err
 	}
 	// Only run the git merge when the feature has its OWN branch that actually
@@ -346,21 +427,6 @@ func (p *Project) Merge(feature string) error {
 	// makes "shipped but main unchanged" surface as an error rather than pass.
 	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) && gitx.IsAncestor(p.dir, branch, base) {
 		return fmt.Errorf("merge %s: feature branch %q has no commits over base %q — no work was committed there (base would be unchanged); refusing to record shipped", feature, branch, base)
-	}
-	// Serialize base-branch integration across processes/worktrees: hold an advisory
-	// lock for the whole checkout→merge→event→commit critical section (which all
-	// write base) so a concurrent `pactify merge` — another orchestrate run, or a
-	// worktree sharing this .git — queues instead of racing on base (spec
-	// coordination-authority P1). The lock file lives in the shared git common dir,
-	// so every worktree of this repo contends on the same handle.
-	if lockPath, lerr := gitx.GitPath(p.dir, "pactify-base.lock"); lerr == nil {
-		lctx, cancel := context.WithTimeout(context.Background(), baseIntegrationLockTimeout)
-		defer cancel()
-		release, aerr := lockx.Acquire(lctx, lockPath)
-		if aerr != nil {
-			return fmt.Errorf("merge %s: acquire base-integration lock: %w", feature, aerr)
-		}
-		defer release()
 	}
 	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) {
 		if ch, _ := gitx.HasChanges(p.dir); ch {
@@ -452,12 +518,19 @@ func initBaseBranch(evs []event.Event) string {
 // `assigned` while the owner works. Only an `assigned` task can start; anything
 // further along already has a stronger status the start must not disturb.
 func (p *Project) Start(taskID string) error {
+	return p.withLedgerLock(func() error { return p.startLocked(taskID) })
+}
+
+func (p *Project) startLocked(taskID string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
 	st, _, err := p.state()
 	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "start", id); err != nil {
 		return err
 	}
 	t, f := findTask(st, taskID)
@@ -475,6 +548,10 @@ func (p *Project) Start(taskID string) error {
 
 // Accept marks a task accepted (reviewer-only; must be awaiting_review).
 func (p *Project) Accept(taskID string) error {
+	return p.withLedgerLock(func() error { return p.acceptLocked(taskID) })
+}
+
+func (p *Project) acceptLocked(taskID string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -495,6 +572,10 @@ func (p *Project) Accept(taskID string) error {
 
 // Changes sends a task back (reviewer-only; must be awaiting_review).
 func (p *Project) Changes(taskID, reason string) error {
+	return p.withLedgerLock(func() error { return p.changesLocked(taskID, reason) })
+}
+
+func (p *Project) changesLocked(taskID, reason string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -513,8 +594,12 @@ func (p *Project) Changes(taskID, reason string) error {
 	})
 }
 
-// Checkpoint submits a task for review (owner-only) and commits the work.
+// Checkpoint commits the work and submits a task for review (owner-only).
 func (p *Project) Checkpoint(taskID, evidence string) error {
+	return p.withLedgerLock(func() error { return p.checkpointLocked(taskID, evidence) })
+}
+
+func (p *Project) checkpointLocked(taskID, evidence string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -537,20 +622,26 @@ func (p *Project) Checkpoint(taskID, evidence string) error {
 			return fmt.Errorf("checkpoint %s: HEAD is on base %q but feature %q declares branch %q — check out the feature branch first (only `pactify merge` writes base)", taskID, base, f.ID, f.Branch)
 		}
 	}
-	if err := p.appendAndRender(event.Event{
+	// Git-first write order (the discipline Merge already follows): commit the work
+	// BEFORE appending the checkpoint event, so a failed commit (concurrent
+	// index.lock, disk full) can never leave the ledger durably claiming
+	// awaiting_review-with-evidence while the branch has nothing — the exact
+	// phantom-checkpoint class v0.8.1 (#29/#30) paid down. If the append below fails
+	// after a successful commit, a re-run finds HasChanges false, skips the commit,
+	// and just appends — self-healing.
+	if ch, _ := gitx.HasChanges(p.dir); ch {
+		if err := gitx.CommitAll(p.dir, "pact "+taskID+": checkpoint by "+id); err != nil {
+			return err
+		}
+	}
+	return p.appendAndRender(event.Event{
 		AgentID:   id,
 		Role:      event.RoleFor("checkpoint"),
 		EventType: "checkpoint",
 		TaskID:    taskID,
 		Feature:   f.ID,
 		Payload:   map[string]any{"evidence": evidence},
-	}); err != nil {
-		return err
-	}
-	if ch, _ := gitx.HasChanges(p.dir); ch {
-		return gitx.CommitAll(p.dir, "pact "+taskID+": checkpoint by "+id)
-	}
-	return nil
+	})
 }
 
 // Status returns the rendered STATE.yml text (from the live log).
@@ -633,12 +724,24 @@ func ConfigBaseBranch(branch string) error { return At(".").ConfigBaseBranch(bra
 // branch — used to correct a project whose init captured a feature branch as the
 // base (so merges would target the wrong branch). Append-only.
 func (p *Project) ConfigBaseBranch(branch string) error {
+	return p.withLedgerLock(func() error { return p.configBaseBranchLocked(branch) })
+}
+
+func (p *Project) configBaseBranchLocked(branch string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
 	if branch == "" {
 		return fmt.Errorf("config base-branch: branch is required")
+	}
+	// Rebaselining redirects every future merge; only an orchestrator seat may.
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "config base-branch", id); err != nil {
+		return err
 	}
 	return p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("rebaseline"), EventType: "rebaseline",
@@ -653,12 +756,24 @@ func ConfigGate(command string) error { return At(".").ConfigGate(command) }
 // orchestrate driver runs before every merge for tasks that declare no per-task
 // `verify:` line. A later config_gate overrides an earlier one. Append-only.
 func (p *Project) ConfigGate(command string) error {
+	return p.withLedgerLock(func() error { return p.configGateLocked(command) })
+}
+
+func (p *Project) configGateLocked(command string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
 	if strings.TrimSpace(command) == "" {
 		return fmt.Errorf("config gate: command is required")
+	}
+	// The gate command guards every merge; only an orchestrator seat may set it.
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "config gate", id); err != nil {
+		return err
 	}
 	return p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("config_gate"), EventType: "config_gate",
@@ -668,11 +783,14 @@ func (p *Project) ConfigGate(command string) error {
 
 // GateConfig returns the project's configured hard-gate command (the latest
 // `config gate` setting) and whether one was set. orchestrate uses it ahead of a
-// project-type-inferred default.
-func (p *Project) GateConfig() (string, bool) {
+// project-type-inferred default. A log read failure is returned as an error,
+// DISTINCT from "no gate configured" (a missing log reads as absent, not error):
+// the consumer is the pre-merge safety gate, and swallowing a transient I/O error
+// as "unconfigured" would silently degrade it to the type-default fallback.
+func (p *Project) GateConfig() (string, bool, error) {
 	evs, err := event.ReadAll(paths.LogIn(p.dir))
 	if err != nil {
-		return "", false
+		return "", false, fmt.Errorf("pact: read log for gate config: %w", err)
 	}
 	gate, ok := "", false
 	for _, e := range evs {
@@ -682,19 +800,26 @@ func (p *Project) GateConfig() (string, bool) {
 			}
 		}
 	}
-	return gate, ok
+	return gate, ok, nil
 }
 
 // Cancel records a cancel event that excludes taskID from the projection — the
 // structured way to retire a task without hand-editing the log. Append-only: the
 // task's history stays in the log; the projection simply drops it.
 func (p *Project) Cancel(taskID string) error {
+	return p.withLedgerLock(func() error { return p.cancelLocked(taskID) })
+}
+
+func (p *Project) cancelLocked(taskID string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
 	st, _, err := p.state()
 	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "cancel", id); err != nil {
 		return err
 	}
 	feature := ""
@@ -717,12 +842,19 @@ func (p *Project) Cancel(taskID string) error {
 // Withdraw records a withdraw event that excludes the whole feature from the
 // projection. The feature's branch/commits stay in git untouched (retire ≠ delete).
 func (p *Project) Withdraw(feature string) error {
+	return p.withLedgerLock(func() error { return p.withdrawLocked(feature) })
+}
+
+func (p *Project) withdrawLocked(feature string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
 	}
 	st, _, err := p.state()
 	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "withdraw", id); err != nil {
 		return err
 	}
 	found := false

@@ -15,17 +15,17 @@ func TestConfigGateRoundtrip(t *testing.T) {
 	if err := p.Init("p", []string{"orch:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := p.GateConfig(); ok {
-		t.Fatal("fresh project should have no gate config")
+	if _, ok, err := p.GateConfig(); ok || err != nil {
+		t.Fatalf("fresh project should have no gate config (ok=%v err=%v)", ok, err)
 	}
 
 	want := "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"
 	if err := p.As("orch").ConfigGate(want); err != nil {
 		t.Fatal(err)
 	}
-	got, ok := p.GateConfig()
-	if !ok || got != want {
-		t.Fatalf("GateConfig = (%q,%v), want (%q,true)", got, ok, want)
+	got, ok, err := p.GateConfig()
+	if err != nil || !ok || got != want {
+		t.Fatalf("GateConfig = (%q,%v,%v), want (%q,true,nil)", got, ok, err, want)
 	}
 
 	// A later config overrides the earlier one.
@@ -33,7 +33,7 @@ func TestConfigGateRoundtrip(t *testing.T) {
 	if err := p.As("orch").ConfigGate(want2); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := p.GateConfig(); got != want2 {
+	if got, _, _ := p.GateConfig(); got != want2 {
 		t.Fatalf("GateConfig after override = %q, want %q", got, want2)
 	}
 

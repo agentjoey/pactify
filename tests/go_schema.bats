@@ -13,11 +13,11 @@ setup() {
 @test "go-emitted log validates against schemas/event.schema.json" {
   export PACT_AGENT_ID=claude-opus
   "$BIN" init --project p --seat "claude-opus:orchestrator,reviewer:CLAUDE.md" --seat "opencode:worker:AGENTS.md"
-  "$BIN" assign T1 --feature F --branch feat/x --owner opencode --reviewer claude-opus --spec .pact/tasks/T1.md
+  "$BIN" assign t1 --feature f --branch feat/x --owner opencode --reviewer claude-opus --spec .pact/tasks/t1.md
   export PACT_AGENT_ID=opencode; "$BIN" join opencode --roles worker
   echo code > impl.txt
-  "$BIN" checkpoint T1 --evidence "$(printf 'PASS\nok')"
-  export PACT_AGENT_ID=claude-opus; "$BIN" accept T1; "$BIN" merge F
+  "$BIN" checkpoint t1 --evidence "$(printf 'PASS\nok')"
+  export PACT_AGENT_ID=claude-opus; "$BIN" accept t1; "$BIN" merge f
   run python3 - "$REPO/schemas/event.schema.json" .pact/log.jsonl <<'PY'
 import json, sys, jsonschema
 schema = json.load(open(sys.argv[1]))

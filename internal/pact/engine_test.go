@@ -74,7 +74,7 @@ func TestJoinAppendsEventAndChecksOutFeatureBranch(t *testing.T) {
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
 	// seed an assign event directly (Assign verb arrives in Task 8)
 	event.Append(".pact/log.jsonl", event.Event{AgentID: "claude-opus", Role: "orchestrator", EventType: "assign",
-		TaskID: "T1", Feature: "F", Payload: map[string]any{"owner": "opencode", "reviewer": "claude-opus", "branch": "feat/x", "spec": "s"}})
+		TaskID: "t1", Feature: "f", Payload: map[string]any{"owner": "opencode", "reviewer": "claude-opus", "branch": "feat/x", "spec": "s"}})
 	t.Setenv("PACT_AGENT_ID", "opencode")
 	if err := Join("opencode", "worker"); err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestAssignCreatesTask(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	if err := Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md", nil); err != nil {
+	if err := Assign("t1", "f", "feat/x", "opencode", "claude-opus", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(".pact/STATE.yml")
@@ -123,7 +123,7 @@ func TestAssignDefaultSpecIsRepoRelative(t *testing.T) {
 	}
 	// Empty spec via an absolute-dir handle must default to a REPO-RELATIVE path
 	// (no host-absolute leak into the shared log).
-	if err := p.Assign("T1", "F", "feat/x", "opencode", "claude-opus", "", nil); err != nil {
+	if err := p.Assign("t1", "f", "feat/x", "opencode", "claude-opus", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	evs, _ := event.ReadAll(filepath.Join(dir, ".pact", "log.jsonl"))
@@ -133,8 +133,8 @@ func TestAssignDefaultSpecIsRepoRelative(t *testing.T) {
 			spec, _ = e.Payload["spec"].(string)
 		}
 	}
-	if spec != ".pact/tasks/T1.md" {
-		t.Fatalf("default spec = %q, want .pact/tasks/T1.md (repo-relative)", spec)
+	if spec != ".pact/tasks/t1.md" {
+		t.Fatalf("default spec = %q, want .pact/tasks/t1.md (repo-relative)", spec)
 	}
 }
 
@@ -151,12 +151,12 @@ func TestCheckpointBlockedByUnacceptedDep(t *testing.T) {
 	if err := At(dir).As("opencode").Join("opencode", "worker"); err != nil {
 		t.Fatalf("early join: %v", err)
 	}
-	// THEN T1 (no deps) and T2 (deps T1) are assigned to the same worker.
+	// THEN t1 (no deps) and t2 (deps t1) are assigned to the same worker.
 	orch := At(dir).As("claude-opus")
-	if err := orch.Assign("T1", "F", "feat/x", "opencode", "claude-opus", "", nil); err != nil {
+	if err := orch.Assign("t1", "f", "feat/x", "opencode", "claude-opus", "", nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := orch.Assign("T2", "F", "feat/x", "opencode", "claude-opus", "", []string{"T1"}); err != nil {
+	if err := orch.Assign("t2", "f", "feat/x", "opencode", "claude-opus", "", []string{"t1"}); err != nil {
 		t.Fatal(err)
 	}
 	// The worker checkpoints from its feature branch (a real worker checks it out at
@@ -164,22 +164,22 @@ func TestCheckpointBlockedByUnacceptedDep(t *testing.T) {
 	if err := gitx.CheckoutOrCreate(dir, "feat/x"); err != nil {
 		t.Fatalf("checkout feat/x: %v", err)
 	}
-	// T2 checkpoint must now fail at the checkpoint gate — T1 is not accepted.
+	// t2 checkpoint must now fail at the checkpoint gate — t1 is not accepted.
 	os.WriteFile(filepath.Join(dir, "impl.txt"), []byte("c"), 0o644)
-	if err := At(dir).As("opencode").Checkpoint("T2", "ok"); err == nil {
-		t.Fatal("checkpoint of T2 must be blocked by unaccepted dep T1")
-	} else if !strings.Contains(err.Error(), "blocked by unaccepted dep T1") {
+	if err := At(dir).As("opencode").Checkpoint("t2", "ok"); err == nil {
+		t.Fatal("checkpoint of t2 must be blocked by unaccepted dep t1")
+	} else if !strings.Contains(err.Error(), "blocked by unaccepted dep t1") {
 		t.Fatalf("error %q must name the blocking dep", err)
 	}
-	// Once T1 flows through to accepted, T2 checkpoint succeeds.
-	if err := At(dir).As("opencode").Checkpoint("T1", "ok"); err != nil {
-		t.Fatalf("T1 checkpoint: %v", err)
+	// Once t1 flows through to accepted, t2 checkpoint succeeds.
+	if err := At(dir).As("opencode").Checkpoint("t1", "ok"); err != nil {
+		t.Fatalf("t1 checkpoint: %v", err)
 	}
-	if err := At(dir).As("claude-opus").Accept("T1"); err != nil {
-		t.Fatalf("T1 accept: %v", err)
+	if err := At(dir).As("claude-opus").Accept("t1"); err != nil {
+		t.Fatalf("t1 accept: %v", err)
 	}
-	if err := At(dir).As("opencode").Checkpoint("T2", "ok"); err != nil {
-		t.Fatalf("T2 checkpoint after T1 accepted must succeed: %v", err)
+	if err := At(dir).As("opencode").Checkpoint("t2", "ok"); err != nil {
+		t.Fatalf("t2 checkpoint after t1 accepted must succeed: %v", err)
 	}
 }
 
@@ -187,7 +187,7 @@ func TestAssignRejectsOwnerEqualsReviewer(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	if err := Assign("T1", "F", "b", "opencode", "opencode", "s", nil); err == nil {
+	if err := Assign("t1", "f", "b", "opencode", "opencode", "s", nil); err == nil {
 		t.Fatal("owner==reviewer must be rejected")
 	}
 }
@@ -196,8 +196,8 @@ func TestAssignRejectsDuplicateTaskID(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("T1", "A", "b", "opencode", "claude-opus", "s", nil)
-	if err := Assign("T1", "B", "b", "opencode", "claude-opus", "s", nil); err == nil {
+	Assign("t1", "a", "b", "opencode", "claude-opus", "s", nil)
+	if err := Assign("t1", "b", "b", "opencode", "claude-opus", "s", nil); err == nil {
 		t.Fatal("duplicate task id must be rejected")
 	}
 }
@@ -206,7 +206,7 @@ func toAssigned(t *testing.T) {
 	t.Helper()
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("T1", "F", "feat/x", "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
+	Assign("t1", "f", "feat/x", "opencode", "claude-opus", ".pact/tasks/t1.md", nil)
 	t.Setenv("PACT_AGENT_ID", "opencode")
 	Join("opencode", "worker")
 }
@@ -215,15 +215,22 @@ func TestCheckpointByOwnerSetsAwaitingReviewAndCommits(t *testing.T) {
 	newRepo(t)
 	toAssigned(t)
 	os.WriteFile("impl.txt", []byte("code"), 0o644)
-	if err := Checkpoint("T1", "tests green"); err != nil {
+	if err := Checkpoint("t1", "tests green"); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(".pact/STATE.yml")
 	if !strings.Contains(string(b), "status: awaiting_review") || !strings.Contains(string(b), "evidence: tests green") {
 		t.Fatalf("state: %s", b)
 	}
-	if out, _ := exec.Command("git", "status", "--porcelain").Output(); strings.TrimSpace(string(out)) != "" {
-		t.Fatalf("tree not clean after checkpoint: %s", out)
+	// Git-first write order: the WORK is committed before the checkpoint event is
+	// appended, so the ledger files (.pact/) are dirtied AFTER the commit and stay
+	// uncommitted until merge's "ledger before merge" sweep — only the work must
+	// be clean here, and the ledger must not have ridden along in the work commit.
+	out, _ := exec.Command("git", "status", "--porcelain").Output()
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line != "" && !strings.Contains(line, ".pact/") {
+			t.Fatalf("work not committed by checkpoint: %s", out)
+		}
 	}
 }
 
@@ -231,7 +238,7 @@ func TestCheckpointByNonOwnerRejected(t *testing.T) {
 	newRepo(t)
 	toAssigned(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	if err := Checkpoint("T1", "x"); err == nil {
+	if err := Checkpoint("t1", "x"); err == nil {
 		t.Fatal("non-owner checkpoint must be rejected")
 	}
 }
@@ -239,7 +246,7 @@ func TestCheckpointByNonOwnerRejected(t *testing.T) {
 func TestCheckpointRequiresEvidence(t *testing.T) {
 	newRepo(t)
 	toAssigned(t)
-	if err := Checkpoint("T1", ""); err == nil {
+	if err := Checkpoint("t1", ""); err == nil {
 		t.Fatal("checkpoint must require evidence")
 	}
 }
@@ -248,14 +255,14 @@ func toAwaiting(t *testing.T) {
 	t.Helper()
 	toAssigned(t)
 	os.WriteFile("impl.txt", []byte("c"), 0o644)
-	Checkpoint("T1", "ok")
+	Checkpoint("t1", "ok")
 }
 
 func TestAcceptByReviewer(t *testing.T) {
 	newRepo(t)
 	toAwaiting(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	if err := Accept("T1"); err != nil {
+	if err := Accept("t1"); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(".pact/STATE.yml")
@@ -268,16 +275,16 @@ func TestAcceptByWorkerRejected(t *testing.T) {
 	newRepo(t)
 	toAwaiting(t)
 	t.Setenv("PACT_AGENT_ID", "opencode")
-	if err := Accept("T1"); err == nil {
+	if err := Accept("t1"); err == nil {
 		t.Fatal("worker self-accept must be rejected")
 	}
 }
 
 func TestAcceptRequiresAwaitingReview(t *testing.T) {
 	newRepo(t)
-	toAssigned(t) // T1 is assigned, not awaiting_review
+	toAssigned(t) // t1 is assigned, not awaiting_review
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	if err := Accept("T1"); err == nil {
+	if err := Accept("t1"); err == nil {
 		t.Fatal("accept must require awaiting_review")
 	}
 }
@@ -286,7 +293,7 @@ func TestChangesSendsBack(t *testing.T) {
 	newRepo(t)
 	toAwaiting(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	if err := Changes("T1", "fix lint"); err != nil {
+	if err := Changes("t1", "fix lint"); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(".pact/STATE.yml")
@@ -309,9 +316,9 @@ func baseBranchFromLog() string {
 
 func TestMergeRejectedWhenNotAllAccepted(t *testing.T) {
 	newRepo(t)
-	toAwaiting(t) // T1 awaiting_review, not accepted
+	toAwaiting(t) // t1 awaiting_review, not accepted
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	if err := Merge("F"); err == nil {
+	if err := Merge("f"); err == nil {
 		t.Fatal("merge must be rejected when a task is not accepted")
 	}
 }
@@ -330,8 +337,8 @@ func TestMergeSucceedsFeatureShipped(t *testing.T) {
 	toAwaiting(t)
 	base := baseBranchFromLog()
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	Accept("T1")
-	if err := Merge("F"); err != nil {
+	Accept("t1")
+	if err := Merge("f"); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := execBranch(); b != base {
@@ -353,18 +360,18 @@ func TestMergeInPlaceOnBaseBranchShips(t *testing.T) {
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
 	base, _ := execBranch() // the base branch — declaring it means "work in-place"
-	Assign("T1", "F", base, "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
+	Assign("t1", "f", base, "opencode", "claude-opus", ".pact/tasks/t1.md", nil)
 
 	t.Setenv("PACT_AGENT_ID", "opencode")
 	os.WriteFile("impl.txt", []byte("c"), 0o644)
-	if err := Checkpoint("T1", "ok"); err != nil {
+	if err := Checkpoint("t1", "ok"); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	if err := Accept("T1"); err != nil {
+	if err := Accept("t1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := Merge("F"); err != nil {
+	if err := Merge("f"); err != nil {
 		t.Fatalf("in-place merge on base should succeed, got %v", err)
 	}
 	if after, _ := execBranch(); after != base {
@@ -384,7 +391,7 @@ func TestMergeRefusesMissingDeclaredBranch(t *testing.T) {
 	dir := newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("T1", "F", "feat/missing", "opencode", "claude-opus", ".pact/tasks/T1.md", nil)
+	Assign("t1", "f", "feat/missing", "opencode", "claude-opus", ".pact/tasks/t1.md", nil)
 
 	t.Setenv("PACT_AGENT_ID", "opencode")
 	// The owner commits ELSEWHERE (not on base — the P3-1 guard forbids that — and not
@@ -394,15 +401,15 @@ func TestMergeRefusesMissingDeclaredBranch(t *testing.T) {
 		t.Fatalf("checkout feat/elsewhere: %v", err)
 	}
 	os.WriteFile("impl.txt", []byte("c"), 0o644)
-	if err := Checkpoint("T1", "ok"); err != nil {
+	if err := Checkpoint("t1", "ok"); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	if err := Accept("T1"); err != nil {
+	if err := Accept("t1"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := Merge("F"); err == nil {
+	if err := Merge("f"); err == nil {
 		t.Fatal("merge recorded shipped despite the declared branch feat/missing never existing")
 	}
 	b, _ := os.ReadFile(".pact/STATE.yml")
@@ -420,8 +427,8 @@ func TestJoinStaysOnSeatBranchNotFirstFeature(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("A1", "fa", "feat/a", "opencode", "claude-opus", ".pact/tasks/A1.md", nil) // first feature
-	Assign("B1", "fb", "feat/b", "opencode", "claude-opus", ".pact/tasks/B1.md", nil)
+	Assign("a1", "fa", "feat/a", "opencode", "claude-opus", ".pact/tasks/a1.md", nil) // first feature
+	Assign("b1", "fb", "feat/b", "opencode", "claude-opus", ".pact/tasks/b1.md", nil)
 	if err := gitx.CheckoutOrCreate(".", "feat/b"); err != nil { // orchestrator set THIS task's branch
 		t.Fatal(err)
 	}
@@ -470,7 +477,7 @@ func TestValidatePassesOnConformantRepo(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
 	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
-	Assign("T1", "F", "b", "opencode", "claude-opus", "s", nil)
+	Assign("t1", "f", "b", "opencode", "claude-opus", "s", nil)
 	if err := Validate(); err != nil {
 		t.Fatalf("validate should pass: %v", err)
 	}

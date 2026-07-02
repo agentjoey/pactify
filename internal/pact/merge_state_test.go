@@ -20,10 +20,10 @@ func TestMergeHEADStateMatchesWorktree(t *testing.T) {
 	// real runs, so a declared branch always exists by merge time).
 	exec.Command("git", "branch", "feat/x").Run()
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	if err := Accept("T1"); err != nil {
+	if err := Accept("t1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := Merge("F"); err != nil {
+	if err := Merge("f"); err != nil {
 		t.Fatal(err)
 	}
 

@@ -44,7 +44,7 @@ teardown() {
     -d '{"id":"t1","spec_md":"# T1"}' >/dev/null
   run curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/api/projects/demo/verbs/assign" \
     -H 'content-type: application/json' \
-    -d '{"task":"t1","feature":"F","branch":"feat/x","owner":"opencode","reviewer":"claude-opus","spec":".pact/tasks/t1.md"}'
+    -d '{"task":"t1","feature":"f","branch":"feat/x","owner":"opencode","reviewer":"claude-opus","spec":".pact/tasks/t1.md"}'
   [ "$output" = "200" ]
 
   # worker joins + checkpoints directly on disk (the worker is a separate seat).
@@ -61,7 +61,7 @@ teardown() {
     -H 'content-type: application/json' -d '{"task":"t1"}'
   [ "$output" = "200" ]
   run curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/api/projects/demo/verbs/merge" \
-    -H 'content-type: application/json' -d '{"feature":"F"}'
+    -H 'content-type: application/json' -d '{"feature":"f"}'
   [ "$output" = "200" ]
 
   grep -q "status: shipped" "$PROJ/.pact/STATE.yml"
@@ -72,7 +72,7 @@ teardown() {
     -H 'content-type: application/json' -d '{"id":"t1","spec_md":"# T1"}' >/dev/null
   curl -s -X POST "$BASE/api/projects/demo/verbs/assign" \
     -H 'content-type: application/json' \
-    -d '{"task":"t1","feature":"F","branch":"feat/x","owner":"opencode","reviewer":"claude-opus","spec":".pact/tasks/t1.md"}' >/dev/null
+    -d '{"task":"t1","feature":"f","branch":"feat/x","owner":"opencode","reviewer":"claude-opus","spec":".pact/tasks/t1.md"}' >/dev/null
 
   # accept while the task is still assigned (not awaiting_review) -> engine rejects.
   STATUS=$(curl -s -o /tmp/serve_author_body -w "%{http_code}" -X POST "$BASE/api/projects/demo/verbs/accept" \

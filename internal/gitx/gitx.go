@@ -29,6 +29,21 @@ func GitPath(dir, rel string) (string, error) {
 	return filepath.Join(dir, out), nil
 }
 
+// ValidBranchName reports whether name is a well-formed git branch name (per
+// `git check-ref-format --branch`). Two shapes are rejected up front, before any
+// shell-out: a dash-prefixed name, because check-ref-format takes the name as a
+// positional argument with no "--" separator — "-evil" would be parsed as a flag
+// by the very tool meant to vet it; and anything containing "@{", because
+// --branch mode EXPANDS previous-checkout syntax ("@{-1}") to a real branch name
+// instead of rejecting it.
+func ValidBranchName(name string) bool {
+	if name == "" || strings.HasPrefix(name, "-") || strings.Contains(name, "@{") {
+		return false
+	}
+	_, err := run(".", "check-ref-format", "--branch", name)
+	return err == nil
+}
+
 // CurrentBranch returns the current branch name.
 func CurrentBranch(dir string) (string, error) { return run(dir, "branch", "--show-current") }
 

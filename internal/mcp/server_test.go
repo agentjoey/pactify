@@ -110,7 +110,7 @@ func callErr(t *testing.T, cs *sdk.ClientSession, name string, args map[string]a
 func TestFullLifecycleViaMCP(t *testing.T) {
 	newRepo(t)
 	cs := connect(t)
-	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/T1.md"})
+	callOK(t, cs, "assign", map[string]any{"task": "t1", "feature": "f", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md"})
 
 	t.Setenv("PACT_AGENT_ID", "opencode")
 	// join takes no seat arg: the seat is always the session's PACT_AGENT_ID
@@ -118,13 +118,13 @@ func TestFullLifecycleViaMCP(t *testing.T) {
 		t.Fatalf("join did not use PACT_AGENT_ID as the seat: %q", got)
 	}
 	os.WriteFile("impl.txt", []byte("code"), 0o644)
-	callOK(t, cs, "checkpoint", map[string]any{"task": "T1", "evidence": "tests green"})
+	callOK(t, cs, "checkpoint", map[string]any{"task": "t1", "evidence": "tests green"})
 
-	callErr(t, cs, "accept", map[string]any{"task": "T1"})
+	callErr(t, cs, "accept", map[string]any{"task": "t1"})
 
 	t.Setenv("PACT_AGENT_ID", "claude-opus")
-	callOK(t, cs, "accept", map[string]any{"task": "T1"})
-	callOK(t, cs, "merge", map[string]any{"feature": "F"})
+	callOK(t, cs, "accept", map[string]any{"task": "t1"})
+	callOK(t, cs, "merge", map[string]any{"feature": "f"})
 	if !strings.Contains(callOK(t, cs, "status", nil), "status: shipped") {
 		t.Fatal("feature not shipped")
 	}
@@ -149,7 +149,7 @@ func TestJoinRecordsSessionClientInfo(t *testing.T) {
 	}
 	t.Cleanup(func() { cs.Close() })
 
-	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/T1.md"})
+	callOK(t, cs, "assign", map[string]any{"task": "t1", "feature": "f", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md"})
 	t.Setenv("PACT_AGENT_ID", "opencode")
 	callOK(t, cs, "join", map[string]any{"roles": "worker"})
 
@@ -174,14 +174,14 @@ func TestToolsFailClosedWithoutAgentID(t *testing.T) {
 	newRepo(t)
 	cs := connect(t)
 	t.Setenv("PACT_AGENT_ID", "")
-	callErr(t, cs, "assign", map[string]any{"task": "T9", "feature": "F", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
+	callErr(t, cs, "assign", map[string]any{"task": "t9", "feature": "f", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
 }
 
 func TestMergeRule2ViaMCP(t *testing.T) {
 	newRepo(t)
 	cs := connect(t)
-	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
-	callErr(t, cs, "merge", map[string]any{"feature": "F"})
+	callOK(t, cs, "assign", map[string]any{"task": "t1", "feature": "f", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
+	callErr(t, cs, "merge", map[string]any{"feature": "f"})
 }
 
 func TestResources(t *testing.T) {
@@ -231,7 +231,7 @@ func TestLogChangeNotifiesSubscribers(t *testing.T) {
 	if err := cs.Subscribe(ctx, &sdk.SubscribeParams{URI: logURI}); err != nil {
 		t.Fatal(err)
 	}
-	callOK(t, cs, "assign", map[string]any{"task": "T1", "feature": "F", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
+	callOK(t, cs, "assign", map[string]any{"task": "t1", "feature": "f", "branch": "b", "owner": "opencode", "reviewer": "claude-opus"})
 
 	select {
 	case uri := <-got:

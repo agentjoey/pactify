@@ -22,7 +22,7 @@ func TestCheckpointRefusesOnBaseWhenFeatureHasBranch(t *testing.T) {
 	if err := p.Init("p", []string{"rev:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Assign("T1", "F", "feat/x", "w", "rev", ".pact/tasks/T1.md", nil); err != nil {
+	if err := p.Assign("t1", "f", "feat/x", "w", "rev", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -31,7 +31,7 @@ func TestCheckpointRefusesOnBaseWhenFeatureHasBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(repo, "impl.txt"), []byte("x\n"), 0o644)
-	err := At(repo).As("w").Checkpoint("T1", "ok")
+	err := At(repo).As("w").Checkpoint("t1", "ok")
 	if err == nil {
 		t.Fatal("checkpoint on base with a feature branch declared should be refused")
 	}
@@ -52,7 +52,7 @@ func TestCheckpointCommitsOnFeatureBranch(t *testing.T) {
 	if err := p.Init("p", []string{"rev:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Assign("T1", "F", "feat/x", "w", "rev", ".pact/tasks/T1.md", nil); err != nil {
+	if err := p.Assign("t1", "f", "feat/x", "w", "rev", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 	wk := At(repo).As("w")
@@ -60,7 +60,7 @@ func TestCheckpointCommitsOnFeatureBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(repo, "impl.txt"), []byte("x\n"), 0o644)
-	if err := wk.Checkpoint("T1", "ok"); err != nil {
+	if err := wk.Checkpoint("t1", "ok"); err != nil {
 		t.Fatalf("checkpoint on feature branch should succeed: %v", err)
 	}
 	if cur, _ := gitx.CurrentBranch(repo); cur != "feat/x" {

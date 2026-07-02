@@ -64,7 +64,7 @@ func shipReady(t *testing.T, repo string) {
 	if err := p.Init("p", []string{"rev:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Assign("T1", "F", "feat/x", "w", "rev", ".pact/tasks/T1.md", nil); err != nil {
+	if err := p.Assign("t1", "f", "feat/x", "w", "rev", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 	wk := At(repo).As("w")
@@ -72,10 +72,10 @@ func shipReady(t *testing.T, repo string) {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(repo, "impl.txt"), []byte("feature work\n"), 0o644)
-	if err := wk.Checkpoint("T1", "ok"); err != nil {
+	if err := wk.Checkpoint("t1", "ok"); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.As("rev").Accept("T1"); err != nil {
+	if err := p.As("rev").Accept("t1"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -91,7 +91,7 @@ func TestMergeFetchAwareIntegratesAdvancedBase(t *testing.T) {
 
 	advanceOrigin(t, repo, base, "other.txt", "other writer\n")
 
-	if err := At(repo).As("rev").Merge("F"); err != nil {
+	if err := At(repo).As("rev").Merge("f"); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -117,7 +117,7 @@ func TestMergeFetchAwareRefusesUnrebasable(t *testing.T) {
 	// origin advances the SAME file with conflicting content → unrebasable.
 	advanceOrigin(t, repo, base, "impl.txt", "origin work\n")
 
-	if err := At(repo).As("rev").Merge("F"); err == nil {
+	if err := At(repo).As("rev").Merge("f"); err == nil {
 		t.Fatal("merge should refuse when the feature cannot cleanly rebase onto origin/base")
 	}
 	// The feature must NOT be recorded shipped, and the tree must be clean (rebase aborted).

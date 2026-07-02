@@ -185,8 +185,8 @@ func TestStatusJSONTagsMatchContract(t *testing.T) {
 
 func TestLoopWritesStatusAfterRunOwnerRound(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir)
 	exec := &okExec{}
@@ -220,8 +220,8 @@ func TestLoopWritesStatusAfterRunOwnerRound(t *testing.T) {
 
 func TestLoopDryRunDoesNotWriteStatus(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir)
 	exec := &okExec{}
@@ -240,8 +240,8 @@ func TestLoopDryRunDoesNotWriteStatus(t *testing.T) {
 
 func TestLoopWritesEscalatedStatusOnReworkLimit(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir)
 	runner.alwaysChanges = true
@@ -273,8 +273,8 @@ func TestLoopWritesEscalatedStatusOnReworkLimit(t *testing.T) {
 
 func TestLoopWritesEscalatedStatusOnGateFailure(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir)
 	exec := &failExec{}
@@ -329,8 +329,8 @@ func TestLoopWritesEscalatedStatusOnFailLimit(t *testing.T) {
 
 func TestLoopWritesStatusPerIteration(t *testing.T) {
 	dir := newProject(t)
-	s1 := writeSpec(t, dir, "T1", "go test ./...")
-	assign(t, dir, "T1", "F", "feat/x", s1)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
 
 	runner := newFakeRunner(t, dir)
 	runner.changesBeforeAccept = 1 // one rework round

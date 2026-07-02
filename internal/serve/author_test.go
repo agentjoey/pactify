@@ -147,7 +147,7 @@ func TestPostTaskConflictWithCommittedTask(t *testing.T) {
 	ts := authorServer(t, dir, "claude-opus")
 	// Assign t1 so it becomes a committed task.
 	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/assign", map[string]any{
-		"task": "t1", "feature": "F", "branch": "feat/x",
+		"task": "t1", "feature": "f", "branch": "feat/x",
 		"owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md", "deps": []string{},
 	})
 	if resp.StatusCode != http.StatusOK {
@@ -199,7 +199,7 @@ func TestAssign(t *testing.T) {
 	dir := newAuthorRepo(t)
 	ts := authorServer(t, dir, "claude-opus")
 	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/assign", map[string]any{
-		"task": "t1", "feature": "F", "branch": "feat/x",
+		"task": "t1", "feature": "f", "branch": "feat/x",
 		"owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md", "deps": []string{},
 	})
 	if resp.StatusCode != http.StatusOK {
@@ -231,7 +231,7 @@ func TestAssignEngineError(t *testing.T) {
 	ts := authorServer(t, dir, "claude-opus")
 	// owner == reviewer → engine separation-of-duties violation.
 	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/assign", map[string]any{
-		"task": "t1", "feature": "F", "branch": "feat/x",
+		"task": "t1", "feature": "f", "branch": "feat/x",
 		"owner": "opencode", "reviewer": "opencode", "spec": ".pact/tasks/t1.md", "deps": []string{},
 	})
 	if resp.StatusCode != http.StatusUnprocessableEntity {
@@ -246,7 +246,7 @@ func TestAssignUnknownProject(t *testing.T) {
 	dir := newAuthorRepo(t)
 	ts := authorServer(t, dir, "claude-opus")
 	resp := postJSON(t, ts.URL+"/api/projects/nope/verbs/assign", map[string]any{
-		"task": "t1", "feature": "F", "branch": "feat/x",
+		"task": "t1", "feature": "f", "branch": "feat/x",
 		"owner": "opencode", "reviewer": "claude-opus", "spec": "s", "deps": []string{},
 	})
 	if resp.StatusCode != http.StatusNotFound {
@@ -260,7 +260,7 @@ func TestAssignUnknownProject(t *testing.T) {
 func assignViaAPI(t *testing.T, ts *httptest.Server) {
 	t.Helper()
 	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/assign", map[string]any{
-		"task": "t1", "feature": "F", "branch": "feat/x",
+		"task": "t1", "feature": "f", "branch": "feat/x",
 		"owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md", "deps": []string{},
 	})
 	if resp.StatusCode != http.StatusOK {
@@ -295,7 +295,7 @@ func TestVerbsHappyPath(t *testing.T) {
 	resp.Body.Close()
 
 	// merge over the API.
-	resp = postJSON(t, ts.URL+"/api/projects/pactify/verbs/merge", map[string]any{"feature": "F"})
+	resp = postJSON(t, ts.URL+"/api/projects/pactify/verbs/merge", map[string]any{"feature": "f"})
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("merge: want 200 got %d (%s)", resp.StatusCode, errBody(t, resp))
 	}
@@ -343,7 +343,7 @@ func TestMergeBeforeAccepted(t *testing.T) {
 	dir := newAuthorRepo(t)
 	ts := authorServer(t, dir, "claude-opus")
 	assignViaAPI(t, ts)
-	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/merge", map[string]any{"feature": "F"})
+	resp := postJSON(t, ts.URL+"/api/projects/pactify/verbs/merge", map[string]any{"feature": "f"})
 	if resp.StatusCode != http.StatusUnprocessableEntity {
 		t.Fatalf("want 422 got %d", resp.StatusCode)
 	}
@@ -460,7 +460,7 @@ func putBytes(t *testing.T, url string, body []byte) *http.Response {
 func TestAcceptHumanReviewedTask(t *testing.T) {
 	dir := newAuthorRepo(t)
 	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "t-human.md"), []byte("# t-human\n"), 0o644)
-	if err := pact.At(dir).As("claude-opus").Assign("t-human", "F", "feat-F", "opencode", "human", ".pact/tasks/t-human.md", nil); err != nil {
+	if err := pact.At(dir).As("claude-opus").Assign("t-human", "f", "feat-F", "opencode", "human", ".pact/tasks/t-human.md", nil); err != nil {
 		t.Fatalf("assign: %v", err)
 	}
 	c := exec.Command("git", "checkout", "-q", "-B", "feat-F")
@@ -495,7 +495,7 @@ func TestAcceptHumanReviewedTask(t *testing.T) {
 func TestAcceptHumanReviewed_NoSeatRejected(t *testing.T) {
 	dir := newAuthorRepo(t)
 	os.WriteFile(filepath.Join(dir, ".pact", "tasks", "t-h2.md"), []byte("# t-h2\n"), 0o644)
-	pact.At(dir).As("claude-opus").Assign("t-h2", "F", "feat-F", "opencode", "human", ".pact/tasks/t-h2.md", nil)
+	pact.At(dir).As("claude-opus").Assign("t-h2", "f", "feat-F", "opencode", "human", ".pact/tasks/t-h2.md", nil)
 	c := exec.Command("git", "checkout", "-q", "-B", "feat-F")
 	c.Dir = dir
 	c.Run()

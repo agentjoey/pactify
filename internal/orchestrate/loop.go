@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
@@ -67,6 +68,19 @@ type Options struct {
 	// throwaway worktree, so serve keeps seeing live progress (spec
 	// coordination-authority P0b). Git work (checkout/commit/merge) always uses Dir.
 	RuntimeDir string
+	// pactIgnoredMemo caches mirrorLedger's "does the runtime dir git-ignore .pact"
+	// probe: the answer cannot change mid-run and mirrorLedger runs every loop
+	// iteration, so resolving it once avoids spawning `git check-ignore` in steady
+	// state. A pointer so every value copy of Options the loop passes around shares
+	// the one resolution. RunSandbox wires it (the only caller with RuntimeDir ≠
+	// Dir); nil probes live (direct mirrorLedger use in tests).
+	pactIgnoredMemo *ignoredMemo
+}
+
+// ignoredMemo is the once-per-run backing store for Options.pactIgnored.
+type ignoredMemo struct {
+	once    sync.Once
+	ignored bool
 }
 
 // runtimeDir is the base for dashboard-observable runtime artifacts: RuntimeDir
@@ -94,10 +108,21 @@ func (opts Options) mirrorLedger() {
 	if dst == opts.Dir {
 		return
 	}
-	if !gitx.PathIgnored(dst, ".pact") {
+	if !opts.pactIgnored(dst) {
 		return
 	}
 	writeLedger(dst, readLedger(opts.Dir))
+}
+
+// pactIgnored reports whether dst git-ignores .pact, memoized per run when the
+// memo is wired (RunSandbox) — the ignore state cannot change mid-run, so the
+// first probe's answer stands for the whole loop.
+func (opts Options) pactIgnored(dst string) bool {
+	if m := opts.pactIgnoredMemo; m != nil {
+		m.once.Do(func() { m.ignored = gitx.PathIgnored(dst, ".pact") })
+		return m.ignored
+	}
+	return gitx.PathIgnored(dst, ".pact")
 }
 
 // launchAgent runs one agent under an optional per-run timeout. The timeout is a

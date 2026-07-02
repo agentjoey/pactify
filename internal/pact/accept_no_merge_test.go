@@ -20,7 +20,7 @@ func TestAcceptDoesNotMergeLastTask(t *testing.T) {
 	if err := p.Init("p", []string{"rev:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Assign("T1", "F", "feat/x", "w", "rev", ".pact/tasks/T1.md", nil); err != nil {
+	if err := p.Assign("t1", "f", "feat/x", "w", "rev", ".pact/tasks/t1.md", nil); err != nil {
 		t.Fatal(err)
 	}
 	wk := At(repo).As("w")
@@ -28,11 +28,11 @@ func TestAcceptDoesNotMergeLastTask(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(repo, "impl.txt"), []byte("x\n"), 0o644)
-	if err := wk.Checkpoint("T1", "ok"); err != nil {
+	if err := wk.Checkpoint("t1", "ok"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := p.As("rev").Accept("T1"); err != nil { // the only/last task
+	if err := p.As("rev").Accept("t1"); err != nil { // the only/last task
 		t.Fatal(err)
 	}
 
@@ -42,7 +42,7 @@ func TestAcceptDoesNotMergeLastTask(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, f := range st.Features {
-		if f.ID == "F" && f.Status == "shipped" {
+		if f.ID == "f" && f.Status == "shipped" {
 			t.Fatal("accept shipped the feature — merge must be a separate explicit step")
 		}
 	}

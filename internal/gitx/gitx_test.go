@@ -68,6 +68,20 @@ func mustRun(t *testing.T, dir string, args ...string) {
 	}
 }
 
+func TestPathIgnored(t *testing.T) {
+	dir := tempRepo(t)
+	os.WriteFile(filepath.Join(dir, ".gitignore"), []byte(".pact/\n"), 0o644)
+	// The `.pact/` pattern (trailing slash) matches only a directory, so create it
+	// — mirrors the real caller, where the runtime dir's .pact already exists.
+	os.MkdirAll(filepath.Join(dir, ".pact"), 0o755)
+	if !PathIgnored(dir, ".pact") {
+		t.Fatal("a gitignored path should report ignored")
+	}
+	if PathIgnored(dir, "base.txt") {
+		t.Fatal("a tracked path should not report ignored")
+	}
+}
+
 func TestCheckoutOrCreateAndBranch(t *testing.T) {
 	dir := tempRepo(t)
 	if err := CheckoutOrCreate(dir, "feat/x"); err != nil {

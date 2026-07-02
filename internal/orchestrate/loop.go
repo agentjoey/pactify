@@ -78,6 +78,28 @@ func (opts Options) runtimeDir() string {
 	return opts.Dir
 }
 
+// mirrorLedger unions opts.Dir's ledger into the runtime dir mid-run, so a
+// sandboxed run's board reflects live progress (worker checkpoints, reviewer
+// accepts) instead of freezing on the seed snapshot until RunSandbox's final
+// copy-back. It reads only the sandbox ledger and writes only the runtime dir —
+// never touching the running task's tree/ledger — so it is a pure observation
+// refresh (union-merge is idempotent, reprojection is pure).
+//
+// No-op in-place (runtimeDir == Dir: the ledger already lives where the board
+// reads). Skipped when the runtime dir TRACKS .pact: writing it there would
+// dirty the parked main tree and block teardown's branch restore — those repos
+// keep the run-end copy-back only. Common case (.pact gitignored) mirrors live.
+func (opts Options) mirrorLedger() {
+	dst := opts.runtimeDir()
+	if dst == opts.Dir {
+		return
+	}
+	if !gitx.PathIgnored(dst, ".pact") {
+		return
+	}
+	writeLedger(dst, readLedger(opts.Dir))
+}
+
 // launchAgent runs one agent under an optional per-run timeout. The timeout is a
 // CHILD of ctx, so a per-run expiry cancels just that subprocess (soft failure),
 // while a parent-ctx cancellation (Ctrl-C) propagates. Callers distinguish the
@@ -142,6 +164,11 @@ func (opts Options) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("orchestrate: read state: %w", err)
 		}
+		// Mid-run copy-back: mirror the (just-reprojected) ledger into the runtime
+		// dir so a sandboxed run's board tracks live progress instead of freezing on
+		// the seed snapshot until the run ends. No-op in-place; RunSandbox's final
+		// copy-back stays authoritative (spec coordination-authority P0b).
+		opts.mirrorLedger()
 		view := opts.filtered(st)
 
 		act := nextAction(view, h, opts.Th)
@@ -252,6 +279,17 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		if err := gitx.CheckoutOrCreate(opts.Dir, br); err != nil {
 			return fmt.Errorf("orchestrate: checkout feature branch %q for task %s: %w", br, act.Task, err)
 		}
+	}
+
+	// Record the task-scoped start (assigned → in_progress on the board) as the
+	// driver's own protocol write, like Merge. Guarded on `assigned` so a retry
+	// (already in_progress) doesn't re-emit. Best-effort: the launch must never
+	// be blocked by a bookkeeping write. Mirror immediately — the loop-top mirror
+	// won't run again until the (long) agent launch below returns, which is
+	// exactly the window the start exists to make visible.
+	if task.Status == "assigned" {
+		_ = pact.At(opts.Dir).As(opts.Orchestrator).Start(act.Task)
+		opts.mirrorLedger()
 	}
 
 	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {

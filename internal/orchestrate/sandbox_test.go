@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/pact"
@@ -84,6 +85,62 @@ func TestRunSandbox_WritesStatusToMainDir(t *testing.T) {
 	// status.json landed in the MAIN dir (survives worktree teardown).
 	if _, err := os.Stat(filepath.Join(dir, ".pact", "orchestrate", "status.json")); err != nil {
 		t.Fatalf("no status.json in main dir after sandbox run (dashboard would see nothing): %v", err)
+	}
+}
+
+// mirrorLedger is the mid-run copy-back: while a sandboxed run advances the
+// ledger in opts.Dir (the worktree), the board reads the MAIN dir, which would
+// otherwise freeze on the seed until run end. mirrorLedger unions the sandbox
+// ledger into the main dir each iteration so the board tracks live progress.
+func TestMirrorLedger_UnionsSandboxIntoRuntimeDir(t *testing.T) {
+	main := newProject(t) // the observed (runtime) dir
+	if err := os.WriteFile(filepath.Join(main, ".gitignore"), []byte(".pact/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sandbox := t.TempDir() // stand-in for the worktree's .pact
+	if err := os.MkdirAll(filepath.Join(sandbox, ".pact"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// The sandbox ledger carries an event the main ledger has not seen yet.
+	mainLog := filepath.Join(main, ".pact", "log.jsonl")
+	seed, _ := os.ReadFile(mainLog)
+	extra := []byte(`{"event_id":"cp1","ts":"2026-07-02T00:00:00Z","agent_id":"w","role":"worker","event_type":"checkpoint","task_id":"ta","feature":"fa","payload":{"evidence":"done"}}` + "\n")
+	if err := os.WriteFile(filepath.Join(sandbox, ".pact", "log.jsonl"), append(append([]byte{}, seed...), extra...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := Options{Dir: sandbox, RuntimeDir: main}
+	opts.mirrorLedger()
+
+	merged, _ := os.ReadFile(mainLog)
+	if !strings.Contains(string(merged), `"event_id":"cp1"`) {
+		t.Fatalf("main ledger did not receive the sandbox checkpoint after mirror:\n%s", merged)
+	}
+}
+
+// mirrorLedger must NOT write the runtime dir when it tracks .pact: doing so
+// dirties the parked main tree and blocks teardown's branch restore — those
+// repos keep only the run-end copy-back. It is also a no-op in-place.
+func TestMirrorLedger_SkipsTrackedPactAndInPlace(t *testing.T) {
+	main := newProject(t) // .pact is TRACKED here (no .gitignore)
+	sandbox := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(sandbox, ".pact"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mainLog := filepath.Join(main, ".pact", "log.jsonl")
+	before, _ := os.ReadFile(mainLog)
+	extra := []byte(`{"event_id":"cp2","ts":"2026-07-02T00:00:00Z","agent_id":"w","role":"worker","event_type":"checkpoint","task_id":"ta","feature":"fa","payload":{}}` + "\n")
+	os.WriteFile(filepath.Join(sandbox, ".pact", "log.jsonl"), extra, 0o644)
+
+	// Tracked .pact → skipped.
+	Options{Dir: sandbox, RuntimeDir: main}.mirrorLedger()
+	if after, _ := os.ReadFile(mainLog); string(after) != string(before) {
+		t.Error("mirrorLedger wrote a runtime dir that tracks .pact (would dirty the parked tree)")
+	}
+	// In-place (RuntimeDir == Dir) → no-op regardless of ignore state.
+	Options{Dir: main, RuntimeDir: main}.mirrorLedger()
+	if after, _ := os.ReadFile(mainLog); string(after) != string(before) {
+		t.Error("mirrorLedger mutated the ledger in the in-place case")
 	}
 }
 

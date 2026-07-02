@@ -135,6 +135,14 @@ func Project(evs []event.Event) State {
 					}
 				}
 			}
+		case "start":
+			// Task-scoped "working" fact recorded by the orchestrate driver when it
+			// launches the task's owner (join is seat-scoped and worker-reported,
+			// which headless workers skip). Only lifts a task out of `assigned` —
+			// never rewinds checkpoint/review outcomes.
+			if t := find(e.Feature, e.TaskID); t != nil && t.Status == "assigned" {
+				t.Status = "in_progress"
+			}
 		case "checkpoint":
 			if t := find(e.Feature, e.TaskID); t != nil {
 				t.Status = "awaiting_review"

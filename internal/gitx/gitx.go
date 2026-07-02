@@ -32,6 +32,15 @@ func GitPath(dir, rel string) (string, error) {
 // CurrentBranch returns the current branch name.
 func CurrentBranch(dir string) (string, error) { return run(dir, "branch", "--show-current") }
 
+// PathIgnored reports whether rel is git-ignored in dir (per .gitignore /
+// .git/info/exclude). `git check-ignore` exits 0 when the path is ignored, 1
+// when it is not, and >1 on a real error — so only a clean exit-0 counts as
+// ignored (an error, e.g. dir is not a repo, is treated as not-ignored).
+func PathIgnored(dir, rel string) bool {
+	_, err := run(dir, "check-ignore", "-q", rel)
+	return err == nil
+}
+
 // BranchExists reports whether a local branch exists.
 func BranchExists(dir, branch string) bool {
 	_, err := run(dir, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)

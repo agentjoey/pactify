@@ -73,6 +73,42 @@ func TestProjectStateMachine(t *testing.T) {
 	}
 }
 
+// start is the driver-recorded, task-scoped "working" fact: it lifts exactly
+// the named task out of `assigned` (unlike join, which is seat-scoped) and
+// never rewinds a task that has already progressed past assigned.
+func TestProjectStartLiftsOnlyTheNamedAssignedTask(t *testing.T) {
+	asg := func(task string) event.Event {
+		return event.Event{EventType: "assign", TaskID: task, Feature: "F", Payload: map[string]any{
+			"owner": "opencode", "reviewer": "claude-opus", "branch": "feat/x", "spec": "s"}}
+	}
+	evs := []event.Event{
+		initEv(),
+		asg("T1"),
+		asg("T2"), // same owner, also assigned — must NOT be lifted
+		{EventType: "start", TaskID: "T1", Feature: "F", AgentID: "claude-opus", Payload: map[string]any{"owner": "opencode"}},
+	}
+	st := Project(evs)
+	if got := st.Features[0].Tasks[0].Status; got != "in_progress" {
+		t.Fatalf("started task = %q, want in_progress", got)
+	}
+	if got := st.Features[0].Tasks[1].Status; got != "assigned" {
+		t.Fatalf("sibling task = %q, want assigned (start is task-scoped)", got)
+	}
+}
+
+func TestProjectStartNeverRewindsALaterStatus(t *testing.T) {
+	evs := []event.Event{
+		initEv(),
+		{EventType: "assign", TaskID: "T1", Feature: "F", Payload: map[string]any{"owner": "opencode", "reviewer": "claude-opus", "branch": "b", "spec": "s"}},
+		{EventType: "checkpoint", TaskID: "T1", Feature: "F", Payload: map[string]any{"evidence": "ok"}},
+		{EventType: "start", TaskID: "T1", Feature: "F", Payload: map[string]any{"owner": "opencode"}},
+	}
+	st := Project(evs)
+	if got := st.Features[0].Tasks[0].Status; got != "awaiting_review" {
+		t.Fatalf("start rewound a checkpointed task to %q, want awaiting_review", got)
+	}
+}
+
 func TestProjectUnknownEventTypeIgnored(t *testing.T) {
 	evs := []event.Event{
 		initEv(),

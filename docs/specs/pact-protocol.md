@@ -117,6 +117,20 @@ Each `payload` object MUST contain at minimum the fields listed below. Additiona
 
 Events are ordered by `ts` (UTC ISO-8601 sort) and, within the same timestamp, by append order within the file. There is no sequence number field. `event_id` provides stable identity for individual events; it is not a monotone counter. This design accommodates git merges that interleave events from multiple branches without requiring coordination on a global counter.
 
+### 2.6 Additive event_type Extensions (post-v1, non-breaking per §1.2)
+
+The reference implementation emits the following event types beyond the frozen v1
+enum. Per §1.2 they do not bump `protocol_version`; readers that do not recognise
+them MUST ignore them (§2.2).
+
+| event_type | role | scope | semantics |
+|---|---|---|---|
+| `start` | `orchestrator` | task | The orchestrate driver launched the task's owner. Projects `assigned → in_progress` for exactly the named task (unlike `join`, which is seat-scoped and lifts every assigned task the joining seat owns). Payload: `owner` (string, seat slug). Never rewinds a task that has progressed past `assigned`. |
+| `cancel` | `orchestrator` | task | Excludes the task from the projection (structured retirement; the log is never hand-edited). |
+| `withdraw` | `orchestrator` | feature | Excludes the entire feature from the projection. |
+| `config_gate` | `orchestrator` | project | Sets the project's hard verification gate command (see `pactify config gate`). |
+| `rebaseline` | `orchestrator` | project | Overrides the init-time `base_branch` (see `pactify config base-branch`); the latest rebaseline wins. |
+
 ---
 
 ## 3. `.pact/` File Contract
@@ -187,7 +201,7 @@ todo → assigned → in_progress → awaiting_review → accepted
 
 - `todo`: task exists in the backlog but has not been assigned via an `assign` event.
 - `assigned`: an `assign` event has been emitted for this task; the owner has not yet joined.
-- `in_progress`: the owner has joined (via a `join` event) and work is underway; or the task has been returned from `changes_requested`.
+- `in_progress`: work is underway — the owner has joined (via a `join` event) or the orchestrate driver has launched the owner (via a `start` event, §2.6); or the task has been returned from `changes_requested`.
 - `awaiting_review`: a `checkpoint` event has been emitted; the reviewer must now act.
 - `accepted`: an `accept` event has been emitted by the designated reviewer while the task was `awaiting_review`. This is a terminal state.
 - `changes_requested`: a `changes_requested` event has been emitted by the designated reviewer while the task was `awaiting_review`. The task returns to `in_progress` for the owner to address.

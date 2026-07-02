@@ -445,6 +445,34 @@ func initBaseBranch(evs []event.Event) string {
 	return ""
 }
 
+// Start records that the task's owner has been launched — the task-scoped
+// "working" fact the projection lifts to in_progress. It exists for the
+// orchestrate driver: a worker's own cold-start `join` (seat-scoped) is
+// worker-reported and headless agents often skip it, leaving the board stuck on
+// `assigned` while the owner works. Only an `assigned` task can start; anything
+// further along already has a stronger status the start must not disturb.
+func (p *Project) Start(taskID string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	t, f := findTask(st, taskID)
+	if t == nil {
+		return fmt.Errorf("start %s: no such task", taskID)
+	}
+	if t.Status != "assigned" {
+		return fmt.Errorf("start %s: task is %s, not assigned", taskID, t.Status)
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("start"), EventType: "start",
+		TaskID: taskID, Feature: f.ID, Payload: map[string]any{"owner": t.Owner},
+	})
+}
+
 // Accept marks a task accepted (reviewer-only; must be awaiting_review).
 func (p *Project) Accept(taskID string) error {
 	id, err := p.agentID()

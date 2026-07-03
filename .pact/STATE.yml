@@ -278,13 +278,13 @@ features:
     tasks:
       - id: m0-wire
         owner: opencode-worker
-        status: in_progress
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/cloud-m0-wire.md
-        evidence: null
+        evidence: cd cloud && pnpm install && pnpm -r build && pnpm -r test — wire: tsc clean, 10 test files / 144 tests PASS. Migration fidelity (re-verified by reviewer): src/ and test/ byte-identical to linx packages/wire; package.json deviations = allowed set only (version 0.1.0, private removed, files+publishConfig added); tsconfig extends path adjusted one level for cloud/ layout; linx root tsconfig.base.json copied to cloud/. Work committed as 01b2d1c (workspace skeleton + wire). Ledger events for this task were lost to the sandbox branch-clobber bug (backlogged); this checkpoint restores the record.
       - id: m0-crypto
         owner: opencode-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/cloud-m0-crypto.md
         evidence: null

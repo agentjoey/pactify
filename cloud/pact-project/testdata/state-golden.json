@@ -1,0 +1,82 @@
+{
+  "project": "test-fixture",
+  "agents": [
+    {
+      "id": "claude",
+      "roles": [
+        "orchestrator",
+        "reviewer"
+      ],
+      "kind": "claude-code"
+    },
+    {
+      "id": "opencode",
+      "roles": [
+        "worker"
+      ],
+      "kind": "opencode"
+    },
+    {
+      "id": "kimi",
+      "roles": [
+        "worker"
+      ],
+      "kind": "kimi-cli"
+    }
+  ],
+  "features": [
+    {
+      "id": "auth",
+      "branch": "feat/auth",
+      "status": "shipped",
+      "tasks": [
+        {
+          "id": "T1",
+          "owner": "opencode",
+          "status": "accepted",
+          "reviewer": "claude",
+          "spec": "spec/auth-t1.md",
+          "evidence": "T1 complete: all tests pass"
+        },
+        {
+          "id": "T2",
+          "owner": "opencode",
+          "status": "accepted",
+          "reviewer": "claude",
+          "spec": "spec/auth-t2.md",
+          "evidence": "T2 fixed: feedback addressed, re-tested",
+          "deps": [
+            "T1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "billing",
+      "branch": "feat/billing",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "B1",
+          "owner": "opencode",
+          "status": "awaiting_review",
+          "reviewer": "claude",
+          "spec": "spec/billing-b1.md",
+          "evidence": "B1 complete: invoice calculator done"
+        },
+        {
+          "id": "B2",
+          "owner": "kimi",
+          "status": "assigned",
+          "reviewer": "claude",
+          "spec": "spec/billing-b2.md",
+          "evidence": "",
+          "deps": [
+            "B1"
+          ]
+        }
+      ]
+    }
+  ],
+  "awaiting_count": 1
+}

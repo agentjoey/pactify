@@ -67,18 +67,20 @@ export async function ingestWireMessage(
   // event. Independent, auto-committed statements hold only brief per-statement
   // row locks, so concurrent distinct-seq events all land (matches the pre-#9
   // tolerant semantics), while keeping idempotency + the seq guard.
-  await db.account.upsert({
-    where: { id: accountId },
-    create: { id: accountId, publicKey: `provisional:${accountId}` },
-    update: {},
+  // Establish the tenant + Run rows with createMany+skipDuplicates, NOT upsert.
+  // Prisma `upsert` races on a concurrent create: two same-id ingests both INSERT
+  // and one throws P2002 (unique violation) — which the handler counts as an error
+  // and DROPS the event. createMany+skipDuplicates is `INSERT ... ON CONFLICT DO
+  // NOTHING`, which is a no-op on a concurrent duplicate instead of throwing.
+  await db.account.createMany({
+    data: [{ id: accountId, publicKey: `provisional:${accountId}` }],
+    skipDuplicates: true,
   })
-  await db.machine.upsert({
-    where: { id: header.machineId },
-    create: { id: header.machineId, accountId, metadataEnc: '' },
-    update: {},
+  await db.machine.createMany({
+    data: [{ id: header.machineId, accountId, metadataEnc: '' }],
+    skipDuplicates: true,
   })
-  // Establish the Run row (create-or-noop) so the RunEvent FK is satisfied.
-  await db.run.upsert({ where: { id: header.runId }, create: createData, update: {} })
+  await db.run.createMany({ data: [createData], skipDuplicates: true })
   // Append the event idempotently and UNCONDITIONALLY (no seq guard on the event
   // itself): skipDuplicates makes a retried (runId, seq) a no-op instead of a
   // crash, and never drops a distinct event under concurrency.

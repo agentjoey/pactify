@@ -59,16 +59,20 @@ export async function ingestPactEvent(
   // serialized same-project ingest and made concurrent bursts drop events on
   // abort. Independent idempotent statements; the event is the source of truth,
   // the Project row an eventually-consistent projection.
-  await db.project.upsert({
-    where: { id: input.projectId },
-    create: {
-      id: input.projectId,
-      accountId,
-      name: input.name,
-      feature: input.feature ?? null,
-      seq: input.seq,
-    },
-    update: {},
+  // Establish the Project row with createMany+skipDuplicates, NOT upsert: Prisma
+  // upsert races on a concurrent create (both INSERT → one throws P2002, dropping
+  // the event). ON CONFLICT DO NOTHING is a no-op on a concurrent duplicate.
+  await db.project.createMany({
+    data: [
+      {
+        id: input.projectId,
+        accountId,
+        name: input.name,
+        feature: input.feature ?? null,
+        seq: input.seq,
+      },
+    ],
+    skipDuplicates: true,
   })
   // Append idempotently and unconditionally. createMany+skipDuplicates is a no-op
   // on a duplicate (projectId, seq) AND its `count` tells us if the event was

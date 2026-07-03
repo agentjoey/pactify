@@ -1,0 +1,26 @@
+# Fly.io config for the Pactify zero-knowledge relay.
+# Deploy from the cloud/ root:
+#   fly deploy --dockerfile relay/Dockerfile
+# Secrets (set once, never commit them):
+#   fly secrets set DATABASE_URL="<neon pooled connection string>" RELAY_SECRET="<32+ random bytes>"
+# The container runs `prisma migrate deploy` on boot, then `node dist/server-main.js`.
+
+app = "pactify-relay"
+primary_region = "sin" # Singapore — co-located with the Neon project
+
+[build]
+  dockerfile = "relay/Dockerfile"
+
+[env]
+  PORT = "4310"
+
+[http_service]
+  internal_port = 4310
+  force_https = true
+  auto_stop_machines = "off"  # relay holds long-lived linxd sockets — never suspend/stop
+  auto_start_machines = true
+  min_machines_running = 1 # single instance for MVP (no Redis); HA in backlog
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

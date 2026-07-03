@@ -1,0 +1,135 @@
+// Linx relay data model — M1.
+//
+// Zero-knowledge: every *Enc column and the RunEvent.bodyEnc hold opaque E2E
+// ciphertext the server cannot read. Cleartext operational columns (state,
+// counters, ids, enums) are queryable to drive the fleet board / approval inbox.
+// Every tenant-scoped row carries accountId.
+
+// Prisma 7: driver adapters are GA and connection URLs live in prisma.config.ts.
+// The adapter (Neon in prod, PGlite in tests) is passed to the PrismaClient
+// constructor — see src/db.ts and prisma.config.ts.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id          String    @id @default(cuid())
+  publicKey   String    @unique
+  seq         Int       @default(0)
+  settingsEnc String?
+  createdAt   DateTime  @default(now())
+  devices     Device[]
+  machines    Machine[]
+  runs        Run[]
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  accountId String
+  publicKey String
+  pushToken String?
+  pairedAt  DateTime @default(now())
+  account   Account  @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+}
+
+model Machine {
+  id              String   @id
+  accountId       String
+  metadataEnc     String
+  presence        String   @default("offline")
+  cliAvailability String?
+  host            String?
+  agentKinds      Json     @default("[]")
+  workdirs        Json?
+  online          Boolean  @default(false)
+  lastSeenAt      BigInt   @default(0)
+  account         Account  @relation(fields: [accountId], references: [id])
+  runs            Run[]
+
+  @@index([accountId])
+}
+
+model Run {
+  id                String     @id
+  accountId         String
+  machineId         String
+  agentKind         String
+  state             String
+  pendingApprovals  Int        @default(0)
+  tokensIn          Int        @default(0)
+  tokensOut         Int        @default(0)
+  costMicros        Int?
+  seq               Int        @default(0)
+  startedAt         DateTime   @default(now())
+  lastActiveAt      DateTime   @default(now())
+  endedAt           DateTime?
+  branch            String?
+  // Run start time as epoch ms, carried cleartext through the wire header (the
+  // `startedAt` DateTime above is an unrelated server-side default-now stamp).
+  startedAtMs       BigInt?
+  // Resolved, absolute working directory of the run, carried cleartext through
+  // the wire header alongside `branch` (distinct from the E2E `workdirEnc`).
+  workdir           String?
+  // Git repo root of the run's workdir, carried cleartext through the wire header
+  // alongside `workdir`/`branch`. Groups a run by its PROJECT (repo) rather than
+  // a per-subdir workdir. Null when the workdir is not a git repo.
+  repoRoot          String?
+  title             String?
+  titleEnc          String?
+  workdirEnc        String?
+  modelEnc          String?
+  taskEnc           String?
+  snapshotEnc       String?
+  dataEncryptionKey String?
+  account           Account    @relation(fields: [accountId], references: [id])
+  machine           Machine    @relation(fields: [machineId], references: [id])
+  events            RunEvent[]
+
+  @@index([accountId])
+  @@index([machineId])
+  // Board listing per account, recency-ordered (listRuns: where accountId,
+  // orderBy lastActiveAt desc). Composite so one index serves both the filter
+  // and the sort.
+  @@index([accountId, lastActiveAt])
+  // Inbox / state filters per account (listPendingApprovals and any
+  // state-scoped board query: where accountId + state).
+  @@index([accountId, state])
+}
+
+model RunEvent {
+  id        String @id @default(cuid())
+  runId     String
+  seq       Int
+  state     String
+  eventKind String
+  ts        BigInt
+  bodyEnc   String
+  run       Run    @relation(fields: [runId], references: [id])
+
+  @@unique([runId, seq])
+  @@index([runId])
+}
+
+model PushToken {
+  id        String @id @default(cuid())
+  accountId String
+  // For web-push subscriptions this holds the PushSubscription `endpoint`, the
+  // natural idempotency key — the existing `@@unique([accountId, token])` makes
+  // a re-subscribe with the same endpoint an upsert (idempotent by endpoint).
+  token     String
+  // 'web-push' for browser PushSubscriptions; the seam keeps room for others.
+  platform  String
+  // The PushSubscription `keys` (p256dh + auth) needed to encrypt a web-push.
+  // Additive/nullable so the column is back-compat with pre-7_ rows. NOT secret
+  // agent text — push-infra material the server uses only to send notifications.
+  keysP256dh String?
+  keysAuth   String?
+
+  @@unique([accountId, token])
+}

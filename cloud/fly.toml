@@ -23,7 +23,10 @@ primary_region = "sin" # Singapore — co-located with the Neon project
   force_https = true
   auto_stop_machines = "off"  # relay holds long-lived linxd sockets — never suspend/stop
   auto_start_machines = true
-  min_machines_running = 1 # single instance for MVP (no Redis); HA in backlog
+  # SINGLE INSTANCE ONLY (until Redis-backed): in-process PairStore + rate limiters
+  # break if a load balancer splits them across machines. Deploy `--ha=false`, keep
+  # `fly scale count 1`. Redis-backed multi-instance is a prod-scaling prerequisite.
+  min_machines_running = 1
 
 [[vm]]
   size = "shared-cpu-1x"

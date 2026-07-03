@@ -78,6 +78,18 @@ describe('relay repo: ingest/read round-trip on PGlite', () => {
     expect(events.map((e) => e.seq).sort((a, b) => a - b)).toEqual([0, 1, 2])
   })
 
+  it('concurrent same-run ingest of distinct seqs stores ALL events (no drops)', async () => {
+    // Regression for the #9 transaction bug: a burst of same-run events (agent
+    // delta streams are ms-apart) must not deadlock/drop. Fire them concurrently.
+    await Promise.all(
+      Array.from({ length: 9 }, (_, i) =>
+        ingestWireMessage(db, accountId, 'claude', wireMessage({ seq: i + 1 })),
+      ),
+    )
+    const events = await getRunEvents(db, 'r1')
+    expect(events.map((e) => e.seq).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+  })
+
   it('ingest persists the cleartext header branch onto the Run', async () => {
     await ingestWireMessage(db, accountId, 'claude', wireMessage({ branch: 'feat/c0f' }))
     expect((await getRun(db, 'r1'))?.branch).toBe('feat/c0f')

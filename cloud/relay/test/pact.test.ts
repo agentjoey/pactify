@@ -55,6 +55,14 @@ describe('relay pact data layer (U2 S1) on PGlite', () => {
     expect(await getProjectEvents(db, 'acct1:pactify', { afterSeq: 0 })).toHaveLength(2)
   })
 
+  it('concurrent same-project ingest of distinct seqs stores ALL events (no drops)', async () => {
+    await Promise.all(
+      Array.from({ length: 9 }, (_, i) => ingestPactEvent(db, accountId, ev({ seq: i + 1, bodyEnc: `c${i}` }))),
+    )
+    const events = await getProjectEvents(db, 'acct1:pactify')
+    expect(events.map((e) => e.seq).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+  })
+
   it('duplicate (projectId, seq) ingest is idempotent — no crash, one event', async () => {
     await ingestPactEvent(db, accountId, ev({ seq: 0 }))
     await ingestPactEvent(db, accountId, ev({ seq: 0 })) // retry

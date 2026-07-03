@@ -55,41 +55,27 @@ export async function ingestPactEvent(
   accountId: string,
   input: PactEventInput,
 ): Promise<{ created: boolean }> {
-  return db.$transaction(async (tx) => {
-    const existing = await tx.pactEvent.findUnique({
-      where: { projectId_seq: { projectId: input.projectId, seq: input.seq } },
-      select: { id: true },
-    })
-    // Establish the project row (create-or-noop). The Account row must already
-    // exist (auth provisions it); a bad accountId FK-fails, which is correct.
-    await tx.project.upsert({
-      where: { id: input.projectId },
-      create: {
-        id: input.projectId,
-        accountId,
-        name: input.name,
-        feature: input.feature ?? null,
-        seq: input.seq,
-      },
-      update: {},
-    })
-    // Advance the project summary only for a non-stale event (seq at least as new)
-    // AND only within this account — an out-of-order event must not roll the
-    // summary back, and a projectId collision must not cross accounts.
-    await tx.project.updateMany({
-      where: { id: input.projectId, accountId, seq: { lte: input.seq } },
-      data: {
-        name: input.name,
-        feature: input.feature ?? null,
-        seq: input.seq,
-        lastEventAt: new Date(),
-      },
-    })
-    // Idempotent append: a duplicate/retried (projectId, seq) is a no-op instead
-    // of a unique-constraint crash (mirrors the run ingest).
-    await tx.pactEvent.upsert({
-      where: { projectId_seq: { projectId: input.projectId, seq: input.seq } },
-      create: {
+  // NO wrapping transaction — same reason as ingestWireMessage: a cross-row tx
+  // serialized same-project ingest and made concurrent bursts drop events on
+  // abort. Independent idempotent statements; the event is the source of truth,
+  // the Project row an eventually-consistent projection.
+  await db.project.upsert({
+    where: { id: input.projectId },
+    create: {
+      id: input.projectId,
+      accountId,
+      name: input.name,
+      feature: input.feature ?? null,
+      seq: input.seq,
+    },
+    update: {},
+  })
+  // Append idempotently and unconditionally. createMany+skipDuplicates is a no-op
+  // on a duplicate (projectId, seq) AND its `count` tells us if the event was
+  // genuinely new — so the S6 push is gated without a transaction/TOCTOU.
+  const { count } = await db.pactEvent.createMany({
+    data: [
+      {
         projectId: input.projectId,
         accountId,
         seq: input.seq,
@@ -99,10 +85,21 @@ export async function ingestPactEvent(
         ts: BigInt(input.ts),
         bodyEnc: input.bodyEnc,
       },
-      update: {},
-    })
-    return { created: existing === null }
+    ],
+    skipDuplicates: true,
   })
+  // Advance the summary only for a non-stale event, account-scoped (best-effort,
+  // self-healing). Out-of-order late arrivals can't roll it back.
+  await db.project.updateMany({
+    where: { id: input.projectId, accountId, seq: { lte: input.seq } },
+    data: {
+      name: input.name,
+      feature: input.feature ?? null,
+      seq: input.seq,
+      lastEventAt: new Date(),
+    },
+  })
+  return { created: count > 0 }
 }
 
 /** Read one Project by id, or `null` if it does not exist. */

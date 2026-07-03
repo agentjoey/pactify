@@ -59,35 +59,32 @@ export async function ingestWireMessage(
     lastActiveAt: new Date(),
   }
 
-  // One transaction so the Run and its RunEvent land together (or not at all),
-  // and provisioning the tenant rows in the same tx avoids a first-connect FK
-  // race on the Run insert. Both upserts are no-ops when the row already exists.
-  await db.$transaction(async (tx) => {
-    await tx.account.upsert({
-      where: { id: accountId },
-      create: { id: accountId, publicKey: `provisional:${accountId}` },
-      update: {},
-    })
-    await tx.machine.upsert({
-      where: { id: header.machineId },
-      create: { id: header.machineId, accountId, metadataEnc: '' },
-      update: {},
-    })
-    // Establish the row (create-or-noop), then apply the header ONLY if it is at
-    // least as new as the stored seq. An out-of-order / stale header (lower seq)
-    // whose write settles late must not roll the run's state/counters backward;
-    // the conditional updateMany is atomic (no read-modify-write race).
-    await tx.run.upsert({ where: { id: header.runId }, create: createData, update: {} })
-    await tx.run.updateMany({
-      where: { id: header.runId, seq: { lte: header.seq } },
-      data: updateData,
-    })
-    // Idempotent append: a duplicate/retried (runId, seq) — possible on reconnect
-    // or client resend — becomes a no-op instead of a unique-constraint crash that
-    // would drop the event after it was already broadcast to web clients.
-    await tx.runEvent.upsert({
-      where: { runId_seq: { runId: header.runId, seq: header.seq } },
-      create: {
+  // NO wrapping transaction. Events are the source of truth and are stored
+  // idempotently and independently; the Run row is an eventually-consistent
+  // projection. A single cross-row $transaction here serialized every same-run
+  // ingest on the Run row and made concurrent bursts (agent delta streams are
+  // ms-apart) deadlock/serialization-fail — the abort then silently DROPPED the
+  // event. Independent, auto-committed statements hold only brief per-statement
+  // row locks, so concurrent distinct-seq events all land (matches the pre-#9
+  // tolerant semantics), while keeping idempotency + the seq guard.
+  await db.account.upsert({
+    where: { id: accountId },
+    create: { id: accountId, publicKey: `provisional:${accountId}` },
+    update: {},
+  })
+  await db.machine.upsert({
+    where: { id: header.machineId },
+    create: { id: header.machineId, accountId, metadataEnc: '' },
+    update: {},
+  })
+  // Establish the Run row (create-or-noop) so the RunEvent FK is satisfied.
+  await db.run.upsert({ where: { id: header.runId }, create: createData, update: {} })
+  // Append the event idempotently and UNCONDITIONALLY (no seq guard on the event
+  // itself): skipDuplicates makes a retried (runId, seq) a no-op instead of a
+  // crash, and never drops a distinct event under concurrency.
+  await db.runEvent.createMany({
+    data: [
+      {
         runId: header.runId,
         seq: header.seq,
         state: header.state,
@@ -95,8 +92,15 @@ export async function ingestWireMessage(
         ts: BigInt(header.ts),
         bodyEnc,
       },
-      update: {},
-    })
+    ],
+    skipDuplicates: true,
+  })
+  // Advance the Run projection ONLY for a non-stale header (seq at least as new),
+  // so an out-of-order late arrival can't roll state/counters backward. Best-
+  // effort: if this lags, the next event's update catches up (self-healing).
+  await db.run.updateMany({
+    where: { id: header.runId, seq: { lte: header.seq } },
+    data: updateData,
   })
 }
 

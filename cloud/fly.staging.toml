@@ -19,6 +19,11 @@ primary_region = "sin"
   force_https = true
   auto_stop_machines = "off"
   auto_start_machines = true
+  # SINGLE INSTANCE ONLY (until Redis-backed): the relay keeps in-process state
+  # (PairStore, rate limiters) that a load balancer would split across machines —
+  # pairing/limits break with >1. Deploy with `fly deploy --ha=false` and keep
+  # `fly scale count 1`. Multi-instance (Redis adapter for PairStore + limits) is
+  # a prod-scaling prerequisite tracked in backlog.
   min_machines_running = 1
 
 [[vm]]

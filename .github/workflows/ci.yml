@@ -66,18 +66,3 @@ jobs:
           name: playwright-report
           path: web/playwright-report
           retention-days: 7
-
-  site:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: site/package-lock.json
-      - name: build site
-        run: cd site && npm ci && npm run build
-      - name: dist assertions
-        run: cd site && node scripts/check-dist.mjs

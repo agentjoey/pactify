@@ -29,35 +29,29 @@ CLI 语言待 Sprint 001 T1 决策后补充。
 
 ## pactify.dev (Astro site on Vercel)
 
-One-time setup (maintainer):
-1. Vercel → Add New Project → import `agentjoey/pactify`.
-   - **Root Directory: `site/`** · Framework preset: Astro · production branch `main`.
-   - Settings → General → 确认 **"Include source files outside of the Root Directory"** 为开启
-     （默认开启；构建依赖 `../docs/*` 与 `../install.sh`，关掉会直接构建失败）。
-2. Build gating: `site/vercel.json`'s `ignoreCommand` (committed, NOT a dashboard toggle —
-   a dashboard-only "Ignored Build Step" was tried first and silently never took effect: every
-   push, including pure-Go PRs touching zero docs/site files, kept triggering a full site
-   rebuild for months, confirmed via the Vercel API deployment history and build logs showing
-   no ignore-step evaluation before "Cloning..."). The committed command:
-   ```bash
-   git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- . ../docs/specs/pact-protocol.md ../docs/agent-onboarding.md ../install.sh
-   ```
-   (exit 0 = skip build; builds only when site/, the rendered docs, or install.sh change.)
-   `VERCEL_GIT_PREVIOUS_SHA` — the last successfully deployed commit, exposed only when an
-   `ignoreCommand` is set — diffs the FULL span since the last real site deploy, not just the
-   pushed HEAD's immediate parent; a multi-commit push where an earlier (non-HEAD) commit
-   touches a trigger path is still caught (`HEAD^` alone would miss it). Falls back to `HEAD^`
-   only on the very first deployment, when there is no previous SHA yet.
-3. Project → Settings → Domains → add `pactify.dev` (+ `www.pactify.dev` redirect).
-   Add the records Vercel shows at the registrar (apex A / CNAME for www — use the exact
-   values from the domain panel).
-4. Post-deploy verification:
-   ```bash
-   curl -fsSL https://pactify.dev/install.sh | head -2     # shebang + comment
-   curl -s https://pactify.dev/protocol | grep -c "Pact Protocol v1"
-   ```
-   Then the canonical install one-liner (`curl -fsSL https://pactify.dev/install.sh | sh`)
-   replaces the raw.githubusercontent URL in README/plugin hook (separate follow-up PR).
+The site lives in its **own repo** `agentjoey/pactify-website` (Vercel project `pactify-website`,
+Root Directory = repo root, framework Astro, production branch `main`). It was split out of this
+monorepo's `site/` on 2026-07-03 so the product repo and the website deploy independently — a
+push here no longer triggers a pactify.dev rebuild (that was the whole point of the old
+`site/vercel.json` `ignoreCommand`, now retired along with `site/`).
+
+The three canonical files the site renders — `install.sh`, `docs/specs/pact-protocol.md`,
+`docs/agent-onboarding.md` — are the source of truth **here**; the website repo vendors copies
+into its `vendor/` via `scripts/sync-from-pactify.mjs`. When you change any of them, refresh the
+website's vendor and commit it there:
+
+```bash
+# in a pactify-website checkout
+node scripts/sync-from-pactify.mjs                 # from a local ../pactify checkout
+node scripts/sync-from-pactify.mjs --ref v1.0.0    # or pin a released pactify ref (GitHub)
+git add vendor && git commit -m "chore: sync vendored docs from pactify@<ref>"
+```
+
+Post-deploy verification:
+```bash
+curl -fsSL https://pactify.dev/install.sh | head -2     # shebang + comment
+curl -s https://pactify.dev/protocol | grep -c "Pact Protocol v1"
+```
 
 Constraint: the site is fully static — no Vercel-exclusive features — so it can move to
 any static host (Phase 6 China GTM) by re-pointing DNS.

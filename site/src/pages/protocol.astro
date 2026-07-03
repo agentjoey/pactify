@@ -1,8 +1,0 @@
----
-import { getEntry, render } from 'astro:content';
-import Doc from '../layouts/Doc.astro';
-const entry = await getEntry('docs', 'specs/pact-protocol');
-if (!entry) throw new Error('canonical spec not found at ../docs/specs/pact-protocol.md');
-const { Content } = await render(entry);
----
-<Doc title="Protocol v1" description="The frozen v1 normative specification of the pact protocol — events, state machines, the two rules, recovery semantics."><Content /></Doc>

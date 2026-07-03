@@ -53,6 +53,38 @@ func LoadMasterSecret() ([]byte, error) {
 	return nil, ErrNoMasterSecret
 }
 
+// PactifySecretPath is the canonical location pactify writes the master secret
+// to (~/.config/pactify/master-secret).
+func PactifySecretPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("cloudauth: resolve home dir: %w", err)
+	}
+	return filepath.Join(home, ".config", "pactify", "master-secret"), nil
+}
+
+// SaveMasterSecret writes a 32-byte secret as hex to PactifySecretPath() with
+// 0600 perms. Refuses to overwrite an existing file unless force is set (so a
+// stray `pair` never clobbers an established identity).
+func SaveMasterSecret(secret []byte, force bool) error {
+	if len(secret) != masterSecretLen {
+		return fmt.Errorf("cloudauth: master secret must be %d bytes, got %d", masterSecretLen, len(secret))
+	}
+	path, err := PactifySecretPath()
+	if err != nil {
+		return err
+	}
+	if !force {
+		if _, err := os.Stat(path); err == nil {
+			return fmt.Errorf("cloudauth: %s already exists (pass force to overwrite)", path)
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(hex.EncodeToString(secret)), 0o600)
+}
+
 func decodeMasterSecret(v, source string) ([]byte, error) {
 	secret, err := hex.DecodeString(strings.TrimSpace(v))
 	if err != nil {

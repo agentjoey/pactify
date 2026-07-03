@@ -272,3 +272,27 @@ features:
         spec: .pact/tasks/t-projwiz-frontend.md
         evidence: VERIFY: cd web && npx tsc --noEmit && npx vitest run && npx playwright test\n\n- tsc --noEmit: clean (no output)\n- vitest: 56 test files passed, 476 tests passed\n- playwright: 9 e2e tests passed (including new project-wizard add-project + delete-project specs)\n\nFILES CHANGED:\n- web/src/lib/types.ts: ProjectMeta + RegistryEntry group field\n- web/src/lib/api.ts: browseFs, fetchProjects merges group from /api/registry, postRegister/setupApply group support\n- web/src/lib/api.test.ts: coverage for new api functions\n- web/src/lib/icons.tsx: added chevron-up + folder icons\n- web/src/components/shell/Sidebar.tsx: grouped rendering, add-project button, delete confirm modal\n- web/src/components/shell/Sidebar.test.tsx: grouping/add/delete tests\n- web/src/components/shell/FolderPicker.tsx + test: directory browser with multi-select\n- web/src/components/shell/AddProjectWizard.tsx + test: two-step wizard with register/setup-apply分流\n- web/src/App.tsx: pass onChanged to Sidebar\n- web/src/App.test.tsx: mock /api/registry for fetchProjects\n- web/e2e/fixtures.mjs + mock-server.mjs: hermetic endpoints for wizard e2e\n- web/e2e/project-wizard.spec.ts: add-project + delete-project e2e\n- internal/serve/dist: rebuilt SPA
         deps: [t-projwiz-backend]
+  - id: cloud-m0
+    branch: feat-cloud-m0
+    status: in_progress
+    tasks:
+      - id: m0-wire
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/cloud-m0-wire.md
+        evidence: null
+      - id: m0-crypto
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/cloud-m0-crypto.md
+        evidence: null
+        deps: [m0-wire]
+      - id: m0-relay
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/cloud-m0-relay.md
+        evidence: null
+        deps: [m0-crypto]

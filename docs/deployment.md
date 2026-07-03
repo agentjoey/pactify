@@ -34,11 +34,20 @@ One-time setup (maintainer):
    - **Root Directory: `site/`** · Framework preset: Astro · production branch `main`.
    - Settings → General → 确认 **"Include source files outside of the Root Directory"** 为开启
      （默认开启；构建依赖 `../docs/*` 与 `../install.sh`，关掉会直接构建失败）。
-2. Project → Settings → Git → **Ignored Build Step**:
+2. Build gating: `site/vercel.json`'s `ignoreCommand` (committed, NOT a dashboard toggle —
+   a dashboard-only "Ignored Build Step" was tried first and silently never took effect: every
+   push, including pure-Go PRs touching zero docs/site files, kept triggering a full site
+   rebuild for months, confirmed via the Vercel API deployment history and build logs showing
+   no ignore-step evaluation before "Cloning..."). The committed command:
    ```bash
-   git diff --quiet HEAD^ HEAD -- ./ ../docs/specs/pact-protocol.md ../docs/agent-onboarding.md ../install.sh
+   git diff --quiet "${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}" HEAD -- . ../docs/specs/pact-protocol.md ../docs/agent-onboarding.md ../install.sh
    ```
    (exit 0 = skip build; builds only when site/, the rendered docs, or install.sh change.)
+   `VERCEL_GIT_PREVIOUS_SHA` — the last successfully deployed commit, exposed only when an
+   `ignoreCommand` is set — diffs the FULL span since the last real site deploy, not just the
+   pushed HEAD's immediate parent; a multi-commit push where an earlier (non-HEAD) commit
+   touches a trigger path is still caught (`HEAD^` alone would miss it). Falls back to `HEAD^`
+   only on the very first deployment, when there is no previous SHA yet.
 3. Project → Settings → Domains → add `pactify.dev` (+ `www.pactify.dev` redirect).
    Add the records Vercel shows at the registrar (apex A / CNAME for www — use the exact
    values from the domain panel).

@@ -229,9 +229,43 @@ export async function deliverRunNotification(
   payload: ThinPushPayload,
   log?: Logger,
 ): Promise<DeliveryResult> {
+  return fanOutPush(db, sender, accountId, JSON.stringify(payload), payload.type, log)
+}
+
+/**
+ * Thin U2 pact push (zero-knowledge): a task in one of the caller's projects
+ * needs a human (awaiting review / changes requested). Contains ONLY the
+ * cleartext operational ids — no spec/evidence, no decrypted content.
+ */
+export interface PactPushPayload {
+  type: 'pact-needs-you'
+  projectId: string
+  eventType: string
+  task?: string
+}
+
+export async function deliverPactNotification(
+  db: PrismaClient,
+  sender: WebPushSender,
+  accountId: string,
+  payload: PactPushPayload,
+  log?: Logger,
+): Promise<DeliveryResult> {
+  return fanOutPush(db, sender, accountId, JSON.stringify(payload), payload.type, log)
+}
+
+// fanOutPush sends one serialized body to every push subscription of an account,
+// pruning subscriptions the push service reports as dead (404/410). `label` is a
+// non-sensitive type tag used only for logging a transient failure.
+async function fanOutPush(
+  db: PrismaClient,
+  sender: WebPushSender,
+  accountId: string,
+  body: string,
+  label: string,
+  log?: Logger,
+): Promise<DeliveryResult> {
   const subs = await listPushSubscriptions(db, accountId)
-  // Serialize the thin payload exactly once; it is identical for every device.
-  const body = JSON.stringify(payload)
   let sent = 0
   let pruned = 0
   for (const sub of subs) {
@@ -245,7 +279,7 @@ export async function deliverRunNotification(
         pruned++
       } else {
         // Transient/unknown failure: keep the subscription, log the type only.
-        log?.warn('web-push send failed', { type: payload.type, status })
+        log?.warn('web-push send failed', { type: label, status })
       }
     }
   }

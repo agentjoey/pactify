@@ -12,7 +12,13 @@ import {
 } from '@pactify-apps/wire'
 import { authenticate, verifyToken } from './auth.js'
 import { getRun, deleteRun, deleteMachine, renameRun } from './repo.js'
-import { subscribePush, unsubscribePush, type PushSubscriptionJson } from './push.js'
+import {
+  subscribePush,
+  unsubscribePush,
+  deliverPactNotification,
+  type PushSubscriptionJson,
+  type WebPushSender,
+} from './push.js'
 import { listRuns, listPendingApprovals, getRunEventsAfter, searchRuns } from './queries.js'
 import {
   ingestPactEvent,
@@ -73,7 +79,16 @@ export interface ServerOptions {
    * (tests) it is a safe no-op.
    */
   broadcaster?: Broadcaster
+  /**
+   * Web-push sender for U2 "needs-you" pact notifications (awaiting review /
+   * changes requested). Omitted when push is unconfigured. Shared with the run
+   * push path via {@link createWebPushSender}.
+   */
+  pushSender?: WebPushSender
 }
+
+// Pact event types that mean a human is needed on the board — the U2 push trigger.
+const PACT_NEEDS_YOU: Record<string, true> = { checkpoint: true, changes_requested: true }
 
 /**
  * Parse + validate a standard browser PushSubscription JSON body. Returns the
@@ -398,8 +413,12 @@ export function createServer(opts: ServerOptions): FastifyInstance {
       metrics.inc('pact_rejected_total')
       return reply.code(400).send({ error: 'bad request' })
     }
-    await ingestPactEvent(db, accountId, parsed.data)
+    const { created } = await ingestPactEvent(db, accountId, parsed.data)
     metrics.inc('pact_events_total')
+    // A re-uploaded event (a machine reconnecting replays its whole ledger) is a
+    // storage no-op AND must not re-broadcast or re-push — only genuinely new
+    // events drive board updates and notifications.
+    if (!created) return reply.code(202).send({ ok: true })
     opts.broadcaster?.emit(accountId, 'pact-event', {
       projectId: parsed.data.projectId,
       seq: parsed.data.seq,
@@ -409,6 +428,16 @@ export function createServer(opts: ServerOptions): FastifyInstance {
       ts: parsed.data.ts,
       bodyEnc: parsed.data.bodyEnc,
     })
+    // "Needs you" push (S6): a task awaiting review / changes requested needs a
+    // human. Fire-and-forget (never blocks the 202); zero-knowledge payload.
+    if (opts.pushSender && PACT_NEEDS_YOU[parsed.data.eventType]) {
+      void deliverPactNotification(db, opts.pushSender, accountId, {
+        type: 'pact-needs-you',
+        projectId: parsed.data.projectId,
+        eventType: parsed.data.eventType,
+        ...(parsed.data.task ? { task: parsed.data.task } : {}),
+      }).catch(() => {})
+    }
     return reply.code(202).send({ ok: true })
   })
 

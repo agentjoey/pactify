@@ -47,12 +47,19 @@ export interface PactEventInput {
   bodyEnc: string
 }
 
+// Returns `created: false` when this (projectId, seq) was already stored — a
+// replay/retry — so the caller can suppress duplicate side effects (e.g. a push
+// storm when a machine reconnects and re-uploads its whole ledger).
 export async function ingestPactEvent(
   db: PrismaClient,
   accountId: string,
   input: PactEventInput,
-): Promise<void> {
-  await db.$transaction(async (tx) => {
+): Promise<{ created: boolean }> {
+  return db.$transaction(async (tx) => {
+    const existing = await tx.pactEvent.findUnique({
+      where: { projectId_seq: { projectId: input.projectId, seq: input.seq } },
+      select: { id: true },
+    })
     // Establish the project row (create-or-noop). The Account row must already
     // exist (auth provisions it); a bad accountId FK-fails, which is correct.
     await tx.project.upsert({
@@ -94,6 +101,7 @@ export async function ingestPactEvent(
       },
       update: {},
     })
+    return { created: existing === null }
   })
 }
 

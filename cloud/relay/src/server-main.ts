@@ -100,6 +100,7 @@ export async function startServer(
     runTtlMs,
     machineTtlMs,
     broadcaster,
+    ...(pushSender ? { pushSender } : {}),
     ...(vapid ? { vapidPublicKey: vapid.publicKey } : {}),
   })
   await app.listen({ port: cfg.port, host: '0.0.0.0' })

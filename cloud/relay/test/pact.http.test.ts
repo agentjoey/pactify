@@ -4,6 +4,7 @@ import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
 import type { PrismaClient } from '@prisma/client'
 import { createPgliteDb } from '../src/db'
 import { createServer } from '../src/server'
+import { subscribePush, type WebPushSender } from '../src/push'
 import type { Broadcaster } from '../src/broadcast'
 
 const SECRET = 's3cret'
@@ -115,6 +116,42 @@ describe('relay pact HTTP (U2 S2)', () => {
       headers: { authorization: `Bearer ${b.token}` },
     })
     expect(foreign.statusCode).toBe(404)
+  })
+
+  it('fires a needs-you push on checkpoint/changes_requested, not on other events (S6)', async () => {
+    const calls: string[] = []
+    const sender: WebPushSender = {
+      async send(_sub, payload) {
+        calls.push(payload)
+      },
+    }
+    const app = createServer({ db, secret: SECRET, pushSender: sender })
+    const { token, accountId } = await login(app)
+    await subscribePush(db, accountId, { endpoint: 'https://push.example/a', keys: { p256dh: 'p', auth: 'a' } })
+
+    const post = (over: Record<string, unknown>) =>
+      app.inject({
+        method: 'POST',
+        url: '/v1/pact/ingest',
+        headers: { authorization: `Bearer ${token}` },
+        payload: ingestBody(over),
+      })
+
+    await post({ seq: 0, eventType: 'assign', task: 't1' }) // not a needs-you event
+    await post({ seq: 1, eventType: 'checkpoint', task: 't1' }) // needs review → push
+    // give the fire-and-forget push a tick
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(calls).toHaveLength(1)
+    const p = JSON.parse(calls[0])
+    expect(p).toMatchObject({ type: 'pact-needs-you', eventType: 'checkpoint', task: 't1', projectId: 'p:pactify' })
+    // zero-knowledge: no decrypted content in the push.
+    expect(calls[0]).not.toContain('bodyEnc')
+
+    // Re-uploading the same event (reconnect replay) must NOT re-push (no storm).
+    await post({ seq: 1, eventType: 'checkpoint', task: 't1' })
+    await new Promise((r) => setTimeout(r, 30))
+    expect(calls).toHaveLength(1)
   })
 
   it('rejects unauthenticated ingest (401) and a malformed body (400)', async () => {

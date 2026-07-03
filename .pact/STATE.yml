@@ -278,7 +278,7 @@ features:
     tasks:
       - id: m0-wire
         owner: opencode-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/cloud-m0-wire.md
         evidence: null

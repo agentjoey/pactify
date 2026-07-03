@@ -296,3 +296,37 @@ features:
         spec: .pact/tasks/cloud-m0-relay.md
         evidence: === VERIFY === cd cloud && pnpm install && pnpm -r build && pnpm --filter @pactify/relay test  pnpm install: all 4 workspace projects resolved, 210 packages added (18.9s) pnpm -r build: wire+crypto+relay all build green (tsc + prisma generate) pnpm --filter @pactify/relay test: ALL 212 tests PASS (23 test files in default config + 5 in node config)   - Default vitest: 23 passed, 201 tests PASS (36.45s)   - Node vitest: 5 passed, 11 tests PASS (4.21s)  === DIFF VERIFICATION === diff -r <linx>/packages/linx-relay/src cloud/relay/src --exclude=testing.ts  → EXIT 0 (byte-identical) diff -r <linx>/packages/linx-relay/test cloud/relay/test                        → EXIT 0 (byte-identical) diff -r <linx>/packages/linx-relay/prisma cloud/relay/prisma                    → EXIT 0 (byte-identical)  === FILES CHANGED === - NEW cloud/relay/: entire package directory (src/, test/, prisma/, bin/, Dockerfile, package.json, tsconfig.json, vitest.config.ts, vitest.node.config.ts, prisma.config.ts) - NEW cloud/relay/src/testing.ts: re-exports createPgliteDb, createServer, attachSockets, issueToken - NEW cloud/relay/fly.toml: app=pactify-relay, dockerfile=relay/Dockerfile, sin region, 4310 port - NEW cloud/relay/fly.staging.toml: app=pactify-relay-staging, same config - MOD cloud/relay/package.json: name=@pactify/relay, version=0.1.0, removed private, added publishConfig(access:public), bin renamed to pactify-relay, added exports["./testing"], added files[] array - MOD cloud/relay/tsconfig.json: extends changed from "../../tsconfig.base.json" to "../tsconfig.base.json" - MOD cloud/relay/Dockerfile: rewritten for cloud/ build context (wire/ relay/ paths, prisma migrate deploy path) - MOD cloud/relay/bin/pactify-relay.mjs: renamed from linx-relay.mjs (content unchanged) - MOD cloud/pnpm-lock.yaml: updated with relay dependencies  === NO DEVIATIONS === src/ and test/ byte-identical to source. Zero import rewrites needed (all imports reference only @pactify/wire, noble/scure, fastify, socket.io, prisma — unchanged). Zero suspected bugs recorded.
         deps: [m0-crypto]
+  - id: ds-abstraction
+    branch: feat-ds-abstraction
+    status: in_progress
+    tasks:
+      - id: ds-core
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/ds-core.md
+        evidence: null
+      - id: ds-wire
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/ds-wire.md
+        evidence: null
+        deps: [ds-core]
+  - id: ts-projection
+    branch: feat-ts-projection
+    status: in_progress
+    tasks:
+      - id: proj-fixture
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/proj-fixture.md
+        evidence: null
+      - id: pact-project
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/pact-project.md
+        evidence: null
+        deps: [proj-fixture]

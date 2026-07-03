@@ -1,8 +1,9 @@
 # Fly.io config for the Pactify zero-knowledge relay (staging).
-# Deploy from the cloud/ root:
-#   fly deploy --dockerfile relay/Dockerfile -c relay/fly.staging.toml
+# Lives at the cloud/ root alongside fly.toml (see that file's header for why).
+# Deploy from cloud/:
+#   fly deploy -c fly.staging.toml
 # Secrets (set once, never commit them):
-#   fly secrets set DATABASE_URL="<staging db>" RELAY_SECRET="<32+ random bytes>" -c relay/fly.staging.toml
+#   fly secrets set DATABASE_URL="<staging db>" RELAY_SECRET="<32+ random bytes>" -c fly.staging.toml
 
 app = "pactify-relay-staging"
 primary_region = "sin"

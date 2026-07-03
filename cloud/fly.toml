@@ -1,6 +1,10 @@
-# Fly.io config for the Pactify zero-knowledge relay.
-# Deploy from the cloud/ root:
-#   fly deploy --dockerfile relay/Dockerfile
+# Fly.io config for the Pactify zero-knowledge relay (production).
+# This file lives at the cloud/ root ON PURPOSE: the config dir, the build
+# context, and the `dockerfile` path below all resolve to cloud/, so `relay/
+# Dockerfile` (which COPYs both wire/ and relay/) is always found. There is no
+# fly.toml inside relay/ to accidentally `cd relay/ && fly deploy` against.
+# Deploy from cloud/:
+#   fly deploy                       # auto-picks this file (production)
 # Secrets (set once, never commit them):
 #   fly secrets set DATABASE_URL="<neon pooled connection string>" RELAY_SECRET="<32+ random bytes>"
 # The container runs `prisma migrate deploy` on boot, then `node dist/server-main.js`.

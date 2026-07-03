@@ -1,5 +1,8 @@
 # Build context: cloud/ (the pnpm workspace root for this monorepo).
-#   fly deploy --dockerfile relay/Dockerfile  (from cloud/)
+# Referenced as `dockerfile = "relay/Dockerfile"` from cloud/fly.toml (which
+# lives at the cloud/ root so the path resolves against this build context).
+#   fly deploy                    # from cloud/, production
+#   fly deploy -c fly.staging.toml
 #
 # Runtime applies the schema to Neon (prisma migrate deploy) then starts the
 # bootstrap (dist/server-main.js). DATABASE_URL + RELAY_SECRET are injected at

@@ -23,68 +23,80 @@ export async function ingestWireMessage(
   const { header } = msg
   const bodyEnc = JSON.stringify(msg.body)
 
-  // Auto-provision the tenant rows before the Run upsert. Both are no-ops when
-  // the row already exists; placeholders for the required columns (publicKey,
-  // metadataEnc) are only used on first-create and overwritten by the real
-  // auth/machine flows. `accountId`-keyed publicKey keeps the unique constraint
-  // satisfied without colliding across accounts.
-  await db.account.upsert({
-    where: { id: accountId },
-    create: { id: accountId, publicKey: `provisional:${accountId}` },
-    update: {},
-  })
-  await db.machine.upsert({
-    where: { id: header.machineId },
-    create: { id: header.machineId, accountId, metadataEnc: '' },
-    update: {},
-  })
+  // Placeholders for the required columns (publicKey, metadataEnc) are only used
+  // on first-create and overwritten by the real auth/machine flows.
+  const createData = {
+    id: header.runId,
+    accountId,
+    machineId: header.machineId,
+    agentKind,
+    state: header.state,
+    pendingApprovals: header.pendingApprovals,
+    tokensIn: header.tokensIn,
+    tokensOut: header.tokensOut,
+    costMicros: header.costMicros ?? null,
+    seq: header.seq,
+    branch: header.branch ?? null,
+    workdir: header.workdir ?? null,
+    repoRoot: header.repoRoot ?? null,
+    // Session title rides the header from spawn; persisted once on creation and
+    // never in updateData below, so a post-spawn rename (own endpoint) is never
+    // clobbered by subsequent header ingests.
+    title: header.title ?? null,
+    startedAtMs: header.startedAt !== undefined ? BigInt(header.startedAt) : null,
+  }
+  const updateData = {
+    state: header.state,
+    pendingApprovals: header.pendingApprovals,
+    tokensIn: header.tokensIn,
+    tokensOut: header.tokensOut,
+    costMicros: header.costMicros ?? null,
+    seq: header.seq,
+    branch: header.branch ?? null,
+    workdir: header.workdir ?? null,
+    repoRoot: header.repoRoot ?? null,
+    startedAtMs: header.startedAt !== undefined ? BigInt(header.startedAt) : null,
+    lastActiveAt: new Date(),
+  }
 
-  await db.run.upsert({
-    where: { id: header.runId },
-    create: {
-      id: header.runId,
-      accountId,
-      machineId: header.machineId,
-      agentKind,
-      state: header.state,
-      pendingApprovals: header.pendingApprovals,
-      tokensIn: header.tokensIn,
-      tokensOut: header.tokensOut,
-      costMicros: header.costMicros ?? null,
-      seq: header.seq,
-      branch: header.branch ?? null,
-      workdir: header.workdir ?? null,
-      repoRoot: header.repoRoot ?? null,
-      // Session title rides the header from spawn; persisted once on creation.
-      // It is NOT updated below so a post-spawn rename (own endpoint) is never
-      // clobbered by subsequent header ingests.
-      title: header.title ?? null,
-      startedAtMs: header.startedAt !== undefined ? BigInt(header.startedAt) : null,
-    },
-    update: {
-      state: header.state,
-      pendingApprovals: header.pendingApprovals,
-      tokensIn: header.tokensIn,
-      tokensOut: header.tokensOut,
-      costMicros: header.costMicros ?? null,
-      seq: header.seq,
-      branch: header.branch ?? null,
-      workdir: header.workdir ?? null,
-      repoRoot: header.repoRoot ?? null,
-      startedAtMs: header.startedAt !== undefined ? BigInt(header.startedAt) : null,
-      lastActiveAt: new Date(),
-    },
-  })
-
-  await db.runEvent.create({
-    data: {
-      runId: header.runId,
-      seq: header.seq,
-      state: header.state,
-      eventKind: header.eventKind,
-      ts: BigInt(header.ts),
-      bodyEnc,
-    },
+  // One transaction so the Run and its RunEvent land together (or not at all),
+  // and provisioning the tenant rows in the same tx avoids a first-connect FK
+  // race on the Run insert. Both upserts are no-ops when the row already exists.
+  await db.$transaction(async (tx) => {
+    await tx.account.upsert({
+      where: { id: accountId },
+      create: { id: accountId, publicKey: `provisional:${accountId}` },
+      update: {},
+    })
+    await tx.machine.upsert({
+      where: { id: header.machineId },
+      create: { id: header.machineId, accountId, metadataEnc: '' },
+      update: {},
+    })
+    // Establish the row (create-or-noop), then apply the header ONLY if it is at
+    // least as new as the stored seq. An out-of-order / stale header (lower seq)
+    // whose write settles late must not roll the run's state/counters backward;
+    // the conditional updateMany is atomic (no read-modify-write race).
+    await tx.run.upsert({ where: { id: header.runId }, create: createData, update: {} })
+    await tx.run.updateMany({
+      where: { id: header.runId, seq: { lte: header.seq } },
+      data: updateData,
+    })
+    // Idempotent append: a duplicate/retried (runId, seq) — possible on reconnect
+    // or client resend — becomes a no-op instead of a unique-constraint crash that
+    // would drop the event after it was already broadcast to web clients.
+    await tx.runEvent.upsert({
+      where: { runId_seq: { runId: header.runId, seq: header.seq } },
+      create: {
+        runId: header.runId,
+        seq: header.seq,
+        state: header.state,
+        eventKind: header.eventKind,
+        ts: BigInt(header.ts),
+        bodyEnc,
+      },
+      update: {},
+    })
   })
 }
 
@@ -134,8 +146,14 @@ export async function reconcileMachineRuns(
   })
   if (stale.length === 0) return []
   const ids = stale.map((r) => r.id)
-  // Flip state only (not lastActiveAt) so the board keeps its ordering.
-  await db.run.updateMany({ where: { id: { in: ids } }, data: { state: 'idle' } })
+  // Flip state only (not lastActiveAt) so the board keeps its ordering. Re-assert
+  // the state guard in the WHERE: a live ingest that arrived between the findMany
+  // and here may have already advanced a run out of a reconcilable state, and it
+  // must NOT be clobbered back to idle.
+  await db.run.updateMany({
+    where: { id: { in: ids }, state: { in: [...RECONCILABLE_STATES] } },
+    data: { state: 'idle' },
+  })
   return db.run.findMany({ where: { id: { in: ids } } })
 }
 

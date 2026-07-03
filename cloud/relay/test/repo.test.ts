@@ -56,6 +56,28 @@ describe('relay repo: ingest/read round-trip on PGlite', () => {
     expect(JSON.parse(events[0]?.bodyEnc ?? 'null')).toEqual(msg.body)
   })
 
+  it('duplicate ingest of the same (runId, seq) is idempotent — no crash, one event row', async () => {
+    const msg = wireMessage({ seq: 0 })
+    await ingestWireMessage(db, accountId, 'claude', msg)
+    await ingestWireMessage(db, accountId, 'claude', msg) // retry / reconnect resend
+    const events = await getRunEvents(db, 'r1')
+    expect(events).toHaveLength(1)
+    expect((await getRun(db, 'r1'))?.state).toBe('thinking')
+  })
+
+  it('a stale (lower-seq) header does not roll back the run state/seq', async () => {
+    await ingestWireMessage(db, accountId, 'claude', wireMessage({ seq: 0, state: 'thinking' }))
+    await ingestWireMessage(db, accountId, 'claude', wireMessage({ seq: 2, state: 'blocked' }))
+    // A stale header (seq 1) whose write settles late must NOT overwrite seq 2.
+    await ingestWireMessage(db, accountId, 'claude', wireMessage({ seq: 1, state: 'idle' }))
+    const run = await getRun(db, 'r1')
+    expect(run?.seq).toBe(2)
+    expect(run?.state).toBe('blocked')
+    // The late event is still recorded in the log (all seqs kept).
+    const events = await getRunEvents(db, 'r1')
+    expect(events.map((e) => e.seq).sort((a, b) => a - b)).toEqual([0, 1, 2])
+  })
+
   it('ingest persists the cleartext header branch onto the Run', async () => {
     await ingestWireMessage(db, accountId, 'claude', wireMessage({ branch: 'feat/c0f' }))
     expect((await getRun(db, 'r1'))?.branch).toBe('feat/c0f')

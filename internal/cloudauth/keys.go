@@ -87,3 +87,17 @@ func DeriveRunKey(masterSecret []byte, runID string) ([]byte, error) {
 	}
 	return hkdf32(masterSecret, []byte("run:"+runID))
 }
+
+// DeriveProjectKey derives the per-project symmetric key used to E2E-encrypt the
+// body of U2 Mission Control pact events, from the master secret + the cleartext
+// projectID via HKDF-SHA256 with info "project:<projectID>". Domain-separated
+// from run keys ("run:") and the account seed ("account"), so a project key can
+// never coincide with either. The relay never holds the master secret, so it
+// cannot derive this; any device with the master secret + the cleartext
+// projectID can (keyless distribution).
+func DeriveProjectKey(masterSecret []byte, projectID string) ([]byte, error) {
+	if err := checkMasterSecret(masterSecret); err != nil {
+		return nil, err
+	}
+	return hkdf32(masterSecret, []byte("project:"+projectID))
+}

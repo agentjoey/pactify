@@ -54,6 +54,20 @@ func TestGoldenAccountSignature(t *testing.T) {
 	}
 }
 
+func TestGoldenProjectKey(t *testing.T) {
+	// Vector computed independently via the TS @noble reference (HKDF-SHA256,
+	// nil salt, info "project:acct1:pactify") — proves the U2 project-key
+	// derivation interoperates byte-for-byte with the future TS decrypt in the
+	// Mission Control frontend.
+	key, err := DeriveProjectKey(goldenMaster(t), "acct1:pactify")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := hex.EncodeToString(key); got != "cb1824a13ab023fe2af7238df9dd1e2a5d53a9abf01d1bf446b4725840ddfdd7" {
+		t.Fatalf("project key %s, want cb18…fdd7", got)
+	}
+}
+
 func TestGoldenRunKey(t *testing.T) {
 	runKey, err := DeriveRunKey(goldenMaster(t), "run-0001")
 	if err != nil {

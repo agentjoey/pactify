@@ -183,6 +183,19 @@ runKey = HKDF-SHA256(ikm=masterSecret, salt=<none>, info=utf8("run:" + runId), L
 - The relay cannot derive this (it never holds the master secret), so keyless distribution:
   any device with the master secret + the cleartext `runId` decrypts the body.
 
+### 4.2b Per-project key (U2, pactify)
+
+```
+projectKey = HKDF-SHA256(ikm=masterSecret, salt=<none>, info=utf8("project:" + projectId), L=32)
+```
+
+- Same construction as the run key, used to E2E-encrypt the body of U2 Mission
+  Control pact events. Domain-separated by the `"project:"` info prefix — it can
+  never coincide with a run key (`"run:"`) or the account seed (`"account"`).
+- pactify-only (linx does not use pact events); canonical form defined here, with
+  golden vector in §8. Keyless distribution: any device with the master secret +
+  the cleartext `projectId` decrypts the body.
+
 ### 4.3 Known weaknesses → v2 [v2, breaking]
 
 The review flagged two KDF issues that CANNOT be fixed on v1 without changing derived bytes
@@ -283,6 +296,7 @@ Master secret (32 bytes `0x00..0x1f`):
 | account publicKeyHex | master above | `ca14d356f48c1391eb7c8b51970f768360e9d25e5d9fded81b55d6aef64d79b7` |
 | account sign("pactify-golden-challenge") | master above | `d8eb8cab4286a9062f09d6c1c9e539de865cf6883e080234545735936375f2d15335a256a5d098bf67fe9aad98c5b1dac2225fcc697c4bfeaac1ed29d06afe08` |
 | deriveRunKey(master, "run-0001") | master above | `a58393253ee3c085d948bb7f28af35887f835d95671f61cbd8aee617f21edac9` |
+| deriveProjectKey(master, "acct1:pactify") | master above | `cb1824a13ab023fe2af7238df9dd1e2a5d53a9abf01d1bf446b4725840ddfdd7` |
 
 Envelope (primitive determinism — fixed key + nonce + plaintext):
 ```

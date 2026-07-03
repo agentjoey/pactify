@@ -302,7 +302,7 @@ features:
     tasks:
       - id: ds-core
         owner: kimi-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/ds-core.md
         evidence: null

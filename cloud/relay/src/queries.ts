@@ -60,7 +60,7 @@ export async function listRuns(
     // Exclude terminal runs that went stale past the ttl; keep everything else.
     where.NOT = { state: { in: [...TERMINAL_STATES] }, lastActiveAt: { lt: cutoff } }
   }
-  const runs = await db.run.findMany({ where, orderBy: { lastActiveAt: 'desc' } })
+  const runs = await db.run.findMany({ where, orderBy: [{ lastActiveAt: 'desc' }, { id: 'desc' }] })
   return runs.map(toRunSummary)
 }
 
@@ -140,13 +140,18 @@ export async function searchRuns(
   // Fetch one extra row to detect whether another page exists.
   const rows = await db.run.findMany({
     where,
-    orderBy: { lastActiveAt: 'desc' },
+    orderBy: [{ lastActiveAt: 'desc' }, { id: 'desc' }],
     take: limit + 1,
   })
   const hasMore = rows.length > limit
   const page = hasMore ? rows.slice(0, limit) : rows
   const runs = page.map(toRunSummary)
   const last = page[page.length - 1]
+  // The `id`-tiebroken orderBy above makes ordering deterministic. NOTE: the
+  // cursor is still a bare `lastActiveAt` ms, so runs sharing the exact boundary
+  // ms can be skipped across pages. Fully fixing that needs a composite
+  // (lastActiveAt, id) cursor, which changes the history API contract — a
+  // coordinated change with linx-web (tracked in backlog).
   const nextCursor = hasMore && last ? last.lastActiveAt.getTime() : undefined
   return { runs, nextCursor }
 }
@@ -158,7 +163,7 @@ export async function listPendingApprovals(
 ): Promise<RunSummary[]> {
   const runs = await db.run.findMany({
     where: { accountId, pendingApprovals: { gt: 0 } },
-    orderBy: { lastActiveAt: 'desc' },
+    orderBy: [{ lastActiveAt: 'desc' }, { id: 'desc' }],
   })
   return runs.map(toRunSummary)
 }

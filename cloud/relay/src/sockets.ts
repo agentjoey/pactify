@@ -167,38 +167,56 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
         'register',
         (info: { host?: string; agentKinds?: string[]; workdirs?: string[] }) => {
           void (async () => {
-            await db.machine.upsert({
-              where: { id: machineId },
-              create: {
-                id: machineId,
-                accountId,
-                metadataEnc: '',
-                host: info.host ?? null,
-                agentKinds: info.agentKinds ?? [],
-                workdirs: info.workdirs === undefined ? Prisma.JsonNull : info.workdirs,
-                online: true,
-                lastSeenAt: BigInt(now()),
-              },
-              update: {
-                host: info.host ?? null,
-                agentKinds: info.agentKinds ?? [],
-                workdirs: info.workdirs === undefined ? Prisma.JsonNull : info.workdirs,
-                online: true,
-                lastSeenAt: BigInt(now()),
-              },
-            })
-            await broadcastMachines(accountId)
+            try {
+              await db.machine.upsert({
+                where: { id: machineId },
+                create: {
+                  id: machineId,
+                  accountId,
+                  metadataEnc: '',
+                  host: info.host ?? null,
+                  agentKinds: info.agentKinds ?? [],
+                  workdirs: info.workdirs === undefined ? Prisma.JsonNull : info.workdirs,
+                  online: true,
+                  lastSeenAt: BigInt(now()),
+                },
+                update: {
+                  host: info.host ?? null,
+                  agentKinds: info.agentKinds ?? [],
+                  workdirs: info.workdirs === undefined ? Prisma.JsonNull : info.workdirs,
+                  online: true,
+                  lastSeenAt: BigInt(now()),
+                },
+              })
+              await broadcastMachines(accountId)
+            } catch (err) {
+              // A DB failure here must not become an unhandled rejection — the
+              // machine would silently appear stale/offline. Log + count instead.
+              metrics.inc('errors_total', { where: 'register' })
+              log.warn('register failed', {
+                machineId,
+                error: err instanceof Error ? err.message : String(err),
+              })
+            }
           })()
         },
       )
 
       socket.on('disconnect', () => {
         void (async () => {
-          await db.machine.updateMany({
-            where: { id: machineId, accountId },
-            data: { online: false },
-          })
-          await broadcastMachines(accountId)
+          try {
+            await db.machine.updateMany({
+              where: { id: machineId, accountId },
+              data: { online: false },
+            })
+            await broadcastMachines(accountId)
+          } catch (err) {
+            metrics.inc('errors_total', { where: 'disconnect' })
+            log.warn('machine disconnect handler failed', {
+              machineId,
+              error: err instanceof Error ? err.message : String(err),
+            })
+          }
         })()
       })
 

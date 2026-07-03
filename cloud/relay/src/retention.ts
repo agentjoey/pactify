@@ -49,14 +49,24 @@ export async function sweepExpired(
     lastActiveAt: { lt: cutoff },
   }
 
-  return db.$transaction(async (tx) => {
-    const expired = await tx.run.findMany({ where, select: { id: true } })
-    if (expired.length === 0) return 0
-    const ids = expired.map((r) => r.id)
-    await tx.runEvent.deleteMany({ where: { runId: { in: ids } } })
-    const { count } = await tx.run.deleteMany({ where: { id: { in: ids } } })
-    return count
-  })
+  // Batch the delete so a large backlog of expired runs can't load every id into
+  // memory or bloat one transaction. Each batch is its own transaction; the next
+  // findMany naturally skips the just-deleted rows.
+  const BATCH = 1000
+  let total = 0
+  for (;;) {
+    const removed = await db.$transaction(async (tx) => {
+      const expired = await tx.run.findMany({ where, select: { id: true }, take: BATCH })
+      if (expired.length === 0) return 0
+      const ids = expired.map((r) => r.id)
+      await tx.runEvent.deleteMany({ where: { runId: { in: ids } } })
+      const { count } = await tx.run.deleteMany({ where: { id: { in: ids } } })
+      return count
+    })
+    total += removed
+    if (removed < BATCH) break
+  }
+  return total
 }
 
 /** A started sweeper; call `stop()` to clear the interval. */

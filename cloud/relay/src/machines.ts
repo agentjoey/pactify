@@ -87,9 +87,12 @@ export async function sweepExpiredMachines(
 ): Promise<number> {
   if (opts.ttlMs <= 0) return 0
   const cutoffMs = now.getTime() - opts.ttlMs
+  // Bound memory: machines are few (one per device), so a generous cap suffices;
+  // any beyond it are swept on the next interval.
   const candidates = await db.machine.findMany({
     where: { online: false, lastSeenAt: { lt: BigInt(cutoffMs) } },
     select: { id: true },
+    take: 5000,
   })
   if (candidates.length === 0) return 0
 

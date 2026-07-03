@@ -146,7 +146,7 @@ export async function main(): Promise<void> {
     return
   }
   const server = await startServer(cfg)
-  process.stdout.write(`linx-relay listening on ${server.url}\n`)
+  process.stdout.write(`pactify relay listening on ${server.url}\n`)
 }
 
 // When run directly (the container CMD `node dist/server-main.js`), start the

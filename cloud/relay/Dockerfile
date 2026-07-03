@@ -30,6 +30,9 @@ RUN pnpm --filter @pactify-apps/relay... build
 # ── runtime ──────────────────────────────────────────────────────────────────
 FROM base AS runtime
 ENV NODE_ENV=production
+# Prisma needs libssl/openssl at runtime; node:24-slim ships without it, which
+# makes `prisma migrate deploy` warn "failed to detect the libssl/openssl version".
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app/relay
 
 COPY --from=build /app/node_modules /app/node_modules

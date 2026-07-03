@@ -284,10 +284,10 @@ features:
         evidence: cd cloud && pnpm install && pnpm -r build && pnpm -r test — wire: tsc clean, 10 test files / 144 tests PASS. Migration fidelity (re-verified by reviewer): src/ and test/ byte-identical to linx packages/wire; package.json deviations = allowed set only (version 0.1.0, private removed, files+publishConfig added); tsconfig extends path adjusted one level for cloud/ layout; linx root tsconfig.base.json copied to cloud/. Work committed as 01b2d1c (workspace skeleton + wire). Ledger events for this task were lost to the sandbox branch-clobber bug (backlogged); this checkpoint restores the record.
       - id: m0-crypto
         owner: opencode-worker
-        status: in_progress
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/cloud-m0-crypto.md
-        evidence: null
+        evidence: cd cloud && pnpm install && pnpm -r build && pnpm -r test — wire 144 + crypto 16 tests all PASS, tsc clean both. BOUNDARY CHECK: keys.ts/crypto.ts/pairing.ts import only noble/scure + @pactify/wire, no core-internal imports. FIDELITY: keys.ts, crypto.ts, pairing.ts and their three test files byte-identical to linx packages/core sources (diff empty, zero import rewrites needed). New files (allowed): package.json, tsconfig.json, src/index.ts barrel. ZERO deviations, zero suspected bugs recorded. (Work executed by opencode/deepseek-v4-pro in run r4; checkpoint was lost to the sandbox ledger-clobber bug and is restored here; verify re-run independently by reviewer before this checkpoint.)
         deps: [m0-wire]
       - id: m0-relay
         owner: opencode-worker

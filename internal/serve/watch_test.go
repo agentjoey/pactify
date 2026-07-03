@@ -97,7 +97,8 @@ func TestDrainNewEnqueuesToRelay(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	srv.SetRelay(ts.URL, "test-token")
+	seedRelaySession(t, ts.URL)
+	srv.SetRelay(ts.URL, "")
 
 	f, _ := os.OpenFile(lp, os.O_APPEND|os.O_WRONLY, 0o644)
 	f.WriteString(`{"event_id":"A","event_type":"assign"}` + "\n")
@@ -122,7 +123,8 @@ func TestDrainNewEnqueuesToRelay(t *testing.T) {
 		gotBodies := bodies
 		mu.Unlock()
 		for _, b := range gotBodies {
-			if strings.Contains(b, `"event_id":"A"`) && strings.Contains(b, `"project":"p"`) {
+			// The event body is now encrypted; assert on the cleartext header.
+			if strings.Contains(b, `"eventType":"assign"`) && strings.Contains(b, `"projectId":"acct1:p"`) {
 				found = true
 				break
 			}

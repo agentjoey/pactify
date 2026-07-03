@@ -24,7 +24,25 @@ func (s *Server) StartWatchers() error {
 	for _, id := range s.order {
 		s.watchProjectLocked(id, s.projects[id].Path)
 	}
+	// Snapshot (id, logPath, seededOffset) so the relay can replay the existing
+	// ledger up to the same offset the SSE watch was seeded at — replay and the
+	// live drain then partition each file with no overlapping seq.
+	type seed struct {
+		id, lp string
+		off    int64
+	}
+	var seeds []seed
+	if s.relay != nil {
+		for id, lp := range s.watchPaths {
+			seeds = append(seeds, seed{id, lp, s.offsets[id]})
+		}
+	}
 	s.pmu.Unlock()
+	// Full-ledger replay BEFORE the watch loop starts, so all historical events
+	// get their line-index seq before any live append is enqueued.
+	for _, sd := range seeds {
+		s.relay.replayProject(sd.id, sd.lp, sd.off)
+	}
 	go s.watchLoop()
 	return nil
 }

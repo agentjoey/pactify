@@ -2,8 +2,10 @@ package serve
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -66,8 +68,17 @@ type Server struct {
 // SetSeat configures the acting seat used for author (write) endpoints.
 func (s *Server) SetSeat(seat string) { s.seat = seat }
 
-// SetRelay configures the optional best-effort relay for log events.
-func (s *Server) SetRelay(url, token string) { s.relay = newRelay(url, token) }
+// SetRelay configures the optional best-effort pact-event uploader (U2). A
+// relay URL with no cloud session / master secret is surfaced (not silently
+// dropped) and serve runs without the relay.
+func (s *Server) SetRelay(url, token string) {
+	r, err := newRelay(url, token)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "pactify serve: relay disabled: %v\n", err)
+		return
+	}
+	s.relay = r
+}
 
 // projectMu returns the lazily-created mutex serializing author writes for id.
 func (s *Server) projectMu(id string) *sync.Mutex {

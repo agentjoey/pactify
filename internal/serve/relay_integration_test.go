@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/cloudauth"
 	"github.com/agentjoey/pactify/internal/registry"
 )
 
@@ -31,6 +32,7 @@ func TestRelayIntegrationFullChain(t *testing.T) {
 	}))
 	defer relaySrv.Close()
 
+	seedRelaySession(t, relaySrv.URL)
 	srv := New([]registry.Project{{Name: "p", Path: root}})
 	srv.SetRelay(relaySrv.URL, "")
 
@@ -65,7 +67,7 @@ func TestRelayIntegrationFullChain(t *testing.T) {
 		}
 		mu.Lock()
 		for _, b := range bodies {
-			if strings.Contains(b, `"event_id":"A"`) && strings.Contains(b, `"project":"p"`) {
+			if strings.Contains(b, `"eventType":"checkpoint"`) && strings.Contains(b, `"projectId":"acct1:p"`) {
 				found = true
 				break
 			}
@@ -83,21 +85,23 @@ func TestRelayIntegrationFullChain(t *testing.T) {
 	}
 	mu.Unlock()
 
-	var envelope struct {
-		Project string          `json:"project"`
-		Event   json.RawMessage `json:"event"`
-	}
-	if err := json.Unmarshal([]byte(last), &envelope); err != nil {
+	// Cleartext operational header for the board.
+	var env ingestCapture
+	if err := json.Unmarshal([]byte(last), &env); err != nil {
 		t.Fatalf("invalid envelope JSON: %v, body=%s", err, last)
 	}
-	if envelope.Project != "p" {
-		t.Fatalf("project = %q, want p", envelope.Project)
+	if env.ProjectID != "acct1:p" || env.EventType != "checkpoint" || env.Task != "t1" {
+		t.Fatalf("envelope header wrong: %+v", env)
 	}
-	if !strings.Contains(string(envelope.Event), `"event_id":"A"`) {
-		t.Fatalf("event field missing event_id: %s", envelope.Event)
+	// The encrypted body decrypts to the original line under the per-project key.
+	key, _ := cloudauth.DeriveProjectKey(goldenMaster(), "acct1:p")
+	var blob cloudauth.EncryptedBlob
+	if err := json.Unmarshal([]byte(env.BodyEnc), &blob); err != nil {
+		t.Fatalf("bodyEnc not an EncryptedBlob: %v", err)
 	}
-	if !strings.Contains(string(envelope.Event), `"event_type":"checkpoint"`) {
-		t.Fatalf("event field missing event_type: %s", envelope.Event)
+	pt, err := cloudauth.DecryptEvent(key, blob)
+	if err != nil || !strings.Contains(string(pt), `"event_id":"A"`) {
+		t.Fatalf("decrypt failed or missing event_id: err=%v pt=%s", err, pt)
 	}
 }
 
@@ -110,6 +114,7 @@ func TestRelayIntegrationFailureIsolation(t *testing.T) {
 	}))
 	defer relaySrv.Close()
 
+	seedRelaySession(t, relaySrv.URL)
 	srv := New([]registry.Project{{Name: "p", Path: root}})
 	srv.SetRelay(relaySrv.URL, "")
 

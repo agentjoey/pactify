@@ -1,63 +1,163 @@
 package serve
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/agentjoey/pactify/internal/cloudauth"
+	"github.com/agentjoey/pactify/internal/cloudclient"
+	"github.com/agentjoey/pactify/internal/event"
 )
 
-// relay POSTs serve log events to a configured endpoint, best-effort & async.
-// NEVER blocks the caller; NEVER propagates failures back to the watcher.
+// relay uploads pact ledger events to the shared relay as E2E-encrypted wire
+// envelopes (U2 Mission Control). Best-effort & async: it NEVER blocks the
+// caller and NEVER propagates failures back to the watcher.
+//
+// Each event becomes a POST /v1/pact/ingest: a cleartext operational header
+// (project/eventType/task/feature/seq/ts) that drives the cross-machine board,
+// plus `bodyEnc` — the full event JSON encrypted under a per-project key derived
+// from the account master secret, which the relay can never derive.
+//
+// seq is the event's line index in `.pact/log.jsonl` (append-only → stable
+// across restarts). On (re)connect the full ledger is replayed with those
+// indices; the relay's idempotent (projectId, seq) upsert makes re-pushes no-ops.
 type relay struct {
-	url     string
-	token   string
-	queue   chan relayMsg
+	endpoint  string // <baseURL>/v1/pact/ingest
+	accountID string
+	master    []byte
+	client    *cloudclient.Client // for token refresh on 401
+
+	mu          sync.Mutex
+	token       string
+	seqs        map[string]int64  // next line index per project
+	projectKeys map[string][]byte // cache: projectID → per-project key
+
+	queue   chan pactMsg
 	stopCh  chan struct{}
 	done    chan struct{}
 	dropped int64
-	client  *http.Client
+	http    *http.Client
 }
 
-type relayMsg struct {
+type pactMsg struct {
 	project string
+	seq     int64
 	line    string
 }
 
-// newRelay builds a relay posting to url with optional bearer token.
-// A "" url returns nil (relay disabled). Otherwise starts the background POST
-// goroutine immediately — callers never need a separate start step.
-func newRelay(url, token string) *relay {
-	if url == "" {
-		return nil
+// newRelay builds the pact-event uploader for baseURL. A "" baseURL returns nil
+// (relay disabled). It requires a cloud session (`pactify account login`) and the
+// account master secret; if either is missing it returns an error so the caller
+// can warn and run without the relay.
+func newRelay(baseURL, _ string) (*relay, error) {
+	if baseURL == "" {
+		return nil, nil
 	}
+	sess, err := cloudclient.LoadSession()
+	if err != nil {
+		return nil, fmt.Errorf("relay: no cloud session (run `pactify account login`): %w", err)
+	}
+	master, err := cloudauth.LoadMasterSecret()
+	if err != nil {
+		return nil, fmt.Errorf("relay: %w", err)
+	}
+	base := strings.TrimRight(baseURL, "/")
 	r := &relay{
-		url:    url,
-		token:  token,
-		queue:  make(chan relayMsg, 256),
-		stopCh: make(chan struct{}),
-		done:   make(chan struct{}),
-		client: &http.Client{Timeout: 10 * time.Second},
+		endpoint:    base + "/v1/pact/ingest",
+		accountID:   sess.AccountID,
+		master:      master,
+		client:      cloudclient.New(base),
+		token:       sess.Token,
+		seqs:        map[string]int64{},
+		projectKeys: map[string][]byte{},
+		queue:       make(chan pactMsg, 256),
+		stopCh:      make(chan struct{}),
+		done:        make(chan struct{}),
+		http:        &http.Client{Timeout: 10 * time.Second},
 	}
 	go r.run()
-	return r
+	return r, nil
 }
 
-// enqueue drops a log line into the bounded queue without blocking.
-// When the queue is full the oldest item is evicted and dropped is incremented.
-// Calling on a nil relay is a safe no-op.
+// projectID for a serve project id (a name slug): account-scoped and stable.
+func (r *relay) projectID(project string) string { return r.accountID + ":" + project }
+
+// projectKey returns the cached per-project encryption key, deriving it once.
+func (r *relay) projectKey(project string) ([]byte, error) {
+	pid := r.projectID(project)
+	r.mu.Lock()
+	if k, ok := r.projectKeys[pid]; ok {
+		r.mu.Unlock()
+		return k, nil
+	}
+	r.mu.Unlock()
+	k, err := cloudauth.DeriveProjectKey(r.master, pid)
+	if err != nil {
+		return nil, err
+	}
+	r.mu.Lock()
+	r.projectKeys[pid] = k
+	r.mu.Unlock()
+	return k, nil
+}
+
+// replayProject uploads the existing ledger bytes [0, upTo) for a project with
+// line-index seq, so the board reflects the current state on connect (not just
+// future appends). `upTo` is the SSE watcher's seeded offset, so replay and the
+// live drain partition the file cleanly (no overlapping/duplicate seq). Called
+// once per project before the watch loop starts. Idempotent on the relay; safe
+// on a nil relay / missing log.
+func (r *relay) replayProject(project, logPath string, upTo int64) {
+	if r == nil {
+		return
+	}
+	f, err := os.Open(logPath)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	rd := bufio.NewReader(f)
+	var read int64
+	for read < upTo {
+		line, err := rd.ReadString('\n')
+		read += int64(len(line))
+		if read > upTo {
+			break // a trailing partial line past the watcher offset: leave it to drainNew
+		}
+		if t := strings.TrimRight(line, "\n"); t != "" {
+			r.enqueue(project, t)
+		}
+		if err != nil {
+			break
+		}
+	}
+}
+
+// enqueue assigns the project's next line-index seq and drops the event into the
+// bounded queue without blocking; a full queue evicts the oldest. nil-safe.
 func (r *relay) enqueue(project, line string) {
 	if r == nil {
 		return
 	}
-	msg := relayMsg{project, line}
+	r.mu.Lock()
+	seq := r.seqs[project]
+	r.seqs[project] = seq + 1
+	r.mu.Unlock()
+	msg := pactMsg{project: project, seq: seq, line: line}
 	for {
 		select {
 		case r.queue <- msg:
 			return
 		default:
-			// Queue full: evict the oldest item to make room.
 			select {
 			case <-r.queue:
 				atomic.AddInt64(&r.dropped, 1)
@@ -67,21 +167,14 @@ func (r *relay) enqueue(project, line string) {
 	}
 }
 
-// stop closes the queue, signals the background goroutine to exit, and waits
-// for it to finish.
 func (r *relay) stop() {
 	close(r.stopCh)
 	close(r.queue)
 	<-r.done
 }
 
-func (r *relay) droppedCount() int64 {
-	return atomic.LoadInt64(&r.dropped)
-}
-
-func (r *relay) queueLen() int {
-	return len(r.queue)
-}
+func (r *relay) droppedCount() int64 { return atomic.LoadInt64(&r.dropped) }
+func (r *relay) queueLen() int       { return len(r.queue) }
 
 func (r *relay) run() {
 	defer close(r.done)
@@ -90,13 +183,66 @@ func (r *relay) run() {
 	}
 }
 
-// postOne delivers a single message to the configured endpoint.
-// Retries up to 3 times (4 attempts total) with capped exponential backoff
-// (1s, 2s, 4s). Final failure increments dropped. Checks stopCh between
-// attempts so stop() can interrupt without waiting for all retries.
-func (r *relay) postOne(msg relayMsg) {
-	body := r.buildBody(msg)
+// pactIngestBody is the POST /v1/pact/ingest wire contract (mirrors the relay's
+// PactIngestRequest zod schema).
+type pactIngestBody struct {
+	ProjectID string `json:"projectId"`
+	Name      string `json:"name"`
+	Feature   string `json:"feature,omitempty"`
+	EventType string `json:"eventType"`
+	Task      string `json:"task,omitempty"`
+	Seq       int64  `json:"seq"`
+	TS        int64  `json:"ts"`
+	BodyEnc   string `json:"bodyEnc"`
+}
 
+// buildBody turns one ledger line into the encrypted ingest envelope: cleartext
+// operational header parsed from the event + `bodyEnc` = the full line encrypted
+// under the per-project key. Returns nil to skip a line that can't be built
+// (unparseable / encrypt error) rather than send garbage.
+func (r *relay) buildBody(msg pactMsg) []byte {
+	var ev event.Event
+	if err := json.Unmarshal([]byte(msg.line), &ev); err != nil || ev.EventType == "" {
+		return nil
+	}
+	key, err := r.projectKey(msg.project)
+	if err != nil {
+		return nil
+	}
+	blob, err := cloudauth.EncryptEvent(key, []byte(msg.line))
+	if err != nil {
+		return nil
+	}
+	bodyEnc, err := json.Marshal(blob)
+	if err != nil {
+		return nil
+	}
+	var tsMs int64
+	if t, err := time.Parse(time.RFC3339, ev.TS); err == nil {
+		tsMs = t.UnixMilli()
+	}
+	body, _ := json.Marshal(pactIngestBody{
+		ProjectID: r.projectID(msg.project),
+		Name:      msg.project,
+		Feature:   ev.Feature,
+		EventType: ev.EventType,
+		Task:      ev.TaskID,
+		Seq:       msg.seq,
+		TS:        tsMs,
+		BodyEnc:   string(bodyEnc),
+	})
+	return body
+}
+
+// postOne delivers one event, retrying with capped backoff. On a 401 it refreshes
+// the token once (re-login with the master secret) before retrying. Final failure
+// increments dropped.
+func (r *relay) postOne(msg pactMsg) {
+	body := r.buildBody(msg)
+	if body == nil {
+		return
+	}
+	refreshed := false
 	for attempt := 0; attempt < 4; attempt++ {
 		select {
 		case <-r.stopCh:
@@ -114,15 +260,16 @@ func (r *relay) postOne(msg relayMsg) {
 				return
 			}
 		}
-		req, err := http.NewRequest("POST", r.url, bytes.NewReader(body))
+		req, err := http.NewRequest("POST", r.endpoint, bytes.NewReader(body))
 		if err != nil {
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
-		if r.token != "" {
-			req.Header.Set("Authorization", "Bearer "+r.token)
-		}
-		resp, err := r.client.Do(req)
+		r.mu.Lock()
+		tok := r.token
+		r.mu.Unlock()
+		req.Header.Set("Authorization", "Bearer "+tok)
+		resp, err := r.http.Do(req)
 		if err != nil {
 			continue
 		}
@@ -130,23 +277,26 @@ func (r *relay) postOne(msg relayMsg) {
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			return
 		}
+		if resp.StatusCode == http.StatusUnauthorized && !refreshed {
+			refreshed = true
+			r.refreshToken()
+		}
 	}
 	atomic.AddInt64(&r.dropped, 1)
 }
 
-// buildBody wraps a log line into the relay envelope: {"project":<id>,"event":<json>}.
-// If line is not valid JSON it is quoted as a JSON string and the raw text is
-// carried as the event value — never panics.
-func (r *relay) buildBody(msg relayMsg) []byte {
-	var event json.RawMessage
-	if err := json.Unmarshal([]byte(msg.line), &event); err != nil {
-		quoted, _ := json.Marshal(msg.line)
-		event = json.RawMessage(quoted)
+// refreshToken re-authenticates with the master secret to get a fresh bearer
+// token (the cached one expired). Best-effort — a failure just leaves the old
+// token and the event drops after its retries.
+func (r *relay) refreshToken() {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	sess, err := r.client.Authenticate(ctx, r.master)
+	if err != nil {
+		return
 	}
-	envelope := struct {
-		Project string          `json:"project"`
-		Event   json.RawMessage `json:"event"`
-	}{Project: msg.project, Event: event}
-	b, _ := json.Marshal(envelope)
-	return b
+	r.mu.Lock()
+	r.token = sess.Token
+	r.mu.Unlock()
+	_ = cloudclient.SaveSession(sess)
 }

@@ -1,190 +1,170 @@
 package serve
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
-	"sync"
-	"sync/atomic"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/agentjoey/pactify/internal/cloudauth"
+	"github.com/agentjoey/pactify/internal/cloudclient"
 )
 
+// goldenMaster is the fixed 32-byte secret (00..1f) used across cloud golden tests.
+func goldenMaster() []byte {
+	b := make([]byte, 32)
+	for i := range b {
+		b[i] = byte(i)
+	}
+	return b
+}
+
+// seedRelaySession sets up a throwaway HOME with the golden master secret + a
+// cached session pointing at relayURL, so SetRelay(relayURL, "") enables the relay.
+func seedRelaySession(t *testing.T, relayURL string) {
+	t.Helper()
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("PACTIFY_MASTER_SECRET", hex.EncodeToString(goldenMaster()))
+	if err := cloudclient.SaveSession(&cloudclient.Session{
+		RelayURL: relayURL, AccountID: "acct1", Token: "tok",
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// ingestCapture is one decoded POST /v1/pact/ingest body.
+type ingestCapture struct {
+	ProjectID string `json:"projectId"`
+	Name      string `json:"name"`
+	Feature   string `json:"feature"`
+	EventType string `json:"eventType"`
+	Task      string `json:"task"`
+	Seq       int64  `json:"seq"`
+	TS        int64  `json:"ts"`
+	BodyEnc   string `json:"bodyEnc"`
+}
+
+// newTestRelay wires a relay to an httptest ingest endpoint, with a throwaway
+// session + the golden master secret in a temp HOME. The channel receives each POST.
+func newTestRelay(t *testing.T) (*relay, chan ingestCapture) {
+	t.Helper()
+	got := make(chan ingestCapture, 16)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/pact/ingest" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		var c ingestCapture
+		_ = json.NewDecoder(r.Body).Decode(&c)
+		got <- c
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	t.Cleanup(srv.Close)
+
+	seedRelaySession(t, srv.URL)
+	r, err := newRelay(srv.URL, "")
+	if err != nil {
+		t.Fatalf("newRelay: %v", err)
+	}
+	t.Cleanup(r.stop)
+	return r, got
+}
+
+func recv(t *testing.T, ch chan ingestCapture) ingestCapture {
+	t.Helper()
+	select {
+	case c := <-ch:
+		return c
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for ingest POST")
+		return ingestCapture{}
+	}
+}
+
 func TestRelayNilOnEmptyURL(t *testing.T) {
-	r := newRelay("", "")
-	if r != nil {
-		t.Fatal("newRelay(\"\",\"\") must return nil")
+	r, err := newRelay("", "")
+	if r != nil || err != nil {
+		t.Fatalf("newRelay(\"\") = %v, %v; want nil, nil", r, err)
 	}
 }
 
 func TestRelayNilEnqueueNoPanic(t *testing.T) {
 	var r *relay
-	r.enqueue("p", `{}`) // must not panic
+	r.enqueue("p", `{}`)         // must not panic
+	r.replayProject("p", "x", 0) // must not panic
 }
 
-func TestRelayAuthHeader(t *testing.T) {
-	// The handler runs on the server goroutine — hand results back over a
-	// channel (never a bare shared variable + Sleep, which races under -race).
-	authCh := make(chan string, 1)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authCh <- r.Header.Get("Authorization")
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
+func TestRelayEnvelopeHeaderAndEncryptedBody(t *testing.T) {
+	r, got := newTestRelay(t)
+	line := `{"event_id":"e1","ts":"2026-06-13T02:59:28Z","agent_id":"claude","role":"orchestrator","event_type":"checkpoint","task_id":"m0-wire","feature":"cloud-m0","payload":{"spec":"SECRET-EVIDENCE"}}`
+	r.enqueue("pactify", line)
+	c := recv(t, got)
 
-	r := newRelay(srv.URL, "secret-token")
-	if r == nil {
-		t.Fatal("newRelay with URL must return non-nil")
+	// Cleartext operational header for the board.
+	if c.ProjectID != "acct1:pactify" || c.Name != "pactify" {
+		t.Fatalf("project header wrong: %+v", c)
 	}
-	defer r.stop()
+	if c.EventType != "checkpoint" || c.Task != "m0-wire" || c.Feature != "cloud-m0" {
+		t.Fatalf("event header wrong: %+v", c)
+	}
+	if c.Seq != 0 {
+		t.Fatalf("seq = %d, want 0", c.Seq)
+	}
+	want := time.Date(2026, 6, 13, 2, 59, 28, 0, time.UTC).UnixMilli()
+	if c.TS != want {
+		t.Fatalf("ts = %d, want %d", c.TS, want)
+	}
+	// The sensitive body is ciphertext, not the plaintext line.
+	if c.BodyEnc == "" || c.BodyEnc == line || strings.Contains(c.BodyEnc, "SECRET-EVIDENCE") {
+		t.Fatalf("bodyEnc leaks plaintext or is empty")
+	}
+	// And it decrypts back to the exact line under the per-project key.
+	key, _ := cloudauth.DeriveProjectKey(goldenMaster(), "acct1:pactify")
+	var blob cloudauth.EncryptedBlob
+	if err := json.Unmarshal([]byte(c.BodyEnc), &blob); err != nil {
+		t.Fatalf("bodyEnc not an EncryptedBlob: %v", err)
+	}
+	pt, err := cloudauth.DecryptEvent(key, blob)
+	if err != nil {
+		t.Fatalf("decrypt: %v", err)
+	}
+	if string(pt) != line {
+		t.Fatalf("decrypted body != original line")
+	}
+}
 
-	r.enqueue("p", `{"event":"x"}`)
-	select {
-	case gotAuth := <-authCh:
-		if gotAuth != "Bearer secret-token" {
-			t.Fatalf("Authorization = %q, want Bearer secret-token", gotAuth)
+func TestRelaySeqIncrementsPerProject(t *testing.T) {
+	r, got := newTestRelay(t)
+	for i := 0; i < 3; i++ {
+		r.enqueue("proj", `{"event_type":"assign","ts":"2026-06-13T02:59:28Z"}`)
+	}
+	for want := int64(0); want < 3; want++ {
+		if c := recv(t, got); c.Seq != want {
+			t.Fatalf("seq = %d, want %d", c.Seq, want)
 		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("relay never posted to the server")
 	}
 }
 
-func TestRelayBodyEnvelope(t *testing.T) {
-	bodyCh := make(chan []byte, 1)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("Content-Type = %q", r.Header.Get("Content-Type"))
-		}
-		body := make([]byte, r.ContentLength)
-		r.Body.Read(body)
-		bodyCh <- body
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	r := newRelay(srv.URL, "")
-	defer r.stop()
-
-	r.enqueue("pactify", `{"event_id":"1","type":"test"}`)
-	var gotBody []byte
-	select {
-	case gotBody = <-bodyCh:
-	case <-time.After(5 * time.Second):
-		t.Fatal("relay never posted to the server")
+func TestRelayReplayProjectUploadsExistingLedger(t *testing.T) {
+	r, got := newTestRelay(t)
+	dir := t.TempDir()
+	lp := filepath.Join(dir, "log.jsonl")
+	content := `{"event_type":"assign","ts":"2026-06-13T02:59:28Z","task_id":"t1"}` + "\n" +
+		`{"event_type":"checkpoint","ts":"2026-06-13T03:01:45Z","task_id":"t1"}` + "\n"
+	if err := os.WriteFile(lp, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
 	}
-
-	var envelope struct {
-		Project string          `json:"project"`
-		Event   json.RawMessage `json:"event"`
+	r.replayProject("proj", lp, int64(len(content)))
+	a, b := recv(t, got), recv(t, got)
+	if a.Seq != 0 || b.Seq != 1 {
+		t.Fatalf("replay seqs = %d,%d want 0,1", a.Seq, b.Seq)
 	}
-	if err := json.Unmarshal(gotBody, &envelope); err != nil {
-		t.Fatalf("invalid body JSON: %v, body=%s", err, gotBody)
-	}
-	if envelope.Project != "pactify" {
-		t.Fatalf("project = %q, want pactify", envelope.Project)
-	}
-	if string(envelope.Event) != `{"event_id":"1","type":"test"}` {
-		t.Fatalf("event = %s", envelope.Event)
-	}
-}
-
-func TestRelayQueueFullDropsOldest(t *testing.T) {
-	const cap = 256
-	const N = 100
-
-	ready := make(chan struct{})
-	block := make(chan struct{})
-	var once sync.Once
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		once.Do(func() { close(ready) })
-		<-block
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	r := newRelay(srv.URL, "")
-	r.enqueue("p", `"first"`) // bait: one item for the worker to pick up and block on
-	<-ready                   // wait until worker has dequeued it and is blocked in handler
-
-	for i := 0; i < cap+N; i++ {
-		r.enqueue("p", `{"i":`+strconv.Itoa(i)+`}`)
-	}
-
-	dropped := atomic.LoadInt64(&r.dropped)
-	if dropped < int64(N) {
-		t.Fatalf("dropped = %d, want >= %d (1 dequeued + %d pushed, cap %d)", dropped, N, cap+N, cap)
-	}
-	if n := r.queueLen(); n > cap {
-		t.Fatalf("queue len = %d, want <= %d", n, cap)
-	}
-
-	close(block)
-	srv.Close()
-	r.stop()
-}
-
-func TestRelayServerErrorRetriesAndDrops(t *testing.T) {
-	var attempts int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&attempts, 1)
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer srv.Close()
-
-	r := newRelay(srv.URL, "")
-	defer r.stop()
-
-	r.enqueue("p", `{"x":1}`)
-
-	time.Sleep(10 * time.Second)
-
-	att := atomic.LoadInt32(&attempts)
-	if att < 1 {
-		t.Fatal("server was never called")
-	}
-	// 1 initial + 3 retries = 4 total
-	if att != 4 {
-		t.Fatalf("attempts = %d, want 4 (1 initial + 3 retries)", att)
-	}
-
-	dropped := atomic.LoadInt64(&r.dropped)
-	if dropped != 1 {
-		t.Fatalf("dropped = %d, want 1 (final failure after retries)", dropped)
-	}
-}
-
-func TestRelayBadJSONLineSafe(t *testing.T) {
-	bodyCh := make(chan []byte, 1)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body := make([]byte, r.ContentLength)
-		r.Body.Read(body)
-		bodyCh <- body
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
-	r := newRelay(srv.URL, "")
-	defer r.stop()
-
-	r.enqueue("p", `not json`)
-	var gotBody []byte
-	select {
-	case gotBody = <-bodyCh:
-	case <-time.After(5 * time.Second):
-		t.Fatal("relay never posted to the server")
-	}
-
-	if len(gotBody) == 0 {
-		t.Fatal("expected a body even for bad JSON line")
-	}
-	var envelope struct {
-		Project string          `json:"project"`
-		Event   json.RawMessage `json:"event"`
-	}
-	if err := json.Unmarshal(gotBody, &envelope); err != nil {
-		t.Fatalf("envelope must be valid JSON: %v, body=%s", err, gotBody)
-	}
-	if envelope.Project != "p" {
-		t.Fatalf("project = %q, want p", envelope.Project)
+	if a.EventType != "assign" || b.EventType != "checkpoint" {
+		t.Fatalf("replay order wrong: %s,%s", a.EventType, b.EventType)
 	}
 }

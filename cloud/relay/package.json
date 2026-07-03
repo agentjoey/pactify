@@ -1,0 +1,60 @@
+{
+  "name": "@pactify/relay",
+  "version": "0.1.0",
+  "description": "Pactify zero-knowledge relay: forwards & caches E2E-encrypted blobs. Fastify + socket.io + Prisma.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "pactify-relay": "./bin/pactify-relay.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "prisma",
+    "prisma.config.ts"
+  ],
+  "scripts": {
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "start": "node dist/server-main.js",
+    "dev": "tsc -w -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests && vitest run --config vitest.node.config.ts --passWithNoTests"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.3",
+    "@fastify/cors": "^11.2.0",
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0",
+    "@pactify/wire": "workspace:*",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@scure/base": "^1.2.6",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "fastify": "^5.8.5",
+    "pg": "^8.22.0",
+    "pglite-prisma-adapter": "^0.7.2",
+    "redis": "^6.0.0",
+    "socket.io": "^4.8.3",
+    "web-push": "^3.6.7"
+  },
+    "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "@types/web-push": "^3.6.4",
+    "prisma": "^7.8.0",
+    "socket.io-client": "^4.8.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

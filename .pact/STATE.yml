@@ -291,7 +291,7 @@ features:
         deps: [m0-wire]
       - id: m0-relay
         owner: opencode-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/cloud-m0-relay.md
         evidence: null

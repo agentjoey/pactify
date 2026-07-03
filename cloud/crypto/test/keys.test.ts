@@ -1,8 +1,23 @@
 import { describe, it, expect } from 'vitest'
-import { generateMasterSecret, deriveRunKey, deriveAccountKeypair } from '../src/keys'
+import { generateMasterSecret, deriveRunKey, deriveProjectKey, deriveAccountKeypair } from '../src/keys'
 import { encryptEvent, decryptEvent } from '../src/crypto'
 import { ed25519 } from '@noble/curves/ed25519.js'
-import { utf8ToBytes, hexToBytes } from '@noble/hashes/utils.js'
+import { bytesToHex, utf8ToBytes, hexToBytes } from '@noble/hashes/utils.js'
+
+describe('deriveProjectKey', () => {
+  it('matches the cross-language golden vector (spec §4.2b/§8)', () => {
+    const master = Uint8Array.from({ length: 32 }, (_, i) => i) // 00..1f
+    // Same value the Go DeriveProjectKey golden test pins — proves Go↔TS parity,
+    // so S5's decrypt matches S4's encrypt.
+    expect(bytesToHex(deriveProjectKey(master, 'acct1:pactify'))).toBe(
+      'cb1824a13ab023fe2af7238df9dd1e2a5d53a9abf01d1bf446b4725840ddfdd7',
+    )
+  })
+  it('is domain-separated from the run key', () => {
+    const master = generateMasterSecret()
+    expect(bytesToHex(deriveProjectKey(master, 'x'))).not.toBe(bytesToHex(deriveRunKey(master, 'x')))
+  })
+})
 import type { AgentEvent } from '@pactify-apps/wire'
 
 describe('derived run keys', () => {

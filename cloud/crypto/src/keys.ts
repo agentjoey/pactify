@@ -32,3 +32,12 @@ export function generateMasterSecret(): Uint8Array {
 export function deriveRunKey(masterSecret: Uint8Array, runId: string): Uint8Array {
   return hkdf(sha256, masterSecret, undefined, new TextEncoder().encode(`run:${runId}`), KEY_BYTES)
 }
+
+/** Per-project symmetric key for U2 Mission Control pact events, derived from the
+ * master secret + the cleartext projectId via HKDF-SHA256 with info
+ * `project:<projectId>`. Domain-separated from run keys (`run:`) and the account
+ * seed (`account`). Matches the Go DeriveProjectKey byte-for-byte (spec §4.2b);
+ * the relay never holds the master secret, so it cannot derive this. */
+export function deriveProjectKey(masterSecret: Uint8Array, projectId: string): Uint8Array {
+  return hkdf(sha256, masterSecret, undefined, utf8ToBytes(`project:${projectId}`), KEY_BYTES)
+}

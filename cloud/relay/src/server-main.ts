@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client'
 import { createPostgresDb } from './db.js'
 import { createServer } from './server.js'
 import { attachSockets } from './sockets.js'
+import { createBroadcaster } from './broadcast.js'
 import { createLogger } from './log.js'
 import { createMetrics } from './metrics.js'
 import { startRetention, DEFAULT_RUN_TTL_MS, DEFAULT_SWEEP_INTERVAL_MS } from './retention.js'
@@ -88,6 +89,9 @@ export async function startServer(
   // sender is omitted and GET /v1/push/vapid 404s, but the relay still boots.
   const vapid = loadVapidConfig(process.env)
   const pushSender = vapid ? createWebPushSender(vapid) : undefined
+  // HTTP→socket bridge so POST /v1/pact/ingest can fan out to board watchers;
+  // the real `io` is bound in after attachSockets creates it.
+  const broadcaster = createBroadcaster()
   const app = createServer({
     db: client,
     secret: cfg.secret,
@@ -95,10 +99,11 @@ export async function startServer(
     metrics,
     runTtlMs,
     machineTtlMs,
+    broadcaster,
     ...(vapid ? { vapidPublicKey: vapid.publicKey } : {}),
   })
   await app.listen({ port: cfg.port, host: '0.0.0.0' })
-  await attachSockets(app.server, {
+  const io = await attachSockets(app.server, {
     db: client,
     secret: cfg.secret,
     redisUrl: cfg.redisUrl,
@@ -106,6 +111,7 @@ export async function startServer(
     metrics,
     ...(pushSender ? { pushSender } : {}),
   })
+  broadcaster.bind(io)
   // Periodic retention sweep (off when runTtlMs <= 0). Expires old terminal
   // runs + their events so metadata/ciphertext don't accumulate forever.
   const sweeper = startRetention(client, {

@@ -46,9 +46,10 @@
     "pglite-prisma-adapter": "^0.7.2",
     "redis": "^6.0.0",
     "socket.io": "^4.8.3",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "zod": "^3.25.76"
   },
-    "devDependencies": {
+  "devDependencies": {
     "@types/pg": "^8.20.0",
     "@types/web-push": "^3.6.4",
     "prisma": "^7.8.0",

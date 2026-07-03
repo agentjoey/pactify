@@ -14,6 +14,14 @@ import { authenticate, verifyToken } from './auth.js'
 import { getRun, deleteRun, deleteMachine, renameRun } from './repo.js'
 import { subscribePush, unsubscribePush, type PushSubscriptionJson } from './push.js'
 import { listRuns, listPendingApprovals, getRunEventsAfter, searchRuns } from './queries.js'
+import {
+  ingestPactEvent,
+  listProjects,
+  getProjectEvents,
+  getProject,
+  PactIngestRequest,
+} from './pact.js'
+import type { Broadcaster } from './broadcast.js'
 import { listMachines } from './machines.js'
 import { PairStore } from './pair.js'
 import { TokenBucketLimiter } from './rateLimit.js'
@@ -59,6 +67,12 @@ export interface ServerOptions {
    * so the web knows push delivery is off (no redeploy needed on key rotation).
    */
   vapidPublicKey?: string
+  /**
+   * Late-bound HTTP→socket bridge so POST /v1/pact/ingest can fan a `pact-event`
+   * out to the account's board watchers. server-main binds the real `io`; unset
+   * (tests) it is a safe no-op.
+   */
+  broadcaster?: Broadcaster
 }
 
 /**
@@ -368,6 +382,58 @@ export function createServer(opts: ServerOptions): FastifyInstance {
     const afterSeq = Number((req.query as { after_seq?: string }).after_seq ?? '0')
     const events = await getRunEventsAfter(db, id, afterSeq)
     // RunEvent.ts is BigInt — serialize to number for JSON.
+    return events.map((e) => ({ ...e, ts: Number(e.ts) }))
+  })
+
+  // ── U2 Mission Control: pact events ────────────────────────────────────────
+  // pactify machines POST their `.pact` log events here (cleartext operational
+  // header + E2E-encrypted body). Persist, then fan a `pact-event` out to the
+  // account's board watchers over sockets. HTTP (not socket) because pactify's
+  // uploader is Go, where socket.io support is poor.
+  app.post('/v1/pact/ingest', async (req, reply) => {
+    const accountId = accountIdOf(req)
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' })
+    const parsed = PactIngestRequest.safeParse(req.body)
+    if (!parsed.success) {
+      metrics.inc('pact_rejected_total')
+      return reply.code(400).send({ error: 'bad request' })
+    }
+    await ingestPactEvent(db, accountId, parsed.data)
+    metrics.inc('pact_events_total')
+    opts.broadcaster?.emit(accountId, 'pact-event', {
+      projectId: parsed.data.projectId,
+      seq: parsed.data.seq,
+      eventType: parsed.data.eventType,
+      task: parsed.data.task ?? null,
+      feature: parsed.data.feature ?? null,
+      ts: parsed.data.ts,
+      bodyEnc: parsed.data.bodyEnc,
+    })
+    return reply.code(202).send({ ok: true })
+  })
+
+  app.get('/v1/pact/projects', async (req, reply) => {
+    const accountId = accountIdOf(req)
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' })
+    const projects = await listProjects(db, accountId)
+    return projects.map((p) => ({ ...p, lastEventAt: p.lastEventAt.getTime() }))
+  })
+
+  app.get('/v1/pact/projects/:id/events', async (req, reply) => {
+    const accountId = accountIdOf(req)
+    if (!accountId) return reply.code(401).send({ error: 'unauthorized' })
+    const { id } = req.params as { id: string }
+    // 404 uniform for missing OR foreign-account projects, so a caller can't
+    // probe which project ids exist on other accounts.
+    const project = await getProject(db, id)
+    if (!project || project.accountId !== accountId) {
+      return reply.code(404).send({ error: 'not found' })
+    }
+    // `after_seq` is a catch-up cursor (events strictly after it). Absent → the
+    // full stream from seq 0; do NOT default to 0, which would drop seq 0.
+    const rawAfter = (req.query as { after_seq?: string }).after_seq
+    const opts = rawAfter !== undefined ? { afterSeq: Number(rawAfter) } : {}
+    const events = await getProjectEvents(db, id, opts)
     return events.map((e) => ({ ...e, ts: Number(e.ts) }))
   })
 

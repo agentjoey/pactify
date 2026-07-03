@@ -31,6 +31,8 @@ export type CounterName =
   | 'rpc_rejected_total'
   | 'ingest_events_total'
   | 'ingest_rejected_total'
+  | 'pact_events_total'
+  | 'pact_rejected_total'
   | 'rate_limited_total'
   | 'runs_deleted_total'
   | 'reconciled_runs_total'
@@ -77,6 +79,14 @@ const COUNTERS: Record<CounterName, CounterDef> = {
   },
   ingest_rejected_total: {
     help: 'Total ingest messages rejected by schema validation at the socket boundary.',
+    labelNames: [],
+  },
+  pact_events_total: {
+    help: 'Total U2 pact events ingested via POST /v1/pact/ingest.',
+    labelNames: [],
+  },
+  pact_rejected_total: {
+    help: 'Total pact ingest requests rejected by schema validation.',
     labelNames: [],
   },
   rate_limited_total: {

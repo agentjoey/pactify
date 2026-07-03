@@ -1,4 +1,22 @@
+import { z } from 'zod'
 import type { PrismaClient, Project, PactEvent } from '@prisma/client'
+
+// Wire contract for POST /v1/pact/ingest (docs/specs/agentworks-wire.md — pactify
+// overlay). Cleartext operational header + opaque encrypted body. Bounds are
+// generous DoS caps (a conforming pactify machine stays far under).
+export const PactIngestRequest = z
+  .object({
+    projectId: z.string().min(1).max(256),
+    name: z.string().min(1).max(256),
+    feature: z.string().max(256).optional(),
+    eventType: z.string().min(1).max(64),
+    task: z.string().max(256).optional(),
+    seq: z.number().int().nonnegative(),
+    ts: z.number().int().nonnegative(),
+    bodyEnc: z.string().min(1).max(2_000_000),
+  })
+  .strict()
+export type PactIngestRequest = z.infer<typeof PactIngestRequest>
 
 /**
  * U2 Mission Control data layer: ingest/read pact protocol events uploaded from
@@ -77,6 +95,11 @@ export async function ingestPactEvent(
       update: {},
     })
   })
+}
+
+/** Read one Project by id, or `null` if it does not exist. */
+export async function getProject(db: PrismaClient, projectId: string): Promise<Project | null> {
+  return db.project.findUnique({ where: { id: projectId } })
 }
 
 /** An account's projects, most-recently-active first (board listing). */

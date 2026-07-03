@@ -31,8 +31,8 @@ export type EventKind = z.infer<typeof EventKind>
  */
 export const OperationalHeader = z.object({
   v: z.literal(1),
-  machineId: z.string().min(1),
-  runId: z.string().min(1),
+  machineId: z.string().min(1).max(256),
+  runId: z.string().min(1).max(256),
   seq: z.number().int().nonnegative(),
   ts: z.number().int().nonnegative(),
   state: RunState,
@@ -46,7 +46,7 @@ export const OperationalHeader = z.object({
    * metadata (like machineId/workdir), so it rides cleartext here — NOT the
    * encrypted body. Omitted when the workdir is not a git repo / is detached.
    */
-  branch: z.string().optional(),
+  branch: z.string().max(512).optional(),
   /**
    * Epoch ms the run started (its first publish time), stamped once at spawn.
    * Cleartext operational metadata so the web can tick a running timer. Stable
@@ -59,7 +59,7 @@ export const OperationalHeader = z.object({
    * NOT the encrypted body. Reported exactly once (already resolved at spawn);
    * omitted for runs that carry no workdir (e.g. attach).
    */
-  workdir: z.string().optional(),
+  workdir: z.string().max(4096).optional(),
   /**
    * Absolute path to the git repo root of the run's workdir (`git rev-parse
    * --show-toplevel`), resolved once at spawn alongside `branch`/`workdir`. Rides
@@ -67,7 +67,7 @@ export const OperationalHeader = z.object({
    * so the relay/web can group a run by its PROJECT rather than a per-subdir
    * workdir. Omitted when the workdir is not a git repo / git is missing.
    */
-  repoRoot: z.string().optional(),
+  repoRoot: z.string().max(4096).optional(),
   /**
    * Human-readable session title, set at spawn from the optional spawn `title`.
    * Low-sensitivity operational metadata (like machineId/branch/workdir), so it
@@ -75,7 +75,7 @@ export const OperationalHeader = z.object({
    * Run on creation; omitted for runs spawned without a title. Post-spawn renames
    * go through the dedicated rename endpoint, not this header.
    */
-  title: z.string().optional(),
+  title: z.string().max(512).optional(),
   /**
    * Marks a transient query reply (e.g. `dir-list`, `discovered`, `file-list`)
    * couriered via a one-off `requestId` placed in `runId`. The relay forwards it
@@ -84,4 +84,5 @@ export const OperationalHeader = z.object({
    */
   ephemeral: z.boolean().optional(),
 })
+  .strict()
 export type OperationalHeader = z.infer<typeof OperationalHeader>

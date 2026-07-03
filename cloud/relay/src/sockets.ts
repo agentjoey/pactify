@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from 'node:http'
 import { Server } from 'socket.io'
 import { Prisma, type PrismaClient } from '@prisma/client'
-import type { RpcRequest, WireMessage } from '@pactify-apps/wire'
+import { AgentKind, RpcRequest, WireMessage } from '@pactify-apps/wire'
 import { verifyToken } from './auth.js'
 import { ingestWireMessage, getRun, reconcileMachineRuns } from './repo.js'
 import { getRunEventsAfter, toRunSummary } from './queries.js'
@@ -202,9 +202,20 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
         })()
       })
 
-      socket.on('ingest', (payload: { agentKind: string; msg: WireMessage }) => {
+      socket.on('ingest', (payload: { agentKind: string; msg: unknown }) => {
         void (async () => {
-          const { header, body } = payload.msg
+          // Validate at the trust boundary: reject a non-conforming agentKind or
+          // WireMessage (wrong version, missing/oversized fields, unknown keys)
+          // before it touches the DB or a broadcast. See spec §2.5. A conforming
+          // linxd (typed against the same schema) always passes.
+          const kind = AgentKind.safeParse(payload?.agentKind)
+          const parsed = WireMessage.safeParse(payload?.msg)
+          if (!kind.success || !parsed.success) {
+            metrics.inc('ingest_rejected_total')
+            return
+          }
+          const msg = parsed.data
+          const { header, body } = msg
           // runId/seq only — `body` is opaque ciphertext and is never logged.
           log.debug('ingest', { runId: header.runId, seq: header.seq, machineId })
           try {
@@ -238,7 +249,7 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
             // (not on every header while the run sits in that state). The emit
             // above does not touch the DB, so this still reflects pre-upsert state.
             const prevState = (await getRun(db, header.runId))?.state ?? null
-            await ingestWireMessage(db, accountId, payload.agentKind, payload.msg)
+            await ingestWireMessage(db, accountId, kind.data, msg)
             metrics.inc('ingest_events_total')
             // Board update from the just-upserted header.
             const run = await getRun(db, header.runId)
@@ -325,7 +336,17 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
 
     socket.on('ping', () => socket.emit('pong'))
 
-    socket.on('rpc', (rpc: RpcRequest) => {
+    socket.on('rpc', (raw: unknown) => {
+      // Validate at the trust boundary before anything reads rpc fields — an
+      // unvalidated `raw.type` would otherwise be forwarded to a machine and
+      // injected into the metrics label set (cardinality attack). See spec §2.5.
+      const parsedRpc = RpcRequest.safeParse(raw)
+      if (!parsedRpc.success) {
+        metrics.inc('rpc_rejected_total')
+        socket.emit('rpc-error', { error: 'invalid rpc' })
+        return
+      }
+      const rpc = parsedRpc.data
       // `rpc.type` is a bounded enum (spawn / send-message / …), safe as a label.
       metrics.inc('rpc_total', { type: rpc.type })
       // Per-account rate limit: silently drop the over-limit message (emit a

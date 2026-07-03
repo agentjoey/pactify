@@ -20,16 +20,16 @@ export const SpawnRequest = z.object({
 })
 /** An image attachment carried inline with a message (base64 body + mime). */
 export const InlineImage = z.object({
-  data: z.string().min(1),
-  mimeType: z.string().min(1),
+  data: z.string().min(1).max(12_000_000),
+  mimeType: z.string().min(1).max(256),
 })
 export type InlineImage = z.infer<typeof InlineImage>
 
 export const SendMessageRequest = z.object({
   type: z.literal('send-message'),
   runId: z.string().min(1),
-  text: z.string(),
-  images: z.array(InlineImage).optional(),
+  text: z.string().max(256_000),
+  images: z.array(InlineImage).max(32).optional(),
 })
 export const ResolveApprovalRequest = z.object({
   type: z.literal('resolve-approval'),

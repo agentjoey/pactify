@@ -28,7 +28,9 @@ export type CounterName =
   | 'http_requests_total'
   | 'socket_connections_total'
   | 'rpc_total'
+  | 'rpc_rejected_total'
   | 'ingest_events_total'
+  | 'ingest_rejected_total'
   | 'rate_limited_total'
   | 'runs_deleted_total'
   | 'reconciled_runs_total'
@@ -65,8 +67,16 @@ const COUNTERS: Record<CounterName, CounterDef> = {
     help: 'Total rpc events received by type.',
     labelNames: ['type'],
   },
+  rpc_rejected_total: {
+    help: 'Total rpc messages rejected by schema validation at the socket boundary.',
+    labelNames: [],
+  },
   ingest_events_total: {
     help: 'Total wire events ingested.',
+    labelNames: [],
+  },
+  ingest_rejected_total: {
+    help: 'Total ingest messages rejected by schema validation at the socket boundary.',
     labelNames: [],
   },
   rate_limited_total: {

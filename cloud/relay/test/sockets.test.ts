@@ -100,6 +100,47 @@ describe('relay sockets', () => {
     expect(rpc.runId).toBe('r1')
   })
 
+  it('rejects malformed ingest at the boundary — bad agentKind / wrong version / unknown key are not persisted', async () => {
+    const token = issueToken(SECRET, accountId, 60_000, 1000)
+    const machine = await connect(port, { token, role: 'machine', machineId: 'm1' })
+    clients.push(machine)
+
+    // (a) unknown agentKind, (b) wrong protocol version, (c) unknown header key.
+    machine.emit('ingest', { agentKind: 'notakind', msg: wire('m1', 'bad-a', 0) })
+    machine.emit('ingest', {
+      agentKind: 'claude',
+      msg: { header: { ...header('m1', 'bad-b', 0), v: 2 }, body: { alg: 'xchacha20poly1305', nonce: 'n', ct: 'c' } },
+    })
+    machine.emit('ingest', {
+      agentKind: 'claude',
+      msg: { header: { ...header('m1', 'bad-c', 0), evil: 'x' }, body: { alg: 'xchacha20poly1305', nonce: 'n', ct: 'c' } },
+    })
+    // A valid one to prove the boundary lets conforming traffic through.
+    machine.emit('ingest', { agentKind: 'claude', msg: wire('m1', 'good', 0) })
+
+    await new Promise((r) => setTimeout(r, 80))
+    for (const id of ['bad-a', 'bad-b', 'bad-c']) {
+      expect(await db.run.findUnique({ where: { id } })).toBeNull()
+    }
+    expect(await db.run.findUnique({ where: { id: 'good' } })).not.toBeNull()
+  })
+
+  it('rejects a malformed rpc with rpc-error and does not forward it', async () => {
+    const token = issueToken(SECRET, accountId, 60_000, 1000)
+    const machine = await connect(port, { token, role: 'machine', machineId: 'm1' })
+    const web = await connect(port, { token, role: 'client' })
+    clients.push(machine, web)
+
+    let forwarded = false
+    machine.on('rpc', () => (forwarded = true))
+    const errP = once<{ error: string }>(web, 'rpc-error')
+    web.emit('rpc', { type: 'nonsense', runId: 'r1' })
+    const err = await errP
+    expect(err.error).toBeTruthy()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(forwarded).toBe(false)
+  })
+
   it('routes a run-less list-dirs rpc to the machine by machineId', async () => {
     const token = issueToken(SECRET, accountId, 60_000, 1000)
     const machine = await connect(port, { token, role: 'machine', machineId: 'm1' })

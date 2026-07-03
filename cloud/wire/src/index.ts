@@ -1,5 +1,5 @@
 /**
- * @pactify/wire — shared protocol contracts for Linx.
+ * @pactify-apps/wire — shared protocol contracts for Linx.
  *
  * The C hybrid model: a WireMessage is a cleartext operational header plus an
  * opaque E2E-encrypted body. The plaintext encrypted into the body is an

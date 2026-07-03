@@ -1,5 +1,5 @@
 import type { PrismaClient, Run, RunEvent } from '@prisma/client'
-import type { WireMessage } from '@pactify/wire'
+import type { WireMessage } from '@pactify-apps/wire'
 
 /**
  * Ingest one {@link WireMessage} into the zero-knowledge store:

@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from 'node:http'
 import { Server } from 'socket.io'
 import { Prisma, type PrismaClient } from '@prisma/client'
-import type { RpcRequest, WireMessage } from '@pactify/wire'
+import type { RpcRequest, WireMessage } from '@pactify-apps/wire'
 import { verifyToken } from './auth.js'
 import { ingestWireMessage, getRun, reconcileMachineRuns } from './repo.js'
 import { getRunEventsAfter, toRunSummary } from './queries.js'

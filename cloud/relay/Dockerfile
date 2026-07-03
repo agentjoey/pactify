@@ -25,7 +25,7 @@ RUN pnpm install --frozen-lockfile
 COPY tsconfig.base.json ./
 COPY wire wire
 COPY relay relay
-RUN pnpm --filter @pactify/relay... build
+RUN pnpm --filter @pactify-apps/relay... build
 
 # ── runtime ──────────────────────────────────────────────────────────────────
 FROM base AS runtime

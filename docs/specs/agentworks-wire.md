@@ -85,7 +85,7 @@ sees in cleartext.
 EncryptedBlob = { alg: "xchacha20poly1305", nonce: base64, ct: base64 }
 ```
 
-`wire` defines the shape; the crypto lives in `@pactify/crypto` (§5).
+`wire` defines the shape; the crypto lives in `@pactify-apps/crypto` (§5).
 
 ### 2.4 Version gating [HARDENING, non-breaking]
 

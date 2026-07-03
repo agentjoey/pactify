@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import * as relay from '../src/index.js'
 
-describe('@pactify/linx-relay public surface', () => {
+describe('@pactify-apps/relay public surface', () => {
   it('exports the data layer', () => {
     expect(typeof relay.ingestWireMessage).toBe('function')
     expect(typeof relay.getRun).toBe('function')

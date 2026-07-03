@@ -1,5 +1,5 @@
 import type { Machine as MachineRow, Prisma, PrismaClient } from '@prisma/client'
-import { MachineInfo } from '@pactify/wire'
+import { MachineInfo } from '@pactify-apps/wire'
 
 /** Default machine TTL: 7 days. Offline machines staler than this are swept. */
 export const DEFAULT_MACHINE_TTL_MS = 7 * 24 * 60 * 60 * 1000

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { PrismaClient } from '@prisma/client'
-import type { WireMessage } from '@pactify/wire'
+import type { WireMessage } from '@pactify-apps/wire'
 import { createPgliteDb } from '../src/db.js'
 import { ingestWireMessage, getRun, getRunEvents, deleteRun, deleteMachine } from '../src/repo.js'
 import { listRuns } from '../src/queries.js'

@@ -3,7 +3,7 @@ import { OperationalHeader } from './operational.js'
 
 /**
  * Opaque E2E ciphertext. wire defines the SHAPE only; the crypto lives in
- * @pactify/core / linxd. nonce and ct are base64.
+ * @pactify-apps/crypto / linxd. nonce and ct are base64.
  */
 export const EncryptedBlob = z.object({
   alg: z.literal('xchacha20poly1305'),

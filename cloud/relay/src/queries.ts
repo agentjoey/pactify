@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient, Run, RunEvent } from '@prisma/client'
-import type { AgentKind, RunState, RunSummary } from '@pactify/wire'
+import type { AgentKind, RunState, RunSummary } from '@pactify-apps/wire'
 import { TERMINAL_STATES } from './retention.js'
 
 /** Board hygiene knobs for {@link listRuns}. */

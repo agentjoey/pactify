@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import type { PairComplete, PairMode, PairStatus } from '@pactify/wire'
+import type { PairComplete, PairMode, PairStatus } from '@pactify-apps/wire'
 
 const PAIR_TTL_MS = 5 * 60 * 1000
 

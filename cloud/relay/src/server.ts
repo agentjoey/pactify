@@ -9,7 +9,7 @@ import {
   PairStatus,
   RenameRequest,
   RunSummary,
-} from '@pactify/wire'
+} from '@pactify-apps/wire'
 import { authenticate, verifyToken } from './auth.js'
 import { getRun, deleteRun, deleteMachine, renameRun } from './repo.js'
 import { subscribePush, unsubscribePush, type PushSubscriptionJson } from './push.js'

@@ -1,7 +1,7 @@
 import { xchacha20poly1305 } from '@noble/ciphers/chacha'
 import { randomBytes } from '@noble/ciphers/webcrypto'
 import { base64 } from '@scure/base'
-import { AgentEvent, type EncryptedBlob } from '@pactify/wire'
+import { AgentEvent, type EncryptedBlob } from '@pactify-apps/wire'
 
 const ALG = 'xchacha20poly1305' as const
 const KEY_BYTES = 32

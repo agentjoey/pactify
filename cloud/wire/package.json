@@ -1,5 +1,5 @@
 {
-  "name": "@pactify/wire",
+  "name": "@pactify-apps/wire",
   "version": "0.1.0",
   "description": "Shared wire protocol: schemas, encryption-envelope & message contracts for Linx.",
   "type": "module",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { AgentEvent } from '@pactify/wire'
+import type { AgentEvent } from '@pactify-apps/wire'
 import { generateRunKey, encryptEvent, decryptEvent } from '../src/crypto'
 
 const samples: AgentEvent[] = [

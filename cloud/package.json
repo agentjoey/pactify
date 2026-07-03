@@ -1,5 +1,5 @@
 {
-  "name": "@pactify/cloud-root",
+  "name": "@pactify-apps/cloud-root",
   "version": "0.0.0",
   "private": true,
   "type": "module",

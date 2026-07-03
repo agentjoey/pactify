@@ -3,7 +3,7 @@ import { generateMasterSecret, deriveRunKey, deriveAccountKeypair } from '../src
 import { encryptEvent, decryptEvent } from '../src/crypto'
 import { ed25519 } from '@noble/curves/ed25519.js'
 import { utf8ToBytes, hexToBytes } from '@noble/hashes/utils.js'
-import type { AgentEvent } from '@pactify/wire'
+import type { AgentEvent } from '@pactify-apps/wire'
 
 describe('derived run keys', () => {
   it('generateMasterSecret is 32 random bytes', () => {

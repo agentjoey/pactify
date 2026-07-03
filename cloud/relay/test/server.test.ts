@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { ed25519 } from '@noble/curves/ed25519.js'
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
 import type { PrismaClient } from '@prisma/client'
-import { MachineInfo, PairStatus, RunSummary } from '@pactify/wire'
+import { MachineInfo, PairStatus, RunSummary } from '@pactify-apps/wire'
 import { createPgliteDb } from '../src/db'
 import { createServer } from '../src/server'
 

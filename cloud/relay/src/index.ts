@@ -1,5 +1,5 @@
 /**
- * @pactify/linx-relay — zero-knowledge relay.
+ * @pactify-apps/relay — zero-knowledge relay.
  *
  * M1 data layer: a Prisma store (Neon in prod, PGlite in tests/local) that
  * indexes the cleartext operational header and persists the encrypted body as

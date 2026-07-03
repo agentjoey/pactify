@@ -25,6 +25,7 @@ model Account {
   devices     Device[]
   machines    Machine[]
   runs        Run[]
+  projects    Project[]
 }
 
 model Device {
@@ -132,4 +133,47 @@ model PushToken {
   keysAuth   String?
 
   @@unique([accountId, token])
+}
+
+// U2 Mission Control — pact protocol events uploaded from pactify machines.
+// Additive (linx never touches these). Same zero-knowledge shape as Run/RunEvent:
+// cleartext operational columns drive the cross-machine board; bodyEnc holds the
+// opaque E2E ciphertext of the full pact event (spec/evidence never in cleartext).
+model Project {
+  id          String      @id
+  accountId   String
+  // Cleartext operational label (repo/project name), for board display + grouping.
+  name        String
+  // Current feature id (cleartext operational), for board grouping.
+  feature     String?
+  seq         Int         @default(0)
+  lastEventAt DateTime    @default(now())
+  metadataEnc String?
+  account     Account     @relation(fields: [accountId], references: [id])
+  events      PactEvent[]
+
+  @@index([accountId])
+  @@index([accountId, lastEventAt])
+}
+
+model PactEvent {
+  id        String  @id @default(cuid())
+  projectId String
+  // Denormalized so account-scoped reads/deletes don't need a Project join.
+  accountId String
+  // Monotonic per project.
+  seq       Int
+  // Cleartext routable/indexable pact verb: assign/checkpoint/accept/merge/...
+  eventType String
+  // Cleartext task + feature ids (operational slugs), for board grouping.
+  task      String?
+  feature   String?
+  ts        BigInt
+  // Opaque E2E ciphertext of the full pact event JSON (spec/evidence live here).
+  bodyEnc   String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, seq])
+  @@index([projectId])
+  @@index([accountId])
 }

@@ -37,6 +37,15 @@ jobs:
         run: bats tests/
       - name: web tests
         run: cd web && npm ci && npm test
+      - name: web typecheck
+        run: cd web && npx tsc -b --noEmit
+      - name: cloud workspace (wire + relay type-check + wire tests)
+        run: |
+          cd cloud
+          npx pnpm@10 install --frozen-lockfile
+          npx pnpm@10 --filter @pactify-apps/wire build
+          npx pnpm@10 --filter @pactify-apps/wire test
+          npx pnpm@10 --filter @pactify-apps/relay build   # prisma generate + tsc (type-check; no DB needed)
       - name: embedded dist in sync with web source
         run: |
           cd web && npm run build && cd ..

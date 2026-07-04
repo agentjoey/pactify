@@ -347,10 +347,10 @@ features:
         deps: [dm-acp-runner]
       - id: dm-session-resume
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/dm-session-resume.md
-        evidence: null
+        evidence: go test ./internal/orchestrate/ PASS (+ -race on Session tests) + build/vet clean. NEW sessionstore.go: .pact/orchestrate/sessions.json via lockx + atomic write; API Load/Record/Lookup/Clear/Prune. AcpRunner: after Initialize, if server advertises loadSession + prior (seat,task) id → LoadSession + resume-briefing-prefix; fail → Clear+NewSession (unchanged). loop.go: clear on accept (beside cleanupTaskSessions) + prune orphans on startup. usage/idle/permission untouched. Concurrent-write test (2×25) no loss.
         deps: [dm-acp-runner]
       - id: dm-knowledge
         owner: kimi-worker

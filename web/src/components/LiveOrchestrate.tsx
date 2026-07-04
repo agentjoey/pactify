@@ -234,6 +234,9 @@ export function LiveOrchestrate({
             featureCount={lanes.length}
             concurrency={parallel?.length ?? null}
             iter={status?.iter ?? null}
+            phase={status?.phase ?? null}
+            fixRound={status?.fix_round ?? null}
+            fixMax={status?.fix_max ?? null}
             tok={totals.tok}
             accepted={totals.accepted}
             total={totals.total}
@@ -325,9 +328,10 @@ export function LiveOrchestrate({
 // concurrency, iter, tokens) + accepted progress bar + Resume (when a gate is
 // open) / Ship (when all delivered). Pause/Stop are omitted — no backend yet.
 function RunControl({
-  featureCount, concurrency, iter, tok, accepted, total, escalated, done, author, resuming, onResume, onShip, canWrite, canShip,
+  featureCount, concurrency, iter, phase, fixRound, fixMax, tok, accepted, total, escalated, done, author, resuming, onResume, onShip, canWrite, canShip,
 }: {
-  featureCount: number; concurrency: number | null; iter: number | null; tok: number;
+  featureCount: number; concurrency: number | null; iter: number | null;
+  phase: string | null; fixRound: number | null; fixMax: number | null; tok: number;
   accepted: number; total: number; escalated: boolean; done: boolean;
   author: boolean; resuming: boolean; onResume: () => void; onShip: () => void; canWrite: boolean; canShip: boolean;
 }) {
@@ -349,6 +353,11 @@ function RunControl({
         <span className="status-pill-dot-live h-[7px] w-[7px] rounded-full" style={{ background: dot, boxShadow: `0 0 8px ${dot}` }} />
         {label}
       </span>
+      {phase === "fixing" && (
+        <span data-testid="fixing-indicator" className="text-[11.5px] font-medium text-[var(--color-warn)]">
+          修复中 {fixRound ?? 0}/{fixMax ?? 0}
+        </span>
+      )}
       <span className="text-[11.5px] text-[var(--color-text-3)]">{meta}</span>
       <div className="ml-auto flex items-center gap-[10px]">
         <div className="flex items-center gap-2 text-[10.5px] font-medium text-[var(--color-text-2)]">

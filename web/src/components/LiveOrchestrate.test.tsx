@@ -148,6 +148,31 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     await waitFor(() => expect(screen.getByText("https://github.com/org/repo/pull/42")).toBeTruthy());
   });
 
+  it("shows the 修复中 indicator when the run phase is fixing", async () => {
+    getOrchestrateStatus.mockResolvedValue({
+      present: true,
+      status: status({ phase: "fixing", fix_round: 2, fix_max: 3 }),
+    });
+    renderLive({
+      state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
+        task("t1", "accepted"), task("t2", "in_progress"),
+      ] }]),
+    });
+    await waitFor(() => expect(screen.getByTestId("fixing-indicator")).toBeTruthy());
+    expect(screen.getByTestId("fixing-indicator").textContent).toContain("修复中 2/3");
+  });
+
+  it("shows no fixing indicator in a normal (owner) phase", async () => {
+    getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}) });
+    renderLive({
+      state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
+        task("t1", "accepted"), task("t2", "in_progress"),
+      ] }]),
+    });
+    await waitFor(() => expect(screen.getByTestId("feature-lane")).toBeTruthy());
+    expect(screen.queryByTestId("fixing-indicator")).toBeNull();
+  });
+
   it("always renders the event stream pane", async () => {
     getOrchestrateStatus.mockResolvedValue({ present: false });
     renderLive();

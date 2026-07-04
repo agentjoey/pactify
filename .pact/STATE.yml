@@ -402,10 +402,10 @@ features:
         evidence: null
       - id: rp-snapshot
         owner: claude-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-snapshot.md
-        evidence: null
+        evidence: go test ./internal/pact/ ./internal/projection/ ./internal/event/ PASS + -race green + full repo green + build/vet clean. .pact/state-snapshot.json {version,ledger_bytes,head_hash,state}; read-path validity (version+bytes≤size+sha256 prefix match, else silent full fold; PACT_NO_SNAPSHOT=1 bypass); write in appendAndRender under lock (atomic, info/exclude registered). projection Folder resumable; stores pre-retirement accumulator (cancel-then-reassign correctness). Equivalence asserted at EVERY split point over 11 ledgers + corruption fallbacks. Bench 5k: 11.5x faster (7.44ms→0.65ms), >5x hard gate.
       - id: rp-critic
         owner: kimi-worker
         status: accepted

@@ -431,16 +431,16 @@ features:
     tasks:
       - id: dm-acp-core
         owner: claude-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/dm-acp-core.md
         evidence: verify: go test ./internal/acp/ PASS + go vet clean + go build ./... clean. 11 tests all PASS (also under -race): TestHandshakeAndPrompt, TestUsageParsedFromUpdate, TestPermissionAutoSelect, TestPermissionDefaultCancel, TestLoadSessionSupported/Unsupported/ServerError, TestMalformedFrameSkipped, TestPendingFailOnTransportClose, TestSpawnProcessDeathFailsPending, TestContextCancelUnblocksCall. gofmt clean. NEW: internal/acp/acp.go (Go ACP client: Spawn stdio subprocess, JSON-RPC 2.0 ndjson, single writer+reader goroutine, id->chan correlation + notification/server-request dispatch; Initialize/NewSession/LoadSession(ErrNotSupported gate)/Prompt/Close; OnSessionUpdate w/ Usage parse, OnPermissionRequest w/ reply+default-cancel; process death/stdio close -> all pending+future calls error via sync.Once terminate; minimal types + json.RawMessage). NEW: acp_test.go (11 TDD tests, usage+permission mutation-verified). NEW: fakeserver_test.go (hermetic in-process ACP server over io.Pipe, real-subprocess death via sh). Boundary: only internal/acp; no orchestrate integration; no real vendor calls.
       - id: dm-acp-runner
         owner: claude-worker
-        status: in_progress
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/dm-acp-runner.md
-        evidence: null
+        evidence: verify: go test ./internal/orchestrate/ -run 'Acp|Routed' + go build ./... — both PASS. Also -race green (full orchestrate pkg), go vet clean, gofmt clean. 11 new tests PASS (FullStintSuccess, IdleKill, IdleResetByActivity, PermissionAuto/Deny/Escalate, UsageCallback, StripsAnthropicKey, UnknownKindGuidesToCmd, RoutedLocalRunnerRoutesByKind, RoutedLocalRunnerDefaultsToCmd). NEW internal/orchestrate/acprunner.go: AcpRunner implements Runner over ACP (Spawn(kind->cmd map)->Initialize->NewSession(RepoDir)->Prompt(Briefing) off-goroutine->StopReason->Close; PACT_* env same as CmdRunner). kind->ACP map spec A.2: kimi-cli='kimi acp'; claude-code='npx -y @agentclientprotocol/claude-agent-acp' (ANTHROPIC_API_KEY stripped via empty override, os/exec last-wins); codex-cli='npx -y @zed-industries/codex-acp'; gemini-cli='npx -y @google/gemini-cli --acp'; opencode none->error guides to --transport kind=cmd. Idle watchdog on OnSessionUpdate activity->errIdle soft failure. PermissionPolicy auto/escalate/deny (escalate reuses writeEscalation + denies). Usage aggregated across updates->OnUsage(seat,task,Usage) hook (nil in prod; dm-acp-usage wires it). RoutedLocalRunner per-kind mode, empty=all-cmd zero-behavior-change; *acp.Client satisfies acpConn seam. cmd_orchestrate.go: --transport kind=acp|cmd repeatable, validated, wired to RoutedLocalRunner only when set (else CmdRunner default; also RemoteRunner.Local under --seat-host). Boundary: no loop.go changes, no session persistence, default all-cmd. Only touched acprunner.go(new), acprunner_test.go(new), cmd_orchestrate.go.
       - id: dm-acp-usage
         owner: kimi-worker
         status: assigned

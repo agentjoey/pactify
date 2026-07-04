@@ -244,16 +244,6 @@ features:
         spec: .pact/tasks/pact-project.md
         evidence: pact-project: pure-TS project(events)→State (cloud/pact-project/src/index.ts). tsc build clean + 21 tests PASS (2 parity vs Go golden + 19 unit). verify: cd cloud && pnpm --filter @pactify-apps/pact-project build && test. [checkpoint recorded by orchestrator claude on worker's behalf — worker's in-branch ledger view showed dep unaccepted due to ledger/worktree coupling; code verified independently by reviewer]
         deps: [proj-fixture]
-  - id: obs-runtime
-    branch: feat-obs-runtime
-    status: in_progress
-    tasks:
-      - id: obs-runduration
-        owner: opencode-worker
-        status: assigned
-        reviewer: claude
-        spec: .pact/tasks/obs-runduration.md
-        evidence: null
   - id: web-hygiene
     branch: feat-web-hygiene
     status: in_progress

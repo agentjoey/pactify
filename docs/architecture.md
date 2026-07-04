@@ -112,6 +112,14 @@ pactify serve
 
 worker 不能自标 `accepted`（职责分离）。
 
+### 驱动层（orchestrate driver — driver-modernization）
+`orchestrate` 把座席作为子进程「一棒」驱动。传输可选:
+- **CmdRunner**（默认）— headless 一次性 spawn（`claude -p`/`opencode run`…），解析 stdout；巡检 idle-timeout 兼看工作树变更(静默但在写不误杀)。
+- **AcpRunner**（opt-in,`--transport kind=acp`）— 对 vendor CLI 说 **Agent Client Protocol**（`internal/acp`,JSON-RPC/stdio）:`initialize→session/new→session/prompt→session/update`。给结构化事件流:usage（token）经 `session/update` 落 `internal/tokens`（**根治 TOK=0**）、`session/request_permission` 三档策略 auto/escalate/deny（escalate 写 escalation,与 OpenHands 无脑 auto-approve 相反）。kind→命令映射:kimi=`kimi acp`、claude/codex/gemini 经 npx bridge。`RoutedLocalRunner` 按 kind 选传输,空映射=全 cmd(零行为变化)。
+- **会话续接**（AcpRunner）— `.pact/orchestrate/sessions.json`（lockx）记 (seat,task)→sessionID;重试时 server 支持 `loadSession` 则续接会话（保上下文、省 token）,失败回退新会话;accept/终态清理。
+- **知识注入** — briefing 尾部注入 `.pact/memory.md`(累积决策)+ role/keyword 匹配的 `.pact/skills/*.md`(4KB 预算);无文件时字节不变。
+- **可观测** — `internal/stats` per-seat `Accepted/Reworked`(纯 fold);`pactify doctor` per-vendor 预检(binary+auth+ACP 可用性)。
+
 ## CLI 命令集（Phase 1）
 
 ```

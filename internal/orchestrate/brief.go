@@ -15,7 +15,7 @@ import (
 // rule are always present. When changesReason is non-empty (a rework launch
 // after the reviewer requested changes) the verbatim reason is carried in so
 // the worker addresses it.
-func workerBrief(seat projection.Seat, task projection.Task, changesReason string, retrying bool) string {
+func workerBrief(dir string, seat projection.Seat, task projection.Task, changesReason string, retrying bool) string {
 	roles := strings.Join(seat.Roles, ",")
 
 	var b strings.Builder
@@ -51,6 +51,12 @@ func workerBrief(seat projection.Seat, task projection.Task, changesReason strin
 	b.WriteString("- 不要自标 `accepted`，不能自接受。worker 只把 task 置为 awaiting_review；只有该 task 的 reviewer 能 accept。\n")
 	b.WriteString("- 不碰别的 task，不碰 spec 以外的文件。\n")
 
+	// git-native knowledge injection (spec §3): memory + matching skills. When
+	// nothing applies KnowledgeFor returns "" and the briefing is unchanged.
+	if kn := KnowledgeFor(dir, "worker", task.Spec+" "+task.ID); kn != "" {
+		b.WriteString("\n" + kn)
+	}
+
 	return b.String()
 }
 
@@ -59,7 +65,7 @@ func workerBrief(seat projection.Seat, task projection.Task, changesReason strin
 // points at the worker's changes via `git diff` / `git log`, instructs running
 // the spec's acceptance commands, and gives the accept / changes verbs while
 // forbidding the reviewer from editing the implementation.
-func reviewerBrief(seat projection.Seat, task projection.Task) string {
+func reviewerBrief(dir string, seat projection.Seat, task projection.Task) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# pact reviewer — seat `%s`\n\n", seat.ID)
 	fmt.Fprintf(&b, "You are seat `%s`, reviewing task `%s` (status awaiting_review) in this repo (pact protocol v1).\n\n", seat.ID, task.ID)
@@ -75,6 +81,12 @@ func reviewerBrief(seat projection.Seat, task projection.Task) string {
 
 	b.WriteString("## 边界\n")
 	b.WriteString("- 不要自己改实现。你只裁决（accept / changes）；要改由 worker 下一轮做。\n")
+
+	// git-native knowledge injection (spec §3): memory + matching skills. When
+	// nothing applies KnowledgeFor returns "" and the briefing is unchanged.
+	if kn := KnowledgeFor(dir, "reviewer", task.Spec+" "+task.ID); kn != "" {
+		b.WriteString("\n" + kn)
+	}
 
 	return b.String()
 }

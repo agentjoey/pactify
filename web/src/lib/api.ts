@@ -112,6 +112,8 @@ export type AgentStat = {
   added: number;
   deleted: number;
   tokens: number;
+  accepted: number;
+  reworked: number;
 };
 export type ProjectStats = { tasks: TaskStat[]; agents: AgentStat[] };
 export const getStats = (id: string) => getJSON<ProjectStats>(`/api/projects/${id}/stats`);

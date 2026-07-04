@@ -236,9 +236,21 @@ func recordTokens(lc LaunchContext, output string) {
 	if !ok || n <= 0 {
 		return
 	}
-	s := tokens.Load(lc.RepoDir)
-	s.Add(lc.Task, n)
-	_ = tokens.Save(lc.RepoDir, s)
+	recordTaskTokens(lc.RepoDir, lc.Task, n)
+}
+
+// recordTaskTokens accumulates n tokens for task into the repo's token store
+// (internal/tokens at .pact/orchestrate/tokens.json). Shared by the CmdRunner
+// stdout-parse path (recordTokens) and the ACP usage path (recordAcpUsage) so both
+// transports write the SAME on-disk store, keyed by task. Best-effort: an empty
+// task, non-positive count, or a write error are all silent no-ops.
+func recordTaskTokens(repoDir, task string, n int) {
+	if task == "" || n <= 0 {
+		return
+	}
+	s := tokens.Load(repoDir)
+	s.Add(task, n)
+	_ = tokens.Save(repoDir, s)
 }
 
 // tailWriter keeps only the last max bytes written to it. Splicing it into the

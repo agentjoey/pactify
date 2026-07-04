@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 
+	"github.com/agentjoey/pactify/internal/doctor"
 	"github.com/agentjoey/pactify/internal/registry"
 	"github.com/agentjoey/pactify/internal/serve"
 	"github.com/spf13/cobra"
@@ -35,6 +36,16 @@ func newServeCmd() *cobra.Command {
 				abs, _ := filepath.Abs(p)
 				projects = appendIfNew(projects, registry.Project{Name: registry.Slug(filepath.Base(abs)), Path: abs})
 			}
+			// Vendor CLI preflight: log any red per-vendor checks to stderr so a
+			// misconfigured host (missing binary / unauthenticated CLI) is visible
+			// at startup. Non-blocking — never aborts serve.
+			home, _ := os.UserHomeDir()
+			for _, ck := range doctor.VendorChecks(home, os.Getenv("PATH")) {
+				if !ck.OK {
+					fmt.Fprintf(os.Stderr, "pactify serve: preflight ✗ %s — %s\n", ck.Name, ck.Detail)
+				}
+			}
+
 			srv := serve.New(projects)
 			srv.SetSeat(seat)
 			srv.SetRelay(relayURL, relayToken)

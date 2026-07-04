@@ -26,6 +26,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var dryRun bool
 	var seatKinds []string
 	var seatHosts []string
+	var transports []string
 	var asSeat string
 	var keepSessions bool
 	var inPlace bool
@@ -97,6 +98,26 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				}
 				hosts[parts[0]] = parts[1]
 			}
+
+			// --transport kind=acp|cmd routes those kinds' stints over the Agent
+			// Client Protocol (a persistent stdio JSON-RPC session) instead of a
+			// one-shot headless command. An empty map keeps the all-command default
+			// (zero behavior change).
+			transportModes := map[string]string{}
+			for _, t := range transports {
+				parts := strings.SplitN(t, "=", 2)
+				if len(parts) != 2 || parts[0] == "" || (parts[1] != "acp" && parts[1] != "cmd") {
+					return fmt.Errorf("--transport must be kind=acp|cmd, got %q", t)
+				}
+				transportModes[parts[0]] = parts[1]
+			}
+
+			idle := time.Duration(idleTimeoutMin) * time.Minute
+			var local orchestrate.Runner = orchestrate.NewCmdRunner(idle)
+			if len(transportModes) > 0 {
+				local = orchestrate.NewRoutedLocalRunner(transportModes, idle)
+			}
+
 			var runner orchestrate.Runner
 			if len(hosts) > 0 {
 				dispatch, closeDispatch, derr := newRelayStintDispatch(ctx)
@@ -106,10 +127,14 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				defer closeDispatch()
 				runner = &orchestrate.RemoteRunner{
 					Hosts:    hosts,
-					Local:    orchestrate.NewCmdRunner(time.Duration(idleTimeoutMin) * time.Minute),
+					Local:    local,
 					Dispatch: dispatch,
 					Timeout:  time.Duration(runTimeoutMin) * time.Minute,
 				}
+			} else if len(transportModes) > 0 {
+				// Only override the withDefaults CmdRunner when ACP routing is asked
+				// for, so a plain run stays byte-for-byte on the command transport.
+				runner = local
 			}
 
 			opts := orchestrate.Options{
@@ -172,6 +197,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")
 	cmd.Flags().StringArrayVar(&seatHosts, "seat-host", nil, "seat=machineId to run that seat's stints on another machine via the relay (repeatable; requires a cloud session + the project's git origin)")
+	cmd.Flags().StringArrayVar(&transports, "transport", nil, "kind=acp|cmd to drive that kind over the Agent Client Protocol instead of a headless command (repeatable), e.g. --transport kimi-cli=acp; default: all cmd")
 	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")
 	return cmd
 }

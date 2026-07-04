@@ -61,7 +61,8 @@ func newDoctorCmd() *cobra.Command {
 		RunE: func(c *cobra.Command, _ []string) error {
 			cwd, _ := os.Getwd()
 			exe, _ := os.Executable()
-			checks := append(doctor.Run(cwd, paths.AgentID(), exe, os.Getenv("PATH")), checkMCP())
+			home, _ := os.UserHomeDir()
+			checks := append(doctor.Run(cwd, paths.AgentID(), exe, os.Getenv("PATH"), home), checkMCP())
 			allOK := true
 			for _, ck := range checks {
 				mark := "✓"

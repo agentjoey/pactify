@@ -3,6 +3,15 @@ import { describe, it, expect, vi } from "vitest";
 import type { State } from "../../lib/types";
 import type { Draft, LayoutJSON } from "../../lib/canvas";
 import { OfficeView } from "./OfficeView";
+import type { ProjectStats } from "../../lib/api";
+
+// Cost lens fetches per-seat stats via getStats; mock it while keeping the real
+// formatting helpers (fmtDuration) intact.
+const getStatsMock = vi.fn<(id: string) => Promise<ProjectStats>>();
+vi.mock("../../lib/api", async (importActual) => {
+  const actual = await importActual<typeof import("../../lib/api")>();
+  return { ...actual, getStats: (id: string) => getStatsMock(id) };
+});
 
 // Fixture exercising every desk status:
 //   bob  → owns T1 in_progress         ⇒ BUSY
@@ -312,6 +321,24 @@ describe("OfficeView", () => {
     rerender(<OfficeView {...baseProps} layout={layoutB} />);
     const after = await screen.findByTestId("desk-bob");
     expect(Object.is(before, after)).toBe(true);
+  });
+
+  it("cost lens shows each seat's ✓accepted ↻reworked reliability badge", async () => {
+    getStatsMock.mockResolvedValue({
+      tasks: [],
+      agents: [
+        { seat: "bob", tasks: 3, duration_sec: 120, added: 40, deleted: 5, tokens: 0, accepted: 3, reworked: 1 },
+        { seat: "carol", tasks: 2, duration_sec: 60, added: 10, deleted: 2, tokens: 0, accepted: 2, reworked: 0 },
+      ],
+    });
+    render(<OfficeView {...baseProps} project="demo" />);
+    await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Cost" }));
+
+    await waitFor(() => expect(screen.getByTestId("seat-reliability-bob")).toBeInTheDocument());
+    expect(screen.getByTestId("seat-reliability-bob").textContent).toBe("✓3↻1");
+    expect(screen.getByTestId("seat-reliability-carol").textContent).toBe("✓2↻0");
   });
 
   it("renders the transit overlay when a pulsed task changes to awaiting_review", async () => {

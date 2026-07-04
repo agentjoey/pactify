@@ -881,6 +881,10 @@ function OfficeViewInner({
                   <span style={{ color: "var(--color-role-dev-ink)" }}>+{a.added}</span>
                   <span style={{ color: "var(--color-danger)" }}>−{a.deleted}</span>
                   {a.tokens > 0 && <span>⛁ {a.tokens.toLocaleString()}</span>}
+                  <span data-testid={`seat-reliability-${a.seat}`} style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                    <span style={{ color: "var(--color-success)" }}>✓{a.accepted}</span>
+                    <span style={{ color: "var(--color-warn)" }}>↻{a.reworked}</span>
+                  </span>
                 </span>
               </div>
             ))}

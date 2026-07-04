@@ -268,6 +268,8 @@ export class RelaySource implements DataSource {
       added: 0,
       deleted: 0,
       tokens: 0,
+      accepted: 0,
+      reworked: 0,
     }));
     return { tasks, agents };
   }

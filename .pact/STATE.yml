@@ -246,7 +246,7 @@ features:
         deps: [proj-fixture]
   - id: web-hygiene
     branch: feat-web-hygiene
-    status: in_progress
+    status: shipped
     tasks:
       - id: fe-apihygiene
         owner: kimi-worker

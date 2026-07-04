@@ -229,7 +229,7 @@ features:
         deps: [ds-core]
   - id: ts-projection
     branch: feat-ts-projection
-    status: in_progress
+    status: shipped
     tasks:
       - id: proj-fixture
         owner: opencode-worker

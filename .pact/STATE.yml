@@ -386,7 +386,7 @@ features:
         deps: [dm-acp-runner, dm-session-resume]
   - id: review-runtime
     branch: feat-review-runtime
-    status: in_progress
+    status: shipped
     tasks:
       - id: rp-fix-loop
         owner: claude-worker

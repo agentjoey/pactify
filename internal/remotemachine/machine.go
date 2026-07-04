@@ -61,6 +61,8 @@ type Config struct {
 	Orch remoteexec.Orchestrator
 	// Plan runs remote plan generate/apply, policy-gated. Nil = disabled.
 	Plan remoteexec.Planner
+	// Prov clones + registers a repo (pact.provision), machine-gated. Nil = off.
+	Prov remoteexec.Provisioner
 }
 
 // Run connects to the relay as a machine, registers its presence (host + agent
@@ -95,7 +97,7 @@ func Run(ctx context.Context, cfg Config) error {
 	}()
 
 	// Remote command execution — only when a resolver or stinter is configured.
-	if cfg.Resolve != nil || cfg.Stint != nil || cfg.Orch != nil || cfg.Plan != nil {
+	if cfg.Resolve != nil || cfg.Stint != nil || cfg.Orch != nil || cfg.Plan != nil || cfg.Prov != nil {
 		tr := &socketTransport{ch: make(chan []byte, 32)}
 		client.On("rpc", func(args []json.RawMessage) {
 			if len(args) != 1 {
@@ -108,7 +110,7 @@ func Run(ctx context.Context, cfg Config) error {
 		})
 		ex := &remoteexec.Executor{
 			Account:    cfg.Account,
-			Dispatcher: &remoteexec.Dispatcher{Account: cfg.Account, Resolve: cfg.Resolve, Stint: cfg.Stint, Orch: cfg.Orch, Plan: cfg.Plan},
+			Dispatcher: &remoteexec.Dispatcher{Account: cfg.Account, Resolve: cfg.Resolve, Stint: cfg.Stint, Orch: cfg.Orch, Plan: cfg.Plan, Prov: cfg.Prov},
 		}
 		go func() { _ = ex.Run(ctx, tr) }()
 	}

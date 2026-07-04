@@ -20,6 +20,7 @@ var pactTypes = map[string]bool{
 	"orchestrate.resume": true,
 	"plan.generate":      true,
 	"plan.apply":         true,
+	"pact.provision":     true,
 }
 
 // IsPactType reports whether t is a pactify pact-verb rpc type.
@@ -47,6 +48,8 @@ type wireRPC struct {
 	SeatKinds   map[string]string `json:"seatKinds"`
 	Goal        string            `json:"goal"`
 	PlannerKind string            `json:"plannerKind"`
+	RepoURL     string            `json:"repoUrl"`
+	Name        string            `json:"name"`
 }
 
 // ParseRPC decodes a raw wire rpc payload into an RPC, rejecting anything that is
@@ -80,5 +83,7 @@ func ParseRPC(raw []byte) (RPC, error) {
 		SeatKinds:   w.SeatKinds,
 		Goal:        w.Goal,
 		PlannerKind: w.PlannerKind,
+		RepoURL:     w.RepoURL,
+		Name:        w.Name,
 	}, nil
 }

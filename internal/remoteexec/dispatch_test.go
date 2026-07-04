@@ -209,3 +209,35 @@ func TestHandle_Plan(t *testing.T) {
 		t.Fatal("plan should be disabled when Plan nil")
 	}
 }
+
+type fakeProv struct {
+	gotURL, gotName string
+	err             error
+}
+
+func (f *fakeProv) Provision(url, name string) (string, error) {
+	f.gotURL, f.gotName = url, name
+	return "demo", f.err
+}
+
+func TestHandle_Provision(t *testing.T) {
+	fp := &fakeProv{}
+	d := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{}), Prov: fp}
+	// No project required for provision.
+	r := d.Handle(RPC{Type: "pact.provision", Account: "acct1", RepoURL: "git@x:demo.git", Name: "demo"})
+	if !r.OK || r.RunID != "demo" {
+		t.Fatalf("provision should accept + return name, got %+v", r)
+	}
+	if fp.gotURL != "git@x:demo.git" || fp.gotName != "demo" {
+		t.Fatalf("provision args wrong: %s / %s", fp.gotURL, fp.gotName)
+	}
+	// Missing repoUrl → rejected.
+	if r := d.Handle(RPC{Type: "pact.provision", Account: "acct1", Name: "demo"}); r.OK {
+		t.Fatal("provision without repoUrl should fail")
+	}
+	// Disabled → rejected.
+	d2 := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{})}
+	if r := d2.Handle(RPC{Type: "pact.provision", Account: "acct1", RepoURL: "u", Name: "n"}); r.OK {
+		t.Fatal("provision should be disabled when Prov nil")
+	}
+}

@@ -38,6 +38,8 @@ type RPC struct {
 	SeatKinds   map[string]string // orchestrate.run: seat → agent kind
 	Goal        string            // plan.generate: the goal prompt
 	PlannerKind string            // plan.generate: planner agent kind
+	RepoURL     string            // provision: git URL to clone
+	Name        string            // provision: registry name for the clone
 }
 
 // StintRequest is a remote request to run one agent stint (spawn an agent CLI to
@@ -50,6 +52,14 @@ type StintRequest struct {
 	AgentKind string
 	Briefing  string
 	Branch    string // feature branch to run on (from the driver; "" = resolve locally)
+}
+
+// Provisioner clones a repo onto the machine and registers it (pact.provision).
+// serve implements it (machine-level policy: requires a configured provision
+// dir; default off). Nil = remote provisioning disabled. It has no project (the
+// project doesn't exist yet), so it's dispatched before the project resolve.
+type Provisioner interface {
+	Provision(repoURL, name string) (registeredName string, err error)
 }
 
 // PlanRequest drives remote plan generation/application.
@@ -98,6 +108,9 @@ type Stinter interface {
 type Reply struct {
 	OK    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
+	// RunID carries an operation identifier back to the caller (e.g. the
+	// registered project name from a provision). Optional.
+	RunID string `json:"runId,omitempty"`
 }
 
 // PactEngine is the subset of *pact.Project the dispatcher drives. *pact.Project
@@ -134,6 +147,8 @@ type Dispatcher struct {
 	Orch Orchestrator
 	// Plan runs remote plan generate/apply (plan.generate/apply). Nil = disabled.
 	Plan Planner
+	// Prov clones + registers a repo (pact.provision). Nil = disabled.
+	Prov Provisioner
 }
 
 // Handle executes one rpc and returns a Reply. It never panics on bad input:
@@ -143,6 +158,20 @@ func (d *Dispatcher) Handle(rpc RPC) Reply {
 	// Auth scope: an empty machine account accepts nothing (fail closed).
 	if d.Account == "" || rpc.Account != d.Account {
 		return fail(ErrAccountScope.Error())
+	}
+	// Provision has no project (it creates one) — dispatch before the project check.
+	if rpc.Type == "pact.provision" {
+		if d.Prov == nil {
+			return fail("remote provisioning not enabled for this machine")
+		}
+		if rpc.RepoURL == "" || rpc.Name == "" {
+			return fail("pact.provision requires repoUrl and name")
+		}
+		name, err := d.Prov.Provision(rpc.RepoURL, rpc.Name)
+		if err != nil {
+			return fail(err.Error())
+		}
+		return Reply{OK: true, RunID: name}
 	}
 	if rpc.Project == "" {
 		return fail("rpc missing project")

@@ -321,3 +321,66 @@ features:
         reviewer: claude
         spec: .pact/tasks/fe-machines.md
         evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test\n\n- npx tsc -b: clean (no output)\n- npx vitest run: 61 test files passed, 505 tests passed\n- npx playwright test: 5 e2e tests passed\n- npm run build: rebuilt internal/serve/dist SPA\n- go build ./...: clean\n\nFiles changed:\n- web/src/lib/types.ts: added Machine type\n- web/src/lib/datasource.tsx: added optional getMachines to DataSource; LocalServeSource does not implement\n- web/src/lib/relaysource.ts: implemented RelaySource.getMachines via client.listMachines()\n- web/src/lib/relaysource.test.ts: added getMachines mapping test\n- web/src/components/Machines.tsx + .test.tsx: new read-only machine roster view\n- web/src/components/shell/SettingsModal.tsx: added 'Machines' item under ACCOUNT scope\n- internal/serve/dist/: rebuilt production SPA
+  - id: driver-modernization
+    branch: feat-driver-modernization
+    status: in_progress
+    tasks:
+      - id: dm-acp-core
+        owner: claude-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-acp-core.md
+        evidence: null
+      - id: dm-acp-runner
+        owner: claude-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-acp-runner.md
+        evidence: null
+        deps: [dm-acp-core]
+      - id: dm-acp-usage
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-acp-usage.md
+        evidence: null
+        deps: [dm-acp-runner]
+      - id: dm-session-resume
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-session-resume.md
+        evidence: null
+        deps: [dm-acp-runner]
+      - id: dm-knowledge
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-knowledge.md
+        evidence: null
+      - id: dm-doctor
+        owner: gemini-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-doctor.md
+        evidence: null
+      - id: dm-stats
+        owner: gemini-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-stats.md
+        evidence: null
+      - id: dm-stats-web
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-stats-web.md
+        evidence: null
+        deps: [dm-stats]
+      - id: dm-e2e-docs
+        owner: claude-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/dm-e2e-docs.md
+        evidence: null
+        deps: [dm-acp-runner, dm-session-resume]

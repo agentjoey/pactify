@@ -37,6 +37,12 @@ func (opts Options) withDefaults() Options {
 	if opts.Notify == nil {
 		opts.Notify = StdoutNotifier{}
 	}
+	// Default the pre-review fix-until-green bound (spec §1 WS-F). 0-unset ==
+	// 0-explicit here (same shape as the Thresholds), so the default stands unless a
+	// caller sets a positive bound; the CLI plumbs --max-fix-rounds.
+	if opts.MaxFixRounds == 0 {
+		opts.MaxFixRounds = 2
+	}
 	// Wire the real session-management runner only when cleanup is enabled, so the
 	// loop never spawns a session CLI unless the operator asked for it (and tests,
 	// which leave both unset, stay hermetic).

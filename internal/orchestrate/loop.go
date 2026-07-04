@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/gitx"
@@ -44,6 +45,14 @@ type Options struct {
 	// (Merge). "" falls back to PACT_AGENT_ID (tests rely on the env fallback; the
 	// CLI resolves it from --as / PACT_AGENT_ID and fail-fasts when both are empty).
 	Orchestrator string
+	// MaxFixRounds bounds the pre-review fix-until-green self-repair loop (spec §1
+	// WS-F): after a worker checkpoints a task, the driver runs the task's verify
+	// gate BEFORE launching the reviewer; on a RED gate it re-runs the SAME owner
+	// with a "fix round" briefing up to this many times before falling through to
+	// the existing changes/escalation path. Fix rounds are in-stint self-repair —
+	// they do NOT count toward MaxFails/MaxRework. Default 2 (withDefaults); 0
+	// means a RED gate escalates immediately (no self-repair).
+	MaxFixRounds int
 	// RunTimeout bounds a single agent run end-to-end (a hard backstop). On expiry
 	// the agent subprocess is killed and the run counts as a soft failure (retry →
 	// escalate). 0 = no timeout (tests use the fake runner which returns instantly).
@@ -186,6 +195,12 @@ func (opts Options) run(ctx context.Context) error {
 	h := History{Rework: seedRework(opts.Dir), Fails: map[string]int{}, LastFail: map[string]string{}}
 	loadHistory(opts.runtimeDir(), scope, &h)
 
+	// fixRounds counts the pre-review self-repair rounds already spent per task
+	// (spec §1 WS-F). It is DELIBERATELY driver in-memory only — I-3 forbids a new
+	// ledger event_type for it, and it is not a failure budget, so it is neither
+	// persisted (unlike History.Fails) nor ledger-derived (unlike History.Rework).
+	fixRounds := map[string]int{}
+
 	// Startup sweep: drop ACP session records whose task went terminal while the
 	// driver was down (spec §2 orphan cleanup). Best-effort, off the DryRun path.
 	if !opts.DryRun {
@@ -273,6 +288,18 @@ func (opts Options) run(ctx context.Context) error {
 			_ = writeHistory(opts.runtimeDir(), scope, h)
 
 		case ActRunReviewer:
+			// Fix-until-green self-repair (spec §1 WS-F): before handing a
+			// checkpointed task to the reviewer, run its verify gate. GREEN → fall
+			// through to the reviewer exactly as before. RED → re-run the SAME owner
+			// with a fix briefing (bounded by MaxFixRounds; NOT a failure), rechecking
+			// the gate each round. Rounds exhausted → escalate (proceed=false).
+			proceed, err := opts.fixUntilGreen(ctx, st, view, act, &h, fixRounds)
+			if err != nil {
+				return err
+			}
+			if !proceed {
+				return nil // rounds exhausted → escalated: paused, not failed
+			}
 			if err := opts.runReviewer(ctx, st, &h, act); err != nil {
 				return err
 			}
@@ -431,6 +458,106 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 		h.Fails[act.Task]++
 	}
 	return nil
+}
+
+// fixUntilGreen is the pre-review fix-until-green self-repair loop (spec §1
+// WS-F). It is called for an awaiting_review task BEFORE its reviewer launches:
+//
+//   - It runs the task's verify gate (its own `verify:` line, else the config
+//     gate — the same "task verify: > config gate" resolution the merge gate uses).
+//   - GREEN → returns proceed=true and performs NO state writes, so the caller's
+//     reviewer launch is byte-for-byte identical to the pre-WS-F flow (the only
+//     added effect on a green first try is the gate exec itself).
+//   - RED → re-runs the SAME owner with a fix briefing (tail of the verify output
+//     + "you already checkpointed; fix until the gate is green, then checkpoint
+//     again"), rechecking the gate after each round, bounded by opts.MaxFixRounds.
+//     Fix rounds are in-stint self-repair: they NEVER touch h.Fails/h.Rework, so
+//     they do not count toward MaxFails/MaxRework.
+//   - Rounds exhausted → escalates with the last verify output as the reason and
+//     returns proceed=false so the loop pauses (the existing escalation path).
+func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State, act Action, h *History, fixRounds map[string]int) (proceed bool, err error) {
+	_, task, ok := find(st, act.Feature, act.Task)
+	if !ok {
+		// No such task (should not happen for an awaiting_review action): defer the
+		// lookup error to runReviewer so the handling stays in one place.
+		return true, nil
+	}
+	cmd := opts.taskGateCommand(task)
+	for {
+		passed, detail := runGate(ctx, opts.Exec, opts.Dir, cmd)
+		if passed {
+			return true, nil
+		}
+		// RED. Out of fix rounds → escalate with the last verify output as reason.
+		if fixRounds[act.Task] >= opts.MaxFixRounds {
+			reason := fmt.Sprintf("fix-until-green exhausted after %d round(s); verify still failing:\n%s",
+				fixRounds[act.Task], detail)
+			opts.emitEscalatedStatus(view, act.Task, reason, *h)
+			return false, opts.escalate(act.Task, reason, evidenceFor(st, act.Task),
+				"人工修复 verify 失败后 pactify orchestrate 续跑")
+		}
+		// Re-run the SAME owner with a fix briefing. Count the round FIRST (driver
+		// in-memory only — not a failure, not a ledger event) so a persistently
+		// erroring fixer still terminates at MaxFixRounds.
+		fixRounds[act.Task]++
+		opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task])
+		brief := fixBrief(task, detail)
+		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
+			if ctx.Err() != nil {
+				return false, runErr // cancellation: propagate, don't swallow
+			}
+			// A fix-round agent error is not a task failure (in-stint self-repair):
+			// leave h.Fails untouched and let the gate recheck decide. The round is
+			// already counted, so this cannot spin.
+		}
+		// Mirror the (possibly new) checkpoint into the runtime dir so a sandboxed
+		// run's board reflects the fix mid-loop instead of freezing until the next
+		// top-of-loop mirror.
+		opts.mirrorLedger()
+	}
+}
+
+// taskGateCommand resolves the verify command for a single task: its own
+// `verify:` line when present, else the project config gate (resolveGate) — the
+// same "task verify: > config gate" precedence gateCommands applies per feature.
+func (opts Options) taskGateCommand(task projection.Task) string {
+	if cmd, ok := extractVerify(readSpec(opts.Dir, task.Spec)); ok {
+		return cmd
+	}
+	return resolveGate(opts.Dir)
+}
+
+// fixBrief renders the fix-round briefing for the pre-review self-repair loop: it
+// tells the owner it already checkpointed, shows the tail (~2KB) of the failing
+// verify output, and asks it to fix until the gate is green and checkpoint again.
+func fixBrief(task projection.Task, verifyOutput string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# pact fix round — task `%s`\n\n", task.ID)
+	b.WriteString("你上一轮已经 `pactify checkpoint` 了这个 task,但驱动器在交给 reviewer 前先跑验收门(verify)——**门是红的**。\n")
+	b.WriteString("这不是返工、也不算失败,是评审前的自愈轮:请直接修到门绿。\n\n")
+	b.WriteString("## 修什么\n")
+	fmt.Fprintf(&b, "- 读规格:`%s`。只碰该 spec 列出的文件。\n", task.Spec)
+	b.WriteString("- 下面是失败的 verify 输出(尾部),按它定位并修复:\n\n")
+	b.WriteString("```\n" + tailBytes(verifyOutput, 2048) + "\n```\n\n")
+	fmt.Fprintf(&b, "- 修好后重新 `pactify checkpoint %s` 附上验收命令输出。修到门绿为止,不要自标 accepted。\n", task.ID)
+	return b.String()
+}
+
+// tailBytes returns the last n bytes of s, trimmed forward to the next rune
+// boundary so a multi-byte character is never split, prefixed with a truncation
+// marker when it dropped anything.
+func tailBytes(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	cut := s[len(s)-n:]
+	for i := 0; i < len(cut) && i < utf8.UTFMax; i++ {
+		if utf8.RuneStart(cut[i]) {
+			cut = cut[i:]
+			break
+		}
+	}
+	return "...(truncated)...\n" + cut
 }
 
 // cleanupTaskSessions closes the sessions an accepted task's agents created,
@@ -691,6 +818,13 @@ func (opts Options) emitLoopStatus(view projection.State, act Action, h History)
 // Write errors are silently ignored (status is observation, not a transaction source).
 func (opts Options) emitEscalatedStatus(view projection.State, task, reason string, h History) {
 	writeStatus(opts.runtimeDir(), buildEscalatedStatus(view, task, reason, h, func() string { return statusNow(opts.Now) }))
+}
+
+// emitFixingStatus writes a `fixing` snapshot so the board shows "fixing n/max"
+// while the pre-review self-repair loop re-runs the owner (spec §1 WS-F).
+// Write errors are silently ignored (status is observation, not a transaction source).
+func (opts Options) emitFixingStatus(view projection.State, act Action, owner string, h History, round int) {
+	writeStatus(opts.runtimeDir(), buildFixingStatus(view, act, owner, h, round, opts.MaxFixRounds, func() string { return statusNow(opts.Now) }))
 }
 
 // --- small state/log helpers -------------------------------------------------

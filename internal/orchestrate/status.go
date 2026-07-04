@@ -24,6 +24,11 @@ type Status struct {
 	Total     int    `json:"total"`
 	Accepted  int    `json:"accepted"`
 	Iter      int    `json:"iter"`
+	// FixRound / FixMax surface the pre-review fix-until-green self-repair loop
+	// (spec §1 WS-F): when Phase == "fixing" they carry the current round and the
+	// bound, so the board can show "fixing n/2". Omitted (0) outside a fix loop.
+	FixRound  int    `json:"fix_round,omitempty"`
+	FixMax    int    `json:"fix_max,omitempty"`
 	UpdatedAt string `json:"updated_at"`
 }
 
@@ -75,6 +80,27 @@ func buildEscalatedStatus(view projection.State, task, reason string, h History,
 		}
 	}
 	return s
+}
+
+// buildFixingStatus assembles the `fixing` snapshot the pre-review self-repair
+// loop emits while re-running the owner (spec §1 WS-F). Seat is the OWNER doing
+// the fix (not the reviewer named in the ActRunReviewer that triggered it). Pure,
+// so serial and any future parallel caller build identical statuses.
+func buildFixingStatus(view projection.State, act Action, owner string, h History, round, max int, now func() string) Status {
+	total, accepted := progress(view)
+	return Status{
+		Feature:   act.Feature,
+		Task:      act.Task,
+		Seat:      owner,
+		Action:    "run_owner",
+		Phase:     "fixing",
+		FixRound:  round,
+		FixMax:    max,
+		Total:     total,
+		Accepted:  accepted,
+		Iter:      h.Iters,
+		UpdatedAt: now(),
+	}
 }
 
 // parallelStatusDir is where the parallel driver writes one status file per

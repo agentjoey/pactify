@@ -20,7 +20,9 @@
        No baseUrl (deprecated in TS7): with moduleResolution "bundler", paths are
        resolved relative to this tsconfig's location. */
     "paths": {
-      "@pactify-apps/pact-project": ["../cloud/pact-project/src/index.ts"]
+      "@pactify-apps/pact-project": ["../cloud/pact-project/src/index.ts"],
+      "@pactify-apps/crypto": ["../cloud/crypto/src/index.ts"],
+      "@pactify-apps/wire": ["../cloud/wire/src/index.ts"]
     },
 
     /* Linting */

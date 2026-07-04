@@ -18,6 +18,12 @@ export default defineConfig({
       "@pactify-apps/pact-project": fileURLToPath(
         new URL("../cloud/pact-project/src/index.ts", import.meta.url),
       ),
+      "@pactify-apps/crypto": fileURLToPath(
+        new URL("../cloud/crypto/src/index.ts", import.meta.url),
+      ),
+      "@pactify-apps/wire": fileURLToPath(
+        new URL("../cloud/wire/src/index.ts", import.meta.url),
+      ),
     },
   },
   // Dev server proxies the API + SSE stream (both live under /api) to the running

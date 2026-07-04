@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client'
 import { deriveAccountKeypair, deriveProjectKey, decryptEvent } from '@pactify-apps/crypto'
-import type { EncryptedBlob } from '@pactify-apps/wire'
+import type { EncryptedBlob, RpcRequest } from '@pactify-apps/wire'
 
 /** The cleartext header of one pact event (as served by /v1/pact/projects/:id/events). */
 export interface PactEventHeader {
@@ -133,6 +133,30 @@ export class RelayClient {
   disconnect(): void {
     this.socket?.disconnect()
     this.socket = null
+    this.control?.disconnect()
+    this.control = null
+  }
+
+  // A persistent control socket for outbound rpc (distinct from the per-project
+  // subscribe sockets). Opened lazily on first sendRpc.
+  private control: Socket | null = null
+
+  private controlSocket(): Socket {
+    if (!this.control) {
+      this.control = io(this.url, { auth: { token: this.token, role: 'client' } })
+    }
+    return this.control
+  }
+
+  /**
+   * Send a pact command (U3 P-b rpc type) to the target machine. Fire-and-forget:
+   * the relay routes it by `machineId` and the machine executes it locally; the
+   * EFFECT comes back through the event stream (the executed verb appends to the
+   * ledger, which the machine uploads and the board re-projects), not a direct
+   * ack — so there is no reply to await here. Requires a prior login() for the token.
+   */
+  sendRpc(rpc: RpcRequest): void {
+    this.controlSocket().emit('rpc', rpc)
   }
 }
 

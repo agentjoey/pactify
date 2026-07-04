@@ -7,6 +7,7 @@ import type { PactEventBroadcast } from '../src/index'
 let lastFakeSocket: {
   handlers: Record<string, (arg: unknown) => void>
   emit: (event: string, arg: unknown) => void
+  emitted: Array<{ ev: string; arg: unknown }>
   disconnected: boolean
 }
 vi.mock('socket.io-client', () => ({
@@ -14,6 +15,7 @@ vi.mock('socket.io-client', () => ({
     const handlers: Record<string, (arg: unknown) => void> = {}
     const sock = {
       handlers,
+      emitted: [] as Array<{ ev: string; arg: unknown }>,
       disconnected: false,
       on(ev: string, fn: (arg: unknown) => void) {
         handlers[ev] = fn
@@ -25,6 +27,7 @@ vi.mock('socket.io-client', () => ({
         this.disconnected = true
       },
       emit(ev: string, arg: unknown) {
+        this.emitted.push({ ev, arg })
         handlers[ev]?.(arg)
       },
     }
@@ -126,5 +129,12 @@ describe('RelayClient', () => {
     off()
     expect(lastFakeSocket.disconnected).toBe(true)
     expect(lastFakeSocket.handlers['pact-event']).toBeUndefined()
+  })
+
+  it('sendRpc emits the pact rpc on a control socket (fire-and-forget)', () => {
+    const c = new RelayClient(URL, MASTER)
+    const rpc = { type: 'pact.accept' as const, machineId: 'm1', project: 'p1', task: 't1' }
+    c.sendRpc(rpc)
+    expect(lastFakeSocket.emitted).toContainEqual({ ev: 'rpc', arg: rpc })
   })
 })

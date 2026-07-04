@@ -366,10 +366,10 @@ features:
         evidence: null
       - id: dm-stats
         owner: gemini-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/dm-stats.md
-        evidence: null
+        evidence: go test ./internal/stats/ ./internal/serve/ PASS; build+vet clean. AgentStat+Accepted/Reworked, fold from accept + changes_requested events (real event type verified vs internal/event), owner-attributed; serve /stats auto-carries (embedded); +2 fold tests incl chaining survival.
       - id: dm-stats-web
         owner: kimi-worker
         status: assigned

@@ -273,7 +273,7 @@ features:
         deps: [relay-client]
   - id: web-polish
     branch: feat-web-polish
-    status: in_progress
+    status: shipped
     tasks:
       - id: fe-codesplit
         owner: kimi-worker

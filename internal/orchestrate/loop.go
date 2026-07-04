@@ -307,13 +307,28 @@ func (opts Options) run(ctx context.Context) error {
 			if !proceed {
 				return nil // rounds exhausted → escalated: paused, not failed
 			}
+			// QA-agent gate (spec §4 WS-I, experimental, task-level opt-in): with the
+			// verify gate green and BEFORE the critic (order: 先 QA 后 critic), if the
+			// task declares a `qa:` hint, run the software to verify it. A QA FAIL feeds
+			// the SAME WS-F fix loop, sharing fixRounds/MaxFixRounds. No `qa:` line → ""
+			// and zero extra stints (byte-identical flow).
+			qaNote, proceed, err := opts.runQA(ctx, st, view, act, &h, fixRounds)
+			if err != nil {
+				return err
+			}
+			if !proceed {
+				return nil // QA fix rounds exhausted → escalated: paused, not failed
+			}
 			// Critic pre-review score (spec §3 WS-H): with the gate green and before
 			// the reviewer, if a critic seat is configured, run it read-only, record
 			// its score as a task note, and inject the score into the reviewer's
 			// briefing. No gating power (I-2); no critic configured → "" and the
 			// reviewer launch is byte-for-byte unchanged.
 			criticNote := opts.runCritic(ctx, st, act)
-			if err := opts.runReviewer(ctx, st, &h, act, criticNote); err != nil {
+			// Both pre-review injections (QA report path + critic score) share the
+			// reviewer briefing's single pre-review section; all-empty leaves it
+			// byte-for-byte unchanged.
+			if err := opts.runReviewer(ctx, st, &h, act, joinNotes(qaNote, criticNote)); err != nil {
 				return err
 			}
 			_ = writeHistory(opts.runtimeDir(), scope, h)

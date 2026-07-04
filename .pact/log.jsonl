@@ -229,3 +229,5 @@
 {"event_id":"325051dacc90e65ed9ebee20955e325f","ts":"2026-07-04T04:28:29Z","agent_id":"claude","role":"reviewer","event_type":"accept","task_id":"fe-lazycanvas","feature":"web-polish2","payload":{}}
 {"event_id":"9e1a75e8219cac08d2b0122e599eec76","ts":"2026-07-04T04:28:44Z","agent_id":"claude","role":"orchestrator","event_type":"merge","task_id":"","feature":"web-polish2","payload":{}}
 {"event_id":"eed603b852081e602b62e48ada13be4a","ts":"2026-07-04T04:30:36Z","agent_id":"claude","role":"orchestrator","event_type":"assign","task_id":"fe-lazyrelay","feature":"web-polish3","payload":{"branch":"feat-web-polish3","owner":"kimi-worker","reviewer":"claude","spec":".pact/tasks/fe-lazyrelay.md"}}
+{"event_id":"4116fb89c6dc5308159a48cdc811118e","ts":"2026-07-04T04:30:45Z","agent_id":"claude","role":"orchestrator","event_type":"start","task_id":"fe-lazyrelay","feature":"web-polish3","payload":{"owner":"kimi-worker"}}
+{"event_id":"31eb80888ab92ee8116eb3cdd36573fa","ts":"2026-07-04T04:30:53Z","agent_id":"kimi-worker","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"roles":["worker"]}}

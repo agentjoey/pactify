@@ -297,7 +297,7 @@ features:
     tasks:
       - id: fe-lazyrelay
         owner: kimi-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/fe-lazyrelay.md
         evidence: null

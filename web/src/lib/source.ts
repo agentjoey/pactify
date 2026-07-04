@@ -1,5 +1,4 @@
-import { RelayClient } from "@pactify-apps/relay-client";
-import { RelaySource } from "./relaysource";
+import type { RelaySource } from "./relaysource";
 import { LocalServeSource, type DataSource } from "./datasource";
 
 // The dashboard runs in one of two modes, decided at build time by whether a
@@ -52,6 +51,10 @@ export async function connectRelaySource(masterHex: string): Promise<RelaySource
     throw new Error("no relay configured (VITE_PACTIFY_RELAY_URL unset)");
   }
   const master = hexToBytes(masterHex);
+  const [{ RelaySource }, { RelayClient }] = await Promise.all([
+    import("./relaysource"),
+    import("@pactify-apps/relay-client"),
+  ]);
   const client = new RelayClient(RELAY_URL, master);
   await client.login();
   return new RelaySource(client);

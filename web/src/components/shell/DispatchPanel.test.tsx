@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DispatchPanel } from "./DispatchPanel";
 import type { Seat } from "../../lib/types";
+import { DataSourceProvider } from "../../lib/datasource";
 
 const generatePlan = vi.fn();
 const getPlanGenStatus = vi.fn();
@@ -28,7 +29,9 @@ beforeEach(() => {
 
 function open() {
   return render(
-    <DispatchPanel project="p1" roster={roster} open onClose={() => {}} onGoLive={() => {}} />,
+    <DataSourceProvider>
+      <DispatchPanel project="p1" roster={roster} open onClose={() => {}} onGoLive={() => {}} />
+    </DataSourceProvider>,
   );
 }
 
@@ -40,7 +43,11 @@ describe("DispatchPanel", () => {
   });
 
   it("disables Generate when roster is empty", () => {
-    render(<DispatchPanel project="p1" roster={[]} open onClose={() => {}} onGoLive={() => {}} />);
+    render(
+      <DataSourceProvider>
+        <DispatchPanel project="p1" roster={[]} open onClose={() => {}} onGoLive={() => {}} />
+      </DataSourceProvider>,
+    );
     fireEvent.change(screen.getByTestId("dispatch-goal"), { target: { value: "x" } });
     expect(screen.getByTestId("dispatch-generate")).toBeDisabled();
   });
@@ -84,5 +91,33 @@ describe("DispatchPanel", () => {
     fireEvent.change(screen.getByTestId("dispatch-goal"), { target: { value: "add 2fa" } });
     fireEvent.click(screen.getByTestId("dispatch-generate"));
     await waitFor(() => expect(screen.getByTestId("dispatch-error")).toHaveTextContent("planner failed"));
+  });
+});
+
+describe("DispatchPanel — capability gating", () => {
+  it("disables Generate and Dispatch when the source is read-only", () => {
+    const readOnly = {
+      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true },
+      listProjects: vi.fn(),
+      getState: vi.fn(),
+      getStats: vi.fn(),
+      subscribe: vi.fn(),
+      generatePlan: vi.fn(),
+      getPlanGenStatus: vi.fn(),
+      getPlanReview: vi.fn().mockResolvedValue({
+        present: true, feature: "add-2fa", valid: true,
+        tasks: [{ id: "t1", owner: "kimi", reviewer: "claude", spec: "", verify: "" }],
+      }),
+      applyPlan: vi.fn(),
+      runOrchestrate: vi.fn(),
+    };
+    render(
+      <DataSourceProvider source={readOnly}>
+        <DispatchPanel project="p1" roster={roster} open onClose={() => {}} onGoLive={() => {}} />
+      </DataSourceProvider>,
+    );
+    fireEvent.change(screen.getByTestId("dispatch-goal"), { target: { value: "add 2fa" } });
+    expect(screen.getByTestId("dispatch-generate")).toBeDisabled();
+    expect(screen.getByTestId("dispatch-generate")).toHaveAttribute("title", "Remote control needs U3");
   });
 });

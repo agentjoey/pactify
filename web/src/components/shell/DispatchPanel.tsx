@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Seat, PlanReviewResponse } from "../../lib/types";
-import { generatePlan, getPlanGenStatus, getPlanReview, applyPlan, runOrchestrate } from "../../lib/api";
+import { useDataSource } from "../../lib/datasource";
 import { slugify } from "../../lib/slug";
 
 type Phase = "compose" | "generating" | "review" | "dispatching" | "done" | "error";
@@ -21,6 +21,8 @@ export function DispatchPanel({
   // Seeds the goal field when the panel opens (e.g. from the canvas NL dock).
   initialGoal?: string;
 }) {
+  const src = useDataSource();
+  const canWrite = src.capabilities.canWrite;
   const [phase, setPhase] = useState<Phase>("compose");
   const [goal, setGoal] = useState("");
   const [feature, setFeature] = useState("");
@@ -47,13 +49,14 @@ export function DispatchPanel({
 
   if (!open) return null;
 
-  const canGenerate = goal.trim() !== "" && /^[a-z0-9][a-z0-9-]*$/.test(feature) && roster.length > 0;
+  const canGenerate = goal.trim() !== "" && /^[a-z0-9][a-z0-9-]*$/.test(feature) && roster.length > 0 && canWrite;
 
   async function startGenerate() {
+    if (!canWrite) return;
     setError("");
     setPhase("generating");
     try {
-      await generatePlan(project, { goal, feature });
+      await src.generatePlan!(project, { goal, feature });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setPhase("error");
@@ -61,10 +64,10 @@ export function DispatchPanel({
     }
     pollRef.current = setInterval(async () => {
       try {
-        const st = await getPlanGenStatus(project);
+        const st = await src.getPlanGenStatus!(project);
         if (st.state === "done") {
           if (pollRef.current) clearInterval(pollRef.current);
-          const rv = await getPlanReview(project, feature);
+          const rv = await src.getPlanReview!(project, feature);
           setReview(rv);
           setPhase("review");
         } else if (st.state === "error") {
@@ -77,11 +80,12 @@ export function DispatchPanel({
   }
 
   async function dispatch() {
+    if (!canWrite) return;
     setPhase("dispatching");
     try {
-      const r = await applyPlan(project, feature);
+      const r = await src.applyPlan!(project, feature);
       setAssigned(r.assigned);
-      await runOrchestrate(project, { feature });
+      await src.runOrchestrate!(project, { feature });
       setPhase("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -133,6 +137,7 @@ export function DispatchPanel({
                 type="button"
                 data-testid="dispatch-generate"
                 disabled={!canGenerate}
+                title={canWrite ? undefined : "Remote control needs U3"}
                 onClick={startGenerate}
                 className="rounded-md bg-[var(--color-text-1)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-bg-surface)] disabled:opacity-40"
               >Generate</button>
@@ -157,7 +162,8 @@ export function DispatchPanel({
               <button
                 type="button"
                 data-testid="dispatch-confirm"
-                disabled={review.valid === false}
+                disabled={review.valid === false || !canWrite}
+                title={canWrite ? undefined : "Remote control needs U3"}
                 onClick={dispatch}
                 className="rounded-md bg-[var(--color-success)] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40"
               >✓ Dispatch</button>

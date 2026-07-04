@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { State, PactEvent } from "../lib/types";
 import { findTask, canMergeFeature } from "../lib/derive";
-import { postVerb, getStats, fmtDuration, type TaskStat } from "../lib/api";
+import { fmtDuration, type TaskStat } from "../lib/api";
+import { useDataSource } from "../lib/datasource";
 import { AuditLens } from "./AuditLens";
 import { humanizeError } from "../lib/protocolErrors";
 import { relTime } from "../lib/reltime";
@@ -63,6 +64,8 @@ export function RightRail({
   author?: boolean;
   onSelect?: (id: string) => void;
 }) {
+  const src = useDataSource();
+  const canWrite = src.capabilities.canWrite;
   const bt = selected ? findTask(state, selected) : undefined;
   const [reason, setReason] = useState("");
   const [showChanges, setShowChanges] = useState(false);
@@ -79,7 +82,7 @@ export function RightRail({
       return;
     }
     let alive = true;
-    getStats(project)
+    src.getStats(project)
       .then((s) => {
         if (alive) setTaskStat(s.tasks.find((t) => t.task_id === selected) ?? null);
       })
@@ -309,16 +312,18 @@ export function RightRail({
               <Button
                 variant="primary"
                 className="flex-1"
-                disabled={busy}
+                disabled={busy || !canWrite}
+                title={canWrite ? undefined : "Remote control needs U3"}
                 loading={pending === "accept"}
-                onClick={() => run("accept", () => postVerb(project, "accept", { task: task.id }))}
+                onClick={() => run("accept", () => src.verb!(project, "accept", { task: task.id }))}
               >
                 ✓ Accept
               </Button>
               <Button
                 variant="ghost"
                 className="flex-1"
-                disabled={busy}
+                disabled={busy || !canWrite}
+                title={canWrite ? undefined : "Remote control needs U3"}
                 onClick={() => setShowChanges((s) => !s)}
               >
                 ↺ Changes…
@@ -337,11 +342,12 @@ export function RightRail({
                   variant="danger"
                   size="sm"
                   className="mt-1.5"
-                  disabled={busy || !reason.trim()}
+                  disabled={busy || !reason.trim() || !canWrite}
+                  title={canWrite ? undefined : "Remote control needs U3"}
                   loading={pending === "changes"}
                   onClick={() =>
                     run("changes", async () => {
-                      await postVerb(project, "changes", { task: task.id, reason: reason.trim() });
+                      await src.verb!(project, "changes", { task: task.id, reason: reason.trim() });
                       setReason("");
                       setShowChanges(false);
                     })
@@ -364,10 +370,10 @@ export function RightRail({
             </div>
             <Button
               size="sm"
-              disabled={busy || !mergeable}
+              disabled={busy || !mergeable || !canWrite}
               loading={pending === "merge"}
-              title={mergeable ? "" : "all tasks must be accepted"}
-              onClick={() => run("merge", () => postVerb(project, "merge", { feature }))}
+              title={canWrite ? (mergeable ? "" : "all tasks must be accepted") : "Remote control needs U3"}
+              onClick={() => run("merge", () => src.verb!(project, "merge", { feature }))}
             >
               Merge {feature}
             </Button>

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
-import { fetchProjects, fetchState, fetchEventsLog, subscribeEvents, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
+import { fetchEventsLog, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
 import type { Worktree } from "./lib/api";
 import { type View } from "./lib/types";
+import { DataSourceProvider, useDataSource } from "./lib/datasource";
 import { Toolbar } from "./components/shell/Toolbar";
 import { SettingsModal } from "./components/shell/SettingsModal";
 import { AddProjectWizard } from "./components/shell/AddProjectWizard";
@@ -44,7 +45,8 @@ const EVENTS_CAP = 2000;
 // "updates interrupted" indicator shows (first-load failures own loadFailed).
 const FETCH_FAIL_THRESHOLD = 3;
 
-export default function App() {
+function AppContent() {
+  const src = useDataSource();
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
   // A failed first state fetch must NOT read as "still loading" — it suppresses
@@ -126,7 +128,7 @@ export default function App() {
   // projectsLoaded gates the empty-registry hero: only a CONFIRMED-empty
   // registry shows it (never the pre-fetch window, never a failed fetch).
   function refreshProjects() {
-    fetchProjects().then((ps) => {
+    src.listProjects().then((ps) => {
       setProjects(ps);
       setProjectsLoaded(true);
       setCurrent((cur) => {
@@ -310,27 +312,30 @@ export default function App() {
     setState(EMPTY);
     setLoadFailed(false);
     const wt = currentWorktree || undefined;
-    fetchState(current, wt)
+    src.getState(current, wt)
       .then((s) => { if (alive) { noteFetchOk(); applyState(s); } })
       .catch(() => { if (alive) { noteFetchFail(); setState(EMPTY); setLoadFailed(true); } });
     if (!currentWorktree) {
-      const off = subscribeEvents(current, (e) => {
-        if (!alive) return;
-        // Dedupe by event_id: the SSE backfill replays the log tail, which can
-        // overlap a live event that raced in between subscribe and replay.
-        // Checked against the seen-set OUTSIDE the updater (O(1), and keeps the
-        // updater pure), then trimmed to the EVENTS_CAP most recent.
-        if (!seenEventIds.current.has(e.event_id)) {
-          seenEventIds.current.add(e.event_id);
-          setEvents((prev) => {
-            const next = [...prev, e];
-            return next.length > EVENTS_CAP ? next.slice(-EVENTS_CAP) : next;
-          });
-        }
-        fetchState(current)
-          .then((s) => { if (alive) { noteFetchOk(); applyState(s); } })
-          .catch(() => { if (alive) noteFetchFail(); });
-      }, (v) => { if (alive) setLive(v); });
+      const off = src.subscribe(
+        current,
+        (s) => { if (alive) { noteFetchOk(); applyState(s); } },
+        (e) => {
+          if (!alive) return;
+          // Dedupe by event_id: the SSE backfill replays the log tail, which can
+          // overlap a live event that raced in between subscribe and replay.
+          // Checked against the seen-set OUTSIDE the updater (O(1), and keeps the
+          // updater pure), then trimmed to the EVENTS_CAP most recent.
+          if (!seenEventIds.current.has(e.event_id)) {
+            seenEventIds.current.add(e.event_id);
+            setEvents((prev) => {
+              const next = [...prev, e];
+              return next.length > EVENTS_CAP ? next.slice(-EVENTS_CAP) : next;
+            });
+          }
+        },
+        () => { if (alive) noteFetchFail(); },
+        (v) => { if (alive) setLive(v); },
+      );
       return () => {
         alive = false;
         off();
@@ -343,13 +348,14 @@ export default function App() {
     // aren't dead in worktree views; the response is already recency-capped
     // server-side, so it replaces `events` wholesale.
     setLive(false);
+    const fetchLog = src.fetchEventsLog?.bind(src) ?? fetchEventsLog;
     const pollEvents = () =>
-      fetchEventsLog(current, currentWorktree)
+      fetchLog(current, currentWorktree)
         .then((evs) => { if (alive) setEvents(evs); })
         .catch(() => {});
     pollEvents();
     const poll = setInterval(() => {
-      fetchState(current, currentWorktree)
+      src.getState(current, currentWorktree)
         .then((s) => { if (alive) { noteFetchOk(); applyState(s); } })
         .catch(() => { if (alive) noteFetchFail(); });
       pollEvents();
@@ -460,5 +466,13 @@ export default function App() {
         </Modal>
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <DataSourceProvider>
+      <AppContent />
+    </DataSourceProvider>
   );
 }

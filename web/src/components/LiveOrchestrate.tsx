@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrchestrateStatus, Seat, PactEvent, State, Feature, Task } from "../lib/types";
-import {
-  getOrchestrateStatus,
-  getParallelOrchestrate,
-  runOrchestrate,
-  resumeOrchestrate,
-  shipFeature,
-  getDiff,
-} from "../lib/api";
+import { useDataSource } from "../lib/datasource";
 import { AgentTerminal } from "./live/AgentTerminal";
 import { taskTokens, fmtTokens, canMergeFeature } from "../lib/derive";
 import { Button } from "./ui/Button";
@@ -55,10 +48,12 @@ export function LiveOrchestrate({
   const [shipHead, setShipHead] = useState("");
   const [shipResult, setShipResult] = useState<{ prUrl?: string; error?: string } | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const src = useDataSource();
+  const canWrite = src.capabilities.canWrite;
 
   function load() {
     if (!project) return;
-    Promise.all([getOrchestrateStatus(project), getParallelOrchestrate(project)])
+    Promise.all([src.getOrchestrateStatus!(project), src.getParallelOrchestrate!(project)])
       .then(([single, par]) => {
         setPresent(single.present);
         setStatus(single.status ?? null);
@@ -69,13 +64,13 @@ export function LiveOrchestrate({
   }
 
   const rosterComplete = agents.length >= 2;
-  const canRun = author && rosterComplete && !running && !resuming;
+  const canRun = author && rosterComplete && !running && !resuming && canWrite;
 
   async function handleRun() {
     if (!canRun) return;
     setRunning(true);
     try {
-      await runOrchestrate(project);
+      await src.runOrchestrate!(project);
       onNotify?.("Orchestrate run started");
       load();
     } catch (e) {
@@ -86,10 +81,10 @@ export function LiveOrchestrate({
   }
 
   async function handleResume() {
-    if (!author || resuming || running) return;
+    if (!author || !canWrite || resuming || running) return;
     setResuming(true);
     try {
-      await resumeOrchestrate(project);
+      await src.resumeOrchestrate!(project);
       onNotify?.("Orchestrate resumed");
       setDiffOpen(false);
       load();
@@ -104,7 +99,7 @@ export function LiveOrchestrate({
     setLoadingDiff(true);
     setDiffOpen(true);
     try {
-      const r = await getDiff(project);
+      const r = await src.getDiff!(project);
       setDiffText(r.diff);
     } catch (e) {
       setDiffText(e instanceof Error ? e.message : "Failed to load diff");
@@ -114,14 +109,14 @@ export function LiveOrchestrate({
   }
 
   async function handleShip() {
-    if (!author || shipping) return;
+    if (!author || !canWrite || shipping) return;
     if (!shipTitle || !shipHead) {
       setShipResult({ error: "Head branch and title are required" });
       return;
     }
     setShipping(true);
     try {
-      const r = await shipFeature(project, { pr: true, head: shipHead, title: shipTitle, body: shipBody });
+      const r = await src.shipFeature!(project, { pr: true, head: shipHead, title: shipTitle, body: shipBody });
       setShipResult({ prUrl: r.pr_url });
       onNotify?.(r.pr_url ? `PR opened: ${r.pr_url}` : "Pushed");
     } catch (e) {
@@ -205,7 +200,7 @@ export function LiveOrchestrate({
             {author && !rosterComplete && (
               <div className="mb-3 text-xs text-[var(--color-warn)]">Wire at least two seats before running</div>
             )}
-            <Button size="sm" loading={running} disabled={!canRun} onClick={handleRun}>Run</Button>
+            <Button size="sm" loading={running} disabled={!canRun} title={canWrite ? undefined : "Remote control needs U3"} onClick={handleRun}>Run</Button>
           </div>
         )}
 
@@ -223,6 +218,7 @@ export function LiveOrchestrate({
             resuming={resuming}
             onResume={handleResume}
             onShip={() => { setShipOpen(true); setShipResult(null); }}
+            canWrite={canWrite}
           />
         )}
 
@@ -247,6 +243,7 @@ export function LiveOrchestrate({
             expanded={expanded === f.id}
             onToggle={() => setExpanded(expanded === f.id ? null : f.id)}
             project={project}
+            canWrite={canWrite}
           />
         ))}
       </div>
@@ -301,11 +298,11 @@ export function LiveOrchestrate({
 // concurrency, iter, tokens) + accepted progress bar + Resume (when a gate is
 // open) / Ship (when all delivered). Pause/Stop are omitted — no backend yet.
 function RunControl({
-  featureCount, concurrency, iter, tok, accepted, total, escalated, done, author, resuming, onResume, onShip,
+  featureCount, concurrency, iter, tok, accepted, total, escalated, done, author, resuming, onResume, onShip, canWrite,
 }: {
   featureCount: number; concurrency: number | null; iter: number | null; tok: number;
   accepted: number; total: number; escalated: boolean; done: boolean;
-  author: boolean; resuming: boolean; onResume: () => void; onShip: () => void;
+  author: boolean; resuming: boolean; onResume: () => void; onShip: () => void; canWrite: boolean;
 }) {
   const pct = total > 0 ? Math.round((accepted / total) * 100) : 0;
   const label = done ? "Delivered" : escalated ? "Paused" : "Orchestrating";
@@ -334,10 +331,10 @@ function RunControl({
           </span>
         </div>
         {author && escalated && (
-          <Button size="sm" loading={resuming} onClick={onResume}>Resume</Button>
+          <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume</Button>
         )}
         {author && done && (
-          <Button size="sm" onClick={onShip}>Ship</Button>
+          <Button size="sm" disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onShip}>Ship</Button>
         )}
       </div>
     </div>
@@ -359,11 +356,11 @@ function chipKindFor(t: Task, os: OrchestrateStatus | null): ChipKind {
 // horizontal task pipeline + (when its hard gate failed) the review gate +
 // (when working and expanded) live agent terminal.
 function FeatureLane({
-  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, expanded, onToggle, project,
+  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, expanded, onToggle, project, canWrite,
 }: {
   feature: Feature; os: OrchestrateStatus | null; events: PactEvent[]; state: State;
   author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void;
-  expanded: boolean; onToggle: () => void; project: string;
+  expanded: boolean; onToggle: () => void; project: string; canWrite: boolean;
 }) {
   const gate = !!os?.escalated;
   const accepted = feature.tasks.filter((t) => t.status === "accepted" || t.status === "shipped").length;
@@ -439,6 +436,7 @@ function FeatureLane({
           loadingDiff={loadingDiff}
           onResume={onResume}
           onDiff={onDiff}
+          canWrite={canWrite}
         />
       )}
 
@@ -533,8 +531,8 @@ function MergeNode({ active }: { active: boolean }) {
 // ReviewGate — the human-decision panel shown when a feature's hard test gate
 // fails. Surfaces the escalation reason and the actions that have a backend
 // today (See diff, Resume run). Approve/Reject/Take-over await dedicated APIs.
-function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff }: {
-  reason?: string; author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void;
+function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff, canWrite }: {
+  reason?: string; author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void; canWrite: boolean;
 }) {
   return (
     <div
@@ -552,7 +550,7 @@ function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff }:
       {author && (
         <div className="flex flex-wrap items-center gap-[9px]">
           <Button size="sm" variant="ghost" loading={loadingDiff} onClick={onDiff}>See diff</Button>
-          <Button size="sm" loading={resuming} onClick={onResume}>Resume run ▸</Button>
+          <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume run ▸</Button>
         </div>
       )}
     </div>

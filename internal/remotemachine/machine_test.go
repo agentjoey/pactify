@@ -2,6 +2,7 @@ package remotemachine
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/agentjoey/pactify/internal/relaysock"
 	"github.com/agentjoey/pactify/internal/remoteexec"
 )
 
@@ -22,8 +24,10 @@ func (f *fakeEngine) Changes(_, _ string) error                         { return
 func (f *fakeEngine) Merge(_ string) error                              { return nil }
 func (f *fakeEngine) Checkpoint(_, _ string) error                      { return nil }
 
-// startFakeRelay serves the socket.io v4 handshake then pushes `push` frames.
-func startFakeRelay(t *testing.T, push []string) string {
+// startFakeRelay serves the socket.io v4 handshake, pushes `push` frames, and
+// forwards every EVENT the client emits (e.g. register) to the returned channel.
+func startFakeRelay(t *testing.T, push []string) (string, chan relaysock.Frame) {
+	emits := make(chan relaysock.Frame, 16)
 	up := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := up.Upgrade(w, r, nil)
@@ -39,20 +43,26 @@ func startFakeRelay(t *testing.T, push []string) string {
 		for _, f := range push {
 			_ = c.WriteMessage(websocket.TextMessage, []byte(f))
 		}
-		// Keep the connection open so the client's read loop stays alive.
 		for {
-			if _, _, err := c.ReadMessage(); err != nil {
+			_, data, err := c.ReadMessage()
+			if err != nil {
 				return
+			}
+			if fr, derr := relaysock.DecodeFrame(string(data)); derr == nil && fr.Kind == relaysock.FrameEvent {
+				select {
+				case emits <- fr:
+				default:
+				}
 			}
 		}
 	}))
 	t.Cleanup(srv.Close)
-	return "http" + strings.TrimPrefix(srv.URL, "http")
+	return "http" + strings.TrimPrefix(srv.URL, "http"), emits
 }
 
 func TestRun_DispatchesPactRpcToEngine(t *testing.T) {
 	fe := &fakeEngine{accepted: make(chan string, 1)}
-	url := startFakeRelay(t, []string{
+	url, _ := startFakeRelay(t, []string{
 		`42["rpc",{"type":"pact.accept","machineId":"m1","project":"known","task":"t1"}]`,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -89,5 +99,33 @@ func TestRun_DialErrorReturns(t *testing.T) {
 	err := Run(ctx, Config{RelayURL: "http://127.0.0.1:1", Account: "a", MachineID: "m", Token: "t"})
 	if err == nil {
 		t.Fatal("Run should return the dial error")
+	}
+}
+
+func TestRun_RegistersPresence(t *testing.T) {
+	url, emits := startFakeRelay(t, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	go func() {
+		_ = Run(ctx, Config{
+			RelayURL: url, Account: "acct1", MachineID: "m1", Token: "tok",
+			Info:    Info{Host: "host1", AgentKinds: []string{"opencode", "claude"}},
+			Resolve: nil, // presence-only: registers + heartbeats, no rpc execution
+		})
+	}()
+	select {
+	case fr := <-emits:
+		if fr.Event != "register" {
+			t.Fatalf("first emit should be register, got %q", fr.Event)
+		}
+		var info Info
+		if len(fr.Args) == 1 {
+			_ = json.Unmarshal(fr.Args[0], &info)
+		}
+		if info.Host != "host1" || len(info.AgentKinds) != 2 {
+			t.Fatalf("register info wrong: %+v", info)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("no register emitted (presence)")
 	}
 }

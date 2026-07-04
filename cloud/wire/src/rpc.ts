@@ -196,6 +196,9 @@ export const PactStintRequest = z.object({
   seat: z.string().min(1),
   agentKind: z.string().min(1),
   briefing: z.string().optional(),
+  /** Feature branch to run on (the driver knows it; saves the worker machine a
+   * ledger lookup its checkout may not have yet). */
+  branch: z.string().optional(),
 })
 export type PactStintRequest = z.infer<typeof PactStintRequest>
 

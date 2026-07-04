@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/remoteexec"
 )
 
@@ -20,6 +22,9 @@ import (
 type RemotePolicy struct {
 	// Stint enables pact.stint (a remote control plane can spawn an agent here).
 	Stint bool `json:"stint"`
+	// Orchestrate enables orchestrate.run/resume rpc (drive this machine's
+	// orchestrate remotely). Reserved for the M3/M4 remote-orchestrate entry.
+	Orchestrate bool `json:"orchestrate"`
 	// AgentKinds optionally restricts which agent kinds may be spawned remotely;
 	// empty ⇒ any known kind.
 	AgentKinds []string `json:"agentKinds,omitempty"`
@@ -45,9 +50,14 @@ type serveStinter struct {
 	runner orchestrate.Runner
 }
 
-// RunStint validates + accepts synchronously (policy check), then spawns the agent
-// asynchronously — the agent works the task in the project's repo and checkpoints;
-// the effect returns via the event stream (serve's uploader), not this call.
+// RunStint validates + accepts synchronously (policy check), then runs the stint
+// lifecycle asynchronously. Multi-machine semantics (branch-as-interface): when
+// the project has an `origin` remote and the task's feature branch is known, the
+// stint runs in an ISOLATED WORKTREE of that branch — fetch origin first (pick up
+// the driver's pushed assign/ledger), run the agent there, push the branch back
+// (the agent's checkpoint commits become visible to the dispatching driver's
+// poll). Without a remote (single-machine setup) it degrades to running in the
+// project tree and the effect stays local.
 func (st *serveStinter) RunStint(req remoteexec.StintRequest) error {
 	st.s.pmu.RLock()
 	p, ok := st.s.projects[req.Project]
@@ -62,17 +72,83 @@ func (st *serveStinter) RunStint(req remoteexec.StintRequest) error {
 	if len(pol.AgentKinds) > 0 && !contains(pol.AgentKinds, req.AgentKind) {
 		return fmt.Errorf("agent kind %q not permitted for remote stint here", req.AgentKind)
 	}
-	go func() {
-		_ = st.runner.Run(context.Background(), orchestrate.LaunchContext{
-			Seat:     req.Seat,
-			Kind:     req.AgentKind,
-			Task:     req.Task,
-			Project:  req.Project,
-			Briefing: req.Briefing,
-			RepoDir:  p.Path,
-		})
-	}()
+	go st.runLifecycle(p.Path, req)
 	return nil
+}
+
+// runLifecycle executes one stint end-to-end. Errors are best-effort logged —
+// the remote driver's completion signal is the pushed checkpoint (or its absence,
+// which trips the driver's poll timeout), never this goroutine's outcome.
+func (st *serveStinter) runLifecycle(repoDir string, req remoteexec.StintRequest) {
+	dir := repoDir
+	branch := ""
+	hasRemote := gitx.HasRemote(repoDir, "origin")
+	if hasRemote {
+		// Pick up the driver's latest push (the assign + ledger this stint works).
+		if err := gitx.Fetch(repoDir, "origin", ""); err != nil {
+			stintLog(req, "fetch origin: %v", err)
+		}
+		// The rpc carries the branch (the driver knows it); fall back to this
+		// machine's ledger for the single-machine/local case.
+		branch = req.Branch
+		if branch == "" {
+			branch = taskBranch(repoDir, req.Task)
+		}
+	}
+	if branch != "" {
+		// Isolated worktree on the feature branch, based on its origin tip, so the
+		// stint never disturbs whatever the machine's main tree is doing.
+		wt := filepath.Join(repoDir, ".pact", "orchestrate", "wt", "stint-"+req.Task)
+		base := "origin/" + branch
+		if !gitx.RemoteBranchExists(repoDir, "origin", branch) {
+			base = gitx.DefaultBranch(repoDir)
+		}
+		if err := gitx.AddWorktree(repoDir, wt, branch, base); err != nil {
+			stintLog(req, "add worktree (running in project tree instead): %v", err)
+		} else {
+			dir = wt
+			defer func() { _ = gitx.RemoveWorktree(repoDir, wt) }()
+		}
+	}
+
+	_ = st.runner.Run(context.Background(), orchestrate.LaunchContext{
+		Seat:     req.Seat,
+		Kind:     req.AgentKind,
+		Task:     req.Task,
+		Project:  req.Project,
+		Briefing: req.Briefing,
+		RepoDir:  dir,
+	})
+
+	// Branch-as-interface: publish the agent's commits (checkpoint + ledger) so
+	// the dispatching driver's poll sees them. Best-effort — a push failure just
+	// means the driver times out and retries/escalates.
+	if hasRemote && branch != "" {
+		if err := gitx.Push(dir, "origin", branch); err != nil {
+			stintLog(req, "push %s: %v", branch, err)
+		}
+	}
+}
+
+// taskBranch resolves the feature branch the task belongs to from the project's
+// ledger ("" when unknown — e.g. the assign hasn't reached this machine yet).
+func taskBranch(repoDir, task string) string {
+	stp, err := pact.At(repoDir).StateProjection()
+	if err != nil {
+		return ""
+	}
+	for _, f := range stp.Features {
+		for _, t := range f.Tasks {
+			if t.ID == task {
+				return f.Branch
+			}
+		}
+	}
+	return ""
+}
+
+func stintLog(req remoteexec.StintRequest, format string, args ...any) {
+	fmt.Fprintf(os.Stderr, "pactify stint %s/%s: %s\n", req.Project, req.Task, fmt.Sprintf(format, args...))
 }
 
 func contains(xs []string, x string) bool {

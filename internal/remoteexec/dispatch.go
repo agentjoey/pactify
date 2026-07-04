@@ -46,6 +46,7 @@ type StintRequest struct {
 	Seat      string
 	AgentKind string
 	Briefing  string
+	Branch    string // feature branch to run on (from the driver; "" = resolve locally)
 }
 
 // Stinter runs a remote agent stint. serve implements it (policy check + agent
@@ -118,7 +119,7 @@ func (d *Dispatcher) Handle(rpc RPC) Reply {
 		}
 		if err := d.Stint.RunStint(StintRequest{
 			Project: rpc.Project, Task: rpc.Task, Seat: rpc.Seat,
-			AgentKind: rpc.AgentKind, Briefing: rpc.Briefing,
+			AgentKind: rpc.AgentKind, Briefing: rpc.Briefing, Branch: rpc.Branch,
 		}); err != nil {
 			return fail(err.Error())
 		}

@@ -151,6 +151,19 @@ func IsAncestor(dir, a, b string) bool {
 // MergeNoFF performs a --no-ff merge of branch into the current branch.
 // --no-verify: the merge commit is machine-generated and must not run the repo's
 // human merge/commit hooks (pre-merge-commit / commit-msg, e.g. commitlint).
+// Merge integrates ref into the current branch (ff or merge commit, no hooks).
+// On conflict/failure the half-merge is aborted so the tree is never left dirty.
+// Used by the remote-stint driver to fold a worker machine's pushed branch (its
+// ledger checkpoint rides the union merge driver) into the local feature branch.
+func Merge(dir, ref string) error {
+	out, err := run(dir, "merge", "--no-edit", "--no-verify", ref)
+	if err != nil {
+		_, _ = run(dir, "merge", "--abort")
+		return fmt.Errorf("merge %s failed and was aborted (tree restored clean): %s", ref, strings.TrimSpace(out))
+	}
+	return nil
+}
+
 func MergeNoFF(dir, branch, msg string) error {
 	out, err := run(dir, "merge", "--no-ff", "--no-verify", "-m", msg, branch)
 	if err != nil {

@@ -12,6 +12,7 @@ vi.mock("../lib/api", () => ({
 }));
 
 import { Canvas } from "./Canvas";
+import { DataSourceProvider } from "../lib/datasource";
 
 const fixture: State = {
   project: "demo",
@@ -113,15 +114,17 @@ describe("Canvas", () => {
 
   it("office click-dispatch opens DispatchModal with the seat as owner", async () => {
     render(
-      <Canvas
-        project="demo"
-        state={fixture}
-        author
-        drafts={[{ id: "d1", specMd: "# d", feature: "F1", deps: [] }]}
-        setDrafts={() => {}}
-        draftFeatures={[]}
-        setDraftFeatures={() => {}}
-      />,
+      <DataSourceProvider>
+        <Canvas
+          project="demo"
+          state={fixture}
+          author
+          drafts={[{ id: "d1", specMd: "# d", feature: "F1", deps: [] }]}
+          setDrafts={() => {}}
+          draftFeatures={[]}
+          setDraftFeatures={() => {}}
+        />
+      </DataSourceProvider>,
     );
     await waitFor(() => expect(screen.getByTestId("desk-bob")).toBeInTheDocument());
     fireEvent.click(screen.getByTestId("desk-bob"));

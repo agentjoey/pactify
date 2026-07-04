@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State, Feature, OrchestrateStatus } from "../lib/types";
-import { DataSourceProvider } from "../lib/datasource";
+import { DataSourceProvider, type DataSource } from "../lib/datasource";
 
 const getOrchestrateStatus = vi.fn();
 const getParallelOrchestrate = vi.fn();
@@ -194,5 +194,82 @@ describe("LiveOrchestrate — capability gating", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Ship" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Ship" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Ship" })).toHaveAttribute("title", "Remote control needs U3");
+  });
+});
+
+// A hosted-like source: RelaySource can drive orchestrate (canOrchestrate) but
+// OMITS the orchestrate read/action methods (status/parallel/diff/ship) that read
+// or act on the machine's live driver + git tree. The Live view must guard on
+// method presence and degrade gracefully instead of throwing a non-null-assertion.
+function hostedSource(over: Partial<DataSource> = {}): DataSource {
+  return {
+    capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true },
+    listProjects: vi.fn().mockResolvedValue([]),
+    getState: vi.fn().mockResolvedValue(EMPTY),
+    getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
+    subscribe: vi.fn().mockReturnValue(() => {}),
+    runOrchestrate: vi.fn().mockResolvedValue({ status_url: "" }),
+    resumeOrchestrate: vi.fn().mockResolvedValue({ status_url: "" }),
+    // deliberately no getOrchestrateStatus / getParallelOrchestrate / getDiff / shipFeature
+    ...over,
+  } as unknown as DataSource;
+}
+
+describe("LiveOrchestrate — hosted method-presence guards", () => {
+  const laneState = st([
+    { id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "in_progress")] },
+  ]);
+
+  it("renders (no throw) with a hosted note + live event stream when status methods are absent", async () => {
+    render(
+      <DataSourceProvider source={hostedSource()}>
+        <LiveOrchestrate project="p1" state={laneState} refreshTick={0} author={true} agents={FULL_ROSTER} />
+      </DataSourceProvider>,
+    );
+    // event stream + lanes still render; a note explains the missing run status.
+    expect(screen.getByTestId("event-stream")).toBeTruthy();
+    expect(screen.getByTestId("hosted-status-note")).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId("feature-lane")).toBeTruthy());
+    // status-driven controls never fabricate (no getOrchestrateStatus to poll).
+    expect(screen.queryByRole("button", { name: "Ship" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "See diff" })).toBeNull();
+  });
+
+  it("hides the Ship button when the source lacks shipFeature (even when done)", async () => {
+    const src = hostedSource({
+      getOrchestrateStatus: vi.fn().mockResolvedValue({ present: true, status: status({ done: true, action: "done", task: "", accepted: 2, total: 2 }) }),
+      getParallelOrchestrate: vi.fn().mockResolvedValue({ present: false }),
+    });
+    render(
+      <DataSourceProvider source={src}>
+        <LiveOrchestrate
+          project="p1"
+          state={st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "accepted")] }])}
+          refreshTick={0}
+          author={true}
+          agents={FULL_ROSTER}
+        />
+      </DataSourceProvider>,
+    );
+    await waitFor(() => expect(screen.getByText("Delivered")).toBeTruthy());
+    // status IS queryable here → no hosted note, but Ship stays hidden (no method).
+    expect(screen.queryByTestId("hosted-status-note")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ship" })).toBeNull();
+  });
+
+  it("hides the review-gate See-diff button when the source lacks getDiff (Resume still shown)", async () => {
+    const src = hostedSource({
+      getOrchestrateStatus: vi.fn().mockResolvedValue({ present: true, status: status({ escalated: true, action: "stuck", reason: "FAIL TestX" }) }),
+      getParallelOrchestrate: vi.fn().mockResolvedValue({ present: false }),
+    });
+    render(
+      <DataSourceProvider source={src}>
+        <LiveOrchestrate project="p1" state={laneState} refreshTick={0} author={true} agents={FULL_ROSTER} />
+      </DataSourceProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("review-gate")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "See diff" })).toBeNull();
+    // Resume remains (resumeOrchestrate is present on the hosted source).
+    expect(screen.getByRole("button", { name: "Resume run ▸" })).toBeTruthy();
   });
 });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Draft } from "../lib/canvas";
-import { postTask, postVerb } from "../lib/api";
+import { postVerb } from "../lib/api";
+import { useDataSource } from "../lib/datasource";
 import { humanizeError } from "../lib/protocolErrors";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
@@ -70,24 +71,36 @@ export function DispatchModal({
   onDispatched: () => void;
   onClose: () => void;
 }) {
+  const src = useDataSource();
   const [owner, setOwner] = useState(initialOwner ?? "");
   const reviewers = roster.filter((r) => r !== owner);
   const [reviewer, setReviewer] = useState(reviewers[0] ?? "");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const canConfirm = !!owner && !!reviewer && reviewer !== owner && !busy;
+  // Task authoring writes a spec_md FILE on the machine, so it needs src.postTask.
+  // Hosted (RelaySource) doesn't expose it yet (a pact.task rpc is in flight), so
+  // guard the create action off there rather than hitting a non-existent local
+  // /api. Local serve always has postTask → this stays true and behavior unchanged.
+  const canCreate = typeof src.postTask === "function";
+  const canConfirm = !!owner && !!reviewer && reviewer !== owner && !busy && canCreate;
 
   const confirm = async () => {
-    if (!canConfirm) return;
+    if (!canConfirm || !src.postTask) return;
     setBusy(true);
     setErr("");
     try {
       const body = dispatchPayload(draft, owner, reviewer, branch);
       // spec_md carries the markdown; the server writes it to .pact/tasks/<id>.md
       // and the assign verb references it. Two steps, one mutex server-side.
-      await postTask(project, { id: draft.id, spec_md: draft.specMd });
-      await postVerb(project, "assign", body as unknown as Record<string, unknown>);
+      await src.postTask(project, { id: draft.id, spec_md: draft.specMd });
+      // Assign via the data source's verb when present (RelaySource routes it as a
+      // remote pact.assign rpc); fall back to the local REST verb otherwise.
+      if (src.verb) {
+        await src.verb(project, "assign", body as unknown as Record<string, unknown>);
+      } else {
+        await postVerb(project, "assign", body as unknown as Record<string, unknown>);
+      }
       onDispatched();
     } catch (e) {
       setErr(humanizeError(e instanceof Error ? e.message : String(e)));
@@ -171,6 +184,15 @@ export function DispatchModal({
           {draft.specMd || "(empty)"}
         </pre>
       </div>
+
+      {!canCreate && (
+        <p
+          data-testid="dispatch-hosted-note"
+          className="mt-3 whitespace-pre-wrap text-xs text-[var(--color-text-3)]"
+        >
+          Creating tasks isn't available in hosted mode yet — use the local dashboard to author tasks.
+        </p>
+      )}
 
       {err && (
         <p className="mt-3 whitespace-pre-wrap text-xs text-[var(--color-danger)]">{err}</p>

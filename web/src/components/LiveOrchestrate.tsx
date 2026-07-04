@@ -53,9 +53,22 @@ export function LiveOrchestrate({
   // the relay source can drive pact verbs (accept/changes) but not orchestrate.
   const canWrite = src.capabilities.canOrchestrate;
 
+  // Hosted (RelaySource) omits the orchestrate READ/ACTION methods — run status,
+  // parallel status, working diff, ship — because they read/act on the machine's
+  // live driver + git tree, which the zero-knowledge relay doesn't hold yet.
+  // Guard every call on method PRESENCE so hosted degrades gracefully (event
+  // stream + lanes still render) instead of throwing on a non-null assertion.
+  // Local serve implements them all, so local behavior is byte-identical.
+  const canQueryStatus =
+    typeof src.getOrchestrateStatus === "function" && typeof src.getParallelOrchestrate === "function";
+  const canShip = typeof src.shipFeature === "function";
+  const canDiff = typeof src.getDiff === "function";
+
   function load() {
     if (!project) return;
-    Promise.all([src.getOrchestrateStatus!(project), src.getParallelOrchestrate!(project)])
+    // Hosted has no run-status source — skip the poll (the note renders instead).
+    if (!src.getOrchestrateStatus || !src.getParallelOrchestrate) return;
+    Promise.all([src.getOrchestrateStatus(project), src.getParallelOrchestrate(project)])
       .then(([single, par]) => {
         setPresent(single.present);
         setStatus(single.status ?? null);
@@ -69,10 +82,10 @@ export function LiveOrchestrate({
   const canRun = author && rosterComplete && !running && !resuming && canWrite;
 
   async function handleRun() {
-    if (!canRun) return;
+    if (!canRun || !src.runOrchestrate) return;
     setRunning(true);
     try {
-      await src.runOrchestrate!(project);
+      await src.runOrchestrate(project);
       onNotify?.("Orchestrate run started");
       load();
     } catch (e) {
@@ -83,10 +96,10 @@ export function LiveOrchestrate({
   }
 
   async function handleResume() {
-    if (!author || !canWrite || resuming || running) return;
+    if (!author || !canWrite || resuming || running || !src.resumeOrchestrate) return;
     setResuming(true);
     try {
-      await src.resumeOrchestrate!(project);
+      await src.resumeOrchestrate(project);
       onNotify?.("Orchestrate resumed");
       setDiffOpen(false);
       load();
@@ -98,10 +111,11 @@ export function LiveOrchestrate({
   }
 
   async function handleViewDiff() {
+    if (!src.getDiff) return;
     setLoadingDiff(true);
     setDiffOpen(true);
     try {
-      const r = await src.getDiff!(project);
+      const r = await src.getDiff(project);
       setDiffText(r.diff);
     } catch (e) {
       setDiffText(e instanceof Error ? e.message : "Failed to load diff");
@@ -111,14 +125,14 @@ export function LiveOrchestrate({
   }
 
   async function handleShip() {
-    if (!author || !canWrite || shipping) return;
+    if (!author || !canWrite || shipping || !src.shipFeature) return;
     if (!shipTitle || !shipHead) {
       setShipResult({ error: "Head branch and title are required" });
       return;
     }
     setShipping(true);
     try {
-      const r = await src.shipFeature!(project, { pr: true, head: shipHead, title: shipTitle, body: shipBody });
+      const r = await src.shipFeature(project, { pr: true, head: shipHead, title: shipTitle, body: shipBody });
       setShipResult({ prUrl: r.pr_url });
       onNotify?.(r.pr_url ? `PR opened: ${r.pr_url}` : "Pushed");
     } catch (e) {
@@ -196,6 +210,15 @@ export function LiveOrchestrate({
       >
         {error && <div className="mb-3 text-xs text-[var(--color-danger)]">{error}</div>}
 
+        {!canQueryStatus && (
+          <div
+            data-testid="hosted-status-note"
+            className="mb-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2 text-xs text-[var(--color-text-3)]"
+          >
+            Run status isn't available in hosted mode yet — the board and event stream stay live.
+          </div>
+        )}
+
         {!hasActivity && present === false && (
           <div className="mt-10 text-center">
             <div className="mb-3 text-sm text-[var(--color-text-3)]">orchestrate hasn't run yet</div>
@@ -221,6 +244,7 @@ export function LiveOrchestrate({
             onResume={handleResume}
             onShip={() => { setShipOpen(true); setShipResult(null); }}
             canWrite={canWrite}
+            canShip={canShip}
           />
         )}
 
@@ -246,6 +270,7 @@ export function LiveOrchestrate({
             onToggle={() => setExpanded(expanded === f.id ? null : f.id)}
             project={project}
             canWrite={canWrite}
+            canDiff={canDiff}
           />
         ))}
       </div>
@@ -300,11 +325,11 @@ export function LiveOrchestrate({
 // concurrency, iter, tokens) + accepted progress bar + Resume (when a gate is
 // open) / Ship (when all delivered). Pause/Stop are omitted — no backend yet.
 function RunControl({
-  featureCount, concurrency, iter, tok, accepted, total, escalated, done, author, resuming, onResume, onShip, canWrite,
+  featureCount, concurrency, iter, tok, accepted, total, escalated, done, author, resuming, onResume, onShip, canWrite, canShip,
 }: {
   featureCount: number; concurrency: number | null; iter: number | null; tok: number;
   accepted: number; total: number; escalated: boolean; done: boolean;
-  author: boolean; resuming: boolean; onResume: () => void; onShip: () => void; canWrite: boolean;
+  author: boolean; resuming: boolean; onResume: () => void; onShip: () => void; canWrite: boolean; canShip: boolean;
 }) {
   const pct = total > 0 ? Math.round((accepted / total) * 100) : 0;
   const label = done ? "Delivered" : escalated ? "Paused" : "Orchestrating";
@@ -335,7 +360,7 @@ function RunControl({
         {author && escalated && (
           <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume</Button>
         )}
-        {author && done && (
+        {author && done && canShip && (
           <Button size="sm" disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onShip}>Ship</Button>
         )}
       </div>
@@ -358,11 +383,11 @@ function chipKindFor(t: Task, os: OrchestrateStatus | null): ChipKind {
 // horizontal task pipeline + (when its hard gate failed) the review gate +
 // (when working and expanded) live agent terminal.
 function FeatureLane({
-  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, expanded, onToggle, project, canWrite,
+  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, expanded, onToggle, project, canWrite, canDiff,
 }: {
   feature: Feature; os: OrchestrateStatus | null; events: PactEvent[]; state: State;
   author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void;
-  expanded: boolean; onToggle: () => void; project: string; canWrite: boolean;
+  expanded: boolean; onToggle: () => void; project: string; canWrite: boolean; canDiff: boolean;
 }) {
   const gate = !!os?.escalated;
   const accepted = feature.tasks.filter((t) => t.status === "accepted" || t.status === "shipped").length;
@@ -439,6 +464,7 @@ function FeatureLane({
           onResume={onResume}
           onDiff={onDiff}
           canWrite={canWrite}
+          canDiff={canDiff}
         />
       )}
 
@@ -533,8 +559,8 @@ function MergeNode({ active }: { active: boolean }) {
 // ReviewGate — the human-decision panel shown when a feature's hard test gate
 // fails. Surfaces the escalation reason and the actions that have a backend
 // today (See diff, Resume run). Approve/Reject/Take-over await dedicated APIs.
-function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff, canWrite }: {
-  reason?: string; author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void; canWrite: boolean;
+function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff, canWrite, canDiff }: {
+  reason?: string; author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void; canWrite: boolean; canDiff: boolean;
 }) {
   return (
     <div
@@ -551,7 +577,7 @@ function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff, c
       </pre>
       {author && (
         <div className="flex flex-wrap items-center gap-[9px]">
-          <Button size="sm" variant="ghost" loading={loadingDiff} onClick={onDiff}>See diff</Button>
+          {canDiff && <Button size="sm" variant="ghost" loading={loadingDiff} onClick={onDiff}>See diff</Button>}
           <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume run ▸</Button>
         </div>
       )}

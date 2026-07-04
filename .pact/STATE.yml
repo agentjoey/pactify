@@ -325,7 +325,7 @@ features:
         evidence: null
       - id: pact-project
         owner: opencode-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/pact-project.md
         evidence: null

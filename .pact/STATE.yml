@@ -372,10 +372,10 @@ features:
         evidence: go test ./internal/stats/ ./internal/serve/ PASS; build+vet clean. AgentStat+Accepted/Reworked, fold from accept + changes_requested events (real event type verified vs internal/event), owner-attributed; serve /stats auto-carries (embedded); +2 fold tests incl chaining survival.
       - id: dm-stats-web
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/dm-stats-web.md
-        evidence: null
+        evidence: vitest 521 PASS (62 files) + tsc -b clean. AgentStat TS type +accepted/reworked; OfficeView Cost lens seat row appends ✓{accepted} ↻{reworked} badge (success/warn tokens, data-testid seat-reliability-<seat>); relaysource getStats fills zeros (no relay fold); +test asserts ✓3↻1/✓2↻0.
         deps: [dm-stats]
       - id: dm-e2e-docs
         owner: claude-worker

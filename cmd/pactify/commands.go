@@ -145,6 +145,17 @@ Without this, the gate defaults to one inferred from the project type:
 Example (build-first JS gate):
   pactify config gate "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"`,
 		RunE: func(_ *cobra.Command, a []string) error { return pact.ConfigGate(a[0]) }})
+	configCmd.AddCommand(&cobra.Command{Use: "critic <seat>", Args: cobra.ExactArgs(1),
+		Short: "set the seat orchestrate runs as a read-only pre-review critic (default: off)",
+		Long: `Set the project's pre-review critic seat — the seat orchestrate runs read-only
+AFTER a task's verify gate is green and BEFORE its reviewer. The critic scores the
+diff vs the spec (a trailing CRITIC_SCORE: 0.0-1.0 line); the score is injected
+into the reviewer's briefing to steer attention.
+
+The score has NO gating power: a low score never auto-bounces a task (that is the
+verify gate's job). Off by default — set this (or pass orchestrate --critic) to
+enable. Override per-run with: pactify orchestrate --critic seat=<seat>`,
+		RunE: func(_ *cobra.Command, a []string) error { return pact.ConfigCritic(a[0]) }})
 
 	statusCmd := &cobra.Command{Use: "status", Short: "print STATE.yml",
 		RunE: func(c *cobra.Command, _ []string) error {

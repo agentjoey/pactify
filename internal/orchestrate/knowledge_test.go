@@ -77,7 +77,7 @@ func TestBriefNoKnowledgeByteIdentical(t *testing.T) {
 
 	rseat := projection.Seat{ID: "bob", Roles: []string{"reviewer"}}
 	rtask := projection.Task{ID: "t-99", Owner: "alice", Reviewer: "bob", Status: "awaiting_review", Spec: "docs/specs/t-99.md"}
-	if got := reviewerBrief(dir, rseat, rtask); got != goldenReviewerBrief {
+	if got := reviewerBrief(dir, rseat, rtask, ""); got != goldenReviewerBrief {
 		t.Errorf("reviewer brief not byte-identical to golden.\n--- got ---\n%q\n--- want ---\n%q", got, goldenReviewerBrief)
 	}
 }

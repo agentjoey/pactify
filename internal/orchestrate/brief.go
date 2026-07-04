@@ -65,10 +65,20 @@ func workerBrief(dir string, seat projection.Seat, task projection.Task, changes
 // points at the worker's changes via `git diff` / `git log`, instructs running
 // the spec's acceptance commands, and gives the accept / changes verbs while
 // forbidding the reviewer from editing the implementation.
-func reviewerBrief(dir string, seat projection.Seat, task projection.Task) string {
+//
+// criticNote, when non-empty, is the pre-review critic's score+reason line (spec
+// §3 WS-H); it is injected as a leading section to steer the reviewer's attention.
+// An empty criticNote (no critic configured, or a critic that produced no
+// parseable score) leaves the briefing byte-for-byte identical to the pre-WS-H one.
+func reviewerBrief(dir string, seat projection.Seat, task projection.Task, criticNote string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# pact reviewer — seat `%s`\n\n", seat.ID)
 	fmt.Fprintf(&b, "You are seat `%s`, reviewing task `%s` (status awaiting_review) in this repo (pact protocol v1).\n\n", seat.ID, task.ID)
+
+	if criticNote != "" {
+		b.WriteString("## critic 预评\n")
+		b.WriteString(criticNote + "\n\n")
+	}
 
 	b.WriteString("## 审什么\n")
 	fmt.Fprintf(&b, "- 读规格：`%s`，确认验收标准。\n", task.Spec)

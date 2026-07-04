@@ -45,6 +45,13 @@ type Options struct {
 	// (Merge). "" falls back to PACT_AGENT_ID (tests rely on the env fallback; the
 	// CLI resolves it from --as / PACT_AGENT_ID and fail-fasts when both are empty).
 	Orchestrator string
+	// Critic names the seat run as a read-only pre-review critic (spec §3 WS-H):
+	// after a task's verify gate is green and before its reviewer, the critic scores
+	// the diff vs the spec and the score is injected into the reviewer briefing. This
+	// is the --critic flag override; "" falls back to the project's `config critic`
+	// setting, and absent-everywhere leaves the feature OFF (byte-identical flow, no
+	// extra stint). The score has NO gating power (I-2).
+	Critic string
 	// MaxFixRounds bounds the pre-review fix-until-green self-repair loop (spec §1
 	// WS-F): after a worker checkpoints a task, the driver runs the task's verify
 	// gate BEFORE launching the reviewer; on a RED gate it re-runs the SAME owner
@@ -300,7 +307,13 @@ func (opts Options) run(ctx context.Context) error {
 			if !proceed {
 				return nil // rounds exhausted → escalated: paused, not failed
 			}
-			if err := opts.runReviewer(ctx, st, &h, act); err != nil {
+			// Critic pre-review score (spec §3 WS-H): with the gate green and before
+			// the reviewer, if a critic seat is configured, run it read-only, record
+			// its score as a task note, and inject the score into the reviewer's
+			// briefing. No gating power (I-2); no critic configured → "" and the
+			// reviewer launch is byte-for-byte unchanged.
+			criticNote := opts.runCritic(ctx, st, act)
+			if err := opts.runReviewer(ctx, st, &h, act, criticNote); err != nil {
 				return err
 			}
 			_ = writeHistory(opts.runtimeDir(), scope, h)
@@ -422,12 +435,12 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 // runReviewer launches the task reviewer with a reviewer briefing, then
 // reprojects: changes_requested bumps the rework count; neither accepted nor
 // changes_requested bumps the failure count.
-func (opts Options) runReviewer(ctx context.Context, st projection.State, h *History, act Action) error {
+func (opts Options) runReviewer(ctx context.Context, st projection.State, h *History, act Action, criticNote string) error {
 	_, task, ok := find(st, act.Feature, act.Task)
 	if !ok {
 		return fmt.Errorf("orchestrate: task %s not found for RunReviewer", act.Task)
 	}
-	brief := reviewerBrief(opts.Dir, projection.Seat{ID: act.Seat}, task)
+	brief := reviewerBrief(opts.Dir, projection.Seat{ID: act.Seat}, task, criticNote)
 
 	if runErr := opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {

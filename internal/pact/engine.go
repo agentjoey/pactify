@@ -803,6 +803,98 @@ func (p *Project) GateConfig() (string, bool, error) {
 	return gate, ok, nil
 }
 
+// ConfigCritic sets the project's pre-review critic seat in the current working
+// directory's repo.
+func ConfigCritic(seat string) error { return At(".").ConfigCritic(seat) }
+
+// ConfigCritic records a config_critic event naming the seat the orchestrate
+// driver runs as a read-only pre-review critic (spec review-runtime-deepening §3
+// WS-H): after a task's verify gate is green and before its reviewer, the critic
+// scores the diff vs the spec. The score has NO gating power — it only steers the
+// reviewer's attention. Mirrors ConfigGate: a later config_critic overrides an
+// earlier one; append-only; orchestrator-only.
+func (p *Project) ConfigCritic(seat string) error {
+	return p.withLedgerLock(func() error { return p.configCriticLocked(seat) })
+}
+
+func (p *Project) configCriticLocked(seat string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(seat) == "" {
+		return fmt.Errorf("config critic: seat is required")
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "config critic", id); err != nil {
+		return err
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("config_critic"), EventType: "config_critic",
+		Payload: map[string]any{"critic": seat},
+	})
+}
+
+// CriticConfig returns the project's configured critic seat (the latest
+// `config critic` setting) and whether one was set. orchestrate reads it to
+// decide whether to run a pre-review critic stint. Mirrors GateConfig: absent is
+// distinct from an unreadable log (a missing log reads as absent, not error).
+func (p *Project) CriticConfig() (string, bool, error) {
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	if err != nil {
+		return "", false, fmt.Errorf("pact: read log for critic config: %w", err)
+	}
+	seat, ok := "", false
+	for _, e := range evs {
+		if e.EventType == "config_critic" {
+			if s, o := e.Payload["critic"].(string); o && s != "" {
+				seat, ok = s, true
+			}
+		}
+	}
+	return seat, ok, nil
+}
+
+// Note records a task-scoped annotation on the ledger that drives NO state
+// transition — the "note-style" mechanism (spec §3 WS-H, I-3). It deliberately
+// REUSES the existing `start` event_type rather than introducing a new one: the
+// projection lifts a `start` event ONLY for an `assigned` task, so a note on any
+// further-along task (the critic pre-review score's awaiting_review case) is a
+// pure projection no-op. The payload carries the annotation (e.g. critic_score /
+// critic_by / reason). Orchestrator-only, like the driver's other own writes
+// (start / merge).
+func (p *Project) Note(taskID string, payload map[string]any) error {
+	return p.withLedgerLock(func() error { return p.noteLocked(taskID, payload) })
+}
+
+func (p *Project) noteLocked(taskID string, payload map[string]any) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "note", id); err != nil {
+		return err
+	}
+	t, f := findTask(st, taskID)
+	if t == nil {
+		return fmt.Errorf("note %s: no such task", taskID)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("start"), EventType: "start",
+		TaskID: taskID, Feature: f.ID, Payload: payload,
+	})
+}
+
 // Cancel records a cancel event that excludes taskID from the projection — the
 // structured way to retire a task without hand-editing the log. Append-only: the
 // task's history stays in the log; the projection simply drops it.

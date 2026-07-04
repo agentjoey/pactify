@@ -339,7 +339,10 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 			}
 			_ = writeHistory(opts.Dir, feature, h)
 		case ActRunReviewer:
-			if err := o.runReviewer(ctx, st, &h, act); err != nil {
+			// The parallel path does not run the pre-review gate/critic stints (WS-F/
+			// WS-H are serial-loop features); pass an empty critic note so the reviewer
+			// briefing is unchanged here.
+			if err := o.runReviewer(ctx, st, &h, act, ""); err != nil {
 				return false, false, err
 			}
 			_ = writeHistory(opts.Dir, feature, h)

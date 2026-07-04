@@ -57,7 +57,7 @@ func TestReviewerBrief(t *testing.T) {
 	seat := projection.Seat{ID: "bob", Roles: []string{"reviewer"}}
 	task := projection.Task{ID: "t-99", Owner: "alice", Reviewer: "bob", Status: "awaiting_review", Spec: "docs/specs/t-99.md"}
 
-	body := reviewerBrief("", seat, task)
+	body := reviewerBrief("", seat, task, "")
 
 	for _, c := range []struct{ sub, label string }{
 		{"bob", "seat id"},

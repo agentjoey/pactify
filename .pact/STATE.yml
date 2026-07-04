@@ -297,7 +297,7 @@ features:
     tasks:
       - id: fe-lazyrelay
         owner: kimi-worker
-        status: in_progress
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/fe-lazyrelay.md
-        evidence: null
+        evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test  - npx tsc -b: clean (no output) - npx vitest run: 59 test files passed, 489 tests passed - npx playwright test: 5 passed (dispatch + office + project-wizard) - npm run build: rebuilt internal/serve/dist SPA  LOCAL build chunk list (no VITE_PACTIFY_RELAY_URL): ../internal/serve/dist/assets/index-BVcjIxYz.js        340.69 kB │ gzip: 87.26 kB ../internal/serve/dist/assets/react-vendor-CCIEwYL0.js 189.64 kB │ gzip: 59.65 kB ../internal/serve/dist/assets/xyflow-ZNlHqwZp.js       175.25 kB │ gzip: 56.60 kB ../internal/serve/dist/assets/crypto-relay-BE_I707P.js 158.45 kB │ gzip: 48.67 kB ../internal/serve/dist/assets/Canvas-BST8cvtt.js        30.41 kB │ gzip:  9.37 kB ../internal/serve/dist/assets/relaysource-NQ4u1R_X.js    3.60 kB │ gzip:  1.41 kB  Static-reference check: index.html only preloads rolldown-runtime + react-vendor; main index chunk has no static import of crypto-relay/relay-client (only __vite__mapDeps for the dynamic import inside connectRelaySource). Local mode no longer eagerly fetches crypto-relay.  HOSTED build check (VITE_PACTIFY_RELAY_URL=https://relay.example.com): still emits crypto-relay-BE_I707P.js and builds cleanly.  Files changed: - web/src/lib/source.ts: RelayClient/RelaySource now imported dynamically inside connectRelaySource; top-level import changed to type-only import { RelaySource }. - internal/serve/dist/: rebuilt production SPA with lazy relay loading.

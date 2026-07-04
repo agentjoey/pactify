@@ -354,10 +354,10 @@ features:
         deps: [dm-acp-runner]
       - id: dm-knowledge
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/dm-knowledge.md
-        evidence: null
+        evidence: go test ./internal/orchestrate/ -run 'Brief|Knowledge' 13/13 PASS + build clean. New knowledge.go KnowledgeFor(dir,role,taskHint): reads .pact/memory.md + .pact/skills/*.md (hand frontmatter roles/keywords, no yaml dep), role+keyword match, 4KB truncate; brief.go worker/reviewerBrief append when non-empty (dir threaded from loop.go). No-knowledge case byte-identical (golden asserted). Malformed frontmatter skipped.
       - id: dm-doctor
         owner: gemini-worker
         status: accepted

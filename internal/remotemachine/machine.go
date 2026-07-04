@@ -55,6 +55,8 @@ type Config struct {
 	// rpc — the safe default. A non-nil resolver enables remote command execution
 	// (opt-in via serve --remote-control).
 	Resolve remoteexec.Resolver
+	// Stint runs remote agent stints (pact.stint), policy-gated. Nil = disabled.
+	Stint remoteexec.Stinter
 }
 
 // Run connects to the relay as a machine, registers its presence (host + agent
@@ -88,8 +90,8 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 	}()
 
-	// Remote command execution — only when a resolver is configured.
-	if cfg.Resolve != nil {
+	// Remote command execution — only when a resolver or stinter is configured.
+	if cfg.Resolve != nil || cfg.Stint != nil {
 		tr := &socketTransport{ch: make(chan []byte, 32)}
 		client.On("rpc", func(args []json.RawMessage) {
 			if len(args) != 1 {
@@ -102,7 +104,7 @@ func Run(ctx context.Context, cfg Config) error {
 		})
 		ex := &remoteexec.Executor{
 			Account:    cfg.Account,
-			Dispatcher: &remoteexec.Dispatcher{Account: cfg.Account, Resolve: cfg.Resolve},
+			Dispatcher: &remoteexec.Dispatcher{Account: cfg.Account, Resolve: cfg.Resolve, Stint: cfg.Stint},
 		}
 		go func() { _ = ex.Run(ctx, tr) }()
 	}

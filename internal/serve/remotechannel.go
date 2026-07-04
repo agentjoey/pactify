@@ -43,6 +43,7 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 		Workdirs:   s.projectPaths(),
 	}
 	var resolve remoteexec.Resolver
+	var stint remoteexec.Stinter
 	if remoteControl {
 		resolve = func(project string) (remoteexec.PactEngine, error) {
 			s.pmu.RLock()
@@ -53,6 +54,7 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 			}
 			return pact.At(p.Path).As(s.seat), nil
 		}
+		stint = s.newStinter() // pact.stint, gated per-project by .pact/remote.json
 	}
 
 	backoff := time.Second
@@ -69,6 +71,7 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 			Token:     token,
 			Info:      info,
 			Resolve:   resolve,
+			Stint:     stint,
 		})
 		if ctx.Err() != nil {
 			return

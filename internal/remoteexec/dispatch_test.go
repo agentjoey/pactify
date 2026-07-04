@@ -112,3 +112,42 @@ func TestHandle_NoResolver(t *testing.T) {
 		t.Fatalf("nil resolver should fail closed")
 	}
 }
+
+type fakeStinter struct {
+	got StintRequest
+	err error
+}
+
+func (f *fakeStinter) RunStint(req StintRequest) error { f.got = req; return f.err }
+
+func TestHandle_Stint(t *testing.T) {
+	st := &fakeStinter{}
+	d := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{}), Stint: st}
+	r := d.Handle(RPC{Type: "pact.stint", Account: "acct1", Project: "known", Task: "t1", Seat: "kimi-worker", AgentKind: "kimi-cli", Briefing: "do it"})
+	if !r.OK {
+		t.Fatalf("stint should accept, got %+v", r)
+	}
+	if st.got.Task != "t1" || st.got.Seat != "kimi-worker" || st.got.AgentKind != "kimi-cli" {
+		t.Fatalf("stint req wrong: %+v", st.got)
+	}
+	// Disabled (nil Stinter) → rejected.
+	d2 := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{})}
+	if r := d2.Handle(RPC{Type: "pact.stint", Account: "acct1", Project: "known", Task: "t1", Seat: "s", AgentKind: "k"}); r.OK {
+		t.Fatalf("stint should be disabled when Stinter nil")
+	}
+	// Missing seat → rejected.
+	if r := d.Handle(RPC{Type: "pact.stint", Account: "acct1", Project: "known", Task: "t1", AgentKind: "k"}); r.OK {
+		t.Fatalf("stint missing seat should fail")
+	}
+	// Policy denied (Stinter returns error) → not-OK.
+	st.err = errorsNew("remote stint not allowed for project")
+	if r := d.Handle(RPC{Type: "pact.stint", Account: "acct1", Project: "known", Task: "t1", Seat: "s", AgentKind: "k"}); r.OK {
+		t.Fatalf("policy-denied stint should fail")
+	}
+}
+
+func errorsNew(s string) error { return &strErr{s} }
+
+type strErr struct{ s string }
+
+func (e *strErr) Error() string { return e.s }

@@ -32,6 +32,29 @@ type RPC struct {
 	Reason  string   // changes reason
 	Evidence string  // checkpoint evidence
 	Deps    []string // assign dependencies
+	Seat      string // stint: seat to act as
+	AgentKind string // stint: agent CLI kind to spawn
+	Briefing  string // stint: prompt for the agent
+}
+
+// StintRequest is a remote request to run one agent stint (spawn an agent CLI to
+// work a task, as a seat). It runs code, so serve gates it behind a per-project
+// policy. Distinct from the pact-verb path (PactEngine).
+type StintRequest struct {
+	Project   string
+	Task      string
+	Seat      string
+	AgentKind string
+	Briefing  string
+}
+
+// Stinter runs a remote agent stint. serve implements it (policy check + agent
+// spawn via the orchestrate runner). Nil on a Dispatcher = remote stint disabled.
+// RunStint validates + accepts synchronously (returning an error to reject, e.g.
+// policy-denied), then runs the agent asynchronously — the effect returns via the
+// event stream (the agent's checkpoint), not this call.
+type Stinter interface {
+	RunStint(req StintRequest) error
 }
 
 // Reply is the executor's result, couriered back to the caller. Errors are
@@ -66,23 +89,43 @@ type Dispatcher struct {
 	// Account is this machine's account; every rpc must match it (defense in
 	// depth — the relay already scopes delivery by account, this re-asserts it).
 	Account string
-	// Resolve maps rpc.Project → engine. Required.
+	// Resolve maps rpc.Project → engine. Required for the pact verbs.
 	Resolve Resolver
+	// Stint runs remote agent stints (pact.stint). Nil = remote stint disabled
+	// (the safe default; serve wires a policy-gated Stinter when enabled).
+	Stint Stinter
 }
 
 // Handle executes one rpc and returns a Reply. It never panics on bad input:
 // unknown types, scope mismatches, unknown projects, and verb errors all become
 // Reply{OK:false, Error:...}.
 func (d *Dispatcher) Handle(rpc RPC) Reply {
-	if d.Resolve == nil {
-		return fail("dispatcher has no project resolver")
-	}
 	// Auth scope: an empty machine account accepts nothing (fail closed).
 	if d.Account == "" || rpc.Account != d.Account {
 		return fail(ErrAccountScope.Error())
 	}
 	if rpc.Project == "" {
 		return fail("rpc missing project")
+	}
+	// Stint runs an agent (code), not a pact verb — a distinct, policy-gated path
+	// (the Stinter), handled before the pact-engine resolve.
+	if rpc.Type == "pact.stint" {
+		if d.Stint == nil {
+			return fail("remote stint not enabled for this machine")
+		}
+		if rpc.Seat == "" || rpc.AgentKind == "" || rpc.Task == "" {
+			return fail("pact.stint requires task, seat, agentKind")
+		}
+		if err := d.Stint.RunStint(StintRequest{
+			Project: rpc.Project, Task: rpc.Task, Seat: rpc.Seat,
+			AgentKind: rpc.AgentKind, Briefing: rpc.Briefing,
+		}); err != nil {
+			return fail(err.Error())
+		}
+		return Reply{OK: true}
+	}
+	if d.Resolve == nil {
+		return fail("dispatcher has no project resolver")
 	}
 	eng, err := d.Resolve(rpc.Project)
 	if err != nil {

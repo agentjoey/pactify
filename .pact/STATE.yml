@@ -415,10 +415,10 @@ features:
         deps: [rp-fix-loop]
       - id: rp-qa-gate
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-qa-gate.md
-        evidence: null
+        evidence: go test ./internal/orchestrate/ (incl QA) PASS + build/vet clean. gate.go extractQA (qa: line, shares extractField w/ verify:); qa.go runQA runs gate-green, BEFORE critic (先QA后critic): QA stint briefing = qa-guide skill + hint + 'run software, write .pact/orchestrate/qa-<task>.md, QA_RESULT: PASS|FAIL'; FAIL feeds SHARED fixRounds/MaxFixRounds budget (re-run owner, exhausted→escalate); PASS/missing/failure lenient (note via start event_type, never hard-block). No qa: line → 0 stints byte-identical. Report path injected reviewer brief.
         deps: [rp-fix-loop]
       - id: rp-dynamic-seats
         owner: opencode-worker

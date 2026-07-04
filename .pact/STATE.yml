@@ -313,7 +313,7 @@ features:
         evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test\n\n- tsc -b: clean (no output)\n- vitest: 60 test files passed, 498 tests passed (including new RelaySource.getEvents + TaskDetail tests)\n- playwright: 5 e2e tests passed\n- npm run build: rebuilt internal/serve/dist SPA\n- go build ./...: clean\n\nFiles changed:\n- web/src/lib/types.ts: added PactEventDetail type\n- web/src/lib/datasource.tsx: added optional getEvents to DataSource\n- web/src/lib/relaysource.ts: implemented RelaySource.getEvents\n- web/src/lib/relaysource.test.ts: added getEvents decryption test\n- web/src/components/TaskDetail.tsx + .test.tsx: hosted-mode task event-history panel\n- web/src/App.tsx: render TaskDetail in multiMachine (hosted) mode, keep RightRail for local\n- internal/serve/dist/: rebuilt production bundle
   - id: m1-machines
     branch: feat-m1-machines
-    status: in_progress
+    status: shipped
     tasks:
       - id: fe-machines
         owner: kimi-worker

@@ -18,6 +18,9 @@ var pactTypes = map[string]bool{
 	"pact.stint":         true,
 	"orchestrate.run":    true,
 	"orchestrate.resume": true,
+	"plan.generate":      true,
+	"plan.apply":         true,
+	"pact.provision":     true,
 }
 
 // IsPactType reports whether t is a pactify pact-verb rpc type.
@@ -27,22 +30,26 @@ func IsPactType(t string) bool { return pactTypes[t] }
 // Account is intentionally absent: the relay scopes delivery by the socket's
 // authenticated account, and the Executor injects it — the wire never carries it.
 type wireRPC struct {
-	Type      string            `json:"type"`
-	MachineID string            `json:"machineId"`
-	Project   string            `json:"project"`
-	Task      string            `json:"task"`
-	Feature   string            `json:"feature"`
-	Branch    string            `json:"branch"`
-	Owner     string            `json:"owner"`
-	Reviewer  string            `json:"reviewer"`
-	Spec      string            `json:"spec"`
-	Reason    string            `json:"reason"`
-	Evidence  string            `json:"evidence"`
-	Deps      []string          `json:"deps"`
-	Seat      string            `json:"seat"`
-	AgentKind string            `json:"agentKind"`
-	Briefing  string            `json:"briefing"`
-	SeatKinds map[string]string `json:"seatKinds"`
+	Type        string            `json:"type"`
+	MachineID   string            `json:"machineId"`
+	Project     string            `json:"project"`
+	Task        string            `json:"task"`
+	Feature     string            `json:"feature"`
+	Branch      string            `json:"branch"`
+	Owner       string            `json:"owner"`
+	Reviewer    string            `json:"reviewer"`
+	Spec        string            `json:"spec"`
+	Reason      string            `json:"reason"`
+	Evidence    string            `json:"evidence"`
+	Deps        []string          `json:"deps"`
+	Seat        string            `json:"seat"`
+	AgentKind   string            `json:"agentKind"`
+	Briefing    string            `json:"briefing"`
+	SeatKinds   map[string]string `json:"seatKinds"`
+	Goal        string            `json:"goal"`
+	PlannerKind string            `json:"plannerKind"`
+	RepoURL     string            `json:"repoUrl"`
+	Name        string            `json:"name"`
 }
 
 // ParseRPC decodes a raw wire rpc payload into an RPC, rejecting anything that is
@@ -59,20 +66,24 @@ func ParseRPC(raw []byte) (RPC, error) {
 		return RPC{}, fmt.Errorf("not a pact rpc type: %q", w.Type)
 	}
 	return RPC{
-		Type:      w.Type,
-		Project:   w.Project,
-		Task:      w.Task,
-		Feature:   w.Feature,
-		Branch:    w.Branch,
-		Owner:     w.Owner,
-		Reviewer:  w.Reviewer,
-		Spec:      w.Spec,
-		Reason:    w.Reason,
-		Evidence:  w.Evidence,
-		Deps:      w.Deps,
-		Seat:      w.Seat,
-		AgentKind: w.AgentKind,
-		Briefing:  w.Briefing,
-		SeatKinds: w.SeatKinds,
+		Type:        w.Type,
+		Project:     w.Project,
+		Task:        w.Task,
+		Feature:     w.Feature,
+		Branch:      w.Branch,
+		Owner:       w.Owner,
+		Reviewer:    w.Reviewer,
+		Spec:        w.Spec,
+		Reason:      w.Reason,
+		Evidence:    w.Evidence,
+		Deps:        w.Deps,
+		Seat:        w.Seat,
+		AgentKind:   w.AgentKind,
+		Briefing:    w.Briefing,
+		SeatKinds:   w.SeatKinds,
+		Goal:        w.Goal,
+		PlannerKind: w.PlannerKind,
+		RepoURL:     w.RepoURL,
+		Name:        w.Name,
 	}, nil
 }

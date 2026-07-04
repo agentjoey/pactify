@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -96,25 +97,34 @@ func (s *Server) handlePlanApply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	feature := r.PathValue("feature")
+	n, code, err := s.applyPlanManifest(id, dir, feature)
+	if err != nil {
+		writeErr(w, code, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"assigned": n})
+}
+
+// applyPlanManifest reads .pact/plan-<feature>.json, parses + applies it under
+// the per-project lock. Shared by the HTTP endpoint and the remote plan.apply
+// rpc. Returns (assignedCount, httpStatusCode, error).
+func (s *Server) applyPlanManifest(id, dir, feature string) (int, int, error) {
 	b, err := os.ReadFile(filepath.Join(dir, ".pact", "plan-"+feature+".json"))
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "plan manifest not found")
-		return
+		return 0, http.StatusBadRequest, fmt.Errorf("plan manifest not found")
 	}
 	plan, err := planner.Parse(b)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, err.Error())
-		return
+		return 0, http.StatusBadRequest, err
 	}
 	mu := s.projectMu(id)
 	mu.Lock()
 	defer mu.Unlock()
 	n, err := planner.ApplyTx(dir, plan, rosterOf(dir), s.seat)
 	if err != nil {
-		writeErr(w, http.StatusUnprocessableEntity, err.Error())
-		return
+		return 0, http.StatusUnprocessableEntity, err
 	}
-	writeJSON(w, http.StatusOK, map[string]int{"assigned": n})
+	return n, http.StatusOK, nil
 }
 
 // rosterOf returns the project's seat ids for plan validation; an unreadable

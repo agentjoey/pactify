@@ -142,15 +142,35 @@ func (s *Server) handlePlanGenerate(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	if strings.TrimSpace(req.Goal) == "" {
-		writeErr(w, http.StatusBadRequest, "goal must not be empty")
+	// The HTTP dashboard drives generate → review → apply as separate steps.
+	if code, err := s.startPlanGenerate(id, dir, req.Goal, req.Feature, req.PlannerKind, false); err != nil {
+		writeErr(w, code, err.Error())
 		return
 	}
-	if !planner.ValidSlug(req.Feature) {
-		writeErr(w, http.StatusBadRequest, "feature must be a kebab-case slug")
-		return
+	writeJSON(w, http.StatusAccepted, map[string]string{
+		"status_url": "/api/projects/" + id + "/plan/generate/status",
+		"feature":    req.Feature,
+	})
+}
+
+// startPlanGenerate validates + launches the planner subprocess (async), shared
+// by the dashboard's HTTP endpoint and the remote plan.generate rpc. Returns an
+// HTTP status code with the error for the HTTP caller; the goroutine records
+// done/error in plan-gen status. When applyAfter is set, a successfully
+// generated + valid manifest is applied in the same goroutine — the one-shot
+// path for hosted/relay callers that can't drive an interactive review loop over
+// the relay (the resulting assigns surface on the board via the event stream).
+func (s *Server) startPlanGenerate(id, dir, goal, feature, plannerKind string, applyAfter bool) (int, error) {
+	if readPlanGenStatus(dir).State == "running" {
+		return http.StatusConflict, fmt.Errorf("a plan is already generating")
 	}
-	kind := req.PlannerKind
+	if strings.TrimSpace(goal) == "" {
+		return http.StatusBadRequest, fmt.Errorf("goal must not be empty")
+	}
+	if !planner.ValidSlug(feature) {
+		return http.StatusBadRequest, fmt.Errorf("feature must be a kebab-case slug")
+	}
+	kind := plannerKind
 	if kind == "" {
 		if st, err := stateProjection(dir); err == nil {
 			kind = orchestratorKind(st)
@@ -159,17 +179,15 @@ func (s *Server) handlePlanGenerate(w http.ResponseWriter, r *http.Request) {
 	if kind == "" {
 		kind = "claude-code"
 	}
-	if err := writePlanGenStatus(dir, PlanGenStatusDTO{State: "running", Feature: req.Feature}); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
+	if err := writePlanGenStatus(dir, PlanGenStatusDTO{State: "running", Feature: feature}); err != nil {
+		return http.StatusInternalServerError, err
 	}
 	runFn := s.runPlanner
 	if runFn == nil {
 		runFn = s.defaultRunPlanner
 	}
-	args := []string{"plan", req.Goal, "--feature", req.Feature, "--planner-kind", kind}
+	args := []string{"plan", goal, "--feature", feature, "--planner-kind", kind}
 	env := []string{"PACT_AGENT_ID=" + s.seat}
-	feature := req.Feature
 	go func() {
 		err := runFn(dir, args, env)
 		done := PlanGenStatusDTO{Feature: feature, State: "done"}
@@ -179,11 +197,13 @@ func (s *Server) handlePlanGenerate(w http.ResponseWriter, r *http.Request) {
 		} else if perr := manifestParses(dir, feature); perr != nil {
 			done.State = "error"
 			done.Error = "planner produced no valid manifest: " + perr.Error()
+		} else if applyAfter {
+			if _, _, aerr := s.applyPlanManifest(id, dir, feature); aerr != nil {
+				done.State = "error"
+				done.Error = "generated but failed to apply: " + aerr.Error()
+			}
 		}
 		_ = writePlanGenStatus(dir, done)
 	}()
-	writeJSON(w, http.StatusAccepted, map[string]string{
-		"status_url": "/api/projects/" + id + "/plan/generate/status",
-		"feature":    feature,
-	})
+	return 0, nil
 }

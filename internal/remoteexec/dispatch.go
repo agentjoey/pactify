@@ -20,22 +20,26 @@ import (
 // linx rpc type. Args carry the verb parameters (task/feature/branch/owner/
 // reviewer/spec/reason/evidence/deps) so the wire shape stays a flat, bounded map.
 type RPC struct {
-	Type      string            // e.g. "pact.assign" (see the switch in Handle for the set)
-	Account   string            // account scope of the caller — must match this machine's
-	Project   string            // registered project name the verb targets
-	Task      string            // task id (assign/accept/changes/checkpoint)
-	Feature   string            // feature id (assign/merge)
-	Branch    string            // feature branch (assign)
-	Owner     string            // task owner seat (assign)
-	Reviewer  string            // task reviewer seat (assign)
-	Spec      string            // task spec path (assign)
-	Reason    string            // changes reason
-	Evidence  string            // checkpoint evidence
-	Deps      []string          // assign dependencies
-	Seat      string            // stint: seat to act as
-	AgentKind string            // stint: agent CLI kind to spawn
-	Briefing  string            // stint: prompt for the agent
-	SeatKinds map[string]string // orchestrate.run: seat → agent kind
+	Type        string            // e.g. "pact.assign" (see the switch in Handle for the set)
+	Account     string            // account scope of the caller — must match this machine's
+	Project     string            // registered project name the verb targets
+	Task        string            // task id (assign/accept/changes/checkpoint)
+	Feature     string            // feature id (assign/merge)
+	Branch      string            // feature branch (assign)
+	Owner       string            // task owner seat (assign)
+	Reviewer    string            // task reviewer seat (assign)
+	Spec        string            // task spec path (assign)
+	Reason      string            // changes reason
+	Evidence    string            // checkpoint evidence
+	Deps        []string          // assign dependencies
+	Seat        string            // stint: seat to act as
+	AgentKind   string            // stint: agent CLI kind to spawn
+	Briefing    string            // stint: prompt for the agent
+	SeatKinds   map[string]string // orchestrate.run: seat → agent kind
+	Goal        string            // plan.generate: the goal prompt
+	PlannerKind string            // plan.generate: planner agent kind
+	RepoURL     string            // provision: git URL to clone
+	Name        string            // provision: registry name for the clone
 }
 
 // StintRequest is a remote request to run one agent stint (spawn an agent CLI to
@@ -48,6 +52,29 @@ type StintRequest struct {
 	AgentKind string
 	Briefing  string
 	Branch    string // feature branch to run on (from the driver; "" = resolve locally)
+}
+
+// Provisioner clones a repo onto the machine and registers it (pact.provision).
+// serve implements it (machine-level policy: requires a configured provision
+// dir; default off). Nil = remote provisioning disabled. It has no project (the
+// project doesn't exist yet), so it's dispatched before the project resolve.
+type Provisioner interface {
+	Provision(repoURL, name string) (registeredName string, err error)
+}
+
+// PlanRequest drives remote plan generation/application.
+type PlanRequest struct {
+	Project     string
+	Feature     string
+	Goal        string // generate only
+	PlannerKind string // generate only
+	Apply       bool   // false = generate, true = apply
+}
+
+// Planner runs remote plan.generate/apply. serve implements it (policy-gated,
+// same spawn/apply path the dashboard uses). Nil = remote plan disabled.
+type Planner interface {
+	RunPlan(req PlanRequest) error
 }
 
 // OrchestrateRequest asks the machine to start (or resume) its orchestrate
@@ -81,6 +108,9 @@ type Stinter interface {
 type Reply struct {
 	OK    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
+	// RunID carries an operation identifier back to the caller (e.g. the
+	// registered project name from a provision). Optional.
+	RunID string `json:"runId,omitempty"`
 }
 
 // PactEngine is the subset of *pact.Project the dispatcher drives. *pact.Project
@@ -115,6 +145,10 @@ type Dispatcher struct {
 	Stint Stinter
 	// Orch starts the orchestrate driver (orchestrate.run/resume). Nil = disabled.
 	Orch Orchestrator
+	// Plan runs remote plan generate/apply (plan.generate/apply). Nil = disabled.
+	Plan Planner
+	// Prov clones + registers a repo (pact.provision). Nil = disabled.
+	Prov Provisioner
 }
 
 // Handle executes one rpc and returns a Reply. It never panics on bad input:
@@ -125,8 +159,38 @@ func (d *Dispatcher) Handle(rpc RPC) Reply {
 	if d.Account == "" || rpc.Account != d.Account {
 		return fail(ErrAccountScope.Error())
 	}
+	// Provision has no project (it creates one) — dispatch before the project check.
+	if rpc.Type == "pact.provision" {
+		if d.Prov == nil {
+			return fail("remote provisioning not enabled for this machine")
+		}
+		if rpc.RepoURL == "" || rpc.Name == "" {
+			return fail("pact.provision requires repoUrl and name")
+		}
+		name, err := d.Prov.Provision(rpc.RepoURL, rpc.Name)
+		if err != nil {
+			return fail(err.Error())
+		}
+		return Reply{OK: true, RunID: name}
+	}
 	if rpc.Project == "" {
 		return fail("rpc missing project")
+	}
+	// plan.generate/apply — policy-gated (generate spawns the planner agent).
+	if rpc.Type == "plan.generate" || rpc.Type == "plan.apply" {
+		if d.Plan == nil {
+			return fail("remote plan not enabled for this machine")
+		}
+		if rpc.Feature == "" {
+			return fail("plan rpc requires feature")
+		}
+		if err := d.Plan.RunPlan(PlanRequest{
+			Project: rpc.Project, Feature: rpc.Feature, Goal: rpc.Goal,
+			PlannerKind: rpc.PlannerKind, Apply: rpc.Type == "plan.apply",
+		}); err != nil {
+			return fail(err.Error())
+		}
+		return Reply{OK: true}
 	}
 	// orchestrate.run/resume starts the whole driver — policy-gated like stint.
 	if rpc.Type == "orchestrate.run" || rpc.Type == "orchestrate.resume" {

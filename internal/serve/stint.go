@@ -23,8 +23,10 @@ type RemotePolicy struct {
 	// Stint enables pact.stint (a remote control plane can spawn an agent here).
 	Stint bool `json:"stint"`
 	// Orchestrate enables orchestrate.run/resume rpc (drive this machine's
-	// orchestrate remotely). Reserved for the M3/M4 remote-orchestrate entry.
+	// orchestrate remotely).
 	Orchestrate bool `json:"orchestrate"`
+	// Plan enables plan.generate/apply rpc (generate spawns the planner agent).
+	Plan bool `json:"plan"`
 	// AgentKinds optionally restricts which agent kinds may be spawned remotely;
 	// empty ⇒ any known kind.
 	AgentKinds []string `json:"agentKinds,omitempty"`
@@ -190,3 +192,30 @@ func (o *serveOrchestrator) RunOrchestrate(req remoteexec.OrchestrateRequest) er
 func (s *Server) newOrchestrator() remoteexec.Orchestrator {
 	return &serveOrchestrator{s: s}
 }
+
+// servePlanner runs remote plan.generate/apply, gated by RemotePolicy.Plan.
+// Reuses the same generate-spawn / apply paths the dashboard uses.
+type servePlanner struct{ s *Server }
+
+func (pl *servePlanner) RunPlan(req remoteexec.PlanRequest) error {
+	pl.s.pmu.RLock()
+	proj, ok := pl.s.projects[req.Project]
+	pl.s.pmu.RUnlock()
+	if !ok {
+		return fmt.Errorf("unknown project %q", req.Project)
+	}
+	if !readRemotePolicy(proj.Path).Plan {
+		return errors.New("remote plan not enabled for this project (see .pact/remote.json)")
+	}
+	if req.Apply {
+		_, _, err := pl.s.applyPlanManifest(req.Project, proj.Path, req.Feature)
+		return err
+	}
+	// Remote generate is one-shot (generate → auto-apply): the relay can't drive
+	// an interactive review loop, so the assigns land on the board via events.
+	_, err := pl.s.startPlanGenerate(req.Project, proj.Path, req.Goal, req.Feature, req.PlannerKind, true)
+	return err
+}
+
+// newPlanner builds the policy-gated remote plan entry.
+func (s *Server) newPlanner() remoteexec.Planner { return &servePlanner{s: s} }

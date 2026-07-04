@@ -178,3 +178,66 @@ func TestHandle_Orchestrate(t *testing.T) {
 		t.Fatalf("orchestrate should be disabled when Orch nil")
 	}
 }
+
+type fakePlanner struct {
+	got PlanRequest
+	err error
+}
+
+func (f *fakePlanner) RunPlan(req PlanRequest) error { f.got = req; return f.err }
+
+func TestHandle_Plan(t *testing.T) {
+	fp := &fakePlanner{}
+	d := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{}), Plan: fp}
+	r := d.Handle(RPC{Type: "plan.generate", Account: "acct1", Project: "known", Feature: "f1", Goal: "build X", PlannerKind: "claude-code"})
+	if !r.OK {
+		t.Fatalf("plan.generate should accept, got %+v", r)
+	}
+	if fp.got.Goal != "build X" || fp.got.Feature != "f1" || fp.got.Apply {
+		t.Fatalf("plan req wrong: %+v", fp.got)
+	}
+	if r := d.Handle(RPC{Type: "plan.apply", Account: "acct1", Project: "known", Feature: "f1"}); !r.OK || !fp.got.Apply {
+		t.Fatalf("plan.apply should set Apply, got %+v / %+v", r, fp.got)
+	}
+	// Missing feature → rejected.
+	if r := d.Handle(RPC{Type: "plan.generate", Account: "acct1", Project: "known", Goal: "x"}); r.OK {
+		t.Fatal("plan without feature should fail")
+	}
+	// Disabled → rejected.
+	d2 := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{})}
+	if r := d2.Handle(RPC{Type: "plan.generate", Account: "acct1", Project: "known", Feature: "f1", Goal: "x"}); r.OK {
+		t.Fatal("plan should be disabled when Plan nil")
+	}
+}
+
+type fakeProv struct {
+	gotURL, gotName string
+	err             error
+}
+
+func (f *fakeProv) Provision(url, name string) (string, error) {
+	f.gotURL, f.gotName = url, name
+	return "demo", f.err
+}
+
+func TestHandle_Provision(t *testing.T) {
+	fp := &fakeProv{}
+	d := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{}), Prov: fp}
+	// No project required for provision.
+	r := d.Handle(RPC{Type: "pact.provision", Account: "acct1", RepoURL: "git@x:demo.git", Name: "demo"})
+	if !r.OK || r.RunID != "demo" {
+		t.Fatalf("provision should accept + return name, got %+v", r)
+	}
+	if fp.gotURL != "git@x:demo.git" || fp.gotName != "demo" {
+		t.Fatalf("provision args wrong: %s / %s", fp.gotURL, fp.gotName)
+	}
+	// Missing repoUrl → rejected.
+	if r := d.Handle(RPC{Type: "pact.provision", Account: "acct1", Name: "demo"}); r.OK {
+		t.Fatal("provision without repoUrl should fail")
+	}
+	// Disabled → rejected.
+	d2 := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{})}
+	if r := d2.Handle(RPC{Type: "pact.provision", Account: "acct1", RepoURL: "u", Name: "n"}); r.OK {
+		t.Fatal("provision should be disabled when Prov nil")
+	}
+}

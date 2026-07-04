@@ -396,10 +396,10 @@ features:
         evidence: go test ./internal/orchestrate/ -run Fix|Gate + full pkg + build/vet clean. loop.go pre-review fixUntilGreen (verify gate red→re-run owner fixBrief, MaxFixRounds=2, not counted to MaxFails; exhausted→escalate; green first-try byte-identical), status.go fixing phase, 5 tests.
       - id: rp-quorum
         owner: claude-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-quorum.md
-        evidence: null
+        evidence: go test ./internal/pact/ ./internal/projection/ ./internal/orchestrate/ PASS + build/vet clean. assign --reviewers a,b,c --quorum N (excl --reviewer); fold: distinct reviewer accepts after checkpoint ≥ quorum → accepted, changes/checkpoint reset Accepts tally; checkReviewerVerdict generalized (caller∈Reviewers; worker self-accept still rejected); single-reviewer byte-identical (quorum==0 writes classic payload, map-key sort → identical bytes; regression golden). loop launchReviewers serial + early-stop. DTO reviewers/quorum/accepts.
       - id: rp-snapshot
         owner: claude-worker
         status: accepted

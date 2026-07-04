@@ -241,3 +241,5 @@
 {"event_id":"728e1229b7e9abdd62ef6c243c50e4bd","ts":"2026-07-04T05:12:37Z","agent_id":"claude","role":"reviewer","event_type":"accept","task_id":"fe-drilldown","feature":"web-drilldown","payload":{}}
 {"event_id":"e438a56799f060586c75bb5902c45ea5","ts":"2026-07-04T05:12:48Z","agent_id":"claude","role":"orchestrator","event_type":"merge","task_id":"","feature":"web-drilldown","payload":{}}
 {"event_id":"fd9b055afd3922e4302a3112a664cd8f","ts":"2026-07-04T06:41:19Z","agent_id":"claude","role":"orchestrator","event_type":"assign","task_id":"fe-machines","feature":"m1-machines","payload":{"branch":"feat-m1-machines","owner":"kimi-worker","reviewer":"claude","spec":".pact/tasks/fe-machines.md"}}
+{"event_id":"efcce925029f22adeaf6637e21d64c6a","ts":"2026-07-04T06:41:29Z","agent_id":"claude","role":"orchestrator","event_type":"start","task_id":"fe-machines","feature":"m1-machines","payload":{"owner":"kimi-worker"}}
+{"event_id":"86f4df9649046f942ac6a2023d0d7c40","ts":"2026-07-04T06:41:38Z","agent_id":"kimi-worker","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"roles":["worker"]}}

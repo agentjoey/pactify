@@ -140,6 +140,16 @@ export interface FsBrowseResponse {
   entries: FsBrowseEntry[];
 }
 
+// Multi-machine roster surfaced by hosted-mode sources (relay account machines).
+export interface Machine {
+  machineId: string;
+  host?: string;
+  agentKinds: string[];
+  workdirs?: string[];
+  online: boolean;
+  lastSeenAt: number;
+}
+
 // Planner-generated task graph surfaced for human review before `plan apply`
 // assigns it (#7 planner review).
 export interface PlanTaskReview {

@@ -7,12 +7,13 @@ import type {
   PactEventBroadcast,
 } from "@pactify-apps/relay-client";
 import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
-import type { ProjectMeta, State } from "./types";
+import type { Machine, ProjectMeta, State } from "./types";
 import type { ProjectStats } from "./api";
 import type { PactEventDetail } from "./types";
 
 type MockRelayClient = {
   listProjects: RelayClient["listProjects"];
+  listMachines: RelayClient["listMachines"];
   getProjectEvents: RelayClient["getProjectEvents"];
   decrypt: RelayClient["decrypt"];
   subscribe: RelayClient["subscribe"];
@@ -23,6 +24,7 @@ type MockRelayClient = {
 function makeClient(overrides?: Partial<MockRelayClient>): MockRelayClient {
   return {
     listProjects: vi.fn().mockResolvedValue([]),
+    listMachines: vi.fn().mockResolvedValue([]),
     getProjectEvents: vi.fn().mockResolvedValue([]),
     decrypt: vi.fn().mockReturnValue({}),
     subscribe: vi.fn().mockReturnValue(() => {}),
@@ -91,6 +93,47 @@ describe("RelaySource", () => {
       },
     ]);
     expect(client.listProjects).toHaveBeenCalled();
+  });
+
+  it("getMachines maps relay MachineInfo to Machine", async () => {
+    const machines = [
+      {
+        machineId: "m1",
+        host: "laptop.local",
+        agentKinds: ["opencode", "claude-code"],
+        workdirs: ["/Users/x/p1"],
+        online: true,
+        lastSeenAt: 1_700_000_000_000,
+      },
+      {
+        machineId: "m2",
+        agentKinds: ["gemini"],
+        online: false,
+        lastSeenAt: 1_700_000_000_000 - 3_600_000,
+      },
+    ];
+    const client = makeClient({
+      listMachines: vi.fn().mockResolvedValue(machines),
+    });
+    const src = new RelaySource(client as RelayClient);
+    const result = await src.getMachines();
+    expect(result).toEqual<Machine[]>([
+      {
+        machineId: "m1",
+        host: "laptop.local",
+        agentKinds: ["opencode", "claude-code"],
+        workdirs: ["/Users/x/p1"],
+        online: true,
+        lastSeenAt: 1_700_000_000_000,
+      },
+      {
+        machineId: "m2",
+        agentKinds: ["gemini"],
+        online: false,
+        lastSeenAt: 1_700_000_000_000 - 3_600_000,
+      },
+    ]);
+    expect(client.listMachines).toHaveBeenCalled();
   });
 
   it("getState decrypts events and projects to State", async () => {

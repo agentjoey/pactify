@@ -317,7 +317,7 @@ features:
     tasks:
       - id: fe-machines
         owner: kimi-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/fe-machines.md
         evidence: null

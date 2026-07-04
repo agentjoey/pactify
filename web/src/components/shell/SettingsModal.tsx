@@ -4,6 +4,7 @@ import { CustomAgentForm } from "../ops/CustomAgentForm";
 import { AgentConfig } from "../ops/AgentConfig";
 import { Wiring } from "../ops/Wiring";
 import { Seats } from "../ops/Seats";
+import { Machines } from "../Machines";
 
 type Scope = "project" | "machine" | "account";
 
@@ -120,6 +121,7 @@ export function SettingsModal({
       scope: "account",
       label: "ACCOUNT",
       items: [
+        { id: "machines", label: "Machines", icon: "◈" },
         { id: "appearance", label: "Appearance", icon: "◐" },
         { id: "shortcuts", label: "Shortcuts", icon: "⌘" },
       ],
@@ -161,6 +163,8 @@ export function SettingsModal({
         );
       case "agent-configs":
         return <AgentConfig />;
+      case "machines":
+        return <Machines />;
       case "review-gate":
       case "worktrees":
       case "sessions":
@@ -327,6 +331,14 @@ function ScopeExplainer({
       <p className="max-w-xl text-xs leading-relaxed text-[var(--color-text-2)]">
         Scan, register and remove agent kinds on this computer. Once registered, configure models
         and permissions under <span className="text-[#6ee7a0]">Machine · Agent configs</span>.
+      </p>
+    );
+  }
+  if (scope === "account" && activeItem === "machines") {
+    return (
+      <p className="max-w-xl text-xs leading-relaxed text-[var(--color-text-2)]">
+        Account-wide machine roster. In local mode this list is empty because there is no relay
+        presence to aggregate.
       </p>
     );
   }

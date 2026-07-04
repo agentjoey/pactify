@@ -340,10 +340,10 @@ features:
         deps: [dm-acp-core]
       - id: dm-acp-usage
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/dm-acp-usage.md
-        evidence: null
+        evidence: go test ./internal/orchestrate/ ./internal/tokens/ ./internal/serve/ PASS + build clean. Found store internal/tokens → .pact/orchestrate/tokens.json; extracted shared recordTaskTokens (CmdRunner behavior identical); AcpRunner.OnUsage(repoDir,seat,task,Usage) wired in NewAcpRunner → recordAcpUsage sums in+out tokens into same store. Fixes TOK=0 debt (ACP session/update usage is the real data source). +2 production tests.
         deps: [dm-acp-runner]
       - id: dm-session-resume
         owner: kimi-worker

@@ -56,6 +56,10 @@ func newServeCmd() *cobra.Command {
 			// app (M1). --remote-control ADDITIONALLY executes pact.* rpc from a
 			// remote control plane (U3), gated because it runs writes on local repos.
 			go srv.StartMachineChannel(ctx, remoteControl)
+			// Scheduled/recurring orchestrate: a minute-granularity ticker reads
+			// ~/.pactify/schedules.json and spawns orchestrate for due schedules
+			// (conflict guard skips a project already running).
+			go srv.StartScheduler(ctx)
 			if remoteControl {
 				fmt.Fprintln(c.OutOrStdout(), "pactify serve: remote control ENABLED (relay down-channel)")
 			}

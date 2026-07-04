@@ -4,7 +4,7 @@ import { project } from "@pactify-apps/pact-project";
 import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
 import type { DataSource, DataSourceCapabilities } from "./datasource";
 import type { ProjectStats, TaskStat, AgentStat } from "./api";
-import type { PactEventDetail, ProjectMeta, State } from "./types";
+import type { Machine, PactEventDetail, ProjectMeta, State } from "./types";
 
 /**
  * RelaySource implements DataSource against the zero-knowledge pact relay: events
@@ -59,10 +59,22 @@ export class RelaySource implements DataSource {
     }));
   }
 
+  async getMachines(): Promise<Machine[]> {
+    const machines = await this.client.listMachines();
+    return machines.map((m) => ({
+      machineId: m.machineId,
+      host: m.host,
+      agentKinds: m.agentKinds,
+      workdirs: m.workdirs,
+      online: m.online,
+      lastSeenAt: m.lastSeenAt,
+    }));
+  }
+
   /**
    * Drive a pact verb remotely: build the matching pact.* rpc and send it to this
    * account's machine over the relay (fire-and-forget — the machine executes it
-   * and the effect returns through the event stream, re-projecting the board).
+   * locally and the effect returns through the event stream, re-projecting the board).
    * machineId is the account id (MVP one-machine-per-account).
    */
   async verb(

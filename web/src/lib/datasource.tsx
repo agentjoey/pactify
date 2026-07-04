@@ -13,7 +13,7 @@ import type {
   PlanReviewResponse,
   PactEvent,
 } from "./types";
-import type { PactEventDetail, ProjectMeta, State } from "./types";
+import type { Machine, PactEventDetail, ProjectMeta, State } from "./types";
 
 export interface DataSourceCapabilities {
   canWrite: boolean;
@@ -36,6 +36,8 @@ export interface DataSource {
   fetchEventsLog?(id: string, wt?: string, n?: number): Promise<PactEvent[]>;
   /** Hosted-mode sources may expose the full decrypted event history. */
   getEvents?(project: string): Promise<PactEventDetail[]>;
+  /** Hosted-mode sources may expose the account's machine roster. */
+  getMachines?(): Promise<Machine[]>;
 
   verb?(
     project: string,

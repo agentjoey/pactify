@@ -271,3 +271,13 @@ features:
         spec: .pact/tasks/p3-relay-source.md
         evidence: verify: cd web && npx tsc -b && npx vitest run src/lib  - npx tsc -b: clean (no output) - npx vitest run src/lib: 17 test files passed, 190 tests passed  Files changed: - web/vite.config.ts: added @pactify-apps/relay-client alias - web/tsconfig.app.json: added @pactify-apps/relay-client path - web/src/lib/relaysource.ts (NEW): RelaySource implements DataSource against RelayClient; read-only (canWrite=false, canOrchestrate=false, multiMachine=true); listProjects/getState/getState/subscribe implemented; write/orchestrate methods left undefined per spec - web/src/lib/relaysource.test.ts (NEW): 5 vitest tests covering capabilities, listProjects mapping, getState decrypt+project, subscribe callback+unsubscribe, getStats derived from state
         deps: [relay-client]
+  - id: web-polish
+    branch: feat-web-polish
+    status: in_progress
+    tasks:
+      - id: fe-codesplit
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/fe-codesplit.md
+        evidence: null

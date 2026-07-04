@@ -186,6 +186,14 @@ func (opts Options) run(ctx context.Context) error {
 	h := History{Rework: seedRework(opts.Dir), Fails: map[string]int{}, LastFail: map[string]string{}}
 	loadHistory(opts.runtimeDir(), scope, &h)
 
+	// Startup sweep: drop ACP session records whose task went terminal while the
+	// driver was down (spec §2 orphan cleanup). Best-effort, off the DryRun path.
+	if !opts.DryRun {
+		if st, err := pact.At(opts.Dir).StateProjection(); err == nil {
+			opts.pruneOrphanSessions(st)
+		}
+	}
+
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -416,6 +424,9 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 		// Task is done: close the owner's & reviewer's sessions for it (opencode-
 		// only today). Best-effort — a cleanup failure never blocks the loop.
 		opts.cleanupTaskSessions(task)
+		// Drop the persisted ACP session records for this task so its resume state
+		// doesn't outlive it (spec §2 cleanup). Best-effort; keyed by (seat,task).
+		opts.clearTaskSessionRecords(task)
 	default:
 		h.Fails[act.Task]++
 	}
@@ -458,6 +469,38 @@ func (opts Options) cleanupTaskSessions(task projection.Task) {
 		ids, _, err := mgr.CleanupByTitle(kind, sessions.SessionTag(seat))
 		opts.notifyCleanup(task, seat, kind, ids, err)
 	}
+}
+
+// clearTaskSessionRecords drops the persisted ACP session store rows for a task's
+// owner and reviewer once the task is terminal, so a resume never re-attaches a
+// dead task's context. Best-effort: keyed by (seat,task); a store write failure is
+// swallowed (resume degrades to a cold session — never fatal).
+func (opts Options) clearTaskSessionRecords(task projection.Task) {
+	for _, seat := range []string{task.Owner, task.Reviewer} {
+		if seat == "" {
+			continue
+		}
+		_ = ClearSession(opts.Dir, seat, task.ID)
+	}
+}
+
+// pruneOrphanSessions sweeps the ACP session store on startup, dropping records
+// whose task already reached a terminal state (accepted/cancelled) while the
+// driver was down — the crash-safe complement to clearTaskSessionRecords. Records
+// for still-live or unknown tasks are kept (a resume of a live task is the point).
+// Best-effort: a read/write failure is swallowed so startup is never blocked.
+func (opts Options) pruneOrphanSessions(st projection.State) {
+	terminal := map[string]bool{}
+	for _, f := range st.Features {
+		for _, t := range f.Tasks {
+			if t.Status == "accepted" || t.Status == "cancelled" {
+				terminal[t.ID] = true
+			}
+		}
+	}
+	_ = PruneSessions(opts.Dir, func(_ /*seat*/, task string) bool {
+		return !terminal[task]
+	})
 }
 
 // notifyCleanup reports the outcome of one seat's session cleanup: an error, or

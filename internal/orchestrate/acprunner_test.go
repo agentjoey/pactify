@@ -24,6 +24,18 @@ type fakeAcpConn struct {
 	// fc helpers, then returns the stop reason (or an error).
 	prompt func(fc *fakeAcpConn) (acp.StopReason, error)
 
+	// newSessionID, when set, is the id NewSession returns (default "sess-1"); a
+	// non-nil loadErr makes LoadSession fail (exercising the fall-back-to-New path).
+	newSessionID string
+	loadErr      error
+	// newCalls / loadCalls record how many times each was invoked, and loadedID the
+	// id LoadSession was last asked to resume — the resume tests assert on these.
+	newCalls     int
+	loadCalls    int
+	loadedID     acp.SessionID
+	promptedSID  acp.SessionID
+	promptedText string
+
 	onUpdate func(acp.SessionUpdate)
 	onPerm   func(acp.PermissionRequest) acp.PermissionOutcome
 
@@ -37,9 +49,20 @@ func (f *fakeAcpConn) Initialize(context.Context) (acp.InitializeResult, error) 
 	return acp.InitializeResult{ProtocolVersion: acp.ProtocolVersion, LoadSession: f.loadSession}, nil
 }
 func (f *fakeAcpConn) NewSession(context.Context, string) (acp.SessionID, error) {
+	f.newCalls++
+	if f.newSessionID != "" {
+		return acp.SessionID(f.newSessionID), nil
+	}
 	return "sess-1", nil
 }
-func (f *fakeAcpConn) Prompt(_ context.Context, _ acp.SessionID, _ string) (acp.StopReason, error) {
+func (f *fakeAcpConn) LoadSession(_ context.Context, id acp.SessionID) error {
+	f.loadCalls++
+	f.loadedID = id
+	return f.loadErr
+}
+func (f *fakeAcpConn) Prompt(_ context.Context, sid acp.SessionID, text string) (acp.StopReason, error) {
+	f.promptedSID = sid
+	f.promptedText = text
 	if f.prompt != nil {
 		return f.prompt(f)
 	}
@@ -334,6 +357,109 @@ func TestAcpRunnerUnknownKindGuidesToCmd(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "--transport") || !strings.Contains(err.Error(), "cmd") {
 		t.Fatalf("error should point the user at --transport …=cmd, got %v", err)
+	}
+}
+
+// TestAcpRunnerRecordsSessionOnNew is the baseline for resume: a fresh stint (no
+// prior record) mints a new session and persists it, so a later retry can resume.
+func TestAcpRunnerSessionRecordsOnNew(t *testing.T) {
+	dir := t.TempDir()
+	fc := newFakeAcpConn()
+	fc.loadSession = true // capability present, but nothing to resume yet
+	r := AcpRunner{Spawn: captureSpawn(fc, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w", Task: "t1", Kind: "kimi-cli", RepoDir: dir}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if fc.newCalls != 1 || fc.loadCalls != 0 {
+		t.Fatalf("first stint should NewSession, not LoadSession: new=%d load=%d", fc.newCalls, fc.loadCalls)
+	}
+	if got, ok := LookupSession(dir, "w", "t1"); !ok || got != "sess-1" {
+		t.Fatalf("NewSession id should be persisted, got %q ok=%v", got, ok)
+	}
+	if strings.HasPrefix(fc.promptedText, "续接") {
+		t.Fatalf("a fresh session must not carry the resume prefix, got %q", fc.promptedText)
+	}
+}
+
+// TestAcpRunnerResumesWhenSupported: server advertises loadSession AND a prior
+// record exists → LoadSession(oldID) is called first and the briefing is prefixed.
+func TestAcpRunnerSessionResumesWhenSupported(t *testing.T) {
+	dir := t.TempDir()
+	if err := RecordSession(dir, "w", "t1", "kimi-cli", "old-sess"); err != nil {
+		t.Fatalf("seed record: %v", err)
+	}
+	fc := newFakeAcpConn()
+	fc.loadSession = true
+	r := AcpRunner{Spawn: captureSpawn(fc, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w", Task: "t1", Kind: "kimi-cli", RepoDir: dir, Briefing: "do the work"}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if fc.loadCalls != 1 || fc.loadedID != "old-sess" {
+		t.Fatalf("retry should LoadSession the prior id first, load=%d id=%q", fc.loadCalls, fc.loadedID)
+	}
+	if fc.newCalls != 0 {
+		t.Fatalf("a successful resume must not open a new session, new=%d", fc.newCalls)
+	}
+	if fc.promptedSID != "old-sess" {
+		t.Fatalf("prompt should run against the resumed session, got %q", fc.promptedSID)
+	}
+	if !strings.HasPrefix(fc.promptedText, "续接上次会话") || !strings.Contains(fc.promptedText, "do the work") {
+		t.Fatalf("resumed briefing should be prefixed then carry the original brief, got %q", fc.promptedText)
+	}
+}
+
+// TestAcpRunnerNoResumeWhenUnsupported: a prior record exists but the server did
+// NOT advertise loadSession → LoadSession is never called, falls to NewSession,
+// briefing unprefixed (current behavior).
+func TestAcpRunnerSessionNoResumeWhenUnsupported(t *testing.T) {
+	dir := t.TempDir()
+	if err := RecordSession(dir, "w", "t1", "kimi-cli", "old-sess"); err != nil {
+		t.Fatalf("seed record: %v", err)
+	}
+	fc := newFakeAcpConn()
+	fc.loadSession = false
+	r := AcpRunner{Spawn: captureSpawn(fc, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w", Task: "t1", Kind: "kimi-cli", RepoDir: dir, Briefing: "do the work"}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if fc.loadCalls != 0 {
+		t.Fatalf("no loadSession capability → LoadSession must not be called, load=%d", fc.loadCalls)
+	}
+	if fc.newCalls != 1 {
+		t.Fatalf("should fall back to NewSession, new=%d", fc.newCalls)
+	}
+	if strings.HasPrefix(fc.promptedText, "续接") {
+		t.Fatalf("unsupported resume must not prefix the briefing, got %q", fc.promptedText)
+	}
+}
+
+// TestAcpRunnerResumeFailureFallsBack: capability present, prior record present,
+// but LoadSession errors (session expired/rejected) → the stale record is cleared
+// and the stint falls back to a fresh NewSession, unprefixed.
+func TestAcpRunnerSessionResumeFailureFallsBack(t *testing.T) {
+	dir := t.TempDir()
+	if err := RecordSession(dir, "w", "t1", "kimi-cli", "old-sess"); err != nil {
+		t.Fatalf("seed record: %v", err)
+	}
+	fc := newFakeAcpConn()
+	fc.loadSession = true
+	fc.loadErr = errors.New("session expired")
+	r := AcpRunner{Spawn: captureSpawn(fc, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w", Task: "t1", Kind: "kimi-cli", RepoDir: dir, Briefing: "do the work"}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if fc.loadCalls != 1 {
+		t.Fatalf("resume should be attempted once, load=%d", fc.loadCalls)
+	}
+	if fc.newCalls != 1 {
+		t.Fatalf("a failed resume must fall back to NewSession, new=%d", fc.newCalls)
+	}
+	if strings.HasPrefix(fc.promptedText, "续接") {
+		t.Fatalf("a failed resume runs a fresh session — no resume prefix, got %q", fc.promptedText)
+	}
+	// The stale id was cleared and replaced by the fresh NewSession id.
+	if got, ok := LookupSession(dir, "w", "t1"); !ok || got != "sess-1" {
+		t.Fatalf("record should now hold the fresh session id, got %q ok=%v", got, ok)
 	}
 }
 

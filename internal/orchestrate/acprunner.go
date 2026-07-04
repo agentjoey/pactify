@@ -11,11 +11,17 @@ import (
 	"github.com/agentjoey/pactify/internal/acp"
 )
 
+// resumeBriefingPrefix is prepended to the briefing when a stint resumes a prior
+// ACP session (LoadSession succeeded), telling the agent to re-orient off its own
+// prior work before continuing rather than restarting from scratch.
+const resumeBriefingPrefix = "续接上次会话:先自查上次进度(git log/diff),再继续任务\n\n"
+
 // acpConn is the subset of *acp.Client that AcpRunner drives — the seam tests
 // inject a fake through, mirroring CmdRunner's execFn. *acp.Client satisfies it.
 type acpConn interface {
 	Initialize(ctx context.Context) (acp.InitializeResult, error)
 	NewSession(ctx context.Context, cwd string) (acp.SessionID, error)
+	LoadSession(ctx context.Context, id acp.SessionID) error
 	Prompt(ctx context.Context, sid acp.SessionID, text string) (acp.StopReason, error)
 	OnSessionUpdate(fn func(acp.SessionUpdate))
 	OnPermissionRequest(fn func(acp.PermissionRequest) acp.PermissionOutcome)
@@ -125,12 +131,38 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 	})
 	conn.OnPermissionRequest(r.permissionHandler(lc))
 
-	if _, err := conn.Initialize(ctx); err != nil {
+	init, err := conn.Initialize(ctx)
+	if err != nil {
 		return fmt.Errorf("orchestrate: acp initialize %q: %w", lc.Kind, err)
 	}
-	sid, err := conn.NewSession(ctx, lc.RepoDir)
-	if err != nil {
-		return fmt.Errorf("orchestrate: acp session %q: %w", lc.Kind, err)
+
+	// Session resume (spec §2): if a prior stint for this (seat,task) recorded a
+	// session and the server advertised loadSession, re-attach that context instead
+	// of starting cold. On any LoadSession failure (expired/rejected) we drop the
+	// stale record and fall through to NewSession — the pre-resume behavior.
+	var sid string
+	briefing := lc.Briefing
+	resumed := false
+	if init.LoadSession {
+		if old, ok := LookupSession(lc.RepoDir, lc.Seat, lc.Task); ok {
+			if lerr := conn.LoadSession(ctx, acp.SessionID(old)); lerr == nil {
+				sid = old
+				resumed = true
+				briefing = resumeBriefingPrefix + lc.Briefing
+			} else {
+				_ = ClearSession(lc.RepoDir, lc.Seat, lc.Task)
+			}
+		}
+	}
+	if !resumed {
+		newID, nerr := conn.NewSession(ctx, lc.RepoDir)
+		if nerr != nil {
+			return fmt.Errorf("orchestrate: acp session %q: %w", lc.Kind, nerr)
+		}
+		sid = string(newID)
+		// Persist the mapping so a later retry of this (seat,task) can resume it.
+		// Best-effort: a store write failure must not fail the stint.
+		_ = RecordSession(lc.RepoDir, lc.Seat, lc.Task, lc.Kind, sid)
 	}
 
 	// The stint prompted: surface its usage on every exit path (success, idle
@@ -151,7 +183,7 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 	}
 	done := make(chan result, 1)
 	go func() {
-		_, perr := conn.Prompt(ctx, sid, lc.Briefing)
+		_, perr := conn.Prompt(ctx, acp.SessionID(sid), briefing)
 		done <- result{perr}
 	}()
 

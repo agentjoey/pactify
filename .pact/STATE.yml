@@ -307,7 +307,7 @@ features:
     tasks:
       - id: fe-drilldown
         owner: kimi-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/fe-drilldown.md
         evidence: null

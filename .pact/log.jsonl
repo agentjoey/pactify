@@ -235,3 +235,5 @@
 {"event_id":"e6185f52e838f92585d8f71ae76db51d","ts":"2026-07-04T04:34:57Z","agent_id":"claude","role":"reviewer","event_type":"accept","task_id":"fe-lazyrelay","feature":"web-polish3","payload":{}}
 {"event_id":"eb206fc84d2371497b19767425351138","ts":"2026-07-04T04:35:08Z","agent_id":"claude","role":"orchestrator","event_type":"merge","task_id":"","feature":"web-polish3","payload":{}}
 {"event_id":"8b54d198b24b150a33eaac93ea93587b","ts":"2026-07-04T05:04:20Z","agent_id":"claude","role":"orchestrator","event_type":"assign","task_id":"fe-drilldown","feature":"web-drilldown","payload":{"branch":"feat-web-drilldown","owner":"kimi-worker","reviewer":"claude","spec":".pact/tasks/fe-drilldown.md"}}
+{"event_id":"c4d5e0e452901bee43ec485c9a9395ba","ts":"2026-07-04T05:04:29Z","agent_id":"claude","role":"orchestrator","event_type":"start","task_id":"fe-drilldown","feature":"web-drilldown","payload":{"owner":"kimi-worker"}}
+{"event_id":"b875775d32a2a4e2c138024d86e60506","ts":"2026-07-04T05:04:38Z","agent_id":"kimi-worker","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"roles":["worker"]}}

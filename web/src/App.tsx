@@ -15,6 +15,7 @@ import { Board } from "./components/Board";
 import { LiveOrchestrate } from "./components/LiveOrchestrate";
 import { Spinner } from "./components/ui/Spinner";
 import { RightRail } from "./components/RightRail";
+import { TaskDetail } from "./components/TaskDetail";
 import { CommandK } from "./components/CommandK";
 import { NoProjects } from "./components/NoProjects";
 import { Recipes } from "./components/Recipes";
@@ -430,7 +431,9 @@ function AppContent() {
                       </div>
                     )
                     : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>}
-                  <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />
+                  {src.capabilities.multiMachine
+                    ? <TaskDetail project={current} taskId={selected} onClose={() => setSelected("")} />
+                    : <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />}
                 </div>
               </>
             )}

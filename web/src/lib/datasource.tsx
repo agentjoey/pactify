@@ -13,7 +13,7 @@ import type {
   PlanReviewResponse,
   PactEvent,
 } from "./types";
-import type { ProjectMeta, State } from "./types";
+import type { PactEventDetail, ProjectMeta, State } from "./types";
 
 export interface DataSourceCapabilities {
   canWrite: boolean;
@@ -34,6 +34,8 @@ export interface DataSource {
     onLive?: (live: boolean) => void,
   ): () => void;
   fetchEventsLog?(id: string, wt?: string, n?: number): Promise<PactEvent[]>;
+  /** Hosted-mode sources may expose the full decrypted event history. */
+  getEvents?(project: string): Promise<PactEventDetail[]>;
 
   verb?(
     project: string,

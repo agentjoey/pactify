@@ -180,6 +180,71 @@ export const PactCheckpointRequest = z.object({
 })
 export type PactCheckpointRequest = z.infer<typeof PactCheckpointRequest>
 
+// ── multi-machine orchestration (M2–M5) ─────────────────────────────────────
+// Additive machine-targeted rpcs; the relay routes them by machineId unchanged.
+// pactify serve executes them (behind a per-project policy for the ones that run
+// code — stint/orchestrate/provision); linx ignores them.
+
+/** M2: run ONE agent stint on the target machine (spawn an agent CLI for a task,
+ * as a seat). The agent does the work locally and checkpoints; results return via
+ * the event stream. Executes only if the project's remote policy allows stint. */
+export const PactStintRequest = z.object({
+  type: z.literal('pact.stint'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  task: z.string().min(1),
+  seat: z.string().min(1),
+  agentKind: z.string().min(1),
+  briefing: z.string().optional(),
+})
+export type PactStintRequest = z.infer<typeof PactStintRequest>
+
+/** M3: run/resume the orchestrate driver on the target machine for a feature. */
+export const OrchestrateRunRequest = z.object({
+  type: z.literal('orchestrate.run'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  feature: z.string().optional(),
+  seatKinds: z.record(z.string(), z.string()).optional(), // seat → agentKind
+})
+export type OrchestrateRunRequest = z.infer<typeof OrchestrateRunRequest>
+
+export const OrchestrateResumeRequest = z.object({
+  type: z.literal('orchestrate.resume'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  feature: z.string().optional(),
+})
+export type OrchestrateResumeRequest = z.infer<typeof OrchestrateResumeRequest>
+
+/** M4: generate / apply a plan on the target machine (planner is an agent). */
+export const PlanGenerateRequest = z.object({
+  type: z.literal('plan.generate'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  goal: z.string().min(1),
+  feature: z.string().min(1),
+  plannerKind: z.string().optional(),
+})
+export type PlanGenerateRequest = z.infer<typeof PlanGenerateRequest>
+
+export const PlanApplyRequest = z.object({
+  type: z.literal('plan.apply'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  feature: z.string().min(1),
+})
+export type PlanApplyRequest = z.infer<typeof PlanApplyRequest>
+
+/** M5: clone a project onto the target machine (remote provisioning). */
+export const PactProvisionRequest = z.object({
+  type: z.literal('pact.provision'),
+  machineId: z.string().min(1),
+  repoUrl: z.string().min(1),
+  name: z.string().min(1),
+})
+export type PactProvisionRequest = z.infer<typeof PactProvisionRequest>
+
 /** client → relay → linxd (or pactify serve) control messages. */
 export const RpcRequest = z.discriminatedUnion('type', [
   SpawnRequest,
@@ -201,6 +266,12 @@ export const RpcRequest = z.discriminatedUnion('type', [
   PactChangesRequest,
   PactMergeRequest,
   PactCheckpointRequest,
+  PactStintRequest,
+  OrchestrateRunRequest,
+  OrchestrateResumeRequest,
+  PlanGenerateRequest,
+  PlanApplyRequest,
+  PactProvisionRequest,
 ])
 export type RpcRequest = z.infer<typeof RpcRequest>
 

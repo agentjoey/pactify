@@ -38,3 +38,25 @@ describe('RpcRequest: pactify pact.* control messages', () => {
     expect(() => RpcRequest.parse({ type: 'pact.accept', project: 'p', task: 't1' })).toThrow()
   })
 })
+
+describe('RpcRequest: multi-machine (M2-M5) control messages', () => {
+  it('parses pact.stint', () => {
+    const r = RpcRequest.parse({
+      type: 'pact.stint', machineId: 'm1', project: 'p', task: 't1', seat: 'kimi', agentKind: 'kimi', briefing: 'do it',
+    })
+    expect(r.type).toBe('pact.stint')
+    if (r.type === 'pact.stint') expect(r.seat).toBe('kimi')
+  })
+  it('parses orchestrate.run/resume with optional seatKinds', () => {
+    expect(RpcRequest.parse({ type: 'orchestrate.run', machineId: 'm1', project: 'p', seatKinds: { alice: 'opencode' } }).type).toBe('orchestrate.run')
+    expect(RpcRequest.parse({ type: 'orchestrate.resume', machineId: 'm1', project: 'p', feature: 'f' }).type).toBe('orchestrate.resume')
+  })
+  it('parses plan.generate/apply and pact.provision', () => {
+    expect(RpcRequest.parse({ type: 'plan.generate', machineId: 'm1', project: 'p', goal: 'g', feature: 'f' }).type).toBe('plan.generate')
+    expect(RpcRequest.parse({ type: 'plan.apply', machineId: 'm1', project: 'p', feature: 'f' }).type).toBe('plan.apply')
+    expect(RpcRequest.parse({ type: 'pact.provision', machineId: 'm1', repoUrl: 'git@x', name: 'demo' }).type).toBe('pact.provision')
+  })
+  it('rejects pact.stint missing seat/agentKind', () => {
+    expect(() => RpcRequest.parse({ type: 'pact.stint', machineId: 'm1', project: 'p', task: 't1' })).toThrow()
+  })
+})

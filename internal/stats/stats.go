@@ -26,7 +26,10 @@ type TaskStat struct {
 	Tokens      int    `json:"tokens"`
 }
 
-// AgentStat rolls a seat's owned tasks up into totals.
+// AgentStat rolls a seat's owned tasks up into totals. Accepted/Reworked are
+// reliability signals derived purely from the event stream: Accepted counts the
+// seat's owned tasks that got an `accept` event; Reworked counts every
+// `changes_requested` event on the seat's owned tasks (each round of rework).
 type AgentStat struct {
 	Seat        string `json:"seat"`
 	Tasks       int    `json:"tasks"`
@@ -34,6 +37,8 @@ type AgentStat struct {
 	Added       int    `json:"added"`
 	Deleted     int    `json:"deleted"`
 	Tokens      int    `json:"tokens"`
+	Accepted    int    `json:"accepted"`
+	Reworked    int    `json:"reworked"`
 }
 
 // Stats is the full derived view: every task + a per-owner rollup.
@@ -46,6 +51,8 @@ type timing struct {
 	assign         time.Time
 	lastCheckpoint time.Time
 	accept         time.Time
+	accepts        int // count of `accept` events on this task
+	reworks        int // count of `changes_requested` events on this task
 }
 
 // Compute derives stats from the ordered event log. `now` is the clock used to
@@ -79,6 +86,9 @@ func Compute(events []event.Event, now time.Time) Stats {
 			t.lastCheckpoint = ts
 		case "accept":
 			t.accept = ts
+			t.accepts++
+		case "changes_requested":
+			t.reworks++
 		}
 	}
 
@@ -107,6 +117,10 @@ func Compute(events []event.Event, now time.Time) Stats {
 				a.Added += ts.Added
 				a.Deleted += ts.Deleted
 				a.Tokens += ts.Tokens
+				if tt := tm[t.ID]; tt != nil {
+					a.Accepted += tt.accepts
+					a.Reworked += tt.reworks
+				}
 			}
 		}
 	}

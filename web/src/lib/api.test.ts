@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fetchProjects, fetchState, subscribeEvents, subscribeAgentStream, browseFs, postRegister, setupApply, renameRegistry } from "./api";
+import { fetchProjects, fetchState, subscribeEvents, subscribeAgentStream, browseFs, postRegister, setupApply, renameRegistry, createManifest, deleteManifest } from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -238,6 +238,46 @@ describe("fetchEventsLog", () => {
   it("throws on a non-2xx response", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("bad wt", { status: 400 })));
     await expect(fetchEventsLog("p1", "nope")).rejects.toThrow("400");
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("manifest mutations", () => {
+  it("createManifest POSTs TOML as text/plain and returns kind", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ kind: "myx" }), { status: 200 })));
+    const out = await createManifest("[agent]\nkind = \"myx\"");
+    expect(out.kind).toBe("myx");
+    const f = fetch as unknown as ReturnType<typeof vi.fn>;
+    const [url, init] = f.mock.calls[0];
+    expect(url).toBe("/api/manifests");
+    expect(init.method).toBe("POST");
+    expect(init.headers["Content-Type"]).toBe("text/plain");
+    expect(init.body).toBe("[agent]\nkind = \"myx\"");
+    vi.unstubAllGlobals();
+  });
+
+  it("createManifest throws with the server error message on 4xx", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ error: "runner.args: must contain exactly one {briefing}" }), { status: 422 })),
+    );
+    await expect(createManifest("bad")).rejects.toThrow("runner.args: must contain exactly one {briefing}");
+    vi.unstubAllGlobals();
+  });
+
+  it("deleteManifest DELETEs the kind and resolves on 2xx", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ removed: "myx" }), { status: 200 })));
+    await expect(deleteManifest("myx")).resolves.toBeUndefined();
+    const f = fetch as unknown as ReturnType<typeof vi.fn>;
+    const [url, init] = f.mock.calls[0];
+    expect(url).toBe("/api/manifests/myx");
+    expect(init.method).toBe("DELETE");
+    vi.unstubAllGlobals();
+  });
+
+  it("deleteManifest throws with the server error message on 4xx", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "not installed" }), { status: 400 })));
+    await expect(deleteManifest("myx")).rejects.toThrow("not installed");
     vi.unstubAllGlobals();
   });
 });

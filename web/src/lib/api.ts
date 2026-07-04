@@ -23,9 +23,19 @@ async function getJSON<T>(url: string): Promise<T> {
   return (await r.json()) as T;
 }
 
-// writeJSON sends a JSON body and, on non-2xx, surfaces the server's
-// {"error":msg} message verbatim so the UI can show it as-is. Falls back to a
-// status line when the body isn't the expected error envelope.
+// extractErrorMessage surfaces the server's {"error":msg} message verbatim
+// so the UI can show it as-is. Falls back to a status line when the body isn't
+// the expected error envelope.
+async function extractErrorMessage(r: Response): Promise<string> {
+  try {
+    const j = (await r.json()) as { error?: string };
+    if (j && typeof j.error === "string") return j.error;
+  } catch { /* non-JSON body; keep status line */ }
+  return `${r.status}`;
+}
+
+// writeJSON sends a JSON body and, on non-2xx, throws with the server's
+// readable error message.
 async function writeJSON(url: string, method: string, body: unknown): Promise<Response> {
   const r = await fetch(url, {
     method,
@@ -33,12 +43,7 @@ async function writeJSON(url: string, method: string, body: unknown): Promise<Re
     body: JSON.stringify(body),
   });
   if (!r.ok) {
-    let msg = `${url}: ${r.status}`;
-    try {
-      const j = (await r.json()) as { error?: string };
-      if (j && typeof j.error === "string") msg = j.error;
-    } catch { /* non-JSON body; keep status line */ }
-    throw new Error(msg);
+    throw new Error(`${url}: ${await extractErrorMessage(r)}`);
   }
   return r;
 }
@@ -416,17 +421,17 @@ export const createManifest = async (toml: string): Promise<{ kind: string }> =>
     body: toml,
   });
   if (!r.ok) {
-    let m = `${r.status}`;
-    try {
-      const j = (await r.json()) as { error?: string };
-      if (j.error) m = j.error;
-    } catch { /* non-JSON body; keep status line */ }
-    throw new Error(m);
+    throw new Error(`/api/manifests: ${await extractErrorMessage(r)}`);
   }
   return r.json() as Promise<{ kind: string }>;
 };
-export const deleteManifest = (kind: string) =>
-  fetch(`/api/manifests/${encodeURIComponent(kind)}`, { method: "DELETE" });
+export const deleteManifest = async (kind: string): Promise<void> => {
+  const url = `/api/manifests/${encodeURIComponent(kind)}`;
+  const r = await fetch(url, { method: "DELETE" });
+  if (!r.ok) {
+    throw new Error(`${url}: ${await extractErrorMessage(r)}`);
+  }
+};
 
 export const browseFs = (path?: string) => {
   const qs = path ? `?path=${encodeURIComponent(path)}` : "";

@@ -32,15 +32,20 @@ const fallbackGate = "go build ./... && go test ./..."
 // (Run), the gate command executor (Exec), the human-escalation notifier
 // (Notify), the timestamp source (Now), and the seat→kind mapping (SeatKind).
 type Options struct {
-	Dir      string                     // repo root
-	Feature  string                     // limit the loop to this feature ("" = all features)
-	Th       Thresholds                 // rework / fail / iteration bounds
-	DryRun   bool                       // compute + print actions, never exec/merge/escalate
-	Run      Runner                     // injected agent launcher (prod CmdRunner, test fake)
-	Exec     cmdExec                    // injected gate command executor
-	Notify   Notifier                   // injected escalation notifier
-	Now      func() string              // injected timestamp for escalation filenames
-	SeatKind func(seatID string) string // seat id → agent kind (prod parses roster, test injects)
+	Dir     string        // repo root
+	Feature string        // limit the loop to this feature ("" = all features)
+	Th      Thresholds    // rework / fail / iteration bounds
+	DryRun  bool          // compute + print actions, never exec/merge/escalate
+	Run     Runner        // injected agent launcher (prod CmdRunner, test fake)
+	Exec    cmdExec       // injected gate command executor
+	Notify  Notifier      // injected escalation notifier
+	Now     func() string // injected timestamp for escalation filenames
+	// SeatKind is the seat→kind OVERRIDE, highest priority: prod passes only the
+	// operator's explicit `--seat-kind` flags, tests inject a fixed map. A non-empty
+	// result wins over the live roster. When it returns "" (or is nil) opts.kind
+	// falls back to re-reading the live roster's Agents[].Kind each iteration, so a
+	// seat that joins mid-run is drivable next iteration (spec §6 WS-K).
+	SeatKind func(seatID string) string
 	// Orchestrator is the seat the driver acts as for its OWN protocol writes
 	// (Merge). "" falls back to PACT_AGENT_ID (tests rely on the env fallback; the
 	// CLI resolves it from --as / PACT_AGENT_ID and fail-fasts when both are empty).
@@ -836,13 +841,31 @@ func (opts Options) filtered(st projection.State) projection.State {
 	return out
 }
 
-// kind maps a seat id to its agent kind via the injected mapper, defaulting to
-// the empty string (the Runner then fails closed on an unknown kind).
+// kind resolves a seat id to its agent kind at the moment of launch, so a seat
+// that joined mid-run (or re-declared its kind via `pactify join --kind`) is
+// drivable on the NEXT iteration without restarting the driver (spec §6 WS-K).
+// Priority (highest first):
+//  1. the injected SeatKind override — the operator's explicit `--seat-kind` flags
+//     (prod) or a test's fixed map. A non-empty override always wins.
+//  2. the LIVE roster's Agents[].Kind, re-read from opts.Dir's ledger on every
+//     call. This is what makes a mid-run join take effect: the startup km no longer
+//     freezes the mapping.
+//
+// Empty when neither resolves (the Runner then fails closed on an unknown kind).
 func (opts Options) kind(seatID string) string {
-	if opts.SeatKind == nil {
-		return ""
+	if opts.SeatKind != nil {
+		if k := opts.SeatKind(seatID); k != "" {
+			return k
+		}
 	}
-	return opts.SeatKind(seatID)
+	if st, err := pact.At(opts.Dir).StateProjection(); err == nil {
+		for _, a := range st.Agents {
+			if a.ID == seatID && a.Kind != "" {
+				return a.Kind
+			}
+		}
+	}
+	return ""
 }
 
 // describe renders a one-line dry-run summary of an action and the command it

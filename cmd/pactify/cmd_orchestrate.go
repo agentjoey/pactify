@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/orchestrate"
-	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/spf13/cobra"
 )
 
@@ -72,16 +71,11 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				}
 				km[parts[0]] = parts[1]
 			}
-			// Default each seat's kind from the roster (init/add-seat record it); an
-			// explicit --seat-kind still wins. Lets orchestrate run without a wall of
-			// --seat-kind flags once the roster carries kinds.
-			if st, perr := pact.At(dir).StateProjection(); perr == nil {
-				for _, a := range st.Agents {
-					if km[a.ID] == "" && a.Kind != "" {
-						km[a.ID] = a.Kind
-					}
-				}
-			}
+			// km carries ONLY the explicit --seat-kind flags (the highest-priority
+			// override). Defaulting each seat's kind from the roster now happens LIVE in
+			// the driver loop (opts.kind re-reads Agents[].Kind every iteration), so a
+			// seat that joins mid-run — or re-declares its kind — is drivable next
+			// iteration without a restart (spec §6 WS-K dynamic seats).
 
 			// The driver needs an acting seat for its own merges. Resolve --as, else
 			// PACT_AGENT_ID; fail fast (before any agent runs) when neither is set, so

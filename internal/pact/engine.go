@@ -251,6 +251,14 @@ func (p *Project) Join(seatID, roles string) error {
 	return p.JoinWithClient(seatID, roles, "pactify-cli", ClientVersion)
 }
 
+// JoinKind is Join plus a declared agent kind (spec §6 WS-K dynamic seats): the
+// join event carries `kind`, which the projection records onto Agents[].Kind so a
+// seat can DECLARE how it is driven at cold-start (and orchestrate resolves it from
+// the live roster). An empty kind is byte-identical to Join.
+func (p *Project) JoinKind(seatID, roles, kind string) error {
+	return p.JoinWithClientKind(seatID, roles, "pactify-cli", ClientVersion, kind)
+}
+
 // JoinWithClient registers the seat (join event) and moves it onto its assigned
 // task's feature branch (creating the branch from HEAD if absent).
 //
@@ -260,12 +268,20 @@ func (p *Project) Join(seatID, roles string) error {
 // byte-identical to pre-feature logs. Provenance lives in the log only — it is
 // never projected into STATE.yml.
 func (p *Project) JoinWithClient(seatID, roles, clientName, clientVersion string) error {
+	return p.JoinWithClientKind(seatID, roles, clientName, clientVersion, "")
+}
+
+// JoinWithClientKind is JoinWithClient plus a declared agent kind (spec §6 WS-K).
+// When kind is non-empty the join payload gains a "kind" field the projection reads
+// into Agents[].Kind; an empty kind emits no kind field, so kind-free joins stay
+// byte-identical to pre-feature logs.
+func (p *Project) JoinWithClientKind(seatID, roles, clientName, clientVersion, kind string) error {
 	return p.withLedgerLock(func() error {
-		return p.joinWithClientLocked(seatID, roles, clientName, clientVersion)
+		return p.joinWithClientLocked(seatID, roles, clientName, clientVersion, kind)
 	})
 }
 
-func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion string) error {
+func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion, kind string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -286,6 +302,11 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion 
 	// conditional-serialization discipline (byte-parity for client-free logs).
 	if clientName != "" {
 		payload["client"] = map[string]any{"name": clientName, "version": clientVersion}
+	}
+	// kind is emitted ONLY when declared (spec §6 WS-K dynamic seats), same additive
+	// discipline: kind-free joins keep byte-identical payloads.
+	if kind != "" {
+		payload["kind"] = kind
 	}
 	if err := p.appendAndRender(event.Event{
 		AgentID:   id,
@@ -772,6 +793,10 @@ func AddSeat(spec string) error { return At(".").AddSeat(spec) }
 // Join registers the seat in the current working directory's repo (CLI client
 // identity: pactify-cli + ClientVersion).
 func Join(seatID, roles string) error { return At(".").Join(seatID, roles) }
+
+// JoinKind registers the seat in the current working directory's repo with a
+// declared agent kind (spec §6 WS-K); empty kind is identical to Join.
+func JoinKind(seatID, roles, kind string) error { return At(".").JoinKind(seatID, roles, kind) }
 
 // JoinWithClient registers the seat in the current working directory's repo with
 // caller-supplied client provenance (empty clientName → no client field).

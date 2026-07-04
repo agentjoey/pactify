@@ -230,6 +230,31 @@ func (f *Folder) apply(evs []event.Event) {
 				f.tIdx[e.Feature][e.TaskID] = len(st.Features[fi].Tasks) - 1
 			}
 		case "join":
+			// Dynamic-seat roster write (spec §6 WS-K): a join may carry `kind` (and
+			// roles) so a seat can DECLARE/refresh how it is driven, and a planner-
+			// proposed seat can enter the roster without an init/add-seat. Record it:
+			// refresh an existing seat's kind (roles only when it had none, so an init
+			// seat's roles are never clobbered), or append a brand-new roster seat.
+			// A kind-free join by an existing roster seat mutates nothing here, keeping
+			// pre-feature logs byte-identical.
+			jkind := str(e.Payload["kind"])
+			jroles := strSlice(e.Payload["roles"])
+			found := false
+			for ai := range st.Agents {
+				if st.Agents[ai].ID != e.AgentID {
+					continue
+				}
+				found = true
+				if jkind != "" {
+					st.Agents[ai].Kind = jkind
+				}
+				if len(st.Agents[ai].Roles) == 0 && len(jroles) > 0 {
+					st.Agents[ai].Roles = jroles
+				}
+			}
+			if !found {
+				st.Agents = append(st.Agents, Seat{ID: e.AgentID, Kind: jkind, Roles: jroles})
+			}
 			// Seat-scoped cold-start signal: lift ONLY the seat's first actionable
 			// owned task — assigned with every dep accepted — mirroring the branch
 			// Join itself checks out (engine JoinWithClient). Flipping every

@@ -24,10 +24,22 @@ type PlanTask struct {
 	Deps     []string `json:"deps,omitempty"`
 }
 
+// PlanSeat is an OPTIONAL new seat the planner proposes (spec §6 WS-K dynamic
+// seats): a seat not already on the roster that the plan needs as a task owner or
+// reviewer. Apply auto-registers each such seat with a `join` carrying its kind.
+type PlanSeat struct {
+	ID    string   `json:"id"`
+	Kind  string   `json:"kind"`
+	Roles []string `json:"roles,omitempty"`
+}
+
 type Plan struct {
-	Feature string     `json:"feature"`
-	Branch  string     `json:"branch"`
-	Tasks   []PlanTask `json:"tasks"`
+	Feature string `json:"feature"`
+	Branch  string `json:"branch"`
+	// Seats is the optional set of NEW seats the plan proposes (dynamic seats);
+	// omitempty keeps seat-free manifests byte-identical.
+	Seats []PlanSeat `json:"seats,omitempty"`
+	Tasks []PlanTask `json:"tasks"`
 }
 
 func Parse(b []byte) (Plan, error) {
@@ -57,9 +69,29 @@ func (p Plan) Validate(roster []string) error {
 		errs = append(errs, "branch must not be empty")
 	}
 
-	rosterSet := make(map[string]bool, len(roster))
+	rosterSet := make(map[string]bool, len(roster)+len(p.Seats))
 	for _, r := range roster {
 		rosterSet[r] = true
+	}
+	// Proposed new seats (dynamic seats) count as roster members for owner/reviewer
+	// validation — apply auto-joins them. Each must be a slug with a non-empty kind.
+	seenSeat := map[string]bool{}
+	for i, s := range p.Seats {
+		if s.ID == "" {
+			errs = append(errs, fmt.Sprintf("seat %d: id must not be empty", i))
+			continue
+		}
+		if !slugRe.MatchString(s.ID) {
+			errs = append(errs, fmt.Sprintf("seat %d: id %q must be a kebab-case slug", i, s.ID))
+		}
+		if s.Kind == "" {
+			errs = append(errs, fmt.Sprintf("seat %s: kind must not be empty", s.ID))
+		}
+		if seenSeat[s.ID] {
+			errs = append(errs, fmt.Sprintf("seat %d: duplicate id %q", i, s.ID))
+		}
+		seenSeat[s.ID] = true
+		rosterSet[s.ID] = true
 	}
 
 	seen := map[string]bool{}

@@ -61,10 +61,11 @@ func newRootCmd() *cobra.Command {
 	initCmd.Flags().StringVar(&project, "project", "", "project name")
 	initCmd.Flags().StringArrayVar(&seats, "seat", nil, "seat 'id:roles:entry[:kind]' (repeatable)")
 
-	var joinRoles string
+	var joinRoles, joinKind string
 	joinCmd := &cobra.Command{Use: "join <id>", Args: cobra.ExactArgs(1), Short: "worker cold-start",
-		RunE: func(_ *cobra.Command, a []string) error { return pact.Join(a[0], joinRoles) }}
+		RunE: func(_ *cobra.Command, a []string) error { return pact.JoinKind(a[0], joinRoles, joinKind) }}
 	joinCmd.Flags().StringVar(&joinRoles, "roles", "", "comma-separated roles")
+	joinCmd.Flags().StringVar(&joinKind, "kind", "", "declared agent kind recorded on the roster (orchestrate resolves seat→kind from it; dynamic seats)")
 
 	var feature, branch, owner, reviewer, spec string
 	var reviewers []string

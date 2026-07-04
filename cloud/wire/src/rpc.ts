@@ -202,6 +202,17 @@ export const PactStintRequest = z.object({
 })
 export type PactStintRequest = z.infer<typeof PactStintRequest>
 
+/** Author a task draft (.pact/tasks/{id}.md) on the target machine — a
+ * coordination write (no code runs), gated like the pact verbs. */
+export const PactTaskRequest = z.object({
+  type: z.literal('pact.task'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  id: z.string().min(1),
+  specMd: z.string(),
+})
+export type PactTaskRequest = z.infer<typeof PactTaskRequest>
+
 /** M3: run/resume the orchestrate driver on the target machine for a feature. */
 export const OrchestrateRunRequest = z.object({
   type: z.literal('orchestrate.run'),
@@ -270,6 +281,7 @@ export const RpcRequest = z.discriminatedUnion('type', [
   PactMergeRequest,
   PactCheckpointRequest,
   PactStintRequest,
+  PactTaskRequest,
   OrchestrateRunRequest,
   OrchestrateResumeRequest,
   PlanGenerateRequest,

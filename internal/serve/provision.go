@@ -72,3 +72,24 @@ func (pv *serveProvisioner) Provision(repoURL, name string) (string, error) {
 
 // newProvisioner builds the machine-gated remote provisioner.
 func (s *Server) newProvisioner() remoteexec.Provisioner { return &serveProvisioner{s: s} }
+
+// serveTaskAuthor writes a task draft (pact.task) on a resolved project. A
+// coordination write (no code runs), so it's gated like the pact verbs (wired
+// only under --remote-control), not by the per-project remote-exec policy.
+type serveTaskAuthor struct{ s *Server }
+
+func (ta *serveTaskAuthor) AuthorTask(project, id, specMD string) error {
+	ta.s.pmu.RLock()
+	p, ok := ta.s.projects[project]
+	ta.s.pmu.RUnlock()
+	if !ok {
+		return fmt.Errorf("unknown project %q", project)
+	}
+	if _, err := authorTask(p.Path, id, specMD); err != nil {
+		return err
+	}
+	return nil
+}
+
+// newTaskAuthor builds the remote task-author handler.
+func (s *Server) newTaskAuthor() remoteexec.TaskAuthor { return &serveTaskAuthor{s: s} }

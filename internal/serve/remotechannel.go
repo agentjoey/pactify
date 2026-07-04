@@ -47,6 +47,7 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 	var orch remoteexec.Orchestrator
 	var plan remoteexec.Planner
 	var prov remoteexec.Provisioner
+	var task remoteexec.TaskAuthor
 	if remoteControl {
 		resolve = func(project string) (remoteexec.PactEngine, error) {
 			s.pmu.RLock()
@@ -61,6 +62,7 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 		orch = s.newOrchestrator() // orchestrate.run/resume, same policy file
 		plan = s.newPlanner()      // plan.generate/apply, same policy file
 		prov = s.newProvisioner()  // pact.provision, machine-gated by PACTIFY_PROVISION_DIR
+		task = s.newTaskAuthor()   // pact.task, coordination write (like the verbs)
 	}
 
 	backoff := time.Second
@@ -97,6 +99,7 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 			Orch:      orch,
 			Plan:      plan,
 			Prov:      prov,
+			Task:      task,
 		})
 		if ctx.Err() != nil {
 			return

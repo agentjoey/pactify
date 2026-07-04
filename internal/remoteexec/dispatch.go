@@ -40,6 +40,8 @@ type RPC struct {
 	PlannerKind string            // plan.generate: planner agent kind
 	RepoURL     string            // provision: git URL to clone
 	Name        string            // provision: registry name for the clone
+	ID          string            // task: task slug
+	SpecMD      string            // task: task draft spec markdown
 }
 
 // StintRequest is a remote request to run one agent stint (spawn an agent CLI to
@@ -92,6 +94,13 @@ type OrchestrateRequest struct {
 // remote orchestrate disabled.
 type Orchestrator interface {
 	RunOrchestrate(req OrchestrateRequest) error
+}
+
+// TaskAuthor writes a task draft spec (.pact/tasks/{id}.md). serve implements it;
+// it's a coordination write (no code runs), gated like the pact verbs (available
+// under --remote-control). Nil = disabled.
+type TaskAuthor interface {
+	AuthorTask(project, id, specMD string) error
 }
 
 // Stinter runs a remote agent stint. serve implements it (policy check + agent
@@ -149,6 +158,8 @@ type Dispatcher struct {
 	Plan Planner
 	// Prov clones + registers a repo (pact.provision). Nil = disabled.
 	Prov Provisioner
+	// Task authors a task draft (pact.task). Nil = disabled.
+	Task TaskAuthor
 }
 
 // Handle executes one rpc and returns a Reply. It never panics on bad input:
@@ -172,6 +183,18 @@ func (d *Dispatcher) Handle(rpc RPC) Reply {
 			return fail(err.Error())
 		}
 		return Reply{OK: true, RunID: name}
+	}
+	if rpc.Type == "pact.task" {
+		if d.Task == nil {
+			return fail("remote task authoring not enabled for this machine")
+		}
+		if rpc.Project == "" || rpc.ID == "" {
+			return fail("pact.task requires project and id")
+		}
+		if err := d.Task.AuthorTask(rpc.Project, rpc.ID, rpc.SpecMD); err != nil {
+			return fail(err.Error())
+		}
+		return Reply{OK: true}
 	}
 	if rpc.Project == "" {
 		return fail("rpc missing project")

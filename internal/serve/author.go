@@ -101,33 +101,39 @@ func (s *Server) handleAuthorTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	if !pact.IsSlug(req.ID) {
-		writeErr(w, http.StatusBadRequest, fmt.Sprintf("task id %q is not a slug", req.ID))
+	if code, err := authorTask(dir, req.ID, req.SpecMD); err != nil {
+		writeErr(w, code, err.Error())
 		return
 	}
-	// A committed task already owns this id — a draft must use a new id, or it
-	// would silently overwrite the spec of an assigned task. Drafts (ids not yet
-	// assigned to any feature) still re-POST fine.
+	writeJSON(w, http.StatusOK, map[string]string{"id": req.ID})
+}
+
+// authorTask writes a task draft spec to .pact/tasks/{id}.md — the shared core of
+// the dashboard's HTTP endpoint and the remote pact.task rpc. The id must be a
+// protocol slug; re-writing a draft id is allowed (authoring is iterative) but an
+// id already committed to a feature is rejected (would clobber an assigned task's
+// spec). Returns (httpStatusCode, error).
+func authorTask(dir, id, specMD string) (int, error) {
+	if !pact.IsSlug(id) {
+		return http.StatusBadRequest, fmt.Errorf("task id %q is not a slug", id)
+	}
 	if dto, err := ProjectState(dir); err == nil {
 		for _, f := range dto.Features {
 			for _, t := range f.Tasks {
-				if t.ID == req.ID {
-					writeErr(w, http.StatusConflict, fmt.Sprintf("task %s already exists; drafts must use a new id", req.ID))
-					return
+				if t.ID == id {
+					return http.StatusConflict, fmt.Errorf("task %s already exists; drafts must use a new id", id)
 				}
 			}
 		}
 	}
 	tasksDir := paths.TasksIn(dir)
 	if err := os.MkdirAll(tasksDir, 0o755); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
+		return http.StatusInternalServerError, err
 	}
-	if err := os.WriteFile(filepath.Join(tasksDir, req.ID+".md"), []byte(req.SpecMD), 0o644); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
+	if err := os.WriteFile(filepath.Join(tasksDir, id+".md"), []byte(specMD), 0o644); err != nil {
+		return http.StatusInternalServerError, err
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"id": req.ID})
+	return 0, nil
 }
 
 type assignReq struct {

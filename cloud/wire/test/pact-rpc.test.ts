@@ -40,6 +40,11 @@ describe('RpcRequest: pactify pact.* control messages', () => {
 })
 
 describe('RpcRequest: multi-machine (M2-M5) control messages', () => {
+  it('parses pact.task', () => {
+    const r = RpcRequest.parse({ type: 'pact.task', machineId: 'm1', project: 'p', id: 'add-login', specMd: '# spec' })
+    expect(r.type).toBe('pact.task')
+    if (r.type === 'pact.task') expect(r.id).toBe('add-login')
+  })
   it('parses pact.stint', () => {
     const r = RpcRequest.parse({
       type: 'pact.stint', machineId: 'm1', project: 'p', task: 't1', seat: 'kimi', agentKind: 'kimi', briefing: 'do it',

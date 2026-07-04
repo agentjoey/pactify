@@ -241,3 +241,29 @@ func TestHandle_Provision(t *testing.T) {
 		t.Fatal("provision should be disabled when Prov nil")
 	}
 }
+
+type fakeTaskAuthor struct {
+	gotID, gotSpec string
+	err            error
+}
+
+func (f *fakeTaskAuthor) AuthorTask(project, id, specMD string) error {
+	f.gotID, f.gotSpec = id, specMD
+	return f.err
+}
+
+func TestHandle_Task(t *testing.T) {
+	fa := &fakeTaskAuthor{}
+	d := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{}), Task: fa}
+	r := d.Handle(RPC{Type: "pact.task", Account: "acct1", Project: "known", ID: "add-login", SpecMD: "# spec"})
+	if !r.OK || fa.gotID != "add-login" || fa.gotSpec != "# spec" {
+		t.Fatalf("pact.task should author, got %+v / %+v", r, fa)
+	}
+	if r := d.Handle(RPC{Type: "pact.task", Account: "acct1", Project: "known"}); r.OK {
+		t.Fatal("pact.task without id should fail")
+	}
+	d2 := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{})}
+	if r := d2.Handle(RPC{Type: "pact.task", Account: "acct1", Project: "known", ID: "x", SpecMD: "y"}); r.OK {
+		t.Fatal("pact.task disabled when Task nil")
+	}
+}

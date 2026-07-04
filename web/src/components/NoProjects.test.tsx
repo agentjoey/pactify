@@ -6,10 +6,15 @@ vi.mock("../lib/api", () => ({
   postRegister: (...args: unknown[]) => postRegister(...args),
 }));
 
+const isHostedMode = vi.fn(() => false);
+vi.mock("../lib/source", () => ({
+  isHostedMode: () => isHostedMode(),
+}));
+
 import { NoProjects } from "./NoProjects";
 
-describe("NoProjects hero", () => {
-  beforeEach(() => postRegister.mockReset());
+describe("NoProjects hero (local mode)", () => {
+  beforeEach(() => { postRegister.mockReset(); isHostedMode.mockReturnValue(false); });
 
   it("renders the hero copy, cable mark and register form", () => {
     render(<NoProjects onRegistered={() => {}} />);
@@ -63,5 +68,29 @@ describe("NoProjects hero", () => {
       expect(err).toHaveTextContent("is not in the project roster");
     });
     expect(onRegistered).not.toHaveBeenCalled();
+  });
+});
+
+describe("NoProjects hero (hosted mode)", () => {
+  beforeEach(() => { postRegister.mockReset(); isHostedMode.mockReturnValue(true); });
+
+  it("shows hosted guidance instead of the local register form", () => {
+    render(<NoProjects onRegistered={() => {}} />);
+    expect(screen.getByTestId("no-projects")).toBeTruthy();
+    expect(screen.getByText("No projects yet on your account")).toBeTruthy();
+    // hosted guidance panel present; the local-path register form is NOT.
+    expect(screen.getByTestId("no-projects-hosted-guidance")).toBeTruthy();
+    expect(screen.queryByTestId("no-projects-form")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Register" })).toBeNull();
+    expect(screen.queryByLabelText("path")).toBeNull();
+    // guidance names the machine-connect command.
+    expect(screen.getByText(/pactify serve/)).toBeTruthy();
+    // still keeps the CableMark hero.
+    expect(screen.getByTestId("no-projects").querySelector("svg")).toBeTruthy();
+  });
+
+  it("never calls postRegister in hosted mode (no register path)", () => {
+    render(<NoProjects onRegistered={() => {}} />);
+    expect(postRegister).not.toHaveBeenCalled();
   });
 });

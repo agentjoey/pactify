@@ -427,6 +427,32 @@ describe("RelaySource", () => {
     expect(client.decrypt).toHaveBeenCalledWith("p1", "enc-assign");
   });
 
+  it("fetchEventsLog returns decrypted PactEvent frames (SSE-frame shape)", async () => {
+    const events: PactEvent[] = [
+      { projectId: "p1", seq: 1, eventType: "assign", feature: "f1", task: "t1", ts: 1, bodyEnc: "enc-a" },
+      { projectId: "p1", seq: 2, eventType: "checkpoint", feature: "f1", task: "t1", ts: 2, bodyEnc: "enc-b" },
+      { projectId: "p1", seq: 3, eventType: "accept", feature: "f1", task: "t1", ts: 3, bodyEnc: "enc-c" },
+    ];
+    const bodies: Record<string, PactProjectEvent> = {
+      "enc-a": { event_id: "e1", ts: "1", agent_id: "alice", role: "orchestrator", event_type: "assign", task_id: "t1", feature: "f1", payload: { owner: "alice" } },
+      "enc-b": { event_id: "e2", ts: "2", agent_id: "alice", role: "worker", event_type: "checkpoint", task_id: "t1", feature: "f1", payload: { evidence: "ok" } },
+      "enc-c": { event_id: "e3", ts: "3", agent_id: "bob", role: "reviewer", event_type: "accept", task_id: "t1", feature: "f1", payload: {} },
+    };
+    const client = makeClient({
+      getProjectEvents: vi.fn().mockResolvedValue(events),
+      decrypt: vi.fn().mockImplementation((_id: string, bodyEnc: string) => bodies[bodyEnc]),
+    });
+    const src = new RelaySource(client as RelayClient);
+
+    const all = await src.fetchEventsLog("p1");
+    expect(all).toEqual([bodies["enc-a"], bodies["enc-b"], bodies["enc-c"]]);
+    expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
+
+    // n slices to the last n events (matches the local /events/log cap semantics).
+    const tail = await src.fetchEventsLog("p1", undefined, 2);
+    expect(tail).toEqual([bodies["enc-b"], bodies["enc-c"]]);
+  });
+
   it("subscribe fetches and projects state on new events, then unsubscribes", async () => {
     const events: PactEvent[] = [
       {

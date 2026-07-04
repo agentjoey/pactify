@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { postRegister } from "../lib/api";
 import { humanizeError } from "../lib/protocolErrors";
+import { isHostedMode } from "../lib/source";
 import { CableMark } from "./shell/CableMark";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
@@ -10,7 +11,54 @@ import { Input } from "./ui/Input";
 // whole main area: cable mark + copy + a register form that reuses the exact
 // ops postRegister API. On success it calls onRegistered (App.refreshProjects),
 // which seeds the first project and tears this hero down. Errors are humanized.
+//
+// HOSTED-AWARE: in hosted mode the browser talks to the zero-knowledge relay and
+// CANNOT register a repo by local absolute path (there is no co-located serve and
+// postRegister would hit a non-existent /api). So the register form is LOCAL-only;
+// hosted shows guidance to connect a machine instead (projects appear once a
+// machine running `pactify serve --relay-url … --remote-control` uploads them).
 export function NoProjects({ onRegistered }: { onRegistered: () => void }) {
+  if (isHostedMode()) return <NoProjectsHosted />;
+  return <NoProjectsLocal onRegistered={onRegistered} />;
+}
+
+// NoProjectsHosted — hosted empty state: no local-path form (it can't work over
+// the relay). Same CableMark hero + copy, guiding the user to connect a machine.
+function NoProjectsHosted() {
+  return (
+    <div
+      data-testid="no-projects"
+      className="flex flex-1 flex-col items-center justify-center px-6 text-center"
+    >
+      <div className="scale-[2.2] mb-6 opacity-90">
+        <CableMark />
+      </div>
+      <h2 className="text-lg font-semibold text-[var(--color-text-1)]">
+        No projects yet on your account
+      </h2>
+      <p className="mt-2 max-w-md text-sm text-[var(--color-text-3)]">
+        Projects appear here once a machine running Pactify connects to the relay.
+        Connect one by running this on a machine that has your pact projects:
+      </p>
+      <div
+        data-testid="no-projects-hosted-guidance"
+        className="mt-6 w-full max-w-md rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] p-4 text-left"
+      >
+        <pre className="mono overflow-x-auto whitespace-pre-wrap break-words text-xs text-[var(--color-text-1)]">
+          pactify serve --relay-url &lt;relay&gt; --remote-control
+        </pre>
+        <p className="mt-3 text-[11px] text-[var(--color-text-3)]">
+          The machine encrypts and uploads its <span className="mono">.pact/</span> ledger to the
+          zero-knowledge relay; its projects then show up on this board automatically.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// NoProjectsLocal — the original local empty-registry hero with the register-by-
+// absolute-path form (unchanged behavior).
+function NoProjectsLocal({ onRegistered }: { onRegistered: () => void }) {
   const [path, setPath] = useState("");
   const [name, setName] = useState("");
   const [err, setErr] = useState("");

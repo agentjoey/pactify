@@ -4,7 +4,7 @@ import { project } from "@pactify-apps/pact-project";
 import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
 import type { DataSource, DataSourceCapabilities } from "./datasource";
 import type { ProjectStats, TaskStat, AgentStat, RunOrchestrateBody } from "./api";
-import type { Machine, PactEventDetail, ProjectMeta, State } from "./types";
+import type { Machine, PactEvent, PactEventDetail, ProjectMeta, State } from "./types";
 
 /**
  * RelaySource implements DataSource against the zero-knowledge pact relay: events
@@ -46,6 +46,23 @@ export class RelaySource implements DataSource {
       (e) => this.client.decrypt(id, e.bodyEnc) as PactProjectEvent,
     );
     return project(decrypted);
+  }
+
+  /**
+   * The last `n` raw pact events in the `PactEvent` (SSE-frame) shape. The relay
+   * stores each event body encrypted; decrypting it yields exactly the pact-project
+   * PactEvent record (event_id / agent_id / role / event_type / task_id / feature /
+   * payload) — the SAME shape the local serve's /events/log returns — so this is a
+   * pure client-side derive over data the relay already holds, no new backend rpc.
+   * `wt` (worktree) is ignored: hosted projects have no worktree addressing. Events
+   * arrive in seq order; slice to the last `n` to match the local endpoint's cap.
+   */
+  async fetchEventsLog(id: string, _wt?: string, n?: number): Promise<PactEvent[]> {
+    const events = await this.client.getProjectEvents(id);
+    const decrypted = events.map(
+      (e) => this.client.decrypt(id, e.bodyEnc) as PactEvent,
+    );
+    return n !== undefined && n > 0 ? decrypted.slice(-n) : decrypted;
   }
 
   async getEvents(id: string): Promise<PactEventDetail[]> {

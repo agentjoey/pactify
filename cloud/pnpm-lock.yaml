@@ -102,6 +102,18 @@ importers:
         specifier: ^4.8.3
         version: 4.8.3
 
+  relay-client:
+    dependencies:
+      '@pactify-apps/crypto':
+        specifier: workspace:*
+        version: link:../crypto
+      '@pactify-apps/wire':
+        specifier: workspace:*
+        version: link:../wire
+      socket.io-client:
+        specifier: ^4.8.3
+        version: 4.8.3
+
   web:
     dependencies:
       '@noble/hashes':
@@ -110,6 +122,9 @@ importers:
       '@pactify-apps/crypto':
         specifier: workspace:*
         version: link:../crypto
+      '@pactify-apps/relay-client':
+        specifier: workspace:*
+        version: link:../relay-client
       '@pactify-apps/wire':
         specifier: workspace:*
         version: link:../wire

@@ -13,6 +13,7 @@
   "dependencies": {
     "@noble/hashes": "^2.2.0",
     "@pactify-apps/crypto": "workspace:*",
+    "@pactify-apps/relay-client": "workspace:*",
     "@pactify-apps/wire": "workspace:*",
     "socket.io-client": "^4.8.3"
   },

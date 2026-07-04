@@ -24,6 +24,9 @@ export default defineConfig({
       "@pactify-apps/wire": fileURLToPath(
         new URL("../cloud/wire/src/index.ts", import.meta.url),
       ),
+      "@pactify-apps/relay-client": fileURLToPath(
+        new URL("../cloud/relay-client/src/index.ts", import.meta.url),
+      ),
     },
   },
   // Dev server proxies the API + SSE stream (both live under /api) to the running

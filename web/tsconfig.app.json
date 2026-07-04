@@ -22,7 +22,8 @@
     "paths": {
       "@pactify-apps/pact-project": ["../cloud/pact-project/src/index.ts"],
       "@pactify-apps/crypto": ["../cloud/crypto/src/index.ts"],
-      "@pactify-apps/wire": ["../cloud/wire/src/index.ts"]
+      "@pactify-apps/wire": ["../cloud/wire/src/index.ts"],
+      "@pactify-apps/relay-client": ["../cloud/relay-client/src/index.ts"]
     },
 
     /* Linting */

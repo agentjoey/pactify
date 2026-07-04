@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RightRail } from "./RightRail";
 import type { State, PactEvent, Task } from "../lib/types";
+import { DataSourceProvider } from "../lib/datasource";
 
 vi.mock("../lib/api", () => ({
   postVerb: vi.fn(() => Promise.resolve()),
@@ -43,20 +44,24 @@ const ev = (over: Partial<PactEvent> = {}): PactEvent => ({
   ...over,
 });
 
+function renderRail(ui: React.ReactElement) {
+  return render(<DataSourceProvider>{ui}</DataSourceProvider>);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("RightRail — task detail panel", () => {
   it("renders nothing when no task is selected", () => {
-    const { container } = render(
+    const { container } = renderRail(
       <RightRail state={baseState()} events={[]} selected="" project="greet" author />,
     );
     expect(container.firstChild).toBeNull();
   });
 
   it("opens the panel when a task is selected (header, badge, ant chips)", () => {
-    render(
+    renderRail(
       <RightRail state={baseState()} events={[]} selected="t2-cli" project="greet" author />,
     );
     const panel = screen.getByTestId("task-panel");
@@ -72,7 +77,7 @@ describe("RightRail — task detail panel", () => {
 
   it("closes on Esc and on scrim click (deselect called)", () => {
     const onSelect = vi.fn();
-    render(
+    renderRail(
       <RightRail
         state={baseState()}
         events={[]}
@@ -91,7 +96,7 @@ describe("RightRail — task detail panel", () => {
   });
 
   it("renders a spec path as a mono path line with a hint", () => {
-    render(
+    renderRail(
       <RightRail state={baseState()} events={[]} selected="t2-cli" project="greet" author />,
     );
     const panel = screen.getByTestId("task-panel");
@@ -101,7 +106,7 @@ describe("RightRail — task detail panel", () => {
 
   it("renders an inline spec value as plain text (no path hint)", () => {
     const t = task({ spec: "implement greet CLI entry point" });
-    render(
+    renderRail(
       <RightRail state={baseState(t)} events={[]} selected="t2-cli" project="greet" author />,
     );
     const panel = screen.getByTestId("task-panel");
@@ -114,7 +119,7 @@ describe("RightRail — task detail panel", () => {
       ev({ event_id: "e1", task_id: "t2-cli", event_type: "checkpoint" }),
       ev({ event_id: "e2", task_id: "OTHER", event_type: "assign" }),
     ];
-    render(
+    renderRail(
       <RightRail state={baseState()} events={events} selected="t2-cli" project="greet" author />,
     );
     const entries = screen.getAllByTestId("panel-timeline-entry");
@@ -124,7 +129,7 @@ describe("RightRail — task detail panel", () => {
   });
 
   it("shows Accept/Changes for an author on an awaiting_review task", () => {
-    render(
+    renderRail(
       <RightRail state={baseState()} events={[]} selected="t2-cli" project="greet" author />,
     );
     const panel = screen.getByTestId("task-panel");
@@ -134,7 +139,7 @@ describe("RightRail — task detail panel", () => {
   });
 
   it("hides the action row for an observer (author=false)", () => {
-    render(
+    renderRail(
       <RightRail
         state={baseState()}
         events={[]}
@@ -150,7 +155,7 @@ describe("RightRail — task detail panel", () => {
 
   it("hides the action row when the task is not awaiting_review", () => {
     const t = task({ status: "in_progress" });
-    render(
+    renderRail(
       <RightRail state={baseState(t)} events={[]} selected="t2-cli" project="greet" author />,
     );
     expect(screen.queryByText("✓ Accept")).toBeNull();
@@ -158,7 +163,7 @@ describe("RightRail — task detail panel", () => {
 
   it("shows the merge affordance for authors, enabled only when all tasks accepted", () => {
     // Mixed: one awaiting → merge disabled.
-    render(
+    renderRail(
       <RightRail state={baseState()} events={[]} selected="t2-cli" project="greet" author />,
     );
     const merge = screen.getByText(/^Merge greet-cli/) as HTMLButtonElement;
@@ -167,7 +172,7 @@ describe("RightRail — task detail panel", () => {
 
   it("enables merge when every task in the feature is accepted", () => {
     const t = task({ status: "accepted" });
-    render(
+    renderRail(
       <RightRail state={baseState(t)} events={[]} selected="t2-cli" project="greet" author />,
     );
     const merge = screen.getByText(/^Merge greet-cli/);
@@ -175,5 +180,26 @@ describe("RightRail — task detail panel", () => {
     expect(btn).not.toBeDisabled();
     fireEvent.click(btn);
     expect(postVerb).toHaveBeenCalledWith("greet", "merge", { feature: "greet-cli" });
+  });
+});
+
+describe("RightRail — capability gating", () => {
+  it("disables Accept/Changes/Merge when the source is read-only", () => {
+    const readOnly = {
+      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true },
+      listProjects: vi.fn(),
+      getState: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
+      subscribe: vi.fn(),
+      verb: vi.fn(),
+    };
+    render(
+      <DataSourceProvider source={readOnly}>
+        <RightRail state={baseState()} events={[]} selected="t2-cli" project="greet" author />
+      </DataSourceProvider>,
+    );
+    expect(screen.getByText("✓ Accept").closest("button")).toBeDisabled();
+    expect(screen.getByText("↺ Changes…").closest("button")).toBeDisabled();
+    expect(screen.getByText(/^Merge greet-cli/).closest("button")).toBeDisabled();
   });
 });

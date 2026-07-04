@@ -5,7 +5,14 @@ import type {
   ProjectStats,
   RunOrchestrateBody,
   ShipBody,
+  PlanGenStatus,
 } from "./api";
+import type {
+  OrchestrateStatusResponse,
+  ParallelStatusResponse,
+  PlanReviewResponse,
+  PactEvent,
+} from "./types";
 import type { ProjectMeta, State } from "./types";
 
 export interface DataSourceCapabilities {
@@ -19,7 +26,14 @@ export interface DataSource {
   listProjects(): Promise<ProjectMeta[]>;
   getState(id: string, wt?: string): Promise<State>;
   getStats(id: string): Promise<ProjectStats>;
-  subscribe(id: string, onState: (s: State) => void): () => void;
+  subscribe(
+    id: string,
+    onState: (s: State) => void,
+    onEvent?: (e: PactEvent) => void,
+    onError?: () => void,
+    onLive?: (live: boolean) => void,
+  ): () => void;
+  fetchEventsLog?(id: string, wt?: string, n?: number): Promise<PactEvent[]>;
 
   verb?(
     project: string,
@@ -27,6 +41,8 @@ export interface DataSource {
     body: Record<string, unknown>,
   ): Promise<void>;
   postTask?(project: string, body: { id: string; spec_md: string }): Promise<void>;
+  getOrchestrateStatus?(project: string): Promise<OrchestrateStatusResponse>;
+  getParallelOrchestrate?(project: string): Promise<ParallelStatusResponse>;
   runOrchestrate?(
     project: string,
     body?: RunOrchestrateBody,
@@ -39,10 +55,13 @@ export interface DataSource {
     project: string,
     body?: ShipBody,
   ): Promise<{ pushed: boolean; pr_url?: string }>;
+  getDiff?(project: string): Promise<{ diff: string }>;
   generatePlan?(
     project: string,
     body: { goal: string; feature: string; planner_kind?: string },
   ): Promise<{ status_url: string; feature: string }>;
+  getPlanGenStatus?(project: string): Promise<PlanGenStatus>;
+  getPlanReview?(project: string, feature: string): Promise<PlanReviewResponse>;
   applyPlan?(project: string, feature: string): Promise<{ assigned: number }>;
 }
 
@@ -65,11 +84,25 @@ export class LocalServeSource implements DataSource {
     return api.getStats(id);
   }
 
-  subscribe(id: string, onState: (s: State) => void): () => void {
-    return api.subscribeEvents(id, async () => {
-      const state = await api.fetchState(id);
-      onState(state);
-    });
+  subscribe(
+    id: string,
+    onState: (s: State) => void,
+    onEvent?: (e: PactEvent) => void,
+    onError?: () => void,
+    onLive?: (live: boolean) => void,
+  ): () => void {
+    return api.subscribeEvents(
+      id,
+      (e) => {
+        onEvent?.(e);
+        api.fetchState(id).then(onState).catch(() => onError?.());
+      },
+      onLive,
+    );
+  }
+
+  fetchEventsLog(id: string, wt?: string, n?: number): Promise<PactEvent[]> {
+    return api.fetchEventsLog(id, wt, n);
   }
 
   verb(
@@ -82,6 +115,14 @@ export class LocalServeSource implements DataSource {
 
   postTask(project: string, body: { id: string; spec_md: string }): Promise<void> {
     return api.postTask(project, body);
+  }
+
+  getOrchestrateStatus(project: string): Promise<OrchestrateStatusResponse> {
+    return api.getOrchestrateStatus(project);
+  }
+
+  getParallelOrchestrate(project: string): Promise<ParallelStatusResponse> {
+    return api.getParallelOrchestrate(project);
   }
 
   runOrchestrate(
@@ -102,7 +143,11 @@ export class LocalServeSource implements DataSource {
     project: string,
     body?: ShipBody,
   ): Promise<{ pushed: boolean; pr_url?: string }> {
-    return api.shipFeature(project, body);
+    return api.shipFeature(project, body ?? {});
+  }
+
+  getDiff(project: string): Promise<{ diff: string }> {
+    return api.getDiff(project);
   }
 
   generatePlan(
@@ -110,6 +155,14 @@ export class LocalServeSource implements DataSource {
     body: { goal: string; feature: string; planner_kind?: string },
   ): Promise<{ status_url: string; feature: string }> {
     return api.generatePlan(project, body);
+  }
+
+  getPlanGenStatus(project: string): Promise<PlanGenStatus> {
+    return api.getPlanGenStatus(project);
+  }
+
+  getPlanReview(project: string, feature: string): Promise<PlanReviewResponse> {
+    return api.getPlanReview(project, feature);
   }
 
   applyPlan(project: string, feature: string): Promise<{ assigned: number }> {

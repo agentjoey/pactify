@@ -1,6 +1,7 @@
 import { render, screen, cleanup } from "@testing-library/react";
 import { describe, it, expect, afterEach } from "vitest";
 import type { State } from "../lib/types";
+import { DataSourceProvider } from "../lib/datasource";
 import { Skeleton, BoardSkeleton, CanvasSkeleton, OpsSkeleton } from "./Skeleton";
 import { Board } from "./Board";
 
@@ -43,14 +44,22 @@ describe("Skeleton primitives", () => {
 
 describe("Board first-load skeleton", () => {
   it("shows the skeleton ONLY while loading (pre-snapshot)", () => {
-    render(<Board state={emptyState} selected="" onSelect={() => {}} loading />);
+    render(
+      <DataSourceProvider>
+        <Board state={emptyState} selected="" onSelect={() => {}} loading />
+      </DataSourceProvider>,
+    );
     expect(screen.getByTestId("board-skeleton")).toBeTruthy();
     // the real columns are not rendered yet
     expect(screen.queryByText("ASSIGNED", { exact: false })).toBeNull();
   });
 
   it("renders the real board (no skeleton) once a snapshot has landed", () => {
-    render(<Board state={loadedState} selected="" onSelect={() => {}} loading={false} />);
+    render(
+      <DataSourceProvider>
+        <Board state={loadedState} selected="" onSelect={() => {}} loading={false} />
+      </DataSourceProvider>,
+    );
     expect(screen.queryByTestId("board-skeleton")).toBeNull();
     // a real card id shows
     expect(screen.getAllByText("T1").length).toBeGreaterThan(0);

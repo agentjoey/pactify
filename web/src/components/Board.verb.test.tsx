@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State } from "../lib/types";
 import { Board } from "./Board";
 import { postVerb } from "../lib/api";
+import { DataSourceProvider } from "../lib/datasource";
 
 vi.mock("../lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/api")>()),
@@ -30,7 +31,9 @@ const fx = (t1Status: string): State => ({
 
 const renderBoard = (state: State, onChanged = () => {}) =>
   render(
-    <Board state={state} selected="" onSelect={() => {}} project="demo" author onChanged={onChanged} />,
+    <DataSourceProvider>
+      <Board state={state} selected="" onSelect={() => {}} project="demo" author onChanged={onChanged} />
+    </DataSourceProvider>,
   );
 
 describe("Board — inline accept error handling", () => {
@@ -84,13 +87,17 @@ describe("Board — inline accept error handling", () => {
 
     // Refresh arrives: T1 accepted, the card leaves review and pending clears.
     rerender(
-      <Board state={fx("accepted")} selected="" onSelect={() => {}} project="demo" author onChanged={onChanged} />,
+      <DataSourceProvider>
+        <Board state={fx("accepted")} selected="" onSelect={() => {}} project="demo" author onChanged={onChanged} />
+      </DataSourceProvider>,
     );
     expect(screen.queryByTestId("card-accept")).toBeNull();
 
     // If T1 ever re-enters review (changes → re-review), Accept is live again.
     rerender(
-      <Board state={fx("awaiting_review")} selected="" onSelect={() => {}} project="demo" author onChanged={onChanged} />,
+      <DataSourceProvider>
+        <Board state={fx("awaiting_review")} selected="" onSelect={() => {}} project="demo" author onChanged={onChanged} />
+      </DataSourceProvider>,
     );
     expect(screen.getByTestId("card-accept")).not.toBeDisabled();
   });

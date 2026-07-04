@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State } from "../lib/types";
 import { Board } from "./Board";
 import { getStats } from "../lib/api";
+import { DataSourceProvider } from "../lib/datasource";
 
 // Board pulls per-task tokens from GET /stats (the event log never carries
 // token counts); mock the api module so tests control the response.
@@ -37,9 +38,13 @@ const fixture: State = {
   ],
 };
 
+function renderBoard(ui: React.ReactElement) {
+  return render(<DataSourceProvider>{ui}</DataSourceProvider>);
+}
+
 describe("Board — live pulse", () => {
   it("a task id in pulses gets the pulse class + status-colored --pulse-color", () => {
-    render(<Board state={fixture} selected="" onSelect={() => {}} pulses={new Set(["T1"])} />);
+    renderBoard(<Board state={fixture} selected="" onSelect={() => {}} pulses={new Set(["T1"])} />);
     const pulsing = screen.getByTestId("board-pulse");
     expect(pulsing.className).toContain("pulse");
     // T1 is awaiting_review → the pact-state color (warn) drives the glow, so the
@@ -51,7 +56,7 @@ describe("Board — live pulse", () => {
   });
 
   it("no pulses → no pulse marker (first snapshot / quiescent)", () => {
-    render(<Board state={fixture} selected="" onSelect={() => {}} />);
+    renderBoard(<Board state={fixture} selected="" onSelect={() => {}} />);
     expect(screen.queryByTestId("board-pulse")).toBeNull();
   });
 });
@@ -74,7 +79,7 @@ describe("Board — accepted column recent + fold", () => {
   };
 
   it("shows the 6 most-recent accepted cards and folds the rest behind a 'more' button", () => {
-    render(<Board state={manyAccepted} selected="" onSelect={() => {}} />);
+    renderBoard(<Board state={manyAccepted} selected="" onSelect={() => {}} />);
     // Most-recent-first: t13 (newest) is visible, t01 (oldest, 13th) is folded.
     expect(screen.getAllByText("t13").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("t01")).toHaveLength(0);
@@ -83,7 +88,7 @@ describe("Board — accepted column recent + fold", () => {
   });
 
   it("expands to show all accepted, then collapses back to recent 6", () => {
-    render(<Board state={manyAccepted} selected="" onSelect={() => {}} />);
+    renderBoard(<Board state={manyAccepted} selected="" onSelect={() => {}} />);
     fireEvent.click(screen.getByTestId("accepted-more"));
     expect(screen.getAllByText("t01").length).toBeGreaterThan(0); // folded one now visible
     fireEvent.click(screen.getByTestId("accepted-less"));
@@ -99,7 +104,7 @@ describe("Board — accepted column recent + fold", () => {
           id: `s${String(i + 1).padStart(2, "0")}`, owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "",
         })) }],
     };
-    render(<Board state={manyShipped} selected="" onSelect={() => {}} />);
+    renderBoard(<Board state={manyShipped} selected="" onSelect={() => {}} />);
     expect(screen.getAllByText("s09").length).toBeGreaterThan(0); // newest shown
     expect(screen.queryAllByText("s01")).toHaveLength(0); // oldest folded
     expect(screen.getByTestId("shipped-more")).toHaveTextContent("3 more shipped");
@@ -113,7 +118,7 @@ describe("Board — accepted column recent + fold", () => {
         { id: "only", owner: "a", status: "accepted", reviewer: "a", spec: "", evidence: "" },
       ]}],
     };
-    render(<Board state={few} selected="" onSelect={() => {}} />);
+    renderBoard(<Board state={few} selected="" onSelect={() => {}} />);
     expect(screen.getAllByText("only").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("accepted-more")).toBeNull();
   });
@@ -121,7 +126,7 @@ describe("Board — accepted column recent + fold", () => {
 
 describe("Board — stats-fed TOK", () => {
   it("does not fetch stats without a project", () => {
-    render(<Board state={fixture} selected="" onSelect={() => {}} />);
+    renderBoard(<Board state={fixture} selected="" onSelect={() => {}} />);
     expect(getStatsMock).not.toHaveBeenCalled();
   });
 
@@ -133,7 +138,7 @@ describe("Board — stats-fed TOK", () => {
       ],
       agents: [],
     });
-    render(<Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" />);
+    renderBoard(<Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" />);
     // T1's card TOK and the F1 feature chip rollup both show the stats value
     // once the debounced fetch lands.
     const hits = await screen.findAllByText("12.4k");
@@ -145,9 +150,32 @@ describe("Board — stats-fed TOK", () => {
 
   it("keeps rendering with the — fallback when the stats fetch fails", async () => {
     getStatsMock.mockRejectedValue(new Error("boom"));
-    render(<Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" />);
+    renderBoard(<Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" />);
     // Both cards' TOK stay at the no-data fallback; the board itself renders.
     const dashes = await screen.findAllByText("—");
     expect(dashes.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("Board — capability gating", () => {
+  it("disables Accept/Changes when the source is read-only", () => {
+    const readOnly = {
+      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true },
+      listProjects: vi.fn(),
+      getState: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
+      subscribe: vi.fn(),
+      verb: vi.fn(),
+    };
+    render(
+      <DataSourceProvider source={readOnly}>
+        <Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" author />
+      </DataSourceProvider>,
+    );
+    const accept = screen.getByTestId("card-accept");
+    const changes = screen.getByTestId("card-changes");
+    expect(accept).toBeDisabled();
+    expect(changes).toBeDisabled();
+    expect(accept).toHaveAttribute("title", "Remote control needs U3");
   });
 });

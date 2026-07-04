@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State, Feature, OrchestrateStatus } from "../lib/types";
+import { DataSourceProvider } from "../lib/datasource";
 
 const getOrchestrateStatus = vi.fn();
 const getParallelOrchestrate = vi.fn();
@@ -36,6 +37,14 @@ const status = (over: Partial<OrchestrateStatus>): OrchestrateStatus => ({
   escalated: false, done: false, total: 3, accepted: 1, iter: 2, updated_at: "x", ...over,
 });
 
+function renderLive(props: Partial<React.ComponentProps<typeof LiveOrchestrate>> = {}) {
+  return render(
+    <DataSourceProvider>
+      <LiveOrchestrate project="p1" state={EMPTY} refreshTick={0} author={true} agents={FULL_ROSTER} {...props} />
+    </DataSourceProvider>,
+  );
+}
+
 describe("LiveOrchestrate (lanes redesign)", () => {
   beforeEach(() => {
     getOrchestrateStatus.mockReset();
@@ -46,12 +55,6 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     getDiff.mockReset();
     getParallelOrchestrate.mockResolvedValue({ present: false });
   });
-
-  function renderLive(props: Partial<React.ComponentProps<typeof LiveOrchestrate>> = {}) {
-    return render(
-      <LiveOrchestrate project="p1" state={EMPTY} refreshTick={0} author={true} agents={FULL_ROSTER} {...props} />,
-    );
-  }
 
   it("renders empty state + Run when nothing has run and there are no features", async () => {
     getOrchestrateStatus.mockResolvedValue({ present: false });
@@ -106,7 +109,7 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     expect(screen.getByText("FAIL TestRetryCap")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Resume run ▸" }));
-    await waitFor(() => expect(resumeOrchestrate).toHaveBeenCalledWith("p1"));
+    await waitFor(() => expect(resumeOrchestrate).toHaveBeenCalledWith("p1", undefined));
     await waitFor(() => expect(onNotify).toHaveBeenCalledWith("Orchestrate resumed"));
 
     fireEvent.click(screen.getByRole("button", { name: "See diff" }));
@@ -159,5 +162,37 @@ describe("LiveOrchestrate (lanes redesign)", () => {
       ] }]),
     });
     await waitFor(() => expect(screen.getByTestId("agent-terminal")).toBeTruthy());
+  });
+});
+
+describe("LiveOrchestrate — capability gating", () => {
+  it("disables Run/Resume/Ship when the source is read-only", async () => {
+    const readOnly = {
+      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true },
+      listProjects: vi.fn(),
+      getState: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
+      subscribe: vi.fn(),
+      getOrchestrateStatus: vi.fn().mockResolvedValue({ present: true, status: status({ done: true, action: "done", task: "", accepted: 2, total: 2 }) }),
+      getParallelOrchestrate: vi.fn().mockResolvedValue({ present: false }),
+      runOrchestrate: vi.fn(),
+      resumeOrchestrate: vi.fn(),
+      shipFeature: vi.fn(),
+      getDiff: vi.fn(),
+    };
+    render(
+      <DataSourceProvider source={readOnly}>
+        <LiveOrchestrate
+          project="p1"
+          state={st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "accepted")] }])}
+          refreshTick={0}
+          author={true}
+          agents={FULL_ROSTER}
+        />
+      </DataSourceProvider>,
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ship" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Ship" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ship" })).toHaveAttribute("title", "Remote control needs U3");
   });
 });

@@ -7,7 +7,8 @@ import { TaskCard } from "./TaskCard";
 import { statusColor } from "./ui/StatusPill";
 import { BoardSkeleton } from "./Skeleton";
 import { casteForRoles, padGradient } from "../lib/ants";
-import { postVerb, getStats, type ProjectStats } from "../lib/api";
+import { type ProjectStats } from "../lib/api";
+import { useDataSource } from "../lib/datasource";
 import { humanizeError } from "../lib/protocolErrors";
 import { Alert } from "./ui/Alert";
 
@@ -53,6 +54,8 @@ export function Board({
   // Bump the parent refresh tick after a pact verb so the board re-reads state.
   onChanged?: () => void;
 }) {
+  const src = useDataSource();
+  const canWrite = src.capabilities.canWrite;
   // accepted + shipped are terminal columns that grow unbounded; show only the
   // most recent RECENT and fold the rest behind a per-column expander.
   const RECENT = 6;
@@ -71,7 +74,7 @@ export function Board({
     if (!project) return;
     let cancelled = false;
     const t = setTimeout(() => {
-      getStats(project)
+      src.getStats(project)
         .then((s) => {
           if (!cancelled) setStats(s);
         })
@@ -137,7 +140,7 @@ export function Board({
     setPending(taskId);
     setErr("");
     try {
-      await postVerb(project, v, reason ? { task: taskId, reason } : { task: taskId });
+      await src.verb!(project, v, reason ? { task: taskId, reason } : { task: taskId });
       onChanged?.();
     } catch (e) {
       setErr(humanizeError(e instanceof Error ? e.message : String(e)));
@@ -154,7 +157,8 @@ export function Board({
           <button
             type="button"
             data-testid="card-accept"
-            disabled={pending === bt.task.id}
+            disabled={pending === bt.task.id || !canWrite}
+            title={canWrite ? undefined : "Remote control needs U3"}
             onClick={(e) => {
               e.stopPropagation();
               verb(bt.task.id, "accept");
@@ -167,11 +171,13 @@ export function Board({
           <button
             type="button"
             data-testid="card-changes"
+            disabled={!canWrite}
+            title={canWrite ? undefined : "Remote control needs U3"}
             onClick={(e) => {
               e.stopPropagation();
               onSelect(bt.task.id); // open the detail rail for the reason textarea
             }}
-            className="rounded-[6px] border px-2.5 py-1 text-[11px] font-medium"
+            className="rounded-[6px] border px-2.5 py-1 text-[11px] font-medium disabled:opacity-50"
             style={{
               color: "var(--color-role-ops)",
               borderColor: "color-mix(in srgb, var(--color-role-ops) 40%, transparent)",

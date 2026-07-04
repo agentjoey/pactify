@@ -3,7 +3,9 @@ import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
 import { fetchEventsLog, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
 import type { Worktree } from "./lib/api";
 import { type View } from "./lib/types";
-import { DataSourceProvider, useDataSource } from "./lib/datasource";
+import { DataSourceProvider, useDataSource, type DataSource } from "./lib/datasource";
+import { isHostedMode, localSource } from "./lib/source";
+import { RelayConnect } from "./components/RelayConnect";
 import { Toolbar } from "./components/shell/Toolbar";
 import { SettingsModal } from "./components/shell/SettingsModal";
 import { AddProjectWizard } from "./components/shell/AddProjectWizard";
@@ -470,8 +472,17 @@ function AppContent() {
 }
 
 export default function App() {
+  // Local build → the co-located serve source is ready immediately. Hosted build
+  // → start with no source and gate on RelayConnect until the user supplies the
+  // master secret; then render the same dashboard against the RelaySource.
+  const [source, setSource] = useState<DataSource | null>(() =>
+    isHostedMode() ? null : localSource(),
+  );
+  if (!source) {
+    return <RelayConnect onConnected={setSource} />;
+  }
   return (
-    <DataSourceProvider>
+    <DataSourceProvider source={source}>
       <AppContent />
     </DataSourceProvider>
   );

@@ -1,14 +1,33 @@
 import type { RelaySource } from "./relaysource";
 import { LocalServeSource, type DataSource } from "./datasource";
 
-// The dashboard runs in one of two modes, decided at build time by whether a
-// relay URL is configured:
-//   - LOCAL  (no VITE_PACTIFY_RELAY_URL): talks to the co-located `pactify serve`
-//     over /api — full read+write. This is the serve-embedded build.
-//   - HOSTED (VITE_PACTIFY_RELAY_URL set): talks to the zero-knowledge relay,
-//     read-only (writes gated until U3). This is the Vercel build.
-// The env var is inlined by Vite at build; empty/undefined ⇒ LOCAL.
-const RELAY_URL = (import.meta.env.VITE_PACTIFY_RELAY_URL as string | undefined)?.trim() || "";
+// The dashboard runs in one of two modes:
+//   - LOCAL  (no relay URL): talks to the co-located `pactify serve` over /api —
+//     full read+write. This is the serve-embedded build.
+//   - HOSTED (relay URL set): talks to the zero-knowledge relay. This is the
+//     Vercel build.
+//
+// The relay URL is resolved by HOSTNAME first, then the build-time env var. One
+// hosted bundle therefore serves both environments correctly regardless of which
+// branch/env it was built from (Vercel bakes a single VITE_PACTIFY_RELAY_URL per
+// project, so a hostname map is how staging and production diverge):
+//   orx.agentjoey.ai → staging relay      orx.pactify.dev → production relay
+// Anything else (localhost, *.vercel.app previews, the serve-embedded build)
+// falls back to VITE_PACTIFY_RELAY_URL (empty ⇒ LOCAL).
+const RELAY_BY_HOST: Record<string, string> = {
+  "orx.agentjoey.ai": "https://pactify-relay-staging.fly.dev",
+  "orx.pactify.dev": "https://pactify-relay.fly.dev",
+};
+
+function resolveRelayUrl(): string {
+  if (typeof window !== "undefined" && window.location) {
+    const mapped = RELAY_BY_HOST[window.location.hostname];
+    if (mapped) return mapped;
+  }
+  return (import.meta.env.VITE_PACTIFY_RELAY_URL as string | undefined)?.trim() || "";
+}
+
+const RELAY_URL = resolveRelayUrl();
 
 /** True when this build targets the hosted relay (a relay URL was configured). */
 export function isHostedMode(): boolean {

@@ -60,9 +60,11 @@ type AcpRunner struct {
 	// Policy answers session/request_permission (default PermissionAuto).
 	Policy PermissionPolicy
 	// OnUsage, when set, receives the stint's aggregated token usage keyed by
-	// seat+task. Left nil by this task's wiring — dm-acp-usage connects it; the
-	// tests assert it fires.
-	OnUsage func(seat, task string, u acp.Usage)
+	// repoDir+seat+task. Production (NewAcpRunner) wires it to recordAcpUsage, which
+	// folds the usage into the SAME per-task token store the CmdRunner path writes
+	// (internal/tokens at .pact/orchestrate/tokens.json). repoDir is passed because
+	// the store is per-worktree (parallel features run in distinct RepoDirs).
+	OnUsage func(repoDir, seat, task string, u acp.Usage)
 	// Now supplies the escalation-record timestamp; nil defaults to wall clock.
 	Now func() string
 }
@@ -74,9 +76,19 @@ func NewAcpRunner(idle time.Duration, policy PermissionPolicy) AcpRunner {
 		Spawn: func(ctx context.Context, command string, args, env []string, dir string) (acpConn, error) {
 			return acp.Spawn(ctx, command, args, env, dir)
 		},
-		Idle:   idle,
-		Policy: policy,
+		Idle:    idle,
+		Policy:  policy,
+		OnUsage: recordAcpUsage,
 	}
+}
+
+// recordAcpUsage folds an ACP stint's aggregated token usage into the per-task
+// token store shared with the CmdRunner path (via recordTaskTokens), keyed by
+// task. It sums input+output tokens to match CmdRunner's tokens.Parse total; cost
+// is intentionally not recorded (dm-acp-usage tracks token counts only). seat is
+// part of the callback's attribution contract but unused by the task-keyed store.
+func recordAcpUsage(repoDir, _ /*seat*/, task string, u acp.Usage) {
+	recordTaskTokens(repoDir, task, u.InputTokens+u.OutputTokens)
 }
 
 // Run drives one ACP stint for lc's seat. A kind with no ACP command mapping fails
@@ -128,7 +140,7 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 			umu.Lock()
 			u := agg
 			umu.Unlock()
-			r.OnUsage(lc.Seat, lc.Task, u)
+			r.OnUsage(lc.RepoDir, lc.Seat, lc.Task, u)
 		}
 	}()
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/acp"
+	"github.com/agentjoey/pactify/internal/tokens"
 )
 
 // fakeAcpConn is an in-process stand-in for *acp.Client that lets a test drive one
@@ -229,7 +230,7 @@ func TestAcpRunnerUsageCallback(t *testing.T) {
 	fired := make(chan struct{}, 1)
 	r := AcpRunner{
 		Spawn: captureSpawn(fc, nil),
-		OnUsage: func(seat, task string, u acp.Usage) {
+		OnUsage: func(_ string, seat, task string, u acp.Usage) {
 			mu.Lock()
 			gotSeat, gotTask, gotUsage = seat, task, u
 			mu.Unlock()
@@ -251,6 +252,62 @@ func TestAcpRunnerUsageCallback(t *testing.T) {
 	}
 	if gotUsage.InputTokens != 120 || gotUsage.OutputTokens != 50 || gotUsage.Cost != 0.75 {
 		t.Fatalf("usage not aggregated across updates: %+v", gotUsage)
+	}
+}
+
+// TestAcpRunnerProductionRecordsTokens is the dm-acp-usage acceptance test: the
+// PRODUCTION runner (NewAcpRunner wires OnUsage → recordAcpUsage) must fold an ACP
+// stint's usage into the SAME per-task token store the CmdRunner path writes
+// (internal/tokens at .pact/orchestrate/tokens.json). We inject a fake ACP conn
+// that emits usage updates but keep the production OnUsage, run a stint against a
+// temp RepoDir, then assert the store read API returns the summed input+output
+// tokens keyed by task — the exact structure CmdRunner's recordTokens populates.
+func TestAcpRunnerProductionRecordsTokens(t *testing.T) {
+	dir := t.TempDir()
+	fc := newFakeAcpConn()
+	fc.prompt = func(fc *fakeAcpConn) (acp.StopReason, error) {
+		fc.emitUpdate(acp.SessionUpdate{Kind: "usage", Usage: &acp.Usage{InputTokens: 100, OutputTokens: 40, Cost: 0.5}})
+		fc.emitUpdate(acp.SessionUpdate{Kind: "usage", Usage: &acp.Usage{InputTokens: 20, OutputTokens: 10, Cost: 0.25}})
+		return "end_turn", nil
+	}
+	// Production constructor wires OnUsage; swap only the spawn seam for the fake.
+	r := NewAcpRunner(0, PermissionAuto)
+	r.Spawn = captureSpawn(fc, nil)
+
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w", Task: "t-acp", Kind: "kimi-cli", RepoDir: dir}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// Same store, same read API, same on-disk file CmdRunner uses.
+	s := tokens.Load(dir)
+	if got := s.Get("t-acp"); got != 170 { // (100+40) + (20+10) = input 120 + output 50
+		t.Fatalf("ACP stint should record summed input+output tokens into the shared store, got %d want 170", got)
+	}
+	if runs := s.Tasks["t-acp"].Runs; runs != 1 {
+		t.Fatalf("one ACP stint should be one run, got %d", runs)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".pact", "orchestrate", "tokens.json")); err != nil {
+		t.Fatalf("ACP usage must land in the CmdRunner store file .pact/orchestrate/tokens.json: %v", err)
+	}
+}
+
+// TestAcpRunnerProductionZeroUsageNoRecord guards that a stint with no usage
+// updates writes nothing (matching CmdRunner's unparseable-output no-op), so
+// TOK stays absent rather than a phantom zero-run entry.
+func TestAcpRunnerProductionZeroUsageNoRecord(t *testing.T) {
+	dir := t.TempDir()
+	fc := newFakeAcpConn()
+	fc.prompt = func(fc *fakeAcpConn) (acp.StopReason, error) {
+		fc.emitUpdate(acp.SessionUpdate{Kind: "agent_message_chunk"}) // no Usage
+		return "end_turn", nil
+	}
+	r := NewAcpRunner(0, PermissionAuto)
+	r.Spawn = captureSpawn(fc, nil)
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w", Task: "t-zero", Kind: "kimi-cli", RepoDir: dir}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(tokens.Load(dir).Tasks) != 0 {
+		t.Fatalf("a zero-usage stint must not write a token entry, got %d", len(tokens.Load(dir).Tasks))
 	}
 }
 

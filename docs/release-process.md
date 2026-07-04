@@ -1,7 +1,8 @@
 # Pactify Release Process
 
 > Repo: `agentjoey/pactify` (private). Governs the product — the relay
-> (`cloud/relay` → Fly) and Mission Control (`cloud/web` → Vercel `pactify`).
+> (`cloud/relay` → Fly) and the dashboard (`web/`, React → Vercel `pactify`,
+> hosted RelaySource build; the old `cloud/web` SvelteKit MVP was retired 2026-07-04).
 > The marketing site (`agentjoey/pactify-website`) has its own simple main→prod.
 
 ## Branch model
@@ -78,8 +79,9 @@ origin can lag its local work.
 ## One-time setup checklist
 
 - [x] `main` / `staging` / `production` branches exist; stale feature branches removed.
-- [x] Vercel `pactify`: Root Directory `cloud/web`, framework SvelteKit,
-      `PUBLIC_PACTIFY_RELAY_URL` env, `vercel.json` build/ignore commands.
-- [ ] **Vercel `pactify` Production Branch → `production`** (dashboard; API-gated).
+- [x] Vercel `pactify`: Root Directory `web`, framework Other, srcOutside=on,
+      `VITE_PACTIFY_RELAY_URL` env, `web/vercel.json` build (npm+cloud pnpm+vite).
+- [x] **Vercel `pactify` Production Branch → `production`**; SSO protection off;
+      LIVE on orx.pactify.dev (prod) + orx.agentjoey.ai (staging).
 - [ ] Prod relay `pactify-relay` created + secrets + first deploy from `production`.
 - [ ] `PUBLIC_PACTIFY_RELAY_URL` production target → prod relay URL (currently staging).

@@ -308,10 +308,10 @@ features:
         evidence: cd web && npx tsc --noEmit && npx vitest run src/lib  - tsc --noEmit: clean (no output) - vitest: 14 test files passed, 179 tests passed  Files changed: - web/src/lib/datasource.tsx (NEW): DataSourceCapabilities/DataSource interfaces, LocalServeSource thin delegate over api.ts, DataSourceProvider + useDataSource context hook - web/src/lib/datasource.test.tsx (NEW): vitest coverage for capabilities, delegation to api functions, SSE subscribe/unsubscribe, provider/hook behavior  Boundary respected: read-only use of api.ts/types.ts; no components/App.tsx changes.
       - id: ds-wire
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/ds-wire.md
-        evidence: null
+        evidence: cd web && npx tsc --noEmit && npx vitest run && npx playwright test\n\n- tsc --noEmit: clean (no output)\n- vitest: 54 test files passed, 468 tests passed\n- playwright: 5 e2e tests passed\n- npm run build: rebuilt internal/serve/dist SPA\n\nFiles changed:\n- web/src/lib/datasource.tsx: extended DataSource interface + LocalServeSource with orchestrate/plan/diff ops and subscribe event/error/live callbacks; fetchEventsLog delegate\n- web/src/App.tsx: wrap in DataSourceProvider; route listProjects/getState/subscribe/fetchEventsLog through useDataSource\n- web/src/components/Board.tsx: useDataSource for getStats/postVerb; canWrite gate on Accept/Changes\n- web/src/components/LiveOrchestrate.tsx: useDataSource for orchestrate status/run/resume/ship/diff; canWrite gate on Run/Resume/Ship\n- web/src/components/shell/DispatchPanel.tsx: useDataSource for generatePlan/getPlanGenStatus/getPlanReview/applyPlan/runOrchestrate; canWrite gate on Generate/Dispatch\n- web/src/components/RightRail.tsx: useDataSource for getStats/postVerb; canWrite gate on Accept/Changes/Merge\n- Tests updated to wrap with DataSourceProvider and mock source; added canWrite=false capability-gating tests for Board/LiveOrchestrate/DispatchPanel/RightRail\n- internal/serve/dist: rebuilt production bundle
         deps: [ds-core]
   - id: ts-projection
     branch: feat-ts-projection

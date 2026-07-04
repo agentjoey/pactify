@@ -40,12 +40,12 @@ func newServeCmd() *cobra.Command {
 			srv.SetRelay(relayURL, relayToken)
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
-			// U3 down-channel: opt-in remote command execution — a remote control
-			// plane (hosted dashboard / another machine) can drive pact verbs on
-			// this machine's engine. Gated because it executes writes on local
-			// repos; no-op without a relay session.
+			// Machine channel: when a relay session is configured, register this
+			// host (presence + agent kinds) so it's visible/selectable in the web
+			// app (M1). --remote-control ADDITIONALLY executes pact.* rpc from a
+			// remote control plane (U3), gated because it runs writes on local repos.
+			go srv.StartMachineChannel(ctx, remoteControl)
 			if remoteControl {
-				go srv.StartRemoteChannel(ctx)
 				fmt.Fprintln(c.OutOrStdout(), "pactify serve: remote control ENABLED (relay down-channel)")
 			}
 			if relayURL != "" {

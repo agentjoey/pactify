@@ -287,7 +287,7 @@ features:
     tasks:
       - id: fe-lazycanvas
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/fe-lazycanvas.md
-        evidence: null
+        evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test  - npx tsc -b: clean (no output) - npx vitest run: 59 test files passed, 489 tests passed - npx playwright test: 5 passed (dispatch + office + project-wizard) - npm run build: rebuilt internal/serve/dist SPA  Build chunk list (lazy Canvas now its own async chunk; xyflow remains a separate on-demand chunk): ../internal/serve/dist/assets/index-8rvluMIA.js          344.12 kB │ gzip:  88.45 kB ../internal/serve/dist/assets/Canvas-B_NBSutq.js          30.41 kB │ gzip:   9.37 kB ../internal/serve/dist/assets/xyflow-ZNlHqwZp.js         175.25 kB │ gzip:  56.60 kB ../internal/serve/dist/assets/react-vendor-CCIEwYL0.js   189.64 kB │ gzip:  59.65 kB ../internal/serve/dist/assets/crypto-relay-CIo5B-gh.js   157.84 kB │ gzip:  48.54 kB  Boundary check: no @xyflow strings in the main index chunk (grep -c "@xyflow" = 0), confirming xyflow is only pulled in by the async Canvas chunk.  Files changed: - web/src/App.tsx: Canvas is now lazy(() => import("./components/Canvas")) wrapped in <Suspense fallback={<Spinner />}> - internal/serve/dist/: rebuilt production bundle with new async Canvas chunk

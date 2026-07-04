@@ -75,11 +75,15 @@ func checkAgentWiring(cwd string) Check {
 // Run executes the non-MCP checks. The MCP-launch check (spec B1 #5) is run by the
 // command layer's checkMCP, which spawns the PATH-resolved binary and completes an
 // initialize handshake; keeping it there leaves this package pure and unit-testable.
-func Run(cwd, agentID, exePath, pathEnv string) []Check {
-	return []Check{
+//
+// home is the user's home directory (injected, not read from os.Getenv here) so
+// the per-vendor auth checks stay hermetically testable.
+func Run(cwd, agentID, exePath, pathEnv, home string) []Check {
+	checks := []Check{
 		checkPath(exePath, pathEnv),
 		checkRepo(cwd),
 		checkSeat(agentID),
 		checkAgentWiring(cwd),
 	}
+	return append(checks, VendorChecks(home, pathEnv)...)
 }

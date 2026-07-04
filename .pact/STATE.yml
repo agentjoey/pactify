@@ -408,10 +408,10 @@ features:
         evidence: null
       - id: rp-critic
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-critic.md
-        evidence: null
+        evidence: go test ./internal/orchestrate/ -run Critic + full pkg + build/vet clean. Config pair ConfigCritic/CriticConfig (engine.go, like gate) + Note (start event_type, no new type); orchestrate/critic.go runCritic runs gate-green pre-reviewer if critic seat set (--critic or config critic, default OFF); parse CRITIC_SCORE (missing→null, clamp), inject reviewer brief (no gating power — low score still ships); failure swallowed. Default-off byte-identical (0 stints). 5 tests.
         deps: [rp-fix-loop]
       - id: rp-qa-gate
         owner: kimi-worker

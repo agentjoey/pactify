@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client'
 import { deriveAccountKeypair, deriveProjectKey, decryptEvent } from '@pactify-apps/crypto'
-import type { EncryptedBlob, RpcRequest } from '@pactify-apps/wire'
+import type { EncryptedBlob, RpcRequest, MachineInfo } from '@pactify-apps/wire'
 
 /** The cleartext header of one pact event (as served by /v1/pact/projects/:id/events). */
 export interface PactEventHeader {
@@ -96,6 +96,13 @@ export class RelayClient {
 
   listProjects(): Promise<Project[]> {
     return this.getJSON<Project[]>('/v1/pact/projects')
+  }
+
+  /** The account's machines (presence + agent kinds) — the multi-machine roster
+   * the dashboard shows and targets rpc at. Offline machines past the board TTL
+   * are hidden by the relay. */
+  listMachines(): Promise<MachineInfo[]> {
+    return this.getJSON<MachineInfo[]>('/v1/machines')
   }
 
   /** A project's stored events in seq order (optionally only seq > afterSeq). */

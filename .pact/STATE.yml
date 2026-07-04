@@ -260,7 +260,7 @@ features:
     tasks:
       - id: relay-client
         owner: opencode-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/p3-relay-client.md
         evidence: null

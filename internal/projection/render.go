@@ -33,6 +33,14 @@ func Render(st State) string {
 			fmt.Fprintf(&b, "        reviewer: %s\n", t.Reviewer)
 			fmt.Fprintf(&b, "        spec: %s\n", t.Spec)
 			fmt.Fprintf(&b, "        evidence: %s\n", ev)
+			// Quorum lines are emitted ONLY for a quorum task (opt-in `reviewers[]`);
+			// a legacy single-reviewer task has no Reviewers, so its render stays
+			// byte-identical to the bash reference. accepts reflects the current round.
+			if len(t.Reviewers) > 0 {
+				fmt.Fprintf(&b, "        reviewers: [%s]\n", strings.Join(t.Reviewers, ", "))
+				fmt.Fprintf(&b, "        quorum: %d\n", t.Quorum)
+				fmt.Fprintf(&b, "        accepts: [%s]\n", strings.Join(t.Accepts, ", "))
+			}
 			// deps line is emitted ONLY when the task carried deps; deps-free
 			// tasks render byte-identically to the bash reference (which has no
 			// deps concept). Mirrors the agents `roles: [a, b]` list style.

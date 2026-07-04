@@ -65,10 +65,21 @@ func workerBrief(dir string, seat projection.Seat, task projection.Task, changes
 // points at the worker's changes via `git diff` / `git log`, instructs running
 // the spec's acceptance commands, and gives the accept / changes verbs while
 // forbidding the reviewer from editing the implementation.
-func reviewerBrief(dir string, seat projection.Seat, task projection.Task) string {
+//
+// preReviewNote, when non-empty, carries the pre-review injections that steer the
+// reviewer's attention: the QA report path (spec §4 WS-I) and/or the critic's
+// score+reason line (spec §3 WS-H), joined by joinNotes into one section. An empty
+// preReviewNote (no QA line + no critic, or neither produced anything) leaves the
+// briefing byte-for-byte identical to the pre-WS-H/WS-I one.
+func reviewerBrief(dir string, seat projection.Seat, task projection.Task, preReviewNote string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# pact reviewer — seat `%s`\n\n", seat.ID)
 	fmt.Fprintf(&b, "You are seat `%s`, reviewing task `%s` (status awaiting_review) in this repo (pact protocol v1).\n\n", seat.ID, task.ID)
+
+	if preReviewNote != "" {
+		b.WriteString("## 评审前置提示\n")
+		b.WriteString(preReviewNote + "\n\n")
+	}
 
 	b.WriteString("## 审什么\n")
 	fmt.Fprintf(&b, "- 读规格：`%s`，确认验收标准。\n", task.Spec)

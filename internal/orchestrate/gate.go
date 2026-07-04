@@ -17,6 +17,13 @@ import (
 // quotes and surrounded by whitespace, all of which are trimmed.
 const verifyPrefix = "verify:"
 
+// qaPrefix marks the OPTIONAL, experimental QA-agent hint inside a task spec
+// (spec review-runtime-deepening §4 WS-I). Convention: a single frontmatter-style
+// line `qa: <one sentence describing what to run-and-verify>`. It parses exactly
+// like verifyPrefix and may coexist with a `verify:` line; its absence leaves the
+// driver's flow byte-for-byte unchanged (no QA stint).
+const qaPrefix = "qa:"
+
 // extractVerify pulls the machine-readable acceptance command out of a task
 // spec markdown. On success it returns (command, true); when no `verify:` line
 // is present it returns ("", false) so the caller can fall back to a
@@ -25,18 +32,33 @@ const verifyPrefix = "verify:"
 // The first `verify:` line wins. Surrounding whitespace and a single pair of
 // wrapping quotes (matching ' or ") are stripped from the command.
 func extractVerify(specMarkdown string) (string, bool) {
+	return extractField(specMarkdown, verifyPrefix)
+}
+
+// extractQA pulls the experimental QA hint out of a task spec markdown (spec §4
+// WS-I). It returns (hint, true) when a non-empty `qa:` line is present, else
+// ("", false) — the signal to the driver that this task opts OUT of the QA gate
+// and its flow stays unchanged. Same parse rules as extractVerify.
+func extractQA(specMarkdown string) (string, bool) {
+	return extractField(specMarkdown, qaPrefix)
+}
+
+// extractField is the shared frontmatter-line parser behind extractVerify and
+// extractQA: the first line whose trimmed text starts with prefix wins, its value
+// is trimmed and unquoted, and a bare prefix with no value is treated as absent.
+func extractField(specMarkdown, prefix string) (string, bool) {
 	for _, raw := range strings.Split(specMarkdown, "\n") {
 		line := strings.TrimSpace(raw)
-		if !strings.HasPrefix(line, verifyPrefix) {
+		if !strings.HasPrefix(line, prefix) {
 			continue
 		}
-		cmd := strings.TrimSpace(strings.TrimPrefix(line, verifyPrefix))
-		cmd = unquote(cmd)
-		if cmd == "" {
-			// A bare `verify:` with no command is treated as absent.
+		val := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+		val = unquote(val)
+		if val == "" {
+			// A bare `verify:` / `qa:` with no value is treated as absent.
 			continue
 		}
-		return cmd, true
+		return val, true
 	}
 	return "", false
 }

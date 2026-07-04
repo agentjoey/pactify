@@ -9,9 +9,19 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/orchestrate"
-	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/spf13/cobra"
 )
+
+// parseCriticSeat normalizes the --critic flag value: it accepts either the
+// documented `seat=<seat>` form or a bare `<seat>`, returning the seat id (""
+// when unset). The seat= prefix is optional sugar so the flag reads naturally.
+func parseCriticSeat(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return ""
+	}
+	return strings.TrimSpace(strings.TrimPrefix(v, "seat="))
+}
 
 // newOrchestrateCmd wires `pactify orchestrate`: the autonomous driver that walks
 // the pact state machine in the current repo, launching the owner/reviewer agent
@@ -31,6 +41,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var keepSessions bool
 	var inPlace bool
 	var sandbox bool // deprecated: sandbox is now the default; flag kept as a no-op alias
+	var critic string
 
 	cmd := &cobra.Command{
 		Use:   "orchestrate",
@@ -60,16 +71,11 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				}
 				km[parts[0]] = parts[1]
 			}
-			// Default each seat's kind from the roster (init/add-seat record it); an
-			// explicit --seat-kind still wins. Lets orchestrate run without a wall of
-			// --seat-kind flags once the roster carries kinds.
-			if st, perr := pact.At(dir).StateProjection(); perr == nil {
-				for _, a := range st.Agents {
-					if km[a.ID] == "" && a.Kind != "" {
-						km[a.ID] = a.Kind
-					}
-				}
-			}
+			// km carries ONLY the explicit --seat-kind flags (the highest-priority
+			// override). Defaulting each seat's kind from the roster now happens LIVE in
+			// the driver loop (opts.kind re-reads Agents[].Kind every iteration), so a
+			// seat that joins mid-run — or re-declares its kind — is drivable next
+			// iteration without a restart (spec §6 WS-K dynamic seats).
 
 			// The driver needs an acting seat for its own merges. Resolve --as, else
 			// PACT_AGENT_ID; fail fast (before any agent runs) when neither is set, so
@@ -149,6 +155,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				IdleTimeout:     time.Duration(idleTimeoutMin) * time.Minute,
 				Orchestrator:    orchestrator,
 				CleanupSessions: !keepSessions,
+				Critic:          parseCriticSeat(critic),
 			}
 			// --max-concurrency > 1 drives independent features in parallel, each in
 			// an isolated worktree, merges serialized onto base. Incompatible with
@@ -199,5 +206,6 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().StringArrayVar(&seatHosts, "seat-host", nil, "seat=machineId to run that seat's stints on another machine via the relay (repeatable; requires a cloud session + the project's git origin)")
 	cmd.Flags().StringArrayVar(&transports, "transport", nil, "kind=acp|cmd to drive that kind over the Agent Client Protocol instead of a headless command (repeatable), e.g. --transport kimi-cli=acp; default: all cmd")
 	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")
+	cmd.Flags().StringVar(&critic, "critic", "", "run this seat as a read-only pre-review critic (accepts seat=<seat> or <seat>); overrides `pactify config critic`; default off — the critic scores the diff but has no gating power")
 	return cmd
 }

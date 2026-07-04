@@ -48,10 +48,13 @@ func (p *Project) agentID() (string, error) {
 }
 
 // StateProjection returns the current projected state for the repo (exported
-// wrapper around the internal projection used by the orchestrate driver).
+// wrapper around the internal projection used by the orchestrate driver and serve's
+// cold start). It reads through the persistent ledger snapshot: on a valid snapshot
+// it folds only the bytes appended since the snapshot was written, else it full-
+// folds. The result is identical to a full replay either way (the snapshot is a
+// pure cache); PACT_NO_SNAPSHOT=1 bypasses it.
 func (p *Project) StateProjection() (projection.State, error) {
-	st, _, err := p.state()
-	return st, err
+	return projection.LoadSnapshotState(paths.LogIn(p.dir), paths.StateSnapshotIn(p.dir))
 }
 
 func (p *Project) state() (projection.State, []event.Event, error) {
@@ -95,15 +98,55 @@ func (p *Project) withLedgerLock(fn func() error) error {
 }
 
 func (p *Project) appendAndRender(ev event.Event) error {
-	if err := event.Append(paths.LogIn(p.dir), ev); err != nil {
+	logPath := paths.LogIn(p.dir)
+	if err := event.Append(logPath, ev); err != nil {
 		return err
 	}
-	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	// Read the whole log ONCE as bytes: reuse them both to re-render STATE.yml and
+	// to fingerprint the snapshot (its head hash is over these exact bytes).
+	data, err := os.ReadFile(logPath)
 	if err != nil {
 		return err
 	}
-	return projection.WriteState(paths.StateIn(p.dir), projection.Project(evs))
+	evs, err := event.ParseAll(data)
+	if err != nil {
+		return err
+	}
+	st, folder := projection.Fold(evs)
+	if err := projection.WriteState(paths.StateIn(p.dir), st); err != nil {
+		return err
+	}
+	// Refresh the snapshot cache while still holding the ledger lock (callers wrap
+	// appendAndRender in withLedgerLock), so the on-disk snapshot never lags the log
+	// a reader could see. Best-effort: the snapshot is only a cache — a write failure
+	// (or PACT_NO_SNAPSHOT) must not fail the verb, whose event is already durable.
+	p.writeSnapshot(data, folder)
+	return nil
 }
+
+// writeSnapshot atomically rewrites the ledger snapshot for the just-folded log.
+// All errors are swallowed: the snapshot is a cache, and the next reader silently
+// full-folds on any mismatch. On first creation it also registers the snapshot file
+// with the repo's runtime-ignore list so this cache is never committed.
+func (p *Project) writeSnapshot(logBytes []byte, folder *projection.Folder) {
+	if os.Getenv(projection.NoSnapshotEnv) == "1" {
+		return
+	}
+	snapPath := paths.StateSnapshotIn(p.dir)
+	if _, err := os.Stat(snapPath); os.IsNotExist(err) {
+		// First write: keep the cache out of git via .git/info/exclude (best-effort;
+		// a non-git dir or git error just leaves it untracked-by-absence).
+		_ = gitx.EnsureExcluded(p.dir, snapshotIgnoreMarker)
+	}
+	_ = projection.WriteSnapshot(snapPath, logBytes, folder)
+}
+
+// snapshotIgnoreMarker is the .git/info/exclude entry that keeps the ledger
+// snapshot cache out of git — it is a projection, never the source of truth (the
+// log is), so committing it would be a lie waiting to drift. Matches the default
+// .pact/ location; a PACT_DIR-absolute override lands the cache outside the repo,
+// where it is untracked anyway.
+const snapshotIgnoreMarker = ".pact/state-snapshot.json"
 
 // Init scaffolds .pact/, bakes entry files, and writes the init event.
 func (p *Project) Init(project string, seatSpecs []string) error {
@@ -208,6 +251,14 @@ func (p *Project) Join(seatID, roles string) error {
 	return p.JoinWithClient(seatID, roles, "pactify-cli", ClientVersion)
 }
 
+// JoinKind is Join plus a declared agent kind (spec §6 WS-K dynamic seats): the
+// join event carries `kind`, which the projection records onto Agents[].Kind so a
+// seat can DECLARE how it is driven at cold-start (and orchestrate resolves it from
+// the live roster). An empty kind is byte-identical to Join.
+func (p *Project) JoinKind(seatID, roles, kind string) error {
+	return p.JoinWithClientKind(seatID, roles, "pactify-cli", ClientVersion, kind)
+}
+
 // JoinWithClient registers the seat (join event) and moves it onto its assigned
 // task's feature branch (creating the branch from HEAD if absent).
 //
@@ -217,12 +268,20 @@ func (p *Project) Join(seatID, roles string) error {
 // byte-identical to pre-feature logs. Provenance lives in the log only — it is
 // never projected into STATE.yml.
 func (p *Project) JoinWithClient(seatID, roles, clientName, clientVersion string) error {
+	return p.JoinWithClientKind(seatID, roles, clientName, clientVersion, "")
+}
+
+// JoinWithClientKind is JoinWithClient plus a declared agent kind (spec §6 WS-K).
+// When kind is non-empty the join payload gains a "kind" field the projection reads
+// into Agents[].Kind; an empty kind emits no kind field, so kind-free joins stay
+// byte-identical to pre-feature logs.
+func (p *Project) JoinWithClientKind(seatID, roles, clientName, clientVersion, kind string) error {
 	return p.withLedgerLock(func() error {
-		return p.joinWithClientLocked(seatID, roles, clientName, clientVersion)
+		return p.joinWithClientLocked(seatID, roles, clientName, clientVersion, kind)
 	})
 }
 
-func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion string) error {
+func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion, kind string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -243,6 +302,11 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion 
 	// conditional-serialization discipline (byte-parity for client-free logs).
 	if clientName != "" {
 		payload["client"] = map[string]any{"name": clientName, "version": clientVersion}
+	}
+	// kind is emitted ONLY when declared (spec §6 WS-K dynamic seats), same additive
+	// discipline: kind-free joins keep byte-identical payloads.
+	if kind != "" {
+		payload["kind"] = kind
 	}
 	if err := p.appendAndRender(event.Event{
 		AgentID:   id,
@@ -313,11 +377,30 @@ func splitCSV(s string) []any {
 // in the payload ONLY when non-empty so deps-free logs stay byte-identical.
 func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
 	return p.withLedgerLock(func() error {
-		return p.assignLocked(taskID, feature, branch, owner, reviewer, spec, deps)
+		// Legacy single-reviewer path: quorum 0 with a one-element reviewer set
+		// (empty reviewer → empty set so the "reviewer required" check still fires).
+		var reviewers []string
+		if reviewer != "" {
+			reviewers = []string{reviewer}
+		}
+		return p.assignLocked(taskID, feature, branch, owner, reviewers, 0, spec, deps)
 	})
 }
 
-func (p *Project) assignLocked(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
+// AssignQuorum records a quorum multi-reviewer assignment (spec review-runtime-
+// deepening §2): reviewers is the reviewer set and quorum (≥1, ≤len(reviewers)) is
+// how many DISTINCT reviewers must accept. It is the strictly opt-in counterpart to
+// Assign; single-reviewer callers keep using Assign unchanged. The assign event
+// payload carries `reviewers[]` + `quorum` (never the single `reviewer` key), which
+// the projection reads back; the cmd layer enforces --reviewer/--reviewers mutual
+// exclusion before calling either.
+func (p *Project) AssignQuorum(taskID, feature, branch, owner string, reviewers []string, quorum int, spec string, deps []string) error {
+	return p.withLedgerLock(func() error {
+		return p.assignLocked(taskID, feature, branch, owner, reviewers, quorum, spec, deps)
+	})
+}
+
+func (p *Project) assignLocked(taskID, feature, branch, owner string, reviewers []string, quorum int, spec string, deps []string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -326,7 +409,7 @@ func (p *Project) assignLocked(taskID, feature, branch, owner, reviewer, spec st
 	if err != nil {
 		return err
 	}
-	if err := checkAssign(st, id, taskID, feature, branch, owner, reviewer); err != nil {
+	if err := checkAssign(st, id, taskID, feature, branch, owner, reviewers, quorum); err != nil {
 		return err
 	}
 	if err := checkDeps(st, taskID, feature, deps); err != nil {
@@ -338,7 +421,26 @@ func (p *Project) assignLocked(taskID, feature, branch, owner, reviewer, spec st
 		// dir-aware paths elsewhere.
 		spec = paths.Tasks() + "/" + taskID + ".md"
 	}
-	payload := map[string]any{"owner": owner, "reviewer": reviewer, "branch": branch, "spec": spec}
+	payload := map[string]any{"owner": owner, "branch": branch, "spec": spec}
+	// Payload shape is format-specific so each round-trips byte-identically:
+	//   - quorum assign  → `reviewers[]` + `quorum` (no single `reviewer` key)
+	//   - legacy assign  → single `reviewer` key (no reviewers/quorum keys)
+	// The legacy branch reproduces the exact pre-feature payload, so its ledger
+	// bytes and projection are unchanged (golden).
+	if quorum > 0 {
+		rs := make([]any, len(reviewers))
+		for i, r := range reviewers {
+			rs[i] = r
+		}
+		payload["reviewers"] = rs
+		payload["quorum"] = quorum
+	} else {
+		reviewer := ""
+		if len(reviewers) > 0 {
+			reviewer = reviewers[0]
+		}
+		payload["reviewer"] = reviewer
+	}
 	if len(deps) > 0 {
 		ds := make([]any, len(deps))
 		for i, d := range deps {
@@ -644,9 +746,10 @@ func (p *Project) checkpointLocked(taskID, evidence string) error {
 	})
 }
 
-// Status returns the rendered STATE.yml text (from the live log).
+// Status returns the rendered STATE.yml text (from the live log, through the
+// snapshot cache — identical to a full replay; see StateProjection).
 func (p *Project) Status() (string, error) {
-	st, _, err := p.state()
+	st, err := projection.LoadSnapshotState(paths.LogIn(p.dir), paths.StateSnapshotIn(p.dir))
 	if err != nil {
 		return "", err
 	}
@@ -691,6 +794,10 @@ func AddSeat(spec string) error { return At(".").AddSeat(spec) }
 // identity: pactify-cli + ClientVersion).
 func Join(seatID, roles string) error { return At(".").Join(seatID, roles) }
 
+// JoinKind registers the seat in the current working directory's repo with a
+// declared agent kind (spec §6 WS-K); empty kind is identical to Join.
+func JoinKind(seatID, roles, kind string) error { return At(".").JoinKind(seatID, roles, kind) }
+
 // JoinWithClient registers the seat in the current working directory's repo with
 // caller-supplied client provenance (empty clientName → no client field).
 func JoinWithClient(seatID, roles, clientName, clientVersion string) error {
@@ -700,6 +807,12 @@ func JoinWithClient(seatID, roles, clientName, clientVersion string) error {
 // Assign records a task assignment in the current working directory's repo.
 func Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
 	return At(".").Assign(taskID, feature, branch, owner, reviewer, spec, deps)
+}
+
+// AssignQuorum records a quorum multi-reviewer assignment in the current working
+// directory's repo (see (*Project).AssignQuorum).
+func AssignQuorum(taskID, feature, branch, owner string, reviewers []string, quorum int, spec string, deps []string) error {
+	return At(".").AssignQuorum(taskID, feature, branch, owner, reviewers, quorum, spec, deps)
 }
 
 // Merge integrates a feature branch in the current working directory's repo.
@@ -801,6 +914,98 @@ func (p *Project) GateConfig() (string, bool, error) {
 		}
 	}
 	return gate, ok, nil
+}
+
+// ConfigCritic sets the project's pre-review critic seat in the current working
+// directory's repo.
+func ConfigCritic(seat string) error { return At(".").ConfigCritic(seat) }
+
+// ConfigCritic records a config_critic event naming the seat the orchestrate
+// driver runs as a read-only pre-review critic (spec review-runtime-deepening §3
+// WS-H): after a task's verify gate is green and before its reviewer, the critic
+// scores the diff vs the spec. The score has NO gating power — it only steers the
+// reviewer's attention. Mirrors ConfigGate: a later config_critic overrides an
+// earlier one; append-only; orchestrator-only.
+func (p *Project) ConfigCritic(seat string) error {
+	return p.withLedgerLock(func() error { return p.configCriticLocked(seat) })
+}
+
+func (p *Project) configCriticLocked(seat string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(seat) == "" {
+		return fmt.Errorf("config critic: seat is required")
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "config critic", id); err != nil {
+		return err
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("config_critic"), EventType: "config_critic",
+		Payload: map[string]any{"critic": seat},
+	})
+}
+
+// CriticConfig returns the project's configured critic seat (the latest
+// `config critic` setting) and whether one was set. orchestrate reads it to
+// decide whether to run a pre-review critic stint. Mirrors GateConfig: absent is
+// distinct from an unreadable log (a missing log reads as absent, not error).
+func (p *Project) CriticConfig() (string, bool, error) {
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	if err != nil {
+		return "", false, fmt.Errorf("pact: read log for critic config: %w", err)
+	}
+	seat, ok := "", false
+	for _, e := range evs {
+		if e.EventType == "config_critic" {
+			if s, o := e.Payload["critic"].(string); o && s != "" {
+				seat, ok = s, true
+			}
+		}
+	}
+	return seat, ok, nil
+}
+
+// Note records a task-scoped annotation on the ledger that drives NO state
+// transition — the "note-style" mechanism (spec §3 WS-H, I-3). It deliberately
+// REUSES the existing `start` event_type rather than introducing a new one: the
+// projection lifts a `start` event ONLY for an `assigned` task, so a note on any
+// further-along task (the critic pre-review score's awaiting_review case) is a
+// pure projection no-op. The payload carries the annotation (e.g. critic_score /
+// critic_by / reason). Orchestrator-only, like the driver's other own writes
+// (start / merge).
+func (p *Project) Note(taskID string, payload map[string]any) error {
+	return p.withLedgerLock(func() error { return p.noteLocked(taskID, payload) })
+}
+
+func (p *Project) noteLocked(taskID string, payload map[string]any) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "note", id); err != nil {
+		return err
+	}
+	t, f := findTask(st, taskID)
+	if t == nil {
+		return fmt.Errorf("note %s: no such task", taskID)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("start"), EventType: "start",
+		TaskID: taskID, Feature: f.ID, Payload: payload,
+	})
 }
 
 // Cancel records a cancel event that excludes taskID from the projection — the

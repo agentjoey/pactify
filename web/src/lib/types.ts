@@ -2,7 +2,7 @@
 export type View = "board" | "canvas" | "live";
 
 export interface Seat { id: string; roles: string[]; kind?: string }
-export interface Task { id: string; owner: string; status: string; reviewer: string; spec: string; evidence: string; deps?: string[] }
+export interface Task { id: string; owner: string; status: string; reviewer: string; spec: string; evidence: string; deps?: string[]; reviewers?: string[]; quorum?: number; accepts?: string[] }
 export interface Feature { id: string; branch: string; status: string; tasks: Task[] }
 export interface State { project: string; agents: Seat[]; features: Feature[]; awaiting_count: number }
 export interface PactEvent { event_id: string; ts: string; agent_id: string; role: string; event_type: string; task_id: string; feature: string; payload: Record<string, unknown> }
@@ -86,6 +86,10 @@ export interface OrchestrateStatus {
   accepted: number;
   iter: number;
   updated_at: string;
+  // Self-repair loop progress. Present (omitempty) only while phase === "fixing":
+  // fix_round is the current repair attempt, fix_max the bound.
+  fix_round?: number;
+  fix_max?: number;
 }
 
 export interface OrchestrateStatusResponse {

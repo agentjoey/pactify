@@ -82,6 +82,12 @@ export function TaskCard({
   const ownerCaste = casteForRoles(ownerRoles);
   const reviewerCaste = casteForRoles(reviewerRoles);
 
+  // Quorum badge: multi-reviewer tasks carry a quorum (>0) + reviewers list.
+  // Single-reviewer tasks leave both unset → no badge (card unchanged).
+  const quorum = task.quorum ?? 0;
+  const showQuorum = quorum > 0 && !!task.reviewers && task.reviewers.length > 0;
+  const acceptsLen = task.accepts?.length ?? 0;
+
   return (
     <div
       data-testid="task-card"
@@ -121,6 +127,15 @@ export function TaskCard({
         {featureId && (
           <span className="mono ml-auto shrink-0 rounded-full bg-white/5 px-[7px] py-px text-[9px] text-[var(--color-text-3)]">
             {featureId}
+          </span>
+        )}
+        {showQuorum && (
+          <span
+            data-testid="task-card-quorum"
+            title={`quorum ${acceptsLen}/${quorum}`}
+            className={`mono shrink-0 rounded-full bg-white/5 px-[7px] py-px text-[9px] text-[var(--color-text-2)] ${featureId ? "" : "ml-auto"}`}
+          >
+            {acceptsLen}/{quorum} ✓
           </span>
         )}
       </div>

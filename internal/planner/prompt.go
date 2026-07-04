@@ -69,7 +69,13 @@ func BuildPrompt(in PromptInput) string {
 	b.WriteString("- Allocate by complexity: assign the more complex tasks to the more capable\n")
 	b.WriteString("  seats.\n")
 	b.WriteString("- Use a GUI seat (Drivable=false) only when a task truly requires it, and when\n")
-	b.WriteString("  you do, note in that task's spec that a human hand-off is needed.\n\n")
+	b.WriteString("  you do, note in that task's spec that a human hand-off is needed.\n")
+	b.WriteString("- You MAY propose NEW seats when the goal needs a capability no rostered seat\n")
+	b.WriteString("  provides. Declare each new seat in the manifest's optional `seats` array as\n")
+	b.WriteString("  `{ \"id\": <kebab-slug>, \"kind\": <agent-kind>, \"roles\": [\"worker\"] }`, then you\n")
+	b.WriteString("  may use its id as a task owner/reviewer. Apply auto-registers (joins) each\n")
+	b.WriteString("  proposed seat with its kind. PREFER existing seats; propose one only when\n")
+	b.WriteString("  necessary, and give it a real drivable `kind`.\n\n")
 
 	b.WriteString("## Per-task spec files\n")
 	fmt.Fprintf(&b, "Write one spec per task to `.pact/tasks/%s-<id>.md` (e.g. `.pact/tasks/%s-<id>.md`).\n", in.Feature, in.Feature)
@@ -105,7 +111,10 @@ func BuildPrompt(in PromptInput) string {
 	b.WriteString("Field rules: `verify` is the same machine-readable command as the spec's\n")
 	b.WriteString("`verify:` line; `deps` lists the ids this task depends on (forming the serial\n")
 	b.WriteString("chain); `spec` points at the `.pact/tasks/` file you wrote; `owner` and\n")
-	b.WriteString("`reviewer` are roster seat ids and must differ.\n")
+	b.WriteString("`reviewer` are roster seat ids (or a proposed new seat's id) and must differ.\n")
+	b.WriteString("Optional top-level `seats`: an array of proposed NEW seats, each\n")
+	b.WriteString("`{ \"id\": <slug>, \"kind\": <agent-kind>, \"roles\": [\"worker\"] }` — omit it when the\n")
+	b.WriteString("existing roster suffices.\n")
 
 	return b.String()
 }

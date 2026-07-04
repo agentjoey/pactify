@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"github.com/agentjoey/pactify/internal/finish"
 	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/pact"
+	"github.com/agentjoey/pactify/internal/schedule"
 )
 
 // OrchestrateStatusDTO wraps the orchestrate runtime snapshot. Present is false
@@ -429,6 +431,41 @@ func (s *Server) spawnOrchestrate(dir, feature string, seatKinds map[string]stri
 		orchClearRunning(dir)
 	}
 	return 0, nil
+}
+
+// scheduleSpawn adapts spawnOrchestrate to schedule.SpawnFunc: it resolves a
+// project registry name to its on-disk dir and launches a serial orchestrate run
+// (nil seat-kinds → resolved from the ledger; feature "" → driver picks). A
+// conflict (an orchestrate already running for that project) maps to
+// alreadyRunning=true rather than an error, so the scheduler logs a skip.
+func (s *Server) scheduleSpawn(project, feature string) (bool, error) {
+	_, dir, ok := s.project(project)
+	if !ok {
+		return false, fmt.Errorf("unknown project %q", project)
+	}
+	code, err := s.spawnOrchestrate(dir, feature, nil, 0, false)
+	if err != nil {
+		if code == http.StatusConflict {
+			return true, nil
+		}
+		return false, err
+	}
+	return false, nil
+}
+
+// StartScheduler launches the minute-granularity schedule runner in the calling
+// goroutine (cmd_serve runs it as `go srv.StartScheduler(ctx)`). It reads
+// ~/.pactify/schedules.json each tick and spawns orchestrate for due enabled
+// schedules; the existing conflict guard skips any project already running.
+func (s *Server) StartScheduler(ctx context.Context) {
+	r := &schedule.Runner{
+		Path:  schedule.DefaultPath(),
+		Spawn: s.scheduleSpawn,
+		Log: func(format string, args ...any) {
+			fmt.Fprintf(os.Stderr, "pactify serve: "+format+"\n", args...)
+		},
+	}
+	r.Start(ctx)
 }
 
 func (s *Server) handleOrchestrateRun(w http.ResponseWriter, r *http.Request) {

@@ -98,6 +98,27 @@ describe("TaskCard — genome", () => {
     expect(screen.getByTestId("task-card").className).toContain("selected");
   });
 
+  it("quorum task renders a compact accepts/quorum ✓ badge", () => {
+    render(
+      <TaskCard
+        task={task({ status: "awaiting_review", reviewers: ["a", "b", "c"], quorum: 3, accepts: ["a", "b"] })}
+        {...roleProps}
+      />,
+    );
+    const badge = screen.getByTestId("task-card-quorum");
+    expect(badge.textContent).toContain("2/3 ✓");
+  });
+
+  it("single-reviewer task renders no quorum badge (unchanged)", () => {
+    render(<TaskCard task={task()} {...roleProps} />);
+    expect(screen.queryByTestId("task-card-quorum")).toBeNull();
+  });
+
+  it("quorum 0 / no reviewers renders no quorum badge", () => {
+    render(<TaskCard task={task({ quorum: 0, reviewers: [] })} {...roleProps} />);
+    expect(screen.queryByTestId("task-card-quorum")).toBeNull();
+  });
+
   it("onClick fires on card click", () => {
     const onClick = vi.fn();
     render(<TaskCard task={task()} onClick={onClick} {...roleProps} />);

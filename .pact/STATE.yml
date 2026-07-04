@@ -390,52 +390,52 @@ features:
     tasks:
       - id: rp-fix-loop
         owner: claude-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-fix-loop.md
-        evidence: null
+        evidence: go test ./internal/orchestrate/ -run Fix|Gate + full pkg + build/vet clean. loop.go pre-review fixUntilGreen (verify gate red→re-run owner fixBrief, MaxFixRounds=2, not counted to MaxFails; exhausted→escalate; green first-try byte-identical), status.go fixing phase, 5 tests.
       - id: rp-quorum
         owner: claude-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-quorum.md
-        evidence: null
+        evidence: go test ./internal/pact/ ./internal/projection/ ./internal/orchestrate/ PASS + build/vet clean. assign --reviewers a,b,c --quorum N (excl --reviewer); fold: distinct reviewer accepts after checkpoint ≥ quorum → accepted, changes/checkpoint reset Accepts tally; checkReviewerVerdict generalized (caller∈Reviewers; worker self-accept still rejected); single-reviewer byte-identical (quorum==0 writes classic payload, map-key sort → identical bytes; regression golden). loop launchReviewers serial + early-stop. DTO reviewers/quorum/accepts.
       - id: rp-snapshot
         owner: claude-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-snapshot.md
-        evidence: null
+        evidence: go test ./internal/pact/ ./internal/projection/ ./internal/event/ PASS + -race green + full repo green + build/vet clean. .pact/state-snapshot.json {version,ledger_bytes,head_hash,state}; read-path validity (version+bytes≤size+sha256 prefix match, else silent full fold; PACT_NO_SNAPSHOT=1 bypass); write in appendAndRender under lock (atomic, info/exclude registered). projection Folder resumable; stores pre-retirement accumulator (cancel-then-reassign correctness). Equivalence asserted at EVERY split point over 11 ledgers + corruption fallbacks. Bench 5k: 11.5x faster (7.44ms→0.65ms), >5x hard gate.
       - id: rp-critic
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-critic.md
-        evidence: null
+        evidence: go test ./internal/orchestrate/ -run Critic + full pkg + build/vet clean. Config pair ConfigCritic/CriticConfig (engine.go, like gate) + Note (start event_type, no new type); orchestrate/critic.go runCritic runs gate-green pre-reviewer if critic seat set (--critic or config critic, default OFF); parse CRITIC_SCORE (missing→null, clamp), inject reviewer brief (no gating power — low score still ships); failure swallowed. Default-off byte-identical (0 stints). 5 tests.
         deps: [rp-fix-loop]
       - id: rp-qa-gate
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-qa-gate.md
-        evidence: null
+        evidence: go test ./internal/orchestrate/ (incl QA) PASS + build/vet clean. gate.go extractQA (qa: line, shares extractField w/ verify:); qa.go runQA runs gate-green, BEFORE critic (先QA后critic): QA stint briefing = qa-guide skill + hint + 'run software, write .pact/orchestrate/qa-<task>.md, QA_RESULT: PASS|FAIL'; FAIL feeds SHARED fixRounds/MaxFixRounds budget (re-run owner, exhausted→escalate); PASS/missing/failure lenient (note via start event_type, never hard-block). No qa: line → 0 stints byte-identical. Report path injected reviewer brief.
         deps: [rp-fix-loop]
       - id: rp-dynamic-seats
         owner: opencode-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-dynamic-seats.md
-        evidence: null
+        evidence: go test ./internal/pact/ ./internal/orchestrate/ ./internal/planner/ PASS + build/vet clean + projection/serve/mcp/cmd no regression. JoinKind threads kind→join payload(仅非空)→projection Agents[].Kind(刷新已有/追加新座席,不覆盖 init roles;kind-free join byte-identical); join --kind flag. loop opts.kind() 每次调用:SeatKind override 优先,否则实时读 roster(mid-run join 下轮可驱动)。planner manifest +Seats[], apply 对未在 roster 的 seat 自动 JoinKind(ApplyTx 原子回滚)。3 测试文件。follow-up(未做,记 backlog):validate 仍只认 init 座席。
       - id: rp-schedule
         owner: opencode-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-schedule.md
-        evidence: null
+        evidence: go test ./internal/schedule/ ./internal/serve/ PASS + build/vet clean. NEW internal/schedule: NextFire pure (daily@HH:MM local + every:Nh|Nm, no cron dep), ~/.pactify/schedules.json (PACTIFY_HOME injectable, atomic), Runner injectable Spawn+Now, arms-forward (restart won't insta-fire). cmd_schedule add/list/remove (validates expr). serve StartScheduler goroutine reuses spawnOrchestrate + conflict guard (already-running=skip). Cross-midnight/boundary tests + fake-spawn runner tests.
       - id: rp-e2e-docs
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-e2e-docs.md
-        evidence: null
+        evidence: 全仓门绿:go build/vet/test ./... + -race · vitest 526(+5 badge/fixing) · tsc -b · dist rebuilt · bats 111. web:Task 类型 +reviewers/quorum/accepts + OrchestrateStatus +fix_round/fix_max;TaskCard quorum 徽标 {accepts}/{quorum} ✓(单 reviewer 不变);LiveOrchestrate 修复中 n/max 指示。docs/architecture.md 加 review-runtime 小节;CLAUDE.md Version 补包2。
         deps: [rp-quorum, rp-fix-loop]

@@ -25,6 +25,13 @@ type TaskDTO struct {
 	Spec     string   `json:"spec"`
 	Evidence string   `json:"evidence"`
 	Deps     []string `json:"deps,omitempty"`
+	// Quorum multi-reviewer (spec review-runtime-deepening §2): populated only for a
+	// quorum task and omitted otherwise, so a legacy single-reviewer task's DTO JSON
+	// stays byte-identical. Reviewer above still carries the first reviewer for
+	// back-compat clients (the board badge consumes these — a separate UI task).
+	Reviewers []string `json:"reviewers,omitempty"`
+	Quorum    int      `json:"quorum,omitempty"`
+	Accepts   []string `json:"accepts,omitempty"`
 }
 
 type FeatureDTO struct {
@@ -173,7 +180,7 @@ func toDTO(st projection.State) StateDTO {
 			if t.Status == "awaiting_review" {
 				d.AwaitingCount++
 			}
-			fd.Tasks = append(fd.Tasks, TaskDTO{ID: t.ID, Owner: t.Owner, Status: t.Status, Reviewer: t.Reviewer, Spec: t.Spec, Evidence: ev, Deps: t.Deps})
+			fd.Tasks = append(fd.Tasks, TaskDTO{ID: t.ID, Owner: t.Owner, Status: t.Status, Reviewer: t.Reviewer, Spec: t.Spec, Evidence: ev, Deps: t.Deps, Reviewers: t.Reviewers, Quorum: t.Quorum, Accepts: t.Accepts})
 		}
 		d.Features = append(d.Features, fd)
 	}

@@ -120,6 +120,15 @@ worker 不能自标 `accepted`（职责分离）。
 - **知识注入** — briefing 尾部注入 `.pact/memory.md`(累积决策)+ role/keyword 匹配的 `.pact/skills/*.md`(4KB 预算);无文件时字节不变。
 - **可观测** — `internal/stats` per-seat `Accepted/Reworked`(纯 fold);`pactify doctor` per-vendor 预检(binary+auth+ACP 可用性)。
 
+### 评审深化 + 运行时（review-runtime — 包2）
+在「驱动一棒」外把评审与运行时做深(全部 opt-in,不带配置行为不变):
+- **fix-until-green 自修环** — worker checkpoint 后、评审前先跑 verify 门;红则**同 worker fix 轮**(默认 2 轮,不计 MaxFails),绿才进评审;board 显示「修复中 n/2」。省 reviewer 回合。
+- **quorum 多评审** — `assign --reviewers a,b,c --quorum N`;投影按「本次 checkpoint 后不同 reviewer 的 accept 数 ≥ N」判 accepted,任一 changes 清零重投;accept 门校验 caller∈reviewers。**单 reviewer 路径字节不变**;两不变量神圣(worker 仍不能自 accept)。
+- **critic 预评 / QA 门**(顺序:gate 绿 → QA → critic → reviewer)— critic 出 `CRITIC_SCORE` 注入 reviewer(无门控权,只提示);QA(`qa:` 行)真跑软件出 `QA_RESULT`,FAIL 走 fix 轮(共享轮次预算);两者失败都宽松放行。note 复用 `start` 事件类型,不加新类型。
+- **账本持久快照** — `.pact/state-snapshot.json`(offset+prefix-hash 校验,损坏静默全量 fold,`PACT_NO_SNAPSHOT=1` 逃生),冷启动增量 replay,**5k 账本 11.5x**;gitignored,非事实源。
+- **动态座席 / 定时** — `join --kind` + driver 每轮实时读 seat→kind(mid-run join 下轮可驱动)+ planner 可提议新座席(apply 自动 join);`pactify schedule`(`daily@HH:MM`/`every:Nh`,serve ticker,复用 spawnOrchestrate 冲突门)。
+- **已知 follow-up**:`pactify validate` 仍只从 `init` 事件推导座席 roster,`join` 动态加入的座席会被误判「不在 roster」——待专门修(改 golden 向量有风险,单列)。
+
 ## CLI 命令集（Phase 1）
 
 ```

@@ -61,21 +61,43 @@ func newRootCmd() *cobra.Command {
 	initCmd.Flags().StringVar(&project, "project", "", "project name")
 	initCmd.Flags().StringArrayVar(&seats, "seat", nil, "seat 'id:roles:entry[:kind]' (repeatable)")
 
-	var joinRoles string
+	var joinRoles, joinKind string
 	joinCmd := &cobra.Command{Use: "join <id>", Args: cobra.ExactArgs(1), Short: "worker cold-start",
-		RunE: func(_ *cobra.Command, a []string) error { return pact.Join(a[0], joinRoles) }}
+		RunE: func(_ *cobra.Command, a []string) error { return pact.JoinKind(a[0], joinRoles, joinKind) }}
 	joinCmd.Flags().StringVar(&joinRoles, "roles", "", "comma-separated roles")
+	joinCmd.Flags().StringVar(&joinKind, "kind", "", "declared agent kind recorded on the roster (orchestrate resolves seat→kind from it; dynamic seats)")
 
 	var feature, branch, owner, reviewer, spec string
+	var reviewers []string
+	var quorum int
 	var deps []string
 	assignCmd := &cobra.Command{Use: "assign <task>", Args: cobra.ExactArgs(1), Short: "assign a task",
 		RunE: func(_ *cobra.Command, a []string) error {
+			// Quorum multi-reviewer is strictly opt-in and mutually exclusive with the
+			// single --reviewer: --reviewers names the reviewer set, --quorum how many
+			// must accept. When neither quorum flag is used the call is byte-identical
+			// to the historical single-reviewer assign.
+			if len(reviewers) > 0 || quorum > 0 {
+				if reviewer != "" {
+					return fmt.Errorf("pactify assign: --reviewer is mutually exclusive with --reviewers/--quorum")
+				}
+				if len(reviewers) == 0 {
+					return fmt.Errorf("pactify assign: --quorum requires --reviewers")
+				}
+				q := quorum
+				if q == 0 {
+					q = len(reviewers) // default to unanimous when --reviewers given without --quorum
+				}
+				return pact.AssignQuorum(a[0], feature, branch, owner, reviewers, q, spec, deps)
+			}
 			return pact.Assign(a[0], feature, branch, owner, reviewer, spec, deps)
 		}}
 	assignCmd.Flags().StringVar(&feature, "feature", "", "feature id")
 	assignCmd.Flags().StringVar(&branch, "branch", "", "feature branch")
 	assignCmd.Flags().StringVar(&owner, "owner", "", "owner seat")
 	assignCmd.Flags().StringVar(&reviewer, "reviewer", "", "reviewer seat")
+	assignCmd.Flags().StringSliceVar(&reviewers, "reviewers", nil, "comma-separated reviewer seats (quorum review; mutually exclusive with --reviewer)")
+	assignCmd.Flags().IntVar(&quorum, "quorum", 0, "number of distinct reviewers that must accept (requires --reviewers; defaults to unanimous)")
 	assignCmd.Flags().StringVar(&spec, "spec", "", "task spec path")
 	assignCmd.Flags().StringSliceVar(&deps, "deps", nil, "comma-separated dep task ids (same feature)")
 
@@ -145,6 +167,17 @@ Without this, the gate defaults to one inferred from the project type:
 Example (build-first JS gate):
   pactify config gate "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"`,
 		RunE: func(_ *cobra.Command, a []string) error { return pact.ConfigGate(a[0]) }})
+	configCmd.AddCommand(&cobra.Command{Use: "critic <seat>", Args: cobra.ExactArgs(1),
+		Short: "set the seat orchestrate runs as a read-only pre-review critic (default: off)",
+		Long: `Set the project's pre-review critic seat — the seat orchestrate runs read-only
+AFTER a task's verify gate is green and BEFORE its reviewer. The critic scores the
+diff vs the spec (a trailing CRITIC_SCORE: 0.0-1.0 line); the score is injected
+into the reviewer's briefing to steer attention.
+
+The score has NO gating power: a low score never auto-bounces a task (that is the
+verify gate's job). Off by default — set this (or pass orchestrate --critic) to
+enable. Override per-run with: pactify orchestrate --critic seat=<seat>`,
+		RunE: func(_ *cobra.Command, a []string) error { return pact.ConfigCritic(a[0]) }})
 
 	statusCmd := &cobra.Command{Use: "status", Short: "print STATE.yml",
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -194,6 +227,6 @@ Example (build-first JS gate):
 	seatCmd.AddCommand(seatAddCmd)
 
 	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, cancelCmd, withdrawCmd, configCmd, statusCmd, logCmd, validateCmd, seatCmd,
-		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd(), newAccountCmd())
+		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd(), newAccountCmd(), newScheduleCmd())
 	return root
 }

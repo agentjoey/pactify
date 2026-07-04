@@ -9,6 +9,7 @@ import type {
 import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
 import type { ProjectMeta, State } from "./types";
 import type { ProjectStats } from "./api";
+import type { PactEventDetail } from "./types";
 
 type MockRelayClient = {
   listProjects: RelayClient["listProjects"];
@@ -142,6 +143,105 @@ describe("RelaySource", () => {
     expect(state.awaiting_count).toBe(0);
     expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
     expect(client.decrypt).toHaveBeenCalledWith("p1", "enc-init");
+    expect(client.decrypt).toHaveBeenCalledWith("p1", "enc-assign");
+  });
+
+  it("getEvents decrypts events and preserves cleartext headers", async () => {
+    const events: PactEvent[] = [
+      {
+        projectId: "p1",
+        seq: 1,
+        eventType: "assign",
+        feature: "f1",
+        task: "t1",
+        ts: 1_700_000_000_000,
+        bodyEnc: "enc-assign",
+      },
+      {
+        projectId: "p1",
+        seq: 2,
+        eventType: "checkpoint",
+        feature: "f1",
+        task: "t1",
+        ts: 1_700_000_100_000,
+        bodyEnc: "enc-checkpoint",
+      },
+      {
+        projectId: "p1",
+        seq: 3,
+        eventType: "accept",
+        feature: "f1",
+        task: "t1",
+        ts: 1_700_000_200_000,
+        bodyEnc: "enc-accept",
+      },
+    ];
+    const bodies: Record<string, Record<string, unknown>> = {
+      "enc-assign": {
+        event_id: "e1",
+        ts: "2023-11-14T22:13:20Z",
+        agent_id: "alice",
+        role: "orchestrator",
+        event_type: "assign",
+        task_id: "t1",
+        feature: "f1",
+        payload: { owner: "alice", reviewer: "bob", spec: "spec.md", branch: "feat-f1" },
+      },
+      "enc-checkpoint": {
+        event_id: "e2",
+        ts: "2023-11-14T22:15:00Z",
+        agent_id: "alice",
+        role: "worker",
+        event_type: "checkpoint",
+        task_id: "t1",
+        feature: "f1",
+        payload: { evidence: "go test ./... ok" },
+      },
+      "enc-accept": {
+        event_id: "e3",
+        ts: "2023-11-14T22:16:40Z",
+        agent_id: "bob",
+        role: "reviewer",
+        event_type: "accept",
+        task_id: "t1",
+        feature: "f1",
+        payload: {},
+      },
+    };
+    const client = makeClient({
+      getProjectEvents: vi.fn().mockResolvedValue(events),
+      decrypt: vi.fn().mockImplementation((_id: string, bodyEnc: string) => bodies[bodyEnc]),
+    });
+    const src = new RelaySource(client as RelayClient);
+    const result = await src.getEvents("p1");
+    expect(result).toHaveLength(3);
+    expect(result).toEqual<PactEventDetail[]>([
+      {
+        seq: 1,
+        eventType: "assign",
+        task: "t1",
+        feature: "f1",
+        ts: 1_700_000_000_000,
+        body: bodies["enc-assign"],
+      },
+      {
+        seq: 2,
+        eventType: "checkpoint",
+        task: "t1",
+        feature: "f1",
+        ts: 1_700_000_100_000,
+        body: bodies["enc-checkpoint"],
+      },
+      {
+        seq: 3,
+        eventType: "accept",
+        task: "t1",
+        feature: "f1",
+        ts: 1_700_000_200_000,
+        body: bodies["enc-accept"],
+      },
+    ]);
+    expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
     expect(client.decrypt).toHaveBeenCalledWith("p1", "enc-assign");
   });
 

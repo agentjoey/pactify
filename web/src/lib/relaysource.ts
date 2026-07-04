@@ -3,7 +3,7 @@ import { project } from "@pactify-apps/pact-project";
 import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
 import type { DataSource, DataSourceCapabilities } from "./datasource";
 import type { ProjectStats, TaskStat, AgentStat } from "./api";
-import type { ProjectMeta, State } from "./types";
+import type { PactEventDetail, ProjectMeta, State } from "./types";
 
 /**
  * RelaySource implements DataSource against the zero-knowledge pact relay.
@@ -42,6 +42,18 @@ export class RelaySource implements DataSource {
       (e) => this.client.decrypt(id, e.bodyEnc) as PactProjectEvent,
     );
     return project(decrypted);
+  }
+
+  async getEvents(id: string): Promise<PactEventDetail[]> {
+    const events = await this.client.getProjectEvents(id);
+    return events.map((e) => ({
+      seq: e.seq,
+      eventType: e.eventType,
+      task: e.task,
+      feature: e.feature,
+      ts: e.ts,
+      body: this.client.decrypt(id, e.bodyEnc) as Record<string, unknown>,
+    }));
   }
 
   async getStats(id: string): Promise<ProjectStats> {

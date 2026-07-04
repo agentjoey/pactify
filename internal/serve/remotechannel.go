@@ -66,10 +66,26 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 	backoff := time.Second
 	const maxBackoff = 30 * time.Second
 	for ctx.Err() == nil {
+		// Mint a FRESH token at the top of every attempt (master-secret auth). The
+		// saved session token (newRelay) can be expired or minted against a
+		// different relay — that would wedge the machine channel indefinitely,
+		// unlike the HTTP uploader which self-heals on a 401. Authenticating first
+		// (not lazily after a failure) means the first attempt already uses a good
+		// token. A FAILED auth is logged, never silently swallowed, so a stale
+		// login / wrong-account credential is diagnosable instead of a mute
+		// "machine never appears" — fall back to the current token and back off.
+		if sess, err := s.relay.client.Authenticate(ctx, s.relay.master); err == nil {
+			s.relay.mu.Lock()
+			s.relay.token = sess.Token
+			s.relay.mu.Unlock()
+		} else if ctx.Err() == nil {
+			fmt.Fprintf(os.Stderr, "pactify serve: machine channel auth failed (retrying in %s; run `pactify account login`?): %v\n", backoff, err)
+		}
 		s.relay.mu.Lock()
 		token := s.relay.token
 		s.relay.mu.Unlock()
 
+		start := time.Now()
 		_ = remotemachine.Run(ctx, remotemachine.Config{
 			RelayURL:  base,
 			Account:   s.relay.accountID,
@@ -85,6 +101,11 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 		if ctx.Err() != nil {
 			return
 		}
+		// A connection that held for a while was healthy — reset the backoff so a
+		// later transient drop reconnects promptly instead of at the capped delay.
+		if time.Since(start) > time.Minute {
+			backoff = time.Second
+		}
 		select {
 		case <-ctx.Done():
 			return
@@ -92,12 +113,6 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 		}
 		if backoff < maxBackoff {
 			backoff *= 2
-		}
-		if sess, err := s.relay.client.Authenticate(ctx, s.relay.master); err == nil {
-			s.relay.mu.Lock()
-			s.relay.token = sess.Token
-			s.relay.mu.Unlock()
-			backoff = time.Second
 		}
 	}
 }

@@ -100,6 +100,22 @@ describe('relay sockets', () => {
     expect(rpc.runId).toBe('r1')
   })
 
+  it('routes a machine-targeted pactify pact.* rpc to the target machine (U3 down-channel)', async () => {
+    const token = issueToken(SECRET, accountId, 60_000, 1000)
+    const machine = await connect(port, { token, role: 'machine', machineId: 'm1' })
+    const web = await connect(port, { token, role: 'client' })
+    clients.push(machine, web)
+
+    // The hosted dashboard sends a pact command targeting the machine; the relay
+    // (unchanged — it routes any RpcRequest by machineId) forwards it verbatim.
+    const rpcP = once<{ type: string; project: string; task: string }>(machine, 'rpc')
+    web.emit('rpc', { type: 'pact.accept', machineId: 'm1', project: 'demo', task: 't1' })
+    const rpc = await rpcP
+    expect(rpc.type).toBe('pact.accept')
+    expect(rpc.project).toBe('demo')
+    expect(rpc.task).toBe('t1')
+  })
+
   it('rejects malformed ingest at the boundary — bad agentKind / wrong version / unknown key are not persisted', async () => {
     const token = issueToken(SECRET, accountId, 60_000, 1000)
     const machine = await connect(port, { token, role: 'machine', machineId: 'm1' })

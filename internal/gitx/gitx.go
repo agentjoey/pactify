@@ -3,6 +3,7 @@ package gitx
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -47,6 +48,30 @@ func GitCommonPath(dir, rel string) (string, error) {
 		out = filepath.Join(dir, out)
 	}
 	return filepath.Join(out, rel), nil
+}
+
+// EnsureExcluded appends marker to the repo's .git/info/exclude — the per-clone,
+// NEVER-committed ignore list — when it is not already present. Idempotent. This is
+// the same runtime-ignore mechanism v0.8.0 wired for orchestrate's .pact/orchestrate/
+// artifacts (spec coordination-authority P0a: routing runtime ignores here instead
+// of committing .gitignore keeps the writer off any tracked branch); it is exported
+// so other packages — the ledger snapshot cache — can share the one接线.
+func EnsureExcluded(dir, marker string) error {
+	excl, err := GitPath(dir, "info/exclude")
+	if err != nil {
+		return err
+	}
+	cur, err := os.ReadFile(excl)
+	switch {
+	case err == nil && strings.Contains(string(cur), marker):
+		return nil
+	case err == nil:
+		return os.WriteFile(excl, append(cur, []byte("\n"+marker+"\n")...), 0o644)
+	case os.IsNotExist(err):
+		return os.WriteFile(excl, []byte(marker+"\n"), 0o644)
+	default:
+		return err
+	}
 }
 
 // ValidBranchName reports whether name is a well-formed git branch name (per

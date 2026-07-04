@@ -57,51 +57,77 @@ func seatFromPayload(m map[string]any) Seat {
 	return seat
 }
 
-// Project folds events into State, preserving first-assign order for
-// features/tasks and init order for seats. Unknown event_types are ignored.
-func Project(evs []event.Event) State {
-	st := State{Project: "unknown"}
+// Folder is a resumable projection accumulator. It holds the PRE-retirement state
+// (cancelled tasks and withdrawn features are still present here — the retire step
+// runs only in finalize) plus the bookkeeping a fold needs to apply more events.
+// Storing this — rather than the finalized State — is what lets the ledger snapshot
+// resume folding at a byte offset and produce a result byte-for-byte identical to a
+// full Project() fold, even for pathological logs (e.g. an assign that re-uses a
+// cancelled task id, which a finalized-state resume would get wrong because the
+// cancelled set is sticky). Fields are unexported; snapshot.go (same package)
+// serializes st/cancelled/withdrawn and rebuilds fIdx/tIdx on restore.
+type Folder struct {
+	st        State
+	fIdx      map[string]int
+	tIdx      map[string]map[string]int
+	cancelled map[string]bool // feature\x00task — retired task, excluded from the projection
+	withdrawn map[string]bool // feature — retired feature, excluded from the projection
+}
 
+// newFolder seeds a fresh accumulator from the log's init event(s): it takes the
+// LAST init's project name and seats, mirroring the historical first-scan. Only
+// the seed comes from here; every other event is replayed by apply.
+func newFolder(evs []event.Event) *Folder {
+	f := &Folder{
+		st:        State{Project: "unknown"},
+		fIdx:      map[string]int{},
+		tIdx:      map[string]map[string]int{},
+		cancelled: map[string]bool{},
+		withdrawn: map[string]bool{},
+	}
 	for i := len(evs) - 1; i >= 0; i-- {
 		if evs[i].EventType != "init" {
 			continue
 		}
 		p := evs[i].Payload
 		if v := str(p["project"]); v != "" {
-			st.Project = v
+			f.st.Project = v
 		}
 		if seats, ok := p["seats"].([]any); ok {
 			for _, s := range seats {
 				m, _ := s.(map[string]any)
-				st.Agents = append(st.Agents, seatFromPayload(m))
+				f.st.Agents = append(f.st.Agents, seatFromPayload(m))
 			}
 		}
 		break
 	}
+	return f
+}
 
-	fIdx := map[string]int{}
-	tIdx := map[string]map[string]int{}
-	cancelled := map[string]bool{} // feature\x00task — retired task, excluded from the projection
-	withdrawn := map[string]bool{} // feature — retired feature, excluded from the projection
-	find := func(feature, task string) *Task {
-		fi, ok := fIdx[feature]
-		if !ok {
-			return nil
-		}
-		ti, ok := tIdx[feature][task]
-		if !ok {
-			return nil
-		}
-		return &st.Features[fi].Tasks[ti]
+func (f *Folder) find(feature, task string) *Task {
+	fi, ok := f.fIdx[feature]
+	if !ok {
+		return nil
 	}
+	ti, ok := f.tIdx[feature][task]
+	if !ok {
+		return nil
+	}
+	return &f.st.Features[fi].Tasks[ti]
+}
 
-	// Known limitation (parity): for a checkpoint/accept/changes_requested/merge
-	// that references a task/feature never created by an `assign`, this fold skips
-	// the event, whereas the bash reference autovivifies a null-field stub. This
-	// only differs on malformed / out-of-order logs — a well-formed log (and the
-	// git-merge interleaving of distinct features, which preserves each feature's
-	// intra-order) always has assign precede its task's other events. Reconcile if
-	// concurrent-feature support ever makes dangling events real. See M1.2 design.
+// apply replays events onto the accumulator. It handles every event type EXCEPT
+// init (whose seat/project seeding lives in newFolder); an incremental replay
+// therefore must never contain an init in its tail (the snapshot reader guards
+// this by falling back to a full fold when a tail init appears).
+//
+// Known limitation (parity): for a checkpoint/accept/changes_requested/merge that
+// references a task/feature never created by an `assign`, this fold skips the
+// event, whereas the bash reference autovivifies a null-field stub. This only
+// differs on malformed / out-of-order logs — a well-formed log always has assign
+// precede its task's other events. See M1.2 design.
+func (f *Folder) apply(evs []event.Event) {
+	st := &f.st
 	for _, e := range evs {
 		switch e.EventType {
 		case "add-seat":
@@ -116,12 +142,12 @@ func Project(evs []event.Event) State {
 				st.Agents = append(st.Agents, seat)
 			}
 		case "assign":
-			fi, ok := fIdx[e.Feature]
+			fi, ok := f.fIdx[e.Feature]
 			if !ok {
 				st.Features = append(st.Features, Feature{ID: e.Feature, Branch: str(e.Payload["branch"]), Status: "in_progress"})
 				fi = len(st.Features) - 1
-				fIdx[e.Feature] = fi
-				tIdx[e.Feature] = map[string]int{}
+				f.fIdx[e.Feature] = fi
+				f.tIdx[e.Feature] = map[string]int{}
 			}
 			tk := Task{ID: e.TaskID, Owner: str(e.Payload["owner"]), Reviewer: str(e.Payload["reviewer"]), Spec: str(e.Payload["spec"]), Status: "assigned"}
 			if raw, ok := e.Payload["deps"].([]any); ok && len(raw) > 0 {
@@ -130,11 +156,11 @@ func Project(evs []event.Event) State {
 					tk.Deps = append(tk.Deps, str(d))
 				}
 			}
-			if ti, ok := tIdx[e.Feature][e.TaskID]; ok {
+			if ti, ok := f.tIdx[e.Feature][e.TaskID]; ok {
 				st.Features[fi].Tasks[ti] = tk
 			} else {
 				st.Features[fi].Tasks = append(st.Features[fi].Tasks, tk)
-				tIdx[e.Feature][e.TaskID] = len(st.Features[fi].Tasks) - 1
+				f.tIdx[e.Feature][e.TaskID] = len(st.Features[fi].Tasks) - 1
 			}
 		case "join":
 			// Seat-scoped cold-start signal: lift ONLY the seat's first actionable
@@ -148,18 +174,18 @@ func Project(evs []event.Event) State {
 				if lifted {
 					break
 				}
-				f := &st.Features[fi]
-				for ti := range f.Tasks {
-					t := &f.Tasks[ti]
-					if t.Owner != e.AgentID || t.Status != "assigned" || cancelled[f.ID+"\x00"+t.ID] {
+				fe := &st.Features[fi]
+				for ti := range fe.Tasks {
+					t := &fe.Tasks[ti]
+					if t.Owner != e.AgentID || t.Status != "assigned" || f.cancelled[fe.ID+"\x00"+t.ID] {
 						continue
 					}
 					ready := true
 					for _, d := range t.Deps {
 						// A dep cancelled so far in the log (or absent) can never
 						// reach accepted; it does not hold this task back.
-						dep := taskInFeature(f, d)
-						if dep != nil && !cancelled[f.ID+"\x00"+d] && dep.Status != "accepted" {
+						dep := taskInFeature(fe, d)
+						if dep != nil && !f.cancelled[fe.ID+"\x00"+d] && dep.Status != "accepted" {
 							ready = false
 							break
 						}
@@ -176,53 +202,74 @@ func Project(evs []event.Event) State {
 			// launches the task's owner (join is seat-scoped and worker-reported,
 			// which headless workers skip). Only lifts a task out of `assigned` —
 			// never rewinds checkpoint/review outcomes.
-			if t := find(e.Feature, e.TaskID); t != nil && t.Status == "assigned" {
+			if t := f.find(e.Feature, e.TaskID); t != nil && t.Status == "assigned" {
 				t.Status = "in_progress"
 			}
 		case "checkpoint":
-			if t := find(e.Feature, e.TaskID); t != nil {
+			if t := f.find(e.Feature, e.TaskID); t != nil {
 				t.Status = "awaiting_review"
 				ev := str(e.Payload["evidence"])
 				t.Evidence = &ev
 			}
 		case "accept":
-			if t := find(e.Feature, e.TaskID); t != nil {
+			if t := f.find(e.Feature, e.TaskID); t != nil {
 				t.Status = "accepted"
 			}
 		case "changes_requested":
-			if t := find(e.Feature, e.TaskID); t != nil {
+			if t := f.find(e.Feature, e.TaskID); t != nil {
 				t.Status = "changes_requested"
 			}
 		case "merge":
-			if fi, ok := fIdx[e.Feature]; ok {
+			if fi, ok := f.fIdx[e.Feature]; ok {
 				st.Features[fi].Status = "shipped"
 			}
 		case "cancel":
-			cancelled[e.Feature+"\x00"+e.TaskID] = true
+			f.cancelled[e.Feature+"\x00"+e.TaskID] = true
 		case "withdraw":
-			withdrawn[e.Feature] = true
+			f.withdrawn[e.Feature] = true
 		}
 	}
+}
 
-	// Retire cancelled tasks and withdrawn features. Excluding them here (rather
-	// than mutating during the fold) keeps the event handlers simple and order-
-	// independent: a cancel/withdraw anywhere in the log removes the target.
-	if len(cancelled) > 0 || len(withdrawn) > 0 {
-		kept := st.Features[:0]
-		for _, f := range st.Features {
-			if withdrawn[f.ID] {
-				continue
-			}
-			tasks := f.Tasks[:0]
-			for _, t := range f.Tasks {
-				if !cancelled[f.ID+"\x00"+t.ID] {
-					tasks = append(tasks, t)
-				}
-			}
-			f.Tasks = tasks
-			kept = append(kept, f)
-		}
-		st.Features = kept
+// finalize projects the accumulator into the public State, retiring cancelled
+// tasks and withdrawn features. It is NON-destructive: f.st (the pre-retirement
+// accumulator) is left intact so the same Folder can be both snapshotted and
+// resumed later. A cancel/withdraw anywhere in the log removes the target.
+func (f *Folder) finalize() State {
+	st := f.st
+	if len(f.cancelled) == 0 && len(f.withdrawn) == 0 {
+		return st
 	}
+	kept := make([]Feature, 0, len(st.Features))
+	for _, ft := range st.Features {
+		if f.withdrawn[ft.ID] {
+			continue
+		}
+		tasks := make([]Task, 0, len(ft.Tasks))
+		for _, t := range ft.Tasks {
+			if !f.cancelled[ft.ID+"\x00"+t.ID] {
+				tasks = append(tasks, t)
+			}
+		}
+		ft.Tasks = tasks
+		kept = append(kept, ft)
+	}
+	st.Features = kept
 	return st
+}
+
+// Project folds events into State, preserving first-assign order for
+// features/tasks and init order for seats. Unknown event_types are ignored.
+func Project(evs []event.Event) State {
+	st, _ := Fold(evs)
+	return st
+}
+
+// Fold folds events into the finalized public State AND returns the resumable
+// accumulator behind it (pre-retirement state + cancelled/withdrawn sets). The
+// snapshot writer keeps the Folder; every other caller uses only the State.
+func Fold(evs []event.Event) (State, *Folder) {
+	f := newFolder(evs)
+	f.apply(evs)
+	return f.finalize(), f
 }

@@ -48,10 +48,13 @@ func (p *Project) agentID() (string, error) {
 }
 
 // StateProjection returns the current projected state for the repo (exported
-// wrapper around the internal projection used by the orchestrate driver).
+// wrapper around the internal projection used by the orchestrate driver and serve's
+// cold start). It reads through the persistent ledger snapshot: on a valid snapshot
+// it folds only the bytes appended since the snapshot was written, else it full-
+// folds. The result is identical to a full replay either way (the snapshot is a
+// pure cache); PACT_NO_SNAPSHOT=1 bypasses it.
 func (p *Project) StateProjection() (projection.State, error) {
-	st, _, err := p.state()
-	return st, err
+	return projection.LoadSnapshotState(paths.LogIn(p.dir), paths.StateSnapshotIn(p.dir))
 }
 
 func (p *Project) state() (projection.State, []event.Event, error) {
@@ -95,15 +98,55 @@ func (p *Project) withLedgerLock(fn func() error) error {
 }
 
 func (p *Project) appendAndRender(ev event.Event) error {
-	if err := event.Append(paths.LogIn(p.dir), ev); err != nil {
+	logPath := paths.LogIn(p.dir)
+	if err := event.Append(logPath, ev); err != nil {
 		return err
 	}
-	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	// Read the whole log ONCE as bytes: reuse them both to re-render STATE.yml and
+	// to fingerprint the snapshot (its head hash is over these exact bytes).
+	data, err := os.ReadFile(logPath)
 	if err != nil {
 		return err
 	}
-	return projection.WriteState(paths.StateIn(p.dir), projection.Project(evs))
+	evs, err := event.ParseAll(data)
+	if err != nil {
+		return err
+	}
+	st, folder := projection.Fold(evs)
+	if err := projection.WriteState(paths.StateIn(p.dir), st); err != nil {
+		return err
+	}
+	// Refresh the snapshot cache while still holding the ledger lock (callers wrap
+	// appendAndRender in withLedgerLock), so the on-disk snapshot never lags the log
+	// a reader could see. Best-effort: the snapshot is only a cache — a write failure
+	// (or PACT_NO_SNAPSHOT) must not fail the verb, whose event is already durable.
+	p.writeSnapshot(data, folder)
+	return nil
 }
+
+// writeSnapshot atomically rewrites the ledger snapshot for the just-folded log.
+// All errors are swallowed: the snapshot is a cache, and the next reader silently
+// full-folds on any mismatch. On first creation it also registers the snapshot file
+// with the repo's runtime-ignore list so this cache is never committed.
+func (p *Project) writeSnapshot(logBytes []byte, folder *projection.Folder) {
+	if os.Getenv(projection.NoSnapshotEnv) == "1" {
+		return
+	}
+	snapPath := paths.StateSnapshotIn(p.dir)
+	if _, err := os.Stat(snapPath); os.IsNotExist(err) {
+		// First write: keep the cache out of git via .git/info/exclude (best-effort;
+		// a non-git dir or git error just leaves it untracked-by-absence).
+		_ = gitx.EnsureExcluded(p.dir, snapshotIgnoreMarker)
+	}
+	_ = projection.WriteSnapshot(snapPath, logBytes, folder)
+}
+
+// snapshotIgnoreMarker is the .git/info/exclude entry that keeps the ledger
+// snapshot cache out of git — it is a projection, never the source of truth (the
+// log is), so committing it would be a lie waiting to drift. Matches the default
+// .pact/ location; a PACT_DIR-absolute override lands the cache outside the repo,
+// where it is untracked anyway.
+const snapshotIgnoreMarker = ".pact/state-snapshot.json"
 
 // Init scaffolds .pact/, bakes entry files, and writes the init event.
 func (p *Project) Init(project string, seatSpecs []string) error {
@@ -644,9 +687,10 @@ func (p *Project) checkpointLocked(taskID, evidence string) error {
 	})
 }
 
-// Status returns the rendered STATE.yml text (from the live log).
+// Status returns the rendered STATE.yml text (from the live log, through the
+// snapshot cache — identical to a full replay; see StateProjection).
 func (p *Project) Status() (string, error) {
-	st, _, err := p.state()
+	st, err := projection.LoadSnapshotState(paths.LogIn(p.dir), paths.StateSnapshotIn(p.dir))
 	if err != nil {
 		return "", err
 	}

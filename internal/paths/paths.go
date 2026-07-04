@@ -22,6 +22,10 @@ func State() string { return filepath.Join(Dir(), "STATE.yml") }
 func Tasks() string { return filepath.Join(Dir(), "tasks") }
 func Bin() string   { return filepath.Join(Dir(), "bin") }
 
+// StateSnapshot is the persistent ledger snapshot cache (a projection of the log,
+// NOT the source of truth). It is never committed — see the runtime-ignore wiring.
+func StateSnapshot() string { return filepath.Join(Dir(), "state-snapshot.json") }
+
 // DirIn resolves the pact directory rooted at base. It preserves the PACT_DIR
 // override semantics of Dir(): if Dir() is absolute (e.g. PACT_DIR is an
 // absolute path), it is returned verbatim and base is ignored; otherwise the
@@ -40,6 +44,11 @@ func LogIn(base string) string   { return filepath.Join(DirIn(base), "log.jsonl"
 func StateIn(base string) string { return filepath.Join(DirIn(base), "STATE.yml") }
 func TasksIn(base string) string { return filepath.Join(DirIn(base), "tasks") }
 func BinIn(base string) string   { return filepath.Join(DirIn(base), "bin") }
+
+// StateSnapshotIn is the base-rooted analogue of StateSnapshot.
+func StateSnapshotIn(base string) string {
+	return filepath.Join(DirIn(base), "state-snapshot.json")
+}
 
 // AgentID returns PACT_AGENT_ID (may be "").
 func AgentID() string { return os.Getenv("PACT_AGENT_ID") }

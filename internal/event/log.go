@@ -2,7 +2,9 @@ package event
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 )
 
@@ -41,8 +43,21 @@ func ReadAll(logPath string) ([]Event, error) {
 		return nil, err
 	}
 	defer f.Close()
+	return parse(f)
+}
+
+// ParseAll parses events from an in-memory log slice, byte-for-byte equivalent to
+// ReadAll over a file holding the same bytes. The snapshot fold uses it to parse a
+// tail slice (the bytes after the folded offset) without re-reading the file. data
+// must start on a line boundary — the ledger is append-only with a trailing newline
+// per event, so the snapshot offset always lands on one.
+func ParseAll(data []byte) ([]Event, error) {
+	return parse(bytes.NewReader(data))
+}
+
+func parse(r io.Reader) ([]Event, error) {
 	var evs []Event
-	sc := bufio.NewScanner(f)
+	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 1<<20), 1<<20)
 	for sc.Scan() {
 		b := sc.Bytes()

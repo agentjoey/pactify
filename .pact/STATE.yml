@@ -422,10 +422,10 @@ features:
         deps: [rp-fix-loop]
       - id: rp-dynamic-seats
         owner: opencode-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-dynamic-seats.md
-        evidence: null
+        evidence: go test ./internal/pact/ ./internal/orchestrate/ ./internal/planner/ PASS + build/vet clean + projection/serve/mcp/cmd no regression. JoinKind threads kind→join payload(仅非空)→projection Agents[].Kind(刷新已有/追加新座席,不覆盖 init roles;kind-free join byte-identical); join --kind flag. loop opts.kind() 每次调用:SeatKind override 优先,否则实时读 roster(mid-run join 下轮可驱动)。planner manifest +Seats[], apply 对未在 roster 的 seat 自动 JoinKind(ApplyTx 原子回滚)。3 测试文件。follow-up(未做,记 backlog):validate 仍只认 init 座席。
       - id: rp-schedule
         owner: opencode-worker
         status: accepted

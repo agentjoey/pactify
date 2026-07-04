@@ -119,7 +119,68 @@ export const RenameRequest = z.object({
 })
 export type RenameRequest = z.infer<typeof RenameRequest>
 
-/** client → relay → linxd control messages. */
+// ── pactify pact-verb control messages ──────────────────────────────────────
+// A remote control plane (the hosted dashboard, or another machine) drives pact
+// coordination on a target machine's LOCAL engine. Additive to the union: linxd
+// ignores `pact.*` types (its handler has no case for them), pactify serve
+// handles them (see internal/remoteexec). The relay routes by `machineId` and
+// scopes delivery by the socket's authenticated account — identical to the linx
+// machine RPCs above, so no relay routing change is needed. Reply on RpcResponse.
+
+/** Assign a pact task on the target machine's project. */
+export const PactAssignRequest = z.object({
+  type: z.literal('pact.assign'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  task: z.string().min(1),
+  feature: z.string().min(1),
+  branch: z.string().min(1),
+  owner: z.string().min(1),
+  reviewer: z.string().min(1),
+  spec: z.string(),
+  deps: z.array(z.string()).optional(),
+})
+export type PactAssignRequest = z.infer<typeof PactAssignRequest>
+
+/** Accept a pact task (reviewer). */
+export const PactAcceptRequest = z.object({
+  type: z.literal('pact.accept'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  task: z.string().min(1),
+})
+export type PactAcceptRequest = z.infer<typeof PactAcceptRequest>
+
+/** Request changes on a pact task (reviewer). */
+export const PactChangesRequest = z.object({
+  type: z.literal('pact.changes'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  task: z.string().min(1),
+  reason: z.string(),
+})
+export type PactChangesRequest = z.infer<typeof PactChangesRequest>
+
+/** Merge a pact feature (all tasks accepted). */
+export const PactMergeRequest = z.object({
+  type: z.literal('pact.merge'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  feature: z.string().min(1),
+})
+export type PactMergeRequest = z.infer<typeof PactMergeRequest>
+
+/** Checkpoint a pact task with evidence (owner). */
+export const PactCheckpointRequest = z.object({
+  type: z.literal('pact.checkpoint'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  task: z.string().min(1),
+  evidence: z.string(),
+})
+export type PactCheckpointRequest = z.infer<typeof PactCheckpointRequest>
+
+/** client → relay → linxd (or pactify serve) control messages. */
 export const RpcRequest = z.discriminatedUnion('type', [
   SpawnRequest,
   SendMessageRequest,
@@ -135,6 +196,11 @@ export const RpcRequest = z.discriminatedUnion('type', [
   ListCommandsRequest,
   RunCommandRequest,
   RenameRequest,
+  PactAssignRequest,
+  PactAcceptRequest,
+  PactChangesRequest,
+  PactMergeRequest,
+  PactCheckpointRequest,
 ])
 export type RpcRequest = z.infer<typeof RpcRequest>
 

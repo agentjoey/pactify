@@ -15,6 +15,14 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Monorepo local linking (path B) — mirror of vite.config.ts resolve.alias.
+       Resolves shared cloud/ packages from source; keep the two lists in sync.
+       No baseUrl (deprecated in TS7): with moduleResolution "bundler", paths are
+       resolved relative to this tsconfig's location. */
+    "paths": {
+      "@pactify-apps/pact-project": ["../cloud/pact-project/src/index.ts"]
+    },
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,

@@ -1,11 +1,25 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vitest/config";
+import { fileURLToPath, URL } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: { outDir: "../internal/serve/dist", emptyOutDir: true },
+  // Monorepo local linking (path B): the dashboard bundles shared cloud/ TS
+  // packages straight from source — no npm publish, no build-dist round-trip.
+  // Keeps cloud/ (its own pnpm workspace + fly-deployed relay) untouched; only
+  // Vite/tsc resolve these aliases. A full pnpm-workspace unification would also
+  // move the relay Docker to a repo-root build context (deploy-touching) — left
+  // as a follow-up. Mirror every alias in tsconfig.app.json `paths`.
+  resolve: {
+    alias: {
+      "@pactify-apps/pact-project": fileURLToPath(
+        new URL("../cloud/pact-project/src/index.ts", import.meta.url),
+      ),
+    },
+  },
   // Dev server proxies the API + SSE stream (both live under /api) to the running
   // `pactify serve` (launchd default :17082, override with PACTIFY_SERVE_URL), so
   // `vite` hot-reload hits the real backend WITHOUT the

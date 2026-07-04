@@ -71,18 +71,32 @@ export class RelaySource implements DataSource {
     }));
   }
 
+  /** Pin remote commands to a specific machine (e.g. a user selection in the
+   * Machines view). When unset, verb() targets the first online machine. */
+  setTargetMachine(machineId: string): void {
+    this.targetMachineId = machineId;
+  }
+  private targetMachineId = "";
+
+  private async resolveMachineId(): Promise<string> {
+    if (this.targetMachineId) return this.targetMachineId;
+    const online = (await this.getMachines()).find((m) => m.online);
+    if (!online) throw new Error("no online machine to run the command");
+    return online.machineId;
+  }
+
   /**
-   * Drive a pact verb remotely: build the matching pact.* rpc and send it to this
-   * account's machine over the relay (fire-and-forget — the machine executes it
-   * locally and the effect returns through the event stream, re-projecting the board).
-   * machineId is the account id (MVP one-machine-per-account).
+   * Drive a pact verb remotely: build the matching pact.* rpc and send it to the
+   * target machine over the relay (fire-and-forget — the machine executes it
+   * locally and the effect returns through the event stream, re-projecting the
+   * board). Targets the pinned machine, else the first online one.
    */
   async verb(
     project: string,
     verb: "assign" | "accept" | "changes" | "merge",
     body: Record<string, unknown>,
   ): Promise<void> {
-    const machineId = this.client.account();
+    const machineId = await this.resolveMachineId();
     const s = (k: string): string => (typeof body[k] === "string" ? (body[k] as string) : "");
     let rpc: RpcRequest;
     switch (verb) {

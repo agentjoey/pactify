@@ -44,18 +44,27 @@ describe("RelaySource", () => {
     });
   });
 
-  it("verb sends the matching pact.* rpc targeting the account machine", async () => {
+  it("verb sends the matching pact.* rpc targeting the first online machine", async () => {
     const sendRpc = vi.fn();
-    const src = new RelaySource(makeClient({ sendRpc }) as RelayClient);
+    const listMachines = vi.fn().mockResolvedValue([
+      { machineId: "m-offline", agentKinds: [], online: false, lastSeenAt: 0 },
+      { machineId: "m-1", host: "build", agentKinds: ["opencode"], online: true, lastSeenAt: 1 },
+    ]);
+    const src = new RelaySource(makeClient({ sendRpc, listMachines }) as RelayClient);
 
     await src.verb("demo", "accept", { task: "t1" });
-    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.accept", machineId: "acct1", project: "demo", task: "t1" });
+    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.accept", machineId: "m-1", project: "demo", task: "t1" });
 
     await src.verb("demo", "changes", { task: "t1", reason: "fix" });
-    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.changes", machineId: "acct1", project: "demo", task: "t1", reason: "fix" });
+    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.changes", machineId: "m-1", project: "demo", task: "t1", reason: "fix" });
 
     await src.verb("demo", "merge", { feature: "f1" });
-    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.merge", machineId: "acct1", project: "demo", feature: "f1" });
+    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.merge", machineId: "m-1", project: "demo", feature: "f1" });
+
+    // A pinned machine overrides the auto-pick.
+    src.setTargetMachine("m-pinned");
+    await src.verb("demo", "accept", { task: "t2" });
+    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.accept", machineId: "m-pinned", project: "demo", task: "t2" });
   });
 
   it("listProjects maps relay projects to ProjectMeta", async () => {

@@ -260,10 +260,10 @@ features:
     tasks:
       - id: relay-client
         owner: opencode-worker
-        status: in_progress
+        status: changes_requested
         reviewer: claude
         spec: .pact/tasks/p3-relay-client.md
-        evidence: null
+        evidence: verify passed on recovery: gate passed for "cd cloud && pnpm install && pnpm --filter @pactify-apps/relay-client build && pnpm --filter @pactify-apps/relay-client test && pnpm --filter @pactify-apps/web build"
       - id: relay-source
         owner: kimi-worker
         status: assigned

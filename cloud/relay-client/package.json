@@ -1,0 +1,29 @@
+{
+  "name": "@pactify-apps/relay-client",
+  "version": "0.1.0",
+  "description": "Framework-agnostic zero-knowledge relay read-client: auth, HTTP reads, realtime socket, client-side decrypt.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -w -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pactify-apps/crypto": "workspace:*",
+    "@pactify-apps/wire": "workspace:*",
+    "socket.io-client": "^4.8.3"
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

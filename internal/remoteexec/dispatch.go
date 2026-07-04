@@ -20,21 +20,22 @@ import (
 // linx rpc type. Args carry the verb parameters (task/feature/branch/owner/
 // reviewer/spec/reason/evidence/deps) so the wire shape stays a flat, bounded map.
 type RPC struct {
-	Type    string   // e.g. "pact.assign" (see the switch in Handle for the set)
-	Account string   // account scope of the caller — must match this machine's
-	Project string   // registered project name the verb targets
-	Task    string   // task id (assign/accept/changes/checkpoint)
-	Feature string   // feature id (assign/merge)
-	Branch  string   // feature branch (assign)
-	Owner   string   // task owner seat (assign)
-	Reviewer string  // task reviewer seat (assign)
-	Spec    string   // task spec path (assign)
-	Reason  string   // changes reason
-	Evidence string  // checkpoint evidence
-	Deps    []string // assign dependencies
-	Seat      string // stint: seat to act as
-	AgentKind string // stint: agent CLI kind to spawn
-	Briefing  string // stint: prompt for the agent
+	Type      string            // e.g. "pact.assign" (see the switch in Handle for the set)
+	Account   string            // account scope of the caller — must match this machine's
+	Project   string            // registered project name the verb targets
+	Task      string            // task id (assign/accept/changes/checkpoint)
+	Feature   string            // feature id (assign/merge)
+	Branch    string            // feature branch (assign)
+	Owner     string            // task owner seat (assign)
+	Reviewer  string            // task reviewer seat (assign)
+	Spec      string            // task spec path (assign)
+	Reason    string            // changes reason
+	Evidence  string            // checkpoint evidence
+	Deps      []string          // assign dependencies
+	Seat      string            // stint: seat to act as
+	AgentKind string            // stint: agent CLI kind to spawn
+	Briefing  string            // stint: prompt for the agent
+	SeatKinds map[string]string // orchestrate.run: seat → agent kind
 }
 
 // StintRequest is a remote request to run one agent stint (spawn an agent CLI to
@@ -47,6 +48,23 @@ type StintRequest struct {
 	AgentKind string
 	Briefing  string
 	Branch    string // feature branch to run on (from the driver; "" = resolve locally)
+}
+
+// OrchestrateRequest asks the machine to start (or resume) its orchestrate
+// driver for a project — the remote entry to a whole autonomous run, vs a single
+// stint. Policy-gated like stint (it runs many agents).
+type OrchestrateRequest struct {
+	Project   string
+	Feature   string
+	SeatKinds map[string]string
+	Resume    bool
+}
+
+// Orchestrator starts the orchestrate driver remotely. serve implements it
+// (policy check + the same spawn path the dashboard's Run button uses). Nil =
+// remote orchestrate disabled.
+type Orchestrator interface {
+	RunOrchestrate(req OrchestrateRequest) error
 }
 
 // Stinter runs a remote agent stint. serve implements it (policy check + agent
@@ -95,6 +113,8 @@ type Dispatcher struct {
 	// Stint runs remote agent stints (pact.stint). Nil = remote stint disabled
 	// (the safe default; serve wires a policy-gated Stinter when enabled).
 	Stint Stinter
+	// Orch starts the orchestrate driver (orchestrate.run/resume). Nil = disabled.
+	Orch Orchestrator
 }
 
 // Handle executes one rpc and returns a Reply. It never panics on bad input:
@@ -107,6 +127,19 @@ func (d *Dispatcher) Handle(rpc RPC) Reply {
 	}
 	if rpc.Project == "" {
 		return fail("rpc missing project")
+	}
+	// orchestrate.run/resume starts the whole driver — policy-gated like stint.
+	if rpc.Type == "orchestrate.run" || rpc.Type == "orchestrate.resume" {
+		if d.Orch == nil {
+			return fail("remote orchestrate not enabled for this machine")
+		}
+		if err := d.Orch.RunOrchestrate(OrchestrateRequest{
+			Project: rpc.Project, Feature: rpc.Feature,
+			SeatKinds: rpc.SeatKinds, Resume: rpc.Type == "orchestrate.resume",
+		}); err != nil {
+			return fail(err.Error())
+		}
+		return Reply{OK: true}
 	}
 	// Stint runs an agent (code), not a pact verb — a distinct, policy-gated path
 	// (the Stinter), handled before the pact-engine resolve.

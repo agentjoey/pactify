@@ -177,3 +177,41 @@ func (l *lifecycleRunner) Run(ctx context.Context, lc orchestrate.LaunchContext)
 	return l.inner.Run(ctx, lc)
 }
 
+
+func TestServeOrchestrator_PolicyGate(t *testing.T) {
+	dir := t.TempDir()
+	srv := New([]registry.Project{{Name: "demo", Path: dir}})
+	ran := make(chan []string, 1)
+	srv.execOrchestrate = func(_ string, args, _ []string) error { ran <- args; return nil }
+	srv.SetSeat("claude")
+	o := &serveOrchestrator{s: srv}
+
+	// No policy / stint-only policy → denied.
+	if err := o.RunOrchestrate(remoteexec.OrchestrateRequest{Project: "demo"}); err == nil {
+		t.Fatal("no policy should deny remote orchestrate")
+	}
+	writePolicy(t, dir, `{"stint":true}`)
+	if err := o.RunOrchestrate(remoteexec.OrchestrateRequest{Project: "demo"}); err == nil {
+		t.Fatal("stint-only policy should deny remote orchestrate")
+	}
+
+	// orchestrate:true → spawns with feature + seat kinds.
+	writePolicy(t, dir, `{"orchestrate":true}`)
+	if err := o.RunOrchestrate(remoteexec.OrchestrateRequest{Project: "demo", Feature: "f1", SeatKinds: map[string]string{"w": "opencode"}}); err != nil {
+		t.Fatalf("orchestrate should be allowed: %v", err)
+	}
+	select {
+	case args := <-ran:
+		joined := strings.Join(args, " ")
+		if !strings.Contains(joined, "--feature f1") || !strings.Contains(joined, "--seat-kind w=opencode") {
+			t.Fatalf("spawn args wrong: %v", args)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("orchestrate never spawned")
+	}
+
+	// Unknown project → denied.
+	if err := o.RunOrchestrate(remoteexec.OrchestrateRequest{Project: "nope"}); err == nil {
+		t.Fatal("unknown project should deny")
+	}
+}

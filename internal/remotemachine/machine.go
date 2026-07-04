@@ -57,6 +57,8 @@ type Config struct {
 	Resolve remoteexec.Resolver
 	// Stint runs remote agent stints (pact.stint), policy-gated. Nil = disabled.
 	Stint remoteexec.Stinter
+	// Orch starts the orchestrate driver remotely, policy-gated. Nil = disabled.
+	Orch remoteexec.Orchestrator
 }
 
 // Run connects to the relay as a machine, registers its presence (host + agent
@@ -91,7 +93,7 @@ func Run(ctx context.Context, cfg Config) error {
 	}()
 
 	// Remote command execution — only when a resolver or stinter is configured.
-	if cfg.Resolve != nil || cfg.Stint != nil {
+	if cfg.Resolve != nil || cfg.Stint != nil || cfg.Orch != nil {
 		tr := &socketTransport{ch: make(chan []byte, 32)}
 		client.On("rpc", func(args []json.RawMessage) {
 			if len(args) != 1 {
@@ -104,7 +106,7 @@ func Run(ctx context.Context, cfg Config) error {
 		})
 		ex := &remoteexec.Executor{
 			Account:    cfg.Account,
-			Dispatcher: &remoteexec.Dispatcher{Account: cfg.Account, Resolve: cfg.Resolve, Stint: cfg.Stint},
+			Dispatcher: &remoteexec.Dispatcher{Account: cfg.Account, Resolve: cfg.Resolve, Stint: cfg.Stint, Orch: cfg.Orch},
 		}
 		go func() { _ = ex.Run(ctx, tr) }()
 	}

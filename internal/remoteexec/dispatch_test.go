@@ -151,3 +151,30 @@ func errorsNew(s string) error { return &strErr{s} }
 type strErr struct{ s string }
 
 func (e *strErr) Error() string { return e.s }
+
+type fakeOrch struct {
+	got OrchestrateRequest
+	err error
+}
+
+func (f *fakeOrch) RunOrchestrate(req OrchestrateRequest) error { f.got = req; return f.err }
+
+func TestHandle_Orchestrate(t *testing.T) {
+	fo := &fakeOrch{}
+	d := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{}), Orch: fo}
+	r := d.Handle(RPC{Type: "orchestrate.run", Account: "acct1", Project: "known", Feature: "f1", SeatKinds: map[string]string{"w": "opencode"}})
+	if !r.OK {
+		t.Fatalf("orchestrate.run should accept, got %+v", r)
+	}
+	if fo.got.Feature != "f1" || fo.got.Resume || fo.got.SeatKinds["w"] != "opencode" {
+		t.Fatalf("orchestrate req wrong: %+v", fo.got)
+	}
+	if r := d.Handle(RPC{Type: "orchestrate.resume", Account: "acct1", Project: "known"}); !r.OK || !fo.got.Resume {
+		t.Fatalf("resume should set Resume, got %+v / %+v", r, fo.got)
+	}
+	// Disabled → rejected.
+	d2 := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{})}
+	if r := d2.Handle(RPC{Type: "orchestrate.run", Account: "acct1", Project: "known"}); r.OK {
+		t.Fatalf("orchestrate should be disabled when Orch nil")
+	}
+}

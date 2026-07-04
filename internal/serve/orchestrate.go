@@ -371,20 +371,31 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	if code, err := s.spawnOrchestrate(dir, req.Feature, req.SeatKinds, req.MaxConcurrency, resume); err != nil {
+		writeErr(w, code, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]string{
+		"status_url": "/api/projects/" + id + "/orchestrate/status",
+	})
+}
+
+// spawnOrchestrate launches the orchestrate driver subprocess for dir — the
+// shared core of the dashboard Run button (HTTP) and the remote orchestrate rpc.
+// Returns an HTTP-ish status code with the error for the HTTP caller's mapping.
+func (s *Server) spawnOrchestrate(dir, feature string, seatKinds map[string]string, maxConcurrency int, resume bool) (int, error) {
 	// Claim the in-memory marker BEFORE the file check: it is the only guard
 	// with no window between check and spawn (see orchRunning).
 	if !orchMarkRunning(dir) {
-		writeErr(w, http.StatusConflict, "orchestrate is already running")
-		return
+		return http.StatusConflict, fmt.Errorf("orchestrate is already running")
 	}
 	if s.orchestrateRunning(dir) {
 		orchClearRunning(dir)
-		writeErr(w, http.StatusConflict, "orchestrate is already running")
-		return
+		return http.StatusConflict, fmt.Errorf("orchestrate is already running")
 	}
 
 	km := s.resolveSeatKinds(dir)
-	for seat, kind := range req.SeatKinds {
+	for seat, kind := range seatKinds {
 		km[seat] = kind
 	}
 
@@ -392,11 +403,11 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 	for seat, kind := range km {
 		args = append(args, "--seat-kind", seat+"="+kind)
 	}
-	if req.Feature != "" {
-		args = append(args, "--feature", req.Feature)
+	if feature != "" {
+		args = append(args, "--feature", feature)
 	}
-	if req.MaxConcurrency > 0 {
-		args = append(args, "--max-concurrency", fmt.Sprintf("%d", req.MaxConcurrency))
+	if maxConcurrency > 0 {
+		args = append(args, "--max-concurrency", fmt.Sprintf("%d", maxConcurrency))
 	}
 	if resume {
 		args = append(args, "--resume")
@@ -410,17 +421,14 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 	}
 	if err := execFn(dir, args, env); err != nil {
 		orchClearRunning(dir)
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
+		return http.StatusInternalServerError, err
 	}
 	// The default exec clears the marker from its reaper when the child exits;
 	// an injected fn (tests) has no child to reap, so clear once it returns.
 	if injected {
 		orchClearRunning(dir)
 	}
-	writeJSON(w, http.StatusAccepted, map[string]string{
-		"status_url": "/api/projects/" + id + "/orchestrate/status",
-	})
+	return 0, nil
 }
 
 func (s *Server) handleOrchestrateRun(w http.ResponseWriter, r *http.Request) {

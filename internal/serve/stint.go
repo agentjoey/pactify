@@ -164,3 +164,29 @@ func contains(xs []string, x string) bool {
 func (s *Server) newStinter() remoteexec.Stinter {
 	return &serveStinter{s: s, runner: orchestrate.NewCmdRunner(5 * time.Minute)}
 }
+
+// serveOrchestrator starts the orchestrate driver from a remote rpc
+// (orchestrate.run/resume), gated by the project's RemotePolicy.Orchestrate.
+// Reuses the same spawn path as the dashboard's Run button.
+type serveOrchestrator struct{ s *Server }
+
+func (o *serveOrchestrator) RunOrchestrate(req remoteexec.OrchestrateRequest) error {
+	o.s.pmu.RLock()
+	p, ok := o.s.projects[req.Project]
+	o.s.pmu.RUnlock()
+	if !ok {
+		return fmt.Errorf("unknown project %q", req.Project)
+	}
+	if !readRemotePolicy(p.Path).Orchestrate {
+		return errors.New("remote orchestrate not enabled for this project (see .pact/remote.json)")
+	}
+	if _, err := o.s.spawnOrchestrate(p.Path, req.Feature, req.SeatKinds, 0, req.Resume); err != nil {
+		return err
+	}
+	return nil
+}
+
+// newOrchestrator builds the policy-gated remote orchestrate entry.
+func (s *Server) newOrchestrator() remoteexec.Orchestrator {
+	return &serveOrchestrator{s: s}
+}

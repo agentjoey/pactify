@@ -15,8 +15,8 @@ pactify 在共享 `cloud/wire/src/rpc.ts` 的 `RpcRequest` discriminated union �
 | `pact.assign/accept/changes/merge/checkpoint` | U3（已上线） | machineId, project, + verb 参数 |
 | `pact.stint` | M2 远程单棒（已上线） | machineId, project, task, seat, agentKind, briefing?, branch? |
 | `orchestrate.run` / `orchestrate.resume` | M3 远程编排（已上线） | machineId, project, feature?, seatKinds? |
-| `plan.generate` / `plan.apply` | M4 plan 托管 | machineId, project, goal?/feature |
-| `pact.provision` | M5 远程 clone 项目 | machineId, repoUrl, name |
+| `plan.generate` / `plan.apply` | M4 plan 托管（已上线） | machineId, project, goal?, feature, plannerKind? |
+| `pact.provision` | M5 远程 clone 项目（已上线） | machineId, repoUrl, name |
 
 **linx 侧要做的**：`pnpm up @pactify-apps/wire@<新版>` + relay 带新 wire 重部署。linxd 的 rpc handler 对 `pact.*`/`orchestrate.*`/`plan.*` 无 case → 自动忽略（和 pactify 忽略 linx 的 spawn/send-message 对称）。**已由 pactify hermetic 测试验证 relay 路由这些类型正常。**
 

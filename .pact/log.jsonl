@@ -199,3 +199,5 @@
 {"event_id":"47cc7efb6a6d09f771f7f570d424655a","ts":"2026-07-04T01:14:44Z","agent_id":"claude","role":"orchestrator","event_type":"assign","task_id":"fe-apihygiene","feature":"web-hygiene","payload":{"branch":"feat-web-hygiene","owner":"kimi-worker","reviewer":"claude","spec":".pact/tasks/fe-apihygiene.md"}}
 {"event_id":"35d684b4c4f915bb51ef56d1673a7f2f","ts":"2026-07-04T01:22:44Z","agent_id":"claude","role":"orchestrator","event_type":"cancel","task_id":"obs-runduration","feature":"obs-runtime","payload":{}}
 {"event_id":"14a5f7101c5d8690d62c21fc4dabde5f","ts":"2026-07-04T01:22:44Z","agent_id":"claude","role":"orchestrator","event_type":"withdraw","task_id":"","feature":"obs-runtime","payload":{}}
+{"event_id":"7c11661cd06dfc042964b88bb01359d2","ts":"2026-07-04T01:22:57Z","agent_id":"claude","role":"orchestrator","event_type":"start","task_id":"fe-apihygiene","feature":"web-hygiene","payload":{"owner":"kimi-worker"}}
+{"event_id":"a81e79b1cd1bfcd91871be56e226eaac","ts":"2026-07-04T01:23:06Z","agent_id":"kimi-worker","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"roles":["worker"]}}

@@ -250,7 +250,7 @@ features:
     tasks:
       - id: fe-apihygiene
         owner: kimi-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/fe-apihygiene.md
         evidence: null

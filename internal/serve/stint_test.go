@@ -215,3 +215,35 @@ func TestServeOrchestrator_PolicyGate(t *testing.T) {
 		t.Fatal("unknown project should deny")
 	}
 }
+
+func TestServePlanner_PolicyGate(t *testing.T) {
+	dir := t.TempDir()
+	srv := New([]registry.Project{{Name: "demo", Path: dir}})
+	gen := make(chan []string, 1)
+	srv.runPlanner = func(_ string, args, _ []string) error { gen <- args; return nil }
+	srv.SetSeat("claude")
+	pl := &servePlanner{s: srv}
+
+	// No plan policy → denied.
+	if err := pl.RunPlan(remoteexec.PlanRequest{Project: "demo", Feature: "f1", Goal: "g"}); err == nil {
+		t.Fatal("no policy should deny remote plan")
+	}
+	// plan:true → generate spawns the planner with goal + feature.
+	writePolicy(t, dir, `{"plan":true}`)
+	if err := pl.RunPlan(remoteexec.PlanRequest{Project: "demo", Feature: "f1", Goal: "build X"}); err != nil {
+		t.Fatalf("plan generate should be allowed: %v", err)
+	}
+	select {
+	case args := <-gen:
+		joined := strings.Join(args, " ")
+		if !strings.Contains(joined, "build X") || !strings.Contains(joined, "--feature f1") {
+			t.Fatalf("planner args wrong: %v", args)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("planner never spawned")
+	}
+	// Unknown project → denied.
+	if err := pl.RunPlan(remoteexec.PlanRequest{Project: "nope", Feature: "f1", Goal: "g"}); err == nil {
+		t.Fatal("unknown project should deny")
+	}
+}

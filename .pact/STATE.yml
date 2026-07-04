@@ -360,10 +360,10 @@ features:
         evidence: null
       - id: dm-doctor
         owner: gemini-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/dm-doctor.md
-        evidence: null
+        evidence: go test ./internal/doctor/ PASS + build/vet clean. New internal/doctor/vendor.go VendorChecks(home,pathEnv): per-headless-kind binary(LookPath injected)+auth(static no-net cred probe, claude/kimi lenient, codex/gemini strict)+ACP-availability checks; doctor.Run gained home param (caller cmd_doctor.go updated); serve startup prints red preflights to stderr non-blocking (cmd_serve.go). Hermetic table tests (fake HOME+PATH).
       - id: dm-stats
         owner: gemini-worker
         status: accepted

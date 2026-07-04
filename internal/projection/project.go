@@ -18,6 +18,21 @@ type Task struct {
 	// renderer can omit the `deps:` line entirely for deps-free tasks and keep
 	// STATE.yml byte-identical to the bash reference.
 	Deps []string
+	// Reviewers / Quorum implement opt-in multi-reviewer quorum review (spec
+	// review-runtime-deepening §2). They are populated ONLY from a quorum assign
+	// (payload `reviewers[]` + `quorum`); a legacy single-`reviewer` assign leaves
+	// Reviewers nil and Quorum 0, so its projection, STATE.yml render, snapshot and
+	// review guards stay byte-identical to the pre-feature behavior. When set,
+	// Reviewer carries the FIRST reviewer for back-compat consumers of the single
+	// field.
+	Reviewers []string
+	Quorum    int
+	// Accepts is the CURRENT review round's distinct reviewer seats that have
+	// accepted (since the most recent checkpoint). It is the quorum tally: the fold
+	// marks the task accepted once len(Accepts) ≥ Quorum. A new checkpoint or any
+	// reviewer's changes_requested clears it (re-checkpoint → all reviewers re-vote).
+	// nil for legacy single-reviewer tasks (never touched → byte-identical).
+	Accepts []string
 }
 
 type Feature struct {
@@ -34,6 +49,46 @@ type State struct {
 func str(v any) string {
 	s, _ := v.(string)
 	return s
+}
+
+// intFromPayload coerces a JSON-decoded payload number to int. event.ParseAll
+// unmarshals JSON numbers to float64, so `quorum` arrives as a float64; a snapshot
+// resume rebuilds the Folder from a JSON State where an int survives as float64
+// too. Both are handled; anything else yields 0.
+func intFromPayload(v any) int {
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	default:
+		return 0
+	}
+}
+
+// strSlice pulls a []string out of a JSON-decoded []any payload value (e.g. the
+// quorum assign's `reviewers`), skipping non-string entries. Returns nil for a
+// missing/empty/wrong-typed value so quorum-free tasks keep a nil slice.
+func strSlice(v any) []string {
+	raw, ok := v.([]any)
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(raw))
+	for _, e := range raw {
+		out = append(out, str(e))
+	}
+	return out
+}
+
+// contains reports whether s is in xs.
+func contains(xs []string, s string) bool {
+	for _, x := range xs {
+		if x == s {
+			return true
+		}
+	}
+	return false
 }
 
 // taskInFeature returns the feature's task with the given id, or nil.
@@ -150,6 +205,18 @@ func (f *Folder) apply(evs []event.Event) {
 				f.tIdx[e.Feature] = map[string]int{}
 			}
 			tk := Task{ID: e.TaskID, Owner: str(e.Payload["owner"]), Reviewer: str(e.Payload["reviewer"]), Spec: str(e.Payload["spec"]), Status: "assigned"}
+			// Quorum multi-reviewer (opt-in): a quorum assign carries `reviewers[]` +
+			// `quorum` instead of a single `reviewer`. Populate the list and mirror the
+			// first reviewer into the single Reviewer field for back-compat consumers.
+			// A legacy single-reviewer assign has no `reviewers` key → Reviewers stays
+			// nil, Quorum 0, and everything below is byte-identical to before.
+			if revs := strSlice(e.Payload["reviewers"]); len(revs) > 0 {
+				tk.Reviewers = revs
+				tk.Quorum = intFromPayload(e.Payload["quorum"])
+				if tk.Reviewer == "" {
+					tk.Reviewer = revs[0]
+				}
+			}
 			if raw, ok := e.Payload["deps"].([]any); ok && len(raw) > 0 {
 				tk.Deps = make([]string, 0, len(raw))
 				for _, d := range raw {
@@ -210,14 +277,34 @@ func (f *Folder) apply(evs []event.Event) {
 				t.Status = "awaiting_review"
 				ev := str(e.Payload["evidence"])
 				t.Evidence = &ev
+				// New review round: clear the quorum tally so accepts are counted only
+				// from this checkpoint forward (no-op for legacy tasks — Accepts is nil).
+				t.Accepts = nil
 			}
 		case "accept":
 			if t := f.find(e.Feature, e.TaskID); t != nil {
-				t.Status = "accepted"
+				if len(t.Reviewers) > 0 {
+					// Quorum task: tally DISTINCT reviewer seats accepting since the last
+					// checkpoint; the task only becomes accepted once the tally reaches
+					// quorum. Below quorum it stays awaiting_review so the remaining
+					// reviewers can still vote.
+					if !contains(t.Accepts, e.AgentID) {
+						t.Accepts = append(t.Accepts, e.AgentID)
+					}
+					if t.Quorum > 0 && len(t.Accepts) >= t.Quorum {
+						t.Status = "accepted"
+					}
+				} else {
+					// Legacy single-reviewer: one accept → accepted (byte-identical).
+					t.Status = "accepted"
+				}
 			}
 		case "changes_requested":
 			if t := f.find(e.Feature, e.TaskID); t != nil {
 				t.Status = "changes_requested"
+				// Any reviewer's changes ends this round and resets the quorum tally, so
+				// after a re-checkpoint every reviewer votes afresh (no-op for legacy).
+				t.Accepts = nil
 			}
 		case "merge":
 			if fi, ok := f.fIdx[e.Feature]; ok {

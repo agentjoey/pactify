@@ -3,6 +3,7 @@ package pact
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/gitx"
@@ -32,15 +33,42 @@ func findTask(st projection.State, taskID string) (*projection.Task, *projection
 	return nil, nil
 }
 
-func checkAssign(st projection.State, actingID, taskID, feature, branch, owner, reviewer string) error {
+// checkAssign validates an assignment. reviewers is the reviewer set (a single-
+// reviewer assign passes a one-element slice; a quorum assign passes the full
+// list); quorum is 0 for the legacy single-reviewer path and ≥1 for a quorum
+// assign. The single-reviewer path (quorum==0, one reviewer) produces byte-
+// identical error messages to before, keeping the golden path unchanged.
+func checkAssign(st projection.State, actingID, taskID, feature, branch, owner string, reviewers []string, quorum int) error {
 	if err := requireOrchestrator(st, "assign", actingID); err != nil {
 		return err
 	}
-	if owner == "" || reviewer == "" {
+	if owner == "" || len(reviewers) == 0 {
 		return fmt.Errorf("pactify assign: --owner and --reviewer required")
 	}
-	if owner == reviewer {
-		return fmt.Errorf("pactify assign: owner (%s) must differ from reviewer (separation of duties)", owner)
+	// Separation of duties generalizes to the whole reviewer set: the owner may not
+	// review its own work under any reviewer slot.
+	for _, rv := range reviewers {
+		if owner == rv {
+			return fmt.Errorf("pactify assign: owner (%s) must differ from reviewer (separation of duties)", owner)
+		}
+	}
+	// Quorum-mode sanity (opt-in only): reviewers must be distinct and non-empty and
+	// the quorum must be attainable (1 ≤ quorum ≤ #reviewers). Skipped entirely for
+	// the legacy single-reviewer path (quorum==0) so its validation is unchanged.
+	if quorum > 0 {
+		seen := map[string]bool{}
+		for _, rv := range reviewers {
+			if rv == "" {
+				return fmt.Errorf("pactify assign: --reviewers contains an empty seat")
+			}
+			if seen[rv] {
+				return fmt.Errorf("pactify assign: --reviewers contains a duplicate seat %q", rv)
+			}
+			seen[rv] = true
+		}
+		if quorum > len(reviewers) {
+			return fmt.Errorf("pactify assign: --quorum %d exceeds the %d reviewer(s)", quorum, len(reviewers))
+		}
 	}
 	// Identifier hygiene: taskID and feature flow unquoted into git argv and
 	// commit messages later (CheckoutOrCreate, MergeNoFF, AddWorktree), where a
@@ -284,13 +312,35 @@ func checkReviewerVerdict(st projection.State, verb, caller, taskID string) (*pr
 	if tk == nil {
 		return nil, fmt.Errorf("pactify %s: unknown task %s", verb, taskID)
 	}
-	if tk.Reviewer != caller {
+	// The acting seat must be an authorized reviewer. This is the single-reviewer
+	// guard generalized to the quorum reviewer set: a quorum task authorizes any
+	// seat in tk.Reviewers; a legacy task authorizes only tk.Reviewer (unchanged,
+	// byte-identical error message). A worker is never in either set (assign enforces
+	// owner ∉ reviewers), so worker self-accept stays rejected — the sacred rule.
+	if !reviewerAllowed(tk, caller) {
+		if len(tk.Reviewers) > 0 {
+			return nil, fmt.Errorf("pactify %s: only a reviewer (%s) may review %s; you are %s", verb, strings.Join(tk.Reviewers, ", "), taskID, caller)
+		}
 		return nil, fmt.Errorf("pactify %s: only the reviewer (%s) may review %s; you are %s", verb, tk.Reviewer, taskID, caller)
 	}
 	if tk.Status != "awaiting_review" {
 		return nil, fmt.Errorf("pactify %s: %s is not awaiting_review (status: %s)", verb, taskID, tk.Status)
 	}
 	return f, nil
+}
+
+// reviewerAllowed reports whether caller is an authorized reviewer of tk: any seat
+// in the quorum reviewer set when one is declared, else the single reviewer.
+func reviewerAllowed(tk *projection.Task, caller string) bool {
+	if len(tk.Reviewers) > 0 {
+		for _, r := range tk.Reviewers {
+			if r == caller {
+				return true
+			}
+		}
+		return false
+	}
+	return tk.Reviewer == caller
 }
 
 // ValidateLog runs the v1 conformance checks against the cwd's log + STATE.

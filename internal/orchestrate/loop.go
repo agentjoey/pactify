@@ -440,9 +440,8 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 	if !ok {
 		return fmt.Errorf("orchestrate: task %s not found for RunReviewer", act.Task)
 	}
-	brief := reviewerBrief(opts.Dir, projection.Seat{ID: act.Seat}, task, criticNote)
 
-	if runErr := opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task); runErr != nil {
+	if runErr := opts.launchReviewers(ctx, act, task, criticNote); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
@@ -473,6 +472,59 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 	return nil
 }
 
+// launchReviewers runs the reviewer stint(s) for an awaiting_review task. A legacy
+// single-reviewer task runs its one reviewer exactly as before (byte-identical:
+// same seat, same briefing). A quorum task (opt-in `reviewers[]`) runs its
+// reviewers SERIALLY, re-reading live state each iteration to skip any reviewer who
+// already accepted in the current round and to STOP EARLY the moment the task
+// leaves awaiting_review — quorum reached (accepted) or any reviewer requested
+// changes (round reset). A met quorum therefore never burns the remaining
+// reviewers' stints. The post-sweep classification (rework/accept/soft-fail) is the
+// caller's, shared with the single-reviewer path.
+func (opts Options) launchReviewers(ctx context.Context, act Action, task projection.Task, criticNote string) error {
+	if len(task.Reviewers) == 0 {
+		// Legacy single-reviewer: unchanged. act.Seat == task.Reviewer (nextAction).
+		brief := reviewerBrief(opts.Dir, projection.Seat{ID: act.Seat}, task, criticNote)
+		return opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task)
+	}
+	for _, reviewer := range task.Reviewers {
+		// Re-read live state: an earlier reviewer's accept/changes in THIS sweep may
+		// have already met quorum or reset the round.
+		cur, err := pact.At(opts.Dir).StateProjection()
+		if err != nil {
+			return err
+		}
+		_, t, ok := find(cur, act.Feature, act.Task)
+		if !ok {
+			return nil
+		}
+		if t.Status != "awaiting_review" {
+			return nil // quorum met (accepted) or changes requested → stop early
+		}
+		if containsSeat(t.Accepts, reviewer) {
+			continue // already voted this round → skip
+		}
+		brief := reviewerBrief(opts.Dir, projection.Seat{ID: reviewer}, t, criticNote)
+		if err := opts.launchAgent(ctx, reviewer, opts.kind(reviewer), brief, act.Task); err != nil {
+			return err
+		}
+		// Mirror the fresh verdict into the runtime dir so a sandboxed board reflects
+		// each reviewer's vote mid-sweep instead of freezing until the next loop top.
+		opts.mirrorLedger()
+	}
+	return nil
+}
+
+// containsSeat reports whether seat is in xs (the current round's accepts tally).
+func containsSeat(xs []string, seat string) bool {
+	for _, x := range xs {
+		if x == seat {
+			return true
+		}
+	}
+	return false
+}
+
 // fixUntilGreen is the pre-review fix-until-green self-repair loop (spec §1
 // WS-F). It is called for an awaiting_review task BEFORE its reviewer launches:
 //
@@ -482,7 +534,7 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 //     reviewer launch is byte-for-byte identical to the pre-WS-F flow (the only
 //     added effect on a green first try is the gate exec itself).
 //   - RED → re-runs the SAME owner with a fix briefing (tail of the verify output
-//     + "you already checkpointed; fix until the gate is green, then checkpoint
+//   - "you already checkpointed; fix until the gate is green, then checkpoint
 //     again"), rechecking the gate after each round, bounded by opts.MaxFixRounds.
 //     Fix rounds are in-stint self-repair: they NEVER touch h.Fails/h.Rework, so
 //     they do not count toward MaxFails/MaxRework.

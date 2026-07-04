@@ -67,15 +67,36 @@ func newRootCmd() *cobra.Command {
 	joinCmd.Flags().StringVar(&joinRoles, "roles", "", "comma-separated roles")
 
 	var feature, branch, owner, reviewer, spec string
+	var reviewers []string
+	var quorum int
 	var deps []string
 	assignCmd := &cobra.Command{Use: "assign <task>", Args: cobra.ExactArgs(1), Short: "assign a task",
 		RunE: func(_ *cobra.Command, a []string) error {
+			// Quorum multi-reviewer is strictly opt-in and mutually exclusive with the
+			// single --reviewer: --reviewers names the reviewer set, --quorum how many
+			// must accept. When neither quorum flag is used the call is byte-identical
+			// to the historical single-reviewer assign.
+			if len(reviewers) > 0 || quorum > 0 {
+				if reviewer != "" {
+					return fmt.Errorf("pactify assign: --reviewer is mutually exclusive with --reviewers/--quorum")
+				}
+				if len(reviewers) == 0 {
+					return fmt.Errorf("pactify assign: --quorum requires --reviewers")
+				}
+				q := quorum
+				if q == 0 {
+					q = len(reviewers) // default to unanimous when --reviewers given without --quorum
+				}
+				return pact.AssignQuorum(a[0], feature, branch, owner, reviewers, q, spec, deps)
+			}
 			return pact.Assign(a[0], feature, branch, owner, reviewer, spec, deps)
 		}}
 	assignCmd.Flags().StringVar(&feature, "feature", "", "feature id")
 	assignCmd.Flags().StringVar(&branch, "branch", "", "feature branch")
 	assignCmd.Flags().StringVar(&owner, "owner", "", "owner seat")
 	assignCmd.Flags().StringVar(&reviewer, "reviewer", "", "reviewer seat")
+	assignCmd.Flags().StringSliceVar(&reviewers, "reviewers", nil, "comma-separated reviewer seats (quorum review; mutually exclusive with --reviewer)")
+	assignCmd.Flags().IntVar(&quorum, "quorum", 0, "number of distinct reviewers that must accept (requires --reviewers; defaults to unanimous)")
 	assignCmd.Flags().StringVar(&spec, "spec", "", "task spec path")
 	assignCmd.Flags().StringSliceVar(&deps, "deps", nil, "comma-separated dep task ids (same feature)")
 

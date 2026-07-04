@@ -356,11 +356,30 @@ func splitCSV(s string) []any {
 // in the payload ONLY when non-empty so deps-free logs stay byte-identical.
 func (p *Project) Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
 	return p.withLedgerLock(func() error {
-		return p.assignLocked(taskID, feature, branch, owner, reviewer, spec, deps)
+		// Legacy single-reviewer path: quorum 0 with a one-element reviewer set
+		// (empty reviewer → empty set so the "reviewer required" check still fires).
+		var reviewers []string
+		if reviewer != "" {
+			reviewers = []string{reviewer}
+		}
+		return p.assignLocked(taskID, feature, branch, owner, reviewers, 0, spec, deps)
 	})
 }
 
-func (p *Project) assignLocked(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
+// AssignQuorum records a quorum multi-reviewer assignment (spec review-runtime-
+// deepening §2): reviewers is the reviewer set and quorum (≥1, ≤len(reviewers)) is
+// how many DISTINCT reviewers must accept. It is the strictly opt-in counterpart to
+// Assign; single-reviewer callers keep using Assign unchanged. The assign event
+// payload carries `reviewers[]` + `quorum` (never the single `reviewer` key), which
+// the projection reads back; the cmd layer enforces --reviewer/--reviewers mutual
+// exclusion before calling either.
+func (p *Project) AssignQuorum(taskID, feature, branch, owner string, reviewers []string, quorum int, spec string, deps []string) error {
+	return p.withLedgerLock(func() error {
+		return p.assignLocked(taskID, feature, branch, owner, reviewers, quorum, spec, deps)
+	})
+}
+
+func (p *Project) assignLocked(taskID, feature, branch, owner string, reviewers []string, quorum int, spec string, deps []string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -369,7 +388,7 @@ func (p *Project) assignLocked(taskID, feature, branch, owner, reviewer, spec st
 	if err != nil {
 		return err
 	}
-	if err := checkAssign(st, id, taskID, feature, branch, owner, reviewer); err != nil {
+	if err := checkAssign(st, id, taskID, feature, branch, owner, reviewers, quorum); err != nil {
 		return err
 	}
 	if err := checkDeps(st, taskID, feature, deps); err != nil {
@@ -381,7 +400,26 @@ func (p *Project) assignLocked(taskID, feature, branch, owner, reviewer, spec st
 		// dir-aware paths elsewhere.
 		spec = paths.Tasks() + "/" + taskID + ".md"
 	}
-	payload := map[string]any{"owner": owner, "reviewer": reviewer, "branch": branch, "spec": spec}
+	payload := map[string]any{"owner": owner, "branch": branch, "spec": spec}
+	// Payload shape is format-specific so each round-trips byte-identically:
+	//   - quorum assign  → `reviewers[]` + `quorum` (no single `reviewer` key)
+	//   - legacy assign  → single `reviewer` key (no reviewers/quorum keys)
+	// The legacy branch reproduces the exact pre-feature payload, so its ledger
+	// bytes and projection are unchanged (golden).
+	if quorum > 0 {
+		rs := make([]any, len(reviewers))
+		for i, r := range reviewers {
+			rs[i] = r
+		}
+		payload["reviewers"] = rs
+		payload["quorum"] = quorum
+	} else {
+		reviewer := ""
+		if len(reviewers) > 0 {
+			reviewer = reviewers[0]
+		}
+		payload["reviewer"] = reviewer
+	}
 	if len(deps) > 0 {
 		ds := make([]any, len(deps))
 		for i, d := range deps {
@@ -744,6 +782,12 @@ func JoinWithClient(seatID, roles, clientName, clientVersion string) error {
 // Assign records a task assignment in the current working directory's repo.
 func Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
 	return At(".").Assign(taskID, feature, branch, owner, reviewer, spec, deps)
+}
+
+// AssignQuorum records a quorum multi-reviewer assignment in the current working
+// directory's repo (see (*Project).AssignQuorum).
+func AssignQuorum(taskID, feature, branch, owner string, reviewers []string, quorum int, spec string, deps []string) error {
+	return At(".").AssignQuorum(taskID, feature, branch, owner, reviewers, quorum, spec, deps)
 }
 
 // Merge integrates a feature branch in the current working directory's repo.

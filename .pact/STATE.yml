@@ -302,10 +302,10 @@ features:
     tasks:
       - id: ds-core
         owner: kimi-worker
-        status: in_progress
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/ds-core.md
-        evidence: null
+        evidence: cd web && npx tsc --noEmit && npx vitest run src/lib  - tsc --noEmit: clean (no output) - vitest: 14 test files passed, 179 tests passed  Files changed: - web/src/lib/datasource.tsx (NEW): DataSourceCapabilities/DataSource interfaces, LocalServeSource thin delegate over api.ts, DataSourceProvider + useDataSource context hook - web/src/lib/datasource.test.tsx (NEW): vitest coverage for capabilities, delegation to api functions, SSE subscribe/unsubscribe, provider/hook behavior  Boundary respected: read-only use of api.ts/types.ts; no components/App.tsx changes.
       - id: ds-wire
         owner: kimi-worker
         status: assigned

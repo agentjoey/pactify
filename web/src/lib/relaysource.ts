@@ -208,6 +208,25 @@ export class RelaySource implements DataSource {
     return { status_url: "", feature: body.feature };
   }
 
+  /**
+   * Author a task draft on the target machine: send a `pact.task` rpc that writes
+   * `.pact/tasks/{id}.md` (spec_md) and appends the task to the ledger locally.
+   * Fire-and-forget like verb()/generatePlan() — the new task surfaces on the board
+   * via the event stream, so there is nothing to return. Targets the pinned
+   * machine, else the first online one. Mirrors PactTaskRequest in cloud/wire.
+   */
+  async postTask(project: string, body: { id: string; spec_md: string }): Promise<void> {
+    const machineId = await this.resolveMachineId();
+    const rpc: RpcRequest = {
+      type: "pact.task",
+      machineId,
+      project,
+      id: body.id,
+      specMd: body.spec_md,
+    };
+    this.client.sendRpc(rpc);
+  }
+
   /** Apply a previously-generated plan on the target machine (M4). Fire-and-
    * forget; the assigns arrive via the event stream, so the count is unknown
    * here (0). The relay flow auto-applies inside plan.generate, so this is only

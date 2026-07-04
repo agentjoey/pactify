@@ -167,6 +167,37 @@ describe("RelaySource", () => {
     expect((src as unknown as { getPlanReview?: unknown }).getPlanReview).toBeUndefined();
   });
 
+  it("postTask sends a pact.task rpc targeting the first online machine", async () => {
+    const sendRpc = vi.fn();
+    const listMachines = vi.fn().mockResolvedValue([
+      { machineId: "m-offline", agentKinds: [], online: false, lastSeenAt: 0 },
+      { machineId: "m-1", host: "build", agentKinds: ["opencode"], online: true, lastSeenAt: 1 },
+    ]);
+    const src = new RelaySource(makeClient({ sendRpc, listMachines }) as RelayClient);
+
+    // spec_md maps to the rpc's specMd field (PactTaskRequest shape).
+    const res = await src.postTask("demo", { id: "t7", spec_md: "# spec body" });
+    expect(sendRpc).toHaveBeenCalledWith({
+      type: "pact.task",
+      machineId: "m-1",
+      project: "demo",
+      id: "t7",
+      specMd: "# spec body",
+    });
+    expect(res).toBeUndefined();
+
+    // A pinned machine overrides the auto-pick.
+    src.setTargetMachine("m-pinned");
+    await src.postTask("demo", { id: "t8", spec_md: "x" });
+    expect(sendRpc).toHaveBeenCalledWith({
+      type: "pact.task",
+      machineId: "m-pinned",
+      project: "demo",
+      id: "t8",
+      specMd: "x",
+    });
+  });
+
   it("applyPlan sends plan.apply rpc targeting the resolved machine", async () => {
     const sendRpc = vi.fn();
     const listMachines = vi.fn().mockResolvedValue([

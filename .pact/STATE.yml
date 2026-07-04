@@ -428,10 +428,10 @@ features:
         evidence: null
       - id: rp-schedule
         owner: opencode-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-schedule.md
-        evidence: null
+        evidence: go test ./internal/schedule/ ./internal/serve/ PASS + build/vet clean. NEW internal/schedule: NextFire pure (daily@HH:MM local + every:Nh|Nm, no cron dep), ~/.pactify/schedules.json (PACTIFY_HOME injectable, atomic), Runner injectable Spawn+Now, arms-forward (restart won't insta-fire). cmd_schedule add/list/remove (validates expr). serve StartScheduler goroutine reuses spawnOrchestrate + conflict guard (already-running=skip). Cross-midnight/boundary tests + fake-spawn runner tests.
       - id: rp-e2e-docs
         owner: kimi-worker
         status: assigned

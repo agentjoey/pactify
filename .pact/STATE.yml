@@ -379,8 +379,8 @@ features:
         deps: [dm-stats]
       - id: dm-e2e-docs
         owner: claude-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/dm-e2e-docs.md
-        evidence: null
+        evidence: 全仓门绿:go build/vet/test ./... + -race(pact/orchestrate/serve) · vitest 521 · tsc -b clean · bats 111/111. 新增 acp_smoke_test.go(//go:build acpsmoke,无 kimi 时 skip,-tags 编译验证过);docs/architecture.md 加驱动层小节(CmdRunner/AcpRunner/路由/会话续接/知识注入/可观测);CLAUDE.md Version 行补 driver-modernization。
         deps: [dm-acp-runner, dm-session-resume]

@@ -212,7 +212,7 @@ features:
         deps: [m0-crypto]
   - id: ds-abstraction
     branch: feat-ds-abstraction
-    status: in_progress
+    status: shipped
     tasks:
       - id: ds-core
         owner: kimi-worker

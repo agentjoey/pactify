@@ -277,7 +277,7 @@ features:
     tasks:
       - id: fe-codesplit
         owner: kimi-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/fe-codesplit.md
         evidence: null

@@ -6,7 +6,36 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  build: { outDir: "../internal/serve/dist", emptyOutDir: true },
+  build: {
+    outDir: "../internal/serve/dist",
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Vendor split: keep the heavy dependencies out of the main entry chunk
+          // so the initial dashboard load stays under Vercel's 500 kB warning.
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/")
+          ) {
+            return "react-vendor";
+          }
+          if (id.includes("node_modules/@xyflow/")) {
+            return "xyflow";
+          }
+          if (
+            id.includes("/cloud/crypto/") ||
+            id.includes("/cloud/relay-client/") ||
+            id.includes("/node_modules/@noble/") ||
+            id.includes("/node_modules/@scure/") ||
+            id.includes("/node_modules/socket.io-client/")
+          ) {
+            return "crypto-relay";
+          }
+        },
+      },
+    },
+  },
   // Monorepo local linking (path B): the dashboard bundles shared cloud/ TS
   // packages straight from source — no npm publish, no build-dist round-trip.
   // Keeps cloud/ (its own pnpm workspace + fly-deployed relay) untouched; only

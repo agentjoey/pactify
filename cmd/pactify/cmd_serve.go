@@ -18,6 +18,7 @@ func newServeCmd() *cobra.Command {
 	var seat string
 	var relayURL string
 	var relayToken string
+	var remoteControl bool
 	cmd := &cobra.Command{Use: "serve", Short: "run the multi-project dashboard HTTP server",
 		RunE: func(c *cobra.Command, _ []string) error {
 			reg, err := registry.Load()
@@ -39,6 +40,14 @@ func newServeCmd() *cobra.Command {
 			srv.SetRelay(relayURL, relayToken)
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
+			// U3 down-channel: opt-in remote command execution — a remote control
+			// plane (hosted dashboard / another machine) can drive pact verbs on
+			// this machine's engine. Gated because it executes writes on local
+			// repos; no-op without a relay session.
+			if remoteControl {
+				go srv.StartRemoteChannel(ctx)
+				fmt.Fprintln(c.OutOrStdout(), "pactify serve: remote control ENABLED (relay down-channel)")
+			}
 			if relayURL != "" {
 				fmt.Fprintf(c.OutOrStdout(), "pactify serve on http://%s (%d project(s)) relay → %s\n", addr, len(projects), relayURL)
 			} else {
@@ -51,6 +60,7 @@ func newServeCmd() *cobra.Command {
 	cmd.Flags().StringVar(&seat, "seat", os.Getenv("PACT_AGENT_ID"), "acting seat for author (write) endpoints (default $PACT_AGENT_ID)")
 	cmd.Flags().StringVar(&relayURL, "relay-url", "", "best-effort relay POST endpoint")
 	cmd.Flags().StringVar(&relayToken, "relay-token", os.Getenv("PACT_RELAY_TOKEN"), "bearer token for relay endpoint (default $PACT_RELAY_TOKEN)")
+	cmd.Flags().BoolVar(&remoteControl, "remote-control", false, "enable the relay down-channel: execute pact commands sent from a remote control plane (U3)")
 	return cmd
 }
 

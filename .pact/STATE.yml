@@ -434,8 +434,8 @@ features:
         evidence: go test ./internal/schedule/ ./internal/serve/ PASS + build/vet clean. NEW internal/schedule: NextFire pure (daily@HH:MM local + every:Nh|Nm, no cron dep), ~/.pactify/schedules.json (PACTIFY_HOME injectable, atomic), Runner injectable Spawn+Now, arms-forward (restart won't insta-fire). cmd_schedule add/list/remove (validates expr). serve StartScheduler goroutine reuses spawnOrchestrate + conflict guard (already-running=skip). Cross-midnight/boundary tests + fake-spawn runner tests.
       - id: rp-e2e-docs
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rp-e2e-docs.md
-        evidence: null
+        evidence: 全仓门绿:go build/vet/test ./... + -race · vitest 526(+5 badge/fixing) · tsc -b · dist rebuilt · bats 111. web:Task 类型 +reviewers/quorum/accepts + OrchestrateStatus +fix_round/fix_max;TaskCard quorum 徽标 {accepts}/{quorum} ✓(单 reviewer 不变);LiveOrchestrate 修复中 n/max 指示。docs/architecture.md 加 review-runtime 小节;CLAUDE.md Version 补包2。
         deps: [rp-quorum, rp-fix-loop]

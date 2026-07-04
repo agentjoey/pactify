@@ -277,7 +277,7 @@ features:
     tasks:
       - id: fe-codesplit
         owner: kimi-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/fe-codesplit.md
-        evidence: null
+        evidence: === VERIFY === cd web && npx tsc -b && npx vitest run && npx playwright test  BEFORE (baseline npm run build): - assets/index-OAAdnraF.js 896.76 kB │ gzip: 260.86 kB (Vercel >500 kB warning)  AFTER (manualChunks split): - assets/index-B9Nv_C81.js        372.52 kB │ gzip:  95.94 kB - assets/react-vendor-CCIEwYL0.js 189.64 kB │ gzip:  59.65 kB - assets/xyflow-ZNlHqwZp.js       175.25 kB │ gzip:  56.60 kB - assets/crypto-relay-CIo5B-gh.js 157.84 kB │ gzip:  48.54 kB Main index chunk dropped 58% (896.76 kB → 372.52 kB), gzip down 63% (260.86 kB → 95.94 kB). No more Vercel 500 kB warning.  - npx tsc -b: clean (no output) - npx vitest run: 59 test files passed, 489 tests passed - npx playwright test: 5 passed - go build ./...: clean  FILES CHANGED: - web/vite.config.ts: added build.rollupOptions.output.manualChunks (react-vendor, xyflow, crypto-relay) - internal/serve/dist/: rebuilt SPA with new chunking

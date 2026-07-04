@@ -384,3 +384,58 @@ features:
         spec: .pact/tasks/dm-e2e-docs.md
         evidence: 全仓门绿:go build/vet/test ./... + -race(pact/orchestrate/serve) · vitest 521 · tsc -b clean · bats 111/111. 新增 acp_smoke_test.go(//go:build acpsmoke,无 kimi 时 skip,-tags 编译验证过);docs/architecture.md 加驱动层小节(CmdRunner/AcpRunner/路由/会话续接/知识注入/可观测);CLAUDE.md Version 行补 driver-modernization。
         deps: [dm-acp-runner, dm-session-resume]
+  - id: review-runtime
+    branch: feat-review-runtime
+    status: in_progress
+    tasks:
+      - id: rp-fix-loop
+        owner: claude-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/rp-fix-loop.md
+        evidence: null
+      - id: rp-quorum
+        owner: claude-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/rp-quorum.md
+        evidence: null
+      - id: rp-snapshot
+        owner: claude-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/rp-snapshot.md
+        evidence: null
+      - id: rp-critic
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/rp-critic.md
+        evidence: null
+        deps: [rp-fix-loop]
+      - id: rp-qa-gate
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/rp-qa-gate.md
+        evidence: null
+        deps: [rp-fix-loop]
+      - id: rp-dynamic-seats
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/rp-dynamic-seats.md
+        evidence: null
+      - id: rp-schedule
+        owner: opencode-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/rp-schedule.md
+        evidence: null
+      - id: rp-e2e-docs
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/rp-e2e-docs.md
+        evidence: null
+        deps: [rp-quorum, rp-fix-loop]

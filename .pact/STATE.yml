@@ -266,7 +266,7 @@ features:
         evidence: relay-client: @pactify-apps/relay-client extracted. build clean (tsc), 5 tests PASS (mock fetch/socket + real-crypto decrypt round-trip). cloud/web re-exports it, still builds + 5 board tests PASS. verify: cd cloud && pnpm --filter @pactify-apps/relay-client build && test && pnpm --filter @pactify-apps/web build. [implemented by claude after opencode stalled]
       - id: relay-source
         owner: kimi-worker
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/p3-relay-source.md
         evidence: null

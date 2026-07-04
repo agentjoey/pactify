@@ -323,7 +323,7 @@ features:
         evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test\n\n- npx tsc -b: clean (no output)\n- npx vitest run: 61 test files passed, 505 tests passed\n- npx playwright test: 5 e2e tests passed\n- npm run build: rebuilt internal/serve/dist SPA\n- go build ./...: clean\n\nFiles changed:\n- web/src/lib/types.ts: added Machine type\n- web/src/lib/datasource.tsx: added optional getMachines to DataSource; LocalServeSource does not implement\n- web/src/lib/relaysource.ts: implemented RelaySource.getMachines via client.listMachines()\n- web/src/lib/relaysource.test.ts: added getMachines mapping test\n- web/src/components/Machines.tsx + .test.tsx: new read-only machine roster view\n- web/src/components/shell/SettingsModal.tsx: added 'Machines' item under ACCOUNT scope\n- internal/serve/dist/: rebuilt production SPA
   - id: driver-modernization
     branch: feat-driver-modernization
-    status: in_progress
+    status: shipped
     tasks:
       - id: dm-acp-core
         owner: claude-worker

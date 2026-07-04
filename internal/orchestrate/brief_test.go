@@ -18,7 +18,7 @@ func TestWorkerBrief(t *testing.T) {
 	seat := projection.Seat{ID: "alice", Roles: []string{"worker", "backend"}}
 	task := projection.Task{ID: "t-42", Owner: "alice", Status: "assigned", Spec: "docs/specs/t-42.md"}
 
-	body := workerBrief(seat, task, "", false)
+	body := workerBrief("", seat, task, "", false)
 
 	for _, c := range []struct{ sub, label string }{
 		{"alice", "seat id"},
@@ -46,7 +46,7 @@ func TestWorkerBriefWithChangesReason(t *testing.T) {
 	task := projection.Task{ID: "t-7", Owner: "alice", Status: "changes_requested", Spec: "spec/t-7.md"}
 	reason := "boundary check missing on empty slice input"
 
-	body := workerBrief(seat, task, reason, false)
+	body := workerBrief("", seat, task, reason, false)
 
 	mustContain(t, body, reason, "changes reason verbatim")
 	mustContain(t, body, "t-7", "task id")
@@ -57,7 +57,7 @@ func TestReviewerBrief(t *testing.T) {
 	seat := projection.Seat{ID: "bob", Roles: []string{"reviewer"}}
 	task := projection.Task{ID: "t-99", Owner: "alice", Reviewer: "bob", Status: "awaiting_review", Spec: "docs/specs/t-99.md"}
 
-	body := reviewerBrief(seat, task)
+	body := reviewerBrief("", seat, task)
 
 	for _, c := range []struct{ sub, label string }{
 		{"bob", "seat id"},
@@ -86,7 +86,7 @@ func TestReviewerBrief(t *testing.T) {
 func TestWorkerBrief_MultilineReasonStaysQuoted(t *testing.T) {
 	seat := projection.Seat{ID: "w", Roles: []string{"worker"}}
 	task := projection.Task{ID: "t1", Spec: ".pact/tasks/t1.md"}
-	out := workerBrief(seat, task, "line one\nline two", false)
+	out := workerBrief("", seat, task, "line one\nline two", false)
 	if !strings.Contains(out, "> line one\n> line two") {
 		t.Fatalf("multi-line reason not fully quoted:\n%s", out)
 	}
@@ -95,7 +95,7 @@ func TestWorkerBrief_MultilineReasonStaysQuoted(t *testing.T) {
 func TestWorkerBriefRetryingHasContinuation(t *testing.T) {
 	seat := projection.Seat{ID: "w1", Roles: []string{"worker"}}
 	task := projection.Task{ID: "t1", Spec: ".pact/tasks/t1.md"}
-	out := workerBrief(seat, task, "", true)
+	out := workerBrief("", seat, task, "", true)
 	if !strings.Contains(out, "重试棒") {
 		t.Error("retrying brief should flag it is a retry")
 	}
@@ -103,7 +103,7 @@ func TestWorkerBriefRetryingHasContinuation(t *testing.T) {
 		t.Error("retrying brief should tell the worker to inspect half-done work")
 	}
 	// A non-retry brief must NOT carry the continuation section.
-	if strings.Contains(workerBrief(seat, task, "", false), "重试棒") {
+	if strings.Contains(workerBrief("", seat, task, "", false), "重试棒") {
 		t.Error("non-retry brief should not have the continuation section")
 	}
 }

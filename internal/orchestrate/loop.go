@@ -311,7 +311,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	// cleanly redoes rather than starting blind (error-handling design: retry the
 	// worker, never hand off to the orchestrator).
 	retrying := h.Fails[act.Task] > 0
-	brief := workerBrief(seatFor(st, act.Seat, seat), task, reason, retrying)
+	brief := workerBrief(opts.Dir, seatFor(st, act.Seat, seat), task, reason, retrying)
 
 	// Check out THIS task's feature branch before launching the worker, so a seat
 	// that owns tasks in several features commits to the right branch — not whichever
@@ -392,7 +392,7 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 	if !ok {
 		return fmt.Errorf("orchestrate: task %s not found for RunReviewer", act.Task)
 	}
-	brief := reviewerBrief(projection.Seat{ID: act.Seat}, task)
+	brief := reviewerBrief(opts.Dir, projection.Seat{ID: act.Seat}, task)
 
 	if runErr := opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {

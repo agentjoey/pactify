@@ -22,7 +22,9 @@ export function DispatchPanel({
   initialGoal?: string;
 }) {
   const src = useDataSource();
-  const canWrite = src.capabilities.canWrite;
+  // Dispatch generates + runs an orchestrate plan → needs the drive capability,
+  // not just write (the relay source can't orchestrate remotely yet).
+  const canWrite = src.capabilities.canOrchestrate;
   const [phase, setPhase] = useState<Phase>("compose");
   const [goal, setGoal] = useState("");
   const [feature, setFeature] = useState("");

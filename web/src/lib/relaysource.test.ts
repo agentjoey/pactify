@@ -16,6 +16,8 @@ type MockRelayClient = {
   getProjectEvents: RelayClient["getProjectEvents"];
   decrypt: RelayClient["decrypt"];
   subscribe: RelayClient["subscribe"];
+  sendRpc: RelayClient["sendRpc"];
+  account: RelayClient["account"];
 };
 
 function makeClient(overrides?: Partial<MockRelayClient>): MockRelayClient {
@@ -24,18 +26,34 @@ function makeClient(overrides?: Partial<MockRelayClient>): MockRelayClient {
     getProjectEvents: vi.fn().mockResolvedValue([]),
     decrypt: vi.fn().mockReturnValue({}),
     subscribe: vi.fn().mockReturnValue(() => {}),
+    sendRpc: vi.fn(),
+    account: vi.fn().mockReturnValue("acct1"),
     ...overrides,
   } as unknown as MockRelayClient;
 }
 
 describe("RelaySource", () => {
-  it("exposes read-only multi-machine capabilities", () => {
+  it("can drive pact verbs (canWrite) but not orchestrate remotely", () => {
     const src = new RelaySource(makeClient() as RelayClient);
     expect(src.capabilities).toEqual({
-      canWrite: false,
+      canWrite: true,
       canOrchestrate: false,
       multiMachine: true,
     });
+  });
+
+  it("verb sends the matching pact.* rpc targeting the account machine", async () => {
+    const sendRpc = vi.fn();
+    const src = new RelaySource(makeClient({ sendRpc }) as RelayClient);
+
+    await src.verb("demo", "accept", { task: "t1" });
+    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.accept", machineId: "acct1", project: "demo", task: "t1" });
+
+    await src.verb("demo", "changes", { task: "t1", reason: "fix" });
+    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.changes", machineId: "acct1", project: "demo", task: "t1", reason: "fix" });
+
+    await src.verb("demo", "merge", { feature: "f1" });
+    expect(sendRpc).toHaveBeenCalledWith({ type: "pact.merge", machineId: "acct1", project: "demo", feature: "f1" });
   });
 
   it("listProjects maps relay projects to ProjectMeta", async () => {

@@ -49,7 +49,9 @@ export function LiveOrchestrate({
   const [shipResult, setShipResult] = useState<{ prUrl?: string; error?: string } | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const src = useDataSource();
-  const canWrite = src.capabilities.canWrite;
+  // Orchestrate (Run/Resume/Ship) needs the drive capability, not just write:
+  // the relay source can drive pact verbs (accept/changes) but not orchestrate.
+  const canWrite = src.capabilities.canOrchestrate;
 
   function load() {
     if (!project) return;

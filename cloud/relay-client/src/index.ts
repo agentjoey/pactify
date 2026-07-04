@@ -65,7 +65,17 @@ export class RelayClient {
       body: JSON.stringify({ publicKey: kp.publicKeyHex, challenge, signature: kp.sign(challenge) }),
     })
     if (!res.ok) throw new Error(`auth failed: ${res.status}`)
-    this.token = ((await res.json()) as { token: string }).token
+    const body = (await res.json()) as { token: string; accountId?: string }
+    this.token = body.token
+    if (body.accountId) this.accountId = body.accountId
+  }
+
+  private accountId = ''
+
+  /** This connection's account id (available after login). The U3 down-channel
+   * uses it as the target machineId (MVP: machineId == accountId). */
+  account(): string {
+    return this.accountId
   }
 
   private auth() {

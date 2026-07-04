@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
 import { fetchEventsLog, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
 import type { Worktree } from "./lib/api";
@@ -12,8 +12,8 @@ import { AddProjectWizard } from "./components/shell/AddProjectWizard";
 import { DispatchPanel } from "./components/shell/DispatchPanel";
 import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
-import { Canvas } from "./components/Canvas";
 import { LiveOrchestrate } from "./components/LiveOrchestrate";
+import { Spinner } from "./components/ui/Spinner";
 import { RightRail } from "./components/RightRail";
 import { CommandK } from "./components/CommandK";
 import { NoProjects } from "./components/NoProjects";
@@ -26,6 +26,11 @@ import { docTitle } from "./lib/docTitle";
 import type { Draft, DraftFeature } from "./lib/canvas";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
+
+// Lazy-load the Canvas view so users who only use Board/Live do not pay for the
+// heavy xyflow chunk on initial load. The named-export wrapper lets us keep the
+// Canvas component itself untouched.
+const Canvas = lazy(() => import("./components/Canvas").then((m) => ({ default: m.Canvas })));
 
 // Stale threshold: a task sitting in_progress longer than this (with no further
 // state change observed) gets an amber dot. Pragmatic: we time from when this
@@ -417,7 +422,13 @@ function AppContent() {
                     now take the full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
                   {view === "canvas"
-                    ? <div data-testid="view-canvas" className="flex flex-1 overflow-hidden"><Canvas key={current} project={current} state={shownState} author={author} replaying={false} pulses={pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} /></div>
+                    ? (
+                      <div data-testid="view-canvas" className="flex flex-1 overflow-hidden">
+                        <Suspense fallback={<div className="flex flex-1 items-center justify-center"><Spinner size="md" /></div>}>
+                          <Canvas key={current} project={current} state={shownState} author={author} replaying={false} pulses={pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} />
+                        </Suspense>
+                      </div>
+                    )
                     : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>}
                   <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />
                 </div>

@@ -223,3 +223,5 @@
 {"event_id":"55b250fa8350eaa8c93af410cb673cb2","ts":"2026-07-04T04:17:24Z","agent_id":"claude","role":"reviewer","event_type":"accept","task_id":"fe-codesplit","feature":"web-polish","payload":{}}
 {"event_id":"0aeccfd14b7fbeb486fc6af71d59caff","ts":"2026-07-04T04:17:39Z","agent_id":"claude","role":"orchestrator","event_type":"merge","task_id":"","feature":"web-polish","payload":{}}
 {"event_id":"68172db0568b5bd95d641b533187c25e","ts":"2026-07-04T04:23:27Z","agent_id":"claude","role":"orchestrator","event_type":"assign","task_id":"fe-lazycanvas","feature":"web-polish2","payload":{"branch":"feat-web-polish2","owner":"kimi-worker","reviewer":"claude","spec":".pact/tasks/fe-lazycanvas.md"}}
+{"event_id":"cd6f452e4d8f01862fcb1191e50ba96f","ts":"2026-07-04T04:23:38Z","agent_id":"claude","role":"orchestrator","event_type":"start","task_id":"fe-lazycanvas","feature":"web-polish2","payload":{"owner":"kimi-worker"}}
+{"event_id":"c32b50594a36f9607f6675f5e92bb0e3","ts":"2026-07-04T04:23:59Z","agent_id":"kimi-worker","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"roles":["worker"]}}

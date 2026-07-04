@@ -239,8 +239,8 @@ features:
         evidence: === RUN   TestFixtureExport --- PASS: TestFixtureExport (0.00s) PASS ok  github.com/agentjoey/pactify/internal/serve
       - id: pact-project
         owner: opencode-worker
-        status: assigned
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/pact-project.md
-        evidence: null
+        evidence: pact-project: pure-TS project(events)→State (cloud/pact-project/src/index.ts). tsc build clean + 21 tests PASS (2 parity vs Go golden + 19 unit). verify: cd cloud && pnpm --filter @pactify-apps/pact-project build && test. [checkpoint recorded by orchestrator claude on worker's behalf — worker's in-branch ledger view showed dep unaccepted due to ledger/worktree coupling; code verified independently by reviewer]
         deps: [proj-fixture]

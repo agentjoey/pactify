@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci && cd ../cloud && npx pnpm@10 install --frozen-lockfile",
+  "buildCommand": "npx tsc -b && npx vite build --outDir dist",
+  "outputDirectory": "dist"
+}

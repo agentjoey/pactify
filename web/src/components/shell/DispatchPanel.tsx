@@ -23,8 +23,14 @@ export function DispatchPanel({
 }) {
   const src = useDataSource();
   // Dispatch generates + runs an orchestrate plan → needs the drive capability,
-  // not just write (the relay source can't orchestrate remotely yet).
+  // not just write.
   const canWrite = src.capabilities.canOrchestrate;
+  // Hosted (relay) sources can't read the machine's files, so they have no
+  // status/review/apply round-trip: plan.generate is one-shot (generates AND
+  // auto-applies on the machine, assigns arrive via the event stream). The
+  // local serve source exposes getPlanGenStatus → keep the generate→poll→
+  // review→apply flow. Branch on method presence, never on canOrchestrate.
+  const hosted = src.getPlanGenStatus == null;
   const [phase, setPhase] = useState<Phase>("compose");
   const [goal, setGoal] = useState("");
   const [feature, setFeature] = useState("");
@@ -54,14 +60,20 @@ export function DispatchPanel({
   const canGenerate = goal.trim() !== "" && /^[a-z0-9][a-z0-9-]*$/.test(feature) && roster.length > 0 && canWrite;
 
   async function startGenerate() {
-    if (!canWrite) return;
+    if (!canWrite || !src.generatePlan) return;
     setError("");
     setPhase("generating");
     try {
-      await src.generatePlan!(project, { goal, feature });
+      await src.generatePlan(project, { goal, feature });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setPhase("error");
+      return;
+    }
+    // Hosted one-shot: generate already applied on the machine; the assigns
+    // stream onto the board. Nothing to poll — confirm and let the user watch.
+    if (hosted || !src.getPlanGenStatus) {
+      setPhase("done");
       return;
     }
     pollRef.current = setInterval(async () => {
@@ -69,7 +81,7 @@ export function DispatchPanel({
         const st = await src.getPlanGenStatus!(project);
         if (st.state === "done") {
           if (pollRef.current) clearInterval(pollRef.current);
-          const rv = await src.getPlanReview!(project, feature);
+          const rv = src.getPlanReview ? await src.getPlanReview(project, feature) : null;
           setReview(rv);
           setPhase("review");
         } else if (st.state === "error") {
@@ -82,12 +94,12 @@ export function DispatchPanel({
   }
 
   async function dispatch() {
-    if (!canWrite) return;
+    if (!canWrite || !src.applyPlan) return;
     setPhase("dispatching");
     try {
-      const r = await src.applyPlan!(project, feature);
+      const r = await src.applyPlan(project, feature);
       setAssigned(r.assigned);
-      await src.runOrchestrate!(project, { feature });
+      if (src.runOrchestrate) await src.runOrchestrate(project, { feature });
       setPhase("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -177,7 +189,11 @@ export function DispatchPanel({
 
         {phase === "done" && (
           <div data-testid="dispatch-done" className="flex flex-col gap-3">
-            <p className="text-[12px] text-[var(--color-text-1)]">Dispatched — {assigned} task(s) assigned, orchestrating.</p>
+            <p className="text-[12px] text-[var(--color-text-1)]">
+              {hosted
+                ? "Dispatched — generating the plan on the remote machine. Watch the board as tasks arrive."
+                : `Dispatched — ${assigned} task(s) assigned, orchestrating.`}
+            </p>
             <button type="button" data-testid="dispatch-golive" onClick={onGoLive} className="rounded-md border border-[var(--color-border-subtle)] px-3 py-1.5 text-[12px]">Go to Live →</button>
           </div>
         )}

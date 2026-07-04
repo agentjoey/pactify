@@ -35,11 +35,11 @@ function makeClient(overrides?: Partial<MockRelayClient>): MockRelayClient {
 }
 
 describe("RelaySource", () => {
-  it("can drive pact verbs (canWrite) but not orchestrate remotely", () => {
+  it("can drive pact verbs (canWrite) and orchestrate remotely", () => {
     const src = new RelaySource(makeClient() as RelayClient);
     expect(src.capabilities).toEqual({
       canWrite: true,
-      canOrchestrate: false,
+      canOrchestrate: true,
       multiMachine: true,
     });
   });
@@ -65,6 +65,118 @@ describe("RelaySource", () => {
     src.setTargetMachine("m-pinned");
     await src.verb("demo", "accept", { task: "t2" });
     expect(sendRpc).toHaveBeenCalledWith({ type: "pact.accept", machineId: "m-pinned", project: "demo", task: "t2" });
+  });
+
+  it("runOrchestrate sends orchestrate.run rpc targeting the first online machine", async () => {
+    const sendRpc = vi.fn();
+    const listMachines = vi.fn().mockResolvedValue([
+      { machineId: "m-offline", agentKinds: [], online: false, lastSeenAt: 0 },
+      { machineId: "m-1", host: "build", agentKinds: ["opencode"], online: true, lastSeenAt: 1 },
+    ]);
+    const src = new RelaySource(makeClient({ sendRpc, listMachines }) as RelayClient);
+
+    const res = await src.runOrchestrate("demo");
+    expect(sendRpc).toHaveBeenCalledWith({ type: "orchestrate.run", machineId: "m-1", project: "demo" });
+    expect(res).toEqual({ status_url: "" });
+
+    // feature + seat_kinds map to the rpc's feature/seatKinds fields.
+    await src.runOrchestrate("demo", { feature: "f1", seat_kinds: { alice: "opencode" } });
+    expect(sendRpc).toHaveBeenCalledWith({
+      type: "orchestrate.run",
+      machineId: "m-1",
+      project: "demo",
+      feature: "f1",
+      seatKinds: { alice: "opencode" },
+    });
+
+    // A pinned machine overrides the auto-pick.
+    src.setTargetMachine("m-pinned");
+    await src.runOrchestrate("demo", { feature: "f2" });
+    expect(sendRpc).toHaveBeenCalledWith({
+      type: "orchestrate.run",
+      machineId: "m-pinned",
+      project: "demo",
+      feature: "f2",
+    });
+  });
+
+  it("resumeOrchestrate sends orchestrate.resume rpc targeting the resolved machine", async () => {
+    const sendRpc = vi.fn();
+    const listMachines = vi.fn().mockResolvedValue([
+      { machineId: "m-offline", agentKinds: [], online: false, lastSeenAt: 0 },
+      { machineId: "m-1", host: "build", agentKinds: ["opencode"], online: true, lastSeenAt: 1 },
+    ]);
+    const src = new RelaySource(makeClient({ sendRpc, listMachines }) as RelayClient);
+
+    const res = await src.resumeOrchestrate("demo", { feature: "f1" });
+    expect(sendRpc).toHaveBeenCalledWith({
+      type: "orchestrate.resume",
+      machineId: "m-1",
+      project: "demo",
+      feature: "f1",
+    });
+    expect(res).toEqual({ status_url: "" });
+
+    src.setTargetMachine("m-pinned");
+    await src.resumeOrchestrate("demo");
+    expect(sendRpc).toHaveBeenCalledWith({ type: "orchestrate.resume", machineId: "m-pinned", project: "demo" });
+  });
+
+  it("generatePlan sends a one-shot plan.generate rpc targeting the resolved machine", async () => {
+    const sendRpc = vi.fn();
+    const listMachines = vi.fn().mockResolvedValue([
+      { machineId: "m-offline", agentKinds: [], online: false, lastSeenAt: 0 },
+      { machineId: "m-1", host: "build", agentKinds: ["opencode"], online: true, lastSeenAt: 1 },
+    ]);
+    const src = new RelaySource(makeClient({ sendRpc, listMachines }) as RelayClient);
+
+    const res = await src.generatePlan("demo", { goal: "add 2fa", feature: "add-2fa" });
+    expect(sendRpc).toHaveBeenCalledWith({
+      type: "plan.generate",
+      machineId: "m-1",
+      project: "demo",
+      goal: "add 2fa",
+      feature: "add-2fa",
+    });
+    expect(res).toEqual({ status_url: "", feature: "add-2fa" });
+
+    // planner_kind maps to the rpc's plannerKind field.
+    await src.generatePlan("demo", { goal: "g", feature: "f", planner_kind: "claude" });
+    expect(sendRpc).toHaveBeenCalledWith({
+      type: "plan.generate",
+      machineId: "m-1",
+      project: "demo",
+      goal: "g",
+      feature: "f",
+      plannerKind: "claude",
+    });
+
+    // A pinned machine overrides the auto-pick.
+    src.setTargetMachine("m-pinned");
+    await src.generatePlan("demo", { goal: "g2", feature: "f2" });
+    expect(sendRpc).toHaveBeenCalledWith({
+      type: "plan.generate",
+      machineId: "m-pinned",
+      project: "demo",
+      goal: "g2",
+      feature: "f2",
+    });
+
+    // RelaySource has no status/review round-trip (one-shot over the relay).
+    expect((src as unknown as { getPlanGenStatus?: unknown }).getPlanGenStatus).toBeUndefined();
+    expect((src as unknown as { getPlanReview?: unknown }).getPlanReview).toBeUndefined();
+  });
+
+  it("applyPlan sends plan.apply rpc targeting the resolved machine", async () => {
+    const sendRpc = vi.fn();
+    const listMachines = vi.fn().mockResolvedValue([
+      { machineId: "m-1", host: "build", agentKinds: ["opencode"], online: true, lastSeenAt: 1 },
+    ]);
+    const src = new RelaySource(makeClient({ sendRpc, listMachines }) as RelayClient);
+
+    const res = await src.applyPlan("demo", "f1");
+    expect(sendRpc).toHaveBeenCalledWith({ type: "plan.apply", machineId: "m-1", project: "demo", feature: "f1" });
+    expect(res).toEqual({ assigned: 0 });
   });
 
   it("listProjects maps relay projects to ProjectMeta", async () => {

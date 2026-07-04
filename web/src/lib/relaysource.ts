@@ -3,7 +3,7 @@ import type { RpcRequest } from "@pactify-apps/wire";
 import { project } from "@pactify-apps/pact-project";
 import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
 import type { DataSource, DataSourceCapabilities } from "./datasource";
-import type { ProjectStats, TaskStat, AgentStat } from "./api";
+import type { ProjectStats, TaskStat, AgentStat, RunOrchestrateBody } from "./api";
 import type { Machine, PactEventDetail, ProjectMeta, State } from "./types";
 
 /**
@@ -12,14 +12,15 @@ import type { Machine, PactEventDetail, ProjectMeta, State } from "./types";
  * shared pact-project fold. Pact verbs (assign/accept/changes/merge) are driven
  * remotely via the U3 down-channel — sent as pact.* rpc that the target machine's
  * `pactify serve --remote-control` executes locally (canWrite=true). Orchestrate
- * (run/ship/plan) is NOT an rpc verb, so canOrchestrate stays false.
+ * run/resume is driven remotely too (M4) via orchestrate.* rpc, so
+ * canOrchestrate=true; effects arrive back through the event stream.
  */
 export class RelaySource implements DataSource {
   private client: RelayClient;
 
   capabilities: DataSourceCapabilities = {
     canWrite: true,
-    canOrchestrate: false,
+    canOrchestrate: true,
     multiMachine: true,
   };
 
@@ -125,6 +126,85 @@ export class RelaySource implements DataSource {
         break;
     }
     this.client.sendRpc(rpc);
+  }
+
+  /**
+   * Start the orchestrate driver on the target machine (M4). Fire-and-forget:
+   * the machine runs the driver locally and its progress re-projects the board
+   * through the event stream, so there is no status_url to poll here. Targets
+   * the pinned machine, else the first online one — same as verb().
+   */
+  async runOrchestrate(
+    project: string,
+    body?: RunOrchestrateBody,
+  ): Promise<{ status_url: string }> {
+    const machineId = await this.resolveMachineId();
+    const rpc: RpcRequest = {
+      type: "orchestrate.run",
+      machineId,
+      project,
+      ...(body?.feature ? { feature: body.feature } : {}),
+      ...(body?.seat_kinds ? { seatKinds: body.seat_kinds } : {}),
+    };
+    this.client.sendRpc(rpc);
+    return { status_url: "" };
+  }
+
+  /** Resume a paused orchestrate driver on the target machine (M4). */
+  async resumeOrchestrate(
+    project: string,
+    body?: RunOrchestrateBody,
+  ): Promise<{ status_url: string }> {
+    const machineId = await this.resolveMachineId();
+    const rpc: RpcRequest = {
+      type: "orchestrate.resume",
+      machineId,
+      project,
+      ...(body?.feature ? { feature: body.feature } : {}),
+    };
+    this.client.sendRpc(rpc);
+    return { status_url: "" };
+  }
+
+  /**
+   * Generate a plan on the target machine (M4). One-shot over the relay: the
+   * plan.generate rpc runs the planner AND auto-applies the assigns on the
+   * machine (the relay can't read the machine's files to offer a review/apply
+   * round-trip), so the resulting tasks arrive on the board via the event
+   * stream. There is no status to poll here — hence RelaySource deliberately
+   * omits getPlanGenStatus/getPlanReview (see DispatchPanel's hosted branch).
+   */
+  async generatePlan(
+    project: string,
+    body: { goal: string; feature: string; planner_kind?: string },
+  ): Promise<{ status_url: string; feature: string }> {
+    const machineId = await this.resolveMachineId();
+    const rpc: RpcRequest = {
+      type: "plan.generate",
+      machineId,
+      project,
+      goal: body.goal,
+      feature: body.feature,
+      ...(body.planner_kind ? { plannerKind: body.planner_kind } : {}),
+    };
+    this.client.sendRpc(rpc);
+    return { status_url: "", feature: body.feature };
+  }
+
+  /** Apply a previously-generated plan on the target machine (M4). Fire-and-
+   * forget; the assigns arrive via the event stream, so the count is unknown
+   * here (0). The relay flow auto-applies inside plan.generate, so this is only
+   * for parity / an explicit re-apply. */
+  async applyPlan(project: string, feature: string): Promise<{ assigned: number }> {
+    const machineId = await this.resolveMachineId();
+    const rpc: RpcRequest = {
+      type: "plan.apply",
+      machineId,
+      project,
+      feature,
+    };
+    this.client.sendRpc(rpc);
+    return { assigned: 0 };
   }
 
   async getStats(id: string): Promise<ProjectStats> {

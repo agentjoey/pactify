@@ -94,6 +94,42 @@ describe("DispatchPanel", () => {
   });
 });
 
+describe("DispatchPanel — hosted (relay) one-shot", () => {
+  it("generates and confirms without polling status, review, or apply", async () => {
+    const generatePlanFn = vi.fn().mockResolvedValue({ status_url: "", feature: "add-2fa-login" });
+    const getPlanReviewFn = vi.fn();
+    const applyPlanFn = vi.fn();
+    const runOrchestrateFn = vi.fn();
+    // A relay-style source: canOrchestrate=true but NO getPlanGenStatus/getPlanReview.
+    const hostedSrc = {
+      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true },
+      listProjects: vi.fn(),
+      getState: vi.fn(),
+      getStats: vi.fn(),
+      subscribe: vi.fn(),
+      generatePlan: generatePlanFn,
+      applyPlan: applyPlanFn,
+      runOrchestrate: runOrchestrateFn,
+      getPlanReview: getPlanReviewFn,
+    };
+    render(
+      <DataSourceProvider source={hostedSrc}>
+        <DispatchPanel project="p1" roster={roster} open onClose={() => {}} onGoLive={() => {}} />
+      </DataSourceProvider>,
+    );
+    fireEvent.change(screen.getByTestId("dispatch-goal"), { target: { value: "Add 2FA Login" } });
+    fireEvent.click(screen.getByTestId("dispatch-generate"));
+    await waitFor(() => expect(screen.getByTestId("dispatch-done")).toBeInTheDocument());
+    expect(generatePlanFn).toHaveBeenCalledWith("p1", { goal: "Add 2FA Login", feature: "add-2fa-login" });
+    expect(screen.getByTestId("dispatch-done")).toHaveTextContent("Watch the board");
+    // One-shot: no review step, no separate apply, no explicit orchestrate call.
+    expect(getPlanReviewFn).not.toHaveBeenCalled();
+    expect(applyPlanFn).not.toHaveBeenCalled();
+    expect(runOrchestrateFn).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("dispatch-review")).not.toBeInTheDocument();
+  });
+});
+
 describe("DispatchPanel — capability gating", () => {
   it("disables Generate and Dispatch when the source is read-only", () => {
     const readOnly = {

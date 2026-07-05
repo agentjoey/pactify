@@ -250,6 +250,37 @@ func (opts Options) run(ctx context.Context) error {
 
 		act := nextAction(view, h, opts.Th)
 
+		// Orchestrator-as-actor guard, checked BEFORE the failure-threshold guard
+		// and BEFORE any launch is attempted: the orchestrator seat (opts.
+		// Orchestrator — the human/session running THIS `pactify orchestrate`
+		// process, who does its own protocol writes like Merge/Start) is static
+		// for the whole run, never resolved dynamically, and structurally cannot
+		// be headlessly launched as a subprocess of itself. When it's ALSO a
+		// task's owner/reviewer (a normal pattern — "claude" is orchestrator AND
+		// reviewer) and has no explicit --seat-kind override, every launch
+		// attempt fails deterministically and instantly on kind resolution, not
+		// from a transient crash. Routing it through the normal Fails++/
+		// tripped() retry cycle burns the whole failure budget in a handful of
+		// near-instant iterations and escalates with a MISLEADING "failure limit
+		// exceeded" whose attached evidence is often the task's own successful
+		// checkpoint — exactly what happened in the 2026-07-05 dogfood (P2): the
+		// worker's checkpoint had already landed, but the very next iteration
+		// tried to headlessly launch reviewer seat "claude" (the orchestrator,
+		// meant to accept by hand) and instantly exhausted MaxFails trying.
+		// Requiring act.Seat == opts.Orchestrator (not just "any unresolved
+		// kind") keeps this from firing on a dynamic seat that simply hasn't
+		// joined YET and may still get a kind on a later iteration (spec §6
+		// rp-dynamic-seats) — Orchestrator can't ever "join later", so there is
+		// nothing to wait for. An explicit --seat-kind for the orchestrator
+		// (a deliberate choice to also drive it headlessly) opts back out.
+		if !opts.DryRun && (act.Kind == ActRunOwner || act.Kind == ActRunReviewer) &&
+			act.Seat != "" && act.Seat == opts.Orchestrator && opts.kind(act.Seat) == "" {
+			reason := fmt.Sprintf("seat %q is the orchestrator (this pactify orchestrate process) and has no --seat-kind override — it cannot launch itself headlessly; this task's %s stint must be done manually (e.g. `pactify accept`/`pactify checkpoint`/`pactify changes`)", act.Seat, actKindLabel(act.Kind))
+			opts.emitEscalatedStatus(view, act.Task, reason, h)
+			return opts.escalate(act.Feature, act.Task, reason, evidenceFor(st, act.Task),
+				"人工完成该棒后 pactify orchestrate 续跑（该座席是 orchestrator，永远不会被无人值守拉起）")
+		}
+
 		// Threshold guard for the churn loop. nextAction only escalates from its
 		// idle path (no available action), but a task stuck in a rework or
 		// fail cycle always HAS an action (rerun owner/reviewer), so the idle path
@@ -265,13 +296,13 @@ func (opts Options) run(ctx context.Context) error {
 				delete(h.Fails, act.Task)
 				delete(h.LastFail, act.Task)
 				_ = writeHistory(opts.runtimeDir(), scope, h)
-				return opts.escalate(act.Task, reason, evidenceFor(st, act.Task),
+				return opts.escalate(act.Feature, act.Task, reason, evidenceFor(st, act.Task),
 					"人工介入后 pactify orchestrate 续跑")
 			}
 		}
 		if !opts.DryRun && opts.Th.MaxIters > 0 && h.Iters >= opts.Th.MaxIters {
 			opts.emitEscalatedStatus(view, "", "iteration limit exceeded", h)
-			return opts.escalate("", "iteration limit exceeded", "(global cap)",
+			return opts.escalate(opts.Feature, "", "iteration limit exceeded", "(global cap)",
 				"放宽 --max-iters 或检查为何 task 图迟迟不收敛")
 		}
 
@@ -361,14 +392,14 @@ func (opts Options) run(ctx context.Context) error {
 
 		case ActStuck:
 			opts.emitEscalatedStatus(view, act.Task, act.Reason, h)
-			return opts.escalate(act.Task, act.Reason, evidenceFor(st, act.Task),
+			return opts.escalate(act.Feature, act.Task, act.Reason, evidenceFor(st, act.Task),
 				"人工介入后 pactify orchestrate 续跑")
 
 		case ActIdle:
 			// Theoretically unreachable (unfinished work, no action, no threshold
 			// tripped). Treat defensively as Stuck so the driver never spins.
 			opts.emitEscalatedStatus(view, act.Task, "driver idle with unfinished work (unexpected)", h)
-			return opts.escalate(act.Task, "driver idle with unfinished work (unexpected)",
+			return opts.escalate(act.Feature, act.Task, "driver idle with unfinished work (unexpected)",
 				evidenceFor(st, act.Task), "检查 task 图/依赖是否成环或卡死，修后续跑")
 		}
 
@@ -589,7 +620,7 @@ func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State
 			reason := fmt.Sprintf("fix-until-green exhausted after %d round(s); verify still failing:\n%s",
 				fixRounds[act.Task], detail)
 			opts.emitEscalatedStatus(view, act.Task, reason, *h)
-			return false, opts.escalate(act.Task, reason, evidenceFor(st, act.Task),
+			return false, opts.escalate(act.Feature, act.Task, reason, evidenceFor(st, act.Task),
 				"人工修复 verify 失败后 pactify orchestrate 续跑")
 		}
 		// Re-run the SAME owner with a fix briefing. Count the round FIRST (driver
@@ -760,7 +791,7 @@ func (opts Options) merge(ctx context.Context, st, view projection.State, act Ac
 		ok, detail := runGate(ctx, opts.Exec, opts.Dir, cmd)
 		if !ok {
 			opts.emitEscalatedStatus(view, act.Feature, "hard gate failed: "+detail, *h)
-			return true, opts.escalate(act.Feature, "hard gate failed: "+detail,
+			return true, opts.escalate(act.Feature, "", "hard gate failed: "+detail,
 				evidenceFor(st, ""), "修复实现/规格后 pactify orchestrate 续跑")
 		}
 	}
@@ -773,6 +804,12 @@ func (opts Options) merge(ctx context.Context, st, view projection.State, act Ac
 	if err := pact.At(opts.Dir).As(opts.Orchestrator).Merge(act.Feature); err != nil {
 		return false, fmt.Errorf("orchestrate: merge %s: %w", act.Feature, err)
 	}
+	// The feature just shipped: any of its OWN escalation files are resolved and
+	// no longer actionable — archive them out of the live directory so it only
+	// ever shows escalations for features still in progress (spec P1: a stale,
+	// unrelated escalation sitting next to a live one is how one got mistaken
+	// for the current run's state during the 2026-07-05 dogfood).
+	archiveEscalationsForFeature(opts.runtimeDir(), act.Feature)
 	return false, nil
 }
 
@@ -811,14 +848,14 @@ func gateCommands(dir string, f projection.Feature) []string {
 // write/notify failure path's own error only when the record cannot be written,
 // because escalation is a pause, not a hard stop — but a write error is a real
 // IO failure worth surfacing.
-func (opts Options) escalate(task, reason, evidence, suggestion string) error {
+func (opts Options) escalate(feature, task, reason, evidence, suggestion string) error {
 	// Now is injected for deterministic test filenames; fall back to wall-clock so
 	// a caller that forgets to wire it doesn't panic at the worst moment (escalation).
 	ts := time.Now().Format("20060102-150405")
 	if opts.Now != nil {
 		ts = opts.Now()
 	}
-	path, err := writeEscalation(opts.runtimeDir(), ts, task, reason, evidence, suggestion)
+	path, err := writeEscalation(opts.runtimeDir(), ts, feature, task, reason, evidence, suggestion)
 	if err != nil {
 		return fmt.Errorf("orchestrate: write escalation: %w", err)
 	}
@@ -838,6 +875,14 @@ func (opts Options) previewNotify(st projection.State, act Action) {
 
 // filtered narrows the state to opts.Feature when set, so the loop only drives
 // the requested feature. An empty Feature drives everything.
+// actKindLabel names an action kind for a human-facing escalation message.
+func actKindLabel(k ActionKind) string {
+	if k == ActRunReviewer {
+		return "reviewer"
+	}
+	return "worker"
+}
+
 // hasFeature reports whether id is present anywhere in st.Features.
 func hasFeature(st projection.State, id string) bool {
 	for _, f := range st.Features {

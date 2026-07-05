@@ -1,21 +1,148 @@
 package orchestrate
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
+// escalationFilename must embed feature+task so a human scanning the directory
+// can tell which run an escalation is about without opening it — the ambiguity
+// that let a days-old, unrelated escalation get mistaken for the current run's
+// state during the 2026-07-05 dogfood (P1).
+func TestEscalationFilename(t *testing.T) {
+	cases := []struct{ feature, task, ts, want string }{
+		{"f1", "t1", "20260613-000000", "escalation-f1-t1-20260613-000000.md"},
+		{"f1", "", "20260613-000000", "escalation-f1-20260613-000000.md"},
+		{"", "t1", "20260613-000000", "escalation-t1-20260613-000000.md"},
+		{"", "", "20260613-000000", "escalation-20260613-000000.md"},
+	}
+	for _, c := range cases {
+		if got := escalationFilename(c.feature, c.task, c.ts); got != c.want {
+			t.Errorf("escalationFilename(%q,%q,%q) = %q, want %q", c.feature, c.task, c.ts, got, c.want)
+		}
+	}
+}
+
+// archiveEscalationsForFeature moves ONLY the named feature's own escalation
+// files into archive/, leaving other features' (and feature-less) escalations
+// untouched in the live directory.
+func TestArchiveEscalationsForFeature(t *testing.T) {
+	dir := t.TempDir()
+	outDir := filepath.Join(dir, ".pact", "orchestrate")
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(name string) {
+		if err := os.WriteFile(filepath.Join(outDir, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("escalation-fa-t1-20260613-000000.md")   // fa's own — should archive
+	write("escalation-fa-t2-20260613-000001.md")   // fa's own — should archive
+	write("escalation-fb-t1-20260613-000002.md")   // a DIFFERENT feature — must stay
+	write("escalation-20260613-000003.md")         // feature-less — must stay
+
+	archiveEscalationsForFeature(dir, "fa")
+
+	stillLive := func(name string) bool {
+		_, err := os.Stat(filepath.Join(outDir, name))
+		return err == nil
+	}
+	archived := func(name string) bool {
+		_, err := os.Stat(filepath.Join(outDir, "archive", name))
+		return err == nil
+	}
+	if stillLive("escalation-fa-t1-20260613-000000.md") || !archived("escalation-fa-t1-20260613-000000.md") {
+		t.Error("fa's t1 escalation should have been archived")
+	}
+	if stillLive("escalation-fa-t2-20260613-000001.md") || !archived("escalation-fa-t2-20260613-000001.md") {
+		t.Error("fa's t2 escalation should have been archived")
+	}
+	if !stillLive("escalation-fb-t1-20260613-000002.md") {
+		t.Error("a DIFFERENT feature's escalation must NOT be touched")
+	}
+	if !stillLive("escalation-20260613-000003.md") {
+		t.Error("a feature-less escalation must NOT be touched")
+	}
+}
+
+// End-to-end (the actual P1 scenario): feature fa ships → its own prior
+// escalation is archived out of the live directory, while a live escalation
+// for an UNRELATED feature (pre-existing debris from a different run, exactly
+// like the days-old files that caused the 2026-07-05 dogfood confusion) is left
+// alone and clearly distinguishable by name — a human (or driver) scanning the
+// live directory now only ever sees escalations that are actually still open.
+func TestLoopArchivesOwnEscalationOnShipLeavesOthersAlone(t *testing.T) {
+	dir := newProject(t)
+	// Pre-existing, unrelated debris from a DIFFERENT feature/day.
+	outDir := filepath.Join(dir, ".pact", "orchestrate")
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outDir, "escalation-old-feature-t9-20260101-000000.md"), []byte("stale debris"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
+	runner := newFakeRunner(t, dir)
+	runner.alwaysChanges = true // first escalate on rework limit...
+	opts := baseOpts(dir, runner, &okExec{}, &recNotify{})
+	opts.Th.MaxRework = 1
+	if err := Run(context.Background(), opts); err != nil {
+		t.Fatalf("Run (rework escalation): %v", err)
+	}
+	// The rework escalation for "f" must exist now, named for "f".
+	if _, err := os.Stat(findEscalation(t, dir, fixedNow())); err != nil {
+		t.Fatalf("expected an escalation for feature f: %v", err)
+	}
+
+	// Now let it actually ship: reviewer accepts.
+	runner.alwaysChanges = false
+	runner.reviewSeen = map[string]int{}
+	if err := Run(context.Background(), baseOpts(dir, runner, &okExec{}, &recNotify{})); err != nil {
+		t.Fatalf("Run (ship): %v", err)
+	}
+	if got := featureStatus(t, dir, "f"); got != "shipped" {
+		t.Fatalf("feature status = %q, want shipped", got)
+	}
+
+	// "f"'s own escalation is archived — no longer live.
+	if _, err := os.Stat(filepath.Join(outDir, "archive")); err != nil {
+		t.Fatal("archive dir should exist after shipping a feature with a prior escalation")
+	}
+	liveEntries, err := os.ReadDir(outDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range liveEntries {
+		if e.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(e.Name(), "escalation-f-") {
+			t.Errorf("shipped feature's own escalation %q should have been archived, not left live", e.Name())
+		}
+	}
+	// The unrelated OLD debris is untouched — still live, still clearly a
+	// different feature by name (never confusable with "f"'s run).
+	if _, err := os.Stat(filepath.Join(outDir, "escalation-old-feature-t9-20260101-000000.md")); err != nil {
+		t.Error("an unrelated feature's escalation must be left alone, not swept up by this feature's ship")
+	}
+}
+
 func TestEscalate_WriteEscalation(t *testing.T) {
 	dir := t.TempDir()
 	ts := "20260613-140530"
+	feature := "f1"
 	task := "t2"
 	reason := "rework limit reached (3 rounds of changes_requested)"
 	evidence := "--- FAIL: TestRelay\nexpected 200, got 500"
 	suggestion := "review the spec's acceptance command; the handler may need a nil check"
 
-	path, err := writeEscalation(dir, ts, task, reason, evidence, suggestion)
+	path, err := writeEscalation(dir, ts, feature, task, reason, evidence, suggestion)
 	if err != nil {
 		t.Fatalf("writeEscalation: unexpected error: %v", err)
 	}
@@ -29,7 +156,10 @@ func TestEscalate_WriteEscalation(t *testing.T) {
 	if !strings.Contains(base, ts) {
 		t.Fatalf("writeEscalation: filename %q should contain ts %q", base, ts)
 	}
-	if want := "escalation-" + ts + ".md"; base != want {
+	// The filename ALSO carries feature+task (P1): a human scanning the
+	// directory must be able to tell which run an escalation is about without
+	// opening it.
+	if want := "escalation-" + feature + "-" + task + "-" + ts + ".md"; base != want {
 		t.Fatalf("writeEscalation: filename = %q, want %q", base, want)
 	}
 
@@ -65,7 +195,7 @@ func TestEscalate_WriteEscalation_CreatesDir(t *testing.T) {
 		t.Fatalf("precondition: %q should not exist yet (err=%v)", orchDir, err)
 	}
 
-	path, err := writeEscalation(dir, "20260613-000000", "t1", "stuck", "ev", "sug")
+	path, err := writeEscalation(dir, "20260613-000000", "f1", "t1", "stuck", "ev", "sug")
 	if err != nil {
 		t.Fatalf("writeEscalation: unexpected error: %v", err)
 	}

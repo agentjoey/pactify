@@ -224,7 +224,7 @@ func TestQAFailExhaustsSharedBudgetAndEscalates(t *testing.T) {
 	if runner.fixCalls != opts.MaxFixRounds {
 		t.Fatalf("QA fix rounds = %d, want exactly MaxFixRounds=%d (shared budget)", runner.fixCalls, opts.MaxFixRounds)
 	}
-	esc := filepath.Join(dir, ".pact", "orchestrate", "escalation-"+fixedNow()+".md")
+	esc := findEscalation(t, dir, fixedNow())
 	b, err := os.ReadFile(esc)
 	if err != nil {
 		t.Fatalf("escalation file missing after exhausted QA fix rounds: %v", err)

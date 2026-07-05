@@ -11,14 +11,40 @@ import (
 	"github.com/agentjoey/pactify/internal/pact"
 )
 
-// escalationBody reads the escalation record written under dir (fixedNow name).
+// escalationBody reads the escalation record written under dir (fixedNow
+// timestamp). The filename also carries feature/task segments (P1) that vary
+// by test, so this globs for the timestamp rather than hardcoding the exact
+// name.
 func escalationBody(t *testing.T, dir string) string {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join(dir, ".pact", "orchestrate", "escalation-"+fixedNow()+".md"))
+	b, err := os.ReadFile(findEscalation(t, dir, fixedNow()))
 	if err != nil {
 		t.Fatalf("escalation file missing: %v", err)
 	}
 	return string(b)
+}
+
+// findEscalation locates the (single) escalation file under dir whose name
+// carries ts, regardless of the feature/task segments embedded before it
+// (escalationFilename), and returns its path.
+func findEscalation(t *testing.T, dir, ts string) string {
+	t.Helper()
+	matches, err := filepath.Glob(filepath.Join(dir, ".pact", "orchestrate", "escalation-*"+ts+".md"))
+	if err != nil {
+		t.Fatalf("glob escalation files: %v", err)
+	}
+	if len(matches) == 0 {
+		entries, _ := os.ReadDir(filepath.Join(dir, ".pact", "orchestrate"))
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("no escalation file matching ts %q found; directory has: %v", ts, names)
+	}
+	if len(matches) > 1 {
+		t.Fatalf("expected exactly one escalation file for ts %q, found %v", ts, matches)
+	}
+	return matches[0]
 }
 
 // Rework seeding: a ledger already carrying 2 changes_requested rounds for a

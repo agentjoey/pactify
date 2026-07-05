@@ -245,7 +245,11 @@ func (r AcpRunner) escalatePermission(lc LaunchContext, req acp.PermissionReques
 	reason := fmt.Sprintf("agent %q requested a permission the driver is configured to escalate (policy=escalate)", lc.Seat)
 	evidence := fmt.Sprintf("tool call: %s\noptions: %s", req.ToolCall.Title, describeOptions(req.Options))
 	suggestion := "review the requested action; approve it manually and re-run, or set the permission policy to auto to grant routine requests"
-	_, _ = writeEscalation(lc.streamDir(), now(), lc.Task, reason, evidence, suggestion)
+	// LaunchContext carries no feature id (task/seat/project-scoped only), so
+	// this escalation is filed under its task alone — fine here since a
+	// permission request is inherently task-specific already, not the routine
+	// which-feature-is-this-about ambiguity the main loop's escalations address.
+	_, _ = writeEscalation(lc.streamDir(), now(), "", lc.Task, reason, evidence, suggestion)
 }
 
 // describeOptions renders a permission request's options for an escalation record.

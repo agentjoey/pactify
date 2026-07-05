@@ -128,7 +128,7 @@ func TestFixLoopExhaustedEscalatesWithVerifyOutput(t *testing.T) {
 		t.Fatalf("fix rounds = %d, want exactly MaxFixRounds=%d", runner.fixCalls, opts.MaxFixRounds)
 	}
 
-	esc := filepath.Join(dir, ".pact", "orchestrate", "escalation-"+fixedNow()+".md")
+	esc := findEscalation(t, dir, fixedNow())
 	b, err := os.ReadFile(esc)
 	if err != nil {
 		t.Fatalf("escalation file missing after exhausted fix rounds: %v", err)

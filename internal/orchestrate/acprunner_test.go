@@ -230,7 +230,7 @@ func TestAcpRunnerPermissionEscalate(t *testing.T) {
 	if !got.Cancelled {
 		t.Fatalf("escalate policy must deny the request, got %+v", got)
 	}
-	path := filepath.Join(dir, ".pact", "orchestrate", "escalation-20260705-000000.md")
+	path := findEscalation(t, dir, "20260705-000000")
 	b, rerr := os.ReadFile(path)
 	if rerr != nil {
 		t.Fatalf("escalate policy should write an escalation record: %v", rerr)

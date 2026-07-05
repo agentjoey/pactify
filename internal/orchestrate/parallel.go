@@ -316,13 +316,13 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 				delete(h.Fails, act.Task)
 				delete(h.LastFail, act.Task)
 				_ = writeHistory(opts.Dir, feature, h)
-				return false, true, o.escalate(act.Task, reason, evidenceFor(st, act.Task),
+				return false, true, o.escalate(feature, act.Task, reason, evidenceFor(st, act.Task),
 					"人工介入后 pactify orchestrate 续跑")
 			}
 		}
 		if o.Th.MaxIters > 0 && h.Iters >= o.Th.MaxIters {
 			emit(buildEscalatedStatus(view, "", "iteration limit exceeded", h, now))
-			return false, true, o.escalate("", "iteration limit exceeded", "(global cap)",
+			return false, true, o.escalate(feature, "", "iteration limit exceeded", "(global cap)",
 				"放宽 --max-iters 或检查为何 task 图迟迟不收敛")
 		}
 
@@ -378,13 +378,16 @@ func (opts Options) mergeFromWorktree(ctx context.Context, worktreeDir, feature 
 		if !ok {
 			o := opts
 			o.Dir = worktreeDir
-			return o.escalate(feature, "hard gate failed: "+detail,
+			return o.escalate(feature, "", "hard gate failed: "+detail,
 				evidenceFor(st, ""), "修复实现/规格后 pactify orchestrate 续跑")
 		}
 	}
 	if err := pact.At(worktreeDir).As(opts.Orchestrator).Merge(feature); err != nil {
 		return fmt.Errorf("orchestrate: merge %s from worktree: %w", feature, err)
 	}
+	// Feature shipped: archive its own escalation files (see the serial merge()
+	// for why — spec P1).
+	archiveEscalationsForFeature(opts.Dir, feature)
 	// pact.Merge now commits the merge event + shipped STATE itself, so this
 	// worktree's HEAD already carries the shipped state before we discard it.
 	// (The old explicit CommitAll here is gone — it would now be a redundant second

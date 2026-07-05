@@ -93,7 +93,7 @@ func (opts Options) runQA(ctx context.Context, st, view projection.State, act Ac
 				reason := fmt.Sprintf("QA gate FAIL — fix rounds exhausted after %d round(s): %s",
 					fixRounds[act.Task], sentence)
 				opts.emitEscalatedStatus(view, act.Task, reason, *h)
-				return "", false, opts.escalate(act.Task, reason, evidenceFor(st, act.Task),
+				return "", false, opts.escalate(act.Feature, act.Task, reason, evidenceFor(st, act.Task),
 					"人工修复 QA 失败后 pactify orchestrate 续跑")
 			}
 			// Count the shared round FIRST (driver in-memory only — not a failure, not a

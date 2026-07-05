@@ -228,6 +228,62 @@ func TestLoopUnknownFeatureFailsLoudInsteadOfSilentDone(t *testing.T) {
 	}
 }
 
+// The orchestrator seat (the human/session running `pactify orchestrate`, doing
+// its own protocol writes like Merge) must never be headlessly launched as a
+// task's reviewer — it structurally can't spawn itself, and every attempt fails
+// deterministically and instantly. Before the fix (2026-07-05 dogfood P2), this
+// burned the whole failure budget in a handful of near-instant iterations right
+// after the worker's checkpoint landed, and escalated with a MISLEADING
+// "failure limit exceeded" whose evidence was the task's own successful
+// checkpoint — looking exactly like "it just succeeded, why does it say it
+// failed?". The fix escalates on the very first attempt, with an accurate
+// reason, and never touches the failure/rework counters at all.
+func TestLoopOrchestratorAsReviewerEscalatesImmediatelyNotAsFailure(t *testing.T) {
+	dir := newProject(t)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	// reviewer "orch" is the ORCHESTRATOR seat — deliberately given no seat-kind.
+	assign(t, dir, "t1", "f", "feat/x", s1)
+
+	runner := newFakeRunner(t, dir)
+	exec := &okExec{}
+	notify := &recNotify{}
+	opts := baseOpts(dir, runner, exec, notify)
+	opts.Orchestrator = "orch" // reviewer of "t1" per assign(); see loop_test helper below.
+	opts.SeatKind = func(seat string) string {
+		if seat == "orch" {
+			return "" // no override — the orchestrator is never meant to be driven headlessly
+		}
+		return "claude-code"
+	}
+
+	if err := Run(context.Background(), opts); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if runner.workerCalls != 1 {
+		t.Fatalf("worker calls = %d, want exactly 1 (the checkpoint should have landed once)", runner.workerCalls)
+	}
+	if runner.reviewerCalls != 0 {
+		t.Fatalf("reviewer calls = %d, want 0 — the orchestrator seat must never be launched, not even once", runner.reviewerCalls)
+	}
+	if len(notify.msgs) == 0 {
+		t.Fatal("expected an escalation notification")
+	}
+	last := notify.msgs[len(notify.msgs)-1]
+	if !strings.Contains(last, "orchestrator") || !strings.Contains(last, "orch") {
+		t.Errorf("escalation reason should name the orchestrator seat, got: %q", last)
+	}
+	if strings.Contains(last, "failure limit exceeded") {
+		t.Errorf("escalation reason should NOT be the generic (misleading) failure-limit message, got: %q", last)
+	}
+	// The task's checkpoint evidence (the worker's success) must still be
+	// attached to the escalation for context, but the REASON must be the new,
+	// accurate one — asserted above.
+	if got := featureStatus(t, dir, "f"); got == "shipped" {
+		t.Error("feature should NOT have shipped — the reviewer never ran")
+	}
+}
+
 func TestLoopHappyPathShipsFeature(t *testing.T) {
 	dir := newProject(t)
 	s1 := writeSpec(t, dir, "t1", "go test ./...")
@@ -372,7 +428,7 @@ func TestEscalationNamesNoCheckpointCause(t *testing.T) {
 		t.Fatalf("escalation should name the no-checkpoint cause, got: %q", joined)
 	}
 	// And the escalation record carries it too.
-	esc := filepath.Join(dir, ".pact", "orchestrate", "escalation-"+fixedNow()+".md")
+	esc := findEscalation(t, dir, fixedNow())
 	b, err := os.ReadFile(esc)
 	if err != nil {
 		t.Fatalf("escalation file missing: %v", err)
@@ -406,7 +462,7 @@ func TestLoopRebuffsEscalatesAtReworkLimit(t *testing.T) {
 	if got := featureStatus(t, dir, "f"); got == "shipped" {
 		t.Fatal("feature shipped despite repeated changes_requested")
 	}
-	esc := filepath.Join(dir, ".pact", "orchestrate", "escalation-"+fixedNow()+".md")
+	esc := findEscalation(t, dir, fixedNow())
 	if _, err := os.Stat(esc); err != nil {
 		t.Fatalf("escalation file missing: %v", err)
 	}
@@ -434,7 +490,7 @@ func TestLoopHardGateBlocksMerge(t *testing.T) {
 	if exec.calls == 0 {
 		t.Fatal("gate exec never invoked")
 	}
-	esc := filepath.Join(dir, ".pact", "orchestrate", "escalation-"+fixedNow()+".md")
+	esc := findEscalation(t, dir, fixedNow())
 	if _, err := os.Stat(esc); err != nil {
 		t.Fatalf("escalation file missing after gate failure: %v", err)
 	}
@@ -538,7 +594,7 @@ func TestLoopRunnerCrashEscalatesAtFailLimit(t *testing.T) {
 func TestEscalateNilNowDoesNotPanic(t *testing.T) {
 	dir := newProject(t)
 	opts := Options{Dir: dir, Notify: &recNotify{}} // Now intentionally nil
-	if err := opts.escalate("t1", "stuck", "evidence", "do X then resume"); err != nil {
+	if err := opts.escalate("f1", "t1", "stuck", "evidence", "do X then resume"); err != nil {
 		t.Fatalf("escalate with nil Now: %v", err)
 	}
 	entries, err := os.ReadDir(filepath.Join(dir, ".pact", "orchestrate"))

@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -79,6 +80,47 @@ func TestPathIgnored(t *testing.T) {
 	}
 	if PathIgnored(dir, "base.txt") {
 		t.Fatal("a tracked path should not report ignored")
+	}
+}
+
+func TestPathTracked(t *testing.T) {
+	dir := tempRepo(t)
+	if !PathTracked(dir, "base.txt") {
+		t.Fatal("a committed path should report tracked")
+	}
+	os.WriteFile(filepath.Join(dir, "untracked.txt"), []byte("x"), 0o644)
+	if PathTracked(dir, "untracked.txt") {
+		t.Fatal("a never-added path should not report tracked")
+	}
+	os.MkdirAll(filepath.Join(dir, ".pact"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".pact", "log.jsonl"), []byte("{}\n"), 0o644)
+	if PathTracked(dir, filepath.Join(dir, ".pact", "log.jsonl")) {
+		t.Fatal(".pact/log.jsonl exists on disk but was never committed — should not report tracked")
+	}
+	mustRun(t, dir, "add", ".pact/log.jsonl")
+	mustRun(t, dir, "commit", "-q", "-m", "track the ledger")
+	if !PathTracked(dir, filepath.Join(dir, ".pact", "log.jsonl")) {
+		t.Fatal("a committed .pact/log.jsonl should report tracked")
+	}
+}
+
+// CheckoutOrCreate must surface git's actual diagnostic text (not a bare "exit
+// status N") — this is what made the 2026-07-05 dogfood sandbox failure
+// (P4/P5) needlessly hard to diagnose: the real cause was hidden behind an
+// opaque error. Provoke a real, recognizable git failure (checking out a branch
+// that's already checked out in another worktree) and assert the message
+// survives.
+func TestCheckoutOrCreateSurfacesGitOutput(t *testing.T) {
+	dir := tempRepo(t)
+	mustRun(t, dir, "branch", "elsewhere")
+	wt := t.TempDir()
+	mustRun(t, dir, "worktree", "add", wt, "elsewhere")
+	err := CheckoutOrCreate(dir, "elsewhere")
+	if err == nil {
+		t.Fatal("checking out a branch held by another worktree should fail")
+	}
+	if !strings.Contains(err.Error(), "worktree") {
+		t.Fatalf("error should carry git's actual diagnostic text (mentions the other worktree), got: %v", err)
 	}
 }
 

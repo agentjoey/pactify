@@ -97,6 +97,33 @@ func (p *Project) withLedgerLock(fn func() error) error {
 	return fn()
 }
 
+// commitLedgerIfTracked keeps the ledger self-consistent for a repo that has
+// deliberately chosen to git-track .pact/ (e.g. this repo, for a full audit
+// history of its own dogfooding) — the uncommon case; a gitignored .pact/ (the
+// default RunSandbox assumes) is untouched by this.
+//
+// Verbs otherwise only commit REAL file changes (checkpointLocked's HasChanges
+// + CommitAll, for the worker's actual work) and never the ledger files
+// themselves, so in a tracked-.pact/ repo every single verb call would leave
+// log.jsonl/STATE.yml modified-but-uncommitted. Two real problems trace back to
+// exactly that gap (2026-07-05 dogfood P4/P5): (1) a coding-agent worker,
+// mid-task, sees the driver's own concurrent verb writes as an unexplained
+// ".pact modified" diff next to its own work and — reasonably, not knowing this
+// is expected — "fixes" it with `git restore`/hand-edits, corrupting state
+// (P4); (2) RunSandbox's dirty-working-tree gate trips on the ledger's own
+// perpetual dirtiness, refusing runs that have nothing actually wrong.
+// Auto-committing the ledger the instant it changes removes both frictions.
+// Best-effort and silent: a failed/no-op commit (nothing changed, lock
+// contention, not a repo) must never fail the verb whose event is already
+// durably appended.
+func (p *Project) commitLedgerIfTracked() {
+	logPath := paths.LogIn(p.dir)
+	if !gitx.PathTracked(p.dir, logPath) {
+		return
+	}
+	_ = gitx.CommitPaths(p.dir, "pact: ledger sync", logPath, paths.StateIn(p.dir))
+}
+
 func (p *Project) appendAndRender(ev event.Event) error {
 	logPath := paths.LogIn(p.dir)
 	if err := event.Append(logPath, ev); err != nil {
@@ -121,6 +148,7 @@ func (p *Project) appendAndRender(ev event.Event) error {
 	// a reader could see. Best-effort: the snapshot is only a cache — a write failure
 	// (or PACT_NO_SNAPSHOT) must not fail the verb, whose event is already durable.
 	p.writeSnapshot(data, folder)
+	p.commitLedgerIfTracked()
 	return nil
 }
 

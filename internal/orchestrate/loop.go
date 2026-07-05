@@ -218,6 +218,17 @@ func (opts Options) run(ctx context.Context) error {
 	if !opts.DryRun {
 		if st, err := pact.At(opts.Dir).StateProjection(); err == nil {
 			opts.pruneOrphanSessions(st)
+			// Fail loud, once, if a feature filter was requested but the ledger this
+			// run actually sees has no such feature at all. Silently proceeding would
+			// hit ActDone on the very first iteration (total=0, done=true) and report
+			// success — exactly the misdiagnosed "sandbox can't see the feature"
+			// dogfood incident (2026-07-05 P5): a RunSandbox worktree that was seeded
+			// from a stale/wrong ledger (or a typo'd --feature) looked like a healthy
+			// "nothing to do" instead of the setup bug it actually was. A feature that
+			// legitimately doesn't exist yet (or a typo) gets the same clear error.
+			if opts.Feature != "" && !hasFeature(st, opts.Feature) {
+				return fmt.Errorf("orchestrate: feature %q not found in %s — check --feature, or that the ledger seeded into this run actually has it (e.g. a stale sandbox worktree)", opts.Feature, opts.Dir)
+			}
 		}
 	}
 
@@ -827,6 +838,16 @@ func (opts Options) previewNotify(st projection.State, act Action) {
 
 // filtered narrows the state to opts.Feature when set, so the loop only drives
 // the requested feature. An empty Feature drives everything.
+// hasFeature reports whether id is present anywhere in st.Features.
+func hasFeature(st projection.State, id string) bool {
+	for _, f := range st.Features {
+		if f.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
 func (opts Options) filtered(st projection.State) projection.State {
 	if opts.Feature == "" {
 		return st

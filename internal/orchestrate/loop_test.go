@@ -198,6 +198,36 @@ func baseOpts(dir string, run Runner, exec cmdExec, notify Notifier) Options {
 // --- cases -------------------------------------------------------------------
 
 // (1) happy: two tasks → feature shipped.
+// A --feature filter that matches nothing in the ledger this run actually sees
+// must fail loudly, not silently proceed to ActDone (total=0, done=true) as if
+// there were nothing to do. Silent success here is exactly how a sandbox
+// worktree seeded from the wrong/stale ledger (or a typo'd --feature) got
+// misdiagnosed as a healthy "nothing to do" during the 2026-07-05 dogfood (P5).
+func TestLoopUnknownFeatureFailsLoudInsteadOfSilentDone(t *testing.T) {
+	dir := newProject(t)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
+
+	runner := newFakeRunner(t, dir)
+	exec := &okExec{}
+	notify := &recNotify{}
+	opts := baseOpts(dir, runner, exec, notify)
+	opts.Feature = "does-not-exist"
+
+	err := Run(context.Background(), opts)
+	if err == nil {
+		t.Fatal("Run should fail loud for a --feature that matches nothing, not silently report done")
+	}
+	if !strings.Contains(err.Error(), "does-not-exist") {
+		t.Errorf("error should name the unmatched feature, got: %v", err)
+	}
+	// The real feature "f" must be untouched — this is a fail-fast guard, not a
+	// partial run.
+	if got := featureStatus(t, dir, "f"); got == "shipped" {
+		t.Error("unrelated feature should not have been driven")
+	}
+}
+
 func TestLoopHappyPathShipsFeature(t *testing.T) {
 	dir := newProject(t)
 	s1 := writeSpec(t, dir, "t1", "go test ./...")

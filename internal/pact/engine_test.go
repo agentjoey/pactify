@@ -1,6 +1,7 @@
 package pact
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -516,4 +517,97 @@ func TestValidateReportsDriftWhenStateMissing(t *testing.T) {
 	if err := Validate(); err == nil {
 		t.Fatal("validate must report drift when STATE.yml is missing (parity with bash)")
 	}
+}
+
+// A repo that has deliberately committed .pact/ to git (this repo's own choice,
+// to dogfood a full ledger audit history) must never sit dirty after a verb: a
+// verb only auto-commits REAL file changes (checkpointLocked's HasChanges +
+// CommitAll), never the ledger itself, so without this the ledger would be left
+// modified-on-disk-but-uncommitted after every single call — which is exactly
+// what let a coding-agent worker mistake the driver's own concurrent ledger
+// writes for external corruption and "fix" them with `git restore` (2026-07-05
+// dogfood P4), and what tripped RunSandbox's dirty-tree gate on nothing actually
+// wrong (P5).
+func TestCommitLedgerIfTrackedAutoCommitsWhenLedgerIsTracked(t *testing.T) {
+	dir := newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "orch")
+	if err := Init("p", []string{"orch:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
+		t.Fatal(err)
+	}
+	// Deliberately track .pact/ — mirrors this repo's own choice.
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-q", "-m", "track .pact")
+
+	if err := At(".").As("orch").Assign("t1", "f", "feat/x", "w", "orch", ".pact/tasks/t1.md", nil); err != nil {
+		t.Fatal(err)
+	}
+	if out := gitPorcelain(t, dir); out != "" {
+		t.Fatalf("ledger left dirty after assign despite .pact/ being tracked:\n%s", out)
+	}
+	// A second verb must ALSO leave the tree clean (not just the first). Checkout
+	// the declared feature branch first (checkpointLocked's base-write guard).
+	runGit(t, dir, "checkout", "-q", "-b", "feat/x")
+	if err := At(".").As("w").Checkpoint("t1", "evidence"); err != nil {
+		t.Fatal(err)
+	}
+	if out := gitPorcelain(t, dir); out != "" {
+		t.Fatalf("ledger left dirty after checkpoint despite .pact/ being tracked:\n%s", out)
+	}
+}
+
+// The common/default case — .pact/ gitignored (or simply never committed) —
+// must be entirely unaffected: pactify must never surprise a project by
+// starting to `git add`/commit a ledger nobody asked it to track.
+func TestCommitLedgerIfTrackedNoopWhenLedgerNeverTracked(t *testing.T) {
+	dir := newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "orch")
+	if err := Init("p", []string{"orch:orchestrator,reviewer:CLAUDE.md", "w:worker:AGENTS.md"}); err != nil {
+		t.Fatal(err)
+	}
+	before := commitCount(t, dir)
+
+	if err := At(".").As("orch").Assign("t1", "f", "feat/x", "w", "orch", ".pact/tasks/t1.md", nil); err != nil {
+		t.Fatal(err)
+	}
+	if after := commitCount(t, dir); after != before {
+		t.Fatalf("assign created a commit (%d -> %d) for a ledger nobody asked pactify to track", before, after)
+	}
+	// The ledger content is still on disk uncommitted — unchanged pre-existing
+	// behavior for a never-tracked .pact/, not silently lost.
+	if _, err := os.Stat(".pact/log.jsonl"); err != nil {
+		t.Fatal("ledger file itself should still exist on disk")
+	}
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	c := exec.Command("git", args...)
+	c.Dir = dir
+	if out, err := c.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v %s", args, err, out)
+	}
+}
+
+func gitPorcelain(t *testing.T, dir string) string {
+	t.Helper()
+	c := exec.Command("git", "status", "--porcelain")
+	c.Dir = dir
+	out, err := c.CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func commitCount(t *testing.T, dir string) int {
+	t.Helper()
+	c := exec.Command("git", "rev-list", "--count", "HEAD")
+	c.Dir = dir
+	out, err := c.CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &n)
+	return n
 }

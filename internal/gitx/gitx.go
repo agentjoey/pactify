@@ -107,21 +107,53 @@ func BranchExists(dir, branch string) bool {
 	return err == nil
 }
 
-// CheckoutOrCreate switches to branch, creating it from HEAD if absent.
+// PathTracked reports whether rel is already tracked in dir's git index (i.e.
+// someone has committed it before — `git ls-files` lists it). Distinct from
+// "not ignored": a brand-new file can be neither ignored nor tracked yet.
+// Callers use this to gate ledger auto-commit (see pact.appendAndRender) so a
+// project that has never added .pact/ to git is never surprised by pactify
+// silently starting to commit it — only a repo that already tracks it (a
+// deliberate choice, as this repo itself makes to dogfood a full audit
+// history) gets the ledger kept continuously committed.
+func PathTracked(dir, rel string) bool {
+	_, err := run(dir, "ls-files", "--error-unmatch", "--", rel)
+	return err == nil
+}
+
+// CheckoutOrCreate switches to branch, creating it from HEAD if absent. On
+// failure the error carries git's actual stderr/stdout (via wrapCheckoutErr) —
+// a bare `exit status 1` swallows the one thing a caller needs to diagnose it
+// (e.g. "already used by worktree at ...", "pathspec did not match"), which
+// cost real diagnostic time chasing an orchestrate sandbox failure (2026-07-05
+// dogfood P4/P5) whose actual cause was hidden behind exactly this.
 func CheckoutOrCreate(dir, branch string) error {
+	var out string
 	var err error
 	if BranchExists(dir, branch) {
-		_, err = run(dir, "checkout", "-q", branch)
+		out, err = run(dir, "checkout", "-q", branch)
 	} else {
-		_, err = run(dir, "checkout", "-q", "-b", branch)
+		out, err = run(dir, "checkout", "-q", "-b", branch)
 	}
-	return err
+	return wrapGitErr(err, out)
+}
+
+// wrapGitErr appends run()'s combined output to err so the caller's error
+// message carries git's actual diagnostic text instead of a bare "exit status
+// N". out is empty on success, so this is a no-op then.
+func wrapGitErr(err error, out string) error {
+	if err == nil {
+		return nil
+	}
+	if out == "" {
+		return err
+	}
+	return fmt.Errorf("%w: %s", err, out)
 }
 
 // Checkout switches to an existing branch.
 func Checkout(dir, branch string) error {
-	_, err := run(dir, "checkout", "-q", branch)
-	return err
+	out, err := run(dir, "checkout", "-q", branch)
+	return wrapGitErr(err, out)
 }
 
 // HasChanges reports whether the working tree has uncommitted changes.

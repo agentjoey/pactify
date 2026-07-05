@@ -8,17 +8,17 @@ package gitx
 // on (one feature per worktree).
 func AddWorktree(dir, path, branch, base string) error {
 	if BranchExists(dir, branch) {
-		_, err := run(dir, "worktree", "add", path, branch)
-		return err
+		out, err := run(dir, "worktree", "add", path, branch)
+		return wrapGitErr(err, out)
 	}
-	_, err := run(dir, "worktree", "add", "-b", branch, path, base)
-	return err
+	out, err := run(dir, "worktree", "add", "-b", branch, path, base)
+	return wrapGitErr(err, out)
 }
 
 // RemoveWorktree removes the worktree at path (force, to drop it even with
 // untracked/modified files — the driver owns these scratch worktrees and reclaims
 // them after a feature ships or escalates).
 func RemoveWorktree(dir, path string) error {
-	_, err := run(dir, "worktree", "remove", "--force", path)
-	return err
+	out, err := run(dir, "worktree", "remove", "--force", path)
+	return wrapGitErr(err, out)
 }

@@ -9,6 +9,7 @@ const runOrchestrate = vi.fn();
 const resumeOrchestrate = vi.fn();
 const shipFeature = vi.fn();
 const getDiff = vi.fn();
+const postVerb = vi.fn();
 vi.mock("../lib/api", () => ({
   getOrchestrateStatus: (...args: unknown[]) => getOrchestrateStatus(...args),
   getParallelOrchestrate: (...args: unknown[]) => getParallelOrchestrate(...args),
@@ -16,6 +17,7 @@ vi.mock("../lib/api", () => ({
   resumeOrchestrate: (...args: unknown[]) => resumeOrchestrate(...args),
   shipFeature: (...args: unknown[]) => shipFeature(...args),
   getDiff: (...args: unknown[]) => getDiff(...args),
+  postVerb: (...args: unknown[]) => postVerb(...args),
   subscribeAgentStream: () => () => {},
 }));
 
@@ -53,7 +55,67 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     resumeOrchestrate.mockReset();
     shipFeature.mockReset();
     getDiff.mockReset();
+    postVerb.mockReset();
     getParallelOrchestrate.mockResolvedValue({ present: false });
+  });
+
+  // P1-7 Review Gate: the five-action panel. Reject→rework and Approve merge are
+  // backed by existing pact verbs (changes/accept/merge) via postVerb.
+  describe("Review Gate decisions", () => {
+    const gatedState = () =>
+      st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
+        task("t1", "accepted"), task("t2", "awaiting_review"),
+      ] }]);
+
+    async function renderGated(onNotify = vi.fn()) {
+      getOrchestrateStatus.mockResolvedValue({ present: true, status: status({ escalated: true, action: "stuck", reason: "FAIL TestX" }) });
+      postVerb.mockResolvedValue(undefined);
+      renderLive({ onNotify, state: gatedState() });
+      await waitFor(() => expect(screen.getByTestId("review-gate")).toBeTruthy());
+      return onNotify;
+    }
+
+    it("Reject → rework requests changes on the awaiting task with the human's feedback", async () => {
+      const onNotify = await renderGated();
+      fireEvent.click(screen.getByRole("button", { name: "Reject → rework" }));
+      fireEvent.change(screen.getByTestId("reject-feedback"), { target: { value: "handle the empty case" } });
+      fireEvent.click(screen.getByRole("button", { name: "Send back for rework" }));
+      await waitFor(() =>
+        expect(postVerb).toHaveBeenCalledWith("p1", "changes", { task: "t2", reason: "handle the empty case" }),
+      );
+      await waitFor(() => expect(onNotify).toHaveBeenCalledWith(expect.stringContaining("rework")));
+    });
+
+    it("Approve merge overrides the gate: two-step confirm, then accept awaiting + merge", async () => {
+      const onNotify = await renderGated();
+      // First click = arm the override confirm (no verbs yet).
+      fireEvent.click(screen.getByRole("button", { name: "Approve merge" }));
+      expect(postVerb).not.toHaveBeenCalled();
+      expect(screen.getByText(/overrides the failed hard gate/i)).toBeTruthy();
+      // Confirm = accept the awaiting task then merge the feature, in order.
+      fireEvent.click(screen.getByTestId("approve-merge-confirm"));
+      await waitFor(() => expect(postVerb).toHaveBeenCalledWith("p1", "accept", { task: "t2" }));
+      await waitFor(() => expect(postVerb).toHaveBeenCalledWith("p1", "merge", { feature: "feat-x" }));
+      const order = postVerb.mock.calls.map((c) => c[1]);
+      expect(order.indexOf("accept")).toBeLessThan(order.indexOf("merge"));
+      await waitFor(() => expect(onNotify).toHaveBeenCalledWith(expect.stringContaining("overridden")));
+    });
+
+    it("Take over reveals the manual-drive commands without any backend call", async () => {
+      await renderGated();
+      fireEvent.click(screen.getByRole("button", { name: "Take over" }));
+      expect(screen.getByText(/Drive this feature by hand/i)).toBeTruthy();
+      expect(screen.getByText(/pactify merge <feature>/)).toBeTruthy();
+      expect(postVerb).not.toHaveBeenCalled();
+    });
+
+    it("gate decisions are hidden in observe mode (author=false)", async () => {
+      getOrchestrateStatus.mockResolvedValue({ present: true, status: status({ escalated: true, reason: "FAIL" }) });
+      renderLive({ author: false, state: gatedState() });
+      await waitFor(() => expect(screen.getByTestId("review-gate")).toBeTruthy());
+      expect(screen.queryByRole("button", { name: "Reject → rework" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Approve merge" })).toBeNull();
+    });
   });
 
   it("renders empty state + Run when nothing has run and there are no features", async () => {

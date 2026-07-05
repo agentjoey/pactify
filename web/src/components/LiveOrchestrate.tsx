@@ -47,6 +47,7 @@ export function LiveOrchestrate({
   const [shipBody, setShipBody] = useState("");
   const [shipHead, setShipHead] = useState("");
   const [shipResult, setShipResult] = useState<{ prUrl?: string; error?: string } | null>(null);
+  const [gateBusy, setGateBusy] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const src = useDataSource();
   // Orchestrate (Run/Resume/Ship) needs the drive capability, not just write:
@@ -141,6 +142,57 @@ export function LiveOrchestrate({
       onNotify?.(msg, "error");
     } finally {
       setShipping(false);
+    }
+  }
+
+  // canAct gates the Review Gate's pact-verb decisions (Reject→rework, Approve
+  // merge). These are writes (accept/changes/merge), not orchestrate drives, so
+  // they gate on canWrite + verb presence — the relay source supports them too.
+  const canAct = author && src.capabilities.canWrite && typeof src.verb === "function";
+
+  // handleReject — the human requests changes on every awaiting-review task of a
+  // paused feature, threading their feedback into the reason so it reaches the
+  // owner's next briefing (structured round-trip, still self-driving). Reopens
+  // the tasks for rework and lets orchestrate pick them up on resume.
+  async function handleReject(feature: Feature, feedback: string) {
+    if (!canAct || gateBusy) return;
+    const awaiting = feature.tasks.filter((t) => t.status === "awaiting_review");
+    if (awaiting.length === 0) {
+      onNotify?.("No awaiting-review task to reject on this feature", "error");
+      return;
+    }
+    setGateBusy(true);
+    try {
+      for (const t of awaiting) {
+        await src.verb!(project, "changes", { task: t.id, reason: feedback });
+      }
+      onNotify?.(`Requested changes on ${awaiting.length} task(s) — rework queued`);
+      load();
+    } catch (e) {
+      onNotify?.(e instanceof Error ? e.message : "Reject failed", "error");
+    } finally {
+      setGateBusy(false);
+    }
+  }
+
+  // handleApproveMerge — the deliberate gate OVERRIDE: the human has reviewed the
+  // failed hard gate and decides to ship anyway. Accepts every awaiting-review
+  // task (the human acting as reviewer — within the two invariants) then merges
+  // the feature. The caller confirms first because this bypasses the failed gate.
+  async function handleApproveMerge(feature: Feature) {
+    if (!canAct || gateBusy) return;
+    setGateBusy(true);
+    try {
+      for (const t of feature.tasks.filter((t) => t.status === "awaiting_review")) {
+        await src.verb!(project, "accept", { task: t.id });
+      }
+      await src.verb!(project, "merge", { feature: feature.id });
+      onNotify?.(`Merged ${feature.id} (gate overridden by human approval)`);
+      load();
+    } catch (e) {
+      onNotify?.(e instanceof Error ? e.message : "Approve/merge failed", "error");
+    } finally {
+      setGateBusy(false);
     }
   }
 
@@ -269,6 +321,10 @@ export function LiveOrchestrate({
             loadingDiff={loadingDiff}
             onResume={handleResume}
             onDiff={handleViewDiff}
+            onReject={handleReject}
+            onApproveMerge={handleApproveMerge}
+            gateBusy={gateBusy}
+            canAct={canAct}
             expanded={expanded === f.id}
             onToggle={() => setExpanded(expanded === f.id ? null : f.id)}
             project={project}
@@ -392,10 +448,11 @@ function chipKindFor(t: Task, os: OrchestrateStatus | null): ChipKind {
 // horizontal task pipeline + (when its hard gate failed) the review gate +
 // (when working and expanded) live agent terminal.
 function FeatureLane({
-  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, expanded, onToggle, project, canWrite, canDiff,
+  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, onReject, onApproveMerge, gateBusy, canAct, expanded, onToggle, project, canWrite, canDiff,
 }: {
   feature: Feature; os: OrchestrateStatus | null; events: PactEvent[]; state: State;
   author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void;
+  onReject: (f: Feature, feedback: string) => void; onApproveMerge: (f: Feature) => void; gateBusy: boolean; canAct: boolean;
   expanded: boolean; onToggle: () => void; project: string; canWrite: boolean; canDiff: boolean;
 }) {
   const gate = !!os?.escalated;
@@ -472,6 +529,10 @@ function FeatureLane({
           loadingDiff={loadingDiff}
           onResume={onResume}
           onDiff={onDiff}
+          onReject={(fb) => onReject(feature, fb)}
+          onApproveMerge={() => onApproveMerge(feature)}
+          gateBusy={gateBusy}
+          canAct={canAct}
           canWrite={canWrite}
           canDiff={canDiff}
         />
@@ -566,11 +627,21 @@ function MergeNode({ active }: { active: boolean }) {
 }
 
 // ReviewGate — the human-decision panel shown when a feature's hard test gate
-// fails. Surfaces the escalation reason and the actions that have a backend
-// today (See diff, Resume run). Approve/Reject/Take-over await dedicated APIs.
-function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff, canWrite, canDiff }: {
-  reason?: string; author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void; canWrite: boolean; canDiff: boolean;
+// fails (design: Pactify Live.dc.html, five actions). All five are backed:
+// See diff + Resume run drive the local orchestrator; Reject→rework requests
+// changes with the human's feedback (→ owner's next briefing); Approve merge is
+// the deliberate gate OVERRIDE (accept awaiting tasks + merge, confirmed); Take
+// over reveals the manual-drive commands (no persistent-attach backend yet —
+// honest, not faked).
+function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff, onReject, onApproveMerge, gateBusy, canAct, canWrite, canDiff }: {
+  reason?: string; author: boolean; resuming: boolean; loadingDiff: boolean;
+  onResume: () => void; onDiff: () => void; onReject: (feedback: string) => void; onApproveMerge: () => void;
+  gateBusy: boolean; canAct: boolean; canWrite: boolean; canDiff: boolean;
 }) {
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [takeoverOpen, setTakeoverOpen] = useState(false);
+  const [confirmMerge, setConfirmMerge] = useState(false);
   return (
     <div
       data-testid="review-gate"
@@ -585,10 +656,52 @@ function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff, c
         {reason || "the orchestrator paused this feature for review"}
       </pre>
       {author && (
-        <div className="flex flex-wrap items-center gap-[9px]">
-          {canDiff && <Button size="sm" variant="ghost" loading={loadingDiff} onClick={onDiff}>See diff</Button>}
-          <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume run ▸</Button>
-        </div>
+        <>
+          <div className="flex flex-wrap items-center gap-[9px]">
+            {canDiff && <Button size="sm" variant="ghost" loading={loadingDiff} onClick={onDiff}>See diff</Button>}
+            <Button size="sm" variant="ghost" disabled={!canAct || gateBusy} title={canAct ? undefined : "Needs write access"} onClick={() => { setRejectOpen((v) => !v); setConfirmMerge(false); setTakeoverOpen(false); }}>Reject → rework</Button>
+            {!confirmMerge ? (
+              <Button size="sm" variant="ghost" disabled={!canAct || gateBusy} title={canAct ? undefined : "Needs write access"} onClick={() => { setConfirmMerge(true); setRejectOpen(false); setTakeoverOpen(false); }}>Approve merge</Button>
+            ) : (
+              <Button size="sm" loading={gateBusy} data-testid="approve-merge-confirm" onClick={onApproveMerge} style={{ background: "var(--color-danger)" }}>Override gate & merge ▸</Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => { setTakeoverOpen((v) => !v); setRejectOpen(false); setConfirmMerge(false); }}>Take over</Button>
+            <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume run ▸</Button>
+          </div>
+
+          {confirmMerge && (
+            <p className="mt-2 text-[10.5px] leading-[1.5] text-[var(--color-warn)]">
+              This overrides the failed hard gate: it accepts the awaiting task(s) as you (the reviewer) and merges. Click again to confirm.
+            </p>
+          )}
+
+          {rejectOpen && (
+            <div className="mt-3">
+              <Textarea
+                data-testid="reject-feedback"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="What needs to change? This feedback goes into the owner's next briefing."
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <Button size="sm" loading={gateBusy} disabled={!feedback.trim()} onClick={() => { onReject(feedback.trim()); setRejectOpen(false); setFeedback(""); }}>Send back for rework</Button>
+                <Button size="sm" variant="ghost" onClick={() => setRejectOpen(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+
+          {takeoverOpen && (
+            <div className="mt-3 rounded-[8px] bg-[var(--color-bg-inset)] p-3 text-[10.5px] leading-[1.7] text-[var(--color-text-2)]">
+              <p className="mb-1 font-medium text-[var(--color-text-1)]">Drive this feature by hand:</p>
+              <pre className="m-0 whitespace-pre-wrap mono text-[10.5px] text-[var(--color-text-1)]">{`# in the repo:
+pactify status
+pactify checkpoint <task>      # you finish the work
+pactify accept <task>          # or: pactify changes <task> "…"
+pactify merge <feature>`}</pre>
+              <p className="mt-1 text-[var(--color-text-3)]">Then Resume run to hand control back to the orchestrator.</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

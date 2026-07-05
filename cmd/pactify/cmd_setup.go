@@ -106,12 +106,81 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 	return nil
 }
 
+// runSetupYes is the zero-interaction onboarding path (`pactify setup --yes`):
+// it inits + wires a project from the registered-agent roster wizard.Suggest
+// proposes, with no prompts — the other half of the "setup + run = two commands"
+// story (backlog P0-2). It refuses on an already-initialized repo (nothing to
+// seed) and when no agents are registered (nothing to staff), pointing at the
+// fix in both cases. The project name defaults to the repo directory basename.
+func runSetupYes(out io.Writer, cwd, project string) error {
+	if _, err := os.Stat(filepath.Join(cwd, paths.Dir())); err == nil {
+		return fmt.Errorf("setup --yes: %s already exists — this repo is already initialized (use `pactify agent add` to wire more seats)", paths.Dir())
+	}
+	reg, err := agentreg.Load()
+	if err != nil {
+		return err
+	}
+	var kinds []string
+	for _, a := range reg.Agents {
+		kinds = append(kinds, a.Kind)
+	}
+	bindings := wizard.Suggest(kinds)
+	if len(bindings) == 0 {
+		return fmt.Errorf("setup --yes: no registered agents to staff — run `pactify agent scan` then `pactify agent register <kind>` first")
+	}
+	if project == "" {
+		project = filepath.Base(cwd)
+	}
+
+	// Build the full seat roster for a single init (every seat seeded at once),
+	// then wire each drivable kind so it can join. Mirrors `setup suggest`'s
+	// printed commands, executed instead of printed.
+	lead := bindings[0].Seat // wizard.Suggest orders the claude-lead first
+	var seatSpecs []string
+	for _, b := range bindings {
+		entry := "AGENTS.md"
+		if ad, ok := agent.Get(b.Kind); ok && ad.DefaultEntry() != "" {
+			entry = ad.DefaultEntry()
+		}
+		seatSpecs = append(seatSpecs, b.Seat+":"+strings.Join(b.Roles, ",")+":"+entry+":"+b.Kind)
+	}
+	// pact.Init records the init event under PACT_AGENT_ID; adopt the lead seat
+	// so provenance matches the roster's declared lead.
+	os.Setenv("PACT_AGENT_ID", lead)
+	if err := pact.Init(project, seatSpecs); err != nil {
+		return err
+	}
+	for _, b := range bindings {
+		if err := agent.Wire(b.Kind, b.Seat, strings.Join(b.Roles, ","), cwd); err != nil {
+			return err
+		}
+		reportWire(out, b.Kind, b.Seat, strings.Join(b.Roles, ","), cwd)
+	}
+	fmt.Fprintf(out, "\n✅ Initialized .pact/ for %q with %d seat(s).\n", project, len(bindings))
+	if warns := wizard.Validate(bindings); len(warns) > 0 {
+		fmt.Fprintln(out, "Gaps to resolve:")
+		for _, w := range warns {
+			fmt.Fprintf(out, "  ⚠ %s\n", w)
+		}
+	}
+	fmt.Fprintf(out, "Set your seat for shell verbs:\n  export PACT_AGENT_ID=%s\n", lead)
+	fmt.Fprintf(out, "Next: `pactify run \"<goal>\" --feature <id>` to go from a sentence to shipped.\n")
+	return nil
+}
+
 func newSetupCmd() *cobra.Command {
-	cmd := &cobra.Command{Use: "setup", Short: "guided onboarding (interactive)",
+	var yes bool
+	var project string
+	cmd := &cobra.Command{Use: "setup", Short: "guided onboarding (interactive, or --yes for zero-interaction)",
 		RunE: func(c *cobra.Command, _ []string) error {
 			cwd, _ := os.Getwd()
+			if yes {
+				return runSetupYes(c.OutOrStdout(), cwd, project)
+			}
 			return runSetup(os.Stdin, c.OutOrStdout(), cwd, isTTY())
 		}}
+	cmd.Flags().BoolVar(&yes, "yes", false, "zero-interaction: init + wire from your registered agents (wizard.Suggest roster) with no prompts")
+	cmd.Flags().StringVar(&project, "project", "", "project name for --yes (default: repo directory name)")
 	cmd.AddCommand(newSetupSuggestCmd())
 	return cmd
 }

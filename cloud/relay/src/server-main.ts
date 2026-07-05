@@ -139,10 +139,56 @@ export async function startServer(
 }
 
 /**
+ * Install process-level last-resort guards so one unhandled async error can't
+ * silently crash-loop the relay (RELAY-1). A bare Node process exits on an
+ * unhandledRejection (and, depending on flags, on an uncaughtException) with no
+ * log line — on the shared staging/prod relay this looked like "the relay just
+ * died", a diagnosis dead end. We log the failure with enough context to act on,
+ * then: for an uncaughtException the process state may be corrupt, so exit
+ * non-zero and let the supervisor (Fly.io) restart cleanly; for an
+ * unhandledRejection we log and keep serving (a single dropped promise must not
+ * take down every connected machine). Returns the handler refs so tests can
+ * assert wiring and callers can remove them.
+ *
+ * Idempotent-ish: pass a logger; falls back to console when the server hasn't
+ * built one yet (these fire before/around startServer).
+ */
+export function installProcessGuards(
+  log: { error(msg: string, meta?: unknown): void } = {
+    error: (m, meta) => process.stderr.write(`relay: ${m} ${meta ? JSON.stringify(meta) : ''}\n`),
+  },
+  // exit is injectable so tests assert the intent without terminating the runner.
+  exit: (code: number) => void = (code) => {
+    process.exitCode = code
+    // Give the log a tick to flush, then hard-exit if we're still here.
+    setTimeout(() => process.exit(code), 100).unref()
+  },
+): { onRejection: (r: unknown) => void; onException: (e: Error) => void } {
+  const onRejection = (reason: unknown) => {
+    log.error('unhandledRejection (kept serving)', {
+      reason: reason instanceof Error ? { message: reason.message, stack: reason.stack } : String(reason),
+    })
+  }
+  const onException = (err: Error) => {
+    // Process state is unknown after an uncaught exception — log, then exit so
+    // the supervisor restarts from a clean slate instead of serving corrupt state.
+    log.error('uncaughtException (exiting for clean restart)', {
+      message: err?.message,
+      stack: err?.stack,
+    })
+    exit(1)
+  }
+  process.on('unhandledRejection', onRejection)
+  process.on('uncaughtException', onException)
+  return { onRejection, onException }
+}
+
+/**
  * Process entrypoint: parse the environment, then listen. On a bad environment,
  * print the error + usage to stderr and set a non-zero exit code.
  */
 export async function main(): Promise<void> {
+  installProcessGuards()
   const cfg = parseServerEnv(process.env)
   if ('error' in cfg) {
     process.stderr.write(`linx-relay: ${cfg.error}\n`)

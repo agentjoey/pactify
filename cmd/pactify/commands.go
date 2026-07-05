@@ -227,6 +227,6 @@ enable. Override per-run with: pactify orchestrate --critic seat=<seat>`,
 	seatCmd.AddCommand(seatAddCmd)
 
 	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, cancelCmd, withdrawCmd, configCmd, statusCmd, logCmd, validateCmd, seatCmd,
-		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd(), newAccountCmd(), newScheduleCmd())
+		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newRunCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd(), newAccountCmd(), newScheduleCmd())
 	return root
 }

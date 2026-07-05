@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseServerEnv } from '../src/server-main.js'
+import { parseServerEnv, installProcessGuards } from '../src/server-main.js'
 import { DEFAULT_RUN_TTL_MS } from '../src/retention.js'
 import { DEFAULT_MACHINE_TTL_MS } from '../src/machines.js'
 
@@ -93,5 +93,44 @@ describe('parseServerEnv', () => {
       machineTtlMs: DEFAULT_MACHINE_TTL_MS,
     })
     expect('redisUrl' in res).toBe(false)
+  })
+})
+
+describe('installProcessGuards (RELAY-1)', () => {
+  it('logs an unhandledRejection and keeps serving (no exit)', () => {
+    const errors: Array<{ msg: string; meta?: unknown }> = []
+    const before = process.exitCode
+    const { onRejection } = installProcessGuards({ error: (msg, meta) => errors.push({ msg, meta }) }, () => {})
+    onRejection(new Error('boom'))
+    expect(errors).toHaveLength(1)
+    expect(errors[0].msg).toContain('unhandledRejection')
+    expect(errors[0].meta).toMatchObject({ reason: { message: 'boom' } })
+    expect(process.exitCode).toBe(before) // must NOT flag exit — one dropped promise can't kill the relay
+    process.off('unhandledRejection', onRejection)
+  })
+
+  it('logs an uncaughtException and exits non-zero for a clean restart', () => {
+    const errors: Array<{ msg: string; meta?: unknown }> = []
+    const exits: number[] = []
+    const { onRejection, onException } = installProcessGuards(
+      { error: (msg, meta) => errors.push({ msg, meta }) },
+      (code) => exits.push(code),
+    )
+    onException(new Error('fatal'))
+    expect(errors[0].msg).toContain('uncaughtException')
+    expect(errors[0].meta).toMatchObject({ message: 'fatal' })
+    expect(exits).toEqual([1]) // supervisor-driven restart, not a silent crash
+    process.off('unhandledRejection', onRejection)
+    process.off('uncaughtException', onException)
+  })
+
+  it('registers real process listeners', () => {
+    const rBefore = process.listenerCount('unhandledRejection')
+    const eBefore = process.listenerCount('uncaughtException')
+    const { onRejection, onException } = installProcessGuards({ error: () => {} }, () => {})
+    expect(process.listenerCount('unhandledRejection')).toBe(rBefore + 1)
+    expect(process.listenerCount('uncaughtException')).toBe(eBefore + 1)
+    process.off('unhandledRejection', onRejection)
+    process.off('uncaughtException', onException)
   })
 })

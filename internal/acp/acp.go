@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"syscall"
 )
 
 // ProtocolVersion is the ACP protocol version this client advertises in the
@@ -154,6 +155,13 @@ func Spawn(ctx context.Context, command string, args, env []string, dir string) 
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), env...)
 	cmd.Stderr = os.Stderr
+	// Run the child in its own process group so teardown can reap the whole
+	// tree (ACP-1): most kinds launch via `npx`, which forks a node grandchild
+	// that would survive a plain Process.Kill as an orphaned live agent — still
+	// holding a vendor session and burning tokens. Same pattern as the cmd
+	// transport's idle-kill (orchestrate/runner_idle.go).
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { killGroup(cmd); return nil }
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("acp: stdin pipe: %w", err)
@@ -167,8 +175,9 @@ func Spawn(ctx context.Context, command string, args, env []string, dir string) 
 	}
 	c := newClient(stdin, stdout, func() error {
 		_ = stdin.Close()
-		// Killing the process (if still running) unblocks Wait and reaps it.
-		_ = cmd.Process.Kill()
+		// Group-kill (if still running) unblocks Wait and reaps npx's
+		// grandchildren along with the direct child.
+		killGroup(cmd)
 		return nil
 	}, dir)
 	// Reap the process; its exit closes stdout, so the reader loop already
@@ -183,6 +192,21 @@ func Spawn(ctx context.Context, command string, args, env []string, dir string) 
 		c.terminate(errors.New(msg))
 	}()
 	return c, nil
+}
+
+// killGroup terminates the agent process AND any subprocesses it spawned. The
+// child is started in its own process group (Setpgid), so killing the negative
+// pgid reaches reparented grandchildren. Falls back to a direct kill if the
+// pgid can't be resolved (already-reaped process).
+func killGroup(cmd *exec.Cmd) {
+	if cmd.Process == nil {
+		return
+	}
+	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil {
+		_ = syscall.Kill(-pgid, syscall.SIGKILL)
+		return
+	}
+	_ = cmd.Process.Kill()
 }
 
 // newClient builds a Client over an already-connected transport: w is the frame

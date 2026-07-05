@@ -144,7 +144,9 @@ func (s *Server) Handler() http.Handler {
 	s.registerPlanRoutes(mux)
 	s.registerFsBrowseRoutes(mux)
 	mux.Handle("/", dashboardHandler())
-	return mux
+	// SEC-1: every mutating route above goes through the browser-CSRF guard —
+	// register new routes inside this mux so they inherit it.
+	return writeGuard(mux)
 }
 
 func (s *Server) handleProjects(w http.ResponseWriter, _ *http.Request) {

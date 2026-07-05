@@ -284,6 +284,59 @@ func TestLoopOrchestratorAsReviewerEscalatesImmediatelyNotAsFailure(t *testing.T
 	}
 }
 
+// The quorum sweep launches each reviewer individually — a path the main
+// loop's orchestrator-as-actor guard (which only sees act.Seat, the FIRST
+// reviewer) does not cover. When a NON-first quorum reviewer is the
+// orchestrator seat with no kind, the launch must escalate with the accurate
+// cause on the first attempt (via the errOrchestratorSeat sentinel), not burn
+// the failure budget on deterministic instant failures — the P2 shape, one
+// layer deeper (found in the post-fix re-review).
+func TestLoopQuorumOrchestratorReviewerEscalatesAccurately(t *testing.T) {
+	dir := newProject(t)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	if err := pact.At(dir).As("orch").AssignQuorum("t1", "f", "feat/x", "w", []string{"r1", "orch"}, 2, s1, nil); err != nil {
+		t.Fatalf("assign quorum: %v", err)
+	}
+	c := exec.Command("git", "checkout", "-q", "-B", "feat/x")
+	c.Dir = dir
+	if out, err := c.CombinedOutput(); err != nil {
+		t.Fatalf("checkout: %v %s", err, out)
+	}
+
+	runner := newFakeRunner(t, dir) // worker checkpoints; reviewers accept
+	notify := &recNotify{}
+	opts := baseOpts(dir, runner, &okExec{}, notify)
+	opts.Orchestrator = "orch"
+	opts.SeatKind = func(seat string) string {
+		if seat == "orch" {
+			return "" // the orchestrator: never headlessly drivable
+		}
+		return "claude-code"
+	}
+
+	if err := Run(context.Background(), opts); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// r1 (launchable) voted; the sweep then hit "orch" and escalated accurately.
+	if runner.reviewerCalls != 1 {
+		t.Fatalf("reviewer calls = %d, want exactly 1 (r1 votes; orch must never be launched)", runner.reviewerCalls)
+	}
+	if len(notify.msgs) == 0 {
+		t.Fatal("expected an escalation notification")
+	}
+	last := notify.msgs[len(notify.msgs)-1]
+	if !strings.Contains(last, "orchestrator") {
+		t.Errorf("escalation should carry the orchestrator-seat cause, got: %q", last)
+	}
+	if strings.Contains(last, "failure limit exceeded") {
+		t.Errorf("escalation must NOT be the generic failure-limit message, got: %q", last)
+	}
+	if got := featureStatus(t, dir, "f"); got == "shipped" {
+		t.Error("feature must not ship — quorum 2/2 needs orch's manual accept")
+	}
+}
+
 func TestLoopHappyPathShipsFeature(t *testing.T) {
 	dir := newProject(t)
 	s1 := writeSpec(t, dir, "t1", "go test ./...")

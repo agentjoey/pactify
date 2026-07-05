@@ -28,22 +28,32 @@ func TestEscalationFilename(t *testing.T) {
 
 // archiveEscalationsForFeature moves ONLY the named feature's own escalation
 // files into archive/, leaving other features' (and feature-less) escalations
-// untouched in the live directory.
+// untouched in the live directory. Matching is by the record's `## Feature`
+// content section, so hyphenated feature ids can never prefix-collide in the
+// filename (feature "fa" must not sweep feature "fa-old"'s files).
 func TestArchiveEscalationsForFeature(t *testing.T) {
 	dir := t.TempDir()
 	outDir := filepath.Join(dir, ".pact", "orchestrate")
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	write := func(name string) {
-		if err := os.WriteFile(filepath.Join(outDir, name), []byte("x"), 0o644); err != nil {
+	// Write records through the REAL producer so the content format (the
+	// ## Feature section the matcher parses) can never drift from production.
+	mustWrite := func(ts, feature, task string) string {
+		t.Helper()
+		p, err := writeEscalation(dir, ts, feature, task, "reason", "ev", "sug")
+		if err != nil {
 			t.Fatal(err)
 		}
+		return filepath.Base(p)
 	}
-	write("escalation-fa-t1-20260613-000000.md")   // fa's own — should archive
-	write("escalation-fa-t2-20260613-000001.md")   // fa's own — should archive
-	write("escalation-fb-t1-20260613-000002.md")   // a DIFFERENT feature — must stay
-	write("escalation-20260613-000003.md")         // feature-less — must stay
+	faT1 := mustWrite("20260613-000000", "fa", "t1")      // fa's own — should archive
+	faT2 := mustWrite("20260613-000001", "fa", "t2")      // fa's own — should archive
+	fbT1 := mustWrite("20260613-000002", "fb", "t1")      // a DIFFERENT feature — must stay
+	faOld := mustWrite("20260613-000003", "fa-old", "t9") // prefix-COLLIDING feature — must stay
+	noFeat := mustWrite("20260613-000004", "", "t1")      // feature-less — must stay
+	// A pre-P1 record (no ## Feature section at all) — must stay.
+	legacy := "escalation-20260101-000000.md"
+	if err := os.WriteFile(filepath.Join(outDir, legacy), []byte("# Escalation\n\n## Task\n\nt0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	archiveEscalationsForFeature(dir, "fa")
 
@@ -55,17 +65,23 @@ func TestArchiveEscalationsForFeature(t *testing.T) {
 		_, err := os.Stat(filepath.Join(outDir, "archive", name))
 		return err == nil
 	}
-	if stillLive("escalation-fa-t1-20260613-000000.md") || !archived("escalation-fa-t1-20260613-000000.md") {
+	if stillLive(faT1) || !archived(faT1) {
 		t.Error("fa's t1 escalation should have been archived")
 	}
-	if stillLive("escalation-fa-t2-20260613-000001.md") || !archived("escalation-fa-t2-20260613-000001.md") {
+	if stillLive(faT2) || !archived(faT2) {
 		t.Error("fa's t2 escalation should have been archived")
 	}
-	if !stillLive("escalation-fb-t1-20260613-000002.md") {
+	if !stillLive(fbT1) {
 		t.Error("a DIFFERENT feature's escalation must NOT be touched")
 	}
-	if !stillLive("escalation-20260613-000003.md") {
+	if !stillLive(faOld) {
+		t.Error("feature fa-old's escalation must NOT be swept by feature fa (filename prefix collision)")
+	}
+	if !stillLive(noFeat) {
 		t.Error("a feature-less escalation must NOT be touched")
+	}
+	if !stillLive(legacy) {
+		t.Error("a legacy (pre-P1, no Feature section) escalation must NOT be touched")
 	}
 }
 

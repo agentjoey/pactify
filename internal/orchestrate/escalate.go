@@ -41,6 +41,10 @@ func writeEscalation(dir, ts, feature, task, reason, evidence, suggestion string
 The orchestrate driver could not converge this task and has paused for human
 intervention. Fix the underlying issue, then resume with `+"`pactify orchestrate --resume`"+`.
 
+## Feature
+
+%s
+
 ## Task
 
 %s
@@ -56,7 +60,7 @@ intervention. Fix the underlying issue, then resume with `+"`pactify orchestrate
 ## Suggestion
 
 %s
-`, ts, task, reason, evidence, suggestion)
+`, ts, feature, task, reason, evidence, suggestion)
 
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return "", fmt.Errorf("write escalation file: %w", err)
@@ -94,9 +98,15 @@ func escalationFilename(feature, task, ts string) string {
 // features is exactly what caused a days-old, unrelated escalation to be
 // mistaken for the current run's state (2026-07-05 dogfood P1). Best-effort and
 // silent: archiving is housekeeping, never something that should fail a merge.
-// Matches by filename prefix "escalation-<feature>-" (or bare
-// "escalation-<feature>-<ts>.md" for a feature-level escalation with no task),
-// so it only ever touches THIS feature's own files.
+//
+// Matching is by the file's `## Feature` CONTENT section (exact id match), NOT
+// by filename prefix: feature and task ids both contain hyphens, so a filename
+// like "escalation-f-old-t9-<ts>.md" is ambiguous between (feature "f", task
+// "old-t9") and (feature "f-old", task "t9") — a prefix match for feature "f"
+// would wrongly sweep feature "f-old"'s files (caught in the 2026-07-05
+// post-fix review). Files without a Feature section (pre-P1 records, or
+// feature-less escalations) are never auto-archived — leaving debris is safe,
+// archiving someone else's live escalation is not.
 func archiveEscalationsForFeature(dir, feature string) {
 	if feature == "" {
 		return
@@ -106,17 +116,44 @@ func archiveEscalationsForFeature(dir, feature string) {
 	if err != nil {
 		return
 	}
-	prefix := "escalation-" + escalationSlug(feature) + "-"
 	archiveDir := filepath.Join(outDir, "archive")
 	for _, e := range entries {
-		if e.IsDir() || !strings.HasPrefix(e.Name(), prefix) {
+		if e.IsDir() || !strings.HasPrefix(e.Name(), "escalation-") {
+			continue
+		}
+		p := filepath.Join(outDir, e.Name())
+		b, rerr := os.ReadFile(p)
+		if rerr != nil || escalationFeatureOf(string(b)) != feature {
 			continue
 		}
 		if err := os.MkdirAll(archiveDir, 0o755); err != nil {
 			return
 		}
-		_ = os.Rename(filepath.Join(outDir, e.Name()), filepath.Join(archiveDir, e.Name()))
+		_ = os.Rename(p, filepath.Join(archiveDir, e.Name()))
 	}
+}
+
+// escalationFeatureOf extracts the feature id from an escalation record's
+// `## Feature` section ("" when absent — pre-P1 records have no such section).
+func escalationFeatureOf(content string) string {
+	const header = "## Feature\n"
+	i := strings.Index(content, header)
+	if i < 0 {
+		return ""
+	}
+	rest := content[i+len(header):]
+	// The section body is the first non-empty line before the next section.
+	for _, line := range strings.Split(rest, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "##") {
+			return "" // empty section (feature-less escalation)
+		}
+		return line
+	}
+	return ""
 }
 
 // Notifier abstracts how an escalation reaches a human. The loop layer injects a

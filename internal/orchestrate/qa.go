@@ -2,6 +2,7 @@ package orchestrate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -71,8 +72,14 @@ func (opts Options) runQA(ctx context.Context, st, view projection.State, act Ac
 			}
 			// A QA stint failure/timeout is soft and LENIENT (experimental — never
 			// hard-block): record a null-result note and proceed, still pointing the
-			// reviewer at the (possibly empty) report.
-			opts.recordQANote(act.Task, "error", "", task.Owner)
+			// reviewer at the (possibly empty) report. An orchestrator-seat owner
+			// (deterministically unlaunchable) stays lenient too, but the note
+			// carries the real cause so the reviewer isn't left guessing.
+			cause := ""
+			if errors.Is(runErr, errOrchestratorSeat) {
+				cause = runErr.Error()
+			}
+			opts.recordQANote(act.Task, "error", cause, task.Owner)
 			return qaInjection(report, ""), true, nil
 		}
 

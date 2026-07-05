@@ -2,6 +2,7 @@ package orchestrate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -150,7 +151,33 @@ func (opts Options) pactIgnored(dst string) bool {
 // CHILD of ctx, so a per-run expiry cancels just that subprocess (soft failure),
 // while a parent-ctx cancellation (Ctrl-C) propagates. Callers distinguish the
 // two by checking the PARENT ctx.Err() after a non-nil return.
+// errOrchestratorSeat marks a launch that can never succeed: the seat is the
+// orchestrator itself (this driver process) with no --seat-kind override, so
+// there is no agent to spawn — the stint must be done manually. Distinguished
+// so secondary launch sites (fix rounds, QA stints, quorum reviewer sweeps)
+// that don't pass through the main loop's orchestrator-as-actor guard can
+// surface the REAL cause instead of burning bounded budgets on a
+// deterministic, instant failure with a generic reason (dogfood P2's shape).
+var errOrchestratorSeat = errors.New("seat is the orchestrator and has no agent kind — its stint must be done manually")
+
+// errPausedForEscalation signals run() that an escalation was already written
+// and the loop must STOP (paused for a human), from a site whose plain-nil
+// return would otherwise let the loop iterate straight back into the same
+// deterministic dead-end (e.g. a quorum sweep re-hitting an unlaunchable
+// orchestrator reviewer every iteration until MaxIters drowns the accurate
+// reason under "iteration limit exceeded" — caught by
+// TestLoopQuorumOrchestratorReviewerEscalatesAccurately). run() maps it to a
+// clean nil return, exactly like the escalate-and-return sites do inline.
+var errPausedForEscalation = errors.New("paused for escalation")
+
 func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task string) error {
+	// Centralized orchestrator-as-actor check: the primary loop guard catches
+	// act.Seat before dispatch, but the owner is also launched from fix/QA
+	// rounds inside the ActRunReviewer branch, and quorum sweeps launch each
+	// reviewer individually — every site funnels through here.
+	if seatID != "" && seatID == opts.Orchestrator && kind == "" {
+		return fmt.Errorf("launch %s for task %s: %w", seatID, task, errOrchestratorSeat)
+	}
 	runCtx := ctx
 	if opts.RunTimeout > 0 {
 		var cancel context.CancelFunc
@@ -376,6 +403,9 @@ func (opts Options) run(ctx context.Context) error {
 			// reviewer briefing's single pre-review section; all-empty leaves it
 			// byte-for-byte unchanged.
 			if err := opts.runReviewer(ctx, st, &h, act, joinNotes(qaNote, criticNote)); err != nil {
+				if errors.Is(err, errPausedForEscalation) {
+					return nil // escalation written + notified: paused, not failed
+				}
 				return err
 			}
 			_ = writeHistory(opts.runtimeDir(), scope, h)
@@ -507,6 +537,23 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
+		// An orchestrator-seat reviewer (e.g. a quorum member that is this very
+		// driver process) can NEVER be launched — deterministic, not transient.
+		// Counting it as a soft failure would burn the whole budget in instant
+		// iterations and escalate with a misleading generic reason (P2's shape,
+		// via the quorum sweep the main-loop guard doesn't see). Escalate now,
+		// accurately, without touching the failure budget.
+		if errors.Is(runErr, errOrchestratorSeat) {
+			reason := runErr.Error() + " (e.g. `pactify accept`/`pactify changes`)"
+			opts.emitEscalatedStatus(st, act.Task, reason, *h)
+			if err := opts.escalate(act.Feature, act.Task, reason, evidenceFor(st, act.Task),
+				"人工完成该评审后 pactify orchestrate 续跑"); err != nil {
+				return err
+			}
+			// A plain nil here would let the loop iterate straight back into this
+			// same deterministic dead-end; signal run() to stop (paused).
+			return errPausedForEscalation
+		}
 		h.Fails[act.Task]++ // transient agent crash → soft failure (spec §2.5)
 		return nil
 	}
@@ -632,6 +679,16 @@ func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State
 		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
 			if ctx.Err() != nil {
 				return false, runErr // cancellation: propagate, don't swallow
+			}
+			// An orchestrator-seat OWNER can never be re-launched for a fix round —
+			// deterministic, so burning the remaining rounds re-checking an
+			// unchanged gate would escalate with only the gate output as reason,
+			// hiding the real cause. Escalate now with the accurate one.
+			if errors.Is(runErr, errOrchestratorSeat) {
+				reason := runErr.Error() + " — the verify gate is red and its owner cannot be driven headlessly"
+				opts.emitEscalatedStatus(view, act.Task, reason, *h)
+				return false, opts.escalate(act.Feature, act.Task, reason, detail,
+					"人工修复 verify 失败后 pactify orchestrate 续跑")
 			}
 			// A fix-round agent error is not a task failure (in-stint self-repair):
 			// leave h.Fails untouched and let the gate recheck decide. The round is

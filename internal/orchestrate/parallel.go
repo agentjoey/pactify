@@ -2,6 +2,7 @@ package orchestrate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -343,6 +344,11 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 			// WS-H are serial-loop features); pass an empty critic note so the reviewer
 			// briefing is unchanged here.
 			if err := o.runReviewer(ctx, st, &h, act, ""); err != nil {
+				if errors.Is(err, errPausedForEscalation) {
+					// Escalation written + notified: this feature pauses (escalated),
+					// mirroring the serial loop's clean stop, not a driver error.
+					return false, true, nil
+				}
 				return false, false, err
 			}
 			_ = writeHistory(opts.Dir, feature, h)

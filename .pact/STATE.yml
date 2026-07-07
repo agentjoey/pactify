@@ -511,7 +511,7 @@ features:
     tasks:
       - id: doctor-json
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/doctor-json.md
-        evidence: null
+        evidence: pactify doctor --json emits []Check as JSON array (name/ok/detail tags); text path byte-unchanged, allOK hoisted; exit-code semantics preserved; go test ./internal/doctor/ ./cmd/pactify/ green; e2e emits 19-check valid array

@@ -1,9 +1,11 @@
 package acp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os/exec"
 	"strings"
@@ -351,4 +353,247 @@ func TestFilteredEnvironDropsPactifySecrets(t *testing.T) {
 	if !has("PATH") {
 		t.Error("PATH should be preserved")
 	}
+}
+
+func TestPerSessionUpdateRouting(t *testing.T) {
+	c := newClient(discardWriteCloser{}, blockingReader{}, func() error { return nil }, ".")
+	defer c.Close()
+
+	var got []string
+	var mu sync.Mutex
+	record := func(name string) func(SessionUpdate) {
+		return func(u SessionUpdate) {
+			mu.Lock()
+			got = append(got, name+":"+string(u.SessionID))
+			mu.Unlock()
+		}
+	}
+
+	c.OnSessionUpdate(record("global"))
+	c.OnSessionUpdateFor("A", record("A"))
+	c.OnSessionUpdateFor("B", record("B"))
+
+	c.dispatchUpdate(SessionUpdate{SessionID: "A", Kind: "k"})
+	c.dispatchUpdate(SessionUpdate{SessionID: "B", Kind: "k"})
+	c.dispatchUpdate(SessionUpdate{SessionID: "C", Kind: "k"})
+
+	mu.Lock()
+	defer mu.Unlock()
+	want := []string{"A:A", "B:B", "global:C"}
+	if !slicesEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestPerSessionUpdateClearSession(t *testing.T) {
+	c := newClient(discardWriteCloser{}, blockingReader{}, func() error { return nil }, ".")
+	defer c.Close()
+
+	var got []string
+	var mu sync.Mutex
+	record := func(name string) func(SessionUpdate) {
+		return func(u SessionUpdate) {
+			mu.Lock()
+			got = append(got, name+":"+string(u.SessionID))
+			mu.Unlock()
+		}
+	}
+
+	c.OnSessionUpdate(record("global"))
+	c.OnSessionUpdateFor("A", record("A"))
+
+	c.dispatchUpdate(SessionUpdate{SessionID: "A", Kind: "k"})
+	c.ClearSession("A")
+	c.dispatchUpdate(SessionUpdate{SessionID: "A", Kind: "k"})
+
+	mu.Lock()
+	defer mu.Unlock()
+	want := []string{"A:A", "global:A"}
+	if !slicesEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestPerSessionUpdateGlobalOnlyRegression(t *testing.T) {
+	c := newClient(discardWriteCloser{}, blockingReader{}, func() error { return nil }, ".")
+	defer c.Close()
+
+	var got []string
+	var mu sync.Mutex
+	c.OnSessionUpdate(func(u SessionUpdate) {
+		mu.Lock()
+		got = append(got, "global:"+string(u.SessionID))
+		mu.Unlock()
+	})
+
+	c.dispatchUpdate(SessionUpdate{SessionID: "A", Kind: "k"})
+	c.dispatchUpdate(SessionUpdate{SessionID: "B", Kind: "k"})
+
+	mu.Lock()
+	defer mu.Unlock()
+	want := []string{"global:A", "global:B"}
+	if !slicesEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestPerSessionPermissionRouting(t *testing.T) {
+	cw := newNotifyingWriter()
+	c := newClient(cw, blockingReader{}, func() error { return nil }, ".")
+	defer c.Close()
+
+	choose := func(name string) func(PermissionRequest) PermissionOutcome {
+		return func(req PermissionRequest) PermissionOutcome {
+			return PermissionOutcome{OptionID: name}
+		}
+	}
+
+	c.OnPermissionRequest(choose("global"))
+	c.OnPermissionRequestFor("A", choose("A"))
+	c.OnPermissionRequestFor("B", choose("B"))
+
+	cases := []struct {
+		sid  string
+		want string
+	}{
+		{"A", "A"},
+		{"B", "B"},
+		{"C", "global"},
+	}
+
+	for i, tc := range cases {
+		cw.Reset()
+		id := json.RawMessage(fmt.Sprintf(`%d`, i+1))
+		params := fmt.Sprintf(`{"sessionId":%q,"toolCall":{"toolCallId":"tc","title":"t"},"options":[]}`, tc.sid)
+		c.handleServerRequest(id, "session/request_permission", json.RawMessage(params))
+
+		resp := cw.ReadResponse(t)
+		if resp.Result.Outcome.Outcome != "selected" || resp.Result.Outcome.OptionID != tc.want {
+			t.Fatalf("sid %s: outcome = %s/%s, want selected/%s", tc.sid, resp.Result.Outcome.Outcome, resp.Result.Outcome.OptionID, tc.want)
+		}
+	}
+}
+
+func TestPerSessionPermissionClearSession(t *testing.T) {
+	cw := newNotifyingWriter()
+	c := newClient(cw, blockingReader{}, func() error { return nil }, ".")
+	defer c.Close()
+
+	c.OnPermissionRequest(func(req PermissionRequest) PermissionOutcome {
+		return PermissionOutcome{OptionID: "global"}
+	})
+	c.OnPermissionRequestFor("A", func(req PermissionRequest) PermissionOutcome {
+		return PermissionOutcome{OptionID: "A"}
+	})
+
+	run := func(want string) {
+		t.Helper()
+		cw.Reset()
+		c.handleServerRequest(json.RawMessage(`1`), "session/request_permission", json.RawMessage(`{"sessionId":"A","toolCall":{"toolCallId":"tc","title":"t"},"options":[]}`))
+		resp := cw.ReadResponse(t)
+		if resp.Result.Outcome.OptionID != want {
+			t.Fatalf("optionId = %q, want %q", resp.Result.Outcome.OptionID, want)
+		}
+	}
+
+	run("A")
+	c.ClearSession("A")
+	run("global")
+}
+
+func TestPerSessionPermissionDefaultCancel(t *testing.T) {
+	cw := newNotifyingWriter()
+	c := newClient(cw, blockingReader{}, func() error { return nil }, ".")
+	defer c.Close()
+
+	c.handleServerRequest(json.RawMessage(`1`), "session/request_permission", json.RawMessage(`{"sessionId":"X","toolCall":{"toolCallId":"tc","title":"t"},"options":[]}`))
+
+	resp := cw.ReadResponse(t)
+	if resp.Result.Outcome.Outcome != "cancelled" {
+		t.Fatalf("outcome = %q, want cancelled", resp.Result.Outcome.Outcome)
+	}
+}
+
+// helpers for per-session routing tests
+
+type blockingReader struct{}
+
+func (blockingReader) Read(p []byte) (int, error) {
+	select {}
+}
+
+type discardWriteCloser struct{}
+
+func (discardWriteCloser) Write(p []byte) (int, error) { return len(p), nil }
+func (discardWriteCloser) Close() error                { return nil }
+
+type notifyingWriter struct {
+	mu  sync.Mutex
+	buf *bytes.Buffer
+	ch  chan struct{}
+}
+
+func newNotifyingWriter() *notifyingWriter {
+	return &notifyingWriter{
+		buf: &bytes.Buffer{},
+		ch:  make(chan struct{}, 1),
+	}
+}
+
+func (w *notifyingWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	n, err := w.buf.Write(p)
+	w.mu.Unlock()
+	select {
+	case w.ch <- struct{}{}:
+	default:
+	}
+	return n, err
+}
+
+func (w *notifyingWriter) Close() error { return nil }
+
+func (w *notifyingWriter) Reset() {
+	w.mu.Lock()
+	w.buf.Reset()
+	w.mu.Unlock()
+}
+
+type permissionResponse struct {
+	Result struct {
+		Outcome struct {
+			Outcome  string `json:"outcome"`
+			OptionID string `json:"optionId"`
+		} `json:"outcome"`
+	} `json:"result"`
+}
+
+func (w *notifyingWriter) ReadResponse(t *testing.T) permissionResponse {
+	t.Helper()
+	select {
+	case <-w.ch:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for permission response")
+	}
+	w.mu.Lock()
+	data := append([]byte(nil), w.buf.Bytes()...)
+	w.mu.Unlock()
+
+	var resp permissionResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	return resp
+}
+
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

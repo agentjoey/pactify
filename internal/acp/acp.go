@@ -124,9 +124,11 @@ type Client struct {
 
 	loadSession bool
 
-	hmu      sync.Mutex
-	onUpdate func(SessionUpdate)
-	onPerm   func(PermissionRequest) PermissionOutcome
+	hmu       sync.Mutex
+	onUpdate  func(SessionUpdate)
+	onPerm    func(PermissionRequest) PermissionOutcome
+	perUpdate map[SessionID]func(SessionUpdate)
+	perPerm   map[SessionID]func(PermissionRequest) PermissionOutcome
 }
 
 // rpcResponse is the result/error delivered to a pending caller.
@@ -236,12 +238,14 @@ func killGroup(cmd *exec.Cmd) {
 // pipe-backed fake server through, keeping Spawn's os/exec path out of the tests.
 func newClient(w io.WriteCloser, r io.Reader, closeFn func() error, cwd string) *Client {
 	c := &Client{
-		w:       w,
-		closeFn: closeFn,
-		cwd:     cwd,
-		writeCh: make(chan []byte),
-		done:    make(chan struct{}),
-		pending: map[int64]chan rpcResponse{},
+		w:         w,
+		closeFn:   closeFn,
+		cwd:       cwd,
+		writeCh:   make(chan []byte),
+		done:      make(chan struct{}),
+		pending:   map[int64]chan rpcResponse{},
+		perUpdate: map[SessionID]func(SessionUpdate){},
+		perPerm:   map[SessionID]func(PermissionRequest) PermissionOutcome{},
 	}
 	go c.writeLoop()
 	go c.readLoop(r)
@@ -262,6 +266,41 @@ func (c *Client) OnSessionUpdate(fn func(SessionUpdate)) {
 func (c *Client) OnPermissionRequest(fn func(PermissionRequest) PermissionOutcome) {
 	c.hmu.Lock()
 	c.onPerm = fn
+	c.hmu.Unlock()
+}
+
+// OnSessionUpdateFor registers a per-session handler for session/update
+// notifications. It takes precedence over the global OnSessionUpdate handler.
+// Passing nil deletes the entry for sid.
+func (c *Client) OnSessionUpdateFor(sid SessionID, fn func(SessionUpdate)) {
+	c.hmu.Lock()
+	if fn == nil {
+		delete(c.perUpdate, sid)
+	} else {
+		c.perUpdate[sid] = fn
+	}
+	c.hmu.Unlock()
+}
+
+// OnPermissionRequestFor registers a per-session handler for
+// session/request_permission requests. It takes precedence over the global
+// OnPermissionRequest handler. Passing nil deletes the entry for sid.
+func (c *Client) OnPermissionRequestFor(sid SessionID, fn func(PermissionRequest) PermissionOutcome) {
+	c.hmu.Lock()
+	if fn == nil {
+		delete(c.perPerm, sid)
+	} else {
+		c.perPerm[sid] = fn
+	}
+	c.hmu.Unlock()
+}
+
+// ClearSession removes any per-session handlers for sid. Call this when a
+// session ends; the global handlers remain in place.
+func (c *Client) ClearSession(sid SessionID) {
+	c.hmu.Lock()
+	delete(c.perUpdate, sid)
+	delete(c.perPerm, sid)
 	c.hmu.Unlock()
 }
 
@@ -544,7 +583,10 @@ func (c *Client) handleNotification(method string, params json.RawMessage) {
 
 func (c *Client) dispatchUpdate(u SessionUpdate) {
 	c.hmu.Lock()
-	fn := c.onUpdate
+	fn, ok := c.perUpdate[u.SessionID]
+	if !ok {
+		fn = c.onUpdate
+	}
 	c.hmu.Unlock()
 	if fn != nil {
 		fn(u)
@@ -572,7 +614,10 @@ func (c *Client) handleServerRequest(id json.RawMessage, method string, params j
 	}
 	go func() {
 		c.hmu.Lock()
-		fn := c.onPerm
+		fn, ok := c.perPerm[p.SessionID]
+		if !ok {
+			fn = c.onPerm
+		}
 		c.hmu.Unlock()
 		outcome := PermissionOutcome{Cancelled: true}
 		if fn != nil {

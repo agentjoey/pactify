@@ -551,7 +551,7 @@ features:
     tasks:
       - id: doctor-setup-bridge
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/doctor-setup-bridge.md
         evidence: pactify doctor --setup-bridge materializes bridge/claude-host node deps (npm ci); doctor adds node + claude-bridge-deps checks (text+json); FindRepoRoot root-terminates (parent==dir). Real --setup-bridge verified idempotent; --json intact; go test green

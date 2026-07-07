@@ -121,7 +121,7 @@ var runnerProfiles = map[string]RunnerProfile{
 			if perm.Scoped {
 				sandbox = "workspace-write"
 			}
-			args := []string{"exec", "--sandbox", sandbox}
+			args := []string{"exec", "--json", "--sandbox", sandbox}
 			if model != "" {
 				args = append(args, "-m", model)
 			}

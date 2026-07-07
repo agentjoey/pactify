@@ -605,3 +605,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-manager.md
         evidence: CockpitManager: per-(project,seat) single session via injectable BackendFactory; get-or-create under lock (single-flight, factory once under 50-goroutine concurrency); Get/List/Close/CloseAll; jsonl at baseDir/cockpit/. go test -race x2 green
+  - id: cockpit-serve
+    branch: feat/cockpit-serve
+    status: in_progress
+    tasks:
+      - id: cockpit-serve
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-serve.md
+        evidence: serve cockpit endpoints (prompt/stream-SSE/permission/cancel/status) wired to cockpit.Manager, inherit SEC-1 writeGuard; backendForKey selects claude-code/codex-cli by roster kind; injectable Manager for httptest w/ FakeBackend. BONUS: fixed a genuinely pre-existing -race in relay enqueue/stop (close(queue) vs send; verified DATA RACE on main) via stopMu serialization. Full repo + -race x2 green

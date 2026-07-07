@@ -41,6 +41,8 @@ type relay struct {
 	seqs        map[string]int64  // next line index per project
 	projectKeys map[string][]byte // cache: projectID → per-project key
 
+	stopMu  sync.Mutex // guards stopped and serializes close(queue) with sends
+	stopped bool
 	queue   chan pactMsg
 	stopCh  chan struct{}
 	done    chan struct{}
@@ -148,28 +150,47 @@ func (r *relay) enqueue(project, line string) {
 	if r == nil {
 		return
 	}
+	r.stopMu.Lock()
+	if r.stopped {
+		r.stopMu.Unlock()
+		return
+	}
 	r.mu.Lock()
 	seq := r.seqs[project]
 	r.seqs[project] = seq + 1
 	r.mu.Unlock()
+	r.stopMu.Unlock()
+
 	msg := pactMsg{project: project, seq: seq, line: line}
 	for {
+		r.stopMu.Lock()
+		if r.stopped {
+			r.stopMu.Unlock()
+			return
+		}
 		select {
 		case r.queue <- msg:
+			r.stopMu.Unlock()
 			return
 		default:
-			select {
-			case <-r.queue:
-				atomic.AddInt64(&r.dropped, 1)
-			default:
-			}
+			r.stopMu.Unlock()
+		}
+		select {
+		case <-r.queue:
+			atomic.AddInt64(&r.dropped, 1)
+		case <-r.stopCh:
+			return
+		default:
 		}
 	}
 }
 
 func (r *relay) stop() {
+	r.stopMu.Lock()
+	r.stopped = true
 	close(r.stopCh)
 	close(r.queue)
+	r.stopMu.Unlock()
 	<-r.done
 }
 

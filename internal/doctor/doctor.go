@@ -13,9 +13,9 @@ import (
 )
 
 type Check struct {
-	Name   string
-	OK     bool
-	Detail string // remediation hint when !OK, or info when OK
+	Name   string `json:"name"`
+	OK     bool   `json:"ok"`
+	Detail string `json:"detail"` // remediation hint when !OK, or info when OK
 }
 
 // checkPath reports whether the directory of exePath is on pathEnv.

@@ -607,7 +607,7 @@ features:
         evidence: CockpitManager: per-(project,seat) single session via injectable BackendFactory; get-or-create under lock (single-flight, factory once under 50-goroutine concurrency); Get/List/Close/CloseAll; jsonl at baseDir/cockpit/. go test -race x2 green
   - id: cockpit-serve
     branch: feat/cockpit-serve
-    status: in_progress
+    status: shipped
     tasks:
       - id: cockpit-serve
         owner: kimi-worker

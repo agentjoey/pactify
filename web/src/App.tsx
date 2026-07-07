@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
 import { fetchEventsLog, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
 import type { Worktree } from "./lib/api";
@@ -13,7 +13,6 @@ import { DispatchPanel } from "./components/shell/DispatchPanel";
 import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
 import { LiveOrchestrate } from "./components/LiveOrchestrate";
-import { Spinner } from "./components/ui/Spinner";
 import { RightRail } from "./components/RightRail";
 import { TaskDetail } from "./components/TaskDetail";
 import { CommandK } from "./components/CommandK";
@@ -24,14 +23,8 @@ import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
 import { docTitle } from "./lib/docTitle";
-import type { Draft, DraftFeature } from "./lib/canvas";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
-
-// Lazy-load the Canvas view so users who only use Board/Live do not pay for the
-// heavy xyflow chunk on initial load. The named-export wrapper lets us keep the
-// Canvas component itself untouched.
-const Canvas = lazy(() => import("./components/Canvas").then((m) => ({ default: m.Canvas })));
 
 // Stale threshold: a task sitting in_progress longer than this (with no further
 // state change observed) gets an amber dot. Pragmatic: we time from when this
@@ -75,7 +68,8 @@ function AppContent() {
   const openSettings = (seat: string | null) => { setSettingsSeat(seat); setSettingsOpen(true); };
   const [wizardOpen, setWizardOpen] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
-  // Goal seeded into the DispatchPanel from the canvas NL command dock.
+  // Goal seeded into the DispatchPanel by callers that pre-fill it (none today;
+  // the canvas NL dock that used to set this is retired).
   const [dispatchGoal, setDispatchGoal] = useState("");
   // running status per project name → drives the status light on the ProjectMenu
   // trigger AND every row in the dropdown (spec §4.1: each project shows a light).
@@ -89,12 +83,6 @@ function AppContent() {
   const [currentWorktree, setCurrentWorktree] = useState("");
   const [worktreesByProject, setWorktreesByProject] = useState<Record<string, Worktree[]>>({});
 
-  // Canvas build-mode drafts live HERE (not inside Canvas) so they survive the
-  // Canvas unmount that view switching causes — switching canvas→ops→canvas
-  // would otherwise wipe every in-flight draft. Reset on project switch (the
-  // [current] effect below), since drafts are scoped to one project's canvas.
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
   const [recipes, setRecipes] = useState<RecipeItem[]>([]);
@@ -170,7 +158,7 @@ function AppContent() {
     getRecipes().then(setRecipes).catch(() => setRecipes([]));
   }, []);
 
-  // Global view shortcuts: 1/2/3 switch kanban/canvas/ops. Ignored while typing
+  // Global view shortcuts: 1/2 switch board/live. Ignored while typing
   // (input/textarea/select or contentEditable) or while a modal/dialog is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -179,10 +167,9 @@ function AppContent() {
       const tag = t?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t?.isContentEditable) return;
       if (document.querySelector('[role="dialog"]')) return;
-      // Three lenses: 1 → board, 2 → canvas, 3 → live.
+      // Two lenses: 1 → board, 2 → live.
       if (e.key === "1") setView("board");
-      else if (e.key === "2") setView("canvas");
-      else if (e.key === "3") setView("live");
+      else if (e.key === "2") setView("live");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -320,13 +307,9 @@ function AppContent() {
     // Selection is per-project: a stale id from the previous project would
     // leave the detail panel's listeners half-armed against a missing task.
     setSelected("");
-    // Drafts are scoped to one project's canvas — drop them on project switch.
-    setDrafts([]);
-    setDraftFeatures([]);
     if (pulseTimer.current) clearTimeout(pulseTimer.current);
     // Clear the displayed snapshot IMMEDIATELY: rendering the previous
-    // project's state under the new project id both flashes stale data and
-    // made Canvas's FitOnEntry frame the OLD graph (then never refit).
+    // project's state under the new project id flashes stale data.
     setState(EMPTY);
     setLoadFailed(false);
     const wt = currentWorktree || undefined;
@@ -429,18 +412,10 @@ function AppContent() {
             : (
               <>
                 {/* relative so the slide-over detail panel + its scrim position
-                    within this row, overlaying board/canvas. The board and canvas
-                    now take the full width — the panel is absolute. */}
+                    within this row, overlaying the board. The board takes the
+                    full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
-                  {view === "canvas"
-                    ? (
-                      <div data-testid="view-canvas" className="flex flex-1 overflow-hidden">
-                        <Suspense fallback={<div className="flex flex-1 items-center justify-center"><Spinner size="md" /></div>}>
-                          <Canvas key={current} project={current} state={shownState} author={author} replaying={false} pulses={pulses} onSelectTask={setSelected} drafts={drafts} setDrafts={setDrafts} draftFeatures={draftFeatures} setDraftFeatures={setDraftFeatures} loading={firstLoad} />
-                        </Suspense>
-                      </div>
-                    )
-                    : <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>}
+                  <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>
                   {src.capabilities.multiMachine
                     ? <TaskDetail project={current} taskId={selected} onClose={() => setSelected("")} />
                     : <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />}

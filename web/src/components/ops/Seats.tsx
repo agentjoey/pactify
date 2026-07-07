@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SeatInfo } from "../../lib/types";
 import { getSeats } from "../../lib/api";
-import { roleColorVar } from "../../lib/canvas";
+import { roleColorVar } from "../../lib/derive";
 import { relativeTime } from "../../lib/ops";
 import { Badge } from "../ui/Badge";
 import { Alert } from "../ui/Alert";

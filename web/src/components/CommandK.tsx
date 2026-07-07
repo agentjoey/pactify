@@ -15,19 +15,19 @@ import { Modal } from "./ui/Modal";
 // stays the single source of truth for view/selection/project.
 //
 // Groups (per board4 §② + spec §5):
-//   Tasks    — every task; ↵ → setView("canvas") + setSelected(id) (the detail
-//              panel opens over the canvas). See the canvas-focus note below.
+//   Tasks    — every task; ↵ → setView("board") + setSelected(id) (the detail
+//              panel opens over the board).
 //   Actions  — Accept / Request changes for awaiting_review tasks (capped at 5);
 //              hidden entirely when observing OR replaying (write ops are unsafe
 //              there). "Replay to this task's last event" is DEFERRED to T14
 //              (timeline jump needs ?at plumbing that does not exist yet).
-//   Navigate — switch view (Kbd 1/2/3) + switch project (one entry per project).
+//   Navigate — switch view (Kbd 1/2) + switch project (one entry per project).
 //
 // CANVAS-FOCUS DECISION: the board4 hint says "↵ 聚焦" (focus). Wiring React
 // Flow's fitView-to-a-specific-node down through App is invasive (App does not
 // hold the Canvas's useReactFlow instance). The honest, non-invasive path is to
-// switch to the canvas view and select the task: the detail panel slides over
-// the canvas, which IS the "focus on this task" affordance. A literal
+// switch to the board view and select the task: the detail panel slides over
+// the board, which IS the "focus on this task" affordance. A literal
 // pan/zoom-to-node animation is left as a TODO for a later Canvas-internal pass.
 
 // "Item value" cmdk uses for filtering/selection. cmdk filters on the value +
@@ -83,7 +83,7 @@ export function CommandK({
   const [cheat, setCheat] = useState(false);
 
   // Focus restore (WAI-ARIA dialog): the cmdk input autofocuses on open; on
-  // close, give focus back to whatever had it (TopBar hint, canvas, …).
+  // close, give focus back to whatever had it (TopBar hint, board, …).
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
@@ -147,10 +147,9 @@ export function CommandK({
     setSearch("");
   }, []);
 
-  // ↵ on a task: switch to canvas + select it (detail panel opens). See the
-  // canvas-focus decision note at the top of this file.
+  // ↵ on a task: switch to board + select it (detail panel opens).
   const focusTask = useCallback((id: string) => {
-    setView("canvas");
+    setView("board");
     setSelected(id);
     close();
   }, [setView, setSelected, close]);
@@ -169,9 +168,9 @@ export function CommandK({
       }
     } else {
       // Request changes needs a reason — the detail panel owns that flow. Open
-      // the task (canvas + select); the panel's "Changes…" affordance collects
+      // the task (board + select); the panel's "Changes…" affordance collects
       // the note. We don't POST a reasonless `changes` here.
-      setView("canvas");
+      setView("board");
       setSelected(taskId);
     }
   }, [close, current, setView, setSelected, notify]);
@@ -199,7 +198,7 @@ export function CommandK({
             className="w-[560px] max-w-[92vw] overflow-hidden rounded-[14px] border border-[var(--color-border-strong)] bg-[var(--color-bg-overlay)] shadow-[var(--shadow-overlay)]"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
-              // Esc closes the palette and must NOT leak to the canvas Esc chains
+              // Esc closes the palette and must NOT leak to the Esc chains
               // behind it.
               if (e.key === "Escape") {
                 e.stopPropagation();
@@ -295,8 +294,7 @@ export function CommandK({
               >
                 {([
                   { v: "board" as View, label: "Board", key: "1", ico: "▤" },
-                  { v: "canvas" as View, label: "Canvas", key: "2", ico: "▦" },
-                  { v: "live" as View, label: "Live", key: "3", ico: "◉" },
+                  { v: "live" as View, label: "Live", key: "2", ico: "◉" },
                 ]).map((o) => (
                   <Command.Item
                     key={o.v}

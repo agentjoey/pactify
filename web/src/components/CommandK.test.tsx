@@ -103,13 +103,13 @@ describe("CommandK — command palette", () => {
     });
   });
 
-  it("↵ on a task navigates: setView(canvas) + setSelected(id)", async () => {
+  it("↵ on a task navigates: setView(board) + setSelected(id)", async () => {
     const { setView, setSelected } = setup();
     pressCmdK();
     const palette = await screen.findByTestId("cmdk");
     const item = palette.querySelector('[cmdk-item][data-value="task t2-cli"]') as HTMLElement;
     fireEvent.click(item);
-    expect(setView).toHaveBeenCalledWith("canvas");
+    expect(setView).toHaveBeenCalledWith("board");
     expect(setSelected).toHaveBeenCalledWith("t2-cli");
     // palette closes after navigation
     await waitFor(() => expect(screen.queryByTestId("cmdk")).toBeNull());

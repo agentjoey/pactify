@@ -204,3 +204,16 @@ export function taskMetrics(task: Task, events: PactEvent[], nowMs: number, stat
     { label: "", value: `×${iter}`, live },
   ];
 }
+
+// roleColorVar — a seat's *defining duty* drives its color (moved here from the
+// retired lib/canvas.ts; consumed by ops/Seats and any future seat chips).
+// Orchestrator (owns the spec, assigns/accepts — Product) is the most senior
+// duty, so it wins when present; reviewer (owns the blueprint — Design)
+// outranks plain worker; worker (builds/ships — Dev) is the baseline and the
+// safe default for an unrecognized or seatless role set.
+export function roleColorVar(roles: string[]): string {
+  if (roles.includes("orchestrator")) return "--role-product";
+  if (roles.includes("reviewer")) return "--role-design";
+  if (roles.includes("worker")) return "--role-dev";
+  return "--role-dev";
+}

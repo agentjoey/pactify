@@ -27,7 +27,7 @@ cat .agent/CURRENT.md
 - `log.jsonl` 为源，`STATE.yml` 为投影，CLI 重算；防多 agent 并发写 STATE 冲突
 - worker 不能自标 `accepted`，只能置 `awaiting_review`；只有 reviewer 能转 `accepted`
 - 拉取式派发：worker 启动时读 STATE.yml，人是"启动按钮"
-- 画布工艺规约（spec 2026-06-12 §5）：节点位置只有两个写入者（placeNew 首现一次 + 用户拖拽），禁止渲染时算位置；RF 节点数组只走 merge-by-id；生产代码禁止伪造 RF 几何（measured/handles）；画布 PR 合并门 = vitest + Playwright e2e 双绿
+- 画布工艺规约已随 Canvas 视图移除退役（2026-07-07 视图收敛：Canvas 删除、Live 并入 Board——见 docs/backlog.md [VIEWS]）；UI 改动合并门 = vitest + Playwright e2e 双绿保持不变
 
 ## Dev Commands
 ```bash

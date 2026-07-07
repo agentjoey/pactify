@@ -52,7 +52,14 @@ var runnerProfiles = map[string]RunnerProfile{
 		DefaultModel: "claude-opus-4-8",
 		Models:       []string{"claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"},
 		BuildArgs: func(model string, perm PermPosture, briefing string) []string {
-			args := []string{"-p"}
+			// --no-session-persistence: the cmd-transport WORKER/REVIEWER stint is a
+			// one-shot "execute the task and exit" that pactify never resumes, so not
+			// writing a transcript to disk means there is nothing to clean up (claude
+			// has no per-session delete CLI — this avoids accumulation entirely,
+			// cleaner than opencode's create-then-delete). The interactive
+			// deep-integration path (cockpit, which DOES resume) is separate and does
+			// not use this BuildArgs. Requires --print, which -p is.
+			args := []string{"-p", "--no-session-persistence"}
 			if perm.Scoped {
 				args = append(args, "--allowedTools", strings.Join(perm.AllowedTools, ","))
 			} else {

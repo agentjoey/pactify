@@ -110,7 +110,7 @@ func TestRunnerCLIKinds(t *testing.T) {
 		args    []string
 	}{
 		{"opencode", "opencode", []string{"run", "-m", "deepseek/deepseek-v4-pro", "{briefing}"}},
-		{"claude-code", "claude", []string{"-p", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}},
+		{"claude-code", "claude", []string{"-p", "--no-session-persistence", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}},
 		{"gemini-cli", "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}},
 		{"kimi-cli", "kimi", []string{"-p", "{briefing}", "-m", "kimi-code/kimi-for-coding"}},
 		{"codex-cli", "codex", []string{"exec", "--sandbox", "danger-full-access", "{briefing}"}},

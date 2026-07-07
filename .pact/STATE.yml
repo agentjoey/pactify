@@ -505,3 +505,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/validate-dynamic-seats.md
         evidence: validateLog declared-set now from st.Agents (init+add-seat+join) fixing FU-1 dynamic-seat false-negative; protocol_version scan preserved; reviewer hardened negative test to regenerate STATE post-tamper so it exercises roster check not drift; go test ./internal/pact/ green
+  - id: doctor-json
+    branch: feat/doctor-json
+    status: in_progress
+    tasks:
+      - id: doctor-json
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/doctor-json.md
+        evidence: pactify doctor --json emits []Check as JSON array (name/ok/detail tags); text path byte-unchanged, allOK hoisted; exit-code semantics preserved; go test ./internal/doctor/ ./cmd/pactify/ green; e2e emits 19-check valid array

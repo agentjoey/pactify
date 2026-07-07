@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -57,18 +58,38 @@ func checkMCP() doctor.Check {
 }
 
 func newDoctorCmd() *cobra.Command {
-	return &cobra.Command{Use: "doctor", Short: "diagnose pactify install + repo wiring",
+	var asJSON bool
+	cmd := &cobra.Command{Use: "doctor", Short: "diagnose pactify install + repo wiring",
 		RunE: func(c *cobra.Command, _ []string) error {
 			cwd, _ := os.Getwd()
 			exe, _ := os.Executable()
 			home, _ := os.UserHomeDir()
 			checks := append(doctor.Run(cwd, paths.AgentID(), exe, os.Getenv("PATH"), home), checkMCP())
+
 			allOK := true
+			for _, ck := range checks {
+				if !ck.OK {
+					allOK = false
+					break
+				}
+			}
+
+			if asJSON {
+				enc := json.NewEncoder(c.OutOrStdout())
+				enc.SetIndent("", "  ")
+				if err := enc.Encode(checks); err != nil {
+					return err
+				}
+				if !allOK {
+					return fmt.Errorf("doctor found issues")
+				}
+				return nil
+			}
+
 			for _, ck := range checks {
 				mark := "✓"
 				if !ck.OK {
 					mark = "✗"
-					allOK = false
 				}
 				fmt.Fprintf(c.OutOrStdout(), "%s %s — %s\n", mark, ck.Name, ck.Detail)
 			}
@@ -77,4 +98,6 @@ func newDoctorCmd() *cobra.Command {
 			}
 			return nil
 		}}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "emit checks as a JSON array")
+	return cmd
 }

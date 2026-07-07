@@ -21,7 +21,7 @@ func newAuditCmd() *cobra.Command {
 		Short: "permission audit log — capture, query, and manage per-seat tool-call records",
 	}
 	cmd.AddCommand(newAuditHookCmd(), newAuditLogCmd(), newAuditSummaryCmd(), newAuditPruneCmd(),
-		newAuditInstallCmd(), newAuditUninstallCmd())
+		newAuditInstallCmd(), newAuditUninstallCmd(), newAuditSarifCmd())
 	return cmd
 }
 

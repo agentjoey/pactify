@@ -475,3 +475,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/planner-dimensions.md
         evidence: PlanTask.Dimension optional field + validation (correctness|security|performance|maintainability|ux); prompt Review dimensions section; go test ./internal/planner/ green, gofmt+vet clean
+  - id: sarif-output
+    branch: feat/sarif-output
+    status: in_progress
+    tasks:
+      - id: sarif-output
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/sarif-output.md
+        evidence: new internal/sarif (reusable SARIF 2.1.0 builder, rule dedup, level normalize) + pactify audit sarif subcommand; go test ./internal/sarif/ ./cmd/pactify/ green; e2e emits valid SARIF 2.1.0

@@ -16,7 +16,7 @@ func TestResolveWith_DefaultsToBuiltin(t *testing.T) {
 	if eff.Model != "claude-opus-4-8" {
 		t.Errorf("Model = %q, want default claude-opus-4-8", eff.Model)
 	}
-	want := []string{"-p", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}
+	want := []string{"-p", "--no-session-persistence", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}
 	if !reflect.DeepEqual(eff.Args, want) {
 		t.Errorf("Args = %v, want %v", eff.Args, want)
 	}
@@ -38,7 +38,7 @@ func TestResolveWith_ScopedPermissions(t *testing.T) {
 	if !eff.Scoped {
 		t.Error("Scoped = false, want true")
 	}
-	want := []string{"-p", "--allowedTools", "Read,Edit,Bash", "--model", "claude-opus-4-8", "{briefing}"}
+	want := []string{"-p", "--no-session-persistence", "--allowedTools", "Read,Edit,Bash", "--model", "claude-opus-4-8", "{briefing}"}
 	if !reflect.DeepEqual(eff.Args, want) {
 		t.Errorf("Args = %v, want %v", eff.Args, want)
 	}

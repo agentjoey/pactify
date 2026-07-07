@@ -491,7 +491,7 @@ features:
     tasks:
       - id: audit-redact
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/audit-redact.md
         evidence: audit redaction denylist extended: Slack/Google-API/Stripe/GCP-OAuth/JWT/PEM-key; positive+negative tests each; go test ./internal/audit/ green, gofmt+vet clean; existing patterns untouched

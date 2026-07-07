@@ -587,7 +587,7 @@ features:
         evidence: acp Client per-session update/permission routing (perUpdate/perPerm maps + OnSessionUpdateFor/OnPermissionRequestFor/ClearSession), global handler fallback preserved (single-session zero regression); lock released before callback; go test -race green
   - id: cockpit-session
     branch: feat/cockpit-session
-    status: in_progress
+    status: shipped
     tasks:
       - id: cockpit-session
         owner: kimi-worker

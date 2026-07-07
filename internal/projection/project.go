@@ -349,6 +349,16 @@ func (f *Folder) apply(evs []event.Event) {
 // resumed later. A cancel/withdraw anywhere in the log removes the target.
 func (f *Folder) finalize() State {
 	st := f.st
+	// A seat's roles must marshal as [] not null: an empty-role seat (joined
+	// with no roles) otherwise projects to `roles: null`, which crashes
+	// null-unsafe clients (the dashboard's Board does a.roles.length → blank
+	// page for that whole project). Normalize in place so every projection
+	// path emits a non-nil slice. (The TS fold already inits roles:[].)
+	for i := range st.Agents {
+		if st.Agents[i].Roles == nil {
+			st.Agents[i].Roles = []string{}
+		}
+	}
 	if len(f.cancelled) == 0 && len(f.withdrawn) == 0 {
 		return st
 	}

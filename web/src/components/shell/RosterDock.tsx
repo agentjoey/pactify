@@ -7,8 +7,8 @@ import { AgentLogo } from "../../lib/agentLogos";
 const ROLE_ORDER = ["orchestrator", "reviewer", "worker"];
 
 function topRole(s: Seat): string {
-  for (const r of ROLE_ORDER) if (s.roles.includes(r)) return r;
-  return s.roles[0] ?? "seat";
+  for (const r of ROLE_ORDER) if ((s.roles ?? []).includes(r)) return r;
+  return (s.roles ?? [])[0] ?? "seat";
 }
 
 // RosterDock — a refined "seated agents" card: a vertical identity list (logo +
@@ -54,7 +54,7 @@ export function RosterDock({
                 key={s.id}
                 type="button"
                 data-testid={`roster-logo-${s.id}`}
-                title={`${s.id} · ${s.roles.join(", ")} — open seat settings`}
+                title={`${s.id} · ${(s.roles ?? []).join(", ")} — open seat settings`}
                 aria-label={`settings for ${s.id}`}
                 onClick={() => onSeatSettings(s.id)}
                 className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-white/[.06]"

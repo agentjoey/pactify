@@ -121,7 +121,7 @@ export function Board({
 
   const totalTasks = state.features.reduce((n, f) => n + f.tasks.length, 0);
   const totalTokens = featureChips.reduce((n, c) => n + c.tokens, 0);
-  const seated = state.agents.filter((a) => a.roles.length > 0);
+  const seated = state.agents.filter((a) => (a.roles?.length ?? 0) > 0);
 
   if (loading) return <BoardSkeleton />;
 
@@ -240,7 +240,7 @@ export function Board({
         <div className="ml-auto flex items-center gap-3">
           <div className="flex items-center">
             {seated.slice(0, 6).map((a, i) => {
-              const caste = casteForRoles(a.roles);
+              const caste = casteForRoles(a.roles ?? []);
               const pad = padGradient(a.id, caste);
               return (
                 <span

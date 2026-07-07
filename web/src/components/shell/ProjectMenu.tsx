@@ -71,7 +71,7 @@ export function ProjectMenu({
             running ? "animate-pulse bg-[var(--color-success)] shadow-[0_0_6px_var(--color-success)]" : "bg-[var(--color-text-3)]",
           ].join(" ")}
         />
-        {current} ▾
+        {projects.find((p) => p.id === current)?.name ?? current} ▾
       </button>
       {open && (
         <div
@@ -125,7 +125,7 @@ function ProjectEntry({
               key={w.branch || w.path}
               type="button"
               data-testid={`worktree-${p.name}-${w.branch}`}
-              onClick={() => onSelectWorktree(p.name, w.primary ? "" : w.branch)}
+              onClick={() => onSelectWorktree(p.id, w.primary ? "" : w.branch)}
               className={["flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] hover:bg-white/5",
                 ((w.primary && currentWorktree === "") || currentWorktree === w.branch) ? "text-[var(--color-text-1)]" : "text-[var(--color-text-3)]"].join(" ")}
             >
@@ -158,7 +158,7 @@ function ProjectRow({
           running ? "animate-pulse bg-[var(--color-success)] shadow-[0_0_5px_var(--color-success)]" : "bg-[var(--color-text-3)]/50",
         ].join(" ")}
       />
-      <button type="button" className="flex-1 text-left" onClick={() => onSelect(p.name)}>{p.name}</button>
+      <button type="button" className="flex-1 text-left" onClick={() => onSelect(p.id)}>{p.name}</button>
       <button type="button" aria-label={`rename ${p.name}`} className="px-1 opacity-0 group-hover:opacity-100" onClick={() => onRename(p.name)}>✎</button>
       <button type="button" aria-label={`delete ${p.name}`} className="px-1 opacity-0 group-hover:opacity-100" onClick={() => onDelete(p.name)}>🗑</button>
     </div>

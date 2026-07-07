@@ -4,14 +4,14 @@ import { ProjectMenu } from "./ProjectMenu";
 import type { ProjectMeta } from "../../lib/types";
 
 const projects: ProjectMeta[] = [
-  { name: "alpha", path: "/a", group: "team-x" } as ProjectMeta,
-  { name: "beta", path: "/b" } as ProjectMeta,
+  { id: "acct-alpha", name: "alpha", path: "/a", group: "team-x" } as ProjectMeta,
+  { id: "acct-beta", name: "beta", path: "/b" } as ProjectMeta,
 ];
 
 describe("ProjectMenu", () => {
   it("shows the current project name and a running status light when running", () => {
     render(
-      <ProjectMenu projects={projects} current="alpha" running={true}
+      <ProjectMenu projects={projects} current="acct-alpha" running={true}
         onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
     );
     expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("alpha");
@@ -21,17 +21,17 @@ describe("ProjectMenu", () => {
   it("opens the menu and selects another project", () => {
     const onSelect = vi.fn();
     render(
-      <ProjectMenu projects={projects} current="alpha" running={false}
+      <ProjectMenu projects={projects} current="acct-alpha" running={false}
         onSelect={onSelect} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
     );
     fireEvent.click(screen.getByTestId("project-menu-trigger"));
     fireEvent.click(screen.getByText("beta"));
-    expect(onSelect).toHaveBeenCalledWith("beta");
+    expect(onSelect).toHaveBeenCalledWith("acct-beta");
   });
 
   it("groups projects but never prints the word 'ungrouped'", () => {
     render(
-      <ProjectMenu projects={projects} current="alpha" running={false}
+      <ProjectMenu projects={projects} current="acct-alpha" running={false}
         onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
     );
     fireEvent.click(screen.getByTestId("project-menu-trigger"));
@@ -42,7 +42,7 @@ describe("ProjectMenu", () => {
 
   it("shows a per-row status light reflecting each project's running state", () => {
     render(
-      <ProjectMenu projects={projects} current="alpha" running={true}
+      <ProjectMenu projects={projects} current="acct-alpha" running={true}
         runningByProject={{ alpha: true, beta: false }}
         onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
     );
@@ -54,7 +54,7 @@ describe("ProjectMenu", () => {
   it("invokes onAdd from the footer add-project item", () => {
     const onAdd = vi.fn();
     render(
-      <ProjectMenu projects={projects} current="alpha" running={false}
+      <ProjectMenu projects={projects} current="acct-alpha" running={false}
         onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={onAdd} />,
     );
     fireEvent.click(screen.getByTestId("project-menu-trigger"));
@@ -65,13 +65,13 @@ describe("ProjectMenu", () => {
   it("nests worktrees under a project when there is more than one", () => {
     const onSelectWorktree = vi.fn();
     render(
-      <ProjectMenu projects={projects} current="alpha" running={false}
+      <ProjectMenu projects={projects} current="acct-alpha" running={false}
         worktreesByProject={{ alpha: [{ branch: "main", path: "/a", primary: true }, { branch: "feat-x", path: "/a-fe", primary: false }] }}
         currentWorktree="" onSelectWorktree={onSelectWorktree}
         onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
     );
     fireEvent.click(screen.getByTestId("project-menu-trigger"));
     fireEvent.click(screen.getByTestId("worktree-alpha-feat-x"));
-    expect(onSelectWorktree).toHaveBeenCalledWith("alpha", "feat-x");
+    expect(onSelectWorktree).toHaveBeenCalledWith("acct-alpha", "feat-x");
   });
 });

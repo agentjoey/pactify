@@ -487,7 +487,7 @@ features:
         evidence: new internal/sarif (reusable SARIF 2.1.0 builder, rule dedup, level normalize) + pactify audit sarif subcommand; go test ./internal/sarif/ ./cmd/pactify/ green; e2e emits valid SARIF 2.1.0
   - id: audit-redact
     branch: feat/audit-redact
-    status: in_progress
+    status: shipped
     tasks:
       - id: audit-redact
         owner: kimi-worker

@@ -585,3 +585,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/acp-per-session.md
         evidence: acp Client per-session update/permission routing (perUpdate/perPerm maps + OnSessionUpdateFor/OnPermissionRequestFor/ClearSession), global handler fallback preserved (single-session zero regression); lock released before callback; go test -race green
+  - id: cockpit-session
+    branch: feat/cockpit-session
+    status: in_progress
+    tasks:
+      - id: cockpit-session
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-session.md
+        evidence: CockpitSession: serial Prompt, event pump (JSONL 0o600 persist + non-blocking fan-out), approval pump (stable ap<n> ids) + Respond/Pending, Subscribe/History, idempotent Close (deadlock-free: close sess -> wait pumps -> close subs). Reviewer hardened close() to reclaim even on sess.Close error. go test -race x3 green

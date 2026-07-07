@@ -521,7 +521,7 @@ features:
     tasks:
       - id: cockpit-backend-iface
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/cockpit-backend-iface.md
         evidence: internal/cockpit Backend/Session interface + Event/ApprovalRequest envelope (§2 verbatim) + in-mem FakeBackend/FakeSession (buffered chans, sync.Once close, idempotent Respond); go test -race green, gofmt+vet clean

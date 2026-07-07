@@ -565,3 +565,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/codex-json-usage.md
         evidence: codex worker BuildArgs adds --json -> emits turn.completed usage JSONL -> existing tokens.Parse extracts it (fixes codex TOK=0); updated launch_test + agent_test + tokens_test (real codex line -> 11886); full repo go test green
+  - id: relay-event-id
+    branch: feat/relay-event-id
+    status: in_progress
+    tasks:
+      - id: relay-event-id
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/relay-event-id.md
+        evidence: relay idempotency: additive nullable eventId + @@unique([projectId,eventId]) keeping @@unique([projectId,seq]); zod optional eventId (.strict kept); ingest dedups on either; machine buildBody sends ev.EventID; wire doc updated. typecheck + go test ./internal/serve/ + vitest 11/11 green. DB migrate+deploy+resync = human end-step

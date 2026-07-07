@@ -120,6 +120,28 @@ Additionally, to bound resource use (all non-breaking — a correct peer stays w
 > legitimately sends today. Confirm against Linx before enabling, then enable on both sides
 > together.
 
+### 2.6 Pact event ingest body (U2 Mission Control) [HARDENING, non-breaking]
+
+`POST /v1/pact/ingest` carries a cleartext operational header plus an E2E-encrypted
+`bodyEnc` (the full pact log line encrypted under the per-project key from §4.2b).
+
+| field | type | notes |
+|---|---|---|
+| `projectId` | string, 1..256 | account-scoped project id |
+| `name` | string, 1..256 | human project/repo label |
+| `feature` | string, ≤256, optional | current feature id |
+| `eventType` | string, 1..64 | pact verb: assign/checkpoint/accept/merge/... |
+| `task` | string, ≤256, optional | task id |
+| `seq` | int ≥ 0 | per-project monotonic sequence (line index) |
+| `eventId` | string, ≤128, optional | client idempotency key (e.g. pact `event_id`); relay enforces uniqueness on `(projectId, eventId)` when present |
+| `ts` | int ≥ 0 | epoch ms |
+| `bodyEnc` | string, 1..2 MiB | opaque encrypted pact event JSON |
+
+The relay stores idempotently on `(projectId, seq)` **and**, when `eventId` is sent,
+on `(projectId, eventId)`. A retry/replay with the same `eventId` but a different
+`seq` is dropped, preventing duplicate side effects (e.g. push storms on reconnect).
+`eventId` is additive: older clients that omit it continue to be keyed by `seq` alone.
+
 ## 3. EventKind ↔ AgentEvent mapping [HARDENING, non-breaking]
 
 The cleartext `EventKind` (header) and the encrypted `AgentEvent.kind` (body) are two

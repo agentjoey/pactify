@@ -163,6 +163,7 @@ CREATE TABLE "PactEvent" (
     "projectId" TEXT NOT NULL,
     "accountId" TEXT NOT NULL,
     "seq" INTEGER NOT NULL,
+    "eventId" TEXT,
     "eventType" TEXT NOT NULL,
     "task" TEXT,
     "feature" TEXT,
@@ -186,6 +187,9 @@ CREATE INDEX "PactEvent_accountId_idx" ON "PactEvent"("accountId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PactEvent_projectId_seq_key" ON "PactEvent"("projectId", "seq");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PactEvent_projectId_eventId_key" ON "PactEvent"("projectId", "eventId");
 
 -- AddForeignKey
 ALTER TABLE "Project" ADD CONSTRAINT "Project_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

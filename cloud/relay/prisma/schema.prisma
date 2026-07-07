@@ -163,6 +163,9 @@ model PactEvent {
   accountId String
   // Monotonic per project.
   seq       Int
+  // Optional client-supplied idempotency key (e.g. pact event_id). Additive:
+  // older clients omit it; the relay still keys on (projectId, seq).
+  eventId   String?
   // Cleartext routable/indexable pact verb: assign/checkpoint/accept/merge/...
   eventType String
   // Cleartext task + feature ids (operational slugs), for board grouping.
@@ -174,6 +177,7 @@ model PactEvent {
   project   Project @relation(fields: [projectId], references: [id])
 
   @@unique([projectId, seq])
+  @@unique([projectId, eventId])
   @@index([projectId])
   @@index([accountId])
 }

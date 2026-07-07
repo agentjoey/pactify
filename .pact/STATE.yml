@@ -561,7 +561,7 @@ features:
     tasks:
       - id: codex-json-usage
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/codex-json-usage.md
         evidence: codex worker BuildArgs adds --json -> emits turn.completed usage JSONL -> existing tokens.Parse extracts it (fixes codex TOK=0); updated launch_test + agent_test + tokens_test (real codex line -> 11886); full repo go test green

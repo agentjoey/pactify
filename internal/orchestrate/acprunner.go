@@ -285,16 +285,32 @@ func autoSelectPermission(opts []acp.PermissionOption) (string, bool) {
 // Bridge package versions are pinned to avoid latest-tag drift; verified with
 // `npm view` on 2026-07-07. Upgrading is intentional: change the pinned version
 // here only after verifying the new release works.
+// acpCommand maps an agent kind to its ACP-transport launch command.
+//
+// Architecture (2026-07-08 decision): the ACP tier is kimi + gemini — both ship
+// native ACP in their installed binary (`kimi acp` / `gemini --acp`), so we
+// invoke the binary DIRECTLY (no npx). claude + codex are the deep-integration
+// tier (their SDKs, not ACP); their npx-bridge entries below are the LEGACY
+// generic-ACP path, kept only as a fallback — the claude bridge
+// (@agentclientprotocol/claude-agent-acp) additionally hangs the stdio handshake
+// under npx (verified 2026-07-08), so the deep-integration path is the real one
+// for claude/codex.
 func acpCommand(kind string) (command string, args []string, ok bool) {
 	switch kind {
 	case "kimi-cli":
 		return "kimi", []string{"acp"}, true
+	case "gemini-cli":
+		// Native ACP in the gemini binary — direct invocation, no npx cold-start
+		// / cache fragility. Consistent with how the cmd transport already runs
+		// gemini (Command "gemini").
+		return "gemini", []string{"--acp"}, true
 	case "claude-code":
+		// LEGACY/fallback — claude is deep-integration tier; this npx bridge also
+		// hangs the handshake (see doc above). Prefer the deep-integration path.
 		return "npx", []string{"-y", "@agentclientprotocol/claude-agent-acp@0.57.0"}, true
 	case "codex-cli":
+		// LEGACY/fallback — codex is deep-integration tier.
 		return "npx", []string{"-y", "@zed-industries/codex-acp@0.16.0"}, true
-	case "gemini-cli":
-		return "npx", []string{"-y", "@google/gemini-cli@0.49.0", "--acp"}, true
 	default:
 		return "", nil, false
 	}

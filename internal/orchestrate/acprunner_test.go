@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -349,14 +350,43 @@ func TestAcpRunnerStripsAnthropicKey(t *testing.T) {
 	}
 }
 
-func TestAcpCommandPinsBridgeVersions(t *testing.T) {
+// The ACP tier (kimi, gemini) invokes the native binary directly — NO npx.
+func TestAcpCommandNativeBinariesForAcpTier(t *testing.T) {
+	cases := []struct {
+		kind, cmd string
+		args      []string
+	}{
+		{"kimi-cli", "kimi", []string{"acp"}},
+		{"gemini-cli", "gemini", []string{"--acp"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.kind, func(t *testing.T) {
+			command, args, ok := acpCommand(tc.kind)
+			if !ok {
+				t.Fatalf("acpCommand(%q): ok=false", tc.kind)
+			}
+			if command != tc.cmd {
+				t.Errorf("command = %q, want %q (native binary, not npx)", command, tc.cmd)
+			}
+			if command == "npx" {
+				t.Errorf("%s must NOT use npx — it has native ACP", tc.kind)
+			}
+			if !reflect.DeepEqual(args, tc.args) {
+				t.Errorf("args = %v, want %v", args, tc.args)
+			}
+		})
+	}
+}
+
+// The legacy/fallback deep-integration-tier bridges (claude, codex) stay pinned
+// via npx (used only as a fallback; the real path is deep integration).
+func TestAcpCommandPinsLegacyBridgeVersions(t *testing.T) {
 	cases := []struct {
 		kind string
 		want string
 	}{
 		{"claude-code", "@agentclientprotocol/claude-agent-acp@0.57.0"},
 		{"codex-cli", "@zed-industries/codex-acp@0.16.0"},
-		{"gemini-cli", "@google/gemini-cli@0.49.0"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.kind, func(t *testing.T) {

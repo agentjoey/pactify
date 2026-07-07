@@ -547,7 +547,7 @@ features:
         evidence: shared rpcConn transport extracted from codex.go (codex still green); claudeSdkBridge (claude.go) over validated host.mjs Agent-SDK bridge; cockpit/* event + approval/request mapping, async ThreadID via cockpit/session. Orchestrator wrote+validated host.mjs (real canUseTool round-trip). Reviewer fixes: relocated bridge out of vendor/ (broke Go default build -> bridge/claude-host/), findClaudeHost infinite uptree loop (filepath.Dir(/)==/) + env-first. Default build/vet/race clean; BOTH real smokes (codex+claude) pass 9s
   - id: cockpit-doctor-bridge
     branch: feat/cockpit-doctor-bridge
-    status: in_progress
+    status: shipped
     tasks:
       - id: doctor-setup-bridge
         owner: kimi-worker

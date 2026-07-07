@@ -595,3 +595,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-session.md
         evidence: CockpitSession: serial Prompt, event pump (JSONL 0o600 persist + non-blocking fan-out), approval pump (stable ap<n> ids) + Respond/Pending, Subscribe/History, idempotent Close (deadlock-free: close sess -> wait pumps -> close subs). Reviewer hardened close() to reclaim even on sess.Close error. go test -race x3 green
+  - id: cockpit-manager
+    branch: feat/cockpit-manager
+    status: in_progress
+    tasks:
+      - id: cockpit-manager
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-manager.md
+        evidence: CockpitManager: per-(project,seat) single session via injectable BackendFactory; get-or-create under lock (single-flight, factory once under 50-goroutine concurrency); Get/List/Close/CloseAll; jsonl at baseDir/cockpit/. go test -race x2 green

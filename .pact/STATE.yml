@@ -581,7 +581,7 @@ features:
     tasks:
       - id: acp-per-session
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/acp-per-session.md
-        evidence: null
+        evidence: acp Client per-session update/permission routing (perUpdate/perPerm maps + OnSessionUpdateFor/OnPermissionRequestFor/ClearSession), global handler fallback preserved (single-session zero regression); lock released before callback; go test -race green

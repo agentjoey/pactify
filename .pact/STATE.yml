@@ -451,7 +451,7 @@ features:
     tasks:
       - id: acp-hardening
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/acp-hardening.md
         evidence: acprunner.go pins @agentclientprotocol/claude-agent-acp@0.57.0 / @zed-industries/codex-acp@0.16.0 / @google/gemini-cli@0.49.0; acp.go filteredEnviron drops PACT_RELAY_TOKEN+PACTIFY_*. build ✓, new tests pass, both pkgs green, gofmt clean. commit 8e0d3bc

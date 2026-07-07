@@ -555,3 +555,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/doctor-setup-bridge.md
         evidence: pactify doctor --setup-bridge materializes bridge/claude-host node deps (npm ci); doctor adds node + claude-bridge-deps checks (text+json); FindRepoRoot root-terminates (parent==dir). Real --setup-bridge verified idempotent; --json intact; go test green
+  - id: codex-json-usage
+    branch: feat/codex-json-usage
+    status: in_progress
+    tasks:
+      - id: codex-json-usage
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/codex-json-usage.md
+        evidence: codex worker BuildArgs adds --json -> emits turn.completed usage JSONL -> existing tokens.Parse extracts it (fixes codex TOK=0); updated launch_test + agent_test + tokens_test (real codex line -> 11886); full repo go test green

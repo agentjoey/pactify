@@ -31,6 +31,15 @@ func TestParse_TopLevelAndNone(t *testing.T) {
 	}
 }
 
+func TestParse_CodexJSONL(t *testing.T) {
+	// codex exec --json emits JSONL ending with turn.completed carrying usage.
+	out := `{"type":"turn.completed","usage":{"input_tokens":11880,"cached_input_tokens":9600,"output_tokens":6}}`
+	n, ok := Parse("codex", out)
+	if !ok || n != 11886 {
+		t.Fatalf("codex parse = %d (ok=%v), want 11886", n, ok)
+	}
+}
+
 func TestStore_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	s := Load(dir) // missing → empty

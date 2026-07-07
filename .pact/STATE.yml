@@ -485,3 +485,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/sarif-output.md
         evidence: new internal/sarif (reusable SARIF 2.1.0 builder, rule dedup, level normalize) + pactify audit sarif subcommand; go test ./internal/sarif/ ./cmd/pactify/ green; e2e emits valid SARIF 2.1.0
+  - id: audit-redact
+    branch: feat/audit-redact
+    status: in_progress
+    tasks:
+      - id: audit-redact
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/audit-redact.md
+        evidence: audit redaction denylist extended: Slack/Google-API/Stripe/GCP-OAuth/JWT/PEM-key; positive+negative tests each; go test ./internal/audit/ green, gofmt+vet clean; existing patterns untouched

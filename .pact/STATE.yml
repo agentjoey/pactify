@@ -465,3 +465,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/doctor-gemini.md
         evidence: doctor gemini auth accepts google_accounts.json OR oauth_creds.json; go test ./internal/doctor/ green
+  - id: planner-dimensions
+    branch: feat/planner-dimensions
+    status: in_progress
+    tasks:
+      - id: planner-dimensions
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/planner-dimensions.md
+        evidence: PlanTask.Dimension optional field + validation (correctness|security|performance|maintainability|ux); prompt Review dimensions section; go test ./internal/planner/ green, gofmt+vet clean

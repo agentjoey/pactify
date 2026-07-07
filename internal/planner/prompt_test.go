@@ -75,7 +75,7 @@ func TestPromptIncludesManifestSchemaExample(t *testing.T) {
 	out := planner.BuildPrompt(samplePromptInput())
 
 	// JSON schema example must show every PlanTask field name.
-	for _, field := range []string{`"feature"`, `"branch"`, `"tasks"`, `"id"`, `"owner"`, `"reviewer"`, `"spec"`, `"verify"`, `"deps"`} {
+	for _, field := range []string{`"feature"`, `"branch"`, `"tasks"`, `"id"`, `"owner"`, `"reviewer"`, `"spec"`, `"verify"`, `"deps"`, `"dimension"`} {
 		if !strings.Contains(out, field) {
 			t.Errorf("manifest schema example missing field %q", field)
 		}
@@ -175,6 +175,19 @@ func TestPromptStatesVerifyScoping(t *testing.T) {
 	for _, want := range []string{"Verify rules", "whole-repo", "touched files"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("prompt missing verify-scoping guidance %q", want)
+		}
+	}
+}
+
+func TestPromptStatesReviewDimensions(t *testing.T) {
+	out := planner.BuildPrompt(samplePromptInput())
+	if !strings.Contains(out, "## Review dimensions") {
+		t.Error("prompt missing Review dimensions section")
+	}
+	low := strings.ToLower(out)
+	for _, dim := range []string{"correctness", "security", "performance", "maintainability", "ux"} {
+		if !strings.Contains(low, dim) {
+			t.Errorf("prompt missing dimension %q", dim)
 		}
 	}
 }

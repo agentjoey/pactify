@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Last updated: 2026-07-03 | Status: **v0.9.0 已发布**（全仓 review 驱动的三轮加固:pact ledger 全 verb 跨进程锁 + Checkpoint 写序翻转 + orchestrator 角色门 + slug/ref 校验、orchestrate sandbox mid-run ledger mirror + park 崩溃恢复 + History 持久化、`join`/`start` 语义修正(任务级而非座席级)、base 锁改走 git common dir、serve 状态 memo + worktree events 端点 + live 流 Last-Event-ID 续传、TOK 指标接上真实 `/stats`）+ v0.8.2（dashboard 隐藏 pact 内部 worktree:`serve` worktree 列表过滤 `.pact/orchestrate/` 树 + `pact-*-park` 分支,消除「同一任务跨 tree 状态不一致」)+ v0.8.1（worker 投递完整性补丁:`PACT_DIR` 钉 worker 到 driver worktree · 回灌 event_id union 合并 · escalation 归因)+ v0.8.0（coordination-authority + dark product UI）— 协议 v1 冻结 · Go CLI + MCP + dashboard · orchestrate 自主驱动 + planner · 成本/可观测(D1) + 巡检(D2) · session 清理(opencode) · GLM 端点可配 · Settings agent 管理 · **深色 dashboard（dark product UI，6 屏照设计稿重制）** · native audit layer(claude-code hook + opencode 插件) · pactify.dev 文档站 · **coordination-authority**(base hygiene `.git/info/exclude` · autonomous 默认 sandbox · merge 跨进程 flock 锁 · MCP 项目按名寻址 · base 写入契约「只 merge 写 base / fetch-aware 不分叉 / 默认不 push / accept 不连 merge / checkpoint base 守卫」· per-project `config gate` · 空分支拒绝 ship · 机器提交 `--no-verify`)。下方「增量子系统」段记录这些子系统的细节。
+> Last updated: 2026-07-07 | Status: **v0.9.0 已发布 + 视图收敛（Canvas 删除、Live 并入 Board——见下「视图收敛」节）**（全仓 review 驱动的三轮加固:pact ledger 全 verb 跨进程锁 + Checkpoint 写序翻转 + orchestrator 角色门 + slug/ref 校验、orchestrate sandbox mid-run ledger mirror + park 崩溃恢复 + History 持久化、`join`/`start` 语义修正(任务级而非座席级)、base 锁改走 git common dir、serve 状态 memo + worktree events 端点 + live 流 Last-Event-ID 续传、TOK 指标接上真实 `/stats`）+ v0.8.2（dashboard 隐藏 pact 内部 worktree:`serve` worktree 列表过滤 `.pact/orchestrate/` 树 + `pact-*-park` 分支,消除「同一任务跨 tree 状态不一致」)+ v0.8.1（worker 投递完整性补丁:`PACT_DIR` 钉 worker 到 driver worktree · 回灌 event_id union 合并 · escalation 归因)+ v0.8.0（coordination-authority + dark product UI）— 协议 v1 冻结 · Go CLI + MCP + dashboard · orchestrate 自主驱动 + planner · 成本/可观测(D1) + 巡检(D2) · session 清理(opencode) · GLM 端点可配 · Settings agent 管理 · **深色 dashboard（dark product UI，6 屏照设计稿重制）** · native audit layer(claude-code hook + opencode 插件) · pactify.dev 文档站 · **coordination-authority**(base hygiene `.git/info/exclude` · autonomous 默认 sandbox · merge 跨进程 flock 锁 · MCP 项目按名寻址 · base 写入契约「只 merge 写 base / fetch-aware 不分叉 / 默认不 push / accept 不连 merge / checkpoint base 守卫」· per-project `config gate` · 空分支拒绝 ship · 机器提交 `--no-verify`)。下方「增量子系统」段记录这些子系统的细节。
 
 ## Overview
 
@@ -200,7 +200,7 @@ served and how they are wired, without leaving the dashboard:
   `pactify-cli`, richer hosts stamp their own identity — and flags `clientChanged` when a
   seat's last two joins name different clients. Provenance is advisory, never gating.
 
-### Comms visualization (M3.3b)
+### Comms visualization (M3.3b) — Canvas 载体已移除（2026-07-07；pulseTargets 仍服务 Board 脉冲）
 
 The canvas gains a comms lens + replay scrubber — pure visualization, **zero protocol
 changes** (this milestone writes no events):
@@ -227,6 +227,26 @@ changes** (this milestone writes no events):
 - **Live pulse**: each SSE-applied snapshot (live mode only) diffs the changed task(s) and
   pulses their node + wait edges once in the actor's role color (the site's cable-pulse
   brand idiom). Pure CSS keyframe, fully gated off under `prefers-reduced-motion`.
+
+### 视图收敛（2026-07-07，PR1/PR2）— dashboard 单视图化
+
+三视图（Board/Canvas/Live）收敛为 **Board 单视图**。Canvas 整体删除（功能与 Dispatch
+面板重复——与 v0.7.2 删 Plan mode 同一逻辑；@xyflow/react 依赖、画布工艺规约、office-zoom
+flake、`squad/layout` 端点与 `.pact/squad/layout.json` sidecar 一并退役）。Live 的三件
+承重件迁入 Board，能力零损失：
+
+- **RunRail**（`web/src/components/board/RunRail.tsx`）：Board 顶部运行横幅——RunControl
+  聚合条（phase/修复中 n:m/iter/进度 + Resume/Ship）+ 每个 driver 触达 feature 一条 lane
+  （任务管道、可展开 AgentTerminal、gate 暂停时的**五动作 ReviewGate**）。driver 空闲或
+  hosted 源（无 status 方法）时渲染为空——board 保持干净。
+- **EventDrawer**（`board/EventDrawer.tsx`）：pact log 终端 = Board 底部折叠 ticker，
+  展开为着色事件流 + 座席在场脚注。
+- **RightRail 增 Output 段**：非终态任务内嵌 AgentTerminal（stream SSE, Last-Event-ID
+  续传）——这也是 Cockpit V1 只读探针的落点（铺位工程）。
+
+单视图 IA：View 类型/快捷键/Toolbar lens 段控/⌘K 视图项移除；`shots.mjs` 只拍 board；
+`live-gate-shot` 改造为 `board-gate-shot`。下方 Canvas P0 / comms visualization /
+Dashboard v2 的 Canvas-Office 段保留为历史记录。
 
 ### Dashboard v2 (Linear-grade re-skin + Office mode)
 
@@ -259,7 +279,7 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
   replay timeline with typed ticks + `?at=N` deep link, humanized engine errors on the
   toast rail, first-load skeletons, and an empty-registry onboarding hero.
 
-### Canvas P0 (interaction-foundation rework, 2026-06-12, PR #20-#22)
+### Canvas P0 (interaction-foundation rework, 2026-06-12, PR #20-#22) — 已随视图收敛移除（2026-07-07，历史记录）
 - **Position materialization** (`web/src/lib/canvas.ts`): layout sidecar **v2** is the
   single source of truth for node positions — top-level nodes absolute, children
   parent-relative (RF-native coords, zero conversion on drag-save). `deriveGraph`

@@ -69,6 +69,14 @@ describe('relay pact data layer (U2 S1) on PGlite', () => {
     expect(await getProjectEvents(db, 'acct1:pactify')).toHaveLength(1)
   })
 
+  it('duplicate (projectId, eventId) with a different seq is idempotent — created:false', async () => {
+    const first = await ingestPactEvent(db, accountId, ev({ seq: 0, eventId: 'ev-42' }))
+    const second = await ingestPactEvent(db, accountId, ev({ seq: 1, eventId: 'ev-42' }))
+    expect(first.created).toBe(true)
+    expect(second.created).toBe(false)
+    expect(await getProjectEvents(db, 'acct1:pactify')).toHaveLength(1)
+  })
+
   it('a stale (lower-seq) event does not roll back the project summary', async () => {
     await ingestPactEvent(db, accountId, ev({ seq: 2, eventType: 'accept', feature: 'f2' }))
     await ingestPactEvent(db, accountId, ev({ seq: 1, eventType: 'checkpoint', feature: 'f1' }))

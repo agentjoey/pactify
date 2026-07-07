@@ -192,6 +192,7 @@ type pactIngestBody struct {
 	EventType string `json:"eventType"`
 	Task      string `json:"task,omitempty"`
 	Seq       int64  `json:"seq"`
+	EventID   string `json:"eventId,omitempty"`
 	TS        int64  `json:"ts"`
 	BodyEnc   string `json:"bodyEnc"`
 }
@@ -228,6 +229,7 @@ func (r *relay) buildBody(msg pactMsg) []byte {
 		EventType: ev.EventType,
 		Task:      ev.TaskID,
 		Seq:       msg.seq,
+		EventID:   ev.EventID,
 		TS:        tsMs,
 		BodyEnc:   string(bodyEnc),
 	})

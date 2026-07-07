@@ -12,6 +12,10 @@ export const PactIngestRequest = z
     eventType: z.string().min(1).max(64),
     task: z.string().max(256).optional(),
     seq: z.number().int().nonnegative(),
+    // Optional client idempotency key. When present the relay also enforces
+    // uniqueness on (projectId, eventId), so a replay with a new seq but the
+    // same eventId is dropped.
+    eventId: z.string().max(128).optional(),
     ts: z.number().int().nonnegative(),
     bodyEnc: z.string().min(1).max(2_000_000),
   })
@@ -41,15 +45,18 @@ export interface PactEventInput {
   task?: string | null
   /** Monotonic per-project sequence. */
   seq: number
+  /** Optional client idempotency key (e.g. pact event_id). */
+  eventId?: string
   /** Epoch ms. */
   ts: number
   /** Opaque E2E ciphertext of the full pact event JSON. */
   bodyEnc: string
 }
 
-// Returns `created: false` when this (projectId, seq) was already stored — a
-// replay/retry — so the caller can suppress duplicate side effects (e.g. a push
-// storm when a machine reconnects and re-uploads its whole ledger).
+// Returns `created: false` when this (projectId, seq) — or, if the client sent
+// an `eventId`, (projectId, eventId) — was already stored. This lets the caller
+// suppress duplicate side effects (e.g. a push storm when a machine reconnects
+// and re-uploads its whole ledger).
 export async function ingestPactEvent(
   db: PrismaClient,
   accountId: string,
@@ -75,14 +82,16 @@ export async function ingestPactEvent(
     skipDuplicates: true,
   })
   // Append idempotently and unconditionally. createMany+skipDuplicates is a no-op
-  // on a duplicate (projectId, seq) AND its `count` tells us if the event was
-  // genuinely new — so the S6 push is gated without a transaction/TOCTOU.
+  // on a duplicate (projectId, seq) or (projectId, eventId) AND its `count`
+  // tells us if the event was genuinely new — so the S6 push is gated without a
+  // transaction/TOCTOU.
   const { count } = await db.pactEvent.createMany({
     data: [
       {
         projectId: input.projectId,
         accountId,
         seq: input.seq,
+        eventId: input.eventId,
         eventType: input.eventType,
         task: input.task ?? null,
         feature: input.feature ?? null,

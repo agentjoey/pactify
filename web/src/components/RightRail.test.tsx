@@ -5,6 +5,7 @@ import type { State, PactEvent, Task } from "../lib/types";
 import { DataSourceProvider } from "../lib/datasource";
 
 vi.mock("../lib/api", () => ({
+  subscribeAgentStream: () => () => {},
   postVerb: vi.fn(() => Promise.resolve()),
   getStats: vi.fn(() => Promise.resolve({ tasks: [], agents: [] })),
   getAudit: vi.fn(() => Promise.resolve([])),

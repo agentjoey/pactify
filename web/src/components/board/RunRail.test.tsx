@@ -1,37 +1,39 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { State, Feature, OrchestrateStatus } from "../lib/types";
-import { DataSourceProvider, type DataSource } from "../lib/datasource";
+import type { State, Feature, OrchestrateStatus } from "../../lib/types";
+import { DataSourceProvider, type DataSource } from "../../lib/datasource";
 
 const getOrchestrateStatus = vi.fn();
 const getParallelOrchestrate = vi.fn();
-const runOrchestrate = vi.fn();
 const resumeOrchestrate = vi.fn();
 const shipFeature = vi.fn();
 const getDiff = vi.fn();
 const postVerb = vi.fn();
-vi.mock("../lib/api", () => ({
+vi.mock("../../lib/api", () => ({
   getOrchestrateStatus: (...args: unknown[]) => getOrchestrateStatus(...args),
   getParallelOrchestrate: (...args: unknown[]) => getParallelOrchestrate(...args),
-  runOrchestrate: (...args: unknown[]) => runOrchestrate(...args),
   resumeOrchestrate: (...args: unknown[]) => resumeOrchestrate(...args),
   shipFeature: (...args: unknown[]) => shipFeature(...args),
   getDiff: (...args: unknown[]) => getDiff(...args),
   postVerb: (...args: unknown[]) => postVerb(...args),
+  runOrchestrate: vi.fn(),
   subscribeAgentStream: () => () => {},
 }));
 
-import { LiveOrchestrate } from "./LiveOrchestrate";
-
-const FULL_ROSTER = [
-  { id: "claude", roles: ["orchestrator", "reviewer"] },
-  { id: "opencode-worker", roles: ["worker"] },
-];
+import { RunRail } from "./RunRail";
 
 const task = (id: string, status: string, owner = "opencode-worker") => ({
   id, owner, status, reviewer: "claude", spec: "", evidence: "",
 });
-const st = (features: Feature[]): State => ({ project: "p1", agents: FULL_ROSTER, features, awaiting_count: 0 });
+const st = (features: Feature[]): State => ({
+  project: "p1",
+  agents: [
+    { id: "claude", roles: ["orchestrator", "reviewer"] },
+    { id: "opencode-worker", roles: ["worker"] },
+  ],
+  features,
+  awaiting_count: 0,
+});
 const EMPTY = st([]);
 
 const status = (over: Partial<OrchestrateStatus>): OrchestrateStatus => ({
@@ -39,24 +41,32 @@ const status = (over: Partial<OrchestrateStatus>): OrchestrateStatus => ({
   escalated: false, done: false, total: 3, accepted: 1, iter: 2, updated_at: "x", ...over,
 });
 
-function renderLive(props: Partial<React.ComponentProps<typeof LiveOrchestrate>> = {}) {
+function renderRail(props: Partial<React.ComponentProps<typeof RunRail>> = {}) {
   return render(
     <DataSourceProvider>
-      <LiveOrchestrate project="p1" state={EMPTY} refreshTick={0} author={true} agents={FULL_ROSTER} {...props} />
+      <RunRail project="p1" state={EMPTY} refreshTick={0} author={true} {...props} />
     </DataSourceProvider>,
   );
 }
 
-describe("LiveOrchestrate (lanes redesign)", () => {
+describe("RunRail (Board run banner — the former Live lanes)", () => {
   beforeEach(() => {
     getOrchestrateStatus.mockReset();
     getParallelOrchestrate.mockReset();
-    runOrchestrate.mockReset();
     resumeOrchestrate.mockReset();
     shipFeature.mockReset();
     getDiff.mockReset();
     postVerb.mockReset();
     getParallelOrchestrate.mockResolvedValue({ present: false });
+  });
+
+  // The rail is a banner, not a view: with no orchestrate activity it renders
+  // NOTHING — the Board columns already tell the whole story.
+  it("renders nothing when orchestrate has no activity", async () => {
+    getOrchestrateStatus.mockResolvedValue({ present: false });
+    renderRail();
+    await waitFor(() => expect(getOrchestrateStatus).toHaveBeenCalled());
+    expect(screen.queryByTestId("run-rail")).toBeNull();
   });
 
   // P1-7 Review Gate: the five-action panel. Reject→rework and Approve merge are
@@ -70,7 +80,7 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     async function renderGated(onNotify = vi.fn()) {
       getOrchestrateStatus.mockResolvedValue({ present: true, status: status({ escalated: true, action: "stuck", reason: "FAIL TestX" }) });
       postVerb.mockResolvedValue(undefined);
-      renderLive({ onNotify, state: gatedState() });
+      renderRail({ onNotify, state: gatedState() });
       await waitFor(() => expect(screen.getByTestId("review-gate")).toBeTruthy());
       return onNotify;
     }
@@ -88,11 +98,9 @@ describe("LiveOrchestrate (lanes redesign)", () => {
 
     it("Approve merge overrides the gate: two-step confirm, then accept awaiting + merge", async () => {
       const onNotify = await renderGated();
-      // First click = arm the override confirm (no verbs yet).
       fireEvent.click(screen.getByRole("button", { name: "Approve merge" }));
       expect(postVerb).not.toHaveBeenCalled();
       expect(screen.getByText(/overrides the failed hard gate/i)).toBeTruthy();
-      // Confirm = accept the awaiting task then merge the feature, in order.
       fireEvent.click(screen.getByTestId("approve-merge-confirm"));
       await waitFor(() => expect(postVerb).toHaveBeenCalledWith("p1", "accept", { task: "t2" }));
       await waitFor(() => expect(postVerb).toHaveBeenCalledWith("p1", "merge", { feature: "feat-x" }));
@@ -111,37 +119,16 @@ describe("LiveOrchestrate (lanes redesign)", () => {
 
     it("gate decisions are hidden in observe mode (author=false)", async () => {
       getOrchestrateStatus.mockResolvedValue({ present: true, status: status({ escalated: true, reason: "FAIL" }) });
-      renderLive({ author: false, state: gatedState() });
+      renderRail({ author: false, state: gatedState() });
       await waitFor(() => expect(screen.getByTestId("review-gate")).toBeTruthy());
       expect(screen.queryByRole("button", { name: "Reject → rework" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Approve merge" })).toBeNull();
     });
   });
 
-  it("renders empty state + Run when nothing has run and there are no features", async () => {
-    getOrchestrateStatus.mockResolvedValue({ present: false });
-    renderLive();
-    await waitFor(() => expect(screen.getByText("orchestrate hasn't run yet")).toBeTruthy());
-    expect(screen.getByRole("button", { name: "Run" })).toBeTruthy();
-  });
-
-  it("Run is disabled when the roster is incomplete", async () => {
-    getOrchestrateStatus.mockResolvedValue({ present: false });
-    renderLive({ agents: [{ id: "claude", roles: ["reviewer"] }] });
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run" })).toBeTruthy());
-    expect((screen.getByRole("button", { name: "Run" }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("Run is disabled in observe mode", async () => {
-    getOrchestrateStatus.mockResolvedValue({ present: false });
-    renderLive({ author: false });
-    await waitFor(() => expect(screen.getByRole("button", { name: "Run" })).toBeTruthy());
-    expect((screen.getByRole("button", { name: "Run" }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
   it("renders a feature lane with task pipeline chips from state", async () => {
     getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}) });
-    renderLive({
+    renderRail({
       state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
         task("t1", "accepted"), task("t2", "in_progress"), task("t3", "assigned"),
       ] }]),
@@ -155,12 +142,25 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     expect(screen.getByText("working")).toBeTruthy();
   });
 
+  it("shows only driver-touched features as lanes (Board columns own the rest)", async () => {
+    getOrchestrateStatus.mockResolvedValue({ present: true, status: status({ feature: "feat-x" }) });
+    renderRail({
+      state: st([
+        { id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "in_progress")] },
+        { id: "feat-idle", branch: "feat/idle", status: "in_progress", tasks: [task("t9", "assigned")] },
+      ]),
+    });
+    await waitFor(() => expect(screen.getByTestId("feature-lane")).toBeTruthy());
+    expect(screen.getAllByTestId("feature-lane")).toHaveLength(1);
+    expect(screen.queryByText("feat-idle")).toBeNull();
+  });
+
   it("shows the review gate with reason + Resume/See diff when a gate fails", async () => {
     getOrchestrateStatus.mockResolvedValue({ present: true, status: status({ escalated: true, action: "stuck", reason: "FAIL TestRetryCap" }) });
     resumeOrchestrate.mockResolvedValue({});
     getDiff.mockResolvedValue({ diff: "diff --git a/foo b/foo" });
     const onNotify = vi.fn();
-    renderLive({
+    renderRail({
       onNotify,
       state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
         task("t1", "accepted"), task("t2", "in_progress"),
@@ -181,7 +181,7 @@ describe("LiveOrchestrate (lanes redesign)", () => {
 
   it("run control shows accepted/total progress", async () => {
     getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}) });
-    renderLive({
+    renderRail({
       state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
         task("t1", "accepted"), task("t2", "in_progress"), task("t3", "assigned"),
       ] }]),
@@ -194,7 +194,7 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     getOrchestrateStatus.mockResolvedValue({ present: true, status: status({ done: true, action: "done", task: "", accepted: 2, total: 2 }) });
     shipFeature.mockResolvedValue({ pushed: true, pr_url: "https://github.com/org/repo/pull/42" });
     const onNotify = vi.fn();
-    renderLive({
+    renderRail({
       onNotify,
       state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "accepted")] }]),
     });
@@ -215,7 +215,7 @@ describe("LiveOrchestrate (lanes redesign)", () => {
       present: true,
       status: status({ phase: "fixing", fix_round: 2, fix_max: 3 }),
     });
-    renderLive({
+    renderRail({
       state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
         task("t1", "accepted"), task("t2", "in_progress"),
       ] }]),
@@ -226,7 +226,7 @@ describe("LiveOrchestrate (lanes redesign)", () => {
 
   it("shows no fixing indicator in a normal (owner) phase", async () => {
     getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}) });
-    renderLive({
+    renderRail({
       state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
         task("t1", "accepted"), task("t2", "in_progress"),
       ] }]),
@@ -235,15 +235,9 @@ describe("LiveOrchestrate (lanes redesign)", () => {
     expect(screen.queryByTestId("fixing-indicator")).toBeNull();
   });
 
-  it("always renders the event stream pane", async () => {
-    getOrchestrateStatus.mockResolvedValue({ present: false });
-    renderLive();
-    await waitFor(() => expect(screen.getByTestId("event-stream")).toBeTruthy());
-  });
-
   it("expands the first working lane's agent terminal by default", async () => {
     getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}) });
-    renderLive({
+    renderRail({
       state: st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
         task("t1", "accepted"), task("t2", "in_progress"),
       ] }]),
@@ -252,15 +246,15 @@ describe("LiveOrchestrate (lanes redesign)", () => {
   });
 });
 
-describe("LiveOrchestrate — capability gating", () => {
-  it("disables Run/Resume/Ship when the source is read-only", async () => {
+describe("RunRail — capability gating", () => {
+  it("disables Ship when the source is read-only", async () => {
     const readOnly = {
       capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true },
       listProjects: vi.fn(),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
       subscribe: vi.fn(),
-      getOrchestrateStatus: vi.fn().mockResolvedValue({ present: true, status: status({ done: true, action: "done", task: "", accepted: 2, total: 2 }) }),
+      getOrchestrateStatus: vi.fn().mockResolvedValue({ present: true, status: { feature: "feat-x", task: "", seat: "", action: "done", phase: "done", escalated: false, done: true, total: 2, accepted: 2, iter: 3, updated_at: "x" } }),
       getParallelOrchestrate: vi.fn().mockResolvedValue({ present: false }),
       runOrchestrate: vi.fn(),
       resumeOrchestrate: vi.fn(),
@@ -268,13 +262,12 @@ describe("LiveOrchestrate — capability gating", () => {
       getDiff: vi.fn(),
     };
     render(
-      <DataSourceProvider source={readOnly}>
-        <LiveOrchestrate
+      <DataSourceProvider source={readOnly as unknown as DataSource}>
+        <RunRail
           project="p1"
           state={st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "accepted")] }])}
           refreshTick={0}
           author={true}
-          agents={FULL_ROSTER}
         />
       </DataSourceProvider>,
     );
@@ -284,79 +277,58 @@ describe("LiveOrchestrate — capability gating", () => {
   });
 });
 
-// A hosted-like source: RelaySource can drive orchestrate (canOrchestrate) but
-// OMITS the orchestrate read/action methods (status/parallel/diff/ship) that read
-// or act on the machine's live driver + git tree. The Live view must guard on
-// method presence and degrade gracefully instead of throwing a non-null-assertion.
-function hostedSource(over: Partial<DataSource> = {}): DataSource {
-  return {
-    capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true },
-    listProjects: vi.fn().mockResolvedValue([]),
-    getState: vi.fn().mockResolvedValue(EMPTY),
-    getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
-    subscribe: vi.fn().mockReturnValue(() => {}),
-    runOrchestrate: vi.fn().mockResolvedValue({ status_url: "" }),
-    resumeOrchestrate: vi.fn().mockResolvedValue({ status_url: "" }),
-    // deliberately no getOrchestrateStatus / getParallelOrchestrate / getDiff / shipFeature
-    ...over,
-  } as unknown as DataSource;
-}
-
-describe("LiveOrchestrate — hosted method-presence guards", () => {
-  const laneState = st([
-    { id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "in_progress")] },
-  ]);
-
-  it("renders (no throw) with a hosted note + live event stream when status methods are absent", async () => {
+// A hosted-like source omits the orchestrate read methods entirely: the rail
+// must render NOTHING (no throw, no note) — hosted boards stay clean and the
+// event drawer/board columns carry the story.
+describe("RunRail — hosted method-presence guard", () => {
+  it("renders nothing when status methods are absent", () => {
+    const hosted = {
+      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true },
+      listProjects: vi.fn().mockResolvedValue([]),
+      getState: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
+      subscribe: vi.fn().mockReturnValue(() => {}),
+      runOrchestrate: vi.fn(),
+      resumeOrchestrate: vi.fn(),
+      // deliberately no getOrchestrateStatus / getParallelOrchestrate
+    };
     render(
-      <DataSourceProvider source={hostedSource()}>
-        <LiveOrchestrate project="p1" state={laneState} refreshTick={0} author={true} agents={FULL_ROSTER} />
+      <DataSourceProvider source={hosted as unknown as DataSource}>
+        <RunRail
+          project="p1"
+          state={st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "in_progress")] }])}
+          refreshTick={0}
+          author={true}
+        />
       </DataSourceProvider>,
     );
-    // event stream + lanes still render; a note explains the missing run status.
-    expect(screen.getByTestId("event-stream")).toBeTruthy();
-    expect(screen.getByTestId("hosted-status-note")).toBeTruthy();
-    await waitFor(() => expect(screen.getByTestId("feature-lane")).toBeTruthy());
-    // status-driven controls never fabricate (no getOrchestrateStatus to poll).
-    expect(screen.queryByRole("button", { name: "Ship" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "See diff" })).toBeNull();
+    expect(screen.queryByTestId("run-rail")).toBeNull();
   });
 
   it("hides the Ship button when the source lacks shipFeature (even when done)", async () => {
-    const src = hostedSource({
-      getOrchestrateStatus: vi.fn().mockResolvedValue({ present: true, status: status({ done: true, action: "done", task: "", accepted: 2, total: 2 }) }),
+    const src = {
+      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true },
+      listProjects: vi.fn().mockResolvedValue([]),
+      getState: vi.fn(),
+      getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
+      subscribe: vi.fn().mockReturnValue(() => {}),
+      runOrchestrate: vi.fn(),
+      resumeOrchestrate: vi.fn(),
+      getOrchestrateStatus: vi.fn().mockResolvedValue({ present: true, status: { feature: "feat-x", task: "", seat: "", action: "done", phase: "done", escalated: false, done: true, total: 2, accepted: 2, iter: 3, updated_at: "x" } }),
       getParallelOrchestrate: vi.fn().mockResolvedValue({ present: false }),
-    });
+      // deliberately no shipFeature / getDiff
+    };
     render(
-      <DataSourceProvider source={src}>
-        <LiveOrchestrate
+      <DataSourceProvider source={src as unknown as DataSource}>
+        <RunRail
           project="p1"
           state={st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "accepted")] }])}
           refreshTick={0}
           author={true}
-          agents={FULL_ROSTER}
         />
       </DataSourceProvider>,
     );
     await waitFor(() => expect(screen.getByText("Delivered")).toBeTruthy());
-    // status IS queryable here → no hosted note, but Ship stays hidden (no method).
-    expect(screen.queryByTestId("hosted-status-note")).toBeNull();
     expect(screen.queryByRole("button", { name: "Ship" })).toBeNull();
-  });
-
-  it("hides the review-gate See-diff button when the source lacks getDiff (Resume still shown)", async () => {
-    const src = hostedSource({
-      getOrchestrateStatus: vi.fn().mockResolvedValue({ present: true, status: status({ escalated: true, action: "stuck", reason: "FAIL TestX" }) }),
-      getParallelOrchestrate: vi.fn().mockResolvedValue({ present: false }),
-    });
-    render(
-      <DataSourceProvider source={src}>
-        <LiveOrchestrate project="p1" state={laneState} refreshTick={0} author={true} agents={FULL_ROSTER} />
-      </DataSourceProvider>,
-    );
-    await waitFor(() => expect(screen.getByTestId("review-gate")).toBeTruthy());
-    expect(screen.queryByRole("button", { name: "See diff" })).toBeNull();
-    // Resume remains (resumeOrchestrate is present on the hosted source).
-    expect(screen.getByRole("button", { name: "Resume run ▸" })).toBeTruthy();
   });
 });

@@ -194,7 +194,7 @@ export function DispatchPanel({
                 ? "Dispatched — generating the plan on the remote machine. Watch the board as tasks arrive."
                 : `Dispatched — ${assigned} task(s) assigned, orchestrating.`}
             </p>
-            <button type="button" data-testid="dispatch-golive" onClick={onGoLive} className="rounded-md border border-[var(--color-border-subtle)] px-3 py-1.5 text-[12px]">Go to Live →</button>
+            <button type="button" data-testid="dispatch-golive" onClick={onGoLive} className="rounded-md border border-[var(--color-border-subtle)] px-3 py-1.5 text-[12px]">Watch on Board →</button>
           </div>
         )}
 

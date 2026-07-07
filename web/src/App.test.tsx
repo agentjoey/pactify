@@ -206,41 +206,16 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByTestId("dispatch-panel")).toBeInTheDocument());
   });
 
-  describe("global view shortcuts", () => {
-    it("defaults to the Board view and switches with keys 1/2", async () => {
+  describe("single-view shell (views consolidation)", () => {
+    it("renders the Board with no lens control and the collapsed event drawer", async () => {
       render(<App />);
       await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
       expect(screen.getByTestId("view-board")).toBeInTheDocument();
-      fireEvent.keyDown(window, { key: "2" });
-      await waitFor(() => expect(screen.getByTestId("view-live")).toBeInTheDocument());
-      fireEvent.keyDown(window, { key: "1" });
-      await waitFor(() => expect(screen.getByTestId("view-board")).toBeInTheDocument());
-    });
-
-    it("the lens control reflects board/live and ignores keys while typing", async () => {
-      render(<App />);
-      await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
-
-      // The Toolbar lens segmented control (board/live).
-      const group = () => screen.getByRole("group", { name: "lens" });
-      const pressed = () =>
-        within(group()).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"));
-
-      // default lens = board (first button pressed)
-      expect(pressed()).toEqual(["true", "false"]);
-
-      await act(async () => { fireEvent.keyDown(window, { key: "2" }); }); // live
-      expect(pressed()).toEqual(["false", "true"]);
-
-      await act(async () => { fireEvent.keyDown(window, { key: "1" }); }); // board
-      expect(pressed()).toEqual(["true", "false"]);
-
-      // typing guard: a keydown originating from an INPUT must not switch.
-      const input = document.createElement("input");
-      document.body.appendChild(input);
-      await act(async () => { fireEvent.keyDown(input, { key: "2" }); });
-      expect(pressed()).toEqual(["true", "false"]);
-      input.remove();
+      // The lens segmented control is gone (single-view IA).
+      expect(screen.queryByRole("group", { name: "lens" })).toBeNull();
+      // The event drawer ships collapsed at the bottom of the board.
+      await waitFor(() => expect(screen.getByTestId("event-drawer")).toBeInTheDocument());
+      expect(screen.getByTestId("event-drawer").dataset.state).toBe("collapsed");
     });
   });
 });

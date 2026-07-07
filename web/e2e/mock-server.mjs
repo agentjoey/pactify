@@ -225,6 +225,12 @@ const server = createServer(async (req, res) => {
   if (url === `/api/projects/${PROJECT_ID}/plan/add-2fa/apply` && method === "POST") {
     return sendJSON(res, 200, { assigned: 1 });
   }
+  if (url === `/api/projects/${PROJECT_ID}/orchestrate/status` && method === "GET") {
+    return sendJSON(res, 200, { present: false });
+  }
+  if (url === `/api/projects/${PROJECT_ID}/orchestrate/parallel` && method === "GET") {
+    return sendJSON(res, 200, { present: false });
+  }
   if (url === `/api/projects/${PROJECT_ID}/orchestrate/run` && method === "POST") {
     return sendJSON(res, 202, { status_url: "/x" });
   }

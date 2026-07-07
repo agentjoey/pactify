@@ -1,11 +1,12 @@
-// live-gate-shot.mjs — visual-gate fixture for the Live orchestrate review gate.
+// board-gate-shot.mjs — visual-gate fixture for the Board run-rail review gate.
 //
 // The escalated / review-gate state only appears when a real orchestrate run
 // hits its hard-gate, which can't be triggered on demand. This captures it by
 // intercepting the orchestrate-status API with a mock escalated payload, so the
-// dark review-gate styling can be visually reviewed. Point at a running serve.
+// review-gate styling (RunRail lane + five-action panel) can be visually
+// reviewed. Point at a running serve (or the e2e mock server).
 //
-// Usage: node web/scripts/live-gate-shot.mjs   # → /tmp/pactify-shots/live-gate.png
+// Usage: node web/scripts/board-gate-shot.mjs  # → /tmp/pactify-shots/board-gate.png
 import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 
@@ -24,8 +25,8 @@ const escalated = {
     total: 4,
     accepted: 2,
     seat: "opencode",
-    task: "t-harden",
-    feature: "feat-rh",
+    task: process.env.SHOT_TASK || "t2",
+    feature: process.env.SHOT_FEATURE || "f1",
   },
 };
 
@@ -40,12 +41,13 @@ async function main() {
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForSelector('[data-testid="app-root"]', { timeout: 15000 });
   await page.waitForTimeout(1000);
-  await page.keyboard.press("3"); // Live lens
-  await page.waitForSelector('[data-testid="escalated-banner"]', { timeout: 5000 });
+  // Single-view IA: the run rail renders on the Board when the driver reports
+  // an escalated run — wait for the five-action review gate to mount.
+  await page.waitForSelector('[data-testid="review-gate"]', { timeout: 5000 });
   await page.waitForTimeout(600);
-  await page.screenshot({ path: `${OUT}/live-gate.png` });
+  await page.screenshot({ path: `${OUT}/board-gate.png` });
   await browser.close();
-  console.log(`shot: live-gate -> ${OUT}/live-gate.png`);
+  console.log(`shot: board-gate -> ${OUT}/board-gate.png`);
 }
 
 main().catch((e) => {

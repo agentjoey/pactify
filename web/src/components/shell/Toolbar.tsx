@@ -1,8 +1,6 @@
 import { useMemo } from "react";
 import type { Seat, ProjectMeta } from "../../lib/types";
-import type { View } from "../../lib/types";
 import { CableMark } from "./CableMark";
-import { Icon } from "../../lib/icons";
 import { Ant } from "../ui/ants/Ant";
 import { casteForRoles, padGradient } from "../../lib/ants";
 import { ProjectMenu } from "./ProjectMenu";
@@ -10,19 +8,13 @@ import type { Worktree } from "../../lib/api";
 
 // Toolbar — the macOS-style unified toolbar (Option A shell). Holds the brand +
 // the ProjectMenu dropdown (project switching / rename / delete / add lives here
-// after IA v2), the centered lens segmented control (the three lenses: Board /
-// Canvas / Live), a ⌘K affordance, the live badge, the ⚙ Settings and 👤 Profile
-// buttons, and the acting-seat avatar. Light theme, English copy.
+// after IA v2), a ⌘K affordance, the live badge, the ⚙ Settings and 👤 Profile
+// buttons, and the acting-seat avatar. Single-view IA (PR2 of the views
+// consolidation): the Board is the only lens, so the segmented control is gone.
 
-const LENSES: ReadonlyArray<{ v: View; label: string; icon: string }> = [
-  { v: "board", label: "Board", icon: "view-kanban" },
-  { v: "live", label: "Live", icon: "view-live" },
-];
 
 export function Toolbar({
   projectName,
-  view,
-  onView,
   live,
   author,
   seat,
@@ -41,8 +33,6 @@ export function Toolbar({
   onSelectWorktree,
 }: {
   projectName: string;
-  view: View;
-  onView: (v: View) => void;
   live: boolean;
   author: boolean;
   seat?: string;
@@ -92,25 +82,7 @@ export function Toolbar({
         />
       </div>
 
-      {/* centered lens segmented control */}
-      <div role="group" aria-label="lens" className="mx-auto inline-flex rounded-[9px] border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] p-0.5">
-        {LENSES.map((l) => {
-          const on = view === l.v;
-          return (
-            <button
-              key={l.v}
-              type="button"
-              onClick={() => onView(l.v)}
-              aria-pressed={on}
-              className="inline-flex items-center gap-1.5 rounded-[7px] px-3 py-1 text-[11.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-role-design)_40%,transparent)]"
-              style={on ? { background: "var(--color-bg-raised)", color: "var(--color-text-1)", boxShadow: "var(--shadow-card)" } : { color: "var(--color-text-2)" }}
-            >
-              <Icon name={l.icon} size={13} color={on ? "var(--color-text-1)" : "var(--color-text-3)"} />
-              {l.label}
-            </button>
-          );
-        })}
-      </div>
+      <div className="mx-auto" />
 
       {/* right cluster: ⌘K · live · seat · ⚙ settings · 👤 profile */}
       <button

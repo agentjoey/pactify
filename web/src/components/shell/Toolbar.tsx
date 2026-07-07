@@ -16,7 +16,6 @@ import type { Worktree } from "../../lib/api";
 
 const LENSES: ReadonlyArray<{ v: View; label: string; icon: string }> = [
   { v: "board", label: "Board", icon: "view-kanban" },
-  { v: "canvas", label: "Canvas", icon: "view-canvas" },
   { v: "live", label: "Live", icon: "view-live" },
 ];
 

@@ -7,8 +7,6 @@
 //   GET  /api/registry              → [{name,path,group?,status}]
 //   GET  /api/acting-seat           → {seat}            (author identity)
 //   GET  /api/projects/p1/state     → StateDTO          (mutable working copy)
-//   GET  /api/projects/p1/squad/layout  → stored layout, or {} when none
-//   PUT  /api/projects/p1/squad/layout  → store verbatim + echo {status:"ok"}
 //   GET  /api/projects/p1/events    → SSE stream ("event: pact\ndata: …\n\n")
 //   GET  /api/fs/browse?path=       → {path,parent,entries}
 //   GET  /api/setup/suggest         → {bindings,warnings}
@@ -18,7 +16,7 @@
 //   (unhandled /api/* → 404; everything else → SPA fallback to index.html)
 //
 // Test hooks (NOT part of the real API):
-//   POST /__test/reset     → restore the seed state + clear layout (per-test).
+//   POST /__test/reset     → restore the seed state (per-test).
 //
 // Draft state is NOT server-side — drafts are browser-local; the connect/author
 // tests create them through the UI.
@@ -43,14 +41,12 @@ const PORT = Number(process.env.PORT || 4173);
 
 // --- mutable per-process state (reset via /__test/reset between tests) --------
 let state = initialState();
-let layout = null; // null ⇒ none stored yet (GET returns {})
 const sseClients = new Set(); // live SSE response objects
 let registry = makeRegistry();
 const fsTree = browseTree();
 
 function resetState() {
   state = initialState();
-  layout = null;
   registry = makeRegistry();
 }
 
@@ -150,21 +146,6 @@ const server = createServer(async (req, res) => {
   }
   if (url === `/api/projects/${PROJECT_ID}/state` && method === "GET") {
     return sendJSON(res, 200, state);
-  }
-  if (url === `/api/projects/${PROJECT_ID}/squad/layout` && method === "GET") {
-    if (layout === null) return sendJSON(res, 200, {});
-    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    return res.end(layout); // stored verbatim, exactly as serve returns it
-  }
-  if (url === `/api/projects/${PROJECT_ID}/squad/layout` && method === "PUT") {
-    const raw = await readBody(req);
-    try {
-      JSON.parse(raw); // serve rejects invalid JSON; mirror that loosely
-    } catch {
-      return sendJSON(res, 400, { error: "layout body is not valid JSON" });
-    }
-    layout = raw;
-    return sendJSON(res, 200, { status: "ok" });
   }
   if (url === `/api/projects/${PROJECT_ID}/events` && method === "GET") {
     res.writeHead(200, {

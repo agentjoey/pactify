@@ -1,5 +1,5 @@
-// The three dashboard lenses (IA v2). Was historically defined in TopBar.tsx.
-export type View = "board" | "canvas" | "live";
+// The dashboard lenses (IA v2; Canvas retired 2026-07). Was historically defined in TopBar.tsx.
+export type View = "board" | "live";
 
 export interface Seat { id: string; roles: string[]; kind?: string }
 export interface Task { id: string; owner: string; status: string; reviewer: string; spec: string; evidence: string; deps?: string[]; reviewers?: string[]; quorum?: number; accepts?: string[] }

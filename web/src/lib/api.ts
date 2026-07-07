@@ -15,7 +15,6 @@ import type {
   ExpandedTaskItem,
   FsBrowseResponse,
 } from "./types";
-import type { LayoutJSON } from "./canvas";
 
 async function getJSON<T>(url: string): Promise<T> {
   const r = await fetch(url);
@@ -152,13 +151,6 @@ export async function postVerb(
   body: Record<string, unknown>,
 ): Promise<void> {
   await writeJSON(`/api/projects/${project}/verbs/${verb}`, "POST", body);
-}
-
-export const getLayout = (project: string) =>
-  getJSON<LayoutJSON>(`/api/projects/${project}/squad/layout`);
-
-export async function putLayout(project: string, layout: LayoutJSON): Promise<void> {
-  await writeJSON(`/api/projects/${project}/squad/layout`, "PUT", layout);
 }
 
 // --- Ops view (M3.3a) ---

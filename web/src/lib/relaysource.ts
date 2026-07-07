@@ -274,10 +274,30 @@ export class RelaySource implements DataSource {
     return { tasks, agents };
   }
 
-  subscribe(id: string, onState: (s: State) => void): () => void {
-    return this.client.subscribe(id, async () => {
-      const state = await this.getState(id);
-      onState(state);
-    });
+  subscribe(
+    id: string,
+    onState: (s: State) => void,
+    onEvent?: (e: PactEvent) => void,
+    _onError?: () => void,
+    onLive?: (live: boolean) => void,
+  ): () => void {
+    return this.client.subscribe(
+      id,
+      async (e) => {
+        // Forward the decrypted event to the live stream (Live view terminal +
+        // per-task token metrics) — previously hosted only re-folded state and
+        // the event stream stayed empty.
+        if (onEvent) {
+          try {
+            onEvent(this.client.decrypt(id, e.bodyEnc) as PactEvent);
+          } catch {
+            /* a body we can't decrypt (key rotation / foreign project) is skipped */
+          }
+        }
+        const state = await this.getState(id);
+        onState(state);
+      },
+      onLive,
+    );
   }
 }

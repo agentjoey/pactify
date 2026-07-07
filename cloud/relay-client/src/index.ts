@@ -129,12 +129,23 @@ export class RelayClient {
    * filters the account-wide `pact-event` broadcast down to `projectId`, and
    * returns an unsubscribe function that removes the handler and closes the socket.
    */
-  subscribe(projectId: string, onEvent: (e: PactEventBroadcast) => void): () => void {
+  subscribe(
+    projectId: string,
+    onEvent: (e: PactEventBroadcast) => void,
+    onConn?: (live: boolean) => void,
+  ): () => void {
     const socket = io(this.url, { auth: { token: this.token, role: 'client' } })
     const handler = (e: PactEventBroadcast) => {
       if (e.projectId === projectId) onEvent(e)
     }
     socket.on('pact-event', handler)
+    // Surface socket liveness so a hosted dashboard can show online/offline
+    // (previously the connection state was never exposed to callers).
+    if (onConn) {
+      socket.on('connect', () => onConn(true))
+      socket.on('disconnect', () => onConn(false))
+      socket.on('connect_error', () => onConn(false))
+    }
     return () => {
       socket.off('pact-event', handler)
       socket.disconnect()

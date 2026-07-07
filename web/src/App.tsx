@@ -148,7 +148,17 @@ function AppContent() {
 
   useEffect(() => {
     refreshProjects();
-    // A non-empty acting seat means this dashboard can author.
+    // Hosted has no /api/acting-seat (that endpoint is local-serve only); its
+    // authority comes from the relay source's capabilities — it drives via the
+    // remote-control down-channel as the account, with no per-project seat. So
+    // deriving author from getActingSeat() left every hosted dashboard stuck in
+    // "observing". Use the capability flag instead.
+    if (isHostedMode()) {
+      setAuthor(src.capabilities.canWrite);
+      setSeat("");
+      return;
+    }
+    // A non-empty acting seat means this local dashboard can author.
     getActingSeat().then((r) => {
       setAuthor(!!(r?.seat));
       setSeat(r?.seat ?? "");

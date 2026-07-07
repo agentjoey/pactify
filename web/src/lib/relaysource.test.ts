@@ -528,6 +528,7 @@ describe("RelaySource", () => {
     expect(client.subscribe).toHaveBeenCalledWith(
       "p1",
       expect.any(Function),
+      undefined, // onLive omitted by this caller → passed through as undefined
     );
 
     handler!({
@@ -591,5 +592,71 @@ describe("RelaySource", () => {
         { seat: "alice", tasks: 0, duration_sec: 0, added: 0, deleted: 0, tokens: 0, accepted: 0, reworked: 0 },
       ],
     });
+  });
+
+  // subscribe must forward BOTH the liveness callback (drives the online/offline
+  // header — previously dropped, so hosted was stuck "offline") and the decrypted
+  // event (drives the Live event stream — previously never forwarded).
+  it("subscribe forwards liveness and decrypted events to the caller", async () => {
+    const frame = { projectId: "p1", bodyEnc: "enc" } as PactEventBroadcast;
+    const decodedEvent = { event_id: "e1", event_type: "checkpoint" } as unknown as PactEvent;
+    let clientOnEvent: ((e: PactEventBroadcast) => void) | undefined;
+    let clientOnConn: ((live: boolean) => void) | undefined;
+    const client = makeClient({
+      subscribe: vi.fn((_id, onEvent, onConn) => {
+        clientOnEvent = onEvent;
+        clientOnConn = onConn;
+        return () => {};
+      }),
+      decrypt: vi.fn().mockReturnValue(decodedEvent),
+      getProjectEvents: vi.fn().mockResolvedValue([]),
+    });
+    const src = new RelaySource(client as RelayClient);
+
+    const states: State[] = [];
+    const events: PactEvent[] = [];
+    const live: boolean[] = [];
+    src.subscribe(
+      "p1",
+      (s) => states.push(s),
+      (e) => events.push(e),
+      () => {},
+      (v) => live.push(v),
+    );
+
+    // Liveness callback is wired straight through to the client's onConn.
+    expect(clientOnConn).toBeTypeOf("function");
+    clientOnConn!(true);
+    clientOnConn!(false);
+    expect(live).toEqual([true, false]);
+
+    // A frame decrypts to a PactEvent forwarded to onEvent, and re-folds state.
+    await clientOnEvent!(frame);
+    expect(events).toEqual([decodedEvent]);
+    expect(states.length).toBe(1);
+  });
+
+  it("subscribe skips an undecryptable frame without throwing", async () => {
+    let clientOnEvent: ((e: PactEventBroadcast) => void) | undefined;
+    const client = makeClient({
+      subscribe: vi.fn((_id, onEvent) => {
+        clientOnEvent = onEvent;
+        return () => {};
+      }),
+      decrypt: vi.fn(() => {
+        throw new Error("bad key");
+      }),
+      getProjectEvents: vi.fn().mockResolvedValue([]),
+    });
+    const src = new RelaySource(client as RelayClient);
+    const events: PactEvent[] = [];
+    const states: State[] = [];
+    src.subscribe("p1", (s) => states.push(s), (e) => events.push(e));
+
+    await expect(
+      clientOnEvent!({ projectId: "p1", bodyEnc: "enc" } as PactEventBroadcast),
+    ).resolves.toBeUndefined();
+    expect(events).toEqual([]); // undecryptable → skipped
+    expect(states.length).toBe(1); // state still re-folds
   });
 });

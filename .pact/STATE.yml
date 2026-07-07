@@ -515,3 +515,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/doctor-json.md
         evidence: pactify doctor --json emits []Check as JSON array (name/ok/detail tags); text path byte-unchanged, allOK hoisted; exit-code semantics preserved; go test ./internal/doctor/ ./cmd/pactify/ green; e2e emits 19-check valid array
+  - id: cockpit-backend
+    branch: feat/cockpit-backend
+    status: in_progress
+    tasks:
+      - id: cockpit-backend-iface
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/cockpit-backend-iface.md
+        evidence: null

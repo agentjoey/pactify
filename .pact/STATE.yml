@@ -501,7 +501,7 @@ features:
     tasks:
       - id: validate-dynamic-seats
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/validate-dynamic-seats.md
-        evidence: null
+        evidence: validateLog declared-set now from st.Agents (init+add-seat+join) fixing FU-1 dynamic-seat false-negative; protocol_version scan preserved; reviewer hardened negative test to regenerate STATE post-tamper so it exercises roster check not drift; go test ./internal/pact/ green

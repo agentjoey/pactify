@@ -497,7 +497,7 @@ features:
         evidence: audit redaction denylist extended: Slack/Google-API/Stripe/GCP-OAuth/JWT/PEM-key; positive+negative tests each; go test ./internal/audit/ green, gofmt+vet clean; existing patterns untouched
   - id: validate-dynamic-seats
     branch: feat/validate-dynamic-seats
-    status: in_progress
+    status: shipped
     tasks:
       - id: validate-dynamic-seats
         owner: kimi-worker

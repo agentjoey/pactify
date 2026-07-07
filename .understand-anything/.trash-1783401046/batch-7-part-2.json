@@ -1,0 +1,1743 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/orchestrate/ledger_lock_test.go",
+      "type": "file",
+      "name": "ledger_lock_test.go",
+      "filePath": "internal/orchestrate/ledger_lock_test.go",
+      "summary": "Concurrency tests for the writeLedger lock path and the mirror-ledger ignore-probe memoization.",
+      "tags": [
+        "ledger",
+        "lock",
+        "concurrency",
+        "test",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/ledger_lock_test.go:TestWriteLedger_ConcurrentAppendSurvives",
+      "type": "function",
+      "name": "TestWriteLedger_ConcurrentAppendSurvives",
+      "filePath": "internal/orchestrate/ledger_lock_test.go",
+      "lineRange": [
+        25,
+        70
+      ],
+      "summary": "TestWriteLedger_ConcurrentAppendSurvives in ledger_lock_test.go (46 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/ledger_lock_test.go:TestWriteLedger_LockTimeoutSkipsCycle",
+      "type": "function",
+      "name": "TestWriteLedger_LockTimeoutSkipsCycle",
+      "filePath": "internal/orchestrate/ledger_lock_test.go",
+      "lineRange": [
+        74,
+        101
+      ],
+      "summary": "TestWriteLedger_LockTimeoutSkipsCycle in ledger_lock_test.go (28 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/ledger_lock_test.go:TestMirrorLedger_IgnoreProbeMemoizedPerRun",
+      "type": "function",
+      "name": "TestMirrorLedger_IgnoreProbeMemoizedPerRun",
+      "filePath": "internal/orchestrate/ledger_lock_test.go",
+      "lineRange": [
+        107,
+        139
+      ],
+      "summary": "TestMirrorLedger_IgnoreProbeMemoizedPerRun in ledger_lock_test.go (33 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/orchestrate/ledger_merge_test.go",
+      "type": "file",
+      "name": "ledger_merge_test.go",
+      "filePath": "internal/orchestrate/ledger_merge_test.go",
+      "summary": "Tests verifying that mergeEventLines preserves concurrent main-process events when re-appended.",
+      "tags": [
+        "ledger",
+        "test",
+        "merge",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/ledger_merge_test.go:TestMergeEventLines",
+      "type": "function",
+      "name": "TestMergeEventLines",
+      "filePath": "internal/orchestrate/ledger_merge_test.go",
+      "lineRange": [
+        12,
+        20
+      ],
+      "summary": "TestMergeEventLines in ledger_merge_test.go (9 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/ledger_merge_test.go:TestWriteLedgerPreservesConcurrentMainEvents",
+      "type": "function",
+      "name": "TestWriteLedgerPreservesConcurrentMainEvents",
+      "filePath": "internal/orchestrate/ledger_merge_test.go",
+      "lineRange": [
+        24,
+        48
+      ],
+      "summary": "TestWriteLedgerPreservesConcurrentMainEvents in ledger_merge_test.go (25 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/loop.go",
+      "type": "file",
+      "name": "loop.go",
+      "filePath": "internal/orchestrate/loop.go",
+      "summary": "Core orchestration loop: drives owner/reviewer iterations, escalation, gate execution, merging, and session cleanup per task lifecycle.",
+      "tags": [
+        "orchestrator",
+        "loop",
+        "owner",
+        "reviewer",
+        "gate",
+        "merge",
+        "go"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        24,
+        24
+      ],
+      "summary": "Run in loop.go (1 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:mirrorLedger",
+      "type": "function",
+      "name": "mirrorLedger",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        128,
+        137
+      ],
+      "summary": "mirrorLedger in loop.go (10 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:launchAgent",
+      "type": "function",
+      "name": "launchAgent",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        173,
+        191
+      ],
+      "summary": "launchAgent in loop.go (19 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:run",
+      "type": "function",
+      "name": "run",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        216,
+        438
+      ],
+      "summary": "run in loop.go (223 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:runOwner",
+      "type": "function",
+      "name": "runOwner",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        443,
+        525
+      ],
+      "summary": "runOwner in loop.go (83 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:runReviewer",
+      "type": "function",
+      "name": "runReviewer",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        530,
+        582
+      ],
+      "summary": "runReviewer in loop.go (53 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:launchReviewers",
+      "type": "function",
+      "name": "launchReviewers",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        593,
+        625
+      ],
+      "summary": "launchReviewers in loop.go (33 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:fixUntilGreen",
+      "type": "function",
+      "name": "fixUntilGreen",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        652,
+        702
+      ],
+      "summary": "fixUntilGreen in loop.go (51 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:fixBrief",
+      "type": "function",
+      "name": "fixBrief",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        717,
+        728
+      ],
+      "summary": "fixBrief in loop.go (12 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:tailBytes",
+      "type": "function",
+      "name": "tailBytes",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        733,
+        745
+      ],
+      "summary": "tailBytes in loop.go (13 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:cleanupTaskSessions",
+      "type": "function",
+      "name": "cleanupTaskSessions",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        752,
+        783
+      ],
+      "summary": "cleanupTaskSessions in loop.go (32 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:pruneOrphanSessions",
+      "type": "function",
+      "name": "pruneOrphanSessions",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        803,
+        815
+      ],
+      "summary": "pruneOrphanSessions in loop.go (13 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:notifyCleanup",
+      "type": "function",
+      "name": "notifyCleanup",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        820,
+        830
+      ],
+      "summary": "notifyCleanup in loop.go (11 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:merge",
+      "type": "function",
+      "name": "merge",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        836,
+        871
+      ],
+      "summary": "merge in loop.go (36 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:gateCommands",
+      "type": "function",
+      "name": "gateCommands",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        877,
+        902
+      ],
+      "summary": "gateCommands in loop.go (26 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:escalate",
+      "type": "function",
+      "name": "escalate",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        908,
+        923
+      ],
+      "summary": "escalate in loop.go (16 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:filtered",
+      "type": "function",
+      "name": "filtered",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        953,
+        965
+      ],
+      "summary": "filtered in loop.go (13 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:kind",
+      "type": "function",
+      "name": "kind",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        978,
+        992
+      ],
+      "summary": "kind in loop.go (15 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:describe",
+      "type": "function",
+      "name": "describe",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        996,
+        1017
+      ],
+      "summary": "describe in loop.go (22 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:tripped",
+      "type": "function",
+      "name": "tripped",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        1021,
+        1033
+      ],
+      "summary": "tripped in loop.go (13 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:find",
+      "type": "function",
+      "name": "find",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        1059,
+        1071
+      ],
+      "summary": "find in loop.go (13 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:seedRework",
+      "type": "function",
+      "name": "seedRework",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        1089,
+        1101
+      ],
+      "summary": "seedRework in loop.go (13 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:lastChangesReason",
+      "type": "function",
+      "name": "lastChangesReason",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        1105,
+        1120
+      ],
+      "summary": "lastChangesReason in loop.go (16 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:evidenceFor",
+      "type": "function",
+      "name": "evidenceFor",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        1125,
+        1137
+      ],
+      "summary": "evidenceFor in loop.go (13 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop.go:readSpec",
+      "type": "function",
+      "name": "readSpec",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        1141,
+        1150
+      ],
+      "summary": "readSpec in loop.go (10 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/orchestrate/loop.go:Options",
+      "type": "class",
+      "name": "Options",
+      "filePath": "internal/orchestrate/loop.go",
+      "lineRange": [
+        35,
+        100
+      ],
+      "summary": "Type Options in loop.go (66 lines, 22 methods, 18 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/orchestrate/remote.go",
+      "type": "file",
+      "name": "remote.go",
+      "filePath": "internal/orchestrate/remote.go",
+      "summary": "Remote runner that uses an RPC stint to dispatch and poll a worker, with checkpointed-ledger detection and local-seat fallback.",
+      "tags": [
+        "remote",
+        "rpc",
+        "runner",
+        "stint",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/remote.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/remote.go",
+      "lineRange": [
+        44,
+        99
+      ],
+      "summary": "Run in remote.go (56 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/remote.go:remoteLedgerHasCheckpoint",
+      "type": "function",
+      "name": "remoteLedgerHasCheckpoint",
+      "filePath": "internal/orchestrate/remote.go",
+      "lineRange": [
+        103,
+        124
+      ],
+      "summary": "remoteLedgerHasCheckpoint in remote.go (22 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/orchestrate/remote.go:StintRPC",
+      "type": "class",
+      "name": "StintRPC",
+      "filePath": "internal/orchestrate/remote.go",
+      "lineRange": [
+        16,
+        23
+      ],
+      "summary": "Type StintRPC in remote.go (8 lines, 0 methods, 6 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/orchestrate/remote.go:RemoteRunner",
+      "type": "class",
+      "name": "RemoteRunner",
+      "filePath": "internal/orchestrate/remote.go",
+      "lineRange": [
+        34,
+        42
+      ],
+      "summary": "Type RemoteRunner in remote.go (9 lines, 1 methods, 5 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/remote_test.go",
+      "type": "file",
+      "name": "remote_test.go",
+      "filePath": "internal/orchestrate/remote_test.go",
+      "summary": "Tests for the RemoteRunner: dispatch-poll-merge flow, soft-fail on timeout, and fall-through to the local seat.",
+      "tags": [
+        "remote",
+        "test",
+        "rpc",
+        "runner",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/remote_test.go:gitT",
+      "type": "function",
+      "name": "gitT",
+      "filePath": "internal/orchestrate/remote_test.go",
+      "lineRange": [
+        14,
+        23
+      ],
+      "summary": "gitT in remote_test.go (10 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/remote_test.go:setupDriverWorker",
+      "type": "function",
+      "name": "setupDriverWorker",
+      "filePath": "internal/orchestrate/remote_test.go",
+      "lineRange": [
+        27,
+        48
+      ],
+      "summary": "setupDriverWorker in remote_test.go (22 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/remote_test.go:workerCheckpoint",
+      "type": "function",
+      "name": "workerCheckpoint",
+      "filePath": "internal/orchestrate/remote_test.go",
+      "lineRange": [
+        53,
+        87
+      ],
+      "summary": "workerCheckpoint in remote_test.go (35 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_DispatchPollMerge",
+      "type": "function",
+      "name": "TestRemoteRunner_DispatchPollMerge",
+      "filePath": "internal/orchestrate/remote_test.go",
+      "lineRange": [
+        89,
+        131
+      ],
+      "summary": "TestRemoteRunner_DispatchPollMerge in remote_test.go (43 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_TimeoutIsSoftFailure",
+      "type": "function",
+      "name": "TestRemoteRunner_TimeoutIsSoftFailure",
+      "filePath": "internal/orchestrate/remote_test.go",
+      "lineRange": [
+        133,
+        145
+      ],
+      "summary": "TestRemoteRunner_TimeoutIsSoftFailure in remote_test.go (13 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_LocalSeatFallsThrough",
+      "type": "function",
+      "name": "TestRemoteRunner_LocalSeatFallsThrough",
+      "filePath": "internal/orchestrate/remote_test.go",
+      "lineRange": [
+        147,
+        159
+      ],
+      "summary": "TestRemoteRunner_LocalSeatFallsThrough in remote_test.go (13 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/remote_test.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/remote_test.go",
+      "lineRange": [
+        163,
+        163
+      ],
+      "summary": "Run in remote_test.go (1 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/runner_idle.go",
+      "type": "file",
+      "name": "runner_idle.go",
+      "filePath": "internal/orchestrate/runner_idle.go",
+      "summary": "Per-stream idle tracker and os.Exec-based runner that kills a child process when it stalls on stdout or idle progress.",
+      "tags": [
+        "runner",
+        "idle",
+        "exec",
+        "timeout",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle.go:killGroup",
+      "type": "function",
+      "name": "killGroup",
+      "filePath": "internal/orchestrate/runner_idle.go",
+      "lineRange": [
+        22,
+        31
+      ],
+      "summary": "killGroup in runner_idle.go (10 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle.go:Write",
+      "type": "function",
+      "name": "Write",
+      "filePath": "internal/orchestrate/runner_idle.go",
+      "lineRange": [
+        82,
+        87
+      ],
+      "summary": "Write in runner_idle.go (6 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle.go:osExecIdle",
+      "type": "function",
+      "name": "osExecIdle",
+      "filePath": "internal/orchestrate/runner_idle.go",
+      "lineRange": [
+        100,
+        169
+      ],
+      "summary": "osExecIdle in runner_idle.go (70 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/orchestrate/runner_idle.go:idleTracker",
+      "type": "class",
+      "name": "idleTracker",
+      "filePath": "internal/orchestrate/runner_idle.go",
+      "lineRange": [
+        77,
+        80
+      ],
+      "summary": "Type idleTracker in runner_idle.go (4 lines, 2 methods, 2 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "function:internal/orchestrate/ledger_lock_test.go:TestWriteLedger_ConcurrentAppendSurvives",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "function:internal/orchestrate/ledger_lock_test.go:TestWriteLedger_LockTimeoutSkipsCycle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "function:internal/orchestrate/ledger_lock_test.go:TestMirrorLedger_IgnoreProbeMemoizedPerRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/lockx/lockx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "file:internal/lockx/lockx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "function:internal/orchestrate/ledger_lock_test.go:TestWriteLedger_ConcurrentAppendSurvives",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "function:internal/orchestrate/ledger_lock_test.go:TestWriteLedger_LockTimeoutSkipsCycle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_lock_test.go",
+      "target": "function:internal/orchestrate/ledger_lock_test.go:TestMirrorLedger_IgnoreProbeMemoizedPerRun",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_merge_test.go",
+      "target": "function:internal/orchestrate/ledger_merge_test.go:TestMergeEventLines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_merge_test.go",
+      "target": "function:internal/orchestrate/ledger_merge_test.go:TestWriteLedgerPreservesConcurrentMainEvents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_merge_test.go",
+      "target": "function:internal/orchestrate/ledger_merge_test.go:TestMergeEventLines",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/ledger_merge_test.go",
+      "target": "function:internal/orchestrate/ledger_merge_test.go:TestWriteLedgerPreservesConcurrentMainEvents",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:mirrorLedger",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:launchAgent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:runOwner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:runReviewer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:launchReviewers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:fixUntilGreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:fixBrief",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:tailBytes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:cleanupTaskSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:pruneOrphanSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:notifyCleanup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:merge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:gateCommands",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:escalate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:filtered",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:kind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:describe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:tripped",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:find",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:seedRework",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:lastChangesReason",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:evidenceFor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:readSpec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "class:internal/orchestrate/loop.go:Options",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/paths/paths_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/paths/paths.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/sessions/sessions_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/sessions/sessions.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/sessions/tag_collision_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "function:internal/orchestrate/loop.go:Run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "class:internal/orchestrate/loop.go:Options",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "function:internal/orchestrate/remote.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "function:internal/orchestrate/remote.go:remoteLedgerHasCheckpoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "class:internal/orchestrate/remote.go:StintRPC",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "class:internal/orchestrate/remote.go:RemoteRunner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "class:internal/orchestrate/remote.go:StintRPC",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "class:internal/orchestrate/remote.go:RemoteRunner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "function:internal/orchestrate/remote.go:Run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:gitT",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:setupDriverWorker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:workerCheckpoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_DispatchPollMerge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_TimeoutIsSoftFailure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_LocalSeatFallsThrough",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_DispatchPollMerge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_TimeoutIsSoftFailure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_LocalSeatFallsThrough",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/remote_test.go",
+      "target": "function:internal/orchestrate/remote_test.go:Run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle.go",
+      "target": "function:internal/orchestrate/runner_idle.go:killGroup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle.go",
+      "target": "function:internal/orchestrate/runner_idle.go:Write",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle.go",
+      "target": "function:internal/orchestrate/runner_idle.go:osExecIdle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle.go",
+      "target": "class:internal/orchestrate/runner_idle.go:idleTracker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle.go",
+      "target": "function:internal/orchestrate/runner_idle.go:Write",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/loop.go",
+      "target": "file:internal/orchestrate/status_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/orchestrate/remote.go",
+      "target": "file:internal/orchestrate/remote_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle.go",
+      "target": "file:internal/orchestrate/runner_idle_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/orchestrate/remote_test.go:TestRemoteRunner_DispatchPollMerge",
+      "target": "function:internal/orchestrate/remote.go:remoteLedgerHasCheckpoint",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

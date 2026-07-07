@@ -1,0 +1,1202 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/orchestrate/stream.go",
+      "type": "file",
+      "name": "stream.go",
+      "filePath": "internal/orchestrate/stream.go",
+      "summary": "Helper that opens an append-only log sink for streaming task output into the pact directory.",
+      "tags": [
+        "stream",
+        "sink",
+        "log",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/stream.go:StreamPath",
+      "type": "function",
+      "name": "StreamPath",
+      "filePath": "internal/orchestrate/stream.go",
+      "lineRange": [
+        12,
+        14
+      ],
+      "summary": "StreamPath in stream.go (3 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/stream.go:OpenStreamSink",
+      "type": "function",
+      "name": "OpenStreamSink",
+      "filePath": "internal/orchestrate/stream.go",
+      "lineRange": [
+        20,
+        26
+      ],
+      "summary": "OpenStreamSink in stream.go (7 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/stream_test.go",
+      "type": "file",
+      "name": "stream_test.go",
+      "filePath": "internal/orchestrate/stream_test.go",
+      "summary": "Test that OpenStreamSink appends to the stream file and creates missing directories.",
+      "tags": [
+        "stream",
+        "test",
+        "sink",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/stream_test.go:TestOpenStreamSinkAppends",
+      "type": "function",
+      "name": "TestOpenStreamSinkAppends",
+      "filePath": "internal/orchestrate/stream_test.go",
+      "lineRange": [
+        9,
+        26
+      ],
+      "summary": "TestOpenStreamSinkAppends in stream_test.go (18 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/projection/atomic.go",
+      "type": "file",
+      "name": "atomic.go",
+      "filePath": "internal/projection/atomic.go",
+      "summary": "Tiny helper that writes a file atomically via write-then-rename to avoid partial writes on crash.",
+      "tags": [
+        "atomic",
+        "write",
+        "filesystem",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/projection/join_scope_test.go",
+      "type": "file",
+      "name": "join_scope_test.go",
+      "filePath": "internal/projection/join_scope_test.go",
+      "summary": "Tests for Project's join logic: lifting the first actionable owned task, skipping dep-blocked tasks, dep cancellation as satisfied, no rewind.",
+      "tags": [
+        "projection",
+        "join",
+        "test",
+        "deps",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/projection/join_scope_test.go:joinAsg",
+      "type": "function",
+      "name": "joinAsg",
+      "filePath": "internal/projection/join_scope_test.go",
+      "lineRange": [
+        11,
+        21
+      ],
+      "summary": "joinAsg in join_scope_test.go (11 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/join_scope_test.go:taskStatus",
+      "type": "function",
+      "name": "taskStatus",
+      "filePath": "internal/projection/join_scope_test.go",
+      "lineRange": [
+        27,
+        38
+      ],
+      "summary": "taskStatus in join_scope_test.go (12 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsOnlyFirstActionableOwnedTask",
+      "type": "function",
+      "name": "TestProjectJoinLiftsOnlyFirstActionableOwnedTask",
+      "filePath": "internal/projection/join_scope_test.go",
+      "lineRange": [
+        43,
+        51
+      ],
+      "summary": "TestProjectJoinLiftsOnlyFirstActionableOwnedTask in join_scope_test.go (9 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/join_scope_test.go:TestProjectJoinSkipsDepBlockedTask",
+      "type": "function",
+      "name": "TestProjectJoinSkipsDepBlockedTask",
+      "filePath": "internal/projection/join_scope_test.go",
+      "lineRange": [
+        55,
+        65
+      ],
+      "summary": "TestProjectJoinSkipsDepBlockedTask in join_scope_test.go (11 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsNothingWhenAllOwnedTasksBlocked",
+      "type": "function",
+      "name": "TestProjectJoinLiftsNothingWhenAllOwnedTasksBlocked",
+      "filePath": "internal/projection/join_scope_test.go",
+      "lineRange": [
+        68,
+        75
+      ],
+      "summary": "TestProjectJoinLiftsNothingWhenAllOwnedTasksBlocked in join_scope_test.go (8 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsTaskWithAcceptedDep",
+      "type": "function",
+      "name": "TestProjectJoinLiftsTaskWithAcceptedDep",
+      "filePath": "internal/projection/join_scope_test.go",
+      "lineRange": [
+        78,
+        91
+      ],
+      "summary": "TestProjectJoinLiftsTaskWithAcceptedDep in join_scope_test.go (14 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/join_scope_test.go:TestProjectJoinTreatsCancelledDepAsSatisfied",
+      "type": "function",
+      "name": "TestProjectJoinTreatsCancelledDepAsSatisfied",
+      "filePath": "internal/projection/join_scope_test.go",
+      "lineRange": [
+        95,
+        112
+      ],
+      "summary": "TestProjectJoinTreatsCancelledDepAsSatisfied in join_scope_test.go (18 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/join_scope_test.go:TestProjectJoinNeverRewindsOrTouchesOthers",
+      "type": "function",
+      "name": "TestProjectJoinNeverRewindsOrTouchesOthers",
+      "filePath": "internal/projection/join_scope_test.go",
+      "lineRange": [
+        116,
+        137
+      ],
+      "summary": "TestProjectJoinNeverRewindsOrTouchesOthers in join_scope_test.go (22 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/projection/project.go",
+      "type": "file",
+      "name": "project.go",
+      "filePath": "internal/projection/project.go",
+      "summary": "Pure event-folder that turns a log.jsonl event stream into a State with seats, features, tasks, and quorum tracking.",
+      "tags": [
+        "projection",
+        "folder",
+        "state",
+        "events",
+        "quorum",
+        "go"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/projection/project.go:intFromPayload",
+      "type": "function",
+      "name": "intFromPayload",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        58,
+        67
+      ],
+      "summary": "intFromPayload in project.go (10 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project.go:strSlice",
+      "type": "function",
+      "name": "strSlice",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        72,
+        82
+      ],
+      "summary": "strSlice in project.go (11 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project.go:newFolder",
+      "type": "function",
+      "name": "newFolder",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        135,
+        160
+      ],
+      "summary": "newFolder in project.go (26 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project.go:find",
+      "type": "function",
+      "name": "find",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        162,
+        172
+      ],
+      "summary": "find in project.go (11 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project.go:apply",
+      "type": "function",
+      "name": "apply",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        184,
+        344
+      ],
+      "summary": "apply in project.go (161 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/projection/project.go:finalize",
+      "type": "function",
+      "name": "finalize",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        350,
+        371
+      ],
+      "summary": "finalize in project.go (22 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project.go:Project",
+      "type": "function",
+      "name": "Project",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        375,
+        378
+      ],
+      "summary": "Project in project.go (4 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project.go:Fold",
+      "type": "function",
+      "name": "Fold",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        383,
+        387
+      ],
+      "summary": "Fold in project.go (5 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/projection/project.go:Seat",
+      "type": "class",
+      "name": "Seat",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        6,
+        11
+      ],
+      "summary": "Type Seat in project.go (6 lines, 0 methods, 4 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/projection/project.go:Task",
+      "type": "class",
+      "name": "Task",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        13,
+        36
+      ],
+      "summary": "Type Task in project.go (24 lines, 0 methods, 10 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/projection/project.go:Feature",
+      "type": "class",
+      "name": "Feature",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        38,
+        41
+      ],
+      "summary": "Type Feature in project.go (4 lines, 0 methods, 4 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/projection/project.go:State",
+      "type": "class",
+      "name": "State",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        43,
+        47
+      ],
+      "summary": "Type State in project.go (5 lines, 0 methods, 3 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/projection/project.go:Folder",
+      "type": "class",
+      "name": "Folder",
+      "filePath": "internal/projection/project.go",
+      "lineRange": [
+        124,
+        130
+      ],
+      "summary": "Type Folder in project.go (7 lines, 3 methods, 5 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/projection/project_test.go",
+      "type": "file",
+      "name": "project_test.go",
+      "filePath": "internal/projection/project_test.go",
+      "summary": "State-machine tests covering seats, cancel/withdraw, start lifts, unknown events, deps folding, empty-deps omission, and first-seen ordering.",
+      "tags": [
+        "projection",
+        "test",
+        "state-machine",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectSeatsAndProject",
+      "type": "function",
+      "name": "TestProjectSeatsAndProject",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        20,
+        25
+      ],
+      "summary": "TestProjectSeatsAndProject in project_test.go (6 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectCancelAndWithdraw",
+      "type": "function",
+      "name": "TestProjectCancelAndWithdraw",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        29,
+        49
+      ],
+      "summary": "TestProjectCancelAndWithdraw in project_test.go (21 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectStateMachine",
+      "type": "function",
+      "name": "TestProjectStateMachine",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        59,
+        74
+      ],
+      "summary": "TestProjectStateMachine in project_test.go (16 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectStartLiftsOnlyTheNamedAssignedTask",
+      "type": "function",
+      "name": "TestProjectStartLiftsOnlyTheNamedAssignedTask",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        79,
+        97
+      ],
+      "summary": "TestProjectStartLiftsOnlyTheNamedAssignedTask in project_test.go (19 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectStartNeverRewindsALaterStatus",
+      "type": "function",
+      "name": "TestProjectStartNeverRewindsALaterStatus",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        99,
+        110
+      ],
+      "summary": "TestProjectStartNeverRewindsALaterStatus in project_test.go (12 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectUnknownEventTypeIgnored",
+      "type": "function",
+      "name": "TestProjectUnknownEventTypeIgnored",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        112,
+        122
+      ],
+      "summary": "TestProjectUnknownEventTypeIgnored in project_test.go (11 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectDepsFoldedAndRendered",
+      "type": "function",
+      "name": "TestProjectDepsFoldedAndRendered",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        124,
+        144
+      ],
+      "summary": "TestProjectDepsFoldedAndRendered in project_test.go (21 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectEmptyDepsArrayOmitted",
+      "type": "function",
+      "name": "TestProjectEmptyDepsArrayOmitted",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        146,
+        160
+      ],
+      "summary": "TestProjectEmptyDepsArrayOmitted in project_test.go (15 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/projection/project_test.go:TestProjectFirstSeenOrdering",
+      "type": "function",
+      "name": "TestProjectFirstSeenOrdering",
+      "filePath": "internal/projection/project_test.go",
+      "lineRange": [
+        162,
+        172
+      ],
+      "summary": "TestProjectFirstSeenOrdering in project_test.go (11 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/orchestrate/stream.go",
+      "target": "function:internal/orchestrate/stream.go:StreamPath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/stream.go",
+      "target": "function:internal/orchestrate/stream.go:OpenStreamSink",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/stream.go",
+      "target": "function:internal/orchestrate/stream.go:StreamPath",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/stream.go",
+      "target": "function:internal/orchestrate/stream.go:OpenStreamSink",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/stream_test.go",
+      "target": "function:internal/orchestrate/stream_test.go:TestOpenStreamSinkAppends",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/stream_test.go",
+      "target": "function:internal/orchestrate/stream_test.go:TestOpenStreamSinkAppends",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:joinAsg",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:taskStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsOnlyFirstActionableOwnedTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinSkipsDepBlockedTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsNothingWhenAllOwnedTasksBlocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsTaskWithAcceptedDep",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinTreatsCancelledDepAsSatisfied",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinNeverRewindsOrTouchesOthers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsOnlyFirstActionableOwnedTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinSkipsDepBlockedTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsNothingWhenAllOwnedTasksBlocked",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsTaskWithAcceptedDep",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinTreatsCancelledDepAsSatisfied",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/join_scope_test.go",
+      "target": "function:internal/projection/join_scope_test.go:TestProjectJoinNeverRewindsOrTouchesOthers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:intFromPayload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:strSlice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:newFolder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:find",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:apply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:finalize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:Project",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:Fold",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:Seat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:Task",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:Feature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:State",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:Folder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:Seat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:Task",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:Feature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:State",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "class:internal/projection/project.go:Folder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:Project",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "function:internal/projection/project.go:Fold",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectSeatsAndProject",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectCancelAndWithdraw",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectStateMachine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectStartLiftsOnlyTheNamedAssignedTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectStartNeverRewindsALaterStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectUnknownEventTypeIgnored",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectDepsFoldedAndRendered",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectEmptyDepsArrayOmitted",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectFirstSeenOrdering",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectSeatsAndProject",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectCancelAndWithdraw",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectStateMachine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectStartLiftsOnlyTheNamedAssignedTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectStartNeverRewindsALaterStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectUnknownEventTypeIgnored",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectDepsFoldedAndRendered",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectEmptyDepsArrayOmitted",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/projection/project_test.go",
+      "target": "function:internal/projection/project_test.go:TestProjectFirstSeenOrdering",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/stream.go",
+      "target": "file:internal/orchestrate/stream_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/projection/project.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/orchestrate/stream_test.go:TestOpenStreamSinkAppends",
+      "target": "function:internal/orchestrate/stream.go:OpenStreamSink",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/stream_test.go:TestOpenStreamSinkAppends",
+      "target": "function:internal/orchestrate/stream.go:StreamPath",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/projection/project_test.go:TestProjectSeatsAndProject",
+      "target": "function:internal/projection/project.go:Project",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/projection/project_test.go:TestProjectStateMachine",
+      "target": "function:internal/projection/project.go:Project",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/projection/project_test.go:TestProjectDepsFoldedAndRendered",
+      "target": "function:internal/projection/project.go:Project",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/projection/project_test.go:TestProjectEmptyDepsArrayOmitted",
+      "target": "function:internal/projection/project.go:Project",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/projection/project.go:Project",
+      "target": "function:internal/projection/project.go:Fold",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/projection/join_scope_test.go:TestProjectJoinLiftsOnlyFirstActionableOwnedTask",
+      "target": "function:internal/projection/project.go:Project",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/projection/join_scope_test.go:TestProjectJoinSkipsDepBlockedTask",
+      "target": "function:internal/projection/project.go:Project",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

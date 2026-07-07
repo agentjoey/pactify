@@ -1,0 +1,570 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/tokens/tokens_test.go",
+      "type": "file",
+      "name": "tokens_test.go",
+      "filePath": "internal/tokens/tokens_test.go",
+      "summary": "Tests for tokens.Parse covering Claude JSON, stream-JSONL, top-level shapes, and store load/save/add roundtrip.",
+      "tags": [
+        "go",
+        "test",
+        "token-tracking"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/tokens/tokens_test.go:TestParse_ClaudeJSON",
+      "type": "function",
+      "name": "TestParse_ClaudeJSON",
+      "filePath": "internal/tokens/tokens_test.go",
+      "lineRange": [
+        7,
+        14
+      ],
+      "summary": "Function TestParse_ClaudeJSON defined in internal/tokens/tokens_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/tokens/tokens_test.go:TestParse_StreamJSONL",
+      "type": "function",
+      "name": "TestParse_StreamJSONL",
+      "filePath": "internal/tokens/tokens_test.go",
+      "lineRange": [
+        16,
+        23
+      ],
+      "summary": "Function TestParse_StreamJSONL defined in internal/tokens/tokens_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/tokens/tokens_test.go:TestParse_TopLevelAndNone",
+      "type": "function",
+      "name": "TestParse_TopLevelAndNone",
+      "filePath": "internal/tokens/tokens_test.go",
+      "lineRange": [
+        25,
+        32
+      ],
+      "summary": "Function TestParse_TopLevelAndNone defined in internal/tokens/tokens_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/tokens/tokens_test.go:TestStore_RoundTrip",
+      "type": "function",
+      "name": "TestStore_RoundTrip",
+      "filePath": "internal/tokens/tokens_test.go",
+      "lineRange": [
+        34,
+        53
+      ],
+      "summary": "Function TestStore_RoundTrip defined in internal/tokens/tokens_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/wizard/wizard.go",
+      "type": "file",
+      "name": "wizard.go",
+      "filePath": "internal/wizard/wizard.go",
+      "summary": "Suggests seat bindings based on installed agent kinds preferring Claude leads, and validates role coverage (worker/reviewer) with warnings.",
+      "tags": [
+        "go",
+        "setup-wizard",
+        "validation",
+        "role-coverage"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/wizard/wizard.go:Suggest",
+      "type": "function",
+      "name": "Suggest",
+      "filePath": "internal/wizard/wizard.go",
+      "lineRange": [
+        43,
+        76
+      ],
+      "summary": "Function Suggest defined in internal/wizard/wizard.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/wizard/wizard.go:Validate",
+      "type": "function",
+      "name": "Validate",
+      "filePath": "internal/wizard/wizard.go",
+      "lineRange": [
+        81,
+        106
+      ],
+      "summary": "Function Validate defined in internal/wizard/wizard.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/wizard/wizard_test.go",
+      "type": "file",
+      "name": "wizard_test.go",
+      "filePath": "internal/wizard/wizard_test.go",
+      "summary": "Tests for wizard.Suggest covering Claude-leads logic, drivable marking, and empty input plus wizard.Validate role-coverage warnings.",
+      "tags": [
+        "go",
+        "test",
+        "setup-wizard",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/wizard/wizard_test.go:TestSuggest_ClaudeLeadsOthersWork",
+      "type": "function",
+      "name": "TestSuggest_ClaudeLeadsOthersWork",
+      "filePath": "internal/wizard/wizard_test.go",
+      "lineRange": [
+        8,
+        20
+      ],
+      "summary": "Function TestSuggest_ClaudeLeadsOthersWork defined in internal/wizard/wizard_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/wizard/wizard_test.go:TestSuggest_NoClaudeFirstDrivableLeads",
+      "type": "function",
+      "name": "TestSuggest_NoClaudeFirstDrivableLeads",
+      "filePath": "internal/wizard/wizard_test.go",
+      "lineRange": [
+        22,
+        35
+      ],
+      "summary": "Function TestSuggest_NoClaudeFirstDrivableLeads defined in internal/wizard/wizard_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/wizard/wizard_test.go:TestSuggest_NonDrivableMarked",
+      "type": "function",
+      "name": "TestSuggest_NonDrivableMarked",
+      "filePath": "internal/wizard/wizard_test.go",
+      "lineRange": [
+        37,
+        51
+      ],
+      "summary": "Function TestSuggest_NonDrivableMarked defined in internal/wizard/wizard_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/wizard/wizard_test.go:TestValidate_CoversRoles",
+      "type": "function",
+      "name": "TestValidate_CoversRoles",
+      "filePath": "internal/wizard/wizard_test.go",
+      "lineRange": [
+        53,
+        61
+      ],
+      "summary": "Function TestValidate_CoversRoles defined in internal/wizard/wizard_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/wizard/wizard_test.go:TestValidate_FlagsMissingWorker",
+      "type": "function",
+      "name": "TestValidate_FlagsMissingWorker",
+      "filePath": "internal/wizard/wizard_test.go",
+      "lineRange": [
+        63,
+        78
+      ],
+      "summary": "Function TestValidate_FlagsMissingWorker defined in internal/wizard/wizard_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/wizard/wizard_test.go:TestValidate_FlagsMissingReviewer",
+      "type": "function",
+      "name": "TestValidate_FlagsMissingReviewer",
+      "filePath": "internal/wizard/wizard_test.go",
+      "lineRange": [
+        80,
+        89
+      ],
+      "summary": "Function TestValidate_FlagsMissingReviewer defined in internal/wizard/wizard_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/wizard/wizard_test.go:TestSuggest_Empty",
+      "type": "function",
+      "name": "TestSuggest_Empty",
+      "filePath": "internal/wizard/wizard_test.go",
+      "lineRange": [
+        91,
+        95
+      ],
+      "summary": "Function TestSuggest_Empty defined in internal/wizard/wizard_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/tokens/tokens_test.go",
+      "target": "function:internal/tokens/tokens_test.go:TestParse_ClaudeJSON",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens_test.go",
+      "target": "function:internal/tokens/tokens_test.go:TestParse_ClaudeJSON",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/tokens/tokens_test.go",
+      "target": "function:internal/tokens/tokens_test.go:TestParse_StreamJSONL",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens_test.go",
+      "target": "function:internal/tokens/tokens_test.go:TestParse_StreamJSONL",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/tokens/tokens_test.go",
+      "target": "function:internal/tokens/tokens_test.go:TestParse_TopLevelAndNone",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens_test.go",
+      "target": "function:internal/tokens/tokens_test.go:TestParse_TopLevelAndNone",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/tokens/tokens_test.go",
+      "target": "function:internal/tokens/tokens_test.go:TestStore_RoundTrip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens_test.go",
+      "target": "function:internal/tokens/tokens_test.go:TestStore_RoundTrip",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "function:internal/wizard/wizard.go:Suggest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "function:internal/wizard/wizard.go:Suggest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "function:internal/wizard/wizard.go:Validate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "function:internal/wizard/wizard.go:Validate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestSuggest_ClaudeLeadsOthersWork",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestSuggest_ClaudeLeadsOthersWork",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestSuggest_NoClaudeFirstDrivableLeads",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestSuggest_NoClaudeFirstDrivableLeads",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestSuggest_NonDrivableMarked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestSuggest_NonDrivableMarked",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestValidate_CoversRoles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestValidate_CoversRoles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestValidate_FlagsMissingWorker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestValidate_FlagsMissingWorker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestValidate_FlagsMissingReviewer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestValidate_FlagsMissingReviewer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestSuggest_Empty",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/wizard/wizard_test.go",
+      "target": "function:internal/wizard/wizard_test.go:TestSuggest_Empty",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/agent_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/agent.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/briefing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/briefing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/external_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/jsonmerge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/jsonmerge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/launch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/launch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/probe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/probe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/scan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/agent/scan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/wizard/wizard.go",
+      "target": "file:internal/wizard/wizard_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

@@ -1,0 +1,2680 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/orchestrate/fix_test.go",
+      "type": "file",
+      "name": "fix_test.go",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "summary": "Tests for the fix-loop: red\u2192green proceeds, exhaustion escalates with verify output, green-first skips fix, fix rounds don't count as fails, status shows fixing phase.",
+      "tags": [
+        "test",
+        "orchestrator",
+        "fix-loop"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/fix_test.go:Run_25",
+      "type": "function",
+      "name": "Run_25",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "lineRange": [
+        25,
+        31
+      ],
+      "summary": "Run (7 lines) defined in internal/orchestrate/fix_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/fix_test.go:Run_47",
+      "type": "function",
+      "name": "Run_47",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "lineRange": [
+        47,
+        63
+      ],
+      "summary": "Run (17 lines) defined in internal/orchestrate/fix_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/fix_test.go:readStatus",
+      "type": "function",
+      "name": "readStatus",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "lineRange": [
+        66,
+        77
+      ],
+      "summary": "readStatus (12 lines) defined in internal/orchestrate/fix_test.go.",
+      "tags": [
+        "test",
+        "status",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/fix_test.go:TestFixLoopRedThenGreenProceedsToReview",
+      "type": "function",
+      "name": "TestFixLoopRedThenGreenProceedsToReview",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "lineRange": [
+        83,
+        104
+      ],
+      "summary": "TestFixLoopRedThenGreenProceedsToReview (22 lines) defined in internal/orchestrate/fix_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "checkpoint",
+        "loop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/fix_test.go:TestFixLoopExhaustedEscalatesWithVerifyOutput",
+      "type": "function",
+      "name": "TestFixLoopExhaustedEscalatesWithVerifyOutput",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "lineRange": [
+        108,
+        152
+      ],
+      "summary": "TestFixLoopExhaustedEscalatesWithVerifyOutput (45 lines) defined in internal/orchestrate/fix_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "checkpoint",
+        "loop",
+        "escalation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/fix_test.go:TestFixLoopGreenFirstTryGoesStraightToReview",
+      "type": "function",
+      "name": "TestFixLoopGreenFirstTryGoesStraightToReview",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "lineRange": [
+        156,
+        178
+      ],
+      "summary": "TestFixLoopGreenFirstTryGoesStraightToReview (23 lines) defined in internal/orchestrate/fix_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "checkpoint",
+        "loop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/fix_test.go:TestFixLoopFixRoundsDoNotCountAsFails",
+      "type": "function",
+      "name": "TestFixLoopFixRoundsDoNotCountAsFails",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "lineRange": [
+        183,
+        202
+      ],
+      "summary": "TestFixLoopFixRoundsDoNotCountAsFails (20 lines) defined in internal/orchestrate/fix_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "checkpoint",
+        "loop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/fix_test.go:TestFixLoopStatusShowsFixingPhase",
+      "type": "function",
+      "name": "TestFixLoopStatusShowsFixingPhase",
+      "filePath": "internal/orchestrate/fix_test.go",
+      "lineRange": [
+        206,
+        236
+      ],
+      "summary": "TestFixLoopStatusShowsFixingPhase (31 lines) defined in internal/orchestrate/fix_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "status",
+        "checkpoint",
+        "loop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/orchestrate/gateconfig.go",
+      "type": "file",
+      "name": "gateconfig.go",
+      "filePath": "internal/orchestrate/gateconfig.go",
+      "summary": "Gate resolution: prefer project-configured gate command, fall back to auto-detected default gate.",
+      "tags": [
+        "orchestrator",
+        "gate",
+        "config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/gateconfig.go:resolveGate",
+      "type": "function",
+      "name": "resolveGate",
+      "filePath": "internal/orchestrate/gateconfig.go",
+      "lineRange": [
+        15,
+        29
+      ],
+      "summary": "resolveGate (15 lines) defined in internal/orchestrate/gateconfig.go.",
+      "tags": [
+        "utility",
+        "gate",
+        "resolve"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/gateconfig.go:detectDefaultGate",
+      "type": "function",
+      "name": "detectDefaultGate",
+      "filePath": "internal/orchestrate/gateconfig.go",
+      "lineRange": [
+        35,
+        52
+      ],
+      "summary": "detectDefaultGate (18 lines) defined in internal/orchestrate/gateconfig.go.",
+      "tags": [
+        "utility",
+        "gate",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/gateconfig_test.go",
+      "type": "file",
+      "name": "gateconfig_test.go",
+      "filePath": "internal/orchestrate/gateconfig_test.go",
+      "summary": "Tests for gateconfig: auto-detect defaults, config overrides, and that orchestrated runs use the project gate.",
+      "tags": [
+        "test",
+        "orchestrator",
+        "gate"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/gateconfig_test.go:TestDetectDefaultGate",
+      "type": "function",
+      "name": "TestDetectDefaultGate",
+      "filePath": "internal/orchestrate/gateconfig_test.go",
+      "lineRange": [
+        13,
+        38
+      ],
+      "summary": "TestDetectDefaultGate (26 lines) defined in internal/orchestrate/gateconfig_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "gate"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/gateconfig_test.go:TestResolveGatePrefersConfig",
+      "type": "function",
+      "name": "TestResolveGatePrefersConfig",
+      "filePath": "internal/orchestrate/gateconfig_test.go",
+      "lineRange": [
+        41,
+        53
+      ],
+      "summary": "TestResolveGatePrefersConfig (13 lines) defined in internal/orchestrate/gateconfig_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "gate",
+        "resolve"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/gateconfig_test.go:TestGateCommandsUsesProjectGate",
+      "type": "function",
+      "name": "TestGateCommandsUsesProjectGate",
+      "filePath": "internal/orchestrate/gateconfig_test.go",
+      "lineRange": [
+        57,
+        80
+      ],
+      "summary": "TestGateCommandsUsesProjectGate (24 lines) defined in internal/orchestrate/gateconfig_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "gate"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/orchestrate/history_test.go",
+      "type": "file",
+      "name": "history_test.go",
+      "filePath": "internal/orchestrate/history_test.go",
+      "summary": "Tests that rework/fail state seeded from the ledger persists across driver restart and history files clear on successful runs.",
+      "tags": [
+        "test",
+        "orchestrator",
+        "history"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/history_test.go:findEscalation",
+      "type": "function",
+      "name": "findEscalation",
+      "filePath": "internal/orchestrate/history_test.go",
+      "lineRange": [
+        30,
+        48
+      ],
+      "summary": "findEscalation (19 lines) defined in internal/orchestrate/history_test.go.",
+      "tags": [
+        "test",
+        "escalation",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/history_test.go:TestReworkSeededFromLedgerTripsAcrossRestart",
+      "type": "function",
+      "name": "TestReworkSeededFromLedgerTripsAcrossRestart",
+      "filePath": "internal/orchestrate/history_test.go",
+      "lineRange": [
+        54,
+        94
+      ],
+      "summary": "TestReworkSeededFromLedgerTripsAcrossRestart (41 lines) defined in internal/orchestrate/history_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/history_test.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/history_test.go",
+      "lineRange": [
+        104,
+        111
+      ],
+      "summary": "Run (8 lines) defined in internal/orchestrate/history_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/history_test.go:TestFailsPersistAcrossDriverRestart",
+      "type": "function",
+      "name": "TestFailsPersistAcrossDriverRestart",
+      "filePath": "internal/orchestrate/history_test.go",
+      "lineRange": [
+        116,
+        162
+      ],
+      "summary": "TestFailsPersistAcrossDriverRestart (47 lines) defined in internal/orchestrate/history_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/history_test.go:TestDoneRunClearsHistoryFile",
+      "type": "function",
+      "name": "TestDoneRunClearsHistoryFile",
+      "filePath": "internal/orchestrate/history_test.go",
+      "lineRange": [
+        166,
+        183
+      ],
+      "summary": "TestDoneRunClearsHistoryFile (18 lines) defined in internal/orchestrate/history_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "escalation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/loop_test.go",
+      "type": "file",
+      "name": "loop_test.go",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "summary": "Heavy loop-orchestrator test suite covering unknown features, reviewer escalation, quorum reviewer, happy path, gitignore scaffolding, rework, gate blocking, dry-run, runner crash soft-fail and escalate, nil-now panic guard.",
+      "tags": [
+        "test",
+        "orchestrator",
+        "loop"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:newProject",
+      "type": "function",
+      "name": "newProject",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        23,
+        56
+      ],
+      "summary": "newProject (34 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:writeSpec",
+      "type": "function",
+      "name": "writeSpec",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        59,
+        68
+      ],
+      "summary": "writeSpec (10 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:assign",
+      "type": "function",
+      "name": "assign",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        74,
+        84
+      ],
+      "summary": "assign (11 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:taskIDFromBrief",
+      "type": "function",
+      "name": "taskIDFromBrief",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        87,
+        99
+      ],
+      "summary": "taskIDFromBrief (13 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:Run_120",
+      "type": "function",
+      "name": "Run_120",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        120,
+        147
+      ],
+      "summary": "Run (28 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:Run_152",
+      "type": "function",
+      "name": "Run_152",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        152,
+        155
+      ],
+      "summary": "Run (4 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:Run_160",
+      "type": "function",
+      "name": "Run_160",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        160,
+        163
+      ],
+      "summary": "Run (4 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:Notify",
+      "type": "function",
+      "name": "Notify",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        168,
+        168
+      ],
+      "summary": "Notify (1 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:featureStatus",
+      "type": "function",
+      "name": "featureStatus",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        172,
+        184
+      ],
+      "summary": "featureStatus (13 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "status",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:baseOpts",
+      "type": "function",
+      "name": "baseOpts",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        186,
+        196
+      ],
+      "summary": "baseOpts (11 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopUnknownFeatureFailsLoudInsteadOfSilentDone",
+      "type": "function",
+      "name": "TestLoopUnknownFeatureFailsLoudInsteadOfSilentDone",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        206,
+        229
+      ],
+      "summary": "TestLoopUnknownFeatureFailsLoudInsteadOfSilentDone (24 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopOrchestratorAsReviewerEscalatesImmediatelyNotAsFailure",
+      "type": "function",
+      "name": "TestLoopOrchestratorAsReviewerEscalatesImmediatelyNotAsFailure",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        241,
+        285
+      ],
+      "summary": "TestLoopOrchestratorAsReviewerEscalatesImmediatelyNotAsFailure (45 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop",
+        "escalation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopQuorumOrchestratorReviewerEscalatesAccurately",
+      "type": "function",
+      "name": "TestLoopQuorumOrchestratorReviewerEscalatesAccurately",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        294,
+        338
+      ],
+      "summary": "TestLoopQuorumOrchestratorReviewerEscalatesAccurately (45 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop",
+        "escalation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopHappyPathShipsFeature",
+      "type": "function",
+      "name": "TestLoopHappyPathShipsFeature",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        340,
+        360
+      ],
+      "summary": "TestLoopHappyPathShipsFeature (21 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopScaffoldsRuntimeGitignore",
+      "type": "function",
+      "name": "TestLoopScaffoldsRuntimeGitignore",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        367,
+        385
+      ],
+      "summary": "TestLoopScaffoldsRuntimeGitignore (19 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestEnsureRuntimeExcludedLocalNeverCommits",
+      "type": "function",
+      "name": "TestEnsureRuntimeExcludedLocalNeverCommits",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        391,
+        409
+      ],
+      "summary": "TestEnsureRuntimeExcludedLocalNeverCommits (19 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "commit",
+        "exclude"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopDoesNotCommitIgnoreToBase",
+      "type": "function",
+      "name": "TestLoopDoesNotCommitIgnoreToBase",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        414,
+        429
+      ],
+      "summary": "TestLoopDoesNotCommitIgnoreToBase (16 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "commit",
+        "loop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:headOf",
+      "type": "function",
+      "name": "headOf",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        431,
+        440
+      ],
+      "summary": "headOf (10 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopReworkThenShips",
+      "type": "function",
+      "name": "TestLoopReworkThenShips",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        443,
+        460
+      ],
+      "summary": "TestLoopReworkThenShips (18 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestEscalationNamesNoCheckpointCause",
+      "type": "function",
+      "name": "TestEscalationNamesNoCheckpointCause",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        467,
+        492
+      ],
+      "summary": "TestEscalationNamesNoCheckpointCause (26 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "checkpoint",
+        "escalation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:Run_498",
+      "type": "function",
+      "name": "Run_498",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        498,
+        498
+      ],
+      "summary": "Run (1 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopRebuffsEscalatesAtReworkLimit",
+      "type": "function",
+      "name": "TestLoopRebuffsEscalatesAtReworkLimit",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        501,
+        525
+      ],
+      "summary": "TestLoopRebuffsEscalatesAtReworkLimit (25 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop",
+        "escalation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopHardGateBlocksMerge",
+      "type": "function",
+      "name": "TestLoopHardGateBlocksMerge",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        528,
+        550
+      ],
+      "summary": "TestLoopHardGateBlocksMerge (23 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "merge",
+        "loop",
+        "gate"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopDryRunNoSideEffects",
+      "type": "function",
+      "name": "TestLoopDryRunNoSideEffects",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        553,
+        576
+      ],
+      "summary": "TestLoopDryRunNoSideEffects (24 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:Run_587",
+      "type": "function",
+      "name": "Run_587",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        587,
+        598
+      ],
+      "summary": "Run (12 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopRunnerCrashIsSoftFailure",
+      "type": "function",
+      "name": "TestLoopRunnerCrashIsSoftFailure",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        602,
+        615
+      ],
+      "summary": "TestLoopRunnerCrashIsSoftFailure (14 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestLoopRunnerCrashEscalatesAtFailLimit",
+      "type": "function",
+      "name": "TestLoopRunnerCrashEscalatesAtFailLimit",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        619,
+        644
+      ],
+      "summary": "TestLoopRunnerCrashEscalatesAtFailLimit (26 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "loop",
+        "escalation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/loop_test.go:TestEscalateNilNowDoesNotPanic",
+      "type": "function",
+      "name": "TestEscalateNilNowDoesNotPanic",
+      "filePath": "internal/orchestrate/loop_test.go",
+      "lineRange": [
+        647,
+        657
+      ],
+      "summary": "TestEscalateNilNowDoesNotPanic (11 lines) defined in internal/orchestrate/loop_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "escalation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/parallel.go",
+      "type": "file",
+      "name": "parallel.go",
+      "filePath": "internal/orchestrate/parallel.go",
+      "summary": "Parallel driver: spawn multiple worktrees per feature, drive each, then merge back to base with conflict handling and runtime-exclusion bookkeeping.",
+      "tags": [
+        "orchestrator",
+        "parallel",
+        "worktree",
+        "merge"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/parallel.go:RunParallel",
+      "type": "function",
+      "name": "RunParallel",
+      "filePath": "internal/orchestrate/parallel.go",
+      "lineRange": [
+        34,
+        197
+      ],
+      "summary": "RunParallel (164 lines) defined in internal/orchestrate/parallel.go.",
+      "tags": [
+        "utility",
+        "exported",
+        "helper"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/parallel.go:ensureUnionAttrs",
+      "type": "function",
+      "name": "ensureUnionAttrs",
+      "filePath": "internal/orchestrate/parallel.go",
+      "lineRange": [
+        239,
+        249
+      ],
+      "summary": "ensureUnionAttrs (11 lines) defined in internal/orchestrate/parallel.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/parallel.go:ensureFileContains",
+      "type": "function",
+      "name": "ensureFileContains",
+      "filePath": "internal/orchestrate/parallel.go",
+      "lineRange": [
+        253,
+        265
+      ],
+      "summary": "ensureFileContains (13 lines) defined in internal/orchestrate/parallel.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/parallel.go:driveFeature",
+      "type": "function",
+      "name": "driveFeature",
+      "filePath": "internal/orchestrate/parallel.go",
+      "lineRange": [
+        272,
+        360
+      ],
+      "summary": "driveFeature (89 lines) defined in internal/orchestrate/parallel.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/parallel.go:mergeFromWorktree",
+      "type": "function",
+      "name": "mergeFromWorktree",
+      "filePath": "internal/orchestrate/parallel.go",
+      "lineRange": [
+        368,
+        402
+      ],
+      "summary": "mergeFromWorktree (35 lines) defined in internal/orchestrate/parallel.go.",
+      "tags": [
+        "utility",
+        "merge",
+        "worktree"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/orchestrate/parallel.go:ParallelOptions",
+      "type": "class",
+      "name": "ParallelOptions",
+      "filePath": "internal/orchestrate/parallel.go",
+      "lineRange": [
+        21,
+        26
+      ],
+      "summary": "ParallelOptions type (6 lines) defined in internal/orchestrate/parallel.go with methods: .",
+      "tags": [
+        "type",
+        "exported",
+        "config"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "function:internal/orchestrate/fix_test.go:Run_25",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "function:internal/orchestrate/fix_test.go:Run_47",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "function:internal/orchestrate/fix_test.go:readStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "function:internal/orchestrate/fix_test.go:TestFixLoopRedThenGreenProceedsToReview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "function:internal/orchestrate/fix_test.go:TestFixLoopExhaustedEscalatesWithVerifyOutput",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "function:internal/orchestrate/fix_test.go:TestFixLoopGreenFirstTryGoesStraightToReview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "function:internal/orchestrate/fix_test.go:TestFixLoopFixRoundsDoNotCountAsFails",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "function:internal/orchestrate/fix_test.go:TestFixLoopStatusShowsFixingPhase",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "function:internal/orchestrate/gateconfig.go:resolveGate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "function:internal/orchestrate/gateconfig.go:detectDefaultGate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "function:internal/orchestrate/gateconfig_test.go:TestDetectDefaultGate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "function:internal/orchestrate/gateconfig_test.go:TestResolveGatePrefersConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "function:internal/orchestrate/gateconfig_test.go:TestGateCommandsUsesProjectGate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "function:internal/orchestrate/history_test.go:findEscalation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "function:internal/orchestrate/history_test.go:TestReworkSeededFromLedgerTripsAcrossRestart",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "function:internal/orchestrate/history_test.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "function:internal/orchestrate/history_test.go:TestFailsPersistAcrossDriverRestart",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "function:internal/orchestrate/history_test.go:TestDoneRunClearsHistoryFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:newProject",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:writeSpec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:assign",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:taskIDFromBrief",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:Run_120",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:Run_152",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:Run_160",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:Notify",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:featureStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:baseOpts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopUnknownFeatureFailsLoudInsteadOfSilentDone",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopOrchestratorAsReviewerEscalatesImmediatelyNotAsFailure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopQuorumOrchestratorReviewerEscalatesAccurately",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopHappyPathShipsFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopScaffoldsRuntimeGitignore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestEnsureRuntimeExcludedLocalNeverCommits",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopDoesNotCommitIgnoreToBase",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:headOf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopReworkThenShips",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestEscalationNamesNoCheckpointCause",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:Run_498",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopRebuffsEscalatesAtReworkLimit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopHardGateBlocksMerge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopDryRunNoSideEffects",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:Run_587",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopRunnerCrashIsSoftFailure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestLoopRunnerCrashEscalatesAtFailLimit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "function:internal/orchestrate/loop_test.go:TestEscalateNilNowDoesNotPanic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "function:internal/orchestrate/parallel.go:RunParallel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "function:internal/orchestrate/parallel.go:ensureUnionAttrs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "function:internal/orchestrate/parallel.go:ensureFileContains",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "function:internal/orchestrate/parallel.go:driveFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "function:internal/orchestrate/parallel.go:mergeFromWorktree",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "class:internal/orchestrate/parallel.go:ParallelOptions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/fix_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/gateconfig_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/history_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/loop_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

@@ -1,0 +1,492 @@
+{
+  "nodes": [
+    {
+      "id": "file:web/src/lib/reltime.test.ts",
+      "type": "file",
+      "name": "reltime.test.ts",
+      "filePath": "web/src/lib/reltime.test.ts",
+      "summary": "Vitest cases verifying relTime shortens ISO timestamps using relativeTime.",
+      "tags": [
+        "test",
+        "formatter",
+        "vitest"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/reltime.ts",
+      "type": "file",
+      "name": "reltime.ts",
+      "filePath": "web/src/lib/reltime.ts",
+      "summary": "Tiny wrapper that trims an ISO timestamp to a relative-time string suitable for compact UI labels.",
+      "tags": [
+        "formatter",
+        "utility",
+        "time"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/reltime.ts:relTime",
+      "type": "function",
+      "name": "relTime",
+      "filePath": "web/src/lib/reltime.ts",
+      "lineRange": [
+        8,
+        14
+      ],
+      "summary": "Returns a compact relative-time label for an ISO timestamp.",
+      "tags": [
+        "utility",
+        "helper",
+        "formatter",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/slug.test.ts",
+      "type": "file",
+      "name": "slug.test.ts",
+      "filePath": "web/src/lib/slug.test.ts",
+      "summary": "Vitest cases verifying slugify produces URL-safe identifiers from free-text goals.",
+      "tags": [
+        "test",
+        "slug",
+        "vitest"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/slug.ts",
+      "type": "file",
+      "name": "slug.ts",
+      "filePath": "web/src/lib/slug.ts",
+      "summary": "Slugifies a free-text goal into a URL-safe identifier with lowercase, dashes, and a 40-char cap.",
+      "tags": [
+        "utility",
+        "slug",
+        "transform"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/slug.ts:slugify",
+      "type": "function",
+      "name": "slugify",
+      "filePath": "web/src/lib/slug.ts",
+      "lineRange": [
+        4,
+        11
+      ],
+      "summary": "Normalizes a free-text goal into a lowercase, dash-separated, 40-char slug.",
+      "tags": [
+        "utility",
+        "helper",
+        "transform",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/source.test.ts",
+      "type": "file",
+      "name": "source.test.ts",
+      "filePath": "web/src/lib/source.test.ts",
+      "summary": "Vitest cases verifying source mode detection and hexToBytes conversion.",
+      "tags": [
+        "test",
+        "boot",
+        "data-source",
+        "vitest"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/source.ts",
+      "type": "file",
+      "name": "source.ts",
+      "filePath": "web/src/lib/source.ts",
+      "summary": "Resolves whether the app is hosted or local and constructs a RelaySource from a master hex key.",
+      "tags": [
+        "boot",
+        "data-source",
+        "configuration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/source.ts:isHostedMode",
+      "type": "function",
+      "name": "isHostedMode",
+      "filePath": "web/src/lib/source.ts",
+      "lineRange": [
+        33,
+        35
+      ],
+      "summary": "Returns true when the app is running in hosted mode (env flag).",
+      "tags": [
+        "utility",
+        "helper",
+        "predicate",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/source.ts:relayUrl",
+      "type": "function",
+      "name": "relayUrl",
+      "filePath": "web/src/lib/source.ts",
+      "lineRange": [
+        38,
+        40
+      ],
+      "summary": "Returns the configured relay URL or falls back to the default.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/source.ts:localSource",
+      "type": "function",
+      "name": "localSource",
+      "filePath": "web/src/lib/source.ts",
+      "lineRange": [
+        43,
+        45
+      ],
+      "summary": "Returns a fresh LocalServeSource instance.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/source.ts:hexToBytes",
+      "type": "function",
+      "name": "hexToBytes",
+      "filePath": "web/src/lib/source.ts",
+      "lineRange": [
+        48,
+        58
+      ],
+      "summary": "Converts a hex-encoded master string into a Uint8Array.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/source.ts:connectRelaySource",
+      "type": "function",
+      "name": "connectRelaySource",
+      "filePath": "web/src/lib/source.ts",
+      "lineRange": [
+        68,
+        80
+      ],
+      "summary": "Builds a RelaySource by importing the client and crypto modules lazily and logging in with the master hex.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/types.ts",
+      "type": "file",
+      "name": "types.ts",
+      "filePath": "web/src/lib/types.ts",
+      "summary": "Central TypeScript type definitions shared by api.ts, datasource.tsx, and the React UI layer.",
+      "tags": [
+        "type-definition",
+        "domain",
+        "schema"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/main.tsx",
+      "type": "file",
+      "name": "main.tsx",
+      "filePath": "web/src/main.tsx",
+      "summary": "Application entry point that mounts the React tree, applies the gallery preview, and injects global CSS.",
+      "tags": [
+        "entry-point",
+        "react",
+        "bootstrap"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:web/src/lib/reltime.test.ts",
+      "target": "file:web/src/lib/reltime.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/reltime.ts",
+      "target": "file:web/src/lib/ops.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/slug.test.ts",
+      "target": "file:web/src/lib/slug.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/source.test.ts",
+      "target": "file:web/src/lib/datasource.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/source.test.ts",
+      "target": "file:web/src/lib/source.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "file:web/src/lib/datasource.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "file:web/src/lib/relaysource.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/main.tsx",
+      "target": "file:web/src/App.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/main.tsx",
+      "target": "file:web/src/components/ElementsGallery.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/main.tsx",
+      "target": "file:web/src/components/shell/ShellPreview.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/main.tsx",
+      "target": "file:web/src/index.css",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/reltime.ts",
+      "target": "function:web/src/lib/reltime.ts:relTime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/slug.ts",
+      "target": "function:web/src/lib/slug.ts:slugify",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:isHostedMode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:relayUrl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:localSource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:hexToBytes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:connectRelaySource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/reltime.ts",
+      "target": "function:web/src/lib/reltime.ts:relTime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/slug.ts",
+      "target": "function:web/src/lib/slug.ts:slugify",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:isHostedMode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:relayUrl",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:localSource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:hexToBytes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "function:web/src/lib/source.ts:connectRelaySource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/types.ts",
+      "target": "file:web/src/lib/canvas.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/types.ts",
+      "target": "file:web/src/lib/comms.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/types.ts",
+      "target": "file:web/src/lib/datasource.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/types.ts",
+      "target": "file:web/src/lib/derive.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/types.ts",
+      "target": "file:web/src/lib/office.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/types.ts",
+      "target": "file:web/src/lib/relaysource.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/reltime.ts",
+      "target": "file:web/src/lib/reltime.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/slug.ts",
+      "target": "file:web/src/lib/slug.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/source.ts",
+      "target": "file:web/src/lib/source.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:web/src/lib/reltime.ts:relTime",
+      "target": "function:web/src/lib/ops.ts:relativeTime",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:web/src/lib/source.ts:localSource",
+      "target": "class:web/src/lib/datasource.tsx:LocalServeSource",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:web/src/lib/source.ts:connectRelaySource",
+      "target": "class:web/src/lib/relaysource.ts:RelaySource",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

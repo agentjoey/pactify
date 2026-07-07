@@ -1,0 +1,346 @@
+{
+  "nodes": [
+    {
+      "id": "file:web/src/components/ui/EmptyState.tsx",
+      "type": "file",
+      "name": "EmptyState.tsx",
+      "filePath": "web/src/components/ui/EmptyState.tsx",
+      "summary": "Centered empty-state placeholder with icon, title, and hint copy for list/grid sections.",
+      "tags": ["ui", "empty-state", "placeholder", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/ui/EmptyState.tsx:EmptyState",
+      "type": "function",
+      "name": "EmptyState",
+      "filePath": "web/src/components/ui/EmptyState.tsx",
+      "lineRange": [5, 30],
+      "summary": "Renders a centered dashed empty-state block with icon, title, and hint.",
+      "tags": ["empty-state", "placeholder", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/Input.tsx",
+      "type": "file",
+      "name": "Input.tsx",
+      "filePath": "web/src/components/ui/Input.tsx",
+      "summary": "Themed text input applying the project's standard surface/transition tokens.",
+      "tags": ["ui", "input", "form-control", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/ui/Input.tsx:Input",
+      "type": "function",
+      "name": "Input",
+      "filePath": "web/src/components/ui/Input.tsx",
+      "lineRange": [5, 22],
+      "summary": "Renders a text input with the project's themed classes and pass-through props.",
+      "tags": ["input", "form-control", "themed", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/Kbd.tsx",
+      "type": "file",
+      "name": "Kbd.tsx",
+      "filePath": "web/src/components/ui/Kbd.tsx",
+      "summary": "Keyboard-cap glyph component styled with the project's raised border for shortcut hints.",
+      "tags": ["ui", "kbd", "shortcut", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/ui/Kbd.tsx:Kbd",
+      "type": "function",
+      "name": "Kbd",
+      "filePath": "web/src/components/ui/Kbd.tsx",
+      "lineRange": [5, 23],
+      "summary": "Renders an inline monospace keycap glyph for keyboard shortcut hints.",
+      "tags": ["kbd", "shortcut", "keycap", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/MetricStrip.test.tsx",
+      "type": "file",
+      "name": "MetricStrip.test.tsx",
+      "filePath": "web/src/components/ui/MetricStrip.test.tsx",
+      "summary": "Vitest spec verifying the MetricStrip renders its items correctly.",
+      "tags": ["test", "vitest", "component-spec"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/MetricStrip.tsx",
+      "type": "file",
+      "name": "MetricStrip.tsx",
+      "filePath": "web/src/components/ui/MetricStrip.tsx",
+      "summary": "Horizontal strip of metric tiles rendered from an items[] prop, used in dashboards and task cards.",
+      "tags": ["ui", "metrics", "strip", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/ui/MetricStrip.tsx:MetricStrip",
+      "type": "function",
+      "name": "MetricStrip",
+      "filePath": "web/src/components/ui/MetricStrip.tsx",
+      "lineRange": [11, 43],
+      "summary": "Renders a horizontal strip of metric tiles from an items[] array.",
+      "tags": ["metrics", "strip", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/Modal.tsx",
+      "type": "file",
+      "name": "Modal.tsx",
+      "filePath": "web/src/components/ui/Modal.tsx",
+      "summary": "Focus-trapped modal overlay with header, footer, and danger variant styling.",
+      "tags": ["ui", "modal", "overlay", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ui/Modal.tsx:Modal",
+      "type": "function",
+      "name": "Modal",
+      "filePath": "web/src/components/ui/Modal.tsx",
+      "lineRange": [10, 128],
+      "summary": "Renders a focus-trapped modal overlay with title, footer slot, and danger variant styling.",
+      "tags": ["modal", "overlay", "focus-trap", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ui/Popover.tsx",
+      "type": "file",
+      "name": "Popover.tsx",
+      "filePath": "web/src/components/ui/Popover.tsx",
+      "summary": "Anchored popover with click-outside and Escape dismissal and left/right alignment.",
+      "tags": ["ui", "popover", "dropdown", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ui/Popover.tsx:Popover",
+      "type": "function",
+      "name": "Popover",
+      "filePath": "web/src/components/ui/Popover.tsx",
+      "lineRange": [9, 64],
+      "summary": "Renders an anchored popover that dismisses on outside click or Escape, with left/right alignment.",
+      "tags": ["popover", "dropdown", "anchored", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ui/Select.tsx",
+      "type": "file",
+      "name": "Select.tsx",
+      "filePath": "web/src/components/ui/Select.tsx",
+      "summary": "Native select wrapper styled to match the Input component.",
+      "tags": ["ui", "select", "form-control", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/ui/Select.tsx:Select",
+      "type": "function",
+      "name": "Select",
+      "filePath": "web/src/components/ui/Select.tsx",
+      "lineRange": [5, 24],
+      "summary": "Renders a native select element with the project's themed classes.",
+      "tags": ["select", "form-control", "themed", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/Spinner.tsx",
+      "type": "file",
+      "name": "Spinner.tsx",
+      "filePath": "web/src/components/ui/Spinner.tsx",
+      "summary": "Sized spinner SVG used for loading indicators with an optional label.",
+      "tags": ["ui", "spinner", "loading", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/ui/Spinner.tsx:Spinner",
+      "type": "function",
+      "name": "Spinner",
+      "filePath": "web/src/components/ui/Spinner.tsx",
+      "lineRange": [10, 40],
+      "summary": "Renders a sized spinner SVG with an accessible loading label.",
+      "tags": ["spinner", "loading", "svg", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/StatusPill.tsx",
+      "type": "file",
+      "name": "StatusPill.tsx",
+      "filePath": "web/src/components/ui/StatusPill.tsx",
+      "summary": "Pact-state pill renderer with status normalization and state-specific color mapping.",
+      "tags": ["ui", "status", "pill", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ui/StatusPill.tsx:normalizeStatus",
+      "type": "function",
+      "name": "normalizeStatus",
+      "filePath": "web/src/components/ui/StatusPill.tsx",
+      "lineRange": [32, 49],
+      "summary": "Maps raw pact state strings (queued/in_progress/blocked/...) to canonical lowercase status tokens.",
+      "tags": ["status", "normalization", "pact-state"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/ui/StatusPill.tsx:StatusPill",
+      "type": "function",
+      "name": "StatusPill",
+      "filePath": "web/src/components/ui/StatusPill.tsx",
+      "lineRange": [59, 107],
+      "summary": "Renders a colored pill for a normalized pact status with optional custom label.",
+      "tags": ["status", "pill", "color", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ui/Textarea.tsx",
+      "type": "file",
+      "name": "Textarea.tsx",
+      "filePath": "web/src/components/ui/Textarea.tsx",
+      "summary": "Auto-growing textarea with optional variable interpolation and an expand toggle.",
+      "tags": ["ui", "textarea", "form-control", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ui/Textarea.tsx:Textarea",
+      "type": "function",
+      "name": "Textarea",
+      "filePath": "web/src/components/ui/Textarea.tsx",
+      "lineRange": [7, 50],
+      "summary": "Auto-growing textarea that supports {{var}} interpolation and a manual expand toggle.",
+      "tags": ["textarea", "interpolation", "auto-grow", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ui/Tooltip.tsx",
+      "type": "file",
+      "name": "Tooltip.tsx",
+      "filePath": "web/src/components/ui/Tooltip.tsx",
+      "summary": "Hover tooltip with delayed show/hide and top/bottom positioning.",
+      "tags": ["ui", "tooltip", "hover", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ui/Tooltip.tsx:Tooltip",
+      "type": "function",
+      "name": "Tooltip",
+      "filePath": "web/src/components/ui/Tooltip.tsx",
+      "lineRange": [6, 59],
+      "summary": "Renders a hover tooltip with delayed show/hide and top/bottom positioning around its child.",
+      "tags": ["tooltip", "hover", "delay", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ui/ants/Ant.test.tsx",
+      "type": "file",
+      "name": "Ant.test.tsx",
+      "filePath": "web/src/components/ui/ants/Ant.test.tsx",
+      "summary": "Vitest spec rendering Ant variants and asserting the SVG output structure.",
+      "tags": ["test", "vitest", "component-spec"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/ants/Ant.tsx",
+      "type": "file",
+      "name": "Ant.tsx",
+      "filePath": "web/src/components/ui/ants/Ant.tsx",
+      "summary": "Pixel-art ant SVG component parametrized by caste, size, and title — used as a compact agent pictogram.",
+      "tags": ["ui", "svg", "agent-pictogram", "react-component"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ui/ants/Ant.tsx:Ant",
+      "type": "function",
+      "name": "Ant",
+      "filePath": "web/src/components/ui/ants/Ant.tsx",
+      "lineRange": [230, 246],
+      "summary": "Renders a pixel-art ant SVG selected by caste with a size and title.",
+      "tags": ["svg", "agent-pictogram", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ui/ui.test.tsx",
+      "type": "file",
+      "name": "ui.test.tsx",
+      "filePath": "web/src/components/ui/ui.test.tsx",
+      "summary": "Top-level vitest spec importing each UI primitive for smoke coverage.",
+      "tags": ["test", "vitest", "smoke"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/agentLogos.tsx",
+      "type": "file",
+      "name": "agentLogos.tsx",
+      "filePath": "web/src/lib/agentLogos.tsx",
+      "summary": "Catalog of vendor-specific agent logos with a resolve() helper and an <AgentLogo kind=.../> renderer.",
+      "tags": ["ui", "logos", "agent", "catalog"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/agentLogos.tsx:AgentLogo",
+      "type": "function",
+      "name": "AgentLogo",
+      "filePath": "web/src/lib/agentLogos.tsx",
+      "lineRange": [100, 124],
+      "summary": "Renders the SVG logo for a given agent kind, resolving via the AGENT_LOGO_KINDS catalog.",
+      "tags": ["logo", "agent", "svg", "react-component"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/ants.test.ts",
+      "type": "file",
+      "name": "ants.test.ts",
+      "filePath": "web/src/lib/ants.test.ts",
+      "summary": "Vitest spec covering the ants utility module's caste/role normalization helpers.",
+      "tags": ["test", "vitest", "utility"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {"source": "file:web/src/components/ui/EmptyState.tsx", "target": "function:web/src/components/ui/EmptyState.tsx:EmptyState", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/EmptyState.tsx", "target": "function:web/src/components/ui/EmptyState.tsx:EmptyState", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/Input.tsx", "target": "function:web/src/components/ui/Input.tsx:Input", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/Input.tsx", "target": "function:web/src/components/ui/Input.tsx:Input", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/Kbd.tsx", "target": "function:web/src/components/ui/Kbd.tsx:Kbd", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/Kbd.tsx", "target": "function:web/src/components/ui/Kbd.tsx:Kbd", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/MetricStrip.test.tsx", "target": "file:web/src/components/ui/MetricStrip.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/MetricStrip.test.tsx", "target": "file:web/src/components/ui/MetricStrip.tsx", "type": "tested_by", "direction": "forward", "weight": 0.5},
+    {"source": "file:web/src/components/ui/MetricStrip.tsx", "target": "function:web/src/components/ui/MetricStrip.tsx:MetricStrip", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/MetricStrip.tsx", "target": "function:web/src/components/ui/MetricStrip.tsx:MetricStrip", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/Modal.tsx", "target": "function:web/src/components/ui/Modal.tsx:Modal", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/Modal.tsx", "target": "function:web/src/components/ui/Modal.tsx:Modal", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/Popover.tsx", "target": "function:web/src/components/ui/Popover.tsx:Popover", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/Popover.tsx", "target": "function:web/src/components/ui/Popover.tsx:Popover", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/Select.tsx", "target": "function:web/src/components/ui/Select.tsx:Select", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/Select.tsx", "target": "function:web/src/components/ui/Select.tsx:Select", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/Spinner.tsx", "target": "function:web/src/components/ui/Spinner.tsx:Spinner", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/Spinner.tsx", "target": "function:web/src/components/ui/Spinner.tsx:Spinner", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/StatusPill.tsx", "target": "function:web/src/components/ui/StatusPill.tsx:normalizeStatus", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/StatusPill.tsx", "target": "function:web/src/components/ui/StatusPill.tsx:StatusPill", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/StatusPill.tsx", "target": "function:web/src/components/ui/StatusPill.tsx:normalizeStatus", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/StatusPill.tsx", "target": "function:web/src/components/ui/StatusPill.tsx:StatusPill", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/Textarea.tsx", "target": "function:web/src/components/ui/Textarea.tsx:Textarea", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/Textarea.tsx", "target": "function:web/src/components/ui/Textarea.tsx:Textarea", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/Tooltip.tsx", "target": "function:web/src/components/ui/Tooltip.tsx:Tooltip", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/Tooltip.tsx", "target": "function:web/src/components/ui/Tooltip.tsx:Tooltip", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/ants/Ant.test.tsx", "target": "file:web/src/components/ui/ants/Ant.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ants/Ant.test.tsx", "target": "file:web/src/lib/ants.ts", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ants/Ant.test.tsx", "target": "file:web/src/components/ui/ants/Ant.tsx", "type": "tested_by", "direction": "forward", "weight": 0.5},
+    {"source": "file:web/src/components/ui/ants/Ant.tsx", "target": "function:web/src/components/ui/ants/Ant.tsx:Ant", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/components/ui/ants/Ant.tsx", "target": "function:web/src/components/ui/ants/Ant.tsx:Ant", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/components/ui/ants/Ant.tsx", "target": "file:web/src/lib/ants.ts", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Alert.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Badge.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Button.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/EmptyState.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Input.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Kbd.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Modal.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Popover.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Select.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Spinner.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/StatusPill.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/components/ui/ui.test.tsx", "target": "file:web/src/components/ui/Tooltip.tsx", "type": "imports", "direction": "forward", "weight": 0.7},
+    {"source": "file:web/src/lib/agentLogos.tsx", "target": "function:web/src/lib/agentLogos.tsx:AgentLogo", "type": "contains", "direction": "forward", "weight": 1.0},
+    {"source": "file:web/src/lib/agentLogos.tsx", "target": "function:web/src/lib/agentLogos.tsx:AgentLogo", "type": "exports", "direction": "forward", "weight": 0.8},
+    {"source": "file:web/src/lib/ants.test.ts", "target": "file:web/src/lib/ants.ts", "type": "imports", "direction": "forward", "weight": 0.7}
+  ]
+}

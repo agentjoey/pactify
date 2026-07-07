@@ -1,0 +1,1363 @@
+{
+  "nodes": [
+    {
+      "id": "file:web/src/components/TaskDetail.test.tsx",
+      "type": "file",
+      "name": "TaskDetail.test.tsx",
+      "filePath": "web/src/components/TaskDetail.test.tsx",
+      "summary": "Vitest tests for the TaskDetail panel, exercising event filtering, ordering, and EventFields rendering via a mocked LocalServeSource data source.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/TaskDetail.test.tsx:makeSource",
+      "type": "function",
+      "name": "makeSource",
+      "filePath": "web/src/components/TaskDetail.test.tsx",
+      "lineRange": [
+        8,
+        20
+      ],
+      "summary": "makeSource function (13 lines).",
+      "tags": [
+        "test",
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/TaskDetail.test.tsx:detail",
+      "type": "function",
+      "name": "detail",
+      "filePath": "web/src/components/TaskDetail.test.tsx",
+      "lineRange": [
+        26,
+        43
+      ],
+      "summary": "detail function (18 lines).",
+      "tags": [
+        "test",
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/TaskDetail.tsx",
+      "type": "file",
+      "name": "TaskDetail.tsx",
+      "filePath": "web/src/components/TaskDetail.tsx",
+      "summary": "Sliding detail panel that shows a task's chronological event stream (lifecycle, agent joins, checkpoints) with field-aware payloads and reduced-motion fallbacks.",
+      "tags": [
+        "react",
+        "component"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/components/TaskDetail.tsx:eventColor",
+      "type": "function",
+      "name": "eventColor",
+      "filePath": "web/src/components/TaskDetail.tsx",
+      "lineRange": [
+        9,
+        24
+      ],
+      "summary": "Maps an eventType to a CSS variable token for badge coloring.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/TaskDetail.tsx:TaskDetail",
+      "type": "function",
+      "name": "TaskDetail",
+      "filePath": "web/src/components/TaskDetail.tsx",
+      "lineRange": [
+        51,
+        193
+      ],
+      "summary": "Renders a task's filtered event stream (lifecycle, agent, checkpoint) inside a focusable panel with Escape-to-close and reduced-motion respect.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/TaskDetail.tsx:EventFields",
+      "type": "function",
+      "name": "EventFields",
+      "filePath": "web/src/components/TaskDetail.tsx",
+      "lineRange": [
+        195,
+        253
+      ],
+      "summary": "Renders type-specific fields (assign/checkpoint/accept/changes) from event body, decoding JSON payloads with strPayload.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/TaskEditor.tsx",
+      "type": "file",
+      "name": "TaskEditor.tsx",
+      "filePath": "web/src/components/TaskEditor.tsx",
+      "summary": "Modal editor for creating or updating a task: validates ID format against TASK_ID_RE, enforces uniqueness against existingIds, and assigns feature/scope.",
+      "tags": [
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/TaskEditor.tsx:TaskEditor",
+      "type": "function",
+      "name": "TaskEditor",
+      "filePath": "web/src/components/TaskEditor.tsx",
+      "lineRange": [
+        19,
+        119
+      ],
+      "summary": "Controlled form for task create/edit; validates TASK_ID_RE, uniqueness, feature scope, and calls onSave / onDelete.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/Toasts.render.test.tsx",
+      "type": "file",
+      "name": "Toasts.render.test.tsx",
+      "filePath": "web/src/components/Toasts.render.test.tsx",
+      "summary": "Smoke test verifying Toasts component renders without throwing.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/Toasts.test.ts",
+      "type": "file",
+      "name": "Toasts.test.ts",
+      "filePath": "web/src/components/Toasts.test.ts",
+      "summary": "Vitest tests for Toasts, covering awaiting_review diffing and toast list rendering.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/Toasts.test.ts:mk",
+      "type": "function",
+      "name": "mk",
+      "filePath": "web/src/components/Toasts.test.ts",
+      "lineRange": [
+        5,
+        24
+      ],
+      "summary": "mk function (20 lines).",
+      "tags": [
+        "test",
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/Toasts.tsx",
+      "type": "file",
+      "name": "Toasts.tsx",
+      "filePath": "web/src/components/Toasts.tsx",
+      "summary": "Toast notifier with diffAwaiting(prev, next) helper that diffs task sets across state snapshots and surfaces newly awaiting_review tasks.",
+      "tags": [
+        "react",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/Toasts.tsx:diffAwaiting",
+      "type": "function",
+      "name": "diffAwaiting",
+      "filePath": "web/src/components/Toasts.tsx",
+      "lineRange": [
+        9,
+        19
+      ],
+      "summary": "Compares prev and next state snapshots and returns tasks that newly entered awaiting_review.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/Toasts.tsx:Toasts",
+      "type": "function",
+      "name": "Toasts",
+      "filePath": "web/src/components/Toasts.tsx",
+      "lineRange": [
+        29,
+        48
+      ],
+      "summary": "Renders the list of toast notifications currently active.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/canvas/AntActivity.tsx",
+      "type": "file",
+      "name": "AntActivity.tsx",
+      "filePath": "web/src/components/canvas/AntActivity.tsx",
+      "summary": "Animated activity indicator (idle / working / thinking) shown next to busy desks; respects prefersReducedMotion.",
+      "tags": [
+        "react",
+        "component",
+        "canvas"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/AntActivity.tsx:AntActivity",
+      "type": "function",
+      "name": "AntActivity",
+      "filePath": "web/src/components/canvas/AntActivity.tsx",
+      "lineRange": [
+        29,
+        43
+      ],
+      "summary": "Animated indicator for a desk's current activity status.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/canvas/Hud.test.tsx",
+      "type": "file",
+      "name": "Hud.test.tsx",
+      "filePath": "web/src/components/canvas/Hud.test.tsx",
+      "summary": "Vitest tests for the canvas heads-up display component (zoom, fit-view controls).",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/canvas/Hud.tsx",
+      "type": "file",
+      "name": "Hud.tsx",
+      "filePath": "web/src/components/canvas/Hud.tsx",
+      "summary": "Floating heads-up display overlaying the React Flow canvas: zoom controls, fitView button, and minimap node coloring driven by lifecycle stage.",
+      "tags": [
+        "react",
+        "component",
+        "canvas"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/canvas/Hud.tsx:minimapNodeColor",
+      "type": "function",
+      "name": "minimapNodeColor",
+      "filePath": "web/src/components/canvas/Hud.tsx",
+      "lineRange": [
+        13,
+        32
+      ],
+      "summary": "Picks a minimap dot color for a node based on its lifecycle status.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/Hud.tsx:Hud",
+      "type": "function",
+      "name": "Hud",
+      "filePath": "web/src/components/canvas/Hud.tsx",
+      "lineRange": [
+        36,
+        77
+      ],
+      "summary": "Heads-up display: minimap toggle, zoom-in/out, fitView, and current viewport readout.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/canvas/OfficeView.test.tsx",
+      "type": "file",
+      "name": "OfficeView.test.tsx",
+      "filePath": "web/src/components/canvas/OfficeView.test.tsx",
+      "summary": "Extensive vitest tests for the office canvas view, covering desk placement, drag/drop, links panel, and transit overlays.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:web/src/components/canvas/OfficeView.tsx",
+      "type": "file",
+      "name": "OfficeView.tsx",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "summary": "Main React Flow canvas: seats as desks, tasks as parcels (drag/drop), TransitOverlay for live animation, walls/lens for activity and cost, and LinksPanel for ownership/review wiring.",
+      "tags": [
+        "react",
+        "component",
+        "canvas"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:statusBadge",
+      "type": "function",
+      "name": "statusBadge",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        53,
+        65
+      ],
+      "summary": "Small badge with status-specific styling for desks.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:Parcel",
+      "type": "function",
+      "name": "Parcel",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        75,
+        109
+      ],
+      "summary": "Draggable task parcel rendered over a desk when a desk draft is in the tray.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:DeskNode",
+      "type": "function",
+      "name": "DeskNode",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        123,
+        212
+      ],
+      "summary": "Custom React Flow node rendering a seat's desk with doing/inbox/waiting lists and click/context-menu handlers.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:LinkRow",
+      "type": "function",
+      "name": "LinkRow",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        219,
+        232
+      ],
+      "summary": "Single row inside LinksPanel describing a task ownership or review link.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:LinksPanel",
+      "type": "function",
+      "name": "LinksPanel",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        234,
+        287
+      ],
+      "summary": "Slide-over panel showing a seat's owned tasks and reviews, with click-to-open task detail.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:placeNewDesks",
+      "type": "function",
+      "name": "placeNewDesks",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        312,
+        334
+      ],
+      "summary": "Places newly added seat nodes on the grid, avoiding collisions with existing positions.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:TransitOverlay",
+      "type": "function",
+      "name": "TransitOverlay",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        372,
+        416
+      ],
+      "summary": "Animates a moving parcel between two desks when a task is dispatched.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:OfficeView",
+      "type": "function",
+      "name": "OfficeView",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        454,
+        460
+      ],
+      "summary": "Memoized wrapper that forwards props to OfficeViewInner.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/OfficeView.tsx:OfficeViewInner",
+      "type": "function",
+      "name": "OfficeViewInner",
+      "filePath": "web/src/components/canvas/OfficeView.tsx",
+      "lineRange": [
+        462,
+        1004
+      ],
+      "summary": "Core canvas implementation: desks, drag/drop parcels, transit overlay, walls/lens, links panel, and live pulse tracking.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:web/src/components/canvas/SeatRoster.tsx",
+      "type": "file",
+      "name": "SeatRoster.tsx",
+      "filePath": "web/src/components/canvas/SeatRoster.tsx",
+      "summary": "Sidebar roster of registered agents (seats) rendered as Ant avatars with role badges.",
+      "tags": [
+        "react",
+        "component",
+        "canvas"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/SeatRoster.tsx:SeatRoster",
+      "type": "function",
+      "name": "SeatRoster",
+      "filePath": "web/src/components/canvas/SeatRoster.tsx",
+      "lineRange": [
+        18,
+        52
+      ],
+      "summary": "Renders the list of seat agents with role chips and Ant avatars.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/canvas/Toolbar.test.tsx",
+      "type": "file",
+      "name": "Toolbar.test.tsx",
+      "filePath": "web/src/components/canvas/Toolbar.test.tsx",
+      "summary": "Vitest tests for the canvas Toolbar: feature creation, new-task gating, branch validation.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/Toolbar.test.tsx:props",
+      "type": "function",
+      "name": "props",
+      "filePath": "web/src/components/canvas/Toolbar.test.tsx",
+      "lineRange": [
+        5,
+        23
+      ],
+      "summary": "props function (19 lines).",
+      "tags": [
+        "test",
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/canvas/Toolbar.tsx",
+      "type": "file",
+      "name": "Toolbar.tsx",
+      "filePath": "web/src/components/canvas/Toolbar.tsx",
+      "summary": "Canvas toolbar with new-feature form (ID/branch validation) and a gated new-task button, all controlled by parent state.",
+      "tags": [
+        "react",
+        "component",
+        "canvas"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/canvas/Toolbar.tsx:Toolbar",
+      "type": "function",
+      "name": "Toolbar",
+      "filePath": "web/src/components/canvas/Toolbar.tsx",
+      "lineRange": [
+        18,
+        89
+      ],
+      "summary": "Canvas top toolbar: new-feature form, new-task button, author tag.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/canvas/edges/AntEdge.test.tsx",
+      "type": "file",
+      "name": "AntEdge.test.tsx",
+      "filePath": "web/src/components/canvas/edges/AntEdge.test.tsx",
+      "summary": "Vitest tests for the animated AntEdge component, including reduced-motion stubbing.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/canvas/edges/AntEdge.test.tsx:stubMatchMedia",
+      "type": "function",
+      "name": "stubMatchMedia",
+      "filePath": "web/src/components/canvas/edges/AntEdge.test.tsx",
+      "lineRange": [
+        39,
+        49
+      ],
+      "summary": "stubMatchMedia function (11 lines).",
+      "tags": [
+        "test",
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "type": "file",
+      "name": "AntEdge.tsx",
+      "filePath": "web/src/components/canvas/edges/AntEdge.tsx",
+      "summary": "Custom React Flow edge that draws a bezier path between desks and animates messenger/carrier ants along it (motion-reduced fallback).",
+      "tags": [
+        "react",
+        "component",
+        "canvas",
+        "edge"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/canvas/edges/AntEdge.tsx:MessengerAnt",
+      "type": "function",
+      "name": "MessengerAnt",
+      "filePath": "web/src/components/canvas/edges/AntEdge.tsx",
+      "lineRange": [
+        30,
+        43
+      ],
+      "summary": "Ant visual used for short edges (a message being relayed).",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/edges/AntEdge.tsx:CarrierAnt",
+      "type": "function",
+      "name": "CarrierAnt",
+      "filePath": "web/src/components/canvas/edges/AntEdge.tsx",
+      "lineRange": [
+        48,
+        71
+      ],
+      "summary": "Ant visual used for long edges (carrying a parcel between desks).",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/canvas/edges/AntEdge.tsx:AntEdge",
+      "type": "function",
+      "name": "AntEdge",
+      "filePath": "web/src/components/canvas/edges/AntEdge.tsx",
+      "lineRange": [
+        84,
+        133
+      ],
+      "summary": "Custom edge rendering: bezier path with animated ant(s) traversing it.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/live/AgentTerminal.test.tsx",
+      "type": "file",
+      "name": "AgentTerminal.test.tsx",
+      "filePath": "web/src/components/live/AgentTerminal.test.tsx",
+      "summary": "Vitest smoke test for AgentTerminal live output panel.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/live/AgentTerminal.tsx",
+      "type": "file",
+      "name": "AgentTerminal.tsx",
+      "filePath": "web/src/components/live/AgentTerminal.tsx",
+      "summary": "Live tail of agent stdout/stderr streamed via subscribeAgentStream; auto-scrolls to last line.",
+      "tags": [
+        "react",
+        "component",
+        "live"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/live/AgentTerminal.tsx:AgentTerminal",
+      "type": "function",
+      "name": "AgentTerminal",
+      "filePath": "web/src/components/live/AgentTerminal.tsx",
+      "lineRange": [
+        6,
+        46
+      ],
+      "summary": "Subscribes to a project's agent stream and renders an auto-scrolling line buffer.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:web/src/components/TaskDetail.test.tsx",
+      "target": "file:web/src/components/TaskDetail.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.test.tsx",
+      "target": "file:web/src/lib/datasource.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.test.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "file:web/src/components/ui/Badge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "file:web/src/lib/datasource.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "file:web/src/lib/reltime.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskEditor.tsx",
+      "target": "file:web/src/components/ui/Button.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskEditor.tsx",
+      "target": "file:web/src/components/ui/Input.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskEditor.tsx",
+      "target": "file:web/src/components/ui/Modal.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskEditor.tsx",
+      "target": "file:web/src/components/ui/Select.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskEditor.tsx",
+      "target": "file:web/src/lib/canvas.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/Toasts.render.test.tsx",
+      "target": "file:web/src/components/Toasts.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/Toasts.test.ts",
+      "target": "file:web/src/components/Toasts.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/Toasts.test.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/Toasts.tsx",
+      "target": "file:web/src/lib/derive.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/Toasts.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/AntActivity.tsx",
+      "target": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/Hud.test.tsx",
+      "target": "file:web/src/components/canvas/Hud.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/Hud.tsx",
+      "target": "file:web/src/lib/lifecycle.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.test.tsx",
+      "target": "file:web/src/components/canvas/OfficeView.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.test.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.test.tsx",
+      "target": "file:web/src/lib/canvas.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.test.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/components/canvas/Hud.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/components/ui/ants/Ant.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/components/ui/StatusPill.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/lib/ants.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/lib/canvas.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/lib/lifecycle.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/lib/office.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/SeatRoster.tsx",
+      "target": "file:web/src/components/ui/ants/Ant.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/SeatRoster.tsx",
+      "target": "file:web/src/lib/ants.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/SeatRoster.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/Toolbar.test.tsx",
+      "target": "file:web/src/components/canvas/Toolbar.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.test.tsx",
+      "target": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.test.tsx",
+      "target": "file:web/src/lib/canvas.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "target": "file:web/src/lib/canvas.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/live/AgentTerminal.test.tsx",
+      "target": "file:web/src/components/live/AgentTerminal.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/live/AgentTerminal.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.test.tsx",
+      "target": "function:web/src/components/TaskDetail.test.tsx:makeSource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.test.tsx",
+      "target": "function:web/src/components/TaskDetail.test.tsx:detail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "function:web/src/components/TaskDetail.tsx:eventColor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "function:web/src/components/TaskDetail.tsx:TaskDetail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "function:web/src/components/TaskDetail.tsx:EventFields",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/TaskEditor.tsx",
+      "target": "function:web/src/components/TaskEditor.tsx:TaskEditor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/Toasts.test.ts",
+      "target": "function:web/src/components/Toasts.test.ts:mk",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/Toasts.tsx",
+      "target": "function:web/src/components/Toasts.tsx:diffAwaiting",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/Toasts.tsx",
+      "target": "function:web/src/components/Toasts.tsx:Toasts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/AntActivity.tsx",
+      "target": "function:web/src/components/canvas/AntActivity.tsx:AntActivity",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/Hud.tsx",
+      "target": "function:web/src/components/canvas/Hud.tsx:minimapNodeColor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/Hud.tsx",
+      "target": "function:web/src/components/canvas/Hud.tsx:Hud",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:statusBadge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:Parcel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:DeskNode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:LinkRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:LinksPanel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:placeNewDesks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:TransitOverlay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:OfficeView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:OfficeViewInner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/SeatRoster.tsx",
+      "target": "function:web/src/components/canvas/SeatRoster.tsx:SeatRoster",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/Toolbar.test.tsx",
+      "target": "function:web/src/components/canvas/Toolbar.test.tsx:props",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/Toolbar.tsx",
+      "target": "function:web/src/components/canvas/Toolbar.tsx:Toolbar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.test.tsx",
+      "target": "function:web/src/components/canvas/edges/AntEdge.test.tsx:stubMatchMedia",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "target": "function:web/src/components/canvas/edges/AntEdge.tsx:MessengerAnt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "target": "function:web/src/components/canvas/edges/AntEdge.tsx:CarrierAnt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "target": "function:web/src/components/canvas/edges/AntEdge.tsx:AntEdge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/live/AgentTerminal.tsx",
+      "target": "function:web/src/components/live/AgentTerminal.tsx:AgentTerminal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "function:web/src/components/TaskDetail.tsx:TaskDetail",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/TaskEditor.tsx",
+      "target": "function:web/src/components/TaskEditor.tsx:TaskEditor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/Toasts.tsx",
+      "target": "function:web/src/components/Toasts.tsx:diffAwaiting",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/Toasts.tsx",
+      "target": "function:web/src/components/Toasts.tsx:Toasts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/canvas/AntActivity.tsx",
+      "target": "function:web/src/components/canvas/AntActivity.tsx:AntActivity",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/canvas/Hud.tsx",
+      "target": "function:web/src/components/canvas/Hud.tsx:Hud",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "function:web/src/components/canvas/OfficeView.tsx:OfficeView",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/canvas/SeatRoster.tsx",
+      "target": "function:web/src/components/canvas/SeatRoster.tsx:SeatRoster",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/canvas/Toolbar.tsx",
+      "target": "function:web/src/components/canvas/Toolbar.tsx:Toolbar",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "target": "function:web/src/components/canvas/edges/AntEdge.tsx:MessengerAnt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "target": "function:web/src/components/canvas/edges/AntEdge.tsx:CarrierAnt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "target": "function:web/src/components/canvas/edges/AntEdge.tsx:AntEdge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/live/AgentTerminal.tsx",
+      "target": "function:web/src/components/live/AgentTerminal.tsx:AgentTerminal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/TaskDetail.tsx",
+      "target": "file:web/src/components/TaskDetail.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/canvas/Hud.tsx",
+      "target": "file:web/src/components/canvas/Hud.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/canvas/OfficeView.tsx",
+      "target": "file:web/src/components/canvas/OfficeView.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/canvas/Toolbar.tsx",
+      "target": "file:web/src/components/canvas/Toolbar.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/canvas/edges/AntEdge.tsx",
+      "target": "file:web/src/components/canvas/edges/AntEdge.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/live/AgentTerminal.tsx",
+      "target": "file:web/src/components/live/AgentTerminal.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

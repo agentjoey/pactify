@@ -1,0 +1,912 @@
+{
+  "nodes": [
+    {
+      "id": "file:web/src/lib/datasource.tsx",
+      "type": "file",
+      "name": "datasource.tsx",
+      "filePath": "web/src/lib/datasource.tsx",
+      "summary": "DataSource interface plus a LocalServeSource implementation that wraps api.ts and a React context provider/hook.",
+      "tags": [
+        "data-source",
+        "react",
+        "context",
+        "provider"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:web/src/lib/datasource.tsx:LocalServeSource",
+      "type": "class",
+      "name": "LocalServeSource",
+      "filePath": "web/src/lib/datasource.tsx",
+      "lineRange": [
+        72,
+        175
+      ],
+      "summary": "DataSource implementation that proxies every call through the REST API client.",
+      "tags": [
+        "class",
+        "helper",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/datasource.tsx:DataSourceProvider",
+      "type": "function",
+      "name": "DataSourceProvider",
+      "filePath": "web/src/lib/datasource.tsx",
+      "lineRange": [
+        179,
+        187
+      ],
+      "summary": "React context provider that supplies the current DataSource to descendants (defaults to LocalServeSource).",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/datasource.tsx:useDataSource",
+      "type": "function",
+      "name": "useDataSource",
+      "filePath": "web/src/lib/datasource.tsx",
+      "lineRange": [
+        189,
+        195
+      ],
+      "summary": "React hook returning the DataSource from context, throwing if used outside the provider.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/derive.test.ts",
+      "type": "file",
+      "name": "derive.test.ts",
+      "filePath": "web/src/lib/derive.test.ts",
+      "summary": "Vitest cases for derive.ts board/task/event derivation and metrics formatting.",
+      "tags": [
+        "test",
+        "derivation",
+        "metrics",
+        "vitest"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:web/src/lib/derive.ts",
+      "type": "file",
+      "name": "derive.ts",
+      "filePath": "web/src/lib/derive.ts",
+      "summary": "Pure derivations from raw pact state into board columns, agent activity, feature merge readiness, and task metrics.",
+      "tags": [
+        "derivation",
+        "board",
+        "metrics",
+        "pure-fn"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:allTasks",
+      "type": "function",
+      "name": "allTasks",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        9,
+        13
+      ],
+      "summary": "Returns every task across every feature in a state.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:boardColumns",
+      "type": "function",
+      "name": "boardColumns",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        15,
+        20
+      ],
+      "summary": "Buckets all tasks into board columns keyed by status.",
+      "tags": [
+        "utility",
+        "helper",
+        "domain",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:designBoard",
+      "type": "function",
+      "name": "designBoard",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        30,
+        65
+      ],
+      "summary": "Derives a richer board view grouped into shipped/working/review/accepted/assigned sets.",
+      "tags": [
+        "utility",
+        "helper",
+        "domain",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:agentActivity",
+      "type": "function",
+      "name": "agentActivity",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        68,
+        70
+      ],
+      "summary": "Returns the activity events for an agent in reverse-chronological order.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:lastAction",
+      "type": "function",
+      "name": "lastAction",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        72,
+        74
+      ],
+      "summary": "Returns the most recent activity event for an agent, or null.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:findTask",
+      "type": "function",
+      "name": "findTask",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        76,
+        78
+      ],
+      "summary": "Locates a task by id across all features in a state.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:canMergeFeature",
+      "type": "function",
+      "name": "canMergeFeature",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        84,
+        88
+      ],
+      "summary": "Returns true when every task in a feature has been accepted (merge-ready).",
+      "tags": [
+        "utility",
+        "helper",
+        "predicate",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:eventsByTask",
+      "type": "function",
+      "name": "eventsByTask",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        100,
+        109
+      ],
+      "summary": "Buckets an event list into a Map<taskId, events[]>.",
+      "tags": [
+        "utility",
+        "helper",
+        "event",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:statsByTask",
+      "type": "function",
+      "name": "statsByTask",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        113,
+        117
+      ],
+      "summary": "Buckets task statistics into a Map<taskId, TaskStat>.",
+      "tags": [
+        "utility",
+        "helper",
+        "metrics",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:taskTokens",
+      "type": "function",
+      "name": "taskTokens",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        124,
+        130
+      ],
+      "summary": "Returns the cumulative token counts (in/out) for a task from a stats source.",
+      "tags": [
+        "utility",
+        "helper",
+        "domain",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:fmtDuration",
+      "type": "function",
+      "name": "fmtDuration",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        133,
+        141
+      ],
+      "summary": "Formats a duration in ms into 'Xh Ym Zs' style.",
+      "tags": [
+        "utility",
+        "helper",
+        "formatter",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:fmtTokens",
+      "type": "function",
+      "name": "fmtTokens",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        144,
+        147
+      ],
+      "summary": "Formats a token count with k/M suffixes.",
+      "tags": [
+        "utility",
+        "helper",
+        "formatter",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:fmtCost",
+      "type": "function",
+      "name": "fmtCost",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        150,
+        152
+      ],
+      "summary": "Formats a USD amount to two decimals with a leading $.",
+      "tags": [
+        "utility",
+        "helper",
+        "formatter",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:taskRuntimeMs",
+      "type": "function",
+      "name": "taskRuntimeMs",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        165,
+        183
+      ],
+      "summary": "Computes a task's running time in ms between its first start and last finish/checkpoint.",
+      "tags": [
+        "utility",
+        "helper",
+        "domain",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/derive.ts:taskMetrics",
+      "type": "function",
+      "name": "taskMetrics",
+      "filePath": "web/src/lib/derive.ts",
+      "lineRange": [
+        191,
+        206
+      ],
+      "summary": "Builds a metrics object (runtime, tokens, cost, duration) for a task.",
+      "tags": [
+        "utility",
+        "helper",
+        "domain",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/docTitle.test.ts",
+      "type": "file",
+      "name": "docTitle.test.ts",
+      "filePath": "web/src/lib/docTitle.test.ts",
+      "summary": "Vitest cases verifying docTitle formatters for project and awaiting headings.",
+      "tags": [
+        "test",
+        "formatter",
+        "vitest"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/docTitle.ts",
+      "type": "file",
+      "name": "docTitle.ts",
+      "filePath": "web/src/lib/docTitle.ts",
+      "summary": "Single function building human-readable document titles for projects and awaiting-task summaries.",
+      "tags": [
+        "formatter",
+        "utility",
+        "ui"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/docTitle.ts:docTitle",
+      "type": "function",
+      "name": "docTitle",
+      "filePath": "web/src/lib/docTitle.ts",
+      "lineRange": [
+        5,
+        8
+      ],
+      "summary": "Builds a human-readable document title for the given project, including the awaiting count when non-zero.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/icons.tsx",
+      "type": "file",
+      "name": "icons.tsx",
+      "filePath": "web/src/lib/icons.tsx",
+      "summary": "Phosphor icon registry and a typed <Icon> React component that renders duotone icons by name.",
+      "tags": [
+        "icons",
+        "react",
+        "ui",
+        "registry"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/icons.tsx:Icon",
+      "type": "function",
+      "name": "Icon",
+      "filePath": "web/src/lib/icons.tsx",
+      "lineRange": [
+        85,
+        102
+      ],
+      "summary": "React component that renders a Phosphor icon by name with configurable size, weight, color, and className.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/lifecycle.test.ts",
+      "type": "file",
+      "name": "lifecycle.test.ts",
+      "filePath": "web/src/lib/lifecycle.test.ts",
+      "summary": "Vitest cases verifying lifecycleStage and statusColorVar mappings.",
+      "tags": [
+        "test",
+        "lifecycle",
+        "vitest"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/lifecycle.ts",
+      "type": "file",
+      "name": "lifecycle.ts",
+      "filePath": "web/src/lib/lifecycle.ts",
+      "summary": "Maps task status to lifecycle stages and to corresponding CSS color variables for the board UI.",
+      "tags": [
+        "lifecycle",
+        "styling",
+        "status"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/lifecycle.ts:lifecycleStage",
+      "type": "function",
+      "name": "lifecycleStage",
+      "filePath": "web/src/lib/lifecycle.ts",
+      "lineRange": [
+        8,
+        21
+      ],
+      "summary": "Returns a status group ('open' | 'in-progress' | 'closed') for a given task status.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/lifecycle.ts:statusColorVar",
+      "type": "function",
+      "name": "statusColorVar",
+      "filePath": "web/src/lib/lifecycle.ts",
+      "lineRange": [
+        27,
+        40
+      ],
+      "summary": "Returns the CSS color variable for a given task status.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/derive.test.ts",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/derive.test.ts",
+      "target": "file:web/src/lib/derive.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/derive.test.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "file:web/src/components/ui/MetricStrip.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/docTitle.test.ts",
+      "target": "file:web/src/lib/docTitle.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/lifecycle.test.ts",
+      "target": "file:web/src/lib/lifecycle.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "class:web/src/lib/datasource.tsx:LocalServeSource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "function:web/src/lib/datasource.tsx:DataSourceProvider",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "function:web/src/lib/datasource.tsx:useDataSource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:allTasks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:boardColumns",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:designBoard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:agentActivity",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:lastAction",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:findTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:canMergeFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:eventsByTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:statsByTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:taskTokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:fmtDuration",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:fmtTokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:fmtCost",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:taskRuntimeMs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:taskMetrics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/docTitle.ts",
+      "target": "function:web/src/lib/docTitle.ts:docTitle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/icons.tsx",
+      "target": "function:web/src/lib/icons.tsx:Icon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/lifecycle.ts",
+      "target": "function:web/src/lib/lifecycle.ts:lifecycleStage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/lifecycle.ts",
+      "target": "function:web/src/lib/lifecycle.ts:statusColorVar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "class:web/src/lib/datasource.tsx:LocalServeSource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "function:web/src/lib/datasource.tsx:DataSourceProvider",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "function:web/src/lib/datasource.tsx:useDataSource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:allTasks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:boardColumns",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:designBoard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:agentActivity",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:lastAction",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:findTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:canMergeFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:eventsByTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:statsByTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:taskTokens",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:fmtDuration",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:fmtTokens",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:fmtCost",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:taskRuntimeMs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "function:web/src/lib/derive.ts:taskMetrics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/docTitle.ts",
+      "target": "function:web/src/lib/docTitle.ts:docTitle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/icons.tsx",
+      "target": "function:web/src/lib/icons.tsx:Icon",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/lifecycle.ts",
+      "target": "function:web/src/lib/lifecycle.ts:lifecycleStage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/lifecycle.ts",
+      "target": "function:web/src/lib/lifecycle.ts:statusColorVar",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "file:web/src/lib/datasource.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/datasource.tsx",
+      "target": "file:web/src/lib/source.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/derive.ts",
+      "target": "file:web/src/lib/derive.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/docTitle.ts",
+      "target": "file:web/src/lib/docTitle.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/lifecycle.ts",
+      "target": "file:web/src/lib/lifecycle.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "nodes": [
+    {
+      "id": "service:cloud/relay/Dockerfile",
+      "type": "service",
+      "name": "Dockerfile",
+      "filePath": "cloud/relay/Dockerfile",
+      "summary": "Multi-stage Docker build for the cloud relay service: a slim node:24 base with corepack-pinned pnpm, a build stage that installs workspace deps and compiles the relay package, and a runtime stage that ships the built dist plus Prisma schema and runs migrations before booting the bootstrap server on port 4310.",
+      "tags": ["containerization", "infrastructure", "deployment", "multi-stage-build", "monorepo"],
+      "complexity": "moderate",
+      "languageNotes": "Build context is the parent cloud/ directory (pnpm workspace root), so COPY paths like 'relay/' and 'wire/' resolve from there. Runtime stage installs libssl because the slim base lacks openssl, which Prisma needs to silence its version-detection warning."
+    },
+    {
+      "id": "service:cloud/relay/Dockerfile:base",
+      "type": "service",
+      "name": "base",
+      "filePath": "cloud/relay/Dockerfile",
+      "lineRange": [12, 18],
+      "summary": "Shared base stage on node:24-slim that pins pnpm via corepack and sets /app as the working directory; reused by the build and runtime stages.",
+      "tags": ["containerization", "base-image", "node", "pnpm", "corepack"],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:cloud/relay/Dockerfile:build",
+      "type": "service",
+      "name": "build",
+      "filePath": "cloud/relay/Dockerfile",
+      "lineRange": [19, 29],
+      "summary": "Build stage that copies workspace manifests and source for the wire and relay packages, runs pnpm install with a frozen lockfile, then runs the filtered build for @pactify-apps/relay.",
+      "tags": ["containerization", "build-stage", "pnpm-workspace", "typescript"],
+      "complexity": "simple"
+    },
+    {
+      "id": "service:cloud/relay/Dockerfile:runtime",
+      "type": "service",
+      "name": "runtime",
+      "filePath": "cloud/relay/Dockerfile",
+      "lineRange": [30, 50],
+      "summary": "Runtime stage that sets NODE_ENV=production, installs openssl for Prisma, copies compiled dist, node_modules, prisma assets and prisma.config.ts from the build stage, exposes port 4310, and CMD runs prisma migrate deploy followed by node dist/server-main.js.",
+      "tags": ["containerization", "runtime-stage", "prisma", "production"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "service:cloud/relay/Dockerfile",
+      "target": "service:cloud/relay/Dockerfile:base",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "service:cloud/relay/Dockerfile",
+      "target": "service:cloud/relay/Dockerfile:build",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "service:cloud/relay/Dockerfile",
+      "target": "service:cloud/relay/Dockerfile:runtime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "service:cloud/relay/Dockerfile",
+      "target": "file:cloud/relay/src/server-main.ts",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "service:cloud/relay/Dockerfile",
+      "target": "file:cloud/relay/prisma/schema.prisma",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

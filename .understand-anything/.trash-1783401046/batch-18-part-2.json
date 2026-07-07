@@ -1,0 +1,1197 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/cloudauth/pairing_test.go",
+      "type": "file",
+      "name": "pairing_test.go",
+      "filePath": "internal/cloudauth/pairing_test.go",
+      "summary": "Round-trip and tamper-resistance tests for the pairing flow plus a golden vector for PairingComplete output.",
+      "tags": [
+        "test",
+        "pairing",
+        "roundtrip",
+        "tamper"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Go module file. Test file in the same Go package as the production files alongside it."
+    },
+    {
+      "id": "file:internal/cloudauth/secret.go",
+      "type": "file",
+      "name": "secret.go",
+      "filePath": "internal/cloudauth/secret.go",
+      "summary": "Master-secret persistence: env / file precedence loader, atomic hex writer, and the canonical ~/.pact path resolver.",
+      "tags": [
+        "master-secret",
+        "persistence",
+        "config",
+        "utility"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Go module file."
+    },
+    {
+      "id": "file:internal/cloudauth/token.go",
+      "type": "file",
+      "name": "token.go",
+      "filePath": "internal/cloudauth/token.go",
+      "summary": "HMAC-signed bearer tokens with account id and exp claim and the matching verify routine with constant-time MAC comparison.",
+      "tags": [
+        "token",
+        "hmac",
+        "authentication",
+        "compact-jwt"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Go module file."
+    },
+    {
+      "id": "file:internal/cloudclient/client.go",
+      "type": "file",
+      "name": "client.go",
+      "filePath": "internal/cloudclient/client.go",
+      "summary": "HTTP client wrapping the relay endpoint, including session load/save and the relay URL env helper used by both login and relay flows.",
+      "tags": [
+        "client",
+        "http-client",
+        "authentication",
+        "session"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Go module file."
+    },
+    {
+      "id": "file:internal/cloudclient/client_test.go",
+      "type": "file",
+      "name": "client_test.go",
+      "filePath": "internal/cloudclient/client_test.go",
+      "summary": "httptest-driven tests covering successful authentication, bad-status rejection, session round-trip, and TokenExpMs parsing.",
+      "tags": [
+        "test",
+        "http-mock",
+        "authentication",
+        "session"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Go module file. Test file in the same Go package as the production files alongside it."
+    },
+    {
+      "id": "file:internal/cloudclient/pairing.go",
+      "type": "file",
+      "name": "pairing.go",
+      "filePath": "internal/cloudclient/pairing.go",
+      "summary": "High-level Pair flow that drives the cloud relay device-pairing protocol: init, code display, poll for ciphertext, then complete.",
+      "tags": [
+        "pairing",
+        "http-client",
+        "device-pairing",
+        "polling"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Go module file."
+    },
+    {
+      "id": "function:internal/cloudauth/pairing_test.go:TestGoldenPairingComplete",
+      "type": "function",
+      "name": "TestGoldenPairingComplete",
+      "filePath": "internal/cloudauth/pairing_test.go",
+      "lineRange": [
+        14,
+        27
+      ],
+      "summary": "Pins the PairingComplete plaintext and signature against the canonical fixture.",
+      "tags": [
+        "test",
+        "golden",
+        "pairing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudauth/pairing_test.go:TestPairingRoundTrip",
+      "type": "function",
+      "name": "TestPairingRoundTrip",
+      "filePath": "internal/cloudauth/pairing_test.go",
+      "lineRange": [
+        29,
+        50
+      ],
+      "summary": "End-to-end PairingRespond -> PairingComplete happy path over random secrets.",
+      "tags": [
+        "test",
+        "pairing",
+        "roundtrip"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudauth/pairing_test.go:TestPairingCompleteRejectsTamper",
+      "type": "function",
+      "name": "TestPairingCompleteRejectsTamper",
+      "filePath": "internal/cloudauth/pairing_test.go",
+      "lineRange": [
+        52,
+        67
+      ],
+      "summary": "Asserts PairingComplete rejects ciphertext that has been tampered with after sealing.",
+      "tags": [
+        "test",
+        "pairing",
+        "tamper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudauth/secret.go:LoadMasterSecret",
+      "type": "function",
+      "name": "LoadMasterSecret",
+      "filePath": "internal/cloudauth/secret.go",
+      "lineRange": [
+        29,
+        54
+      ],
+      "summary": "Resolves the master secret from PACTIFY_MASTER_SECRET, PACT_MASTER_SECRET, then ~/.pact/master.secret, in that order.",
+      "tags": [
+        "master-secret",
+        "precedence",
+        "loader"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudauth/secret.go:PactifySecretPath",
+      "type": "function",
+      "name": "PactifySecretPath",
+      "filePath": "internal/cloudauth/secret.go",
+      "lineRange": [
+        58,
+        64
+      ],
+      "summary": "Returns the canonical master-secret path under the user's home dir.",
+      "tags": [
+        "path",
+        "helper",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudauth/secret.go:SaveMasterSecret",
+      "type": "function",
+      "name": "SaveMasterSecret",
+      "filePath": "internal/cloudauth/secret.go",
+      "lineRange": [
+        69,
+        86
+      ],
+      "summary": "Atomically writes the hex-encoded master secret to disk, creating the config dir if needed.",
+      "tags": [
+        "master-secret",
+        "writer",
+        "persistence"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudauth/secret.go:decodeMasterSecret",
+      "type": "function",
+      "name": "decodeMasterSecret",
+      "filePath": "internal/cloudauth/secret.go",
+      "lineRange": [
+        88,
+        97
+      ],
+      "summary": "Parses a hex master secret with whitespace tolerance and length validation.",
+      "tags": [
+        "master-secret",
+        "decode",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudauth/token.go:IssueToken",
+      "type": "function",
+      "name": "IssueToken",
+      "filePath": "internal/cloudauth/token.go",
+      "lineRange": [
+        32,
+        40
+      ],
+      "summary": "Builds and base64url-encodes the body, signs it with the per-account secret, and concatenates body.sig.",
+      "tags": [
+        "token",
+        "issue",
+        "hmac"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudauth/token.go:VerifyToken",
+      "type": "function",
+      "name": "VerifyToken",
+      "filePath": "internal/cloudauth/token.go",
+      "lineRange": [
+        46,
+        68
+      ],
+      "summary": "Validates the body.sig split, replays HMAC in constant time, and decodes the payload to check expiry.",
+      "tags": [
+        "token",
+        "verify",
+        "hmac"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client.go:New",
+      "type": "function",
+      "name": "New",
+      "filePath": "internal/cloudclient/client.go",
+      "lineRange": [
+        42,
+        47
+      ],
+      "summary": "Trims a trailing slash from the base URL and returns a Client with a configured HTTP client.",
+      "tags": [
+        "factory",
+        "constructor",
+        "http-client"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client.go:Authenticate",
+      "type": "function",
+      "name": "Authenticate",
+      "filePath": "internal/cloudclient/client.go",
+      "lineRange": [
+        67,
+        108
+      ],
+      "summary": "Derives the account keypair, signs a server challenge and posts it, returning an authenticated Session.",
+      "tags": [
+        "authentication",
+        "http",
+        "challenge"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/cloudclient/client.go:SessionPath",
+      "type": "function",
+      "name": "SessionPath",
+      "filePath": "internal/cloudclient/client.go",
+      "lineRange": [
+        111,
+        117
+      ],
+      "summary": "Returns the canonical ~/.pact/session.json path used by SaveSession / LoadSession.",
+      "tags": [
+        "path",
+        "session",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client.go:SaveSession",
+      "type": "function",
+      "name": "SaveSession",
+      "filePath": "internal/cloudclient/client.go",
+      "lineRange": [
+        120,
+        133
+      ],
+      "summary": "Marshals the Session to JSON and persists it under the user's home config dir.",
+      "tags": [
+        "session",
+        "persistence",
+        "config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client.go:LoadSession",
+      "type": "function",
+      "name": "LoadSession",
+      "filePath": "internal/cloudclient/client.go",
+      "lineRange": [
+        136,
+        150
+      ],
+      "summary": "Reads, parses, and returns the stored Session if present, or an error otherwise.",
+      "tags": [
+        "session",
+        "loader",
+        "config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client.go:TokenExpMs",
+      "type": "function",
+      "name": "TokenExpMs",
+      "filePath": "internal/cloudclient/client.go",
+      "lineRange": [
+        154,
+        170
+      ],
+      "summary": "Parses a bearer token's body and returns the unix-ms expiry epoch.",
+      "tags": [
+        "token",
+        "parse",
+        "expiry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client_test.go:mockRelay",
+      "type": "function",
+      "name": "mockRelay",
+      "filePath": "internal/cloudclient/client_test.go",
+      "lineRange": [
+        18,
+        46
+      ],
+      "summary": "Stands up an httptest server that mimics a relay, verifies signed challenges, and issues tokens.",
+      "tags": [
+        "test",
+        "mock",
+        "http-server"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client_test.go:TestAuthenticateSuccess",
+      "type": "function",
+      "name": "TestAuthenticateSuccess",
+      "filePath": "internal/cloudclient/client_test.go",
+      "lineRange": [
+        48,
+        72
+      ],
+      "summary": "Runs Authenticate against the mock relay, then verifies the issued token is the same.",
+      "tags": [
+        "test",
+        "authentication",
+        "success"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client_test.go:TestAuthenticateRejectsBadStatus",
+      "type": "function",
+      "name": "TestAuthenticateRejectsBadStatus",
+      "filePath": "internal/cloudclient/client_test.go",
+      "lineRange": [
+        74,
+        83
+      ],
+      "summary": "Checks that a non-200 from the relay yields a wrapped error from Authenticate.",
+      "tags": [
+        "test",
+        "authentication",
+        "error"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client_test.go:TestSessionSaveLoadRoundTrip",
+      "type": "function",
+      "name": "TestSessionSaveLoadRoundTrip",
+      "filePath": "internal/cloudclient/client_test.go",
+      "lineRange": [
+        85,
+        98
+      ],
+      "summary": "Persists a session through SaveSession and reloads it via LoadSession.",
+      "tags": [
+        "test",
+        "session",
+        "roundtrip"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/client_test.go:TestTokenExpMs",
+      "type": "function",
+      "name": "TestTokenExpMs",
+      "filePath": "internal/cloudclient/client_test.go",
+      "lineRange": [
+        100,
+        109
+      ],
+      "summary": "Verifies that TokenExpMs recovers the embedded expiry from a freshly issued token.",
+      "tags": [
+        "test",
+        "token",
+        "parse"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/cloudclient/pairing.go:Pair",
+      "type": "function",
+      "name": "Pair",
+      "filePath": "internal/cloudclient/pairing.go",
+      "lineRange": [
+        38,
+        87
+      ],
+      "summary": "Drives the public pairing flow: init, surface code, poll relay, complete.",
+      "tags": [
+        "pairing",
+        "http",
+        "roundtrip"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/cloudclient/pairing.go:doJSON",
+      "type": "function",
+      "name": "doJSON",
+      "filePath": "internal/cloudclient/pairing.go",
+      "lineRange": [
+        91,
+        122
+      ],
+      "summary": "Internal helper that POSTs a typed JSON body and decodes the typed JSON response, with auth header support.",
+      "tags": [
+        "http",
+        "helper",
+        "json"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/cloudclient/client.go:Session",
+      "type": "class",
+      "name": "Session",
+      "filePath": "internal/cloudclient/client.go",
+      "lineRange": [
+        27,
+        33
+      ],
+      "summary": "Persisted session: relay URL, account id, public key, current token, and the obtain timestamp.",
+      "tags": [
+        "session",
+        "data-class",
+        "persistence"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/cloudclient/client.go:Client",
+      "type": "class",
+      "name": "Client",
+      "filePath": "internal/cloudclient/client.go",
+      "lineRange": [
+        36,
+        39
+      ],
+      "summary": "Thin HTTP client for the relay: base URL plus a configured *http.Client.",
+      "tags": [
+        "client",
+        "http",
+        "data-class"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/cloudauth/pairing_test.go",
+      "target": "function:internal/cloudauth/pairing_test.go:TestGoldenPairingComplete",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudauth/pairing_test.go",
+      "target": "function:internal/cloudauth/pairing_test.go:TestPairingRoundTrip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudauth/pairing_test.go",
+      "target": "function:internal/cloudauth/pairing_test.go:TestPairingCompleteRejectsTamper",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "function:internal/cloudauth/secret.go:LoadMasterSecret",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "function:internal/cloudauth/secret.go:PactifySecretPath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "function:internal/cloudauth/secret.go:SaveMasterSecret",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "function:internal/cloudauth/secret.go:decodeMasterSecret",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudauth/token.go",
+      "target": "function:internal/cloudauth/token.go:IssueToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudauth/token.go",
+      "target": "function:internal/cloudauth/token.go:VerifyToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:New",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:Authenticate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:SessionPath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:SaveSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:LoadSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:TokenExpMs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "class:internal/cloudclient/client.go:Session",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "class:internal/cloudclient/client.go:Client",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:mockRelay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:TestAuthenticateSuccess",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:TestAuthenticateRejectsBadStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:TestSessionSaveLoadRoundTrip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:TestTokenExpMs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "function:internal/cloudclient/pairing.go:Pair",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "function:internal/cloudclient/pairing.go:doJSON",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudauth/cloudauth_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudauth/crypto.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudauth/golden_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudauth/keys.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudauth/pairing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudauth/pairing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudauth/secret.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudauth/token.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "file:internal/cloudauth/cloudauth_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "file:internal/cloudauth/crypto.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "file:internal/cloudauth/golden_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "file:internal/cloudauth/keys.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "file:internal/cloudauth/pairing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "file:internal/cloudauth/pairing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "file:internal/cloudauth/secret.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "file:internal/cloudauth/token.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudauth/cloudauth_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudauth/crypto.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudauth/golden_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudauth/keys.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudauth/pairing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudauth/pairing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudauth/secret.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudauth/token.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/cloudauth/pairing_test.go",
+      "target": "function:internal/cloudauth/pairing_test.go:TestGoldenPairingComplete",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudauth/pairing_test.go",
+      "target": "function:internal/cloudauth/pairing_test.go:TestPairingRoundTrip",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudauth/pairing_test.go",
+      "target": "function:internal/cloudauth/pairing_test.go:TestPairingCompleteRejectsTamper",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "function:internal/cloudauth/secret.go:LoadMasterSecret",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "function:internal/cloudauth/secret.go:PactifySecretPath",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "function:internal/cloudauth/secret.go:SaveMasterSecret",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudauth/token.go",
+      "target": "function:internal/cloudauth/token.go:IssueToken",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudauth/token.go",
+      "target": "function:internal/cloudauth/token.go:VerifyToken",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "class:internal/cloudclient/client.go:Session",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "class:internal/cloudclient/client.go:Client",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:New",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:Authenticate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:SessionPath",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:SaveSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:LoadSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "function:internal/cloudclient/client.go:TokenExpMs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:TestAuthenticateSuccess",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:TestAuthenticateRejectsBadStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:TestSessionSaveLoadRoundTrip",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/client_test.go",
+      "target": "function:internal/cloudclient/client_test.go:TestTokenExpMs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "function:internal/cloudclient/pairing.go:Pair",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudauth/pairing_test.go:TestGoldenPairingComplete",
+      "target": "function:internal/cloudauth/pairing.go:PairingComplete",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudauth/pairing_test.go:TestPairingRoundTrip",
+      "target": "function:internal/cloudauth/pairing.go:NewPairingEphemeral",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudauth/pairing_test.go:TestPairingRoundTrip",
+      "target": "function:internal/cloudauth/pairing.go:PairingRespond",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudauth/pairing_test.go:TestPairingRoundTrip",
+      "target": "function:internal/cloudauth/pairing.go:PairingComplete",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudauth/pairing_test.go:TestPairingCompleteRejectsTamper",
+      "target": "function:internal/cloudauth/pairing.go:NewPairingEphemeral",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudauth/pairing_test.go:TestPairingCompleteRejectsTamper",
+      "target": "function:internal/cloudauth/pairing.go:PairingRespond",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudauth/pairing_test.go:TestPairingCompleteRejectsTamper",
+      "target": "function:internal/cloudauth/pairing.go:PairingComplete",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client.go:Authenticate",
+      "target": "function:internal/cloudauth/keys.go:DeriveAccountKeypair",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:mockRelay",
+      "target": "function:internal/cloudauth/token.go:IssueToken",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestAuthenticateSuccess",
+      "target": "function:internal/cloudclient/client.go:Authenticate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestAuthenticateSuccess",
+      "target": "function:internal/cloudclient/client.go:New",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestAuthenticateSuccess",
+      "target": "function:internal/cloudauth/token.go:VerifyToken",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestAuthenticateRejectsBadStatus",
+      "target": "function:internal/cloudclient/client.go:Authenticate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestAuthenticateRejectsBadStatus",
+      "target": "function:internal/cloudclient/client.go:New",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestSessionSaveLoadRoundTrip",
+      "target": "function:internal/cloudclient/client.go:SaveSession",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestSessionSaveLoadRoundTrip",
+      "target": "function:internal/cloudclient/client.go:LoadSession",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestTokenExpMs",
+      "target": "function:internal/cloudauth/token.go:IssueToken",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/client_test.go:TestTokenExpMs",
+      "target": "function:internal/cloudclient/client.go:TokenExpMs",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/pairing.go:Pair",
+      "target": "function:internal/cloudauth/pairing.go:NewPairingEphemeral",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/cloudclient/pairing.go:Pair",
+      "target": "function:internal/cloudauth/pairing.go:PairingComplete",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "file:internal/cloudauth/cloudauth_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "file:internal/cloudauth/golden_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudauth/secret.go",
+      "target": "file:internal/cloudauth/pairing_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudauth/token.go",
+      "target": "file:internal/cloudauth/cloudauth_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudauth/token.go",
+      "target": "file:internal/cloudauth/golden_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudauth/token.go",
+      "target": "file:internal/cloudauth/pairing_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudclient/client_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudclient/client.go",
+      "target": "file:internal/cloudclient/pairing_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudclient/client_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/cloudclient/pairing.go",
+      "target": "file:internal/cloudclient/pairing_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

@@ -1,0 +1,1543 @@
+{
+  "nodes": [
+    {
+      "id": "file:web/src/lib/ants.ts",
+      "type": "file",
+      "name": "ants.ts",
+      "filePath": "web/src/lib/ants.ts",
+      "summary": "Generates deterministic seat/role colors and gradient backgrounds for ant-like avatar pucks in the canvas.",
+      "tags": [
+        "utility",
+        "styling",
+        "canvas",
+        "color"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/ants.ts:casteForRoles",
+      "type": "function",
+      "name": "casteForRoles",
+      "filePath": "web/src/lib/ants.ts",
+      "lineRange": [
+        37,
+        49
+      ],
+      "summary": "Determines a caste name (queen/worker/forager/etc.) for a seat by inspecting its roles.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/ants.ts:padGradient",
+      "type": "function",
+      "name": "padGradient",
+      "filePath": "web/src/lib/ants.ts",
+      "lineRange": [
+        92,
+        101
+      ],
+      "summary": "Returns a CSS conic-gradient string using the seat's deterministic gradient palette.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/api.test.ts",
+      "type": "file",
+      "name": "api.test.ts",
+      "filePath": "web/src/lib/api.test.ts",
+      "summary": "Vitest suite exercising the fetch/write helpers, event subscription, and stream reader against a mocked EventSource.",
+      "tags": [
+        "test",
+        "api-client",
+        "vitest"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:web/src/lib/api.ts",
+      "type": "file",
+      "name": "api.ts",
+      "filePath": "web/src/lib/api.ts",
+      "summary": "Thin REST client for the pactify backend covering state, registry, wiring, agents, audit, orchestration, plans, and live event streams.",
+      "tags": [
+        "api-client",
+        "http",
+        "rest",
+        "fetch"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:writeJSON",
+      "type": "function",
+      "name": "writeJSON",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        39,
+        49
+      ],
+      "summary": "Helper that POSTs/PUTs/DELETEs JSON to an API URL and throws a readable error on failure.",
+      "tags": [
+        "utility",
+        "helper",
+        "writer",
+        "internal"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:fetchProjects",
+      "type": "function",
+      "name": "fetchProjects",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        73,
+        89
+      ],
+      "summary": "Fetches the project list plus the registry and merges them into a projects view with group annotations.",
+      "tags": [
+        "utility",
+        "helper",
+        "getter",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:fmtDuration",
+      "type": "function",
+      "name": "fmtDuration",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        122,
+        129
+      ],
+      "summary": "Formats seconds into a compact 'Xm Ys' style duration string.",
+      "tags": [
+        "utility",
+        "helper",
+        "formatter",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:postTask",
+      "type": "function",
+      "name": "postTask",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        142,
+        147
+      ],
+      "summary": "Function postTask defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "writer",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:postVerb",
+      "type": "function",
+      "name": "postVerb",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        149,
+        155
+      ],
+      "summary": "Function postVerb defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "writer",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:putLayout",
+      "type": "function",
+      "name": "putLayout",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        160,
+        162
+      ],
+      "summary": "Function putLayout defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "writer",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:postRegister",
+      "type": "function",
+      "name": "postRegister",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        175,
+        188
+      ],
+      "summary": "Registers a new project by path, supporting optional opts and returning parsed JSON.",
+      "tags": [
+        "utility",
+        "helper",
+        "writer",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:deleteRegistry",
+      "type": "function",
+      "name": "deleteRegistry",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        190,
+        192
+      ],
+      "summary": "Function deleteRegistry defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:renameRegistry",
+      "type": "function",
+      "name": "renameRegistry",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        194,
+        201
+      ],
+      "summary": "Function renameRegistry defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:postWire",
+      "type": "function",
+      "name": "postWire",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        206,
+        213
+      ],
+      "summary": "Function postWire defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "writer",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:getAudit",
+      "type": "function",
+      "name": "getAudit",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        242,
+        245
+      ],
+      "summary": "Function getAudit defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "getter",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:setAgentConfig",
+      "type": "function",
+      "name": "setAgentConfig",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        265,
+        271
+      ],
+      "summary": "Function setAgentConfig defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:registerAgent",
+      "type": "function",
+      "name": "registerAgent",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        273,
+        277
+      ],
+      "summary": "Function registerAgent defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:unregisterAgent",
+      "type": "function",
+      "name": "unregisterAgent",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        279,
+        281
+      ],
+      "summary": "Function unregisterAgent defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:setupApply",
+      "type": "function",
+      "name": "setupApply",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        311,
+        319
+      ],
+      "summary": "Applies a setup-suggest payload to the server and returns the response.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:expandRecipe",
+      "type": "function",
+      "name": "expandRecipe",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        323,
+        326
+      ],
+      "summary": "Function expandRecipe defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:applyPlan",
+      "type": "function",
+      "name": "applyPlan",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        331,
+        341
+      ],
+      "summary": "Submits a plan-review payload to the server to apply a generated plan.",
+      "tags": [
+        "utility",
+        "helper",
+        "action",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:generatePlan",
+      "type": "function",
+      "name": "generatePlan",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        349,
+        355
+      ],
+      "summary": "Function generatePlan defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "factory",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:runOrchestrate",
+      "type": "function",
+      "name": "runOrchestrate",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        368,
+        374
+      ],
+      "summary": "Function runOrchestrate defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "action",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:resumeOrchestrate",
+      "type": "function",
+      "name": "resumeOrchestrate",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        376,
+        382
+      ],
+      "summary": "Function resumeOrchestrate defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:shipFeature",
+      "type": "function",
+      "name": "shipFeature",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        393,
+        399
+      ],
+      "summary": "Function shipFeature defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:getDiff",
+      "type": "function",
+      "name": "getDiff",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        401,
+        403
+      ],
+      "summary": "Function getDiff defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "getter",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:pruneSessions",
+      "type": "function",
+      "name": "pruneSessions",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        405,
+        414
+      ],
+      "summary": "POSTs to a prune endpoint for a given session kind and returns the response.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:createManifest",
+      "type": "function",
+      "name": "createManifest",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        419,
+        429
+      ],
+      "summary": "Creates a new manifest from raw TOML by POSTing to /api/manifests.",
+      "tags": [
+        "utility",
+        "helper",
+        "factory",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:deleteManifest",
+      "type": "function",
+      "name": "deleteManifest",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        430,
+        436
+      ],
+      "summary": "Function deleteManifest defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:browseFs",
+      "type": "function",
+      "name": "browseFs",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        438,
+        441
+      ],
+      "summary": "Function browseFs defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:subscribeAgentStream",
+      "type": "function",
+      "name": "subscribeAgentStream",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        447,
+        458
+      ],
+      "summary": "Subscribes to a Server-Sent Events stream for a task's agent output and invokes onLine per event.",
+      "tags": [
+        "utility",
+        "helper",
+        "subscription",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:fetchEventsLog",
+      "type": "function",
+      "name": "fetchEventsLog",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        465,
+        471
+      ],
+      "summary": "Function fetchEventsLog defined in web/src/lib/api.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "getter",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/api.ts:subscribeEvents",
+      "type": "function",
+      "name": "subscribeEvents",
+      "filePath": "web/src/lib/api.ts",
+      "lineRange": [
+        475,
+        487
+      ],
+      "summary": "Subscribes to the project's live event SSE channel and dispatches parsed events and live markers.",
+      "tags": [
+        "utility",
+        "helper",
+        "subscription",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/canvas.test.ts",
+      "type": "file",
+      "name": "canvas.test.ts",
+      "filePath": "web/src/lib/canvas.test.ts",
+      "summary": "Vitest suite verifying graph building, role coloring, placement, merging, and ant flag assignment invariants.",
+      "tags": [
+        "test",
+        "canvas",
+        "layout",
+        "vitest"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/canvas.test.ts:graphOf",
+      "type": "function",
+      "name": "graphOf",
+      "filePath": "web/src/lib/canvas.test.ts",
+      "lineRange": [
+        67,
+        111
+      ],
+      "summary": "Builds a node graph from a state plus drafts (test helper, mirrors mergeNodes).",
+      "tags": [
+        "utility",
+        "helper",
+        "internal"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:web/src/lib/canvas.ts",
+      "type": "file",
+      "name": "canvas.ts",
+      "filePath": "web/src/lib/canvas.ts",
+      "summary": "Pure layout and rendering helpers that build node graphs, place new nodes, merge persisted layout, and assign ant flag values.",
+      "tags": [
+        "canvas",
+        "layout",
+        "graph",
+        "rendering"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/canvas.ts:normalizeLayout",
+      "type": "function",
+      "name": "normalizeLayout",
+      "filePath": "web/src/lib/canvas.ts",
+      "lineRange": [
+        35,
+        40
+      ],
+      "summary": "Ensures a layout payload has the expected version and top-level shape.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/canvas.ts:mergeOfficePos",
+      "type": "function",
+      "name": "mergeOfficePos",
+      "filePath": "web/src/lib/canvas.ts",
+      "lineRange": [
+        47,
+        53
+      ],
+      "summary": "Merges a measured office position for a seat into the persisted layout.",
+      "tags": [
+        "utility",
+        "helper",
+        "layout",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/canvas.ts:roleColorVar",
+      "type": "function",
+      "name": "roleColorVar",
+      "filePath": "web/src/lib/canvas.ts",
+      "lineRange": [
+        65,
+        70
+      ],
+      "summary": "Picks the CSS color variable for a node given its agent roles.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/canvas.ts:featureStyle",
+      "type": "function",
+      "name": "featureStyle",
+      "filePath": "web/src/lib/canvas.ts",
+      "lineRange": [
+        97,
+        100
+      ],
+      "summary": "Computes the visual style for a feature node based on its child rows.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/canvas.ts:placeNew",
+      "type": "function",
+      "name": "placeNew",
+      "filePath": "web/src/lib/canvas.ts",
+      "lineRange": [
+        128,
+        218
+      ],
+      "summary": "Assigns x/y coordinates to brand-new graph nodes that have no persisted position.",
+      "tags": [
+        "utility",
+        "helper",
+        "layout",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/canvas.ts:mergeNodes",
+      "type": "function",
+      "name": "mergeNodes",
+      "filePath": "web/src/lib/canvas.ts",
+      "lineRange": [
+        246,
+        334
+      ],
+      "summary": "Merges a new graph with the previous layout, preserving positions and recomputing sizes.",
+      "tags": [
+        "utility",
+        "helper",
+        "layout",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/canvas.ts:assignAntFlags",
+      "type": "function",
+      "name": "assignAntFlags",
+      "filePath": "web/src/lib/canvas.ts",
+      "lineRange": [
+        357,
+        367
+      ],
+      "summary": "Marks the first ANT_CAP edges along the merge order so they render with the animated ant treatment.",
+      "tags": [
+        "utility",
+        "helper",
+        "layout",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/comms.test.ts",
+      "type": "file",
+      "name": "comms.test.ts",
+      "filePath": "web/src/lib/comms.test.ts",
+      "summary": "Vitest cases for the flatTasks / unmetDeps / pulseTargets helpers.",
+      "tags": [
+        "test",
+        "utility",
+        "vitest"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/comms.ts",
+      "type": "file",
+      "name": "comms.ts",
+      "filePath": "web/src/lib/comms.ts",
+      "summary": "Small pure helpers for flattening tasks, computing unmet dependencies, and identifying pulse-target task transitions.",
+      "tags": [
+        "utility",
+        "derivation",
+        "task-state"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/comms.ts:flatTasks",
+      "type": "function",
+      "name": "flatTasks",
+      "filePath": "web/src/lib/comms.ts",
+      "lineRange": [
+        4,
+        8
+      ],
+      "summary": "Flattens all features' tasks into a single array, skipping draft placeholders.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/comms.ts:unmetDeps",
+      "type": "function",
+      "name": "unmetDeps",
+      "filePath": "web/src/lib/comms.ts",
+      "lineRange": [
+        14,
+        16
+      ],
+      "summary": "Returns the deps of a task whose targets are not present or not accepted in byId.",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/lib/comms.ts:pulseTargets",
+      "type": "function",
+      "name": "pulseTargets",
+      "filePath": "web/src/lib/comms.ts",
+      "lineRange": [
+        21,
+        30
+      ],
+      "summary": "Computes task ids whose status changed between prev and next (used for pulse animations).",
+      "tags": [
+        "utility",
+        "helper",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/datasource.test.tsx",
+      "type": "file",
+      "name": "datasource.test.tsx",
+      "filePath": "web/src/lib/datasource.test.tsx",
+      "summary": "Vitest suite verifying the LocalServeSource and DataSourceProvider behavior over the API layer.",
+      "tags": [
+        "test",
+        "data-source",
+        "react",
+        "vitest"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:web/src/lib/api.test.ts",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "file:web/src/lib/canvas.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/canvas.test.ts",
+      "target": "file:web/src/lib/canvas.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/canvas.test.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/comms.test.ts",
+      "target": "file:web/src/lib/comms.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/comms.test.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/comms.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/datasource.test.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/datasource.test.tsx",
+      "target": "file:web/src/lib/datasource.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/datasource.test.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/ants.ts",
+      "target": "function:web/src/lib/ants.ts:casteForRoles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/ants.ts",
+      "target": "function:web/src/lib/ants.ts:padGradient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:writeJSON",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:fetchProjects",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:fmtDuration",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:postTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:postVerb",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:putLayout",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:postRegister",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:deleteRegistry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:renameRegistry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:postWire",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:getAudit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:setAgentConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:registerAgent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:unregisterAgent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:setupApply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:expandRecipe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:applyPlan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:generatePlan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:runOrchestrate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:resumeOrchestrate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:shipFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:getDiff",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:pruneSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:createManifest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:deleteManifest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:browseFs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:subscribeAgentStream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:fetchEventsLog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:subscribeEvents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/canvas.test.ts",
+      "target": "function:web/src/lib/canvas.test.ts:graphOf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:normalizeLayout",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:mergeOfficePos",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:roleColorVar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:featureStyle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:placeNew",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:mergeNodes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:assignAntFlags",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/comms.ts",
+      "target": "function:web/src/lib/comms.ts:flatTasks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/comms.ts",
+      "target": "function:web/src/lib/comms.ts:unmetDeps",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/comms.ts",
+      "target": "function:web/src/lib/comms.ts:pulseTargets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/ants.ts",
+      "target": "function:web/src/lib/ants.ts:casteForRoles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/ants.ts",
+      "target": "function:web/src/lib/ants.ts:padGradient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:fetchProjects",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:fmtDuration",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:postTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:postVerb",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:putLayout",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:postRegister",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:deleteRegistry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:renameRegistry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:postWire",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:getAudit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:setAgentConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:registerAgent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:unregisterAgent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:setupApply",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:expandRecipe",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:applyPlan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:generatePlan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:runOrchestrate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:resumeOrchestrate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:shipFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:getDiff",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:pruneSessions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:createManifest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:deleteManifest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:browseFs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:subscribeAgentStream",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:fetchEventsLog",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "function:web/src/lib/api.ts:subscribeEvents",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:normalizeLayout",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:mergeOfficePos",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:roleColorVar",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:featureStyle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:placeNew",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:mergeNodes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "function:web/src/lib/canvas.ts:assignAntFlags",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/comms.ts",
+      "target": "function:web/src/lib/comms.ts:flatTasks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/comms.ts",
+      "target": "function:web/src/lib/comms.ts:unmetDeps",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/comms.ts",
+      "target": "function:web/src/lib/comms.ts:pulseTargets",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "file:web/src/lib/api.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "file:web/src/lib/datasource.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "file:web/src/lib/derive.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/api.ts",
+      "target": "file:web/src/lib/relaysource.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/canvas.ts",
+      "target": "file:web/src/lib/canvas.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/comms.ts",
+      "target": "file:web/src/lib/comms.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

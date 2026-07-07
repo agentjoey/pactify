@@ -1,0 +1,310 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 5,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "cloud/crypto/src/crypto.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 31,
+      "nonEmptyLines": 27,
+      "functions": [
+        {
+          "name": "generateRunKey",
+          "startLine": 11,
+          "endLine": 13,
+          "params": []
+        },
+        {
+          "name": "encryptEvent",
+          "startLine": 16,
+          "endLine": 21,
+          "params": [
+            "key",
+            "event"
+          ]
+        },
+        {
+          "name": "decryptEvent",
+          "startLine": 25,
+          "endLine": 31,
+          "params": [
+            "key",
+            "blob"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "generateRunKey",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "encryptEvent",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "decryptEvent",
+          "line": 25,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "generateRunKey",
+          "callee": "randomBytes",
+          "lineNumber": 12
+        },
+        {
+          "caller": "encryptEvent",
+          "callee": "randomBytes",
+          "lineNumber": 17
+        },
+        {
+          "caller": "encryptEvent",
+          "callee": "new TextEncoder().encode",
+          "lineNumber": 18
+        },
+        {
+          "caller": "encryptEvent",
+          "callee": "JSON.stringify",
+          "lineNumber": 18
+        },
+        {
+          "caller": "encryptEvent",
+          "callee": "xchacha20poly1305(key, nonce).encrypt",
+          "lineNumber": 19
+        },
+        {
+          "caller": "encryptEvent",
+          "callee": "xchacha20poly1305",
+          "lineNumber": 19
+        },
+        {
+          "caller": "encryptEvent",
+          "callee": "base64.encode",
+          "lineNumber": 20
+        },
+        {
+          "caller": "encryptEvent",
+          "callee": "base64.encode",
+          "lineNumber": 20
+        },
+        {
+          "caller": "decryptEvent",
+          "callee": "base64.decode",
+          "lineNumber": 26
+        },
+        {
+          "caller": "decryptEvent",
+          "callee": "base64.decode",
+          "lineNumber": 27
+        },
+        {
+          "caller": "decryptEvent",
+          "callee": "xchacha20poly1305(key, nonce).decrypt",
+          "lineNumber": 28
+        },
+        {
+          "caller": "decryptEvent",
+          "callee": "xchacha20poly1305",
+          "lineNumber": 28
+        },
+        {
+          "caller": "decryptEvent",
+          "callee": "JSON.parse",
+          "lineNumber": 29
+        },
+        {
+          "caller": "decryptEvent",
+          "callee": "new TextDecoder().decode",
+          "lineNumber": 29
+        },
+        {
+          "caller": "decryptEvent",
+          "callee": "AgentEvent.parse",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/crypto/src/keys.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 43,
+      "nonEmptyLines": 37,
+      "functions": [
+        {
+          "name": "deriveAccountKeypair",
+          "startLine": 16,
+          "endLine": 23,
+          "params": [
+            "masterSecret"
+          ]
+        },
+        {
+          "name": "generateMasterSecret",
+          "startLine": 26,
+          "endLine": 28,
+          "params": []
+        },
+        {
+          "name": "deriveRunKey",
+          "startLine": 32,
+          "endLine": 34,
+          "params": [
+            "masterSecret",
+            "runId"
+          ]
+        },
+        {
+          "name": "deriveProjectKey",
+          "startLine": 41,
+          "endLine": 43,
+          "params": [
+            "masterSecret",
+            "projectId"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "deriveAccountKeypair",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "generateMasterSecret",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "deriveRunKey",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "deriveProjectKey",
+          "line": 41,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "deriveAccountKeypair",
+          "callee": "hkdf",
+          "lineNumber": 17
+        },
+        {
+          "caller": "deriveAccountKeypair",
+          "callee": "utf8ToBytes",
+          "lineNumber": 17
+        },
+        {
+          "caller": "deriveAccountKeypair",
+          "callee": "bytesToHex",
+          "lineNumber": 18
+        },
+        {
+          "caller": "deriveAccountKeypair",
+          "callee": "ed25519.getPublicKey",
+          "lineNumber": 18
+        },
+        {
+          "caller": "deriveAccountKeypair",
+          "callee": "bytesToHex",
+          "lineNumber": 21
+        },
+        {
+          "caller": "deriveAccountKeypair",
+          "callee": "ed25519.sign",
+          "lineNumber": 21
+        },
+        {
+          "caller": "deriveAccountKeypair",
+          "callee": "utf8ToBytes",
+          "lineNumber": 21
+        },
+        {
+          "caller": "generateMasterSecret",
+          "callee": "randomBytes",
+          "lineNumber": 27
+        },
+        {
+          "caller": "deriveRunKey",
+          "callee": "hkdf",
+          "lineNumber": 33
+        },
+        {
+          "caller": "deriveRunKey",
+          "callee": "new TextEncoder().encode",
+          "lineNumber": 33
+        },
+        {
+          "caller": "deriveProjectKey",
+          "callee": "hkdf",
+          "lineNumber": 42
+        },
+        {
+          "caller": "deriveProjectKey",
+          "callee": "utf8ToBytes",
+          "lineNumber": 42
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/crypto/test/crypto.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 54,
+      "nonEmptyLines": 47,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/crypto/test/golden.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 70,
+      "nonEmptyLines": 64,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/crypto/test/keys.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 73,
+      "nonEmptyLines": 68,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,1128 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 25,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "cmd/pactify/cmd_account_test.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 29,
+      "functions": [
+        {
+          "name": "TestAccountCmdRegistered",
+          "startLine": 9,
+          "endLine": 20,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestAccountLoginNoRelayErrors",
+          "startLine": 22,
+          "endLine": 32,
+          "params": [
+            "t"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TestAccountCmdRegistered",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "TestAccountLoginNoRelayErrors",
+          "line": 22,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "TestAccountCmdRegistered",
+          "callee": "newRootCmd",
+          "lineNumber": 10
+        },
+        {
+          "caller": "TestAccountCmdRegistered",
+          "callee": "root.Find",
+          "lineNumber": 11
+        },
+        {
+          "caller": "TestAccountCmdRegistered",
+          "callee": "acct.Name",
+          "lineNumber": 12
+        },
+        {
+          "caller": "TestAccountCmdRegistered",
+          "callee": "t.Fatalf",
+          "lineNumber": 13
+        },
+        {
+          "caller": "TestAccountCmdRegistered",
+          "callee": "acct.Find",
+          "lineNumber": 16
+        },
+        {
+          "caller": "TestAccountCmdRegistered",
+          "callee": "c.Name",
+          "lineNumber": 16
+        },
+        {
+          "caller": "TestAccountCmdRegistered",
+          "callee": "t.Fatalf",
+          "lineNumber": 17
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "t.Setenv",
+          "lineNumber": 23
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "newRootCmd",
+          "lineNumber": 24
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "root.SetArgs",
+          "lineNumber": 25
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "root.SetOut",
+          "lineNumber": 26
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "root.SetErr",
+          "lineNumber": 27
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "root.Execute",
+          "lineNumber": 28
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "strings.Contains",
+          "lineNumber": 29
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "err.Error",
+          "lineNumber": 29
+        },
+        {
+          "caller": "TestAccountLoginNoRelayErrors",
+          "callee": "t.Fatalf",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cmd/pactify/cmd_agent_manifest_test.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 62,
+      "nonEmptyLines": 56,
+      "functions": [
+        {
+          "name": "TestAgentManifestValidate",
+          "startLine": 10,
+          "endLine": 26,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "runManifest",
+          "startLine": 28,
+          "endLine": 38,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestAgentManifestAddRemove",
+          "startLine": 40,
+          "endLine": 62,
+          "params": [
+            "t"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TestAgentManifestValidate",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "TestAgentManifestAddRemove",
+          "line": 40,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "filepath.Join",
+          "lineNumber": 11
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "t.TempDir",
+          "lineNumber": 11
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "os.WriteFile",
+          "lineNumber": 12
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "runManifest",
+          "lineNumber": 13
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "contains",
+          "lineNumber": 14
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "t.Fatalf",
+          "lineNumber": 15
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "filepath.Join",
+          "lineNumber": 18
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "t.TempDir",
+          "lineNumber": 18
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "os.WriteFile",
+          "lineNumber": 19
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "newAgentManifestCmd",
+          "lineNumber": 20
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "cmd.SetArgs",
+          "lineNumber": 21
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "cmd.SetOut",
+          "lineNumber": 22
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "cmd.Execute",
+          "lineNumber": 23
+        },
+        {
+          "caller": "TestAgentManifestValidate",
+          "callee": "t.Fatal",
+          "lineNumber": 24
+        },
+        {
+          "caller": "runManifest",
+          "callee": "t.Helper",
+          "lineNumber": 29
+        },
+        {
+          "caller": "runManifest",
+          "callee": "newAgentManifestCmd",
+          "lineNumber": 30
+        },
+        {
+          "caller": "runManifest",
+          "callee": "cmd.SetOut",
+          "lineNumber": 32
+        },
+        {
+          "caller": "runManifest",
+          "callee": "cmd.SetArgs",
+          "lineNumber": 33
+        },
+        {
+          "caller": "runManifest",
+          "callee": "cmd.Execute",
+          "lineNumber": 34
+        },
+        {
+          "caller": "runManifest",
+          "callee": "t.Fatalf",
+          "lineNumber": 35
+        },
+        {
+          "caller": "runManifest",
+          "callee": "b.String",
+          "lineNumber": 37
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "t.TempDir",
+          "lineNumber": 41
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "t.Setenv",
+          "lineNumber": 42
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "filepath.Join",
+          "lineNumber": 43
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "t.TempDir",
+          "lineNumber": 43
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "os.WriteFile",
+          "lineNumber": 44
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "runManifest",
+          "lineNumber": 46
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "os.Stat",
+          "lineNumber": 47
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "filepath.Join",
+          "lineNumber": 47
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "t.Fatalf",
+          "lineNumber": 48
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "filepath.Join",
+          "lineNumber": 50
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "t.TempDir",
+          "lineNumber": 50
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "os.WriteFile",
+          "lineNumber": 51
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "newAgentManifestCmd",
+          "lineNumber": 52
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "cmd.SetArgs",
+          "lineNumber": 53
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "cmd.SetOut",
+          "lineNumber": 54
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "cmd.Execute",
+          "lineNumber": 55
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "t.Fatal",
+          "lineNumber": 56
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "runManifest",
+          "lineNumber": 58
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "os.Stat",
+          "lineNumber": 59
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "filepath.Join",
+          "lineNumber": 59
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "os.IsNotExist",
+          "lineNumber": 59
+        },
+        {
+          "caller": "TestAgentManifestAddRemove",
+          "callee": "t.Fatal",
+          "lineNumber": 60
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cmd/pactify/cmd_run_test.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 75,
+      "nonEmptyLines": 70,
+      "functions": [
+        {
+          "name": "TestRunRequiresFeature",
+          "startLine": 11,
+          "endLine": 19,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestRunRequiresActingSeat",
+          "startLine": 21,
+          "endLine": 32,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestPlanSummaryRendersTasks",
+          "startLine": 36,
+          "endLine": 62,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestConfirmYesNo",
+          "startLine": 64,
+          "endLine": 75,
+          "params": [
+            "t"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TestRunRequiresFeature",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "TestRunRequiresActingSeat",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "TestPlanSummaryRendersTasks",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "TestConfirmYesNo",
+          "line": 64,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "TestRunRequiresFeature",
+          "callee": "newRunCmd",
+          "lineNumber": 12
+        },
+        {
+          "caller": "TestRunRequiresFeature",
+          "callee": "cmd.SetArgs",
+          "lineNumber": 13
+        },
+        {
+          "caller": "TestRunRequiresFeature",
+          "callee": "cmd.SetOut",
+          "lineNumber": 14
+        },
+        {
+          "caller": "TestRunRequiresFeature",
+          "callee": "cmd.SetErr",
+          "lineNumber": 15
+        },
+        {
+          "caller": "TestRunRequiresFeature",
+          "callee": "cmd.Execute",
+          "lineNumber": 16
+        },
+        {
+          "caller": "TestRunRequiresFeature",
+          "callee": "strings.Contains",
+          "lineNumber": 16
+        },
+        {
+          "caller": "TestRunRequiresFeature",
+          "callee": "err.Error",
+          "lineNumber": 16
+        },
+        {
+          "caller": "TestRunRequiresFeature",
+          "callee": "t.Fatalf",
+          "lineNumber": 17
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "t.TempDir",
+          "lineNumber": 22
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "t.Chdir",
+          "lineNumber": 23
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "t.Setenv",
+          "lineNumber": 24
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "newRunCmd",
+          "lineNumber": 25
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "cmd.SetArgs",
+          "lineNumber": 26
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "cmd.SetOut",
+          "lineNumber": 27
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "cmd.SetErr",
+          "lineNumber": 28
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "cmd.Execute",
+          "lineNumber": 29
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "strings.Contains",
+          "lineNumber": 29
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "err.Error",
+          "lineNumber": 29
+        },
+        {
+          "caller": "TestRunRequiresActingSeat",
+          "callee": "t.Fatalf",
+          "lineNumber": 30
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "t.TempDir",
+          "lineNumber": 37
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "os.MkdirAll",
+          "lineNumber": 38
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "filepath.Join",
+          "lineNumber": 38
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "t.Fatal",
+          "lineNumber": 39
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "os.WriteFile",
+          "lineNumber": 50
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "filepath.Join",
+          "lineNumber": 50
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "t.Fatal",
+          "lineNumber": 51
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "planSummary",
+          "lineNumber": 53
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "t.Fatalf",
+          "lineNumber": 55
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "strings.Contains",
+          "lineNumber": 58
+        },
+        {
+          "caller": "TestPlanSummaryRendersTasks",
+          "callee": "t.Errorf",
+          "lineNumber": 59
+        },
+        {
+          "caller": "TestConfirmYesNo",
+          "callee": "confirm",
+          "lineNumber": 68
+        },
+        {
+          "caller": "TestConfirmYesNo",
+          "callee": "strings.NewReader",
+          "lineNumber": 68
+        },
+        {
+          "caller": "TestConfirmYesNo",
+          "callee": "t.Errorf",
+          "lineNumber": 69
+        },
+        {
+          "caller": "TestConfirmYesNo",
+          "callee": "strings.Contains",
+          "lineNumber": 71
+        },
+        {
+          "caller": "TestConfirmYesNo",
+          "callee": "out.String",
+          "lineNumber": 71
+        },
+        {
+          "caller": "TestConfirmYesNo",
+          "callee": "t.Errorf",
+          "lineNumber": 72
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cmd/pactify/cmd_version_test.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 21,
+      "nonEmptyLines": 18,
+      "functions": [
+        {
+          "name": "TestVersionStringDefault",
+          "startLine": 8,
+          "endLine": 14,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestVersionStringInjected",
+          "startLine": 16,
+          "endLine": 21,
+          "params": [
+            "t"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TestVersionStringDefault",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "TestVersionStringInjected",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "TestVersionStringDefault",
+          "callee": "versionString",
+          "lineNumber": 9
+        },
+        {
+          "caller": "TestVersionStringDefault",
+          "callee": "t.Fatalf",
+          "lineNumber": 12
+        },
+        {
+          "caller": "TestVersionStringInjected",
+          "callee": "versionString",
+          "lineNumber": 17
+        },
+        {
+          "caller": "TestVersionStringInjected",
+          "callee": "strings.Contains",
+          "lineNumber": 18
+        },
+        {
+          "caller": "TestVersionStringInjected",
+          "callee": "strings.Contains",
+          "lineNumber": 18
+        },
+        {
+          "caller": "TestVersionStringInjected",
+          "callee": "t.Fatalf",
+          "lineNumber": 19
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cmd/pactify/cmd_version.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 20,
+      "nonEmptyLines": 16,
+      "functions": [
+        {
+          "name": "versionString",
+          "startLine": 10,
+          "endLine": 12,
+          "params": [
+            "version",
+            "commit",
+            "date"
+          ]
+        },
+        {
+          "name": "newVersionCmd",
+          "startLine": 14,
+          "endLine": 20,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "versionString",
+          "callee": "fmt.Sprintf",
+          "lineNumber": 11
+        },
+        {
+          "caller": "newVersionCmd",
+          "callee": "fmt.Fprintln",
+          "lineNumber": 17
+        },
+        {
+          "caller": "newVersionCmd",
+          "callee": "c.OutOrStdout",
+          "lineNumber": 17
+        },
+        {
+          "caller": "newVersionCmd",
+          "callee": "versionString",
+          "lineNumber": 17
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "dev/showcase/.pact/log.jsonl",
+      "language": "jsonl",
+      "fileCategory": "code",
+      "totalLines": 15,
+      "nonEmptyLines": 15,
+      "metrics": {}
+    },
+    {
+      "path": "dev/showcase/.pact/squad/layout.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "v",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "positions",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "dev/showcase/.pact/STATE.yml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 91,
+      "nonEmptyLines": 91,
+      "sections": [
+        {
+          "heading": "project",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "working_tree_holder",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "agents",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "features",
+          "level": 1,
+          "line": 7
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "dev/showcase/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 26,
+      "nonEmptyLines": 20,
+      "sections": [
+        {
+          "heading": "showcase — dashboard seed project",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Serve it",
+          "level": 2,
+          "line": 13
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": "plugins/pact/.claude-plugin/plugin.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "description",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "version",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "author",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "homepage",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "repository",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "license",
+          "level": 1,
+          "line": 8
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "plugins/pact/.mcp.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 8,
+      "nonEmptyLines": 8,
+      "sections": [
+        {
+          "heading": "mcpServers",
+          "level": 1,
+          "line": 2
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "plugins/pact/hooks/check-pactify.sh",
+      "language": "shell",
+      "fileCategory": "script",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "plugins/pact/hooks/hooks.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 11,
+      "nonEmptyLines": 11,
+      "sections": [
+        {
+          "heading": "hooks",
+          "level": 1,
+          "line": 2
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "plugins/pact/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 20,
+      "nonEmptyLines": 15,
+      "sections": [
+        {
+          "heading": "pact (Claude Code plugin)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Prerequisite",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "Note on double wiring",
+          "level": 2,
+          "line": 16
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "plugins/pact/skills/pact/SKILL.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 30,
+      "nonEmptyLines": 24,
+      "sections": [
+        {
+          "heading": "pact — multi-agent coordination",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "On start",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "Your job by role",
+          "level": 2,
+          "line": 22
+        },
+        {
+          "heading": "The two rules",
+          "level": 2,
+          "line": 28
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": "tests/accept.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 32,
+      "metrics": {}
+    },
+    {
+      "path": "tests/agent_add.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 69,
+      "nonEmptyLines": 58,
+      "metrics": {}
+    },
+    {
+      "path": "tests/assign.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 31,
+      "nonEmptyLines": 27,
+      "metrics": {}
+    },
+    {
+      "path": "tests/checkpoint.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 35,
+      "nonEmptyLines": 31,
+      "metrics": {}
+    },
+    {
+      "path": "tests/doctor.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 28,
+      "metrics": {}
+    },
+    {
+      "path": "tests/f1_branch_flow.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 40,
+      "nonEmptyLines": 36,
+      "metrics": {}
+    },
+    {
+      "path": "tests/f3_entry_files.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 39,
+      "metrics": {}
+    },
+    {
+      "path": "tests/go_schema.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 33,
+      "nonEmptyLines": 30,
+      "metrics": {}
+    },
+    {
+      "path": "tests/help.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 20,
+      "nonEmptyLines": 18,
+      "metrics": {}
+    },
+    {
+      "path": "tests/helpers_core.bats",
+      "language": "bats",
+      "fileCategory": "code",
+      "totalLines": 34,
+      "nonEmptyLines": 30,
+      "metrics": {}
+    }
+  ]
+}

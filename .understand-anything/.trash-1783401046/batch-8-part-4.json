@@ -1,0 +1,925 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/orchestrate/recover.go",
+      "type": "file",
+      "name": "recover.go",
+      "filePath": "internal/orchestrate/recover.go",
+      "summary": "Recovery helper that re-runs the task-local verify command after a worker soft-fail and, if it now passes, records a checkpoint so the driver routes the task to its reviewer instead of burning another worker stint.",
+      "tags": [
+        "orchestration",
+        "recovery",
+        "verify-gate",
+        "self-repair"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/sandbox_test.go",
+      "type": "file",
+      "name": "sandbox_test.go",
+      "filePath": "internal/orchestrate/sandbox_test.go",
+      "summary": "End-to-end sandbox driver tests: feature ships and runs cleanup, status is written to the main runtime dir, the ledger mirror unions the sandbox checkout, and partial in-place progress is preserved across a sandbox round-trip.",
+      "tags": [
+        "test",
+        "orchestration",
+        "sandbox",
+        "mirror"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "file",
+      "name": "checkpoint_guard_test.go",
+      "filePath": "internal/pact/checkpoint_guard_test.go",
+      "summary": "Tests for checkpoint base-branch guard: refuses a checkpoint on the base when the feature has a real branch, and allows it when the branch is the declared seat branch.",
+      "tags": [
+        "test",
+        "protocol",
+        "checkpoint",
+        "base-branch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/pactdir_pin_test.go",
+      "type": "file",
+      "name": "pactdir_pin_test.go",
+      "filePath": "internal/pact/pactdir_pin_test.go",
+      "summary": "Test that Checkpoint honors an absolute PACTDIR pin rather than silently re-resolving against the working tree.",
+      "tags": [
+        "test",
+        "protocol",
+        "pactdir",
+        "pin"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/recover.go:classifyAndCheckpoint",
+      "type": "function",
+      "name": "classifyAndCheckpoint",
+      "filePath": "internal/orchestrate/recover.go",
+      "lineRange": [
+        19,
+        30
+      ],
+      "summary": "Recovery classifier: re-runs the task-local verify, and if it now passes records a checkpoint as the owner with the verify output as evidence so the driver moves the task to the reviewer instead of re-running the worker.",
+      "tags": [
+        "orchestration",
+        "recovery",
+        "verify-gate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox_test.go:TestRunSandbox_ShipsAndCleansUp",
+      "type": "function",
+      "name": "TestRunSandbox_ShipsAndCleansUp",
+      "filePath": "internal/orchestrate/sandbox_test.go",
+      "lineRange": [
+        17,
+        60
+      ],
+      "summary": "Sandbox happy-path: a feature ships, the parked tree is restored, the parked marker is removed, and the runtime dir is left in a clean state.",
+      "tags": [
+        "test",
+        "orchestration",
+        "sandbox",
+        "cleanup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox_test.go:TestRunSandbox_WritesStatusToMainDir",
+      "type": "function",
+      "name": "TestRunSandbox_WritesStatusToMainDir",
+      "filePath": "internal/orchestrate/sandbox_test.go",
+      "lineRange": [
+        66,
+        90
+      ],
+      "summary": "Test that sandbox run status is written to the main runtime dir (not the sandbox dir), so observers polling the host project see progress.",
+      "tags": [
+        "test",
+        "orchestration",
+        "sandbox",
+        "status"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox_test.go:TestMirrorLedger_UnionsSandboxIntoRuntimeDir",
+      "type": "function",
+      "name": "TestMirrorLedger_UnionsSandboxIntoRuntimeDir",
+      "filePath": "internal/orchestrate/sandbox_test.go",
+      "lineRange": [
+        96,
+        120
+      ],
+      "summary": "Test that mirroring the ledger unions sandbox-progress commits into the main runtime dir without overwriting concurrent host-tree state.",
+      "tags": [
+        "test",
+        "orchestration",
+        "sandbox",
+        "mirror"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox_test.go:TestMirrorLedger_SkipsTrackedPactAndInPlace",
+      "type": "function",
+      "name": "TestMirrorLedger_SkipsTrackedPactAndInPlace",
+      "filePath": "internal/orchestrate/sandbox_test.go",
+      "lineRange": [
+        125,
+        146
+      ],
+      "summary": "Test that the ledger mirror skips already-tracked `.pact/` files and in-place sandbox-progress entries, avoiding redundant write-back.",
+      "tags": [
+        "test",
+        "orchestration",
+        "sandbox",
+        "mirror"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox_test.go:TestRunSandbox_AfterPartialInPlaceProgress",
+      "type": "function",
+      "name": "TestRunSandbox_AfterPartialInPlaceProgress",
+      "filePath": "internal/orchestrate/sandbox_test.go",
+      "lineRange": [
+        155,
+        237
+      ],
+      "summary": "Advanced test: a sandbox run started after partial in-place progress correctly rolls forward \u2014 sandbox picks up the partial commit and only adds the missing stint.",
+      "tags": [
+        "test",
+        "orchestration",
+        "sandbox",
+        "in-place"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox_test.go:gitDirty",
+      "type": "function",
+      "name": "gitDirty",
+      "filePath": "internal/orchestrate/sandbox_test.go",
+      "lineRange": [
+        239,
+        248
+      ],
+      "summary": "Test helper: returns whether a worktree has uncommitted changes (`git status --porcelain`).",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox_test.go:branchOf",
+      "type": "function",
+      "name": "branchOf",
+      "filePath": "internal/orchestrate/sandbox_test.go",
+      "lineRange": [
+        250,
+        261
+      ],
+      "summary": "Test helper: returns the current branch name for a worktree, or empty when detached.",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/checkpoint_guard_test.go:TestCheckpointRefusesOnBaseWhenFeatureHasBranch",
+      "type": "function",
+      "name": "TestCheckpointRefusesOnBaseWhenFeatureHasBranch",
+      "filePath": "internal/pact/checkpoint_guard_test.go",
+      "lineRange": [
+        15,
+        43
+      ],
+      "summary": "Test that Checkpoint refuses to commit on the base branch when the feature has a real per-task branch \u2014 checkpoints must land on the feature branch.",
+      "tags": [
+        "test",
+        "protocol",
+        "checkpoint",
+        "base-branch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/checkpoint_guard_test.go:TestCheckpointCommitsOnFeatureBranch",
+      "type": "function",
+      "name": "TestCheckpointCommitsOnFeatureBranch",
+      "filePath": "internal/pact/checkpoint_guard_test.go",
+      "lineRange": [
+        46,
+        69
+      ],
+      "summary": "Positive counterpart: Checkpoint succeeds and writes the owner commit on the feature branch when no base-branch shortcut is taken.",
+      "tags": [
+        "test",
+        "protocol",
+        "checkpoint",
+        "feature-branch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/checkpoint_guard_test.go:gitLog",
+      "type": "function",
+      "name": "gitLog",
+      "filePath": "internal/pact/checkpoint_guard_test.go",
+      "lineRange": [
+        71,
+        77
+      ],
+      "summary": "Test helper that returns `git log --oneline` output for a worktree.",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/pactdir_pin_test.go:TestCheckpointHonorsAbsolutePactDir",
+      "type": "function",
+      "name": "TestCheckpointHonorsAbsolutePactDir",
+      "filePath": "internal/pact/pactdir_pin_test.go",
+      "lineRange": [
+        16,
+        55
+      ],
+      "summary": "Test that Checkpoint honors an absolute PACTDIR pin rather than re-resolving against the working tree.",
+      "tags": [
+        "test",
+        "protocol",
+        "pactdir",
+        "pin"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "function:internal/orchestrate/recover.go:classifyAndCheckpoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "function:internal/orchestrate/sandbox_test.go:TestRunSandbox_ShipsAndCleansUp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "function:internal/orchestrate/sandbox_test.go:TestRunSandbox_WritesStatusToMainDir",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "function:internal/orchestrate/sandbox_test.go:TestMirrorLedger_UnionsSandboxIntoRuntimeDir",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "function:internal/orchestrate/sandbox_test.go:TestMirrorLedger_SkipsTrackedPactAndInPlace",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "function:internal/orchestrate/sandbox_test.go:TestRunSandbox_AfterPartialInPlaceProgress",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "function:internal/orchestrate/sandbox_test.go:gitDirty",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "function:internal/orchestrate/sandbox_test.go:branchOf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "function:internal/pact/checkpoint_guard_test.go:TestCheckpointRefusesOnBaseWhenFeatureHasBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "function:internal/pact/checkpoint_guard_test.go:TestCheckpointCommitsOnFeatureBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "function:internal/pact/checkpoint_guard_test.go:gitLog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/pactdir_pin_test.go",
+      "target": "function:internal/pact/pactdir_pin_test.go:TestCheckpointHonorsAbsolutePactDir",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/checkpoint_guard_test.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/pactdir_pin_test.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/pactdir_pin_test.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/pactdir_pin_test.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/pactdir_pin_test.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/pactdir_pin_test.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/pactdir_pin_test.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/pactdir_pin_test.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

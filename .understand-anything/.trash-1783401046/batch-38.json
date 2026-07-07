@@ -1,0 +1,661 @@
+{
+  "nodes": [
+    {
+      "id": "config:.claude-plugin/marketplace.json",
+      "type": "config",
+      "name": "marketplace.json",
+      "filePath": ".claude-plugin/marketplace.json",
+      "summary": "Claude Code marketplace manifest declaring the pactify plugin that bundles the pact protocol skill and MCP server.",
+      "tags": ["marketplace", "plugin-manifest", "configuration"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.claude/settings.json",
+      "type": "config",
+      "name": "settings.json",
+      "filePath": ".claude/settings.json",
+      "summary": "Claude Code settings declaring a PostToolUse hook that reminds the agent to update CURRENT.md, sprint summary, and architecture docs after running release.sh.",
+      "tags": ["claude-hooks", "configuration", "post-tool-use"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.claude/skills/pact/SKILL.md",
+      "type": "document",
+      "name": "SKILL.md",
+      "filePath": ".claude/skills/pact/SKILL.md",
+      "summary": "Claude skill entry point describing how to drive the pact protocol — cold-start verbs, per-role responsibilities, and the two enforced rules.",
+      "tags": ["documentation", "skill", "multi-agent"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:.gemini/settings.json",
+      "type": "config",
+      "name": "settings.json",
+      "filePath": ".gemini/settings.json",
+      "summary": "Gemini CLI settings wiring the pact MCP server with the gemini-worker seat identity so Gemini can speak the pact protocol.",
+      "tags": ["mcp-config", "gemini", "configuration"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:.gitattributes",
+      "type": "file",
+      "name": ".gitattributes",
+      "filePath": ".gitattributes",
+      "summary": "Git attributes configuring union-merge for the pact log and STATE.yml so concurrent agents can append without losing each other's events.",
+      "tags": ["git-config", "merge-strategy", "protocol-ledger"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:.pact/bin/pact.sh",
+      "type": "file",
+      "name": "pact.sh",
+      "filePath": ".pact/bin/pact.sh",
+      "summary": "Reference bash implementation of the pact protocol — exposes the public verbs (init/join/assign/checkpoint/accept/changes/merge/validate) plus projection helpers that fold log.jsonl into STATE.yml.",
+      "tags": ["shell-script", "multi-agent", "protocol-cli"],
+      "complexity": "complex",
+      "languageNotes": "Uses jq to project log events into a state tree and idempotent managed-block baking for AGENTS.md/CLAUDE.md/PROJECT.md entries."
+    },
+    {
+      "id": "file:.pact/log.jsonl",
+      "type": "file",
+      "name": "log.jsonl",
+      "filePath": ".pact/log.jsonl",
+      "summary": "Append-only pact event ledger capturing every init/assign/join/checkpoint/accept/changes_requested/merge event with full payload — the source of truth from which STATE.yml is re-projected.",
+      "tags": ["event-log", "ledger", "protocol-data"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:.pact/squad/layout.json",
+      "type": "config",
+      "name": "layout.json",
+      "filePath": ".pact/squad/layout.json",
+      "summary": "Single-line JSON Canvas layout (v2) recording the on-canvas positions of seats, features, and tasks for the squad visualization board.",
+      "tags": ["visual-layout", "canvas-config", "squad-board"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:.understand-anything/.understandignore",
+      "type": "file",
+      "name": ".understandignore",
+      "filePath": ".understand-anything/.understandignore",
+      "summary": "Understand-Anything ignore patterns file — commented-out suggestions mirroring .gitignore plus test-file globs to tune the analyzer's scan surface.",
+      "tags": ["analyzer-config", "ignore-patterns", "meta-config"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/.npmrc",
+      "type": "file",
+      "name": ".npmrc",
+      "filePath": "cloud/.npmrc",
+      "summary": "pnpm/npm workspace config enabling engine-strict and auto-install-peers for the cloud monorepo.",
+      "tags": ["npm-config", "workspace", "monorepo"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/crypto/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "cloud/crypto/package.json",
+      "summary": "@pactify-apps/crypto package manifest — shared cryptography (key derivation, event encryption, relay-blind pairing) with noble-ciphers, noble-curves, noble-hashes, and the @pactify-apps/wire workspace dependency.",
+      "tags": ["package-config", "typescript", "crypto-library"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/crypto/src/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "cloud/crypto/src/index.ts",
+      "summary": "Barrel module re-exporting keys, crypto, and pairing sub-modules as the public surface of @pactify-apps/crypto.",
+      "tags": ["barrel", "entry-point", "exports"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/crypto/src/pairing.ts",
+      "type": "file",
+      "name": "pairing.ts",
+      "filePath": "cloud/crypto/src/pairing.ts",
+      "summary": "Relay-blind pairing implementation using ephemeral X25519 ECDH plus HKDF-SHA256 and xchacha20poly1305 to wrap an account master secret so the relay never sees it.",
+      "tags": ["cryptography", "x25519", "key-exchange"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/crypto/test/pairing.test.ts",
+      "type": "file",
+      "name": "pairing.test.ts",
+      "filePath": "cloud/crypto/test/pairing.test.ts",
+      "summary": "Vitest suite exercising relay-blind pairing — round-trip in both directions, tamper detection, wrong-key rejection, and freshness guarantees on epkWebPub/nonce.",
+      "tags": ["test", "vitest", "crypto"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:cloud/crypto/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "cloud/crypto/tsconfig.json",
+      "summary": "TypeScript compiler config for the crypto package — extends the workspace base and emits ESM into dist/ from src/.",
+      "tags": ["typescript-config", "build-config", "esm-output"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/pact-project/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "cloud/pact-project/package.json",
+      "summary": "@pactify-apps/pact-project package manifest — pure-TS pact-log projection that replays events into state with Go parity for the cloud relay.",
+      "tags": ["package-config", "typescript", "log-projection"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/pact-project/testdata/events-golden.jsonl",
+      "type": "file",
+      "name": "events-golden.jsonl",
+      "filePath": "cloud/pact-project/testdata/events-golden.jsonl",
+      "summary": "Golden event-log fixture (17 events across two features and three seats) driving the pact-project projector in conformance tests.",
+      "tags": ["test-fixture", "golden-data", "event-log"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/pact-project/testdata/state-golden.json",
+      "type": "config",
+      "name": "state-golden.json",
+      "filePath": "cloud/pact-project/testdata/state-golden.json",
+      "summary": "Expected projection output for the events-golden.jsonl fixture — three agents, two features (auth shipped, billing in progress), and the awaiting-review count used by golden tests.",
+      "tags": ["test-fixture", "golden-data", "state-snapshot"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:cloud/pact-project/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "cloud/pact-project/tsconfig.json",
+      "summary": "TypeScript compiler config for pact-project — extends the workspace base and emits ESM into dist/ from src/.",
+      "tags": ["typescript-config", "build-config", "esm-output"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/relay-client/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "cloud/relay-client/package.json",
+      "summary": "@pactify-apps/relay-client package manifest — framework-agnostic zero-knowledge relay read-client with socket.io realtime, depending on @pactify-apps/crypto and @pactify-apps/wire.",
+      "tags": ["package-config", "typescript", "relay-client"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay-client/src/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "cloud/relay-client/src/index.ts",
+      "summary": "Framework-agnostic zero-knowledge relay read-client — challenge auth, HTTP reads for projects/events, per-project realtime subscription with project-key decryption, and outbound RPC over a control socket.",
+      "tags": ["relay-client", "zero-knowledge", "websocket"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:cloud/relay-client/test/relay-client.test.ts",
+      "type": "file",
+      "name": "relay-client.test.ts",
+      "filePath": "cloud/relay-client/test/relay-client.test.ts",
+      "summary": "Vitest suite for RelayClient — login challenge exchange, bearer-token headers, 401 re-login retry, local decrypt, per-project subscription filtering, and fire-and-forget sendRpc.",
+      "tags": ["test", "vitest", "relay-client"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:cloud/relay-client/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "cloud/relay-client/tsconfig.json",
+      "summary": "TypeScript compiler config for relay-client — extends the workspace base, adds DOM lib for socket.io-client, and emits ESM into dist/ from src/.",
+      "tags": ["typescript-config", "build-config", "esm-output"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay/bin/pactify-relay.mjs",
+      "type": "file",
+      "name": "pactify-relay.mjs",
+      "filePath": "cloud/relay/bin/pactify-relay.mjs",
+      "summary": "Thin CLI launcher that dynamically imports the compiled server-main.js from dist/, avoiding a build step inside the bin entry.",
+      "tags": ["entry-point", "node-bin", "launcher"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/relay/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "cloud/relay/package.json",
+      "summary": "@pactify-apps/relay package manifest — the zero-knowledge relay server (Fastify + socket.io + Prisma with pglite/postgres) whose `pactify-relay` bin delegates to dist/server-main.js.",
+      "tags": ["package-config", "relay-server", "fastify"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:_pact_log_append",
+      "type": "function",
+      "name": "_pact_log_append",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [31, 42],
+      "summary": "Appends a single jq-built JSON event line to log.jsonl atomically using printf + O_APPEND so concurrent agents don't tear lines.",
+      "tags": ["log-append", "atomic-write", "event-ledger"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:_pact_project_json",
+      "type": "function",
+      "name": "_pact_project_json",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [45, 85],
+      "summary": "Folds the event log into the canonical JSON projection: agents, features, and per-task status transitions driven by the latest event of each type.",
+      "tags": ["projection", "jq-reducer", "state-folding"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:_pact_render_state_to",
+      "type": "function",
+      "name": "_pact_render_state_to",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [88, 111],
+      "summary": "Writes the JSON projection as a human-readable YAML STATE.yml to a target path, escaping newlines/tabs in evidence text.",
+      "tags": ["state-renderer", "yaml-output", "projection"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_join",
+      "type": "function",
+      "name": "pact_join",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [134, 156],
+      "summary": "Worker cold-start verb — appends a join event, re-renders STATE, and checks out the seat's assigned feature branch (creating it if absent).",
+      "tags": ["worker-verb", "branch-checkout", "cold-start"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_init",
+      "type": "function",
+      "name": "pact_init",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [159, 210],
+      "summary": "Orchestrator verb that scaffolds .pact/, validates every seat's id:roles:entry triple, self-copies pact.sh, bakes entry files + PROJECT.md charter, and records the init event with the base branch.",
+      "tags": ["orchestrator-verb", "scaffold", "seat-init"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:_pact_bake_entry",
+      "type": "function",
+      "name": "_pact_bake_entry",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [213, 254],
+      "summary": "Idempotently writes a managed `<!-- pact:begin ... pact:end -->` block into a seat's entry file, never clobbering surrounding content and never following symlinks.",
+      "tags": ["entry-file", "managed-block", "idempotent"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_assign",
+      "type": "function",
+      "name": "pact_assign",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [257, 286],
+      "summary": "Orchestrator verb that records an assign event after enforcing separation of duties (owner != reviewer) and uniqueness of the task id across the projection.",
+      "tags": ["orchestrator-verb", "task-creation", "separation-of-duties"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_checkpoint",
+      "type": "function",
+      "name": "pact_checkpoint",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [289, 311],
+      "summary": "Worker verb that records a checkpoint event with evidence after verifying the caller is the task's owner, then commits any working-tree changes on the feature branch.",
+      "tags": ["worker-verb", "evidence-commit", "auto-commit"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_accept",
+      "type": "function",
+      "name": "pact_accept",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [314, 330],
+      "summary": "Reviewer-only verb that flips a task from awaiting_review to accepted after verifying the caller is the task's reviewer.",
+      "tags": ["reviewer-verb", "task-accept", "state-transition"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_changes",
+      "type": "function",
+      "name": "pact_changes",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [333, 354],
+      "summary": "Reviewer-only verb that sends a task back with a free-text reason after enforcing reviewer-match and awaiting_review status.",
+      "tags": ["reviewer-verb", "request-changes", "state-transition"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_merge",
+      "type": "function",
+      "name": "pact_merge",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [357, 390],
+      "summary": "Orchestrator verb that --no-ff merges a feature branch into the init base branch once every task is accepted, committing any uncommitted ledger first.",
+      "tags": ["orchestrator-verb", "git-merge", "no-ff"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_validate",
+      "type": "function",
+      "name": "pact_validate",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [404, 454],
+      "summary": "Conformance checker — verifies STATE.yml has no drift vs a fresh render, every log agent_id is in the seat roster, seat slugs are valid, no owner==reviewer, no duplicate task ids, protocol_version isn't newer, and every event has an event_id.",
+      "tags": ["validation", "conformance-check", "drift-detection"],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:pact_help",
+      "type": "function",
+      "name": "pact_help",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [456, 478],
+      "summary": "Prints the human-readable verb reference and the two enforced rules.",
+      "tags": ["help-text", "verb-reference", "documentation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:.pact/bin/pact.sh:_pact_bake_project",
+      "type": "function",
+      "name": "_pact_bake_project",
+      "filePath": ".pact/bin/pact.sh",
+      "lineRange": [483, 531],
+      "summary": "Idempotently writes the protocol charter (roles, rules, seat table, command pointer) into a managed block in .pact/PROJECT.md, preserving any user content outside the block.",
+      "tags": ["charter", "managed-block", "idempotent"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/crypto/src/pairing.ts:createPairingInitiator",
+      "type": "function",
+      "name": "createPairingInitiator",
+      "filePath": "cloud/crypto/src/pairing.ts",
+      "lineRange": [42, 57],
+      "summary": "Web-side pairing factory — generates an ephemeral X25519 keypair, returns the hex public key plus a `complete()` that decrypts the master secret the machine wraps for it.",
+      "tags": ["key-exchange", "ecdh", "exported"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/crypto/src/pairing.ts:pairingRespond",
+      "type": "function",
+      "name": "pairingRespond",
+      "filePath": "cloud/crypto/src/pairing.ts",
+      "lineRange": [70, 81],
+      "summary": "Machine-side pairing — derives the shared X25519 secret from the web's ephemeral pubkey, derives the symmetric key via HKDF, and returns nonce||xchacha20poly1305(masterSecret) as base64url.",
+      "tags": ["key-exchange", "ecdh", "exported"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:cloud/relay-client/src/index.ts:RelayClient",
+      "type": "class",
+      "name": "RelayClient",
+      "filePath": "cloud/relay-client/src/index.ts",
+      "lineRange": [47, 178],
+      "summary": "Zero-knowledge relay read-client — handles challenge-signed login, auto-retry on 401, project/event reads, per-project realtime subscription with local decrypt, and outbound RPC over a lazily-opened control socket.",
+      "tags": ["relay-client", "websocket", "decryption"],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:_pact_log_append",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:_pact_project_json",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:_pact_render_state_to",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_join",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_init",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:_pact_bake_entry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_assign",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_checkpoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_accept",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_changes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_merge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_validate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:pact_help",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:.pact/bin/pact.sh",
+      "target": "function:.pact/bin/pact.sh:_pact_bake_project",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/pairing.ts",
+      "target": "function:cloud/crypto/src/pairing.ts:createPairingInitiator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/pairing.ts",
+      "target": "function:cloud/crypto/src/pairing.ts:pairingRespond",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay-client/src/index.ts",
+      "target": "class:cloud/relay-client/src/index.ts:RelayClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/pairing.ts",
+      "target": "function:cloud/crypto/src/pairing.ts:createPairingInitiator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/src/pairing.ts",
+      "target": "function:cloud/crypto/src/pairing.ts:pairingRespond",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay-client/src/index.ts",
+      "target": "class:cloud/relay-client/src/index.ts:RelayClient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/test/pairing.test.ts",
+      "target": "file:cloud/crypto/src/pairing.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/relay-client/test/relay-client.test.ts",
+      "target": "file:cloud/relay-client/src/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/crypto/src/pairing.ts",
+      "target": "file:cloud/crypto/test/pairing.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/relay-client/src/index.ts",
+      "target": "file:cloud/relay-client/test/relay-client.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/relay-client/src/index.ts",
+      "target": "file:cloud/crypto/src/index.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:cloud/crypto/src/index.ts",
+      "target": "file:cloud/crypto/src/pairing.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/crypto/tsconfig.json",
+      "target": "file:cloud/crypto/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/crypto/tsconfig.json",
+      "target": "file:cloud/crypto/src/pairing.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/crypto/package.json",
+      "target": "file:cloud/crypto/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/relay-client/tsconfig.json",
+      "target": "file:cloud/relay-client/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/relay-client/package.json",
+      "target": "file:cloud/relay-client/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/relay/package.json",
+      "target": "file:cloud/relay/bin/pactify-relay.mjs",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "document:.claude/skills/pact/SKILL.md",
+      "target": "file:.pact/bin/pact.sh",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.claude/skills/pact/SKILL.md",
+      "target": "file:.pact/log.jsonl",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:.gitattributes",
+      "target": "file:.pact/log.jsonl",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:.gemini/settings.json",
+      "target": "file:.pact/bin/pact.sh",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:cloud/pact-project/testdata/state-golden.json",
+      "target": "file:cloud/pact-project/testdata/events-golden.jsonl",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

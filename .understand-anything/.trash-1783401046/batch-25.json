@@ -1,0 +1,83 @@
+{
+  "nodes": [
+    {
+      "id": "pipeline:.github/workflows/ci.yml",
+      "type": "pipeline",
+      "name": "ci.yml",
+      "filePath": ".github/workflows/ci.yml",
+      "summary": "GitHub Actions CI workflow that runs the full test matrix on push/PR to main: two parallel jobs (test, e2e) covering go mod tidy/vet/test/build, bats, web vitest + tsc typecheck, cloud wire/relay build, and Playwright e2e against chromium.",
+      "tags": ["ci-cd", "testing", "build-system", "deployment"],
+      "complexity": "moderate",
+      "languageNotes": "Concurrency group 'ci-${{ github.ref }}' with cancel-in-progress serializes revisions; both jobs share the same cloud-deps prerequisite because the web bundle imports @noble/@scure from cloud/* via vite alias."
+    },
+    {
+      "id": "step:.github/workflows/ci.yml:test",
+      "type": "function",
+      "name": "test",
+      "filePath": ".github/workflows/ci.yml",
+      "summary": "Primary CI test job: installs Go (from go.mod) and Node 24, pre-installs cloud workspace deps (pnpm@10 frozen-lockfile) and web deps (npm ci), then runs go mod tidy -diff, go vet, go test, go build, bats tests/, web vitest, web tsc -b --noEmit, cloud wire/relay build/type-check, and finally a guard check that internal/serve/dist is in sync with the web build.",
+      "tags": ["test", "build-system", "ci-cd"],
+      "complexity": "complex",
+      "lineRange": [13, 58]
+    },
+    {
+      "id": "step:.github/workflows/ci.yml:e2e",
+      "type": "function",
+      "name": "e2e",
+      "filePath": ".github/workflows/ci.yml",
+      "summary": "Parallel CI end-to-end job: re-installs cloud + web deps, installs Playwright chromium with system deps, runs `npm run e2e` (which builds the web bundle and executes Playwright tests), and uploads the playwright-report artifact on failure with 7-day retention.",
+      "tags": ["test", "e2e", "ci-cd"],
+      "complexity": "moderate",
+      "lineRange": [60, 85]
+    },
+    {
+      "id": "pipeline:.github/workflows/release.yml",
+      "type": "pipeline",
+      "name": "release.yml",
+      "filePath": ".github/workflows/release.yml",
+      "summary": "GitHub Actions release workflow that runs GoReleaser on version tags (v*) to build cross-platform binaries and publish a GitHub Release; uses contents: write permission and the workflow GITHUB_TOKEN.",
+      "tags": ["ci-cd", "deployment", "release"],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:.github/workflows/release.yml:goreleaser",
+      "type": "function",
+      "name": "goreleaser",
+      "filePath": ".github/workflows/release.yml",
+      "summary": "Release job that checks out the repo with full history (fetch-depth: 0 for changelog), sets up Go from go.mod, then invokes goreleaser/goreleaser-action@v6 with `release --clean` to build and publish the binary via GITHUB_TOKEN.",
+      "tags": ["ci-cd", "release", "deployment"],
+      "complexity": "simple",
+      "lineRange": [11, 26]
+    }
+  ],
+  "edges": [
+    {
+      "source": "pipeline:.github/workflows/ci.yml",
+      "target": "step:.github/workflows/ci.yml:test",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "pipeline:.github/workflows/ci.yml",
+      "target": "step:.github/workflows/ci.yml:e2e",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "pipeline:.github/workflows/release.yml",
+      "target": "step:.github/workflows/release.yml:goreleaser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "pipeline:.github/workflows/release.yml",
+      "target": "pipeline:.github/workflows/ci.yml",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

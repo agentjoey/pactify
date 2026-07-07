@@ -1,0 +1,79 @@
+{
+  "nodes": [
+    {
+      "id": "config:cloud/fly.toml",
+      "type": "config",
+      "name": "fly.toml",
+      "filePath": "cloud/fly.toml",
+      "summary": "Production Fly.io deployment manifest for the Pactify zero-knowledge relay: builds the relay Docker image, exposes HTTP on port 4310 with force_https, pins a single Singapore machine (in-process PairStore + rate limiters do not survive load-balancing), and lets the runtime run Prisma migrations before booting the bootstrap server.",
+      "tags": ["deployment", "fly-io", "containerization", "configuration", "production"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:cloud/fly.staging.toml",
+      "type": "config",
+      "name": "fly.staging.toml",
+      "filePath": "cloud/fly.staging.toml",
+      "summary": "Staging Fly.io deployment manifest for the Pactify zero-knowledge relay: separate app named pactify-relay-staging in the Singapore region, single shared-cpu-1x machine with 512MB, same HTTP-on-4310 / single-instance constraint as production so in-process PairStore and rate limiters behave identically across environments.",
+      "tags": ["deployment", "fly-io", "containerization", "configuration", "staging"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:cloud/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "cloud/package.json",
+      "summary": "Workspace-root package.json for the cloud pnpm monorepo: private root scoped as @pactify-apps/cloud-root, ESM, pnpm 10.33.0 package manager, Node >= 24 engine pin, recursive build/test scripts, and shared dev dependencies (@types/node, typescript, vitest).",
+      "tags": ["configuration", "build-system", "pnpm", "monorepo", "workspace-root"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/pnpm-workspace.yaml",
+      "type": "config",
+      "name": "pnpm-workspace.yaml",
+      "filePath": "cloud/pnpm-workspace.yaml",
+      "summary": "pnpm workspace declaration that globs every direct subdirectory of cloud/ (wire, relay, relay-client, crypto, pact-project) into a single workspace so recursive install and filter-based scripts can operate across packages.",
+      "tags": ["configuration", "pnpm", "monorepo", "workspace"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/tsconfig.base.json",
+      "type": "config",
+      "name": "tsconfig.base.json",
+      "filePath": "cloud/tsconfig.base.json",
+      "summary": "Shared TypeScript compiler configuration extended by every cloud workspace package: ES2022 target with NodeNext modules and NodeNext resolution, strict mode plus noUncheckedIndexedAccess / noImplicitOverride, declaration + sourceMap output, and isolatedModules / verbatimModuleSyntax for safe per-file transpilation.",
+      "tags": ["configuration", "typescript", "build-system", "monorepo", "strict-mode"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "config:cloud/fly.toml",
+      "target": "service:cloud/relay/Dockerfile",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/fly.toml",
+      "target": "file:cloud/relay/src/server-main.ts",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "config:cloud/fly.staging.toml",
+      "target": "service:cloud/relay/Dockerfile",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/fly.staging.toml",
+      "target": "file:cloud/relay/src/server-main.ts",
+      "type": "deploys",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

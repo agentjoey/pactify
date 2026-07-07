@@ -1,0 +1,1156 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/pact/seat_test.go",
+      "type": "file",
+      "name": "seat_test.go",
+      "filePath": "internal/pact/seat_test.go",
+      "summary": "Tests for seat parsing and bake helpers: round-tripping managed blocks, rejecting marker-in-body, replacing symlinks, accepting optional kind.",
+      "tags": [
+        "test",
+        "pact",
+        "seat"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/seat_test.go:TestParseSeatValid",
+      "type": "function",
+      "name": "TestParseSeatValid",
+      "filePath": "internal/pact/seat_test.go",
+      "lineRange": [
+        10,
+        18
+      ],
+      "summary": "TestParseSeatValid(exported) in seat_test.go (lines 10-18, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/seat_test.go:TestParseSeatRejectsMalformed",
+      "type": "function",
+      "name": "TestParseSeatRejectsMalformed",
+      "filePath": "internal/pact/seat_test.go",
+      "lineRange": [
+        20,
+        26
+      ],
+      "summary": "TestParseSeatRejectsMalformed(exported) in seat_test.go (lines 20-26, 7 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/seat_test.go:TestBakeEntryManagedBlockPreservesContent",
+      "type": "function",
+      "name": "TestBakeEntryManagedBlockPreservesContent",
+      "filePath": "internal/pact/seat_test.go",
+      "lineRange": [
+        28,
+        46
+      ],
+      "summary": "TestBakeEntryManagedBlockPreservesContent(exported) in seat_test.go (lines 28-46, 19 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/seat_test.go:TestBakeEntryReplacesSymlink",
+      "type": "function",
+      "name": "TestBakeEntryReplacesSymlink",
+      "filePath": "internal/pact/seat_test.go",
+      "lineRange": [
+        48,
+        63
+      ],
+      "summary": "TestBakeEntryReplacesSymlink(exported) in seat_test.go (lines 48-63, 16 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/seat_test.go:TestBakeManagedBlockRoundTrips",
+      "type": "function",
+      "name": "TestBakeManagedBlockRoundTrips",
+      "filePath": "internal/pact/seat_test.go",
+      "lineRange": [
+        65,
+        80
+      ],
+      "summary": "TestBakeManagedBlockRoundTrips(exported) in seat_test.go (lines 65-80, 16 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/seat_test.go:TestBakeManagedBlockRejectsMarkerInBody",
+      "type": "function",
+      "name": "TestBakeManagedBlockRejectsMarkerInBody",
+      "filePath": "internal/pact/seat_test.go",
+      "lineRange": [
+        82,
+        90
+      ],
+      "summary": "TestBakeManagedBlockRejectsMarkerInBody(exported) in seat_test.go (lines 82-90, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/seat_test.go:TestParseSeatOptionalKind",
+      "type": "function",
+      "name": "TestParseSeatOptionalKind",
+      "filePath": "internal/pact/seat_test.go",
+      "lineRange": [
+        92,
+        107
+      ],
+      "summary": "TestParseSeatOptionalKind(exported) in seat_test.go (lines 92-107, 16 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/planner/prompt_test.go",
+      "type": "file",
+      "name": "prompt_test.go",
+      "filePath": "internal/planner/prompt_test.go",
+      "summary": "Tests that the planner prompt contains required sections, names valid slugs, produces parseable manifest example, and is deterministic.",
+      "tags": [
+        "test",
+        "planner",
+        "prompt"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:samplePromptInput",
+      "type": "function",
+      "name": "samplePromptInput",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        10,
+        26
+      ],
+      "summary": "samplePromptInput in prompt_test.go (lines 10-26, 17 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptContainsGoalFeatureAndRepoTree",
+      "type": "function",
+      "name": "TestPromptContainsGoalFeatureAndRepoTree",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        28,
+        37
+      ],
+      "summary": "TestPromptContainsGoalFeatureAndRepoTree(exported) in prompt_test.go (lines 28-37, 10 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptListsSeatsWithDrivable",
+      "type": "function",
+      "name": "TestPromptListsSeatsWithDrivable",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        39,
+        62
+      ],
+      "summary": "TestPromptListsSeatsWithDrivable(exported) in prompt_test.go (lines 39-62, 24 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptMentionsTaskAndManifestPaths",
+      "type": "function",
+      "name": "TestPromptMentionsTaskAndManifestPaths",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        64,
+        72
+      ],
+      "summary": "TestPromptMentionsTaskAndManifestPaths(exported) in prompt_test.go (lines 64-72, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptIncludesManifestSchemaExample",
+      "type": "function",
+      "name": "TestPromptIncludesManifestSchemaExample",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        74,
+        83
+      ],
+      "summary": "TestPromptIncludesManifestSchemaExample(exported) in prompt_test.go (lines 74-83, 10 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptStatesAssignmentRules",
+      "type": "function",
+      "name": "TestPromptStatesAssignmentRules",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        85,
+        104
+      ],
+      "summary": "TestPromptStatesAssignmentRules(exported) in prompt_test.go (lines 85-104, 20 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptRequiresVerifyLine",
+      "type": "function",
+      "name": "TestPromptRequiresVerifyLine",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        106,
+        116
+      ],
+      "summary": "TestPromptRequiresVerifyLine(exported) in prompt_test.go (lines 106-116, 11 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptRequiresDependencyChain",
+      "type": "function",
+      "name": "TestPromptRequiresDependencyChain",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        118,
+        129
+      ],
+      "summary": "TestPromptRequiresDependencyChain(exported) in prompt_test.go (lines 118-129, 12 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptManifestExampleParses",
+      "type": "function",
+      "name": "TestPromptManifestExampleParses",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        131,
+        148
+      ],
+      "summary": "TestPromptManifestExampleParses(exported) in prompt_test.go (lines 131-148, 18 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptDeterministic",
+      "type": "function",
+      "name": "TestPromptDeterministic",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        150,
+        155
+      ],
+      "summary": "TestPromptDeterministic(exported) in prompt_test.go (lines 150-155, 6 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptStatesNamingConvention",
+      "type": "function",
+      "name": "TestPromptStatesNamingConvention",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        157,
+        164
+      ],
+      "summary": "TestPromptStatesNamingConvention(exported) in prompt_test.go (lines 157-164, 8 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptNamingExampleIsSlug",
+      "type": "function",
+      "name": "TestPromptNamingExampleIsSlug",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        166,
+        171
+      ],
+      "summary": "TestPromptNamingExampleIsSlug(exported) in prompt_test.go (lines 166-171, 6 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/prompt_test.go:TestPromptStatesVerifyScoping",
+      "type": "function",
+      "name": "TestPromptStatesVerifyScoping",
+      "filePath": "internal/planner/prompt_test.go",
+      "lineRange": [
+        173,
+        180
+      ],
+      "summary": "TestPromptStatesVerifyScoping(exported) in prompt_test.go (lines 173-180, 8 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/serve/remotechannel.go",
+      "type": "file",
+      "name": "remotechannel.go",
+      "filePath": "internal/serve/remotechannel.go",
+      "summary": "Long-running machine channel that sends agent + project metadata to the remote control service and handles commands.",
+      "tags": [
+        "serve",
+        "remote",
+        "channel",
+        "machine"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/remotechannel.go:StartMachineChannel",
+      "type": "function",
+      "name": "StartMachineChannel",
+      "filePath": "internal/serve/remotechannel.go",
+      "lineRange": [
+        30,
+        121
+      ],
+      "summary": "StartMachineChannel(exported) in remotechannel.go (lines 30-121, 92 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/serve/remotechannel.go:machineAgentKinds",
+      "type": "function",
+      "name": "machineAgentKinds",
+      "filePath": "internal/serve/remotechannel.go",
+      "lineRange": [
+        144,
+        157
+      ],
+      "summary": "machineAgentKinds in remotechannel.go (lines 144-157, 14 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/remotechannel.go:projectPaths",
+      "type": "function",
+      "name": "projectPaths",
+      "filePath": "internal/serve/remotechannel.go",
+      "lineRange": [
+        160,
+        169
+      ],
+      "summary": "projectPaths in remotechannel.go (lines 160-169, 10 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "file:internal/planner/apply_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "file:internal/planner/apply_tx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "file:internal/planner/apply.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "file:internal/planner/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "file:internal/planner/manifest_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "file:internal/planner/manifest.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "file:internal/planner/prompt.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/agent_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/agent.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/briefing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/briefing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/external_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/jsonmerge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/jsonmerge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/launch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/launch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/probe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/probe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/scan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/agent/scan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/machineid/machineid_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/machineid/machineid.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/remoteexec/dispatch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/remoteexec/dispatch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/remoteexec/executor_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/remoteexec/executor.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/remoteexec/parse.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/remotemachine/machine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "file:internal/remotemachine/machine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestParseSeatValid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestParseSeatRejectsMalformed",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestBakeEntryManagedBlockPreservesContent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestBakeEntryReplacesSymlink",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestBakeManagedBlockRoundTrips",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestBakeManagedBlockRejectsMarkerInBody",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestParseSeatOptionalKind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:samplePromptInput",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptContainsGoalFeatureAndRepoTree",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptListsSeatsWithDrivable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptMentionsTaskAndManifestPaths",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptIncludesManifestSchemaExample",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptStatesAssignmentRules",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptRequiresVerifyLine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptRequiresDependencyChain",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptManifestExampleParses",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptDeterministic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptStatesNamingConvention",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptNamingExampleIsSlug",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptStatesVerifyScoping",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "function:internal/serve/remotechannel.go:StartMachineChannel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "function:internal/serve/remotechannel.go:machineAgentKinds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "function:internal/serve/remotechannel.go:projectPaths",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestParseSeatValid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestParseSeatRejectsMalformed",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestBakeEntryManagedBlockPreservesContent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestBakeEntryReplacesSymlink",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestBakeManagedBlockRoundTrips",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestBakeManagedBlockRejectsMarkerInBody",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/seat_test.go",
+      "target": "function:internal/pact/seat_test.go:TestParseSeatOptionalKind",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptContainsGoalFeatureAndRepoTree",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptListsSeatsWithDrivable",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptMentionsTaskAndManifestPaths",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptIncludesManifestSchemaExample",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptStatesAssignmentRules",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptRequiresVerifyLine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptRequiresDependencyChain",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptManifestExampleParses",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptDeterministic",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptStatesNamingConvention",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptNamingExampleIsSlug",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/prompt_test.go",
+      "target": "function:internal/planner/prompt_test.go:TestPromptStatesVerifyScoping",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/remotechannel.go",
+      "target": "function:internal/serve/remotechannel.go:StartMachineChannel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+[
+  {
+    "order": 1,
+    "title": "Protocol at a Glance",
+    "description": "Start with the README narrative: pactify is a portable multi-agent coordination protocol where a git-tracked append-only event log (.pact/log.jsonl) is authoritative and STATE.yml is a regenerable projection. The formal spec defines events, roles, and the two invariants. Read these before any code to understand the story the rest of the tour retells through actual structure.",
+    "nodeIds": [
+      "document:README.md",
+      "document:docs/specs/pact-protocol.md",
+      "document:docs/architecture.md"
+    ]
+  },
+  {
+    "order": 2,
+    "title": "The Event Log \u2014 the single source of truth",
+    "description": "The heart of the protocol lives in internal/event. An Event carries verb/actor/task/feature payloads; log.go appends events (stamping id + timestamp) and reads them back losslessly. Everything else is derived from this JSONL file, so understanding Append/ReadAll and the Event shape is foundational.",
+    "nodeIds": [
+      "file:internal/event/event.go",
+      "class:internal/event/event.go:Event",
+      "file:internal/event/log.go",
+      "function:internal/event/log.go:Append",
+      "function:internal/event/log.go:ReadAll"
+    ]
+  },
+  {
+    "order": 3,
+    "title": "Projection \u2014 folding events into STATE.yml",
+    "description": "internal/projection turns the log into state. Project/Fold replays events into the State/Feature/Task/Seat model; render.go serializes it byte-aligned to STATE.yml; snapshot.go accelerates replays. This is the 'log is source, STATE is projection, CLI recomputes' rule made concrete.",
+    "nodeIds": [
+      "file:internal/projection/project.go",
+      "function:internal/projection/project.go:Project",
+      "class:internal/projection/project.go:State",
+      "function:internal/projection/render.go:Render",
+      "file:internal/projection/snapshot.go"
+    ]
+  },
+  {
+    "order": 4,
+    "title": "Rules \u2014 the two invariants enforced",
+    "description": "rules.go encodes the protocol guarantees: a worker cannot self-accept (only the task's reviewer can), and a feature cannot merge until all its tasks are accepted. checkCheckpoint, checkReviewerVerdict, checkMerge, and the role gate are where correctness is guarded before any event is written.",
+    "nodeIds": [
+      "file:internal/pact/rules.go",
+      "function:internal/pact/rules.go:checkMerge",
+      "function:internal/pact/rules.go:checkReviewerVerdict",
+      "function:internal/pact/rules.go:reviewerAllowed",
+      "function:internal/pact/rules.go:checkCheckpoint"
+    ]
+  },
+  {
+    "order": 5,
+    "title": "The Engine \u2014 verbs that mutate the ledger",
+    "description": "engine.go is the transactional core: each protocol verb (assign, start, checkpoint, changes, accept, merge, join) runs under a ledger lock, checks rules, then appends-and-renders atomically. This is where log, projection, and rules compose into safe state transitions.",
+    "nodeIds": [
+      "file:internal/pact/engine.go",
+      "function:internal/pact/engine.go:assignLocked",
+      "function:internal/pact/engine.go:checkpointLocked",
+      "function:internal/pact/engine.go:acceptLocked",
+      "function:internal/pact/engine.go:mergeLocked",
+      "function:internal/pact/engine.go:appendAndRender"
+    ]
+  },
+  {
+    "order": 6,
+    "title": "Seats & Roles \u2014 who may act",
+    "description": "seat.go models agent identities (seats) and their roles, and manages the pact-managed block baked into AGENTS.md/CLAUDE.md. Combined with the role gate, seats decide which verbs an actor may perform \u2014 the identity layer behind the invariants.",
+    "nodeIds": [
+      "file:internal/pact/seat.go",
+      "function:internal/pact/seat.go:ParseSeat",
+      "function:internal/event/event.go:RoleFor",
+      "file:internal/pact/role_gate_test.go"
+    ]
+  },
+  {
+    "order": 7,
+    "title": "The CLI Surface",
+    "description": "cmd/pactify is the standard implementation of the protocol. main.go wires the root command; commands.go assembles subcommands (setup, join, assign, checkpoint, run, serve, mcp, orchestrate...). This is the primary human/agent entry point that drives the engine.",
+    "nodeIds": [
+      "file:cmd/pactify/main.go",
+      "function:cmd/pactify/main.go:main",
+      "file:cmd/pactify/commands.go",
+      "function:cmd/pactify/commands.go:newRootCmd",
+      "file:cmd/pactify/cmd_setup.go"
+    ]
+  },
+  {
+    "order": 8,
+    "title": "Orchestration Engine \u2014 driving agents automatically",
+    "description": "internal/orchestrate runs the pull-based dispatch loop: it reads STATE, launches owner and reviewer agents, runs gates, handles rework/escalation, and merges when green. loop.go's Run is mission control's automation brain, turning the protocol into a self-driving workflow.",
+    "nodeIds": [
+      "file:internal/orchestrate/loop.go",
+      "function:internal/orchestrate/loop.go:Run",
+      "function:internal/orchestrate/loop.go:runOwner",
+      "function:internal/orchestrate/loop.go:runReviewer",
+      "file:internal/orchestrate/gate.go"
+    ]
+  },
+  {
+    "order": 9,
+    "title": "MCP Server \u2014 protocol as agent tools",
+    "description": "internal/mcp exposes the protocol over the Model Context Protocol so any MCP-capable agent can participate. server.go serves tools (status/join/assign/checkpoint/accept/merge) and resources (pact://state, pact://log); tools.go registers them and resolves the target project.",
+    "nodeIds": [
+      "file:internal/mcp/server.go",
+      "function:internal/mcp/server.go:New",
+      "file:internal/mcp/tools.go",
+      "function:internal/mcp/tools.go:registerTools",
+      "file:internal/mcp/resources.go"
+    ]
+  },
+  {
+    "order": 10,
+    "title": "Web Dashboard \u2014 mission control",
+    "description": "web/ is the React+Vite dashboard. main.tsx boots the app, App.tsx composes the views, lib/api.ts talks to the serve API, and Canvas.tsx renders the live board. Per the canvas craft spec, node positions have exactly two writers and RF nodes only merge-by-id.",
+    "nodeIds": [
+      "file:web/src/main.tsx",
+      "file:web/src/App.tsx",
+      "file:web/src/lib/api.ts",
+      "file:web/src/components/Canvas.tsx",
+      "file:web/src/lib/datasource.tsx"
+    ]
+  },
+  {
+    "order": 11,
+    "title": "Cloud Relay \u2014 remote coordination",
+    "description": "Cloud lets seats coordinate across machines. Go-side internal/cloudclient authenticates and holds sessions while internal/relaysock speaks the wire protocol; the TS relay server (cloud/relay) and relay-client persist and broadcast events. This mirrors the local engine over the network.",
+    "nodeIds": [
+      "file:internal/cloudclient/client.go",
+      "file:internal/relaysock/client.go",
+      "file:cloud/relay/src/index.ts",
+      "file:cloud/relay/src/pact.ts",
+      "class:cloud/relay-client/src/index.ts:RelayClient"
+    ]
+  },
+  {
+    "order": 12,
+    "title": "CI/CD, Release & Tests",
+    "description": "The distribution and verification layer: ci.yml runs Go + web unit tests and Playwright e2e; release.yml + .goreleaser.yaml build the single static binary; install.sh delivers it. Protocol behavior is pinned by bats suites (protocol_v1, merge, checkpoint) plus web vitest \u2014 the double-green gate.",
+    "nodeIds": [
+      "pipeline:.github/workflows/ci.yml",
+      "pipeline:.github/workflows/release.yml",
+      "config:.goreleaser.yaml",
+      "file:tests/protocol_v1.bats",
+      "file:install.sh"
+    ]
+  }
+]

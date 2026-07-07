@@ -1,0 +1,1672 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/pact/project_test.go",
+      "type": "file",
+      "name": "project_test.go",
+      "filePath": "internal/pact/project_test.go",
+      "summary": "Integration test for project lifecycle: init/assign/join/checkpoint/accept/merge from a foreign working directory.",
+      "tags": [
+        "test",
+        "pact",
+        "integration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/project_test.go:newGitRepo",
+      "type": "function",
+      "name": "newGitRepo",
+      "filePath": "internal/pact/project_test.go",
+      "lineRange": [
+        16,
+        33
+      ],
+      "summary": "newGitRepo in project_test.go (lines 16-33, 18 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/project_test.go:TestProjectLifecycleFromForeignCwd",
+      "type": "function",
+      "name": "TestProjectLifecycleFromForeignCwd",
+      "filePath": "internal/pact/project_test.go",
+      "lineRange": [
+        35,
+        81
+      ],
+      "summary": "TestProjectLifecycleFromForeignCwd(exported) in project_test.go (lines 35-81, 47 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/pact/util.go",
+      "type": "file",
+      "name": "util.go",
+      "filePath": "internal/pact/util.go",
+      "summary": "Internal utility helper (splitComma) \u2014 kept in a separate file to enable shared internal package use.",
+      "tags": [
+        "pact",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/planner/apply_test.go",
+      "type": "file",
+      "name": "apply_test.go",
+      "filePath": "internal/planner/apply_test.go",
+      "summary": "Tests for plan Apply: valid plan success, missing spec rejection, invalid plan rejection.",
+      "tags": [
+        "test",
+        "planner",
+        "apply"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/planner/apply_test.go:newGitRepo",
+      "type": "function",
+      "name": "newGitRepo",
+      "filePath": "internal/planner/apply_test.go",
+      "lineRange": [
+        14,
+        31
+      ],
+      "summary": "newGitRepo in apply_test.go (lines 14-31, 18 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/apply_test.go:TestApplyValidPlan",
+      "type": "function",
+      "name": "TestApplyValidPlan",
+      "filePath": "internal/planner/apply_test.go",
+      "lineRange": [
+        33,
+        116
+      ],
+      "summary": "TestApplyValidPlan(exported) in apply_test.go (lines 33-116, 84 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/planner/apply_test.go:TestApplySpecMissing",
+      "type": "function",
+      "name": "TestApplySpecMissing",
+      "filePath": "internal/planner/apply_test.go",
+      "lineRange": [
+        118,
+        155
+      ],
+      "summary": "TestApplySpecMissing(exported) in apply_test.go (lines 118-155, 38 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/planner/apply_test.go:TestApplyInvalidPlan",
+      "type": "function",
+      "name": "TestApplyInvalidPlan",
+      "filePath": "internal/planner/apply_test.go",
+      "lineRange": [
+        157,
+        197
+      ],
+      "summary": "TestApplyInvalidPlan(exported) in apply_test.go (lines 157-197, 41 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/remoteexec/dispatch.go",
+      "type": "file",
+      "name": "dispatch.go",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "summary": "RPC dispatcher that routes remote calls to Planner, Orchestrator, Provisioner, Stinter, TaskAuthor, or PactEngine.",
+      "tags": [
+        "remote",
+        "rpc",
+        "dispatcher",
+        "api"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/remoteexec/dispatch.go:Handle",
+      "type": "function",
+      "name": "Handle",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        168,
+        277
+      ],
+      "summary": "Handle(exported) in dispatch.go (lines 168-277, 110 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:RPC",
+      "type": "class",
+      "name": "RPC",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        22,
+        45
+      ],
+      "summary": "RPC(exported) type in dispatch.go (lines 22-45, 24 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:StintRequest",
+      "type": "class",
+      "name": "StintRequest",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        50,
+        57
+      ],
+      "summary": "StintRequest(exported) type in dispatch.go (lines 50-57, 8 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:Provisioner",
+      "type": "class",
+      "name": "Provisioner",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        63,
+        65
+      ],
+      "summary": "Provisioner(exported) type in dispatch.go (lines 63-65, 3 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:PlanRequest",
+      "type": "class",
+      "name": "PlanRequest",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        68,
+        74
+      ],
+      "summary": "PlanRequest(exported) type in dispatch.go (lines 68-74, 7 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:Planner",
+      "type": "class",
+      "name": "Planner",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        78,
+        80
+      ],
+      "summary": "Planner(exported) type in dispatch.go (lines 78-80, 3 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:OrchestrateRequest",
+      "type": "class",
+      "name": "OrchestrateRequest",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        85,
+        90
+      ],
+      "summary": "OrchestrateRequest(exported) type in dispatch.go (lines 85-90, 6 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:Orchestrator",
+      "type": "class",
+      "name": "Orchestrator",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        95,
+        97
+      ],
+      "summary": "Orchestrator(exported) type in dispatch.go (lines 95-97, 3 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:TaskAuthor",
+      "type": "class",
+      "name": "TaskAuthor",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        102,
+        104
+      ],
+      "summary": "TaskAuthor(exported) type in dispatch.go (lines 102-104, 3 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:Stinter",
+      "type": "class",
+      "name": "Stinter",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        111,
+        113
+      ],
+      "summary": "Stinter(exported) type in dispatch.go (lines 111-113, 3 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:Reply",
+      "type": "class",
+      "name": "Reply",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        117,
+        123
+      ],
+      "summary": "Reply(exported) type in dispatch.go (lines 117-123, 7 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:PactEngine",
+      "type": "class",
+      "name": "PactEngine",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        128,
+        134
+      ],
+      "summary": "PactEngine(exported) type in dispatch.go (lines 128-134, 7 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/remoteexec/dispatch.go:Dispatcher",
+      "type": "class",
+      "name": "Dispatcher",
+      "filePath": "internal/remoteexec/dispatch.go",
+      "lineRange": [
+        146,
+        163
+      ],
+      "summary": "Dispatcher(exported) type in dispatch.go (lines 146-163, 18 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/serve/seats_test.go",
+      "type": "file",
+      "name": "seats_test.go",
+      "filePath": "internal/serve/seats_test.go",
+      "summary": "Tests the seats HTTP endpoint: empty state, CLI join, client identity changes/preservation across joins.",
+      "tags": [
+        "test",
+        "serve",
+        "seats",
+        "http"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/seats_test.go:getSeats",
+      "type": "function",
+      "name": "getSeats",
+      "filePath": "internal/serve/seats_test.go",
+      "lineRange": [
+        12,
+        27
+      ],
+      "summary": "getSeats in seats_test.go (lines 12-27, 16 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/seats_test.go:findSeat",
+      "type": "function",
+      "name": "findSeat",
+      "filePath": "internal/serve/seats_test.go",
+      "lineRange": [
+        29,
+        38
+      ],
+      "summary": "findSeat in seats_test.go (lines 29-38, 10 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/seats_test.go:TestSeatsNeverJoined",
+      "type": "function",
+      "name": "TestSeatsNeverJoined",
+      "filePath": "internal/serve/seats_test.go",
+      "lineRange": [
+        42,
+        58
+      ],
+      "summary": "TestSeatsNeverJoined(exported) in seats_test.go (lines 42-58, 17 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/seats_test.go:TestSeatsSingleCLIJoin",
+      "type": "function",
+      "name": "TestSeatsSingleCLIJoin",
+      "filePath": "internal/serve/seats_test.go",
+      "lineRange": [
+        62,
+        84
+      ],
+      "summary": "TestSeatsSingleCLIJoin(exported) in seats_test.go (lines 62-84, 23 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/seats_test.go:TestSeatsClientChanged",
+      "type": "function",
+      "name": "TestSeatsClientChanged",
+      "filePath": "internal/serve/seats_test.go",
+      "lineRange": [
+        88,
+        109
+      ],
+      "summary": "TestSeatsClientChanged(exported) in seats_test.go (lines 88-109, 22 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/seats_test.go:TestSeatsClientUnchanged",
+      "type": "function",
+      "name": "TestSeatsClientUnchanged",
+      "filePath": "internal/serve/seats_test.go",
+      "lineRange": [
+        113,
+        127
+      ],
+      "summary": "TestSeatsClientUnchanged(exported) in seats_test.go (lines 113-127, 15 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/planner/apply_tx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/planner/apply.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/planner/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/planner/manifest_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/planner/manifest.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/planner/prompt_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "file:internal/planner/prompt.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "function:internal/pact/project_test.go:newGitRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "function:internal/pact/project_test.go:TestProjectLifecycleFromForeignCwd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "function:internal/planner/apply_test.go:newGitRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "function:internal/planner/apply_test.go:TestApplyValidPlan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "function:internal/planner/apply_test.go:TestApplySpecMissing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "function:internal/planner/apply_test.go:TestApplyInvalidPlan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "function:internal/remoteexec/dispatch.go:Handle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:RPC",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:StintRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Provisioner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:PlanRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Planner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:OrchestrateRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Orchestrator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:TaskAuthor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Stinter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Reply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:PactEngine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Dispatcher",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:getSeats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:findSeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:TestSeatsNeverJoined",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:TestSeatsSingleCLIJoin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:TestSeatsClientChanged",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:TestSeatsClientUnchanged",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/project_test.go",
+      "target": "function:internal/pact/project_test.go:TestProjectLifecycleFromForeignCwd",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "function:internal/planner/apply_test.go:TestApplyValidPlan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "function:internal/planner/apply_test.go:TestApplySpecMissing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/apply_test.go",
+      "target": "function:internal/planner/apply_test.go:TestApplyInvalidPlan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "function:internal/remoteexec/dispatch.go:Handle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:RPC",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:StintRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Provisioner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:PlanRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Planner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:OrchestrateRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Orchestrator",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:TaskAuthor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Stinter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Reply",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:PactEngine",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/remoteexec/dispatch.go",
+      "target": "class:internal/remoteexec/dispatch.go:Dispatcher",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:TestSeatsNeverJoined",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:TestSeatsSingleCLIJoin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:TestSeatsClientChanged",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/seats_test.go",
+      "target": "function:internal/serve/seats_test.go:TestSeatsClientUnchanged",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

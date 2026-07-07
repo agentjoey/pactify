@@ -1,0 +1,807 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 20,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": ".pact/tasks/planner-manifest.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 42,
+      "nonEmptyLines": 34,
+      "sections": [
+        {
+          "heading": "Task p-manifest · manifest schema + 解析 + 校验",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "改文件",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "契约",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "Validate 规则（违规聚合，列出每条）",
+          "level": 2,
+          "line": 24
+        },
+        {
+          "heading": "验收（manifest_test.go）",
+          "level": 2,
+          "line": 33
+        },
+        {
+          "heading": "verify",
+          "level": 2,
+          "line": 36
+        },
+        {
+          "heading": "完成方式",
+          "level": 2,
+          "line": 41
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": ".pact/tasks/planner-prompt.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 40,
+      "nonEmptyLines": 32,
+      "sections": [
+        {
+          "heading": "Task p-prompt · planning prompt 组装",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "改文件",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "契约",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "BuildPrompt 产出的 prompt 必须指示 planner agent：",
+          "level": 2,
+          "line": 24
+        },
+        {
+          "heading": "验收（prompt_test.go，纯函数，断言关键片段存在）",
+          "level": 2,
+          "line": 31
+        },
+        {
+          "heading": "verify",
+          "level": 2,
+          "line": 34
+        },
+        {
+          "heading": "完成方式",
+          "level": 2,
+          "line": 39
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": ".pact/tasks/proj-fixture.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 27,
+      "nonEmptyLines": 21,
+      "sections": [
+        {
+          "heading": "proj-fixture：Go 黄金夹具导出器（events→StateDTO，跨语言 parity 契约）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 16
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 21
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/recipe-core.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 117,
+      "nonEmptyLines": 101,
+      "sections": [
+        {
+          "heading": "recipe-core — orchestrate 动作配方（任务图模板）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "要实现的文件",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "1) `internal/recipe/recipe.go`（新建）",
+          "level": 3,
+          "line": 9
+        },
+        {
+          "heading": "2) `internal/recipe/recipe_test.go`（新建）",
+          "level": 3,
+          "line": 100
+        },
+        {
+          "heading": "3) `cmd/pactify/cmd_recipe.go`（新建）",
+          "level": 3,
+          "line": 103
+        },
+        {
+          "heading": "验收口径",
+          "level": 2,
+          "line": 109
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": ".pact/tasks/recipe-serve.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 110,
+      "nonEmptyLines": 94,
+      "sections": [
+        {
+          "heading": "recipe-serve — Recipes 的 serve 端点（给 dashboard 消费）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "先读这两个文件学模式（务必照抄风格）",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "recipe 包已有的导出（直接用，别改）",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "要实现的文件",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "1) `internal/serve/recipes.go`（新建）",
+          "level": 3,
+          "line": 20
+        },
+        {
+          "heading": "2) 在 `internal/serve/api.go` 的 `Handler()` 里注册（加一行）",
+          "level": 3,
+          "line": 90
+        },
+        {
+          "heading": "3) `internal/serve/recipes_test.go`（新建）",
+          "level": 3,
+          "line": 96
+        },
+        {
+          "heading": "验收口径",
+          "level": 2,
+          "line": 104
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": ".pact/tasks/relay-client.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 57,
+      "nonEmptyLines": 44,
+      "sections": [
+        {
+          "heading": "Task t1 · relay-client",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "要碰的文件",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "契约（签名照此实现）",
+          "level": 2,
+          "line": 13
+        },
+        {
+          "heading": "行为要求",
+          "level": 2,
+          "line": 37
+        },
+        {
+          "heading": "验收测试（relay_test.go 必须覆盖）",
+          "level": 2,
+          "line": 44
+        },
+        {
+          "heading": "验收命令",
+          "level": 2,
+          "line": 51
+        },
+        {
+          "heading": "完成方式",
+          "level": 2,
+          "line": 56
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": ".pact/tasks/rp-critic.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 12,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "rp-critic — critic 预评分(默认关)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "交付",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "测试",
+          "level": 2,
+          "line": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": ".pact/tasks/rp-dynamic-seats.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 11,
+      "nonEmptyLines": 8,
+      "sections": [
+        {
+          "heading": "rp-dynamic-seats — 动态座席(小步)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "交付",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "测试",
+          "level": 2,
+          "line": 10
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": ".pact/tasks/rp-e2e-docs.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 9,
+      "nonEmptyLines": 7,
+      "sections": [
+        {
+          "heading": "rp-e2e-docs — 包2 收尾:quorum 徽标 + 文档 + 全仓门",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "交付",
+          "level": 2,
+          "line": 5
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": ".pact/tasks/rp-fix-loop.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 13,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "rp-fix-loop — fix-until-green 自修环 + draft 语义",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "交付",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "测试",
+          "level": 2,
+          "line": 9
+        },
+        {
+          "heading": "边界",
+          "level": 2,
+          "line": 12
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/rp-qa-gate.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 11,
+      "nonEmptyLines": 8,
+      "sections": [
+        {
+          "heading": "rp-qa-gate — QA-agent 门(实验性,任务级 opt-in)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "交付",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "测试",
+          "level": 2,
+          "line": 10
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": ".pact/tasks/rp-quorum.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 15,
+      "nonEmptyLines": 11,
+      "sections": [
+        {
+          "heading": "rp-quorum — quorum 多评审(协议扩展,严格 opt-in)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "交付",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "测试",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "边界",
+          "level": 2,
+          "line": 14
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/rp-schedule.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 14,
+      "nonEmptyLines": 10,
+      "sections": [
+        {
+          "heading": "rp-schedule — 定时/周期 orchestrate(serve 侧,零新依赖)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "交付",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "测试",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "边界",
+          "level": 2,
+          "line": 13
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/rp-snapshot.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 12,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "rp-snapshot — 账本持久快照 + 增量 replay(正确性关键)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "交付",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "测试(评审最严)",
+          "level": 2,
+          "line": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": ".pact/tasks/serve-manifests.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 25,
+      "nonEmptyLines": 20,
+      "sections": [
+        {
+          "heading": "Task: serve endpoints for custom-agent manifests (Phase C)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "What to build",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "Rules",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "Acceptance (reviewer re-runs this)",
+          "level": 2,
+          "line": 23
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/sessions-core.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 101,
+      "nonEmptyLines": 84,
+      "sections": [
+        {
+          "heading": "sessions-core — agent 任务 session 清理框架",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "要实现的文件",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "1) `internal/sessions/sessions.go`（新建）",
+          "level": 3,
+          "line": 10
+        },
+        {
+          "heading": "2) `internal/sessions/sessions_test.go`（新建）",
+          "level": 3,
+          "line": 84
+        },
+        {
+          "heading": "3) `cmd/pactify/cmd_sessions.go`（新建）",
+          "level": 3,
+          "line": 87
+        },
+        {
+          "heading": "验收口径",
+          "level": 2,
+          "line": 93
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": ".pact/tasks/t-acting-seat.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 31,
+      "nonEmptyLines": 25,
+      "sections": [
+        {
+          "heading": "t-acting-seat：acting-seat 授权基线（SP1 块④）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "分层规则",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 16
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 27
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": ".pact/tasks/t-plan-apply.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 28,
+      "nonEmptyLines": 22,
+      "sections": [
+        {
+          "heading": "t-plan-apply：plan apply 事务化（SP1 块②）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "实现要点（细节见 plan Task 3）",
+          "level": 2,
+          "line": 16
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": ".pact/tasks/t-projwiz-backend.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 24,
+      "nonEmptyLines": 18,
+      "sections": [
+        {
+          "heading": "t-projwiz-backend：fs browse + group（项目向导后端）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/t-projwiz-frontend.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 23,
+      "nonEmptyLines": 17,
+      "sections": [
+        {
+          "heading": "t-projwiz-frontend：Sidebar 分组 + 添加向导 + FolderPicker + 删除（项目向导前端）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 19
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    }
+  ]
+}

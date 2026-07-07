@@ -1,0 +1,1206 @@
+{
+  "nodes": [
+    {
+      "id": "file:web/src/components/ops/AgentConfig.test.tsx",
+      "type": "file",
+      "name": "AgentConfig.test.tsx",
+      "filePath": "web/src/components/ops/AgentConfig.test.tsx",
+      "summary": "Vitest tests for the per-agent-kind config row: model selection, tool allow-list, restricted mode toggling.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ops/AgentConfig.test.tsx:cfg",
+      "type": "function",
+      "name": "cfg",
+      "filePath": "web/src/components/ops/AgentConfig.test.tsx",
+      "lineRange": [
+        15,
+        25
+      ],
+      "summary": "cfg function (11 lines).",
+      "tags": [
+        "test",
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ops/AgentConfig.tsx",
+      "type": "file",
+      "name": "AgentConfig.tsx",
+      "filePath": "web/src/components/ops/AgentConfig.tsx",
+      "summary": "Per-agent-kind configuration UI: pick model from candidate_models, edit allowed tools, toggle custom/restricted mode, persist via setAgentConfig.",
+      "tags": [
+        "react",
+        "component",
+        "ops"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/components/ops/AgentConfig.tsx:AgentConfig",
+      "type": "function",
+      "name": "AgentConfig",
+      "filePath": "web/src/components/ops/AgentConfig.tsx",
+      "lineRange": [
+        16,
+        68
+      ],
+      "summary": "Loads registered agent kinds and renders an AgentConfigRow for each.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ops/AgentConfig.tsx:AgentConfigRow",
+      "type": "function",
+      "name": "AgentConfigRow",
+      "filePath": "web/src/components/ops/AgentConfig.tsx",
+      "lineRange": [
+        70,
+        296
+      ],
+      "summary": "Editable row for one agent kind: model select, tools input, restricted toggle, save/reset.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:web/src/components/ops/AgentRoster.test.tsx",
+      "type": "file",
+      "name": "AgentRoster.test.tsx",
+      "filePath": "web/src/components/ops/AgentRoster.test.tsx",
+      "summary": "Vitest tests for the agent roster with register/unregister and session-prune flows.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ops/AgentRoster.tsx",
+      "type": "file",
+      "name": "AgentRoster.tsx",
+      "filePath": "web/src/components/ops/AgentRoster.tsx",
+      "summary": "Ops view listing discovered agents with register/unregister toggles and a prune-sessions action per row.",
+      "tags": [
+        "react",
+        "component",
+        "ops"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/components/ops/AgentRoster.tsx:AgentRoster",
+      "type": "function",
+      "name": "AgentRoster",
+      "filePath": "web/src/components/ops/AgentRoster.tsx",
+      "lineRange": [
+        19,
+        179
+      ],
+      "summary": "Lists installed and manual agents, supports register/unregister and prune-sessions.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ops/AgentRoster.tsx:RosterRow",
+      "type": "function",
+      "name": "RosterRow",
+      "filePath": "web/src/components/ops/AgentRoster.tsx",
+      "lineRange": [
+        181,
+        250
+      ],
+      "summary": "Single roster row with toggle and prune-sessions controls.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ops/CustomAgentForm.test.tsx",
+      "type": "file",
+      "name": "CustomAgentForm.test.tsx",
+      "filePath": "web/src/components/ops/CustomAgentForm.test.tsx",
+      "summary": "Vitest tests for the custom-agent manifest form, covering TOML assembly and createManifest call.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "type": "file",
+      "name": "CustomAgentForm.tsx",
+      "filePath": "web/src/components/ops/CustomAgentForm.tsx",
+      "summary": "Form to assemble a custom agent TOML manifest (kind, binary, entry, args, models, MCP config) and submit via createManifest.",
+      "tags": [
+        "react",
+        "component",
+        "ops"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/components/ops/CustomAgentForm.tsx:CustomAgentForm",
+      "type": "function",
+      "name": "CustomAgentForm",
+      "filePath": "web/src/components/ops/CustomAgentForm.tsx",
+      "lineRange": [
+        10,
+        229
+      ],
+      "summary": "Form that assembles a TOML manifest and submits via createManifest.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:web/src/components/ops/OpsView.tsx",
+      "type": "file",
+      "name": "OpsView.tsx",
+      "filePath": "web/src/components/ops/OpsView.tsx",
+      "summary": "Top-level ops panel composing AgentConfig, AgentRoster, CustomAgentForm, Projects, Seats, and Wiring into a single refresh-aware surface.",
+      "tags": [
+        "react",
+        "component",
+        "ops"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/ops/OpsView.tsx:OpsView",
+      "type": "function",
+      "name": "OpsView",
+      "filePath": "web/src/components/ops/OpsView.tsx",
+      "lineRange": [
+        12,
+        44
+      ],
+      "summary": "Composes the ops sub-views (agents, projects, seats, wiring) under one refresh tick.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/ops/Projects.test.tsx",
+      "type": "file",
+      "name": "Projects.test.tsx",
+      "filePath": "web/src/components/ops/Projects.test.tsx",
+      "summary": "Vitest tests for the project registry table (register/remove flows).",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ops/Projects.tsx",
+      "type": "file",
+      "name": "Projects.tsx",
+      "filePath": "web/src/components/ops/Projects.tsx",
+      "summary": "Registry of configured projects (postRegister / deleteRegistry) with add/remove controls and refresh propagation.",
+      "tags": [
+        "react",
+        "component",
+        "ops"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ops/Projects.tsx:Projects",
+      "type": "function",
+      "name": "Projects",
+      "filePath": "web/src/components/ops/Projects.tsx",
+      "lineRange": [
+        16,
+        176
+      ],
+      "summary": "Registry table for projects with add/remove and refresh propagation.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ops/Seats.test.tsx",
+      "type": "file",
+      "name": "Seats.test.tsx",
+      "filePath": "web/src/components/ops/Seats.test.tsx",
+      "summary": "Vitest tests for the seat listing view.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ops/Seats.tsx",
+      "type": "file",
+      "name": "Seats.tsx",
+      "filePath": "web/src/components/ops/Seats.tsx",
+      "summary": "Lists seats (running agents) for the active project with role badges and last-seen relative time.",
+      "tags": [
+        "react",
+        "component",
+        "ops"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ops/Seats.tsx:Seats",
+      "type": "function",
+      "name": "Seats",
+      "filePath": "web/src/components/ops/Seats.tsx",
+      "lineRange": [
+        14,
+        104
+      ],
+      "summary": "Lists seats for the active project with roles and last-seen time.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ops/Wiring.test.tsx",
+      "type": "file",
+      "name": "Wiring.test.tsx",
+      "filePath": "web/src/components/ops/Wiring.test.tsx",
+      "summary": "Vitest tests for the wire-a-seat modal and roster.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/ops/Wiring.tsx",
+      "type": "file",
+      "name": "Wiring.tsx",
+      "filePath": "web/src/components/ops/Wiring.tsx",
+      "summary": "Wire-a-seat ops view: pick existing or new seat, assign roles, submit via postWire, with clipboard-copyable install snippet.",
+      "tags": [
+        "react",
+        "component",
+        "ops"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/components/ops/Wiring.tsx:WireModal",
+      "type": "function",
+      "name": "WireModal",
+      "filePath": "web/src/components/ops/Wiring.tsx",
+      "lineRange": [
+        18,
+        183
+      ],
+      "summary": "Modal for wiring a seat: choose seat, roles, and submit via postWire.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/components/ops/Wiring.tsx:Wiring",
+      "type": "function",
+      "name": "Wiring",
+      "filePath": "web/src/components/ops/Wiring.tsx",
+      "lineRange": [
+        188,
+        274
+      ],
+      "summary": "Lists wires with open-modal action per row and refresh propagation.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/shell/AddProjectWizard.test.tsx",
+      "type": "file",
+      "name": "AddProjectWizard.test.tsx",
+      "filePath": "web/src/components/shell/AddProjectWizard.test.tsx",
+      "summary": "Vitest tests for the multi-step add-project wizard.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "type": "file",
+      "name": "AddProjectWizard.tsx",
+      "filePath": "web/src/components/shell/AddProjectWizard.tsx",
+      "summary": "Multi-step wizard for registering a project: pick a folder, choose a roster (with AI-suggested bindings), apply via postRegister + setupApply.",
+      "tags": [
+        "react",
+        "component",
+        "shell"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/components/shell/AddProjectWizard.tsx:AddProjectWizard",
+      "type": "function",
+      "name": "AddProjectWizard",
+      "filePath": "web/src/components/shell/AddProjectWizard.tsx",
+      "lineRange": [
+        62,
+        352
+      ],
+      "summary": "Multi-step wizard: pick folder, configure roster, apply via postRegister + setupApply.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/components/shell/AddProjectWizard.tsx:RosterEditor",
+      "type": "function",
+      "name": "RosterEditor",
+      "filePath": "web/src/components/shell/AddProjectWizard.tsx",
+      "lineRange": [
+        354,
+        402
+      ],
+      "summary": "Inline roster editor used inside the wizard's step 2.",
+      "tags": [
+        "function",
+        "react",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/shell/CableMark.tsx",
+      "type": "file",
+      "name": "CableMark.tsx",
+      "filePath": "web/src/components/shell/CableMark.tsx",
+      "summary": "Tiny visual cable marker (decorative SVG/div) used in shell layouts.",
+      "tags": [
+        "react",
+        "component",
+        "shell"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:web/src/components/shell/CableMark.tsx:CableMark",
+      "type": "function",
+      "name": "CableMark",
+      "filePath": "web/src/components/shell/CableMark.tsx",
+      "lineRange": [
+        3,
+        11
+      ],
+      "summary": "Renders a decorative cable mark in the shell layout.",
+      "tags": [
+        "function",
+        "react",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/components/shell/DispatchPanel.test.tsx",
+      "type": "file",
+      "name": "DispatchPanel.test.tsx",
+      "filePath": "web/src/components/shell/DispatchPanel.test.tsx",
+      "summary": "Vitest tests for the dispatch panel rendering tasking UI against a mocked data source.",
+      "tags": [
+        "test",
+        "react",
+        "component"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:web/src/components/ops/AgentConfig.test.tsx",
+      "target": "file:web/src/components/ops/AgentConfig.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/components/ui/Alert.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/components/ui/Badge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/components/ui/Button.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/components/ui/EmptyState.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/components/ui/Input.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/components/ui/Select.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/components/ui/Spinner.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/lib/agentLogos.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.test.tsx",
+      "target": "file:web/src/components/ops/AgentRoster.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "file:web/src/components/ui/Alert.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "file:web/src/components/ui/Badge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "file:web/src/components/ui/Button.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "file:web/src/components/ui/EmptyState.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "file:web/src/lib/agentLogos.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "file:web/src/lib/protocolErrors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.test.tsx",
+      "target": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "target": "file:web/src/components/ui/Alert.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "target": "file:web/src/components/ui/Button.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "target": "file:web/src/components/ui/Input.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "target": "file:web/src/components/ui/Select.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "file:web/src/components/ops/AgentConfig.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "file:web/src/components/ops/AgentRoster.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "file:web/src/components/ops/Projects.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "file:web/src/components/ops/Seats.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "file:web/src/components/ops/Wiring.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "file:web/src/components/Skeleton.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.test.tsx",
+      "target": "file:web/src/components/ops/Projects.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.test.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/components/ui/Alert.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/components/ui/Button.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/components/ui/EmptyState.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/components/ui/Input.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/components/ui/Modal.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/lib/ops.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/lib/protocolErrors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.test.tsx",
+      "target": "file:web/src/components/ops/Seats.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.test.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/components/ui/Alert.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/components/ui/Badge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/components/ui/EmptyState.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/components/ui/Spinner.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/lib/canvas.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/lib/ops.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.test.tsx",
+      "target": "file:web/src/components/ops/Wiring.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.test.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/components/ui/Alert.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/components/ui/Badge.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/components/ui/Button.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/components/ui/EmptyState.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/components/ui/Input.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/components/ui/Modal.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/components/ui/Spinner.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/lib/ops.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/lib/protocolErrors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.test.tsx",
+      "target": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "file:web/src/components/shell/FolderPicker.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "file:web/src/components/ui/Button.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "file:web/src/components/ui/Input.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "file:web/src/components/ui/Modal.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "file:web/src/lib/protocolErrors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/DispatchPanel.test.tsx",
+      "target": "file:web/src/components/shell/DispatchPanel.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/DispatchPanel.test.tsx",
+      "target": "file:web/src/lib/datasource.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/shell/DispatchPanel.test.tsx",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.test.tsx",
+      "target": "function:web/src/components/ops/AgentConfig.test.tsx:cfg",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "function:web/src/components/ops/AgentConfig.tsx:AgentConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "function:web/src/components/ops/AgentConfig.tsx:AgentConfigRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "function:web/src/components/ops/AgentRoster.tsx:AgentRoster",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "function:web/src/components/ops/AgentRoster.tsx:RosterRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "target": "function:web/src/components/ops/CustomAgentForm.tsx:CustomAgentForm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "function:web/src/components/ops/OpsView.tsx:OpsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "function:web/src/components/ops/Projects.tsx:Projects",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "function:web/src/components/ops/Seats.tsx:Seats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "function:web/src/components/ops/Wiring.tsx:WireModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "function:web/src/components/ops/Wiring.tsx:Wiring",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "function:web/src/components/shell/AddProjectWizard.tsx:AddProjectWizard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "function:web/src/components/shell/AddProjectWizard.tsx:RosterEditor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/shell/CableMark.tsx",
+      "target": "function:web/src/components/shell/CableMark.tsx:CableMark",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "function:web/src/components/ops/AgentConfig.tsx:AgentConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "function:web/src/components/ops/AgentRoster.tsx:AgentRoster",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "target": "function:web/src/components/ops/CustomAgentForm.tsx:CustomAgentForm",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ops/OpsView.tsx",
+      "target": "function:web/src/components/ops/OpsView.tsx:OpsView",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "function:web/src/components/ops/Projects.tsx:Projects",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "function:web/src/components/ops/Seats.tsx:Seats",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "function:web/src/components/ops/Wiring.tsx:Wiring",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "function:web/src/components/shell/AddProjectWizard.tsx:AddProjectWizard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/shell/CableMark.tsx",
+      "target": "function:web/src/components/shell/CableMark.tsx:CableMark",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ops/AgentConfig.tsx",
+      "target": "file:web/src/components/ops/AgentConfig.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/ops/AgentRoster.tsx",
+      "target": "file:web/src/components/ops/AgentRoster.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "target": "file:web/src/components/ops/CustomAgentForm.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/ops/Projects.tsx",
+      "target": "file:web/src/components/ops/Projects.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/ops/Seats.tsx",
+      "target": "file:web/src/components/ops/Seats.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/ops/Wiring.tsx",
+      "target": "file:web/src/components/ops/Wiring.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/components/shell/AddProjectWizard.tsx",
+      "target": "file:web/src/components/shell/AddProjectWizard.test.tsx",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

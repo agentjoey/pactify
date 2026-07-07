@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    {
+      "id": "config:schemas/event.schema.json",
+      "type": "config",
+      "name": "event.schema.json",
+      "filePath": "schemas/event.schema.json",
+      "summary": "JSON Schema (draft 2020-12) defining the pact protocol v1 log event, including required fields for agent identity, role, event type, and event-type-specific payload requirements via allOf conditional branches.",
+      "tags": ["schema-definition", "validation", "json-schema", "pact-protocol", "data-model"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:schemas/seat.schema.json",
+      "type": "config",
+      "name": "seat.schema.json",
+      "filePath": "schemas/seat.schema.json",
+      "summary": "JSON Schema (draft 2020-12) defining a pact v1 seat with required id, roles array (orchestrator/worker/reviewer), and entry identifier.",
+      "tags": ["schema-definition", "validation", "json-schema", "pact-protocol", "data-model"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:schemas/task.schema.json",
+      "type": "config",
+      "name": "task.schema.json",
+      "filePath": "schemas/task.schema.json",
+      "summary": "JSON Schema (draft 2020-12) defining the pact v1 task frontmatter with required id, feature, owner, and reviewer identifiers.",
+      "tags": ["schema-definition", "validation", "json-schema", "pact-protocol", "data-model"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

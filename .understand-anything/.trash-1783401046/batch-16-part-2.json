@@ -1,0 +1,1596 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/doctor/vendor.go",
+      "type": "file",
+      "name": "vendor.go",
+      "filePath": "internal/doctor/vendor.go",
+      "summary": "Per-vendor binary, auth-file, and transport health checks for Claude, OpenCode, Gemini, and other supported agent CLIs.",
+      "tags": [
+        "go",
+        "diagnostics",
+        "vendor-check",
+        "health-check"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/doctor/vendor.go:VendorChecks",
+      "type": "function",
+      "name": "VendorChecks",
+      "filePath": "internal/doctor/vendor.go",
+      "lineRange": [
+        59,
+        79
+      ],
+      "summary": "Function VendorChecks defined in internal/doctor/vendor.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/doctor/vendor.go:vendorBinaryCheck",
+      "type": "function",
+      "name": "vendorBinaryCheck",
+      "filePath": "internal/doctor/vendor.go",
+      "lineRange": [
+        81,
+        91
+      ],
+      "summary": "Function vendorBinaryCheck defined in internal/doctor/vendor.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/doctor/vendor.go:vendorAuthCheck",
+      "type": "function",
+      "name": "vendorAuthCheck",
+      "filePath": "internal/doctor/vendor.go",
+      "lineRange": [
+        93,
+        105
+      ],
+      "summary": "Function vendorAuthCheck defined in internal/doctor/vendor.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/doctor/vendor.go:lookInPath",
+      "type": "function",
+      "name": "lookInPath",
+      "filePath": "internal/doctor/vendor.go",
+      "lineRange": [
+        119,
+        139
+      ],
+      "summary": "Function lookInPath defined in internal/doctor/vendor.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/mcp/resources.go",
+      "type": "file",
+      "name": "resources.go",
+      "filePath": "internal/mcp/resources.go",
+      "summary": "MCP resource registration that exposes pact log and state files as readable resources with missing-file tolerance.",
+      "tags": [
+        "go",
+        "mcp",
+        "resource-provider",
+        "file-reading"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/mcp/server.go",
+      "type": "file",
+      "name": "server.go",
+      "filePath": "internal/mcp/server.go",
+      "summary": "Constructs MCP server wiring tools and resources and watches the pact log file for live notifications.",
+      "tags": [
+        "go",
+        "mcp",
+        "server",
+        "file-watcher"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/mcp/server.go:New",
+      "type": "function",
+      "name": "New",
+      "filePath": "internal/mcp/server.go",
+      "lineRange": [
+        17,
+        29
+      ],
+      "summary": "Function New defined in internal/mcp/server.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/server.go:Watch",
+      "type": "function",
+      "name": "Watch",
+      "filePath": "internal/mcp/server.go",
+      "lineRange": [
+        34,
+        66
+      ],
+      "summary": "Function Watch defined in internal/mcp/server.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/orchestrate/runner.go",
+      "type": "file",
+      "name": "runner.go",
+      "filePath": "internal/orchestrate/runner.go",
+      "summary": "Command-line runner launching agent CLI processes with seat/project env vars, stdout mirroring, and per-task token usage recording.",
+      "tags": [
+        "go",
+        "process-runner",
+        "agent-launch",
+        "token-tracking",
+        "env-stamping"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/runner.go:NewCmdRunner",
+      "type": "function",
+      "name": "NewCmdRunner",
+      "filePath": "internal/orchestrate/runner.go",
+      "lineRange": [
+        96,
+        98
+      ],
+      "summary": "Function NewCmdRunner defined in internal/orchestrate/runner.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/runner.go",
+      "lineRange": [
+        128,
+        217
+      ],
+      "summary": "Function Run defined in internal/orchestrate/runner.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/runner.go:recordTokens",
+      "type": "function",
+      "name": "recordTokens",
+      "filePath": "internal/orchestrate/runner.go",
+      "lineRange": [
+        231,
+        240
+      ],
+      "summary": "Function recordTokens defined in internal/orchestrate/runner.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner.go:Write",
+      "type": "function",
+      "name": "Write",
+      "filePath": "internal/orchestrate/runner.go",
+      "lineRange": [
+        264,
+        270
+      ],
+      "summary": "Function Write defined in internal/orchestrate/runner.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner.go:geminiEnv",
+      "type": "function",
+      "name": "geminiEnv",
+      "filePath": "internal/orchestrate/runner.go",
+      "lineRange": [
+        305,
+        315
+      ],
+      "summary": "Function geminiEnv defined in internal/orchestrate/runner.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner.go:glmEnv",
+      "type": "function",
+      "name": "glmEnv",
+      "filePath": "internal/orchestrate/runner.go",
+      "lineRange": [
+        320,
+        329
+      ],
+      "summary": "Function glmEnv defined in internal/orchestrate/runner.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/orchestrate/runner.go:tailWriter",
+      "type": "class",
+      "name": "tailWriter",
+      "filePath": "internal/orchestrate/runner.go",
+      "lineRange": [
+        259,
+        262
+      ],
+      "summary": "Type tailWriter defined in internal/orchestrate/runner.go.",
+      "tags": [
+        "go",
+        "type-definition",
+        "data-model",
+        "internal"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/runner_test.go",
+      "type": "file",
+      "name": "runner_test.go",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "summary": "Tests for CmdRunner covering opencode/claude/gui kinds, env stamping, error propagation, stdout mirroring, and token accumulation across runs.",
+      "tags": [
+        "go",
+        "test",
+        "process-runner",
+        "token-tracking"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "function",
+      "name": "fakeRunExec",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        26,
+        35
+      ],
+      "summary": "Function fakeRunExec defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestCmdRunner_Opencode",
+      "type": "function",
+      "name": "TestCmdRunner_Opencode",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        46,
+        71
+      ],
+      "summary": "Function TestCmdRunner_Opencode defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestCmdRunner_ClaudeCode",
+      "type": "function",
+      "name": "TestCmdRunner_ClaudeCode",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        73,
+        89
+      ],
+      "summary": "Function TestCmdRunner_ClaudeCode defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestRunnerStampsTaskAndProjectEnv",
+      "type": "function",
+      "name": "TestRunnerStampsTaskAndProjectEnv",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        91,
+        106
+      ],
+      "summary": "Function TestRunnerStampsTaskAndProjectEnv defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestGeminiEnv",
+      "type": "function",
+      "name": "TestGeminiEnv",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        108,
+        129
+      ],
+      "summary": "Function TestGeminiEnv defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestGLMEnv",
+      "type": "function",
+      "name": "TestGLMEnv",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        131,
+        172
+      ],
+      "summary": "Function TestGLMEnv defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestTagOpencodeSession",
+      "type": "function",
+      "name": "TestTagOpencodeSession",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        174,
+        191
+      ],
+      "summary": "Function TestTagOpencodeSession defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestCmdRunner_GUIKind_Errors",
+      "type": "function",
+      "name": "TestCmdRunner_GUIKind_Errors",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        193,
+        203
+      ],
+      "summary": "Function TestCmdRunner_GUIKind_Errors defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestCmdRunner_UnknownKind_Errors",
+      "type": "function",
+      "name": "TestCmdRunner_UnknownKind_Errors",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        205,
+        215
+      ],
+      "summary": "Function TestCmdRunner_UnknownKind_Errors defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestCmdRunner_ExecError_Propagates",
+      "type": "function",
+      "name": "TestCmdRunner_ExecError_Propagates",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        217,
+        225
+      ],
+      "summary": "Function TestCmdRunner_ExecError_Propagates defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens",
+      "type": "function",
+      "name": "TestCmdRunner_RecordsTokens",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        241,
+        251
+      ],
+      "summary": "Function TestCmdRunner_RecordsTokens defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens_AccumulatesAcrossRuns",
+      "type": "function",
+      "name": "TestCmdRunner_RecordsTokens_AccumulatesAcrossRuns",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        255,
+        270
+      ],
+      "summary": "Function TestCmdRunner_RecordsTokens_AccumulatesAcrossRuns defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens_NoopWithoutTaskOrUsage",
+      "type": "function",
+      "name": "TestCmdRunner_RecordsTokens_NoopWithoutTaskOrUsage",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        274,
+        290
+      ],
+      "summary": "Function TestCmdRunner_RecordsTokens_NoopWithoutTaskOrUsage defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestTailWriter_KeepsTailUnderCap",
+      "type": "function",
+      "name": "TestTailWriter_KeepsTailUnderCap",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        294,
+        306
+      ],
+      "summary": "Function TestTailWriter_KeepsTailUnderCap defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestNewCmdRunner_HasExec",
+      "type": "function",
+      "name": "TestNewCmdRunner_HasExec",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        310,
+        314
+      ],
+      "summary": "Function TestNewCmdRunner_HasExec defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestRunMirrorsStdoutToStreamFile",
+      "type": "function",
+      "name": "TestRunMirrorsStdoutToStreamFile",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        316,
+        330
+      ],
+      "summary": "Function TestRunMirrorsStdoutToStreamFile defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_test.go:TestRunnerSubstitutesSeatToken",
+      "type": "function",
+      "name": "TestRunnerSubstitutesSeatToken",
+      "filePath": "internal/orchestrate/runner_test.go",
+      "lineRange": [
+        342,
+        360
+      ],
+      "summary": "Function TestRunnerSubstitutesSeatToken defined in internal/orchestrate/runner_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/paths/paths.go",
+      "type": "file",
+      "name": "paths.go",
+      "filePath": "internal/paths/paths.go",
+      "summary": "Centralised .pact directory and file path helpers with PACT_DIR env override support and a per-base variant for repo-relative paths.",
+      "tags": [
+        "go",
+        "path-helper",
+        "configuration",
+        "env-aware"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/paths/paths.go:Dir",
+      "type": "function",
+      "name": "Dir",
+      "filePath": "internal/paths/paths.go",
+      "lineRange": [
+        13,
+        18
+      ],
+      "summary": "Function Dir defined in internal/paths/paths.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/paths/paths.go:DirIn",
+      "type": "function",
+      "name": "DirIn",
+      "filePath": "internal/paths/paths.go",
+      "lineRange": [
+        33,
+        39
+      ],
+      "summary": "Function DirIn defined in internal/paths/paths.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/paths/paths.go:StateSnapshotIn",
+      "type": "function",
+      "name": "StateSnapshotIn",
+      "filePath": "internal/paths/paths.go",
+      "lineRange": [
+        49,
+        51
+      ],
+      "summary": "Function StateSnapshotIn defined in internal/paths/paths.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "function:internal/doctor/vendor.go:VendorChecks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "function:internal/doctor/vendor.go:VendorChecks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "function:internal/doctor/vendor.go:vendorBinaryCheck",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "function:internal/doctor/vendor.go:vendorAuthCheck",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "function:internal/doctor/vendor.go:lookInPath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server.go",
+      "target": "function:internal/mcp/server.go:New",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server.go",
+      "target": "function:internal/mcp/server.go:New",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/mcp/server.go",
+      "target": "function:internal/mcp/server.go:Watch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server.go",
+      "target": "function:internal/mcp/server.go:Watch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:NewCmdRunner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:NewCmdRunner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:Run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:recordTokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:Write",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:Write",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:Write",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:Write",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:geminiEnv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "function:internal/orchestrate/runner.go:glmEnv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "class:internal/orchestrate/runner.go:tailWriter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_Opencode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_Opencode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_ClaudeCode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_ClaudeCode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestRunnerStampsTaskAndProjectEnv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestRunnerStampsTaskAndProjectEnv",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestGeminiEnv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestGeminiEnv",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestGLMEnv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestGLMEnv",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestTagOpencodeSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestTagOpencodeSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_GUIKind_Errors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_GUIKind_Errors",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_UnknownKind_Errors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_UnknownKind_Errors",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_ExecError_Propagates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_ExecError_Propagates",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens_AccumulatesAcrossRuns",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens_AccumulatesAcrossRuns",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens_NoopWithoutTaskOrUsage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestCmdRunner_RecordsTokens_NoopWithoutTaskOrUsage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestTailWriter_KeepsTailUnderCap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestTailWriter_KeepsTailUnderCap",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestNewCmdRunner_HasExec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestNewCmdRunner_HasExec",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestRunMirrorsStdoutToStreamFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestRunMirrorsStdoutToStreamFile",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestRunnerSubstitutesSeatToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "function:internal/orchestrate/runner_test.go:TestRunnerSubstitutesSeatToken",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/paths/paths.go",
+      "target": "function:internal/paths/paths.go:Dir",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/paths/paths.go",
+      "target": "function:internal/paths/paths.go:Dir",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/paths/paths.go",
+      "target": "function:internal/paths/paths.go:DirIn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/paths/paths.go",
+      "target": "function:internal/paths/paths.go:DirIn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/paths/paths.go",
+      "target": "function:internal/paths/paths.go:StateSnapshotIn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/paths/paths.go",
+      "target": "function:internal/paths/paths.go:StateSnapshotIn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/agent_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/agent.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/briefing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/briefing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/external_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/jsonmerge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/jsonmerge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/launch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/launch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/probe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/probe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/scan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/doctor/vendor.go",
+      "target": "file:internal/agent/scan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/resources.go",
+      "target": "file:internal/paths/paths_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/resources.go",
+      "target": "file:internal/paths/paths.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server.go",
+      "target": "file:internal/paths/paths_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server.go",
+      "target": "file:internal/paths/paths.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/agent_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/agent.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/briefing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/briefing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/external_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/jsonmerge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/jsonmerge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/launch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/launch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/probe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/probe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/scan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agent/scan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agentcfg/agentcfg_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/agentcfg/agentcfg.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/secret/secret.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/sessions/sessions_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/sessions/sessions.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/sessions/tag_collision_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/tokens/tokens_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/tokens/tokens.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/agent_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/agent.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/briefing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/briefing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/external_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/jsonmerge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/jsonmerge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/launch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/launch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/probe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/probe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/scan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/agent/scan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/tokens/tokens_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner_test.go",
+      "target": "file:internal/tokens/tokens.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/runner.go",
+      "target": "file:internal/orchestrate/runner_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/paths/paths.go",
+      "target": "file:internal/paths/paths_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/doctor/vendor.go:VendorChecks",
+      "target": "function:internal/doctor/vendor.go:vendorBinaryCheck",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/doctor/vendor.go:VendorChecks",
+      "target": "function:internal/doctor/vendor.go:vendorAuthCheck",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/doctor/vendor.go:vendorBinaryCheck",
+      "target": "function:internal/doctor/vendor.go:lookInPath",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner.go:Run",
+      "target": "function:internal/orchestrate/runner.go:glmEnv",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner.go:Run",
+      "target": "function:internal/orchestrate/runner.go:geminiEnv",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner.go:Run",
+      "target": "function:internal/orchestrate/runner.go:recordTokens",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_test.go:TestCmdRunner_Opencode",
+      "target": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_test.go:TestCmdRunner_ClaudeCode",
+      "target": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_test.go:TestRunnerStampsTaskAndProjectEnv",
+      "target": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_test.go:TestCmdRunner_GUIKind_Errors",
+      "target": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_test.go:TestCmdRunner_UnknownKind_Errors",
+      "target": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_test.go:TestCmdRunner_ExecError_Propagates",
+      "target": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_test.go:TestRunnerSubstitutesSeatToken",
+      "target": "function:internal/orchestrate/runner_test.go:fakeRunExec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/paths/paths.go:DirIn",
+      "target": "function:internal/paths/paths.go:Dir",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/paths/paths.go:StateSnapshotIn",
+      "target": "function:internal/paths/paths.go:DirIn",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

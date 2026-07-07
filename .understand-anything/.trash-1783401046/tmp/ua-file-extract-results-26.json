@@ -1,0 +1,439 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 11,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": ".goreleaser.yaml",
+      "language": "yaml",
+      "fileCategory": "config",
+      "totalLines": 46,
+      "nonEmptyLines": 39,
+      "sections": [
+        {
+          "heading": "version",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "project_name",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "before",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "builds",
+          "level": 1,
+          "line": 10
+        },
+        {
+          "heading": "archives",
+          "level": 1,
+          "line": 26
+        },
+        {
+          "heading": "checksum",
+          "level": 1,
+          "line": 34
+        },
+        {
+          "heading": "release",
+          "level": 1,
+          "line": 38
+        },
+        {
+          "heading": "changelog",
+          "level": 1,
+          "line": 45
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": ".mcp.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 13,
+      "nonEmptyLines": 13,
+      "sections": [
+        {
+          "heading": "mcpServers",
+          "level": 1,
+          "line": 2
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 1
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 61,
+      "nonEmptyLines": 49,
+      "sections": [
+        {
+          "heading": "Pactify — Claude Code Context",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "⭐ Session 启动（每次必执行）",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Project Overview",
+          "level": 2,
+          "line": 9
+        },
+        {
+          "heading": "Tech Stack",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "Key Implementation Details",
+          "level": 2,
+          "line": 25
+        },
+        {
+          "heading": "Dev Commands",
+          "level": 2,
+          "line": 32
+        },
+        {
+          "heading": "Release 后必做（任何 agent 通用）",
+          "level": 2,
+          "line": 37
+        },
+        {
+          "heading": "pact protocol — seat `opencode-worker`",
+          "level": 1,
+          "line": 43
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": "CLAUDE.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 67,
+      "nonEmptyLines": 54,
+      "sections": [
+        {
+          "heading": "Pactify — Claude Code Context",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "⭐ Session 启动（每次必执行）",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Project Overview",
+          "level": 2,
+          "line": 9
+        },
+        {
+          "heading": "Tech Stack",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "Key Implementation Details",
+          "level": 2,
+          "line": 25
+        },
+        {
+          "heading": "Dev Commands",
+          "level": 2,
+          "line": 32
+        },
+        {
+          "heading": "Release 后必做（任何 agent 通用）",
+          "level": 2,
+          "line": 37
+        },
+        {
+          "heading": "工程约定（2026-06-19 dark-ui 复盘）",
+          "level": 2,
+          "line": 43
+        },
+        {
+          "heading": "pact protocol — seat `claude`",
+          "level": 1,
+          "line": 49
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 9
+      }
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 79,
+      "nonEmptyLines": 62,
+      "sections": [
+        {
+          "heading": "Contributing & Git Workflow",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Branch model — GitHub flow",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "The flow",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "Maintainer exception",
+          "level": 2,
+          "line": 36
+        },
+        {
+          "heading": "Two different \"feature branches\" — don't confuse them",
+          "level": 2,
+          "line": 45
+        },
+        {
+          "heading": "Tests",
+          "level": 2,
+          "line": 52
+        },
+        {
+          "heading": "Branch protection (maintainer)",
+          "level": 2,
+          "line": 61
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "GEMINI.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 61,
+      "nonEmptyLines": 49,
+      "sections": [
+        {
+          "heading": "Pactify — Claude Code Context",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "⭐ Session 启动（每次必执行）",
+          "level": 2,
+          "line": 3
+        },
+        {
+          "heading": "Project Overview",
+          "level": 2,
+          "line": 9
+        },
+        {
+          "heading": "Tech Stack",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "Key Implementation Details",
+          "level": 2,
+          "line": 25
+        },
+        {
+          "heading": "Dev Commands",
+          "level": 2,
+          "line": 32
+        },
+        {
+          "heading": "Release 后必做（任何 agent 通用）",
+          "level": 2,
+          "line": 37
+        },
+        {
+          "heading": "pact protocol — seat `gemini-worker`",
+          "level": 1,
+          "line": 43
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 95,
+      "nonEmptyLines": 66,
+      "sections": [
+        {
+          "heading": "Pactify",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "Install",
+          "level": 2,
+          "line": 13
+        },
+        {
+          "heading": "Quickstart",
+          "level": 2,
+          "line": 35
+        },
+        {
+          "heading": "Claude Code (one-click)",
+          "level": 2,
+          "line": 52
+        },
+        {
+          "heading": "The idea in 30 seconds",
+          "level": 2,
+          "line": 64
+        },
+        {
+          "heading": "Try the reference implementation",
+          "level": 2,
+          "line": 76
+        },
+        {
+          "heading": "Docs",
+          "level": 2,
+          "line": 86
+        },
+        {
+          "heading": "License",
+          "level": 2,
+          "line": 93
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 8
+      }
+    },
+    {
+      "path": "go.mod",
+      "language": "mod",
+      "fileCategory": "config",
+      "totalLines": 23,
+      "nonEmptyLines": 20,
+      "metrics": {}
+    },
+    {
+      "path": "go.sum",
+      "language": "sum",
+      "fileCategory": "config",
+      "totalLines": 38,
+      "nonEmptyLines": 38,
+      "metrics": {}
+    },
+    {
+      "path": "install.sh",
+      "language": "shell",
+      "fileCategory": "script",
+      "totalLines": 83,
+      "nonEmptyLines": 71,
+      "functions": [
+        {
+          "name": "detect_os",
+          "startLine": 11,
+          "endLine": 11,
+          "params": []
+        },
+        {
+          "name": "detect_arch",
+          "startLine": 12,
+          "endLine": 19,
+          "params": []
+        },
+        {
+          "name": "main",
+          "startLine": 31,
+          "endLine": 81,
+          "params": []
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "opencode.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 16,
+      "nonEmptyLines": 16,
+      "sections": [
+        {
+          "heading": "$schema",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "mcp",
+          "level": 1,
+          "line": 3
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    }
+  ]
+}

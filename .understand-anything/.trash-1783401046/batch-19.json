@@ -1,0 +1,292 @@
+{
+  "nodes": [
+    {
+      "id": "file:cloud/crypto/src/crypto.ts",
+      "type": "file",
+      "name": "crypto.ts",
+      "filePath": "cloud/crypto/src/crypto.ts",
+      "summary": "Symmetric xchacha20poly1305 envelope helpers: generates a 32-byte run key, serializes AgentEvents to JSON, encrypts to a base64 EncryptedBlob (alg/nonce/ct), and decrypts back with AEAD auth-failure detection.",
+      "tags": ["cryptography", "symmetric-cipher", "envelope", "aead", "wire-format"],
+      "complexity": "simple",
+      "languageNotes": "Uses @noble/ciphers XChaCha20-Poly1305 with 24-byte nonce and @scure/base for base64 envelope encoding."
+    },
+    {
+      "id": "file:cloud/crypto/src/keys.ts",
+      "type": "file",
+      "name": "keys.ts",
+      "filePath": "cloud/crypto/src/keys.ts",
+      "summary": "HKDF-SHA256 key derivation utilities: master secret generation, per-run and per-project symmetric keys (domain-separated via info string), and an Ed25519 account keypair whose public key is the cross-device account identity.",
+      "tags": ["cryptography", "key-derivation", "hkdf", "ed25519", "identity"],
+      "complexity": "moderate",
+      "languageNotes": "Uses HKDF-SHA256 with domain-separation info strings ('account', 'run:<id>', 'project:<id>') to keep each derived key cryptographically independent from the others."
+    },
+    {
+      "id": "file:cloud/crypto/test/crypto.test.ts",
+      "type": "file",
+      "name": "crypto.test.ts",
+      "filePath": "cloud/crypto/test/crypto.test.ts",
+      "summary": "Vitest suite for the crypto envelope: round-trips every AgentEvent kind, asserts blob shape (alg/nonce/ct fields), confirms a fresh nonce per call, and verifies AEAD auth failure on wrong key and tampered ciphertext.",
+      "tags": ["test", "vitest", "cryptography", "envelope", "auth-failure"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/crypto/test/golden.test.ts",
+      "type": "file",
+      "name": "golden.test.ts",
+      "filePath": "cloud/crypto/test/golden.test.ts",
+      "summary": "Frozen cross-language golden vectors for the account keypair, deterministic Ed25519 signature, per-run key derivation, and xchacha20poly1305 envelope bytes — pins the byte-exact contract a future Go port must reproduce.",
+      "tags": ["test", "vitest", "golden-vectors", "cross-language", "compatibility"],
+      "complexity": "moderate",
+      "languageNotes": "Any change to a pinned value is a deliberate cross-language break; the file instructs developers to revert or bump the protocol version rather than edit expected values."
+    },
+    {
+      "id": "file:cloud/crypto/test/keys.test.ts",
+      "type": "file",
+      "name": "keys.test.ts",
+      "filePath": "cloud/crypto/test/keys.test.ts",
+      "summary": "Vitest suite for HKDF derivations: pins deriveProjectKey against the Go golden vector, asserts domain separation between run and project keys, checks run-key determinism and length, and verifies the derived key round-trips an encrypted body.",
+      "tags": ["test", "vitest", "key-derivation", "hkdf", "round-trip"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/crypto/src/crypto.ts:generateRunKey",
+      "type": "function",
+      "name": "generateRunKey",
+      "filePath": "cloud/crypto/src/crypto.ts",
+      "lineRange": [11, 13],
+      "summary": "Returns a fresh 32-byte symmetric key sourced from the WebCrypto CSPRNG for use as a per-run XChaCha20-Poly1305 key.",
+      "tags": ["key-generation", "symmetric", "csprng", "utility"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/crypto/src/crypto.ts:encryptEvent",
+      "type": "function",
+      "name": "encryptEvent",
+      "filePath": "cloud/crypto/src/crypto.ts",
+      "lineRange": [16, 21],
+      "summary": "JSON-encodes a normalized AgentEvent, encrypts it under the supplied key with a freshly generated 24-byte nonce, and returns a base64 EncryptedBlob (alg/nonce/ct) for transport over the relay.",
+      "tags": ["encryption", "aead", "envelope", "serialization", "base64"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/crypto/src/crypto.ts:decryptEvent",
+      "type": "function",
+      "name": "decryptEvent",
+      "filePath": "cloud/crypto/src/crypto.ts",
+      "lineRange": [25, 31],
+      "summary": "Base64-decodes an EncryptedBlob, decrypts it under the supplied key (throws on auth failure from wrong key or tampering), parses the JSON payload, and re-validates it through the AgentEvent schema parser.",
+      "tags": ["decryption", "aead", "auth-verification", "schema-validation", "base64"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/crypto/src/keys.ts:deriveAccountKeypair",
+      "type": "function",
+      "name": "deriveAccountKeypair",
+      "filePath": "cloud/crypto/src/keys.ts",
+      "lineRange": [16, 23],
+      "summary": "Derives a deterministic Ed25519 account keypair from the shared master secret using HKDF-SHA256 with info 'account'; the returned AccountKeypair exposes publicKeyHex and a sign(challenge) method used to authenticate account-level requests.",
+      "tags": ["key-derivation", "ed25519", "hkdf", "identity", "signing"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/crypto/src/keys.ts:generateMasterSecret",
+      "type": "function",
+      "name": "generateMasterSecret",
+      "filePath": "cloud/crypto/src/keys.ts",
+      "lineRange": [26, 28],
+      "summary": "Returns a fresh 32-byte random master secret that the user's devices (linxd + web) share and that all other keys (account, run, project) are derived from.",
+      "tags": ["key-generation", "master-secret", "csprng", "utility"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/crypto/src/keys.ts:deriveRunKey",
+      "type": "function",
+      "name": "deriveRunKey",
+      "filePath": "cloud/crypto/src/keys.ts",
+      "lineRange": [32, 34],
+      "summary": "Derives a 32-byte per-run symmetric key from the master secret + runId via HKDF-SHA256 with info 'run:<runId>'; linxd and the web derive the same key while the relay cannot.",
+      "tags": ["key-derivation", "hkdf", "domain-separation", "symmetric", "run"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/crypto/src/keys.ts:deriveProjectKey",
+      "type": "function",
+      "name": "deriveProjectKey",
+      "filePath": "cloud/crypto/src/keys.ts",
+      "lineRange": [41, 43],
+      "summary": "Derives a 32-byte per-project symmetric key for U2 Mission Control pact events via HKDF-SHA256 with info 'project:<projectId>'; domain-separated from run and account keys and byte-for-byte compatible with the Go port (spec §4.2b).",
+      "tags": ["key-derivation", "hkdf", "domain-separation", "symmetric", "project"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:cloud/crypto/test/crypto.test.ts",
+      "target": "file:cloud/crypto/src/crypto.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/crypto/test/golden.test.ts",
+      "target": "file:cloud/crypto/src/crypto.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/crypto/test/golden.test.ts",
+      "target": "file:cloud/crypto/src/keys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/crypto/test/keys.test.ts",
+      "target": "file:cloud/crypto/src/crypto.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/crypto/test/keys.test.ts",
+      "target": "file:cloud/crypto/src/keys.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "function:cloud/crypto/src/crypto.ts:generateRunKey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "function:cloud/crypto/src/crypto.ts:encryptEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "function:cloud/crypto/src/crypto.ts:decryptEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "function:cloud/crypto/src/keys.ts:deriveAccountKeypair",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "function:cloud/crypto/src/keys.ts:generateMasterSecret",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "function:cloud/crypto/src/keys.ts:deriveRunKey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "function:cloud/crypto/src/keys.ts:deriveProjectKey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "function:cloud/crypto/src/crypto.ts:generateRunKey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "function:cloud/crypto/src/crypto.ts:encryptEvent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "function:cloud/crypto/src/crypto.ts:decryptEvent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "function:cloud/crypto/src/keys.ts:deriveAccountKeypair",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "function:cloud/crypto/src/keys.ts:generateMasterSecret",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "function:cloud/crypto/src/keys.ts:deriveRunKey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "function:cloud/crypto/src/keys.ts:deriveProjectKey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "file:cloud/crypto/test/crypto.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "file:cloud/crypto/test/golden.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/crypto/src/crypto.ts",
+      "target": "file:cloud/crypto/test/keys.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "file:cloud/crypto/test/golden.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/crypto/src/keys.ts",
+      "target": "file:cloud/crypto/test/keys.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

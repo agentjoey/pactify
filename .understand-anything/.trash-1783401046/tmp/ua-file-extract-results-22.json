@@ -1,0 +1,409 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 3,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "cloud/pact-project/src/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 244,
+      "nonEmptyLines": 227,
+      "functions": [
+        {
+          "name": "str",
+          "startLine": 42,
+          "endLine": 44,
+          "params": [
+            "v"
+          ]
+        },
+        {
+          "name": "payloadStr",
+          "startLine": 46,
+          "endLine": 48,
+          "params": [
+            "payload",
+            "key"
+          ]
+        },
+        {
+          "name": "payloadArr",
+          "startLine": 50,
+          "endLine": 53,
+          "params": [
+            "payload",
+            "key"
+          ]
+        },
+        {
+          "name": "seatFromPayload",
+          "startLine": 55,
+          "endLine": 64,
+          "params": [
+            "payload"
+          ]
+        },
+        {
+          "name": "findTask",
+          "startLine": 66,
+          "endLine": 68,
+          "params": [
+            "feature",
+            "taskId"
+          ]
+        },
+        {
+          "name": "buildTask",
+          "startLine": 70,
+          "endLine": 76,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "project",
+          "startLine": 78,
+          "endLine": 244,
+          "params": [
+            "events"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "project",
+          "line": 78,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "payloadStr",
+          "callee": "str",
+          "lineNumber": 47
+        },
+        {
+          "caller": "payloadArr",
+          "callee": "Array.isArray",
+          "lineNumber": 52
+        },
+        {
+          "caller": "seatFromPayload",
+          "callee": "payloadStr",
+          "lineNumber": 56
+        },
+        {
+          "caller": "seatFromPayload",
+          "callee": "payloadStr",
+          "lineNumber": 57
+        },
+        {
+          "caller": "seatFromPayload",
+          "callee": "payloadArr",
+          "lineNumber": 59
+        },
+        {
+          "caller": "seatFromPayload",
+          "callee": "str",
+          "lineNumber": 60
+        },
+        {
+          "caller": "seatFromPayload",
+          "callee": "seat.roles.push",
+          "lineNumber": 61
+        },
+        {
+          "caller": "findTask",
+          "callee": "feature.tasks.find",
+          "lineNumber": 67
+        },
+        {
+          "caller": "project",
+          "callee": "payloadStr",
+          "lineNumber": 101
+        },
+        {
+          "caller": "project",
+          "callee": "payloadArr",
+          "lineNumber": 103
+        },
+        {
+          "caller": "project",
+          "callee": "st.agents.push",
+          "lineNumber": 105
+        },
+        {
+          "caller": "project",
+          "callee": "seatFromPayload",
+          "lineNumber": 105
+        },
+        {
+          "caller": "project",
+          "callee": "seatFromPayload",
+          "lineNumber": 115
+        },
+        {
+          "caller": "project",
+          "callee": "st.agents.some",
+          "lineNumber": 116
+        },
+        {
+          "caller": "project",
+          "callee": "st.agents.push",
+          "lineNumber": 117
+        },
+        {
+          "caller": "project",
+          "callee": "st.features.push",
+          "lineNumber": 124
+        },
+        {
+          "caller": "project",
+          "callee": "payloadStr",
+          "lineNumber": 124
+        },
+        {
+          "caller": "project",
+          "callee": "payloadArr",
+          "lineNumber": 129
+        },
+        {
+          "caller": "project",
+          "callee": "depsRaw.map((d) => str(d)).filter",
+          "lineNumber": 132
+        },
+        {
+          "caller": "project",
+          "callee": "depsRaw.map",
+          "lineNumber": 132
+        },
+        {
+          "caller": "project",
+          "callee": "str",
+          "lineNumber": 132
+        },
+        {
+          "caller": "project",
+          "callee": "buildTask",
+          "lineNumber": 134
+        },
+        {
+          "caller": "project",
+          "callee": "payloadStr",
+          "lineNumber": 136
+        },
+        {
+          "caller": "project",
+          "callee": "payloadStr",
+          "lineNumber": 138
+        },
+        {
+          "caller": "project",
+          "callee": "payloadStr",
+          "lineNumber": 139
+        },
+        {
+          "caller": "project",
+          "callee": "st.features[fi]!.tasks.push",
+          "lineNumber": 148
+        },
+        {
+          "caller": "project",
+          "callee": "cancelled.has",
+          "lineNumber": 160
+        },
+        {
+          "caller": "project",
+          "callee": "t.deps.every",
+          "lineNumber": 163
+        },
+        {
+          "caller": "project",
+          "callee": "findTask",
+          "lineNumber": 164
+        },
+        {
+          "caller": "project",
+          "callee": "cancelled.has",
+          "lineNumber": 165
+        },
+        {
+          "caller": "project",
+          "callee": "find",
+          "lineNumber": 177
+        },
+        {
+          "caller": "project",
+          "callee": "find",
+          "lineNumber": 184
+        },
+        {
+          "caller": "project",
+          "callee": "payloadStr",
+          "lineNumber": 187
+        },
+        {
+          "caller": "project",
+          "callee": "find",
+          "lineNumber": 192
+        },
+        {
+          "caller": "project",
+          "callee": "find",
+          "lineNumber": 199
+        },
+        {
+          "caller": "project",
+          "callee": "cancelled.add",
+          "lineNumber": 213
+        },
+        {
+          "caller": "project",
+          "callee": "withdrawn.add",
+          "lineNumber": 217
+        },
+        {
+          "caller": "project",
+          "callee": "withdrawn.has",
+          "lineNumber": 227
+        },
+        {
+          "caller": "project",
+          "callee": "f.tasks.filter",
+          "lineNumber": 228
+        },
+        {
+          "caller": "project",
+          "callee": "cancelled.has",
+          "lineNumber": 228
+        },
+        {
+          "caller": "project",
+          "callee": "kept.push",
+          "lineNumber": 229
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 7,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/pact-project/test/parity.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 42,
+      "nonEmptyLines": 37,
+      "functions": [
+        {
+          "name": "readEvents",
+          "startLine": 10,
+          "endLine": 16,
+          "params": []
+        },
+        {
+          "name": "readGolden",
+          "startLine": 18,
+          "endLine": 21,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "readEvents",
+          "callee": "readFileSync",
+          "lineNumber": 11
+        },
+        {
+          "caller": "readEvents",
+          "callee": "resolve",
+          "lineNumber": 11
+        },
+        {
+          "caller": "readEvents",
+          "callee": "text\n    .split('\\n')\n    .filter((line) => line.trim() !== '')\n    .map",
+          "lineNumber": 12
+        },
+        {
+          "caller": "readEvents",
+          "callee": "text\n    .split('\\n')\n    .filter",
+          "lineNumber": 12
+        },
+        {
+          "caller": "readEvents",
+          "callee": "text\n    .split",
+          "lineNumber": 12
+        },
+        {
+          "caller": "readEvents",
+          "callee": "line.trim",
+          "lineNumber": 14
+        },
+        {
+          "caller": "readEvents",
+          "callee": "JSON.parse",
+          "lineNumber": 15
+        },
+        {
+          "caller": "readGolden",
+          "callee": "readFileSync",
+          "lineNumber": 19
+        },
+        {
+          "caller": "readGolden",
+          "callee": "resolve",
+          "lineNumber": 19
+        },
+        {
+          "caller": "readGolden",
+          "callee": "JSON.parse",
+          "lineNumber": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/pact-project/test/unit.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 476,
+      "nonEmptyLines": 455,
+      "functions": [
+        {
+          "name": "ev",
+          "startLine": 4,
+          "endLine": 18,
+          "params": [
+            "overrides"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ev",
+          "callee": "String(n).padStart",
+          "lineNumber": 9
+        },
+        {
+          "caller": "ev",
+          "callee": "String",
+          "lineNumber": 9
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

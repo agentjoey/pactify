@@ -1,0 +1,1256 @@
+{
+  "nodes": [
+    {
+      "id": "file:cloud/relay/prisma.config.ts",
+      "type": "file",
+      "name": "prisma.config.ts",
+      "filePath": "cloud/relay/prisma.config.ts",
+      "summary": "Prisma CLI configuration defining the schema location and migrations directory for the relay service.",
+      "tags": [
+        "configuration",
+        "prisma",
+        "build-system",
+        "orm"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql",
+      "type": "table",
+      "name": "init.sql",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "Canonical reference schema for the relay service defining Account, Device, Machine, Run, RunEvent, PushToken, Project, and PactEvent tables with encryption-aware columns and indexes.",
+      "tags": [
+        "database",
+        "schema",
+        "sql",
+        "data-model",
+        "canonical-schema"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "type": "table",
+      "name": "0_init/migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/0_init/migration.sql",
+      "summary": "Initial Prisma migration that creates the Account, Device, Machine, Run, RunEvent, and PushToken tables along with their primary indexes.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "schema-evolution",
+        "prisma"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/1_machines/migration.sql",
+      "type": "table",
+      "name": "migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/1_machines/migration.sql",
+      "summary": "Prisma migration that extends the Machine table with presence, host, agent kinds, workdirs, online flag, and last-seen metadata for relay presence tracking.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "schema-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/2_add_run_branch/migration.sql",
+      "type": "table",
+      "name": "migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/2_add_run_branch/migration.sql",
+      "summary": "Prisma migration that adds a branch column to the Run table to track the git branch each run was started on.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "schema-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/3_add_run_started_at/migration.sql",
+      "type": "table",
+      "name": "migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/3_add_run_started_at/migration.sql",
+      "summary": "Prisma migration that adds a startedAtMs timestamp column to the Run table for accurate run start timing.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "schema-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/4_scale_indexes/migration.sql",
+      "type": "table",
+      "name": "migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/4_scale_indexes/migration.sql",
+      "summary": "Prisma migration that adds performance indexes on Machine, Run, and RunEvent for account-scoped and state-based lookups.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "schema-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/5_add_run_workdir/migration.sql",
+      "type": "table",
+      "name": "migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/5_add_run_workdir/migration.sql",
+      "summary": "Prisma migration that adds a workdir column to the Run table to record the working directory each run started in.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "schema-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/6_add_run_title/migration.sql",
+      "type": "table",
+      "name": "migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/6_add_run_title/migration.sql",
+      "summary": "Prisma migration that adds a title column to the Run table for human-readable run labels.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "schema-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/7_add_push_subscription_keys/migration.sql",
+      "type": "table",
+      "name": "migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/7_add_push_subscription_keys/migration.sql",
+      "summary": "Prisma migration that adds VAPID keysP256dh and keysAuth columns to PushToken for end-to-end encrypted push payloads.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "schema-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/8_add_run_repo_root/migration.sql",
+      "type": "table",
+      "name": "migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/8_add_run_repo_root/migration.sql",
+      "summary": "Prisma migration that adds a repoRoot column to the Run table to capture the absolute repository root at run start.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "schema-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "type": "table",
+      "name": "9_add_pact_tables/migration.sql",
+      "filePath": "cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "summary": "Prisma migration that introduces the Project and PactEvent tables to back pact protocol project and event-log storage in the relay service.",
+      "tags": [
+        "database",
+        "migration",
+        "sql",
+        "prisma",
+        "pact-protocol"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "schema:cloud/relay/prisma/schema.prisma",
+      "type": "schema",
+      "name": "schema.prisma",
+      "filePath": "cloud/relay/prisma/schema.prisma",
+      "summary": "Prisma schema for the relay service declaring models for accounts, devices, machines, runs, events, push tokens, projects, and pact events with encrypted payload columns.",
+      "tags": [
+        "schema-definition",
+        "orm",
+        "prisma",
+        "data-model",
+        "relay"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/relay/src/health.ts",
+      "type": "file",
+      "name": "health.ts",
+      "filePath": "cloud/relay/src/health.ts",
+      "summary": "Tiny HTTP handler exporting a health() function used by the relay service for liveness probes.",
+      "tags": [
+        "entry-point",
+        "health-check",
+        "utility",
+        "http-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay/src/testing.ts",
+      "type": "file",
+      "name": "testing.ts",
+      "filePath": "cloud/relay/src/testing.ts",
+      "summary": "Test-helper barrel that re-exports the in-memory PGlite database factory, server factory, socket attach helper, and token issuer for relay tests.",
+      "tags": [
+        "test-helper",
+        "test-utility",
+        "test-fixture",
+        "barrel"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/relay/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "cloud/relay/tsconfig.json",
+      "summary": "TypeScript compiler configuration for the relay service extending the base tsconfig with DOM lib and including the src tree.",
+      "tags": [
+        "configuration",
+        "typescript",
+        "build-system",
+        "compiler-options"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay/vitest.config.ts",
+      "type": "file",
+      "name": "vitest.config.ts",
+      "filePath": "cloud/relay/vitest.config.ts",
+      "summary": "Vitest configuration for the relay service that registers the node test project and enables global test helpers.",
+      "tags": [
+        "test-configuration",
+        "test-runner",
+        "vitest",
+        "configuration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay/vitest.node.config.ts",
+      "type": "file",
+      "name": "vitest.node.config.ts",
+      "filePath": "cloud/relay/vitest.node.config.ts",
+      "summary": "Vitest configuration for node-environment test runs in the relay service, isolating them from the browser-DOM defaults.",
+      "tags": [
+        "test-configuration",
+        "test-runner",
+        "vitest",
+        "node-environment"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:cloud/wire/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "cloud/wire/package.json",
+      "summary": "Package manifest for the cloud/wire protocol module declaring the package name, main entry, exports map, dependencies, and public publish settings.",
+      "tags": [
+        "configuration",
+        "package-metadata",
+        "build-system",
+        "wire-protocol"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/src/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "cloud/wire/src/index.ts",
+      "summary": "Barrel entry for the cloud/wire protocol module exporting the PROTOCOL_VERSION constant and re-exporting the pairing message types.",
+      "tags": [
+        "entry-point",
+        "wire-protocol",
+        "protocol-version",
+        "barrel"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/src/pairing.ts",
+      "type": "file",
+      "name": "pairing.ts",
+      "filePath": "cloud/wire/src/pairing.ts",
+      "summary": "Wire-protocol type module that defines the PairMode, PairInit, PairReady, PairComplete, and PairStatus message shapes exchanged during device pairing.",
+      "tags": [
+        "type-definition",
+        "wire-protocol",
+        "pairing",
+        "message-types"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/test/index.test.ts",
+      "type": "file",
+      "name": "index.test.ts",
+      "filePath": "cloud/wire/test/index.test.ts",
+      "summary": "Unit tests for the cloud/wire barrel that verify the exported PROTOCOL_VERSION matches the expected format and the pairing types are re-exported.",
+      "tags": [
+        "test",
+        "wire-protocol",
+        "unit-test",
+        "smoke-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/test/pairing.test.ts",
+      "type": "file",
+      "name": "pairing.test.ts",
+      "filePath": "cloud/wire/test/pairing.test.ts",
+      "summary": "Unit tests for the pairing message types verifying that PairInit, PairReady, PairComplete, and PairStatus conform to the wire-protocol schema.",
+      "tags": [
+        "test",
+        "pairing",
+        "unit-test",
+        "schema-validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:cloud/wire/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "filePath": "cloud/wire/tsconfig.json",
+      "summary": "TypeScript compiler configuration for the cloud/wire protocol module extending the base tsconfig with DOM lib and including src plus test trees.",
+      "tags": [
+        "configuration",
+        "typescript",
+        "build-system",
+        "compiler-options"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cmd/pactify/cli_test.go",
+      "type": "file",
+      "name": "cli_test.go",
+      "filePath": "cmd/pactify/cli_test.go",
+      "summary": "End-to-end Go integration tests for the pactify CLI covering help, full project flow, root-project chdir/empty handling, missing agent-ID failure mode, agent scan/register/unregister, orchestrate dry-run, and plan/apply.",
+      "tags": [
+        "test",
+        "integration-test",
+        "cli-test",
+        "end-to-end"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql:Account",
+      "type": "table",
+      "name": "Account",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "Account table holding the public key, monotonic seq counter, encrypted settings blob, and creation timestamp for each account on the relay.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql:Device",
+      "type": "table",
+      "name": "Device",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "Device table tracking each paired device via its public key, owning account, push token, and pairing timestamp.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql:Machine",
+      "type": "table",
+      "name": "Machine",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "Machine table storing encrypted metadata, presence, CLI availability, host, agent kinds, workdirs, online flag, and last-seen timestamp for each agent host.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "table",
+      "name": "Run",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "Run table capturing the lifecycle state of an agent run including machine, agent kind, state, pending approvals, token usage, costs, seq, branch, started/ended timestamps, and per-field encrypted payloads.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql:RunEvent",
+      "type": "table",
+      "name": "RunEvent",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "RunEvent table logging each event of a run with runId, seq, state, event kind, timestamp, and an encrypted event body.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql:PushToken",
+      "type": "table",
+      "name": "PushToken",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "PushToken table storing web-push subscription tokens per account and platform together with VAPID keysP256dh and keysAuth.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql:Project",
+      "type": "table",
+      "name": "Project",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "Project table tracking each registered pact project by account, name, feature, monotonic seq, last event timestamp, and an encrypted metadata blob.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/init.sql:PactEvent",
+      "type": "table",
+      "name": "PactEvent",
+      "filePath": "cloud/relay/prisma/init.sql",
+      "summary": "PactEvent table appending every pact protocol event for a project with seq, event type, task, feature, timestamp, and an encrypted body.",
+      "tags": [
+        "database",
+        "data-model",
+        "relay",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Account",
+      "type": "table",
+      "name": "Account",
+      "filePath": "cloud/relay/prisma/migrations/0_init/migration.sql",
+      "summary": "Account table in the initial Prisma migration holding the public key, seq counter, encrypted settings blob, and creation timestamp.",
+      "tags": [
+        "database",
+        "data-model",
+        "prisma-migration",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Device",
+      "type": "table",
+      "name": "Device",
+      "filePath": "cloud/relay/prisma/migrations/0_init/migration.sql",
+      "summary": "Device table in the initial Prisma migration tracking each paired device with its public key, owning account, push token, and pairing timestamp.",
+      "tags": [
+        "database",
+        "data-model",
+        "prisma-migration",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Machine",
+      "type": "table",
+      "name": "Machine",
+      "filePath": "cloud/relay/prisma/migrations/0_init/migration.sql",
+      "summary": "Machine table in the initial Prisma migration with id, accountId, encrypted metadata, presence, CLI availability, and last-seen timestamp.",
+      "tags": [
+        "database",
+        "data-model",
+        "prisma-migration",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Run",
+      "type": "table",
+      "name": "Run",
+      "filePath": "cloud/relay/prisma/migrations/0_init/migration.sql",
+      "summary": "Run table in the initial Prisma migration with id, account, machine, agent kind, state, pending approvals, token usage, cost, seq, lifecycle timestamps, and encrypted per-field payloads.",
+      "tags": [
+        "database",
+        "data-model",
+        "prisma-migration",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/0_init/migration.sql:RunEvent",
+      "type": "table",
+      "name": "RunEvent",
+      "filePath": "cloud/relay/prisma/migrations/0_init/migration.sql",
+      "summary": "RunEvent table in the initial Prisma migration logging each event of a run with runId, seq, state, event kind, timestamp, and encrypted body.",
+      "tags": [
+        "database",
+        "data-model",
+        "prisma-migration",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/0_init/migration.sql:PushToken",
+      "type": "table",
+      "name": "PushToken",
+      "filePath": "cloud/relay/prisma/migrations/0_init/migration.sql",
+      "summary": "PushToken table in the initial Prisma migration storing web-push tokens per account and platform.",
+      "tags": [
+        "database",
+        "data-model",
+        "prisma-migration",
+        "encrypted-payload"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql:Project",
+      "type": "table",
+      "name": "Project",
+      "filePath": "cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "summary": "Project table added by the 9_add_pact_tables migration to track pact projects by account, name, feature, monotonic seq, last event timestamp, and encrypted metadata.",
+      "tags": [
+        "database",
+        "data-model",
+        "prisma-migration",
+        "pact-protocol"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql:PactEvent",
+      "type": "table",
+      "name": "PactEvent",
+      "filePath": "cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "summary": "PactEvent table added by the 9_add_pact_tables migration to append pact protocol events per project with seq, event type, task, feature, timestamp, and encrypted body.",
+      "tags": [
+        "database",
+        "data-model",
+        "prisma-migration",
+        "pact-protocol"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/health.ts:health",
+      "type": "function",
+      "name": "health",
+      "filePath": "cloud/relay/src/health.ts",
+      "lineRange": [
+        1,
+        3
+      ],
+      "summary": "HTTP handler that returns the relay service health status used by liveness probes.",
+      "tags": [
+        "health-check",
+        "http-handler",
+        "entry-point"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cli_test.go:buildBinary",
+      "type": "function",
+      "name": "buildBinary",
+      "filePath": "cmd/pactify/cli_test.go",
+      "lineRange": [
+        11,
+        20
+      ],
+      "summary": "Builds the pactify CLI binary into a temporary directory for use by the integration tests, compiling cmd/pactify via go build.",
+      "tags": [
+        "test-helper",
+        "cli-test",
+        "integration-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cli_test.go:TestCLIHelpAndFullFlow",
+      "type": "function",
+      "name": "TestCLIHelpAndFullFlow",
+      "filePath": "cmd/pactify/cli_test.go",
+      "lineRange": [
+        28,
+        84
+      ],
+      "summary": "End-to-end test that exercises the CLI help output, version, init, plan, apply, and full project lifecycle commands against a temp git repo.",
+      "tags": [
+        "test",
+        "cli-test",
+        "integration-test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cli_test.go:TestRootProjectChdirs",
+      "type": "function",
+      "name": "TestRootProjectChdirs",
+      "filePath": "cmd/pactify/cli_test.go",
+      "lineRange": [
+        86,
+        99
+      ],
+      "summary": "Test that asserts rootProject resolves correctly when the working directory is changed inside a test.",
+      "tags": [
+        "test",
+        "cli-test",
+        "integration-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cli_test.go:TestRootProjectEmptyIsNoop",
+      "type": "function",
+      "name": "TestRootProjectEmptyIsNoop",
+      "filePath": "cmd/pactify/cli_test.go",
+      "lineRange": [
+        101,
+        110
+      ],
+      "summary": "Test that verifies rootProject behaves as a no-op when the .pact directory is absent.",
+      "tags": [
+        "test",
+        "cli-test",
+        "integration-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cli_test.go:TestCLIFailsClosedWithoutAgentID",
+      "type": "function",
+      "name": "TestCLIFailsClosedWithoutAgentID",
+      "filePath": "cmd/pactify/cli_test.go",
+      "lineRange": [
+        112,
+        121
+      ],
+      "summary": "Test that confirms the CLI fails closed when PACT_AGENT_ID is not set, preventing accidental writes to the pact log.",
+      "tags": [
+        "test",
+        "cli-test",
+        "integration-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cli_test.go:TestAgentScanRegisterUnregister",
+      "type": "function",
+      "name": "TestAgentScanRegisterUnregister",
+      "filePath": "cmd/pactify/cli_test.go",
+      "lineRange": [
+        123,
+        175
+      ],
+      "summary": "Test that walks the agent scan, register, scan-again, unregister, and scan-again flow including a bogus-agent failure path.",
+      "tags": [
+        "test",
+        "cli-test",
+        "integration-test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cli_test.go:TestCLIOrchestrateHelpAndDryRun",
+      "type": "function",
+      "name": "TestCLIOrchestrateHelpAndDryRun",
+      "filePath": "cmd/pactify/cli_test.go",
+      "lineRange": [
+        180,
+        236
+      ],
+      "summary": "Test that exercises the orchestrate help output, dry-run plan rendering, and config file validation paths.",
+      "tags": [
+        "test",
+        "cli-test",
+        "integration-test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cli_test.go:TestCLIPlanApply",
+      "type": "function",
+      "name": "TestCLIPlanApply",
+      "filePath": "cmd/pactify/cli_test.go",
+      "lineRange": [
+        243,
+        322
+      ],
+      "summary": "Test that drives the CLI plan/apply lifecycle against fixtures, verifying agent layout, root project, and config edge cases.",
+      "tags": [
+        "test",
+        "cli-test",
+        "integration-test"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "table:cloud/relay/prisma/init.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Account",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/init.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Device",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/init.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Machine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/init.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/init.sql",
+      "target": "table:cloud/relay/prisma/init.sql:RunEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/init.sql",
+      "target": "table:cloud/relay/prisma/init.sql:PushToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/init.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Project",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/init.sql",
+      "target": "table:cloud/relay/prisma/init.sql:PactEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Account",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Device",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Machine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:RunEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:PushToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql:Project",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql:PactEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:buildBinary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestCLIHelpAndFullFlow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestRootProjectChdirs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestRootProjectEmptyIsNoop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestCLIFailsClosedWithoutAgentID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestAgentScanRegisterUnregister",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestCLIOrchestrateHelpAndDryRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestCLIPlanApply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/health.ts",
+      "target": "function:cloud/relay/src/health.ts:health",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/wire/test/index.test.ts",
+      "target": "file:cloud/wire/src/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/pairing.test.ts",
+      "target": "file:cloud/wire/src/pairing.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/relay/src/health.ts",
+      "target": "function:cloud/relay/src/health.ts:health",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestCLIHelpAndFullFlow",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestRootProjectChdirs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestRootProjectEmptyIsNoop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestCLIFailsClosedWithoutAgentID",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestAgentScanRegisterUnregister",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestCLIOrchestrateHelpAndDryRun",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cli_test.go",
+      "target": "function:cmd/pactify/cli_test.go:TestCLIPlanApply",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/wire/src/index.ts",
+      "target": "file:cloud/wire/test/index.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/pairing.ts",
+      "target": "file:cloud/wire/test/pairing.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:cmd/pactify/cli_test.go:TestCLIHelpAndFullFlow",
+      "target": "function:cmd/pactify/cli_test.go:buildBinary",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:cmd/pactify/cli_test.go:TestCLIFailsClosedWithoutAgentID",
+      "target": "function:cmd/pactify/cli_test.go:buildBinary",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:cmd/pactify/cli_test.go:TestAgentScanRegisterUnregister",
+      "target": "function:cmd/pactify/cli_test.go:buildBinary",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:cmd/pactify/cli_test.go:TestCLIOrchestrateHelpAndDryRun",
+      "target": "function:cmd/pactify/cli_test.go:buildBinary",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:cmd/pactify/cli_test.go:TestCLIPlanApply",
+      "target": "function:cmd/pactify/cli_test.go:buildBinary",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Account",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Device",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Machine",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:Run",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:RunEvent",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/0_init/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/0_init/migration.sql:PushToken",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/1_machines/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Machine",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/2_add_run_branch/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/3_add_run_started_at/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/4_scale_indexes/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Machine",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/4_scale_indexes/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/4_scale_indexes/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:RunEvent",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/5_add_run_workdir/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/6_add_run_title/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/7_add_push_subscription_keys/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:PushToken",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/8_add_run_repo_root/migration.sql",
+      "target": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql:Project",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "target": "table:cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql:PactEvent",
+      "type": "migrates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "schema:cloud/relay/prisma/schema.prisma",
+      "target": "table:cloud/relay/prisma/init.sql:Account",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "schema:cloud/relay/prisma/schema.prisma",
+      "target": "table:cloud/relay/prisma/init.sql:Device",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "schema:cloud/relay/prisma/schema.prisma",
+      "target": "table:cloud/relay/prisma/init.sql:Machine",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "schema:cloud/relay/prisma/schema.prisma",
+      "target": "table:cloud/relay/prisma/init.sql:Run",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "schema:cloud/relay/prisma/schema.prisma",
+      "target": "table:cloud/relay/prisma/init.sql:RunEvent",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "schema:cloud/relay/prisma/schema.prisma",
+      "target": "table:cloud/relay/prisma/init.sql:PushToken",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "schema:cloud/relay/prisma/schema.prisma",
+      "target": "table:cloud/relay/prisma/init.sql:Project",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "schema:cloud/relay/prisma/schema.prisma",
+      "target": "table:cloud/relay/prisma/init.sql:PactEvent",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "config:cloud/relay/tsconfig.json",
+      "target": "file:cloud/relay/src/health.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/relay/tsconfig.json",
+      "target": "file:cloud/relay/src/testing.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/wire/tsconfig.json",
+      "target": "file:cloud/wire/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/wire/tsconfig.json",
+      "target": "file:cloud/wire/src/pairing.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "config:cloud/wire/package.json",
+      "target": "file:cloud/wire/src/index.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

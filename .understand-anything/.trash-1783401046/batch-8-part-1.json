@@ -1,0 +1,1393 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/pact/client_test.go",
+      "type": "file",
+      "name": "client_test.go",
+      "filePath": "internal/pact/client_test.go",
+      "summary": "Tests covering the client provenance object on join events: writes payload, wraps CLI identity, omits when not provided, and never appears in the public State projection.",
+      "tags": [
+        "test",
+        "protocol",
+        "client",
+        "join"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/pact/engine_test.go",
+      "type": "file",
+      "name": "engine_test.go",
+      "filePath": "internal/pact/engine_test.go",
+      "summary": "Extensive engine test suite covering init / fail-closed identity / join / assign / checkpoint / accept / changes / merge / in-place merge / status / log-replay / validate / drift / commit-ledger-if-tracked contracts.",
+      "tags": [
+        "test",
+        "protocol",
+        "engine",
+        "event-ledger"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/pact/client_test.go:clientRepo",
+      "type": "function",
+      "name": "clientRepo",
+      "filePath": "internal/pact/client_test.go",
+      "lineRange": [
+        15,
+        31
+      ],
+      "summary": "Test helper: builds a fresh repo with PACTDIR set and records the env at init.",
+      "tags": [
+        "test",
+        "helper",
+        "repo"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/client_test.go:lastJoinPayload",
+      "type": "function",
+      "name": "lastJoinPayload",
+      "filePath": "internal/pact/client_test.go",
+      "lineRange": [
+        34,
+        60
+      ],
+      "summary": "Test helper that scans events log for the most recent join event and returns its raw JSON payload for assertions.",
+      "tags": [
+        "test",
+        "helper",
+        "json"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/client_test.go:TestJoinWithClientWritesClientObject",
+      "type": "function",
+      "name": "TestJoinWithClientWritesClientObject",
+      "filePath": "internal/pact/client_test.go",
+      "lineRange": [
+        63,
+        76
+      ],
+      "summary": "Test that JoinWithClient writes a `client: {name,version}` object into the join event payload.",
+      "tags": [
+        "test",
+        "protocol",
+        "client",
+        "join"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/client_test.go:TestJoinWrapsWithCLIIdentity",
+      "type": "function",
+      "name": "TestJoinWrapsWithCLIIdentity",
+      "filePath": "internal/pact/client_test.go",
+      "lineRange": [
+        80,
+        96
+      ],
+      "summary": "Test that JoinWithoutClient still stamps the CLI identity into the event payload.",
+      "tags": [
+        "test",
+        "protocol",
+        "client",
+        "cli"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/client_test.go:TestJoinWithoutClientOmitsField",
+      "type": "function",
+      "name": "TestJoinWithoutClientOmitsField",
+      "filePath": "internal/pact/client_test.go",
+      "lineRange": [
+        100,
+        113
+      ],
+      "summary": "Test that Join called without client args writes no `client` field in the payload.",
+      "tags": [
+        "test",
+        "protocol",
+        "client",
+        "join"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/client_test.go:TestStateNeverContainsClient",
+      "type": "function",
+      "name": "TestStateNeverContainsClient",
+      "filePath": "internal/pact/client_test.go",
+      "lineRange": [
+        117,
+        132
+      ],
+      "summary": "Test that the rendered State projection never includes `client` \u2014 it is event-payload metadata only.",
+      "tags": [
+        "test",
+        "protocol",
+        "client",
+        "projection"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:newRepo",
+      "type": "function",
+      "name": "newRepo",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        16,
+        35
+      ],
+      "summary": "Test helper that builds a fresh repo, initializes the pact project, and captures env defaults for engine tests.",
+      "tags": [
+        "test",
+        "helper",
+        "repo"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestInitScaffoldsAndWritesInitEvent",
+      "type": "function",
+      "name": "TestInitScaffoldsAndWritesInitEvent",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        37,
+        62
+      ],
+      "summary": "Test that Init scaffolds the project and writes an `init` event into the ledger.",
+      "tags": [
+        "test",
+        "protocol",
+        "init"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestInitFailsClosedWithoutAgentID",
+      "type": "function",
+      "name": "TestInitFailsClosedWithoutAgentID",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        64,
+        70
+      ],
+      "summary": "Test that Init fails closed when neither PACT_AGENT_ID nor seat identity is set.",
+      "tags": [
+        "test",
+        "protocol",
+        "identity"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestJoinAppendsEventAndChecksOutFeatureBranch",
+      "type": "function",
+      "name": "TestJoinAppendsEventAndChecksOutFeatureBranch",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        72,
+        86
+      ],
+      "summary": "Test that Join appends a join event and lands the working tree on the seat branch.",
+      "tags": [
+        "test",
+        "protocol",
+        "join"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:execBranch",
+      "type": "function",
+      "name": "execBranch",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        88,
+        92
+      ],
+      "summary": "Test helper that runs `git symbolic-ref HEAD` in a worktree.",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestJoinFailsClosedWithoutAgentID",
+      "type": "function",
+      "name": "TestJoinFailsClosedWithoutAgentID",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        94,
+        100
+      ],
+      "summary": "Test that Join fails closed without a seat identity.",
+      "tags": [
+        "test",
+        "protocol",
+        "identity"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestAssignCreatesTask",
+      "type": "function",
+      "name": "TestAssignCreatesTask",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        102,
+        113
+      ],
+      "summary": "Test that Assign creates a task and records the assigned event.",
+      "tags": [
+        "test",
+        "protocol",
+        "assign"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestAssignDefaultSpecIsRepoRelative",
+      "type": "function",
+      "name": "TestAssignDefaultSpecIsRepoRelative",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        115,
+        140
+      ],
+      "summary": "Test that an empty spec defaults to a repo-relative path so seat tests can write fixtures inline.",
+      "tags": [
+        "test",
+        "protocol",
+        "assign",
+        "spec"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestCheckpointBlockedByUnacceptedDep",
+      "type": "function",
+      "name": "TestCheckpointBlockedByUnacceptedDep",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        142,
+        185
+      ],
+      "summary": "Test that Checkpoint is refused while an upstream dep is unaccepted.",
+      "tags": [
+        "test",
+        "protocol",
+        "checkpoint",
+        "deps"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestAssignRejectsOwnerEqualsReviewer",
+      "type": "function",
+      "name": "TestAssignRejectsOwnerEqualsReviewer",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        187,
+        194
+      ],
+      "summary": "Negative test: Assign refuses an owner == reviewer configuration.",
+      "tags": [
+        "test",
+        "protocol",
+        "assign",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestAssignRejectsDuplicateTaskID",
+      "type": "function",
+      "name": "TestAssignRejectsDuplicateTaskID",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        196,
+        204
+      ],
+      "summary": "Negative test: Assign refuses a duplicate taskID against the ledger.",
+      "tags": [
+        "test",
+        "protocol",
+        "assign",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:toAssigned",
+      "type": "function",
+      "name": "toAssigned",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        206,
+        213
+      ],
+      "summary": "Test helper that drives a task from created to assigned via a fake Assign call.",
+      "tags": [
+        "test",
+        "helper",
+        "state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestCheckpointByOwnerSetsAwaitingReviewAndCommits",
+      "type": "function",
+      "name": "TestCheckpointByOwnerSetsAwaitingReviewAndCommits",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        215,
+        236
+      ],
+      "summary": "Test that Checkpoint by the owner transitions a task to awaiting_review and writes a commit on the seat branch.",
+      "tags": [
+        "test",
+        "protocol",
+        "checkpoint"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestCheckpointByNonOwnerRejected",
+      "type": "function",
+      "name": "TestCheckpointByNonOwnerRejected",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        238,
+        245
+      ],
+      "summary": "Negative test: Checkpoint is refused from a non-owner seat.",
+      "tags": [
+        "test",
+        "protocol",
+        "checkpoint"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestCheckpointRequiresEvidence",
+      "type": "function",
+      "name": "TestCheckpointRequiresEvidence",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        247,
+        253
+      ],
+      "summary": "Negative test: Checkpoint with empty evidence is refused.",
+      "tags": [
+        "test",
+        "protocol",
+        "checkpoint",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:toAwaiting",
+      "type": "function",
+      "name": "toAwaiting",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        255,
+        260
+      ],
+      "summary": "Test helper that drives a task from assigned into awaiting_review via a successful Checkpoint.",
+      "tags": [
+        "test",
+        "helper",
+        "state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestAcceptByReviewer",
+      "type": "function",
+      "name": "TestAcceptByReviewer",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        262,
+        273
+      ],
+      "summary": "Test that Accept under the reviewer seat transitions the task to accepted.",
+      "tags": [
+        "test",
+        "protocol",
+        "accept"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestAcceptByWorkerRejected",
+      "type": "function",
+      "name": "TestAcceptByWorkerRejected",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        275,
+        282
+      ],
+      "summary": "Negative test: Accept by the worker seat is refused.",
+      "tags": [
+        "test",
+        "protocol",
+        "accept"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestAcceptRequiresAwaitingReview",
+      "type": "function",
+      "name": "TestAcceptRequiresAwaitingReview",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        284,
+        291
+      ],
+      "summary": "Negative test: Accept is refused when the task is not in awaiting_review.",
+      "tags": [
+        "test",
+        "protocol",
+        "accept"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestChangesSendsBack",
+      "type": "function",
+      "name": "TestChangesSendsBack",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        293,
+        304
+      ],
+      "summary": "Test that Changes moves the task back to in_progress with a reviewer reason.",
+      "tags": [
+        "test",
+        "protocol",
+        "changes"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:baseBranchFromLog",
+      "type": "function",
+      "name": "baseBranchFromLog",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        306,
+        316
+      ],
+      "summary": "Test helper that derives the base branch from the events log.",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestMergeRejectedWhenNotAllAccepted",
+      "type": "function",
+      "name": "TestMergeRejectedWhenNotAllAccepted",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        318,
+        325
+      ],
+      "summary": "Negative test: Merge refuses a feature while any task is unaccepted.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestMergeUnknownFeatureRejected",
+      "type": "function",
+      "name": "TestMergeUnknownFeatureRejected",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        327,
+        334
+      ],
+      "summary": "Negative test: Merge with an unknown feature id is refused.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestMergeSucceedsFeatureShipped",
+      "type": "function",
+      "name": "TestMergeSucceedsFeatureShipped",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        336,
+        355
+      ],
+      "summary": "Positive test: a fully-accepted feature merges onto the base branch.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "happy-path"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestMergeInPlaceOnBaseBranchShips",
+      "type": "function",
+      "name": "TestMergeInPlaceOnBaseBranchShips",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        359,
+        385
+      ],
+      "summary": "Test that an in-place feature (no per-task branch) ships via direct base-branch integration.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "in-place"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestMergeRefusesMissingDeclaredBranch",
+      "type": "function",
+      "name": "TestMergeRefusesMissingDeclaredBranch",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        391,
+        420
+      ],
+      "summary": "Negative test: Merge refuses a feature that references a branch which does not exist.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestJoinStaysOnSeatBranchNotFirstFeature",
+      "type": "function",
+      "name": "TestJoinStaysOnSeatBranchNotFirstFeature",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        427,
+        444
+      ],
+      "summary": "Regression test: a join lands on the seat branch, not on the first declared feature branch.",
+      "tags": [
+        "test",
+        "protocol",
+        "join",
+        "branch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestConfigBaseBranchOverridesInitBase",
+      "type": "function",
+      "name": "TestConfigBaseBranchOverridesInitBase",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        449,
+        465
+      ],
+      "summary": "Test that ConfigBaseBranch overrides the Init-time base branch selection.",
+      "tags": [
+        "test",
+        "protocol",
+        "config",
+        "base-branch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestStatusReturnsRenderedState",
+      "type": "function",
+      "name": "TestStatusReturnsRenderedState",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        467,
+        475
+      ],
+      "summary": "Test that the Status verb returns the rendered State projection.",
+      "tags": [
+        "test",
+        "protocol",
+        "status"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestValidatePassesOnConformantRepo",
+      "type": "function",
+      "name": "TestValidatePassesOnConformantRepo",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        477,
+        485
+      ],
+      "summary": "Test that Validate passes on a fully-conformant repo (correct major / conformance rules).",
+      "tags": [
+        "test",
+        "protocol",
+        "validate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestValidateFailsClosedOnHigherProtocolMajor",
+      "type": "function",
+      "name": "TestValidateFailsClosedOnHigherProtocolMajor",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        487,
+        497
+      ],
+      "summary": "Negative test: Validate fails closed when the events log reports a higher protocol major.",
+      "tags": [
+        "test",
+        "protocol",
+        "validate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestLogReplayRebuildsState",
+      "type": "function",
+      "name": "TestLogReplayRebuildsState",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        499,
+        510
+      ],
+      "summary": "Test that LogReplay rebuilds the State from a cleaned ledger end-to-end.",
+      "tags": [
+        "test",
+        "protocol",
+        "replay"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestValidateReportsDriftWhenStateMissing",
+      "type": "function",
+      "name": "TestValidateReportsDriftWhenStateMissing",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        512,
+        520
+      ],
+      "summary": "Test that Validate reports drift when STATE.yml is missing and a fresh projection does not match a stale one.",
+      "tags": [
+        "test",
+        "protocol",
+        "drift"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestCommitLedgerIfTrackedAutoCommitsWhenLedgerIsTracked",
+      "type": "function",
+      "name": "TestCommitLedgerIfTrackedAutoCommitsWhenLedgerIsTracked",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        531,
+        556
+      ],
+      "summary": "Test that `commitLedgerIfTracked` auto-commits the ledger file whenever it is tracked by git.",
+      "tags": [
+        "test",
+        "protocol",
+        "engine",
+        "ledger"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:TestCommitLedgerIfTrackedNoopWhenLedgerNeverTracked",
+      "type": "function",
+      "name": "TestCommitLedgerIfTrackedNoopWhenLedgerNeverTracked",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        561,
+        580
+      ],
+      "summary": "Test that the helper is a no-op when the ledger file has never been tracked by git.",
+      "tags": [
+        "test",
+        "protocol",
+        "engine",
+        "ledger"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:runGit",
+      "type": "function",
+      "name": "runGit",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        582,
+        589
+      ],
+      "summary": "Test helper that runs an arbitrary git command in a worktree and returns stdout.",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:gitPorcelain",
+      "type": "function",
+      "name": "gitPorcelain",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        591,
+        600
+      ],
+      "summary": "Test helper that returns the porcelain output of `git status` in a worktree.",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine_test.go:commitCount",
+      "type": "function",
+      "name": "commitCount",
+      "filePath": "internal/pact/engine_test.go",
+      "lineRange": [
+        602,
+        613
+      ],
+      "summary": "Test helper that returns the commit count for a worktree / ref, used to assert that checkpoints produced real commits.",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "function:internal/pact/client_test.go:clientRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "function:internal/pact/client_test.go:lastJoinPayload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "function:internal/pact/client_test.go:TestJoinWithClientWritesClientObject",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "function:internal/pact/client_test.go:TestJoinWrapsWithCLIIdentity",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "function:internal/pact/client_test.go:TestJoinWithoutClientOmitsField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "function:internal/pact/client_test.go:TestStateNeverContainsClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:newRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestInitScaffoldsAndWritesInitEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestInitFailsClosedWithoutAgentID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestJoinAppendsEventAndChecksOutFeatureBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:execBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestJoinFailsClosedWithoutAgentID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestAssignCreatesTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestAssignDefaultSpecIsRepoRelative",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestCheckpointBlockedByUnacceptedDep",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestAssignRejectsOwnerEqualsReviewer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestAssignRejectsDuplicateTaskID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:toAssigned",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestCheckpointByOwnerSetsAwaitingReviewAndCommits",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestCheckpointByNonOwnerRejected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestCheckpointRequiresEvidence",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:toAwaiting",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestAcceptByReviewer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestAcceptByWorkerRejected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestAcceptRequiresAwaitingReview",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestChangesSendsBack",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:baseBranchFromLog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestMergeRejectedWhenNotAllAccepted",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestMergeUnknownFeatureRejected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestMergeSucceedsFeatureShipped",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestMergeInPlaceOnBaseBranchShips",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestMergeRefusesMissingDeclaredBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestJoinStaysOnSeatBranchNotFirstFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestConfigBaseBranchOverridesInitBase",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestStatusReturnsRenderedState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestValidatePassesOnConformantRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestValidateFailsClosedOnHigherProtocolMajor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestLogReplayRebuildsState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestValidateReportsDriftWhenStateMissing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestCommitLedgerIfTrackedAutoCommitsWhenLedgerIsTracked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:TestCommitLedgerIfTrackedNoopWhenLedgerNeverTracked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:runGit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:gitPorcelain",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "function:internal/pact/engine_test.go:commitCount",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/client_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine_test.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

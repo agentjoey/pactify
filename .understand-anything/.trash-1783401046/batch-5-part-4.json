@@ -1,0 +1,2083 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/mcp/project_addressing_test.go",
+      "type": "file",
+      "name": "project_addressing_test.go",
+      "filePath": "internal/mcp/project_addressing_test.go",
+      "summary": "MCP test that registers multiple named projects and verifies tool routing picks the right one by name.",
+      "tags": [
+        "test",
+        "mcp",
+        "project-registry"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/mcp/project_addressing_test.go:TestProjectAddressingByName",
+      "type": "function",
+      "name": "TestProjectAddressingByName",
+      "filePath": "internal/mcp/project_addressing_test.go",
+      "lineRange": [
+        17,
+        58
+      ],
+      "summary": "TestProjectAddressingByName (42 lines) defined in internal/mcp/project_addressing_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/mcp/project_addressing_test.go:initNamedRepo",
+      "type": "function",
+      "name": "initNamedRepo",
+      "filePath": "internal/mcp/project_addressing_test.go",
+      "lineRange": [
+        62,
+        84
+      ],
+      "summary": "initNamedRepo (23 lines) defined in internal/mcp/project_addressing_test.go.",
+      "tags": [
+        "test",
+        "init",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/mcp/server_test.go",
+      "type": "file",
+      "name": "server_test.go",
+      "filePath": "internal/mcp/server_test.go",
+      "summary": "MCP server integration tests: status, lifecycle, session client info, fail-closed tools, resource access, and log-change notifications.",
+      "tags": [
+        "test",
+        "mcp",
+        "server",
+        "integration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:newRepo",
+      "type": "function",
+      "name": "newRepo",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        17,
+        40
+      ],
+      "summary": "newRepo (24 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:connect",
+      "type": "function",
+      "name": "connect",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        43,
+        58
+      ],
+      "summary": "connect (16 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:TestStatusTool",
+      "type": "function",
+      "name": "TestStatusTool",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        71,
+        84
+      ],
+      "summary": "TestStatusTool (14 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "status"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:callOK",
+      "type": "function",
+      "name": "callOK",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        86,
+        96
+      ],
+      "summary": "callOK (11 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:callErr",
+      "type": "function",
+      "name": "callErr",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        98,
+        108
+      ],
+      "summary": "callErr (11 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:TestFullLifecycleViaMCP",
+      "type": "function",
+      "name": "TestFullLifecycleViaMCP",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        110,
+        132
+      ],
+      "summary": "TestFullLifecycleViaMCP (23 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:TestJoinRecordsSessionClientInfo",
+      "type": "function",
+      "name": "TestJoinRecordsSessionClientInfo",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        136,
+        171
+      ],
+      "summary": "TestJoinRecordsSessionClientInfo (36 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:TestToolsFailClosedWithoutAgentID",
+      "type": "function",
+      "name": "TestToolsFailClosedWithoutAgentID",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        173,
+        178
+      ],
+      "summary": "TestToolsFailClosedWithoutAgentID (6 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:TestMergeRule2ViaMCP",
+      "type": "function",
+      "name": "TestMergeRule2ViaMCP",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        180,
+        185
+      ],
+      "summary": "TestMergeRule2ViaMCP (6 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "merge"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:TestResources",
+      "type": "function",
+      "name": "TestResources",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        187,
+        204
+      ],
+      "summary": "TestResources (18 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/server_test.go:TestLogChangeNotifiesSubscribers",
+      "type": "function",
+      "name": "TestLogChangeNotifiesSubscribers",
+      "filePath": "internal/mcp/server_test.go",
+      "lineRange": [
+        206,
+        244
+      ],
+      "summary": "TestLogChangeNotifiesSubscribers (39 lines) defined in internal/mcp/server_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/mcp/tools.go",
+      "type": "file",
+      "name": "tools.go",
+      "filePath": "internal/mcp/tools.go",
+      "summary": "MCP tool registrations and input schemas: status, join, assign, checkpoint, accept, changes, merge, cancel, withdraw, log, validate, add-seat.",
+      "tags": [
+        "mcp",
+        "tool-schema",
+        "protocol",
+        "type-definition"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/mcp/tools.go:resolveProject",
+      "type": "function",
+      "name": "resolveProject",
+      "filePath": "internal/mcp/tools.go",
+      "lineRange": [
+        72,
+        86
+      ],
+      "summary": "resolveProject (15 lines) defined in internal/mcp/tools.go.",
+      "tags": [
+        "utility",
+        "resolve",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/tools.go:clientInfo",
+      "type": "function",
+      "name": "clientInfo",
+      "filePath": "internal/mcp/tools.go",
+      "lineRange": [
+        107,
+        116
+      ],
+      "summary": "clientInfo (10 lines) defined in internal/mcp/tools.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/mcp/tools.go:registerTools",
+      "type": "function",
+      "name": "registerTools",
+      "filePath": "internal/mcp/tools.go",
+      "lineRange": [
+        118,
+        233
+      ],
+      "summary": "registerTools (116 lines) defined in internal/mcp/tools.go.",
+      "tags": [
+        "utility",
+        "registry",
+        "helper"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "type": "file",
+      "name": "classify_cleanexit_test.go",
+      "filePath": "internal/orchestrate/classify_cleanexit_test.go",
+      "summary": "Tests that classify a clean worker exit (no checkpoint) as a verify-pass rescue vs. an escalation depending on gate outcome.",
+      "tags": [
+        "test",
+        "orchestrator",
+        "exit-classification"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/classify_cleanexit_test.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/classify_cleanexit_test.go",
+      "lineRange": [
+        20,
+        30
+      ],
+      "summary": "Run (11 lines) defined in internal/orchestrate/classify_cleanexit_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/classify_cleanexit_test.go:TestCleanExitNoCheckpointRescuedByVerify",
+      "type": "function",
+      "name": "TestCleanExitNoCheckpointRescuedByVerify",
+      "filePath": "internal/orchestrate/classify_cleanexit_test.go",
+      "lineRange": [
+        36,
+        53
+      ],
+      "summary": "TestCleanExitNoCheckpointRescuedByVerify (18 lines) defined in internal/orchestrate/classify_cleanexit_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "checkpoint"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/classify_cleanexit_test.go:TestCleanExitNoCheckpointStillEscalatesWhenVerifyFails",
+      "type": "function",
+      "name": "TestCleanExitNoCheckpointStillEscalatesWhenVerifyFails",
+      "filePath": "internal/orchestrate/classify_cleanexit_test.go",
+      "lineRange": [
+        57,
+        74
+      ],
+      "summary": "TestCleanExitNoCheckpointStillEscalatesWhenVerifyFails (18 lines) defined in internal/orchestrate/classify_cleanexit_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "checkpoint",
+        "escalation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/critic.go",
+      "type": "file",
+      "name": "critic.go",
+      "filePath": "internal/orchestrate/critic.go",
+      "summary": "Critic seat logic: spawn, run, parse score output, and inject a critic note into the ledger.",
+      "tags": [
+        "orchestrator",
+        "critic",
+        "scoring"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/critic.go:criticSeat",
+      "type": "function",
+      "name": "criticSeat",
+      "filePath": "internal/orchestrate/critic.go",
+      "lineRange": [
+        23,
+        32
+      ],
+      "summary": "criticSeat (10 lines) defined in internal/orchestrate/critic.go.",
+      "tags": [
+        "utility",
+        "seat",
+        "critic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/critic.go:runCritic",
+      "type": "function",
+      "name": "runCritic",
+      "filePath": "internal/orchestrate/critic.go",
+      "lineRange": [
+        47,
+        71
+      ],
+      "summary": "runCritic (25 lines) defined in internal/orchestrate/critic.go.",
+      "tags": [
+        "utility",
+        "critic",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/critic.go:parseCriticScore",
+      "type": "function",
+      "name": "parseCriticScore",
+      "filePath": "internal/orchestrate/critic.go",
+      "lineRange": [
+        79,
+        107
+      ],
+      "summary": "parseCriticScore (29 lines) defined in internal/orchestrate/critic.go.",
+      "tags": [
+        "utility",
+        "critic",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/critic.go:criticInjection",
+      "type": "function",
+      "name": "criticInjection",
+      "filePath": "internal/orchestrate/critic.go",
+      "lineRange": [
+        113,
+        122
+      ],
+      "summary": "criticInjection (10 lines) defined in internal/orchestrate/critic.go.",
+      "tags": [
+        "utility",
+        "critic",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/critic.go:criticBrief",
+      "type": "function",
+      "name": "criticBrief",
+      "filePath": "internal/orchestrate/critic.go",
+      "lineRange": [
+        139,
+        150
+      ],
+      "summary": "criticBrief (12 lines) defined in internal/orchestrate/critic.go.",
+      "tags": [
+        "utility",
+        "critic",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/critic.go:readStreamTail",
+      "type": "function",
+      "name": "readStreamTail",
+      "filePath": "internal/orchestrate/critic.go",
+      "lineRange": [
+        155,
+        165
+      ],
+      "summary": "readStreamTail (11 lines) defined in internal/orchestrate/critic.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/dynamic_seat_test.go",
+      "type": "file",
+      "name": "dynamic_seat_test.go",
+      "filePath": "internal/orchestrate/dynamic_seat_test.go",
+      "summary": "Tests that mid-run joined seats are honored with their declared kind on the very next tick.",
+      "tags": [
+        "test",
+        "orchestrator",
+        "dynamic-seat"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/dynamic_seat_test.go:TestKindReReadsLiveRoster",
+      "type": "function",
+      "name": "TestKindReReadsLiveRoster",
+      "filePath": "internal/orchestrate/dynamic_seat_test.go",
+      "lineRange": [
+        14,
+        40
+      ],
+      "summary": "TestKindReReadsLiveRoster (27 lines) defined in internal/orchestrate/dynamic_seat_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/dynamic_seat_test.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/dynamic_seat_test.go",
+      "lineRange": [
+        52,
+        71
+      ],
+      "summary": "Run (20 lines) defined in internal/orchestrate/dynamic_seat_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/dynamic_seat_test.go:TestLoopDrivesMidRunJoinedSeatWithItsKind",
+      "type": "function",
+      "name": "TestLoopDrivesMidRunJoinedSeatWithItsKind",
+      "filePath": "internal/orchestrate/dynamic_seat_test.go",
+      "lineRange": [
+        76,
+        109
+      ],
+      "summary": "TestLoopDrivesMidRunJoinedSeatWithItsKind (34 lines) defined in internal/orchestrate/dynamic_seat_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "seat",
+        "loop"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "function:internal/mcp/project_addressing_test.go:TestProjectAddressingByName",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "function:internal/mcp/project_addressing_test.go:initNamedRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:newRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:connect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:TestStatusTool",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:callOK",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:callErr",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:TestFullLifecycleViaMCP",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:TestJoinRecordsSessionClientInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:TestToolsFailClosedWithoutAgentID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:TestMergeRule2ViaMCP",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:TestResources",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "function:internal/mcp/server_test.go:TestLogChangeNotifiesSubscribers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "function:internal/mcp/tools.go:resolveProject",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "function:internal/mcp/tools.go:clientInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "function:internal/mcp/tools.go:registerTools",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "function:internal/orchestrate/classify_cleanexit_test.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "function:internal/orchestrate/classify_cleanexit_test.go:TestCleanExitNoCheckpointRescuedByVerify",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "function:internal/orchestrate/classify_cleanexit_test.go:TestCleanExitNoCheckpointStillEscalatesWhenVerifyFails",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "function:internal/orchestrate/critic.go:criticSeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "function:internal/orchestrate/critic.go:runCritic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "function:internal/orchestrate/critic.go:parseCriticScore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "function:internal/orchestrate/critic.go:criticInjection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "function:internal/orchestrate/critic.go:criticBrief",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "function:internal/orchestrate/critic.go:readStreamTail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "function:internal/orchestrate/dynamic_seat_test.go:TestKindReReadsLiveRoster",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "function:internal/orchestrate/dynamic_seat_test.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "function:internal/orchestrate/dynamic_seat_test.go:TestLoopDrivesMidRunJoinedSeatWithItsKind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/registry/registry_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/project_addressing_test.go",
+      "target": "file:internal/registry/registry.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/server_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/paths/paths_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/paths/paths.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/registry/registry_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/mcp/tools.go",
+      "target": "file:internal/registry/registry.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/critic.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/dynamic_seat_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

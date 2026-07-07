@@ -585,3 +585,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/acp-per-session.md
         evidence: acp Client per-session update/permission routing (perUpdate/perPerm maps + OnSessionUpdateFor/OnPermissionRequestFor/ClearSession), global handler fallback preserved (single-session zero regression); lock released before callback; go test -race green
+  - id: cockpit-session
+    branch: feat/cockpit-session
+    status: in_progress
+    tasks:
+      - id: cockpit-session
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/cockpit-session.md
+        evidence: null

@@ -601,7 +601,7 @@ features:
     tasks:
       - id: cockpit-manager
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/cockpit-manager.md
         evidence: CockpitManager: per-(project,seat) single session via injectable BackendFactory; get-or-create under lock (single-flight, factory once under 50-goroutine concurrency); Get/List/Close/CloseAll; jsonl at baseDir/cockpit/. go test -race x2 green

@@ -447,7 +447,7 @@ features:
         deps: [rp-quorum, rp-fix-loop]
   - id: cockpit
     branch: feat/acp-hardening
-    status: in_progress
+    status: shipped
     tasks:
       - id: acp-hardening
         owner: kimi-worker

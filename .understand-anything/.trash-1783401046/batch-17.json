@@ -1,0 +1,362 @@
+{
+  "nodes": [
+    {
+      "id": "file:cloud/wire/src/envelope.ts",
+      "type": "file",
+      "name": "envelope.ts",
+      "filePath": "cloud/wire/src/envelope.ts",
+      "summary": "Defines the E2E encrypted envelope shape: an opaque ciphertext blob (xchacha20poly1305 nonce+ct) wrapped in a cleartext-header wire message that the relay can route without breaking zero-knowledge.",
+      "tags": ["wire-protocol", "schema", "type-definition", "encryption", "zod"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/src/events.ts",
+      "type": "file",
+      "name": "events.ts",
+      "filePath": "cloud/wire/src/events.ts",
+      "summary": "Defines the normalized AgentEvent discriminated union — the plaintext bodies linxd encrypts, covering messages, deltas, thinking, tool calls/results, diffs, approvals, state changes, usage, todos, and reply payloads.",
+      "tags": ["wire-protocol", "schema", "type-definition", "event-handler", "zod"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/src/machine.ts",
+      "type": "file",
+      "name": "machine.ts",
+      "filePath": "cloud/wire/src/machine.ts",
+      "summary": "Defines cleartext-operational MachineInfo metadata (host, agent kinds, workdirs, presence) so the relay can render the machine picker without inspecting encrypted bodies.",
+      "tags": ["wire-protocol", "schema", "type-definition", "zod", "metadata"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/src/operational.ts",
+      "type": "file",
+      "name": "operational.ts",
+      "filePath": "cloud/wire/src/operational.ts",
+      "summary": "Defines the cleartext operational header (RunState, EventKind, OperationalHeader) — machine-readable enums, counters, and ids the relay indexes to drive the fleet board, approval inbox, and push.",
+      "tags": ["wire-protocol", "schema", "type-definition", "header", "zod"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/src/reply.ts",
+      "type": "file",
+      "name": "reply.ts",
+      "filePath": "cloud/wire/src/reply.ts",
+      "summary": "Defines E2E reply event bodies (file-list, controls, mcp, discovered, dir-list, command-list) couried as encrypted AgentEvents through the acct room and matched by requestId.",
+      "tags": ["wire-protocol", "schema", "type-definition", "rpc-reply", "zod"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/src/rpc.ts",
+      "type": "file",
+      "name": "rpc.ts",
+      "filePath": "cloud/wire/src/rpc.ts",
+      "summary": "Defines the full client→relay RpcRequest discriminated union covering linx machine RPCs (spawn/send/abort/takeover/list-files/...) plus additive pactify verbs (pact.assign/accept/changes/merge/checkpoint) and multi-machine orchestration (orchestrate, plan, provision).",
+      "tags": ["wire-protocol", "schema", "type-definition", "rpc", "zod"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:cloud/wire/src/summary.ts",
+      "type": "file",
+      "name": "summary.ts",
+      "filePath": "cloud/wire/src/summary.ts",
+      "summary": "Defines the cleartext fleet-board RunSummary (folded from the operational header) and a wire-local mirror of BackendCapabilitiesLite — what the relay indexes and pushes to drive tiles and the inbox.",
+      "tags": ["wire-protocol", "schema", "type-definition", "summary", "zod"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/src/ws.ts",
+      "type": "file",
+      "name": "ws.ts",
+      "filePath": "cloud/wire/src/ws.ts",
+      "summary": "Defines the WebSocket message envelopes (ClientWsMessage for subscribe/unsubscribe/ping with optional resume cursors; ServerWsMessage for event/replay-end/run-updated/machines/pong) the relay uses to stream gapless per-run events.",
+      "tags": ["wire-protocol", "schema", "type-definition", "websocket", "zod"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/test/envelope.test.ts",
+      "type": "file",
+      "name": "envelope.test.ts",
+      "filePath": "cloud/wire/test/envelope.test.ts",
+      "summary": "Vitest cases verifying EncryptedBlob and WireMessage zod parsing: valid inputs round-trip; wrong alg, empty ciphertext, and missing body are rejected.",
+      "tags": ["test", "validation", "vitest", "wire-protocol"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/test/events.test.ts",
+      "type": "file",
+      "name": "events.test.ts",
+      "filePath": "cloud/wire/test/events.test.ts",
+      "summary": "Vitest cases exercising the AgentEvent discriminated union — every event kind (message, delta, thinking, tool-call, tool-result, diff, approvals, state-change, usage, todo) parses valid input and rejects malformed fields.",
+      "tags": ["test", "validation", "vitest", "wire-protocol"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/test/machine.test.ts",
+      "type": "file",
+      "name": "machine.test.ts",
+      "filePath": "cloud/wire/test/machine.test.ts",
+      "summary": "Vitest cases verifying MachineInfo zod parsing — required agentKinds/online/lastSeenAt, optional host/workdirs, and rejection of unknown shapes.",
+      "tags": ["test", "validation", "vitest", "wire-protocol"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/test/operational.test.ts",
+      "type": "file",
+      "name": "operational.test.ts",
+      "filePath": "cloud/wire/test/operational.test.ts",
+      "summary": "Vitest cases for RunState/EventKind enums and OperationalHeader — required fields, optional branch/workdir/repoRoot/title/ephemeral, strict rejection of unknown keys.",
+      "tags": ["test", "validation", "vitest", "wire-protocol"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/test/pact-rpc.test.ts",
+      "type": "file",
+      "name": "pact-rpc.test.ts",
+      "filePath": "cloud/wire/test/pact-rpc.test.ts",
+      "summary": "Vitest cases pinning the pact.* verb wire types (pact.assign, pact.accept, pact.changes, pact.merge, pact.checkpoint, pact.stint, pact.task, pact.provision) — discriminants and required fields.",
+      "tags": ["test", "validation", "vitest", "wire-protocol", "rpc"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/wire/test/reply.test.ts",
+      "type": "file",
+      "name": "reply.test.ts",
+      "filePath": "cloud/wire/test/reply.test.ts",
+      "summary": "Vitest cases for the E2E reply payloads (file-list, controls, mcp, discovered, dir-list, command-list) — required requestId, optional fields, and array element validation.",
+      "tags": ["test", "validation", "vitest", "wire-protocol"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/test/rpc.test.ts",
+      "type": "file",
+      "name": "rpc.test.ts",
+      "filePath": "cloud/wire/test/rpc.test.ts",
+      "summary": "Vitest cases for the linx machine RPC request types (spawn, send-message, resolve-approval, abort, takeover, list-files, set-model, set-mode, discover, list-dirs, attach, list-commands, run-command, rename) and RpcResponse shape.",
+      "tags": ["test", "validation", "vitest", "wire-protocol", "rpc"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/test/summary.test.ts",
+      "type": "file",
+      "name": "summary.test.ts",
+      "filePath": "cloud/wire/test/summary.test.ts",
+      "summary": "Vitest cases for RunSummary and BackendCapabilitiesLite — required cleartext fields, optional capabilities/branch/startedAt/workdir/repoRoot/title, and rejection of unknown keys.",
+      "tags": ["test", "validation", "vitest", "wire-protocol"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/wire/test/ws.test.ts",
+      "type": "file",
+      "name": "ws.test.ts",
+      "filePath": "cloud/wire/test/ws.test.ts",
+      "summary": "Vitest cases for the WS envelope unions — ClientWsMessage (subscribe/unsubscribe/ping with optional afterSeqByRun resume cursor) and ServerWsMessage (event/replay-end/run-updated/machines/pong) parse and discriminate correctly.",
+      "tags": ["test", "validation", "vitest", "wire-protocol", "websocket"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:cloud/wire/src/envelope.ts",
+      "target": "file:cloud/wire/src/operational.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/events.ts",
+      "target": "file:cloud/wire/src/operational.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/events.ts",
+      "target": "file:cloud/wire/src/reply.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/machine.ts",
+      "target": "file:cloud/wire/src/rpc.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/reply.ts",
+      "target": "file:cloud/wire/src/rpc.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/summary.ts",
+      "target": "file:cloud/wire/src/operational.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/summary.ts",
+      "target": "file:cloud/wire/src/rpc.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/ws.ts",
+      "target": "file:cloud/wire/src/envelope.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/ws.ts",
+      "target": "file:cloud/wire/src/machine.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/ws.ts",
+      "target": "file:cloud/wire/src/summary.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/envelope.test.ts",
+      "target": "file:cloud/wire/src/envelope.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/events.test.ts",
+      "target": "file:cloud/wire/src/events.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/machine.test.ts",
+      "target": "file:cloud/wire/src/machine.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/operational.test.ts",
+      "target": "file:cloud/wire/src/operational.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/pact-rpc.test.ts",
+      "target": "file:cloud/wire/src/rpc.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/reply.test.ts",
+      "target": "file:cloud/wire/src/events.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/reply.test.ts",
+      "target": "file:cloud/wire/src/reply.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/rpc.test.ts",
+      "target": "file:cloud/wire/src/rpc.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/summary.test.ts",
+      "target": "file:cloud/wire/src/summary.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/test/ws.test.ts",
+      "target": "file:cloud/wire/src/ws.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/wire/src/envelope.ts",
+      "target": "file:cloud/wire/test/envelope.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/events.ts",
+      "target": "file:cloud/wire/test/events.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/machine.ts",
+      "target": "file:cloud/wire/test/machine.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/operational.ts",
+      "target": "file:cloud/wire/test/operational.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/rpc.ts",
+      "target": "file:cloud/wire/test/pact-rpc.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/reply.ts",
+      "target": "file:cloud/wire/test/reply.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/rpc.ts",
+      "target": "file:cloud/wire/test/rpc.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/summary.ts",
+      "target": "file:cloud/wire/test/summary.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/wire/src/ws.ts",
+      "target": "file:cloud/wire/test/ws.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

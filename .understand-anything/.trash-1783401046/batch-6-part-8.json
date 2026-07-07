@@ -1,0 +1,1144 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/orchestrate/decide_test.go",
+      "type": "file",
+      "name": "decide_test.go",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "summary": "Comprehensive tests for the serial decision core and threshold enforcement: state transitions, priority ordering, dep blocking, and trip semantics.",
+      "tags": [
+        "go",
+        "test",
+        "module"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedNoDeps_RunOwner",
+      "type": "function",
+      "name": "TestNextAction_AssignedNoDeps_RunOwner",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        18,
+        34
+      ],
+      "summary": "TestNextAction_AssignedNoDeps_RunOwner: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedDepNotAccepted_BlockedTaskSkipped",
+      "type": "function",
+      "name": "TestNextAction_AssignedDepNotAccepted_BlockedTaskSkipped",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        39,
+        53
+      ],
+      "summary": "TestNextAction_AssignedDepNotAccepted_BlockedTaskSkipped: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_DepBlockedTask_DrivesDepFirst",
+      "type": "function",
+      "name": "TestNextAction_DepBlockedTask_DrivesDepFirst",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        57,
+        74
+      ],
+      "summary": "TestNextAction_DepBlockedTask_DrivesDepFirst: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedDepAccepted_RunOwner",
+      "type": "function",
+      "name": "TestNextAction_AssignedDepAccepted_RunOwner",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        77,
+        91
+      ],
+      "summary": "TestNextAction_AssignedDepAccepted_RunOwner: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_ChangesRequested_RunOwner",
+      "type": "function",
+      "name": "TestNextAction_ChangesRequested_RunOwner",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        94,
+        107
+      ],
+      "summary": "TestNextAction_ChangesRequested_RunOwner: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_ChangesRequestedDepNotAccepted_DrivesDepFirst",
+      "type": "function",
+      "name": "TestNextAction_ChangesRequestedDepNotAccepted_DrivesDepFirst",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        111,
+        125
+      ],
+      "summary": "TestNextAction_ChangesRequestedDepNotAccepted_DrivesDepFirst: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_AwaitingReview_RunReviewer",
+      "type": "function",
+      "name": "TestNextAction_AwaitingReview_RunReviewer",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        128,
+        141
+      ],
+      "summary": "TestNextAction_AwaitingReview_RunReviewer: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_AllAccepted_Merge",
+      "type": "function",
+      "name": "TestNextAction_AllAccepted_Merge",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        144,
+        158
+      ],
+      "summary": "TestNextAction_AllAccepted_Merge: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_FeatureNoTasks_NotMerged",
+      "type": "function",
+      "name": "TestNextAction_FeatureNoTasks_NotMerged",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        161,
+        169
+      ],
+      "summary": "TestNextAction_FeatureNoTasks_NotMerged: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_AllShipped_Done",
+      "type": "function",
+      "name": "TestNextAction_AllShipped_Done",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        172,
+        185
+      ],
+      "summary": "TestNextAction_AllShipped_Done: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_NoFeatures_Done",
+      "type": "function",
+      "name": "TestNextAction_NoFeatures_Done",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        188,
+        193
+      ],
+      "summary": "TestNextAction_NoFeatures_Done: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestTripped_ReworkExceeded",
+      "type": "function",
+      "name": "TestTripped_ReworkExceeded",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        200,
+        206
+      ],
+      "summary": "TestTripped_ReworkExceeded: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestTripped_FailsExceeded",
+      "type": "function",
+      "name": "TestTripped_FailsExceeded",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        208,
+        214
+      ],
+      "summary": "TestTripped_FailsExceeded: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestTripped_WithinBounds",
+      "type": "function",
+      "name": "TestTripped_WithinBounds",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        216,
+        223
+      ],
+      "summary": "TestTripped_WithinBounds: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_ThresholdDoesNotPreemptAction",
+      "type": "function",
+      "name": "TestNextAction_ThresholdDoesNotPreemptAction",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        227,
+        243
+      ],
+      "summary": "TestNextAction_ThresholdDoesNotPreemptAction: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityReviewerOverOwner",
+      "type": "function",
+      "name": "TestNextAction_PriorityReviewerOverOwner",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        247,
+        262
+      ],
+      "summary": "TestNextAction_PriorityReviewerOverOwner: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityOwnerOverMerge",
+      "type": "function",
+      "name": "TestNextAction_PriorityOwnerOverMerge",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        266,
+        281
+      ],
+      "summary": "TestNextAction_PriorityOwnerOverMerge: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityReviewerOverMerge",
+      "type": "function",
+      "name": "TestNextAction_PriorityReviewerOverMerge",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        284,
+        299
+      ],
+      "summary": "TestNextAction_PriorityReviewerOverMerge: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_FirstReviewerCandidate",
+      "type": "function",
+      "name": "TestNextAction_FirstReviewerCandidate",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        303,
+        317
+      ],
+      "summary": "TestNextAction_FirstReviewerCandidate: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_ShippedFeatureNotRemerged",
+      "type": "function",
+      "name": "TestNextAction_ShippedFeatureNotRemerged",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        321,
+        336
+      ],
+      "summary": "TestNextAction_ShippedFeatureNotRemerged: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_DepsScopedToOwnFeature",
+      "type": "function",
+      "name": "TestNextAction_DepsScopedToOwnFeature",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        341,
+        360
+      ],
+      "summary": "TestNextAction_DepsScopedToOwnFeature: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_ShippedTaskDoesNotTripStuck",
+      "type": "function",
+      "name": "TestNextAction_ShippedTaskDoesNotTripStuck",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        366,
+        378
+      ],
+      "summary": "TestNextAction_ShippedTaskDoesNotTripStuck: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_InProgress_RunOwner",
+      "type": "function",
+      "name": "TestNextAction_InProgress_RunOwner",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        384,
+        394
+      ],
+      "summary": "TestNextAction_InProgress_RunOwner: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/decide_test.go:TestNextAction_InProgressDepNotAccepted_Blocked",
+      "type": "function",
+      "name": "TestNextAction_InProgressDepNotAccepted_Blocked",
+      "filePath": "internal/orchestrate/decide_test.go",
+      "lineRange": [
+        397,
+        409
+      ],
+      "summary": "TestNextAction_InProgressDepNotAccepted_Blocked: helper in internal/orchestrate/decide_test.go.",
+      "tags": [
+        "test",
+        "orchestration",
+        "decision",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/defaults.go",
+      "type": "file",
+      "name": "defaults.go",
+      "filePath": "internal/orchestrate/defaults.go",
+      "summary": "Default collaborators for the Options struct: shell-based gate executor, NewCmdRunner, stdout notifier, fix-until-green bound, and session-cleanup runner wiring.",
+      "tags": [
+        "go",
+        "defaults",
+        "module"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/orchestrate/defaults.go:shellExec",
+      "type": "class",
+      "name": "shellExec",
+      "filePath": "internal/orchestrate/defaults.go",
+      "lineRange": [
+        11,
+        11
+      ],
+      "summary": "shellExec: production gate executor that runs a verify command via the shell and reports exit code + combined output.",
+      "tags": [
+        "defaults",
+        "go",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/defaults.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/defaults.go",
+      "lineRange": [
+        13,
+        24
+      ],
+      "summary": "Run: helper in internal/orchestrate/defaults.go.",
+      "tags": [
+        "orchestration",
+        "defaults",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/defaults.go:withDefaults",
+      "type": "function",
+      "name": "withDefaults",
+      "filePath": "internal/orchestrate/defaults.go",
+      "lineRange": [
+        30,
+        53
+      ],
+      "summary": "withDefaults: helper in internal/orchestrate/defaults.go.",
+      "tags": [
+        "orchestration",
+        "defaults",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/escalate.go",
+      "type": "file",
+      "name": "escalate.go",
+      "filePath": "internal/orchestrate/escalate.go",
+      "summary": "Writes human-readable escalation markdown files under .pact/orchestrate/ when the driver cannot converge (rework/fails/iter thresholds), archives resolved feature escalations, and defines the Notifier interface.",
+      "tags": [
+        "go",
+        "escalation",
+        "module"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:internal/orchestrate/escalate.go:Notifier",
+      "type": "class",
+      "name": "Notifier",
+      "filePath": "internal/orchestrate/escalate.go",
+      "lineRange": [
+        163,
+        165
+      ],
+      "summary": "Notifier: interface for delivering escalation messages to a human; production wires StdoutNotifier.",
+      "tags": [
+        "escalation",
+        "go",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/orchestrate/escalate.go:StdoutNotifier",
+      "type": "class",
+      "name": "StdoutNotifier",
+      "filePath": "internal/orchestrate/escalate.go",
+      "lineRange": [
+        170,
+        170
+      ],
+      "summary": "StdoutNotifier: default production Notifier that prints the escalation message to stdout.",
+      "tags": [
+        "escalation",
+        "go",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/escalate.go:writeEscalation",
+      "type": "function",
+      "name": "writeEscalation",
+      "filePath": "internal/orchestrate/escalate.go",
+      "lineRange": [
+        32,
+        69
+      ],
+      "summary": "writeEscalation: helper in internal/orchestrate/escalate.go.",
+      "tags": [
+        "orchestration",
+        "escalation",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/escalate.go:escalationFilename",
+      "type": "function",
+      "name": "escalationFilename",
+      "filePath": "internal/orchestrate/escalate.go",
+      "lineRange": [
+        83,
+        92
+      ],
+      "summary": "escalationFilename: helper in internal/orchestrate/escalate.go.",
+      "tags": [
+        "orchestration",
+        "escalation",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/escalate.go:archiveEscalationsForFeature",
+      "type": "function",
+      "name": "archiveEscalationsForFeature",
+      "filePath": "internal/orchestrate/escalate.go",
+      "lineRange": [
+        110,
+        134
+      ],
+      "summary": "archiveEscalationsForFeature: helper in internal/orchestrate/escalate.go.",
+      "tags": [
+        "orchestration",
+        "escalation",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/escalate.go:escalationFeatureOf",
+      "type": "function",
+      "name": "escalationFeatureOf",
+      "filePath": "internal/orchestrate/escalate.go",
+      "lineRange": [
+        138,
+        157
+      ],
+      "summary": "escalationFeatureOf: helper in internal/orchestrate/escalate.go.",
+      "tags": [
+        "orchestration",
+        "escalation",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/escalate.go:Notify",
+      "type": "function",
+      "name": "Notify",
+      "filePath": "internal/orchestrate/escalate.go",
+      "lineRange": [
+        173,
+        175
+      ],
+      "summary": "Notify: helper in internal/orchestrate/escalate.go.",
+      "tags": [
+        "orchestration",
+        "escalation",
+        "helper"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedNoDeps_RunOwner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedNoDeps_RunOwner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedDepNotAccepted_BlockedTaskSkipped",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedDepNotAccepted_BlockedTaskSkipped",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_DepBlockedTask_DrivesDepFirst",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_DepBlockedTask_DrivesDepFirst",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedDepAccepted_RunOwner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AssignedDepAccepted_RunOwner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ChangesRequested_RunOwner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ChangesRequested_RunOwner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ChangesRequestedDepNotAccepted_DrivesDepFirst",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ChangesRequestedDepNotAccepted_DrivesDepFirst",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AwaitingReview_RunReviewer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AwaitingReview_RunReviewer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AllAccepted_Merge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AllAccepted_Merge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_FeatureNoTasks_NotMerged",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_FeatureNoTasks_NotMerged",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AllShipped_Done",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_AllShipped_Done",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_NoFeatures_Done",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_NoFeatures_Done",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestTripped_ReworkExceeded",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestTripped_ReworkExceeded",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestTripped_FailsExceeded",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestTripped_FailsExceeded",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestTripped_WithinBounds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestTripped_WithinBounds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ThresholdDoesNotPreemptAction",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ThresholdDoesNotPreemptAction",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityReviewerOverOwner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityReviewerOverOwner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityOwnerOverMerge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityOwnerOverMerge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityReviewerOverMerge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_PriorityReviewerOverMerge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_FirstReviewerCandidate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_FirstReviewerCandidate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ShippedFeatureNotRemerged",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ShippedFeatureNotRemerged",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_DepsScopedToOwnFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_DepsScopedToOwnFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ShippedTaskDoesNotTripStuck",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_ShippedTaskDoesNotTripStuck",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_InProgress_RunOwner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_InProgress_RunOwner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_InProgressDepNotAccepted_Blocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "function:internal/orchestrate/decide_test.go:TestNextAction_InProgressDepNotAccepted_Blocked",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/defaults.go",
+      "target": "class:internal/orchestrate/defaults.go:shellExec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/defaults.go",
+      "target": "function:internal/orchestrate/defaults.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/defaults.go",
+      "target": "function:internal/orchestrate/defaults.go:Run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/defaults.go",
+      "target": "function:internal/orchestrate/defaults.go:withDefaults",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "class:internal/orchestrate/escalate.go:Notifier",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "class:internal/orchestrate/escalate.go:Notifier",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "class:internal/orchestrate/escalate.go:StdoutNotifier",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "class:internal/orchestrate/escalate.go:StdoutNotifier",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "function:internal/orchestrate/escalate.go:writeEscalation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "function:internal/orchestrate/escalate.go:escalationFilename",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "function:internal/orchestrate/escalate.go:archiveEscalationsForFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "function:internal/orchestrate/escalate.go:escalationFeatureOf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "function:internal/orchestrate/escalate.go:Notify",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/escalate.go",
+      "target": "function:internal/orchestrate/escalate.go:Notify",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/decide_test.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

@@ -1,0 +1,1260 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/pact/project.go",
+      "type": "file",
+      "name": "project.go",
+      "filePath": "internal/pact/project.go",
+      "summary": "Project resolver \u2014 locates the pact repository root and returns an acting seat handle (Actor pattern).",
+      "tags": [
+        "pact",
+        "actor",
+        "entry-point"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/project.go:At",
+      "type": "function",
+      "name": "At",
+      "filePath": "internal/pact/project.go",
+      "lineRange": [
+        30,
+        37
+      ],
+      "summary": "At(exported) in project.go (lines 30-37, 8 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/project.go:As",
+      "type": "function",
+      "name": "As",
+      "filePath": "internal/pact/project.go",
+      "lineRange": [
+        41,
+        45
+      ],
+      "summary": "As(exported) in project.go (lines 41-45, 5 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/pact/project.go:Project",
+      "type": "class",
+      "name": "Project",
+      "filePath": "internal/pact/project.go",
+      "lineRange": [
+        15,
+        18
+      ],
+      "summary": "Project(exported) type in project.go (lines 15-18, 4 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/planner/apply.go",
+      "type": "file",
+      "name": "apply.go",
+      "filePath": "internal/planner/apply.go",
+      "summary": "Plan application: validates a planner manifest, joins proposed new seats, and assigns the first task; transactional variant restores log on rejection.",
+      "tags": [
+        "planner",
+        "apply",
+        "transaction"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/planner/apply.go:joinNewSeats",
+      "type": "function",
+      "name": "joinNewSeats",
+      "filePath": "internal/planner/apply.go",
+      "lineRange": [
+        21,
+        43
+      ],
+      "summary": "joinNewSeats in apply.go (lines 21-43, 23 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/apply.go:Apply",
+      "type": "function",
+      "name": "Apply",
+      "filePath": "internal/planner/apply.go",
+      "lineRange": [
+        45,
+        69
+      ],
+      "summary": "Apply(exported) in apply.go (lines 45-69, 25 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/apply.go:ApplyTx",
+      "type": "function",
+      "name": "ApplyTx",
+      "filePath": "internal/planner/apply.go",
+      "lineRange": [
+        71,
+        104
+      ],
+      "summary": "ApplyTx(exported) in apply.go (lines 71-104, 34 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/planner/manifest.go",
+      "type": "file",
+      "name": "manifest.go",
+      "filePath": "internal/planner/manifest.go",
+      "summary": "Plan manifest types (Plan, PlanTask, PlanSeat) plus Parse (JSON) and Validate (slug + dep + cycle checks).",
+      "tags": [
+        "planner",
+        "manifest",
+        "validation",
+        "data-model"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/planner/manifest.go:ValidSlug",
+      "type": "function",
+      "name": "ValidSlug",
+      "filePath": "internal/planner/manifest.go",
+      "lineRange": [
+        16,
+        16
+      ],
+      "summary": "ValidSlug(exported) in manifest.go (lines 16-16, 1 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest.go:Parse",
+      "type": "function",
+      "name": "Parse",
+      "filePath": "internal/planner/manifest.go",
+      "lineRange": [
+        45,
+        54
+      ],
+      "summary": "Parse(exported) in manifest.go (lines 45-54, 10 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest.go:Validate",
+      "type": "function",
+      "name": "Validate",
+      "filePath": "internal/planner/manifest.go",
+      "lineRange": [
+        56,
+        161
+      ],
+      "summary": "Validate(exported) in manifest.go (lines 56-161, 106 lines)",
+      "tags": [
+        "function",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/planner/manifest.go:checkCycle",
+      "type": "function",
+      "name": "checkCycle",
+      "filePath": "internal/planner/manifest.go",
+      "lineRange": [
+        163,
+        208
+      ],
+      "summary": "checkCycle in manifest.go (lines 163-208, 46 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/planner/manifest.go:PlanTask",
+      "type": "class",
+      "name": "PlanTask",
+      "filePath": "internal/planner/manifest.go",
+      "lineRange": [
+        18,
+        25
+      ],
+      "summary": "PlanTask(exported) type in manifest.go (lines 18-25, 8 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/planner/manifest.go:PlanSeat",
+      "type": "class",
+      "name": "PlanSeat",
+      "filePath": "internal/planner/manifest.go",
+      "lineRange": [
+        30,
+        34
+      ],
+      "summary": "PlanSeat(exported) type in manifest.go (lines 30-34, 5 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/planner/manifest.go:Plan",
+      "type": "class",
+      "name": "Plan",
+      "filePath": "internal/planner/manifest.go",
+      "lineRange": [
+        36,
+        43
+      ],
+      "summary": "Plan(exported) type in manifest.go (lines 36-43, 8 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/serve/plan_generate.go",
+      "type": "file",
+      "name": "plan_generate.go",
+      "filePath": "internal/serve/plan_generate.go",
+      "summary": "Plan generation HTTP endpoints: async run of the planner binary with status polling and post-apply hook.",
+      "tags": [
+        "serve",
+        "plan",
+        "planner",
+        "http",
+        "async"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/plan_generate.go:readPlanGenStatus",
+      "type": "function",
+      "name": "readPlanGenStatus",
+      "filePath": "internal/serve/plan_generate.go",
+      "lineRange": [
+        29,
+        39
+      ],
+      "summary": "readPlanGenStatus in plan_generate.go (lines 29-39, 11 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/plan_generate.go:orchestratorKind",
+      "type": "function",
+      "name": "orchestratorKind",
+      "filePath": "internal/serve/plan_generate.go",
+      "lineRange": [
+        52,
+        61
+      ],
+      "summary": "orchestratorKind in plan_generate.go (lines 52-61, 10 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/plan_generate.go:defaultRunPlanner",
+      "type": "function",
+      "name": "defaultRunPlanner",
+      "filePath": "internal/serve/plan_generate.go",
+      "lineRange": [
+        76,
+        89
+      ],
+      "summary": "defaultRunPlanner in plan_generate.go (lines 76-89, 14 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/plan_generate.go:wrapRunErr",
+      "type": "function",
+      "name": "wrapRunErr",
+      "filePath": "internal/serve/plan_generate.go",
+      "lineRange": [
+        94,
+        104
+      ],
+      "summary": "wrapRunErr in plan_generate.go (lines 94-104, 11 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/plan_generate.go:handlePlanGenerate",
+      "type": "function",
+      "name": "handlePlanGenerate",
+      "filePath": "internal/serve/plan_generate.go",
+      "lineRange": [
+        125,
+        154
+      ],
+      "summary": "handlePlanGenerate in plan_generate.go (lines 125-154, 30 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/plan_generate.go:startPlanGenerate",
+      "type": "function",
+      "name": "startPlanGenerate",
+      "filePath": "internal/serve/plan_generate.go",
+      "lineRange": [
+        163,
+        209
+      ],
+      "summary": "startPlanGenerate in plan_generate.go (lines 163-209, 47 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/serve/plan_generate.go:PlanGenStatusDTO",
+      "type": "class",
+      "name": "PlanGenStatusDTO",
+      "filePath": "internal/serve/plan_generate.go",
+      "lineRange": [
+        19,
+        23
+      ],
+      "summary": "PlanGenStatusDTO(exported) type in plan_generate.go (lines 19-23, 5 lines)",
+      "tags": [
+        "class",
+        "type-definition",
+        "exported"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/paths/paths_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/paths/paths.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/planner/apply_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/planner/apply_tx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/planner/apply.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/planner/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/planner/manifest_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/planner/manifest.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/planner/prompt_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/planner/prompt.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/project.go",
+      "target": "function:internal/pact/project.go:At",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/project.go",
+      "target": "function:internal/pact/project.go:As",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/project.go",
+      "target": "class:internal/pact/project.go:Project",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "function:internal/planner/apply.go:joinNewSeats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "function:internal/planner/apply.go:Apply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "function:internal/planner/apply.go:ApplyTx",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "function:internal/planner/manifest.go:ValidSlug",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "function:internal/planner/manifest.go:Parse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "function:internal/planner/manifest.go:Validate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "function:internal/planner/manifest.go:checkCycle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "class:internal/planner/manifest.go:PlanTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "class:internal/planner/manifest.go:PlanSeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "class:internal/planner/manifest.go:Plan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "function:internal/serve/plan_generate.go:readPlanGenStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "function:internal/serve/plan_generate.go:orchestratorKind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "function:internal/serve/plan_generate.go:defaultRunPlanner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "function:internal/serve/plan_generate.go:wrapRunErr",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "function:internal/serve/plan_generate.go:handlePlanGenerate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "function:internal/serve/plan_generate.go:startPlanGenerate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "class:internal/serve/plan_generate.go:PlanGenStatusDTO",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/project.go",
+      "target": "function:internal/pact/project.go:At",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/project.go",
+      "target": "function:internal/pact/project.go:As",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/project.go",
+      "target": "class:internal/pact/project.go:Project",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "function:internal/planner/apply.go:Apply",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "function:internal/planner/apply.go:ApplyTx",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "function:internal/planner/manifest.go:ValidSlug",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "function:internal/planner/manifest.go:Parse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "function:internal/planner/manifest.go:Validate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "class:internal/planner/manifest.go:PlanTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "class:internal/planner/manifest.go:PlanSeat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "class:internal/planner/manifest.go:Plan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/plan_generate.go",
+      "target": "class:internal/serve/plan_generate.go:PlanGenStatusDTO",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/project.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/planner/manifest.go",
+      "target": "file:internal/planner/manifest_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/planner/apply.go",
+      "target": "file:internal/planner/apply_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

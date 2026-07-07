@@ -1,0 +1,2037 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/orchestrate/runner_idle_test.go",
+      "type": "file",
+      "name": "runner_idle_test.go",
+      "filePath": "internal/orchestrate/runner_idle_test.go",
+      "summary": "Tests for os.Exec runner: stdout capture, silent-process killing, file-writing survival, stall killing, context propagation.",
+      "tags": [
+        "runner",
+        "idle",
+        "test",
+        "exec",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle_test.go:TestOsExec_TeesStdoutToCapture",
+      "type": "function",
+      "name": "TestOsExec_TeesStdoutToCapture",
+      "filePath": "internal/orchestrate/runner_idle_test.go",
+      "lineRange": [
+        15,
+        34
+      ],
+      "summary": "TestOsExec_TeesStdoutToCapture in runner_idle_test.go (20 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_KillsSilentProcess",
+      "type": "function",
+      "name": "TestOsExecIdle_KillsSilentProcess",
+      "filePath": "internal/orchestrate/runner_idle_test.go",
+      "lineRange": [
+        39,
+        53
+      ],
+      "summary": "TestOsExecIdle_KillsSilentProcess in runner_idle_test.go (15 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_KeepsChattyProcessAlive",
+      "type": "function",
+      "name": "TestOsExecIdle_KeepsChattyProcessAlive",
+      "filePath": "internal/orchestrate/runner_idle_test.go",
+      "lineRange": [
+        58,
+        66
+      ],
+      "summary": "TestOsExecIdle_KeepsChattyProcessAlive in runner_idle_test.go (9 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_QuietButWritingFilesNotKilled",
+      "type": "function",
+      "name": "TestOsExecIdle_QuietButWritingFilesNotKilled",
+      "filePath": "internal/orchestrate/runner_idle_test.go",
+      "lineRange": [
+        71,
+        80
+      ],
+      "summary": "TestOsExecIdle_QuietButWritingFilesNotKilled in runner_idle_test.go (10 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_StalledNoProgressKilled",
+      "type": "function",
+      "name": "TestOsExecIdle_StalledNoProgressKilled",
+      "filePath": "internal/orchestrate/runner_idle_test.go",
+      "lineRange": [
+        84,
+        93
+      ],
+      "summary": "TestOsExecIdle_StalledNoProgressKilled in runner_idle_test.go (10 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_DisabledRunsToCompletion",
+      "type": "function",
+      "name": "TestOsExecIdle_DisabledRunsToCompletion",
+      "filePath": "internal/orchestrate/runner_idle_test.go",
+      "lineRange": [
+        96,
+        101
+      ],
+      "summary": "TestOsExecIdle_DisabledRunsToCompletion in runner_idle_test.go (6 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_ContextCancelPropagates",
+      "type": "function",
+      "name": "TestOsExecIdle_ContextCancelPropagates",
+      "filePath": "internal/orchestrate/runner_idle_test.go",
+      "lineRange": [
+        105,
+        116
+      ],
+      "summary": "TestOsExecIdle_ContextCancelPropagates in runner_idle_test.go (12 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/sandbox.go",
+      "type": "file",
+      "name": "sandbox.go",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "summary": "Sandbox runner that drives a worker in an isolated worktree, persists a park marker, writes the ledger atomically, and syncs .pact.",
+      "tags": [
+        "sandbox",
+        "worktree",
+        "park-marker",
+        "atomic-write",
+        "ledger",
+        "go"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox.go:RunSandbox",
+      "type": "function",
+      "name": "RunSandbox",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "lineRange": [
+        40,
+        120
+      ],
+      "summary": "RunSandbox in sandbox.go (81 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox.go:writeParkMarker",
+      "type": "function",
+      "name": "writeParkMarker",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "lineRange": [
+        139,
+        149
+      ],
+      "summary": "writeParkMarker in sandbox.go (11 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox.go:checkStalePark",
+      "type": "function",
+      "name": "checkStalePark",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "lineRange": [
+        159,
+        174
+      ],
+      "summary": "checkStalePark in sandbox.go (16 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox.go:writeLedger",
+      "type": "function",
+      "name": "writeLedger",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "lineRange": [
+        192,
+        228
+      ],
+      "summary": "writeLedger in sandbox.go (37 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox.go:atomicWriteFile",
+      "type": "function",
+      "name": "atomicWriteFile",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "lineRange": [
+        233,
+        258
+      ],
+      "summary": "atomicWriteFile in sandbox.go (26 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox.go:mergeEventLines",
+      "type": "function",
+      "name": "mergeEventLines",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "lineRange": [
+        263,
+        286
+      ],
+      "summary": "mergeEventLines in sandbox.go (24 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox.go:syncPact",
+      "type": "function",
+      "name": "syncPact",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "lineRange": [
+        299,
+        315
+      ],
+      "summary": "syncPact in sandbox.go (17 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sandbox.go:copyFile",
+      "type": "function",
+      "name": "copyFile",
+      "filePath": "internal/orchestrate/sandbox.go",
+      "lineRange": [
+        318,
+        330
+      ],
+      "summary": "copyFile in sandbox.go (13 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/sessionstore.go",
+      "type": "file",
+      "name": "sessionstore.go",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "summary": "JSON-backed session id store keyed by (seat, task), guarded by an advisory lock, with upsert/prune/clear operations and atomic temp-file writes.",
+      "tags": [
+        "session",
+        "store",
+        "lock",
+        "json",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore.go:LoadSessions",
+      "type": "function",
+      "name": "LoadSessions",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        42,
+        44
+      ],
+      "summary": "LoadSessions in sessionstore.go (3 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore.go:readSessions",
+      "type": "function",
+      "name": "readSessions",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        47,
+        63
+      ],
+      "summary": "readSessions in sessionstore.go (17 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore.go:withSessionsLock",
+      "type": "function",
+      "name": "withSessionsLock",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        69,
+        83
+      ],
+      "summary": "withSessionsLock in sessionstore.go (15 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore.go:writeSessions",
+      "type": "function",
+      "name": "writeSessions",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        87,
+        117
+      ],
+      "summary": "writeSessions in sessionstore.go (31 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore.go:RecordSession",
+      "type": "function",
+      "name": "RecordSession",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        122,
+        141
+      ],
+      "summary": "RecordSession in sessionstore.go (20 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore.go:LookupSession",
+      "type": "function",
+      "name": "LookupSession",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        146,
+        157
+      ],
+      "summary": "LookupSession in sessionstore.go (12 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore.go:ClearSession",
+      "type": "function",
+      "name": "ClearSession",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        161,
+        172
+      ],
+      "summary": "ClearSession in sessionstore.go (12 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore.go:PruneSessions",
+      "type": "function",
+      "name": "PruneSessions",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        177,
+        187
+      ],
+      "summary": "PruneSessions in sessionstore.go (11 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/orchestrate/sessionstore.go:SessionRecord",
+      "type": "class",
+      "name": "SessionRecord",
+      "filePath": "internal/orchestrate/sessionstore.go",
+      "lineRange": [
+        20,
+        26
+      ],
+      "summary": "Type SessionRecord in sessionstore.go (7 lines, 0 methods, 5 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/sessionstore_test.go",
+      "type": "file",
+      "name": "sessionstore_test.go",
+      "filePath": "internal/orchestrate/sessionstore_test.go",
+      "summary": "Tests for the session store: round-trip, upsert, prune, prune-by-state, clear, and concurrent writer stress tests.",
+      "tags": [
+        "session",
+        "store",
+        "test",
+        "concurrency",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreRoundTrip",
+      "type": "function",
+      "name": "TestSessionStoreRoundTrip",
+      "filePath": "internal/orchestrate/sessionstore_test.go",
+      "lineRange": [
+        14,
+        41
+      ],
+      "summary": "TestSessionStoreRoundTrip in sessionstore_test.go (28 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreUpsert",
+      "type": "function",
+      "name": "TestSessionStoreUpsert",
+      "filePath": "internal/orchestrate/sessionstore_test.go",
+      "lineRange": [
+        45,
+        69
+      ],
+      "summary": "TestSessionStoreUpsert in sessionstore_test.go (25 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore_test.go:TestPruneSessions",
+      "type": "function",
+      "name": "TestPruneSessions",
+      "filePath": "internal/orchestrate/sessionstore_test.go",
+      "lineRange": [
+        72,
+        87
+      ],
+      "summary": "TestPruneSessions in sessionstore_test.go (16 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore_test.go:TestPruneOrphanSessionsByState",
+      "type": "function",
+      "name": "TestPruneOrphanSessionsByState",
+      "filePath": "internal/orchestrate/sessionstore_test.go",
+      "lineRange": [
+        91,
+        116
+      ],
+      "summary": "TestPruneOrphanSessionsByState in sessionstore_test.go (26 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore_test.go:TestClearTaskSessionRecords",
+      "type": "function",
+      "name": "TestClearTaskSessionRecords",
+      "filePath": "internal/orchestrate/sessionstore_test.go",
+      "lineRange": [
+        120,
+        137
+      ],
+      "summary": "TestClearTaskSessionRecords in sessionstore_test.go (18 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreConcurrentWrites",
+      "type": "function",
+      "name": "TestSessionStoreConcurrentWrites",
+      "filePath": "internal/orchestrate/sessionstore_test.go",
+      "lineRange": [
+        142,
+        182
+      ],
+      "summary": "TestSessionStoreConcurrentWrites in sessionstore_test.go (41 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/orchestrate/status.go",
+      "type": "file",
+      "name": "status.go",
+      "filePath": "internal/orchestrate/status.go",
+      "summary": "Writes per-iteration status.json, parallel feature status, and escalation/fixing/loop status payloads with persistedHistory of past fails.",
+      "tags": [
+        "status",
+        "json",
+        "history",
+        "escalation",
+        "fixing",
+        "go"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:buildLoopStatus",
+      "type": "function",
+      "name": "buildLoopStatus",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        37,
+        50
+      ],
+      "summary": "buildLoopStatus in status.go (14 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:buildEscalatedStatus",
+      "type": "function",
+      "name": "buildEscalatedStatus",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        54,
+        83
+      ],
+      "summary": "buildEscalatedStatus in status.go (30 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:buildFixingStatus",
+      "type": "function",
+      "name": "buildFixingStatus",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        89,
+        104
+      ],
+      "summary": "buildFixingStatus in status.go (16 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:writeFeatureStatus",
+      "type": "function",
+      "name": "writeFeatureStatus",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        116,
+        135
+      ],
+      "summary": "writeFeatureStatus in status.go (20 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:writeHistory",
+      "type": "function",
+      "name": "writeHistory",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        180,
+        194
+      ],
+      "summary": "writeHistory in status.go (15 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:loadHistory",
+      "type": "function",
+      "name": "loadHistory",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        199,
+        214
+      ],
+      "summary": "loadHistory in status.go (16 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:writeStatus",
+      "type": "function",
+      "name": "writeStatus",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        223,
+        246
+      ],
+      "summary": "writeStatus in status.go (24 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:progress",
+      "type": "function",
+      "name": "progress",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        249,
+        259
+      ],
+      "summary": "progress in status.go (11 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:actionString",
+      "type": "function",
+      "name": "actionString",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        268,
+        285
+      ],
+      "summary": "actionString in status.go (18 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status.go:phaseFor",
+      "type": "function",
+      "name": "phaseFor",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        287,
+        304
+      ],
+      "summary": "phaseFor in status.go (18 lines).",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/orchestrate/status.go:Status",
+      "type": "class",
+      "name": "Status",
+      "filePath": "internal/orchestrate/status.go",
+      "lineRange": [
+        15,
+        33
+      ],
+      "summary": "Type Status in status.go (19 lines, 0 methods, 14 fields).",
+      "tags": [
+        "type-definition",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/orchestrate/status_test.go",
+      "type": "file",
+      "name": "status_test.go",
+      "filePath": "internal/orchestrate/status_test.go",
+      "summary": "Tests for status serialization: temp-file cleanup, dir creation, progress counts, JSON-tag contract, and loop integration paths.",
+      "tags": [
+        "status",
+        "test",
+        "json",
+        "loop",
+        "go"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestWriteStatusWritesValidJSON",
+      "type": "function",
+      "name": "TestWriteStatusWritesValidJSON",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        19,
+        53
+      ],
+      "summary": "TestWriteStatusWritesValidJSON in status_test.go (35 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestWriteStatusNoTempFileLeftBehind",
+      "type": "function",
+      "name": "TestWriteStatusNoTempFileLeftBehind",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        55,
+        67
+      ],
+      "summary": "TestWriteStatusNoTempFileLeftBehind in status_test.go (13 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestWriteStatusCreatesDirIfAbsent",
+      "type": "function",
+      "name": "TestWriteStatusCreatesDirIfAbsent",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        69,
+        84
+      ],
+      "summary": "TestWriteStatusCreatesDirIfAbsent in status_test.go (16 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestProgressCountsTotalAndAccepted",
+      "type": "function",
+      "name": "TestProgressCountsTotalAndAccepted",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        88,
+        109
+      ],
+      "summary": "TestProgressCountsTotalAndAccepted in status_test.go (22 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestProgressEmptyState",
+      "type": "function",
+      "name": "TestProgressEmptyState",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        111,
+        116
+      ],
+      "summary": "TestProgressEmptyState in status_test.go (6 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestProgressShippedFeatureCountsTasks",
+      "type": "function",
+      "name": "TestProgressShippedFeatureCountsTasks",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        118,
+        134
+      ],
+      "summary": "TestProgressShippedFeatureCountsTasks in status_test.go (17 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestStatusJSONTagsMatchContract",
+      "type": "function",
+      "name": "TestStatusJSONTagsMatchContract",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        138,
+        182
+      ],
+      "summary": "TestStatusJSONTagsMatchContract in status_test.go (45 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestLoopWritesStatusAfterRunOwnerRound",
+      "type": "function",
+      "name": "TestLoopWritesStatusAfterRunOwnerRound",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        186,
+        219
+      ],
+      "summary": "TestLoopWritesStatusAfterRunOwnerRound in status_test.go (34 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestLoopDryRunDoesNotWriteStatus",
+      "type": "function",
+      "name": "TestLoopDryRunDoesNotWriteStatus",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        221,
+        239
+      ],
+      "summary": "TestLoopDryRunDoesNotWriteStatus in status_test.go (19 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnReworkLimit",
+      "type": "function",
+      "name": "TestLoopWritesEscalatedStatusOnReworkLimit",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        241,
+        272
+      ],
+      "summary": "TestLoopWritesEscalatedStatusOnReworkLimit in status_test.go (32 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnGateFailure",
+      "type": "function",
+      "name": "TestLoopWritesEscalatedStatusOnGateFailure",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        274,
+        301
+      ],
+      "summary": "TestLoopWritesEscalatedStatusOnGateFailure in status_test.go (28 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnFailLimit",
+      "type": "function",
+      "name": "TestLoopWritesEscalatedStatusOnFailLimit",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        303,
+        328
+      ],
+      "summary": "TestLoopWritesEscalatedStatusOnFailLimit in status_test.go (26 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/status_test.go:TestLoopWritesStatusPerIteration",
+      "type": "function",
+      "name": "TestLoopWritesStatusPerIteration",
+      "filePath": "internal/orchestrate/status_test.go",
+      "lineRange": [
+        330,
+        364
+      ],
+      "summary": "TestLoopWritesStatusPerIteration in status_test.go (35 lines).",
+      "tags": [
+        "test"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExec_TeesStdoutToCapture",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_KillsSilentProcess",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_KeepsChattyProcessAlive",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_QuietButWritingFilesNotKilled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_StalledNoProgressKilled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_DisabledRunsToCompletion",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_ContextCancelPropagates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExec_TeesStdoutToCapture",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_KillsSilentProcess",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_KeepsChattyProcessAlive",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_QuietButWritingFilesNotKilled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_StalledNoProgressKilled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_DisabledRunsToCompletion",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/runner_idle_test.go",
+      "target": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_ContextCancelPropagates",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:RunSandbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:writeParkMarker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:checkStalePark",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:writeLedger",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:atomicWriteFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:mergeEventLines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:syncPact",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:copyFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/lockx/lockx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/lockx/lockx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "function:internal/orchestrate/sandbox.go:RunSandbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:LoadSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:readSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:withSessionsLock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:writeSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:RecordSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:LookupSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:ClearSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:PruneSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "class:internal/orchestrate/sessionstore.go:SessionRecord",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "file:internal/lockx/lockx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "file:internal/lockx/lockx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "class:internal/orchestrate/sessionstore.go:SessionRecord",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:LoadSessions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:RecordSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:LookupSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:ClearSession",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "function:internal/orchestrate/sessionstore.go:PruneSessions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreRoundTrip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreUpsert",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestPruneSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestPruneOrphanSessionsByState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestClearTaskSessionRecords",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreConcurrentWrites",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreRoundTrip",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreUpsert",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestPruneSessions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestPruneOrphanSessionsByState",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestClearTaskSessionRecords",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore_test.go",
+      "target": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreConcurrentWrites",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:buildLoopStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:buildEscalatedStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:buildFixingStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:writeFeatureStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:writeHistory",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:loadHistory",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:writeStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:progress",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:actionString",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "function:internal/orchestrate/status.go:phaseFor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "class:internal/orchestrate/status.go:Status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "class:internal/orchestrate/status.go:Status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestWriteStatusWritesValidJSON",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestWriteStatusNoTempFileLeftBehind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestWriteStatusCreatesDirIfAbsent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestProgressCountsTotalAndAccepted",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestProgressEmptyState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestProgressShippedFeatureCountsTasks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestStatusJSONTagsMatchContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesStatusAfterRunOwnerRound",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopDryRunDoesNotWriteStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnReworkLimit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnGateFailure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnFailLimit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesStatusPerIteration",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestWriteStatusWritesValidJSON",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestWriteStatusNoTempFileLeftBehind",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestWriteStatusCreatesDirIfAbsent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestProgressCountsTotalAndAccepted",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestProgressEmptyState",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestProgressShippedFeatureCountsTasks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestStatusJSONTagsMatchContract",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesStatusAfterRunOwnerRound",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopDryRunDoesNotWriteStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnReworkLimit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnGateFailure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesEscalatedStatusOnFailLimit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/status_test.go",
+      "target": "function:internal/orchestrate/status_test.go:TestLoopWritesStatusPerIteration",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/orchestrate/ledger_lock_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/orchestrate/sandbox.go",
+      "target": "file:internal/orchestrate/ledger_merge_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/orchestrate/sessionstore.go",
+      "target": "file:internal/orchestrate/sessionstore_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/orchestrate/status.go",
+      "target": "file:internal/orchestrate/status_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreRoundTrip",
+      "target": "function:internal/orchestrate/sessionstore.go:RecordSession",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreRoundTrip",
+      "target": "function:internal/orchestrate/sessionstore.go:LookupSession",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreRoundTrip",
+      "target": "function:internal/orchestrate/sessionstore.go:ClearSession",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore_test.go:TestPruneSessions",
+      "target": "function:internal/orchestrate/sessionstore.go:PruneSessions",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreUpsert",
+      "target": "function:internal/orchestrate/sessionstore.go:RecordSession",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore_test.go:TestSessionStoreUpsert",
+      "target": "function:internal/orchestrate/sessionstore.go:LoadSessions",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/status_test.go:TestWriteStatusWritesValidJSON",
+      "target": "function:internal/orchestrate/status.go:writeStatus",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/status_test.go:TestProgressCountsTotalAndAccepted",
+      "target": "function:internal/orchestrate/status.go:progress",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/status_test.go:TestProgressEmptyState",
+      "target": "function:internal/orchestrate/status.go:progress",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/status_test.go:TestProgressShippedFeatureCountsTasks",
+      "target": "function:internal/orchestrate/status.go:progress",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore.go:LoadSessions",
+      "target": "function:internal/orchestrate/sessionstore.go:readSessions",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore.go:RecordSession",
+      "target": "function:internal/orchestrate/sessionstore.go:withSessionsLock",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore.go:PruneSessions",
+      "target": "function:internal/orchestrate/sessionstore.go:withSessionsLock",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/sessionstore.go:ClearSession",
+      "target": "function:internal/orchestrate/sessionstore.go:withSessionsLock",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_KillsSilentProcess",
+      "target": "function:internal/orchestrate/runner_idle.go:osExecIdle",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_StalledNoProgressKilled",
+      "target": "function:internal/orchestrate/runner_idle.go:osExecIdle",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/orchestrate/runner_idle_test.go:TestOsExecIdle_ContextCancelPropagates",
+      "target": "function:internal/orchestrate/runner_idle.go:osExecIdle",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

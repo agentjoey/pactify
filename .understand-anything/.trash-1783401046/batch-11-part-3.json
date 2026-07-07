@@ -1,0 +1,1155 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/serve/stats.go",
+      "type": "file",
+      "name": "stats.go",
+      "filePath": "internal/serve/stats.go",
+      "summary": "GET handler that reads the .pact/log.jsonl, projects state, computes stats, and enriches WithTaskLOC/WithTokens.",
+      "tags": [
+        "api-handler",
+        "stats",
+        "loc-enrichment",
+        "tokens"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/stats.go:handleStats",
+      "type": "function",
+      "name": "handleStats",
+      "filePath": "internal/serve/stats.go",
+      "lineRange": [
+        22,
+        41
+      ],
+      "summary": "Function handleStats() in stats.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/stats.go:taskLocForProject",
+      "type": "function",
+      "name": "taskLocForProject",
+      "filePath": "internal/serve/stats.go",
+      "lineRange": [
+        49,
+        87
+      ],
+      "summary": "Function taskLocForProject() in stats.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/serve/stint_test.go",
+      "type": "file",
+      "name": "stint_test.go",
+      "filePath": "internal/serve/stint_test.go",
+      "summary": "Tests for serve stint/orchestrate/planner covering policy gates, agent-kind allowlists, and remote-lifecycle worktree creation and push.",
+      "tags": [
+        "test",
+        "policy-gate",
+        "git-worktree",
+        "lifecycle"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:Run@19",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        19,
+        22
+      ],
+      "summary": "Function Run() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:TestServeStinter_PolicyGate",
+      "type": "function",
+      "name": "TestServeStinter_PolicyGate",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        40,
+        63
+      ],
+      "summary": "Function TestServeStinter_PolicyGate() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:TestServeStinter_AgentKindAllowlist",
+      "type": "function",
+      "name": "TestServeStinter_AgentKindAllowlist",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        65,
+        72
+      ],
+      "summary": "Function TestServeStinter_AgentKindAllowlist() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:TestServeStinter_UnknownProject",
+      "type": "function",
+      "name": "TestServeStinter_UnknownProject",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        74,
+        79
+      ],
+      "summary": "Function TestServeStinter_UnknownProject() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:gitRun",
+      "type": "function",
+      "name": "gitRun",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        82,
+        91
+      ],
+      "summary": "Function gitRun() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:TestServeStinter_RemoteLifecycle",
+      "type": "function",
+      "name": "TestServeStinter_RemoteLifecycle",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        98,
+        162
+      ],
+      "summary": "Function TestServeStinter_RemoteLifecycle() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:Run@171",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        171,
+        178
+      ],
+      "summary": "Function Run() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:TestServeOrchestrator_PolicyGate",
+      "type": "function",
+      "name": "TestServeOrchestrator_PolicyGate",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        181,
+        217
+      ],
+      "summary": "Function TestServeOrchestrator_PolicyGate() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/stint_test.go:TestServePlanner_PolicyGate",
+      "type": "function",
+      "name": "TestServePlanner_PolicyGate",
+      "filePath": "internal/serve/stint_test.go",
+      "lineRange": [
+        219,
+        249
+      ],
+      "summary": "Function TestServePlanner_PolicyGate() in stint_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/serve/timeline.go",
+      "type": "file",
+      "name": "timeline.go",
+      "filePath": "internal/serve/timeline.go",
+      "summary": "GET handler that returns paginated timeline events from the project log, with parseAt URL helper for the `at` query parameter.",
+      "tags": [
+        "api-handler",
+        "timeline",
+        "pagination",
+        "event-log"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/timeline.go:handleTimeline",
+      "type": "function",
+      "name": "handleTimeline",
+      "filePath": "internal/serve/timeline.go",
+      "lineRange": [
+        37,
+        60
+      ],
+      "summary": "Function handleTimeline() in timeline.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/timeline.go:parseAt",
+      "type": "function",
+      "name": "parseAt",
+      "filePath": "internal/serve/timeline.go",
+      "lineRange": [
+        66,
+        76
+      ],
+      "summary": "Function parseAt() in timeline.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/serve/timeline.go:TimelineEventDTO",
+      "type": "class",
+      "name": "TimelineEventDTO",
+      "filePath": "internal/serve/timeline.go",
+      "lineRange": [
+        13,
+        20
+      ],
+      "summary": "Type/class TimelineEventDTO in timeline.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/serve/timeline.go:TimelineDTO",
+      "type": "class",
+      "name": "TimelineDTO",
+      "filePath": "internal/serve/timeline.go",
+      "lineRange": [
+        24,
+        27
+      ],
+      "summary": "Type/class TimelineDTO in timeline.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/sessions/tag_collision_test.go",
+      "type": "file",
+      "name": "tag_collision_test.go",
+      "filePath": "internal/sessions/tag_collision_test.go",
+      "summary": "Regression tests for SessionTag prefix collisions and CleanupByTitle seat isolation.",
+      "tags": [
+        "test",
+        "tag-collision",
+        "seat-isolation",
+        "regression"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/tag_collision_test.go:TestSessionTagSelfDelimiting",
+      "type": "function",
+      "name": "TestSessionTagSelfDelimiting",
+      "filePath": "internal/sessions/tag_collision_test.go",
+      "lineRange": [
+        8,
+        19
+      ],
+      "summary": "Function TestSessionTagSelfDelimiting() in tag_collision_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/tag_collision_test.go:TestCleanupByTitleDoesNotCrossSeats",
+      "type": "function",
+      "name": "TestCleanupByTitleDoesNotCrossSeats",
+      "filePath": "internal/sessions/tag_collision_test.go",
+      "lineRange": [
+        21,
+        38
+      ],
+      "summary": "Function TestCleanupByTitleDoesNotCrossSeats() in tag_collision_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "function:internal/serve/stats.go:handleStats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "function:internal/serve/stats.go:taskLocForProject",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/diffstat/diffstat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/diffstat/diffstat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/stats/stats_rework_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/stats/stats_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/stats/stats.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/tokens/tokens_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stats.go",
+      "target": "file:internal/tokens/tokens.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:Run@19",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:Run@19",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeStinter_PolicyGate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeStinter_PolicyGate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeStinter_AgentKindAllowlist",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeStinter_AgentKindAllowlist",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeStinter_UnknownProject",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeStinter_UnknownProject",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:gitRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeStinter_RemoteLifecycle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeStinter_RemoteLifecycle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:Run@171",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:Run@171",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeOrchestrator_PolicyGate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServeOrchestrator_PolicyGate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServePlanner_PolicyGate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "function:internal/serve/stint_test.go:TestServePlanner_PolicyGate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/acp_smoke_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/acprunner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/acprunner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/besteffort_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/brief_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/brief.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/cleanup_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/critic_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/critic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/decide_parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/decide_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/decide.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/defaults.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/escalate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/escalate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/fix_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/gate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/gateconfig_failclosed_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/gateconfig_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/gateconfig.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/history_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/knowledge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/knowledge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/ledger_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/ledger_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/loop_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/loop.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/parallel_drain_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/parallel.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/qa_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/qa.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/recover_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/recover.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/remote_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/remote.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/runner_idle_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/runner_idle.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/runner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/runner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/sandbox_base_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/sandbox_crash_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/sandbox_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/sandbox.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/sessionstore_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/sessionstore.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/status_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/status.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/stream_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/orchestrate/stream.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/registry/registry_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/registry/registry.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/remoteexec/dispatch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/remoteexec/dispatch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/remoteexec/executor_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/remoteexec/executor.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint_test.go",
+      "target": "file:internal/remoteexec/parse.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "function:internal/serve/timeline.go:handleTimeline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "function:internal/serve/timeline.go:parseAt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "class:internal/serve/timeline.go:TimelineEventDTO",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "class:internal/serve/timeline.go:TimelineEventDTO",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "class:internal/serve/timeline.go:TimelineDTO",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "class:internal/serve/timeline.go:TimelineDTO",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/sessions/tag_collision_test.go",
+      "target": "function:internal/sessions/tag_collision_test.go:TestSessionTagSelfDelimiting",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/tag_collision_test.go",
+      "target": "function:internal/sessions/tag_collision_test.go:TestSessionTagSelfDelimiting",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/tag_collision_test.go",
+      "target": "function:internal/sessions/tag_collision_test.go:TestCleanupByTitleDoesNotCrossSeats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/tag_collision_test.go",
+      "target": "function:internal/sessions/tag_collision_test.go:TestCleanupByTitleDoesNotCrossSeats",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

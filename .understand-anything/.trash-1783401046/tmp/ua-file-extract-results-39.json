@@ -1,0 +1,2038 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 25,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "cloud/relay/prisma.config.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 22,
+      "nonEmptyLines": 21,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/init.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 194,
+      "nonEmptyLines": 154,
+      "definitions": [
+        {
+          "name": "Account",
+          "kind": "table",
+          "fields": [
+            "id",
+            "publicKey",
+            "seq",
+            "settingsEnc",
+            "createdAt"
+          ],
+          "startLine": 5,
+          "endLine": 13
+        },
+        {
+          "name": "Device",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "publicKey",
+            "pushToken",
+            "pairedAt"
+          ],
+          "startLine": 16,
+          "endLine": 24
+        },
+        {
+          "name": "Machine",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "metadataEnc",
+            "presence",
+            "cliAvailability",
+            "host",
+            "agentKinds",
+            "workdirs",
+            "online",
+            "lastSeenAt"
+          ],
+          "startLine": 27,
+          "endLine": 40
+        },
+        {
+          "name": "Run",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "machineId",
+            "agentKind",
+            "state",
+            "pendingApprovals",
+            "tokensIn",
+            "tokensOut",
+            "costMicros",
+            "seq",
+            "startedAt",
+            "lastActiveAt",
+            "endedAt",
+            "branch",
+            "startedAtMs",
+            "workdir",
+            "repoRoot",
+            "title",
+            "titleEnc",
+            "workdirEnc",
+            "modelEnc",
+            "taskEnc",
+            "snapshotEnc",
+            "dataEncryptionKey"
+          ],
+          "startLine": 43,
+          "endLine": 70
+        },
+        {
+          "name": "RunEvent",
+          "kind": "table",
+          "fields": [
+            "id",
+            "runId",
+            "seq",
+            "state",
+            "eventKind",
+            "ts",
+            "bodyEnc"
+          ],
+          "startLine": 73,
+          "endLine": 83
+        },
+        {
+          "name": "PushToken",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "token",
+            "platform",
+            "keysP256dh",
+            "keysAuth"
+          ],
+          "startLine": 86,
+          "endLine": 95
+        },
+        {
+          "name": "Project",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "name",
+            "feature",
+            "seq",
+            "lastEventAt",
+            "metadataEnc"
+          ],
+          "startLine": 148,
+          "endLine": 158
+        },
+        {
+          "name": "PactEvent",
+          "kind": "table",
+          "fields": [
+            "id",
+            "projectId",
+            "accountId",
+            "seq",
+            "eventType",
+            "task",
+            "feature",
+            "ts",
+            "bodyEnc"
+          ],
+          "startLine": 161,
+          "endLine": 173
+        },
+        {
+          "name": "Account_publicKey_key",
+          "kind": "index",
+          "fields": [],
+          "startLine": 98,
+          "endLine": 98
+        },
+        {
+          "name": "Device_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 101,
+          "endLine": 101
+        },
+        {
+          "name": "Machine_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 104,
+          "endLine": 104
+        },
+        {
+          "name": "Run_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 107,
+          "endLine": 107
+        },
+        {
+          "name": "Run_machineId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 110,
+          "endLine": 110
+        },
+        {
+          "name": "Run_accountId_lastActiveAt_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 113,
+          "endLine": 113
+        },
+        {
+          "name": "Run_accountId_state_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 116,
+          "endLine": 116
+        },
+        {
+          "name": "RunEvent_runId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 119,
+          "endLine": 119
+        },
+        {
+          "name": "RunEvent_runId_seq_key",
+          "kind": "index",
+          "fields": [],
+          "startLine": 122,
+          "endLine": 122
+        },
+        {
+          "name": "PushToken_accountId_token_key",
+          "kind": "index",
+          "fields": [],
+          "startLine": 125,
+          "endLine": 125
+        },
+        {
+          "name": "Project_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 176,
+          "endLine": 176
+        },
+        {
+          "name": "Project_accountId_lastEventAt_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 179,
+          "endLine": 179
+        },
+        {
+          "name": "PactEvent_projectId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 182,
+          "endLine": 182
+        },
+        {
+          "name": "PactEvent_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 185,
+          "endLine": 185
+        },
+        {
+          "name": "PactEvent_projectId_seq_key",
+          "kind": "index",
+          "fields": [],
+          "startLine": 188,
+          "endLine": 188
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 23
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/0_init/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 123,
+      "nonEmptyLines": 98,
+      "definitions": [
+        {
+          "name": "Account",
+          "kind": "table",
+          "fields": [
+            "id",
+            "publicKey",
+            "seq",
+            "settingsEnc",
+            "createdAt"
+          ],
+          "startLine": 5,
+          "endLine": 13
+        },
+        {
+          "name": "Device",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "publicKey",
+            "pushToken",
+            "pairedAt"
+          ],
+          "startLine": 16,
+          "endLine": 24
+        },
+        {
+          "name": "Machine",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "metadataEnc",
+            "presence",
+            "cliAvailability",
+            "lastSeenAt"
+          ],
+          "startLine": 27,
+          "endLine": 36
+        },
+        {
+          "name": "Run",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "machineId",
+            "agentKind",
+            "state",
+            "pendingApprovals",
+            "tokensIn",
+            "tokensOut",
+            "costMicros",
+            "seq",
+            "startedAt",
+            "lastActiveAt",
+            "endedAt",
+            "titleEnc",
+            "workdirEnc",
+            "modelEnc",
+            "taskEnc",
+            "snapshotEnc",
+            "dataEncryptionKey"
+          ],
+          "startLine": 39,
+          "endLine": 61
+        },
+        {
+          "name": "RunEvent",
+          "kind": "table",
+          "fields": [
+            "id",
+            "runId",
+            "seq",
+            "state",
+            "eventKind",
+            "ts",
+            "bodyEnc"
+          ],
+          "startLine": 64,
+          "endLine": 74
+        },
+        {
+          "name": "PushToken",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "token",
+            "platform"
+          ],
+          "startLine": 77,
+          "endLine": 84
+        },
+        {
+          "name": "Account_publicKey_key",
+          "kind": "index",
+          "fields": [],
+          "startLine": 87,
+          "endLine": 87
+        },
+        {
+          "name": "Device_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 90,
+          "endLine": 90
+        },
+        {
+          "name": "Machine_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 93,
+          "endLine": 93
+        },
+        {
+          "name": "Run_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 96,
+          "endLine": 96
+        },
+        {
+          "name": "Run_machineId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 99,
+          "endLine": 99
+        },
+        {
+          "name": "RunEvent_runId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 102,
+          "endLine": 102
+        },
+        {
+          "name": "RunEvent_runId_seq_key",
+          "kind": "index",
+          "fields": [],
+          "startLine": 105,
+          "endLine": 105
+        },
+        {
+          "name": "PushToken_accountId_token_key",
+          "kind": "index",
+          "fields": [],
+          "startLine": 108,
+          "endLine": 108
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 14
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/1_machines/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 10,
+      "nonEmptyLines": 10,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/2_add_run_branch/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 3,
+      "nonEmptyLines": 3,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/3_add_run_started_at/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 6,
+      "nonEmptyLines": 6,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/4_scale_indexes/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 25,
+      "nonEmptyLines": 21,
+      "definitions": [
+        {
+          "name": "IF",
+          "kind": "index",
+          "fields": [],
+          "startLine": 2,
+          "endLine": 2
+        },
+        {
+          "name": "Run_accountId_lastActiveAt_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 14,
+          "endLine": 14
+        },
+        {
+          "name": "Run_accountId_state_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 17,
+          "endLine": 17
+        },
+        {
+          "name": "Machine_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 21,
+          "endLine": 21
+        },
+        {
+          "name": "RunEvent_runId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 25,
+          "endLine": 25
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 5
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/5_add_run_workdir/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 5,
+      "nonEmptyLines": 5,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/6_add_run_title/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/7_add_push_subscription_keys/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 7,
+      "nonEmptyLines": 7,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/8_add_run_repo_root/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 5,
+      "nonEmptyLines": 5,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/migrations/9_add_pact_tables/migration.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 52,
+      "nonEmptyLines": 41,
+      "definitions": [
+        {
+          "name": "Project",
+          "kind": "table",
+          "fields": [
+            "id",
+            "accountId",
+            "name",
+            "feature",
+            "seq",
+            "lastEventAt",
+            "metadataEnc"
+          ],
+          "startLine": 6,
+          "endLine": 16
+        },
+        {
+          "name": "PactEvent",
+          "kind": "table",
+          "fields": [
+            "id",
+            "projectId",
+            "accountId",
+            "seq",
+            "eventType",
+            "task",
+            "feature",
+            "ts",
+            "bodyEnc"
+          ],
+          "startLine": 19,
+          "endLine": 31
+        },
+        {
+          "name": "Project_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 34,
+          "endLine": 34
+        },
+        {
+          "name": "Project_accountId_lastEventAt_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 37,
+          "endLine": 37
+        },
+        {
+          "name": "PactEvent_projectId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 40,
+          "endLine": 40
+        },
+        {
+          "name": "PactEvent_accountId_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 43,
+          "endLine": 43
+        },
+        {
+          "name": "PactEvent_projectId_seq_key",
+          "kind": "index",
+          "fields": [],
+          "startLine": 46,
+          "endLine": 46
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 7
+      }
+    },
+    {
+      "path": "cloud/relay/prisma/schema.prisma",
+      "language": "prisma",
+      "fileCategory": "data",
+      "totalLines": 179,
+      "nonEmptyLines": 162,
+      "metrics": {}
+    },
+    {
+      "path": "cloud/relay/src/health.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 3,
+      "nonEmptyLines": 3,
+      "functions": [
+        {
+          "name": "health",
+          "startLine": 1,
+          "endLine": 3,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "health",
+          "line": 1,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/testing.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 4,
+      "nonEmptyLines": 4,
+      "exports": [
+        {
+          "name": "createPgliteDb",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "createServer",
+          "line": 2,
+          "isDefault": false
+        },
+        {
+          "name": "attachSockets",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "issueToken",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/tsconfig.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 8,
+      "nonEmptyLines": 8,
+      "sections": [
+        {
+          "heading": "extends",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "compilerOptions",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "include",
+          "level": 1,
+          "line": 7
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "cloud/relay/vitest.config.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 11,
+      "nonEmptyLines": 10,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/vitest.node.config.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 16,
+      "nonEmptyLines": 15,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/wire/package.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 27,
+      "nonEmptyLines": 27,
+      "sections": [
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "version",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "description",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "type",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "main",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "types",
+          "level": 1,
+          "line": 7
+        },
+        {
+          "heading": "exports",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "scripts",
+          "level": 1,
+          "line": 14
+        },
+        {
+          "heading": "dependencies",
+          "level": 1,
+          "line": 20
+        },
+        {
+          "heading": "files",
+          "level": 1,
+          "line": 23
+        },
+        {
+          "heading": "publishConfig",
+          "level": 1,
+          "line": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 11
+      }
+    },
+    {
+      "path": "cloud/wire/src/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 18,
+      "nonEmptyLines": 17,
+      "exports": [
+        {
+          "name": "PROTOCOL_VERSION",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/wire/src/pairing.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 69,
+      "nonEmptyLines": 63,
+      "exports": [
+        {
+          "name": "PairMode",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "PairInit",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "PairReady",
+          "line": 40,
+          "isDefault": false
+        },
+        {
+          "name": "PairComplete",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "PairStatus",
+          "line": 64,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/wire/test/index.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 40,
+      "nonEmptyLines": 37,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/wire/test/pairing.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 77,
+      "nonEmptyLines": 63,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/wire/tsconfig.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 8,
+      "nonEmptyLines": 8,
+      "sections": [
+        {
+          "heading": "extends",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "compilerOptions",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "include",
+          "level": 1,
+          "line": 7
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "cmd/pactify/cli_test.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 322,
+      "nonEmptyLines": 296,
+      "functions": [
+        {
+          "name": "buildBinary",
+          "startLine": 11,
+          "endLine": 20,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "repoRoot",
+          "startLine": 22,
+          "endLine": 26,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestCLIHelpAndFullFlow",
+          "startLine": 28,
+          "endLine": 84,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestRootProjectChdirs",
+          "startLine": 86,
+          "endLine": 99,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestRootProjectEmptyIsNoop",
+          "startLine": 101,
+          "endLine": 110,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestCLIFailsClosedWithoutAgentID",
+          "startLine": 112,
+          "endLine": 121,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestAgentScanRegisterUnregister",
+          "startLine": 123,
+          "endLine": 175,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestCLIOrchestrateHelpAndDryRun",
+          "startLine": 180,
+          "endLine": 236,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestCLIPlanApply",
+          "startLine": 243,
+          "endLine": 322,
+          "params": [
+            "t"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TestCLIHelpAndFullFlow",
+          "line": 28,
+          "isDefault": false
+        },
+        {
+          "name": "TestRootProjectChdirs",
+          "line": 86,
+          "isDefault": false
+        },
+        {
+          "name": "TestRootProjectEmptyIsNoop",
+          "line": 101,
+          "isDefault": false
+        },
+        {
+          "name": "TestCLIFailsClosedWithoutAgentID",
+          "line": 112,
+          "isDefault": false
+        },
+        {
+          "name": "TestAgentScanRegisterUnregister",
+          "line": 123,
+          "isDefault": false
+        },
+        {
+          "name": "TestCLIOrchestrateHelpAndDryRun",
+          "line": 180,
+          "isDefault": false
+        },
+        {
+          "name": "TestCLIPlanApply",
+          "line": 243,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "buildBinary",
+          "callee": "t.Helper",
+          "lineNumber": 12
+        },
+        {
+          "caller": "buildBinary",
+          "callee": "filepath.Join",
+          "lineNumber": 13
+        },
+        {
+          "caller": "buildBinary",
+          "callee": "t.TempDir",
+          "lineNumber": 13
+        },
+        {
+          "caller": "buildBinary",
+          "callee": "exec.Command",
+          "lineNumber": 14
+        },
+        {
+          "caller": "buildBinary",
+          "callee": "repoRoot",
+          "lineNumber": 15
+        },
+        {
+          "caller": "buildBinary",
+          "callee": "cmd.CombinedOutput",
+          "lineNumber": 16
+        },
+        {
+          "caller": "buildBinary",
+          "callee": "t.Fatalf",
+          "lineNumber": 17
+        },
+        {
+          "caller": "repoRoot",
+          "callee": "t.Helper",
+          "lineNumber": 23
+        },
+        {
+          "caller": "repoRoot",
+          "callee": "os.Getwd",
+          "lineNumber": 24
+        },
+        {
+          "caller": "repoRoot",
+          "callee": "filepath.Dir",
+          "lineNumber": 25
+        },
+        {
+          "caller": "repoRoot",
+          "callee": "filepath.Dir",
+          "lineNumber": 25
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "buildBinary",
+          "lineNumber": 29
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.TempDir",
+          "lineNumber": 30
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "exec.Command",
+          "lineNumber": 32
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "append",
+          "lineNumber": 34
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "os.Environ",
+          "lineNumber": 34
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 35
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "string",
+          "lineNumber": 36
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "exec.Command",
+          "lineNumber": 39
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 41
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "os.WriteFile",
+          "lineNumber": 43
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "filepath.Join",
+          "lineNumber": 43
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "exec.Command(\"git\", \"-C\", dir, \"add\", \"-A\").Run",
+          "lineNumber": 44
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "exec.Command",
+          "lineNumber": 44
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "exec.Command(\"git\", \"-C\", dir, \"commit\", \"-q\", \"-m\", \"base\").Run",
+          "lineNumber": 45
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "exec.Command",
+          "lineNumber": 45
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 47
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "strings.Contains",
+          "lineNumber": 47
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 48
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 50
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "strings.Contains",
+          "lineNumber": 50
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 51
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 53
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "strings.TrimSpace",
+          "lineNumber": 53
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "versionString",
+          "lineNumber": 53
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 54
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 58
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 59
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 61
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 62
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 64
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 65
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "os.WriteFile",
+          "lineNumber": 67
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "filepath.Join",
+          "lineNumber": 67
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 68
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 69
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 71
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 72
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 74
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 75
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 77
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 78
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "run",
+          "lineNumber": 80
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "strings.Contains",
+          "lineNumber": 81
+        },
+        {
+          "caller": "TestCLIHelpAndFullFlow",
+          "callee": "t.Fatalf",
+          "lineNumber": 82
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "os.Getwd",
+          "lineNumber": 87
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "t.Cleanup",
+          "lineNumber": 88
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "os.Chdir",
+          "lineNumber": 88
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "t.TempDir",
+          "lineNumber": 89
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "rootProject",
+          "lineNumber": 90
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "t.Fatal",
+          "lineNumber": 91
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "os.Getwd",
+          "lineNumber": 93
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "filepath.EvalSymlinks",
+          "lineNumber": 94
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "filepath.EvalSymlinks",
+          "lineNumber": 95
+        },
+        {
+          "caller": "TestRootProjectChdirs",
+          "callee": "t.Fatalf",
+          "lineNumber": 97
+        },
+        {
+          "caller": "TestRootProjectEmptyIsNoop",
+          "callee": "os.Getwd",
+          "lineNumber": 102
+        },
+        {
+          "caller": "TestRootProjectEmptyIsNoop",
+          "callee": "rootProject",
+          "lineNumber": 103
+        },
+        {
+          "caller": "TestRootProjectEmptyIsNoop",
+          "callee": "t.Fatal",
+          "lineNumber": 104
+        },
+        {
+          "caller": "TestRootProjectEmptyIsNoop",
+          "callee": "os.Getwd",
+          "lineNumber": 106
+        },
+        {
+          "caller": "TestRootProjectEmptyIsNoop",
+          "callee": "t.Fatalf",
+          "lineNumber": 108
+        },
+        {
+          "caller": "TestCLIFailsClosedWithoutAgentID",
+          "callee": "buildBinary",
+          "lineNumber": 113
+        },
+        {
+          "caller": "TestCLIFailsClosedWithoutAgentID",
+          "callee": "t.TempDir",
+          "lineNumber": 114
+        },
+        {
+          "caller": "TestCLIFailsClosedWithoutAgentID",
+          "callee": "exec.Command",
+          "lineNumber": 115
+        },
+        {
+          "caller": "TestCLIFailsClosedWithoutAgentID",
+          "callee": "append",
+          "lineNumber": 117
+        },
+        {
+          "caller": "TestCLIFailsClosedWithoutAgentID",
+          "callee": "os.Environ",
+          "lineNumber": 117
+        },
+        {
+          "caller": "TestCLIFailsClosedWithoutAgentID",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 118
+        },
+        {
+          "caller": "TestCLIFailsClosedWithoutAgentID",
+          "callee": "t.Fatalf",
+          "lineNumber": 119
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "buildBinary",
+          "lineNumber": 124
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.TempDir",
+          "lineNumber": 125
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Setenv",
+          "lineNumber": 126
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command(bin, \"agent\", \"scan\").CombinedOutput",
+          "lineNumber": 129
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command",
+          "lineNumber": 129
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 131
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "strings.Contains",
+          "lineNumber": 133
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "string",
+          "lineNumber": 133
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 134
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command(bin, \"agent\", \"register\", \"opencode\", \"--label\", \"test-oc\").CombinedOutput",
+          "lineNumber": 138
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command",
+          "lineNumber": 138
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 140
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command(bin, \"agent\", \"scan\").CombinedOutput",
+          "lineNumber": 144
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command",
+          "lineNumber": 144
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 146
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "strings.Contains",
+          "lineNumber": 148
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "string",
+          "lineNumber": 148
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 149
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command(bin, \"agent\", \"unregister\", \"opencode\").CombinedOutput",
+          "lineNumber": 153
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command",
+          "lineNumber": 153
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 155
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command(bin, \"agent\", \"scan\").CombinedOutput",
+          "lineNumber": 159
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command",
+          "lineNumber": 159
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 161
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "strings.Contains",
+          "lineNumber": 163
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "string",
+          "lineNumber": 163
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 164
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command(bin, \"agent\", \"register\", \"bogus\").CombinedOutput",
+          "lineNumber": 168
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "exec.Command",
+          "lineNumber": 168
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 170
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "strings.Contains",
+          "lineNumber": 172
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "string",
+          "lineNumber": 172
+        },
+        {
+          "caller": "TestAgentScanRegisterUnregister",
+          "callee": "t.Fatalf",
+          "lineNumber": 173
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "buildBinary",
+          "lineNumber": 181
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.TempDir",
+          "lineNumber": 182
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "exec.Command",
+          "lineNumber": 184
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "append",
+          "lineNumber": 186
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "os.Environ",
+          "lineNumber": 186
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 187
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "string",
+          "lineNumber": 188
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "exec.Command",
+          "lineNumber": 191
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 193
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatalf",
+          "lineNumber": 194
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "os.WriteFile",
+          "lineNumber": 197
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "filepath.Join",
+          "lineNumber": 197
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatal",
+          "lineNumber": 198
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "exec.Command",
+          "lineNumber": 201
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 203
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatalf",
+          "lineNumber": 204
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "run",
+          "lineNumber": 208
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatalf",
+          "lineNumber": 210
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "strings.Contains",
+          "lineNumber": 213
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatalf",
+          "lineNumber": 214
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "run",
+          "lineNumber": 219
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatalf",
+          "lineNumber": 220
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "os.MkdirAll",
+          "lineNumber": 222
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "filepath.Join",
+          "lineNumber": 222
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatal",
+          "lineNumber": 223
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "os.WriteFile",
+          "lineNumber": 225
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "filepath.Join",
+          "lineNumber": 225
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatal",
+          "lineNumber": 226
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "run",
+          "lineNumber": 228
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatalf",
+          "lineNumber": 229
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "run",
+          "lineNumber": 232
+        },
+        {
+          "caller": "TestCLIOrchestrateHelpAndDryRun",
+          "callee": "t.Fatalf",
+          "lineNumber": 234
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "buildBinary",
+          "lineNumber": 244
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.TempDir",
+          "lineNumber": 245
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "exec.Command",
+          "lineNumber": 247
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "append",
+          "lineNumber": 249
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "os.Environ",
+          "lineNumber": 249
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 250
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "string",
+          "lineNumber": 251
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "run",
+          "lineNumber": 254
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 256
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "strings.Contains",
+          "lineNumber": 259
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 260
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "run",
+          "lineNumber": 264
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 266
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "strings.Contains",
+          "lineNumber": 268
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 269
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "exec.Command",
+          "lineNumber": 273
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 275
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 276
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "os.WriteFile",
+          "lineNumber": 279
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "filepath.Join",
+          "lineNumber": 279
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatal",
+          "lineNumber": 280
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "exec.Command",
+          "lineNumber": 283
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "c.CombinedOutput",
+          "lineNumber": 285
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 286
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "run",
+          "lineNumber": 291
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 292
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "os.MkdirAll",
+          "lineNumber": 294
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "filepath.Join",
+          "lineNumber": 294
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatal",
+          "lineNumber": 295
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "os.WriteFile",
+          "lineNumber": 297
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "filepath.Join",
+          "lineNumber": 297
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatal",
+          "lineNumber": 298
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "os.WriteFile",
+          "lineNumber": 307
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "filepath.Join",
+          "lineNumber": 307
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatal",
+          "lineNumber": 308
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "run",
+          "lineNumber": 311
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 312
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "run",
+          "lineNumber": 315
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 317
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "strings.Contains",
+          "lineNumber": 319
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "strings.Contains",
+          "lineNumber": 319
+        },
+        {
+          "caller": "TestCLIPlanApply",
+          "callee": "t.Fatalf",
+          "lineNumber": 320
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 7,
+        "functionCount": 9,
+        "classCount": 0
+      }
+    }
+  ]
+}

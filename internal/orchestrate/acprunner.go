@@ -281,16 +281,20 @@ func autoSelectPermission(opts []acp.PermissionOption) (string, bool) {
 // acpCommand maps a seat kind to its ACP adapter command + args (spec §A.2). The
 // second return is false for a kind with no ACP transport (e.g. opencode), which
 // the caller reports with a --transport=cmd hint.
+//
+// Bridge package versions are pinned to avoid latest-tag drift; verified with
+// `npm view` on 2026-07-07. Upgrading is intentional: change the pinned version
+// here only after verifying the new release works.
 func acpCommand(kind string) (command string, args []string, ok bool) {
 	switch kind {
 	case "kimi-cli":
 		return "kimi", []string{"acp"}, true
 	case "claude-code":
-		return "npx", []string{"-y", "@agentclientprotocol/claude-agent-acp"}, true
+		return "npx", []string{"-y", "@agentclientprotocol/claude-agent-acp@0.57.0"}, true
 	case "codex-cli":
-		return "npx", []string{"-y", "@zed-industries/codex-acp"}, true
+		return "npx", []string{"-y", "@zed-industries/codex-acp@0.16.0"}, true
 	case "gemini-cli":
-		return "npx", []string{"-y", "@google/gemini-cli", "--acp"}, true
+		return "npx", []string{"-y", "@google/gemini-cli@0.49.0", "--acp"}, true
 	default:
 		return "", nil, false
 	}

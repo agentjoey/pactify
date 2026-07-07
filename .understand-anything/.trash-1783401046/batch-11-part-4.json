@@ -1,0 +1,1046 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/serve/stint.go",
+      "type": "file",
+      "name": "stint.go",
+      "filePath": "internal/serve/stint.go",
+      "summary": "Serve-side stint/orchestrate/plan Run adapters that read remote policy, fetch git, run the lifecycle in a worktree, and push the feature branch.",
+      "tags": [
+        "stint-runner",
+        "orchestrator",
+        "planner",
+        "git-worktree",
+        "policy-gate"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/serve/stint.go:readRemotePolicy",
+      "type": "function",
+      "name": "readRemotePolicy",
+      "filePath": "internal/serve/stint.go",
+      "lineRange": [
+        35,
+        45
+      ],
+      "summary": "Function readRemotePolicy() in stint.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint.go:RunStint",
+      "type": "function",
+      "name": "RunStint",
+      "filePath": "internal/serve/stint.go",
+      "lineRange": [
+        63,
+        79
+      ],
+      "summary": "Function RunStint() in stint.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint.go:runLifecycle",
+      "type": "function",
+      "name": "runLifecycle",
+      "filePath": "internal/serve/stint.go",
+      "lineRange": [
+        84,
+        133
+      ],
+      "summary": "Function runLifecycle() in stint.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/stint.go:taskBranch",
+      "type": "function",
+      "name": "taskBranch",
+      "filePath": "internal/serve/stint.go",
+      "lineRange": [
+        137,
+        150
+      ],
+      "summary": "Function taskBranch() in stint.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint.go:RunOrchestrate",
+      "type": "function",
+      "name": "RunOrchestrate",
+      "filePath": "internal/serve/stint.go",
+      "lineRange": [
+        175,
+        189
+      ],
+      "summary": "Function RunOrchestrate() in stint.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/stint.go:RunPlan",
+      "type": "function",
+      "name": "RunPlan",
+      "filePath": "internal/serve/stint.go",
+      "lineRange": [
+        200,
+        218
+      ],
+      "summary": "Function RunPlan() in stint.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/serve/stint.go:RemotePolicy",
+      "type": "class",
+      "name": "RemotePolicy",
+      "filePath": "internal/serve/stint.go",
+      "lineRange": [
+        22,
+        33
+      ],
+      "summary": "Type/class RemotePolicy in stint.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/serve/stint.go:serveStinter",
+      "type": "class",
+      "name": "serveStinter",
+      "filePath": "internal/serve/stint.go",
+      "lineRange": [
+        50,
+        53
+      ],
+      "summary": "Type/class serveStinter in stint.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/stats/stats_rework_test.go",
+      "type": "file",
+      "name": "stats_rework_test.go",
+      "filePath": "internal/stats/stats_rework_test.go",
+      "summary": "Tests for stats.Compute covering changes-requested clock continuity and the accepted/reworked counters under chained revisions.",
+      "tags": [
+        "test",
+        "stats-compute",
+        "rework-counter",
+        "chained-revisions"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/stats/stats_rework_test.go:TestCompute_ChangesRequestedClockKeepsRunning",
+      "type": "function",
+      "name": "TestCompute_ChangesRequestedClockKeepsRunning",
+      "filePath": "internal/stats/stats_rework_test.go",
+      "lineRange": [
+        13,
+        57
+      ],
+      "summary": "Function TestCompute_ChangesRequestedClockKeepsRunning() in stats_rework_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/stats/stats_rework_test.go:TestCompute_AcceptedReworked",
+      "type": "function",
+      "name": "TestCompute_AcceptedReworked",
+      "filePath": "internal/stats/stats_rework_test.go",
+      "lineRange": [
+        81,
+        147
+      ],
+      "summary": "Function TestCompute_AcceptedReworked() in stats_rework_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/stats/stats_rework_test.go:TestCompute_AcceptedReworkedSurvivesChaining",
+      "type": "function",
+      "name": "TestCompute_AcceptedReworkedSurvivesChaining",
+      "filePath": "internal/stats/stats_rework_test.go",
+      "lineRange": [
+        151,
+        174
+      ],
+      "summary": "Function TestCompute_AcceptedReworkedSurvivesChaining() in stats_rework_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:readRemotePolicy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:RunStint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:RunStint",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:runLifecycle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:taskBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:RunOrchestrate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:RunOrchestrate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:RunPlan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "function:internal/serve/stint.go:RunPlan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "class:internal/serve/stint.go:RemotePolicy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "class:internal/serve/stint.go:RemotePolicy",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "class:internal/serve/stint.go:serveStinter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/acp_smoke_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/acprunner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/acprunner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/besteffort_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/brief_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/brief.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/cleanup_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/critic_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/critic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/decide_parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/decide_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/decide.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/defaults.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/escalate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/escalate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/fix_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/gate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/gateconfig_failclosed_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/gateconfig_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/gateconfig.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/history_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/knowledge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/knowledge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/ledger_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/ledger_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/loop_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/loop.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/parallel_drain_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/parallel.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/qa_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/qa.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/recover_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/recover.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/remote_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/remote.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/runner_idle_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/runner_idle.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/runner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/runner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/sandbox_base_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/sandbox_crash_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/sandbox_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/sandbox.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/sessionstore_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/sessionstore.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/status_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/status.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/stream_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/orchestrate/stream.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/remoteexec/dispatch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/remoteexec/dispatch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/remoteexec/executor_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/remoteexec/executor.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stint.go",
+      "target": "file:internal/remoteexec/parse.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "function:internal/stats/stats_rework_test.go:TestCompute_ChangesRequestedClockKeepsRunning",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "function:internal/stats/stats_rework_test.go:TestCompute_ChangesRequestedClockKeepsRunning",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "function:internal/stats/stats_rework_test.go:TestCompute_AcceptedReworked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "function:internal/stats/stats_rework_test.go:TestCompute_AcceptedReworked",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "function:internal/stats/stats_rework_test.go:TestCompute_AcceptedReworkedSurvivesChaining",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "function:internal/stats/stats_rework_test.go:TestCompute_AcceptedReworkedSurvivesChaining",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_rework_test.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

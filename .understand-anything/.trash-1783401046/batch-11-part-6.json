@@ -1,0 +1,764 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/sessions/sessions_test.go",
+      "type": "file",
+      "name": "sessions_test.go",
+      "filePath": "internal/sessions/sessions_test.go",
+      "summary": "Tests for sessions.Supported/CanPrune/CanCleanup and Manager List/Prune/CleanupByTitle/CleanupKimiSeat operations.",
+      "tags": [
+        "test",
+        "session-manager",
+        "fake-runner",
+        "kimi-cleanup"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:writeKimiSession",
+      "type": "function",
+      "name": "writeKimiSession",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        15,
+        33
+      ],
+      "summary": "Function writeKimiSession() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:TestCleanupKimiSeat_DeletesOnlyMatchingSeatPactSessions",
+      "type": "function",
+      "name": "TestCleanupKimiSeat_DeletesOnlyMatchingSeatPactSessions",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        35,
+        65
+      ],
+      "summary": "Function TestCleanupKimiSeat_DeletesOnlyMatchingSeatPactSessions() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:TestSupported",
+      "type": "function",
+      "name": "TestSupported",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        67,
+        82
+      ],
+      "summary": "Function TestSupported() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:TestCanPrune",
+      "type": "function",
+      "name": "TestCanPrune",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        84,
+        99
+      ],
+      "summary": "Function TestCanPrune() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        110,
+        116
+      ],
+      "summary": "Function Run() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:TestList",
+      "type": "function",
+      "name": "TestList",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        118,
+        197
+      ],
+      "summary": "Function TestList() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:TestPrune",
+      "type": "function",
+      "name": "TestPrune",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        199,
+        289
+      ],
+      "summary": "Function TestPrune() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:TestPruneWithKind",
+      "type": "function",
+      "name": "TestPruneWithKind",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        291,
+        342
+      ],
+      "summary": "Function TestPruneWithKind() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:TestCanCleanup",
+      "type": "function",
+      "name": "TestCanCleanup",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        344,
+        354
+      ],
+      "summary": "Function TestCanCleanup() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:TestCleanupByTitle",
+      "type": "function",
+      "name": "TestCleanupByTitle",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        356,
+        416
+      ],
+      "summary": "Function TestCleanupByTitle() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:equalSlice",
+      "type": "function",
+      "name": "equalSlice",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        418,
+        428
+      ],
+      "summary": "Function equalSlice() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions_test.go:Error",
+      "type": "function",
+      "name": "Error",
+      "filePath": "internal/sessions/sessions_test.go",
+      "lineRange": [
+        433,
+        433
+      ],
+      "summary": "Function Error() in sessions_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/stats/stats.go",
+      "type": "file",
+      "name": "stats.go",
+      "filePath": "internal/stats/stats.go",
+      "summary": "Compute that derives per-task/per-agent Stats (duration, LOC, tokens, accepted/reworked) from a projected event log.",
+      "tags": [
+        "stats-compute",
+        "duration",
+        "tokens",
+        "loc",
+        "event-projection"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/stats/stats.go:Compute",
+      "type": "function",
+      "name": "Compute",
+      "filePath": "internal/stats/stats.go",
+      "lineRange": [
+        63,
+        133
+      ],
+      "summary": "Function Compute() in stats.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/stats/stats.go:WithTaskLOC",
+      "type": "function",
+      "name": "WithTaskLOC",
+      "filePath": "internal/stats/stats.go",
+      "lineRange": [
+        141,
+        167
+      ],
+      "summary": "Function WithTaskLOC() in stats.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/stats/stats.go:WithTokens",
+      "type": "function",
+      "name": "WithTokens",
+      "filePath": "internal/stats/stats.go",
+      "lineRange": [
+        171,
+        195
+      ],
+      "summary": "Function WithTokens() in stats.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/stats/stats.go:durationSec",
+      "type": "function",
+      "name": "durationSec",
+      "filePath": "internal/stats/stats.go",
+      "lineRange": [
+        197,
+        217
+      ],
+      "summary": "Function durationSec() in stats.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/stats/stats.go:TaskStat",
+      "type": "class",
+      "name": "TaskStat",
+      "filePath": "internal/stats/stats.go",
+      "lineRange": [
+        17,
+        27
+      ],
+      "summary": "Type/class TaskStat in stats.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/stats/stats.go:AgentStat",
+      "type": "class",
+      "name": "AgentStat",
+      "filePath": "internal/stats/stats.go",
+      "lineRange": [
+        33,
+        42
+      ],
+      "summary": "Type/class AgentStat in stats.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/stats/stats.go:Stats",
+      "type": "class",
+      "name": "Stats",
+      "filePath": "internal/stats/stats.go",
+      "lineRange": [
+        45,
+        48
+      ],
+      "summary": "Type/class Stats in stats.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/stats/stats_test.go",
+      "type": "file",
+      "name": "stats_test.go",
+      "filePath": "internal/stats/stats_test.go",
+      "summary": "Tests for stats.Compute duration accounting across assign/checkpoint/accept events.",
+      "tags": [
+        "test",
+        "stats-compute",
+        "duration-accounting",
+        "events"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/stats/stats_test.go:TestCompute_Duration",
+      "type": "function",
+      "name": "TestCompute_Duration",
+      "filePath": "internal/stats/stats_test.go",
+      "lineRange": [
+        14,
+        82
+      ],
+      "summary": "Function TestCompute_Duration() in stats_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:writeKimiSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestCleanupKimiSeat_DeletesOnlyMatchingSeatPactSessions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestCleanupKimiSeat_DeletesOnlyMatchingSeatPactSessions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestSupported",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestSupported",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestCanPrune",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestCanPrune",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:Run",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestList",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestList",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestPrune",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestPrune",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestPruneWithKind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestPruneWithKind",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestCanCleanup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestCanCleanup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestCleanupByTitle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:TestCleanupByTitle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:equalSlice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:Error",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions_test.go",
+      "target": "function:internal/sessions/sessions_test.go:Error",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "function:internal/stats/stats.go:Compute",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "function:internal/stats/stats.go:Compute",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "function:internal/stats/stats.go:WithTaskLOC",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "function:internal/stats/stats.go:WithTaskLOC",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "function:internal/stats/stats.go:WithTokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "function:internal/stats/stats.go:WithTokens",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "function:internal/stats/stats.go:durationSec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "class:internal/stats/stats.go:TaskStat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "class:internal/stats/stats.go:TaskStat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "class:internal/stats/stats.go:AgentStat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "class:internal/stats/stats.go:AgentStat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "class:internal/stats/stats.go:Stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "class:internal/stats/stats.go:Stats",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_test.go",
+      "target": "function:internal/stats/stats_test.go:TestCompute_Duration",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/stats/stats_test.go",
+      "target": "function:internal/stats/stats_test.go:TestCompute_Duration",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/stats/stats_test.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_test.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_test.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_test.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/stats/stats_test.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

@@ -1,0 +1,2179 @@
+{
+  "nodes": [
+    {
+      "id": "file:cmd/pactify/cmd_finish.go",
+      "type": "file",
+      "name": "cmd_finish.go",
+      "filePath": "cmd/pactify/cmd_finish.go",
+      "summary": "CLI finish command: pushes the current branch and opens a PR via gh CLI, falling back to a manual command.",
+      "tags": [
+        "cli",
+        "command",
+        "finish",
+        "pr-creation",
+        "git-push"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_finish.go:newFinishCmd",
+      "type": "function",
+      "name": "newFinishCmd",
+      "filePath": "cmd/pactify/cmd_finish.go",
+      "lineRange": [
+        12,
+        67
+      ],
+      "summary": "newFinishCmd (56 lines) defined in cmd/pactify/cmd_finish.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cmd/pactify/cmd_run.go",
+      "type": "file",
+      "name": "cmd_run.go",
+      "filePath": "cmd/pactify/cmd_run.go",
+      "summary": "CLI run command: drives a feature from plan to merge, building prompts, applying plans, and orchestrating agent runs.",
+      "tags": [
+        "cli",
+        "command",
+        "orchestrator",
+        "runner",
+        "entry-point"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_run.go:newRunCmd",
+      "type": "function",
+      "name": "newRunCmd",
+      "filePath": "cmd/pactify/cmd_run.go",
+      "lineRange": [
+        40,
+        183
+      ],
+      "summary": "newRunCmd (144 lines) defined in cmd/pactify/cmd_run.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_run.go:planSummary",
+      "type": "function",
+      "name": "planSummary",
+      "filePath": "cmd/pactify/cmd_run.go",
+      "lineRange": [
+        187,
+        205
+      ],
+      "summary": "planSummary (19 lines) defined in cmd/pactify/cmd_run.go.",
+      "tags": [
+        "utility",
+        "plan",
+        "summary"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cmd/pactify/cmd_setup_test.go",
+      "type": "file",
+      "name": "cmd_setup_test.go",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "summary": "Tests for the interactive and non-interactive setup workflows covering seat wiring, kind validation, and stale env overrides.",
+      "tags": [
+        "test",
+        "setup",
+        "interactive",
+        "wiring"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_test.go:gitInitWithCommit",
+      "type": "function",
+      "name": "gitInitWithCommit",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "lineRange": [
+        14,
+        28
+      ],
+      "summary": "gitInitWithCommit (15 lines) defined in cmd/pactify/cmd_setup_test.go.",
+      "tags": [
+        "test",
+        "commit",
+        "init"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_test.go:TestSetupNonInteractiveGuides",
+      "type": "function",
+      "name": "TestSetupNonInteractiveGuides",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "lineRange": [
+        30,
+        40
+      ],
+      "summary": "TestSetupNonInteractiveGuides (11 lines) defined in cmd/pactify/cmd_setup_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_test.go:TestSetupInteractivePromptsForSeat",
+      "type": "function",
+      "name": "TestSetupInteractivePromptsForSeat",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "lineRange": [
+        42,
+        58
+      ],
+      "summary": "TestSetupInteractivePromptsForSeat (17 lines) defined in cmd/pactify/cmd_setup_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "seat",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_test.go:TestSetupInteractiveRejectsUnknownKindBeforeWrites",
+      "type": "function",
+      "name": "TestSetupInteractiveRejectsUnknownKindBeforeWrites",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "lineRange": [
+        60,
+        74
+      ],
+      "summary": "TestSetupInteractiveRejectsUnknownKindBeforeWrites (15 lines) defined in cmd/pactify/cmd_setup_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_test.go:TestSetupAutoSetsAgentIDFromSeat",
+      "type": "function",
+      "name": "TestSetupAutoSetsAgentIDFromSeat",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "lineRange": [
+        78,
+        95
+      ],
+      "summary": "TestSetupAutoSetsAgentIDFromSeat (18 lines) defined in cmd/pactify/cmd_setup_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "seat",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_test.go:TestSetupOverridesStaleSeatEnv",
+      "type": "function",
+      "name": "TestSetupOverridesStaleSeatEnv",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "lineRange": [
+        101,
+        118
+      ],
+      "summary": "TestSetupOverridesStaleSeatEnv (18 lines) defined in cmd/pactify/cmd_setup_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "seat",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_test.go:TestSetupRejectsEmptySeat",
+      "type": "function",
+      "name": "TestSetupRejectsEmptySeat",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "lineRange": [
+        122,
+        137
+      ],
+      "summary": "TestSetupRejectsEmptySeat (16 lines) defined in cmd/pactify/cmd_setup_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "seat",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_test.go:TestSetupExistingPactWiresAgent",
+      "type": "function",
+      "name": "TestSetupExistingPactWiresAgent",
+      "filePath": "cmd/pactify/cmd_setup_test.go",
+      "lineRange": [
+        141,
+        163
+      ],
+      "summary": "TestSetupExistingPactWiresAgent (23 lines) defined in cmd/pactify/cmd_setup_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "setup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "type": "file",
+      "name": "cmd_setup_yes_test.go",
+      "filePath": "cmd/pactify/cmd_setup_yes_test.go",
+      "summary": "Tests for `pactify setup --yes`: roster-driven init, refusal to re-init, and empty-roster guidance.",
+      "tags": [
+        "test",
+        "setup",
+        "non-interactive",
+        "roster"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_yes_test.go:registerAgents",
+      "type": "function",
+      "name": "registerAgents",
+      "filePath": "cmd/pactify/cmd_setup_yes_test.go",
+      "lineRange": [
+        16,
+        31
+      ],
+      "summary": "registerAgents (16 lines) defined in cmd/pactify/cmd_setup_yes_test.go.",
+      "tags": [
+        "test",
+        "registry",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_yes_test.go:TestSetupYesInitsAndWiresFromRoster",
+      "type": "function",
+      "name": "TestSetupYesInitsAndWiresFromRoster",
+      "filePath": "cmd/pactify/cmd_setup_yes_test.go",
+      "lineRange": [
+        35,
+        63
+      ],
+      "summary": "TestSetupYesInitsAndWiresFromRoster (29 lines) defined in cmd/pactify/cmd_setup_yes_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "init",
+        "setup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_yes_test.go:TestSetupYesRefusesInitializedRepo",
+      "type": "function",
+      "name": "TestSetupYesRefusesInitializedRepo",
+      "filePath": "cmd/pactify/cmd_setup_yes_test.go",
+      "lineRange": [
+        65,
+        80
+      ],
+      "summary": "TestSetupYesRefusesInitializedRepo (16 lines) defined in cmd/pactify/cmd_setup_yes_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "init",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_setup_yes_test.go:TestSetupYesNoAgentsFailsWithGuidance",
+      "type": "function",
+      "name": "TestSetupYesNoAgentsFailsWithGuidance",
+      "filePath": "cmd/pactify/cmd_setup_yes_test.go",
+      "lineRange": [
+        82,
+        96
+      ],
+      "summary": "TestSetupYesNoAgentsFailsWithGuidance (15 lines) defined in cmd/pactify/cmd_setup_yes_test.go.",
+      "tags": [
+        "test",
+        "exported",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cmd/pactify/commands.go",
+      "type": "file",
+      "name": "commands.go",
+      "filePath": "cmd/pactify/commands.go",
+      "summary": "Cobra root command that wires every pactify verb (init, join, assign, checkpoint, accept, merge, status, etc.) to the pact engine.",
+      "tags": [
+        "cli",
+        "cobra",
+        "command-tree",
+        "wiring",
+        "entry-point"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:cmd/pactify/commands.go:newRootCmd",
+      "type": "function",
+      "name": "newRootCmd",
+      "filePath": "cmd/pactify/commands.go",
+      "lineRange": [
+        14,
+        232
+      ],
+      "summary": "newRootCmd (219 lines) defined in cmd/pactify/commands.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:cmd/pactify/main.go",
+      "type": "file",
+      "name": "main.go",
+      "filePath": "cmd/pactify/main.go",
+      "summary": "Entry point: registers the agent manifest and dispatches to the cobra root command.",
+      "tags": [
+        "entry-point",
+        "bootstrap",
+        "cli"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/main.go:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "cmd/pactify/main.go",
+      "lineRange": [
+        18,
+        30
+      ],
+      "summary": "main (13 lines) defined in cmd/pactify/main.go.",
+      "tags": [
+        "utility",
+        "helper",
+        "helper"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:cmd/pactify/cmd_finish.go",
+      "target": "function:cmd/pactify/cmd_finish.go:newFinishCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "function:cmd/pactify/cmd_run.go:newRunCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "function:cmd/pactify/cmd_run.go:planSummary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "function:cmd/pactify/cmd_setup_test.go:gitInitWithCommit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "function:cmd/pactify/cmd_setup_test.go:TestSetupNonInteractiveGuides",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "function:cmd/pactify/cmd_setup_test.go:TestSetupInteractivePromptsForSeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "function:cmd/pactify/cmd_setup_test.go:TestSetupInteractiveRejectsUnknownKindBeforeWrites",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "function:cmd/pactify/cmd_setup_test.go:TestSetupAutoSetsAgentIDFromSeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "function:cmd/pactify/cmd_setup_test.go:TestSetupOverridesStaleSeatEnv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "function:cmd/pactify/cmd_setup_test.go:TestSetupRejectsEmptySeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "function:cmd/pactify/cmd_setup_test.go:TestSetupExistingPactWiresAgent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "function:cmd/pactify/cmd_setup_yes_test.go:registerAgents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "function:cmd/pactify/cmd_setup_yes_test.go:TestSetupYesInitsAndWiresFromRoster",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "function:cmd/pactify/cmd_setup_yes_test.go:TestSetupYesRefusesInitializedRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "function:cmd/pactify/cmd_setup_yes_test.go:TestSetupYesNoAgentsFailsWithGuidance",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "function:cmd/pactify/commands.go:newRootCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "function:cmd/pactify/main.go:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_finish.go",
+      "target": "file:internal/finish/finish_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_finish.go",
+      "target": "file:internal/finish/finish.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/finish/finish_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/finish/finish.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/acp_smoke_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/acprunner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/acprunner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/besteffort_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/brief_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/brief.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/cleanup_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/critic_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/critic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/decide_parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/decide_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/decide.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/defaults.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/escalate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/escalate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/fix_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/gate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/gateconfig_failclosed_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/gateconfig_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/gateconfig.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/history_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/knowledge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/knowledge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/ledger_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/ledger_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/loop_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/loop.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/parallel_drain_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/parallel.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/qa_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/qa.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/recover_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/recover.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/remote_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/remote.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/runner_idle_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/runner_idle.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/runner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/runner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/sandbox_base_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/sandbox_crash_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/sandbox_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/sandbox.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/sessionstore_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/sessionstore.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/status_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/status.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/stream_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/orchestrate/stream.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/planner/apply_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/planner/apply_tx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/planner/apply.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/planner/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/planner/manifest_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/planner/manifest.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/planner/prompt_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_run.go",
+      "target": "file:internal/planner/prompt.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/agentreg/agentreg_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/agentreg/agentreg.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/agentreg/config_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_setup_yes_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/agent_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/agent.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/briefing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/briefing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/external_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/jsonmerge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/jsonmerge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/launch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/launch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/probe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/probe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/scan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/agent/scan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/commands.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/agentmanifest/manifest_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/agentmanifest/manifest.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/agentmanifest/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/agentmanifest/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/main.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

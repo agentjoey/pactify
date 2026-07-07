@@ -1,0 +1,1087 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/pact/quorum_test.go",
+      "type": "file",
+      "name": "quorum_test.go",
+      "filePath": "internal/pact/quorum_test.go",
+      "summary": "Tests the multi-reviewer quorum engine: valid reviewers accept, non-reviewers are rejected, workers cannot self-accept.",
+      "tags": [
+        "test",
+        "pact",
+        "quorum",
+        "reviewer"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/quorum_test.go:quorumRepo",
+      "type": "function",
+      "name": "quorumRepo",
+      "filePath": "internal/pact/quorum_test.go",
+      "lineRange": [
+        13,
+        37
+      ],
+      "summary": "quorumRepo in quorum_test.go (lines 13-37, 25 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/quorum_test.go:statusOf",
+      "type": "function",
+      "name": "statusOf",
+      "filePath": "internal/pact/quorum_test.go",
+      "lineRange": [
+        39,
+        54
+      ],
+      "summary": "statusOf in quorum_test.go (lines 39-54, 16 lines)",
+      "tags": [
+        "function"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/quorum_test.go:TestQuorumEngineValidReviewerAccepts",
+      "type": "function",
+      "name": "TestQuorumEngineValidReviewerAccepts",
+      "filePath": "internal/pact/quorum_test.go",
+      "lineRange": [
+        58,
+        72
+      ],
+      "summary": "TestQuorumEngineValidReviewerAccepts(exported) in quorum_test.go (lines 58-72, 15 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/quorum_test.go:TestQuorumEngineNonReviewerRejected",
+      "type": "function",
+      "name": "TestQuorumEngineNonReviewerRejected",
+      "filePath": "internal/pact/quorum_test.go",
+      "lineRange": [
+        76,
+        85
+      ],
+      "summary": "TestQuorumEngineNonReviewerRejected(exported) in quorum_test.go (lines 76-85, 10 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/quorum_test.go:TestQuorumEngineWorkerSelfAcceptRejected",
+      "type": "function",
+      "name": "TestQuorumEngineWorkerSelfAcceptRejected",
+      "filePath": "internal/pact/quorum_test.go",
+      "lineRange": [
+        90,
+        99
+      ],
+      "summary": "TestQuorumEngineWorkerSelfAcceptRejected(exported) in quorum_test.go (lines 90-99, 10 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/quorum_test.go:TestQuorumAssignValidation",
+      "type": "function",
+      "name": "TestQuorumAssignValidation",
+      "filePath": "internal/pact/quorum_test.go",
+      "lineRange": [
+        103,
+        123
+      ],
+      "summary": "TestQuorumAssignValidation(exported) in quorum_test.go (lines 103-123, 21 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/quorum_test.go:TestSingleReviewerEngineGolden",
+      "type": "function",
+      "name": "TestSingleReviewerEngineGolden",
+      "filePath": "internal/pact/quorum_test.go",
+      "lineRange": [
+        129,
+        171
+      ],
+      "summary": "TestSingleReviewerEngineGolden(exported) in quorum_test.go (lines 129-171, 43 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/planner/manifest_test.go",
+      "type": "file",
+      "name": "manifest_test.go",
+      "filePath": "internal/planner/manifest_test.go",
+      "summary": "Exhaustive tests for manifest Parse and Validate: round-trip, malformed JSON, missing fields, dep cycles, self-references, slug rules.",
+      "tags": [
+        "test",
+        "planner",
+        "manifest",
+        "validation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestManifest",
+      "type": "function",
+      "name": "TestManifest",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        33,
+        53
+      ],
+      "summary": "TestManifest(exported) in manifest_test.go (lines 33-53, 21 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestParseRoundTrip",
+      "type": "function",
+      "name": "TestParseRoundTrip",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        55,
+        75
+      ],
+      "summary": "TestParseRoundTrip(exported) in manifest_test.go (lines 55-75, 21 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestParseMalformedJSON",
+      "type": "function",
+      "name": "TestParseMalformedJSON",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        77,
+        82
+      ],
+      "summary": "TestParseMalformedJSON(exported) in manifest_test.go (lines 77-82, 6 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestParseMissingRequiredFields",
+      "type": "function",
+      "name": "TestParseMissingRequiredFields",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        84,
+        89
+      ],
+      "summary": "TestParseMissingRequiredFields(exported) in manifest_test.go (lines 84-89, 6 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateValidPlan",
+      "type": "function",
+      "name": "TestValidateValidPlan",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        91,
+        100
+      ],
+      "summary": "TestValidateValidPlan(exported) in manifest_test.go (lines 91-100, 10 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateEmptyFeature",
+      "type": "function",
+      "name": "TestValidateEmptyFeature",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        102,
+        110
+      ],
+      "summary": "TestValidateEmptyFeature(exported) in manifest_test.go (lines 102-110, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateEmptyBranch",
+      "type": "function",
+      "name": "TestValidateEmptyBranch",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        112,
+        120
+      ],
+      "summary": "TestValidateEmptyBranch(exported) in manifest_test.go (lines 112-120, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateMissingTaskID",
+      "type": "function",
+      "name": "TestValidateMissingTaskID",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        122,
+        130
+      ],
+      "summary": "TestValidateMissingTaskID(exported) in manifest_test.go (lines 122-130, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateMissingOwner",
+      "type": "function",
+      "name": "TestValidateMissingOwner",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        132,
+        140
+      ],
+      "summary": "TestValidateMissingOwner(exported) in manifest_test.go (lines 132-140, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateMissingReviewer",
+      "type": "function",
+      "name": "TestValidateMissingReviewer",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        142,
+        150
+      ],
+      "summary": "TestValidateMissingReviewer(exported) in manifest_test.go (lines 142-150, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateMissingSpec",
+      "type": "function",
+      "name": "TestValidateMissingSpec",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        152,
+        160
+      ],
+      "summary": "TestValidateMissingSpec(exported) in manifest_test.go (lines 152-160, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateMissingVerify",
+      "type": "function",
+      "name": "TestValidateMissingVerify",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        162,
+        170
+      ],
+      "summary": "TestValidateMissingVerify(exported) in manifest_test.go (lines 162-170, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateUnknownOwner",
+      "type": "function",
+      "name": "TestValidateUnknownOwner",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        172,
+        180
+      ],
+      "summary": "TestValidateUnknownOwner(exported) in manifest_test.go (lines 172-180, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateUnknownReviewer",
+      "type": "function",
+      "name": "TestValidateUnknownReviewer",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        182,
+        190
+      ],
+      "summary": "TestValidateUnknownReviewer(exported) in manifest_test.go (lines 182-190, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateOwnerEqualsReviewer",
+      "type": "function",
+      "name": "TestValidateOwnerEqualsReviewer",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        192,
+        200
+      ],
+      "summary": "TestValidateOwnerEqualsReviewer(exported) in manifest_test.go (lines 192-200, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateDepNotExist",
+      "type": "function",
+      "name": "TestValidateDepNotExist",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        202,
+        210
+      ],
+      "summary": "TestValidateDepNotExist(exported) in manifest_test.go (lines 202-210, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateDepSelfReferencing",
+      "type": "function",
+      "name": "TestValidateDepSelfReferencing",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        212,
+        220
+      ],
+      "summary": "TestValidateDepSelfReferencing(exported) in manifest_test.go (lines 212-220, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateDepCycle",
+      "type": "function",
+      "name": "TestValidateDepCycle",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        222,
+        231
+      ],
+      "summary": "TestValidateDepCycle(exported) in manifest_test.go (lines 222-231, 10 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateDuplicateTaskID",
+      "type": "function",
+      "name": "TestValidateDuplicateTaskID",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        233,
+        242
+      ],
+      "summary": "TestValidateDuplicateTaskID(exported) in manifest_test.go (lines 233-242, 10 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateMultipleErrorsAggregated",
+      "type": "function",
+      "name": "TestValidateMultipleErrorsAggregated",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        244,
+        256
+      ],
+      "summary": "TestValidateMultipleErrorsAggregated(exported) in manifest_test.go (lines 244-256, 13 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateRejectsNonSlugFeature",
+      "type": "function",
+      "name": "TestValidateRejectsNonSlugFeature",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        258,
+        268
+      ],
+      "summary": "TestValidateRejectsNonSlugFeature(exported) in manifest_test.go (lines 258-268, 11 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateRejectsNonSlugTaskID",
+      "type": "function",
+      "name": "TestValidateRejectsNonSlugTaskID",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        270,
+        277
+      ],
+      "summary": "TestValidateRejectsNonSlugTaskID(exported) in manifest_test.go (lines 270-277, 8 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateRejectsOverlongFeature",
+      "type": "function",
+      "name": "TestValidateRejectsOverlongFeature",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        279,
+        287
+      ],
+      "summary": "TestValidateRejectsOverlongFeature(exported) in manifest_test.go (lines 279-287, 9 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidateAcceptsSlugNames",
+      "type": "function",
+      "name": "TestValidateAcceptsSlugNames",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        289,
+        296
+      ],
+      "summary": "TestValidateAcceptsSlugNames(exported) in manifest_test.go (lines 289-296, 8 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/planner/manifest_test.go:TestValidSlug",
+      "type": "function",
+      "name": "TestValidSlug",
+      "filePath": "internal/planner/manifest_test.go",
+      "lineRange": [
+        298,
+        309
+      ],
+      "summary": "TestValidSlug(exported) in manifest_test.go (lines 298-309, 12 lines)",
+      "tags": [
+        "function",
+        "exported",
+        "test",
+        "test-case"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "file:internal/planner/apply_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "file:internal/planner/apply_tx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "file:internal/planner/apply.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "file:internal/planner/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "file:internal/planner/manifest.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "file:internal/planner/prompt_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "file:internal/planner/prompt.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:quorumRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:statusOf",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestQuorumEngineValidReviewerAccepts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestQuorumEngineNonReviewerRejected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestQuorumEngineWorkerSelfAcceptRejected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestQuorumAssignValidation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestSingleReviewerEngineGolden",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestManifest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestParseRoundTrip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestParseMalformedJSON",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestParseMissingRequiredFields",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateValidPlan",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateEmptyFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateEmptyBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingTaskID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingOwner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingReviewer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingSpec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingVerify",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateUnknownOwner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateUnknownReviewer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateOwnerEqualsReviewer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateDepNotExist",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateDepSelfReferencing",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateDepCycle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateDuplicateTaskID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMultipleErrorsAggregated",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateRejectsNonSlugFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateRejectsNonSlugTaskID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateRejectsOverlongFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateAcceptsSlugNames",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidSlug",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestQuorumEngineValidReviewerAccepts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestQuorumEngineNonReviewerRejected",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestQuorumEngineWorkerSelfAcceptRejected",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestQuorumAssignValidation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/quorum_test.go",
+      "target": "function:internal/pact/quorum_test.go:TestSingleReviewerEngineGolden",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestManifest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestParseRoundTrip",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestParseMalformedJSON",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestParseMissingRequiredFields",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateValidPlan",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateEmptyFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateEmptyBranch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingTaskID",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingOwner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingReviewer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingSpec",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMissingVerify",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateUnknownOwner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateUnknownReviewer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateOwnerEqualsReviewer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateDepNotExist",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateDepSelfReferencing",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateDepCycle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateDuplicateTaskID",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateMultipleErrorsAggregated",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateRejectsNonSlugFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateRejectsNonSlugTaskID",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateRejectsOverlongFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidateAcceptsSlugNames",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/planner/manifest_test.go",
+      "target": "function:internal/planner/manifest_test.go:TestValidSlug",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

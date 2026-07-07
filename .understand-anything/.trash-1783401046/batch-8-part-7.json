@@ -1,0 +1,1281 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/orchestrate/recover_test.go",
+      "type": "file",
+      "name": "recover_test.go",
+      "filePath": "internal/orchestrate/recover_test.go",
+      "summary": "Tests for classifyAndCheckpoint: recovery succeeds when verify re-passes, returns false when verify still fails so the driver keeps retrying.",
+      "tags": [
+        "test",
+        "orchestration",
+        "recovery"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/accept_no_merge_test.go",
+      "type": "file",
+      "name": "accept_no_merge_test.go",
+      "filePath": "internal/pact/accept_no_merge_test.go",
+      "summary": "Test verifying that accepting the final task does NOT cause the merge to fire \u2014 merge is a separate driver responsibility, gated by all-tasks-accepted.",
+      "tags": [
+        "test",
+        "protocol",
+        "accept",
+        "merge-gating"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/assign_race_test.go",
+      "type": "file",
+      "name": "assign_race_test.go",
+      "filePath": "internal/pact/assign_race_test.go",
+      "summary": "Concurrent-assign race test asserting exactly one writer wins when two agents attempt to claim the same taskID simultaneously, with the loser observing an error.",
+      "tags": [
+        "test",
+        "protocol",
+        "concurrency",
+        "race"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/assign_validate_test.go",
+      "type": "file",
+      "name": "assign_validate_test.go",
+      "filePath": "internal/pact/assign_validate_test.go",
+      "summary": "Validation tests for Assign: rejects empty / whitespace ids, mismatched declared branch vs. task-id, and duplicate taskIDs against the ledger.",
+      "tags": [
+        "test",
+        "protocol",
+        "validation",
+        "assign"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/config_gate_test.go",
+      "type": "file",
+      "name": "config_gate_test.go",
+      "filePath": "internal/pact/config_gate_test.go",
+      "summary": "Roundtrip test that ConfigGate persists and re-loads gate-command overrides exactly, byte-for-byte, through the engine.",
+      "tags": [
+        "test",
+        "protocol",
+        "config",
+        "gate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/deps_test.go",
+      "type": "file",
+      "name": "deps_test.go",
+      "filePath": "internal/pact/deps_test.go",
+      "summary": "Tests for the dep-task machinery on Assign and Join: unknown / cross-feature / cyclic / DAG-accepted / gate-block / no-strand / projection-line entries.",
+      "tags": [
+        "test",
+        "protocol",
+        "deps",
+        "projection"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/pact/gateconfig_error_test.go",
+      "type": "file",
+      "name": "gateconfig_error_test.go",
+      "filePath": "internal/pact/gateconfig_error_test.go",
+      "summary": "Test distinguishing a configured-but-erroring gate command from a simply-absent gate, ensuring GateConfig surfaces a real error rather than treating it as unset.",
+      "tags": [
+        "test",
+        "protocol",
+        "config",
+        "gate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/merge_empty_test.go",
+      "type": "file",
+      "name": "merge_empty_test.go",
+      "filePath": "internal/pact/merge_empty_test.go",
+      "summary": "Test that Merge refuses to ship a feature branch with no commits (empty HEAD), keeping the base branch clean of no-op merges.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "empty-branch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/merge_fetch_test.go",
+      "type": "file",
+      "name": "merge_fetch_test.go",
+      "filePath": "internal/pact/merge_fetch_test.go",
+      "summary": "Fetch-aware merge tests using a synthetic remote: rebase-able base advances are integrated, and an unrebasable history is refused with a clear error.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "fetch",
+        "rebase"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/pact/merge_state_test.go",
+      "type": "file",
+      "name": "merge_state_test.go",
+      "filePath": "internal/pact/merge_state_test.go",
+      "summary": "Test confirming rendered merge state (HEAD, refs) matches the on-disk worktree after a successful merge run, so clients can rely on the projection.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "state"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/recover_test.go:TestClassifyAndCheckpoint_VerifyPasses",
+      "type": "function",
+      "name": "TestClassifyAndCheckpoint_VerifyPasses",
+      "filePath": "internal/orchestrate/recover_test.go",
+      "lineRange": [
+        13,
+        35
+      ],
+      "summary": "Test recovery success: a worker soft-fail followed by a now-passing verify produces a checkpoint event authored by the owner.",
+      "tags": [
+        "test",
+        "orchestration",
+        "recovery",
+        "verify-gate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/recover_test.go:TestClassifyAndCheckpoint_VerifyFails",
+      "type": "function",
+      "name": "TestClassifyAndCheckpoint_VerifyFails",
+      "filePath": "internal/orchestrate/recover_test.go",
+      "lineRange": [
+        39,
+        55
+      ],
+      "summary": "Test recovery failure: a worker soft-fail followed by a still-failing verify returns false and writes no checkpoint event.",
+      "tags": [
+        "test",
+        "orchestration",
+        "recovery",
+        "verify-gate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/accept_no_merge_test.go:TestAcceptDoesNotMergeLastTask",
+      "type": "function",
+      "name": "TestAcceptDoesNotMergeLastTask",
+      "filePath": "internal/pact/accept_no_merge_test.go",
+      "lineRange": [
+        13,
+        53
+      ],
+      "summary": "Negative test: accepting the final task does NOT trigger merge \u2014 the driver still owns the merge step after all tasks are accepted.",
+      "tags": [
+        "test",
+        "protocol",
+        "accept",
+        "merge-gating"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/assign_race_test.go:TestAssignConcurrentSameTaskIDExactlyOneWins",
+      "type": "function",
+      "name": "TestAssignConcurrentSameTaskIDExactlyOneWins",
+      "filePath": "internal/pact/assign_race_test.go",
+      "lineRange": [
+        14,
+        51
+      ],
+      "summary": "Race test: two parallel Assign calls for the same taskID \u2014 exactly one wins, the other returns an error and does not create a phantom task.",
+      "tags": [
+        "test",
+        "protocol",
+        "assign",
+        "race",
+        "concurrency"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/assign_validate_test.go:TestAssignValidatesIdsAndBranch",
+      "type": "function",
+      "name": "TestAssignValidatesIdsAndBranch",
+      "filePath": "internal/pact/assign_validate_test.go",
+      "lineRange": [
+        13,
+        48
+      ],
+      "summary": "Validation test: Assign rejects empty / whitespace ids, branch not matching task-id convention, and duplicate taskIDs already present in the ledger.",
+      "tags": [
+        "test",
+        "protocol",
+        "assign",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/config_gate_test.go:TestConfigGateRoundtrip",
+      "type": "function",
+      "name": "TestConfigGateRoundtrip",
+      "filePath": "internal/pact/config_gate_test.go",
+      "lineRange": [
+        9,
+        49
+      ],
+      "summary": "Roundtrip test: ConfigGate persists a gate-command override and re-loads it byte-for-byte across an engine instance.",
+      "tags": [
+        "test",
+        "protocol",
+        "config",
+        "gate"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/deps_test.go:depsRepo",
+      "type": "function",
+      "name": "depsRepo",
+      "filePath": "internal/pact/deps_test.go",
+      "lineRange": [
+        16,
+        34
+      ],
+      "summary": "Test helper that builds a fresh repo and applies Assign / Cancel scenarios for dep-task tests.",
+      "tags": [
+        "test",
+        "helper",
+        "repo"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/deps_test.go:TestAssignUnknownDep",
+      "type": "function",
+      "name": "TestAssignUnknownDep",
+      "filePath": "internal/pact/deps_test.go",
+      "lineRange": [
+        36,
+        42
+      ],
+      "summary": "Negative test: Assign with a dep task id that does not exist fails closed.",
+      "tags": [
+        "test",
+        "protocol",
+        "deps",
+        "assign",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/deps_test.go:TestAssignDepCrossFeature",
+      "type": "function",
+      "name": "TestAssignDepCrossFeature",
+      "filePath": "internal/pact/deps_test.go",
+      "lineRange": [
+        44,
+        53
+      ],
+      "summary": "Test that a cross-feature dep on Assign is allowed and recorded.",
+      "tags": [
+        "test",
+        "protocol",
+        "deps",
+        "assign",
+        "cross-feature"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/deps_test.go:TestAssignDepCycle",
+      "type": "function",
+      "name": "TestAssignDepCycle",
+      "filePath": "internal/pact/deps_test.go",
+      "lineRange": [
+        59,
+        73
+      ],
+      "summary": "Test that Assign refuses a dep cycle (A\u2192B\u2192A) with a clear error.",
+      "tags": [
+        "test",
+        "protocol",
+        "deps",
+        "cycle"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/deps_test.go:TestAssignDepDAGAccepted",
+      "type": "function",
+      "name": "TestAssignDepDAGAccepted",
+      "filePath": "internal/pact/deps_test.go",
+      "lineRange": [
+        77,
+        88
+      ],
+      "summary": "Test that a 3-task DAG dep set on Assign is accepted.",
+      "tags": [
+        "test",
+        "protocol",
+        "deps",
+        "dag"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/deps_test.go:TestJoinGateBlockedByUnacceptedDep",
+      "type": "function",
+      "name": "TestJoinGateBlockedByUnacceptedDep",
+      "filePath": "internal/pact/deps_test.go",
+      "lineRange": [
+        90,
+        125
+      ],
+      "summary": "Test that Join on a runnable task is gated by an upstream unaccepted dep \u2014 and the gate opens once the dep accepts.",
+      "tags": [
+        "test",
+        "protocol",
+        "deps",
+        "join",
+        "gate"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/deps_test.go:TestJoinGateRunnableTaskNotStrandedByFutureDep",
+      "type": "function",
+      "name": "TestJoinGateRunnableTaskNotStrandedByFutureDep",
+      "filePath": "internal/pact/deps_test.go",
+      "lineRange": [
+        130,
+        146
+      ],
+      "summary": "Test that adding a future dep after Join does not strand an already runnable task.",
+      "tags": [
+        "test",
+        "protocol",
+        "deps",
+        "join",
+        "gate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/deps_test.go:TestProjectionDepsLine",
+      "type": "function",
+      "name": "TestProjectionDepsLine",
+      "filePath": "internal/pact/deps_test.go",
+      "lineRange": [
+        148,
+        168
+      ],
+      "summary": "Test that the rendered projection includes a `deps:` line per task, listing upstream accepted / open state.",
+      "tags": [
+        "test",
+        "protocol",
+        "deps",
+        "projection"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/gateconfig_error_test.go:TestGateConfigDistinguishesErrorFromAbsent",
+      "type": "function",
+      "name": "TestGateConfigDistinguishesErrorFromAbsent",
+      "filePath": "internal/pact/gateconfig_error_test.go",
+      "lineRange": [
+        13,
+        32
+      ],
+      "summary": "Test that GateConfig surfaces a real error (configured-but-failing) distinctly from a simply-absent gate command.",
+      "tags": [
+        "test",
+        "protocol",
+        "gate",
+        "error"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/merge_empty_test.go:TestMergeRefusesEmptyFeatureBranch",
+      "type": "function",
+      "name": "TestMergeRefusesEmptyFeatureBranch",
+      "filePath": "internal/pact/merge_empty_test.go",
+      "lineRange": [
+        15,
+        65
+      ],
+      "summary": "Test that Merge refuses a feature whose branch is empty (no commits beyond the base)",
+      "tags": "to keep the base branch free of no-op merges.",
+      "complexity": [
+        "test",
+        "protocol",
+        "merge",
+        "empty-branch"
+      ]
+    },
+    {
+      "id": "function:internal/pact/merge_fetch_test.go:gitRun",
+      "type": "function",
+      "name": "gitRun",
+      "filePath": "internal/pact/merge_fetch_test.go",
+      "lineRange": [
+        12,
+        21
+      ],
+      "summary": "Test helper that runs a git command in a worktree, asserting success.",
+      "tags": [
+        "test",
+        "helper",
+        "git"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/merge_fetch_test.go:newRepoWithOrigin",
+      "type": "function",
+      "name": "newRepoWithOrigin",
+      "filePath": "internal/pact/merge_fetch_test.go",
+      "lineRange": [
+        25,
+        37
+      ],
+      "summary": "Test helper: builds a fresh repo and a synthetic bare origin with a base branch.",
+      "tags": [
+        "test",
+        "helper",
+        "repo"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/merge_fetch_test.go:advanceOrigin",
+      "type": "function",
+      "name": "advanceOrigin",
+      "filePath": "internal/pact/merge_fetch_test.go",
+      "lineRange": [
+        41,
+        58
+      ],
+      "summary": "Test helper: advances the synthetic origin by committing a file with the given content on top of the supplied base.",
+      "tags": [
+        "test",
+        "helper",
+        "repo"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/merge_fetch_test.go:shipReady",
+      "type": "function",
+      "name": "shipReady",
+      "filePath": "internal/pact/merge_fetch_test.go",
+      "lineRange": [
+        61,
+        81
+      ],
+      "summary": "Test helper: ships a fake feature into the local repo so subsequent merges see an accepted feature as ready.",
+      "tags": [
+        "test",
+        "helper",
+        "repo"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/merge_fetch_test.go:TestMergeFetchAwareIntegratesAdvancedBase",
+      "type": "function",
+      "name": "TestMergeFetchAwareIntegratesAdvancedBase",
+      "filePath": "internal/pact/merge_fetch_test.go",
+      "lineRange": [
+        86,
+        106
+      ],
+      "summary": "Test that the fetch-aware merge path integrates an advanced base branch from origin before shipping the local feature commits.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "fetch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/merge_fetch_test.go:TestMergeFetchAwareRefusesUnrebasable",
+      "type": "function",
+      "name": "TestMergeFetchAwareRefusesUnrebasable",
+      "filePath": "internal/pact/merge_fetch_test.go",
+      "lineRange": [
+        111,
+        127
+      ],
+      "summary": "Negative test: fetch-aware merge refuses to ship when the feature branch cannot be cleanly rebased onto the advanced base.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "fetch"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/merge_state_test.go:TestMergeHEADStateMatchesWorktree",
+      "type": "function",
+      "name": "TestMergeHEADStateMatchesWorktree",
+      "filePath": "internal/pact/merge_state_test.go",
+      "lineRange": [
+        15,
+        41
+      ],
+      "summary": "Test that the rendered merge state (HEAD, refs) matches the on-disk worktree after a successful merge run.",
+      "tags": [
+        "test",
+        "protocol",
+        "merge",
+        "state"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "function:internal/orchestrate/recover_test.go:TestClassifyAndCheckpoint_VerifyPasses",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "function:internal/orchestrate/recover_test.go:TestClassifyAndCheckpoint_VerifyFails",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/accept_no_merge_test.go",
+      "target": "function:internal/pact/accept_no_merge_test.go:TestAcceptDoesNotMergeLastTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/assign_race_test.go",
+      "target": "function:internal/pact/assign_race_test.go:TestAssignConcurrentSameTaskIDExactlyOneWins",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/assign_validate_test.go",
+      "target": "function:internal/pact/assign_validate_test.go:TestAssignValidatesIdsAndBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/config_gate_test.go",
+      "target": "function:internal/pact/config_gate_test.go:TestConfigGateRoundtrip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "function:internal/pact/deps_test.go:depsRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "function:internal/pact/deps_test.go:TestAssignUnknownDep",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "function:internal/pact/deps_test.go:TestAssignDepCrossFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "function:internal/pact/deps_test.go:TestAssignDepCycle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "function:internal/pact/deps_test.go:TestAssignDepDAGAccepted",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "function:internal/pact/deps_test.go:TestJoinGateBlockedByUnacceptedDep",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "function:internal/pact/deps_test.go:TestJoinGateRunnableTaskNotStrandedByFutureDep",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "function:internal/pact/deps_test.go:TestProjectionDepsLine",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/gateconfig_error_test.go",
+      "target": "function:internal/pact/gateconfig_error_test.go:TestGateConfigDistinguishesErrorFromAbsent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/merge_empty_test.go",
+      "target": "function:internal/pact/merge_empty_test.go:TestMergeRefusesEmptyFeatureBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/merge_empty_test.go",
+      "target": "function:internal/pact/merge_empty_test.go:TestMergeRefusesEmptyFeatureBranch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "function:internal/pact/merge_fetch_test.go:gitRun",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "function:internal/pact/merge_fetch_test.go:newRepoWithOrigin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "function:internal/pact/merge_fetch_test.go:advanceOrigin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "function:internal/pact/merge_fetch_test.go:shipReady",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "function:internal/pact/merge_fetch_test.go:TestMergeFetchAwareIntegratesAdvancedBase",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "function:internal/pact/merge_fetch_test.go:TestMergeFetchAwareRefusesUnrebasable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/merge_state_test.go",
+      "target": "function:internal/pact/merge_state_test.go:TestMergeHEADStateMatchesWorktree",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/recover_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/accept_no_merge_test.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/accept_no_merge_test.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/accept_no_merge_test.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/accept_no_merge_test.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/accept_no_merge_test.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/accept_no_merge_test.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/accept_no_merge_test.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/deps_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/merge_fetch_test.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

@@ -1,0 +1,1168 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/paths/paths_test.go",
+      "type": "file",
+      "name": "paths_test.go",
+      "filePath": "internal/paths/paths_test.go",
+      "summary": "Tests for path helpers covering PACT_DIR env override, default .pact directory, and protocol version constants.",
+      "tags": [
+        "go",
+        "test",
+        "path-helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/paths/paths_test.go:TestDirDefaultsToDotPact",
+      "type": "function",
+      "name": "TestDirDefaultsToDotPact",
+      "filePath": "internal/paths/paths_test.go",
+      "lineRange": [
+        8,
+        13
+      ],
+      "summary": "Function TestDirDefaultsToDotPact defined in internal/paths/paths_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/paths/paths_test.go:TestDirHonoursEnv",
+      "type": "function",
+      "name": "TestDirHonoursEnv",
+      "filePath": "internal/paths/paths_test.go",
+      "lineRange": [
+        15,
+        23
+      ],
+      "summary": "Function TestDirHonoursEnv defined in internal/paths/paths_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/paths/paths_test.go:TestProtocolVersionIsOne",
+      "type": "function",
+      "name": "TestProtocolVersionIsOne",
+      "filePath": "internal/paths/paths_test.go",
+      "lineRange": [
+        25,
+        29
+      ],
+      "summary": "Function TestProtocolVersionIsOne defined in internal/paths/paths_test.go.",
+      "tags": [
+        "go",
+        "function",
+        "test",
+        "unit-test",
+        "test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/secret/secret.go",
+      "type": "file",
+      "name": "secret.go",
+      "filePath": "internal/secret/secret.go",
+      "summary": "Keychain-backed secret access wrapping macOS security command-line tool for GLM token retrieval.",
+      "tags": [
+        "go",
+        "secret-management",
+        "keychain",
+        "macos"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/secret/secret.go:Keychain",
+      "type": "function",
+      "name": "Keychain",
+      "filePath": "internal/secret/secret.go",
+      "lineRange": [
+        15,
+        24
+      ],
+      "summary": "Function Keychain defined in internal/secret/secret.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/secret/secret.go:GLMToken",
+      "type": "function",
+      "name": "GLMToken",
+      "filePath": "internal/secret/secret.go",
+      "lineRange": [
+        29,
+        31
+      ],
+      "summary": "Function GLMToken defined in internal/secret/secret.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/serve/agents.go",
+      "type": "file",
+      "name": "agents.go",
+      "filePath": "internal/serve/agents.go",
+      "summary": "HTTP handlers for agent list, register, unregister, and config get/set endpoints with seat enforcement and effective-model resolution.",
+      "tags": [
+        "go",
+        "http-handler",
+        "agent-management",
+        "api"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/agents.go:handleAgents",
+      "type": "function",
+      "name": "handleAgents",
+      "filePath": "internal/serve/agents.go",
+      "lineRange": [
+        30,
+        56
+      ],
+      "summary": "Function handleAgents defined in internal/serve/agents.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/agents.go:handleAgentRegister",
+      "type": "function",
+      "name": "handleAgentRegister",
+      "filePath": "internal/serve/agents.go",
+      "lineRange": [
+        62,
+        93
+      ],
+      "summary": "Function handleAgentRegister defined in internal/serve/agents.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/agents.go:handleAgentUnregister",
+      "type": "function",
+      "name": "handleAgentUnregister",
+      "filePath": "internal/serve/agents.go",
+      "lineRange": [
+        95,
+        118
+      ],
+      "summary": "Function handleAgentUnregister defined in internal/serve/agents.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/agents.go:handleAgentConfigGet",
+      "type": "function",
+      "name": "handleAgentConfigGet",
+      "filePath": "internal/serve/agents.go",
+      "lineRange": [
+        132,
+        153
+      ],
+      "summary": "Function handleAgentConfigGet defined in internal/serve/agents.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/agents.go:handleAgentConfigSet",
+      "type": "function",
+      "name": "handleAgentConfigSet",
+      "filePath": "internal/serve/agents.go",
+      "lineRange": [
+        161,
+        202
+      ],
+      "summary": "Function handleAgentConfigSet defined in internal/serve/agents.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/serve/manifests.go",
+      "type": "file",
+      "name": "manifests.go",
+      "filePath": "internal/serve/manifests.go",
+      "summary": "HTTP handlers for agent manifest list, create, and delete operations with seat enforcement.",
+      "tags": [
+        "go",
+        "http-handler",
+        "agent-manifest",
+        "api"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/manifests.go:handleManifestList",
+      "type": "function",
+      "name": "handleManifestList",
+      "filePath": "internal/serve/manifests.go",
+      "lineRange": [
+        16,
+        28
+      ],
+      "summary": "Function handleManifestList defined in internal/serve/manifests.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/manifests.go:handleManifestCreate",
+      "type": "function",
+      "name": "handleManifestCreate",
+      "filePath": "internal/serve/manifests.go",
+      "lineRange": [
+        30,
+        45
+      ],
+      "summary": "Function handleManifestCreate defined in internal/serve/manifests.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/manifests.go:handleManifestDelete",
+      "type": "function",
+      "name": "handleManifestDelete",
+      "filePath": "internal/serve/manifests.go",
+      "lineRange": [
+        47,
+        57
+      ],
+      "summary": "Function handleManifestDelete defined in internal/serve/manifests.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/serve/setup.go",
+      "type": "file",
+      "name": "setup.go",
+      "filePath": "internal/serve/setup.go",
+      "summary": "HTTP handlers for setup wizard suggest and apply operations including repo init, agent wiring, and manifest rendering.",
+      "tags": [
+        "go",
+        "http-handler",
+        "setup-wizard",
+        "agent-wiring",
+        "repo-init"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/serve/setup.go:handleSetupSuggest",
+      "type": "function",
+      "name": "handleSetupSuggest",
+      "filePath": "internal/serve/setup.go",
+      "lineRange": [
+        39,
+        55
+      ],
+      "summary": "Function handleSetupSuggest defined in internal/serve/setup.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/setup.go:handleSetupApply",
+      "type": "function",
+      "name": "handleSetupApply",
+      "filePath": "internal/serve/setup.go",
+      "lineRange": [
+        86,
+        169
+      ],
+      "summary": "Function handleSetupApply defined in internal/serve/setup.go.",
+      "tags": [
+        "go",
+        "function",
+        "internal",
+        "http-handler"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/tokens/tokens.go",
+      "type": "file",
+      "name": "tokens.go",
+      "filePath": "internal/tokens/tokens.go",
+      "summary": "Per-task token usage tally store with load/save roundtrip and Claude/OpenCode stdout/JSONL parsing into a unified Tally.",
+      "tags": [
+        "go",
+        "token-tracking",
+        "usage-parse",
+        "persistence"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/tokens/tokens.go:Load",
+      "type": "function",
+      "name": "Load",
+      "filePath": "internal/tokens/tokens.go",
+      "lineRange": [
+        30,
+        41
+      ],
+      "summary": "Function Load defined in internal/tokens/tokens.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/tokens/tokens.go:Add",
+      "type": "function",
+      "name": "Add",
+      "filePath": "internal/tokens/tokens.go",
+      "lineRange": [
+        44,
+        52
+      ],
+      "summary": "Function Add defined in internal/tokens/tokens.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/tokens/tokens.go:Save",
+      "type": "function",
+      "name": "Save",
+      "filePath": "internal/tokens/tokens.go",
+      "lineRange": [
+        55,
+        65
+      ],
+      "summary": "Function Save defined in internal/tokens/tokens.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/tokens/tokens.go:Parse",
+      "type": "function",
+      "name": "Parse",
+      "filePath": "internal/tokens/tokens.go",
+      "lineRange": [
+        89,
+        125
+      ],
+      "summary": "Function Parse defined in internal/tokens/tokens.go.",
+      "tags": [
+        "go",
+        "function",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/tokens/tokens.go:Store",
+      "type": "class",
+      "name": "Store",
+      "filePath": "internal/tokens/tokens.go",
+      "lineRange": [
+        20,
+        22
+      ],
+      "summary": "Type Store defined in internal/tokens/tokens.go.",
+      "tags": [
+        "go",
+        "type-definition",
+        "data-model",
+        "exported"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/paths/paths_test.go",
+      "target": "function:internal/paths/paths_test.go:TestDirDefaultsToDotPact",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/paths/paths_test.go",
+      "target": "function:internal/paths/paths_test.go:TestDirDefaultsToDotPact",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/paths/paths_test.go",
+      "target": "function:internal/paths/paths_test.go:TestDirHonoursEnv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/paths/paths_test.go",
+      "target": "function:internal/paths/paths_test.go:TestDirHonoursEnv",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/paths/paths_test.go",
+      "target": "function:internal/paths/paths_test.go:TestProtocolVersionIsOne",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/paths/paths_test.go",
+      "target": "function:internal/paths/paths_test.go:TestProtocolVersionIsOne",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/secret/secret.go",
+      "target": "function:internal/secret/secret.go:Keychain",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/secret/secret.go",
+      "target": "function:internal/secret/secret.go:Keychain",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/secret/secret.go",
+      "target": "function:internal/secret/secret.go:GLMToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/secret/secret.go",
+      "target": "function:internal/secret/secret.go:GLMToken",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "function:internal/serve/agents.go:handleAgents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "function:internal/serve/agents.go:handleAgentRegister",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "function:internal/serve/agents.go:handleAgentUnregister",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "function:internal/serve/agents.go:handleAgentConfigGet",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "function:internal/serve/agents.go:handleAgentConfigSet",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/manifests.go",
+      "target": "function:internal/serve/manifests.go:handleManifestList",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/manifests.go",
+      "target": "function:internal/serve/manifests.go:handleManifestCreate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/manifests.go",
+      "target": "function:internal/serve/manifests.go:handleManifestDelete",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "function:internal/serve/setup.go:handleSetupSuggest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "function:internal/serve/setup.go:handleSetupApply",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "function:internal/tokens/tokens.go:Load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "function:internal/tokens/tokens.go:Load",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "function:internal/tokens/tokens.go:Add",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "function:internal/tokens/tokens.go:Add",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "function:internal/tokens/tokens.go:Save",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "function:internal/tokens/tokens.go:Save",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "function:internal/tokens/tokens.go:Parse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "function:internal/tokens/tokens.go:Parse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "class:internal/tokens/tokens.go:Store",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "class:internal/tokens/tokens.go:Store",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/agent_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/agent.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/briefing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/briefing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/external_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/jsonmerge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/jsonmerge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/launch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/launch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/probe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/probe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/scan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agent/scan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agentcfg/agentcfg_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agentcfg/agentcfg.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agentreg/agentreg_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agentreg/agentreg.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/agents.go",
+      "target": "file:internal/agentreg/config_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/manifests.go",
+      "target": "file:internal/agentmanifest/manifest_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/manifests.go",
+      "target": "file:internal/agentmanifest/manifest.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/manifests.go",
+      "target": "file:internal/agentmanifest/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/manifests.go",
+      "target": "file:internal/agentmanifest/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/agent_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/agent.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/briefing_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/briefing.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/external_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/jsonmerge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/jsonmerge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/launch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/launch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/probe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/probe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/scan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agent/scan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agentreg/agentreg_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agentreg/agentreg.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/agentreg/config_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/registry/registry_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/registry/registry.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/wizard/wizard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/setup.go",
+      "target": "file:internal/wizard/wizard.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/tokens/tokens.go",
+      "target": "file:internal/tokens/tokens_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/secret/secret.go:GLMToken",
+      "target": "function:internal/secret/secret.go:Keychain",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

@@ -1,0 +1,1420 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/orchestrate/parallel_drain_test.go",
+      "type": "file",
+      "name": "parallel_drain_test.go",
+      "filePath": "internal/orchestrate/parallel_drain_test.go",
+      "summary": "Test that RunParallel drains in-flight sibling features when one fails, so independent features still ship after a partial run.",
+      "tags": [
+        "test",
+        "orchestration",
+        "parallel",
+        "drain"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/orchestrate/start_test.go",
+      "type": "file",
+      "name": "start_test.go",
+      "filePath": "internal/orchestrate/start_test.go",
+      "summary": "Regression test ensuring the driver emits a start event so the owner seat works an assigned task in_progress at task-1 entry, rather than appearing stuck on the awaiting-start state.",
+      "tags": [
+        "test",
+        "orchestration",
+        "start-event",
+        "state-machine"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/pact/engine.go",
+      "type": "file",
+      "name": "engine.go",
+      "filePath": "internal/pact/engine.go",
+      "summary": "Core pact engine: implements Init, AddSeat, Join (with kind / client variants), Assign (regular + quorum), Merge, Start, Accept, Changes, Checkpoint, Cancel, Withdraw, Note, Config* verbs, plus Status/LogReplay/LogText/Validate \u2014 serialized through a per-repo ledger write lock with snapshot-and-replay state reconstruction.",
+      "tags": [
+        "protocol",
+        "engine",
+        "state-machine",
+        "event-ledger"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/orchestrate/parallel_drain_test.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/parallel_drain_test.go",
+      "lineRange": [
+        25,
+        44
+      ],
+      "summary": "Fake runner Run that writes a worker commit then unblocks the drain via a once-guarded channel.",
+      "tags": [
+        "test",
+        "fake-runner",
+        "drain"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/parallel_drain_test.go:TestRunParallel_DrainMergesSiblingAfterError",
+      "type": "function",
+      "name": "TestRunParallel_DrainMergesSiblingAfterError",
+      "filePath": "internal/orchestrate/parallel_drain_test.go",
+      "lineRange": [
+        50,
+        96
+      ],
+      "summary": "End-to-end test that one failing feature does not strand another concurrent feature \u2014 the healthy sibling must still merge its branch.",
+      "tags": [
+        "test",
+        "orchestration",
+        "parallel",
+        "drain"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/orchestrate/parallel_drain_test.go:drainFakeRunner",
+      "type": "class",
+      "name": "drainFakeRunner",
+      "filePath": "internal/orchestrate/parallel_drain_test.go",
+      "lineRange": [
+        19,
+        23
+      ],
+      "summary": "Test double: pretends to be a Runner that completes worker work, gates on an external unblock channel, and lets the test inject a per-sibling ordering point.",
+      "tags": [
+        "test",
+        "fake-runner",
+        "drain"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/start_test.go:Run",
+      "type": "function",
+      "name": "Run",
+      "filePath": "internal/orchestrate/start_test.go",
+      "lineRange": [
+        19,
+        33
+      ],
+      "summary": "Fake worker Run that records the seat at launch and completes via checkpoint + accept.",
+      "tags": [
+        "test",
+        "fake-runner",
+        "start"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/orchestrate/start_test.go:TestRunEmitsStartSoOwnerWorksAsInProgress",
+      "type": "function",
+      "name": "TestRunEmitsStartSoOwnerWorksAsInProgress",
+      "filePath": "internal/orchestrate/start_test.go",
+      "lineRange": [
+        38,
+        61
+      ],
+      "summary": "Regression test: an assigned task reaches in_progress after one driver cycle, verifying that the engine emits the start event before the worker stint.",
+      "tags": [
+        "test",
+        "orchestration",
+        "state-machine",
+        "start"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/orchestrate/start_test.go:startObservingRunner",
+      "type": "class",
+      "name": "startObservingRunner",
+      "filePath": "internal/orchestrate/start_test.go",
+      "lineRange": [
+        14,
+        17
+      ],
+      "summary": "Test double capturing the seat id at launch time, used to assert that start is emitted under the task-owner seat.",
+      "tags": [
+        "test",
+        "fake-runner",
+        "start"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:agentID",
+      "type": "function",
+      "name": "agentID",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        39,
+        48
+      ],
+      "summary": "Resolves the acting seat id from the actor override or PACT_AGENT_ID env; fails closed with errNoAgent when neither is present.",
+      "tags": [
+        "protocol",
+        "identity",
+        "engine"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:StateProjection",
+      "type": "function",
+      "name": "StateProjection",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        56,
+        58
+      ],
+      "summary": "Public verb: returns the current State as projected from the events log.",
+      "tags": [
+        "protocol",
+        "engine",
+        "read"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:withLedgerLock",
+      "type": "function",
+      "name": "withLedgerLock",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        83,
+        98
+      ],
+      "summary": "Bracket helper that holds the per-repo write lock for the duration of `fn`, used to serialize all ledger-mutating verbs.",
+      "tags": [
+        "protocol",
+        "engine",
+        "locking"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:commitLedgerIfTracked",
+      "type": "function",
+      "name": "commitLedgerIfTracked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        119,
+        125
+      ],
+      "summary": "If the ledger file is tracked by git, auto-commit it on every append to keep disk state and git history aligned; no-op otherwise.",
+      "tags": [
+        "protocol",
+        "engine",
+        "git-integration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:appendAndRender",
+      "type": "function",
+      "name": "appendAndRender",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        127,
+        153
+      ],
+      "summary": "Appends an event to the ledger and re-renders STATE.yml + snapshot, guaranteeing readers see a consistent projection after every mutation.",
+      "tags": [
+        "protocol",
+        "engine",
+        "projection"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:writeSnapshot",
+      "type": "function",
+      "name": "writeSnapshot",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        159,
+        170
+      ],
+      "summary": "Persists the latest State as a `state.json` snapshot under the supplied folder for fast startup replay.",
+      "tags": [
+        "protocol",
+        "engine",
+        "snapshot"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:initLocked",
+      "type": "function",
+      "name": "initLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        184,
+        237
+      ],
+      "summary": "Initializes the project with the agent id and seat specs, writes the init event, and lands the tree on the base branch.",
+      "tags": [
+        "protocol",
+        "engine",
+        "init"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/pact/engine.go:addSeatLocked",
+      "type": "function",
+      "name": "addSeatLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        249,
+        273
+      ],
+      "summary": "Appends a seat spec to the roster under the orchestrator identity and emits an add_seat event; rejects duplicates.",
+      "tags": [
+        "protocol",
+        "engine",
+        "seat"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:joinWithClientLocked",
+      "type": "function",
+      "name": "joinWithClientLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        312,
+        388
+      ],
+      "summary": "Core Join implementation: handles plain / kind / client variants, validates requested branch, checks out the seat branch, and writes the join event.",
+      "tags": [
+        "protocol",
+        "engine",
+        "join"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/pact/engine.go:splitCSV",
+      "type": "function",
+      "name": "splitCSV",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        390,
+        399
+      ],
+      "summary": "Splits a comma-separated roles string into a slice, trimming whitespace.",
+      "tags": [
+        "protocol",
+        "engine",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:assignLocked",
+      "type": "function",
+      "name": "assignLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        431,
+        487
+      ],
+      "summary": "Core Assign implementation: validates ids, applies seat / dep / branch rules, records the assigned event, and (for deps) builds the DAG.",
+      "tags": [
+        "protocol",
+        "engine",
+        "assign"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/pact/engine.go:mergeLocked",
+      "type": "function",
+      "name": "mergeLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        517,
+        615
+      ],
+      "summary": "Core Merge implementation: gate / lock acquisition, dependency acceptance check, fetch-aware rebase attempt, feature branch integration, and ledger event emission.",
+      "tags": [
+        "protocol",
+        "engine",
+        "merge"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/pact/engine.go:baseBranch",
+      "type": "function",
+      "name": "baseBranch",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        621,
+        631
+      ],
+      "summary": "Returns the configured base branch implied by the events leading up to the first assign event.",
+      "tags": [
+        "protocol",
+        "engine",
+        "config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:initBaseBranch",
+      "type": "function",
+      "name": "initBaseBranch",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        633,
+        642
+      ],
+      "summary": "Initializes the base branch to the spec default (or the engine default) at init time.",
+      "tags": [
+        "protocol",
+        "engine",
+        "init"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:startLocked",
+      "type": "function",
+      "name": "startLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        654,
+        677
+      ],
+      "summary": "Marks a task as in_progress and emits the start event under the owner seat.",
+      "tags": [
+        "protocol",
+        "engine",
+        "start"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:acceptLocked",
+      "type": "function",
+      "name": "acceptLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        684,
+        701
+      ],
+      "summary": "Marks a task as accepted under the reviewer seat, and clears any pending changes-request state.",
+      "tags": [
+        "protocol",
+        "engine",
+        "accept"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:changesLocked",
+      "type": "function",
+      "name": "changesLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        708,
+        725
+      ],
+      "summary": "Records a Changes request from the reviewer back to the worker with a reason.",
+      "tags": [
+        "protocol",
+        "engine",
+        "changes"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:checkpointLocked",
+      "type": "function",
+      "name": "checkpointLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        732,
+        775
+      ],
+      "summary": "Records a checkpoint commit on the feature branch under the owner seat, switching the task state from in_progress to awaiting_review.",
+      "tags": [
+        "protocol",
+        "engine",
+        "checkpoint"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:configBaseBranchLocked",
+      "type": "function",
+      "name": "configBaseBranchLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        871,
+        891
+      ],
+      "summary": "Persists a ConfigBaseBranch override \u2014 how the engine resolves the integration branch on a fresh repo.",
+      "tags": [
+        "protocol",
+        "engine",
+        "config"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:configGateLocked",
+      "type": "function",
+      "name": "configGateLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        903,
+        923
+      ],
+      "summary": "Persists a ConfigGate override: the per-task gate command runs before checkpoint commits land on the base.",
+      "tags": [
+        "protocol",
+        "engine",
+        "config"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:GateConfig",
+      "type": "function",
+      "name": "GateConfig",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        931,
+        945
+      ],
+      "summary": "Public verb: returns the effective GateConfig (command + set / unset state).",
+      "tags": [
+        "protocol",
+        "engine",
+        "gate"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:configCriticLocked",
+      "type": "function",
+      "name": "configCriticLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        961,
+        980
+      ],
+      "summary": "Persists a ConfigCritic override identifying the per-task critic seat.",
+      "tags": [
+        "protocol",
+        "engine",
+        "config"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:CriticConfig",
+      "type": "function",
+      "name": "CriticConfig",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        986,
+        1000
+      ],
+      "summary": "Public verb: returns the effective CriticConfig (critic seat + set state).",
+      "tags": [
+        "protocol",
+        "engine",
+        "critic"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/pact/engine.go:noteLocked",
+      "type": "function",
+      "name": "noteLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        1014,
+        1037
+      ],
+      "summary": "Records a free-form note under the orchestrator seat, attached to a task; used for QA / recovery / escalation context.",
+      "tags": [
+        "protocol",
+        "engine",
+        "note"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:cancelLocked",
+      "type": "function",
+      "name": "cancelLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        1046,
+        1073
+      ],
+      "summary": "Marks a task canceled; transitions cancelable runnables to failed and opens any dependent gates.",
+      "tags": [
+        "protocol",
+        "engine",
+        "cancel"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/pact/engine.go:withdrawLocked",
+      "type": "function",
+      "name": "withdrawLocked",
+      "filePath": "internal/pact/engine.go",
+      "lineRange": [
+        1081,
+        1106
+      ],
+      "summary": "Aborts an entire feature branch: cancels every task under it and frees the integration lock.",
+      "tags": [
+        "protocol",
+        "engine",
+        "withdraw"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "function:internal/orchestrate/parallel_drain_test.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "function:internal/orchestrate/parallel_drain_test.go:TestRunParallel_DrainMergesSiblingAfterError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "class:internal/orchestrate/parallel_drain_test.go:drainFakeRunner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "function:internal/orchestrate/start_test.go:Run",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "function:internal/orchestrate/start_test.go:TestRunEmitsStartSoOwnerWorksAsInProgress",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "class:internal/orchestrate/start_test.go:startObservingRunner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:agentID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:StateProjection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:StateProjection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:withLedgerLock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:commitLedgerIfTracked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:appendAndRender",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:writeSnapshot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:initLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:addSeatLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:joinWithClientLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:splitCSV",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:assignLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:mergeLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:baseBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:initBaseBranch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:startLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:acceptLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:changesLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:checkpointLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:configBaseBranchLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:configGateLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:GateConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:GateConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:configCriticLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:CriticConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:CriticConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:noteLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:cancelLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "function:internal/pact/engine.go:withdrawLocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/parallel_drain_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/accept_no_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/add_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/assign_race_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/assign_validate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/checkpoint_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/checkpoint_order_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/client_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/config_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/dep_cancel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/deps_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/engine_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/engine.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/gateconfig_error_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/join_kind_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/merge_empty_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/merge_fetch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/merge_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/merge_state_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/pactdir_pin_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/role_gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/rules.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/seat.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/orchestrate/start_test.go",
+      "target": "file:internal/pact/util.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/gitx/branchname_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/gitx/gitcommonpath_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/gitx/gitx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/gitx/gitx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/gitx/hooks_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/gitx/worktree_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/gitx/worktree.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/lockx/lockx_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/lockx/lockx.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/paths/paths_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/paths/paths.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/pact/engine.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

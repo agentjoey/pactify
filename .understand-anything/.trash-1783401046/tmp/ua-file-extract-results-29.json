@@ -1,0 +1,797 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 20,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": ".pact/tasks/ds-core.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 29,
+      "nonEmptyLines": 23,
+      "sections": [
+        {
+          "heading": "ds-core：DataSource 抽象接口 + LocalServeSource + Context/hook（P1 地基）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 23
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/ds-wire.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 26,
+      "nonEmptyLines": 20,
+      "sections": [
+        {
+          "heading": "ds-wire：组件接 useDataSource + 写控件 capability 门控（P1 收尾）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/fe-apihygiene.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 25,
+      "nonEmptyLines": 18,
+      "sections": [
+        {
+          "heading": "fe-apihygiene：api.ts mutation 统一走 writeJSON（错误提取一致）（FE-12 子项）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "问题",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": ".pact/tasks/fe-codesplit.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 23,
+      "nonEmptyLines": 17,
+      "sections": [
+        {
+          "heading": "fe-codesplit：拆分托管 bundle（现单块 896kB，Vercel 已告警）（B / FE-11）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 12
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 17
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/fe-drilldown.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 23,
+      "nonEmptyLines": 18,
+      "sections": [
+        {
+          "heading": "fe-drilldown：托管模式任务详情（点卡片→解密事件历史）（B / FE-10）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 17
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/fe-lazycanvas.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 24,
+      "nonEmptyLines": 18,
+      "sections": [
+        {
+          "heading": "fe-lazycanvas：Canvas 视图懒加载（延续 code-split，Canvas 块不进首屏）（B / FE-11b）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 13
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 18
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/fe-lazyrelay.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 24,
+      "nonEmptyLines": 18,
+      "sections": [
+        {
+          "heading": "fe-lazyrelay：本地模式不加载 crypto-relay 块（RelaySource 懒加载）（B / FE-11c）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 13
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 18
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/fe-machines.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 26,
+      "nonEmptyLines": 20,
+      "sections": [
+        {
+          "heading": "fe-machines：托管侧「Machines」视图（多机在线+agent 清单）（M1 前端）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 14
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/fe-remote-orchestrate.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 10,
+      "nonEmptyLines": 7,
+      "sections": [
+        {
+          "heading": "fe-remote-orchestrate：托管侧远程编排 UI（选机器起 orchestrate）（M4 前端）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 2
+      }
+    },
+    {
+      "path": ".pact/tasks/finishstep-core.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 82,
+      "nonEmptyLines": 65,
+      "sections": [
+        {
+          "heading": "finishstep-core — 收尾交付步（push + 开 PR）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "要实现的文件",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "1) `internal/finish/finish.go`（新建）",
+          "level": 3,
+          "line": 9
+        },
+        {
+          "heading": "2) `internal/finish/finish_test.go`（新建）",
+          "level": 3,
+          "line": 61
+        },
+        {
+          "heading": "3) `cmd/pactify/cmd_finish.go`（新建）",
+          "level": 3,
+          "line": 64
+        },
+        {
+          "heading": "验收口径",
+          "level": 2,
+          "line": 73
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 6
+      }
+    },
+    {
+      "path": ".pact/tasks/integration-docs.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 33,
+      "nonEmptyLines": 26,
+      "sections": [
+        {
+          "heading": "Task t3 · integration-docs",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "要碰的文件",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "集成测试要求（relay_integration_test.go）",
+          "level": 2,
+          "line": 14
+        },
+        {
+          "heading": "文档要求",
+          "level": 2,
+          "line": 21
+        },
+        {
+          "heading": "验收命令",
+          "level": 2,
+          "line": 26
+        },
+        {
+          "heading": "完成方式",
+          "level": 2,
+          "line": 32
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": ".pact/tasks/liveview-step1.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 60,
+      "nonEmptyLines": 50,
+      "sections": [
+        {
+          "heading": "liveview-step1 — orchestrate emits runtime status",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标 / Goal",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "改文件 / Files",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "契约 / Contract",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "验收 / Acceptance",
+          "level": 2,
+          "line": 54
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": ".pact/tasks/liveview-step2.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 47,
+      "nonEmptyLines": 39,
+      "sections": [
+        {
+          "heading": "liveview-step2 — serve /api/orchestrate/status endpoint",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标 / Goal",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "改文件 / Files",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "契约 / Contract",
+          "level": 2,
+          "line": 16
+        },
+        {
+          "heading": "验收 / Acceptance",
+          "level": 2,
+          "line": 42
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": ".pact/tasks/liveview-step3.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 66,
+      "nonEmptyLines": 57,
+      "sections": [
+        {
+          "heading": "liveview-step3 — dashboard live orchestration view panel",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标 / Goal",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "改文件 / Files",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "契约 / Contract",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "验收 / Acceptance",
+          "level": 2,
+          "line": 60
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": ".pact/tasks/obs-runduration.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 24,
+      "nonEmptyLines": 17,
+      "sections": [
+        {
+          "heading": "obs-runduration：RUN 时长在 changes_requested（返工期）不再冻结（OBS-1）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "问题",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 15
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 19
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 5
+      }
+    },
+    {
+      "path": ".pact/tasks/p3-relay-client.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 31,
+      "nonEmptyLines": 25,
+      "sections": [
+        {
+          "heading": "relay-client：抽出框架无关的 relay 读客户端到共享包（P3 后端）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 20
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 25
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/p3-relay-source.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 30,
+      "nonEmptyLines": 24,
+      "sections": [
+        {
+          "heading": "relay-source：web/ 的 RelaySource（DataSource 的 relay 实现，只读）（P3 前端）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 6
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 19
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/pact-project.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 28,
+      "nonEmptyLines": 22,
+      "sections": [
+        {
+          "heading": "pact-project：@pactify-apps/pact-project TS 投影包 + Go parity（P2）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 7
+        },
+        {
+          "heading": "文件",
+          "level": 2,
+          "line": 17
+        },
+        {
+          "heading": "纪律",
+          "level": 2,
+          "line": 22
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 4
+      }
+    },
+    {
+      "path": ".pact/tasks/planner-apply.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 33,
+      "nonEmptyLines": 26,
+      "sections": [
+        {
+          "heading": "Task p-apply · manifest → assign",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "改文件",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "契约",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "验收（apply_test.go，临时 .pact 项目，参考 internal/pact 测试建 project + roster）",
+          "level": 2,
+          "line": 24
+        },
+        {
+          "heading": "verify",
+          "level": 2,
+          "line": 27
+        },
+        {
+          "heading": "完成方式",
+          "level": 2,
+          "line": 32
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": ".pact/tasks/planner-cmd.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 27,
+      "nonEmptyLines": 20,
+      "sections": [
+        {
+          "heading": "Task p-cmd · CLI（pactify plan / plan apply）",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "目标",
+          "level": 2,
+          "line": 5
+        },
+        {
+          "heading": "改文件",
+          "level": 2,
+          "line": 8
+        },
+        {
+          "heading": "行为",
+          "level": 2,
+          "line": 11
+        },
+        {
+          "heading": "验收（cli_test smoke，建 binary，PACT_AGENT_ID=claude）",
+          "level": 2,
+          "line": 18
+        },
+        {
+          "heading": "verify",
+          "level": 2,
+          "line": 21
+        },
+        {
+          "heading": "完成方式",
+          "level": 2,
+          "line": 26
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    }
+  ]
+}

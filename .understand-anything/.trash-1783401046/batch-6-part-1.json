@@ -1,0 +1,428 @@
+{
+  "nodes": [
+    {
+      "id": "file:cmd/pactify/cmd_orchestrate.go",
+      "type": "file",
+      "name": "cmd_orchestrate.go",
+      "filePath": "cmd/pactify/cmd_orchestrate.go",
+      "summary": "Cobra command wiring `pactify orchestrate`: the autonomous state-machine driver that launches owner/reviewer agents until work ships or escalates.",
+      "tags": [
+        "go",
+        "cli",
+        "entry-point"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_orchestrate.go:newOrchestrateCmd",
+      "type": "function",
+      "name": "newOrchestrateCmd",
+      "filePath": "cmd/pactify/cmd_orchestrate.go",
+      "lineRange": [
+        30,
+        211
+      ],
+      "summary": "Orchestrate command helper newOrchestrateCmd: builds the `pactify orchestrate` driver CLI or parses the --critic flag.",
+      "tags": [
+        "cli",
+        "orchestration",
+        "factory"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "function:cmd/pactify/cmd_orchestrate.go:newOrchestrateCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/acp_smoke_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/acprunner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/acprunner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/besteffort_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/brief_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/brief.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/cleanup_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/critic_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/critic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/decide_parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/decide_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/decide.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/defaults.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/escalate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/escalate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/fix_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/gate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/gateconfig_failclosed_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/gateconfig_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/gateconfig.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/history_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/knowledge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/knowledge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/ledger_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/ledger_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/loop_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/loop.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/parallel_drain_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/parallel.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/qa_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/qa.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/recover_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/recover.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/remote_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/remote.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/runner_idle_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/runner_idle.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/runner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/runner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/sandbox_base_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/sandbox_crash_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/sandbox_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/sandbox.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/sessionstore_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/sessionstore.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/status_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/status.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/stream_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_orchestrate.go",
+      "target": "file:internal/orchestrate/stream.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

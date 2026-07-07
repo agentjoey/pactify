@@ -1,0 +1,1830 @@
+{
+  "nodes": [
+    {
+      "id": "file:cmd/pactify/cmd_audit.go",
+      "type": "file",
+      "name": "cmd_audit.go",
+      "filePath": "cmd/pactify/cmd_audit.go",
+      "summary": "Cobra subcommands for pactify audit: log read/write, summary, prune, hook install/uninstall, and top-level grouping under the audit command tree.",
+      "tags": [
+        "cli",
+        "cobra",
+        "audit",
+        "command-tree"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit.go:newAuditInstallCmd",
+      "type": "function",
+      "name": "newAuditInstallCmd",
+      "filePath": "cmd/pactify/cmd_audit.go",
+      "lineRange": [
+        28,
+        74
+      ],
+      "summary": "newAuditInstallCmd in cmd_audit.go (47 lines). Package-internal cmd_audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit.go:newAuditUninstallCmd",
+      "type": "function",
+      "name": "newAuditUninstallCmd",
+      "filePath": "cmd/pactify/cmd_audit.go",
+      "lineRange": [
+        76,
+        101
+      ],
+      "summary": "newAuditUninstallCmd in cmd_audit.go (26 lines). Package-internal cmd_audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit.go:newAuditLogCmd",
+      "type": "function",
+      "name": "newAuditLogCmd",
+      "filePath": "cmd/pactify/cmd_audit.go",
+      "lineRange": [
+        103,
+        149
+      ],
+      "summary": "newAuditLogCmd in cmd_audit.go (47 lines). Package-internal cmd_audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit.go:newAuditSummaryCmd",
+      "type": "function",
+      "name": "newAuditSummaryCmd",
+      "filePath": "cmd/pactify/cmd_audit.go",
+      "lineRange": [
+        151,
+        181
+      ],
+      "summary": "newAuditSummaryCmd in cmd_audit.go (31 lines). Package-internal cmd_audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit.go:newAuditPruneCmd",
+      "type": "function",
+      "name": "newAuditPruneCmd",
+      "filePath": "cmd/pactify/cmd_audit.go",
+      "lineRange": [
+        183,
+        206
+      ],
+      "summary": "newAuditPruneCmd in cmd_audit.go (24 lines). Package-internal cmd_audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit.go:newAuditHookCmd",
+      "type": "function",
+      "name": "newAuditHookCmd",
+      "filePath": "cmd/pactify/cmd_audit.go",
+      "lineRange": [
+        210,
+        231
+      ],
+      "summary": "newAuditHookCmd in cmd_audit.go (22 lines). Package-internal cmd_audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cmd/pactify/cmd_audit_test.go",
+      "type": "file",
+      "name": "cmd_audit_test.go",
+      "filePath": "cmd/pactify/cmd_audit_test.go",
+      "summary": "Tests for the audit CLI surface covering hook append, malformed input, log+summary round-trip, and helper seeding/contains substring assertions.",
+      "tags": [
+        "test",
+        "cli",
+        "audit",
+        "cobra"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit_test.go:TestAuditHookAppendsAndExitsZero",
+      "type": "function",
+      "name": "TestAuditHookAppendsAndExitsZero",
+      "filePath": "cmd/pactify/cmd_audit_test.go",
+      "lineRange": [
+        11,
+        28
+      ],
+      "summary": "TestAuditHookAppendsAndExitsZero in cmd_audit_test.go (18 lines). Tests TestAuditHookAppendsAndExitsZero",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit_test.go:TestAuditHookBadInputStillExitsZero",
+      "type": "function",
+      "name": "TestAuditHookBadInputStillExitsZero",
+      "filePath": "cmd/pactify/cmd_audit_test.go",
+      "lineRange": [
+        30,
+        39
+      ],
+      "summary": "TestAuditHookBadInputStillExitsZero in cmd_audit_test.go (10 lines). Tests TestAuditHookBadInputStillExitsZero",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit_test.go:TestAuditLogAndSummary",
+      "type": "function",
+      "name": "TestAuditLogAndSummary",
+      "filePath": "cmd/pactify/cmd_audit_test.go",
+      "lineRange": [
+        41,
+        55
+      ],
+      "summary": "TestAuditLogAndSummary in cmd_audit_test.go (15 lines). Tests TestAuditLogAndSummary",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_audit_test.go:runAudit",
+      "type": "function",
+      "name": "runAudit",
+      "filePath": "cmd/pactify/cmd_audit_test.go",
+      "lineRange": [
+        64,
+        74
+      ],
+      "summary": "runAudit in cmd_audit_test.go (11 lines). Tests runAudit",
+      "tags": [
+        "go",
+        "test-function",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cmd/pactify/cmd_recipe.go",
+      "type": "file",
+      "name": "cmd_recipe.go",
+      "filePath": "cmd/pactify/cmd_recipe.go",
+      "summary": "Cobra command exposing pactify recipes: dependency-aware joining and listing of named recipe bundles.",
+      "tags": [
+        "cli",
+        "cobra",
+        "recipe",
+        "command"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_recipe.go:newRecipeCmd",
+      "type": "function",
+      "name": "newRecipeCmd",
+      "filePath": "cmd/pactify/cmd_recipe.go",
+      "lineRange": [
+        10,
+        62
+      ],
+      "summary": "newRecipeCmd in cmd_recipe.go (53 lines). Package-internal cmd_recipe.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_recipe.go:joinDeps",
+      "type": "function",
+      "name": "joinDeps",
+      "filePath": "cmd/pactify/cmd_recipe.go",
+      "lineRange": [
+        64,
+        73
+      ],
+      "summary": "joinDeps in cmd_recipe.go (10 lines). Package-internal cmd_recipe.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cmd/pactify/cmd_register.go",
+      "type": "file",
+      "name": "cmd_register.go",
+      "filePath": "cmd/pactify/cmd_register.go",
+      "summary": "Cobra commands for managing the project registry: register, unregister, and list registered pactify projects.",
+      "tags": [
+        "cli",
+        "cobra",
+        "registry",
+        "command"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_register.go:newRegisterCmd",
+      "type": "function",
+      "name": "newRegisterCmd",
+      "filePath": "cmd/pactify/cmd_register.go",
+      "lineRange": [
+        10,
+        25
+      ],
+      "summary": "newRegisterCmd in cmd_register.go (16 lines). Package-internal cmd_register.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_register.go:newUnregisterCmd",
+      "type": "function",
+      "name": "newUnregisterCmd",
+      "filePath": "cmd/pactify/cmd_register.go",
+      "lineRange": [
+        27,
+        39
+      ],
+      "summary": "newUnregisterCmd in cmd_register.go (13 lines). Package-internal cmd_register.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_register.go:newListCmd",
+      "type": "function",
+      "name": "newListCmd",
+      "filePath": "cmd/pactify/cmd_register.go",
+      "lineRange": [
+        41,
+        53
+      ],
+      "summary": "newListCmd in cmd_register.go (13 lines). Package-internal cmd_register.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cmd/pactify/cmd_serve.go",
+      "type": "file",
+      "name": "cmd_serve.go",
+      "filePath": "cmd/pactify/cmd_serve.go",
+      "summary": "Top-level cobra entry that wires together every internal/serve package into a single serve command with full route registry.",
+      "tags": [
+        "cli",
+        "cobra",
+        "serve",
+        "wiring"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:cmd/pactify/cmd_serve.go:newServeCmd",
+      "type": "function",
+      "name": "newServeCmd",
+      "filePath": "cmd/pactify/cmd_serve.go",
+      "lineRange": [
+        16,
+        80
+      ],
+      "summary": "newServeCmd in cmd_serve.go (65 lines). Package-internal cmd_serve.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "pactify"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/audit/audit.go",
+      "type": "file",
+      "name": "audit.go",
+      "filePath": "internal/audit/audit.go",
+      "summary": "Append-only JSONL audit store bucketed by project and UTC day, with Query/Summarize/Prune over PACTIFY_HOME.",
+      "tags": [
+        "audit",
+        "storage",
+        "jsonl",
+        "policy-free"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/audit/audit.go:home",
+      "type": "function",
+      "name": "home",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        37,
+        46
+      ],
+      "summary": "home in audit.go (10 lines). Package-internal audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit.go:storePath",
+      "type": "function",
+      "name": "storePath",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        58,
+        68
+      ],
+      "summary": "storePath in audit.go (11 lines). Package-internal audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit.go:Append",
+      "type": "function",
+      "name": "Append",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        72,
+        93
+      ],
+      "summary": "Append in audit.go (22 lines). Exported audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit.go:match",
+      "type": "function",
+      "name": "match",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        103,
+        129
+      ],
+      "summary": "match in audit.go (27 lines). Package-internal audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit.go:Query",
+      "type": "function",
+      "name": "Query",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        133,
+        174
+      ],
+      "summary": "Query in audit.go (42 lines). Exported audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/audit/audit.go:Summarize",
+      "type": "function",
+      "name": "Summarize",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        185,
+        194
+      ],
+      "summary": "Summarize in audit.go (10 lines). Exported audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit.go:Prune",
+      "type": "function",
+      "name": "Prune",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        199,
+        240
+      ],
+      "summary": "Prune in audit.go (42 lines). Exported audit.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/audit/audit.go:Record",
+      "type": "class",
+      "name": "Record",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        21,
+        33
+      ],
+      "summary": "Go type Record in audit.go (13 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/audit/audit.go:Filter",
+      "type": "class",
+      "name": "Filter",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        98,
+        101
+      ],
+      "summary": "Go type Filter in audit.go (4 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/audit/audit.go:Summary",
+      "type": "class",
+      "name": "Summary",
+      "filePath": "internal/audit/audit.go",
+      "lineRange": [
+        177,
+        182
+      ],
+      "summary": "Go type Summary in audit.go (6 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/audit/audit_test.go",
+      "type": "file",
+      "name": "audit_test.go",
+      "filePath": "internal/audit/audit_test.go",
+      "summary": "Tests for audit Append/Query/Summarize/Prune: day-bucketing, torn-line skip, ordering, and prune-by-date semantics.",
+      "tags": [
+        "test",
+        "audit",
+        "storage"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/audit/audit_test.go:TestAppendAndStorePath",
+      "type": "function",
+      "name": "TestAppendAndStorePath",
+      "filePath": "internal/audit/audit_test.go",
+      "lineRange": [
+        10,
+        30
+      ],
+      "summary": "TestAppendAndStorePath in audit_test.go (21 lines). Tests TestAppendAndStorePath",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit_test.go:TestAppendDateBucketsByUTC",
+      "type": "function",
+      "name": "TestAppendDateBucketsByUTC",
+      "filePath": "internal/audit/audit_test.go",
+      "lineRange": [
+        32,
+        42
+      ],
+      "summary": "TestAppendDateBucketsByUTC in audit_test.go (11 lines). Tests TestAppendDateBucketsByUTC",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit_test.go:TestQueryFiltersAndOrder",
+      "type": "function",
+      "name": "TestQueryFiltersAndOrder",
+      "filePath": "internal/audit/audit_test.go",
+      "lineRange": [
+        51,
+        74
+      ],
+      "summary": "TestQueryFiltersAndOrder in audit_test.go (24 lines). Tests TestQueryFiltersAndOrder",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit_test.go:TestQuerySkipsTornLines",
+      "type": "function",
+      "name": "TestQuerySkipsTornLines",
+      "filePath": "internal/audit/audit_test.go",
+      "lineRange": [
+        76,
+        92
+      ],
+      "summary": "TestQuerySkipsTornLines in audit_test.go (17 lines). Tests TestQuerySkipsTornLines",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit_test.go:TestSummarize",
+      "type": "function",
+      "name": "TestSummarize",
+      "filePath": "internal/audit/audit_test.go",
+      "lineRange": [
+        94,
+        104
+      ],
+      "summary": "TestSummarize in audit_test.go (11 lines). Tests TestSummarize",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/audit_test.go:TestPruneRemovesOldDayFiles",
+      "type": "function",
+      "name": "TestPruneRemovesOldDayFiles",
+      "filePath": "internal/audit/audit_test.go",
+      "lineRange": [
+        108,
+        128
+      ],
+      "summary": "TestPruneRemovesOldDayFiles in audit_test.go (21 lines). Tests TestPruneRemovesOldDayFiles",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/audit/hook.go",
+      "type": "file",
+      "name": "hook.go",
+      "filePath": "internal/audit/hook.go",
+      "summary": "Hook glue: parses Claude/opencode PreToolUse stdin into audit Records with secret-redacting summary and env attribution.",
+      "tags": [
+        "hook",
+        "audit",
+        "redaction",
+        "attribution"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/audit/hook.go:EnvFromOS",
+      "type": "function",
+      "name": "EnvFromOS",
+      "filePath": "internal/audit/hook.go",
+      "lineRange": [
+        17,
+        23
+      ],
+      "summary": "EnvFromOS in hook.go (7 lines). Exported hook.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/hook.go:FromHook",
+      "type": "function",
+      "name": "FromHook",
+      "filePath": "internal/audit/hook.go",
+      "lineRange": [
+        37,
+        63
+      ],
+      "summary": "FromHook in hook.go (27 lines). Exported hook.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/hook.go:mapTool",
+      "type": "function",
+      "name": "mapTool",
+      "filePath": "internal/audit/hook.go",
+      "lineRange": [
+        69,
+        93
+      ],
+      "summary": "mapTool in hook.go (25 lines). Package-internal hook.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/audit/hook.go:Env",
+      "type": "class",
+      "name": "Env",
+      "filePath": "internal/audit/hook.go",
+      "lineRange": [
+        14,
+        14
+      ],
+      "summary": "Go type Env in hook.go (1 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/audit/hook.go:hookInput",
+      "type": "class",
+      "name": "hookInput",
+      "filePath": "internal/audit/hook.go",
+      "lineRange": [
+        27,
+        32
+      ],
+      "summary": "Go type hookInput in hook.go (6 lines).",
+      "tags": [
+        "go",
+        "type-definition",
+        "package-internal",
+        "audit"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "function:cmd/pactify/cmd_audit.go:newAuditInstallCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "function:cmd/pactify/cmd_audit.go:newAuditUninstallCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "function:cmd/pactify/cmd_audit.go:newAuditLogCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "function:cmd/pactify/cmd_audit.go:newAuditSummaryCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "function:cmd/pactify/cmd_audit.go:newAuditPruneCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "function:cmd/pactify/cmd_audit.go:newAuditHookCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "file:internal/audit/audit_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "file:internal/audit/audit.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "file:internal/audit/hook_redact_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "file:internal/audit/hook_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "file:internal/audit/hook.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "file:internal/audit/install_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "file:internal/audit/install.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit.go",
+      "target": "file:cmd/pactify/cmd_audit_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "function:cmd/pactify/cmd_audit_test.go:TestAuditHookAppendsAndExitsZero",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "function:cmd/pactify/cmd_audit_test.go:TestAuditHookAppendsAndExitsZero",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "function:cmd/pactify/cmd_audit_test.go:TestAuditHookBadInputStillExitsZero",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "function:cmd/pactify/cmd_audit_test.go:TestAuditHookBadInputStillExitsZero",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "function:cmd/pactify/cmd_audit_test.go:TestAuditLogAndSummary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "function:cmd/pactify/cmd_audit_test.go:TestAuditLogAndSummary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "function:cmd/pactify/cmd_audit_test.go:runAudit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "file:internal/audit/audit_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "file:internal/audit/audit.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "file:internal/audit/hook_redact_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "file:internal/audit/hook_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "file:internal/audit/hook.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "file:internal/audit/install_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_audit_test.go",
+      "target": "file:internal/audit/install.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_recipe.go",
+      "target": "function:cmd/pactify/cmd_recipe.go:newRecipeCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_recipe.go",
+      "target": "function:cmd/pactify/cmd_recipe.go:joinDeps",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_recipe.go",
+      "target": "file:internal/recipe/recipe_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_recipe.go",
+      "target": "file:internal/recipe/recipe.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_register.go",
+      "target": "function:cmd/pactify/cmd_register.go:newRegisterCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_register.go",
+      "target": "function:cmd/pactify/cmd_register.go:newUnregisterCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_register.go",
+      "target": "function:cmd/pactify/cmd_register.go:newListCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_register.go",
+      "target": "file:internal/registry/registry_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_register.go",
+      "target": "file:internal/registry/registry.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "function:cmd/pactify/cmd_serve.go:newServeCmd",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/doctor/doctor_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/doctor/doctor.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/doctor/vendor_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/doctor/vendor.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/registry/registry_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/registry/registry.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/acting_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/agents_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/agents.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/api_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/api.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/audit_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/audit.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/author_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/author.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/dto_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/dto.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/embed_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/embed.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/eventsrest_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/eventsrest.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/fixture_export_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/fsbrowse_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/fsbrowse.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/manifests_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/manifests.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/orchestrate_drive_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/orchestrate_guard_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/orchestrate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/orchestrate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/plan_apply_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/plan_generate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/plan_generate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/plan_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/plan.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/provision_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/provision.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/recipes_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/recipes.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/registry_rename_watch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/registry_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/registry.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/relay_integration_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/relay_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/relay.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/remotechannel.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/schedule_spawn_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/seats_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/seats.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/security_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/security.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/serve.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/sessions_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/sessions.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/setup_apply_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/setup_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/setup.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/sse_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/sse.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/statememo_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/stats.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/stint_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/stint.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/stream_resume_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/stream_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/stream.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/timeline_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/timeline.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/watch_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/watch.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/wiring_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/wiring.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/worktrees_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cmd/pactify/cmd_serve.go",
+      "target": "file:internal/serve/worktrees.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:home",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:storePath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:Append",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:Append",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:match",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:Query",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:Query",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:Summarize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:Summarize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:Prune",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "function:internal/audit/audit.go:Prune",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "class:internal/audit/audit.go:Record",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "class:internal/audit/audit.go:Record",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "class:internal/audit/audit.go:Filter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "class:internal/audit/audit.go:Filter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "class:internal/audit/audit.go:Summary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "class:internal/audit/audit.go:Summary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit.go",
+      "target": "file:internal/audit/audit_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestAppendAndStorePath",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestAppendAndStorePath",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestAppendDateBucketsByUTC",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestAppendDateBucketsByUTC",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestQueryFiltersAndOrder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestQueryFiltersAndOrder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestQuerySkipsTornLines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestQuerySkipsTornLines",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestSummarize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestSummarize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestPruneRemovesOldDayFiles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/audit_test.go",
+      "target": "function:internal/audit/audit_test.go:TestPruneRemovesOldDayFiles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "function:internal/audit/hook.go:EnvFromOS",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "function:internal/audit/hook.go:EnvFromOS",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "function:internal/audit/hook.go:FromHook",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "function:internal/audit/hook.go:FromHook",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "function:internal/audit/hook.go:mapTool",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "class:internal/audit/hook.go:Env",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "class:internal/audit/hook.go:Env",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "class:internal/audit/hook.go:hookInput",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "file:internal/audit/hook_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/audit/hook.go",
+      "target": "file:internal/audit/hook_redact_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

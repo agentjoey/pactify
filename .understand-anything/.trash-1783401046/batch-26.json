@@ -1,0 +1,144 @@
+{
+  "nodes": [
+    {
+      "id": "config:.goreleaser.yaml",
+      "type": "config",
+      "name": ".goreleaser.yaml",
+      "filePath": ".goreleaser.yaml",
+      "summary": "GoReleaser v2 pipeline producing static pactify binaries for darwin/linux amd64/arm64 from ./cmd/pactify with SHA-256 checksums and GitHub release publishing.",
+      "tags": ["release", "build-system", "deployment", "configuration", "goreleaser"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:.mcp.json",
+      "type": "config",
+      "name": ".mcp.json",
+      "filePath": ".mcp.json",
+      "summary": "MCP server registry declaring a `pact` server that invokes the `pactify mcp` command with PACT_AGENT_ID=claude for Claude Code integration.",
+      "tags": ["mcp", "configuration", "model-context-protocol", "claude-code"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:AGENTS.md",
+      "type": "document",
+      "name": "AGENTS.md",
+      "filePath": "AGENTS.md",
+      "summary": "Agent context for the `opencode-worker` seat covering session bootstrap, project overview, tech stack, and the pact MCP integration block managed by pactify.",
+      "tags": ["documentation", "agent-context", "pact-protocol", "opencode"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:CLAUDE.md",
+      "type": "document",
+      "name": "CLAUDE.md",
+      "filePath": "CLAUDE.md",
+      "summary": "Agent context for the `claude` seat (orchestrator + reviewer) with current sprint/version summary, key implementation details, and the pact MCP integration block.",
+      "tags": ["documentation", "agent-context", "pact-protocol", "claude-code"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:CONTRIBUTING.md",
+      "type": "document",
+      "name": "CONTRIBUTING.md",
+      "filePath": "CONTRIBUTING.md",
+      "summary": "Canonical GitHub-flow contribution guide for the Pactify repo: branch prefixes, conventional commits, merge-commit strategy, TDD discipline, and branch protection config.",
+      "tags": ["documentation", "git-workflow", "contributing", "development"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:GEMINI.md",
+      "type": "document",
+      "name": "GEMINI.md",
+      "filePath": "GEMINI.md",
+      "summary": "Agent context for the `gemini-worker` seat mirroring the opencode-worker context with session bootstrap, project overview, and the pact MCP integration block.",
+      "tags": ["documentation", "agent-context", "pact-protocol", "gemini"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "README.md",
+      "summary": "Top-level project overview describing the pact protocol, install methods (curl|sh and go install), quickstart, Claude Code one-click install, and links to deeper docs.",
+      "tags": ["documentation", "entry-point", "overview", "install"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:go.mod",
+      "type": "config",
+      "name": "go.mod",
+      "filePath": "go.mod",
+      "summary": "Go module manifest for github.com/agentjoey/pactify (Go 1.26.1) declaring core deps: cobra, gorilla/websocket, modelcontextprotocol/go-sdk, fsnotify, pelletier/go-toml, and x/crypto.",
+      "tags": ["go-module", "configuration", "dependencies", "build-system"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:go.sum",
+      "type": "config",
+      "name": "go.sum",
+      "filePath": "go.sum",
+      "summary": "Go module checksum database pinning exact hashes for the direct and indirect dependencies declared in go.mod to enable reproducible builds.",
+      "tags": ["go-module", "checksums", "configuration", "supply-chain"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:install.sh",
+      "type": "file",
+      "name": "install.sh",
+      "filePath": "install.sh",
+      "summary": "POSIX `curl|sh` installer that downloads the platform-specific pactify tarball + SHA-256 checksums.txt from GitHub releases, verifies, extracts, and installs the binary to ~/.local/bin or /usr/local/bin (re-signs ad-hoc on macOS).",
+      "tags": ["installer", "shell-script", "deployment", "release"],
+      "complexity": "moderate",
+      "languageNotes": "POSIX sh (no bashisms), with a `PACTIFY_SOURCE_ONLY` early-return so test harnesses can source the helpers without running main."
+    },
+    {
+      "id": "config:opencode.json",
+      "type": "config",
+      "name": "opencode.json",
+      "filePath": "opencode.json",
+      "summary": "OpenCode agent configuration declaring the `pact` MCP server as a local command (`pactify mcp`) with PACT_AGENT_ID=opencode-worker.",
+      "tags": ["configuration", "opencode", "mcp", "agent-config"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:install.sh:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "install.sh",
+      "lineRange": [31, 81],
+      "summary": "Installer entry point: resolves the target version, fetches platform archive + checksums.txt, verifies SHA-256, extracts the pactify binary, picks an install dir, and on macOS re-signs ad-hoc + clears quarantine attrs.",
+      "tags": ["installer-entry", "runtime", "cli", "verification"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:install.sh",
+      "target": "function:install.sh:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "document:README.md",
+      "target": "file:install.sh",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:.goreleaser.yaml",
+      "target": "config:go.mod",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:install.sh",
+      "target": "config:.goreleaser.yaml",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

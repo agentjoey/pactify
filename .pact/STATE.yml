@@ -4,7 +4,13 @@ agents:
   - { id: claude, roles: [orchestrator, reviewer] }
   - { id: opencode-worker, roles: [worker] }
   - { id: gemini-worker, roles: [worker] }
+  - { id: oc-finish, roles: [] }
+  - { id: oc-sessions, roles: [] }
+  - { id: oc-recipe, roles: [worker] }
+  - { id: oc-recipeserve, roles: [worker] }
+  - { id: oc-acfg, roles: [worker] }
   - { id: kimi-worker, roles: [worker] }
+  - { id: claude-worker, roles: [worker] }
 features:
   - id: planner
     branch: feat-planner
@@ -439,3 +445,13 @@ features:
         spec: .pact/tasks/rp-e2e-docs.md
         evidence: 全仓门绿:go build/vet/test ./... + -race · vitest 526(+5 badge/fixing) · tsc -b · dist rebuilt · bats 111. web:Task 类型 +reviewers/quorum/accepts + OrchestrateStatus +fix_round/fix_max;TaskCard quorum 徽标 {accepts}/{quorum} ✓(单 reviewer 不变);LiveOrchestrate 修复中 n/max 指示。docs/architecture.md 加 review-runtime 小节;CLAUDE.md Version 补包2。
         deps: [rp-quorum, rp-fix-loop]
+  - id: cockpit
+    branch: feat/acp-hardening
+    status: in_progress
+    tasks:
+      - id: acp-hardening
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/acp-hardening.md
+        evidence: acprunner.go pins @agentclientprotocol/claude-agent-acp@0.57.0 / @zed-industries/codex-acp@0.16.0 / @google/gemini-cli@0.49.0; acp.go filteredEnviron drops PACT_RELAY_TOKEN+PACTIFY_*. build ✓, new tests pass, both pkgs green, gofmt clean. commit 8e0d3bc

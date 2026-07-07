@@ -1,0 +1,109 @@
+{
+  "nodes": [
+    {
+      "id": "document:docs/specs/pact-protocol.md",
+      "type": "document",
+      "name": "pact-protocol.md",
+      "filePath": "docs/specs/pact-protocol.md",
+      "summary": "Frozen normative specification of the Pact Protocol v1 — defines the append-only event log format, the `.pact/` file contract, task and feature state machines, the two invariants (no self-accept, all-tasks-accepted-before-merge), seat identity, command verbs, and additive addenda for task dependencies and join-client provenance.",
+      "tags": ["documentation", "specification", "protocol", "normative", "core"],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:docs/specs/agentworks-wire.md",
+      "type": "document",
+      "name": "agentworks-wire.md",
+      "filePath": "docs/specs/agentworks-wire.md",
+      "summary": "Source-of-truth draft spec for the shared cloud layer used by Pactify and Linx: frozen v1 wire envelope (OperationalHeader/RunState/EncryptedBlob), account key derivation, envelope encryption, auth handshake, relay-blind pairing, golden vectors for cross-language contract, and the Go port checklist for `internal/cloudauth`.",
+      "tags": ["documentation", "specification", "wire-protocol", "encryption", "frozen"],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:docs/specs/account-sso.md",
+      "type": "document",
+      "name": "account-sso.md",
+      "filePath": "docs/specs/account-sso.md",
+      "summary": "Draft spec adding Google and GitHub SSO as an added identity layer to Pactify's zero-knowledge account model — the master-secret CLI path stays first-class, OAuth authenticates, and a separate mechanism supplies decryption keys; covers Prisma additions, relay OAuth endpoints, web sign-in/profile pages, and link/escrow flows in `internal/cloudauth`.",
+      "tags": ["documentation", "specification", "sso", "authentication", "draft"],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:docs/specs/coordination-authority.md",
+      "type": "document",
+      "name": "coordination-authority.md",
+      "filePath": "docs/specs/coordination-authority.md",
+      "summary": "Draft spec addressing two dogfood incidents — make the integration point (base branch) and the coordination target (project) into explicit, named, lockable resources arbitrated by the `serve` broker; introduces Layer A (project addressing by name) and Layer B (base as single-writer integration lane) with phased P0–P3 acceptance.",
+      "tags": ["documentation", "specification", "coordination", "concurrency", "draft"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:docs/specs/driver-modernization.md",
+      "type": "document",
+      "name": "driver-modernization.md",
+      "filePath": "docs/specs/driver-modernization.md",
+      "summary": "Approved package-1 spec modernizing Pactify's orchestrate driver across five workstreams: ACP transport (new `internal/acp` Go client + `AcpRunner`), session continuation, git-native knowledge layer in `.pact/`, doctor vendor preflight checks, and reliability statistics — preserving the two invariants with `CmdRunner` default and ACP opt-in.",
+      "tags": ["documentation", "specification", "driver", "orchestration", "approved"],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:docs/specs/review-runtime-deepening.md",
+      "type": "document",
+      "name": "review-runtime-deepening.md",
+      "filePath": "docs/specs/review-runtime-deepening.md",
+      "summary": "Approved package-2 spec deepening review and runtime: fix-until-green self-healing loop, quorum reviews, critic pre-scoring, QA-agent gates, ledger snapshot with incremental replay, dynamic seats, and scheduled orchestrate runs — all opt-in to keep protocol invariants and default single-reviewer behavior unchanged.",
+      "tags": ["documentation", "specification", "review", "runtime", "approved"],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:docs/specs/account-sso.md",
+      "target": "document:docs/specs/agentworks-wire.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/specs/account-sso.md",
+      "target": "document:docs/specs/pact-protocol.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/specs/review-runtime-deepening.md",
+      "target": "document:docs/specs/driver-modernization.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/specs/driver-modernization.md",
+      "target": "document:docs/specs/pact-protocol.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/specs/coordination-authority.md",
+      "target": "document:docs/specs/pact-protocol.md",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/specs/driver-modernization.md",
+      "target": "document:docs/specs/coordination-authority.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:docs/specs/agentworks-wire.md",
+      "target": "document:docs/specs/pact-protocol.md",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

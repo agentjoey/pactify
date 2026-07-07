@@ -1,0 +1,1296 @@
+{
+  "nodes": [
+    {
+      "id": "file:cloud/relay/src/auth.ts",
+      "type": "file",
+      "name": "auth.ts",
+      "filePath": "cloud/relay/src/auth.ts",
+      "summary": "Provides ed25519 challenge verification, HMAC-based token issue/verify, and the full authenticate() pipeline used by every relay API route.",
+      "tags": [
+        "auth",
+        "cryptography",
+        "token",
+        "ed25519",
+        "security"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/auth.ts:timingSafeEqualStr",
+      "type": "function",
+      "name": "timingSafeEqualStr",
+      "filePath": "cloud/relay/src/auth.ts",
+      "lineRange": [
+        15,
+        20
+      ],
+      "summary": "Constant-time string comparison used to compare MACs without leaking timing information.",
+      "tags": [
+        "crypto",
+        "comparison",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/auth.ts:verifyChallenge",
+      "type": "function",
+      "name": "verifyChallenge",
+      "filePath": "cloud/relay/src/auth.ts",
+      "lineRange": [
+        23,
+        37
+      ],
+      "summary": "Verifies an ed25519 signature over a server-issued challenge against the caller's stored public key.",
+      "tags": [
+        "crypto",
+        "ed25519",
+        "verification"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/auth.ts:issueToken",
+      "type": "function",
+      "name": "issueToken",
+      "filePath": "cloud/relay/src/auth.ts",
+      "lineRange": [
+        49,
+        53
+      ],
+      "summary": "Issues an HMAC-signed token containing accountId and expiry for stateless bearer auth.",
+      "tags": [
+        "token",
+        "hmac",
+        "issuance"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/auth.ts:verifyToken",
+      "type": "function",
+      "name": "verifyToken",
+      "filePath": "cloud/relay/src/auth.ts",
+      "lineRange": [
+        56,
+        78
+      ],
+      "summary": "Parses, MAC-verifies, and reads accountId/expiry from a bearer token, rejecting expired or tampered tokens.",
+      "tags": [
+        "token",
+        "hmac",
+        "verification"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/auth.ts:authenticate",
+      "type": "function",
+      "name": "authenticate",
+      "filePath": "cloud/relay/src/auth.ts",
+      "lineRange": [
+        81,
+        95
+      ],
+      "summary": "Orchestrates the full handshake: verify challenge, upsert the account, then issue a fresh token.",
+      "tags": [
+        "auth",
+        "pipeline",
+        "orchestrator"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/relay/src/broadcast.ts",
+      "type": "file",
+      "name": "broadcast.ts",
+      "filePath": "cloud/relay/src/broadcast.ts",
+      "summary": "Tiny factory that wraps a Socket.IO server into an emit(accountId, payload) helper so handlers can broadcast without holding an io reference.",
+      "tags": [
+        "socket-io",
+        "broadcaster",
+        "event-bus",
+        "factory"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/broadcast.ts:createBroadcaster",
+      "type": "function",
+      "name": "createBroadcaster",
+      "filePath": "cloud/relay/src/broadcast.ts",
+      "lineRange": [
+        16,
+        26
+      ],
+      "summary": "Returns an emit function scoped to an account's socket room; tolerates a null io server for tests.",
+      "tags": [
+        "factory",
+        "socket-io",
+        "broadcast"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay/src/db.ts",
+      "type": "file",
+      "name": "db.ts",
+      "filePath": "cloud/relay/src/db.ts",
+      "summary": "Database factory: builds a PGlite-backed Prisma client for tests/dev, or a real Postgres-backed Prisma client for production.",
+      "tags": [
+        "database",
+        "prisma",
+        "factory",
+        "pglite",
+        "postgres"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/db.ts:createPgliteDb",
+      "type": "function",
+      "name": "createPgliteDb",
+      "filePath": "cloud/relay/src/db.ts",
+      "lineRange": [
+        18,
+        24
+      ],
+      "summary": "Creates an in-memory PGlite Prisma client seeded with the project schema; used by tests and local dev.",
+      "tags": [
+        "database",
+        "pglite",
+        "prisma",
+        "test-fixture"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/db.ts:createPostgresDb",
+      "type": "function",
+      "name": "createPostgresDb",
+      "filePath": "cloud/relay/src/db.ts",
+      "lineRange": [
+        34,
+        38
+      ],
+      "summary": "Creates a real Postgres-backed Prisma client from a connection string.",
+      "tags": [
+        "database",
+        "postgres",
+        "prisma"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay/src/log.ts",
+      "type": "file",
+      "name": "log.ts",
+      "filePath": "cloud/relay/src/log.ts",
+      "summary": "Leveled JSON logger (debug/info/warn/error) with a stderr sink and a noop variant for code paths and tests that need a safe default logger.",
+      "tags": [
+        "logging",
+        "json",
+        "observability",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/log.ts:createLogger",
+      "type": "function",
+      "name": "createLogger",
+      "filePath": "cloud/relay/src/log.ts",
+      "lineRange": [
+        99,
+        129
+      ],
+      "summary": "Builds a logger at the resolved level, with a stable name and a configurable stderr sink.",
+      "tags": [
+        "logger",
+        "factory",
+        "json"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/log.ts:noopLogger",
+      "type": "function",
+      "name": "noopLogger",
+      "filePath": "cloud/relay/src/log.ts",
+      "lineRange": [
+        132,
+        141
+      ],
+      "summary": "Returns a logger with no-op methods; used in tests and as a safe default.",
+      "tags": [
+        "logger",
+        "noop",
+        "test-fixture"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay/src/machines.ts",
+      "type": "file",
+      "name": "machines.ts",
+      "filePath": "cloud/relay/src/machines.ts",
+      "summary": "Machine-row helpers: normalize Prisma rows into the wire-friendly MachineInfo shape, list machines per account, and sweep expired machines.",
+      "tags": [
+        "database",
+        "machine",
+        "prisma",
+        "data-model"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/machines.ts:toMachineInfo",
+      "type": "function",
+      "name": "toMachineInfo",
+      "filePath": "cloud/relay/src/machines.ts",
+      "lineRange": [
+        12,
+        27
+      ],
+      "summary": "Converts a Prisma machine row (with JSON agentKinds/workdirs and BigInt timestamps) into the public MachineInfo shape.",
+      "tags": [
+        "data-model",
+        "serialization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/machines.ts:listMachines",
+      "type": "function",
+      "name": "listMachines",
+      "filePath": "cloud/relay/src/machines.ts",
+      "lineRange": [
+        48,
+        62
+      ],
+      "summary": "Returns MachineInfo rows for an account, optionally including TTL info derived from lastSeenAt.",
+      "tags": [
+        "query",
+        "machine"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/machines.ts:sweepExpiredMachines",
+      "type": "function",
+      "name": "sweepExpiredMachines",
+      "filePath": "cloud/relay/src/machines.ts",
+      "lineRange": [
+        83,
+        112
+      ],
+      "summary": "Deletes machines past their TTL that have no live runs referencing them.",
+      "tags": [
+        "gc",
+        "machine",
+        "sweep"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/relay/src/metrics.ts",
+      "type": "file",
+      "name": "metrics.ts",
+      "filePath": "cloud/relay/src/metrics.ts",
+      "summary": "In-process Prometheus-compatible metrics registry: counters, gauges, summaries with stable label sets and text-format rendering for /metrics.",
+      "tags": [
+        "metrics",
+        "prometheus",
+        "observability",
+        "registry"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:cloud/relay/src/metrics.ts:isValidMetricName",
+      "type": "function",
+      "name": "isValidMetricName",
+      "filePath": "cloud/relay/src/metrics.ts",
+      "summary": "Validates a metric name against the Prometheus naming regex.",
+      "tags": [
+        "validation",
+        "utility"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        270,
+        272
+      ]
+    },
+    {
+      "id": "function:cloud/relay/src/metrics.ts:createMetrics",
+      "type": "function",
+      "name": "createMetrics",
+      "filePath": "cloud/relay/src/metrics.ts",
+      "summary": "Factory that returns a fresh MetricsRegistry instance.",
+      "tags": [
+        "factory",
+        "metrics"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        275,
+        277
+      ]
+    },
+    {
+      "id": "class:cloud/relay/src/metrics.ts:MetricsRegistry",
+      "type": "class",
+      "name": "MetricsRegistry",
+      "filePath": "cloud/relay/src/metrics.ts",
+      "summary": "In-memory registry of counters, gauges, and summaries with Prometheus text-format rendering.",
+      "tags": [
+        "metrics",
+        "registry",
+        "prometheus"
+      ],
+      "complexity": "complex",
+      "lineRange": [
+        167,
+        264
+      ]
+    },
+    {
+      "id": "file:cloud/relay/src/pact.ts",
+      "type": "file",
+      "name": "pact.ts",
+      "filePath": "cloud/relay/src/pact.ts",
+      "summary": "Pact ingest and read API: persists incoming pact events, maintains a per-project head pointer, and serves project listings for the dashboard.",
+      "tags": [
+        "pact",
+        "project",
+        "ingest",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/pact.ts:ingestPactEvent",
+      "type": "function",
+      "name": "ingestPactEvent",
+      "filePath": "cloud/relay/src/pact.ts",
+      "lineRange": [
+        53,
+        107
+      ],
+      "summary": "Persists a PactIngestRequest, creating the project on first sight and updating the project's lastEventAt head pointer.",
+      "tags": [
+        "ingest",
+        "pact",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/pact.ts:getProject",
+      "type": "function",
+      "name": "getProject",
+      "filePath": "cloud/relay/src/pact.ts",
+      "lineRange": [
+        110,
+        112
+      ],
+      "summary": "Fetches a single project by id.",
+      "tags": [
+        "query",
+        "project"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/pact.ts:listProjects",
+      "type": "function",
+      "name": "listProjects",
+      "filePath": "cloud/relay/src/pact.ts",
+      "lineRange": [
+        115,
+        120
+      ],
+      "summary": "Lists every project for the given account, ordered by most recent activity.",
+      "tags": [
+        "query",
+        "project"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/pact.ts:getProjectEvents",
+      "type": "function",
+      "name": "getProjectEvents",
+      "filePath": "cloud/relay/src/pact.ts",
+      "lineRange": [
+        133,
+        145
+      ],
+      "summary": "Returns pact events for a project with cursor-based pagination via afterSeq.",
+      "tags": [
+        "query",
+        "pact",
+        "pagination"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/relay/src/pair.ts",
+      "type": "file",
+      "name": "pair.ts",
+      "filePath": "cloud/relay/src/pair.ts",
+      "summary": "In-memory pairing code store with TTL-based GC; the web/CLI claim a device by entering the short code before its expiry.",
+      "tags": [
+        "pairing",
+        "in-memory",
+        "ttl",
+        "store"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:cloud/relay/src/pair.ts:PairStore",
+      "type": "class",
+      "name": "PairStore",
+      "filePath": "cloud/relay/src/pair.ts",
+      "lineRange": [
+        25,
+        115
+      ],
+      "summary": "In-memory map of pairing codes with init/get/ready/complete/status/exists/gc operations; codes auto-expire on every read.",
+      "tags": [
+        "pairing",
+        "in-memory",
+        "store",
+        "ttl"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/relay/src/push.ts",
+      "type": "file",
+      "name": "push.ts",
+      "filePath": "cloud/relay/src/push.ts",
+      "summary": "Web Push subscription management and fan-out delivery: VAPID sender setup, subscribe/unsubscribe, dead-subscription pruning, and run/pact notification delivery.",
+      "tags": [
+        "push-notification",
+        "web-push",
+        "vapid",
+        "delivery"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:notifyTypeForHeader",
+      "type": "function",
+      "name": "notifyTypeForHeader",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        65,
+        76
+      ],
+      "summary": "Maps a (prevState, eventKind, nextState) transition to a push notification type.",
+      "tags": [
+        "notification",
+        "transition"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:cloud/relay/src/push.ts:PushSendError",
+      "type": "class",
+      "name": "PushSendError",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        89,
+        97
+      ],
+      "summary": "Error thrown when a single push send fails; carries the status code for dead-subscription detection.",
+      "tags": [
+        "error",
+        "push"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:isDeadSubscriptionStatus",
+      "type": "function",
+      "name": "isDeadSubscriptionStatus",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        100,
+        102
+      ],
+      "summary": "Returns true for HTTP statuses that indicate the push subscription is permanently gone.",
+      "tags": [
+        "push",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:loadVapidConfig",
+      "type": "function",
+      "name": "loadVapidConfig",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        110,
+        116
+      ],
+      "summary": "Loads VAPID subject/public/private from environment variables, returning null if not configured.",
+      "tags": [
+        "vapid",
+        "config"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:createWebPushSender",
+      "type": "function",
+      "name": "createWebPushSender",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        124,
+        142
+      ],
+      "summary": "Builds a web-push sender closure configured with the VAPID keys; returns null if not configured.",
+      "tags": [
+        "vapid",
+        "factory",
+        "web-push"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:subscribePush",
+      "type": "function",
+      "name": "subscribePush",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        151,
+        171
+      ],
+      "summary": "Upserts a push subscription row for the given account and subscription.",
+      "tags": [
+        "subscribe",
+        "push",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:unsubscribePush",
+      "type": "function",
+      "name": "unsubscribePush",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        178,
+        185
+      ],
+      "summary": "Removes a push subscription by endpoint for the given account.",
+      "tags": [
+        "unsubscribe",
+        "push",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:listPushSubscriptions",
+      "type": "function",
+      "name": "listPushSubscriptions",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        192,
+        205
+      ],
+      "summary": "Returns all push subscription rows for the given account, normalized to a public shape.",
+      "tags": [
+        "query",
+        "push"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:deliverRunNotification",
+      "type": "function",
+      "name": "deliverRunNotification",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        225,
+        233
+      ],
+      "summary": "Builds a run-state notification payload and fans it out to the account's push subscriptions.",
+      "tags": [
+        "notification",
+        "push",
+        "fan-out"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:deliverPactNotification",
+      "type": "function",
+      "name": "deliverPactNotification",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        247,
+        255
+      ],
+      "summary": "Builds a pact notification payload and fans it out to the account's push subscriptions.",
+      "tags": [
+        "notification",
+        "push",
+        "fan-out"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/push.ts:fanOutPush",
+      "type": "function",
+      "name": "fanOutPush",
+      "filePath": "cloud/relay/src/push.ts",
+      "lineRange": [
+        260,
+        287
+      ],
+      "summary": "Internal fan-out loop: sends to each subscription, counts successes, and prunes any 404/410 subscriptions.",
+      "tags": [
+        "fan-out",
+        "push",
+        "prune"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:cloud/relay/src/queries.ts",
+      "type": "file",
+      "name": "queries.ts",
+      "filePath": "cloud/relay/src/queries.ts",
+      "summary": "Read-side helpers that return summarized runs (list, search, pending approvals, events-after-seq) consumed by the HTTP and socket layers.",
+      "tags": [
+        "query",
+        "read-model",
+        "run-summary",
+        "search"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/queries.ts:toRunSummary",
+      "type": "function",
+      "name": "toRunSummary",
+      "filePath": "cloud/relay/src/queries.ts",
+      "lineRange": [
+        25,
+        44
+      ],
+      "summary": "Normalizes a Prisma run row (BigInt timestamps, agentKind enum) into the public RunSummary shape.",
+      "tags": [
+        "serialization",
+        "data-model"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/queries.ts:listRuns",
+      "type": "function",
+      "name": "listRuns",
+      "filePath": "cloud/relay/src/queries.ts",
+      "lineRange": [
+        51,
+        65
+      ],
+      "summary": "Returns RunSummary rows for an account, ordered by most recently active, with a since-N-days filter.",
+      "tags": [
+        "query",
+        "run"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/queries.ts:searchRuns",
+      "type": "function",
+      "name": "searchRuns",
+      "filePath": "cloud/relay/src/queries.ts",
+      "lineRange": [
+        111,
+        157
+      ],
+      "summary": "Cursor-paginated run search keyed on lastActiveAt; used by the dashboard history view.",
+      "tags": [
+        "query",
+        "search",
+        "pagination"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:cloud/relay/src/queries.ts:listPendingApprovals",
+      "type": "function",
+      "name": "listPendingApprovals",
+      "filePath": "cloud/relay/src/queries.ts",
+      "lineRange": [
+        160,
+        169
+      ],
+      "summary": "Returns runs awaiting human approval for an account.",
+      "tags": [
+        "query",
+        "approval"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:cloud/relay/src/queries.ts:getRunEventsAfter",
+      "type": "function",
+      "name": "getRunEventsAfter",
+      "filePath": "cloud/relay/src/queries.ts",
+      "lineRange": [
+        172,
+        181
+      ],
+      "summary": "Returns events for a run after the given seq; used by socket reconnect replay.",
+      "tags": [
+        "query",
+        "event-replay"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:timingSafeEqualStr",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:verifyChallenge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:issueToken",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:verifyToken",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:authenticate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:timingSafeEqualStr",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:verifyChallenge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:issueToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:verifyToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/auth.ts",
+      "target": "function:cloud/relay/src/auth.ts:authenticate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/broadcast.ts",
+      "target": "file:cloud/relay/src/broadcast.ts:createBroadcaster",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/broadcast.ts",
+      "target": "function:cloud/relay/src/broadcast.ts:createBroadcaster",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/db.ts",
+      "target": "function:cloud/relay/src/db.ts:createPgliteDb",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/db.ts",
+      "target": "function:cloud/relay/src/db.ts:createPgliteDb",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/db.ts",
+      "target": "function:cloud/relay/src/db.ts:createPostgresDb",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/db.ts",
+      "target": "function:cloud/relay/src/db.ts:createPostgresDb",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/log.ts",
+      "target": "function:cloud/relay/src/log.ts:createLogger",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/log.ts",
+      "target": "function:cloud/relay/src/log.ts:createLogger",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/log.ts",
+      "target": "function:cloud/relay/src/log.ts:noopLogger",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/log.ts",
+      "target": "function:cloud/relay/src/log.ts:noopLogger",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/machines.ts",
+      "target": "function:cloud/relay/src/machines.ts:toMachineInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/machines.ts",
+      "target": "function:cloud/relay/src/machines.ts:toMachineInfo",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/machines.ts",
+      "target": "function:cloud/relay/src/machines.ts:listMachines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/machines.ts",
+      "target": "function:cloud/relay/src/machines.ts:listMachines",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/machines.ts",
+      "target": "function:cloud/relay/src/machines.ts:sweepExpiredMachines",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/machines.ts",
+      "target": "function:cloud/relay/src/machines.ts:sweepExpiredMachines",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/metrics.ts",
+      "target": "function:cloud/relay/src/metrics.ts:isValidMetricName",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/metrics.ts",
+      "target": "function:cloud/relay/src/metrics.ts:isValidMetricName",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/metrics.ts",
+      "target": "function:cloud/relay/src/metrics.ts:createMetrics",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/metrics.ts",
+      "target": "function:cloud/relay/src/metrics.ts:createMetrics",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/metrics.ts",
+      "target": "class:cloud/relay/src/metrics.ts:MetricsRegistry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/metrics.ts",
+      "target": "class:cloud/relay/src/metrics.ts:MetricsRegistry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/pact.ts",
+      "target": "function:cloud/relay/src/pact.ts:ingestPactEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/pact.ts",
+      "target": "function:cloud/relay/src/pact.ts:ingestPactEvent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/pact.ts",
+      "target": "function:cloud/relay/src/pact.ts:getProject",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/pact.ts",
+      "target": "function:cloud/relay/src/pact.ts:getProject",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/pact.ts",
+      "target": "function:cloud/relay/src/pact.ts:listProjects",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/pact.ts",
+      "target": "function:cloud/relay/src/pact.ts:listProjects",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/pact.ts",
+      "target": "function:cloud/relay/src/pact.ts:getProjectEvents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/pact.ts",
+      "target": "function:cloud/relay/src/pact.ts:getProjectEvents",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/pair.ts",
+      "target": "class:cloud/relay/src/pair.ts:PairStore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/pair.ts",
+      "target": "class:cloud/relay/src/pair.ts:PairStore",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:notifyTypeForHeader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:notifyTypeForHeader",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "class:cloud/relay/src/push.ts:PushSendError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "class:cloud/relay/src/push.ts:PushSendError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:isDeadSubscriptionStatus",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:isDeadSubscriptionStatus",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:loadVapidConfig",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:loadVapidConfig",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:createWebPushSender",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:createWebPushSender",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:subscribePush",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:subscribePush",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:unsubscribePush",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:unsubscribePush",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:listPushSubscriptions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:listPushSubscriptions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:deliverRunNotification",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:deliverRunNotification",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:deliverPactNotification",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:deliverPactNotification",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:fanOutPush",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "function:cloud/relay/src/push.ts:fanOutPush",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:toRunSummary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:toRunSummary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:listRuns",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:listRuns",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:searchRuns",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:searchRuns",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:listPendingApprovals",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:listPendingApprovals",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:getRunEventsAfter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "function:cloud/relay/src/queries.ts:getRunEventsAfter",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:cloud/relay/src/push.ts",
+      "target": "file:cloud/relay/src/log.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/relay/src/queries.ts",
+      "target": "file:cloud/relay/src/retention.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

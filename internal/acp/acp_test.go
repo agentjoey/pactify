@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -324,5 +325,30 @@ func TestContextCancelUnblocksCall(t *testing.T) {
 	_, err := c.Prompt(cctx, sid, "go")
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Prompt err = %v, want context.Canceled", err)
+	}
+}
+
+func TestFilteredEnvironDropsPactifySecrets(t *testing.T) {
+	t.Setenv("PACT_RELAY_TOKEN", "super-secret")
+	t.Setenv("PACTIFY_HOME", "/some/home")
+	t.Setenv("PATH", "/usr/bin:/bin")
+
+	has := func(key string) bool {
+		for _, e := range filteredEnviron() {
+			if strings.HasPrefix(e, key+"=") {
+				return true
+			}
+		}
+		return false
+	}
+
+	if has("PACT_RELAY_TOKEN") {
+		t.Error("PACT_RELAY_TOKEN should be filtered out")
+	}
+	if has("PACTIFY_HOME") {
+		t.Error("PACTIFY_HOME should be filtered out")
+	}
+	if !has("PATH") {
+		t.Error("PATH should be preserved")
 	}
 }

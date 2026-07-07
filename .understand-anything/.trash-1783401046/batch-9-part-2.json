@@ -1,0 +1,1709 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/audit/hook_redact_test.go",
+      "type": "file",
+      "name": "hook_redact_test.go",
+      "filePath": "internal/audit/hook_redact_test.go",
+      "summary": "Tests that redact() masks URL credentials, env-var assignments, and well-known token shapes while leaving benign commands alone.",
+      "tags": [
+        "test",
+        "redaction",
+        "secret-masking"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/audit/hook_redact_test.go:TestRedactMasksBroadSecretShapes",
+      "type": "function",
+      "name": "TestRedactMasksBroadSecretShapes",
+      "filePath": "internal/audit/hook_redact_test.go",
+      "lineRange": [
+        8,
+        81
+      ],
+      "summary": "TestRedactMasksBroadSecretShapes in hook_redact_test.go (74 lines). Tests TestRedactMasksBroadSecretShapes",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/audit/hook_redact_test.go:TestRedactLeavesBenignCommandsAlone",
+      "type": "function",
+      "name": "TestRedactLeavesBenignCommandsAlone",
+      "filePath": "internal/audit/hook_redact_test.go",
+      "lineRange": [
+        83,
+        96
+      ],
+      "summary": "TestRedactLeavesBenignCommandsAlone in hook_redact_test.go (14 lines). Tests TestRedactLeavesBenignCommandsAlone",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/audit/hook_test.go",
+      "type": "file",
+      "name": "hook_test.go",
+      "filePath": "internal/audit/hook_test.go",
+      "summary": "Tests for FromHook: bash/fs.read/fs.write/MCP passthrough, project-from-cwd fallback, unmapped tool no-op, and redaction truncation.",
+      "tags": [
+        "test",
+        "hook",
+        "audit"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/audit/hook_test.go:TestFromHookClaudeBash",
+      "type": "function",
+      "name": "TestFromHookClaudeBash",
+      "filePath": "internal/audit/hook_test.go",
+      "lineRange": [
+        11,
+        30
+      ],
+      "summary": "TestFromHookClaudeBash in hook_test.go (20 lines). Tests TestFromHookClaudeBash",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/hook_test.go:TestFromHookClaudeFileTools",
+      "type": "function",
+      "name": "TestFromHookClaudeFileTools",
+      "filePath": "internal/audit/hook_test.go",
+      "lineRange": [
+        32,
+        41
+      ],
+      "summary": "TestFromHookClaudeFileTools in hook_test.go (10 lines). Tests TestFromHookClaudeFileTools",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/hook_test.go:TestFromHookProjectFallsBackToCwdBase",
+      "type": "function",
+      "name": "TestFromHookProjectFallsBackToCwdBase",
+      "filePath": "internal/audit/hook_test.go",
+      "lineRange": [
+        43,
+        48
+      ],
+      "summary": "TestFromHookProjectFallsBackToCwdBase in hook_test.go (6 lines). Tests TestFromHookProjectFallsBackToCwdBase",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/hook_test.go:TestFromHookMCPPassthrough",
+      "type": "function",
+      "name": "TestFromHookMCPPassthrough",
+      "filePath": "internal/audit/hook_test.go",
+      "lineRange": [
+        50,
+        56
+      ],
+      "summary": "TestFromHookMCPPassthrough in hook_test.go (7 lines). Tests TestFromHookMCPPassthrough",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/hook_test.go:TestFromHookUnmappedReturnsFalse",
+      "type": "function",
+      "name": "TestFromHookUnmappedReturnsFalse",
+      "filePath": "internal/audit/hook_test.go",
+      "lineRange": [
+        58,
+        65
+      ],
+      "summary": "TestFromHookUnmappedReturnsFalse in hook_test.go (8 lines). Tests TestFromHookUnmappedReturnsFalse",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/hook_test.go:TestRedactionTruncatesAndMasksSecrets",
+      "type": "function",
+      "name": "TestRedactionTruncatesAndMasksSecrets",
+      "filePath": "internal/audit/hook_test.go",
+      "lineRange": [
+        67,
+        79
+      ],
+      "summary": "TestRedactionTruncatesAndMasksSecrets in hook_test.go (13 lines). Tests TestRedactionTruncatesAndMasksSecrets",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/audit/install.go",
+      "type": "file",
+      "name": "install.go",
+      "filePath": "internal/audit/install.go",
+      "summary": "Installs/uninstalls pactify audit hook into Claude-code settings.json and writes the opencode plugin shim, idempotently.",
+      "tags": [
+        "install",
+        "hook",
+        "settings",
+        "plugin"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/audit/install.go:Install",
+      "type": "function",
+      "name": "Install",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        54,
+        67
+      ],
+      "summary": "Install in install.go (14 lines). Exported install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install.go:Uninstall",
+      "type": "function",
+      "name": "Uninstall",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        70,
+        81
+      ],
+      "summary": "Uninstall in install.go (12 lines). Exported install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install.go:Detect",
+      "type": "function",
+      "name": "Detect",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        92,
+        105
+      ],
+      "summary": "Detect in install.go (14 lines). Exported install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install.go:installClaudeStyle",
+      "type": "function",
+      "name": "installClaudeStyle",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        107,
+        118
+      ],
+      "summary": "installClaudeStyle in install.go (12 lines). Package-internal install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install.go:uninstallClaudeStyle",
+      "type": "function",
+      "name": "uninstallClaudeStyle",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        120,
+        129
+      ],
+      "summary": "uninstallClaudeStyle in install.go (10 lines). Package-internal install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install.go:dropAuditEntries",
+      "type": "function",
+      "name": "dropAuditEntries",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        132,
+        141
+      ],
+      "summary": "dropAuditEntries in install.go (10 lines). Package-internal install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install.go:isAuditEntry",
+      "type": "function",
+      "name": "isAuditEntry",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        143,
+        158
+      ],
+      "summary": "isAuditEntry in install.go (16 lines). Package-internal install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install.go:readSettings",
+      "type": "function",
+      "name": "readSettings",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        162,
+        172
+      ],
+      "summary": "readSettings in install.go (11 lines). Package-internal install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install.go:writeSettings",
+      "type": "function",
+      "name": "writeSettings",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        174,
+        183
+      ],
+      "summary": "writeSettings in install.go (10 lines). Package-internal install.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/audit/install.go:Status",
+      "type": "class",
+      "name": "Status",
+      "filePath": "internal/audit/install.go",
+      "lineRange": [
+        84,
+        87
+      ],
+      "summary": "Go type Status in install.go (4 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/audit/install_test.go",
+      "type": "file",
+      "name": "install_test.go",
+      "filePath": "internal/audit/install_test.go",
+      "summary": "Tests for hook Install/Uninstall idempotency, preservation of existing hooks, and opencode plugin writing.",
+      "tags": [
+        "test",
+        "install",
+        "hook"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/audit/install_test.go:TestInstallClaudeCodeIdempotent",
+      "type": "function",
+      "name": "TestInstallClaudeCodeIdempotent",
+      "filePath": "internal/audit/install_test.go",
+      "lineRange": [
+        11,
+        40
+      ],
+      "summary": "TestInstallClaudeCodeIdempotent in install_test.go (30 lines). Tests TestInstallClaudeCodeIdempotent",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/audit/install_test.go:TestInstallPreservesExistingHooks",
+      "type": "function",
+      "name": "TestInstallPreservesExistingHooks",
+      "filePath": "internal/audit/install_test.go",
+      "lineRange": [
+        42,
+        61
+      ],
+      "summary": "TestInstallPreservesExistingHooks in install_test.go (20 lines). Tests TestInstallPreservesExistingHooks",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install_test.go:TestUninstallRemovesEntry",
+      "type": "function",
+      "name": "TestUninstallRemovesEntry",
+      "filePath": "internal/audit/install_test.go",
+      "lineRange": [
+        63,
+        73
+      ],
+      "summary": "TestUninstallRemovesEntry in install_test.go (11 lines). Tests TestUninstallRemovesEntry",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install_test.go:TestDetect",
+      "type": "function",
+      "name": "TestDetect",
+      "filePath": "internal/audit/install_test.go",
+      "lineRange": [
+        75,
+        93
+      ],
+      "summary": "TestDetect in install_test.go (19 lines). Tests TestDetect",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/audit/install_test.go:TestInstallOpencodeWritesPlugin",
+      "type": "function",
+      "name": "TestInstallOpencodeWritesPlugin",
+      "filePath": "internal/audit/install_test.go",
+      "lineRange": [
+        95,
+        124
+      ],
+      "summary": "TestInstallOpencodeWritesPlugin in install_test.go (30 lines). Tests TestInstallOpencodeWritesPlugin",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "audit"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/doctor/vendor_test.go",
+      "type": "file",
+      "name": "vendor_test.go",
+      "filePath": "internal/doctor/vendor_test.go",
+      "summary": "Vendor-check tests covering binary detection, exec-bit, auth, transport classification, and skip-non-headless-kinds behavior.",
+      "tags": [
+        "test",
+        "doctor",
+        "vendor",
+        "auth"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/doctor/vendor_test.go:mkFile",
+      "type": "function",
+      "name": "mkFile",
+      "filePath": "internal/doctor/vendor_test.go",
+      "lineRange": [
+        20,
+        29
+      ],
+      "summary": "mkFile in vendor_test.go (10 lines). Tests mkFile",
+      "tags": [
+        "go",
+        "test-function",
+        "doctor"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/doctor/vendor_test.go:TestVendorChecks_Binary",
+      "type": "function",
+      "name": "TestVendorChecks_Binary",
+      "filePath": "internal/doctor/vendor_test.go",
+      "lineRange": [
+        40,
+        81
+      ],
+      "summary": "TestVendorChecks_Binary in vendor_test.go (42 lines). Tests TestVendorChecks_Binary",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "doctor"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/doctor/vendor_test.go:TestLookInPath_ExecBit",
+      "type": "function",
+      "name": "TestLookInPath_ExecBit",
+      "filePath": "internal/doctor/vendor_test.go",
+      "lineRange": [
+        84,
+        100
+      ],
+      "summary": "TestLookInPath_ExecBit in vendor_test.go (17 lines). Tests TestLookInPath_ExecBit",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "doctor"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/doctor/vendor_test.go:TestVendorChecks_Auth",
+      "type": "function",
+      "name": "TestVendorChecks_Auth",
+      "filePath": "internal/doctor/vendor_test.go",
+      "lineRange": [
+        102,
+        159
+      ],
+      "summary": "TestVendorChecks_Auth in vendor_test.go (58 lines). Tests TestVendorChecks_Auth",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "doctor"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/doctor/vendor_test.go:TestVendorChecks_EmptyCredFileIsAbsent",
+      "type": "function",
+      "name": "TestVendorChecks_EmptyCredFileIsAbsent",
+      "filePath": "internal/doctor/vendor_test.go",
+      "lineRange": [
+        162,
+        171
+      ],
+      "summary": "TestVendorChecks_EmptyCredFileIsAbsent in vendor_test.go (10 lines). Tests TestVendorChecks_EmptyCredFileIsAbsent",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "doctor"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/doctor/vendor_test.go:TestVendorChecks_TransportClassification",
+      "type": "function",
+      "name": "TestVendorChecks_TransportClassification",
+      "filePath": "internal/doctor/vendor_test.go",
+      "lineRange": [
+        173,
+        197
+      ],
+      "summary": "TestVendorChecks_TransportClassification in vendor_test.go (25 lines). Tests TestVendorChecks_TransportClassification",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "doctor"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/doctor/vendor_test.go:TestVendorChecks_SkipsNonHeadlessKinds",
+      "type": "function",
+      "name": "TestVendorChecks_SkipsNonHeadlessKinds",
+      "filePath": "internal/doctor/vendor_test.go",
+      "lineRange": [
+        200,
+        209
+      ],
+      "summary": "TestVendorChecks_SkipsNonHeadlessKinds in vendor_test.go (10 lines). Tests TestVendorChecks_SkipsNonHeadlessKinds",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "doctor"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/recipe/recipe.go",
+      "type": "file",
+      "name": "recipe.go",
+      "filePath": "internal/recipe/recipe.go",
+      "summary": "Recipe model and loaders: Names() lists; Get() loads a named recipe; Expand() clones tasks with goal substitution and deps preserved as independent slices.",
+      "tags": [
+        "recipe",
+        "model",
+        "expansion"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/recipe/recipe.go:Get",
+      "type": "function",
+      "name": "Get",
+      "filePath": "internal/recipe/recipe.go",
+      "lineRange": [
+        50,
+        53
+      ],
+      "summary": "Get in recipe.go (4 lines). Exported recipe.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/recipe/recipe.go:Names",
+      "type": "function",
+      "name": "Names",
+      "filePath": "internal/recipe/recipe.go",
+      "lineRange": [
+        55,
+        62
+      ],
+      "summary": "Names in recipe.go (8 lines). Exported recipe.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/recipe/recipe.go:Expand",
+      "type": "function",
+      "name": "Expand",
+      "filePath": "internal/recipe/recipe.go",
+      "lineRange": [
+        64,
+        79
+      ],
+      "summary": "Expand in recipe.go (16 lines). Exported recipe.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/recipe/recipe.go:Task",
+      "type": "class",
+      "name": "Task",
+      "filePath": "internal/recipe/recipe.go",
+      "lineRange": [
+        9,
+        13
+      ],
+      "summary": "Go type Task in recipe.go (5 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/recipe/recipe.go:Recipe",
+      "type": "class",
+      "name": "Recipe",
+      "filePath": "internal/recipe/recipe.go",
+      "lineRange": [
+        15,
+        19
+      ],
+      "summary": "Go type Recipe in recipe.go (5 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/recipe/recipe.go:ExpandedTask",
+      "type": "class",
+      "name": "ExpandedTask",
+      "filePath": "internal/recipe/recipe.go",
+      "lineRange": [
+        21,
+        25
+      ],
+      "summary": "Go type ExpandedTask in recipe.go (5 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/recipe/recipe_test.go",
+      "type": "file",
+      "name": "recipe_test.go",
+      "filePath": "internal/recipe/recipe_test.go",
+      "summary": "Tests for recipe Names/Get/Expand: directory loading, goal substitution, and independent dep slices after expansion.",
+      "tags": [
+        "test",
+        "recipe",
+        "expansion"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/recipe/recipe_test.go:TestNames",
+      "type": "function",
+      "name": "TestNames",
+      "filePath": "internal/recipe/recipe_test.go",
+      "lineRange": [
+        8,
+        19
+      ],
+      "summary": "TestNames in recipe_test.go (12 lines). Tests TestNames",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/recipe/recipe_test.go:TestGet",
+      "type": "function",
+      "name": "TestGet",
+      "filePath": "internal/recipe/recipe_test.go",
+      "lineRange": [
+        21,
+        40
+      ],
+      "summary": "TestGet in recipe_test.go (20 lines). Tests TestGet",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/recipe/recipe_test.go:TestGetReturnsRecipeWithTasks",
+      "type": "function",
+      "name": "TestGetReturnsRecipeWithTasks",
+      "filePath": "internal/recipe/recipe_test.go",
+      "lineRange": [
+        42,
+        59
+      ],
+      "summary": "TestGetReturnsRecipeWithTasks in recipe_test.go (18 lines). Tests TestGetReturnsRecipeWithTasks",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/recipe/recipe_test.go:TestExpand",
+      "type": "function",
+      "name": "TestExpand",
+      "filePath": "internal/recipe/recipe_test.go",
+      "lineRange": [
+        61,
+        127
+      ],
+      "summary": "TestExpand in recipe_test.go (67 lines). Tests TestExpand",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/recipe/recipe_test.go:TestExpandSubstitutesGoal",
+      "type": "function",
+      "name": "TestExpandSubstitutesGoal",
+      "filePath": "internal/recipe/recipe_test.go",
+      "lineRange": [
+        129,
+        145
+      ],
+      "summary": "TestExpandSubstitutesGoal in recipe_test.go (17 lines). Tests TestExpandSubstitutesGoal",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/recipe/recipe_test.go:TestExpandPreservesDeps",
+      "type": "function",
+      "name": "TestExpandPreservesDeps",
+      "filePath": "internal/recipe/recipe_test.go",
+      "lineRange": [
+        147,
+        171
+      ],
+      "summary": "TestExpandPreservesDeps in recipe_test.go (25 lines). Tests TestExpandPreservesDeps",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/recipe/recipe_test.go:TestExpandDepsAreIndependentSlices",
+      "type": "function",
+      "name": "TestExpandDepsAreIndependentSlices",
+      "filePath": "internal/recipe/recipe_test.go",
+      "lineRange": [
+        173,
+        194
+      ],
+      "summary": "TestExpandDepsAreIndependentSlices in recipe_test.go (22 lines). Tests TestExpandDepsAreIndependentSlices",
+      "tags": [
+        "go",
+        "test-function",
+        "exported",
+        "recipe"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:internal/registry/registry.go",
+      "type": "file",
+      "name": "registry.go",
+      "filePath": "internal/registry/registry.go",
+      "summary": "Project registry CRUD on PACTIFY_HOME/projects.json: Slug, Load, Save, Add, Remove, Rename with group metadata and persistent paths.",
+      "tags": [
+        "registry",
+        "persistence",
+        "project"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/registry/registry.go:Slug",
+      "type": "function",
+      "name": "Slug",
+      "filePath": "internal/registry/registry.go",
+      "lineRange": [
+        34,
+        38
+      ],
+      "summary": "Slug in registry.go (5 lines). Exported registry.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/registry/registry.go:Load",
+      "type": "function",
+      "name": "Load",
+      "filePath": "internal/registry/registry.go",
+      "lineRange": [
+        41,
+        54
+      ],
+      "summary": "Load in registry.go (14 lines). Exported registry.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/registry/registry.go:Save",
+      "type": "function",
+      "name": "Save",
+      "filePath": "internal/registry/registry.go",
+      "lineRange": [
+        57,
+        66
+      ],
+      "summary": "Save in registry.go (10 lines). Exported registry.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/registry/registry.go:Add",
+      "type": "function",
+      "name": "Add",
+      "filePath": "internal/registry/registry.go",
+      "lineRange": [
+        69,
+        88
+      ],
+      "summary": "Add in registry.go (20 lines). Exported registry.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/registry/registry.go:Remove",
+      "type": "function",
+      "name": "Remove",
+      "filePath": "internal/registry/registry.go",
+      "lineRange": [
+        91,
+        100
+      ],
+      "summary": "Remove in registry.go (10 lines). Exported registry.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/registry/registry.go:Rename",
+      "type": "function",
+      "name": "Rename",
+      "filePath": "internal/registry/registry.go",
+      "lineRange": [
+        105,
+        127
+      ],
+      "summary": "Rename in registry.go (23 lines). Exported registry.go function.",
+      "tags": [
+        "go",
+        "go-function",
+        "exported",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/registry/registry.go:Project",
+      "type": "class",
+      "name": "Project",
+      "filePath": "internal/registry/registry.go",
+      "lineRange": [
+        13,
+        17
+      ],
+      "summary": "Go type Project in registry.go (5 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/registry/registry.go:Registry",
+      "type": "class",
+      "name": "Registry",
+      "filePath": "internal/registry/registry.go",
+      "lineRange": [
+        19,
+        21
+      ],
+      "summary": "Go type Registry in registry.go (3 lines). Exported.",
+      "tags": [
+        "go",
+        "type-definition",
+        "exported",
+        "registry"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/audit/hook_redact_test.go",
+      "target": "function:internal/audit/hook_redact_test.go:TestRedactMasksBroadSecretShapes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook_redact_test.go",
+      "target": "function:internal/audit/hook_redact_test.go:TestRedactMasksBroadSecretShapes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook_redact_test.go",
+      "target": "function:internal/audit/hook_redact_test.go:TestRedactLeavesBenignCommandsAlone",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook_redact_test.go",
+      "target": "function:internal/audit/hook_redact_test.go:TestRedactLeavesBenignCommandsAlone",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookClaudeBash",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookClaudeBash",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookClaudeFileTools",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookClaudeFileTools",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookProjectFallsBackToCwdBase",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookProjectFallsBackToCwdBase",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookMCPPassthrough",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookMCPPassthrough",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookUnmappedReturnsFalse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestFromHookUnmappedReturnsFalse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestRedactionTruncatesAndMasksSecrets",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/hook_test.go",
+      "target": "function:internal/audit/hook_test.go:TestRedactionTruncatesAndMasksSecrets",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:Install",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:Install",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:Uninstall",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:Uninstall",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:Detect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:Detect",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:installClaudeStyle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:uninstallClaudeStyle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:dropAuditEntries",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:isAuditEntry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:readSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "function:internal/audit/install.go:writeSettings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "class:internal/audit/install.go:Status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "class:internal/audit/install.go:Status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install.go",
+      "target": "file:internal/audit/install_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestInstallClaudeCodeIdempotent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestInstallClaudeCodeIdempotent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestInstallPreservesExistingHooks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestInstallPreservesExistingHooks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestUninstallRemovesEntry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestUninstallRemovesEntry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestDetect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestDetect",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestInstallOpencodeWritesPlugin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/audit/install_test.go",
+      "target": "function:internal/audit/install_test.go:TestInstallOpencodeWritesPlugin",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:mkFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_Binary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_Binary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestLookInPath_ExecBit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestLookInPath_ExecBit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_Auth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_Auth",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_EmptyCredFileIsAbsent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_EmptyCredFileIsAbsent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_TransportClassification",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_TransportClassification",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_SkipsNonHeadlessKinds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/doctor/vendor_test.go",
+      "target": "function:internal/doctor/vendor_test.go:TestVendorChecks_SkipsNonHeadlessKinds",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "function:internal/recipe/recipe.go:Get",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "function:internal/recipe/recipe.go:Get",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "function:internal/recipe/recipe.go:Names",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "function:internal/recipe/recipe.go:Names",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "function:internal/recipe/recipe.go:Expand",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "function:internal/recipe/recipe.go:Expand",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "class:internal/recipe/recipe.go:Task",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "class:internal/recipe/recipe.go:Task",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "class:internal/recipe/recipe.go:Recipe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "class:internal/recipe/recipe.go:Recipe",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "class:internal/recipe/recipe.go:ExpandedTask",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "class:internal/recipe/recipe.go:ExpandedTask",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe.go",
+      "target": "file:internal/recipe/recipe_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestNames",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestNames",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestGet",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestGet",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestGetReturnsRecipeWithTasks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestGetReturnsRecipeWithTasks",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestExpand",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestExpand",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestExpandSubstitutesGoal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestExpandSubstitutesGoal",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestExpandPreservesDeps",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestExpandPreservesDeps",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestExpandDepsAreIndependentSlices",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/recipe/recipe_test.go",
+      "target": "function:internal/recipe/recipe_test.go:TestExpandDepsAreIndependentSlices",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Slug",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Slug",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Load",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Load",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Save",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Save",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Add",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Add",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Remove",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Remove",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Rename",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "function:internal/registry/registry.go:Rename",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "class:internal/registry/registry.go:Project",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "class:internal/registry/registry.go:Project",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "class:internal/registry/registry.go:Registry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "class:internal/registry/registry.go:Registry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/registry/registry.go",
+      "target": "file:internal/registry/registry_test.go",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

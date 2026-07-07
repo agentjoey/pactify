@@ -1,0 +1,4778 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 23,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "cloud/relay/src/auth.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 95,
+      "nonEmptyLines": 88,
+      "functions": [
+        {
+          "name": "timingSafeEqualStr",
+          "startLine": 15,
+          "endLine": 20,
+          "params": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "name": "verifyChallenge",
+          "startLine": 23,
+          "endLine": 37,
+          "params": [
+            "publicKeyHex",
+            "challenge",
+            "signatureHex"
+          ]
+        },
+        {
+          "name": "macOf",
+          "startLine": 44,
+          "endLine": 46,
+          "params": [
+            "secret",
+            "body"
+          ]
+        },
+        {
+          "name": "issueToken",
+          "startLine": 49,
+          "endLine": 53,
+          "params": [
+            "secret",
+            "accountId",
+            "ttlMs",
+            "now"
+          ]
+        },
+        {
+          "name": "verifyToken",
+          "startLine": 56,
+          "endLine": 78,
+          "params": [
+            "secret",
+            "token",
+            "now"
+          ]
+        },
+        {
+          "name": "authenticate",
+          "startLine": 81,
+          "endLine": 95,
+          "params": [
+            "db",
+            "secret",
+            "input",
+            "ttlMs",
+            "now"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "timingSafeEqualStr",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "verifyChallenge",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "issueToken",
+          "line": 49,
+          "isDefault": false
+        },
+        {
+          "name": "verifyToken",
+          "line": 56,
+          "isDefault": false
+        },
+        {
+          "name": "authenticate",
+          "line": 81,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "timingSafeEqualStr",
+          "callee": "Buffer.from",
+          "lineNumber": 16
+        },
+        {
+          "caller": "timingSafeEqualStr",
+          "callee": "Buffer.from",
+          "lineNumber": 17
+        },
+        {
+          "caller": "timingSafeEqualStr",
+          "callee": "timingSafeEqual",
+          "lineNumber": 19
+        },
+        {
+          "caller": "verifyChallenge",
+          "callee": "ed25519.verify",
+          "lineNumber": 29
+        },
+        {
+          "caller": "verifyChallenge",
+          "callee": "hexToBytes",
+          "lineNumber": 30
+        },
+        {
+          "caller": "verifyChallenge",
+          "callee": "utf8ToBytes",
+          "lineNumber": 31
+        },
+        {
+          "caller": "verifyChallenge",
+          "callee": "hexToBytes",
+          "lineNumber": 32
+        },
+        {
+          "caller": "macOf",
+          "callee": "base64urlnopad.encode",
+          "lineNumber": 45
+        },
+        {
+          "caller": "macOf",
+          "callee": "hmac",
+          "lineNumber": 45
+        },
+        {
+          "caller": "macOf",
+          "callee": "utf8ToBytes",
+          "lineNumber": 45
+        },
+        {
+          "caller": "macOf",
+          "callee": "utf8ToBytes",
+          "lineNumber": 45
+        },
+        {
+          "caller": "issueToken",
+          "callee": "base64urlnopad.encode",
+          "lineNumber": 51
+        },
+        {
+          "caller": "issueToken",
+          "callee": "utf8ToBytes",
+          "lineNumber": 51
+        },
+        {
+          "caller": "issueToken",
+          "callee": "JSON.stringify",
+          "lineNumber": 51
+        },
+        {
+          "caller": "issueToken",
+          "callee": "macOf",
+          "lineNumber": 52
+        },
+        {
+          "caller": "verifyToken",
+          "callee": "token.indexOf",
+          "lineNumber": 61
+        },
+        {
+          "caller": "verifyToken",
+          "callee": "token.slice",
+          "lineNumber": 63
+        },
+        {
+          "caller": "verifyToken",
+          "callee": "token.slice",
+          "lineNumber": 64
+        },
+        {
+          "caller": "verifyToken",
+          "callee": "macOf",
+          "lineNumber": 65
+        },
+        {
+          "caller": "verifyToken",
+          "callee": "timingSafeEqualStr",
+          "lineNumber": 67
+        },
+        {
+          "caller": "verifyToken",
+          "callee": "JSON.parse",
+          "lineNumber": 69
+        },
+        {
+          "caller": "verifyToken",
+          "callee": "new TextDecoder().decode",
+          "lineNumber": 70
+        },
+        {
+          "caller": "verifyToken",
+          "callee": "base64urlnopad.decode",
+          "lineNumber": 70
+        },
+        {
+          "caller": "authenticate",
+          "callee": "verifyChallenge",
+          "lineNumber": 88
+        },
+        {
+          "caller": "authenticate",
+          "callee": "db.account.upsert",
+          "lineNumber": 89
+        },
+        {
+          "caller": "authenticate",
+          "callee": "issueToken",
+          "lineNumber": 94
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/broadcast.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 26,
+      "nonEmptyLines": 24,
+      "functions": [
+        {
+          "name": "createBroadcaster",
+          "startLine": 16,
+          "endLine": 26,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "createBroadcaster",
+          "line": 16,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "emit",
+          "callee": "io?.to(`acct:${accountId}`).emit",
+          "lineNumber": 20
+        },
+        {
+          "caller": "emit",
+          "callee": "io?.to",
+          "lineNumber": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/db.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 38,
+      "nonEmptyLines": 36,
+      "functions": [
+        {
+          "name": "createPgliteDb",
+          "startLine": 18,
+          "endLine": 24,
+          "params": []
+        },
+        {
+          "name": "createPostgresDb",
+          "startLine": 34,
+          "endLine": 38,
+          "params": [
+            "connectionString"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "createPgliteDb",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "createPostgresDb",
+          "line": 34,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "createPgliteDb",
+          "callee": "readFileSync",
+          "lineNumber": 20
+        },
+        {
+          "caller": "createPgliteDb",
+          "callee": "fileURLToPath",
+          "lineNumber": 20
+        },
+        {
+          "caller": "createPgliteDb",
+          "callee": "pglite.exec",
+          "lineNumber": 21
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/log.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 141,
+      "nonEmptyLines": 126,
+      "functions": [
+        {
+          "name": "isLevel",
+          "startLine": 58,
+          "endLine": 60,
+          "params": [
+            "v"
+          ]
+        },
+        {
+          "name": "resolveLevel",
+          "startLine": 62,
+          "endLine": 70,
+          "params": [
+            "opts"
+          ]
+        },
+        {
+          "name": "stderrSink",
+          "startLine": 72,
+          "endLine": 74,
+          "params": [
+            "record"
+          ]
+        },
+        {
+          "name": "render",
+          "startLine": 76,
+          "endLine": 92,
+          "params": [
+            "level",
+            "ts",
+            "name",
+            "msg",
+            "fields"
+          ]
+        },
+        {
+          "name": "createLogger",
+          "startLine": 99,
+          "endLine": 129,
+          "params": [
+            "opts"
+          ]
+        },
+        {
+          "name": "noopLogger",
+          "startLine": 132,
+          "endLine": 141,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "createLogger",
+          "line": 99,
+          "isDefault": false
+        },
+        {
+          "name": "noopLogger",
+          "line": 132,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "resolveLevel",
+          "callee": "env[opts.envVar]?.toLowerCase",
+          "lineNumber": 66
+        },
+        {
+          "caller": "resolveLevel",
+          "callee": "isLevel",
+          "lineNumber": 67
+        },
+        {
+          "caller": "stderrSink",
+          "callee": "process.stderr.write",
+          "lineNumber": 73
+        },
+        {
+          "caller": "render",
+          "callee": "Object.keys",
+          "lineNumber": 84
+        },
+        {
+          "caller": "render",
+          "callee": "JSON.stringify",
+          "lineNumber": 87
+        },
+        {
+          "caller": "createLogger",
+          "callee": "resolveLevel",
+          "lineNumber": 100
+        },
+        {
+          "caller": "emit",
+          "callee": "Date.now",
+          "lineNumber": 108
+        },
+        {
+          "caller": "emit",
+          "callee": "render",
+          "lineNumber": 115
+        },
+        {
+          "caller": "emit",
+          "callee": "sink",
+          "lineNumber": 117
+        },
+        {
+          "caller": "make",
+          "callee": "emit",
+          "lineNumber": 120
+        },
+        {
+          "caller": "make",
+          "callee": "emit",
+          "lineNumber": 121
+        },
+        {
+          "caller": "make",
+          "callee": "emit",
+          "lineNumber": 122
+        },
+        {
+          "caller": "make",
+          "callee": "emit",
+          "lineNumber": 123
+        },
+        {
+          "caller": "make",
+          "callee": "make",
+          "lineNumber": 124
+        },
+        {
+          "caller": "createLogger",
+          "callee": "make",
+          "lineNumber": 128
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/machines.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 112,
+      "nonEmptyLines": 104,
+      "functions": [
+        {
+          "name": "toMachineInfo",
+          "startLine": 12,
+          "endLine": 27,
+          "params": [
+            "row"
+          ]
+        },
+        {
+          "name": "listMachines",
+          "startLine": 48,
+          "endLine": 62,
+          "params": [
+            "db",
+            "accountId",
+            "opts"
+          ]
+        },
+        {
+          "name": "sweepExpiredMachines",
+          "startLine": 83,
+          "endLine": 112,
+          "params": [
+            "db",
+            "now",
+            "opts"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DEFAULT_MACHINE_TTL_MS",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "toMachineInfo",
+          "line": 12,
+          "isDefault": false
+        },
+        {
+          "name": "listMachines",
+          "line": 48,
+          "isDefault": false
+        },
+        {
+          "name": "sweepExpiredMachines",
+          "line": 83,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "toMachineInfo",
+          "callee": "Array.isArray",
+          "lineNumber": 13
+        },
+        {
+          "caller": "toMachineInfo",
+          "callee": "(row.agentKinds as unknown[]).filter",
+          "lineNumber": 14
+        },
+        {
+          "caller": "toMachineInfo",
+          "callee": "Array.isArray",
+          "lineNumber": 16
+        },
+        {
+          "caller": "toMachineInfo",
+          "callee": "(row.workdirs as unknown[]).filter",
+          "lineNumber": 17
+        },
+        {
+          "caller": "toMachineInfo",
+          "callee": "MachineInfo.parse",
+          "lineNumber": 19
+        },
+        {
+          "caller": "toMachineInfo",
+          "callee": "Number",
+          "lineNumber": 25
+        },
+        {
+          "caller": "listMachines",
+          "callee": "(opts.now ?? Date.now)",
+          "lineNumber": 56
+        },
+        {
+          "caller": "listMachines",
+          "callee": "BigInt",
+          "lineNumber": 58
+        },
+        {
+          "caller": "listMachines",
+          "callee": "db.machine.findMany",
+          "lineNumber": 60
+        },
+        {
+          "caller": "listMachines",
+          "callee": "rows.map",
+          "lineNumber": 61
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "now.getTime",
+          "lineNumber": 89
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "db.machine.findMany",
+          "lineNumber": 92
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "BigInt",
+          "lineNumber": 93
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "candidates.map",
+          "lineNumber": 100
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "db.run.findMany",
+          "lineNumber": 101
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "referenced.map",
+          "lineNumber": 106
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "ids.filter",
+          "lineNumber": 107
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "referencedIds.has",
+          "lineNumber": 107
+        },
+        {
+          "caller": "sweepExpiredMachines",
+          "callee": "db.machine.deleteMany",
+          "lineNumber": 110
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/metrics.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 277,
+      "nonEmptyLines": 248,
+      "functions": [
+        {
+          "name": "escapeLabelValue",
+          "startLine": 138,
+          "endLine": 140,
+          "params": [
+            "v"
+          ]
+        },
+        {
+          "name": "renderLabels",
+          "startLine": 148,
+          "endLine": 156,
+          "params": [
+            "labelNames",
+            "labels"
+          ]
+        },
+        {
+          "name": "seriesKey",
+          "startLine": 159,
+          "endLine": 161,
+          "params": [
+            "labelNames",
+            "labels"
+          ]
+        },
+        {
+          "name": "isValidMetricName",
+          "startLine": 270,
+          "endLine": 272,
+          "params": [
+            "name"
+          ]
+        },
+        {
+          "name": "createMetrics",
+          "startLine": 275,
+          "endLine": 277,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "MetricsRegistry",
+          "startLine": 167,
+          "endLine": 264,
+          "methods": [
+            "inc",
+            "get",
+            "setGauge",
+            "addGauge",
+            "getGauge",
+            "observe",
+            "getSummary",
+            "render"
+          ],
+          "properties": [
+            "counters",
+            "gauges",
+            "summaries"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MetricsRegistry",
+          "line": 167,
+          "isDefault": false
+        },
+        {
+          "name": "METRICS_CONTENT_TYPE",
+          "line": 267,
+          "isDefault": false
+        },
+        {
+          "name": "isValidMetricName",
+          "line": 270,
+          "isDefault": false
+        },
+        {
+          "name": "createMetrics",
+          "line": 275,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "escapeLabelValue",
+          "callee": "v.replace(/\\\\/g, '\\\\\\\\').replace(/\\n/g, '\\\\n').replace",
+          "lineNumber": 139
+        },
+        {
+          "caller": "escapeLabelValue",
+          "callee": "v.replace(/\\\\/g, '\\\\\\\\').replace",
+          "lineNumber": 139
+        },
+        {
+          "caller": "escapeLabelValue",
+          "callee": "v.replace",
+          "lineNumber": 139
+        },
+        {
+          "caller": "renderLabels",
+          "callee": "parts.push",
+          "lineNumber": 153
+        },
+        {
+          "caller": "renderLabels",
+          "callee": "escapeLabelValue",
+          "lineNumber": 153
+        },
+        {
+          "caller": "renderLabels",
+          "callee": "parts.join",
+          "lineNumber": 155
+        },
+        {
+          "caller": "seriesKey",
+          "callee": "labelNames.map((n) => `${n}=${labels[n] ?? ''}`).join",
+          "lineNumber": 160
+        },
+        {
+          "caller": "seriesKey",
+          "callee": "labelNames.map",
+          "lineNumber": 160
+        },
+        {
+          "caller": "inc",
+          "callee": "this.counters.get",
+          "lineNumber": 175
+        },
+        {
+          "caller": "inc",
+          "callee": "this.counters.set",
+          "lineNumber": 178
+        },
+        {
+          "caller": "inc",
+          "callee": "seriesKey",
+          "lineNumber": 180
+        },
+        {
+          "caller": "inc",
+          "callee": "series.get",
+          "lineNumber": 181
+        },
+        {
+          "caller": "inc",
+          "callee": "series.set",
+          "lineNumber": 188
+        },
+        {
+          "caller": "get",
+          "callee": "this.counters.get",
+          "lineNumber": 194
+        },
+        {
+          "caller": "get",
+          "callee": "series.get",
+          "lineNumber": 196
+        },
+        {
+          "caller": "get",
+          "callee": "seriesKey",
+          "lineNumber": 196
+        },
+        {
+          "caller": "setGauge",
+          "callee": "this.gauges.set",
+          "lineNumber": 201
+        },
+        {
+          "caller": "addGauge",
+          "callee": "this.gauges.get",
+          "lineNumber": 206
+        },
+        {
+          "caller": "addGauge",
+          "callee": "this.gauges.set",
+          "lineNumber": 207
+        },
+        {
+          "caller": "getGauge",
+          "callee": "this.gauges.get",
+          "lineNumber": 212
+        },
+        {
+          "caller": "observe",
+          "callee": "Number.isFinite",
+          "lineNumber": 217
+        },
+        {
+          "caller": "observe",
+          "callee": "this.summaries.get",
+          "lineNumber": 218
+        },
+        {
+          "caller": "observe",
+          "callee": "this.summaries.set",
+          "lineNumber": 221
+        },
+        {
+          "caller": "getSummary",
+          "callee": "this.summaries.get",
+          "lineNumber": 226
+        },
+        {
+          "caller": "render",
+          "callee": "Object.keys",
+          "lineNumber": 233
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 235
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 236
+        },
+        {
+          "caller": "render",
+          "callee": "this.counters.get",
+          "lineNumber": 237
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 240
+        },
+        {
+          "caller": "render",
+          "callee": "series.values",
+          "lineNumber": 243
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 244
+        },
+        {
+          "caller": "render",
+          "callee": "renderLabels",
+          "lineNumber": 244
+        },
+        {
+          "caller": "render",
+          "callee": "Object.keys",
+          "lineNumber": 248
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 249
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 250
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 251
+        },
+        {
+          "caller": "render",
+          "callee": "this.gauges.get",
+          "lineNumber": 251
+        },
+        {
+          "caller": "render",
+          "callee": "Object.keys",
+          "lineNumber": 254
+        },
+        {
+          "caller": "render",
+          "callee": "this.summaries.get",
+          "lineNumber": 255
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 256
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 257
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 258
+        },
+        {
+          "caller": "render",
+          "callee": "out.push",
+          "lineNumber": 259
+        },
+        {
+          "caller": "render",
+          "callee": "out.join",
+          "lineNumber": 262
+        },
+        {
+          "caller": "isValidMetricName",
+          "callee": "METRIC_NAME.test",
+          "lineNumber": 271
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 5,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "cloud/relay/src/pact.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 145,
+      "nonEmptyLines": 138,
+      "functions": [
+        {
+          "name": "ingestPactEvent",
+          "startLine": 53,
+          "endLine": 107,
+          "params": [
+            "db",
+            "accountId",
+            "input"
+          ]
+        },
+        {
+          "name": "getProject",
+          "startLine": 110,
+          "endLine": 112,
+          "params": [
+            "db",
+            "projectId"
+          ]
+        },
+        {
+          "name": "listProjects",
+          "startLine": 115,
+          "endLine": 120,
+          "params": [
+            "db",
+            "accountId"
+          ]
+        },
+        {
+          "name": "getProjectEvents",
+          "startLine": 133,
+          "endLine": 145,
+          "params": [
+            "db",
+            "projectId",
+            "opts"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PactIngestRequest",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "ingestPactEvent",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "getProject",
+          "line": 110,
+          "isDefault": false
+        },
+        {
+          "name": "listProjects",
+          "line": 115,
+          "isDefault": false
+        },
+        {
+          "name": "getProjectEvents",
+          "line": 133,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ingestPactEvent",
+          "callee": "db.project.createMany",
+          "lineNumber": 65
+        },
+        {
+          "caller": "ingestPactEvent",
+          "callee": "db.pactEvent.createMany",
+          "lineNumber": 80
+        },
+        {
+          "caller": "ingestPactEvent",
+          "callee": "BigInt",
+          "lineNumber": 89
+        },
+        {
+          "caller": "ingestPactEvent",
+          "callee": "db.project.updateMany",
+          "lineNumber": 97
+        },
+        {
+          "caller": "getProject",
+          "callee": "db.project.findUnique",
+          "lineNumber": 111
+        },
+        {
+          "caller": "listProjects",
+          "callee": "db.project.findMany",
+          "lineNumber": 116
+        },
+        {
+          "caller": "getProjectEvents",
+          "callee": "db.pactEvent.findMany",
+          "lineNumber": 140
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/pair.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 120,
+      "nonEmptyLines": 107,
+      "functions": [
+        {
+          "name": "makeCode",
+          "startLine": 117,
+          "endLine": 120,
+          "params": []
+        }
+      ],
+      "classes": [
+        {
+          "name": "PairStore",
+          "startLine": 25,
+          "endLine": 115,
+          "methods": [
+            "constructor",
+            "init",
+            "get",
+            "ready",
+            "complete",
+            "status",
+            "exists",
+            "gc"
+          ],
+          "properties": [
+            "codes"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PairStore",
+          "line": 25,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "constructor",
+          "callee": "Date.now",
+          "lineNumber": 29
+        },
+        {
+          "caller": "init",
+          "callee": "this.gc",
+          "lineNumber": 39
+        },
+        {
+          "caller": "init",
+          "callee": "makeCode",
+          "lineNumber": 40
+        },
+        {
+          "caller": "init",
+          "callee": "this.now",
+          "lineNumber": 41
+        },
+        {
+          "caller": "init",
+          "callee": "this.codes.set",
+          "lineNumber": 43
+        },
+        {
+          "caller": "get",
+          "callee": "this.codes.get",
+          "lineNumber": 49
+        },
+        {
+          "caller": "get",
+          "callee": "this.now",
+          "lineNumber": 50
+        },
+        {
+          "caller": "ready",
+          "callee": "this.codes.get",
+          "lineNumber": 60
+        },
+        {
+          "caller": "ready",
+          "callee": "this.now",
+          "lineNumber": 62
+        },
+        {
+          "caller": "ready",
+          "callee": "this.codes.delete",
+          "lineNumber": 63
+        },
+        {
+          "caller": "complete",
+          "callee": "this.codes.get",
+          "lineNumber": 78
+        },
+        {
+          "caller": "complete",
+          "callee": "this.now",
+          "lineNumber": 80
+        },
+        {
+          "caller": "complete",
+          "callee": "this.codes.delete",
+          "lineNumber": 81
+        },
+        {
+          "caller": "status",
+          "callee": "this.codes.get",
+          "lineNumber": 91
+        },
+        {
+          "caller": "status",
+          "callee": "this.now",
+          "lineNumber": 92
+        },
+        {
+          "caller": "exists",
+          "callee": "this.codes.get",
+          "lineNumber": 100
+        },
+        {
+          "caller": "exists",
+          "callee": "this.now",
+          "lineNumber": 102
+        },
+        {
+          "caller": "gc",
+          "callee": "this.now",
+          "lineNumber": 110
+        },
+        {
+          "caller": "gc",
+          "callee": "this.codes.delete",
+          "lineNumber": 112
+        },
+        {
+          "caller": "makeCode",
+          "callee": "randomBytes(6).toString('base64url').slice(0, 8).padEnd",
+          "lineNumber": 119
+        },
+        {
+          "caller": "makeCode",
+          "callee": "randomBytes(6).toString('base64url').slice",
+          "lineNumber": 119
+        },
+        {
+          "caller": "makeCode",
+          "callee": "randomBytes(6).toString",
+          "lineNumber": 119
+        },
+        {
+          "caller": "makeCode",
+          "callee": "randomBytes",
+          "lineNumber": 119
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "cloud/relay/src/push.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 287,
+      "nonEmptyLines": 267,
+      "functions": [
+        {
+          "name": "notifyTypeForHeader",
+          "startLine": 65,
+          "endLine": 76,
+          "params": [
+            "prevState",
+            "eventKind",
+            "nextState"
+          ]
+        },
+        {
+          "name": "isDeadSubscriptionStatus",
+          "startLine": 100,
+          "endLine": 102,
+          "params": [
+            "statusCode"
+          ]
+        },
+        {
+          "name": "loadVapidConfig",
+          "startLine": 110,
+          "endLine": 116,
+          "params": [
+            "env"
+          ]
+        },
+        {
+          "name": "createWebPushSender",
+          "startLine": 124,
+          "endLine": 142,
+          "params": [
+            "vapid"
+          ]
+        },
+        {
+          "name": "subscribePush",
+          "startLine": 151,
+          "endLine": 171,
+          "params": [
+            "db",
+            "accountId",
+            "sub"
+          ]
+        },
+        {
+          "name": "unsubscribePush",
+          "startLine": 178,
+          "endLine": 185,
+          "params": [
+            "db",
+            "accountId",
+            "endpoint"
+          ]
+        },
+        {
+          "name": "listPushSubscriptions",
+          "startLine": 192,
+          "endLine": 205,
+          "params": [
+            "db",
+            "accountId"
+          ]
+        },
+        {
+          "name": "deliverRunNotification",
+          "startLine": 225,
+          "endLine": 233,
+          "params": [
+            "db",
+            "sender",
+            "accountId",
+            "payload",
+            "log"
+          ]
+        },
+        {
+          "name": "deliverPactNotification",
+          "startLine": 247,
+          "endLine": 255,
+          "params": [
+            "db",
+            "sender",
+            "accountId",
+            "payload",
+            "log"
+          ]
+        },
+        {
+          "name": "fanOutPush",
+          "startLine": 260,
+          "endLine": 287,
+          "params": [
+            "db",
+            "sender",
+            "accountId",
+            "body",
+            "label",
+            "log"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "PushSendError",
+          "startLine": 89,
+          "endLine": 97,
+          "methods": [
+            "constructor"
+          ],
+          "properties": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "WEB_PUSH_PLATFORM",
+          "line": 15,
+          "isDefault": false
+        },
+        {
+          "name": "notifyTypeForHeader",
+          "line": 65,
+          "isDefault": false
+        },
+        {
+          "name": "PushSendError",
+          "line": 89,
+          "isDefault": false
+        },
+        {
+          "name": "isDeadSubscriptionStatus",
+          "line": 100,
+          "isDefault": false
+        },
+        {
+          "name": "loadVapidConfig",
+          "line": 110,
+          "isDefault": false
+        },
+        {
+          "name": "createWebPushSender",
+          "line": 124,
+          "isDefault": false
+        },
+        {
+          "name": "subscribePush",
+          "line": 151,
+          "isDefault": false
+        },
+        {
+          "name": "unsubscribePush",
+          "line": 178,
+          "isDefault": false
+        },
+        {
+          "name": "listPushSubscriptions",
+          "line": 192,
+          "isDefault": false
+        },
+        {
+          "name": "deliverRunNotification",
+          "line": 225,
+          "isDefault": false
+        },
+        {
+          "name": "deliverPactNotification",
+          "line": 247,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "constructor",
+          "callee": "super",
+          "lineNumber": 94
+        },
+        {
+          "caller": "send",
+          "callee": "webpush.sendNotification",
+          "lineNumber": 128
+        },
+        {
+          "caller": "send",
+          "callee": "String",
+          "lineNumber": 138
+        },
+        {
+          "caller": "subscribePush",
+          "callee": "db.pushToken.upsert",
+          "lineNumber": 156
+        },
+        {
+          "caller": "unsubscribePush",
+          "callee": "db.pushToken.deleteMany",
+          "lineNumber": 183
+        },
+        {
+          "caller": "listPushSubscriptions",
+          "callee": "db.pushToken.findMany",
+          "lineNumber": 196
+        },
+        {
+          "caller": "listPushSubscriptions",
+          "callee": "subs.push",
+          "lineNumber": 202
+        },
+        {
+          "caller": "deliverRunNotification",
+          "callee": "fanOutPush",
+          "lineNumber": 232
+        },
+        {
+          "caller": "deliverRunNotification",
+          "callee": "JSON.stringify",
+          "lineNumber": 232
+        },
+        {
+          "caller": "deliverPactNotification",
+          "callee": "fanOutPush",
+          "lineNumber": 254
+        },
+        {
+          "caller": "deliverPactNotification",
+          "callee": "JSON.stringify",
+          "lineNumber": 254
+        },
+        {
+          "caller": "fanOutPush",
+          "callee": "listPushSubscriptions",
+          "lineNumber": 268
+        },
+        {
+          "caller": "fanOutPush",
+          "callee": "sender.send",
+          "lineNumber": 273
+        },
+        {
+          "caller": "fanOutPush",
+          "callee": "isDeadSubscriptionStatus",
+          "lineNumber": 277
+        },
+        {
+          "caller": "fanOutPush",
+          "callee": "db.pushToken.deleteMany",
+          "lineNumber": 278
+        },
+        {
+          "caller": "fanOutPush",
+          "callee": "log?.warn",
+          "lineNumber": 282
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 11,
+        "functionCount": 10,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "cloud/relay/src/queries.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 181,
+      "nonEmptyLines": 170,
+      "functions": [
+        {
+          "name": "toRunSummary",
+          "startLine": 25,
+          "endLine": 44,
+          "params": [
+            "run"
+          ]
+        },
+        {
+          "name": "listRuns",
+          "startLine": 51,
+          "endLine": 65,
+          "params": [
+            "db",
+            "accountId",
+            "opts"
+          ]
+        },
+        {
+          "name": "searchRuns",
+          "startLine": 111,
+          "endLine": 157,
+          "params": [
+            "db",
+            "accountId",
+            "opts"
+          ]
+        },
+        {
+          "name": "listPendingApprovals",
+          "startLine": 160,
+          "endLine": 169,
+          "params": [
+            "db",
+            "accountId"
+          ]
+        },
+        {
+          "name": "getRunEventsAfter",
+          "startLine": 172,
+          "endLine": 181,
+          "params": [
+            "db",
+            "runId",
+            "afterSeq"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "toRunSummary",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "listRuns",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "DEFAULT_HISTORY_LIMIT",
+          "line": 95,
+          "isDefault": false
+        },
+        {
+          "name": "MAX_HISTORY_LIMIT",
+          "line": 97,
+          "isDefault": false
+        },
+        {
+          "name": "searchRuns",
+          "line": 111,
+          "isDefault": false
+        },
+        {
+          "name": "listPendingApprovals",
+          "line": 160,
+          "isDefault": false
+        },
+        {
+          "name": "getRunEventsAfter",
+          "line": 172,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "toRunSummary",
+          "callee": "run.lastActiveAt.getTime",
+          "lineNumber": 37
+        },
+        {
+          "caller": "toRunSummary",
+          "callee": "Number",
+          "lineNumber": 41
+        },
+        {
+          "caller": "listRuns",
+          "callee": "(opts.now ?? Date.now)",
+          "lineNumber": 59
+        },
+        {
+          "caller": "listRuns",
+          "callee": "db.run.findMany",
+          "lineNumber": 63
+        },
+        {
+          "caller": "listRuns",
+          "callee": "runs.map",
+          "lineNumber": 64
+        },
+        {
+          "caller": "searchRuns",
+          "callee": "Number.isFinite",
+          "lineNumber": 118
+        },
+        {
+          "caller": "searchRuns",
+          "callee": "Math.min",
+          "lineNumber": 119
+        },
+        {
+          "caller": "searchRuns",
+          "callee": "Math.floor",
+          "lineNumber": 119
+        },
+        {
+          "caller": "searchRuns",
+          "callee": "db.run.findMany",
+          "lineNumber": 141
+        },
+        {
+          "caller": "searchRuns",
+          "callee": "rows.slice",
+          "lineNumber": 147
+        },
+        {
+          "caller": "searchRuns",
+          "callee": "page.map",
+          "lineNumber": 148
+        },
+        {
+          "caller": "searchRuns",
+          "callee": "last.lastActiveAt.getTime",
+          "lineNumber": 155
+        },
+        {
+          "caller": "listPendingApprovals",
+          "callee": "db.run.findMany",
+          "lineNumber": 164
+        },
+        {
+          "caller": "listPendingApprovals",
+          "callee": "runs.map",
+          "lineNumber": 168
+        },
+        {
+          "caller": "getRunEventsAfter",
+          "callee": "db.runEvent.findMany",
+          "lineNumber": 177
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 7,
+        "functionCount": 5,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/rateLimit.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 89,
+      "nonEmptyLines": 81,
+      "classes": [
+        {
+          "name": "TokenBucketLimiter",
+          "startLine": 44,
+          "endLine": 89,
+          "methods": [
+            "constructor",
+            "fromPerMinute",
+            "take"
+          ],
+          "properties": [
+            "capacity",
+            "refillPerMs",
+            "now",
+            "buckets"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TokenBucketLimiter",
+          "line": 44,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "constructor",
+          "callee": "Date.now",
+          "lineNumber": 53
+        },
+        {
+          "caller": "take",
+          "callee": "this.now",
+          "lineNumber": 69
+        },
+        {
+          "caller": "take",
+          "callee": "this.buckets.get",
+          "lineNumber": 70
+        },
+        {
+          "caller": "take",
+          "callee": "this.buckets.set",
+          "lineNumber": 73
+        },
+        {
+          "caller": "take",
+          "callee": "Math.max",
+          "lineNumber": 76
+        },
+        {
+          "caller": "take",
+          "callee": "Math.min",
+          "lineNumber": 77
+        },
+        {
+          "caller": "take",
+          "callee": "Number.isFinite",
+          "lineNumber": 86
+        },
+        {
+          "caller": "take",
+          "callee": "Math.max",
+          "lineNumber": 86
+        },
+        {
+          "caller": "take",
+          "callee": "Math.ceil",
+          "lineNumber": 86
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "cloud/relay/src/redis.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 27,
+      "nonEmptyLines": 24,
+      "functions": [
+        {
+          "name": "logRedisError",
+          "startLine": 6,
+          "endLine": 8,
+          "params": [
+            "err"
+          ]
+        },
+        {
+          "name": "maybeMakeAdapter",
+          "startLine": 17,
+          "endLine": 27,
+          "params": [
+            "redisUrl"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "maybeMakeAdapter",
+          "line": 17,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "logRedisError",
+          "callee": "console.error",
+          "lineNumber": 7
+        },
+        {
+          "caller": "maybeMakeAdapter",
+          "callee": "createClient",
+          "lineNumber": 21
+        },
+        {
+          "caller": "maybeMakeAdapter",
+          "callee": "pub.duplicate",
+          "lineNumber": 22
+        },
+        {
+          "caller": "maybeMakeAdapter",
+          "callee": "pub.on",
+          "lineNumber": 23
+        },
+        {
+          "caller": "maybeMakeAdapter",
+          "callee": "sub.on",
+          "lineNumber": 24
+        },
+        {
+          "caller": "maybeMakeAdapter",
+          "callee": "Promise.all",
+          "lineNumber": 25
+        },
+        {
+          "caller": "maybeMakeAdapter",
+          "callee": "pub.connect",
+          "lineNumber": 25
+        },
+        {
+          "caller": "maybeMakeAdapter",
+          "callee": "sub.connect",
+          "lineNumber": 25
+        },
+        {
+          "caller": "maybeMakeAdapter",
+          "callee": "createAdapter",
+          "lineNumber": 26
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/repo.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 253,
+      "nonEmptyLines": 243,
+      "functions": [
+        {
+          "name": "ingestWireMessage",
+          "startLine": 17,
+          "endLine": 107,
+          "params": [
+            "db",
+            "accountId",
+            "agentKind",
+            "msg"
+          ]
+        },
+        {
+          "name": "getRun",
+          "startLine": 110,
+          "endLine": 112,
+          "params": [
+            "db",
+            "runId"
+          ]
+        },
+        {
+          "name": "reconcileMachineRuns",
+          "startLine": 144,
+          "endLine": 164,
+          "params": [
+            "db",
+            "accountId",
+            "machineId"
+          ]
+        },
+        {
+          "name": "getRunEvents",
+          "startLine": 167,
+          "endLine": 169,
+          "params": [
+            "db",
+            "runId"
+          ]
+        },
+        {
+          "name": "renameRun",
+          "startLine": 178,
+          "endLine": 189,
+          "params": [
+            "db",
+            "accountId",
+            "runId",
+            "title"
+          ]
+        },
+        {
+          "name": "deleteRun",
+          "startLine": 200,
+          "endLine": 212,
+          "params": [
+            "db",
+            "accountId",
+            "runId"
+          ]
+        },
+        {
+          "name": "deleteMachine",
+          "startLine": 232,
+          "endLine": 253,
+          "params": [
+            "db",
+            "accountId",
+            "machineId"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ingestWireMessage",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "getRun",
+          "line": 110,
+          "isDefault": false
+        },
+        {
+          "name": "reconcileMachineRuns",
+          "line": 144,
+          "isDefault": false
+        },
+        {
+          "name": "getRunEvents",
+          "line": 167,
+          "isDefault": false
+        },
+        {
+          "name": "renameRun",
+          "line": 178,
+          "isDefault": false
+        },
+        {
+          "name": "deleteRun",
+          "line": 200,
+          "isDefault": false
+        },
+        {
+          "name": "deleteMachine",
+          "line": 232,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ingestWireMessage",
+          "callee": "JSON.stringify",
+          "lineNumber": 24
+        },
+        {
+          "caller": "ingestWireMessage",
+          "callee": "BigInt",
+          "lineNumber": 46
+        },
+        {
+          "caller": "ingestWireMessage",
+          "callee": "BigInt",
+          "lineNumber": 58
+        },
+        {
+          "caller": "ingestWireMessage",
+          "callee": "db.account.createMany",
+          "lineNumber": 75
+        },
+        {
+          "caller": "ingestWireMessage",
+          "callee": "db.machine.createMany",
+          "lineNumber": 79
+        },
+        {
+          "caller": "ingestWireMessage",
+          "callee": "db.run.createMany",
+          "lineNumber": 83
+        },
+        {
+          "caller": "ingestWireMessage",
+          "callee": "db.runEvent.createMany",
+          "lineNumber": 87
+        },
+        {
+          "caller": "ingestWireMessage",
+          "callee": "BigInt",
+          "lineNumber": 94
+        },
+        {
+          "caller": "ingestWireMessage",
+          "callee": "db.run.updateMany",
+          "lineNumber": 103
+        },
+        {
+          "caller": "getRun",
+          "callee": "db.run.findUnique",
+          "lineNumber": 111
+        },
+        {
+          "caller": "reconcileMachineRuns",
+          "callee": "db.run.findMany",
+          "lineNumber": 149
+        },
+        {
+          "caller": "reconcileMachineRuns",
+          "callee": "stale.map",
+          "lineNumber": 154
+        },
+        {
+          "caller": "reconcileMachineRuns",
+          "callee": "db.run.updateMany",
+          "lineNumber": 159
+        },
+        {
+          "caller": "reconcileMachineRuns",
+          "callee": "db.run.findMany",
+          "lineNumber": 163
+        },
+        {
+          "caller": "getRunEvents",
+          "callee": "db.runEvent.findMany",
+          "lineNumber": 168
+        },
+        {
+          "caller": "renameRun",
+          "callee": "db.run.updateMany",
+          "lineNumber": 184
+        },
+        {
+          "caller": "deleteRun",
+          "callee": "db.$transaction",
+          "lineNumber": 205
+        },
+        {
+          "caller": "deleteRun",
+          "callee": "tx.run.findFirst",
+          "lineNumber": 206
+        },
+        {
+          "caller": "deleteRun",
+          "callee": "tx.runEvent.deleteMany",
+          "lineNumber": 208
+        },
+        {
+          "caller": "deleteRun",
+          "callee": "tx.run.delete",
+          "lineNumber": 209
+        },
+        {
+          "caller": "deleteMachine",
+          "callee": "db.$transaction",
+          "lineNumber": 237
+        },
+        {
+          "caller": "deleteMachine",
+          "callee": "tx.machine.findFirst",
+          "lineNumber": 238
+        },
+        {
+          "caller": "deleteMachine",
+          "callee": "tx.run.findMany",
+          "lineNumber": 243
+        },
+        {
+          "caller": "deleteMachine",
+          "callee": "runs.map",
+          "lineNumber": 244
+        },
+        {
+          "caller": "deleteMachine",
+          "callee": "tx.runEvent.deleteMany",
+          "lineNumber": 247
+        },
+        {
+          "caller": "deleteMachine",
+          "callee": "tx.run.deleteMany",
+          "lineNumber": 248
+        },
+        {
+          "caller": "deleteMachine",
+          "callee": "tx.machine.delete",
+          "lineNumber": 250
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 7,
+        "functionCount": 7,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/retention.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 136,
+      "nonEmptyLines": 124,
+      "functions": [
+        {
+          "name": "sweepExpired",
+          "startLine": 40,
+          "endLine": 70,
+          "params": [
+            "db",
+            "now",
+            "opts"
+          ]
+        },
+        {
+          "name": "startRetention",
+          "startLine": 98,
+          "endLine": 136,
+          "params": [
+            "db",
+            "opts"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TERMINAL_STATES",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "DEFAULT_RUN_TTL_MS",
+          "line": 20,
+          "isDefault": false
+        },
+        {
+          "name": "DEFAULT_SWEEP_INTERVAL_MS",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "sweepExpired",
+          "line": 40,
+          "isDefault": false
+        },
+        {
+          "name": "startRetention",
+          "line": 98,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "sweepExpired",
+          "callee": "now.getTime",
+          "lineNumber": 46
+        },
+        {
+          "caller": "sweepExpired",
+          "callee": "db.$transaction",
+          "lineNumber": 58
+        },
+        {
+          "caller": "sweepExpired",
+          "callee": "tx.run.findMany",
+          "lineNumber": 59
+        },
+        {
+          "caller": "sweepExpired",
+          "callee": "expired.map",
+          "lineNumber": 61
+        },
+        {
+          "caller": "sweepExpired",
+          "callee": "tx.runEvent.deleteMany",
+          "lineNumber": 62
+        },
+        {
+          "caller": "sweepExpired",
+          "callee": "tx.run.deleteMany",
+          "lineNumber": 63
+        },
+        {
+          "caller": "tick",
+          "callee": "clock",
+          "lineNumber": 110
+        },
+        {
+          "caller": "tick",
+          "callee": "sweepExpired",
+          "lineNumber": 113
+        },
+        {
+          "caller": "tick",
+          "callee": "log?.info",
+          "lineNumber": 114
+        },
+        {
+          "caller": "tick",
+          "callee": "log?.error",
+          "lineNumber": 116
+        },
+        {
+          "caller": "tick",
+          "callee": "String",
+          "lineNumber": 116
+        },
+        {
+          "caller": "tick",
+          "callee": "sweepExpiredMachines",
+          "lineNumber": 121
+        },
+        {
+          "caller": "tick",
+          "callee": "log?.info",
+          "lineNumber": 122
+        },
+        {
+          "caller": "tick",
+          "callee": "log?.error",
+          "lineNumber": 124
+        },
+        {
+          "caller": "tick",
+          "callee": "String",
+          "lineNumber": 124
+        },
+        {
+          "caller": "startRetention",
+          "callee": "setInterval",
+          "lineNumber": 129
+        },
+        {
+          "caller": "startRetention",
+          "callee": "tick",
+          "lineNumber": 129
+        },
+        {
+          "caller": "startRetention",
+          "callee": "handle.unref",
+          "lineNumber": 130
+        },
+        {
+          "caller": "stop",
+          "callee": "clearInterval",
+          "lineNumber": 133
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 5,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/server-main.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 210,
+      "nonEmptyLines": 203,
+      "functions": [
+        {
+          "name": "parseServerEnv",
+          "startLine": 43,
+          "endLine": 68,
+          "params": [
+            "env"
+          ]
+        },
+        {
+          "name": "startServer",
+          "startLine": 78,
+          "endLine": 139,
+          "params": [
+            "cfg",
+            "db"
+          ]
+        },
+        {
+          "name": "installProcessGuards",
+          "startLine": 156,
+          "endLine": 184,
+          "params": [
+            "log",
+            "exit"
+          ]
+        },
+        {
+          "name": "main",
+          "startLine": 190,
+          "endLine": 203,
+          "params": []
+        }
+      ],
+      "exports": [
+        {
+          "name": "parseServerEnv",
+          "line": 43,
+          "isDefault": false
+        },
+        {
+          "name": "startServer",
+          "line": 78,
+          "isDefault": false
+        },
+        {
+          "name": "installProcessGuards",
+          "line": 156,
+          "isDefault": false
+        },
+        {
+          "name": "main",
+          "line": 190,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "parseServerEnv",
+          "callee": "Number",
+          "lineNumber": 48
+        },
+        {
+          "caller": "parseServerEnv",
+          "callee": "Number.isInteger",
+          "lineNumber": 49
+        },
+        {
+          "caller": "parseServerEnv",
+          "callee": "Number",
+          "lineNumber": 52
+        },
+        {
+          "caller": "parseServerEnv",
+          "callee": "Number.isFinite",
+          "lineNumber": 53
+        },
+        {
+          "caller": "parseServerEnv",
+          "callee": "Number",
+          "lineNumber": 59
+        },
+        {
+          "caller": "parseServerEnv",
+          "callee": "Number.isFinite",
+          "lineNumber": 60
+        },
+        {
+          "caller": "startServer",
+          "callee": "createPostgresDb",
+          "lineNumber": 82
+        },
+        {
+          "caller": "startServer",
+          "callee": "createLogger",
+          "lineNumber": 83
+        },
+        {
+          "caller": "startServer",
+          "callee": "createMetrics",
+          "lineNumber": 85
+        },
+        {
+          "caller": "startServer",
+          "callee": "loadVapidConfig",
+          "lineNumber": 90
+        },
+        {
+          "caller": "startServer",
+          "callee": "createWebPushSender",
+          "lineNumber": 91
+        },
+        {
+          "caller": "startServer",
+          "callee": "createBroadcaster",
+          "lineNumber": 94
+        },
+        {
+          "caller": "startServer",
+          "callee": "createServer",
+          "lineNumber": 95
+        },
+        {
+          "caller": "startServer",
+          "callee": "app.listen",
+          "lineNumber": 106
+        },
+        {
+          "caller": "startServer",
+          "callee": "attachSockets",
+          "lineNumber": 107
+        },
+        {
+          "caller": "startServer",
+          "callee": "broadcaster.bind",
+          "lineNumber": 115
+        },
+        {
+          "caller": "startServer",
+          "callee": "startRetention",
+          "lineNumber": 118
+        },
+        {
+          "caller": "startServer",
+          "callee": "app.server.address",
+          "lineNumber": 124
+        },
+        {
+          "caller": "startServer",
+          "callee": "log.info",
+          "lineNumber": 126
+        },
+        {
+          "caller": "close",
+          "callee": "sweeper.stop",
+          "lineNumber": 135
+        },
+        {
+          "caller": "close",
+          "callee": "app.close",
+          "lineNumber": 136
+        },
+        {
+          "caller": "installProcessGuards",
+          "callee": "process.stderr.write",
+          "lineNumber": 158
+        },
+        {
+          "caller": "installProcessGuards",
+          "callee": "JSON.stringify",
+          "lineNumber": 158
+        },
+        {
+          "caller": "installProcessGuards",
+          "callee": "setTimeout(() => process.exit(code), 100).unref",
+          "lineNumber": 164
+        },
+        {
+          "caller": "installProcessGuards",
+          "callee": "setTimeout",
+          "lineNumber": 164
+        },
+        {
+          "caller": "installProcessGuards",
+          "callee": "process.exit",
+          "lineNumber": 164
+        },
+        {
+          "caller": "onRejection",
+          "callee": "log.error",
+          "lineNumber": 168
+        },
+        {
+          "caller": "onRejection",
+          "callee": "String",
+          "lineNumber": 169
+        },
+        {
+          "caller": "onException",
+          "callee": "log.error",
+          "lineNumber": 175
+        },
+        {
+          "caller": "onException",
+          "callee": "exit",
+          "lineNumber": 179
+        },
+        {
+          "caller": "installProcessGuards",
+          "callee": "process.on",
+          "lineNumber": 181
+        },
+        {
+          "caller": "installProcessGuards",
+          "callee": "process.on",
+          "lineNumber": 182
+        },
+        {
+          "caller": "main",
+          "callee": "installProcessGuards",
+          "lineNumber": 191
+        },
+        {
+          "caller": "main",
+          "callee": "parseServerEnv",
+          "lineNumber": 192
+        },
+        {
+          "caller": "main",
+          "callee": "process.stderr.write",
+          "lineNumber": 194
+        },
+        {
+          "caller": "main",
+          "callee": "process.stderr.write",
+          "lineNumber": 195
+        },
+        {
+          "caller": "main",
+          "callee": "startServer",
+          "lineNumber": 201
+        },
+        {
+          "caller": "main",
+          "callee": "process.stdout.write",
+          "lineNumber": 202
+        }
+      ],
+      "metrics": {
+        "importCount": 9,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/server.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 535,
+      "nonEmptyLines": 494,
+      "functions": [
+        {
+          "name": "parsePushSubscription",
+          "startLine": 98,
+          "endLine": 107,
+          "params": [
+            "body"
+          ]
+        },
+        {
+          "name": "resolveHttpLimits",
+          "startLine": 119,
+          "endLine": 142,
+          "params": [
+            "opts"
+          ]
+        },
+        {
+          "name": "createServer",
+          "startLine": 144,
+          "endLine": 535,
+          "params": [
+            "opts"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "createServer",
+          "line": 144,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fromEnv",
+          "callee": "Number",
+          "lineNumber": 123
+        },
+        {
+          "caller": "fromEnv",
+          "callee": "Number.isFinite",
+          "lineNumber": 124
+        },
+        {
+          "caller": "pick",
+          "callee": "Number.isFinite",
+          "lineNumber": 127
+        },
+        {
+          "caller": "resolveHttpLimits",
+          "callee": "pick",
+          "lineNumber": 131
+        },
+        {
+          "caller": "resolveHttpLimits",
+          "callee": "fromEnv",
+          "lineNumber": 133
+        },
+        {
+          "caller": "resolveHttpLimits",
+          "callee": "pick",
+          "lineNumber": 136
+        },
+        {
+          "caller": "resolveHttpLimits",
+          "callee": "fromEnv",
+          "lineNumber": 138
+        },
+        {
+          "caller": "createServer",
+          "callee": "Date.now",
+          "lineNumber": 147
+        },
+        {
+          "caller": "createServer",
+          "callee": "createLogger",
+          "lineNumber": 148
+        },
+        {
+          "caller": "createServer",
+          "callee": "createMetrics",
+          "lineNumber": 149
+        },
+        {
+          "caller": "createServer",
+          "callee": "Fastify",
+          "lineNumber": 150
+        },
+        {
+          "caller": "createServer",
+          "callee": "resolveHttpLimits",
+          "lineNumber": 153
+        },
+        {
+          "caller": "createServer",
+          "callee": "TokenBucketLimiter.fromPerMinute",
+          "lineNumber": 156
+        },
+        {
+          "caller": "createServer",
+          "callee": "TokenBucketLimiter.fromPerMinute",
+          "lineNumber": 157
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.register",
+          "lineNumber": 162
+        },
+        {
+          "caller": "routeLabel",
+          "callee": "req.url.split",
+          "lineNumber": 175
+        },
+        {
+          "caller": "accountIdOf",
+          "callee": "auth.startsWith",
+          "lineNumber": 180
+        },
+        {
+          "caller": "accountIdOf",
+          "callee": "verifyToken",
+          "lineNumber": 181
+        },
+        {
+          "caller": "accountIdOf",
+          "callee": "auth.slice",
+          "lineNumber": 181
+        },
+        {
+          "caller": "accountIdOf",
+          "callee": "now",
+          "lineNumber": 181
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.addHook",
+          "lineNumber": 189
+        },
+        {
+          "caller": "createServer",
+          "callee": "process.hrtime.bigint",
+          "lineNumber": 191
+        },
+        {
+          "caller": "createServer",
+          "callee": "req.url.split",
+          "lineNumber": 193
+        },
+        {
+          "caller": "createServer",
+          "callee": "url.startsWith",
+          "lineNumber": 194
+        },
+        {
+          "caller": "createServer",
+          "callee": "limiter.take",
+          "lineNumber": 197
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 201
+        },
+        {
+          "caller": "createServer",
+          "callee": "routeLabel",
+          "lineNumber": 201
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply\n        .code(429)\n        .header('Retry-After', String(res.retryAfterSec))\n        .send",
+          "lineNumber": 202
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply\n        .code(429)\n        .header",
+          "lineNumber": 202
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply\n        .code",
+          "lineNumber": 202
+        },
+        {
+          "caller": "createServer",
+          "callee": "String",
+          "lineNumber": 204
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.addHook",
+          "lineNumber": 212
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 213
+        },
+        {
+          "caller": "createServer",
+          "callee": "routeLabel",
+          "lineNumber": 214
+        },
+        {
+          "caller": "createServer",
+          "callee": "String",
+          "lineNumber": 215
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.observe",
+          "lineNumber": 219
+        },
+        {
+          "caller": "createServer",
+          "callee": "Number",
+          "lineNumber": 219
+        },
+        {
+          "caller": "createServer",
+          "callee": "process.hrtime.bigint",
+          "lineNumber": 219
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.setErrorHandler",
+          "lineNumber": 224
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 225
+        },
+        {
+          "caller": "createServer",
+          "callee": "String",
+          "lineNumber": 226
+        },
+        {
+          "caller": "createServer",
+          "callee": "log.error",
+          "lineNumber": 227
+        },
+        {
+          "caller": "createServer",
+          "callee": "routeLabel",
+          "lineNumber": 227
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 228
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.send",
+          "lineNumber": 229
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 232
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 236
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.setGauge",
+          "lineNumber": 237
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.getGauge",
+          "lineNumber": 237
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.header('Content-Type', METRICS_CONTENT_TYPE).send",
+          "lineNumber": 238
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.header",
+          "lineNumber": 238
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.render",
+          "lineNumber": 238
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.post",
+          "lineNumber": 241
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 244
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(400).send",
+          "lineNumber": 245
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 245
+        },
+        {
+          "caller": "createServer",
+          "callee": "authenticate",
+          "lineNumber": 247
+        },
+        {
+          "caller": "createServer",
+          "callee": "now",
+          "lineNumber": 252
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 256
+        },
+        {
+          "caller": "createServer",
+          "callee": "log.warn",
+          "lineNumber": 257
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 258
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 258
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 260
+        },
+        {
+          "caller": "createServer",
+          "callee": "log.info",
+          "lineNumber": 261
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 265
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 266
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 267
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 267
+        },
+        {
+          "caller": "createServer",
+          "callee": "RunSummary.array().parse",
+          "lineNumber": 268
+        },
+        {
+          "caller": "createServer",
+          "callee": "RunSummary.array",
+          "lineNumber": 268
+        },
+        {
+          "caller": "createServer",
+          "callee": "listRuns",
+          "lineNumber": 268
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 271
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 272
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 273
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 273
+        },
+        {
+          "caller": "createServer",
+          "callee": "RunSummary.array().parse",
+          "lineNumber": 274
+        },
+        {
+          "caller": "createServer",
+          "callee": "RunSummary.array",
+          "lineNumber": 274
+        },
+        {
+          "caller": "createServer",
+          "callee": "listPendingApprovals",
+          "lineNumber": 274
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 281
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 282
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 283
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 283
+        },
+        {
+          "caller": "numeric",
+          "callee": "Number",
+          "lineNumber": 294
+        },
+        {
+          "caller": "numeric",
+          "callee": "Number.isFinite",
+          "lineNumber": 295
+        },
+        {
+          "caller": "createServer",
+          "callee": "searchRuns",
+          "lineNumber": 297
+        },
+        {
+          "caller": "createServer",
+          "callee": "numeric",
+          "lineNumber": 302
+        },
+        {
+          "caller": "createServer",
+          "callee": "numeric",
+          "lineNumber": 303
+        },
+        {
+          "caller": "createServer",
+          "callee": "RunSummary.array().parse",
+          "lineNumber": 306
+        },
+        {
+          "caller": "createServer",
+          "callee": "RunSummary.array",
+          "lineNumber": 306
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 311
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 312
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 313
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 313
+        },
+        {
+          "caller": "createServer",
+          "callee": "MachineInfo.array().parse",
+          "lineNumber": 314
+        },
+        {
+          "caller": "createServer",
+          "callee": "MachineInfo.array",
+          "lineNumber": 314
+        },
+        {
+          "caller": "createServer",
+          "callee": "listMachines",
+          "lineNumber": 315
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.delete",
+          "lineNumber": 327
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 328
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 329
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 329
+        },
+        {
+          "caller": "createServer",
+          "callee": "deleteMachine",
+          "lineNumber": 331
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 332
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 332
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 333
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(204).send",
+          "lineNumber": 334
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 334
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.post",
+          "lineNumber": 337
+        },
+        {
+          "caller": "createServer",
+          "callee": "PairInit.safeParse",
+          "lineNumber": 338
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(400).send",
+          "lineNumber": 339
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 339
+        },
+        {
+          "caller": "createServer",
+          "callee": "pairStore.init",
+          "lineNumber": 340
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 344
+        },
+        {
+          "caller": "createServer",
+          "callee": "pairStore.get",
+          "lineNumber": 346
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 347
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 347
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.post",
+          "lineNumber": 354
+        },
+        {
+          "caller": "createServer",
+          "callee": "PairReady.safeParse",
+          "lineNumber": 356
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(400).send",
+          "lineNumber": 357
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 357
+        },
+        {
+          "caller": "createServer",
+          "callee": "pairStore.exists",
+          "lineNumber": 359
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 360
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 360
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(410).send",
+          "lineNumber": 361
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 361
+        },
+        {
+          "caller": "createServer",
+          "callee": "pairStore.ready",
+          "lineNumber": 363
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(410).send",
+          "lineNumber": 364
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 364
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 368
+        },
+        {
+          "caller": "createServer",
+          "callee": "pairStore.status",
+          "lineNumber": 370
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 371
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 371
+        },
+        {
+          "caller": "createServer",
+          "callee": "PairStatus.parse",
+          "lineNumber": 372
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.post",
+          "lineNumber": 375
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 376
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 377
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 377
+        },
+        {
+          "caller": "createServer",
+          "callee": "PairComplete.safeParse",
+          "lineNumber": 379
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(400).send",
+          "lineNumber": 380
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 380
+        },
+        {
+          "caller": "createServer",
+          "callee": "pairStore.exists",
+          "lineNumber": 382
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 383
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 383
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(410).send",
+          "lineNumber": 384
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 384
+        },
+        {
+          "caller": "createServer",
+          "callee": "pairStore.complete",
+          "lineNumber": 386
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(410).send",
+          "lineNumber": 387
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 387
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 391
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 392
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 393
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 393
+        },
+        {
+          "caller": "createServer",
+          "callee": "getRun",
+          "lineNumber": 395
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 396
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 396
+        },
+        {
+          "caller": "createServer",
+          "callee": "Number",
+          "lineNumber": 397
+        },
+        {
+          "caller": "createServer",
+          "callee": "getRunEventsAfter",
+          "lineNumber": 398
+        },
+        {
+          "caller": "createServer",
+          "callee": "events.map",
+          "lineNumber": 400
+        },
+        {
+          "caller": "createServer",
+          "callee": "Number",
+          "lineNumber": 400
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.post",
+          "lineNumber": 408
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 409
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 410
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 410
+        },
+        {
+          "caller": "createServer",
+          "callee": "PactIngestRequest.safeParse",
+          "lineNumber": 411
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 413
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(400).send",
+          "lineNumber": 414
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 414
+        },
+        {
+          "caller": "createServer",
+          "callee": "ingestPactEvent",
+          "lineNumber": 416
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 417
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(202).send",
+          "lineNumber": 421
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 421
+        },
+        {
+          "caller": "createServer",
+          "callee": "opts.broadcaster?.emit",
+          "lineNumber": 422
+        },
+        {
+          "caller": "createServer",
+          "callee": "deliverPactNotification(db, opts.pushSender, accountId, {\n        type: 'pact-needs-you',\n        projectId: parsed.data.projectId,\n        eventType: parsed.data.eventType,\n        ...(parsed.data.task ? { task: parsed.data.task } : {}),\n      }).catch",
+          "lineNumber": 434
+        },
+        {
+          "caller": "createServer",
+          "callee": "deliverPactNotification",
+          "lineNumber": 434
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(202).send",
+          "lineNumber": 441
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 441
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 444
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 445
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 446
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 446
+        },
+        {
+          "caller": "createServer",
+          "callee": "listProjects",
+          "lineNumber": 447
+        },
+        {
+          "caller": "createServer",
+          "callee": "projects.map",
+          "lineNumber": 448
+        },
+        {
+          "caller": "createServer",
+          "callee": "p.lastEventAt.getTime",
+          "lineNumber": 448
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 451
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 452
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 453
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 453
+        },
+        {
+          "caller": "createServer",
+          "callee": "getProject",
+          "lineNumber": 457
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 459
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 459
+        },
+        {
+          "caller": "createServer",
+          "callee": "Number",
+          "lineNumber": 464
+        },
+        {
+          "caller": "createServer",
+          "callee": "getProjectEvents",
+          "lineNumber": 465
+        },
+        {
+          "caller": "createServer",
+          "callee": "events.map",
+          "lineNumber": 466
+        },
+        {
+          "caller": "createServer",
+          "callee": "Number",
+          "lineNumber": 466
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.delete",
+          "lineNumber": 474
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 475
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 476
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 476
+        },
+        {
+          "caller": "createServer",
+          "callee": "deleteRun",
+          "lineNumber": 478
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 479
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 479
+        },
+        {
+          "caller": "createServer",
+          "callee": "metrics.inc",
+          "lineNumber": 480
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(204).send",
+          "lineNumber": 481
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 481
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.post",
+          "lineNumber": 487
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 488
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 489
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 489
+        },
+        {
+          "caller": "createServer",
+          "callee": "RenameRequest.safeParse",
+          "lineNumber": 491
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(400).send",
+          "lineNumber": 492
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 492
+        },
+        {
+          "caller": "createServer",
+          "callee": "renameRun",
+          "lineNumber": 493
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 494
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 494
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.get",
+          "lineNumber": 501
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 502
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 503
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 503
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 504
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 504
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.post",
+          "lineNumber": 511
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 512
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 513
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 513
+        },
+        {
+          "caller": "createServer",
+          "callee": "parsePushSubscription",
+          "lineNumber": 514
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(400).send",
+          "lineNumber": 515
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 515
+        },
+        {
+          "caller": "createServer",
+          "callee": "subscribePush",
+          "lineNumber": 516
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(204).send",
+          "lineNumber": 517
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 517
+        },
+        {
+          "caller": "createServer",
+          "callee": "app.delete",
+          "lineNumber": 522
+        },
+        {
+          "caller": "createServer",
+          "callee": "accountIdOf",
+          "lineNumber": 523
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(401).send",
+          "lineNumber": 524
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 524
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(400).send",
+          "lineNumber": 527
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 527
+        },
+        {
+          "caller": "createServer",
+          "callee": "unsubscribePush",
+          "lineNumber": 529
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(404).send",
+          "lineNumber": 530
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 530
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code(204).send",
+          "lineNumber": 531
+        },
+        {
+          "caller": "createServer",
+          "callee": "reply.code",
+          "lineNumber": 531
+        }
+      ],
+      "metrics": {
+        "importCount": 11,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/src/sockets.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 406,
+      "nonEmptyLines": 387,
+      "functions": [
+        {
+          "name": "resolveRpcPerMin",
+          "startLine": 51,
+          "endLine": 60,
+          "params": [
+            "deps"
+          ]
+        },
+        {
+          "name": "attachSockets",
+          "startLine": 62,
+          "endLine": 406,
+          "params": [
+            "httpServer",
+            "deps"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "attachSockets",
+          "line": 62,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "resolveRpcPerMin",
+          "callee": "Number.isFinite",
+          "lineNumber": 53
+        },
+        {
+          "caller": "resolveRpcPerMin",
+          "callee": "Number",
+          "lineNumber": 56
+        },
+        {
+          "caller": "resolveRpcPerMin",
+          "callee": "Number.isFinite",
+          "lineNumber": 57
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "Date.now",
+          "lineNumber": 64
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "createLogger",
+          "lineNumber": 65
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "createMetrics",
+          "lineNumber": 66
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "TokenBucketLimiter.fromPerMinute",
+          "lineNumber": 68
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "resolveRpcPerMin",
+          "lineNumber": 68
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "maybeMakeAdapter",
+          "lineNumber": 72
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.adapter",
+          "lineNumber": 73
+        },
+        {
+          "caller": "broadcastMachines",
+          "callee": "io.to(`acct:${accountId}`).emit",
+          "lineNumber": 76
+        },
+        {
+          "caller": "broadcastMachines",
+          "callee": "io.to",
+          "lineNumber": 76
+        },
+        {
+          "caller": "broadcastMachines",
+          "callee": "listMachines",
+          "lineNumber": 76
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.use",
+          "lineNumber": 79
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "verifyToken",
+          "lineNumber": 81
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "now",
+          "lineNumber": 81
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.warn",
+          "lineNumber": 84
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "next",
+          "lineNumber": 85
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.warn",
+          "lineNumber": 88
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "next",
+          "lineNumber": 89
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "next",
+          "lineNumber": 94
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.on",
+          "lineNumber": 97
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.join",
+          "lineNumber": 101
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 105
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.addGauge",
+          "lineNumber": 106
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.addGauge",
+          "lineNumber": 107
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.info",
+          "lineNumber": 108
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.on",
+          "lineNumber": 114
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.addGauge",
+          "lineNumber": 115
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.addGauge",
+          "lineNumber": 116
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.info",
+          "lineNumber": 117
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.join",
+          "lineNumber": 126
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "(async () => {\n        try {\n          const reconciled = await reconcileMachineRuns(db, accountId, machineId)\n          for (const run of reconciled) {\n            io.to(`acct:${accountId}`).emit('run-updated', { summary: toRunSummary(run) })\n          }\n          if (reconciled.length > 0) {\n            metrics.inc('reconciled_runs_total', {}, reconciled.length)\n            log.info('reconnect reconcile', {\n              account: accountId,\n              machineId,\n              count: reconciled.length,\n            })\n          }\n        } catch (err) {\n          metrics.inc('errors_total', { where: 'reconcile' })\n          log.error('reconnect reconcile failed', {\n            account: accountId,\n            machineId,\n            error: err instanceof Error ? err.message : String(err),\n          })\n        }\n      })",
+          "lineNumber": 142
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "reconcileMachineRuns",
+          "lineNumber": 144
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to(`acct:${accountId}`).emit",
+          "lineNumber": 146
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to",
+          "lineNumber": 146
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "toRunSummary",
+          "lineNumber": 146
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 149
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.info",
+          "lineNumber": 150
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 157
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.error",
+          "lineNumber": 158
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "String",
+          "lineNumber": 161
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.on",
+          "lineNumber": 166
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "(async () => {\n            try {\n              await db.machine.upsert({\n                where: { id: machineId },\n                create: {\n                  id: machineId,\n                  accountId,\n                  metadataEnc: '',\n                  host: info.host ?? null,\n                  agentKinds: info.agentKinds ?? [],\n                  workdirs: info.workdirs === undefined ? Prisma.JsonNull : info.workdirs,\n                  online: true,\n                  lastSeenAt: BigInt(now()),\n                },\n                update: {\n                  host: info.host ?? null,\n                  agentKinds: info.agentKinds ?? [],\n                  workdirs: info.workdirs === undefined ? Prisma.JsonNull : info.workdirs,\n                  online: true,\n                  lastSeenAt: BigInt(now()),\n                },\n              })\n              await broadcastMachines(accountId)\n            } catch (err) {\n              // A DB failure here must not become an unhandled rejection — the\n              // machine would silently appear stale/offline. Log + count instead.\n              metrics.inc('errors_total', { where: 'register' })\n              log.warn('register failed', {\n                machineId,\n                error: err instanceof Error ? err.message : String(err),\n              })\n            }\n          })",
+          "lineNumber": 169
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "db.machine.upsert",
+          "lineNumber": 171
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "BigInt",
+          "lineNumber": 181
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "now",
+          "lineNumber": 181
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "BigInt",
+          "lineNumber": 188
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "now",
+          "lineNumber": 188
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "broadcastMachines",
+          "lineNumber": 191
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 195
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.warn",
+          "lineNumber": 196
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "String",
+          "lineNumber": 198
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.on",
+          "lineNumber": 205
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "(async () => {\n          try {\n            await db.machine.updateMany({\n              where: { id: machineId, accountId },\n              data: { online: false },\n            })\n            await broadcastMachines(accountId)\n          } catch (err) {\n            metrics.inc('errors_total', { where: 'disconnect' })\n            log.warn('machine disconnect handler failed', {\n              machineId,\n              error: err instanceof Error ? err.message : String(err),\n            })\n          }\n        })",
+          "lineNumber": 206
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "db.machine.updateMany",
+          "lineNumber": 208
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "broadcastMachines",
+          "lineNumber": 212
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 214
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.warn",
+          "lineNumber": 215
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "String",
+          "lineNumber": 217
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.on",
+          "lineNumber": 223
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "(async () => {\n          // Validate at the trust boundary: reject a non-conforming agentKind or\n          // WireMessage (wrong version, missing/oversized fields, unknown keys)\n          // before it touches the DB or a broadcast. See spec §2.5. A conforming\n          // linxd (typed against the same schema) always passes.\n          const kind = AgentKind.safeParse(payload?.agentKind)\n          const parsed = WireMessage.safeParse(payload?.msg)\n          if (!kind.success || !parsed.success) {\n            metrics.inc('ingest_rejected_total')\n            return\n          }\n          const msg = parsed.data\n          const { header, body } = msg\n          // runId/seq only — `body` is opaque ciphertext and is never logged.\n          log.debug('ingest', { runId: header.runId, seq: header.seq, machineId })\n          try {\n            // Transient query reply (dir-list/discovered/file-list) couriered via\n            // a one-off requestId in `runId`: forward to the account room for\n            // client-side requestId matching, but NEVER persist — else each\n            // run-less reply upserts a phantom Run (one per directory click).\n            if (header.ephemeral) {\n              io.to(`acct:${accountId}`).emit('event', {\n                runId: header.runId,\n                seq: header.seq,\n                body,\n              })\n              return\n            }\n            // Broadcast the per-run event SYNCHRONOUSLY, before any await, so the\n            // delivery order matches arrival/seq order. Socket.IO dispatches these\n            // ingest handlers in arrival (seq) order, but each runs as its own\n            // async task; emitting after `await getRun`/`await ingestWireMessage`\n            // let a later event whose DB ops settled first jump ahead, scrambling\n            // the streamed reply. The emit needs only the cleartext header.seq and\n            // the opaque body, so it can fire here; persistence, run-updated and\n            // push stay async below. (ServerWsMessage `event` variant shape.)\n            io.to(`acct:${accountId}`).emit('event', {\n              runId: header.runId,\n              seq: header.seq,\n              body,\n            })\n            // Prior cleartext state, captured BEFORE the upsert, so we can fire\n            // a push only on a genuine transition into a notify-worthy state\n            // (not on every header while the run sits in that state). The emit\n            // above does not touch the DB, so this still reflects pre-upsert state.\n            const prevState = (await getRun(db, header.runId))?.state ?? null\n            await ingestWireMessage(db, accountId, kind.data, msg)\n            metrics.inc('ingest_events_total')\n            // Board update from the just-upserted header.\n            const run = await getRun(db, header.runId)\n            if (run) io.to(`acct:${accountId}`).emit('run-updated', { summary: toRunSummary(run) })\n\n            // Web-push delivery: on a transition into a notify-worthy state\n            // (needs-you / done / error), fan a THIN, zero-knowledge payload out\n            // to THIS account's subscriptions. Cleartext operational fields only\n            // — never decrypted agent text. Account-scoped, so account A's run\n            // never pushes to account B. Fire-and-forget so a slow/failing push\n            // service never stalls ingest.\n            if (run && pushSender) {\n              // Decide off THIS header (eventKind for approval; the header's own\n              // terminal state vs the pre-upsert state for done/error) — never\n              // the re-fetched `run.state`, which a concurrent ingest may have\n              // already advanced.\n              const notifyType = notifyTypeForHeader(prevState, header.eventKind, header.state)\n              if (notifyType) {\n                void deliverRunNotification(\n                  db,\n                  pushSender,\n                  accountId,\n                  {\n                    type: notifyType,\n                    runId: run.id,\n                    machineId: run.machineId,\n                    agentKind: run.agentKind,\n                  },\n                  log,\n                )\n                  .then(({ sent, pruned }) => {\n                    if (sent > 0) metrics.inc('push_sent_total', { type: notifyType }, sent)\n                    if (pruned > 0) metrics.inc('push_pruned_total', {}, pruned)\n                  })\n                  .catch((err: unknown) => {\n                    metrics.inc('errors_total', { where: 'push' })\n                    log.error('push delivery failed', {\n                      type: notifyType,\n                      error: err instanceof Error ? err.message : String(err),\n                    })\n                  })\n              }\n            }\n          } catch (err) {\n            metrics.inc('errors_total', { where: 'ingest' })\n            log.error('ingest failed', {\n              runId: header.runId,\n              seq: header.seq,\n              error: err instanceof Error ? err.message : String(err),\n            })\n          }\n        })",
+          "lineNumber": 224
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "AgentKind.safeParse",
+          "lineNumber": 229
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "WireMessage.safeParse",
+          "lineNumber": 230
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 232
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.debug",
+          "lineNumber": 238
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to(`acct:${accountId}`).emit",
+          "lineNumber": 245
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to",
+          "lineNumber": 245
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to(`acct:${accountId}`).emit",
+          "lineNumber": 260
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to",
+          "lineNumber": 260
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "getRun",
+          "lineNumber": 269
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "ingestWireMessage",
+          "lineNumber": 270
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 271
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "getRun",
+          "lineNumber": 273
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to(`acct:${accountId}`).emit",
+          "lineNumber": 274
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to",
+          "lineNumber": 274
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "toRunSummary",
+          "lineNumber": 274
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "notifyTypeForHeader",
+          "lineNumber": 287
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "deliverRunNotification(\n                  db,\n                  pushSender,\n                  accountId,\n                  {\n                    type: notifyType,\n                    runId: run.id,\n                    machineId: run.machineId,\n                    agentKind: run.agentKind,\n                  },\n                  log,\n                )\n                  .then(({ sent, pruned }) => {\n                    if (sent > 0) metrics.inc('push_sent_total', { type: notifyType }, sent)\n                    if (pruned > 0) metrics.inc('push_pruned_total', {}, pruned)\n                  })\n                  .catch",
+          "lineNumber": 289
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "deliverRunNotification(\n                  db,\n                  pushSender,\n                  accountId,\n                  {\n                    type: notifyType,\n                    runId: run.id,\n                    machineId: run.machineId,\n                    agentKind: run.agentKind,\n                  },\n                  log,\n                )\n                  .then",
+          "lineNumber": 289
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "deliverRunNotification",
+          "lineNumber": 289
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 302
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 303
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 306
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.error",
+          "lineNumber": 307
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "String",
+          "lineNumber": 309
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 315
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.error",
+          "lineNumber": 316
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "String",
+          "lineNumber": 319
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.on",
+          "lineNumber": 327
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "(async () => {\n          const afterSeqByRun = payload.afterSeqByRun ?? {}\n          const runIds = payload.runIds ?? Object.keys(afterSeqByRun)\n          for (const runId of runIds) {\n            const run = await getRun(db, runId)\n            // Only replay runs this account owns.\n            if (!run || run.accountId !== accountId) continue\n            if (!(runId in afterSeqByRun)) continue\n            const afterSeq = afterSeqByRun[runId]!\n            const events = await getRunEventsAfter(db, runId, afterSeq)\n            let lastSeq = afterSeq\n            for (const e of events) {\n              socket.emit('event', {\n                runId,\n                seq: e.seq,\n                body: JSON.parse(e.bodyEnc) as unknown,\n              })\n              lastSeq = e.seq\n            }\n            socket.emit('replay-end', { runId, lastSeq })\n          }\n        })",
+          "lineNumber": 330
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "Object.keys",
+          "lineNumber": 332
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "getRun",
+          "lineNumber": 334
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "getRunEventsAfter",
+          "lineNumber": 339
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.emit",
+          "lineNumber": 342
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "JSON.parse",
+          "lineNumber": 345
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.emit",
+          "lineNumber": 349
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.on",
+          "lineNumber": 355
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.emit",
+          "lineNumber": 355
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.on",
+          "lineNumber": 357
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "RpcRequest.safeParse",
+          "lineNumber": 361
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 363
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.emit",
+          "lineNumber": 364
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 369
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "rpcLimiter.take",
+          "lineNumber": 372
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "metrics.inc",
+          "lineNumber": 373
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "log.warn",
+          "lineNumber": 374
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "socket.emit",
+          "lineNumber": 375
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "(async () => {\n        const targetRooms: string[] = []\n        // Machine-targeted RPCs (spawn/discover/attach) carry a `machineId` and\n        // route straight to that machine; run-targeted RPCs route via the run's\n        // owning machine. Both stay zero-knowledge — only ids are inspected.\n        if ('machineId' in rpc) {\n          if (rpc.machineId) {\n            targetRooms.push(`machine:${rpc.machineId}`)\n          } else {\n            // Best-effort fallback: the web may not know the real machine id yet;\n            // broadcast to every machine belonging to this account. With the Redis\n            // adapter only the connected instance(s) deliver; absent machines are a\n            // no-op.\n            const machines = await listMachines(db, accountId)\n            for (const m of machines) targetRooms.push(`machine:${m.machineId}`)\n          }\n        } else {\n          const run = await getRun(db, rpc.runId)\n          if (run && run.accountId === accountId) targetRooms.push(`machine:${run.machineId}`)\n        }\n        for (const room of targetRooms) {\n          io.to(room).emit('rpc', rpc)\n        }\n      })",
+          "lineNumber": 378
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "targetRooms.push",
+          "lineNumber": 385
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "listMachines",
+          "lineNumber": 391
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "targetRooms.push",
+          "lineNumber": 392
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "getRun",
+          "lineNumber": 395
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "targetRooms.push",
+          "lineNumber": 396
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to(room).emit",
+          "lineNumber": 399
+        },
+        {
+          "caller": "attachSockets",
+          "callee": "io.to",
+          "lineNumber": 399
+        }
+      ],
+      "metrics": {
+        "importCount": 9,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/test/auth.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 104,
+      "nonEmptyLines": 96,
+      "functions": [
+        {
+          "name": "keypair",
+          "startLine": 32,
+          "endLine": 36,
+          "params": []
+        },
+        {
+          "name": "sign",
+          "startLine": 37,
+          "endLine": 39,
+          "params": [
+            "priv",
+            "challenge"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "keypair",
+          "callee": "ed25519.utils.randomSecretKey",
+          "lineNumber": 33
+        },
+        {
+          "caller": "keypair",
+          "callee": "ed25519.getPublicKey",
+          "lineNumber": 34
+        },
+        {
+          "caller": "keypair",
+          "callee": "bytesToHex",
+          "lineNumber": 35
+        },
+        {
+          "caller": "sign",
+          "callee": "bytesToHex",
+          "lineNumber": 38
+        },
+        {
+          "caller": "sign",
+          "callee": "ed25519.sign",
+          "lineNumber": 38
+        },
+        {
+          "caller": "sign",
+          "callee": "utf8ToBytes",
+          "lineNumber": 38
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/test/db.node.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 16,
+      "nonEmptyLines": 15,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/test/history.http.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 243,
+      "nonEmptyLines": 220,
+      "functions": [
+        {
+          "name": "keypair",
+          "startLine": 10,
+          "endLine": 13,
+          "params": []
+        },
+        {
+          "name": "sign",
+          "startLine": 14,
+          "endLine": 16,
+          "params": [
+            "priv",
+            "m"
+          ]
+        },
+        {
+          "name": "login",
+          "startLine": 23,
+          "endLine": 34,
+          "params": [
+            "app",
+            "kp"
+          ]
+        },
+        {
+          "name": "seedRun",
+          "startLine": 36,
+          "endLine": 52,
+          "params": [
+            "accountId",
+            "machineId",
+            "r"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "keypair",
+          "callee": "ed25519.utils.randomSecretKey",
+          "lineNumber": 11
+        },
+        {
+          "caller": "keypair",
+          "callee": "bytesToHex",
+          "lineNumber": 12
+        },
+        {
+          "caller": "keypair",
+          "callee": "ed25519.getPublicKey",
+          "lineNumber": 12
+        },
+        {
+          "caller": "sign",
+          "callee": "bytesToHex",
+          "lineNumber": 15
+        },
+        {
+          "caller": "sign",
+          "callee": "ed25519.sign",
+          "lineNumber": 15
+        },
+        {
+          "caller": "sign",
+          "callee": "utf8ToBytes",
+          "lineNumber": 15
+        },
+        {
+          "caller": "login",
+          "callee": "keypair",
+          "lineNumber": 23
+        },
+        {
+          "caller": "login",
+          "callee": "app.inject",
+          "lineNumber": 24
+        },
+        {
+          "caller": "login",
+          "callee": "sign",
+          "lineNumber": 27
+        },
+        {
+          "caller": "login",
+          "callee": "res.json",
+          "lineNumber": 31
+        },
+        {
+          "caller": "login",
+          "callee": "res.json",
+          "lineNumber": 32
+        },
+        {
+          "caller": "seedRun",
+          "callee": "db.run.create",
+          "lineNumber": 41
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/test/history.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 256,
+      "nonEmptyLines": 228,
+      "functions": [
+        {
+          "name": "seedAccount",
+          "startLine": 7,
+          "endLine": 15,
+          "params": [
+            "db",
+            "publicKey"
+          ]
+        },
+        {
+          "name": "seedRun",
+          "startLine": 26,
+          "endLine": 44,
+          "params": [
+            "db",
+            "accountId",
+            "machineId",
+            "r"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "seedAccount",
+          "callee": "db.account.create",
+          "lineNumber": 11
+        },
+        {
+          "caller": "seedAccount",
+          "callee": "db.machine.create",
+          "lineNumber": 13
+        },
+        {
+          "caller": "seedRun",
+          "callee": "db.run.create",
+          "lineNumber": 32
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/test/isolation.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 464,
+      "nonEmptyLines": 415,
+      "functions": [
+        {
+          "name": "seedAccount",
+          "startLine": 16,
+          "endLine": 24,
+          "params": [
+            "db",
+            "publicKey"
+          ]
+        },
+        {
+          "name": "seedRun",
+          "startLine": 27,
+          "endLine": 64,
+          "params": [
+            "db",
+            "opts"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "seedAccount",
+          "callee": "db.account.create",
+          "lineNumber": 20
+        },
+        {
+          "caller": "seedAccount",
+          "callee": "db.machine.create",
+          "lineNumber": 22
+        },
+        {
+          "caller": "seedRun",
+          "callee": "db.run.create",
+          "lineNumber": 38
+        },
+        {
+          "caller": "seedRun",
+          "callee": "db.runEvent.create",
+          "lineNumber": 49
+        },
+        {
+          "caller": "seedRun",
+          "callee": "BigInt",
+          "lineNumber": 55
+        },
+        {
+          "caller": "seedRun",
+          "callee": "JSON.stringify",
+          "lineNumber": 56
+        },
+        {
+          "caller": "connect",
+          "callee": "ioc",
+          "lineNumber": 304
+        },
+        {
+          "caller": "connect",
+          "callee": "s.on",
+          "lineNumber": 309
+        },
+        {
+          "caller": "connect",
+          "callee": "resolve",
+          "lineNumber": 309
+        },
+        {
+          "caller": "connect",
+          "callee": "s.on",
+          "lineNumber": 310
+        },
+        {
+          "caller": "connect",
+          "callee": "reject",
+          "lineNumber": 310
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "cloud/relay/test/log.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 55,
+      "nonEmptyLines": 49,
+      "functions": [
+        {
+          "name": "capture",
+          "startLine": 4,
+          "endLine": 7,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "capture",
+          "callee": "lines.push",
+          "lineNumber": 6
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "nodes": [
+    {
+      "id": "document:.pact/tasks/planner-manifest.md",
+      "type": "document",
+      "name": "planner-manifest.md",
+      "filePath": ".pact/tasks/planner-manifest.md",
+      "summary": "Task spec defining the planner manifest schema, JSON parsing, and validation rules for Plan/PlanTask with DFS-based cycle detection and roster-aware owner/reviewer checks.",
+      "tags": ["task-spec", "planner", "validation", "schema", "tdd"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/planner-prompt.md",
+      "type": "document",
+      "name": "planner-prompt.md",
+      "filePath": ".pact/tasks/planner-prompt.md",
+      "summary": "Task spec for assembling planner agent prompts via a pure BuildPrompt function with assertions on key prompt fragments and TDD coverage.",
+      "tags": ["task-spec", "planner", "prompt", "tdd", "pure-function"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/proj-fixture.md",
+      "type": "document",
+      "name": "proj-fixture.md",
+      "filePath": ".pact/tasks/proj-fixture.md",
+      "summary": "Task spec for a Go golden-fixture exporter that converts events into StateDTO, defining cross-language parity contract for the StateDTO projection.",
+      "tags": ["task-spec", "fixture", "golden-test", "parity", "events"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/recipe-core.md",
+      "type": "document",
+      "name": "recipe-core.md",
+      "filePath": ".pact/tasks/recipe-core.md",
+      "summary": "Task spec for the recipe package (internal/recipe) providing the built-in recipe registry, Expand substitution, and a cobra-based `pactify recipe` subcommand.",
+      "tags": ["task-spec", "recipe", "registry", "cli", "tdd"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/recipe-serve.md",
+      "type": "document",
+      "name": "recipe-serve.md",
+      "filePath": ".pact/tasks/recipe-serve.md",
+      "summary": "Task spec adding GET /api/recipes and POST /api/recipes/{name}/expand HTTP endpoints to internal/serve, keyed off the existing recipe package exports.",
+      "tags": ["task-spec", "http-handler", "recipe", "api", "tdd"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/relay-client.md",
+      "type": "document",
+      "name": "relay-client.md",
+      "filePath": ".pact/tasks/relay-client.md",
+      "summary": "Task spec for a best-effort async relay client that POSTs serve log events to a configurable endpoint with bounded queue, dropped-oldest on overflow, exponential retry, and never propagating failures.",
+      "tags": ["task-spec", "relay", "async", "best-effort", "bounded-queue"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/rp-critic.md",
+      "type": "document",
+      "name": "rp-critic.md",
+      "filePath": ".pact/tasks/rp-critic.md",
+      "summary": "Task spec for an opt-in critic pre-scoring stage (default off) with deliverables and test expectations.",
+      "tags": ["task-spec", "critic", "opt-in", "rp"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/rp-dynamic-seats.md",
+      "type": "document",
+      "name": "rp-dynamic-seats.md",
+      "filePath": ".pact/tasks/rp-dynamic-seats.md",
+      "summary": "Task spec for dynamic seat assignment (small-step rollout) with deliverables and test coverage.",
+      "tags": ["task-spec", "dynamic-seats", "rp"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/rp-e2e-docs.md",
+      "type": "document",
+      "name": "rp-e2e-docs.md",
+      "filePath": ".pact/tasks/rp-e2e-docs.md",
+      "summary": "Package-2 wrap-up task spec covering the quorum badge, documentation, and repo-wide gates.",
+      "tags": ["task-spec", "quorum", "docs", "gate", "rp"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/rp-fix-loop.md",
+      "type": "document",
+      "name": "rp-fix-loop.md",
+      "filePath": ".pact/tasks/rp-fix-loop.md",
+      "summary": "Task spec for a fix-until-green self-repair loop with draft semantics, delivered via tests and boundary definitions.",
+      "tags": ["task-spec", "fix-loop", "draft", "self-repair", "rp"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/rp-qa-gate.md",
+      "type": "document",
+      "name": "rp-qa-gate.md",
+      "filePath": ".pact/tasks/rp-qa-gate.md",
+      "summary": "Task spec for an experimental task-level opt-in QA-agent quality gate with deliverable and test requirements.",
+      "tags": ["task-spec", "qa-gate", "experimental", "opt-in", "rp"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/rp-quorum.md",
+      "type": "document",
+      "name": "rp-quorum.md",
+      "filePath": ".pact/tasks/rp-quorum.md",
+      "summary": "Task spec for protocol-extension quorum multi-reviewer support with strict opt-in and explicit boundary semantics.",
+      "tags": ["task-spec", "quorum", "multi-reviewer", "protocol-extension", "rp"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/rp-schedule.md",
+      "type": "document",
+      "name": "rp-schedule.md",
+      "filePath": ".pact/tasks/rp-schedule.md",
+      "summary": "Task spec for timer/periodic orchestrate scheduling on the serve side with zero new external dependencies.",
+      "tags": ["task-spec", "schedule", "orchestrate", "periodic", "rp"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/rp-snapshot.md",
+      "type": "document",
+      "name": "rp-snapshot.md",
+      "filePath": ".pact/tasks/rp-snapshot.md",
+      "summary": "Task spec for ledger persistent snapshots and incremental replay — flagged as correctness-critical with strictest reviewer scrutiny.",
+      "tags": ["task-spec", "snapshot", "replay", "correctness", "rp"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/serve-manifests.md",
+      "type": "document",
+      "name": "serve-manifests.md",
+      "filePath": ".pact/tasks/serve-manifests.md",
+      "summary": "Phase-C task spec for custom-agent manifest serve endpoints (GET list, POST create, DELETE) wired into internal/serve/api.go, backing onto internal/agentmanifest.",
+      "tags": ["task-spec", "manifest", "http-handler", "phase-c", "toml"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/sessions-core.md",
+      "type": "document",
+      "name": "sessions-core.md",
+      "filePath": ".pact/tasks/sessions-core.md",
+      "summary": "Task spec for an internal/sessions package providing a Runner-injected session-cleanup framework (Supported/CanPrune/List/Prune) and a `pactify sessions` cobra command.",
+      "tags": ["task-spec", "sessions", "cleanup", "cli", "tdd"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/t-acting-seat.md",
+      "type": "document",
+      "name": "t-acting-seat.md",
+      "filePath": ".pact/tasks/t-acting-seat.md",
+      "summary": "Sprint-1 block-4 task spec defining the acting-seat authorization baseline with layered rules, target files, and discipline constraints.",
+      "tags": ["task-spec", "acting-seat", "authorization", "sp1", "baseline"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/t-plan-apply.md",
+      "type": "document",
+      "name": "t-plan-apply.md",
+      "filePath": ".pact/tasks/t-plan-apply.md",
+      "summary": "Sprint-1 block-2 task spec for transactionalizing plan apply, with file scope and discipline notes.",
+      "tags": ["task-spec", "plan-apply", "transactional", "sp1"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/t-projwiz-backend.md",
+      "type": "document",
+      "name": "t-projwiz-backend.md",
+      "filePath": ".pact/tasks/t-projwiz-backend.md",
+      "summary": "Task spec for the project-wizard backend: filesystem browse plus group endpoints, with discipline constraints limiting scope.",
+      "tags": ["task-spec", "project-wizard", "fs-browse", "backend"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/t-projwiz-frontend.md",
+      "type": "document",
+      "name": "t-projwiz-frontend.md",
+      "filePath": ".pact/tasks/t-projwiz-frontend.md",
+      "summary": "Task spec for the project-wizard frontend: grouped Sidebar, add wizard, FolderPicker, and delete flows with discipline constraints.",
+      "tags": ["task-spec", "project-wizard", "frontend", "sidebar", "folder-picker"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

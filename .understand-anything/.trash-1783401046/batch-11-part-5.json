@@ -1,0 +1,1262 @@
+{
+  "nodes": [
+    {
+      "id": "file:internal/serve/stream.go",
+      "type": "file",
+      "name": "stream.go",
+      "filePath": "internal/serve/stream.go",
+      "summary": "GET handler that streams agent JSONL output from the worktree stream file with offset, flush, and complete-line framing.",
+      "tags": [
+        "api-handler",
+        "sse-stream",
+        "jsonl-tail",
+        "offset"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/stream.go:handleAgentStream",
+      "type": "function",
+      "name": "handleAgentStream",
+      "filePath": "internal/serve/stream.go",
+      "lineRange": [
+        18,
+        91
+      ],
+      "summary": "Function handleAgentStream() in stream.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/stream.go:drainStreamFrom",
+      "type": "function",
+      "name": "drainStreamFrom",
+      "filePath": "internal/serve/stream.go",
+      "lineRange": [
+        103,
+        129
+      ],
+      "summary": "Function drainStreamFrom() in stream.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/serve/timeline_test.go",
+      "type": "file",
+      "name": "timeline_test.go",
+      "filePath": "internal/serve/timeline_test.go",
+      "summary": "Tests for the serve timeline and state-at handlers covering pagination, omitempty semantics, and edge clamp behavior.",
+      "tags": [
+        "test",
+        "timeline",
+        "state-at",
+        "pagination"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:seedTimelineRepo",
+      "type": "function",
+      "name": "seedTimelineRepo",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        22,
+        42
+      ],
+      "summary": "Function seedTimelineRepo() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestTimeline",
+      "type": "function",
+      "name": "TestTimeline",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        62,
+        105
+      ],
+      "summary": "Function TestTimeline() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestTimelineUnknownProject",
+      "type": "function",
+      "name": "TestTimelineUnknownProject",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        108,
+        119
+      ],
+      "summary": "Function TestTimelineUnknownProject() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestTimelineOmitemptyTaskFeature",
+      "type": "function",
+      "name": "TestTimelineOmitemptyTaskFeature",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        123,
+        149
+      ],
+      "summary": "Function TestTimelineOmitemptyTaskFeature() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestStateAtZero",
+      "type": "function",
+      "name": "TestStateAtZero",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        162,
+        178
+      ],
+      "summary": "Function TestStateAtZero() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestStateAtMid",
+      "type": "function",
+      "name": "TestStateAtMid",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        181,
+        192
+      ],
+      "summary": "Function TestStateAtMid() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestStateAtClamp",
+      "type": "function",
+      "name": "TestStateAtClamp",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        195,
+        208
+      ],
+      "summary": "Function TestStateAtClamp() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestStateAtBad",
+      "type": "function",
+      "name": "TestStateAtBad",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        211,
+        227
+      ],
+      "summary": "Function TestStateAtBad() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestStateNoAtByteIdentical",
+      "type": "function",
+      "name": "TestStateNoAtByteIdentical",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        231,
+        245
+      ],
+      "summary": "Function TestStateNoAtByteIdentical() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/serve/timeline_test.go:TestTimelineEmptyLog",
+      "type": "function",
+      "name": "TestTimelineEmptyLog",
+      "filePath": "internal/serve/timeline_test.go",
+      "lineRange": [
+        259,
+        281
+      ],
+      "summary": "Function TestTimelineEmptyLog() in timeline_test.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/sessions/sessions.go",
+      "type": "file",
+      "name": "sessions.go",
+      "filePath": "internal/sessions/sessions.go",
+      "summary": "Sessions Manager that lists, prunes, and cleans per-agent-kind session stores; includes Kimi seat scrubbing helpers.",
+      "tags": [
+        "session-manager",
+        "list-prune",
+        "kimi-cleanup",
+        "agent-kinds"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:SessionTag",
+      "type": "function",
+      "name": "SessionTag",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        68,
+        68
+      ],
+      "summary": "Function SessionTag() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:Supported",
+      "type": "function",
+      "name": "Supported",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        79,
+        82
+      ],
+      "summary": "Function Supported() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:CanPrune",
+      "type": "function",
+      "name": "CanPrune",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        86,
+        92
+      ],
+      "summary": "Function CanPrune() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:CanCleanup",
+      "type": "function",
+      "name": "CanCleanup",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        97,
+        100
+      ],
+      "summary": "Function CanCleanup() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:List",
+      "type": "function",
+      "name": "List",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        103,
+        109
+      ],
+      "summary": "Function List() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:Prune",
+      "type": "function",
+      "name": "Prune",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        115,
+        128
+      ],
+      "summary": "Function Prune() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:pruneByIndex",
+      "type": "function",
+      "name": "pruneByIndex",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        133,
+        158
+      ],
+      "summary": "Function pruneByIndex() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:CleanupByTitle",
+      "type": "function",
+      "name": "CleanupByTitle",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        166,
+        194
+      ],
+      "summary": "Function CleanupByTitle() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:IsKimi",
+      "type": "function",
+      "name": "IsKimi",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        217,
+        217
+      ],
+      "summary": "Function IsKimi() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:CleanupKimiSeat",
+      "type": "function",
+      "name": "CleanupKimiSeat",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        226,
+        255
+      ],
+      "summary": "Function CleanupKimiSeat() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/sessions/sessions.go:pruneKimiIndex",
+      "type": "function",
+      "name": "pruneKimiIndex",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        260,
+        287
+      ],
+      "summary": "Function pruneKimiIndex() in sessions.go.",
+      "tags": [
+        "function",
+        "go"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:internal/sessions/sessions.go:Spec",
+      "type": "class",
+      "name": "Spec",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        29,
+        35
+      ],
+      "summary": "Type/class Spec in sessions.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:internal/sessions/sessions.go:Manager",
+      "type": "class",
+      "name": "Manager",
+      "filePath": "internal/sessions/sessions.go",
+      "lineRange": [
+        73,
+        76
+      ],
+      "summary": "Type/class Manager in sessions.go.",
+      "tags": [
+        "class",
+        "go",
+        "type-definition"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "function:internal/serve/stream.go:handleAgentStream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "function:internal/serve/stream.go:drainStreamFrom",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/acp_smoke_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/acprunner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/acprunner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/besteffort_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/brief_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/brief.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/classify_cleanexit_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/cleanup_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/critic_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/critic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/decide_parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/decide_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/decide.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/defaults.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/dynamic_seat_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/escalate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/escalate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/fix_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/gate_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/gate.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/gateconfig_failclosed_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/gateconfig_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/gateconfig.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/history_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/knowledge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/knowledge.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/ledger_lock_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/ledger_merge_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/loop_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/loop.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/parallel_drain_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/parallel_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/parallel.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/qa_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/qa.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/recover_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/recover.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/remote_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/remote.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/runner_idle_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/runner_idle.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/runner_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/runner.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/sandbox_base_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/sandbox_crash_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/sandbox_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/sandbox.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/sessionstore_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/sessionstore.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/start_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/status_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/status.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/stream_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/stream.go",
+      "target": "file:internal/orchestrate/stream.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:seedTimelineRepo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestTimeline",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestTimeline",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestTimelineUnknownProject",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestTimelineUnknownProject",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestTimelineOmitemptyTaskFeature",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestTimelineOmitemptyTaskFeature",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateAtZero",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateAtZero",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateAtMid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateAtMid",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateAtClamp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateAtClamp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateAtBad",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateAtBad",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateNoAtByteIdentical",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestStateNoAtByteIdentical",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestTimelineEmptyLog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "function:internal/serve/timeline_test.go:TestTimelineEmptyLog",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/event/event_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/event/event.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/event/id.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/event/log_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/event/log.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/atomic.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/join_scope_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/project_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/project.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/quorum_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/render_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/render.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/snapshot_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/projection/snapshot.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/registry/registry_test.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/serve/timeline_test.go",
+      "target": "file:internal/registry/registry.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:SessionTag",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:SessionTag",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:Supported",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:Supported",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:CanPrune",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:CanPrune",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:CanCleanup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:CanCleanup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:List",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:List",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:Prune",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:Prune",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:pruneByIndex",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:CleanupByTitle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:CleanupByTitle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:IsKimi",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:IsKimi",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:CleanupKimiSeat",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:CleanupKimiSeat",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "function:internal/sessions/sessions.go:pruneKimiIndex",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "class:internal/sessions/sessions.go:Spec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "class:internal/sessions/sessions.go:Spec",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "class:internal/sessions/sessions.go:Manager",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:internal/sessions/sessions.go",
+      "target": "class:internal/sessions/sessions.go:Manager",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

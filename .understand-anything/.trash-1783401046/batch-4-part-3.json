@@ -1,0 +1,392 @@
+{
+  "nodes": [
+    {
+      "id": "file:web/src/lib/office.test.ts",
+      "type": "file",
+      "name": "office.test.ts",
+      "filePath": "web/src/lib/office.test.ts",
+      "summary": "Vitest suite for deriveOffice and helper factories building states/seats/desks.",
+      "tags": [
+        "test",
+        "office",
+        "derivation",
+        "vitest"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/office.ts",
+      "type": "file",
+      "name": "office.ts",
+      "filePath": "web/src/lib/office.ts",
+      "summary": "Derives per-seat desk state including doing/waiting tasks from the current pact state.",
+      "tags": [
+        "office",
+        "derivation",
+        "seats"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/office.ts:deriveOffice",
+      "type": "function",
+      "name": "deriveOffice",
+      "filePath": "web/src/lib/office.ts",
+      "lineRange": [
+        42,
+        93
+      ],
+      "summary": "Derives per-seat desks with current/doing/waiting task lists from the current pact state.",
+      "tags": [
+        "utility",
+        "helper",
+        "derivation",
+        "exported"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:web/src/lib/ops.test.ts",
+      "type": "file",
+      "name": "ops.test.ts",
+      "filePath": "web/src/lib/ops.test.ts",
+      "summary": "Vitest cases for slug validation and relative time formatting.",
+      "tags": [
+        "test",
+        "formatter",
+        "vitest"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/ops.ts",
+      "type": "file",
+      "name": "ops.ts",
+      "filePath": "web/src/lib/ops.ts",
+      "summary": "Slug validation regex and a relativeTime formatter producing human-friendly past/future time strings.",
+      "tags": [
+        "utility",
+        "formatter",
+        "slug"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/ops.ts:relativeTime",
+      "type": "function",
+      "name": "relativeTime",
+      "filePath": "web/src/lib/ops.ts",
+      "lineRange": [
+        13,
+        25
+      ],
+      "summary": "Formats a timestamp as a human-friendly relative-time string ('just now', '5m ago', 'in 2h').",
+      "tags": [
+        "utility",
+        "helper",
+        "formatter",
+        "exported"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/protocolErrors.test.ts",
+      "type": "file",
+      "name": "protocolErrors.test.ts",
+      "filePath": "web/src/lib/protocolErrors.test.ts",
+      "summary": "Vitest cases verifying humanizeError recognizes protocol-level error strings.",
+      "tags": [
+        "test",
+        "errors",
+        "vitest"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/protocolErrors.ts",
+      "type": "file",
+      "name": "protocolErrors.ts",
+      "filePath": "web/src/lib/protocolErrors.ts",
+      "summary": "Best-effort humanizer for raw error strings emitted by the pact protocol, returning friendly status labels.",
+      "tags": [
+        "errors",
+        "formatter",
+        "protocol"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:web/src/lib/protocolErrors.ts:humanizeError",
+      "type": "function",
+      "name": "humanizeError",
+      "filePath": "web/src/lib/protocolErrors.ts",
+      "lineRange": [
+        69,
+        74
+      ],
+      "summary": "Translates raw protocol error strings into friendly short labels (e.g. 'no seat').",
+      "tags": [
+        "utility",
+        "helper",
+        "error",
+        "exported"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:web/src/lib/relaysource.test.ts",
+      "type": "file",
+      "name": "relaysource.test.ts",
+      "filePath": "web/src/lib/relaysource.test.ts",
+      "summary": "Vitest suite for RelaySource against a mocked client covering list/get/verb/orchestrate/subscribe paths.",
+      "tags": [
+        "test",
+        "data-source",
+        "relay",
+        "rpc",
+        "vitest"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:web/src/lib/relaysource.test.ts:makeClient",
+      "type": "function",
+      "name": "makeClient",
+      "filePath": "web/src/lib/relaysource.test.ts",
+      "lineRange": [
+        24,
+        35
+      ],
+      "summary": "Function makeClient defined in web/src/lib/relaysource.test.ts.",
+      "tags": [
+        "utility",
+        "helper",
+        "factory",
+        "internal"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:web/src/lib/relaysource.ts",
+      "type": "file",
+      "name": "relaysource.ts",
+      "filePath": "web/src/lib/relaysource.ts",
+      "summary": "RelaySource implementation of the DataSource interface that proxies to a remote machine via RPC and decrypts events.",
+      "tags": [
+        "data-source",
+        "relay",
+        "rpc",
+        "encryption"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:web/src/lib/relaysource.ts:RelaySource",
+      "type": "class",
+      "name": "RelaySource",
+      "filePath": "web/src/lib/relaysource.ts",
+      "lineRange": [
+        18,
+        283
+      ],
+      "summary": "DataSource that talks to a remote machine over RPC, decrypts events, and resolves machine routing.",
+      "tags": [
+        "class",
+        "helper",
+        "exported"
+      ],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:web/src/lib/office.test.ts",
+      "target": "file:web/src/lib/office.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/office.test.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/office.ts",
+      "target": "file:web/src/lib/comms.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/office.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/ops.test.ts",
+      "target": "file:web/src/lib/ops.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/protocolErrors.test.ts",
+      "target": "file:web/src/lib/protocolErrors.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/relaysource.test.ts",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/relaysource.test.ts",
+      "target": "file:web/src/lib/relaysource.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/relaysource.test.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/relaysource.ts",
+      "target": "file:web/src/lib/api.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/relaysource.ts",
+      "target": "file:web/src/lib/datasource.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/relaysource.ts",
+      "target": "file:web/src/lib/types.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/office.ts",
+      "target": "function:web/src/lib/office.ts:deriveOffice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/ops.ts",
+      "target": "function:web/src/lib/ops.ts:relativeTime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/protocolErrors.ts",
+      "target": "function:web/src/lib/protocolErrors.ts:humanizeError",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/relaysource.test.ts",
+      "target": "function:web/src/lib/relaysource.test.ts:makeClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/relaysource.ts",
+      "target": "class:web/src/lib/relaysource.ts:RelaySource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:web/src/lib/office.ts",
+      "target": "function:web/src/lib/office.ts:deriveOffice",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/ops.ts",
+      "target": "function:web/src/lib/ops.ts:relativeTime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/protocolErrors.ts",
+      "target": "function:web/src/lib/protocolErrors.ts:humanizeError",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/relaysource.ts",
+      "target": "class:web/src/lib/relaysource.ts:RelaySource",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/lib/office.ts",
+      "target": "file:web/src/lib/office.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/ops.ts",
+      "target": "file:web/src/lib/ops.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/protocolErrors.ts",
+      "target": "file:web/src/lib/protocolErrors.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:web/src/lib/relaysource.ts",
+      "target": "file:web/src/lib/relaysource.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:web/src/lib/office.ts:deriveOffice",
+      "target": "function:web/src/lib/comms.ts:flatTasks",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:web/src/lib/office.ts:deriveOffice",
+      "target": "function:web/src/lib/comms.ts:unmetDeps",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

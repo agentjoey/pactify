@@ -1,0 +1,2710 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 35,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "web/src/components/shell/DispatchPanel.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 210,
+      "nonEmptyLines": 194,
+      "functions": [
+        {
+          "name": "DispatchPanel",
+          "startLine": 8,
+          "endLine": 210,
+          "params": [
+            "{\n  project,\n  roster,\n  open,\n  onClose,\n  onGoLive,\n  initialGoal,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "DispatchPanel",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "DispatchPanel",
+          "callee": "useDataSource",
+          "lineNumber": 24
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useState",
+          "lineNumber": 34
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useState",
+          "lineNumber": 35
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useState",
+          "lineNumber": 36
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useState",
+          "lineNumber": 37
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useState",
+          "lineNumber": 38
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useState",
+          "lineNumber": 39
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useState",
+          "lineNumber": 40
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useRef",
+          "lineNumber": 41
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useEffect",
+          "lineNumber": 44
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "setFeature",
+          "lineNumber": 45
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "slugify",
+          "lineNumber": 45
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useEffect",
+          "lineNumber": 48
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "clearInterval",
+          "lineNumber": 48
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "useEffect",
+          "lineNumber": 51
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "setGoal",
+          "lineNumber": 53
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "setPhase",
+          "lineNumber": 54
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "goal.trim",
+          "lineNumber": 60
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "/^[a-z0-9][a-z0-9-]*$/.test",
+          "lineNumber": 60
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setError",
+          "lineNumber": 64
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setPhase",
+          "lineNumber": 65
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "src.generatePlan",
+          "lineNumber": 67
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setError",
+          "lineNumber": 69
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "String",
+          "lineNumber": 69
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setPhase",
+          "lineNumber": 70
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setPhase",
+          "lineNumber": 76
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setInterval",
+          "lineNumber": 79
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "src.getPlanGenStatus!",
+          "lineNumber": 81
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "clearInterval",
+          "lineNumber": 83
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "src.getPlanReview",
+          "lineNumber": 84
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setReview",
+          "lineNumber": 85
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setPhase",
+          "lineNumber": 86
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "clearInterval",
+          "lineNumber": 88
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setError",
+          "lineNumber": 89
+        },
+        {
+          "caller": "startGenerate",
+          "callee": "setPhase",
+          "lineNumber": 90
+        },
+        {
+          "caller": "dispatch",
+          "callee": "setPhase",
+          "lineNumber": 98
+        },
+        {
+          "caller": "dispatch",
+          "callee": "src.applyPlan",
+          "lineNumber": 100
+        },
+        {
+          "caller": "dispatch",
+          "callee": "setAssigned",
+          "lineNumber": 101
+        },
+        {
+          "caller": "dispatch",
+          "callee": "src.runOrchestrate",
+          "lineNumber": 102
+        },
+        {
+          "caller": "dispatch",
+          "callee": "setPhase",
+          "lineNumber": 103
+        },
+        {
+          "caller": "dispatch",
+          "callee": "setError",
+          "lineNumber": 105
+        },
+        {
+          "caller": "dispatch",
+          "callee": "String",
+          "lineNumber": 105
+        },
+        {
+          "caller": "dispatch",
+          "callee": "setPhase",
+          "lineNumber": 106
+        },
+        {
+          "caller": "regenerate",
+          "callee": "setReview",
+          "lineNumber": 111
+        },
+        {
+          "caller": "regenerate",
+          "callee": "setPhase",
+          "lineNumber": 112
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "setGoal",
+          "lineNumber": 132
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "setFeatureTouched",
+          "lineNumber": 142
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "setFeature",
+          "lineNumber": 142
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "(review.tasks ?? []).map",
+          "lineNumber": 166
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "t.deps.join",
+          "lineNumber": 169
+        },
+        {
+          "caller": "DispatchPanel",
+          "callee": "setPhase",
+          "lineNumber": 204
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/FolderPicker.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 87,
+      "nonEmptyLines": 75,
+      "functions": [
+        {
+          "name": "StatefulPicker",
+          "startLine": 12,
+          "endLine": 15,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "StatefulPicker",
+          "callee": "useState",
+          "lineNumber": 13
+        },
+        {
+          "caller": "StatefulPicker",
+          "callee": "setSelected",
+          "lineNumber": 14
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/FolderPicker.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 156,
+      "nonEmptyLines": 147,
+      "functions": [
+        {
+          "name": "FolderPicker",
+          "startLine": 13,
+          "endLine": 156,
+          "params": [
+            "{\n  selected,\n  onChange,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "FolderPicker",
+          "line": 13,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "FolderPicker",
+          "callee": "useState",
+          "lineNumber": 20
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "useState",
+          "lineNumber": 21
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "useState",
+          "lineNumber": 22
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "useState",
+          "lineNumber": 23
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "useState",
+          "lineNumber": 24
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "useState",
+          "lineNumber": 25
+        },
+        {
+          "caller": "load",
+          "callee": "setLoading",
+          "lineNumber": 28
+        },
+        {
+          "caller": "load",
+          "callee": "setError",
+          "lineNumber": 29
+        },
+        {
+          "caller": "load",
+          "callee": "browseFs(path)\n      .then((r) => {\n        setCurrent(r.path);\n        setParent(r.parent);\n        setEntries(r.entries);\n        setKnownEntries((prev) => {\n          const next = new Map(prev);\n          for (const e of r.entries) next.set(e.path, e);\n          return next;\n        });\n      })\n      .catch((e) => setError(e instanceof Error ? e.message : String(e)))\n      .finally",
+          "lineNumber": 30
+        },
+        {
+          "caller": "load",
+          "callee": "browseFs(path)\n      .then((r) => {\n        setCurrent(r.path);\n        setParent(r.parent);\n        setEntries(r.entries);\n        setKnownEntries((prev) => {\n          const next = new Map(prev);\n          for (const e of r.entries) next.set(e.path, e);\n          return next;\n        });\n      })\n      .catch",
+          "lineNumber": 30
+        },
+        {
+          "caller": "load",
+          "callee": "browseFs(path)\n      .then",
+          "lineNumber": 30
+        },
+        {
+          "caller": "load",
+          "callee": "browseFs",
+          "lineNumber": 30
+        },
+        {
+          "caller": "load",
+          "callee": "setCurrent",
+          "lineNumber": 32
+        },
+        {
+          "caller": "load",
+          "callee": "setParent",
+          "lineNumber": 33
+        },
+        {
+          "caller": "load",
+          "callee": "setEntries",
+          "lineNumber": 34
+        },
+        {
+          "caller": "load",
+          "callee": "setKnownEntries",
+          "lineNumber": 35
+        },
+        {
+          "caller": "load",
+          "callee": "next.set",
+          "lineNumber": 37
+        },
+        {
+          "caller": "load",
+          "callee": "setError",
+          "lineNumber": 41
+        },
+        {
+          "caller": "load",
+          "callee": "String",
+          "lineNumber": 41
+        },
+        {
+          "caller": "load",
+          "callee": "setLoading",
+          "lineNumber": 42
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "useEffect",
+          "lineNumber": 45
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "load",
+          "lineNumber": 46
+        },
+        {
+          "caller": "toggle",
+          "callee": "selected.includes",
+          "lineNumber": 50
+        },
+        {
+          "caller": "toggle",
+          "callee": "selected.filter",
+          "lineNumber": 51
+        },
+        {
+          "caller": "toggle",
+          "callee": "nextSelected.map((p) => knownEntries.get(p)).filter",
+          "lineNumber": 53
+        },
+        {
+          "caller": "toggle",
+          "callee": "nextSelected.map",
+          "lineNumber": 53
+        },
+        {
+          "caller": "toggle",
+          "callee": "knownEntries.get",
+          "lineNumber": 53
+        },
+        {
+          "caller": "toggle",
+          "callee": "onChange",
+          "lineNumber": 54
+        },
+        {
+          "caller": "toggle",
+          "callee": "setKnownEntries",
+          "lineNumber": 55
+        },
+        {
+          "caller": "toggle",
+          "callee": "new Map(prev).set",
+          "lineNumber": 55
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "load",
+          "lineNumber": 65
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "entries.map",
+          "lineNumber": 104
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "selected.includes",
+          "lineNumber": 105
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "toggle",
+          "lineNumber": 116
+        },
+        {
+          "caller": "FolderPicker",
+          "callee": "load",
+          "lineNumber": 123
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/PlanDock.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 34,
+      "nonEmptyLines": 30,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/PlanDock.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 75,
+      "nonEmptyLines": 70,
+      "functions": [
+        {
+          "name": "PlanDock",
+          "startLine": 8,
+          "endLine": 75,
+          "params": [
+            "{ project, features }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "PlanDock",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "PlanDock",
+          "callee": "useState",
+          "lineNumber": 9
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "useState",
+          "lineNumber": 10
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "useState",
+          "lineNumber": 11
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "useEffect",
+          "lineNumber": 13
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "setFeature",
+          "lineNumber": 13
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "useEffect",
+          "lineNumber": 15
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "setData",
+          "lineNumber": 16
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "getPlanReview(project, feature)\n      .then((d) => { if (alive) setData(d); })\n      .catch",
+          "lineNumber": 18
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "getPlanReview(project, feature)\n      .then",
+          "lineNumber": 18
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "getPlanReview",
+          "lineNumber": 18
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "setData",
+          "lineNumber": 19
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "setData",
+          "lineNumber": 20
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "setCollapsed",
+          "lineNumber": 46
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "setFeature",
+          "lineNumber": 57
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "features.map",
+          "lineNumber": 59
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "(data?.tasks ?? []).map",
+          "lineNumber": 65
+        },
+        {
+          "caller": "PlanDock",
+          "callee": "t.deps.join",
+          "lineNumber": 67
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/ProjectMenu.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 77,
+      "nonEmptyLines": 70,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/ProjectMenu.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 166,
+      "nonEmptyLines": 160,
+      "functions": [
+        {
+          "name": "ProjectMenu",
+          "startLine": 5,
+          "endLine": 104,
+          "params": [
+            "{\n  projects,\n  current,\n  running,\n  runningByProject,\n  worktreesByProject,\n  currentWorktree,\n  onSelect,\n  onRename,\n  onDelete,\n  onAdd,\n  onSelectWorktree,\n}"
+          ]
+        },
+        {
+          "name": "ProjectEntry",
+          "startLine": 106,
+          "endLine": 140,
+          "params": [
+            "{\n  p, running, worktrees, currentWorktree, onSelect, onRename, onDelete, onSelectWorktree,\n}"
+          ]
+        },
+        {
+          "name": "ProjectRow",
+          "startLine": 142,
+          "endLine": 166,
+          "params": [
+            "{\n  p, running, onSelect, onRename, onDelete,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ProjectMenu",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "ProjectMenu",
+          "callee": "useState",
+          "lineNumber": 30
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "useRef",
+          "lineNumber": 31
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "useEffect",
+          "lineNumber": 34
+        },
+        {
+          "caller": "onDown",
+          "callee": "rootRef.current.contains",
+          "lineNumber": 37
+        },
+        {
+          "caller": "onDown",
+          "callee": "setOpen",
+          "lineNumber": 37
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "document.addEventListener",
+          "lineNumber": 39
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "document.removeEventListener",
+          "lineNumber": 40
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "useMemo",
+          "lineNumber": 43
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "g.get",
+          "lineNumber": 48
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "arr.push",
+          "lineNumber": 49
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "g.set",
+          "lineNumber": 50
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "f.push",
+          "lineNumber": 52
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "g.entries",
+          "lineNumber": 55
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "setOpen",
+          "lineNumber": 63
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "[\n            \"h-[7px] w-[7px] rounded-full\",\n            running ? \"animate-pulse bg-[var(--color-success)] shadow-[0_0_6px_var(--color-success)]\" : \"bg-[var(--color-text-3)]\",\n          ].join",
+          "lineNumber": 69
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "flat.map",
+          "lineNumber": 81
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "onSelect",
+          "lineNumber": 82
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "setOpen",
+          "lineNumber": 82
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "onSelectWorktree",
+          "lineNumber": 82
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "setOpen",
+          "lineNumber": 82
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "grouped.map",
+          "lineNumber": 84
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "items.map",
+          "lineNumber": 87
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "onSelect",
+          "lineNumber": 88
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "setOpen",
+          "lineNumber": 88
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "onSelectWorktree",
+          "lineNumber": 88
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "setOpen",
+          "lineNumber": 88
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "onAdd",
+          "lineNumber": 95
+        },
+        {
+          "caller": "ProjectMenu",
+          "callee": "setOpen",
+          "lineNumber": 95
+        },
+        {
+          "caller": "ProjectEntry",
+          "callee": "worktrees.map",
+          "lineNumber": 123
+        },
+        {
+          "caller": "ProjectEntry",
+          "callee": "onSelectWorktree",
+          "lineNumber": 128
+        },
+        {
+          "caller": "ProjectEntry",
+          "callee": "[\"flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-[11px] hover:bg-white/5\",\n                ((w.primary && currentWorktree === \"\") || currentWorktree === w.branch) ? \"text-[var(--color-text-1)]\" : \"text-[var(--color-text-3)]\"].join",
+          "lineNumber": 129
+        },
+        {
+          "caller": "ProjectRow",
+          "callee": "[\n          \"h-[6px] w-[6px] shrink-0 rounded-full\",\n          running ? \"animate-pulse bg-[var(--color-success)] shadow-[0_0_5px_var(--color-success)]\" : \"bg-[var(--color-text-3)]/50\",\n        ].join",
+          "lineNumber": 156
+        },
+        {
+          "caller": "ProjectRow",
+          "callee": "onSelect",
+          "lineNumber": 161
+        },
+        {
+          "caller": "ProjectRow",
+          "callee": "onRename",
+          "lineNumber": 162
+        },
+        {
+          "caller": "ProjectRow",
+          "callee": "onDelete",
+          "lineNumber": 163
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/RosterDock.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 49,
+      "nonEmptyLines": 43,
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/RosterDock.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 76,
+      "nonEmptyLines": 71,
+      "functions": [
+        {
+          "name": "topRole",
+          "startLine": 9,
+          "endLine": 12,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "RosterDock",
+          "startLine": 18,
+          "endLine": 76,
+          "params": [
+            "{\n  seats,\n  onSeatSettings,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "RosterDock",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "topRole",
+          "callee": "s.roles.includes",
+          "lineNumber": 10
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "useMemo",
+          "lineNumber": 25
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "topRole",
+          "lineNumber": 28
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "byRole.get",
+          "lineNumber": 29
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "arr.push",
+          "lineNumber": 30
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "byRole.set",
+          "lineNumber": 31
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "ROLE_ORDER.filter",
+          "lineNumber": 33
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "byRole.has",
+          "lineNumber": 33
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "[...byRole.keys()].filter",
+          "lineNumber": 34
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "byRole.keys",
+          "lineNumber": 34
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "ROLE_ORDER.includes",
+          "lineNumber": 34
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "[...known, ...extra].map",
+          "lineNumber": 35
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "byRole.get",
+          "lineNumber": 35
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "groups.map",
+          "lineNumber": 49
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "g.seats.map",
+          "lineNumber": 52
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "s.roles.join",
+          "lineNumber": 57
+        },
+        {
+          "caller": "RosterDock",
+          "callee": "onSeatSettings",
+          "lineNumber": 59
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/SettingsModal.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 70,
+      "nonEmptyLines": 61,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/SettingsModal.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 380,
+      "nonEmptyLines": 363,
+      "functions": [
+        {
+          "name": "SettingsModal",
+          "startLine": 29,
+          "endLine": 292,
+          "params": [
+            "{\n  project,\n  author,\n  focusSeat,\n  onClose,\n}"
+          ]
+        },
+        {
+          "name": "ScopeExplainer",
+          "startLine": 294,
+          "endLine": 354,
+          "params": [
+            "{\n  scope,\n  activeItem,\n  project,\n}"
+          ]
+        },
+        {
+          "name": "PlaceholderPanel",
+          "startLine": 356,
+          "endLine": 380,
+          "params": [
+            "{\n  scope,\n  label,\n  project,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "SettingsModal",
+          "line": 29,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "SettingsModal",
+          "callee": "useState",
+          "lineNumber": 40
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "useId",
+          "lineNumber": 41
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "useRef",
+          "lineNumber": 42
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "useEffect",
+          "lineNumber": 44
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "setActiveId",
+          "lineNumber": 45
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "useEffect",
+          "lineNumber": 48
+        },
+        {
+          "caller": "onKey",
+          "callee": "e.stopPropagation",
+          "lineNumber": 51
+        },
+        {
+          "caller": "onKey",
+          "callee": "onClose",
+          "lineNumber": 52
+        },
+        {
+          "caller": "onKey",
+          "callee": "Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter",
+          "lineNumber": 58
+        },
+        {
+          "caller": "onKey",
+          "callee": "Array.from",
+          "lineNumber": 58
+        },
+        {
+          "caller": "onKey",
+          "callee": "panel.querySelectorAll",
+          "lineNumber": 58
+        },
+        {
+          "caller": "onKey",
+          "callee": "el.hasAttribute",
+          "lineNumber": 61
+        },
+        {
+          "caller": "onKey",
+          "callee": "el.getAttribute",
+          "lineNumber": 62
+        },
+        {
+          "caller": "onKey",
+          "callee": "e.preventDefault",
+          "lineNumber": 65
+        },
+        {
+          "caller": "onKey",
+          "callee": "panel.contains",
+          "lineNumber": 72
+        },
+        {
+          "caller": "onKey",
+          "callee": "e.preventDefault",
+          "lineNumber": 73
+        },
+        {
+          "caller": "onKey",
+          "callee": "last.focus",
+          "lineNumber": 74
+        },
+        {
+          "caller": "onKey",
+          "callee": "panel.contains",
+          "lineNumber": 77
+        },
+        {
+          "caller": "onKey",
+          "callee": "e.preventDefault",
+          "lineNumber": 78
+        },
+        {
+          "caller": "onKey",
+          "callee": "first.focus",
+          "lineNumber": 79
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "document.addEventListener",
+          "lineNumber": 84
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "document.removeEventListener",
+          "lineNumber": 85
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "useEffect",
+          "lineNumber": 88
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).find",
+          "lineNumber": 92
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "Array.from",
+          "lineNumber": 92
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "panel.querySelectorAll",
+          "lineNumber": 92
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "first?.focus",
+          "lineNumber": 95
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "prev?.focus",
+          "lineNumber": 97
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "navGroups.flatMap",
+          "lineNumber": 131
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "allItems.find",
+          "lineNumber": 132
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "navGroups.find",
+          "lineNumber": 133
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "g.items.some",
+          "lineNumber": 133
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "e.stopPropagation",
+          "lineNumber": 199
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "navGroups.map",
+          "lineNumber": 225
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "group.items.map",
+          "lineNumber": 236
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "setActiveId",
+          "lineNumber": 244
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "[\n                        \"flex w-full items-center gap-2 rounded-lg px-2.5 py-[7px] text-left text-xs font-medium transition-colors duration-[var(--motion-micro)]\",\n                        active\n                          ? \"bg-[rgba(255,255,255,0.07)] text-[var(--color-text-1)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]\"\n                          : \"text-[var(--color-text-2)] hover:bg-[rgba(255,255,255,0.04)] hover:text-[var(--color-text-1)]\",\n                      ].join",
+          "lineNumber": 245
+        },
+        {
+          "caller": "SettingsModal",
+          "callee": "renderPanel",
+          "lineNumber": 286
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 1,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/ShellPreview.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 373,
+      "nonEmptyLines": 350,
+      "functions": [
+        {
+          "name": "casteOf",
+          "startLine": 46,
+          "endLine": 46,
+          "params": [
+            "id"
+          ]
+        },
+        {
+          "name": "node",
+          "startLine": 64,
+          "endLine": 64,
+          "params": [
+            "id"
+          ]
+        },
+        {
+          "name": "rightAnchor",
+          "startLine": 65,
+          "endLine": 65,
+          "params": [
+            "n"
+          ]
+        },
+        {
+          "name": "leftAnchor",
+          "startLine": 66,
+          "endLine": 66,
+          "params": [
+            "n"
+          ]
+        },
+        {
+          "name": "edgePath",
+          "startLine": 67,
+          "endLine": 71,
+          "params": [
+            "s",
+            "t"
+          ]
+        },
+        {
+          "name": "ShellPreview",
+          "startLine": 81,
+          "endLine": 281,
+          "params": []
+        },
+        {
+          "name": "CanvasMock",
+          "startLine": 285,
+          "endLine": 311,
+          "params": [
+            "{ selected, onSelect }"
+          ]
+        },
+        {
+          "name": "CanvasNode",
+          "startLine": 313,
+          "endLine": 330,
+          "params": [
+            "{ task, selected, onClick }"
+          ]
+        },
+        {
+          "name": "SeatChip",
+          "startLine": 332,
+          "endLine": 339,
+          "params": [
+            "{ id }"
+          ]
+        },
+        {
+          "name": "RailIcon",
+          "startLine": 341,
+          "endLine": 349,
+          "params": [
+            "{ children, title, active, onClick }"
+          ]
+        },
+        {
+          "name": "SidebarGlyph",
+          "startLine": 351,
+          "endLine": 358,
+          "params": []
+        },
+        {
+          "name": "ChevronLeft",
+          "startLine": 359,
+          "endLine": 361,
+          "params": []
+        },
+        {
+          "name": "SearchGlyph",
+          "startLine": 362,
+          "endLine": 364,
+          "params": []
+        },
+        {
+          "name": "InspectorRow",
+          "startLine": 366,
+          "endLine": 373,
+          "params": [
+            "{ label, children }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ShellPreview",
+          "line": 81,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "casteOf",
+          "callee": "SEATS.find",
+          "lineNumber": 46
+        },
+        {
+          "caller": "node",
+          "callee": "NODES.find",
+          "lineNumber": 64
+        },
+        {
+          "caller": "edgePath",
+          "callee": "rightAnchor",
+          "lineNumber": 68
+        },
+        {
+          "caller": "edgePath",
+          "callee": "leftAnchor",
+          "lineNumber": 68
+        },
+        {
+          "caller": "edgePath",
+          "callee": "Math.max",
+          "lineNumber": 69
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "useState",
+          "lineNumber": 82
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "useState",
+          "lineNumber": 83
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "useState",
+          "lineNumber": 84
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "useState",
+          "lineNumber": 85
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "LENSES.map",
+          "lineNumber": 111
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "setLens",
+          "lineNumber": 114
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "setCollapsed",
+          "lineNumber": 139
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "setCollapsed",
+          "lineNumber": 151
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "PROJECTS.map",
+          "lineNumber": 157
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "setProject",
+          "lineNumber": 160
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "p.name[0].toUpperCase",
+          "lineNumber": 165
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "SEATS.map",
+          "lineNumber": 194
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "s.roles.map",
+          "lineNumber": 198
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "COLUMNS.map",
+          "lineNumber": 212
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "col.tasks.map",
+          "lineNumber": 218
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "setSelected",
+          "lineNumber": 219
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "LENSES.find",
+          "lineNumber": 235
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "LENSES.find",
+          "lineNumber": 236
+        },
+        {
+          "caller": "ShellPreview",
+          "callee": "setSelected",
+          "lineNumber": 249
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "node",
+          "lineNumber": 287
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "node",
+          "lineNumber": 287
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "rightAnchor",
+          "lineNumber": 288
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "leftAnchor",
+          "lineNumber": 288
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "rightAnchor",
+          "lineNumber": 288
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "leftAnchor",
+          "lineNumber": 288
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "EDGES.map",
+          "lineNumber": 295
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "edgePath",
+          "lineNumber": 296
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "node",
+          "lineNumber": 296
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "node",
+          "lineNumber": 296
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "NODES.map",
+          "lineNumber": 305
+        },
+        {
+          "caller": "CanvasMock",
+          "callee": "onSelect",
+          "lineNumber": 306
+        },
+        {
+          "caller": "SeatChip",
+          "callee": "casteOf",
+          "lineNumber": 335
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 1,
+        "functionCount": 14,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/Toolbar.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 80,
+      "nonEmptyLines": 77,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/shell/Toolbar.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 197,
+      "nonEmptyLines": 190,
+      "functions": [
+        {
+          "name": "Toolbar",
+          "startLine": 23,
+          "endLine": 178,
+          "params": [
+            "{\n  projectName,\n  view,\n  onView,\n  live,\n  author,\n  seat,\n  agents,\n  projects,\n  running,\n  runningByProject,\n  onSelectProject,\n  onRenameProject,\n  onDeleteProject,\n  onAddProject,\n  onOpenSettings,\n  onOpenDispatch,\n  worktreesByProject,\n  currentWorktree,\n  onSelectWorktree,\n}"
+          ]
+        },
+        {
+          "name": "LiveBadge",
+          "startLine": 182,
+          "endLine": 197,
+          "params": [
+            "{ live }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Toolbar",
+          "line": 23,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Toolbar",
+          "callee": "useMemo",
+          "lineNumber": 64
+        },
+        {
+          "caller": "Toolbar",
+          "callee": "agents?.find",
+          "lineNumber": 65
+        },
+        {
+          "caller": "Toolbar",
+          "callee": "casteForRoles",
+          "lineNumber": 68
+        },
+        {
+          "caller": "Toolbar",
+          "callee": "padGradient",
+          "lineNumber": 69
+        },
+        {
+          "caller": "Toolbar",
+          "callee": "LENSES.map",
+          "lineNumber": 98
+        },
+        {
+          "caller": "Toolbar",
+          "callee": "onView",
+          "lineNumber": 104
+        },
+        {
+          "caller": "Toolbar",
+          "callee": "window.dispatchEvent",
+          "lineNumber": 121
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 1,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Alert.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 71,
+      "nonEmptyLines": 68,
+      "functions": [
+        {
+          "name": "Alert",
+          "startLine": 18,
+          "endLine": 71,
+          "params": [
+            "{\n  tone = \"info\",\n  title,\n  children,\n  onRetry,\n  retryLabel = \"Retry\",\n  className = \"\",\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Alert",
+          "line": 18,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Alert",
+          "callee": "[\n        \"flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-[12px]\",\n        className,\n      ].join",
+          "lineNumber": 39
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Badge.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 49,
+      "nonEmptyLines": 47,
+      "functions": [
+        {
+          "name": "Badge",
+          "startLine": 19,
+          "endLine": 49,
+          "params": [
+            "{\n  color = \"role-design\",\n  colorVar,\n  className = \"\",\n  children,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Badge",
+          "line": 19,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Badge",
+          "callee": "[\n        // UPPERCASE so badges (roles / capability tags) read distinctly from the\n        // lowercase pact-state pills — state = lowercase, badge = UPPERCASE.\n        \"inline-flex items-center rounded-full px-2 py-px text-[10px] font-medium uppercase tracking-[.4px] leading-[18px]\",\n        className,\n      ].join",
+          "lineNumber": 35
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 67,
+      "nonEmptyLines": 63,
+      "functions": [
+        {
+          "name": "Button",
+          "startLine": 29,
+          "endLine": 67,
+          "params": [
+            "{\n  variant = \"primary\",\n  size = \"md\",\n  className = \"\",\n  type = \"button\",\n  loading = false,\n  icon,\n  disabled,\n  children,\n  ...rest\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Button",
+          "line": 29,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Button",
+          "callee": "[\n        \"inline-flex items-center justify-center gap-1.5 rounded-md font-medium select-none\",\n        \"transition-[background-color,color,border-color,filter,transform] duration-[var(--motion-micro)] ease-[var(--motion-ease)]\",\n        \"active:scale-[0.97]\",\n        \"outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--color-role-design)_40%,transparent)]\",\n        \"disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed disabled:active:scale-100\",\n        VARIANT[variant],\n        SIZE[size],\n        className,\n      ].join",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/ConfigSection.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 43,
+      "nonEmptyLines": 41,
+      "functions": [
+        {
+          "name": "ConfigSection",
+          "startLine": 8,
+          "endLine": 33,
+          "params": [
+            "{\n  label,\n  required,\n  action,\n  children,\n  className = \"\",\n}"
+          ]
+        },
+        {
+          "name": "Inset",
+          "startLine": 37,
+          "endLine": 43,
+          "params": [
+            "{ children, className = \"\" }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ConfigSection",
+          "line": 8,
+          "isDefault": false
+        },
+        {
+          "name": "Inset",
+          "line": 37,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/EmptyState.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 29,
+      "functions": [
+        {
+          "name": "EmptyState",
+          "startLine": 5,
+          "endLine": 30,
+          "params": [
+            "{\n  icon,\n  title,\n  hint,\n  className = \"\",\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "EmptyState",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "EmptyState",
+          "callee": "[\n        \"flex flex-col items-center justify-center gap-2 rounded-lg\",\n        \"border border-dashed border-[var(--color-border-subtle)] px-6 py-8 text-center\",\n        className,\n      ].join",
+          "lineNumber": 19
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Input.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 22,
+      "nonEmptyLines": 21,
+      "functions": [
+        {
+          "name": "Input",
+          "startLine": 5,
+          "endLine": 22,
+          "params": [
+            "{\n  className = \"\",\n  ...rest\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Input",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Input",
+          "callee": "[\n        \"w-full rounded-md bg-[var(--color-bg-surface)] px-2.5 py-1.5 text-xs text-[var(--color-text-1)]\",\n        \"border border-[var(--color-border-subtle)] outline-none\",\n        \"transition-colors duration-[var(--motion-micro)] ease-[var(--motion-ease)]\",\n        \"focus:border-[var(--color-border-strong)]\",\n        \"placeholder:text-[var(--color-text-3)] disabled:opacity-50\",\n        className,\n      ].join",
+          "lineNumber": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Kbd.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 23,
+      "nonEmptyLines": 22,
+      "functions": [
+        {
+          "name": "Kbd",
+          "startLine": 5,
+          "endLine": 23,
+          "params": [
+            "{\n  children,\n  className = \"\",\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Kbd",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Kbd",
+          "callee": "[\n        \"inline-flex items-center rounded-[3.5px] border border-[var(--color-border-strong)]\",\n        \"bg-[var(--color-bg-raised)] px-1.5 text-[9px] leading-[15px] text-[var(--color-text-3)] font-mono shadow-[var(--shadow-raised)]\",\n        className,\n      ].join",
+          "lineNumber": 14
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/MetricStrip.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 22,
+      "nonEmptyLines": 19,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/MetricStrip.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 43,
+      "nonEmptyLines": 42,
+      "functions": [
+        {
+          "name": "MetricStrip",
+          "startLine": 11,
+          "endLine": 43,
+          "params": [
+            "{ items, className = \"\" }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MetricStrip",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "MetricStrip",
+          "callee": "items.map",
+          "lineNumber": 25
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Modal.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 128,
+      "nonEmptyLines": 123,
+      "functions": [
+        {
+          "name": "Modal",
+          "startLine": 10,
+          "endLine": 128,
+          "params": [
+            "{\n  title,\n  onClose,\n  variant = \"default\",\n  children,\n  footer,\n  testId = \"modal\",\n  width = \"520px\",\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Modal",
+          "line": 10,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Modal",
+          "callee": "useRef",
+          "lineNumber": 27
+        },
+        {
+          "caller": "Modal",
+          "callee": "useId",
+          "lineNumber": 28
+        },
+        {
+          "caller": "Modal",
+          "callee": "useEffect",
+          "lineNumber": 30
+        },
+        {
+          "caller": "onKey",
+          "callee": "e.stopPropagation",
+          "lineNumber": 33
+        },
+        {
+          "caller": "onKey",
+          "callee": "onClose",
+          "lineNumber": 34
+        },
+        {
+          "caller": "onKey",
+          "callee": "Array.from(\n          panel.querySelectorAll<HTMLElement>(FOCUSABLE),\n        ).filter",
+          "lineNumber": 40
+        },
+        {
+          "caller": "onKey",
+          "callee": "Array.from",
+          "lineNumber": 40
+        },
+        {
+          "caller": "onKey",
+          "callee": "panel.querySelectorAll",
+          "lineNumber": 41
+        },
+        {
+          "caller": "onKey",
+          "callee": "el.hasAttribute",
+          "lineNumber": 45
+        },
+        {
+          "caller": "onKey",
+          "callee": "el.getAttribute",
+          "lineNumber": 46
+        },
+        {
+          "caller": "onKey",
+          "callee": "e.preventDefault",
+          "lineNumber": 49
+        },
+        {
+          "caller": "onKey",
+          "callee": "panel.contains",
+          "lineNumber": 56
+        },
+        {
+          "caller": "onKey",
+          "callee": "e.preventDefault",
+          "lineNumber": 57
+        },
+        {
+          "caller": "onKey",
+          "callee": "last.focus",
+          "lineNumber": 58
+        },
+        {
+          "caller": "onKey",
+          "callee": "panel.contains",
+          "lineNumber": 61
+        },
+        {
+          "caller": "onKey",
+          "callee": "e.preventDefault",
+          "lineNumber": 62
+        },
+        {
+          "caller": "onKey",
+          "callee": "first.focus",
+          "lineNumber": 63
+        },
+        {
+          "caller": "Modal",
+          "callee": "document.addEventListener",
+          "lineNumber": 68
+        },
+        {
+          "caller": "Modal",
+          "callee": "document.removeEventListener",
+          "lineNumber": 69
+        },
+        {
+          "caller": "Modal",
+          "callee": "useEffect",
+          "lineNumber": 75
+        },
+        {
+          "caller": "Modal",
+          "callee": "Array.from(\n        panel.querySelectorAll<HTMLElement>(FOCUSABLE),\n      ).find",
+          "lineNumber": 79
+        },
+        {
+          "caller": "Modal",
+          "callee": "Array.from",
+          "lineNumber": 79
+        },
+        {
+          "caller": "Modal",
+          "callee": "panel.querySelectorAll",
+          "lineNumber": 80
+        },
+        {
+          "caller": "Modal",
+          "callee": "first?.focus",
+          "lineNumber": 82
+        },
+        {
+          "caller": "Modal",
+          "callee": "prev?.focus",
+          "lineNumber": 84
+        },
+        {
+          "caller": "Modal",
+          "callee": "e.stopPropagation",
+          "lineNumber": 101
+        },
+        {
+          "caller": "Modal",
+          "callee": "[\n            \"mb-3 flex items-center justify-between\",\n            variant === \"danger\"\n              ? \"text-[var(--color-danger)]\"\n              : \"text-[var(--color-text-1)]\",\n          ].join",
+          "lineNumber": 105
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Popover.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 64,
+      "nonEmptyLines": 61,
+      "functions": [
+        {
+          "name": "Popover",
+          "startLine": 9,
+          "endLine": 64,
+          "params": [
+            "{\n  open,\n  onClose,\n  anchor,\n  children,\n  align = \"left\",\n  className = \"\",\n  role,\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Popover",
+          "line": 9,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Popover",
+          "callee": "useRef",
+          "lineNumber": 26
+        },
+        {
+          "caller": "Popover",
+          "callee": "useEffect",
+          "lineNumber": 28
+        },
+        {
+          "caller": "onDown",
+          "callee": "wrapRef.current.contains",
+          "lineNumber": 31
+        },
+        {
+          "caller": "onDown",
+          "callee": "onClose",
+          "lineNumber": 32
+        },
+        {
+          "caller": "onKey",
+          "callee": "onClose",
+          "lineNumber": 36
+        },
+        {
+          "caller": "Popover",
+          "callee": "document.addEventListener",
+          "lineNumber": 38
+        },
+        {
+          "caller": "Popover",
+          "callee": "document.addEventListener",
+          "lineNumber": 39
+        },
+        {
+          "caller": "Popover",
+          "callee": "document.removeEventListener",
+          "lineNumber": 41
+        },
+        {
+          "caller": "Popover",
+          "callee": "document.removeEventListener",
+          "lineNumber": 42
+        },
+        {
+          "caller": "Popover",
+          "callee": "[\n            \"absolute top-full z-50 mt-1 min-w-[180px] rounded-lg border border-[var(--color-border-subtle)]\",\n            \"bg-[var(--color-bg-raised)] p-1 shadow-[var(--shadow-raised)]\",\n            align === \"right\" ? \"right-0\" : \"left-0\",\n            className,\n          ].join",
+          "lineNumber": 52
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 24,
+      "nonEmptyLines": 23,
+      "functions": [
+        {
+          "name": "Select",
+          "startLine": 5,
+          "endLine": 24,
+          "params": [
+            "{\n  className = \"\",\n  children,\n  ...rest\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Select",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Select",
+          "callee": "[\n        \"w-full rounded-md bg-[var(--color-bg-surface)] px-2.5 py-1.5 text-xs text-[var(--color-text-1)]\",\n        \"border border-[var(--color-border-subtle)] outline-none\",\n        \"transition-colors duration-[var(--motion-micro)] ease-[var(--motion-ease)]\",\n        \"focus:border-[var(--color-border-strong)] disabled:opacity-50\",\n        className,\n      ].join",
+          "lineNumber": 12
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Spinner.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 40,
+      "nonEmptyLines": 38,
+      "functions": [
+        {
+          "name": "Spinner",
+          "startLine": 10,
+          "endLine": 40,
+          "params": [
+            "{\n  size = \"sm\",\n  className = \"\",\n  label = \"Loading\",\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Spinner",
+          "line": 10,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/StatusPill.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 107,
+      "nonEmptyLines": 102,
+      "functions": [
+        {
+          "name": "normalizeStatus",
+          "startLine": 32,
+          "endLine": 49,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "statusColor",
+          "startLine": 55,
+          "endLine": 57,
+          "params": [
+            "s"
+          ]
+        },
+        {
+          "name": "StatusPill",
+          "startLine": 59,
+          "endLine": 107,
+          "params": [
+            "{\n  status,\n  label,\n  className = \"\",\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "normalizeStatus",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "statusColor",
+          "line": 55,
+          "isDefault": false
+        },
+        {
+          "name": "StatusPill",
+          "line": 59,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "statusColor",
+          "callee": "normalizeStatus",
+          "lineNumber": 56
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Textarea.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 50,
+      "nonEmptyLines": 48,
+      "functions": [
+        {
+          "name": "Textarea",
+          "startLine": 7,
+          "endLine": 50,
+          "params": [
+            "{\n  value,\n  defaultValue,\n  variables,\n  className = \"\",\n  onChange,\n  ...rest\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Textarea",
+          "line": 7,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Textarea",
+          "callee": "useState",
+          "lineNumber": 15
+        },
+        {
+          "caller": "Textarea",
+          "callee": "String",
+          "lineNumber": 15
+        },
+        {
+          "caller": "Textarea",
+          "callee": "useState",
+          "lineNumber": 16
+        },
+        {
+          "caller": "Textarea",
+          "callee": "String",
+          "lineNumber": 17
+        },
+        {
+          "caller": "Textarea",
+          "callee": "setInternal",
+          "lineNumber": 25
+        },
+        {
+          "caller": "Textarea",
+          "callee": "onChange",
+          "lineNumber": 26
+        },
+        {
+          "caller": "Textarea",
+          "callee": "[\n          \"w-full resize-none bg-transparent px-3 pt-2 text-[12px] text-[var(--color-text-1)] outline-none\",\n          \"placeholder:text-[var(--color-text-3)]\",\n          expanded ? \"h-32\" : \"h-16\",\n        ].join",
+          "lineNumber": 28
+        },
+        {
+          "caller": "Textarea",
+          "callee": "setExpanded",
+          "lineNumber": 42
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/Tooltip.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 59,
+      "nonEmptyLines": 55,
+      "functions": [
+        {
+          "name": "Tooltip",
+          "startLine": 6,
+          "endLine": 59,
+          "params": [
+            "{\n  label,\n  children,\n  side = \"top\",\n}"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Tooltip",
+          "line": 6,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Tooltip",
+          "callee": "useState",
+          "lineNumber": 15
+        },
+        {
+          "caller": "Tooltip",
+          "callee": "useRef",
+          "lineNumber": 16
+        },
+        {
+          "caller": "clear",
+          "callee": "clearTimeout",
+          "lineNumber": 20
+        },
+        {
+          "caller": "schedule",
+          "callee": "clear",
+          "lineNumber": 25
+        },
+        {
+          "caller": "schedule",
+          "callee": "setTimeout",
+          "lineNumber": 26
+        },
+        {
+          "caller": "schedule",
+          "callee": "setShown",
+          "lineNumber": 26
+        },
+        {
+          "caller": "hide",
+          "callee": "clear",
+          "lineNumber": 29
+        },
+        {
+          "caller": "hide",
+          "callee": "setShown",
+          "lineNumber": 30
+        },
+        {
+          "caller": "Tooltip",
+          "callee": "useEffect",
+          "lineNumber": 33
+        },
+        {
+          "caller": "Tooltip",
+          "callee": "[\n            \"pointer-events-none absolute left-1/2 z-[70] -translate-x-1/2 whitespace-nowrap\",\n            \"rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-2 py-1\",\n            \"text-[11px] text-[var(--color-text-1)] shadow-[var(--shadow-raised)]\",\n            side === \"top\" ? \"bottom-full mb-1.5\" : \"top-full mt-1.5\",\n          ].join",
+          "lineNumber": 47
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/ants/Ant.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 76,
+      "nonEmptyLines": 67,
+      "functions": [
+        {
+          "name": "svgOf",
+          "startLine": 10,
+          "endLine": 14,
+          "params": [
+            "container"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "svgOf",
+          "callee": "container.querySelector",
+          "lineNumber": 11
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/ants/Ant.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 246,
+      "nonEmptyLines": 239,
+      "functions": [
+        {
+          "name": "Ant",
+          "startLine": 230,
+          "endLine": 246,
+          "params": [
+            "{ caste, size, title }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Ant",
+          "line": 230,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/components/ui/ui.test.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 410,
+      "nonEmptyLines": 369,
+      "metrics": {
+        "importCount": 12,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/lib/agentLogos.tsx",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 124,
+      "nonEmptyLines": 117,
+      "functions": [
+        {
+          "name": "resolve",
+          "startLine": 73,
+          "endLine": 81,
+          "params": [
+            "kind"
+          ]
+        },
+        {
+          "name": "AgentLogo",
+          "startLine": 100,
+          "endLine": 124,
+          "params": [
+            "{ kind, size = 28 }"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "AGENT_LOGO_KINDS",
+          "line": 83,
+          "isDefault": false
+        },
+        {
+          "name": "AgentLogo",
+          "line": 100,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "resolve",
+          "callee": "kind.startsWith",
+          "lineNumber": 75
+        },
+        {
+          "caller": "resolve",
+          "callee": "kind.startsWith",
+          "lineNumber": 76
+        },
+        {
+          "caller": "resolve",
+          "callee": "kind.startsWith",
+          "lineNumber": 77
+        },
+        {
+          "caller": "resolve",
+          "callee": "kind.startsWith",
+          "lineNumber": 78
+        },
+        {
+          "caller": "resolve",
+          "callee": "kind.startsWith",
+          "lineNumber": 79
+        },
+        {
+          "caller": "AgentLogo",
+          "callee": "resolve",
+          "lineNumber": 101
+        },
+        {
+          "caller": "AgentLogo",
+          "callee": "Math.round",
+          "lineNumber": 102
+        },
+        {
+          "caller": "AgentLogo",
+          "callee": "Math.round",
+          "lineNumber": 111
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "web/src/lib/ants.test.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 94,
+      "nonEmptyLines": 83,
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

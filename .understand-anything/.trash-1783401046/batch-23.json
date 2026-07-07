@@ -1,0 +1,62 @@
+{
+  "nodes": [
+    {
+      "id": "file:cloud/relay/src/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "cloud/relay/src/index.ts",
+      "summary": "Barrel entry point for the @pactify-apps/relay zero-knowledge relay package that re-exports the data layer, queries, auth, HTTP server, sockets, and bootstrap modules.",
+      "tags": ["entry-point", "barrel", "exports", "relay", "data-layer"],
+      "complexity": "simple",
+      "languageNotes": "Pure barrel file using ESM re-exports; no local definitions."
+    },
+    {
+      "id": "file:cloud/relay/test/health.test.ts",
+      "type": "file",
+      "name": "health.test.ts",
+      "filePath": "cloud/relay/test/health.test.ts",
+      "summary": "Vitest test verifying that the relay's health() helper returns { ok: true }.",
+      "tags": ["test", "health", "vitest", "smoke-test"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:cloud/relay/test/index.test.ts",
+      "type": "file",
+      "name": "index.test.ts",
+      "filePath": "cloud/relay/test/index.test.ts",
+      "summary": "Vitest smoke test asserting the relay package's public surface exposes data layer functions, read-side queries, auth primitives, HTTP server, sockets, and server bootstrap helpers.",
+      "tags": ["test", "public-api", "vitest", "smoke-test", "relay"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:cloud/relay/test/health.test.ts",
+      "target": "file:cloud/relay/src/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/relay/test/index.test.ts",
+      "target": "file:cloud/relay/src/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:cloud/relay/src/index.ts",
+      "target": "file:cloud/relay/test/health.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:cloud/relay/src/index.ts",
+      "target": "file:cloud/relay/test/index.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

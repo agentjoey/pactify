@@ -1,0 +1,1 @@
+{"projectRoot":"/Users/xtation/AgentWorks/Code_Claude/pactify","batchFiles":[{"path":".github/workflows/ci.yml","language":"yaml","sizeLines":85,"fileCategory":"infra"},{"path":".github/workflows/release.yml","language":"yaml","sizeLines":26,"fileCategory":"infra"}],"batchImportData":{".github/workflows/ci.yml":[],".github/workflows/release.yml":[]}}

@@ -1,0 +1,235 @@
+{
+  "nodes": [
+    {
+      "id": "document:.pact/tasks/t-sp2-backend.md",
+      "type": "document",
+      "name": "t-sp2-backend.md",
+      "filePath": ".pact/tasks/t-sp2-backend.md",
+      "summary": "Task spec for SP2 backend: adds four HTTP endpoints (run, resume, ship, diff) under /api/projects/{id}/orchestrate/ so the dashboard can drive orchestrate, with a TDD-driven injected runner seam and 202+status-URL async semantics.",
+      "tags": ["task-spec", "backend", "http-endpoint", "tdd", "orchestrate"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/t-sp2-frontend.md",
+      "type": "document",
+      "name": "t-sp2-frontend.md",
+      "filePath": ".pact/tasks/t-sp2-frontend.md",
+      "summary": "Task spec for SP2 frontend: adds six dashboard UI affordances (PlanReview Apply, LiveOrchestrate Run/Resume/Ship + diff, OpsView Prune) backed by new api.ts helpers, gated by vitest + Playwright double-green.",
+      "tags": ["task-spec", "frontend", "ui", "tdd", "dashboard"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/t-sp3-backend.md",
+      "type": "document",
+      "name": "t-sp3-backend.md",
+      "filePath": ".pact/tasks/t-sp3-backend.md",
+      "summary": "Task spec for SP3 backend: implements POST /api/setup/apply for one-click project init + per-seat agent wiring, reusing pact.Init and agent.WireAt with best-effort per-kind error reporting and 409 on existing .pact.",
+      "tags": ["task-spec", "backend", "http-endpoint", "onboarding", "tdd"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/t-sp3-frontend.md",
+      "type": "document",
+      "name": "t-sp3-frontend.md",
+      "filePath": ".pact/tasks/t-sp3-frontend.md",
+      "summary": "Task spec for SP3 frontend: extends Setup.tsx with a one-click Apply button that POSTs to /api/setup/apply and renders wired/docOnly/error results, with vitest test coverage and tsc gate.",
+      "tags": ["task-spec", "frontend", "ui", "onboarding", "tdd"],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:.pact/tasks/watcher-hook.md",
+      "type": "document",
+      "name": "watcher-hook.md",
+      "filePath": ".pact/tasks/watcher-hook.md",
+      "summary": "Task spec for t2 watcher-hook (relay M3.4): wires t1's relay client into serve via Server.relay field, drainNew enqueue, and --relay-url/--relay-token flags, with a hard byte-identical constraint when relay is unconfigured.",
+      "tags": ["task-spec", "backend", "relay", "watcher", "tdd"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:.pact/tasks/web-customagent-form.md",
+      "type": "document",
+      "name": "web-customagent-form.md",
+      "filePath": ".pact/tasks/web-customagent-form.md",
+      "summary": "Task spec for Phase D Task D1: builds CustomAgentForm in web/src/components/ops/ with TOML assembly for createManifest, mounts it in OpsView, with required data-testid hooks and vitest coverage; no Go or other web changes permitted.",
+      "tags": ["task-spec", "frontend", "ui", "settings", "tdd"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:.pact/tasks/t-sp2-backend.md",
+      "target": "file:internal/serve/orchestrate.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp2-backend.md",
+      "target": "file:internal/serve/orchestrate_drive_test.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp2-backend.md",
+      "target": "file:internal/serve/author.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp2-backend.md",
+      "target": "file:internal/finish/finish.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp2-backend.md",
+      "target": "file:cmd/pactify/cmd_orchestrate.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp2-frontend.md",
+      "target": "file:web/src/lib/api.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp2-frontend.md",
+      "target": "file:web/src/components/LiveOrchestrate.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp2-frontend.md",
+      "target": "file:web/src/components/ops/OpsView.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp2-frontend.md",
+      "target": "file:web/src/components/LiveOrchestrate.test.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp3-backend.md",
+      "target": "file:internal/serve/setup.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp3-backend.md",
+      "target": "file:internal/serve/setup_apply_test.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp3-backend.md",
+      "target": "file:internal/serve/author.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp3-backend.md",
+      "target": "file:internal/pact/engine.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp3-backend.md",
+      "target": "file:internal/agent/briefing.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp3-frontend.md",
+      "target": "file:web/src/components/Setup.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp3-frontend.md",
+      "target": "file:web/src/lib/api.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/t-sp3-frontend.md",
+      "target": "file:web/src/components/Setup.test.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/watcher-hook.md",
+      "target": "file:internal/serve/api.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/watcher-hook.md",
+      "target": "file:internal/serve/watch.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/watcher-hook.md",
+      "target": "file:cmd/pactify/cmd_serve.go",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/web-customagent-form.md",
+      "target": "file:web/src/lib/api.ts",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/web-customagent-form.md",
+      "target": "file:web/src/components/ops/CustomAgentForm.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/web-customagent-form.md",
+      "target": "file:web/src/components/ops/CustomAgentForm.test.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/web-customagent-form.md",
+      "target": "file:web/src/components/ops/OpsView.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:.pact/tasks/web-customagent-form.md",
+      "target": "file:web/src/components/ops/AgentRoster.tsx",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

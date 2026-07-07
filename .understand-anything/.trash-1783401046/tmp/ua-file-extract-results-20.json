@@ -1,0 +1,1437 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 5,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "cmd/pactify/cmd_schedule.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 119,
+      "nonEmptyLines": 111,
+      "functions": [
+        {
+          "name": "newScheduleCmd",
+          "startLine": 12,
+          "endLine": 105,
+          "params": []
+        },
+        {
+          "name": "nextScheduleID",
+          "startLine": 108,
+          "endLine": 119,
+          "params": [
+            "scheds"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "newScheduleCmd",
+          "callee": "cobra.ExactArgs",
+          "lineNumber": 16
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "fmt.Errorf",
+          "lineNumber": 20
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.Validate",
+          "lineNumber": 23
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.DefaultPath",
+          "lineNumber": 26
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.Load",
+          "lineNumber": 27
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "nextScheduleID",
+          "lineNumber": 31
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "append",
+          "lineNumber": 32
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.Save",
+          "lineNumber": 39
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "fmt.Fprintf",
+          "lineNumber": 42
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "c.OutOrStdout",
+          "lineNumber": 42
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "addCmd.Flags().StringVar",
+          "lineNumber": 45
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "addCmd.Flags",
+          "lineNumber": 45
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "addCmd.Flags().StringVar",
+          "lineNumber": 46
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "addCmd.Flags",
+          "lineNumber": 46
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.Load",
+          "lineNumber": 50
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.DefaultPath",
+          "lineNumber": 50
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "len",
+          "lineNumber": 54
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "fmt.Fprintln",
+          "lineNumber": 55
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "c.OutOrStdout",
+          "lineNumber": 55
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "time.Now",
+          "lineNumber": 58
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.NextFire",
+          "lineNumber": 65
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "nf.Format",
+          "lineNumber": 66
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "fmt.Fprintf",
+          "lineNumber": 72
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "c.OutOrStdout",
+          "lineNumber": 72
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "cobra.ExactArgs",
+          "lineNumber": 77
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.DefaultPath",
+          "lineNumber": 79
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.Load",
+          "lineNumber": 80
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "make",
+          "lineNumber": 84
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "len",
+          "lineNumber": 84
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "append",
+          "lineNumber": 91
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "fmt.Errorf",
+          "lineNumber": 94
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "schedule.Save",
+          "lineNumber": 96
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "fmt.Fprintf",
+          "lineNumber": 99
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "c.OutOrStdout",
+          "lineNumber": 99
+        },
+        {
+          "caller": "newScheduleCmd",
+          "callee": "cmd.AddCommand",
+          "lineNumber": 103
+        },
+        {
+          "caller": "nextScheduleID",
+          "callee": "strconv.Itoa",
+          "lineNumber": 114
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 0,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "internal/schedule/runner.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 114,
+      "nonEmptyLines": 105,
+      "functions": [
+        {
+          "name": "logf",
+          "startLine": 29,
+          "endLine": 33,
+          "params": [
+            "format"
+          ]
+        },
+        {
+          "name": "Tick",
+          "startLine": 39,
+          "endLine": 95,
+          "params": [
+            "now"
+          ]
+        },
+        {
+          "name": "Start",
+          "startLine": 99,
+          "endLine": 114,
+          "params": [
+            "ctx"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Runner",
+          "startLine": 19,
+          "endLine": 27,
+          "methods": [
+            "logf",
+            "Tick",
+            "Start"
+          ],
+          "properties": [
+            "Path",
+            "Spawn",
+            "Now",
+            "Log",
+            "mu",
+            "next"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Runner",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "Tick",
+          "line": 39,
+          "isDefault": false
+        },
+        {
+          "name": "Start",
+          "line": 99,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "logf",
+          "callee": "r.Log",
+          "lineNumber": 31
+        },
+        {
+          "caller": "Tick",
+          "callee": "Load",
+          "lineNumber": 40
+        },
+        {
+          "caller": "Tick",
+          "callee": "r.logf",
+          "lineNumber": 42
+        },
+        {
+          "caller": "Tick",
+          "callee": "r.mu.Lock",
+          "lineNumber": 46
+        },
+        {
+          "caller": "Tick",
+          "callee": "NextFire",
+          "lineNumber": 60
+        },
+        {
+          "caller": "Tick",
+          "callee": "r.logf",
+          "lineNumber": 63
+        },
+        {
+          "caller": "Tick",
+          "callee": "now.Before",
+          "lineNumber": 67
+        },
+        {
+          "caller": "Tick",
+          "callee": "append",
+          "lineNumber": 68
+        },
+        {
+          "caller": "Tick",
+          "callee": "NextFire",
+          "lineNumber": 69
+        },
+        {
+          "caller": "Tick",
+          "callee": "delete",
+          "lineNumber": 76
+        },
+        {
+          "caller": "Tick",
+          "callee": "r.mu.Unlock",
+          "lineNumber": 79
+        },
+        {
+          "caller": "Tick",
+          "callee": "r.Spawn",
+          "lineNumber": 85
+        },
+        {
+          "caller": "Tick",
+          "callee": "r.logf",
+          "lineNumber": 88
+        },
+        {
+          "caller": "Tick",
+          "callee": "r.logf",
+          "lineNumber": 90
+        },
+        {
+          "caller": "Tick",
+          "callee": "r.logf",
+          "lineNumber": 92
+        },
+        {
+          "caller": "Start",
+          "callee": "time.NewTicker",
+          "lineNumber": 103
+        },
+        {
+          "caller": "Start",
+          "callee": "t.Stop",
+          "lineNumber": 104
+        },
+        {
+          "caller": "Start",
+          "callee": "r.Tick",
+          "lineNumber": 105
+        },
+        {
+          "caller": "Start",
+          "callee": "r.Now",
+          "lineNumber": 105
+        },
+        {
+          "caller": "Start",
+          "callee": "ctx.Done",
+          "lineNumber": 108
+        },
+        {
+          "caller": "Start",
+          "callee": "r.Tick",
+          "lineNumber": 111
+        },
+        {
+          "caller": "Start",
+          "callee": "r.Now",
+          "lineNumber": 111
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 3,
+        "functionCount": 3,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "internal/schedule/runner_test.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 143,
+      "nonEmptyLines": 121,
+      "functions": [
+        {
+          "name": "fn",
+          "startLine": 21,
+          "endLine": 29,
+          "params": [
+            "project",
+            "feature"
+          ]
+        },
+        {
+          "name": "writeScheds",
+          "startLine": 31,
+          "endLine": 36,
+          "params": [
+            "t",
+            "path"
+          ]
+        },
+        {
+          "name": "TestRunnerFiresDueSchedule",
+          "startLine": 38,
+          "endLine": 76,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestRunnerSkipsAlreadyRunning",
+          "startLine": 78,
+          "endLine": 106,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestRunnerDisabledNotFired",
+          "startLine": 108,
+          "endLine": 121,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestRunnerReloadsFileEachTick",
+          "startLine": 123,
+          "endLine": 143,
+          "params": [
+            "t"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "spawnCall",
+          "startLine": 10,
+          "endLine": 12,
+          "methods": [],
+          "properties": [
+            "project",
+            "feature"
+          ]
+        },
+        {
+          "name": "fakeSpawn",
+          "startLine": 15,
+          "endLine": 19,
+          "methods": [
+            "fn"
+          ],
+          "properties": [
+            "calls",
+            "running",
+            "err"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TestRunnerFiresDueSchedule",
+          "line": 38,
+          "isDefault": false
+        },
+        {
+          "name": "TestRunnerSkipsAlreadyRunning",
+          "line": 78,
+          "isDefault": false
+        },
+        {
+          "name": "TestRunnerDisabledNotFired",
+          "line": 108,
+          "isDefault": false
+        },
+        {
+          "name": "TestRunnerReloadsFileEachTick",
+          "line": 123,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "fn",
+          "callee": "append",
+          "lineNumber": 22
+        },
+        {
+          "caller": "writeScheds",
+          "callee": "t.Helper",
+          "lineNumber": 32
+        },
+        {
+          "caller": "writeScheds",
+          "callee": "Save",
+          "lineNumber": 33
+        },
+        {
+          "caller": "writeScheds",
+          "callee": "t.Fatalf",
+          "lineNumber": 34
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "filepath.Join",
+          "lineNumber": 39
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t.TempDir",
+          "lineNumber": 39
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "writeScheds",
+          "lineNumber": 40
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "mustTime",
+          "lineNumber": 45
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "r.Tick",
+          "lineNumber": 47
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 48
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t.Fatalf",
+          "lineNumber": 49
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 49
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "r.Tick",
+          "lineNumber": 53
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t0.Add",
+          "lineNumber": 53
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 54
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t.Fatalf",
+          "lineNumber": 55
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 55
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "r.Tick",
+          "lineNumber": 59
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t0.Add",
+          "lineNumber": 59
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 60
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t.Fatalf",
+          "lineNumber": 61
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 61
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t.Fatalf",
+          "lineNumber": 64
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "r.Tick",
+          "lineNumber": 68
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t0.Add",
+          "lineNumber": 68
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 69
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t.Fatalf",
+          "lineNumber": 70
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 70
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "r.Tick",
+          "lineNumber": 72
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t0.Add",
+          "lineNumber": 72
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 73
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "t.Fatalf",
+          "lineNumber": 74
+        },
+        {
+          "caller": "TestRunnerFiresDueSchedule",
+          "callee": "len",
+          "lineNumber": 74
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "filepath.Join",
+          "lineNumber": 79
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "t.TempDir",
+          "lineNumber": 79
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "writeScheds",
+          "lineNumber": 80
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "append",
+          "lineNumber": 84
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "mustTime",
+          "lineNumber": 86
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "r.Tick",
+          "lineNumber": 87
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "r.Tick",
+          "lineNumber": 88
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "t0.Add",
+          "lineNumber": 88
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "len",
+          "lineNumber": 90
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "t.Fatalf",
+          "lineNumber": 91
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "len",
+          "lineNumber": 91
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "strings.Contains",
+          "lineNumber": 96
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "strings.Contains",
+          "lineNumber": 99
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "t.Fatalf",
+          "lineNumber": 100
+        },
+        {
+          "caller": "TestRunnerSkipsAlreadyRunning",
+          "callee": "t.Fatalf",
+          "lineNumber": 104
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "filepath.Join",
+          "lineNumber": 109
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "t.TempDir",
+          "lineNumber": 109
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "writeScheds",
+          "lineNumber": 110
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "mustTime",
+          "lineNumber": 115
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "r.Tick",
+          "lineNumber": 116
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "r.Tick",
+          "lineNumber": 117
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "t0.Add",
+          "lineNumber": 117
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "len",
+          "lineNumber": 118
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "t.Fatalf",
+          "lineNumber": 119
+        },
+        {
+          "caller": "TestRunnerDisabledNotFired",
+          "callee": "len",
+          "lineNumber": 119
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "filepath.Join",
+          "lineNumber": 124
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "t.TempDir",
+          "lineNumber": 124
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "writeScheds",
+          "lineNumber": 125
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "mustTime",
+          "lineNumber": 130
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "r.Tick",
+          "lineNumber": 131
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "writeScheds",
+          "lineNumber": 134
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "r.Tick",
+          "lineNumber": 135
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "t0.Add",
+          "lineNumber": 135
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "len",
+          "lineNumber": 136
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "t.Fatalf",
+          "lineNumber": 137
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "r.Tick",
+          "lineNumber": 139
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "t0.Add",
+          "lineNumber": 139
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "len",
+          "lineNumber": 140
+        },
+        {
+          "caller": "TestRunnerReloadsFileEachTick",
+          "callee": "t.Fatalf",
+          "lineNumber": 141
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 6,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "internal/schedule/schedule.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 131,
+      "nonEmptyLines": 120,
+      "functions": [
+        {
+          "name": "Validate",
+          "startLine": 40,
+          "endLine": 43,
+          "params": [
+            "expr"
+          ]
+        },
+        {
+          "name": "NextFire",
+          "startLine": 52,
+          "endLine": 81,
+          "params": [
+            "now",
+            "expr"
+          ]
+        },
+        {
+          "name": "DefaultPath",
+          "startLine": 85,
+          "endLine": 91,
+          "params": []
+        },
+        {
+          "name": "Load",
+          "startLine": 95,
+          "endLine": 111,
+          "params": [
+            "path"
+          ]
+        },
+        {
+          "name": "Save",
+          "startLine": 115,
+          "endLine": 131,
+          "params": [
+            "path",
+            "scheds"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "Schedule",
+          "startLine": 26,
+          "endLine": 32,
+          "methods": [],
+          "properties": [
+            "ID",
+            "Project",
+            "Feature",
+            "Expr",
+            "Enabled"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Schedule",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "Validate",
+          "line": 40,
+          "isDefault": false
+        },
+        {
+          "name": "NextFire",
+          "line": 52,
+          "isDefault": false
+        },
+        {
+          "name": "DefaultPath",
+          "line": 85,
+          "isDefault": false
+        },
+        {
+          "name": "Load",
+          "line": 95,
+          "isDefault": false
+        },
+        {
+          "name": "Save",
+          "line": 115,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "Validate",
+          "callee": "NextFire",
+          "lineNumber": 41
+        },
+        {
+          "caller": "Validate",
+          "callee": "time.Now",
+          "lineNumber": 41
+        },
+        {
+          "caller": "NextFire",
+          "callee": "strings.TrimSpace",
+          "lineNumber": 53
+        },
+        {
+          "caller": "NextFire",
+          "callee": "dailyRe.FindStringSubmatch",
+          "lineNumber": 55
+        },
+        {
+          "caller": "NextFire",
+          "callee": "strconv.Atoi",
+          "lineNumber": 56
+        },
+        {
+          "caller": "NextFire",
+          "callee": "strconv.Atoi",
+          "lineNumber": 57
+        },
+        {
+          "caller": "NextFire",
+          "callee": "time.Date",
+          "lineNumber": 58
+        },
+        {
+          "caller": "NextFire",
+          "callee": "now.Year",
+          "lineNumber": 58
+        },
+        {
+          "caller": "NextFire",
+          "callee": "now.Month",
+          "lineNumber": 58
+        },
+        {
+          "caller": "NextFire",
+          "callee": "now.Day",
+          "lineNumber": 58
+        },
+        {
+          "caller": "NextFire",
+          "callee": "now.Location",
+          "lineNumber": 58
+        },
+        {
+          "caller": "NextFire",
+          "callee": "cand.After",
+          "lineNumber": 59
+        },
+        {
+          "caller": "NextFire",
+          "callee": "cand.AddDate",
+          "lineNumber": 60
+        },
+        {
+          "caller": "NextFire",
+          "callee": "everyRe.FindStringSubmatch",
+          "lineNumber": 65
+        },
+        {
+          "caller": "NextFire",
+          "callee": "strconv.Atoi",
+          "lineNumber": 66
+        },
+        {
+          "caller": "NextFire",
+          "callee": "fmt.Errorf",
+          "lineNumber": 68
+        },
+        {
+          "caller": "NextFire",
+          "callee": "time.Duration",
+          "lineNumber": 73
+        },
+        {
+          "caller": "NextFire",
+          "callee": "time.Duration",
+          "lineNumber": 75
+        },
+        {
+          "caller": "NextFire",
+          "callee": "now.Add",
+          "lineNumber": 77
+        },
+        {
+          "caller": "NextFire",
+          "callee": "fmt.Errorf",
+          "lineNumber": 80
+        },
+        {
+          "caller": "DefaultPath",
+          "callee": "os.Getenv",
+          "lineNumber": 86
+        },
+        {
+          "caller": "DefaultPath",
+          "callee": "filepath.Join",
+          "lineNumber": 87
+        },
+        {
+          "caller": "DefaultPath",
+          "callee": "os.UserHomeDir",
+          "lineNumber": 89
+        },
+        {
+          "caller": "DefaultPath",
+          "callee": "filepath.Join",
+          "lineNumber": 90
+        },
+        {
+          "caller": "Load",
+          "callee": "os.ReadFile",
+          "lineNumber": 96
+        },
+        {
+          "caller": "Load",
+          "callee": "os.IsNotExist",
+          "lineNumber": 98
+        },
+        {
+          "caller": "Load",
+          "callee": "len",
+          "lineNumber": 103
+        },
+        {
+          "caller": "Load",
+          "callee": "strings.TrimSpace",
+          "lineNumber": 103
+        },
+        {
+          "caller": "Load",
+          "callee": "string",
+          "lineNumber": 103
+        },
+        {
+          "caller": "Load",
+          "callee": "json.Unmarshal",
+          "lineNumber": 107
+        },
+        {
+          "caller": "Load",
+          "callee": "fmt.Errorf",
+          "lineNumber": 108
+        },
+        {
+          "caller": "Save",
+          "callee": "os.MkdirAll",
+          "lineNumber": 119
+        },
+        {
+          "caller": "Save",
+          "callee": "filepath.Dir",
+          "lineNumber": 119
+        },
+        {
+          "caller": "Save",
+          "callee": "json.MarshalIndent",
+          "lineNumber": 122
+        },
+        {
+          "caller": "Save",
+          "callee": "os.WriteFile",
+          "lineNumber": 127
+        },
+        {
+          "caller": "Save",
+          "callee": "os.Rename",
+          "lineNumber": 130
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 6,
+        "functionCount": 5,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "internal/schedule/schedule_test.go",
+      "language": "go",
+      "fileCategory": "code",
+      "totalLines": 144,
+      "nonEmptyLines": 134,
+      "functions": [
+        {
+          "name": "TestValidateTable",
+          "startLine": 9,
+          "endLine": 50,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "mustTime",
+          "startLine": 52,
+          "endLine": 60,
+          "params": [
+            "t",
+            "s"
+          ]
+        },
+        {
+          "name": "TestNextFireDaily",
+          "startLine": 62,
+          "endLine": 86,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestNextFireEvery",
+          "startLine": 88,
+          "endLine": 110,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestNextFireInvalid",
+          "startLine": 112,
+          "endLine": 116,
+          "params": [
+            "t"
+          ]
+        },
+        {
+          "name": "TestLoadSaveRoundTrip",
+          "startLine": 118,
+          "endLine": 144,
+          "params": [
+            "t"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "TestValidateTable",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "TestNextFireDaily",
+          "line": 62,
+          "isDefault": false
+        },
+        {
+          "name": "TestNextFireEvery",
+          "line": 88,
+          "isDefault": false
+        },
+        {
+          "name": "TestNextFireInvalid",
+          "line": 112,
+          "isDefault": false
+        },
+        {
+          "name": "TestLoadSaveRoundTrip",
+          "line": 118,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "TestValidateTable",
+          "callee": "Validate",
+          "lineNumber": 23
+        },
+        {
+          "caller": "TestValidateTable",
+          "callee": "t.Errorf",
+          "lineNumber": 24
+        },
+        {
+          "caller": "TestValidateTable",
+          "callee": "Validate",
+          "lineNumber": 46
+        },
+        {
+          "caller": "TestValidateTable",
+          "callee": "t.Errorf",
+          "lineNumber": 47
+        },
+        {
+          "caller": "mustTime",
+          "callee": "t.Helper",
+          "lineNumber": 53
+        },
+        {
+          "caller": "mustTime",
+          "callee": "time.Parse",
+          "lineNumber": 55
+        },
+        {
+          "caller": "mustTime",
+          "callee": "t.Fatalf",
+          "lineNumber": 57
+        },
+        {
+          "caller": "TestNextFireDaily",
+          "callee": "NextFire",
+          "lineNumber": 78
+        },
+        {
+          "caller": "TestNextFireDaily",
+          "callee": "mustTime",
+          "lineNumber": 78
+        },
+        {
+          "caller": "TestNextFireDaily",
+          "callee": "t.Fatalf",
+          "lineNumber": 80
+        },
+        {
+          "caller": "TestNextFireDaily",
+          "callee": "mustTime",
+          "lineNumber": 82
+        },
+        {
+          "caller": "TestNextFireDaily",
+          "callee": "got.Equal",
+          "lineNumber": 82
+        },
+        {
+          "caller": "TestNextFireDaily",
+          "callee": "t.Errorf",
+          "lineNumber": 83
+        },
+        {
+          "caller": "TestNextFireDaily",
+          "callee": "got.Format",
+          "lineNumber": 83
+        },
+        {
+          "caller": "TestNextFireEvery",
+          "callee": "mustTime",
+          "lineNumber": 89
+        },
+        {
+          "caller": "TestNextFireEvery",
+          "callee": "NextFire",
+          "lineNumber": 102
+        },
+        {
+          "caller": "TestNextFireEvery",
+          "callee": "t.Fatalf",
+          "lineNumber": 104
+        },
+        {
+          "caller": "TestNextFireEvery",
+          "callee": "mustTime",
+          "lineNumber": 106
+        },
+        {
+          "caller": "TestNextFireEvery",
+          "callee": "got.Equal",
+          "lineNumber": 106
+        },
+        {
+          "caller": "TestNextFireEvery",
+          "callee": "t.Errorf",
+          "lineNumber": 107
+        },
+        {
+          "caller": "TestNextFireEvery",
+          "callee": "got.Format",
+          "lineNumber": 107
+        },
+        {
+          "caller": "TestNextFireInvalid",
+          "callee": "NextFire",
+          "lineNumber": 113
+        },
+        {
+          "caller": "TestNextFireInvalid",
+          "callee": "time.Now",
+          "lineNumber": 113
+        },
+        {
+          "caller": "TestNextFireInvalid",
+          "callee": "t.Fatal",
+          "lineNumber": 114
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "filepath.Join",
+          "lineNumber": 119
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "t.TempDir",
+          "lineNumber": 119
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "Load",
+          "lineNumber": 122
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "t.Fatalf",
+          "lineNumber": 124
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "len",
+          "lineNumber": 126
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "t.Fatalf",
+          "lineNumber": 127
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "Save",
+          "lineNumber": 134
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "t.Fatalf",
+          "lineNumber": 135
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "Load",
+          "lineNumber": 137
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "t.Fatalf",
+          "lineNumber": 139
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "len",
+          "lineNumber": 141
+        },
+        {
+          "caller": "TestLoadSaveRoundTrip",
+          "callee": "t.Fatalf",
+          "lineNumber": 142
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 5,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    }
+  ]
+}

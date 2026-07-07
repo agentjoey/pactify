@@ -117,6 +117,18 @@ var secretRes = []struct {
 	// bare well-known token shapes: GitHub tokens / PATs, AWS access key ids.
 	{regexp.MustCompile(`\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})\b`), `***`},
 	{regexp.MustCompile(`(?i)(bearer\s+|token[=:]\s*|secret[=:]\s*|sk-)[A-Za-z0-9._\-]+`), `$1***`},
+	// Slack tokens: keep the xox<prefix>- introducer and mask the rest.
+	{regexp.MustCompile(`\b(xox[baprs]-)[A-Za-z0-9-]{10,}\b`), `$1***`},
+	// Google API keys: AIza followed by exactly 35 alphanumeric/url-safe chars.
+	{regexp.MustCompile(`\b(AIza)[0-9A-Za-z_\-]{35}\b`), `$1***`},
+	// Stripe live/test keys: keep sk/rk/pk_live/test_ prefix and mask the secret.
+	{regexp.MustCompile(`\b((?:sk|rk|pk)_(?:live|test)_)[A-Za-z0-9]{10,}\b`), `$1***`},
+	// GCP OAuth access tokens: ya29.<base64url>.
+	{regexp.MustCompile(`\b(ya29\.)([A-Za-z0-9_\-]+)`), `$1***`},
+	// JWT: three base64url segments.
+	{regexp.MustCompile(`\beyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\b`), `***`},
+	// PEM private-key header: keep a generic BEGIN header and mask the rest.
+	{regexp.MustCompile(`-----BEGIN [A-Z ]*PRIVATE KEY-----`), `-----BEGIN PRIVATE KEY----- ***`},
 }
 
 // redact masks secret-ish runs and truncates to summaryCap chars.

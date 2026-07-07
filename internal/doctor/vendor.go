@@ -27,6 +27,7 @@ var acpKinds = map[string]bool{
 // session file we don't model) — so the check stays green with an advisory note.
 type authProbe struct {
 	authRel     string
+	authAltRel  string // alternate credential path; either authRel or authAltRel may satisfy auth
 	isDir       bool
 	lenient     bool
 	installHint string
@@ -43,7 +44,7 @@ var vendorAuth = map[string]authProbe{
 	"codex-cli": {authRel: ".codex/auth.json",
 		installHint: "install codex (npm i -g @openai/codex)",
 		loginHint:   "run `codex login`"},
-	"gemini-cli": {authRel: ".gemini/oauth_creds.json",
+	"gemini-cli": {authRel: ".gemini/oauth_creds.json", authAltRel: ".gemini/google_accounts.json",
 		installHint: "install gemini-cli (npm i -g @google/gemini-cli)",
 		loginHint:   "run `gemini` once to authenticate"},
 	"kimi-cli": {authRel: ".kimi", isDir: true, lenient: true,
@@ -70,7 +71,7 @@ func VendorChecks(home, pathEnv string) []Check {
 		probe := vendorAuth[kind] // zero value is fine for unknown custom kinds
 
 		checks = append(checks, vendorBinaryCheck(kind, rs.Command, pathEnv, probe))
-		if probe.authRel != "" {
+		if probe.authRel != "" || probe.authAltRel != "" {
 			checks = append(checks, vendorAuthCheck(kind, home, probe))
 		}
 		checks = append(checks, vendorTransportCheck(kind))
@@ -92,11 +93,29 @@ func vendorBinaryCheck(kind, command, pathEnv string, probe authProbe) Check {
 
 func vendorAuthCheck(kind, home string, probe authProbe) Check {
 	name := fmt.Sprintf("cli %s: auth", kind)
-	target := filepath.Join(home, probe.authRel)
-	present := probe.isDir && isDir(target) || !probe.isDir && isNonEmptyFile(target)
-	if present {
-		return Check{name, true, "credentials present at " + target}
+
+	var candidates []string
+	if probe.authRel != "" {
+		candidates = append(candidates, probe.authRel)
 	}
+	if probe.authAltRel != "" {
+		candidates = append(candidates, probe.authAltRel)
+	}
+
+	var found string
+	for _, rel := range candidates {
+		target := filepath.Join(home, rel)
+		present := probe.isDir && isDir(target) || !probe.isDir && isNonEmptyFile(target)
+		if present {
+			found = target
+			break
+		}
+	}
+
+	if found != "" {
+		return Check{name, true, "credentials present at " + found}
+	}
+	target := filepath.Join(home, probe.authRel)
 	if probe.lenient {
 		// Absent but not fatal — keep green, surface an advisory in Detail.
 		return Check{name, true, fmt.Sprintf("no %s; %s", target, probe.loginHint)}

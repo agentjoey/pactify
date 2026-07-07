@@ -158,6 +158,46 @@ func TestVendorChecks_Auth(t *testing.T) {
 	}
 }
 
+func TestVendorChecks_GeminiAuthAlternatives(t *testing.T) {
+	pathDir := t.TempDir()
+
+	assertGeminiAuthOK := func(t *testing.T, home string) {
+		t.Helper()
+		checks := VendorChecks(home, pathDir)
+		c, ok := findCheck(checks, "cli gemini-cli: auth")
+		if !ok {
+			t.Fatal("gemini-cli auth check missing")
+		}
+		if !c.OK {
+			t.Fatalf("gemini-cli auth should be green: %+v", c)
+		}
+		if !strings.Contains(c.Detail, "present") {
+			t.Fatalf("gemini-cli auth detail should note credentials present: %+v", c)
+		}
+	}
+
+	t.Run("oauth_creds.json", func(t *testing.T) {
+		home := t.TempDir()
+		mkFile(t, home, ".gemini/oauth_creds.json", `{"token":"x"}`)
+		assertGeminiAuthOK(t, home)
+	})
+
+	t.Run("google_accounts.json", func(t *testing.T) {
+		home := t.TempDir()
+		mkFile(t, home, ".gemini/google_accounts.json", `[{"email":"a@b.com"}]`)
+		assertGeminiAuthOK(t, home)
+	})
+
+	t.Run("neither is red", func(t *testing.T) {
+		home := t.TempDir()
+		checks := VendorChecks(home, pathDir)
+		c, _ := findCheck(checks, "cli gemini-cli: auth")
+		if c.OK {
+			t.Fatalf("gemini-cli auth should be red when no credential is present: %+v", c)
+		}
+	})
+}
+
 // An empty (zero-byte) credential file counts as absent for strict kinds.
 func TestVendorChecks_EmptyCredFileIsAbsent(t *testing.T) {
 	pathDir := t.TempDir()

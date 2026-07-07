@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/registry"
 	"github.com/fsnotify/fsnotify"
 )
@@ -58,6 +59,10 @@ type Server struct {
 	mu      map[string]*sync.Mutex
 
 	relay *relay
+
+	// cockpit hosts the live agent-backend sessions for the cockpit HTTP endpoints.
+	// It is created lazily by ensureCockpit; tests may inject a pre-built Manager.
+	cockpit *cockpit.Manager
 
 	execOrchestrate func(dir string, args, env []string) error
 	finishRunner    func(dir, name string, args ...string) (string, error)
@@ -139,6 +144,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerSeatsRoutes(mux)
 	s.registerTimelineRoutes(mux)
 	s.registerOrchestrateRoutes(mux)
+	s.registerCockpitRoutes(mux)
 	s.registerSetupRoutes(mux)
 	s.registerRecipeRoutes(mux)
 	s.registerPlanRoutes(mux)

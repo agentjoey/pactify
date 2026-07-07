@@ -571,7 +571,7 @@ features:
     tasks:
       - id: relay-event-id
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/relay-event-id.md
         evidence: relay idempotency: additive nullable eventId + @@unique([projectId,eventId]) keeping @@unique([projectId,seq]); zod optional eventId (.strict kept); ingest dedups on either; machine buildBody sends ev.EventID; wire doc updated. typecheck + go test ./internal/serve/ + vitest 11/11 green. DB migrate+deploy+resync = human end-step

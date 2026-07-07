@@ -349,6 +349,38 @@ func TestAcpRunnerStripsAnthropicKey(t *testing.T) {
 	}
 }
 
+func TestAcpCommandPinsBridgeVersions(t *testing.T) {
+	cases := []struct {
+		kind string
+		want string
+	}{
+		{"claude-code", "@agentclientprotocol/claude-agent-acp@0.57.0"},
+		{"codex-cli", "@zed-industries/codex-acp@0.16.0"},
+		{"gemini-cli", "@google/gemini-cli@0.49.0"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.kind, func(t *testing.T) {
+			command, args, ok := acpCommand(tc.kind)
+			if !ok {
+				t.Fatalf("acpCommand(%q): ok=false", tc.kind)
+			}
+			if command != "npx" {
+				t.Errorf("command = %q, want npx", command)
+			}
+			found := false
+			for _, a := range args {
+				if a == tc.want {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("args = %v, want to include %q", args, tc.want)
+			}
+		})
+	}
+}
+
 func TestAcpRunnerUnknownKindGuidesToCmd(t *testing.T) {
 	r := AcpRunner{Spawn: captureSpawn(newFakeAcpConn(), nil)}
 	err := r.Run(context.Background(), LaunchContext{Seat: "w", Kind: "opencode", RepoDir: "/tmp/x"})

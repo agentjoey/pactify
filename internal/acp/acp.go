@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 )
@@ -145,6 +146,25 @@ func (e *rpcError) Error() string {
 	return fmt.Sprintf("acp: rpc error %d: %s", e.Code, e.Message)
 }
 
+// filteredEnviron returns the current process environment with pactify/relay
+// internal secrets removed. We use a denylist (drop known pactify keys) rather
+// than a strict whitelist because vendor authentication depends on a wide set
+// of system and HOME-directory variables that vary by agent. The goal is to
+// avoid leaking pactify/relay secrets to third-party npx bridges, not to
+// minimize the child's environment.
+func filteredEnviron() []string {
+	var out []string
+	for _, e := range os.Environ() {
+		if key, _, ok := strings.Cut(e, "="); ok {
+			if key == "PACT_RELAY_TOKEN" || strings.HasPrefix(key, "PACTIFY_") {
+				continue
+			}
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
 // Spawn starts command with args in dir, appends env onto the inherited
 // environment, and takes over the child's stdin/stdout for the JSON-RPC
 // connection. The child's stderr streams to the parent (so agent diagnostics stay
@@ -153,7 +173,7 @@ func (e *rpcError) Error() string {
 func Spawn(ctx context.Context, command string, args, env []string, dir string) (*Client, error) {
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(filteredEnviron(), env...)
 	cmd.Stderr = os.Stderr
 	// Run the child in its own process group so teardown can reap the whole
 	// tree (ACP-1): most kinds launch via `npx`, which forks a node grandchild

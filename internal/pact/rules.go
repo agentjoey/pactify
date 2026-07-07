@@ -360,18 +360,13 @@ func (p *Project) validateLog() error {
 		return fmt.Errorf("pactify validate: STATE.yml drift vs render(log)")
 	}
 	declared := map[string]bool{}
+	for _, a := range st.Agents {
+		declared[a.ID] = true
+	}
+
 	var protocolVersion int
 	for _, e := range evs {
 		if e.EventType == "init" {
-			if seats, ok := e.Payload["seats"].([]any); ok {
-				for _, s := range seats {
-					if m, ok := s.(map[string]any); ok {
-						if id, ok := m["id"].(string); ok {
-							declared[id] = true
-						}
-					}
-				}
-			}
 			if pv, ok := e.Payload["protocol_version"].(float64); ok {
 				protocolVersion = int(pv)
 			}

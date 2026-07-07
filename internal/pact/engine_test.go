@@ -496,6 +496,55 @@ func TestValidateFailsClosedOnHigherProtocolMajor(t *testing.T) {
 	}
 }
 
+func TestValidateAcceptsDynamicJoinSeat(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	t.Setenv("PACT_AGENT_ID", "dynseat")
+	if err := JoinKind("dynseat", "worker", "headless"); err != nil {
+		t.Fatalf("dynamic join failed: %v", err)
+	}
+	if err := Validate(); err != nil {
+		t.Fatalf("validate should accept dynamic join seat: %v", err)
+	}
+}
+
+func TestValidateAcceptsAddedSeat(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	if err := AddSeat("newseat:worker:NEWSEAT.md"); err != nil {
+		t.Fatalf("add-seat failed: %v", err)
+	}
+	t.Setenv("PACT_AGENT_ID", "newseat")
+	if err := Join("newseat", "worker"); err != nil {
+		t.Fatalf("added seat join failed: %v", err)
+	}
+	if err := Validate(); err != nil {
+		t.Fatalf("validate should accept added seat: %v", err)
+	}
+}
+
+func TestValidateStillRejectsUnknownSeat(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	b, _ := os.ReadFile(".pact/log.jsonl")
+	out := strings.Replace(string(b), `"agent_id":"claude-opus"`, `"agent_id":"ghost"`, 1)
+	os.WriteFile(".pact/log.jsonl", []byte(out), 0o644)
+	// Regenerate STATE.yml from the tampered log so the STATE-drift check passes
+	// and Validate must reach the roster check — otherwise this test would pass on
+	// drift alone and prove nothing about unknown-seat rejection. "ghost" is the
+	// init event's agent_id but never appears in any seats payload / add-seat /
+	// join, so it is absent from st.Agents and only the roster check can reject it.
+	if err := LogReplay(); err != nil {
+		t.Fatalf("replay tampered log: %v", err)
+	}
+	if err := Validate(); err == nil {
+		t.Fatal("validate must still reject unknown seat")
+	}
+}
+
 func TestLogReplayRebuildsState(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")

@@ -10,6 +10,9 @@ import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
 import type { Machine, ProjectMeta, State } from "./types";
 import type { ProjectStats } from "./api";
 import type { PactEventDetail } from "./types";
+// RelaySource.subscribe emits the web SSE-frame PactEvent (decrypted body), which
+// is a DIFFERENT type from relay-client's stored PactEvent imported above.
+import type { PactEvent as SseEvent } from "./types";
 
 type MockRelayClient = {
   listProjects: RelayClient["listProjects"];
@@ -599,7 +602,7 @@ describe("RelaySource", () => {
   // event (drives the Live event stream — previously never forwarded).
   it("subscribe forwards liveness and decrypted events to the caller", async () => {
     const frame = { projectId: "p1", bodyEnc: "enc" } as PactEventBroadcast;
-    const decodedEvent = { event_id: "e1", event_type: "checkpoint" } as unknown as PactEvent;
+    const decodedEvent = { event_id: "e1", event_type: "checkpoint" } as unknown as SseEvent;
     let clientOnEvent: ((e: PactEventBroadcast) => void) | undefined;
     let clientOnConn: ((live: boolean) => void) | undefined;
     const client = makeClient({
@@ -614,7 +617,7 @@ describe("RelaySource", () => {
     const src = new RelaySource(client as RelayClient);
 
     const states: State[] = [];
-    const events: PactEvent[] = [];
+    const events: SseEvent[] = [];
     const live: boolean[] = [];
     src.subscribe(
       "p1",
@@ -649,7 +652,7 @@ describe("RelaySource", () => {
       getProjectEvents: vi.fn().mockResolvedValue([]),
     });
     const src = new RelaySource(client as RelayClient);
-    const events: PactEvent[] = [];
+    const events: SseEvent[] = [];
     const states: State[] = [];
     src.subscribe("p1", (s) => states.push(s), (e) => events.push(e));
 

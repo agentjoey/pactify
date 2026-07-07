@@ -611,7 +611,7 @@ features:
     tasks:
       - id: cockpit-serve
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/cockpit-serve.md
         evidence: serve cockpit endpoints (prompt/stream-SSE/permission/cancel/status) wired to cockpit.Manager, inherit SEC-1 writeGuard; backendForKey selects claude-code/codex-cli by roster kind; injectable Manager for httptest w/ FakeBackend. BONUS: fixed a genuinely pre-existing -race in relay enqueue/stop (close(queue) vs send; verified DATA RACE on main) via stopMu serialization. Full repo + -race x2 green

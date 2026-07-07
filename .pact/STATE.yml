@@ -531,7 +531,7 @@ features:
     tasks:
       - id: cockpit-codex-backend
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/cockpit-codex-backend.md
-        evidence: null
+        evidence: codexAppServer backend: native codex app-server JSON-RPC client (writeCh/pending/3-branch dispatch, Setpgid/killGroup), envelope mapping, approval RawInput, vendored schema + drift guard. Reviewer fixed 3 defects the fake masked: (1) nextID started at 0 -> id,omitempty dropped it -> codex saw initialize as notification -> 60s hang; set nextID=1; (2) vet: append no-op; (3) vet: t.Fatalf from goroutine. REAL codex round-trip smoke now PASSES 0.14s; -race + vet clean

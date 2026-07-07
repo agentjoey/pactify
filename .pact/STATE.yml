@@ -481,7 +481,7 @@ features:
     tasks:
       - id: sarif-output
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/sarif-output.md
-        evidence: null
+        evidence: new internal/sarif (reusable SARIF 2.1.0 builder, rule dedup, level normalize) + pactify audit sarif subcommand; go test ./internal/sarif/ ./cmd/pactify/ green; e2e emits valid SARIF 2.1.0

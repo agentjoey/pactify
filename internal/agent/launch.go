@@ -94,20 +94,27 @@ var runnerProfiles = map[string]RunnerProfile{
 			return []string{"-p", briefing, "-m", model}
 		},
 	},
-	// codex-cli: `codex exec` is headless. The blanket posture maps to
-	// --sandbox workspace-write — the worker can edit the repo tree without
-	// per-command approval while staying sandboxed from network/system
-	// (--dangerously-bypass-approvals-and-sandbox is the full-trust escalation,
-	// not used by default). codex has no per-tool allowlist, so a scoped posture
-	// can't be expressed; posture is otherwise ignored. -m is omitted when no
-	// model is pinned, so codex falls back to its own configured default (the
-	// current default model name isn't asserted here). Verified against
-	// codex-cli v0.139.0 (codex exec --help).
+	// codex-cli: `codex exec` is headless. Blanket (the orchestrate default) maps
+	// to --sandbox danger-full-access — codex's workspace-write sandbox
+	// specifically protects `.git/` (it permits `git` commands but blocks direct
+	// writes into .git/), which blocks pactify's base merge lock
+	// (.git/pactify-base.lock via lockx) and the tracked-ledger auto-commit, so a
+	// worker/orchestrator can't advance pact/git state (confirmed codex 0.142.5;
+	// --add-dir .git does NOT override it). Full-access matches the full-trust
+	// posture the other blanket agents get (claude --dangerously-skip-permissions,
+	// gemini --approval-mode yolo). Scoped keeps workspace-write (explicit opt-in;
+	// note scoped codex cannot take the .git base lock, so it cannot merge). codex
+	// has no per-tool allowlist, so AllowedTools is not expressible. -m omitted
+	// when no model is pinned → codex uses its configured default.
 	"codex-cli": {
 		Command:      "codex",
 		DefaultModel: "",
-		BuildArgs: func(model string, _ PermPosture, briefing string) []string {
-			args := []string{"exec", "--sandbox", "workspace-write"}
+		BuildArgs: func(model string, perm PermPosture, briefing string) []string {
+			sandbox := "danger-full-access"
+			if perm.Scoped {
+				sandbox = "workspace-write"
+			}
+			args := []string{"exec", "--sandbox", sandbox}
 			if model != "" {
 				args = append(args, "-m", model)
 			}

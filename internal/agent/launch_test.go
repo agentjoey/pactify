@@ -19,7 +19,7 @@ func TestLaunchProfile_DefaultsMatchRunner(t *testing.T) {
 		{"claude-code", "claude", []string{"-p", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}},
 		{"gemini-cli", "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}},
 		{"kimi-cli", "kimi", []string{"-p", "{briefing}", "-m", "kimi-code/kimi-for-coding"}},
-		{"codex-cli", "codex", []string{"exec", "--sandbox", "workspace-write", "{briefing}"}},
+		{"codex-cli", "codex", []string{"exec", "--sandbox", "danger-full-access", "{briefing}"}},
 	}
 	for _, c := range cases {
 		p, ok := RunnerProfileFor(c.kind)
@@ -64,6 +64,18 @@ func TestLaunchProfile_ScopedPosture(t *testing.T) {
 	wantG := []string{"-p", "B", "-m", "gemini-3.1-pro-preview", "--approval-mode", "default", "--allowed-tools", "ReadFile,Edit", "--skip-trust"}
 	if !reflect.DeepEqual(gotG, wantG) {
 		t.Errorf("gemini scoped = %v, want %v", gotG, wantG)
+	}
+
+	// codex: blanket → danger-full-access (needs .git writes for pactify's base
+	// lock + commits); scoped → workspace-write (explicit opt-in, more restricted).
+	px, _ := RunnerProfileFor("codex-cli")
+	gotXBlanket := px.BuildArgs("", PermPosture{}, "B")
+	if !reflect.DeepEqual(gotXBlanket, []string{"exec", "--sandbox", "danger-full-access", "B"}) {
+		t.Errorf("codex blanket = %v, want danger-full-access", gotXBlanket)
+	}
+	gotXScoped := px.BuildArgs("", PermPosture{Scoped: true}, "B")
+	if !reflect.DeepEqual(gotXScoped, []string{"exec", "--sandbox", "workspace-write", "B"}) {
+		t.Errorf("codex scoped = %v, want workspace-write", gotXScoped)
 	}
 }
 

@@ -461,7 +461,7 @@ features:
     tasks:
       - id: doctor-gemini
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/doctor-gemini.md
-        evidence: null
+        evidence: doctor gemini auth accepts google_accounts.json OR oauth_creds.json; go test ./internal/doctor/ green

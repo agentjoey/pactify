@@ -467,7 +467,7 @@ features:
         evidence: doctor gemini auth accepts google_accounts.json OR oauth_creds.json; go test ./internal/doctor/ green
   - id: planner-dimensions
     branch: feat/planner-dimensions
-    status: in_progress
+    status: shipped
     tasks:
       - id: planner-dimensions
         owner: kimi-worker

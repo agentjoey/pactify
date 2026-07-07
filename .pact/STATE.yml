@@ -471,7 +471,7 @@ features:
     tasks:
       - id: planner-dimensions
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/planner-dimensions.md
         evidence: PlanTask.Dimension optional field + validation (correctness|security|performance|maintainability|ux); prompt Review dimensions section; go test ./internal/planner/ green, gofmt+vet clean

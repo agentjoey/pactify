@@ -1,7 +1,6 @@
 package cockpit
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -79,7 +78,7 @@ func newCodexSession(ctx context.Context, repoDir, resumeThreadID string) (*code
 
 	go func() {
 		_ = cmd.Wait()
-		s.client.terminate(errors.New("codex: app-server process exited"))
+		s.client.rpc.terminate(errors.New("codex: app-server process exited"))
 	}()
 
 	if _, err := s.client.initialize(ctx); err != nil {
@@ -161,59 +160,21 @@ func newCodexSessionWithClient(c *codexClient, threadID string) *codexSession {
 	}
 }
 
-// codexClient is the internal JSON-RPC/stdio client.
+// codexClient is the thin, codex-specific wrapper around the shared rpcConn.
 type codexClient struct {
-	w       io.WriteCloser
-	r       io.Reader
-	closeFn func() error
-
-	writeCh chan []byte
-	done    chan struct{}
-	once    sync.Once
-
-	mu      sync.Mutex
-	nextID  int
-	pending map[int]chan rpcResponse
-	dead    bool
-	deadErr error
+	rpc *rpcConn
 
 	dispatchEvent    func(Event)
 	dispatchApproval func(ApprovalRequest)
 }
 
-type rpcResponse struct {
-	Result json.RawMessage
-	Err    *rpcError
-}
-
-type rpcError struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-}
-
-func (e *rpcError) Error() string {
-	return fmt.Sprintf("codex: rpc error %d: %s", e.Code, e.Message)
-}
-
 func newCodexClient(w io.WriteCloser, r io.Reader, closeFn func() error,
 	onEvent func(Event), onApproval func(ApprovalRequest)) *codexClient {
 	c := &codexClient{
-		w:                w,
-		r:                r,
-		closeFn:          closeFn,
-		writeCh:          make(chan []byte),
-		done:             make(chan struct{}),
-		pending:          map[int]chan rpcResponse{},
 		dispatchEvent:    onEvent,
 		dispatchApproval: onApproval,
-		// Request ids MUST start at 1: id 0 is dropped by the `id,omitempty` JSON
-		// tag, so codex would see the request as an id-less notification and never
-		// reply — the initialize call would then hang until the ctx deadline.
-		nextID: 1,
 	}
-	go c.writeLoop()
-	go c.readLoop()
+	c.rpc = newRPCConn(w, r, closeFn, c.handleServerRequest, c.handleNotification)
 	return c
 }
 
@@ -225,16 +186,16 @@ func (c *codexClient) initialize(ctx context.Context) (json.RawMessage, error) {
 			"title":   "pactify",
 		},
 	}
-	return c.call(ctx, "initialize", params)
+	return c.rpc.call(ctx, "initialize", params)
 }
 
 func (c *codexClient) initialized(ctx context.Context) error {
-	return c.notify("initialized", nil)
+	return c.rpc.notify("initialized", nil)
 }
 
 func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, error) {
 	params := map[string]any{"cwd": cwd}
-	raw, err := c.call(ctx, "thread/start", params)
+	raw, err := c.rpc.call(ctx, "thread/start", params)
 	if err != nil {
 		return "", err
 	}
@@ -250,7 +211,7 @@ func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, erro
 }
 
 func (c *codexClient) threadResume(ctx context.Context, threadID string) error {
-	return c.notify("thread/resume", map[string]any{"threadId": threadID})
+	return c.rpc.notify("thread/resume", map[string]any{"threadId": threadID})
 }
 
 func (c *codexClient) turnStart(ctx context.Context, threadID, text string) error {
@@ -258,152 +219,17 @@ func (c *codexClient) turnStart(ctx context.Context, threadID, text string) erro
 		"threadId": threadID,
 		"input":    []map[string]any{{"type": "text", "text": text}},
 	}
-	_, err := c.call(ctx, "turn/start", params)
+	_, err := c.rpc.call(ctx, "turn/start", params)
 	return err
 }
 
 func (c *codexClient) turnInterrupt(ctx context.Context, threadID string) error {
 	params := map[string]any{"threadId": threadID}
-	return c.notify("turn/interrupt", params)
+	return c.rpc.notify("turn/interrupt", params)
 }
 
 func (c *codexClient) Close() error {
-	c.terminate(errors.New("codex: client closed"))
-	return nil
-}
-
-func (c *codexClient) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
-	c.mu.Lock()
-	if c.dead {
-		err := c.deadErr
-		c.mu.Unlock()
-		return nil, err
-	}
-	id := c.nextID
-	c.nextID++
-	ch := make(chan rpcResponse, 1)
-	c.pending[id] = ch
-	c.mu.Unlock()
-
-	b, err := json.Marshal(request{Jsonrpc: "2.0", ID: id, Method: method, Params: params})
-	if err != nil {
-		c.dropPending(id)
-		return nil, fmt.Errorf("codex: marshal %s: %w", method, err)
-	}
-	if err := c.write(b); err != nil {
-		c.dropPending(id)
-		return nil, err
-	}
-
-	select {
-	case <-ctx.Done():
-		c.dropPending(id)
-		return nil, ctx.Err()
-	case <-c.done:
-		c.mu.Lock()
-		err := c.deadErr
-		c.mu.Unlock()
-		return nil, err
-	case resp := <-ch:
-		if resp.Err != nil {
-			return nil, resp.Err
-		}
-		return resp.Result, nil
-	}
-}
-
-func (c *codexClient) notify(method string, params any) error {
-	b, err := json.Marshal(request{Jsonrpc: "2.0", Method: method, Params: params})
-	if err != nil {
-		return fmt.Errorf("codex: marshal %s: %w", method, err)
-	}
-	return c.write(b)
-}
-
-func (c *codexClient) dropPending(id int) {
-	c.mu.Lock()
-	delete(c.pending, id)
-	c.mu.Unlock()
-}
-
-func (c *codexClient) write(b []byte) error {
-	select {
-	case <-c.done:
-		c.mu.Lock()
-		err := c.deadErr
-		c.mu.Unlock()
-		return err
-	case c.writeCh <- b:
-		return nil
-	}
-}
-
-func (c *codexClient) writeLoop() {
-	for {
-		select {
-		case <-c.done:
-			return
-		case b := <-c.writeCh:
-			frame := append(b, '\n')
-			if _, err := c.w.Write(frame); err != nil {
-				c.terminate(fmt.Errorf("codex: write: %w", err))
-				return
-			}
-		}
-	}
-}
-
-func (c *codexClient) readLoop() {
-	br := bufio.NewReader(c.r)
-	for {
-		line, err := br.ReadBytes('\n')
-		if len(line) > 0 {
-			c.dispatch(line)
-		}
-		if err != nil {
-			c.terminate(fmt.Errorf("codex: connection closed: %w", err))
-			return
-		}
-	}
-}
-
-type request struct {
-	Jsonrpc string `json:"jsonrpc"`
-	ID      int    `json:"id,omitempty"`
-	Method  string `json:"method"`
-	Params  any    `json:"params,omitempty"`
-}
-
-func (c *codexClient) dispatch(line []byte) {
-	var m struct {
-		ID     *json.RawMessage `json:"id"`
-		Method string           `json:"method"`
-		Params json.RawMessage  `json:"params"`
-		Result json.RawMessage  `json:"result"`
-		Error  *rpcError        `json:"error"`
-	}
-	if err := json.Unmarshal(line, &m); err != nil {
-		return
-	}
-
-	switch {
-	case m.Method != "" && m.ID != nil:
-		c.handleServerRequest(*m.ID, m.Method, m.Params)
-	case m.Method != "":
-		c.handleNotification(m.Method, m.Params)
-	case m.ID != nil:
-		var id int
-		if json.Unmarshal(*m.ID, &id) != nil {
-			return
-		}
-		c.mu.Lock()
-		ch := c.pending[id]
-		delete(c.pending, id)
-		c.mu.Unlock()
-		if ch != nil {
-			ch <- rpcResponse{Result: m.Result, Err: m.Error}
-		}
-	}
+	return c.rpc.Close()
 }
 
 func (c *codexClient) handleServerRequest(id json.RawMessage, method string, params json.RawMessage) {
@@ -462,15 +288,7 @@ func (c *codexClient) replyApproval(id json.RawMessage, d Decision) error {
 	if decision == "" {
 		return fmt.Errorf("codex: unsupported decision %q", d)
 	}
-	b, err := json.Marshal(map[string]any{
-		"jsonrpc": "2.0",
-		"id":      id,
-		"result":  map[string]any{"decision": decision},
-	})
-	if err != nil {
-		return err
-	}
-	return c.write(b)
+	return c.rpc.reply(id, map[string]any{"decision": decision})
 }
 
 func approvalKindFromMethod(method string) string {
@@ -651,44 +469,4 @@ func firstFloat(m map[string]json.RawMessage, keys ...string) float64 {
 		}
 	}
 	return 0
-}
-
-func (c *codexClient) terminate(err error) {
-	c.once.Do(func() {
-		c.mu.Lock()
-		c.dead = true
-		c.deadErr = err
-		c.mu.Unlock()
-		close(c.done)
-		if c.closeFn != nil {
-			_ = c.closeFn()
-		}
-	})
-}
-
-// filteredEnviron returns the current environment with pactify/relay secrets
-// removed. A denylist is used so that vendor authentication (PATH, HOME, shell
-// config, etc.) still reaches the child process.
-func filteredEnviron() []string {
-	var out []string
-	for _, e := range os.Environ() {
-		if key, _, ok := strings.Cut(e, "="); ok {
-			if key == "PACT_RELAY_TOKEN" || strings.HasPrefix(key, "PACTIFY_") {
-				continue
-			}
-		}
-		out = append(out, e)
-	}
-	return out
-}
-
-func killGroup(cmd *exec.Cmd) {
-	if cmd.Process == nil {
-		return
-	}
-	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil {
-		_ = syscall.Kill(-pgid, syscall.SIGKILL)
-		return
-	}
-	_ = cmd.Process.Kill()
 }

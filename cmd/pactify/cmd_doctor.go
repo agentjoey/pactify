@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -59,12 +60,34 @@ func checkMCP() doctor.Check {
 
 func newDoctorCmd() *cobra.Command {
 	var asJSON bool
+	var setupBridge bool
 	cmd := &cobra.Command{Use: "doctor", Short: "diagnose pactify install + repo wiring",
 		RunE: func(c *cobra.Command, _ []string) error {
 			cwd, _ := os.Getwd()
+
+			if setupBridge {
+				repoRoot, ok := doctor.FindRepoRoot(cwd)
+				if !ok {
+					exe, _ := os.Executable()
+					repoRoot, ok = doctor.FindRepoRoot(filepath.Dir(exe))
+				}
+				if !ok {
+					return fmt.Errorf("could not locate bridge/claude-host from cwd or exe")
+				}
+				if err := doctor.SetupBridge(repoRoot, c.OutOrStdout()); err != nil {
+					return err
+				}
+				fmt.Fprintf(c.OutOrStdout(), "bridge ready at %s\n", repoRoot)
+				return nil
+			}
+
 			exe, _ := os.Executable()
 			home, _ := os.UserHomeDir()
 			checks := append(doctor.Run(cwd, paths.AgentID(), exe, os.Getenv("PATH"), home), checkMCP())
+
+			if repoRoot, ok := doctor.FindRepoRoot(cwd); ok {
+				checks = append(checks, doctor.BridgeChecks(repoRoot)...)
+			}
 
 			allOK := true
 			for _, ck := range checks {
@@ -99,5 +122,6 @@ func newDoctorCmd() *cobra.Command {
 			return nil
 		}}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "emit checks as a JSON array")
+	cmd.Flags().BoolVar(&setupBridge, "setup-bridge", false, "materialize the claude cockpit bridge node deps (npm ci)")
 	return cmd
 }

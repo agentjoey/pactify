@@ -65,10 +65,17 @@ export function TaskDetail({
 
   // Hosted-mode sources expose the decrypted event history; local sources render
   // the existing RightRail instead, so this panel gracefully degrades to null.
-  if (!taskId || !src.getEvents) return null;
+  // NB: this guard must NOT early-return before the hooks below — the parent
+  // keeps this component mounted and only toggles taskId (""→selected), so a
+  // conditional return here would change the hook count between renders and
+  // crash the whole tree ("rendered more hooks than during the previous
+  // render"). Keep every hook unconditional; gate the effect bodies and the
+  // final render instead.
   const getEvents = src.getEvents;
+  const active = Boolean(taskId && getEvents);
 
   useEffect(() => {
+    if (!active || !getEvents) return;
     let alive = true;
     setLoading(true);
     setErr("");
@@ -86,9 +93,10 @@ export function TaskDetail({
     return () => {
       alive = false;
     };
-  }, [project, taskId, getEvents]);
+  }, [project, taskId, getEvents, active]);
 
   useEffect(() => {
+    if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -98,9 +106,12 @@ export function TaskDetail({
     window.addEventListener("keydown", onKey, true);
     panelRef.current?.focus();
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  }, [onClose, active]);
 
   const reduced = prefersReducedMotion();
+
+  // All hooks have run unconditionally above; only now is it safe to bail out.
+  if (!active) return null;
 
   return (
     <>

@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client'
-import { deriveAccountKeypair, deriveProjectKey, decryptEvent } from '@pactify-apps/crypto'
+import { deriveAccountKeypair, deriveProjectKey, decryptEvent, decryptEventRaw } from '@pactify-apps/crypto'
 import type { EncryptedBlob, RpcRequest, MachineInfo } from '@pactify-apps/wire'
 
 /** The cleartext header of one pact event (as served by /v1/pact/projects/:id/events). */
@@ -122,6 +122,15 @@ export class RelayClient {
     const key = deriveProjectKey(this.master, projectId)
     const blob = JSON.parse(bodyEnc) as EncryptedBlob
     return decryptEvent(key, blob)
+  }
+
+  /** Decrypt without validating against linx's AgentEvent schema — for foreign
+   * payloads like pactify's raw pact ledger lines, which decryptEvent would
+   * reject with `invalid_union_discriminator`. The caller validates the shape. */
+  decryptRaw(projectId: string, bodyEnc: string): unknown {
+    const key = deriveProjectKey(this.master, projectId)
+    const blob = JSON.parse(bodyEnc) as EncryptedBlob
+    return decryptEventRaw(key, blob)
   }
 
   /**

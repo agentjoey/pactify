@@ -43,7 +43,7 @@ export class RelaySource implements DataSource {
   async getState(id: string, _wt?: string): Promise<State> {
     const events = await this.client.getProjectEvents(id);
     const decrypted = events.map(
-      (e) => this.client.decrypt(id, e.bodyEnc) as PactProjectEvent,
+      (e) => this.client.decryptRaw(id, e.bodyEnc) as PactProjectEvent,
     );
     return project(decrypted);
   }
@@ -60,7 +60,7 @@ export class RelaySource implements DataSource {
   async fetchEventsLog(id: string, _wt?: string, n?: number): Promise<PactEvent[]> {
     const events = await this.client.getProjectEvents(id);
     const decrypted = events.map(
-      (e) => this.client.decrypt(id, e.bodyEnc) as PactEvent,
+      (e) => this.client.decryptRaw(id, e.bodyEnc) as PactEvent,
     );
     return n !== undefined && n > 0 ? decrypted.slice(-n) : decrypted;
   }
@@ -73,7 +73,7 @@ export class RelaySource implements DataSource {
       task: e.task,
       feature: e.feature,
       ts: e.ts,
-      body: this.client.decrypt(id, e.bodyEnc) as Record<string, unknown>,
+      body: this.client.decryptRaw(id, e.bodyEnc) as Record<string, unknown>,
     }));
   }
 
@@ -289,7 +289,7 @@ export class RelaySource implements DataSource {
         // the event stream stayed empty.
         if (onEvent) {
           try {
-            onEvent(this.client.decrypt(id, e.bodyEnc) as PactEvent);
+            onEvent(this.client.decryptRaw(id, e.bodyEnc) as PactEvent);
           } catch {
             /* a body we can't decrypt (key rotation / foreign project) is skipped */
           }

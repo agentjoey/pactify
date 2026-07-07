@@ -18,7 +18,7 @@ type MockRelayClient = {
   listProjects: RelayClient["listProjects"];
   listMachines: RelayClient["listMachines"];
   getProjectEvents: RelayClient["getProjectEvents"];
-  decrypt: RelayClient["decrypt"];
+  decryptRaw: RelayClient["decryptRaw"];
   subscribe: RelayClient["subscribe"];
   sendRpc: RelayClient["sendRpc"];
   account: RelayClient["account"];
@@ -29,7 +29,7 @@ function makeClient(overrides?: Partial<MockRelayClient>): MockRelayClient {
     listProjects: vi.fn().mockResolvedValue([]),
     listMachines: vi.fn().mockResolvedValue([]),
     getProjectEvents: vi.fn().mockResolvedValue([]),
-    decrypt: vi.fn().mockReturnValue({}),
+    decryptRaw: vi.fn().mockReturnValue({}),
     subscribe: vi.fn().mockReturnValue(() => {}),
     sendRpc: vi.fn(),
     account: vi.fn().mockReturnValue("acct1"),
@@ -342,7 +342,7 @@ describe("RelaySource", () => {
     ];
     const client = makeClient({
       getProjectEvents: vi.fn().mockResolvedValue(events),
-      decrypt: vi.fn().mockImplementation((_id: string, bodyEnc: string) => {
+      decryptRaw: vi.fn().mockImplementation((_id: string, bodyEnc: string) => {
         const idx = events.findIndex((e) => e.bodyEnc === bodyEnc);
         return decrypted[idx];
       }),
@@ -358,8 +358,8 @@ describe("RelaySource", () => {
     expect(state.features[0].tasks[0].reviewer).toBe("bob");
     expect(state.awaiting_count).toBe(0);
     expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
-    expect(client.decrypt).toHaveBeenCalledWith("p1", "enc-init");
-    expect(client.decrypt).toHaveBeenCalledWith("p1", "enc-assign");
+    expect(client.decryptRaw).toHaveBeenCalledWith("p1", "enc-init");
+    expect(client.decryptRaw).toHaveBeenCalledWith("p1", "enc-assign");
   });
 
   it("getEvents decrypts events and preserves cleartext headers", async () => {
@@ -426,7 +426,7 @@ describe("RelaySource", () => {
     };
     const client = makeClient({
       getProjectEvents: vi.fn().mockResolvedValue(events),
-      decrypt: vi.fn().mockImplementation((_id: string, bodyEnc: string) => bodies[bodyEnc]),
+      decryptRaw: vi.fn().mockImplementation((_id: string, bodyEnc: string) => bodies[bodyEnc]),
     });
     const src = new RelaySource(client as RelayClient);
     const result = await src.getEvents("p1");
@@ -458,7 +458,7 @@ describe("RelaySource", () => {
       },
     ]);
     expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
-    expect(client.decrypt).toHaveBeenCalledWith("p1", "enc-assign");
+    expect(client.decryptRaw).toHaveBeenCalledWith("p1", "enc-assign");
   });
 
   it("fetchEventsLog returns decrypted PactEvent frames (SSE-frame shape)", async () => {
@@ -474,7 +474,7 @@ describe("RelaySource", () => {
     };
     const client = makeClient({
       getProjectEvents: vi.fn().mockResolvedValue(events),
-      decrypt: vi.fn().mockImplementation((_id: string, bodyEnc: string) => bodies[bodyEnc]),
+      decryptRaw: vi.fn().mockImplementation((_id: string, bodyEnc: string) => bodies[bodyEnc]),
     });
     const src = new RelaySource(client as RelayClient);
 
@@ -512,7 +512,7 @@ describe("RelaySource", () => {
     let handler: ((e: PactEventBroadcast) => void) | undefined;
     const client = makeClient({
       getProjectEvents: vi.fn().mockResolvedValue(events),
-      decrypt: vi.fn().mockReturnValue(decrypted[0]),
+      decryptRaw: vi.fn().mockReturnValue(decrypted[0]),
       subscribe: vi
         .fn()
         .mockImplementation(
@@ -585,7 +585,7 @@ describe("RelaySource", () => {
     ];
     const client = makeClient({
       getProjectEvents: vi.fn().mockResolvedValue(events),
-      decrypt: vi.fn().mockReturnValue(decrypted[0]),
+      decryptRaw: vi.fn().mockReturnValue(decrypted[0]),
     });
     const src = new RelaySource(client as RelayClient);
     const stats = await src.getStats("p1");
@@ -611,7 +611,7 @@ describe("RelaySource", () => {
         clientOnConn = onConn;
         return () => {};
       }),
-      decrypt: vi.fn().mockReturnValue(decodedEvent),
+      decryptRaw: vi.fn().mockReturnValue(decodedEvent),
       getProjectEvents: vi.fn().mockResolvedValue([]),
     });
     const src = new RelaySource(client as RelayClient);
@@ -646,7 +646,7 @@ describe("RelaySource", () => {
         clientOnEvent = onEvent;
         return () => {};
       }),
-      decrypt: vi.fn(() => {
+      decryptRaw: vi.fn(() => {
         throw new Error("bad key");
       }),
       getProjectEvents: vi.fn().mockResolvedValue([]),

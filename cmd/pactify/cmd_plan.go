@@ -80,7 +80,7 @@ By default plan stops after generation so you can review the manifest, then run
 				return nil
 			}
 
-			n, err := applyPlan(dir, feature, roster)
+			n, err := applyPlan(dir, feature, roster, os.Getenv("PACT_AGENT_ID"))
 			if err != nil {
 				return err
 			}
@@ -120,7 +120,7 @@ func newPlanApplyCmd() *cobra.Command {
 			}
 			_, roster := rosterFromState(st)
 
-			n, err := applyPlan(dir, feature, roster)
+			n, err := applyPlan(dir, feature, roster, os.Getenv("PACT_AGENT_ID"))
 			if err != nil {
 				return err
 			}
@@ -135,8 +135,16 @@ func newPlanApplyCmd() *cobra.Command {
 	return cmd
 }
 
-// applyPlan reads .pact/plan-<feature>.json, parses it, and assigns its tasks.
-func applyPlan(dir, feature string, roster []string) (int, error) {
+// applyPlan reads .pact/plan-<feature>.json, parses it, and assigns its tasks as
+// `seat` (the acting orchestrator). Uses the transactional ApplyTx so a mid-apply
+// failure rolls the whole batch back. `seat` MUST be the project's orchestrator —
+// passing it (rather than the old hardcoded "claude") is what lets `pactify run`/
+// `plan apply` work on any project regardless of what the orchestrator seat is
+// named.
+func applyPlan(dir, feature string, roster []string, seat string) (int, error) {
+	if seat == "" {
+		return 0, fmt.Errorf("plan apply needs an acting seat: set PACT_AGENT_ID (the orchestrator)")
+	}
 	path := filepath.Join(dir, ".pact", "plan-"+feature+".json")
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -146,7 +154,7 @@ func applyPlan(dir, feature string, roster []string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return planner.Apply(dir, plan, roster)
+	return planner.ApplyTx(dir, plan, roster, seat)
 }
 
 // rosterFromState turns the projected seats into planner SeatInfo (MVP: every

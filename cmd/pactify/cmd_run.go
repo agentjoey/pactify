@@ -116,7 +116,7 @@ locally" and leaves pushing to ` + "`pactify finish`" + ` unless --finish is set
 			}
 
 			// 3. Apply — assign the tasks.
-			n, err := applyPlan(dir, feature, roster)
+			n, err := applyPlan(dir, feature, roster, orchestrator)
 			if err != nil {
 				return err
 			}

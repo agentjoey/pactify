@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { State, PactEvent } from "../lib/types";
 import { findTask, canMergeFeature } from "../lib/derive";
+import { AgentTerminal } from "./board/AgentTerminal";
 import { fmtDuration, type TaskStat } from "../lib/api";
 import { useDataSource } from "../lib/datasource";
 import { AuditLens } from "./AuditLens";
@@ -272,6 +273,17 @@ export function RightRail({
             {task.evidence || "(none yet)"}
           </pre>
         </div>
+
+        {/* Output — live tail of the task's agent stream (PR2: the Live view's
+            terminal now lives here; the stream SSE resumes via Last-Event-ID).
+            Mounted only for tasks that can plausibly have a stream — terminal
+            states skip the connection. Local-only: hosted uses TaskDetail. */}
+        {project && ["in_progress", "awaiting_review", "changes_requested"].includes(task.status) && (
+          <div data-testid="panel-output" className="border-b border-[var(--color-border-subtle)] px-4 py-3">
+            <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">Output · live</div>
+            <AgentTerminal project={project} task={task.id} seat={task.owner} height={240} />
+          </div>
+        )}
 
         {/* Timeline */}
         <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">

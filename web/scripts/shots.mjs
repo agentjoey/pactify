@@ -14,12 +14,11 @@ import { mkdir } from "node:fs/promises";
 const BASE = process.env.SHOT_BASE || "http://127.0.0.1:17082";
 const OUT = process.env.SHOT_OUT || "/tmp/pactify-shots";
 
-// IA v2: three lens views (keys 1/2/3) + Settings as a modal (⚙). Older 7-view
+// Views consolidation (2026-07): the Board is the only lens; Settings is a
+// modal (⚙). Older 7-view
 // keymap is gone — keep this list in sync with shell/Toolbar LENSES.
 const VIEWS = [
   ["board", "1"],
-  ["canvas", "2"],
-  ["live", "3"],
 ];
 
 async function main() {

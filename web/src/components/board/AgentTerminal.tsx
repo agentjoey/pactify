@@ -3,7 +3,7 @@ import { subscribeAgentStream } from "../../lib/api";
 
 // AgentTerminal tails a task's raw agent output (P1: raw lines; structured
 // rendering arrives in P2). Newest at the bottom; bounded to the last 500 lines.
-export function AgentTerminal({ project, task, seat }: { project: string; task: string; seat?: string }) {
+export function AgentTerminal({ project, task, seat, height = 380 }: { project: string; task: string; seat?: string; height?: number }) {
   const [lines, setLines] = useState<string[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -30,7 +30,7 @@ export function AgentTerminal({ project, task, seat }: { project: string; task: 
     <div
       data-testid="agent-terminal"
       className="mono overflow-y-auto rounded-[10px] border border-[var(--color-border-subtle)] px-[14px] py-3 text-[10.5px] leading-[1.9] text-[var(--color-text-2)]"
-      style={{ background: "var(--color-bg-terminal,#07090d)", minHeight: 380, maxHeight: 380 }}
+      style={{ background: "var(--color-bg-terminal,#07090d)", minHeight: height, maxHeight: height }}
     >
       <div className="mb-2 flex gap-2 border-b border-[color-mix(in_srgb,var(--color-text-1)_6%,transparent)] pb-1.5 text-[8.5px] tracking-[0.8px] text-[var(--color-text-3)]">
         LIVE{seat ? ` · ${seat}` : ""} · {task}

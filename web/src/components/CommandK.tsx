@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Command } from "cmdk";
 import type { ProjectMeta, State, RecipeItem } from "../lib/types";
-import type { View } from "../lib/types";
 import { allTasks } from "../lib/derive";
 import { postVerb } from "../lib/api";
 import { humanizeError } from "../lib/protocolErrors";
@@ -12,23 +11,17 @@ import { Modal } from "./ui/Modal";
 // installs its own global listeners (⌘K/Ctrl+K + the `pactify:cmdk` CustomEvent
 // the TopBar hint dispatches) to open, and a typing-guarded `?` to open the
 // shortcut cheat sheet. Receives the data + callbacks it needs as props so App
-// stays the single source of truth for view/selection/project.
+// stays the single source of truth for selection/project.
 //
 // Groups (per board4 §② + spec §5):
-//   Tasks    — every task; ↵ → setView("board") + setSelected(id) (the detail
-//              panel opens over the board).
+//   Tasks    — every task; ↵ → setSelected(id) (the detail panel opens over
+//              the board).
 //   Actions  — Accept / Request changes for awaiting_review tasks (capped at 5);
 //              hidden entirely when observing OR replaying (write ops are unsafe
 //              there). "Replay to this task's last event" is DEFERRED to T14
 //              (timeline jump needs ?at plumbing that does not exist yet).
-//   Navigate — switch view (Kbd 1/2) + switch project (one entry per project).
+//   Navigate — switch project (one entry per project).
 //
-// CANVAS-FOCUS DECISION: the board4 hint says "↵ 聚焦" (focus). Wiring React
-// Flow's fitView-to-a-specific-node down through App is invasive (App does not
-// hold the Canvas's useReactFlow instance). The honest, non-invasive path is to
-// switch to the board view and select the task: the detail panel slides over
-// the board, which IS the "focus on this task" affordance. A literal
-// pan/zoom-to-node animation is left as a TODO for a later Canvas-internal pass.
 
 // "Item value" cmdk uses for filtering/selection. cmdk filters on the value +
 // keywords; we feed it an id-forward value so typing a task id surfaces it.
@@ -49,8 +42,6 @@ export function CommandK({
   projects,
   current,
   state,
-  view,
-  setView,
   setSelected,
   onSelectProject,
   author,
@@ -62,8 +53,6 @@ export function CommandK({
   projects: ProjectMeta[];
   current: string;
   state: State;
-  view: View;
-  setView: (v: View) => void;
   setSelected: (id: string) => void;
   onSelectProject: (id: string) => void;
   // author => this dashboard can act (has an acting seat). Write actions are
@@ -147,12 +136,11 @@ export function CommandK({
     setSearch("");
   }, []);
 
-  // ↵ on a task: switch to board + select it (detail panel opens).
+  // ↵ on a task: select it (the detail panel opens over the board).
   const focusTask = useCallback((id: string) => {
-    setView("board");
     setSelected(id);
     close();
-  }, [setView, setSelected, close]);
+  }, [setSelected, close]);
 
   const runAction = useCallback(async (kind: ActionKind, taskId: string) => {
     close();
@@ -168,12 +156,11 @@ export function CommandK({
       }
     } else {
       // Request changes needs a reason — the detail panel owns that flow. Open
-      // the task (board + select); the panel's "Changes…" affordance collects
-      // the note. We don't POST a reasonless `changes` here.
-      setView("board");
+      // the task (select); the panel's "Changes…" affordance collects the
+      // note. We don't POST a reasonless `changes` here.
       setSelected(taskId);
     }
-  }, [close, current, setView, setSelected, notify]);
+  }, [close, current, setSelected, notify]);
 
   const switchProject = useCallback((id: string) => {
     onSelectProject(id);
@@ -292,23 +279,6 @@ export function CommandK({
                 heading="Navigate"
                 className="[&_[cmdk-group-heading]]:px-3.5 [&_[cmdk-group-heading]]:pb-0.5 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[.6px] [&_[cmdk-group-heading]]:text-[var(--color-text-3)]"
               >
-                {([
-                  { v: "board" as View, label: "Board", key: "1", ico: "▤" },
-                  { v: "live" as View, label: "Live", key: "2", ico: "◉" },
-                ]).map((o) => (
-                  <Command.Item
-                    key={o.v}
-                    value={`switch view ${o.label}`}
-                    keywords={["view", o.label]}
-                    onSelect={() => { setView(o.v); close(); }}
-                    className="mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-[var(--color-text-1)] data-[selected=true]:bg-[linear-gradient(180deg,rgba(147,180,242,.18),rgba(147,180,242,.09))]"
-                  >
-                    <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[11px]">{o.ico}</span>
-                    Switch view: {o.label}
-                    {view === o.v && <span className="text-[10px] text-[var(--color-text-3)]">·</span>}
-                    <Kbd className="ml-auto">{o.key}</Kbd>
-                  </Command.Item>
-                ))}
                 {projects.map((p) => (
                   <Command.Item
                     key={`proj-${p.id}`}
@@ -364,9 +334,6 @@ export function CommandK({
 // CheatSheet — static shortcut reference (plan T13.4). A ui/Modal so it inherits
 // the overlay token, Esc-closes and focus trap.
 const SHORTCUTS: ReadonlyArray<{ keys: string[]; what: string }> = [
-  { keys: ["1"], what: "Board view" },
-  { keys: ["2"], what: "Canvas view" },
-  { keys: ["3"], what: "Live view" },
   { keys: ["⌘", "K"], what: "Command palette" },
   { keys: ["Esc"], what: "Close panel / menu / cancel draft" },
   { keys: ["?"], what: "This cheat sheet" },

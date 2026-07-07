@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
 import { fetchEventsLog, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
 import type { Worktree } from "./lib/api";
-import { type View } from "./lib/types";
 import { DataSourceProvider, useDataSource, type DataSource } from "./lib/datasource";
 import { isHostedMode, localSource } from "./lib/source";
 import { RelayConnect } from "./components/RelayConnect";
@@ -12,7 +11,8 @@ import { AddProjectWizard } from "./components/shell/AddProjectWizard";
 import { DispatchPanel } from "./components/shell/DispatchPanel";
 import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
-import { LiveOrchestrate } from "./components/LiveOrchestrate";
+import { RunRail } from "./components/board/RunRail";
+import { EventDrawer } from "./components/board/EventDrawer";
 import { RightRail } from "./components/RightRail";
 import { TaskDetail } from "./components/TaskDetail";
 import { CommandK } from "./components/CommandK";
@@ -58,7 +58,6 @@ function AppContent() {
   const [events, setEvents] = useState<PactEvent[]>([]);
   const [selected, setSelected] = useState("");
   const [live, setLive] = useState(false);
-  const [view, setView] = useState<View>("board");
   // IA v2 shell: ⚙ Settings sheet + AddProjectWizard now owned by App (moved out
   // of the dropped Sidebar). `running` drives the ProjectMenu status light.
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -156,23 +155,6 @@ function AppContent() {
   // Fetch recipes once on mount; feed into the ⌘K Templates group.
   useEffect(() => {
     getRecipes().then(setRecipes).catch(() => setRecipes([]));
-  }, []);
-
-  // Global view shortcuts: 1/2 switch board/live. Ignored while typing
-  // (input/textarea/select or contentEditable) or while a modal/dialog is open.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      const tag = t?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t?.isContentEditable) return;
-      if (document.querySelector('[role="dialog"]')) return;
-      // Two lenses: 1 → board, 2 → live.
-      if (e.key === "1") setView("board");
-      else if (e.key === "2") setView("live");
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   // Re-evaluate stale tasks on a 60s ticker (and whenever state changes).
@@ -394,7 +376,7 @@ function AppContent() {
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <Toolbar projectName={currentName} view={view} onView={setView} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} onOpenDispatch={() => setDispatchOpen(true)} worktreesByProject={worktreesByProject} currentWorktree={currentWorktree} onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }} />
+      <Toolbar projectName={currentName} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} onOpenDispatch={() => setDispatchOpen(true)} worktreesByProject={worktreesByProject} currentWorktree={currentWorktree} onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }} />
       <div className="relative flex flex-1 overflow-hidden">
         {/* The dark-handoff Board carries its seated cluster in its own context
             header (Board.tsx), so the old floating left dock is gone — the board
@@ -403,14 +385,12 @@ function AppContent() {
           <Agents author={author} onChanged={refreshProjects} />
           {projectsLoaded && projects.length === 0
             ? <NoProjects onRegistered={refreshProjects} />
-            : view === "live"
-            ? (
-              <div data-testid="view-live" className="flex-1 overflow-hidden">
-                <LiveOrchestrate project={current} state={shownState} refreshTick={refreshTick} author={author} agents={shownState.agents} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} />
-              </div>
-            )
             : (
               <>
+                {/* Run rail: the orchestrate banner (renders nothing when the
+                    driver is idle) — RunControl strip + driver-touched feature
+                    lanes + the five-action ReviewGate on a paused gate. */}
+                <RunRail project={current} state={shownState} refreshTick={refreshTick} author={author} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} />
                 {/* relative so the slide-over detail panel + its scrim position
                     within this row, overlaying the board. The board takes the
                     full width — the panel is absolute. */}
@@ -420,6 +400,9 @@ function AppContent() {
                     ? <TaskDetail project={current} taskId={selected} onClose={() => setSelected("")} />
                     : <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />}
                 </div>
+                {/* Event drawer: collapsed one-line ticker of the pact log —
+                    expands to the full colorized terminal + seat presence. */}
+                <EventDrawer events={events} agents={shownState.agents} state={shownState} />
               </>
             )}
         </div>
@@ -444,15 +427,13 @@ function AppContent() {
         roster={shownState.agents}
         open={dispatchOpen}
         onClose={() => { setDispatchOpen(false); setDispatchGoal(""); }}
-        onGoLive={() => { setView("live"); setDispatchOpen(false); }}
+        onGoLive={() => setDispatchOpen(false)}
         initialGoal={dispatchGoal}
       />
       <CommandK
         projects={projects}
         current={current}
         state={shownState}
-        view={view}
-        setView={setView}
         setSelected={setSelected}
         onSelectProject={setCurrent}
         author={author}

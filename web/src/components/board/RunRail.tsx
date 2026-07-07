@@ -1,25 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { OrchestrateStatus, Seat, PactEvent, State, Feature, Task } from "../lib/types";
-import { useDataSource } from "../lib/datasource";
-import { AgentTerminal } from "./live/AgentTerminal";
-import { taskTokens, fmtTokens, canMergeFeature } from "../lib/derive";
-import { Button } from "./ui/Button";
-import { Modal } from "./ui/Modal";
-import { Input } from "./ui/Input";
-import { Textarea } from "./ui/Textarea";
+import type { OrchestrateStatus, PactEvent, State, Feature, Task } from "../../lib/types";
+import { useDataSource } from "../../lib/datasource";
+import { AgentTerminal } from "./AgentTerminal";
+import { taskTokens, fmtTokens, canMergeFeature } from "../../lib/derive";
+import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
+import { Input } from "../ui/Input";
+import { Textarea } from "../ui/Textarea";
 
-// LiveOrchestrate — the dark-handoff Live view (designs/Pactify Live.dc.html):
-// a left column of per-feature *lanes* (run-control strip + task pipeline +
-// review gate when a hard gate fails) and a right *event stream* terminal with a
-// seat-presence footer. Everything is sourced from real state/events — per-task
-// tokens via derive.taskTokens, pipeline from state.features[].tasks[]. Controls
-// with no backend yet (Pause/Stop, cost) are intentionally omitted, not faked.
-export function LiveOrchestrate({
+// RunRail — the Board's run banner (formerly the Live view's lane column,
+// PR2 of the views consolidation): an aggregate run-control strip + one lane
+// per driver-touched feature (task pipeline, the five-action ReviewGate when a
+// hard gate fails, an expandable per-task agent terminal). Renders NOTHING when
+// orchestrate has no activity — the Board stays clean. Everything is sourced
+// from real state/events; controls with no backend yet (Pause/Stop) are
+// intentionally omitted, not faked.
+export function RunRail({
   project,
   state,
   refreshTick,
   author,
-  agents,
   events = [],
   onNotify,
 }: {
@@ -27,7 +27,6 @@ export function LiveOrchestrate({
   state: State;
   refreshTick: number;
   author: boolean;
-  agents: Seat[];
   events?: PactEvent[];
   onNotify?: (message: string, kind?: "error") => void;
 }) {
@@ -35,7 +34,6 @@ export function LiveOrchestrate({
   const [present, setPresent] = useState<boolean | null>(null);
   const [parallel, setParallel] = useState<OrchestrateStatus[] | null>(null);
   const [error, setError] = useState("");
-  const [running, setRunning] = useState(false);
   const [resuming, setResuming] = useState(false);
   const [shipping, setShipping] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -79,25 +77,9 @@ export function LiveOrchestrate({
       .catch(() => setError("Failed to load orchestrate status"));
   }
 
-  const rosterComplete = agents.length >= 2;
-  const canRun = author && rosterComplete && !running && !resuming && canWrite;
-
-  async function handleRun() {
-    if (!canRun || !src.runOrchestrate) return;
-    setRunning(true);
-    try {
-      await src.runOrchestrate(project);
-      onNotify?.("Orchestrate run started");
-      load();
-    } catch (e) {
-      onNotify?.(e instanceof Error ? e.message : "Run failed", "error");
-    } finally {
-      setRunning(false);
-    }
-  }
 
   async function handleResume() {
-    if (!author || !canWrite || resuming || running || !src.resumeOrchestrate) return;
+    if (!author || !canWrite || resuming || !src.resumeOrchestrate) return;
     setResuming(true);
     try {
       await src.resumeOrchestrate(project);
@@ -213,9 +195,10 @@ export function LiveOrchestrate({
   const osFor = (fid: string): OrchestrateStatus | null =>
     parallel?.find((p) => p.feature === fid) ?? (status?.feature === fid ? status : null);
 
-  // Lanes = features with live work (not yet shipped), escalated first.
+  // Lanes = driver-touched features (a live or escalated run status names
+  // them), escalated first. Everything else already lives on the Board columns.
   const lanes = useMemo(() => {
-    const active = state.features.filter((f) => f.status !== "shipped");
+    const active = state.features.filter((f) => f.status !== "shipped" && osFor(f.id) != null);
     return [...active].sort((a, b) => {
       const ae = osFor(a.id)?.escalated ? 0 : 1;
       const be = osFor(b.id)?.escalated ? 0 : 1;
@@ -246,40 +229,19 @@ export function LiveOrchestrate({
   const allDone = present === true && status?.done === true;
   const hasActivity = lanes.length > 0 || present === true;
 
+  // Nothing to show: hosted sources can't query run status, and an idle local
+  // driver means the Board columns already tell the whole story.
+  if (!canQueryStatus) return null;
+  if (!hasActivity) return null;
+
   return (
     <div
-      data-testid="live-orchestrate"
-      aria-label="orchestrate live view"
-      className="flex flex-1 overflow-hidden view-enter"
+      data-testid="run-rail"
+      aria-label="orchestrate run rail"
+      className="shrink-0 overflow-y-auto border-b border-[var(--color-border-subtle)]"
+      style={{ maxHeight: "42vh", padding: "14px 22px 4px", background: "var(--color-bg-page)" }}
     >
-      <div
-        className="flex-1 min-w-0 overflow-y-auto"
-        style={{
-          padding: "18px 22px",
-          background:
-            "radial-gradient(900px 420px at 30% -10%, color-mix(in srgb, var(--color-role-design) 6%, transparent), transparent 60%), var(--color-bg-page)",
-        }}
-      >
         {error && <div className="mb-3 text-xs text-[var(--color-danger)]">{error}</div>}
-
-        {!canQueryStatus && (
-          <div
-            data-testid="hosted-status-note"
-            className="mb-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2 text-xs text-[var(--color-text-3)]"
-          >
-            Run status isn't available in hosted mode yet — the board and event stream stay live.
-          </div>
-        )}
-
-        {!hasActivity && present === false && (
-          <div className="mt-10 text-center">
-            <div className="mb-3 text-sm text-[var(--color-text-3)]">orchestrate hasn't run yet</div>
-            {author && !rosterComplete && (
-              <div className="mb-3 text-xs text-[var(--color-warn)]">Wire at least two seats before running</div>
-            )}
-            <Button size="sm" loading={running} disabled={!canRun} title={canWrite ? undefined : "Remote control needs U3"} onClick={handleRun}>Run</Button>
-          </div>
-        )}
 
         {hasActivity && (
           <RunControl
@@ -332,9 +294,7 @@ export function LiveOrchestrate({
             canDiff={canDiff}
           />
         ))}
-      </div>
 
-      <EventStream events={events} agents={agents} state={state} />
 
       {diffOpen && (
         <Modal title="Working diff" onClose={() => setDiffOpen(false)} width="720px">
@@ -703,75 +663,6 @@ pactify merge <feature>`}</pre>
           )}
         </>
       )}
-    </div>
-  );
-}
-
-// EventStream — the right pane: a colorized terminal tail of pact log.jsonl +
-// a per-seat presence footer (runs · tokens, attributed from owned tasks).
-function EventStream({ events, agents, state }: { events: PactEvent[]; agents: Seat[]; state: State }) {
-  const recent = events.slice(-200);
-  const glyph: Record<string, { ch: string; color: string }> = {
-    checkpoint: { ch: "$", color: "var(--color-role-dev)" },
-    accept: { ch: "✓", color: "var(--color-role-design)" },
-    assign: { ch: "·", color: "var(--color-text-3)" },
-    join: { ch: "→", color: "var(--color-text-3)" },
-    merge: { ch: "✓", color: "var(--color-role-dev)" },
-    changes: { ch: "!", color: "var(--color-warn)" },
-    escalate: { ch: "⊘", color: "var(--color-danger)" },
-  };
-  const seats = agents.map((a) => {
-    const runs = events.filter((e) => e.agent_id === a.id && (e.event_type === "checkpoint" || e.event_type === "accept")).length;
-    const tok = state.features
-      .flatMap((f) => f.tasks)
-      .filter((t) => t.owner === a.id)
-      .reduce((n, t) => n + taskTokens(t.id, events), 0);
-    return { id: a.id, runs, tok };
-  });
-  return (
-    <div
-      data-testid="event-stream"
-      className="flex w-[392px] flex-none flex-col border-l border-[var(--color-border-subtle)]"
-      style={{ background: "var(--color-bg-terminal,#07090d)" }}
-    >
-      <div className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] px-4 py-3">
-        <span className="mono text-[10px] uppercase tracking-[1px] text-[var(--color-text-3)]">Event stream</span>
-        <span className="inline-flex items-center gap-[5px] text-[9.5px] font-medium" style={{ color: "var(--color-success)" }}>
-          <span className="status-pill-dot-live h-[5px] w-[5px] rounded-full" style={{ background: "var(--color-success)" }} />live
-        </span>
-        <span className="mono ml-auto text-[10px] text-[var(--color-text-3)]">log.jsonl</span>
-      </div>
-      <div className="mono flex-1 overflow-y-auto px-4 py-3 text-[11px] leading-[1.85] text-[var(--color-text-2)]">
-        {recent.length === 0 ? (
-          <div className="text-[var(--color-text-3)]">no events yet…</div>
-        ) : (
-          recent.map((e) => {
-            const g = glyph[e.event_type] ?? { ch: "·", color: "var(--color-text-3)" };
-            return (
-              <div key={e.event_id} className="whitespace-nowrap">
-                <span className="text-[var(--color-text-3)]">{(e.ts || "").slice(11, 19)}</span>{" "}
-                <span style={{ color: g.color }}>{g.ch}</span>{" "}
-                <span style={{ color: "var(--color-role-product)" }}>{e.agent_id}</span>{" "}
-                <span style={{ color: "var(--color-text-2)" }}>{e.event_type}</span>
-                {e.task_id && <> <span className="text-[var(--color-text-3)]">{e.task_id}</span></>}
-              </div>
-            );
-          })
-        )}
-        <span className="mt-1 flex items-center gap-[6px]">
-          <span style={{ color: "var(--color-role-dev)" }}>$</span>
-          <span className="live-cursor inline-block h-[12px] w-[7px]" style={{ background: "var(--color-role-dev)" }} />
-        </span>
-      </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--color-border-subtle)] px-4 py-[11px]">
-        <span className="mono text-[9px] text-[var(--color-text-3)]">SEATS</span>
-        {seats.map((s) => (
-          <span key={s.id} className="inline-flex items-center gap-[5px] text-[9.5px] font-medium text-[var(--color-text-2)]">
-            <span className="h-[7px] w-[7px] rounded-full" style={{ background: s.runs > 0 ? "var(--color-success)" : "var(--color-text-3)" }} />
-            {s.id} <span className="mono text-[var(--color-text-3)]">{s.runs}·{fmtTokens(s.tok)}</span>
-          </span>
-        ))}
-      </div>
     </div>
   );
 }

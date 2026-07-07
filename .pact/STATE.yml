@@ -475,3 +475,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/planner-dimensions.md
         evidence: PlanTask.Dimension optional field + validation (correctness|security|performance|maintainability|ux); prompt Review dimensions section; go test ./internal/planner/ green, gofmt+vet clean
+  - id: sarif-output
+    branch: feat/sarif-output
+    status: in_progress
+    tasks:
+      - id: sarif-output
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/sarif-output.md
+        evidence: null

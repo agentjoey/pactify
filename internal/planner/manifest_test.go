@@ -255,6 +255,40 @@ func TestValidateMultipleErrorsAggregated(t *testing.T) {
 	}
 }
 
+func TestValidateDimensionOmittedIsValid(t *testing.T) {
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v"},
+	}}
+	if err := p.Validate([]string{"a", "b"}); err != nil {
+		t.Fatalf("omitted dimension must be valid: %v", err)
+	}
+}
+
+func TestValidateValidDimension(t *testing.T) {
+	for _, d := range []string{"correctness", "security", "performance", "maintainability", "ux"} {
+		p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+			{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v", Dimension: d},
+		}}
+		if err := p.Validate([]string{"a", "b"}); err != nil {
+			t.Errorf("dimension %q must be valid: %v", d, err)
+		}
+	}
+}
+
+func TestValidateInvalidDimension(t *testing.T) {
+	p := planner.Plan{Feature: "feat-x", Branch: "b", Tasks: []planner.PlanTask{
+		{ID: "t1", Owner: "a", Reviewer: "b", Spec: "s", Verify: "v", Dimension: "speed"},
+	}}
+	err := p.Validate([]string{"a", "b"})
+	if err == nil {
+		t.Fatal("expected error for invalid dimension")
+	}
+	want := "task t1: dimension \"speed\" not one of correctness|security|performance|maintainability|ux"
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("want error %q, got %v", want, err)
+	}
+}
+
 func TestValidateRejectsNonSlugFeature(t *testing.T) {
 	js := []byte(`{"feature":"Add_2FA","branch":"feat-2fa","tasks":[
 		{"id":"add-2fa-otp","owner":"alice","reviewer":"bob","spec":".pact/tasks/x.md","verify":"go test ./..."}]}`)

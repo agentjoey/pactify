@@ -77,13 +77,23 @@ func BuildPrompt(in PromptInput) string {
 	b.WriteString("  proposed seat with its kind. PREFER existing seats; propose one only when\n")
 	b.WriteString("  necessary, and give it a real drivable `kind`.\n\n")
 
+	b.WriteString("## Review dimensions\n")
+	b.WriteString("Assign every task ONE review dimension from this set:\n")
+	b.WriteString("- correctness — does the change behave as specified and not break existing behavior?\n")
+	b.WriteString("- security — does the change avoid new attack surface or data leaks?\n")
+	b.WriteString("- performance — does the change meet latency, throughput, or resource targets?\n")
+	b.WriteString("- maintainability — is the change readable, tested, and consistent with the codebase?\n")
+	b.WriteString("- ux — does the change serve the end user or operator as intended?\n")
+	b.WriteString("Write the chosen dimension into the manifest task's `dimension` field, and\n")
+	b.WriteString("state the dimension explicitly in that task's spec under 验收 / Acceptance.\n\n")
+
 	b.WriteString("## Per-task spec files\n")
 	fmt.Fprintf(&b, "Write one spec per task to `.pact/tasks/%s-<id>.md` (e.g. `.pact/tasks/%s-<id>.md`).\n", in.Feature, in.Feature)
 	b.WriteString("Each spec must contain:\n")
 	b.WriteString("- 目标 / Goal — what this task delivers.\n")
 	b.WriteString("- 改文件 / Files — the bounded set of files it may touch.\n")
 	b.WriteString("- 契约 / Contract — signatures, schema, or API shape.\n")
-	b.WriteString("- 验收 / Acceptance — how the reviewer confirms it.\n")
+	b.WriteString("- 验收 / Acceptance — how the reviewer confirms it, including the review dimension.\n")
 	b.WriteString("- A machine-readable `verify:` line — a single command the harness can run,\n")
 	b.WriteString("  e.g. `verify: go test ./internal/<pkg>/` or `verify: npm run -C web test`.\n")
 	b.WriteString("  Every task MUST have a `verify:` line.\n\n")
@@ -135,7 +145,8 @@ func manifestSchemaExample(feature string) string {
       "reviewer": "<other-seat>",
       "spec": ".pact/tasks/%s-step1.md",
       "verify": "go test ./internal/%s/",
-      "deps": []
+      "deps": [],
+      "dimension": "correctness"
     },
     {
       "id": "step2",

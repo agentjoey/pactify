@@ -15,13 +15,24 @@ var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 // ValidSlug reports whether s is a kebab-case id (same rule Validate enforces).
 func ValidSlug(s string) bool { return slugRe.MatchString(s) }
 
+// validDimensions is the allowed set of review dimensions a planner may assign
+// to a task. Empty is allowed for backward compatibility.
+var validDimensions = map[string]bool{
+	"correctness":     true,
+	"security":        true,
+	"performance":     true,
+	"maintainability": true,
+	"ux":              true,
+}
+
 type PlanTask struct {
-	ID       string   `json:"id"`
-	Owner    string   `json:"owner"`
-	Reviewer string   `json:"reviewer"`
-	Spec     string   `json:"spec"`
-	Verify   string   `json:"verify"`
-	Deps     []string `json:"deps,omitempty"`
+	ID        string   `json:"id"`
+	Owner     string   `json:"owner"`
+	Reviewer  string   `json:"reviewer"`
+	Spec      string   `json:"spec"`
+	Verify    string   `json:"verify"`
+	Deps      []string `json:"deps,omitempty"`
+	Dimension string   `json:"dimension,omitempty"`
 }
 
 // PlanSeat is an OPTIONAL new seat the planner proposes (spec §6 WS-K dynamic
@@ -119,6 +130,9 @@ func (p Plan) Validate(roster []string) error {
 		}
 		if t.Owner != "" && t.Reviewer != "" && t.Owner == t.Reviewer {
 			errs = append(errs, prefix+"owner and reviewer must differ")
+		}
+		if t.Dimension != "" && !validDimensions[t.Dimension] {
+			errs = append(errs, fmt.Sprintf("task %s: dimension %q not one of correctness|security|performance|maintainability|ux", t.ID, t.Dimension))
 		}
 		if t.Spec == "" {
 			errs = append(errs, prefix+"spec must not be empty")

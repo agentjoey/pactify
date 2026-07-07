@@ -56,6 +56,25 @@ describe("TaskDetail — hosted-mode event history", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  // Regression: the parent (App) keeps TaskDetail mounted in hosted mode and only
+  // toggles taskId ("" → selected) when a card is clicked. If the empty-taskId
+  // guard early-returns before the hooks, the hook count changes between renders
+  // and React tears down the whole tree ("rendered more hooks than during the
+  // previous render") — the reported "clicking a card blanks the dashboard" bug.
+  it("survives taskId toggling from empty to set without a hooks-count crash", async () => {
+    const source = makeSource(vi.fn().mockResolvedValue([detail()]));
+    const { rerender } = renderDetail(<TaskDetail project="p1" taskId="" />, source);
+    // No panel while nothing is selected.
+    expect(screen.queryByTestId("task-detail-panel")).toBeNull();
+    // Selecting a card must not throw (would blank the app if hooks mismatch).
+    rerender(
+      <DataSourceProvider source={source}>
+        <TaskDetail project="p1" taskId="t1" />
+      </DataSourceProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("task-detail-panel")).toBeInTheDocument());
+  });
+
   it("shows loading state then renders decrypted events", async () => {
     const events = [detail({ seq: 1, eventType: "checkpoint" })];
     const source = makeSource(vi.fn().mockResolvedValue(events));

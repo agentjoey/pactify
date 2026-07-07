@@ -339,3 +339,4 @@
 {"event_id":"7bdc80f6c19799a12578cceb544bd2db","ts":"2026-07-07T18:41:42Z","agent_id":"claude","role":"reviewer","event_type":"accept","task_id":"cockpit-backend-iface","feature":"cockpit-backend","payload":{}}
 {"event_id":"278bb0ffbc78ffe27f13745ff9151923","ts":"2026-07-07T18:41:44Z","agent_id":"claude","role":"orchestrator","event_type":"merge","task_id":"","feature":"cockpit-backend","payload":{}}
 {"event_id":"850d428bef22a100ab52150f937c3274","ts":"2026-07-07T18:45:48Z","agent_id":"claude","role":"orchestrator","event_type":"assign","task_id":"cockpit-codex-backend","feature":"cockpit-backend","payload":{"branch":"feat/cockpit-backend","owner":"kimi-worker","reviewer":"claude","spec":".pact/tasks/cockpit-codex-backend.md"}}
+{"event_id":"ee9636acec5ea5e61574e606ffb2b173","ts":"2026-07-07T18:46:28Z","agent_id":"claude","role":"orchestrator","event_type":"cancel","task_id":"cockpit-codex-backend","feature":"cockpit-backend","payload":{}}

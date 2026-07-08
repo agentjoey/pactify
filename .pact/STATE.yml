@@ -641,7 +641,7 @@ features:
     tasks:
       - id: cockpit-audit
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/cockpit-audit.md
         evidence: cockpit tool-start + approval-decision direct-write to audit pipe w/ risk grading (read/write/exec/mcp); optional AuditSink (nil = zero regression, NewCockpitSession preserved); Summary carries only tool name/phrase (never rawInput -> no secret leak); Risk grades from rawInput. go test -race ./internal/cockpit/ ./internal/serve/ green

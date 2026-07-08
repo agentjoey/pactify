@@ -625,3 +625,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-panel.md
         evidence: dashboard Cockpit slide-out panel: SSE event stream (message bubbles + tool/state/usage/error system rows) + prompt input + approval cards (allow/deny) + cancel; DataSource cockpit* methods + capability on LocalServeSource; App cockpit-toggle gated on canOrchestrate; fixed 8 capability mocks. Reviewer fixed a TS narrowing error the build (not tsc --noEmit) caught. tsc + vitest 438 + prod build green; browser smoke: panel renders correctly, seat auto-resolves to orchestrator
+  - id: cockpit-acp-backend
+    branch: feat/cockpit-acp-backend
+    status: in_progress
+    tasks:
+      - id: cockpit-acp-backend
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/cockpit-acp-backend.md
+        evidence: null

@@ -665,3 +665,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-panel-polish.md
         evidence: 6-item polish: on-accent token fixes invisible text on solid fills (user bubble/Send/Approve); auto-scroll; running-tool indicator; threadId in header; event-driven status + 5s fallback + failure banner; capability pre-flight (capable/reason) w/ friendly gate. Reviewer fixed hollow impl: handler never set Capable (zero-value also mis-gated VALID seats) - wired + wrote the missing serve test. Visual: gate + Send label verified in browser; web 446+ green
+  - id: board-shell-fixes
+    branch: feat/board-shell-fixes
+    status: in_progress
+    tasks:
+      - id: board-shell-fixes
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/board-shell-fixes.md
+        evidence: null

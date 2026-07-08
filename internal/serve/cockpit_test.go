@@ -241,8 +241,11 @@ func TestCockpitStreamReplaysHistory(t *testing.T) {
 
 	select {
 	case line := <-got:
-		if !strings.Contains(line, `"Text":"hello"`) {
-			t.Fatalf("expected event data line with hello, got %q", line)
+		// Lowercase json keys are the contract the dashboard CockpitPanel reads
+		// (ev.kind / ev.text). Capitalized keys would render every event as an
+		// empty row.
+		if !strings.Contains(line, `"text":"hello"`) || !strings.Contains(line, `"kind":"message"`) {
+			t.Fatalf("expected lowercase event data line with hello, got %q", line)
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("did not receive replayed event within timeout")

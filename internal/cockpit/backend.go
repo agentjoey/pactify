@@ -40,29 +40,32 @@ const (
 
 // ToolEvent 描述一次工具调用的一段（start/output/end）。
 type ToolEvent struct {
-	Phase string // "start"|"output"|"end"
-	Name  string
-	Text  string // 输出增量或摘要
+	Phase string `json:"phase"` // "start"|"output"|"end"
+	Name  string `json:"name"`
+	Text  string `json:"text"` // 输出增量或摘要
 }
 
 // Usage 是一次 usage 更新（token 计数，后端各取所能）。
 type Usage struct {
-	InputTokens  int
-	OutputTokens int
-	TotalTokens  int
-	CostUSD      float64
+	InputTokens  int     `json:"inputTokens"`
+	OutputTokens int     `json:"outputTokens"`
+	TotalTokens  int     `json:"totalTokens"`
+	CostUSD      float64 `json:"costUSD"`
 }
 
 // Event 是统一信封；按 Kind 取对应字段，允许字段缺位（禁伪造）。Raw 留原始后端载荷。
+// JSON tags are lowercase: this struct is the SSE wire shape the dashboard's
+// CockpitPanel consumes (ev.kind / ev.text / ev.tool / …); without tags Go would
+// emit capitalized keys and every event would render as an empty system row.
 type Event struct {
-	Kind  EventKind
-	Text  string          // message: 增量/终稿文本
-	Final bool            // message: 是否终稿
-	Tool  *ToolEvent      // Kind==EventTool
-	Usage *Usage          // Kind==EventUsage
-	State string          // Kind==EventState: "turn_started"|"turn_completed"|"turn_failed" 等
-	Err   string          // Kind==EventError: 结构化错误摘要
-	Raw   json.RawMessage // 原始后端载荷（可空）
+	Kind  EventKind       `json:"kind"`
+	Text  string          `json:"text,omitempty"`  // message: 增量/终稿文本
+	Final bool            `json:"final,omitempty"` // message: 是否终稿
+	Tool  *ToolEvent      `json:"tool,omitempty"`  // Kind==EventTool
+	Usage *Usage          `json:"usage,omitempty"` // Kind==EventUsage
+	State string          `json:"state,omitempty"` // Kind==EventState: "turn_started"|"turn_completed"|"turn_failed" 等
+	Err   string          `json:"err,omitempty"`   // Kind==EventError: 结构化错误摘要
+	Raw   json.RawMessage `json:"raw,omitempty"`   // 原始后端载荷（可空）
 }
 
 // ApprovalRequest 是后端发起的审批请求；Respond 回决策（幂等，重复调用返回 error）。

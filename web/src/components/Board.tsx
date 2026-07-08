@@ -64,6 +64,8 @@ export function Board({
   const [featureFilter, setFeatureFilter] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [inlineChangesId, setInlineChangesId] = useState<string | null>(null);
+  const [inlineReason, setInlineReason] = useState("");
   const [stats, setStats] = useState<ProjectStats | null>(null);
 
   // Per-task tokens live in GET /stats, not the event log (no pact event carries
@@ -141,16 +143,18 @@ export function Board({
       : { ...state, features: state.features.filter((f) => f.id === featureFilter) };
   const cols = designBoard(filtered);
 
-  async function verb(taskId: string, v: "accept" | "changes", reason?: string) {
-    if (!project) return;
+  async function verb(taskId: string, v: "accept" | "changes", reason?: string): Promise<boolean> {
+    if (!project) return false;
     setPending(taskId);
     setErr("");
     try {
       await src.verb!(project, v, reason ? { task: taskId, reason } : { task: taskId });
       onChanged?.();
+      return true;
     } catch (e) {
       setErr(humanizeError(e instanceof Error ? e.message : String(e)));
       setPending(null);
+      return false;
     }
   }
 
@@ -166,40 +170,97 @@ export function Board({
         : undefined;
     const reviewActions =
       isReview && author && project ? (
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            data-testid="card-accept"
-            disabled={pending === bt.task.id || !canWrite}
-            title={canWrite ? undefined : "Remote control needs U3"}
-            onClick={(e) => {
-              e.stopPropagation();
-              verb(bt.task.id, "accept");
-            }}
-            className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium disabled:opacity-50"
-            style={{ background: "var(--color-success)", color: "var(--color-bg-page)" }}
-          >
-            ✓ Accept
-          </button>
-          <button
-            type="button"
-            data-testid="card-changes"
-            disabled={!canWrite}
-            title={canWrite ? undefined : "Remote control needs U3"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(bt.task.id); // open the detail rail for the reason textarea
-            }}
-            className="rounded-[6px] border px-2.5 py-1 text-[11px] font-medium disabled:opacity-50"
-            style={{
-              color: "var(--color-role-ops)",
-              borderColor: "color-mix(in srgb, var(--color-role-ops) 40%, transparent)",
-              background: "color-mix(in srgb, var(--color-role-ops) 14%, transparent)",
+        inlineChangesId === bt.task.id ? (
+          <form
+            data-testid="inline-changes-form"
+            className="flex w-full flex-col gap-1"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const reason = inlineReason.trim();
+              if (!reason) return;
+              if (await verb(bt.task.id, "changes", reason)) {
+                setInlineChangesId(null);
+                setInlineReason("");
+              }
             }}
           >
-            ↺ Changes
-          </button>
-        </div>
+            <textarea
+              value={inlineReason}
+              onChange={(e) => {
+                const el = e.target;
+                setInlineReason(el.value);
+                el.style.height = "auto";
+                el.style.height = `${el.scrollHeight}px`;
+              }}
+              placeholder="Reason for changes…"
+              autoFocus
+              rows={1}
+              className="w-full resize-none rounded-md border border-[var(--color-border-strong)] bg-[var(--color-bg-overlay)] px-2 py-1 text-[11px] text-[var(--color-text-1)] outline-none placeholder:text-[var(--color-text-3)]"
+            />
+            <div className="flex justify-end gap-1.5">
+              <button
+                type="button"
+                data-testid="inline-changes-cancel"
+                onClick={() => {
+                  setInlineChangesId(null);
+                  setInlineReason("");
+                }}
+                className="rounded-[6px] border px-2.5 py-1 text-[11px] font-medium"
+                style={{
+                  color: "var(--color-text-2)",
+                  borderColor: "var(--color-border-strong)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                data-testid="inline-changes-send"
+                disabled={!inlineReason.trim() || pending === bt.task.id || !canWrite}
+                className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium disabled:opacity-50"
+                style={{ background: "var(--color-role-ops)", color: "var(--color-bg-page)" }}
+              >
+                Send
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              data-testid="card-accept"
+              disabled={pending === bt.task.id || !canWrite}
+              title={canWrite ? undefined : "Remote control needs U3"}
+              onClick={(e) => {
+                e.stopPropagation();
+                verb(bt.task.id, "accept");
+              }}
+              className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium disabled:opacity-50"
+              style={{ background: "var(--color-success)", color: "var(--color-bg-page)" }}
+            >
+              ✓ Accept
+            </button>
+            <button
+              type="button"
+              data-testid="card-changes"
+              disabled={!canWrite}
+              title={canWrite ? undefined : "Remote control needs U3"}
+              onClick={(e) => {
+                e.stopPropagation();
+                setInlineChangesId(bt.task.id);
+              }}
+              className="rounded-[6px] border px-2.5 py-1 text-[11px] font-medium disabled:opacity-50"
+              style={{
+                color: "var(--color-role-ops)",
+                borderColor: "color-mix(in srgb, var(--color-role-ops) 40%, transparent)",
+                background: "color-mix(in srgb, var(--color-role-ops) 14%, transparent)",
+              }}
+            >
+              ↺ Changes
+            </button>
+          </div>
+        )
       ) : undefined;
 
     return (

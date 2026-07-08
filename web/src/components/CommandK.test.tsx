@@ -135,6 +135,21 @@ describe("CommandK — command palette", () => {
     expect(within(palette).queryByText(/^Accept/)).toBeNull();
   });
 
+  it("shows the observe-mode footer hint when actions are hidden", async () => {
+    setup({ author: false });
+    pressCmdK();
+    const palette = await screen.findByTestId("cmdk");
+    expect(within(palette).getByText("Write actions hidden in observe mode")).toBeTruthy();
+  });
+
+  it("does not show the observe-mode footer hint when author actions are available", async () => {
+    setup({ author: true, replaying: false });
+    pressCmdK();
+    const palette = await screen.findByTestId("cmdk");
+    expect(within(palette).queryByText("Write actions hidden in observe mode")).toBeNull();
+    expect(within(palette).getByText(/Close/)).toBeTruthy();
+  });
+
   it("project switch entry calls onSelectProject", async () => {
     const { onSelectProject } = setup();
     pressCmdK();

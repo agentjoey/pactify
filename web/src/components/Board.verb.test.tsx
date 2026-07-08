@@ -102,3 +102,55 @@ describe("Board — inline accept error handling", () => {
     expect(screen.getByTestId("card-accept")).not.toBeDisabled();
   });
 });
+
+describe("Board — inline changes form", () => {
+  beforeEach(() => mockPostVerb.mockReset());
+
+  it("opens an inline form when the Changes button is clicked", async () => {
+    renderBoard(fx("awaiting_review"));
+    fireEvent.click(screen.getByTestId("card-changes"));
+    expect(await screen.findByTestId("inline-changes-form")).toBeTruthy();
+  });
+
+  it("disables Send with an empty reason and enables it once reason is entered", async () => {
+    renderBoard(fx("awaiting_review"));
+    fireEvent.click(screen.getByTestId("card-changes"));
+    const send = await screen.findByTestId("inline-changes-send");
+    expect(send).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText("Reason for changes…"), {
+      target: { value: "needs tests" },
+    });
+    expect(send).not.toBeDisabled();
+  });
+
+  it("sends the changes verb with the reason and collapses the form on success", async () => {
+    mockPostVerb.mockResolvedValueOnce(undefined);
+    const onChanged = vi.fn();
+    renderBoard(fx("awaiting_review"), onChanged);
+
+    fireEvent.click(screen.getByTestId("card-changes"));
+    fireEvent.change(screen.getByPlaceholderText("Reason for changes…"), {
+      target: { value: "fix coverage" },
+    });
+    fireEvent.click(screen.getByTestId("inline-changes-send"));
+
+    await waitFor(() =>
+      expect(mockPostVerb).toHaveBeenCalledWith("demo", "changes", { task: "T1", reason: "fix coverage" }),
+    );
+    expect(onChanged).toHaveBeenCalled();
+    expect(screen.queryByTestId("inline-changes-form")).toBeNull();
+  });
+
+  it("cancels the inline form without calling the verb", async () => {
+    renderBoard(fx("awaiting_review"));
+    fireEvent.click(screen.getByTestId("card-changes"));
+    fireEvent.change(screen.getByPlaceholderText("Reason for changes…"), {
+      target: { value: "never mind" },
+    });
+    fireEvent.click(screen.getByTestId("inline-changes-cancel"));
+
+    expect(screen.queryByTestId("inline-changes-form")).toBeNull();
+    expect(mockPostVerb).not.toHaveBeenCalled();
+  });
+});

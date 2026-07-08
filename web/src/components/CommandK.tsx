@@ -320,7 +320,13 @@ export function CommandK({
             <div className="flex gap-3.5 border-t border-white/[0.07] px-4 py-[9px] text-[9.5px] text-[var(--color-text-3)]">
               <span>↑↓ Navigate</span>
               <span>↵ Run</span>
-              <span>Write actions hidden in observe mode</span>
+              {showActions ? (
+                <span>
+                  <Kbd>esc</Kbd> Close
+                </span>
+              ) : (
+                <span>Write actions hidden in observe mode</span>
+              )}
             </div>
           </Command>
         </div>

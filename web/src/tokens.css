@@ -75,6 +75,9 @@
   --color-warn:    #f5c451;
   --color-success: #6ee7a0;
 
+  /* Text on solid accent fills (e.g. filled buttons / user bubble). */
+  --color-on-accent: #0b0f16;
+
   /* Radius. */
   --radius-sm: 6px;
   --radius-md: 10px;

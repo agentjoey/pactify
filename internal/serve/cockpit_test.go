@@ -354,3 +354,47 @@ func TestBackendForKeySelectsByKind(t *testing.T) {
 		t.Fatal("expected error for opencode seat")
 	}
 }
+
+// Status must report capability so the panel can gate input BEFORE the user
+// types: a live session is capable by definition; with no session it falls back
+// to the seat's roster kind (empty kind => incapable, with a reason). The
+// original implementation declared Capable/Reason on the DTO but never set them
+// — which also mis-reported capable seats (zero value false) as incapable.
+func TestCockpitStatusCapability(t *testing.T) {
+	srv, _, _ := newCockpitTestServer(t)
+	h := srv.Handler()
+
+	// No session + no roster (empty seatKind) => incapable with a reason.
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest("GET", "/api/projects/p/cockpit/status?seat=ghost", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d", rr.Code)
+	}
+	var st struct {
+		Capable bool   `json:"capable"`
+		Reason  string `json:"reason"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &st); err != nil {
+		t.Fatal(err)
+	}
+	if st.Capable {
+		t.Fatal("kindless seat must be incapable")
+	}
+	if st.Reason == "" {
+		t.Fatal("incapable must carry a human-readable reason")
+	}
+
+	// A live session makes the seat capable regardless of roster kind.
+	rr2 := postCockpit(t, h, "/api/projects/p/cockpit/prompt", map[string]string{"seat": "orch", "text": "hi"})
+	if rr2.Code != http.StatusOK {
+		t.Fatalf("prompt = %d: %s", rr2.Code, rr2.Body.String())
+	}
+	rr3 := httptest.NewRecorder()
+	h.ServeHTTP(rr3, httptest.NewRequest("GET", "/api/projects/p/cockpit/status?seat=orch", nil))
+	if err := json.Unmarshal(rr3.Body.Bytes(), &st); err != nil {
+		t.Fatal(err)
+	}
+	if !st.Capable {
+		t.Fatal("seat with a live session must be capable")
+	}
+}

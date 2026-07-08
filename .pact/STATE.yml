@@ -705,3 +705,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/board-blocked-visibility.md
         evidence: assigned/working cards show blocked-badge (awaiting <dep> +N, full list in title) when deps not accepted; stale dot title appends awaiting info; zero change for dep-less tasks; web 469 green + build clean
+  - id: interaction-fixes
+    branch: feat/interaction-fixes
+    status: in_progress
+    tasks:
+      - id: interaction-fixes
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/interaction-fixes.md
+        evidence: null

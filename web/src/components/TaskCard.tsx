@@ -44,6 +44,9 @@ export interface TaskCardProps {
   stale?: boolean;
   draft?: boolean;
   selected?: boolean;
+  // Unfinished dependency ids surfaced by the caller from the full task map.
+  // Only assigned/working cards normally carry this.
+  blockedOn?: string[];
   // Compact RUN/TOK/×iter stat strip (dark handoff), computed by the caller via
   // taskMetrics(task, events). Omitted on cards with no stat context.
   metrics?: MetricItem[];
@@ -66,6 +69,7 @@ export function TaskCard({
   stale,
   draft,
   selected,
+  blockedOn,
   metrics,
   reviewActions,
   onClick,
@@ -81,6 +85,10 @@ export function TaskCard({
 
   const ownerCaste = casteForRoles(ownerRoles);
   const reviewerCaste = casteForRoles(reviewerRoles);
+
+  const staleTitle = stale
+    ? `in progress >30min${blockedOn?.length ? `; awaiting ${blockedOn.join(", ")}` : ""}`
+    : undefined;
 
   // Quorum badge: multi-reviewer tasks carry a quorum (>0) + reviewers list.
   // Single-reviewer tasks leave both unset → no badge (card unchanged).
@@ -120,7 +128,7 @@ export function TaskCard({
         {stale && (
           <span
             data-testid="task-card-stale"
-            title="in_progress > 30min"
+            title={staleTitle}
             className="ml-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-warn)] shadow-[0_0_5px_var(--color-warn)]"
           />
         )}
@@ -167,7 +175,21 @@ export function TaskCard({
             <span className="mono max-w-[60px] truncate text-[9px] text-[var(--color-text-2)]">{task.reviewer}</span>
           </>
         )}
-        <span className="life ml-auto flex gap-[2.5px]">
+        {blockedOn && blockedOn.length > 0 && (
+          <span
+            data-testid="blocked-badge"
+            title={blockedOn.join(", ")}
+            className="ml-auto shrink-0 rounded-full px-[6px] py-px text-[9px] font-medium"
+            style={{
+              color: "var(--color-warn)",
+              background: "color-mix(in srgb, var(--color-warn) 14%, transparent)",
+            }}
+          >
+            ⧗ awaiting {blockedOn[0]}
+            {blockedOn.length > 1 ? ` +${blockedOn.length - 1}` : ""}
+          </span>
+        )}
+        <span className={`life flex gap-[2.5px] ${blockedOn?.length ? "" : "ml-auto"}`}>
           {[0, 1, 2, 3].map((i) => {
             // accepted (stage 3) fills every bar; otherwise bars before the
             // current stage are done and the stage bar glows (board3).

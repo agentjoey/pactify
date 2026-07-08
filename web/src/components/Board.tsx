@@ -92,6 +92,12 @@ export function Board({
   const statMap = useMemo(() => statsByTask(stats), [stats]);
   // Single clock per render — every card's RUN ticks from the same instant.
   const nowMs = Date.now();
+  // Full-task status map for dependency-blocked checks (assigned/working cards).
+  const taskStatus = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const f of state.features) for (const t of f.tasks) m.set(t.id, t.status);
+    return m;
+  }, [state]);
 
   // A successful verb keeps `pending` set until the refreshed state moves the
   // task out of awaiting_review — clearing eagerly would re-enable Accept in
@@ -151,6 +157,13 @@ export function Board({
   function renderCard(bt: BoardTask, col: DesignColumn) {
     const pulsing = pulses?.has(bt.task.id);
     const isReview = col === "review";
+    const blockedOn =
+      (col === "assigned" || col === "working") && bt.task.deps
+        ? bt.task.deps.filter((depId) => {
+            const depStatus = taskStatus.get(depId);
+            return depStatus !== "accepted" && depStatus !== "shipped";
+          })
+        : undefined;
     const reviewActions =
       isReview && author && project ? (
         <div className="flex items-center gap-1.5">
@@ -202,6 +215,7 @@ export function Board({
           ownerRoles={rolesOf(bt.task.owner)}
           reviewerRoles={rolesOf(bt.task.reviewer)}
           stale={staleTasks?.has(bt.task.id)}
+          blockedOn={blockedOn?.length ? blockedOn : undefined}
           selected={selected === bt.task.id}
           metrics={taskMetrics(bt.task, byTask.get(bt.task.id) ?? [], nowMs, statMap.get(bt.task.id))}
           reviewActions={reviewActions}

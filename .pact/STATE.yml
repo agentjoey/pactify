@@ -701,7 +701,7 @@ features:
     tasks:
       - id: board-blocked-visibility
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/board-blocked-visibility.md
         evidence: assigned/working cards show blocked-badge (awaiting <dep> +N, full list in title) when deps not accepted; stale dot title appends awaiting info; zero change for dep-less tasks; web 469 green + build clean

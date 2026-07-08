@@ -707,7 +707,7 @@ features:
         evidence: assigned/working cards show blocked-badge (awaiting <dep> +N, full list in title) when deps not accepted; stale dot title appends awaiting info; zero change for dep-less tasks; web 469 green + build clean
   - id: interaction-fixes
     branch: feat/interaction-fixes
-    status: in_progress
+    status: shipped
     tasks:
       - id: interaction-fixes
         owner: kimi-worker

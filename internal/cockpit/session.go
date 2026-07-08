@@ -32,6 +32,16 @@ type subscriber struct {
 	ch chan Event
 }
 
+// AuditEvent is the payload passed from a CockpitSession to its audit sink.
+// Summaries must never contain raw tool input (which may hold secrets); only
+// tool names or short safe phrases.
+type AuditEvent struct {
+	Tool     string
+	Summary  string
+	Risk     string
+	Decision string
+}
+
 // CockpitSession hosts one Backend Session: serial prompts, event persistence +
 // live fan-out, and a pending-approval queue. Safe for concurrent callers.
 type CockpitSession struct {
@@ -52,11 +62,20 @@ type CockpitSession struct {
 	closeOnce sync.Once
 	closeErr  error
 	pumpsWG   sync.WaitGroup
+
+	// audit is an optional best-effort sink for tool-start and approval-decision
+	// events. nil means no auditing (existing behavior, zero overhead).
+	audit func(AuditEvent)
 }
 
 // NewCockpitSession wraps sess, appends every event to jsonlPath (0o600, dir
 // 0o700), and starts background pumps draining sess.Events()/sess.Approvals().
 func NewCockpitSession(sess Session, jsonlPath string) (*CockpitSession, error) {
+	return NewCockpitSessionWithAudit(sess, jsonlPath, nil)
+}
+
+// NewCockpitSessionWithAudit is NewCockpitSession with an optional audit sink.
+func NewCockpitSessionWithAudit(sess Session, jsonlPath string, audit func(AuditEvent)) (*CockpitSession, error) {
 	if err := os.MkdirAll(filepath.Dir(jsonlPath), 0o700); err != nil {
 		return nil, fmt.Errorf("mkdir jsonl dir: %w", err)
 	}
@@ -71,6 +90,7 @@ func NewCockpitSession(sess Session, jsonlPath string) (*CockpitSession, error) 
 		jsonlPath:   jsonlPath,
 		pending:     make(map[string]*pendingEntry),
 		subscribers: make(map[int]*subscriber),
+		audit:       audit,
 	}
 
 	cs.pumpsWG.Add(2)
@@ -197,6 +217,15 @@ func (cs *CockpitSession) Close() error {
 	return cs.closeErr
 }
 
+// emitAudit forwards an event to the optional audit sink. It must not be called
+// while holding cs.mu so the sink can never block the pumps.
+func (cs *CockpitSession) emitAudit(ev AuditEvent) {
+	if cs.audit == nil {
+		return
+	}
+	cs.audit(ev)
+}
+
 func (cs *CockpitSession) close() error {
 	// Close the underlying session (which closes its Events/Approvals channels so
 	// the pumps drain and exit), then reclaim regardless of its error — skipping
@@ -231,6 +260,14 @@ func (cs *CockpitSession) eventPump() {
 			_ = err
 		}
 		cs.fanOut(e)
+
+		if e.Kind == EventTool && e.Tool != nil && e.Tool.Phase == "start" {
+			cs.emitAudit(AuditEvent{
+				Tool:    e.Tool.Name,
+				Summary: e.Tool.Name + " start",
+				Risk:    gradeRisk(e.Tool.Name, e.Tool.Text),
+			})
+		}
 	}
 }
 
@@ -277,17 +314,33 @@ func (cs *CockpitSession) fanOut(e Event) {
 func (cs *CockpitSession) approvalPump() {
 	defer cs.pumpsWG.Done()
 	for a := range cs.sess.Approvals() {
+		respond := a.Respond
+		toolName := a.ToolName
+		kind := a.Kind
+		rawInput := a.RawInput
+
+		wrapped := func(d Decision) error {
+			err := respond(d)
+			cs.emitAudit(AuditEvent{
+				Tool:     toolName,
+				Summary:  "approval " + kind,
+				Risk:     gradeRisk(toolName, string(rawInput)),
+				Decision: string(d),
+			})
+			return err
+		}
+
 		cs.mu.Lock()
 		cs.nextApproval++
 		id := fmt.Sprintf("ap%d", cs.nextApproval)
 		entry := &pendingEntry{
 			id:      id,
-			respond: a.Respond,
+			respond: wrapped,
 			pending: PendingApproval{
 				ID:       id,
-				Kind:     a.Kind,
-				ToolName: a.ToolName,
-				RawInput: a.RawInput,
+				Kind:     kind,
+				ToolName: toolName,
+				RawInput: rawInput,
 			},
 		}
 		cs.pending[id] = entry

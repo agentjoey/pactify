@@ -13,11 +13,15 @@ type SessionKey struct{ Project, Seat string }
 // tests use FakeBackend and D2-3 can select by seat kind (claude/codex/acp).
 type BackendFactory func(key SessionKey) (Backend, error)
 
+// AuditSink receives cockpit audit events bound to a specific (project, seat).
+type AuditSink func(key SessionKey, ev AuditEvent)
+
 // Manager owns the live cockpit sessions for a serve process.
 type Manager struct {
 	baseDir string
 	factory BackendFactory
 	baseCtx context.Context
+	sink    AuditSink
 
 	mu       sync.Mutex
 	sessions map[SessionKey]*CockpitSession
@@ -33,10 +37,17 @@ func NewManager(baseDir string, factory BackendFactory) *Manager {
 // NewManagerCtx is NewManager with an explicit base context — when it is
 // cancelled (serve shutdown), every session's backend process is torn down.
 func NewManagerCtx(baseCtx context.Context, baseDir string, factory BackendFactory) *Manager {
+	return NewManagerCtxAudit(baseCtx, baseDir, factory, nil)
+}
+
+// NewManagerCtxAudit is NewManagerCtx with an optional audit sink. The sink is
+// invoked for every live CockpitSession under this manager.
+func NewManagerCtxAudit(baseCtx context.Context, baseDir string, factory BackendFactory, sink AuditSink) *Manager {
 	return &Manager{
 		baseDir:  baseDir,
 		factory:  factory,
 		baseCtx:  baseCtx,
+		sink:     sink,
 		sessions: make(map[SessionKey]*CockpitSession),
 		cancels:  make(map[SessionKey]context.CancelFunc),
 	}
@@ -74,7 +85,12 @@ func (m *Manager) Session(_ context.Context, key SessionKey, opts StartOpts) (*C
 	}
 
 	jsonlPath := filepath.Join(m.baseDir, "cockpit", key.Project+"__"+key.Seat+".jsonl")
-	cs, err := NewCockpitSession(sess, jsonlPath)
+	var cs *CockpitSession
+	if m.sink != nil {
+		cs, err = NewCockpitSessionWithAudit(sess, jsonlPath, func(ev AuditEvent) { m.sink(key, ev) })
+	} else {
+		cs, err = NewCockpitSession(sess, jsonlPath)
+	}
 	if err != nil {
 		cancel()
 		return nil, err

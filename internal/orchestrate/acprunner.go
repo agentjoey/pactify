@@ -336,7 +336,7 @@ func autoSelectPermission(opts []acp.PermissionOption) (string, bool) {
 }
 
 // acpCommand maps a seat kind to its ACP adapter command + args (spec §A.2). The
-// second return is false for a kind with no ACP transport (e.g. opencode), which
+// second return is false for a kind with no ACP transport (e.g. antigravity), which
 // the caller reports with a --transport=cmd hint.
 //
 // Bridge package versions are pinned to avoid latest-tag drift; verified with
@@ -361,6 +361,11 @@ func acpCommand(kind string) (command string, args []string, ok bool) {
 		// / cache fragility. Consistent with how the cmd transport already runs
 		// gemini (Command "gemini").
 		return "gemini", []string{"--acp"}, true
+	case "opencode":
+		// Native ACP in the opencode binary. Model is inherited from opencode's
+		// global config (same pattern as kimi-cli); usage is parsed from the
+		// session/prompt result, verified 2026-07-09.
+		return "opencode", []string{"acp"}, true
 	case "claude-code":
 		// LEGACY/fallback — claude is deep-integration tier; this npx bridge also
 		// hangs the handshake (see doc above). Prefer the deep-integration path.

@@ -17,6 +17,7 @@ var acpKinds = map[string]bool{
 	"claude-code": true,
 	"codex-cli":   true,
 	"gemini-cli":  true,
+	"opencode":    true,
 }
 
 // authProbe describes the static (no-network) credential check for a kind.

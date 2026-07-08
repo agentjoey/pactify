@@ -220,7 +220,7 @@ func TestVendorChecks_TransportClassification(t *testing.T) {
 		"claude-code": "acp available",
 		"codex-cli":   "acp available",
 		"gemini-cli":  "acp available",
-		"opencode":    "cmd only",
+		"opencode":    "acp available",
 	}
 	for kind, sub := range want {
 		c, ok := findCheck(checks, "cli "+kind+": transport")

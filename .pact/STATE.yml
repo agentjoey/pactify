@@ -755,3 +755,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/settings-autosave.md
         evidence: AgentConfig cards auto-save (600ms debounce, hydration-guarded, blur flush) with Saving/Saved/error indicator replacing per-card Save buttons; tests updated to autosave assertions; web full suite + build green
+  - id: opencode-acp-wiring
+    branch: feat/opencode-acp-wiring
+    status: in_progress
+    tasks:
+      - id: opencode-acp-wiring
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/opencode-acp-wiring.md
+        evidence: opencode wired into ACP tier: acpCommand/acpCommandFor -> opencode acp (native), cockpitCapableKind+backendForKey, doctor acpKinds; tests incl. gated real smoke. Facts pre-verified live: model currentValue=deepseek/deepseek-v4-pro from opencode config (kimi-symmetric), usage in prompt result. Reviewer ran REAL opencode cockpit smoke: PASS 6.2s; -race all green; default transport unchanged

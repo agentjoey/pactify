@@ -11,7 +11,7 @@ import (
 )
 
 // NewACPBackend returns a cockpit.Backend that drives an ACP-compatible agent.
-// Supported kinds are "kimi-cli" and "gemini-cli".
+// Supported kinds are "kimi-cli", "gemini-cli" and "opencode".
 func NewACPBackend(kind string) Backend {
 	return newACPBackend(kind)
 }
@@ -83,6 +83,8 @@ func acpCommandFor(kind string) (command string, args []string, err error) {
 		return "kimi", []string{"acp"}, nil
 	case "gemini-cli":
 		return "gemini", []string{"--acp"}, nil
+	case "opencode":
+		return "opencode", []string{"acp"}, nil
 	default:
 		return "", nil, fmt.Errorf("acp: unsupported kind %q", kind)
 	}

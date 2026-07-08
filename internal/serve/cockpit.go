@@ -68,7 +68,7 @@ func (s *Server) cockpitAudit(key cockpit.SessionKey, ev cockpit.AuditEvent) {
 // cockpit session. Kept in sync with backendForKey's supported kinds.
 func cockpitCapableKind(kind string) bool {
 	switch kind {
-	case "claude-code", "codex-cli", "kimi-cli", "gemini-cli":
+	case "claude-code", "codex-cli", "kimi-cli", "gemini-cli", "opencode":
 		return true
 	default:
 		return false
@@ -87,17 +87,17 @@ func (s *Server) backendForKey(key cockpit.SessionKey) (cockpit.Backend, error) 
 
 	kind := s.seatKind(key.Project, key.Seat)
 	if !cockpitCapableKind(kind) {
-		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/gemini-cli only)", key.Seat, kind)
+		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/gemini-cli/opencode only)", key.Seat, kind)
 	}
 	switch kind {
 	case "claude-code":
 		return cockpit.NewClaudeBackend(), nil
 	case "codex-cli":
 		return cockpit.NewCodexBackend(), nil
-	case "kimi-cli", "gemini-cli":
+	case "kimi-cli", "gemini-cli", "opencode":
 		return cockpit.NewACPBackend(kind), nil
 	default:
-		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/gemini-cli only)", key.Seat, kind)
+		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/gemini-cli/opencode only)", key.Seat, kind)
 	}
 }
 

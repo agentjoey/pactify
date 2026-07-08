@@ -49,7 +49,16 @@ describe("AgentConfig panel", () => {
     });
   });
 
-  it("saves model + scoped posture with allowed tools", async () => {
+  it("does not autosave on initial load", async () => {
+    getAgents.mockResolvedValue([{ kind: "opencode", installed: true, detail: "", registered: true }]);
+    getAgentConfig.mockResolvedValue(cfg());
+    render(<AgentConfig />);
+    await waitFor(() => expect(screen.getByTestId("model-opencode")).toBeTruthy());
+    await new Promise((r) => setTimeout(r, 700));
+    expect(setAgentConfig).not.toHaveBeenCalled();
+  });
+
+  it("autosaves model + scoped posture with allowed tools", async () => {
     getAgents.mockResolvedValue([{ kind: "opencode", installed: true, detail: "", registered: true }]);
     getAgentConfig.mockResolvedValue(cfg());
     setAgentConfig.mockResolvedValue(cfg({ model: "deepseek/custom", restricted: true, allowed_tools: ["Read", "Edit"], effective_model: "deepseek/custom", effective_scoped: true }));
@@ -60,7 +69,6 @@ describe("AgentConfig panel", () => {
     fireEvent.click(screen.getByTestId("scoped-opencode")); // blanket → scoped
     await waitFor(() => expect(screen.getByTestId("tools-opencode")).toBeTruthy());
     fireEvent.change(screen.getByTestId("tools-opencode"), { target: { value: "Read, Edit" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       expect(setAgentConfig).toHaveBeenCalledWith("opencode", {
@@ -69,9 +77,12 @@ describe("AgentConfig panel", () => {
         allowed_tools: ["Read", "Edit"],
       });
     });
+    await waitFor(() => {
+      expect(screen.getByTestId("autosave-state")).toHaveTextContent("Saved ✓");
+    });
   });
 
-  it("renders a model dropdown from candidate_models and saves the picked model", async () => {
+  it("renders a model dropdown from candidate_models and autosaves the picked model", async () => {
     getAgents.mockResolvedValue([{ kind: "claude-code", installed: true, detail: "", registered: true }]);
     getAgentConfig.mockResolvedValue(
       cfg({
@@ -92,7 +103,6 @@ describe("AgentConfig panel", () => {
     expect(screen.getByRole("option", { name: "claude-sonnet-4-6" })).toBeTruthy();
 
     fireEvent.change(screen.getByTestId("model-select-claude-code"), { target: { value: "claude-sonnet-4-6" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(setAgentConfig).toHaveBeenCalledWith("claude-code", {
         model: "claude-sonnet-4-6",

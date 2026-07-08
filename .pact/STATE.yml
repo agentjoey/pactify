@@ -725,3 +725,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/ui-hygiene.md
         evidence: dead code removed (CanvasSkeleton/OpsSkeleton/getSessionsList/dispatchGoal remnant/TODO-W3); a11y (icon buttons labeled, seat avatar -> button, cockpit log role/aria-live); hardcoded hexes -> role tokens; constants.ts consolidation. Zero behavior change; web 475 green + build clean
+  - id: gemini-audit-hook
+    branch: feat/gemini-audit-hook
+    status: in_progress
+    tasks:
+      - id: gemini-audit-hook
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/gemini-audit-hook.md
+        evidence: gemini native audit capture: audit install --gemini writes claude-compatible hook under hooks.BeforeTool in .gemini/settings.json (reviewer corrected event key — PreToolUse loads as 0 entries; authoritative via gemini hooks migrate); FromHook maps run_shell_command/write_file/replace/read_* risks; orchestrate injects GEMINI_CLI_TRUST_WORKSPACE=true (skip-trust alone leaves workspace untrusted -> hooks never load, verified live). Reviewer also fixed pre-existing projectless audit-log bug (Query read literal _unknown dir -> always empty; now walks all project dirs). REAL e2e: gemini -p run -> BeforeTool -> audit record (bash/exec) readable via audit log

@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/audit"
@@ -71,6 +73,30 @@ func runAudit(t *testing.T, args ...string) string {
 		t.Fatalf("audit %v: %v", args, err)
 	}
 	return buf.String()
+}
+
+func TestAuditInstallGeminiFlag(t *testing.T) {
+	repo := t.TempDir()
+	orig, _ := os.Getwd()
+	if err := os.Chdir(repo); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	defer os.Chdir(orig)
+
+	cmd := newAuditCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"install", "--gemini"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("install --gemini: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, ".gemini/settings.json") {
+		t.Fatalf("unexpected output: %s", out)
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".gemini", "settings.json")); err != nil {
+		t.Fatalf("settings not written: %v", err)
+	}
 }
 
 func contains(s, sub string) bool {

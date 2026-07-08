@@ -128,46 +128,62 @@ func (f Filter) match(r Record) bool {
 	return true
 }
 
-// Query folds the project's day-files, returns matches newest-first, and skips
-// unparseable (torn) lines rather than failing the whole read.
+// Query folds day-files and returns matches newest-first, skipping unparseable
+// (torn) lines rather than failing the whole read. With Filter.Project set it
+// reads that project's directory; with it empty it walks EVERY project dir —
+// the store is per-project (audit/<project>/<day>.jsonl), so the old behavior
+// of reading a literal "_unknown" dir made a projectless `audit log` always
+// come back empty even when records existed.
 func Query(f Filter) ([]Record, error) {
 	h, err := home()
 	if err != nil {
 		return nil, err
 	}
-	proj := f.Project
-	if proj == "" {
-		proj = "_unknown"
-	}
-	dir := filepath.Join(h, "audit", proj)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil // no audit yet → empty, not an error
+	root := filepath.Join(h, "audit")
+	var dirs []string
+	if f.Project != "" {
+		dirs = []string{filepath.Join(root, f.Project)}
+	} else {
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, nil // no audit yet → empty, not an error
+			}
+			return nil, err
 		}
-		return nil, err
+		for _, e := range entries {
+			if e.IsDir() {
+				dirs = append(dirs, filepath.Join(root, e.Name()))
+			}
+		}
 	}
 	var out []Record
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".jsonl") {
-			continue
-		}
-		file, err := os.Open(filepath.Join(dir, e.Name()))
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
 		if err != nil {
-			continue
+			continue // per-project dir may vanish; skip, don't fail the query
 		}
-		sc := bufio.NewScanner(file)
-		sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-		for sc.Scan() {
-			var r Record
-			if json.Unmarshal(sc.Bytes(), &r) != nil {
-				continue // torn/garbage line
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".jsonl") {
+				continue
 			}
-			if f.match(r) {
-				out = append(out, r)
+			file, err := os.Open(filepath.Join(dir, e.Name()))
+			if err != nil {
+				continue
 			}
+			sc := bufio.NewScanner(file)
+			sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+			for sc.Scan() {
+				var r Record
+				if json.Unmarshal(sc.Bytes(), &r) != nil {
+					continue // torn/garbage line
+				}
+				if f.match(r) {
+					out = append(out, r)
+				}
+			}
+			file.Close()
 		}
-		file.Close()
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].TS > out[j].TS }) // newest-first
 	return out, nil

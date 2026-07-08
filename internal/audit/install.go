@@ -54,7 +54,12 @@ export const PactAudit: Plugin = async ({ directory, $ }) => ({
 func Install(kind, repoDir string) error {
 	switch kind {
 	case "claude-code":
-		return installClaudeStyle(kind, filepath.Join(repoDir, ".claude", "settings.json"))
+		return installClaudeStyle(kind, filepath.Join(repoDir, ".claude", "settings.json"), "PreToolUse")
+	case "gemini":
+		// gemini's hook schema mirrors claude's but names the event "BeforeTool"
+		// (authoritative: `gemini hooks migrate --from-claude` rewrites PreToolUse
+		// entries under hooks.BeforeTool; a PreToolUse entry loads as "0 hooks").
+		return installClaudeStyle(kind, filepath.Join(repoDir, ".gemini", "settings.json"), "BeforeTool")
 	case "opencode":
 		path := opencodePluginPath(repoDir)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -75,8 +80,10 @@ func Uninstall(kind, repoDir string) error {
 			return nil
 		}
 		return err
+	case "gemini":
+		return uninstallClaudeStyle(filepath.Join(repoDir, ".gemini", "settings.json"), "BeforeTool")
 	default:
-		return uninstallClaudeStyle(filepath.Join(repoDir, ".claude", "settings.json"))
+		return uninstallClaudeStyle(filepath.Join(repoDir, ".claude", "settings.json"), "PreToolUse")
 	}
 }
 
@@ -90,40 +97,46 @@ type Status struct {
 // installed in repoDir: claude-code via its PreToolUse settings entry, opencode
 // via the presence of its plugin file.
 func Detect(repoDir string) []Status {
-	s := readSettings(filepath.Join(repoDir, ".claude", "settings.json"))
-	claudeInstalled := false
-	for _, e := range sliceOf(mapOf(s, "hooks"), "PreToolUse") {
-		if isAuditEntry(e) {
-			claudeInstalled = true
-		}
-	}
+	claudeInstalled := detectClaudeStyle(filepath.Join(repoDir, ".claude", "settings.json"), "PreToolUse")
+	geminiInstalled := detectClaudeStyle(filepath.Join(repoDir, ".gemini", "settings.json"), "BeforeTool")
 	_, ocErr := os.Stat(opencodePluginPath(repoDir))
 	return []Status{
 		{Kind: "claude-code", Installed: claudeInstalled},
+		{Kind: "gemini", Installed: geminiInstalled},
 		{Kind: "opencode", Installed: ocErr == nil},
 	}
 }
 
-func installClaudeStyle(kind, settingsPath string) error {
+func detectClaudeStyle(settingsPath, eventKey string) bool {
+	s := readSettings(settingsPath)
+	for _, e := range sliceOf(mapOf(s, "hooks"), eventKey) {
+		if isAuditEntry(e) {
+			return true
+		}
+	}
+	return false
+}
+
+func installClaudeStyle(kind, settingsPath, eventKey string) error {
 	s := readSettings(settingsPath)
 	hooks := mapOf(s, "hooks")
-	pre := dropAuditEntries(sliceOf(hooks, "PreToolUse"))
+	pre := dropAuditEntries(sliceOf(hooks, eventKey))
 	pre = append(pre, map[string]any{
 		"matcher": "*",
 		"hooks":   []any{map[string]any{"type": "command", "command": hookCommand(kind)}},
 	})
-	hooks["PreToolUse"] = pre
+	hooks[eventKey] = pre
 	s["hooks"] = hooks
 	return writeSettings(settingsPath, s)
 }
 
-func uninstallClaudeStyle(settingsPath string) error {
+func uninstallClaudeStyle(settingsPath, eventKey string) error {
 	if _, err := os.Stat(settingsPath); os.IsNotExist(err) {
 		return nil
 	}
 	s := readSettings(settingsPath)
 	hooks := mapOf(s, "hooks")
-	hooks["PreToolUse"] = dropAuditEntries(sliceOf(hooks, "PreToolUse"))
+	hooks[eventKey] = dropAuditEntries(sliceOf(hooks, eventKey))
 	s["hooks"] = hooks
 	return writeSettings(settingsPath, s)
 }

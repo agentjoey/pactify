@@ -193,6 +193,17 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// set — the seat keeps its current auth.
 	env = append(env, geminiEnv(eff.Command)...)
 
+	// gemini hooks (audit capture) only load from a TRUSTED workspace. The
+	// launch args use --skip-trust, which merely skips the trust dialog while
+	// still treating the folder as untrusted — project .gemini/settings.json
+	// hooks then register as "0 hook entries" and the audit BeforeTool hook
+	// never fires (verified live, gemini 0.49.0). GEMINI_CLI_TRUST_WORKSPACE is
+	// the documented headless trust grant; the driver already fully trusts the
+	// repo it is orchestrating.
+	if eff.Command == "gemini" {
+		env = append(env, "GEMINI_CLI_TRUST_WORKSPACE=true")
+	}
+
 	// Siphon a bounded tail of the child's stdout so we can parse token usage from
 	// its headless JSON (the read side surfaces it on the dashboard). Best-effort
 	// telemetry: capture and recording never affect the run's result.

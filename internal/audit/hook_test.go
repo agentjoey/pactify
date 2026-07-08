@@ -40,6 +40,43 @@ func TestFromHookClaudeFileTools(t *testing.T) {
 	}
 }
 
+func TestFromHookGeminiTools(t *testing.T) {
+	bash := []byte(`{"tool_name":"run_shell_command","tool_input":{"command":"git status"},"cwd":"/repo/demo"}`)
+	if r, _ := FromHook("gemini", bash, Env{Seat: "dev", Task: "t1"}, fixedTime); r.Tool != "bash" || r.Risk != "exec" || r.Summary != "git status" || r.Kind != "gemini" {
+		t.Fatalf("run_shell_command = %+v", r)
+	}
+
+	w := []byte(`{"tool_name":"write_file","tool_input":{"file_path":"/repo/x.go"},"cwd":"/repo"}`)
+	if r, _ := FromHook("gemini", w, Env{}, fixedTime); r.Tool != "fs.write" || r.Risk != "write" || r.Summary != "/repo/x.go" {
+		t.Fatalf("write_file = %+v", r)
+	}
+
+	rep := []byte(`{"tool_name":"replace","tool_input":{"file_path":"/repo/x.go"},"cwd":"/repo"}`)
+	if r, _ := FromHook("gemini", rep, Env{}, fixedTime); r.Tool != "fs.write" || r.Risk != "write" {
+		t.Fatalf("replace = %+v", r)
+	}
+
+	rd := []byte(`{"tool_name":"read_file","tool_input":{"file_path":"/repo/y.go"},"cwd":"/repo"}`)
+	if r, _ := FromHook("gemini", rd, Env{}, fixedTime); r.Tool != "fs.read" || r.Risk != "read" {
+		t.Fatalf("read_file = %+v", r)
+	}
+
+	many := []byte(`{"tool_name":"read_many_files","tool_input":{"file_paths":["/repo/a.go","/repo/b.go"]},"cwd":"/repo"}`)
+	if r, _ := FromHook("gemini", many, Env{}, fixedTime); r.Tool != "fs.read" || r.Risk != "read" {
+		t.Fatalf("read_many_files = %+v", r)
+	}
+
+	search := []byte(`{"tool_name":"google_web_search","tool_input":{"query":"pactify docs"},"cwd":"/repo"}`)
+	if r, _ := FromHook("gemini", search, Env{}, fixedTime); r.Tool != "fs.read" || r.Risk != "read" || r.Summary != "pactify docs" {
+		t.Fatalf("google_web_search = %+v", r)
+	}
+
+	fetch := []byte(`{"tool_name":"web_fetch","tool_input":{"url":"https://example.com"},"cwd":"/repo"}`)
+	if r, _ := FromHook("gemini", fetch, Env{}, fixedTime); r.Tool != "fs.read" || r.Risk != "read" || r.Summary != "https://example.com" {
+		t.Fatalf("web_fetch = %+v", r)
+	}
+}
+
 func TestFromHookProjectFallsBackToCwdBase(t *testing.T) {
 	in := []byte(`{"tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"/home/me/myrepo"}`)
 	if r, _ := FromHook("claude-code", in, Env{}, fixedTime); r.Project != "myrepo" {

@@ -71,18 +71,26 @@ func mapTool(kind, name string, rawInput json.RawMessage) (tool, summary, risk s
 		Command  string `json:"command"`
 		FilePath string `json:"file_path"`
 		Path     string `json:"path"`
+		URL      string `json:"url"`
+		Query    string `json:"query"`
 	}
 	_ = json.Unmarshal(rawInput, &fields)
 	path := fields.FilePath
 	if path == "" {
 		path = fields.Path
 	}
+	if path == "" {
+		path = fields.URL
+	}
+	if path == "" {
+		path = fields.Query
+	}
 	switch name {
-	case "Bash":
+	case "Bash", "run_shell_command":
 		return "bash", fields.Command, "exec", true
-	case "Write", "Edit", "MultiEdit", "NotebookEdit":
+	case "Write", "Edit", "MultiEdit", "NotebookEdit", "write_file", "replace":
 		return "fs.write", path, "write", true
-	case "Read":
+	case "Read", "read_file", "read_many_files", "google_web_search", "web_fetch":
 		return "fs.read", path, "read", true
 	default:
 		if strings.HasPrefix(name, "mcp__") {

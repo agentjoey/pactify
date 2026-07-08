@@ -92,6 +92,74 @@ func TestDetect(t *testing.T) {
 	}
 }
 
+func TestInstallGeminiIdempotentPreservesKeys(t *testing.T) {
+	repo := t.TempDir()
+	path := filepath.Join(repo, ".gemini", "settings.json")
+	os.MkdirAll(filepath.Dir(path), 0o755)
+	os.WriteFile(path, []byte(`{"hooks":{"BeforeTool":[{"matcher":"*","hooks":[{"type":"command","command":"other-tool x"}]}]},"model":"flash"}`), 0o644)
+
+	if err := Install("gemini", repo); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if err := Install("gemini", repo); err != nil {
+		t.Fatalf("install (2nd): %v", err)
+	}
+
+	b, _ := os.ReadFile(path)
+	if !strings.Contains(string(b), "other-tool x") {
+		t.Fatalf("foreign hook lost: %s", b)
+	}
+	if !strings.Contains(string(b), `"model": "flash"`) {
+		t.Fatalf("unrelated key lost: %s", b)
+	}
+	if !strings.Contains(string(b), `"command": "pactify audit hook --kind gemini"`) {
+		t.Fatalf("gemini audit hook missing: %s", b)
+	}
+
+	var s map[string]any
+	if err := json.Unmarshal(b, &s); err != nil {
+		t.Fatalf("settings not valid JSON: %v", err)
+	}
+	hooks := s["hooks"].(map[string]any)["BeforeTool"].([]any)
+	n := 0
+	for _, h := range hooks {
+		entry := h.(map[string]any)
+		for _, hh := range entry["hooks"].([]any) {
+			if cmd, _ := hh.(map[string]any)["command"].(string); strings.Contains(cmd, "audit hook --kind gemini") {
+				n++
+			}
+		}
+	}
+	if n != 1 {
+		t.Fatalf("want exactly 1 gemini audit hook entry after 2 installs, got %d", n)
+	}
+
+	if err := Uninstall("gemini", repo); err != nil {
+		t.Fatalf("uninstall: %v", err)
+	}
+	b, _ = os.ReadFile(path)
+	if strings.Contains(string(b), "audit hook") {
+		t.Fatalf("audit hook still present after uninstall: %s", b)
+	}
+	if !strings.Contains(string(b), `"model": "flash"`) {
+		t.Fatalf("unrelated key lost after uninstall: %s", b)
+	}
+}
+
+func TestDetectGemini(t *testing.T) {
+	repo := t.TempDir()
+	_ = Install("gemini", repo)
+	found := false
+	for _, s := range Detect(repo) {
+		if s.Kind == "gemini" && s.Installed {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("gemini should be detected as installed: %+v", Detect(repo))
+	}
+}
+
 func TestInstallOpencodeWritesPlugin(t *testing.T) {
 	repo := t.TempDir()
 	if err := Install("opencode", repo); err != nil {

@@ -647,7 +647,7 @@ features:
         evidence: cockpit tool-start + approval-decision direct-write to audit pipe w/ risk grading (read/write/exec/mcp); optional AuditSink (nil = zero regression, NewCockpitSession preserved); Summary carries only tool name/phrase (never rawInput -> no secret leak); Risk grades from rawInput. go test -race ./internal/cockpit/ ./internal/serve/ green
   - id: cockpit-approval-rawinput
     branch: feat/cockpit-approval-rawinput
-    status: in_progress
+    status: shipped
     tasks:
       - id: cockpit-approval-rawinput
         owner: kimi-worker

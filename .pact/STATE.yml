@@ -715,3 +715,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/interaction-fixes.md
         evidence: cmdk observe-mode hint now conditional on !showActions; review cards get inline Changes form (reason textarea + send/cancel, reuses existing changes verb, empty-reason disabled); rail path untouched; web 475 green + build clean
+  - id: ui-hygiene
+    branch: feat/ui-hygiene
+    status: in_progress
+    tasks:
+      - id: ui-hygiene
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/ui-hygiene.md
+        evidence: null

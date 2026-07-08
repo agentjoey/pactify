@@ -697,7 +697,7 @@ features:
         evidence: project menu worktrees collapsed by default behind chevron+count (aria-expanded, keyboard-accessible); auto-expand when currentWorktree active; single-tree rows unchanged; 8 tests
   - id: board-blocked-visibility
     branch: feat/board-blocked-visibility
-    status: in_progress
+    status: shipped
     tasks:
       - id: board-blocked-visibility
         owner: kimi-worker

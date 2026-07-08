@@ -677,7 +677,7 @@ features:
         evidence: cockpit toggle moved into header Toolbar (collision with New task gone); board header chips min-w-0/flex-1 + right cluster shrink-0 (no overlap); RunRail all-shipped state (All shipped label, no 0/0 counts, no Ship); TOK segment hidden when no data. Reviewer fixed 2 unused imports + a strict-build bool coercion. Visual verify on real board: all four confirmed; web 449 green + build clean
   - id: rail-and-default-project
     branch: feat/rail-and-default-project
-    status: in_progress
+    status: shipped
     tasks:
       - id: rail-and-default-project
         owner: kimi-worker

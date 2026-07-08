@@ -651,7 +651,7 @@ features:
     tasks:
       - id: cockpit-approval-rawinput
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/cockpit-approval-rawinput.md
-        evidence: null
+        evidence: approval cards now carry+render verbatim RawInput (trust root per cockpit spec 4): serve DTO rawInput passthrough, panel mono code block (600-char truncation marked), absent-safe; serve+web tests green

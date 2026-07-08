@@ -695,3 +695,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/project-menu-collapse.md
         evidence: project menu worktrees collapsed by default behind chevron+count (aria-expanded, keyboard-accessible); auto-expand when currentWorktree active; single-tree rows unchanged; 8 tests
+  - id: board-blocked-visibility
+    branch: feat/board-blocked-visibility
+    status: in_progress
+    tasks:
+      - id: board-blocked-visibility
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/board-blocked-visibility.md
+        evidence: null

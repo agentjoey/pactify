@@ -64,6 +64,17 @@ func (s *Server) cockpitAudit(key cockpit.SessionKey, ev cockpit.AuditEvent) {
 	})
 }
 
+// cockpitCapableKind reports whether a seat kind can host a deep-integration
+// cockpit session. Kept in sync with backendForKey's supported kinds.
+func cockpitCapableKind(kind string) bool {
+	switch kind {
+	case "claude-code", "codex-cli", "kimi-cli", "gemini-cli":
+		return true
+	default:
+		return false
+	}
+}
+
 // backendForKey selects a real Backend for a (project, seat) pair based on the
 // seat's agent kind recorded in the project's folded state.
 func (s *Server) backendForKey(key cockpit.SessionKey) (cockpit.Backend, error) {
@@ -75,6 +86,9 @@ func (s *Server) backendForKey(key cockpit.SessionKey) (cockpit.Backend, error) 
 	}
 
 	kind := s.seatKind(key.Project, key.Seat)
+	if !cockpitCapableKind(kind) {
+		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/gemini-cli only)", key.Seat, kind)
+	}
 	switch kind {
 	case "claude-code":
 		return cockpit.NewClaudeBackend(), nil
@@ -350,6 +364,8 @@ type cockpitPendingItem struct {
 
 type cockpitStatusDTO struct {
 	ThreadID string               `json:"threadId"`
+	Capable  bool                 `json:"capable"`
+	Reason   string               `json:"reason"`
 	Pending  []cockpitPendingItem `json:"pending"`
 }
 
@@ -369,10 +385,20 @@ func (s *Server) handleCockpitStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Capability pre-flight: a live session is proof enough; otherwise judge by
+	// the seat's roster kind (the same set backendForKey accepts). Reason is set
+	// only when incapable, so the panel can show a friendly hint instead of
+	// letting the user type into a cockpit that can never start.
 	key := cockpit.SessionKey{Project: id, Seat: seat}
 	cs, ok := s.cockpit.Get(key)
 	if !ok {
-		writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: "", Pending: []cockpitPendingItem{}})
+		kind := s.seatKind(id, seat)
+		capable := cockpitCapableKind(kind)
+		reason := ""
+		if !capable {
+			reason = fmt.Sprintf("seat %q has no deep-integration or ACP kind (kind=%q)", seat, kind)
+		}
+		writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: "", Capable: capable, Reason: reason, Pending: []cockpitPendingItem{}})
 		return
 	}
 
@@ -381,5 +407,5 @@ func (s *Server) handleCockpitStatus(w http.ResponseWriter, r *http.Request) {
 	for _, p := range pending {
 		items = append(items, cockpitPendingItem{ID: p.ID, Kind: p.Kind, ToolName: p.ToolName, RawInput: p.RawInput})
 	}
-	writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: cs.ThreadID(), Pending: items})
+	writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: cs.ThreadID(), Capable: true, Pending: items})
 }

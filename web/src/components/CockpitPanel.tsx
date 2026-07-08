@@ -48,23 +48,34 @@ export function CockpitPanel({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [threadId, setThreadId] = useState("");
+  const [capable, setCapable] = useState(true);
+  const [capableReason, setCapableReason] = useState("");
+  const [runningTool, setRunningTool] = useState<string | null>(null);
+  const [statusFailures, setStatusFailures] = useState(0);
   const panelRef = useRef<HTMLElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const rowId = useRef(0);
   const reduced = prefersReducedMotion();
+  const statusUnavailable = statusFailures >= 3;
 
   const loadStatus = async () => {
     if (!src.cockpitStatus) return;
     try {
       const st = await src.cockpitStatus(project, seat);
       setPending(st.pending);
+      setThreadId(st.threadId ?? "");
+      setCapable(st.capable ?? true);
+      setCapableReason(st.reason ?? "");
+      setStatusFailures(0);
     } catch {
-      // status polling is best-effort
+      setStatusFailures((f) => f + 1);
     }
   };
 
   useEffect(() => {
     loadStatus();
-    const t = setInterval(loadStatus, 2000);
+    const t = setInterval(loadStatus, 5000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, seat, src.cockpitStatus]);
@@ -75,6 +86,21 @@ export function CockpitPanel({
     es.onmessage = (e) => {
       try {
         const ev = JSON.parse(e.data) as CockpitEvent;
+        if (ev.kind === "session" && ev.threadId) {
+          setThreadId(ev.threadId);
+          return;
+        }
+        if (ev.kind === "tool" && ev.tool) {
+          if (ev.tool.phase === "start") {
+            setRunningTool(ev.tool.name);
+          } else if (ev.tool.phase === "end") {
+            setRunningTool(null);
+          }
+        } else if (ev.kind === "state" && ev.state === "turn_completed") {
+          setRunningTool(null);
+        } else if (ev.kind === "error") {
+          setRunningTool(null);
+        }
         if (ev.kind === "message" && typeof ev.text === "string") {
           // Capture the narrowed value: TS loses the `typeof ev.text === string`
           // narrowing inside the deferred setMessages closure (property narrowing
@@ -119,6 +145,17 @@ export function CockpitPanel({
     return () => window.removeEventListener("keydown", onKey, true);
   }, [onClose]);
 
+  // Auto-scroll to the bottom of the message list, unless the user has
+  // intentionally scrolled up (>80px from the bottom).
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distance <= 80) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages, systemRows, pending, runningTool]);
+
   const send = async () => {
     const text = input.trim();
     if (!text || !src.cockpitPrompt) return;
@@ -127,7 +164,10 @@ export function CockpitPanel({
     setBusy(true);
     setError("");
     try {
-      await src.cockpitPrompt(project, seat, text);
+      const resp = await src.cockpitPrompt(project, seat, text);
+      if (resp.threadId) {
+        setThreadId(resp.threadId);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -153,6 +193,13 @@ export function CockpitPanel({
       // best-effort
     }
   };
+
+  const inputEnabled = !busy && capable && !!src.cockpitPrompt;
+  const inputPlaceholder = !capable
+    ? "This seat can't host a cockpit"
+    : !src.cockpitPrompt
+      ? "Cockpit unavailable"
+      : "Message orchestrator…";
 
   return (
     <>
@@ -183,7 +230,18 @@ export function CockpitPanel({
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between rounded-t-2xl border-b border-[var(--color-border-subtle)] bg-[linear-gradient(170deg,color-mix(in_srgb,var(--color-role-design)_8%,transparent),transparent_70%)] px-4 py-3">
           <div>
-            <div className="mono text-[11px] text-[var(--color-text-3)]">{seat}</div>
+            <div className="mono text-[11px] text-[var(--color-text-3)]">
+              {seat}
+              {threadId && (
+                <span
+                  data-testid="cockpit-thread-id"
+                  className="ml-1.5 text-[10px] text-[var(--color-text-3)]"
+                  title={threadId}
+                >
+                  {threadId.slice(0, 8)}
+                </span>
+              )}
+            </div>
             <div className="text-[15px] font-[650] text-[var(--color-text-1)]">Cockpit</div>
           </div>
           <div className="flex items-center gap-1">
@@ -210,8 +268,22 @@ export function CockpitPanel({
           </div>
         </div>
 
+        {(statusUnavailable || !capable) && (
+          <div
+            data-testid="cockpit-notice"
+            className={`shrink-0 border-b px-3 py-1.5 text-[11px] ${
+              !capable
+                ? "border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] text-[var(--color-text-2)]"
+                : "border-[var(--color-warn)]/20 bg-[var(--color-warn)]/10 text-[var(--color-warn)]"
+            }`}
+          >
+            {!capable ? capableReason : "Status unavailable — retrying…"}
+          </div>
+        )}
+
         {/* Messages */}
         <div
+          ref={messagesRef}
           data-testid="cockpit-messages"
           className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3"
         >
@@ -222,7 +294,7 @@ export function CockpitPanel({
               data-role={m.role}
               className={`max-w-[85%] rounded-xl border border-[var(--color-border-subtle)] px-3 py-2 text-[12px] leading-[1.6] ${
                 m.role === "user"
-                  ? "self-end bg-[var(--color-role-dev)] text-[var(--color-role-dev-ink)]"
+                  ? "self-end bg-[var(--color-role-dev)] text-[var(--color-on-accent)]"
                   : "self-start bg-[var(--color-bg-inset)] text-[var(--color-text-1)]"
               }`}
             >
@@ -247,6 +319,15 @@ export function CockpitPanel({
           {error && (
             <div data-testid="cockpit-error" className="text-[11px] text-[var(--color-danger)]">
               {error}
+            </div>
+          )}
+
+          {runningTool && (
+            <div
+              data-testid="cockpit-running"
+              className="self-start rounded-lg px-2.5 py-1.5 text-[11px] text-[var(--color-text-2)] animate-pulse"
+            >
+              ⏺ {runningTool} running…
             </div>
           )}
 
@@ -275,7 +356,7 @@ export function CockpitPanel({
                   type="button"
                   data-testid="cockpit-approval-allow"
                   onClick={() => respond(p.id, "allow")}
-                  className="flex-1 rounded-lg bg-[var(--color-success)] px-3 py-1.5 text-[11px] font-[650] text-[var(--color-success-ink)]"
+                  className="flex-1 rounded-lg bg-[var(--color-success)] px-3 py-1.5 text-[11px] font-[650] text-[var(--color-on-accent)]"
                 >
                   Allow
                 </button>
@@ -306,16 +387,16 @@ export function CockpitPanel({
                   send();
                 }
               }}
-              disabled={busy || !src.cockpitPrompt}
-              placeholder={src.cockpitPrompt ? "Message orchestrator…" : "Cockpit unavailable"}
+              disabled={!inputEnabled}
+              placeholder={inputPlaceholder}
               className="min-w-0 flex-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-3 py-2 text-[12px] text-[var(--color-text-1)] placeholder:text-[var(--color-text-3)] focus:outline-none focus:ring-1 focus:ring-[var(--color-role-design)]"
             />
             <button
               type="button"
               data-testid="cockpit-send"
               onClick={send}
-              disabled={busy || !input.trim() || !src.cockpitPrompt}
-              className="rounded-lg bg-[var(--color-role-design)] px-3 py-2 text-[12px] font-[650] text-[var(--color-role-design-ink)] disabled:opacity-50"
+              disabled={!inputEnabled || !input.trim()}
+              className="rounded-lg bg-[var(--color-role-design)] px-3 py-2 text-[12px] font-[650] text-[var(--color-on-accent)] disabled:opacity-50"
             >
               Send
             </button>

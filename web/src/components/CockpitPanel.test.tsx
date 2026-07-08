@@ -41,7 +41,9 @@ function makeSource(overrides: {
     cockpitPrompt: overrides.cockpitPrompt ?? vi.fn(),
     cockpitRespond: overrides.cockpitRespond ?? vi.fn(),
     cockpitCancel: overrides.cockpitCancel ?? vi.fn(),
-    cockpitStatus: overrides.cockpitStatus ?? vi.fn().mockResolvedValue({ threadId: "", pending: [] } as CockpitStatus),
+    cockpitStatus:
+      overrides.cockpitStatus ??
+      vi.fn().mockResolvedValue({ threadId: "", capable: true, pending: [] } as CockpitStatus),
     cockpitStreamUrl: overrides.cockpitStreamUrl ?? vi.fn().mockReturnValue("/fake-cockpit-stream"),
   } as unknown as DataSource;
 }
@@ -112,6 +114,7 @@ describe("CockpitPanel", () => {
     const source = makeSource({
       cockpitStatus: vi.fn().mockResolvedValue({
         threadId: "t1",
+        capable: true,
         pending: [{ id: "a1", kind: "tool", toolName: "read_file" }],
       } as CockpitStatus),
       cockpitRespond,
@@ -137,6 +140,7 @@ describe("CockpitPanel", () => {
     const source = makeSource({
       cockpitStatus: vi.fn().mockResolvedValue({
         threadId: "t1",
+        capable: true,
         pending: [{ id: "a1", kind: "tool", toolName: "read_file", rawInput: { path: longValue } }],
       } as CockpitStatus),
     });
@@ -152,6 +156,7 @@ describe("CockpitPanel", () => {
     const source = makeSource({
       cockpitStatus: vi.fn().mockResolvedValue({
         threadId: "t1",
+        capable: true,
         pending: [{ id: "a1", kind: "tool", toolName: "read_file" }],
       } as CockpitStatus),
     });
@@ -159,5 +164,94 @@ describe("CockpitPanel", () => {
 
     await waitFor(() => expect(screen.getByTestId("cockpit-approval")).toBeInTheDocument());
     expect(screen.queryByTestId("cockpit-approval-rawinput")).not.toBeInTheDocument();
+  });
+
+  it("disables input and shows a friendly reason when the seat is not capable", async () => {
+    const reason = 'seat "claude" has no deep-integration or ACP kind (kind="")';
+    const source = makeSource({
+      cockpitStatus: vi.fn().mockResolvedValue({
+        threadId: "",
+        capable: false,
+        reason,
+        pending: [],
+      } as CockpitStatus),
+    });
+    renderPanel(source);
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-notice")).toHaveTextContent(reason));
+    const input = screen.getByTestId("cockpit-input");
+    expect(input).toBeDisabled();
+    expect(input).toHaveAttribute("placeholder", "This seat can't host a cockpit");
+    expect(screen.getByTestId("cockpit-send")).toBeDisabled();
+  });
+
+  it("shows and clears the running-tool indicator", async () => {
+    renderPanel(makeSource());
+    expect(lastES).not.toBeNull();
+
+    lastES!.onmessage?.({
+      data: JSON.stringify({ kind: "tool", tool: { name: "read_file", phase: "start" } }),
+    } as MessageEvent);
+    await waitFor(() =>
+      expect(screen.getByTestId("cockpit-running")).toHaveTextContent("⏺ read_file running…"),
+    );
+
+    lastES!.onmessage?.({
+      data: JSON.stringify({ kind: "state", state: "turn_completed" }),
+    } as MessageEvent);
+    await waitFor(() => expect(screen.queryByTestId("cockpit-running")).not.toBeInTheDocument());
+  });
+
+  it("displays the threadId in the header", async () => {
+    const source = makeSource({
+      cockpitStatus: vi.fn().mockResolvedValue({
+        threadId: "thread-abc-123",
+        capable: true,
+        pending: [],
+      } as CockpitStatus),
+    });
+    renderPanel(source);
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-thread-id")).toHaveTextContent("thread-a"));
+    expect(screen.getByTestId("cockpit-thread-id")).toHaveAttribute("title", "thread-abc-123");
+  });
+
+  it("auto-scrolls to the bottom when the user is near the bottom", async () => {
+    renderPanel(makeSource());
+    const messages = screen.getByTestId("cockpit-messages");
+
+    let scrollTop = 80;
+    Object.defineProperty(messages, "scrollHeight", { configurable: true, get: () => 200 });
+    Object.defineProperty(messages, "clientHeight", { configurable: true, get: () => 100 });
+    Object.defineProperty(messages, "scrollTop", {
+      configurable: true,
+      get: () => scrollTop,
+      set: (v: number) => {
+        scrollTop = v;
+      },
+    });
+
+    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: "hi" }) } as MessageEvent);
+    await waitFor(() => expect(scrollTop).toBe(200));
+  });
+
+  it("does not auto-scroll when the user has scrolled up", async () => {
+    renderPanel(makeSource());
+    const messages = screen.getByTestId("cockpit-messages");
+
+    let scrollTop = 10;
+    Object.defineProperty(messages, "scrollHeight", { configurable: true, get: () => 200 });
+    Object.defineProperty(messages, "clientHeight", { configurable: true, get: () => 100 });
+    Object.defineProperty(messages, "scrollTop", {
+      configurable: true,
+      get: () => scrollTop,
+      set: (v: number) => {
+        scrollTop = v;
+      },
+    });
+
+    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: "hi" }) } as MessageEvent);
+    await waitFor(() => expect(screen.getByTestId("cockpit-message")).toHaveTextContent("hi"));
+    expect(scrollTop).toBe(10);
   });
 });

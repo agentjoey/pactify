@@ -397,13 +397,14 @@ export async function getDiff(project: string): Promise<{ diff: string }> {
 // --- Cockpit (orchestrator chat) ---
 
 export type CockpitEvent = {
-  kind: "message" | "tool" | "usage" | "state" | "error";
+  kind: "message" | "tool" | "usage" | "state" | "error" | "session";
   text?: string;
   final?: boolean;
   tool?: { phase: string; name: string; text?: string };
   usage?: Record<string, unknown>;
-  state?: Record<string, unknown>;
+  state?: Record<string, unknown> | string;
   err?: string;
+  threadId?: string;
 };
 
 export async function cockpitPrompt(
@@ -411,7 +412,14 @@ export async function cockpitPrompt(
   seat: string,
   text: string,
 ): Promise<{ ok: boolean; threadId: string }> {
-  const r = await writeJSON(`/api/projects/${project}/cockpit/prompt`, "POST", { seat, text });
+  const r = await fetch(`/api/projects/${project}/cockpit/prompt`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ seat, text }),
+  });
+  if (!r.ok) {
+    throw new Error(await extractErrorMessage(r));
+  }
   return (await r.json()) as { ok: boolean; threadId: string };
 }
 
@@ -430,6 +438,8 @@ export async function cockpitCancel(project: string, seat: string): Promise<void
 
 export type CockpitStatus = {
   threadId: string;
+  capable: boolean;
+  reason?: string;
   pending: { id: string; kind: string; toolName: string; rawInput?: unknown }[];
 };
 

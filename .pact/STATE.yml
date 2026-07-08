@@ -755,3 +755,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/settings-autosave.md
         evidence: AgentConfig cards auto-save (600ms debounce, hydration-guarded, blur flush) with Saving/Saved/error indicator replacing per-card Save buttons; tests updated to autosave assertions; web full suite + build green
+  - id: opencode-acp-wiring
+    branch: feat/opencode-acp-wiring
+    status: in_progress
+    tasks:
+      - id: opencode-acp-wiring
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/opencode-acp-wiring.md
+        evidence: null

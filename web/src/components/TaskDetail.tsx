@@ -80,7 +80,11 @@ export function TaskDetail({
     setLoading(true);
     setErr("");
     setEvents(null);
-    getEvents(project)
+    // Call through `src` (not the detached `getEvents` local): RelaySource.getEvents
+    // is a class method that reads `this.client`, so invoking it unbound throws
+    // "Cannot read properties of undefined (reading 'client')". `getEvents` stays
+    // as the stable truthiness/dep handle; the actual call must keep `this = src`.
+    src.getEvents!(project)
       .then((evs) => {
         if (!alive) return;
         const filtered = evs

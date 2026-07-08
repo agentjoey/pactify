@@ -27,6 +27,16 @@ import { docTitle } from "./lib/docTitle";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
 
+// pickInitialProject resolves the default project id from the loaded list and
+// the user's last selection. Preference order: 1) stored id still present,
+// 2) first project whose backend `project` field is not "unknown",
+// 3) fall back to the first entry (or "" when the list is empty).
+export function pickInitialProject(ps: ProjectMeta[], stored?: string | null): string {
+  if (stored && ps.some((p) => p.id === stored)) return stored;
+  const alive = ps.find((p) => p.project !== "unknown");
+  return alive?.id ?? (ps.length ? ps[0].id : "");
+}
+
 // Stale threshold: a task sitting in_progress longer than this (with no further
 // state change observed) gets an amber dot. Pragmatic: we time from when this
 // dashboard FIRST saw the task in_progress (a per-session timestamp map keyed by
@@ -130,7 +140,7 @@ function AppContent() {
       setProjectsLoaded(true);
       setCurrent((cur) => {
         if (cur && ps.some((p) => p.id === cur)) return cur;
-        return ps.length ? ps[0].id : "";
+        return pickInitialProject(ps, localStorage.getItem("pactify:lastProject"));
       });
     }).catch(() => {});
   }
@@ -374,6 +384,11 @@ function AppContent() {
     const name = projects.find((p) => p.id === current)?.name ?? current;
     document.title = docTitle(name, shownState.awaiting_count);
   }, [projects, current, shownState.awaiting_count]);
+
+  // Remember the selected project id across reloads.
+  useEffect(() => {
+    if (current) localStorage.setItem("pactify:lastProject", current);
+  }, [current]);
 
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   const orchestratorSeat = shownState.agents.find((a) => a.roles.includes("orchestrator"))?.id ?? seat ?? "claude";

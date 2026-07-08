@@ -140,6 +140,8 @@ export function RightRail({
   if (!selected || !bt) return null;
 
   const { task, feature } = bt;
+  const featureObj = state.features.find((f) => f.id === feature);
+  const shipped = featureObj?.status === "shipped";
   const reviewable = task.status === "awaiting_review";
   const mergeable = canMergeFeature(state, feature);
   const reduced = prefersReducedMotion();
@@ -209,7 +211,11 @@ export function RightRail({
           </div>
           <div className="mt-0.5 flex items-center gap-[9px] text-[15px] font-[650] text-[var(--color-text-1)]">
             <span>{task.id}</span>
-            <Badge color="role-design">{task.status.replace(/_/g, " ")}</Badge>
+            {shipped ? (
+              <Badge color="success">SHIPPED</Badge>
+            ) : (
+              <Badge color="role-design">{task.status.replace(/_/g, " ")}</Badge>
+            )}
           </div>
           <div className="mt-[9px] flex gap-3.5 text-[10.5px] text-[var(--color-text-1)]/50">
             <span className="flex items-center gap-1">
@@ -219,7 +225,7 @@ export function RightRail({
               {task.reviewer && <Ant caste={reviewerCaste} size={14} title={task.reviewer} />}
               <span className="mono">{task.reviewer || "—"}</span>
             </span>
-            {inFlight && <span>{inFlight} in flight</span>}
+            {inFlight && !shipped && task.status !== "accepted" && <span>{inFlight} in flight</span>}
             {taskStat && taskStat.duration_sec > 0 && (
               <span data-testid="task-duration">⏱ {fmtDuration(taskStat.duration_sec)}</span>
             )}
@@ -375,7 +381,7 @@ export function RightRail({
         {/* Merge affordance — kept from the previous rail: shown for authors in
             the selected task's feature context, enabled only when every task in
             the feature is accepted (server is authoritative). */}
-        {author && project && (
+        {author && project && !shipped && (
           <div className="px-4 pb-4 pt-1">
             <div className="mb-1 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">
               Feature · {feature}

@@ -184,6 +184,37 @@ describe("RightRail — task detail panel", () => {
   });
 });
 
+describe("RightRail — shipped feature", () => {
+  const shippedState = (t: Task = task({ status: "accepted" })): State => ({
+    ...baseState(t),
+    features: [{ id: "greet-cli", branch: "feat/greet-cli", status: "shipped", tasks: [t] }],
+  });
+
+  it("shows SHIPPED badge and hides the merge affordance", () => {
+    renderRail(
+      <RightRail state={shippedState()} events={[]} selected="t2-cli" project="greet" author />,
+    );
+    const panel = screen.getByTestId("task-panel");
+    expect(panel.textContent).toContain("SHIPPED");
+    expect(screen.queryByText(/^Merge greet-cli/)).toBeNull();
+  });
+
+  it("hides 'in flight' for shipped tasks", () => {
+    const events = [ev({ event_id: "e1", task_id: "t2-cli", event_type: "checkpoint" })];
+    renderRail(
+      <RightRail state={shippedState()} events={events} selected="t2-cli" project="greet" author />,
+    );
+    expect(screen.queryByText(/in flight/)).toBeNull();
+  });
+
+  it("keeps the merge affordance for active (non-shipped) features", () => {
+    renderRail(
+      <RightRail state={baseState(task({ status: "accepted" }))} events={[]} selected="t2-cli" project="greet" author />,
+    );
+    expect(screen.getByText(/^Merge greet-cli/)).toBeInTheDocument();
+  });
+});
+
 describe("RightRail — capability gating", () => {
   it("disables Accept/Changes/Merge when the source is read-only", () => {
     const readOnly = {

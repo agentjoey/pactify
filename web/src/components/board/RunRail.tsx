@@ -267,7 +267,7 @@ export function RunRail({
 
         {shipResult?.prUrl && (
           <div className="mb-4 text-xs text-[var(--color-text-2)]">
-            PR: <a href={shipResult.prUrl} target="_blank" rel="noreferrer" className="text-[var(--color-role-design)] underline">{shipResult.prUrl}</a>
+            PR: <a href={shipResult.prUrl} target="_blank" rel="noreferrer" aria-label="Open pull request" className="text-[var(--color-role-design)] underline">{shipResult.prUrl}</a>
           </div>
         )}
 

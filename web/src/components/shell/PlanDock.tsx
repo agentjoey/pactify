@@ -42,6 +42,7 @@ export function PlanDock({ project, features }: { project: string; features: str
         <button
           type="button"
           data-testid="plan-dock-toggle"
+          aria-label="Toggle plan dock"
           className="text-[var(--color-text-3)]"
           onClick={() => setCollapsed((c) => !c)}
         >

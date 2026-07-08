@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CockpitEvent } from "../lib/api";
 import { useDataSource } from "../lib/datasource";
+import { COCKPIT_STATUS_POLL_MS } from "../lib/constants";
 
 type Message = { role: "user" | "assistant"; text: string };
 type SystemRow = { id: number; kind: string; text: string };
@@ -75,7 +76,7 @@ export function CockpitPanel({
 
   useEffect(() => {
     loadStatus();
-    const t = setInterval(loadStatus, 5000);
+    const t = setInterval(loadStatus, COCKPIT_STATUS_POLL_MS);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, seat, src.cockpitStatus]);
@@ -285,6 +286,9 @@ export function CockpitPanel({
         <div
           ref={messagesRef}
           data-testid="cockpit-messages"
+          role="log"
+          aria-live="polite"
+          aria-label="Conversation"
           className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3"
         >
           {messages.map((m, i) => (

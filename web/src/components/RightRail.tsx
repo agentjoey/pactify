@@ -301,8 +301,7 @@ export function RightRail({
           ) : (
             timeline.map((e) => {
               const caste = casteForRoles(rolesOf(state, e.agent_id));
-              // TODO(W3): each entry gets a "replay to here" jump that calls
-              // enterReplay for this event's position (timeline→replay tie-in).
+              // Replay snapshots were removed with the ?at= query parameter.
               return (
                 <div key={e.event_id} data-testid="panel-timeline-entry" className="mb-2.5 flex gap-[9px]">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px]">

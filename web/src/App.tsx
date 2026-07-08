@@ -24,6 +24,7 @@ import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
 import { docTitle } from "./lib/docTitle";
+import { STALE_MS, EVENTS_CAP, FETCH_FAIL_THRESHOLD } from "./lib/constants";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
 
@@ -36,26 +37,6 @@ export function pickInitialProject(ps: ProjectMeta[], stored?: string | null): s
   const alive = ps.find((p) => p.project !== "unknown");
   return alive?.id ?? (ps.length ? ps[0].id : "");
 }
-
-// Stale threshold: a task sitting in_progress longer than this (with no further
-// state change observed) gets an amber dot. Pragmatic: we time from when this
-// dashboard FIRST saw the task in_progress (a per-session timestamp map keyed by
-// task id), not from the protocol event ts — good enough to flag a stuck task
-// during a live session without parsing the log. Cleared when the task leaves
-// in_progress. A 60s ticker re-evaluates the elapsed window.
-const STALE_MS = 30 * 60 * 1000;
-
-// Retained-events cap: the SSE stream accumulates for the whole session, so the
-// array is trimmed to the most recent EVENTS_CAP after each append (dedup is
-// O(1) via the seenEventIds set). Tradeoff: taskRuntimeMs anchors on a task's
-// `assign` event, which for an ancient task can fall off the window — such
-// long-shipped cards then show runtime 0 (derive's documented no-assign
-// fallback), acceptable in exchange for bounded memory and O(1) appends.
-const EVENTS_CAP = 2000;
-
-// Consecutive mid-session state-fetch failures before the non-blocking
-// "updates interrupted" indicator shows (first-load failures own loadFailed).
-const FETCH_FAIL_THRESHOLD = 3;
 
 function AppContent() {
   const src = useDataSource();
@@ -78,9 +59,6 @@ function AppContent() {
   const openSettings = (seat: string | null) => { setSettingsSeat(seat); setSettingsOpen(true); };
   const [wizardOpen, setWizardOpen] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
-  // Goal seeded into the DispatchPanel by callers that pre-fill it (none today;
-  // the canvas NL dock that used to set this is retired).
-  const [dispatchGoal, setDispatchGoal] = useState("");
   // running status per project name → drives the status light on the ProjectMenu
   // trigger AND every row in the dropdown (spec §4.1: each project shows a light).
   const [runningByProject, setRunningByProject] = useState<Record<string, boolean>>({});
@@ -467,9 +445,9 @@ function AppContent() {
         project={current}
         roster={shownState.agents}
         open={dispatchOpen}
-        onClose={() => { setDispatchOpen(false); setDispatchGoal(""); }}
+        onClose={() => setDispatchOpen(false)}
         onGoLive={() => setDispatchOpen(false)}
-        initialGoal={dispatchGoal}
+        initialGoal=""
       />
       <CommandK
         projects={projects}

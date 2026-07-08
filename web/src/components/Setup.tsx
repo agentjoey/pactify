@@ -75,9 +75,9 @@ function applyCommands(bindings: SetupBinding[]): string {
 // reviewer blue, worker green).
 function roleGradient(roles: string[]): { from: string; to: string } {
   const caste = casteForRoles(roles);
-  if (caste === "queen") return { from: "#ffd479", to: "#e0a93a" };
-  if (caste === "guard") return { from: "#8ab4ff", to: "#5c8bd6" };
-  return { from: "#6ee7a0", to: "#39b97a" };
+  if (caste === "queen") return { from: "var(--color-role-product)", to: "color-mix(in srgb, var(--color-role-product) 70%, var(--color-bg-page))" };
+  if (caste === "guard") return { from: "var(--color-role-design)", to: "color-mix(in srgb, var(--color-role-design) 70%, var(--color-bg-page))" };
+  return { from: "var(--color-role-dev)", to: "color-mix(in srgb, var(--color-role-dev) 70%, var(--color-bg-page))" };
 }
 
 function initials(seat: string): string {
@@ -184,7 +184,7 @@ export function Setup() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto" style={{ background: "radial-gradient(820px 460px at 50% -8%, rgba(255,212,121,0.06), transparent 62%), var(--color-bg-page)" }}>
+      <div className="flex-1 overflow-y-auto" style={{ background: "radial-gradient(820px 460px at 50% -8%, color-mix(in srgb, var(--color-role-product) 6%, transparent), transparent 62%), var(--color-bg-page)" }}>
         <div className="mx-auto max-w-[780px] px-7 pb-20 pt-[34px]">
           {/* Journey stepper */}
           <div className="mb-[34px] flex flex-wrap items-center gap-0" data-testid="journey-stepper">
@@ -197,7 +197,7 @@ export function Setup() {
                     className="inline-flex items-center gap-[7px] rounded-full px-3 py-1.5"
                     style={
                       active
-                        ? { background: "rgba(255,212,121,0.1)", border: "1px solid rgba(255,212,121,0.35)" }
+                        ? { background: "color-mix(in srgb, var(--color-role-product) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--color-role-product) 35%, transparent)" }
                         : { padding: "6px 12px" }
                     }
                   >
@@ -205,7 +205,7 @@ export function Setup() {
                       className="grid h-[18px] w-[18px] place-items-center rounded-full text-[10px] font-semibold"
                       style={
                         active
-                          ? { background: "#ffd479", color: "#0a0e14" }
+                          ? { background: "var(--color-role-product)", color: "#0a0e14" }
                           : { border: "1px solid rgba(255,255,255,0.18)", color: dimColor }
                       }
                     >
@@ -213,7 +213,7 @@ export function Setup() {
                     </span>
                     <span
                       className="text-[11.5px] font-medium"
-                      style={active ? { color: "#ffd479" } : { color: dimColor }}
+                      style={active ? { color: "var(--color-role-product)" } : { color: dimColor }}
                     >
                       {step.label}
                     </span>
@@ -238,9 +238,9 @@ export function Setup() {
               <span
                 data-testid="scope-chip"
                 className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
-                style={{ color: "#ffd479", background: "rgba(255,212,121,0.12)", borderColor: "rgba(255,212,121,0.28)" }}
+                style={{ color: "var(--color-role-product)", background: "color-mix(in srgb, var(--color-role-product) 12%, transparent)", borderColor: "color-mix(in srgb, var(--color-role-product) 28%, transparent)" }}
               >
-                <span className="h-[5px] w-[5px] rounded-sm" style={{ background: "#ffd479" }} />
+                <span className="h-[5px] w-[5px] rounded-sm" style={{ background: "var(--color-role-product)" }} />
                 PROJECT · {project}
               </span>
             )}

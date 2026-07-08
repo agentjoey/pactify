@@ -247,9 +247,9 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                 data-testid="allowed-tool-chip"
                 className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10.5px] font-medium"
                 style={{
-                  color: "#8ab4ff",
-                  background: "rgba(138,180,255,0.1)",
-                  borderColor: "rgba(138,180,255,0.28)",
+                  color: "var(--color-role-design)",
+                  background: "color-mix(in srgb, var(--color-role-design) 10%, transparent)",
+                  borderColor: "color-mix(in srgb, var(--color-role-design) 28%, transparent)",
                 }}
               >
                 {t}

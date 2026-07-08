@@ -28,6 +28,7 @@ describe("EventDrawer (the former Live event-stream pane)", () => {
     expect(screen.queryByTestId("event-stream")).toBeNull();
     // Ticker shows the LATEST event (accept by claude on t2).
     const toggle = screen.getByTestId("event-drawer-toggle");
+    expect(toggle).toHaveAttribute("aria-label", "Toggle event stream");
     expect(toggle.textContent).toContain("claude");
     expect(toggle.textContent).toContain("accept");
     expect(toggle.textContent).toContain("t2");

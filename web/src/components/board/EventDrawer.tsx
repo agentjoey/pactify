@@ -38,6 +38,7 @@ export function EventDrawer({ events, agents, state }: { events: PactEvent[]; ag
       <button
         type="button"
         data-testid="event-drawer-toggle"
+        aria-label="Toggle event stream"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 px-4 py-2 text-left"

@@ -2,7 +2,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { describe, it, expect, afterEach } from "vitest";
 import type { State } from "../lib/types";
 import { DataSourceProvider } from "../lib/datasource";
-import { Skeleton, BoardSkeleton, CanvasSkeleton, OpsSkeleton } from "./Skeleton";
+import { Skeleton, BoardSkeleton } from "./Skeleton";
 import { Board } from "./Board";
 
 afterEach(cleanup);
@@ -31,14 +31,8 @@ describe("Skeleton primitives", () => {
   });
 
   it("the composite skeletons render their containers", () => {
-    const { unmount } = render(<BoardSkeleton />);
+    render(<BoardSkeleton />);
     expect(screen.getByTestId("board-skeleton")).toBeTruthy();
-    unmount();
-    render(<CanvasSkeleton />);
-    expect(screen.getByTestId("canvas-skeleton")).toBeTruthy();
-    cleanup();
-    render(<OpsSkeleton />);
-    expect(screen.getByTestId("ops-skeleton")).toBeTruthy();
   });
 });
 

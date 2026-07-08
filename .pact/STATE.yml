@@ -715,3 +715,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/interaction-fixes.md
         evidence: cmdk observe-mode hint now conditional on !showActions; review cards get inline Changes form (reason textarea + send/cancel, reuses existing changes verb, empty-reason disabled); rail path untouched; web 475 green + build clean
+  - id: ui-hygiene
+    branch: feat/ui-hygiene
+    status: in_progress
+    tasks:
+      - id: ui-hygiene
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ui-hygiene.md
+        evidence: dead code removed (CanvasSkeleton/OpsSkeleton/getSessionsList/dispatchGoal remnant/TODO-W3); a11y (icon buttons labeled, seat avatar -> button, cockpit log role/aria-live); hardcoded hexes -> role tokens; constants.ts consolidation. Zero behavior change; web 475 green + build clean

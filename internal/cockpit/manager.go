@@ -17,26 +17,43 @@ type BackendFactory func(key SessionKey) (Backend, error)
 type Manager struct {
 	baseDir string
 	factory BackendFactory
+	baseCtx context.Context
 
 	mu       sync.Mutex
 	sessions map[SessionKey]*CockpitSession
+	cancels  map[SessionKey]context.CancelFunc
 }
 
 // NewManager persists session event logs under baseDir/cockpit/. factory builds
-// the backend per key.
+// the backend per key. Sessions live under context.Background() (serve lifetime).
 func NewManager(baseDir string, factory BackendFactory) *Manager {
+	return NewManagerCtx(context.Background(), baseDir, factory)
+}
+
+// NewManagerCtx is NewManager with an explicit base context — when it is
+// cancelled (serve shutdown), every session's backend process is torn down.
+func NewManagerCtx(baseCtx context.Context, baseDir string, factory BackendFactory) *Manager {
 	return &Manager{
 		baseDir:  baseDir,
 		factory:  factory,
+		baseCtx:  baseCtx,
 		sessions: make(map[SessionKey]*CockpitSession),
+		cancels:  make(map[SessionKey]context.CancelFunc),
 	}
 }
 
 // Session returns the existing session for key, or starts one: factory(key) ->
-// Backend.Start(ctx, opts) -> wrapped in a CockpitSession with jsonl at
+// Backend.Start(sessionCtx, opts) -> wrapped in a CockpitSession with jsonl at
 // baseDir/cockpit/<project>__<seat>.jsonl. Concurrent callers for the same key
 // get the SAME session (single-flight under the manager lock).
-func (m *Manager) Session(ctx context.Context, key SessionKey, opts StartOpts) (*CockpitSession, error) {
+//
+// The backend process is spawned under a SESSION-lifetime context derived from
+// the manager base context — NOT the caller's ctx. A cockpit session outlives
+// the request that created it; binding the child process (exec.CommandContext)
+// to an HTTP request context would kill the agent the moment POST /prompt
+// returns. The caller's ctx is intentionally not used for the process lifetime;
+// the backend handshakes (initialize/thread.start) are fast by design.
+func (m *Manager) Session(_ context.Context, key SessionKey, opts StartOpts) (*CockpitSession, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -49,18 +66,22 @@ func (m *Manager) Session(ctx context.Context, key SessionKey, opts StartOpts) (
 		return nil, err
 	}
 
-	sess, err := backend.Start(ctx, opts)
+	sessCtx, cancel := context.WithCancel(m.baseCtx)
+	sess, err := backend.Start(sessCtx, opts)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
 	jsonlPath := filepath.Join(m.baseDir, "cockpit", key.Project+"__"+key.Seat+".jsonl")
 	cs, err := NewCockpitSession(sess, jsonlPath)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
 	m.sessions[key] = cs
+	m.cancels[key] = cancel
 	return cs, nil
 }
 
@@ -84,12 +105,17 @@ func (m *Manager) List() []SessionKey {
 	return out
 }
 
-// Close closes and removes one session (no-op if absent).
+// Close closes and removes one session (no-op if absent), tearing down its
+// backend process (cancel the session context + CockpitSession.Close).
 func (m *Manager) Close(key SessionKey) error {
 	m.mu.Lock()
 	cs, ok := m.sessions[key]
 	if ok {
 		delete(m.sessions, key)
+		if cancel := m.cancels[key]; cancel != nil {
+			cancel()
+			delete(m.cancels, key)
+		}
 	}
 	m.mu.Unlock()
 
@@ -106,7 +132,11 @@ func (m *Manager) CloseAll() error {
 	for _, cs := range m.sessions {
 		snapshot = append(snapshot, cs)
 	}
+	for _, cancel := range m.cancels {
+		cancel()
+	}
 	m.sessions = make(map[SessionKey]*CockpitSession)
+	m.cancels = make(map[SessionKey]context.CancelFunc)
 	m.mu.Unlock()
 
 	var firstErr error

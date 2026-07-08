@@ -257,3 +257,45 @@ func unwrapFakeSession(t *testing.T, cs *CockpitSession) *FakeSession {
 	}
 	return fs
 }
+
+// ctxCapturingBackend records the context Start receives, to prove the manager
+// spawns the backend under a session-lifetime context (not the caller's).
+type ctxCapturingBackend struct{ gotCtx context.Context }
+
+func (b *ctxCapturingBackend) Start(ctx context.Context, _ StartOpts) (Session, error) {
+	b.gotCtx = ctx
+	return NewFakeSession("t"), nil
+}
+func (b *ctxCapturingBackend) Resume(ctx context.Context, _ string) (Session, error) {
+	b.gotCtx = ctx
+	return NewFakeSession("t"), nil
+}
+
+// Regression: a cockpit session outlives the request that created it. If the
+// backend process were spawned under the caller's (HTTP request) context, it
+// would die the instant POST /prompt returned — the real "empty event stream"
+// bug found while driving a live claude cockpit. Session must decouple the
+// backend from the caller ctx and only tear it down on Close.
+func TestManager_SessionOutlivesCallerCtx(t *testing.T) {
+	be := &ctxCapturingBackend{}
+	m := NewManager(t.TempDir(), func(SessionKey) (Backend, error) { return be, nil })
+
+	callerCtx, cancel := context.WithCancel(context.Background())
+	cancel() // caller ctx already dead, as if the request already returned
+
+	key := SessionKey{Project: "p", Seat: "s"}
+	if _, err := m.Session(callerCtx, key, StartOpts{}); err != nil {
+		t.Fatalf("Session: %v", err)
+	}
+	if be.gotCtx == nil {
+		t.Fatal("backend Start received nil ctx")
+	}
+	if be.gotCtx.Err() != nil {
+		t.Fatalf("backend ctx already cancelled — process is tied to the caller ctx and would die on request end: %v", be.gotCtx.Err())
+	}
+	// Close tears the backend down.
+	_ = m.Close(key)
+	if be.gotCtx.Err() == nil {
+		t.Fatal("backend ctx not cancelled after Close — session process would leak")
+	}
+}

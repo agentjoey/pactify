@@ -655,3 +655,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-approval-rawinput.md
         evidence: approval cards now carry+render verbatim RawInput (trust root per cockpit spec 4): serve DTO rawInput passthrough, panel mono code block (600-char truncation marked), absent-safe; serve+web tests green
+  - id: cockpit-panel-polish
+    branch: feat/cockpit-panel-polish
+    status: in_progress
+    tasks:
+      - id: cockpit-panel-polish
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/cockpit-panel-polish.md
+        evidence: null

@@ -761,7 +761,7 @@ features:
     tasks:
       - id: opencode-acp-wiring
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/opencode-acp-wiring.md
         evidence: opencode wired into ACP tier: acpCommand/acpCommandFor -> opencode acp (native), cockpitCapableKind+backendForKey, doctor acpKinds; tests incl. gated real smoke. Facts pre-verified live: model currentValue=deepseek/deepseek-v4-pro from opencode config (kimi-symmetric), usage in prompt result. Reviewer ran REAL opencode cockpit smoke: PASS 6.2s; -race all green; default transport unchanged

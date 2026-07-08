@@ -661,7 +661,7 @@ features:
     tasks:
       - id: cockpit-panel-polish
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/cockpit-panel-polish.md
         evidence: 6-item polish: on-accent token fixes invisible text on solid fills (user bubble/Send/Approve); auto-scroll; running-tool indicator; threadId in header; event-driven status + 5s fallback + failure banner; capability pre-flight (capable/reason) w/ friendly gate. Reviewer fixed hollow impl: handler never set Capable (zero-value also mis-gated VALID seats) - wired + wrote the missing serve test. Visual: gate + Send label verified in browser; web 446+ green

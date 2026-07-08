@@ -767,7 +767,7 @@ features:
         evidence: opencode wired into ACP tier: acpCommand/acpCommandFor -> opencode acp (native), cockpitCapableKind+backendForKey, doctor acpKinds; tests incl. gated real smoke. Facts pre-verified live: model currentValue=deepseek/deepseek-v4-pro from opencode config (kimi-symmetric), usage in prompt result. Reviewer ran REAL opencode cockpit smoke: PASS 6.2s; -race all green; default transport unchanged
   - id: opencode-acp-default
     branch: feat/opencode-acp-default
-    status: in_progress
+    status: shipped
     tasks:
       - id: opencode-acp-default
         owner: kimi-worker

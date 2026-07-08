@@ -112,14 +112,16 @@ export function Toolbar({
       )}
       <LiveBadge live={live} />
       {author && seat && pad ? (
-        <span
+        <button
+          type="button"
           data-testid="seat-avatar"
-          className="grid h-[24px] w-[24px] shrink-0 place-items-center rounded-[7px]"
+          aria-label={`acting as ${seat}`}
+          className="grid h-[24px] w-[24px] shrink-0 place-items-center rounded-[7px] border-0 p-0"
           style={{ background: `linear-gradient(135deg, ${pad.from}, ${pad.to})`, boxShadow: "inset 0 0 0 1px rgba(255,255,255,.16)" }}
           title={`acting as ${seat} — ${caste}`}
         >
           <Ant caste={caste} size={22} />
-        </span>
+        </button>
       ) : !author ? (
         <span
           data-testid="observe-badge"

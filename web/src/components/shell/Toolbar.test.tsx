@@ -48,5 +48,6 @@ describe("Toolbar dark chrome", () => {
     );
     const avatar = screen.getByTestId("seat-avatar");
     expect(avatar.style.boxShadow).toContain("rgba(255,255,255,.16)");
+    expect(avatar).toHaveAttribute("aria-label", "acting as kimi-worker");
   });
 });

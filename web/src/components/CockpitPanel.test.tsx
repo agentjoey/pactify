@@ -72,6 +72,9 @@ describe("CockpitPanel", () => {
     const { unmount } = renderPanel(source);
     expect(lastES).not.toBeNull();
     expect(lastES!.url).toBe("/fake-cockpit-stream");
+    const messages = screen.getByTestId("cockpit-messages");
+    expect(messages).toHaveAttribute("role", "log");
+    expect(messages).toHaveAttribute("aria-label", "Conversation");
     unmount();
     expect(lastES!.closed).toBe(true);
   });

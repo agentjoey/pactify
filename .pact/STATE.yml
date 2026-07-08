@@ -721,7 +721,7 @@ features:
     tasks:
       - id: ui-hygiene
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/ui-hygiene.md
         evidence: dead code removed (CanvasSkeleton/OpsSkeleton/getSessionsList/dispatchGoal remnant/TODO-W3); a11y (icon buttons labeled, seat avatar -> button, cockpit log role/aria-live); hardcoded hexes -> role tokens; constants.ts consolidation. Zero behavior change; web 475 green + build clean

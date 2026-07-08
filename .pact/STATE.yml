@@ -691,7 +691,7 @@ features:
     tasks:
       - id: project-menu-collapse
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/project-menu-collapse.md
-        evidence: null
+        evidence: project menu worktrees collapsed by default behind chevron+count (aria-expanded, keyboard-accessible); auto-expand when currentWorktree active; single-tree rows unchanged; 8 tests

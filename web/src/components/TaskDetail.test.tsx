@@ -47,6 +47,32 @@ beforeEach(() => {
 });
 
 describe("TaskDetail — hosted-mode event history", () => {
+  // Regression: RelaySource.getEvents is a CLASS METHOD that reads `this.client`.
+  // TaskDetail must call it through the source object (`src.getEvents(...)`), not a
+  // detached local, or `this` is undefined and it throws "Cannot read properties of
+  // undefined (reading 'client')". Plain-object mocks (makeSource) can't catch this
+  // because their getEvents doesn't use `this` — so use a real class here.
+  it("calls getEvents bound to the source (class method reading this.client)", async () => {
+    class ClassSource {
+      capabilities = { canWrite: false, canOrchestrate: false, multiMachine: true, cockpit: false };
+      client = { events: [detail()] };
+      listProjects = vi.fn();
+      getState = vi.fn();
+      getStats = vi.fn();
+      subscribe = vi.fn();
+      async getEvents(): Promise<PactEventDetail[]> {
+        // reads `this.client` — throws if called unbound
+        return this.client.events;
+      }
+    }
+    const source = new ClassSource() as unknown as DataSource;
+    renderDetail(<TaskDetail project="p1" taskId="t1" />, source);
+    await waitFor(() => expect(screen.getByTestId("task-detail-panel")).toBeInTheDocument());
+    // No error banner: the bound call succeeded and rendered the event.
+    expect(screen.queryByTestId("task-detail-error")).toBeNull();
+    await waitFor(() => expect(screen.getAllByTestId("task-detail-event").length).toBeGreaterThan(0));
+  });
+
   it("gracefully degrades to null when source has no getEvents", () => {
     const source = makeSource(undefined, { canWrite: true, canOrchestrate: true, multiMachine: false, cockpit: true });
     const { container } = renderDetail(

@@ -430,7 +430,7 @@ export async function cockpitCancel(project: string, seat: string): Promise<void
 
 export type CockpitStatus = {
   threadId: string;
-  pending: { id: string; kind: string; toolName: string }[];
+  pending: { id: string; kind: string; toolName: string; rawInput?: unknown }[];
 };
 
 export async function cockpitStatus(project: string, seat: string): Promise<CockpitStatus> {

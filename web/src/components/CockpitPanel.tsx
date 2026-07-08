@@ -13,6 +13,12 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+function formatRawInput(rawInput: unknown): string {
+  const text = JSON.stringify(rawInput, null, 1);
+  if (text.length > 600) return text.slice(0, 600) + "…";
+  return text;
+}
+
 function formatSystemRow(ev: CockpitEvent): string {
   if (ev.kind === "tool" && ev.tool) {
     const tail = ev.tool.text ? `: ${ev.tool.text}` : "";
@@ -36,7 +42,9 @@ export function CockpitPanel({
   const src = useDataSource();
   const [messages, setMessages] = useState<Message[]>([]);
   const [systemRows, setSystemRows] = useState<SystemRow[]>([]);
-  const [pending, setPending] = useState<{ id: string; kind: string; toolName: string }[]>([]);
+  const [pending, setPending] = useState<
+    { id: string; kind: string; toolName: string; rawInput?: unknown }[]
+  >([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -254,6 +262,14 @@ export function CockpitPanel({
               >
                 {p.toolName} <span className="text-[var(--color-text-3)]">· {p.kind}</span>
               </div>
+              {p.rawInput !== undefined && (
+                <pre
+                  data-testid="cockpit-approval-rawinput"
+                  className="mb-3 max-h-32 overflow-auto rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] p-2 font-mono text-[11px] text-[var(--color-text-2)]"
+                >
+                  <code>{formatRawInput(p.rawInput)}</code>
+                </pre>
+              )}
               <div className="flex gap-2">
                 <button
                   type="button"

@@ -131,4 +131,33 @@ describe("CockpitPanel", () => {
     fireEvent.click(screen.getByTestId("cockpit-close"));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("renders rawInput in approval card and truncates long input", async () => {
+    const longValue = "a".repeat(700);
+    const source = makeSource({
+      cockpitStatus: vi.fn().mockResolvedValue({
+        threadId: "t1",
+        pending: [{ id: "a1", kind: "tool", toolName: "read_file", rawInput: { path: longValue } }],
+      } as CockpitStatus),
+    });
+    renderPanel(source);
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-approval-rawinput")).toBeInTheDocument());
+    const block = screen.getByTestId("cockpit-approval-rawinput");
+    const expected = JSON.stringify({ path: longValue }, null, 1).slice(0, 600) + "…";
+    expect(block.textContent).toBe(expected);
+  });
+
+  it("does not render rawInput block when rawInput is absent", async () => {
+    const source = makeSource({
+      cockpitStatus: vi.fn().mockResolvedValue({
+        threadId: "t1",
+        pending: [{ id: "a1", kind: "tool", toolName: "read_file" }],
+      } as CockpitStatus),
+    });
+    renderPanel(source);
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-approval")).toBeInTheDocument());
+    expect(screen.queryByTestId("cockpit-approval-rawinput")).not.toBeInTheDocument();
+  });
 });

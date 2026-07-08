@@ -2,6 +2,7 @@ package orchestrate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/acp"
+	"github.com/agentjoey/pactify/internal/audit"
 )
 
 // resumeBriefingPrefix is prepended to the briefing when a stint resumes a prior
@@ -120,6 +122,11 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 		select {
 		case activity <- struct{}{}:
 		default:
+		}
+		if u.Kind == "tool_call" {
+			if rec, ok := acpAuditRecord(lc, u, time.Now()); ok {
+				_ = audit.Append(rec)
+			}
 		}
 		if u.Usage != nil {
 			umu.Lock()
@@ -250,6 +257,56 @@ func (r AcpRunner) escalatePermission(lc LaunchContext, req acp.PermissionReques
 	// permission request is inherently task-specific already, not the routine
 	// which-feature-is-this-about ambiguity the main loop's escalations address.
 	_, _ = writeEscalation(lc.streamDir(), now(), "", lc.Task, reason, evidence, suggestion)
+}
+
+// acpAuditRecord builds an audit.Record from an ACP session/update whose Kind is
+// "tool_call". It returns false for tool_call_update and any other non-auditable
+// update. Raw is best-effort parsed: title feeds Summary, kind/title feed the tool
+// name and risk classification, and rawInput.command forces "exec" risk. Summary
+// never carries rawInput contents.
+func acpAuditRecord(lc LaunchContext, u acp.SessionUpdate, now time.Time) (audit.Record, bool) {
+	if u.Kind != "tool_call" {
+		return audit.Record{}, false
+	}
+	var raw struct {
+		Title    string `json:"title"`
+		Kind     string `json:"kind"`
+		RawInput struct {
+			Command string `json:"command"`
+		} `json:"rawInput"`
+	}
+	_ = json.Unmarshal(u.Raw, &raw)
+
+	summary := raw.Title
+	if summary == "" {
+		summary = "tool_call"
+	}
+	tool := raw.Kind
+	if tool == "" {
+		tool = summary
+	}
+
+	clue := strings.ToLower(raw.Kind + " " + raw.Title)
+	risk := "read"
+	if raw.RawInput.Command != "" || strings.Contains(clue, "shell") || strings.Contains(clue, "exec") || strings.Contains(clue, "bash") {
+		risk = "exec"
+	} else if strings.Contains(clue, "write") || strings.Contains(clue, "edit") || strings.Contains(clue, "create") || strings.Contains(clue, "delete") {
+		risk = "write"
+	}
+
+	return audit.Record{
+		TS:       now.Format(time.RFC3339),
+		Project:  lc.Project,
+		Repo:     lc.RepoDir,
+		Seat:     lc.Seat,
+		Task:     lc.Task,
+		Kind:     "acp:" + lc.Kind,
+		Session:  string(u.SessionID),
+		Tool:     tool,
+		Summary:  summary,
+		Risk:     risk,
+		Decision: "allow",
+	}, true
 }
 
 // describeOptions renders a permission request's options for an escalation record.

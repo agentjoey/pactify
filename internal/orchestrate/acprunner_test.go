@@ -570,3 +570,75 @@ func TestRoutedLocalRunnerDefaultsToCmd(t *testing.T) {
 		t.Fatalf("empty Modes must be all-cmd (zero behavior change), ran=%q", ran)
 	}
 }
+
+func TestAcpAuditRecordShellClass(t *testing.T) {
+	lc := LaunchContext{Seat: "w", Kind: "kimi-cli", Task: "t1", Project: "p", RepoDir: "/tmp/x"}
+	raw := []byte(`{"sessionUpdate":"tool_call","title":"run shell command","kind":"bash","rawInput":{"command":"ls -la"}}`)
+	rec, ok := acpAuditRecord(lc, acp.SessionUpdate{SessionID: "s-1", Kind: "tool_call", Raw: raw}, time.Unix(1, 0).UTC())
+	if !ok {
+		t.Fatal("expected tool_call to be auditable")
+	}
+	if rec.Tool != "bash" {
+		t.Errorf("tool = %q, want bash", rec.Tool)
+	}
+	if rec.Summary != "run shell command" {
+		t.Errorf("summary = %q, want 'run shell command'", rec.Summary)
+	}
+	if rec.Risk != "exec" {
+		t.Errorf("risk = %q, want exec", rec.Risk)
+	}
+	if rec.Kind != "acp:kimi-cli" {
+		t.Errorf("kind = %q, want acp:kimi-cli", rec.Kind)
+	}
+	if rec.Session != "s-1" {
+		t.Errorf("session = %q, want s-1", rec.Session)
+	}
+	if rec.Decision != "allow" {
+		t.Errorf("decision = %q, want allow", rec.Decision)
+	}
+}
+
+func TestAcpAuditRecordWriteClass(t *testing.T) {
+	lc := LaunchContext{Seat: "w", Kind: "kimi-cli", Task: "t1", Project: "p", RepoDir: "/tmp/x"}
+	raw := []byte(`{"sessionUpdate":"tool_call","title":"edit file","kind":"write_file","rawInput":{"path":"/tmp/x"}}`)
+	rec, ok := acpAuditRecord(lc, acp.SessionUpdate{SessionID: "s-2", Kind: "tool_call", Raw: raw}, time.Unix(1, 0).UTC())
+	if !ok {
+		t.Fatal("expected tool_call to be auditable")
+	}
+	if rec.Tool != "write_file" {
+		t.Errorf("tool = %q, want write_file", rec.Tool)
+	}
+	if rec.Summary != "edit file" {
+		t.Errorf("summary = %q, want 'edit file'", rec.Summary)
+	}
+	if rec.Risk != "write" {
+		t.Errorf("risk = %q, want write", rec.Risk)
+	}
+}
+
+func TestAcpAuditRecordNoTitle(t *testing.T) {
+	lc := LaunchContext{Seat: "w", Kind: "kimi-cli", Task: "t1", Project: "p", RepoDir: "/tmp/x"}
+	raw := []byte(`{"sessionUpdate":"tool_call","kind":"read_file","rawInput":{"path":"/tmp/x"}}`)
+	rec, ok := acpAuditRecord(lc, acp.SessionUpdate{SessionID: "s-3", Kind: "tool_call", Raw: raw}, time.Unix(1, 0).UTC())
+	if !ok {
+		t.Fatal("expected tool_call to be auditable")
+	}
+	if rec.Tool != "read_file" {
+		t.Errorf("tool = %q, want read_file", rec.Tool)
+	}
+	if rec.Summary != "tool_call" {
+		t.Errorf("summary = %q, want tool_call", rec.Summary)
+	}
+	if rec.Risk != "read" {
+		t.Errorf("risk = %q, want read", rec.Risk)
+	}
+}
+
+func TestAcpAuditRecordIgnoresToolCallUpdate(t *testing.T) {
+	lc := LaunchContext{Seat: "w", Kind: "kimi-cli", Task: "t1", Project: "p", RepoDir: "/tmp/x"}
+	raw := []byte(`{"sessionUpdate":"tool_call_update","title":"continue","kind":"bash"}`)
+	_, ok := acpAuditRecord(lc, acp.SessionUpdate{SessionID: "s-4", Kind: "tool_call_update", Raw: raw}, time.Unix(1, 0).UTC())
+	if ok {
+		t.Fatal("expected tool_call_update to be ignored")
+	}
+}

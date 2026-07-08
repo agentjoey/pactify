@@ -244,6 +244,20 @@ describe("RunRail (Board run banner — the former Live lanes)", () => {
     });
     await waitFor(() => expect(screen.getByTestId("agent-terminal")).toBeTruthy());
   });
+
+  it("shows All shipped and hides accepted count/progress/Ship when all features are shipped", async () => {
+    getOrchestrateStatus.mockResolvedValue({
+      present: true,
+      status: { feature: "feat-x", task: "", seat: "", action: "done", phase: "done", escalated: false, done: true, total: 0, accepted: 0, iter: 3, updated_at: "x" },
+    });
+    getParallelOrchestrate.mockResolvedValue({ present: false });
+    renderRail({
+      state: st([{ id: "feat-x", branch: "feat/x", status: "shipped", tasks: [task("t1", "accepted"), task("t2", "accepted")] }]),
+    });
+    await waitFor(() => expect(screen.getByText("All shipped")).toBeTruthy());
+    expect(screen.queryByText(/accepted/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ship" })).toBeNull();
+  });
 });
 
 describe("RunRail — capability gating", () => {

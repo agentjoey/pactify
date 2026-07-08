@@ -174,7 +174,7 @@ describe("stat helpers", () => {
       ]);
     });
 
-    it("falls back to — and checkpoint count without a stats entry", () => {
+    it("omits TOK and keeps checkpoint count without a stats entry", () => {
       const events: PactEvent[] = [
         { event_id: "0", ts: iso(990_000), agent_id: "o", role: "orchestrator", event_type: "assign", task_id: "T", feature: "F", payload: {} },
         { event_id: "1", ts: iso(1_000_000), agent_id: "w", role: "worker", event_type: "checkpoint", task_id: "T", feature: "F", payload: {} },
@@ -183,14 +183,17 @@ describe("stat helpers", () => {
       const items = taskMetrics(mkTask("awaiting_review"), events, 1_030_000);
       expect(items).toEqual([
         { label: "RUN", value: "30s", live: false },
-        { label: "TOK", value: "—", live: false },
         { label: "", value: "×2", live: false },
       ]);
     });
 
-    it("treats tokens=0 in stats as unknown (—), not zero spend", () => {
+    it("omits TOK when tokens=0 in stats (treated as unknown, not zero spend)", () => {
       const items = taskMetrics(mkTask("assigned"), [], 1_000_000, mkStat(0));
-      expect(items[1]).toEqual({ label: "TOK", value: "—", live: false });
+      expect(items.find((i) => i.label === "TOK")).toBeUndefined();
+      expect(items).toEqual([
+        { label: "RUN", value: "0s", live: false },
+        { label: "", value: "×1", live: false },
+      ]);
     });
   });
 

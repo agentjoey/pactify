@@ -219,7 +219,7 @@ export function Board({
         className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] px-[18px] py-[9px]"
         style={{ background: "var(--color-bg-inset)" }}
       >
-        <div className="flex items-center gap-1.5 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
           <FilterChip
             label={`All tasks ${totalTasks}`}
             active={featureFilter == null}
@@ -237,7 +237,7 @@ export function Board({
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-3">
           <div className="flex items-center">
             {seated.slice(0, 6).map((a, i) => {
               const caste = casteForRoles(a.roles ?? []);

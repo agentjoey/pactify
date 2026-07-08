@@ -665,3 +665,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-panel-polish.md
         evidence: 6-item polish: on-accent token fixes invisible text on solid fills (user bubble/Send/Approve); auto-scroll; running-tool indicator; threadId in header; event-driven status + 5s fallback + failure banner; capability pre-flight (capable/reason) w/ friendly gate. Reviewer fixed hollow impl: handler never set Capable (zero-value also mis-gated VALID seats) - wired + wrote the missing serve test. Visual: gate + Send label verified in browser; web 446+ green
+  - id: board-shell-fixes
+    branch: feat/board-shell-fixes
+    status: in_progress
+    tasks:
+      - id: board-shell-fixes
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/board-shell-fixes.md
+        evidence: cockpit toggle moved into header Toolbar (collision with New task gone); board header chips min-w-0/flex-1 + right cluster shrink-0 (no overlap); RunRail all-shipped state (All shipped label, no 0/0 counts, no Ship); TOK segment hidden when no data. Reviewer fixed 2 unused imports + a strict-build bool coercion. Visual verify on real board: all four confirmed; web 449 green + build clean

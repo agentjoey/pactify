@@ -28,6 +28,8 @@ export function Toolbar({
   onAddProject,
   onOpenSettings,
   onOpenDispatch,
+  onToggleCockpit,
+  showCockpit,
   worktreesByProject,
   currentWorktree,
   onSelectWorktree,
@@ -46,6 +48,8 @@ export function Toolbar({
   onAddProject: () => void;
   onOpenSettings: () => void;
   onOpenDispatch: () => void;
+  onToggleCockpit?: () => void;
+  showCockpit?: boolean;
   worktreesByProject?: Record<string, Worktree[]>;
   currentWorktree?: string;
   onSelectWorktree?: (project: string, branch: string) => void;
@@ -94,6 +98,18 @@ export function Toolbar({
       >
         ⌘K
       </button>
+      {showCockpit && onToggleCockpit && (
+        <button
+          type="button"
+          data-testid="cockpit-toggle"
+          aria-label="toggle cockpit"
+          title="Cockpit"
+          onClick={onToggleCockpit}
+          className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-2 py-1 text-[11px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+        >
+          Cockpit
+        </button>
+      )}
       <LiveBadge live={live} />
       {author && seat && pad ? (
         <span

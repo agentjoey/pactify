@@ -193,16 +193,18 @@ export function taskMetrics(task: Task, events: PactEvent[], nowMs: number, stat
   const live = task.status === "in_progress";
 
   const tokens = stat?.tokens ?? 0;
-  const tokValue = tokens > 0 ? fmtTokens(tokens) : "—";
 
   const checkpoints = events.filter((e) => e.task_id === task.id && e.event_type === "checkpoint").length;
   const iter = Math.max(1, checkpoints);
 
-  return [
+  const items: MetricItem[] = [
     { label: "RUN", value: fmtDuration(runtime), live },
-    { label: "TOK", value: tokValue, live },
-    { label: "", value: `×${iter}`, live },
   ];
+  if (tokens > 0) {
+    items.push({ label: "TOK", value: fmtTokens(tokens), live });
+  }
+  items.push({ label: "", value: `×${iter}`, live });
+  return items;
 }
 
 // roleColorVar — a seat's *defining duty* drives its color (moved here from the

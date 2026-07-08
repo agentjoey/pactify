@@ -249,7 +249,7 @@ describe("RunRail (Board run banner — the former Live lanes)", () => {
 describe("RunRail — capability gating", () => {
   it("disables Ship when the source is read-only", async () => {
     const readOnly = {
-      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true },
+      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true, cockpit: false },
       listProjects: vi.fn(),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
@@ -283,7 +283,7 @@ describe("RunRail — capability gating", () => {
 describe("RunRail — hosted method-presence guard", () => {
   it("renders nothing when status methods are absent", () => {
     const hosted = {
-      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true },
+      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true, cockpit: false },
       listProjects: vi.fn().mockResolvedValue([]),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
@@ -307,7 +307,7 @@ describe("RunRail — hosted method-presence guard", () => {
 
   it("hides the Ship button when the source lacks shipFeature (even when done)", async () => {
     const src = {
-      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true },
+      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true, cockpit: false },
       listProjects: vi.fn().mockResolvedValue([]),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),

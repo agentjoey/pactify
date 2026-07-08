@@ -102,7 +102,7 @@ describe("DispatchPanel — hosted (relay) one-shot", () => {
     const runOrchestrateFn = vi.fn();
     // A relay-style source: canOrchestrate=true but NO getPlanGenStatus/getPlanReview.
     const hostedSrc = {
-      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true },
+      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true, cockpit: false },
       listProjects: vi.fn(),
       getState: vi.fn(),
       getStats: vi.fn(),
@@ -133,7 +133,7 @@ describe("DispatchPanel — hosted (relay) one-shot", () => {
 describe("DispatchPanel — capability gating", () => {
   it("disables Generate and Dispatch when the source is read-only", () => {
     const readOnly = {
-      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true },
+      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true, cockpit: false },
       listProjects: vi.fn(),
       getState: vi.fn(),
       getStats: vi.fn(),

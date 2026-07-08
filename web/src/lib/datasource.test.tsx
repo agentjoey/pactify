@@ -17,6 +17,7 @@ describe("LocalServeSource", () => {
       canWrite: true,
       canOrchestrate: true,
       multiMachine: false,
+      cockpit: true,
     });
   });
 

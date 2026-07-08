@@ -187,7 +187,7 @@ describe("RightRail — task detail panel", () => {
 describe("RightRail — capability gating", () => {
   it("disables Accept/Changes/Merge when the source is read-only", () => {
     const readOnly = {
-      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true },
+      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true, cockpit: false },
       listProjects: vi.fn(),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),

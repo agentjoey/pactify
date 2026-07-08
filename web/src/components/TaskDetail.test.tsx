@@ -7,7 +7,7 @@ import type { PactEventDetail } from "../lib/types";
 
 function makeSource(
   getEvents?: DataSource["getEvents"],
-  caps: DataSource["capabilities"] = { canWrite: false, canOrchestrate: false, multiMachine: true },
+  caps: DataSource["capabilities"] = { canWrite: false, canOrchestrate: false, multiMachine: true, cockpit: false },
 ): DataSource {
   return {
     capabilities: caps,
@@ -48,7 +48,7 @@ beforeEach(() => {
 
 describe("TaskDetail — hosted-mode event history", () => {
   it("gracefully degrades to null when source has no getEvents", () => {
-    const source = makeSource(undefined, { canWrite: true, canOrchestrate: true, multiMachine: false });
+    const source = makeSource(undefined, { canWrite: true, canOrchestrate: true, multiMachine: false, cockpit: true });
     const { container } = renderDetail(
       <TaskDetail project="p1" taskId="t1" onClose={() => {}} />,
       source,

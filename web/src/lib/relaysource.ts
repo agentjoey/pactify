@@ -22,6 +22,7 @@ export class RelaySource implements DataSource {
     canWrite: true,
     canOrchestrate: true,
     multiMachine: true,
+    cockpit: false,
   };
 
   constructor(client: RelayClient) {

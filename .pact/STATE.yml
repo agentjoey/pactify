@@ -687,7 +687,7 @@ features:
         evidence: RightRail shipped-state: SHIPPED badge, Merge block hidden, in-flight label suppressed for done tasks (duration kept); default project = localStorage last-selection -> first non-unknown -> ps[0], pickInitialProject unit-tested. Visual verify: dead-project default gone, shipped rail clean; web 458 green + build clean
   - id: project-menu-collapse
     branch: feat/project-menu-collapse
-    status: in_progress
+    status: shipped
     tasks:
       - id: project-menu-collapse
         owner: kimi-worker

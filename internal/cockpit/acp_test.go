@@ -190,6 +190,19 @@ func TestACPSessionCloseIdempotent(t *testing.T) {
 	}
 }
 
+func TestAcpCommandForOpencode(t *testing.T) {
+	cmd, args, err := acpCommandFor("opencode")
+	if err != nil {
+		t.Fatalf("acpCommandFor(opencode): %v", err)
+	}
+	if cmd != "opencode" {
+		t.Fatalf("command = %q, want opencode", cmd)
+	}
+	if !reflect.DeepEqual(args, []string{"acp"}) {
+		t.Fatalf("args = %v, want [acp]", args)
+	}
+}
+
 func TestACPBackendSmokeKimi(t *testing.T) {
 	if os.Getenv("COCKPIT_SMOKE") != "1" {
 		t.Skip("set COCKPIT_SMOKE=1 to run real-agent smoke")
@@ -203,6 +216,44 @@ func TestACPBackendSmokeKimi(t *testing.T) {
 
 	b := newACPBackend("kimi-cli")
 	sess, err := b.Start(ctx, StartOpts{RepoDir: t.TempDir(), Seat: "kimi-smoke"})
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer sess.Close()
+
+	go func() {
+		_ = sess.Prompt(ctx, UserMessage{Text: "hi"})
+	}()
+
+	saw := false
+	timeout := time.After(20 * time.Second)
+	for !saw {
+		select {
+		case e := <-sess.Events():
+			if e.Kind == EventMessage || e.Kind == EventUsage {
+				saw = true
+			}
+		case <-timeout:
+			t.Fatal("timed out waiting for an ACP event")
+		case <-ctx.Done():
+			t.Fatalf("context done: %v", ctx.Err())
+		}
+	}
+}
+
+func TestACPBackendSmokeOpencode(t *testing.T) {
+	if os.Getenv("COCKPIT_SMOKE") != "1" {
+		t.Skip("set COCKPIT_SMOKE=1 to run real-agent smoke")
+	}
+	if _, err := exec.LookPath("opencode"); err != nil {
+		t.Skip("opencode not in PATH")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	b := newACPBackend("opencode")
+	sess, err := b.Start(ctx, StartOpts{RepoDir: t.TempDir(), Seat: "opencode-smoke"})
 	if err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}

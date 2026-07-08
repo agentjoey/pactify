@@ -318,6 +318,15 @@ func TestCockpitAuditSink(t *testing.T) {
 	}
 }
 
+func TestCockpitCapableKindIncludesOpencode(t *testing.T) {
+	if !cockpitCapableKind("opencode") {
+		t.Fatal("opencode must be a cockpit-capable kind")
+	}
+	if cockpitCapableKind("unknown-kind") {
+		t.Fatal("unknown kind must not be cockpit-capable")
+	}
+}
+
 func TestBackendForKeySelectsByKind(t *testing.T) {
 	dir := t.TempDir()
 	_ = os.MkdirAll(filepath.Join(dir, ".pact"), 0o755)
@@ -349,9 +358,12 @@ func TestBackendForKeySelectsByKind(t *testing.T) {
 		t.Fatalf("expected backend for codex-cli, got %T", b)
 	}
 
-	_, err = s.backendForKey(cockpit.SessionKey{Project: "p", Seat: "other"})
-	if err == nil {
-		t.Fatal("expected error for opencode seat")
+	b, err = s.backendForKey(cockpit.SessionKey{Project: "p", Seat: "other"})
+	if err != nil {
+		t.Fatalf("opencode seat: %v", err)
+	}
+	if b == nil {
+		t.Fatal("expected non-nil backend for opencode seat")
 	}
 }
 

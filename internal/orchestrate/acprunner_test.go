@@ -358,6 +358,7 @@ func TestAcpCommandNativeBinariesForAcpTier(t *testing.T) {
 	}{
 		{"kimi-cli", "kimi", []string{"acp"}},
 		{"gemini-cli", "gemini", []string{"--acp"}},
+		{"opencode", "opencode", []string{"acp"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.kind, func(t *testing.T) {
@@ -413,9 +414,9 @@ func TestAcpCommandPinsLegacyBridgeVersions(t *testing.T) {
 
 func TestAcpRunnerUnknownKindGuidesToCmd(t *testing.T) {
 	r := AcpRunner{Spawn: captureSpawn(newFakeAcpConn(), nil)}
-	err := r.Run(context.Background(), LaunchContext{Seat: "w", Kind: "opencode", RepoDir: "/tmp/x"})
+	err := r.Run(context.Background(), LaunchContext{Seat: "w", Kind: "antigravity", RepoDir: "/tmp/x"})
 	if err == nil {
-		t.Fatal("opencode has no ACP transport — expected an error")
+		t.Fatal("antigravity has no ACP transport — expected an error")
 	}
 	if !strings.Contains(err.Error(), "--transport") || !strings.Contains(err.Error(), "cmd") {
 		t.Fatalf("error should point the user at --transport …=cmd, got %v", err)

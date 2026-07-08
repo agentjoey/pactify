@@ -121,9 +121,11 @@ func TestCockpitStatusAndPermission(t *testing.T) {
 
 	// Emit an approval request and verify it appears in status.
 	var gotDecision cockpit.Decision
+	wantRawInput := json.RawMessage(`{"path":"/etc","recursive":false}`)
 	fake.EmitApproval(cockpit.ApprovalRequest{
 		Kind:     "command",
 		ToolName: "ls",
+		RawInput: wantRawInput,
 		Respond: func(d cockpit.Decision) error {
 			gotDecision = d
 			return nil
@@ -144,6 +146,9 @@ func TestCockpitStatusAndPermission(t *testing.T) {
 	}
 	if st.Pending[0].ToolName != "ls" {
 		t.Fatalf("unexpected pending item: %+v", st.Pending[0])
+	}
+	if string(st.Pending[0].RawInput) != string(wantRawInput) {
+		t.Fatalf("rawInput mismatch: got %q, want %q", st.Pending[0].RawInput, wantRawInput)
 	}
 
 	// Respond to the approval.

@@ -645,3 +645,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-audit.md
         evidence: cockpit tool-start + approval-decision direct-write to audit pipe w/ risk grading (read/write/exec/mcp); optional AuditSink (nil = zero regression, NewCockpitSession preserved); Summary carries only tool name/phrase (never rawInput -> no secret leak); Risk grades from rawInput. go test -race ./internal/cockpit/ ./internal/serve/ green
+  - id: cockpit-approval-rawinput
+    branch: feat/cockpit-approval-rawinput
+    status: in_progress
+    tasks:
+      - id: cockpit-approval-rawinput
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-approval-rawinput.md
+        evidence: approval cards now carry+render verbatim RawInput (trust root per cockpit spec 4): serve DTO rawInput passthrough, panel mono code block (600-char truncation marked), absent-safe; serve+web tests green

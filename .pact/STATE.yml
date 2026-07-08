@@ -727,7 +727,7 @@ features:
         evidence: dead code removed (CanvasSkeleton/OpsSkeleton/getSessionsList/dispatchGoal remnant/TODO-W3); a11y (icon buttons labeled, seat avatar -> button, cockpit log role/aria-live); hardcoded hexes -> role tokens; constants.ts consolidation. Zero behavior change; web 475 green + build clean
   - id: gemini-audit-hook
     branch: feat/gemini-audit-hook
-    status: in_progress
+    status: shipped
     tasks:
       - id: gemini-audit-hook
         owner: kimi-worker

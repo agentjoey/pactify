@@ -681,7 +681,7 @@ features:
     tasks:
       - id: rail-and-default-project
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/rail-and-default-project.md
         evidence: RightRail shipped-state: SHIPPED badge, Merge block hidden, in-flight label suppressed for done tasks (duration kept); default project = localStorage last-selection -> first non-unknown -> ps[0], pickInitialProject unit-tested. Visual verify: dead-project default gone, shipped rail clean; web 458 green + build clean

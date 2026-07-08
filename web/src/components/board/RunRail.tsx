@@ -351,10 +351,11 @@ function RunControl({
   accepted: number; total: number; escalated: boolean; done: boolean;
   author: boolean; resuming: boolean; onResume: () => void; onShip: () => void; canWrite: boolean; canShip: boolean;
 }) {
+  const allShipped = total === 0 && done;
   const pct = total > 0 ? Math.round((accepted / total) * 100) : 0;
-  const label = done ? "Delivered" : escalated ? "Paused" : "Orchestrating";
-  const dot = done ? "var(--color-success)" : escalated ? "var(--color-danger)" : "var(--color-role-dev)";
-  const meta = [
+  const label = allShipped ? "All shipped" : done ? "Delivered" : escalated ? "Paused" : "Orchestrating";
+  const dot = allShipped || done ? "var(--color-success)" : escalated ? "var(--color-danger)" : "var(--color-role-dev)";
+  const meta = allShipped ? null : [
     `${featureCount} ${featureCount === 1 ? "feature" : "features"}`,
     concurrency && concurrency > 1 ? `concurrency ${concurrency}` : null,
     iter != null ? `iter ${iter}` : null,
@@ -369,26 +370,28 @@ function RunControl({
         <span className="status-pill-dot-live h-[7px] w-[7px] rounded-full" style={{ background: dot, boxShadow: `0 0 8px ${dot}` }} />
         {label}
       </span>
-      {phase === "fixing" && (
+      {phase === "fixing" && !allShipped && (
         <span data-testid="fixing-indicator" className="text-[11.5px] font-medium text-[var(--color-warn)]">
           修复中 {fixRound ?? 0}/{fixMax ?? 0}
         </span>
       )}
-      <span className="text-[11.5px] text-[var(--color-text-3)]">{meta}</span>
-      <div className="ml-auto flex items-center gap-[10px]">
-        <div className="flex items-center gap-2 text-[10.5px] font-medium text-[var(--color-text-2)]">
-          <span>{accepted} / {total} accepted</span>
-          <span className="block h-[5px] w-[120px] overflow-hidden rounded-[3px]" style={{ background: "color-mix(in srgb, var(--color-text-1) 10%, transparent)" }}>
-            <i className="block h-full rounded-[3px]" style={{ width: `${pct}%`, background: "linear-gradient(90deg,var(--color-role-dev),#9fe8be)" }} />
-          </span>
+      {meta && <span className="text-[11.5px] text-[var(--color-text-3)]">{meta}</span>}
+      {!allShipped && (
+        <div className="ml-auto flex items-center gap-[10px]">
+          <div className="flex items-center gap-2 text-[10.5px] font-medium text-[var(--color-text-2)]">
+            <span>{accepted} / {total} accepted</span>
+            <span className="block h-[5px] w-[120px] overflow-hidden rounded-[3px]" style={{ background: "color-mix(in srgb, var(--color-text-1) 10%, transparent)" }}>
+              <i className="block h-full rounded-[3px]" style={{ width: `${pct}%`, background: "linear-gradient(90deg,var(--color-role-dev),#9fe8be)" }} />
+            </span>
+          </div>
+          {author && escalated && (
+            <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume</Button>
+          )}
+          {author && done && canShip && (
+            <Button size="sm" disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onShip}>Ship</Button>
+          )}
         </div>
-        {author && escalated && (
-          <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume</Button>
-        )}
-        {author && done && canShip && (
-          <Button size="sm" disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onShip}>Ship</Button>
-        )}
-      </div>
+      )}
     </div>
   );
 }

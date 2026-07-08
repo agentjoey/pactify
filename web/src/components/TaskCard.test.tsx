@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { TaskCard } from "./TaskCard";
 import type { Task } from "../lib/types";
+import type { MetricItem } from "./ui/MetricStrip";
 
 const task = (over: Partial<Task> = {}): Task => ({
   id: "t2-cli",
@@ -124,5 +125,29 @@ describe("TaskCard — genome", () => {
     render(<TaskCard task={task()} onClick={onClick} {...roleProps} />);
     fireEvent.click(screen.getByTestId("task-card"));
     expect(onClick).toHaveBeenCalled();
+  });
+});
+
+describe("TaskCard — stat strip", () => {
+  const roleProps = { ownerRoles: ["worker"], reviewerRoles: ["orchestrator"] };
+
+  it("renders TOK when token data is present", () => {
+    const metrics: MetricItem[] = [
+      { label: "RUN", value: "3m02s" },
+      { label: "TOK", value: "12.4k" },
+      { label: "", value: "×1" },
+    ];
+    render(<TaskCard task={task()} metrics={metrics} {...roleProps} />);
+    expect(screen.getByText("TOK")).toBeInTheDocument();
+    expect(screen.getByText("12.4k")).toBeInTheDocument();
+  });
+
+  it("omits TOK when token data is absent", () => {
+    const metrics: MetricItem[] = [
+      { label: "RUN", value: "3m02s" },
+      { label: "", value: "×1" },
+    ];
+    render(<TaskCard task={task()} metrics={metrics} {...roleProps} />);
+    expect(screen.queryByText("TOK")).toBeNull();
   });
 });

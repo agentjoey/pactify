@@ -144,16 +144,16 @@ describe("Board — stats-fed TOK", () => {
     const hits = await screen.findAllByText("12.4k");
     expect(hits.length).toBeGreaterThanOrEqual(2);
     expect(getStatsMock).toHaveBeenCalledWith("demo");
-    // T2 has tokens=0 (unknown) → its strip falls back to "—".
-    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    // T2 has tokens=0 (unknown) → its strip omits the TOK segment.
+    expect(screen.queryByText("—")).toBeNull();
   });
 
-  it("keeps rendering with the — fallback when the stats fetch fails", async () => {
+  it("keeps rendering without TOK when the stats fetch fails", async () => {
     getStatsMock.mockRejectedValue(new Error("boom"));
     renderBoard(<Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" />);
-    // Both cards' TOK stay at the no-data fallback; the board itself renders.
-    const dashes = await screen.findAllByText("—");
-    expect(dashes.length).toBeGreaterThanOrEqual(2);
+    // The board still renders; no TOK segments appear because no token data exists.
+    expect(await screen.findAllByTestId("task-card")).toHaveLength(2);
+    expect(screen.queryByText("—")).toBeNull();
   });
 });
 

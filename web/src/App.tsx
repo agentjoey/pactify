@@ -379,7 +379,27 @@ function AppContent() {
   const orchestratorSeat = shownState.agents.find((a) => a.roles.includes("orchestrator"))?.id ?? seat ?? "claude";
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
-      <Toolbar projectName={currentName} live={live} author={author} seat={seat} agents={shownState.agents} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onOpenSettings={() => openSettings(null)} onOpenDispatch={() => setDispatchOpen(true)} worktreesByProject={worktreesByProject} currentWorktree={currentWorktree} onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }} />
+      <Toolbar
+        projectName={currentName}
+        live={live}
+        author={author}
+        seat={seat}
+        agents={shownState.agents}
+        projects={projects}
+        running={!!runningByProject[current]}
+        runningByProject={runningByProject}
+        onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }}
+        onRenameProject={onRenameProject}
+        onDeleteProject={onDeleteProject}
+        onAddProject={() => setWizardOpen(true)}
+        onOpenSettings={() => openSettings(null)}
+        onOpenDispatch={() => setDispatchOpen(true)}
+        showCockpit={Boolean(current) && src.capabilities.canOrchestrate && !!src.cockpitStreamUrl}
+        onToggleCockpit={() => setCockpitOpen((v) => !v)}
+        worktreesByProject={worktreesByProject}
+        currentWorktree={currentWorktree}
+        onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }}
+      />
       <div className="relative flex flex-1 overflow-hidden">
         {/* The dark-handoff Board carries its seated cluster in its own context
             header (Board.tsx), so the old floating left dock is gone — the board
@@ -398,16 +418,6 @@ function AppContent() {
                     within this row, overlaying the board. The board takes the
                     full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
-                  {current && src.capabilities.canOrchestrate && src.cockpitStreamUrl && (
-                    <button
-                      type="button"
-                      data-testid="cockpit-toggle"
-                      onClick={() => setCockpitOpen((v) => !v)}
-                      className="absolute right-3 top-3 z-40 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-2 py-1 text-[11px] text-[var(--color-text-1)] shadow-[var(--shadow-raised)]"
-                    >
-                      Cockpit
-                    </button>
-                  )}
                   <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>
                   {src.capabilities.multiMachine
                     ? <TaskDetail project={current} taskId={selected} onClose={() => setSelected("")} />

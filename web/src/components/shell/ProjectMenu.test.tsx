@@ -8,6 +8,9 @@ const projects: ProjectMeta[] = [
   { id: "acct-beta", name: "beta", path: "/b" } as ProjectMeta,
 ];
 
+const mainWorktree = { branch: "main", path: "/a", primary: true };
+const featWorktree = { branch: "feat-x", path: "/a-fe", primary: false };
+
 describe("ProjectMenu", () => {
   it("shows the current project name and a running status light when running", () => {
     render(
@@ -62,16 +65,57 @@ describe("ProjectMenu", () => {
     expect(onAdd).toHaveBeenCalled();
   });
 
-  it("nests worktrees under a project when there is more than one", () => {
+  it("collapses worktrees by default and toggles them", () => {
     const onSelectWorktree = vi.fn();
     render(
       <ProjectMenu projects={projects} current="acct-alpha" running={false}
-        worktreesByProject={{ alpha: [{ branch: "main", path: "/a", primary: true }, { branch: "feat-x", path: "/a-fe", primary: false }] }}
+        worktreesByProject={{ alpha: [mainWorktree, featWorktree] }}
         currentWorktree="" onSelectWorktree={onSelectWorktree}
         onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
     );
     fireEvent.click(screen.getByTestId("project-menu-trigger"));
+
+    const toggle = screen.getByTestId("worktree-toggle-alpha");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent("▸ 2");
+    expect(screen.queryByTestId("worktree-alpha-feat-x")).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveTextContent("▾ 2");
+    expect(screen.getByTestId("worktree-alpha-feat-x")).toBeInTheDocument();
+
     fireEvent.click(screen.getByTestId("worktree-alpha-feat-x"));
     expect(onSelectWorktree).toHaveBeenCalledWith("acct-alpha", "feat-x");
+
+    fireEvent.click(toggle);
+    expect(screen.queryByTestId("worktree-alpha-feat-x")).toBeNull();
+  });
+
+  it("expands worktrees initially when currentWorktree matches a branch", () => {
+    render(
+      <ProjectMenu projects={projects} current="acct-alpha" running={false}
+        worktreesByProject={{ alpha: [mainWorktree, featWorktree] }}
+        currentWorktree="feat-x" onSelectWorktree={() => {}}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+
+    const toggle = screen.getByTestId("worktree-toggle-alpha");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId("worktree-alpha-feat-x")).toBeInTheDocument();
+  });
+
+  it("does not render a worktree toggle for a single-worktree project", () => {
+    render(
+      <ProjectMenu projects={projects} current="acct-alpha" running={false}
+        worktreesByProject={{ alpha: [mainWorktree] }}
+        currentWorktree="" onSelectWorktree={() => {}}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+
+    expect(screen.queryByTestId("worktree-toggle-alpha")).toBeNull();
+    expect(screen.queryByTestId("worktree-alpha-main")).toBeNull();
   });
 });

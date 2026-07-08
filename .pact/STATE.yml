@@ -685,3 +685,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/rail-and-default-project.md
         evidence: RightRail shipped-state: SHIPPED badge, Merge block hidden, in-flight label suppressed for done tasks (duration kept); default project = localStorage last-selection -> first non-unknown -> ps[0], pickInitialProject unit-tested. Visual verify: dead-project default gone, shipped rail clean; web 458 green + build clean
+  - id: project-menu-collapse
+    branch: feat/project-menu-collapse
+    status: in_progress
+    tasks:
+      - id: project-menu-collapse
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/project-menu-collapse.md
+        evidence: project menu worktrees collapsed by default behind chevron+count (aria-expanded, keyboard-accessible); auto-expand when currentWorktree active; single-tree rows unchanged; 8 tests

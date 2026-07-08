@@ -637,7 +637,7 @@ features:
         evidence: ACP-tier cockpit backend (kimi/gemini) over internal/acp: SessionUpdate->Event mapping (message/usage/tool/plan), sync->async permission bridge (buffered resCh + done-escape, deadlock-safe), MapDecisionToOutcome; backendForKey wires kimi-cli/gemini-cli. Pure mapping + bridge concurrency unit tests; real kimi acp smoke PASS 6s; -race/vet/build clean
   - id: cockpit-audit-write
     branch: feat/cockpit-audit-write
-    status: in_progress
+    status: shipped
     tasks:
       - id: cockpit-audit
         owner: kimi-worker

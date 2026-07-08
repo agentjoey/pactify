@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func newTestFactory(t *testing.T, count *atomic.Int32) BackendFactory {
@@ -246,6 +247,55 @@ func TestManager_JsonlPath(t *testing.T) {
 	}
 	if events[0].Text != "world" {
 		t.Fatalf("unexpected event text: %q", events[0].Text)
+	}
+}
+
+func TestManager_AuditSink(t *testing.T) {
+	ctx := context.Background()
+	baseDir := t.TempDir()
+
+	var mu sync.Mutex
+	var gotKey SessionKey
+	var gotEvent AuditEvent
+	var count atomic.Int32
+	sink := func(key SessionKey, ev AuditEvent) {
+		mu.Lock()
+		defer mu.Unlock()
+		gotKey = key
+		gotEvent = ev
+		count.Add(1)
+	}
+
+	mgr := NewManagerCtxAudit(ctx, baseDir, newTestFactory(t, nil), sink)
+	key := SessionKey{Project: "p1", Seat: "s1"}
+	cs, err := mgr.Session(ctx, key, StartOpts{RepoDir: baseDir, Seat: key.Seat})
+	if err != nil {
+		t.Fatalf("Session: %v", err)
+	}
+
+	fake := unwrapFakeSession(t, cs)
+	fake.Emit(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: "Bash", Text: "rm -rf /tmp"}})
+
+	deadline := time.Now().Add(2 * time.Second)
+	for count.Load() == 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for audit sink")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	mu.Lock()
+	gk, ge := gotKey, gotEvent
+	mu.Unlock()
+
+	if gk != key {
+		t.Fatalf("audit key mismatch: got %+v, want %+v", gk, key)
+	}
+	if ge.Tool != "Bash" {
+		t.Fatalf("tool mismatch: got %q, want Bash", ge.Tool)
+	}
+	if ge.Risk != "exec" {
+		t.Fatalf("risk mismatch: got %q, want exec", ge.Risk)
 	}
 }
 

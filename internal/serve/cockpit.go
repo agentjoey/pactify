@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/audit"
 	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/paths"
@@ -33,8 +35,33 @@ func (s *Server) ensureCockpit() error {
 	if err := os.MkdirAll(baseDir, 0o700); err != nil {
 		return fmt.Errorf("mkdir cockpit base: %w", err)
 	}
-	s.cockpit = cockpit.NewManager(baseDir, s.backendForKey)
+	s.cockpit = cockpit.NewManagerCtxAudit(context.Background(), baseDir, s.backendForKey, s.cockpitAudit)
 	return nil
+}
+
+// cockpitAudit is the live audit sink for cockpit tool starts and approval
+// decisions. It is best-effort: errors are ignored so audit plumbing can never
+// block agent pumps.
+func (s *Server) cockpitAudit(key cockpit.SessionKey, ev cockpit.AuditEvent) {
+	s.pmu.RLock()
+	p, ok := s.projects[key.Project]
+	s.pmu.RUnlock()
+	if !ok {
+		return
+	}
+
+	_ = audit.Append(audit.Record{
+		TS:       time.Now().UTC().Format(time.RFC3339),
+		Project:  key.Project,
+		Repo:     p.Path,
+		Seat:     key.Seat,
+		Kind:     "cockpit",
+		Tool:     ev.Tool,
+		Summary:  ev.Summary,
+		Risk:     ev.Risk,
+		Decision: ev.Decision,
+		Session:  key.Project + "/" + key.Seat,
+	})
 }
 
 // backendForKey selects a real Backend for a (project, seat) pair based on the

@@ -282,6 +282,37 @@ func TestBackendForKeyRejectsNonDeepIntegration(t *testing.T) {
 	}
 }
 
+func TestCockpitAuditSink(t *testing.T) {
+	dir := t.TempDir()
+	s := New([]registry.Project{{Name: "p", Path: dir}})
+
+	auditHome := t.TempDir()
+	t.Setenv("PACTIFY_HOME", auditHome)
+
+	key := cockpit.SessionKey{Project: "p", Seat: "claude"}
+	s.cockpitAudit(key, cockpit.AuditEvent{
+		Tool:    "Bash",
+		Summary: "Bash start",
+		Risk:    "exec",
+	})
+
+	day := time.Now().UTC().Format("2006-01-02")
+	path := filepath.Join(auditHome, ".pactify", "audit", "p", day+".jsonl")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading audit file: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("expected audit record to be written")
+	}
+	line := string(data)
+	for _, want := range []string{`"project":"p"`, `"repo":"` + dir + `"`, `"seat":"claude"`, `"kind":"cockpit"`, `"tool":"Bash"`, `"summary":"Bash start"`, `"risk":"exec"`, `"session":"p/claude"`} {
+		if !strings.Contains(line, want) {
+			t.Fatalf("audit line missing %q: %s", want, line)
+		}
+	}
+}
+
 func TestBackendForKeySelectsByKind(t *testing.T) {
 	dir := t.TempDir()
 	_ = os.MkdirAll(filepath.Join(dir, ".pact"), 0o755)

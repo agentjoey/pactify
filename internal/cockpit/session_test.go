@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -281,6 +282,141 @@ func TestCockpitSessionFilePermissions(t *testing.T) {
 	if dirInfo.Mode().Perm() != 0o700 {
 		t.Fatalf("dir perms want 0o700, got 0o%o", dirInfo.Mode().Perm())
 	}
+}
+
+func TestCockpitSessionAuditToolStart(t *testing.T) {
+	fs := NewFakeSession("thread-audit-tool")
+	var got []AuditEvent
+	var mu sync.Mutex
+	var count atomic.Int32
+	sink := func(ev AuditEvent) {
+		mu.Lock()
+		defer mu.Unlock()
+		got = append(got, ev)
+		count.Add(1)
+	}
+	cs, err := NewCockpitSessionWithAudit(fs, t.TempDir()+"/events.jsonl", sink)
+	if err != nil {
+		t.Fatalf("NewCockpitSessionWithAudit: %v", err)
+	}
+	defer cs.Close()
+
+	fs.Emit(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: "Bash", Text: "rm -rf /tmp/x"}})
+	fs.Emit(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "output", Name: "Bash", Text: "out"}})
+
+	deadline := time.Now().Add(2 * time.Second)
+	for count.Load() < 1 {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for audit sink; got %d events", count.Load())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	mu.Lock()
+	ev := got[0]
+	mu.Unlock()
+	if ev.Tool != "Bash" {
+		t.Fatalf("tool mismatch: got %q, want Bash", ev.Tool)
+	}
+	if ev.Summary != "Bash start" {
+		t.Fatalf("summary mismatch: got %q, want Bash start", ev.Summary)
+	}
+	if ev.Risk != "exec" {
+		t.Fatalf("risk mismatch: got %q, want exec", ev.Risk)
+	}
+	if ev.Decision != "" {
+		t.Fatalf("decision should be empty for tool start, got %q", ev.Decision)
+	}
+}
+
+func TestCockpitSessionAuditApprovalRespond(t *testing.T) {
+	fs := NewFakeSession("thread-audit-approval")
+	var got []AuditEvent
+	var mu sync.Mutex
+	var count atomic.Int32
+	sink := func(ev AuditEvent) {
+		mu.Lock()
+		defer mu.Unlock()
+		got = append(got, ev)
+		count.Add(1)
+	}
+	cs, err := NewCockpitSessionWithAudit(fs, t.TempDir()+"/events.jsonl", sink)
+	if err != nil {
+		t.Fatalf("NewCockpitSessionWithAudit: %v", err)
+	}
+	defer cs.Close()
+
+	fs.EmitApproval(ApprovalRequest{
+		Kind:     "command",
+		ToolName: "rm",
+		RawInput: json.RawMessage(`{"path":"/tmp/secret"}`),
+		Respond:  func(Decision) error { return nil },
+	})
+
+	var id string
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		pending := cs.Pending()
+		if len(pending) == 1 {
+			id = pending[0].ID
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for pending approval")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if err := cs.Respond(id, DecisionAllow); err != nil {
+		t.Fatalf("Respond: %v", err)
+	}
+
+	deadline = time.Now().Add(2 * time.Second)
+	for count.Load() < 1 {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for audit sink; got %d events", count.Load())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	mu.Lock()
+	ev := got[0]
+	mu.Unlock()
+	if ev.Tool != "rm" {
+		t.Fatalf("tool mismatch: got %q, want rm", ev.Tool)
+	}
+	if ev.Summary != "approval command" {
+		t.Fatalf("summary mismatch: got %q, want approval command", ev.Summary)
+	}
+	if ev.Risk != "write" {
+		t.Fatalf("risk mismatch: got %q, want write", ev.Risk)
+	}
+	if ev.Decision != "allow" {
+		t.Fatalf("decision mismatch: got %q, want allow", ev.Decision)
+	}
+	if strings.Contains(ev.Summary, "secret") || strings.Contains(ev.Summary, "/tmp") {
+		t.Fatalf("summary must not leak raw input, got %q", ev.Summary)
+	}
+}
+
+func TestCockpitSessionAuditNilSink(t *testing.T) {
+	fs := NewFakeSession("thread-audit-nil")
+	cs, err := NewCockpitSessionWithAudit(fs, t.TempDir()+"/events.jsonl", nil)
+	if err != nil {
+		t.Fatalf("NewCockpitSessionWithAudit(nil sink): %v", err)
+	}
+	defer cs.Close()
+
+	fs.Emit(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: "Bash", Text: "rm -rf /tmp/x"}})
+	fs.EmitApproval(ApprovalRequest{
+		Kind:     "command",
+		ToolName: "rm",
+		RawInput: json.RawMessage(`{"path":"/tmp/secret"}`),
+		Respond:  func(Decision) error { return nil },
+	})
+
+	time.Sleep(50 * time.Millisecond)
+	// No panic and no observable side effect from the nil sink.
 }
 
 func drainWithTimeout(t *testing.T, ch <-chan Event, id int) {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
-import App from "./App";
+import App, { pickInitialProject } from "./App";
+import type { ProjectMeta } from "./lib/types";
 
 // Module-level capture so tests can fire events on the last-constructed instance.
 let lastES: {
@@ -38,6 +39,7 @@ function makeFakeESClass() {
 
 beforeEach(() => {
   lastES = null;
+  localStorage.clear();
   globalThis.EventSource = makeFakeESClass() as unknown as typeof EventSource;
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
@@ -217,5 +219,69 @@ describe("App", () => {
       await waitFor(() => expect(screen.getByTestId("event-drawer")).toBeInTheDocument());
       expect(screen.getByTestId("event-drawer").dataset.state).toBe("collapsed");
     });
+  });
+
+  it("restores the last selected project from localStorage when it is still present", async () => {
+    localStorage.setItem("pactify:lastProject", "other");
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "/api/projects") return {
+        ok: true,
+        json: async () => [
+          { id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 },
+          { id: "other", name: "other", path: "/y", project: "other", feature_count: 0, awaiting_count: 0 },
+        ],
+      };
+      if (url === "/api/registry") return { ok: true, json: async () => [] };
+      if (url === "/api/agents") return { ok: true, json: async () => [] };
+      return { ok: true, json: async () => ({ project: "other", agents: [], features: [], awaiting_count: 0 }) };
+    }));
+
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("other"));
+  });
+
+  it("persists project selection changes to localStorage", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url === "/api/projects") return {
+        ok: true,
+        json: async () => [
+          { id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 },
+          { id: "other", name: "other", path: "/y", project: "other", feature_count: 0, awaiting_count: 0 },
+        ],
+      };
+      if (url === "/api/registry") return { ok: true, json: async () => [] };
+      if (url === "/api/agents") return { ok: true, json: async () => [] };
+      return { ok: true, json: async () => ({ project: "demo", agents: [], features: [], awaiting_count: 0 }) };
+    }));
+
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    expect(localStorage.getItem("pactify:lastProject")).toBe("demo");
+  });
+});
+
+describe("pickInitialProject", () => {
+  const mk = (id: string, project: string): ProjectMeta => ({
+    id, name: id, path: `/${id}`, project, feature_count: 0, awaiting_count: 0,
+  });
+
+  it("prefers the stored id when it is still in the list", () => {
+    const ps = [mk("dead", "unknown"), mk("alive", "greet")];
+    expect(pickInitialProject(ps, "alive")).toBe("alive");
+  });
+
+  it("skips project===unknown when no stored id matches", () => {
+    const ps = [mk("dead", "unknown"), mk("alive", "greet")];
+    expect(pickInitialProject(ps, "missing")).toBe("alive");
+    expect(pickInitialProject(ps, null)).toBe("alive");
+  });
+
+  it("falls back to the first entry when every project is unknown", () => {
+    const ps = [mk("dead1", "unknown"), mk("dead2", "unknown")];
+    expect(pickInitialProject(ps, null)).toBe("dead1");
+  });
+
+  it("returns empty string for an empty list", () => {
+    expect(pickInitialProject([], "stored")).toBe("");
   });
 });

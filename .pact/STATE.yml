@@ -747,7 +747,7 @@ features:
         evidence: AcpRunner writes audit records for ACP tool_call updates (kind acp:<kind>, title-only summary — never rawInput, conservative exec/write/read grading, best-effort Append); tool_call_update ignored; covers kimi (no native hooks). Unit-tested acpAuditRecord 3 shapes; orchestrate+audit green
   - id: settings-autosave
     branch: feat/settings-autosave
-    status: in_progress
+    status: shipped
     tasks:
       - id: settings-autosave
         owner: kimi-worker

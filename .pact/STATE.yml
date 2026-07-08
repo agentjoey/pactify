@@ -705,3 +705,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/board-blocked-visibility.md
         evidence: assigned/working cards show blocked-badge (awaiting <dep> +N, full list in title) when deps not accepted; stale dot title appends awaiting info; zero change for dep-less tasks; web 469 green + build clean
+  - id: interaction-fixes
+    branch: feat/interaction-fixes
+    status: in_progress
+    tasks:
+      - id: interaction-fixes
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/interaction-fixes.md
+        evidence: cmdk observe-mode hint now conditional on !showActions; review cards get inline Changes form (reason textarea + send/cancel, reuses existing changes verb, empty-reason disabled); rail path untouched; web 475 green + build clean

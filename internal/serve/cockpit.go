@@ -53,8 +53,10 @@ func (s *Server) backendForKey(key cockpit.SessionKey) (cockpit.Backend, error) 
 		return cockpit.NewClaudeBackend(), nil
 	case "codex-cli":
 		return cockpit.NewCodexBackend(), nil
+	case "kimi-cli", "gemini-cli":
+		return cockpit.NewACPBackend(kind), nil
 	default:
-		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli only)", key.Seat, kind)
+		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/gemini-cli only)", key.Seat, kind)
 	}
 }
 

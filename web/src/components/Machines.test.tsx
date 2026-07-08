@@ -10,7 +10,7 @@ function makeSource(
   multiMachine = true,
 ): DataSource {
   return {
-    capabilities: { canWrite: false, canOrchestrate: false, multiMachine },
+    capabilities: { canWrite: false, canOrchestrate: false, multiMachine, cockpit: false },
     listProjects: vi.fn(),
     getState: vi.fn(),
     getStats: vi.fn(),

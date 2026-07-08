@@ -6,6 +6,7 @@ import type {
   RunOrchestrateBody,
   ShipBody,
   PlanGenStatus,
+  CockpitStatus,
 } from "./api";
 import type {
   OrchestrateStatusResponse,
@@ -19,6 +20,7 @@ export interface DataSourceCapabilities {
   canWrite: boolean;
   canOrchestrate: boolean;
   multiMachine: boolean;
+  cockpit: boolean;
 }
 
 export interface DataSource {
@@ -67,6 +69,21 @@ export interface DataSource {
   getPlanGenStatus?(project: string): Promise<PlanGenStatus>;
   getPlanReview?(project: string, feature: string): Promise<PlanReviewResponse>;
   applyPlan?(project: string, feature: string): Promise<{ assigned: number }>;
+
+  cockpitPrompt?(
+    project: string,
+    seat: string,
+    text: string,
+  ): Promise<{ ok: boolean; threadId: string }>;
+  cockpitRespond?(
+    project: string,
+    seat: string,
+    approvalId: string,
+    decision: "allow" | "deny",
+  ): Promise<void>;
+  cockpitCancel?(project: string, seat: string): Promise<void>;
+  cockpitStatus?(project: string, seat: string): Promise<CockpitStatus>;
+  cockpitStreamUrl?(project: string, seat: string): string;
 }
 
 export class LocalServeSource implements DataSource {
@@ -74,6 +91,7 @@ export class LocalServeSource implements DataSource {
     canWrite: true,
     canOrchestrate: true,
     multiMachine: false,
+    cockpit: true,
   };
 
   listProjects(): Promise<ProjectMeta[]> {
@@ -171,6 +189,31 @@ export class LocalServeSource implements DataSource {
 
   applyPlan(project: string, feature: string): Promise<{ assigned: number }> {
     return api.applyPlan(project, feature);
+  }
+
+  cockpitPrompt(project: string, seat: string, text: string): Promise<{ ok: boolean; threadId: string }> {
+    return api.cockpitPrompt(project, seat, text);
+  }
+
+  cockpitRespond(
+    project: string,
+    seat: string,
+    approvalId: string,
+    decision: "allow" | "deny",
+  ): Promise<void> {
+    return api.cockpitRespond(project, seat, approvalId, decision);
+  }
+
+  cockpitCancel(project: string, seat: string): Promise<void> {
+    return api.cockpitCancel(project, seat);
+  }
+
+  cockpitStatus(project: string, seat: string): Promise<CockpitStatus> {
+    return api.cockpitStatus(project, seat);
+  }
+
+  cockpitStreamUrl(project: string, seat: string): string {
+    return api.cockpitStreamUrl(project, seat);
   }
 }
 

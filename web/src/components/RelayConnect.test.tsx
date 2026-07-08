@@ -13,7 +13,7 @@ describe("RelayConnect", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("connects and reports the source on success", async () => {
-    const fakeSource = { capabilities: { canWrite: false } } as unknown as RelaySource;
+    const fakeSource = { capabilities: { canWrite: false, canOrchestrate: true, multiMachine: true, cockpit: false } } as unknown as RelaySource;
     (source.connectRelaySource as ReturnType<typeof vi.fn>).mockResolvedValue(fakeSource);
     const onConnected = vi.fn();
     render(<RelayConnect onConnected={onConnected} />);

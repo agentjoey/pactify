@@ -44,6 +44,7 @@ describe("RelaySource", () => {
       canWrite: true,
       canOrchestrate: true,
       multiMachine: true,
+      cockpit: false,
     });
   });
 

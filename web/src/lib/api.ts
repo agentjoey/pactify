@@ -394,6 +394,53 @@ export async function getDiff(project: string): Promise<{ diff: string }> {
   return getJSON<{ diff: string }>(`/api/projects/${project}/orchestrate/diff`);
 }
 
+// --- Cockpit (orchestrator chat) ---
+
+export type CockpitEvent = {
+  kind: "message" | "tool" | "usage" | "state" | "error";
+  text?: string;
+  final?: boolean;
+  tool?: { phase: string; name: string; text?: string };
+  usage?: Record<string, unknown>;
+  state?: Record<string, unknown>;
+  err?: string;
+};
+
+export async function cockpitPrompt(
+  project: string,
+  seat: string,
+  text: string,
+): Promise<{ ok: boolean; threadId: string }> {
+  const r = await writeJSON(`/api/projects/${project}/cockpit/prompt`, "POST", { seat, text });
+  return (await r.json()) as { ok: boolean; threadId: string };
+}
+
+export async function cockpitRespond(
+  project: string,
+  seat: string,
+  approvalId: string,
+  decision: "allow" | "deny",
+): Promise<void> {
+  await writeJSON(`/api/projects/${project}/cockpit/permission`, "POST", { seat, approvalId, decision });
+}
+
+export async function cockpitCancel(project: string, seat: string): Promise<void> {
+  await writeJSON(`/api/projects/${project}/cockpit/cancel`, "POST", { seat });
+}
+
+export type CockpitStatus = {
+  threadId: string;
+  pending: { id: string; kind: string; toolName: string }[];
+};
+
+export async function cockpitStatus(project: string, seat: string): Promise<CockpitStatus> {
+  return getJSON<CockpitStatus>(`/api/projects/${project}/cockpit/status?seat=${encodeURIComponent(seat)}`);
+}
+
+export function cockpitStreamUrl(project: string, seat: string): string {
+  return `/api/projects/${project}/cockpit/stream?seat=${encodeURIComponent(seat)}`;
+}
+
 export async function pruneSessions(
   kind: string,
 ): Promise<{ kind: string; skipped: boolean; output: string }> {

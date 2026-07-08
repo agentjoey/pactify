@@ -631,7 +631,7 @@ features:
     tasks:
       - id: cockpit-acp-backend
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/cockpit-acp-backend.md
         evidence: ACP-tier cockpit backend (kimi/gemini) over internal/acp: SessionUpdate->Event mapping (message/usage/tool/plan), sync->async permission bridge (buffered resCh + done-escape, deadlock-safe), MapDecisionToOutcome; backendForKey wires kimi-cli/gemini-cli. Pure mapping + bridge concurrency unit tests; real kimi acp smoke PASS 6s; -race/vet/build clean

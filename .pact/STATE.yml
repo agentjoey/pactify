@@ -751,7 +751,7 @@ features:
     tasks:
       - id: settings-autosave
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/settings-autosave.md
-        evidence: null
+        evidence: AgentConfig cards auto-save (600ms debounce, hydration-guarded, blur flush) with Saving/Saved/error indicator replacing per-card Save buttons; tests updated to autosave assertions; web full suite + build green

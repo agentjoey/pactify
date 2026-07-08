@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State } from "../lib/types";
 import { Board } from "./Board";
@@ -177,5 +177,60 @@ describe("Board — capability gating", () => {
     expect(accept).toBeDisabled();
     expect(changes).toBeDisabled();
     expect(accept).toHaveAttribute("title", "Remote control needs U3");
+  });
+});
+
+describe("Board — blocked dependency visibility", () => {
+  const depsFixture: State = {
+    project: "demo",
+    awaiting_count: 0,
+    agents: [{ id: "bob", roles: ["worker"] }],
+    features: [
+      {
+        id: "F1",
+        branch: "feat/f1",
+        status: "active",
+        tasks: [
+          { id: "WAIT-1", owner: "bob", status: "assigned", reviewer: "alice", spec: "", evidence: "", deps: ["BLOCK-1"] },
+          { id: "BLOCK-1", owner: "bob", status: "in_progress", reviewer: "alice", spec: "", evidence: "" },
+          { id: "WAIT-MULTI", owner: "bob", status: "assigned", reviewer: "alice", spec: "", evidence: "", deps: ["BLOCK-1", "BLOCK-2"] },
+          { id: "BLOCK-2", owner: "bob", status: "awaiting_review", reviewer: "alice", spec: "", evidence: "" },
+          { id: "WAIT-DONE", owner: "bob", status: "assigned", reviewer: "alice", spec: "", evidence: "", deps: ["DONE"] },
+          { id: "DONE", owner: "bob", status: "accepted", reviewer: "alice", spec: "", evidence: "" },
+          { id: "NODEPS", owner: "bob", status: "in_progress", reviewer: "alice", spec: "", evidence: "" },
+        ],
+      },
+    ],
+  };
+
+  function cardById(id: string): HTMLElement {
+    return screen.getAllByTestId("task-card").find((card) => card.textContent?.includes(id)) as HTMLElement;
+  }
+
+  it("shows blocked badge for assigned/working tasks with unfinished deps", () => {
+    renderBoard(<Board state={depsFixture} selected="" onSelect={() => {}} />);
+    const wait1 = cardById("WAIT-1");
+    const badge = within(wait1).getByTestId("blocked-badge");
+    expect(badge.textContent).toContain("⧗ awaiting BLOCK-1");
+  });
+
+  it("hides the badge when the dependency is accepted", () => {
+    renderBoard(<Board state={depsFixture} selected="" onSelect={() => {}} />);
+    const waitDone = cardById("WAIT-DONE");
+    expect(within(waitDone).queryByTestId("blocked-badge")).toBeNull();
+  });
+
+  it("renders +N and lists every unfinished dep in the badge title", () => {
+    renderBoard(<Board state={depsFixture} selected="" onSelect={() => {}} />);
+    const waitMulti = cardById("WAIT-MULTI");
+    const badge = within(waitMulti).getByTestId("blocked-badge");
+    expect(badge.textContent).toContain("⧗ awaiting BLOCK-1 +1");
+    expect(badge).toHaveAttribute("title", "BLOCK-1, BLOCK-2");
+  });
+
+  it("leaves cards without deps unchanged (no badge)", () => {
+    renderBoard(<Board state={depsFixture} selected="" onSelect={() => {}} />);
+    const noDeps = cardById("NODEPS");
+    expect(within(noDeps).queryByTestId("blocked-badge")).toBeNull();
   });
 });

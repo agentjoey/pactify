@@ -128,6 +128,43 @@ describe("TaskCard — genome", () => {
   });
 });
 
+describe("TaskCard — blocked badge", () => {
+  const roleProps = { ownerRoles: ["worker"], reviewerRoles: ["orchestrator"] };
+
+  it("renders ⧗ awaiting <first> when blockedOn has one dependency", () => {
+    render(<TaskCard task={task()} blockedOn={["T1"]} {...roleProps} />);
+    const badge = screen.getByTestId("blocked-badge");
+    expect(badge.textContent).toContain("⧗ awaiting T1");
+    expect(badge).toHaveAttribute("title", "T1");
+  });
+
+  it("renders +N suffix and lists all ids in title when multiple deps are blocked", () => {
+    render(<TaskCard task={task()} blockedOn={["T1", "T2", "T3"]} {...roleProps} />);
+    const badge = screen.getByTestId("blocked-badge");
+    expect(badge.textContent).toContain("⧗ awaiting T1 +2");
+    expect(badge).toHaveAttribute("title", "T1, T2, T3");
+  });
+
+  it("renders no badge when blockedOn is absent or empty", () => {
+    const { rerender } = render(<TaskCard task={task()} {...roleProps} />);
+    expect(screen.queryByTestId("blocked-badge")).toBeNull();
+    rerender(<TaskCard task={task()} blockedOn={[]} {...roleProps} />);
+    expect(screen.queryByTestId("blocked-badge")).toBeNull();
+  });
+
+  it("stale tooltip appends awaiting ids when blockedOn is present", () => {
+    render(<TaskCard task={task()} stale blockedOn={["T1", "T2"]} {...roleProps} />);
+    const dot = screen.getByTestId("task-card-stale");
+    expect(dot).toHaveAttribute("title", "in progress >30min; awaiting T1, T2");
+  });
+
+  it("stale tooltip stays plain when not blocked", () => {
+    render(<TaskCard task={task()} stale {...roleProps} />);
+    const dot = screen.getByTestId("task-card-stale");
+    expect(dot).toHaveAttribute("title", "in progress >30min");
+  });
+});
+
 describe("TaskCard — stat strip", () => {
   const roleProps = { ownerRoles: ["worker"], reviewerRoles: ["orchestrator"] };
 

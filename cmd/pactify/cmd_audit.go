@@ -72,7 +72,7 @@ func newAuditInstallCmd() *cobra.Command {
 	}
 	c.Flags().BoolVar(&claudeCode, "claude-code", false, "install the hook for Claude Code")
 	c.Flags().BoolVar(&gemini, "gemini", false, "install the hook for Gemini")
-	c.Flags().BoolVar(&opencode, "opencode", false, "install the hook for opencode")
+	c.Flags().BoolVar(&opencode, "opencode", false, "install the audit plugin for opencode (cmd-transport fallback — the ACP transport, now the default, audits without it)")
 	c.Flags().BoolVar(&detect, "detect", false, "show per-client install status instead of installing")
 	return c
 }

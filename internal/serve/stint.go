@@ -162,9 +162,10 @@ func contains(xs []string, x string) bool {
 	return false
 }
 
-// newStinter builds the policy-gated stint executor with the standard runner.
+// newStinter builds the policy-gated stint executor with the standard runner,
+// using the same default transport modes as the local orchestrate command.
 func (s *Server) newStinter() remoteexec.Stinter {
-	return &serveStinter{s: s, runner: orchestrate.NewCmdRunner(5 * time.Minute)}
+	return &serveStinter{s: s, runner: orchestrate.NewRoutedLocalRunner(orchestrate.DefaultTransportModes(), 5*time.Minute)}
 }
 
 // serveOrchestrator starts the orchestrate driver from a remote rpc

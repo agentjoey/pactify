@@ -23,6 +23,21 @@ func parseCriticSeat(v string) string {
 	return strings.TrimSpace(strings.TrimPrefix(v, "seat="))
 }
 
+// transportModesFromFlags seeds the default transport routing and applies
+// explicit --transport overrides. The default maps opencode to ACP (see
+// orchestrate.DefaultTransportModes); --transport opencode=cmd still reverts it.
+func transportModesFromFlags(transports []string) (map[string]string, error) {
+	modes := orchestrate.DefaultTransportModes()
+	for _, t := range transports {
+		parts := strings.SplitN(t, "=", 2)
+		if len(parts) != 2 || parts[0] == "" || (parts[1] != "acp" && parts[1] != "cmd") {
+			return nil, fmt.Errorf("--transport must be kind=acp|cmd, got %q", t)
+		}
+		modes[parts[0]] = parts[1]
+	}
+	return modes, nil
+}
+
 // newOrchestrateCmd wires `pactify orchestrate`: the autonomous driver that walks
 // the pact state machine in the current repo, launching the owner/reviewer agent
 // at each transition and merging behind a hard test gate, until the work ships or
@@ -107,24 +122,17 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 
 			// --transport kind=acp|cmd routes those kinds' stints over the Agent
 			// Client Protocol (a persistent stdio JSON-RPC session) instead of a
-			// one-shot headless command. An empty map keeps the all-command default
-			// (zero behavior change).
-			transportModes := map[string]string{}
-			for _, t := range transports {
-				parts := strings.SplitN(t, "=", 2)
-				if len(parts) != 2 || parts[0] == "" || (parts[1] != "acp" && parts[1] != "cmd") {
-					return fmt.Errorf("--transport must be kind=acp|cmd, got %q", t)
-				}
-				transportModes[parts[0]] = parts[1]
+			// one-shot headless command. Defaults are seeded from
+			// orchestrate.DefaultTransportModes() and overridden by explicit flags.
+			transportModes, err := transportModesFromFlags(transports)
+			if err != nil {
+				return err
 			}
 
 			idle := time.Duration(idleTimeoutMin) * time.Minute
-			var local orchestrate.Runner = orchestrate.NewCmdRunner(idle)
-			if len(transportModes) > 0 {
-				local = orchestrate.NewRoutedLocalRunner(transportModes, idle)
-			}
+			local := orchestrate.NewRoutedLocalRunner(transportModes, idle)
 
-			var runner orchestrate.Runner
+			runner := orchestrate.Runner(local)
 			if len(hosts) > 0 {
 				dispatch, closeDispatch, derr := newRelayStintDispatch(ctx)
 				if derr != nil {
@@ -137,10 +145,6 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 					Dispatch: dispatch,
 					Timeout:  time.Duration(runTimeoutMin) * time.Minute,
 				}
-			} else if len(transportModes) > 0 {
-				// Only override the withDefaults CmdRunner when ACP routing is asked
-				// for, so a plain run stays byte-for-byte on the command transport.
-				runner = local
 			}
 
 			opts := orchestrate.Options{
@@ -204,7 +208,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")
 	cmd.Flags().StringArrayVar(&seatHosts, "seat-host", nil, "seat=machineId to run that seat's stints on another machine via the relay (repeatable; requires a cloud session + the project's git origin)")
-	cmd.Flags().StringArrayVar(&transports, "transport", nil, "kind=acp|cmd to drive that kind over the Agent Client Protocol instead of a headless command (repeatable), e.g. --transport kimi-cli=acp; default: all cmd")
+	cmd.Flags().StringArrayVar(&transports, "transport", nil, "kind=acp|cmd to drive that kind over the Agent Client Protocol instead of a headless command (repeatable), e.g. --transport kimi-cli=acp; default: opencode=acp (all others cmd); --transport opencode=cmd to revert")
 	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")
 	cmd.Flags().StringVar(&critic, "critic", "", "run this seat as a read-only pre-review critic (accepts seat=<seat> or <seat>); overrides `pactify config critic`; default off — the critic scores the diff but has no gating power")
 	return cmd

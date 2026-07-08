@@ -63,3 +63,14 @@ func execSessionRun(dir, name string, args ...string) (string, error) {
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
+
+// DefaultTransportModes returns the default per-kind transport routing.
+//
+// A/B verdict (orchestrator 2026-07-09, two isomorphic projects, full round):
+// ACP delivered the same result as cmd, recorded TOK usage in tokens.json, and
+// produced 18 audit records vs 0 for cmd. Equal delivery + better telemetry +
+// built-in audit → opencode defaults to ACP. The cmd transport remains available
+// via --transport opencode=cmd as an escape hatch.
+func DefaultTransportModes() map[string]string {
+	return map[string]string{"opencode": "acp"}
+}

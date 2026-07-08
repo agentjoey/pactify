@@ -78,6 +78,25 @@ func TestServeStinter_UnknownProject(t *testing.T) {
 	}
 }
 
+func TestServeStinter_UsesDefaultTransportModes(t *testing.T) {
+	dir := t.TempDir()
+	srv := New([]registry.Project{{Name: "demo", Path: dir}})
+	st, ok := srv.newStinter().(*serveStinter)
+	if !ok {
+		t.Fatalf("newStinter should return *serveStinter, got %T", srv.newStinter())
+	}
+	rr, ok := st.runner.(orchestrate.RoutedLocalRunner)
+	if !ok {
+		t.Fatalf("newStinter runner should be RoutedLocalRunner, got %T", st.runner)
+	}
+	if rr.Modes["opencode"] != "acp" {
+		t.Fatalf("opencode should default to acp, modes=%v", rr.Modes)
+	}
+	if rr.Cmd == nil || rr.Acp == nil {
+		t.Fatalf("RoutedLocalRunner must have both Cmd and Acp runners set")
+	}
+}
+
 // git runs a git command in dir (test helper).
 func gitRun(t *testing.T, dir string, args ...string) {
 	t.Helper()

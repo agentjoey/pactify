@@ -22,6 +22,8 @@ func opencodePluginPath(repoDir string) string {
 // hook forwards each tool call to `pactify audit hook --kind opencode` (best-
 // effort, never blocks the tool). Verified end-to-end against a real opencode run
 // (tool="write" args.filePath; bash args.command). Calls the `pactify` on PATH.
+// Note: this is only needed for the cmd-transport fallback; the ACP transport,
+// now the default, audits natively without the plugin.
 const opencodePlugin = `import type { Plugin } from "@opencode-ai/plugin"
 
 // Pactify audit plugin — forwards each opencode tool call to the Pactify

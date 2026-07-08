@@ -175,8 +175,11 @@ describe("App", () => {
     render(<App />);
     await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
 
-    // Pick the non-primary worktree from the header project menu.
+    // Pick the non-primary worktree from the header project menu. Worktrees are
+    // collapsed behind the per-project chevron by default, so expand first.
     await act(async () => { fireEvent.click(screen.getByTestId("project-menu-trigger")); });
+    await waitFor(() => expect(screen.getByTestId("worktree-toggle-demo")).toBeInTheDocument());
+    await act(async () => { fireEvent.click(screen.getByTestId("worktree-toggle-demo")); });
     await waitFor(() => expect(screen.getByTestId("worktree-demo-feat-x")).toBeInTheDocument());
     await act(async () => { fireEvent.click(screen.getByTestId("worktree-demo-feat-x")); });
 

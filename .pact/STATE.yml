@@ -757,7 +757,7 @@ features:
         evidence: AgentConfig cards auto-save (600ms debounce, hydration-guarded, blur flush) with Saving/Saved/error indicator replacing per-card Save buttons; tests updated to autosave assertions; web full suite + build green
   - id: opencode-acp-wiring
     branch: feat/opencode-acp-wiring
-    status: in_progress
+    status: shipped
     tasks:
       - id: opencode-acp-wiring
         owner: kimi-worker

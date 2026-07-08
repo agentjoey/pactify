@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ProjectMeta } from "../../lib/types";
 import type { Worktree } from "../../lib/api";
 
@@ -115,10 +115,28 @@ function ProjectEntry({
   onDelete: (name: string) => void;
   onSelectWorktree: (project: string, branch: string) => void;
 }) {
+  const [expanded, setExpanded] = useState(() => {
+    if (!currentWorktree || !worktrees || worktrees.length <= 1) return false;
+    return worktrees.some((w) => currentWorktree === w.branch);
+  });
+
+  const toggle = worktrees && worktrees.length > 1 ? (
+    <button
+      type="button"
+      data-testid={`worktree-toggle-${p.name}`}
+      aria-label={`show worktrees for ${p.name}`}
+      aria-expanded={expanded}
+      className="px-1 text-[10px] text-[var(--color-text-3)] hover:text-[var(--color-text-1)]"
+      onClick={() => setExpanded((e) => !e)}
+    >
+      {expanded ? `▾ ${worktrees.length}` : `▸ ${worktrees.length}`}
+    </button>
+  ) : null;
+
   return (
     <div>
-      <ProjectRow p={p} running={running} onSelect={onSelect} onRename={onRename} onDelete={onDelete} />
-      {worktrees && worktrees.length > 1 && (
+      <ProjectRow p={p} running={running} onSelect={onSelect} onRename={onRename} onDelete={onDelete} extra={toggle} />
+      {expanded && worktrees && worktrees.length > 1 && (
         <div className="ml-4 border-l border-[var(--color-border-subtle)] pl-1">
           {worktrees.map((w) => (
             <button
@@ -140,13 +158,14 @@ function ProjectEntry({
 }
 
 function ProjectRow({
-  p, running, onSelect, onRename, onDelete,
+  p, running, onSelect, onRename, onDelete, extra,
 }: {
   p: ProjectMeta;
   running: boolean;
   onSelect: (name: string) => void;
   onRename: (name: string) => void;
   onDelete: (name: string) => void;
+  extra?: ReactNode;
 }) {
   return (
     <div className="group flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[12px] hover:bg-white/5">
@@ -159,6 +178,7 @@ function ProjectRow({
         ].join(" ")}
       />
       <button type="button" className="flex-1 text-left" onClick={() => onSelect(p.id)}>{p.name}</button>
+      {extra}
       <button type="button" aria-label={`rename ${p.name}`} className="px-1 opacity-0 group-hover:opacity-100" onClick={() => onRename(p.name)}>✎</button>
       <button type="button" aria-label={`delete ${p.name}`} className="px-1 opacity-0 group-hover:opacity-100" onClick={() => onDelete(p.name)}>🗑</button>
     </div>

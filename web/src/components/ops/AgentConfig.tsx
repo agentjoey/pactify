@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getAgents, getAgentConfig, setAgentConfig, type AgentConfig as Config } from "../../lib/api";
 import { Badge } from "../ui/Badge";
-import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Alert } from "../ui/Alert";
 import { EmptyState } from "../ui/EmptyState";
 import { Spinner } from "../ui/Spinner";
 import { AgentLogo } from "../../lib/agentLogos";
+
+function arraysEqual(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
 
 // AgentConfig (#10 model / #9 permission posture / #4 scoped tools) — per
 // registered agent, edit the model pin and the permission posture orchestrate
@@ -75,10 +79,13 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState(false);
+  const [savedVisible, setSavedVisible] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   // customMode: the model dropdown's "custom…" branch is active — the loaded
   // model isn't one of the curated candidates (or the user picked custom),
   // so the free-text field is shown.
   const [customMode, setCustomMode] = useState(false);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function apply(c: Config) {
     setCfg(c);
@@ -90,14 +97,72 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
   }
 
   useEffect(() => {
-    getAgentConfig(kind).then(apply).catch(() => setErr("load failed"));
+    getAgentConfig(kind)
+      .then((c) => {
+        apply(c);
+        setHydrated(true);
+      })
+      .catch(() => setErr("load failed"));
   }, [kind]);
 
-  const save = async () => {
+  const save = async (payload: { model: string; restricted: boolean; allowed_tools: string[] }) => {
     setSaving(true);
     setErr("");
     try {
-      const c = await setAgentConfig(kind, {
+      const c = await setAgentConfig(kind, payload);
+      apply(c);
+      setSaved(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!saved) return;
+    setSavedVisible(true);
+    const fade = setTimeout(() => setSavedVisible(false), 1500);
+    const hide = setTimeout(() => setSaved(false), 2000);
+    return () => {
+      clearTimeout(fade);
+      clearTimeout(hide);
+    };
+  }, [saved]);
+
+  useEffect(() => {
+    if (!hydrated || !cfg) return;
+    const payload = {
+      model: model.trim(),
+      restricted,
+      allowed_tools: tools
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    };
+    const unchanged =
+      payload.model === cfg.model &&
+      payload.restricted === cfg.restricted &&
+      arraysEqual(payload.allowed_tools, cfg.allowed_tools ?? []);
+    if (unchanged) return;
+
+    autosaveTimer.current = setTimeout(() => {
+      autosaveTimer.current = null;
+      save(payload);
+    }, 600);
+    return () => {
+      if (autosaveTimer.current) {
+        clearTimeout(autosaveTimer.current);
+        autosaveTimer.current = null;
+      }
+    };
+  }, [hydrated, cfg, model, restricted, tools]);
+
+  const flushSave = () => {
+    if (autosaveTimer.current) {
+      clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = null;
+      save({
         model: model.trim(),
         restricted,
         allowed_tools: tools
@@ -105,13 +170,6 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
           .map((t) => t.trim())
           .filter(Boolean),
       });
-      apply(c);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "save failed");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -150,6 +208,24 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
           </Badge>
         )}
         {!cfg && <Spinner size="xs" />}
+        {cfg && cfg.drivable && (
+          <div data-testid="autosave-state" className="ml-auto text-[11px] font-medium">
+            {err ? (
+              <span className="text-red-400">{err}</span>
+            ) : saving ? (
+              <span className="text-[var(--color-text-3)]">Saving…</span>
+            ) : saved ? (
+              <span
+                className={[
+                  "text-[#6ee7a0] transition-opacity duration-500",
+                  savedVisible ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+              >
+                Saved ✓
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {cfg && cfg.drivable && (
@@ -259,6 +335,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
               data-testid={`tools-${kind}`}
               value={tools}
               onChange={(e) => setTools(e.target.value)}
+              onBlur={flushSave}
               placeholder="Read, Edit, Bash"
               className="min-w-[140px] flex-1 border-dashed border-[rgba(255,255,255,0.16)] bg-transparent text-xs placeholder:text-[var(--color-text-3)]"
             />
@@ -267,23 +344,18 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       )}
 
       {cfg && cfg.drivable && (
-        <div className="mt-3 flex items-center gap-2">
-          <Button size="sm" loading={saving} onClick={save}>
-            {saved ? "Saved ✓" : "Save"}
-          </Button>
-          {/* Keep the legacy scoped toggle so existing tests that target
-              `scoped-${kind}` continue to flip the posture. */}
-          <button
-            type="button"
-            data-testid={`scoped-${kind}`}
-            aria-pressed={restricted}
-            onClick={() => setRestricted((s) => !s)}
-            className="sr-only"
-            tabIndex={-1}
-          >
-            {restricted ? "scoped" : "blanket"}
-          </button>
-        </div>
+        // Keep the legacy scoped toggle so existing tests that target
+        // `scoped-${kind}` continue to flip the posture.
+        <button
+          type="button"
+          data-testid={`scoped-${kind}`}
+          aria-pressed={restricted}
+          onClick={() => setRestricted((s) => !s)}
+          className="sr-only"
+          tabIndex={-1}
+        >
+          {restricted ? "scoped" : "blanket"}
+        </button>
       )}
 
       {err && (

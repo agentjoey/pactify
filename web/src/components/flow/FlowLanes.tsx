@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FlowModel, FlowStint, FlowArrow } from "../../lib/flowderive";
+import { liveStates, type FlowModel, type FlowStint, type FlowArrow } from "../../lib/flowderive";
 import type { State } from "../../lib/types";
 
 const LANE_H = 64;
@@ -106,15 +106,7 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
     return arr;
   }, [model.tMin, model.tMax]);
 
-  const liveByAgent = useMemo(() => {
-    const m = new Map<string, { kind: FlowStint["kind"]; task: string }>();
-    for (const s of model.stints) {
-      if (s.t1 === null && !m.has(s.agent)) {
-        m.set(s.agent, { kind: s.kind, task: s.task });
-      }
-    }
-    return m;
-  }, [model.stints]);
+  const liveMap = useMemo(() => liveStates(model), [model]);
 
   function laneY(i: number): number {
     return HEADER_H + i * LANE_H + LANE_H / 2;
@@ -142,7 +134,9 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
           Seat
         </div>
         {laneOrder.map((a) => {
-          const live = liveByAgent.get(a.id);
+          const live = liveMap[a.id] ?? { kind: "idle" };
+          const liveLabel =
+            live.kind === "work" ? "working" : live.kind === "review" ? "reviewing" : live.kind;
           return (
             <div
               key={a.id}
@@ -159,7 +153,7 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
                 <span className="truncate text-[11.5px] font-medium text-[var(--color-text-1)]">{a.id}</span>
                 <span className="text-[10px] text-[var(--color-text-3)]">{roleLabel(a.roles)}</span>
               </div>
-              {live ? (
+              {live.kind !== "idle" ? (
                 <span
                   className="ml-auto rounded-full px-1.5 py-px text-[9.5px] font-medium"
                   style={{
@@ -168,7 +162,7 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
                     border: `1px solid color-mix(in srgb, ${stintFill(live.kind)} 30%, transparent)`,
                   }}
                 >
-                  {live.kind === "work" ? "working" : live.kind}
+                  {liveLabel}
                 </span>
               ) : (
                 <span

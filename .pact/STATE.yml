@@ -855,3 +855,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/flow-view.md
         evidence: Board|Flow main-view toggle (localStorage) + FlowView shell w/ 3 mode tabs + FlowLanes SVG renderer over deriveFlow (stints/arrows incl. red changes arc/merge diamonds/gap marks/join dots, live chips, click-through onSelect, empty state); feed/office placeholders. Reviewer live-verified against real ledger (111-event project renders correctly). web 498 green + tsc + build. F3 note: time-ruler tick overlap under compression
+  - id: flow-renderers
+    branch: feat/flow-renderers
+    status: in_progress
+    tasks:
+      - id: flow-renderers
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/flow-renderers.md
+        evidence: FlowFeed (verb-colored message cards w/ task ids + live seat chips + click-through + autoscroll) and FlowOffice (desk cards w/ role/live-state/event-count, main-merges banner, 3-line fading ticker) replace placeholders; liveStates extracted to flowderive shared by Lanes. Reviewer fixes: dead roleLabel (strict build), feed cards were missing task ids (added). Live-verified on real 111-event ledger: all three renderers correct. web 506 green + build

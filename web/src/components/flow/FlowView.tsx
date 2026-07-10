@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { State, PactEvent } from "../../lib/types";
 import { deriveFlow } from "../../lib/flowderive";
 import { FlowLanes } from "./FlowLanes";
+import { FlowFeed } from "./FlowFeed";
+import { FlowOffice } from "./FlowOffice";
 
 const STORAGE_KEY = "pactify:flowMode";
 type FlowMode = "lanes" | "feed" | "office";
@@ -49,12 +51,14 @@ export function FlowView({ state, events, selected, onSelect }: FlowViewProps) {
         </div>
       </div>
 
-      {mode === "lanes" ? (
+      {mode === "lanes" && (
         <FlowLanes model={model} agents={state.agents} selected={selected} onSelect={onSelect} />
-      ) : (
-        <div className="grid flex-1 place-items-center text-sm text-[var(--color-text-2)]">
-          {mode === "feed" ? "会话流渲染器 — 下一任务" : "办公室渲染器 — 下一任务"}
-        </div>
+      )}
+      {mode === "feed" && (
+        <FlowFeed events={events} agents={state.agents} selected={selected} onSelect={onSelect} />
+      )}
+      {mode === "office" && (
+        <FlowOffice events={events} agents={state.agents} onSelect={onSelect} />
       )}
     </div>
   );

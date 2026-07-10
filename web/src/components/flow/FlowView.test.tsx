@@ -35,23 +35,23 @@ describe("FlowView", () => {
     expect(screen.getByText("bob")).toBeInTheDocument();
   });
 
-  it("switches to feed placeholder and remembers the mode in localStorage", () => {
+  it("switches to feed renderer and remembers the mode in localStorage", () => {
     render(<FlowView state={state} events={events} project="demo" selected="" onSelect={() => {}} />);
     fireEvent.click(screen.getByTestId("flow-tab-feed"));
-    expect(screen.getByText("会话流渲染器 — 下一任务")).toBeInTheDocument();
+    expect(screen.getByTestId("flow-msg-join")).toBeInTheDocument();
     expect(localStorage.getItem("pactify:flowMode")).toBe("feed");
   });
 
-  it("switches to office placeholder", () => {
+  it("switches to office renderer", () => {
     render(<FlowView state={state} events={events} project="demo" selected="" onSelect={() => {}} />);
     fireEvent.click(screen.getByTestId("flow-tab-office"));
-    expect(screen.getByText("办公室渲染器 — 下一任务")).toBeInTheDocument();
+    expect(screen.getByTestId("flow-office-main")).toBeInTheDocument();
   });
 
   it("restores the saved flow mode from localStorage", () => {
     localStorage.setItem("pactify:flowMode", "office");
     render(<FlowView state={state} events={events} project="demo" selected="" onSelect={() => {}} />);
-    expect(screen.getByText("办公室渲染器 — 下一任务")).toBeInTheDocument();
+    expect(screen.getByTestId("flow-office-main")).toBeInTheDocument();
   });
 
   it("forwards task selection from a stint click", () => {

@@ -817,7 +817,7 @@ features:
         evidence: join carries protocol_version and fail-fasts when project major exceeds client (upgrade pactify error); projectProtocolVersion helper shared with validateLog; schema additive; versionless legacy projects still join. Live-verified both paths; go test ./internal/pact/ + schemas.bats 9/9 + full repo green. capabilities[] deferred (no consumer)
   - id: mcp-envelope
     branch: feat/mcp-envelope
-    status: in_progress
+    status: shipped
     tasks:
       - id: mcp-envelope
         owner: kimi-worker

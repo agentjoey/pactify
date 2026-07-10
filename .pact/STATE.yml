@@ -871,7 +871,7 @@ features:
     tasks:
       - id: flow-polish
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/flow-polish.md
         evidence: tAt inverse mapping + x-space even ticks (skip in-gap); fixed pre-existing buildX non-monotonic in-gap bug; stint in-bar labels (truncate, never stretch) + full titles (start/end/duration, gap real-idle titles); zoom x1/x2/x4 + near-right-edge auto-follow; idle lane fold (all-idle guard). tsc clean, vitest 516/516, build green, playwright shots verified x1/x2/pan

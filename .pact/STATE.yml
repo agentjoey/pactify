@@ -805,3 +805,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/codex-exec-resume.md
         evidence: codex worker retries resume via exec resume <thread_id> (captured from --json thread.started into sessions.json); failed resume self-heals (RemoveSession -> next run cold). resume takes --json but NOT --sandbox (sandbox persists with session; self-heal covers regressions). Reviewer fixed 2 self-contradictory test assertions (RecordSession replaces by seat+task; run-3 success records fresh id). REAL proof: resume recalled PINEAPPLE-42 across runs. -race green
+  - id: join-handshake
+    branch: feat/join-handshake
+    status: in_progress
+    tasks:
+      - id: join-handshake
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/join-handshake.md
+        evidence: join carries protocol_version and fail-fasts when project major exceeds client (upgrade pactify error); projectProtocolVersion helper shared with validateLog; schema additive; versionless legacy projects still join. Live-verified both paths; go test ./internal/pact/ + schemas.bats 9/9 + full repo green. capabilities[] deferred (no consumer)

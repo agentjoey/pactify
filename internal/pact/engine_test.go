@@ -99,6 +99,62 @@ func TestJoinFailsClosedWithoutAgentID(t *testing.T) {
 	}
 }
 
+func TestJoinPayloadIncludesProtocolVersion(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	if err := Join("opencode", "worker"); err != nil {
+		t.Fatalf("join failed: %v", err)
+	}
+	evs, _ := event.ReadAll(".pact/log.jsonl")
+	var joinPV int
+	for _, e := range evs {
+		if e.EventType == "join" {
+			pv, _ := e.Payload["protocol_version"].(float64)
+			joinPV = int(pv)
+		}
+	}
+	if joinPV != 1 {
+		t.Fatalf("join payload protocol_version = %d, want 1", joinPV)
+	}
+}
+
+func TestJoinFailsClosedOnHigherProtocolMajor(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	b, _ := os.ReadFile(".pact/log.jsonl")
+	out := strings.Replace(string(b), `"protocol_version":1`, `"protocol_version":99`, 1)
+	os.WriteFile(".pact/log.jsonl", []byte(out), 0o644)
+	if err := LogReplay(); err != nil {
+		t.Fatalf("replay tampered log: %v", err)
+	}
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	if err := Join("opencode", "worker"); err == nil {
+		t.Fatal("join must fail closed on higher major")
+	} else if !strings.Contains(err.Error(), "upgrade pactify") {
+		t.Fatalf("error %q must mention upgrade pactify", err)
+	}
+}
+
+func TestJoinCompatibleWithLegacyNoProtocolVersion(t *testing.T) {
+	newRepo(t)
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	Init("p", []string{"claude-opus:orchestrator,reviewer:CLAUDE.md", "opencode:worker:AGENTS.md"})
+	b, _ := os.ReadFile(".pact/log.jsonl")
+	// Remove protocol_version key entirely to simulate a pre-version log.
+	out := strings.Replace(string(b), `,"protocol_version":1`, "", 1)
+	os.WriteFile(".pact/log.jsonl", []byte(out), 0o644)
+	if err := LogReplay(); err != nil {
+		t.Fatalf("replay legacy log: %v", err)
+	}
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	if err := Join("opencode", "worker"); err != nil {
+		t.Fatalf("join on legacy no-protocol_version log should succeed: %v", err)
+	}
+}
+
 func TestAssignCreatesTask(t *testing.T) {
 	newRepo(t)
 	t.Setenv("PACT_AGENT_ID", "claude-opus")

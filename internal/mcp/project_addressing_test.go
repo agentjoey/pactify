@@ -48,8 +48,9 @@ func TestProjectAddressingByName(t *testing.T) {
 	}
 	// Unknown name fails with a discoverable list.
 	res, _ := cs.CallTool(context.Background(), &sdk.CallToolParams{Name: "status", Arguments: map[string]any{"project": "nope"}})
-	if !res.IsError || !strings.Contains(toolText(res), "beta") {
-		t.Fatalf("unknown project should error and list known names: %q", toolText(res))
+	env := parseResult(t, res)
+	if env.OK || !res.IsError || !strings.Contains(env.Error, "beta") {
+		t.Fatalf("unknown project should error and list known names: %+v", env)
 	}
 	// The projects tool advertises what can be addressed.
 	if got := callOK(t, cs, "projects", map[string]any{}); !strings.Contains(got, "beta") {

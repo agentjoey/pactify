@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,18 +69,30 @@ func toolText(res *sdk.CallToolResult) string {
 	return b.String()
 }
 
+// resultEnv is the machine-readable envelope returned by every pactify MCP tool.
+type resultEnv struct {
+	OK    bool   `json:"ok"`
+	Data  string `json:"data"`
+	Error string `json:"error"`
+}
+
+// parseResult unmarshals the tool result's JSON envelope.
+func parseResult(t *testing.T, res *sdk.CallToolResult) resultEnv {
+	t.Helper()
+	text := toolText(res)
+	var env resultEnv
+	if err := json.Unmarshal([]byte(text), &env); err != nil {
+		t.Fatalf("tool result is not a valid JSON envelope: %v\nresult: %q", err, text)
+	}
+	return env
+}
+
 func TestStatusTool(t *testing.T) {
 	newRepo(t)
 	cs := connect(t)
-	res, err := cs.CallTool(context.Background(), &sdk.CallToolParams{Name: "status", Arguments: map[string]any{}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.IsError {
-		t.Fatalf("status errored: %s", toolText(res))
-	}
-	if !strings.Contains(toolText(res), "project: p") {
-		t.Fatalf("status text: %q", toolText(res))
+	data := callOK(t, cs, "status", map[string]any{})
+	if !strings.Contains(data, "project: p") {
+		t.Fatalf("status data: %q", data)
 	}
 }
 
@@ -89,10 +102,11 @@ func callOK(t *testing.T, cs *sdk.ClientSession, name string, args map[string]an
 	if err != nil {
 		t.Fatalf("%s transport error: %v", name, err)
 	}
-	if res.IsError {
-		t.Fatalf("%s tool error: %s", name, toolText(res))
+	env := parseResult(t, res)
+	if !env.OK {
+		t.Fatalf("%s tool error: %s", name, env.Error)
 	}
-	return toolText(res)
+	return env.Data
 }
 
 func callErr(t *testing.T, cs *sdk.ClientSession, name string, args map[string]any) string {
@@ -101,10 +115,17 @@ func callErr(t *testing.T, cs *sdk.ClientSession, name string, args map[string]a
 	if err != nil {
 		t.Fatalf("%s transport error: %v", name, err)
 	}
-	if !res.IsError {
-		t.Fatalf("%s should have errored, got: %s", name, toolText(res))
+	env := parseResult(t, res)
+	if env.OK {
+		t.Fatalf("%s should have errored, got data: %s", name, env.Data)
 	}
-	return toolText(res)
+	if !res.IsError {
+		t.Fatalf("%s should have set IsError, got: %+v", name, env)
+	}
+	if env.Error == "" {
+		t.Fatalf("%s error envelope missing error text: %+v", name, env)
+	}
+	return env.Error
 }
 
 func TestFullLifecycleViaMCP(t *testing.T) {
@@ -240,5 +261,50 @@ func TestLogChangeNotifiesSubscribers(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("no resource-updated notification within 3s")
+	}
+}
+
+// TestEnvelopeSuccessShape verifies that a successful tool call returns
+// {"ok":true,"data":...} with IsError=false.
+func TestEnvelopeSuccessShape(t *testing.T) {
+	newRepo(t)
+	cs := connect(t)
+	res, err := cs.CallTool(context.Background(), &sdk.CallToolParams{Name: "status", Arguments: map[string]any{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := parseResult(t, res)
+	if !env.OK {
+		t.Fatalf("expected ok=true, got error: %s", env.Error)
+	}
+	if env.Data == "" {
+		t.Fatalf("expected non-empty data")
+	}
+	if !strings.Contains(env.Data, "project: p") {
+		t.Fatalf("data should contain expected status text: %q", env.Data)
+	}
+	if res.IsError {
+		t.Fatalf("success envelope should not set IsError")
+	}
+}
+
+// TestEnvelopeErrorShape verifies that a failed tool call returns
+// {"ok":false,"error":...} with IsError=true (and no Go transport error).
+func TestEnvelopeErrorShape(t *testing.T) {
+	newRepo(t)
+	cs := connect(t)
+	res, err := cs.CallTool(context.Background(), &sdk.CallToolParams{Name: "status", Arguments: map[string]any{"project": "does-not-exist"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := parseResult(t, res)
+	if env.OK {
+		t.Fatalf("expected ok=false for unknown project, got data: %s", env.Data)
+	}
+	if env.Error == "" {
+		t.Fatalf("expected non-empty error")
+	}
+	if !res.IsError {
+		t.Fatalf("error envelope must set IsError")
 	}
 }

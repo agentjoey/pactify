@@ -865,3 +865,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/flow-renderers.md
         evidence: FlowFeed (verb-colored message cards w/ task ids + live seat chips + click-through + autoscroll) and FlowOffice (desk cards w/ role/live-state/event-count, main-merges banner, 3-line fading ticker) replace placeholders; liveStates extracted to flowderive shared by Lanes. Reviewer fixes: dead roleLabel (strict build), feed cards were missing task ids (added). Live-verified on real 111-event ledger: all three renderers correct. web 506 green + build
+  - id: flow-polish
+    branch: feat/flow-polish
+    status: in_progress
+    tasks:
+      - id: flow-polish
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/flow-polish.md
+        evidence: tAt inverse mapping + x-space even ticks (skip in-gap); fixed pre-existing buildX non-monotonic in-gap bug; stint in-bar labels (truncate, never stretch) + full titles (start/end/duration, gap real-idle titles); zoom x1/x2/x4 + near-right-edge auto-follow; idle lane fold (all-idle guard). tsc clean, vitest 516/516, build green, playwright shots verified x1/x2/pan

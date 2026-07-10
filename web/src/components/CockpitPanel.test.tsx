@@ -171,8 +171,14 @@ describe("CockpitPanel", () => {
     await waitFor(() => expect(screen.getByTestId("cockpit-resume")).toBeInTheDocument());
     expect(screen.getByTestId("cockpit-resume")).toHaveTextContent("Previous session available — Resume");
 
+    // A successful resume bumps streamKey → the effect reconnects with a NEW
+    // EventSource. Wait for that reconnect INSIDE the test: ending after only
+    // "cockpitResume was called" lets the async continuation run post-afterEach
+    // (EventSource already unstubbed) and the ReferenceError gets attributed here.
+    const prevES = lastES;
     fireEvent.click(screen.getByTestId("cockpit-resume-button"));
     await waitFor(() => expect(cockpitResume).toHaveBeenCalledWith("p1", "claude"));
+    await waitFor(() => expect(lastES).not.toBe(prevES));
   });
 
   it("hides the resume banner once stream content arrives", async () => {

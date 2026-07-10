@@ -795,3 +795,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-resume.md
         evidence: cross-restart cockpit resume: threads.json (atomic 0o600) via NoteThread/StoredThread; Manager.Resume reuses wrapSessionLocked; serve resumable flag + POST cockpit/resume; panel Resume button. Pending-approval contract documented (dies with process). -race + web 480 + build green
+  - id: codex-exec-resume
+    branch: feat/codex-exec-resume
+    status: in_progress
+    tasks:
+      - id: codex-exec-resume
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/codex-exec-resume.md
+        evidence: codex worker retries resume via exec resume <thread_id> (captured from --json thread.started into sessions.json); failed resume self-heals (RemoveSession -> next run cold). resume takes --json but NOT --sandbox (sandbox persists with session; self-heal covers regressions). Reviewer fixed 2 self-contradictory test assertions (RecordSession replaces by seat+task; run-3 success records fresh id). REAL proof: resume recalled PINEAPPLE-42 across runs. -race green

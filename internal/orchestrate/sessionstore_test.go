@@ -184,3 +184,36 @@ func TestSessionStoreConcurrentWrites(t *testing.T) {
 func taskName(seat string, i int) string {
 	return seat + "-t" + string(rune('0'+i/10)) + string(rune('0'+i%10))
 }
+
+// RemoveSession drops only the row matching (seat,task,kind); other rows and
+// other kinds for the same (seat,task) are left intact.
+func TestRemoveSession(t *testing.T) {
+	dir := t.TempDir()
+	// RecordSession keys by (seat,task) — a later record REPLACES kind+id.
+	_ = RecordSession(dir, "w", "t1", "codex-cli", "s-codex")
+	_ = RecordSession(dir, "w", "t2", "codex-cli", "s-other")
+
+	if err := RemoveSession(dir, "w", "t1", "codex-cli"); err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	if _, ok := LookupSession(dir, "w", "t1"); ok {
+		t.Fatal("codex-cli record should be removed")
+	}
+	if _, ok := LookupSession(dir, "w", "t2"); !ok {
+		t.Fatal("unrelated task record should survive")
+	}
+
+	// Kind-scoped: a row whose kind differs is NOT removed.
+	_ = RecordSession(dir, "w", "t1", "kimi-cli", "s-kimi")
+	if err := RemoveSession(dir, "w", "t1", "codex-cli"); err != nil {
+		t.Fatalf("remove other-kind: %v", err)
+	}
+	if id, ok := LookupSession(dir, "w", "t1"); !ok || id != "s-kimi" {
+		t.Fatalf("kimi row must survive kind-scoped remove, got %q ok=%v", id, ok)
+	}
+
+	// Removing a missing (seat,task,kind) is a no-op.
+	if err := RemoveSession(dir, "w", "t1", "codex-cli"); err != nil {
+		t.Fatalf("remove missing: %v", err)
+	}
+}

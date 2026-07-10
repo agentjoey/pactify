@@ -2,6 +2,7 @@ package orchestrate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -137,7 +138,16 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	}
 
 	args := make([]string, len(eff.Args))
-	for i, a := range eff.Args {
+	copy(args, eff.Args)
+
+	// codex retry-resume: if a previous successful stint recorded a thread id for
+	// this (seat,task), switch from a cold `exec` to `exec resume <id>`.
+	resumed := false
+	if lc.Kind == "codex-cli" {
+		args, resumed = codexResumeArgsIfAny(lc, args)
+	}
+
+	for i, a := range args {
 		switch a {
 		case briefingPlaceholder:
 			args[i] = lc.Briefing
@@ -145,8 +155,6 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 			// A custom-agent manifest with identity.via=arg carries {seat} in its
 			// argv; substitute the acting seat id at exec (built-in kinds never emit it).
 			args[i] = lc.Seat
-		default:
-			args[i] = a
 		}
 	}
 
@@ -224,6 +232,20 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	}
 	err = r.Exec(ctx, eff.Command, args, lc.RepoDir, env, capture)
 	recordTokens(lc, cap.String())
+
+	// codex session lifecycle: capture the thread id on a successful cold run so a
+	// future retry can resume; if a resume attempt itself fails, delete the stale
+	// record so the next retry falls back to a cold start (self-healing).
+	if lc.Kind == "codex-cli" && lc.Task != "" {
+		if err != nil && resumed {
+			_ = RemoveSession(lc.RepoDir, lc.Seat, lc.Task, "codex-cli")
+		} else if err == nil {
+			if id := parseCodexThreadID(cap.String()); id != "" {
+				_ = RecordSession(lc.RepoDir, lc.Seat, lc.Task, "codex-cli", id)
+			}
+		}
+	}
+
 	return err
 }
 
@@ -262,6 +284,76 @@ func recordTaskTokens(repoDir, task string, n int) {
 	s := tokens.Load(repoDir)
 	s.Add(task, n)
 	_ = tokens.Save(repoDir, s)
+}
+
+// parseCodexThreadID scans codex's JSONL stdout for the first
+// `{"type":"thread.started","thread_id":"..."}` line and returns the thread id.
+// The headless `codex exec --json` run emits this on its first line, but the
+// scanner is tolerant of leading/trailing noise.
+func parseCodexThreadID(output string) string {
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var ev struct {
+			Type     string `json:"type"`
+			ThreadID string `json:"thread_id"`
+		}
+		if err := json.Unmarshal([]byte(line), &ev); err != nil {
+			continue
+		}
+		if ev.Type == "thread.started" && ev.ThreadID != "" {
+			return ev.ThreadID
+		}
+	}
+	return ""
+}
+
+// codexResumeArgsIfAny returns resume-form argv when a prior codex session for
+// (seat,task) is stored; otherwise it returns base unchanged. The bool reports
+// whether a resume was selected.
+func codexResumeArgsIfAny(lc LaunchContext, base []string) ([]string, bool) {
+	if lc.Task == "" {
+		return base, false
+	}
+	recs, err := LoadSessions(lc.RepoDir)
+	if err != nil {
+		return base, false
+	}
+	for _, r := range recs {
+		if r.Seat == lc.Seat && r.Task == lc.Task && r.Kind == "codex-cli" && r.SessionID != "" {
+			return codexResumeArgs(base, r.SessionID), true
+		}
+	}
+	return base, false
+}
+
+// codexResumeArgs converts a cold `codex exec ...` argv into a resume argv. The
+// `resume` subcommand does not accept --sandbox (the session already carries the
+// original policy), so that flag and its value are stripped; --json and -m are
+// preserved.
+func codexResumeArgs(base []string, threadID string) []string {
+	if len(base) == 0 || base[0] != "exec" {
+		// Defensive fallback for an unexpected base shape.
+		return append([]string{"resume", threadID}, base...)
+	}
+	out := make([]string, 0, len(base)+2)
+	out = append(out, "exec", "resume", threadID)
+	for i := 1; i < len(base); i++ {
+		a := base[i]
+		if a == "--sandbox" {
+			if i+1 < len(base) {
+				i++
+			}
+			continue
+		}
+		if strings.HasPrefix(a, "--sandbox=") {
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
 }
 
 // tailWriter keeps only the last max bytes written to it. Splicing it into the

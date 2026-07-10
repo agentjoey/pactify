@@ -29,7 +29,7 @@ func (b *testCockpitBackend) Start(ctx context.Context, opts cockpit.StartOpts) 
 }
 
 func (b *testCockpitBackend) Resume(ctx context.Context, threadID string) (cockpit.Session, error) {
-	return b.sess, nil
+	return cockpit.NewFakeSession(threadID), nil
 }
 
 func newCockpitTestServer(t *testing.T) (*Server, *cockpit.FakeSession, string) {
@@ -357,6 +357,73 @@ func TestCockpitCapableKindIncludesOpencode(t *testing.T) {
 	}
 	if cockpitCapableKind("unknown-kind") {
 		t.Fatal("unknown kind must not be cockpit-capable")
+	}
+}
+
+func TestCockpitStatusResumable(t *testing.T) {
+	srv, _, dir := newCockpitTestServer(t)
+	h := srv.Handler()
+
+	// Register the seat as a deep-integration kind so the capability pre-flight
+	// reports capable when there is no live session.
+	_ = os.MkdirAll(filepath.Join(dir, ".pact"), 0o755)
+	logPath := filepath.Join(dir, ".pact", "log.jsonl")
+	initLine := `{"event_type":"init","agent_id":"orchestrator","payload":{"project":"p","seats":[{"id":"claude","kind":"claude-code"}]}}`
+	if err := os.WriteFile(logPath, []byte(initLine+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	key := cockpit.SessionKey{Project: "p", Seat: "claude"}
+	srv.cockpit.NoteThread(key, "stored-thread")
+
+	rr := getCockpit(t, h, "/api/projects/p/cockpit/status?seat=claude")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: %d %s", rr.Code, rr.Body.String())
+	}
+	var st cockpitStatusDTO
+	if err := json.Unmarshal(rr.Body.Bytes(), &st); err != nil {
+		t.Fatal(err)
+	}
+	if !st.Capable {
+		t.Fatal("expected capable true")
+	}
+	if !st.Resumable {
+		t.Fatal("expected resumable true when a thread is stored but no live session")
+	}
+}
+
+func TestCockpitResumeEndpoint(t *testing.T) {
+	srv, _, _ := newCockpitTestServer(t)
+	h := srv.Handler()
+
+	key := cockpit.SessionKey{Project: "p", Seat: "claude"}
+	srv.cockpit.NoteThread(key, "stored-thread")
+
+	rr := postCockpit(t, h, "/api/projects/p/cockpit/resume", map[string]string{"seat": "claude"})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("resume: %d %s", rr.Code, rr.Body.String())
+	}
+	var resp cockpitResumeResp
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.OK || resp.ThreadID != "stored-thread" {
+		t.Fatalf("unexpected response: %+v", resp)
+	}
+
+	// A session now exists.
+	if _, ok := srv.cockpit.Get(key); !ok {
+		t.Fatal("expected live session after resume")
+	}
+}
+
+func TestCockpitResumeNothingStored(t *testing.T) {
+	srv, _, _ := newCockpitTestServer(t)
+	h := srv.Handler()
+
+	rr := postCockpit(t, h, "/api/projects/p/cockpit/resume", map[string]string{"seat": "claude"})
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d %s", rr.Code, rr.Body.String())
 	}
 }
 

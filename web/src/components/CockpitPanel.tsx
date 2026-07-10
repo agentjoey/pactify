@@ -53,8 +53,10 @@ export function CockpitPanel({
   const [threadId, setThreadId] = useState("");
   const [capable, setCapable] = useState(true);
   const [capableReason, setCapableReason] = useState("");
+  const [resumable, setResumable] = useState(false);
   const [runningTool, setRunningTool] = useState<string | null>(null);
   const [statusFailures, setStatusFailures] = useState(0);
+  const [streamKey, setStreamKey] = useState(0);
   const panelRef = useRef<HTMLElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const rowId = useRef(0);
@@ -69,6 +71,7 @@ export function CockpitPanel({
       setThreadId(st.threadId ?? "");
       setCapable(st.capable ?? true);
       setCapableReason(st.reason ?? "");
+      setResumable(st.resumable ?? false);
       setStatusFailures(0);
     } catch {
       setStatusFailures((f) => f + 1);
@@ -133,7 +136,7 @@ export function CockpitPanel({
     };
     return () => es.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, seat, src.cockpitStreamUrl]);
+  }, [project, seat, src.cockpitStreamUrl, streamKey]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -193,6 +196,25 @@ export function CockpitPanel({
       await loadStatus();
     } catch {
       // best-effort
+    }
+  };
+
+  const resume = async () => {
+    if (!src.cockpitResume) return;
+    setBusy(true);
+    setError("");
+    try {
+      const resp = await src.cockpitResume(project, seat);
+      if (resp.threadId) {
+        setThreadId(resp.threadId);
+      }
+      setResumable(false);
+      setStreamKey((k) => k + 1);
+      await loadStatus();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -316,6 +338,24 @@ export function CockpitPanel({
             }`}
           >
             {!capable ? capableReason : "Status unavailable — retrying…"}
+          </div>
+        )}
+
+        {capable && resumable && messages.length === 0 && systemRows.length === 0 && (
+          <div
+            data-testid="cockpit-resume"
+            className="shrink-0 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-3 py-2 text-[11px] text-[var(--color-text-2)]"
+          >
+            Previous session available —{" "}
+            <button
+              type="button"
+              data-testid="cockpit-resume-button"
+              onClick={resume}
+              disabled={busy}
+              className="font-[650] text-[var(--color-role-design)] hover:underline disabled:opacity-50"
+            >
+              Resume
+            </button>
           </div>
         )}
 

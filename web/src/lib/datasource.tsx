@@ -82,6 +82,7 @@ export interface DataSource {
     decision: "allow" | "deny",
   ): Promise<void>;
   cockpitCancel?(project: string, seat: string): Promise<void>;
+  cockpitResume?(project: string, seat: string): Promise<{ ok: boolean; threadId: string }>;
   cockpitStatus?(project: string, seat: string): Promise<CockpitStatus>;
   cockpitStreamUrl?(project: string, seat: string): string;
 }
@@ -206,6 +207,10 @@ export class LocalServeSource implements DataSource {
 
   cockpitCancel(project: string, seat: string): Promise<void> {
     return api.cockpitCancel(project, seat);
+  }
+
+  cockpitResume(project: string, seat: string): Promise<{ ok: boolean; threadId: string }> {
+    return api.cockpitResume(project, seat);
   }
 
   cockpitStatus(project: string, seat: string): Promise<CockpitStatus> {

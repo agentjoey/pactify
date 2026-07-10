@@ -436,9 +436,25 @@ export async function cockpitCancel(project: string, seat: string): Promise<void
   await writeJSON(`/api/projects/${project}/cockpit/cancel`, "POST", { seat });
 }
 
+export async function cockpitResume(
+  project: string,
+  seat: string,
+): Promise<{ ok: boolean; threadId: string }> {
+  const r = await fetch(`/api/projects/${project}/cockpit/resume`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ seat }),
+  });
+  if (!r.ok) {
+    throw new Error(await extractErrorMessage(r));
+  }
+  return (await r.json()) as { ok: boolean; threadId: string };
+}
+
 export type CockpitStatus = {
   threadId: string;
   capable: boolean;
+  resumable?: boolean;
   reason?: string;
   pending: { id: string; kind: string; toolName: string; rawInput?: unknown; risk?: string }[];
 };

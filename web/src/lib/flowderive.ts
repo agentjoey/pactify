@@ -45,6 +45,25 @@ export interface FlowModel {
   x(t: number): number;
 }
 
+export type LiveKind = "idle" | "work" | "rework" | "review";
+
+/** Live state for each seat inferred from open stints in the flow model.
+ *  The first open stint per agent wins; agents with no open stint are idle. */
+export function liveStates(
+  model: FlowModel,
+): Record<string, { kind: LiveKind; task?: string }> {
+  const out: Record<string, { kind: LiveKind; task?: string }> = {};
+  for (const lane of model.lanes) {
+    out[lane.id] = { kind: "idle" };
+  }
+  for (const s of model.stints) {
+    if (s.t1 === null && out[s.agent]?.kind === "idle") {
+      out[s.agent] = { kind: s.kind, task: s.task };
+    }
+  }
+  return out;
+}
+
 const DEFAULT_GAP_MIN_MS = 30 * 60_000;
 const GAP_W = 0.02;
 

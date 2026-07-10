@@ -1058,6 +1058,47 @@ func (p *Project) noteLocked(taskID string, payload map[string]any) error {
 	})
 }
 
+// Escalate records a task-level escalate event. It does not change the task
+// state machine (the projection ignores escalate events); it is an
+// observability-only ledger write emitted by the orchestrate driver when a task
+// cannot converge and needs human intervention. The payload carries the human
+// reason and the seat that triggered the escalation.
+func (p *Project) Escalate(taskID, feature, reason, seat string) error {
+	return p.withLedgerLock(func() error { return p.escalateLocked(taskID, feature, reason, seat) })
+}
+
+func (p *Project) escalateLocked(taskID, feature, reason, seat string) error {
+	id, err := p.agentID()
+	if err != nil {
+		return err
+	}
+	st, _, err := p.state()
+	if err != nil {
+		return err
+	}
+	if err := requireOrchestrator(st, "escalate", id); err != nil {
+		return err
+	}
+	if feature == "" {
+		for _, f := range st.Features {
+			for _, t := range f.Tasks {
+				if t.ID == taskID {
+					feature = f.ID
+					break
+				}
+			}
+		}
+	}
+	if feature == "" {
+		return fmt.Errorf("escalate: no feature for task %q", taskID)
+	}
+	return p.appendAndRender(event.Event{
+		AgentID: id, Role: event.RoleFor("escalate"), EventType: "escalate",
+		TaskID: taskID, Feature: feature,
+		Payload: map[string]any{"reason": reason, "seat": seat},
+	})
+}
+
 // Cancel records a cancel event that excludes taskID from the projection — the
 // structured way to retire a task without hand-editing the log. Append-only: the
 // task's history stays in the log; the projection simply drops it.

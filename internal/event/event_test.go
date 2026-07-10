@@ -5,6 +5,9 @@ import "testing"
 func TestRoleForDerivesFromVerb(t *testing.T) {
 	cases := map[string]string{
 		"init": "orchestrator", "assign": "orchestrator", "merge": "orchestrator",
+		"cancel": "orchestrator", "withdraw": "orchestrator", "rebaseline": "orchestrator",
+		"config_gate": "orchestrator", "config_critic": "orchestrator", "start": "orchestrator",
+		"escalate": "orchestrator",
 		"join": "worker", "checkpoint": "worker",
 		"accept": "reviewer", "changes_requested": "reviewer",
 	}

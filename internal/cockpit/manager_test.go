@@ -401,6 +401,103 @@ func (b *ctxCapturingBackend) Resume(ctx context.Context, _ string) (Session, er
 // would die the instant POST /prompt returned — the real "empty event stream"
 // bug found while driving a live claude cockpit. Session must decouple the
 // backend from the caller ctx and only tear it down on Close.
+func TestManager_IdleTimeout_ReapsSession(t *testing.T) {
+	ctx := context.Background()
+	baseDir := t.TempDir()
+	key := SessionKey{Project: "p1", Seat: "s1"}
+
+	mgr := NewManagerCtxAudit(ctx, baseDir, newTestFactory(t, nil), nil, WithIdleTimeout(100*time.Millisecond))
+	defer mgr.CloseAll()
+
+	cs, err := mgr.Session(ctx, key, StartOpts{RepoDir: baseDir, Seat: key.Seat})
+	if err != nil {
+		t.Fatalf("Session: %v", err)
+	}
+
+	// Persist a threadID so we can prove threads.json survives the reap.
+	mgr.NoteThread(key, "survivor-thread")
+
+	// Wait for the session to become idle, then force a reap.
+	time.Sleep(150 * time.Millisecond)
+	mgr.CloseIdleSessions()
+
+	if _, ok := mgr.Get(key); ok {
+		t.Fatal("idle session should have been reaped")
+	}
+
+	// Re-creating the session starts a new one.
+	cs2, err := mgr.Session(ctx, key, StartOpts{RepoDir: baseDir, Seat: key.Seat})
+	if err != nil {
+		t.Fatalf("Session after reap: %v", err)
+	}
+	if cs2 == cs {
+		t.Fatal("new session should be a different instance")
+	}
+
+	// threads.json must still hold the persisted threadID.
+	if got := mgr.StoredThread(key); got != "survivor-thread" {
+		t.Fatalf("StoredThread after reap = %q, want survivor-thread", got)
+	}
+}
+
+func TestManager_IdleTimeout_ActivityResets(t *testing.T) {
+	ctx := context.Background()
+	baseDir := t.TempDir()
+	key := SessionKey{Project: "p1", Seat: "s1"}
+
+	mgr := NewManagerCtxAudit(ctx, baseDir, newTestFactory(t, nil), nil, WithIdleTimeout(200*time.Millisecond))
+	defer mgr.CloseAll()
+
+	cs, err := mgr.Session(ctx, key, StartOpts{RepoDir: baseDir, Seat: key.Seat})
+	if err != nil {
+		t.Fatalf("Session: %v", err)
+	}
+
+	// Keep touching activity; the session must survive.
+	for i := 0; i < 5; i++ {
+		time.Sleep(80 * time.Millisecond)
+		if err := cs.Prompt(ctx, "keepalive"); err != nil {
+			t.Fatalf("Prompt: %v", err)
+		}
+	}
+
+	mgr.CloseIdleSessions()
+	if _, ok := mgr.Get(key); !ok {
+		t.Fatal("active session should not be reaped")
+	}
+}
+
+func TestManager_IdleTimeout_DoesNotAffectOtherSessions(t *testing.T) {
+	ctx := context.Background()
+	baseDir := t.TempDir()
+	key1 := SessionKey{Project: "p1", Seat: "s1"}
+	key2 := SessionKey{Project: "p1", Seat: "s2"}
+
+	mgr := NewManagerCtxAudit(ctx, baseDir, newTestFactory(t, nil), nil, WithIdleTimeout(100*time.Millisecond))
+	defer mgr.CloseAll()
+
+	if _, err := mgr.Session(ctx, key1, StartOpts{RepoDir: baseDir, Seat: key1.Seat}); err != nil {
+		t.Fatalf("Session key1: %v", err)
+	}
+	if _, err := mgr.Session(ctx, key2, StartOpts{RepoDir: baseDir, Seat: key2.Seat}); err != nil {
+		t.Fatalf("Session key2: %v", err)
+	}
+
+	// Keep key2 active while key1 idles out.
+	time.Sleep(150 * time.Millisecond)
+	if _, err := mgr.Session(ctx, key2, StartOpts{RepoDir: baseDir, Seat: key2.Seat}); err != nil {
+		t.Fatalf("Session key2 touch: %v", err)
+	}
+	mgr.CloseIdleSessions()
+
+	if _, ok := mgr.Get(key1); ok {
+		t.Fatal("idle key1 should have been reaped")
+	}
+	if _, ok := mgr.Get(key2); !ok {
+		t.Fatal("active key2 should still be live")
+	}
+}
+
 func TestManager_SessionOutlivesCallerCtx(t *testing.T) {
 	be := &ctxCapturingBackend{}
 	m := NewManager(t.TempDir(), func(SessionKey) (Backend, error) { return be, nil })

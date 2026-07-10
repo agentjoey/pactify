@@ -36,6 +36,7 @@ const (
 	EventUsage   EventKind = "usage"
 	EventState   EventKind = "state"
 	EventError   EventKind = "error"
+	EventSystem  EventKind = "system"
 )
 
 // ToolEvent 描述一次工具调用的一段（start/output/end）。

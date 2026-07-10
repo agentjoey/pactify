@@ -27,6 +27,9 @@ type RemotePolicy struct {
 	Orchestrate bool `json:"orchestrate"`
 	// Plan enables plan.generate/apply rpc (generate spawns the planner agent).
 	Plan bool `json:"plan"`
+	// Cockpit enables hosted cockpit rpc (prompt/stream/permission/resume) for
+	// this project. Pure policy gate for T2 dispatcher; no behaviour wired yet.
+	Cockpit bool `json:"cockpit"`
 	// AgentKinds optionally restricts which agent kinds may be spawned remotely;
 	// empty ⇒ any known kind.
 	AgentKinds []string `json:"agentKinds,omitempty"`

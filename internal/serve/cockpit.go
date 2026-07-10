@@ -3,6 +3,7 @@ package serve
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -177,6 +178,10 @@ func (s *Server) handleCockpitPrompt(w http.ResponseWriter, r *http.Request) {
 		s.cockpit.NoteThread(key, tid)
 	}
 	if err := cs.Prompt(r.Context(), req.Text); err != nil {
+		if errors.Is(err, cockpit.ErrPromptRateLimited) {
+			writeErr(w, http.StatusTooManyRequests, err.Error())
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

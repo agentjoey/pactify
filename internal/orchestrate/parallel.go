@@ -271,6 +271,7 @@ func ensureFileContains(path, marker, block string) (bool, error) {
 // no cross-feature locking is needed.
 func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature string) (mergeable bool, escalated bool, err error) {
 	o := opts
+	o.LedgerDir = opts.Dir // escalate events go to the primary repo ledger
 	o.Dir = worktreeDir
 	o.Feature = feature
 	// Reconstruct threshold history across driver restarts: rework rounds from

@@ -100,6 +100,7 @@ func RunSandbox(ctx context.Context, opts Options) error {
 	// orchestrate/, sees nothing and the worktree's copy vanishes at teardown
 	// (spec coordination-authority P0b). Git work still happens in sbDir.
 	o.RuntimeDir = dir
+	o.LedgerDir = dir
 	// mirrorLedger's "is .pact ignored in the runtime dir" probe cannot change
 	// mid-run; wiring the memo here means steady-state loop iterations don't spawn
 	// `git check-ignore` (see Options.pactIgnored).

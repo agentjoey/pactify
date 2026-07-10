@@ -90,6 +90,10 @@ type Options struct {
 	// throwaway worktree, so serve keeps seeing live progress (spec
 	// coordination-authority P0b). Git work (checkout/commit/merge) always uses Dir.
 	RuntimeDir string
+	// LedgerDir is the repo dir whose .pact/log.jsonl receives escalate events.
+	// "" = Dir. Sandbox/parallel set it to the primary repo so escalation events
+	// survive worktree teardown.
+	LedgerDir string
 	// pactIgnoredMemo caches mirrorLedger's "does the runtime dir git-ignore .pact"
 	// probe: the answer cannot change mid-run and mirrorLedger runs every loop
 	// iteration, so resolving it once avoids spawning `git check-ignore` in steady
@@ -118,6 +122,16 @@ type ignoredMemo struct {
 func (opts Options) runtimeDir() string {
 	if opts.RuntimeDir != "" {
 		return opts.RuntimeDir
+	}
+	return opts.Dir
+}
+
+// ledgerDir is the base for pact ledger writes (escalate events). LedgerDir when
+// set, else Dir. Sandbox/parallel set LedgerDir to the primary repo so events
+// survive worktree teardown.
+func (opts Options) ledgerDir() string {
+	if opts.LedgerDir != "" {
+		return opts.LedgerDir
 	}
 	return opts.Dir
 }
@@ -928,6 +942,19 @@ func (opts Options) escalate(feature, task, reason, evidence, suggestion string)
 	}
 	if opts.Notify != nil {
 		opts.Notify.Notify(fmt.Sprintf("orchestrate paused: %s — see %s", reason, path))
+	}
+	// Dual-write an escalate event to the pact ledger. This is observability-only:
+	// it does not change the task state machine, but it makes escalation durable
+	// and replayable. Failures are warned, never blocking — escalation is a pause.
+	seat := opts.Orchestrator
+	if seat == "" {
+		seat = os.Getenv("PACT_AGENT_ID")
+	}
+	if seat == "" {
+		seat = "orchestrator"
+	}
+	if err := pact.At(opts.ledgerDir()).As(seat).Escalate(task, feature, reason, seat); err != nil {
+		fmt.Fprintf(os.Stderr, "orchestrate: escalate ledger append failed: %v\n", err)
 	}
 	return nil
 }

@@ -62,6 +62,21 @@ func TestServeStinter_PolicyGate(t *testing.T) {
 	}
 }
 
+func TestRemotePolicy_CockpitFieldParsed(t *testing.T) {
+	dir := t.TempDir()
+	writePolicy(t, dir, `{"stint":true,"cockpit":true}`)
+	p := readRemotePolicy(dir)
+	if !p.Stint {
+		t.Error("stint should be true")
+	}
+	if !p.Cockpit {
+		t.Error("cockpit should be true")
+	}
+	if p.Plan {
+		t.Error("plan should default false")
+	}
+}
+
 func TestServeStinter_AgentKindAllowlist(t *testing.T) {
 	dir := t.TempDir()
 	st, _ := newStinterFor(dir)

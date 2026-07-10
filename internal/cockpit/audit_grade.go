@@ -2,6 +2,12 @@ package cockpit
 
 import "strings"
 
+// GradeRisk is the exported wrapper around gradeRisk; it classifies a cockpit
+// tool call or approval into a coarse risk bucket.
+func GradeRisk(tool, detail string) string {
+	return gradeRisk(tool, detail)
+}
+
 // gradeRisk classifies a cockpit tool call or approval into a coarse risk
 // bucket. It is conservative: anything that can mutate state or run arbitrary
 // code is "write" or "exec", and MCP tool calls are called out separately.

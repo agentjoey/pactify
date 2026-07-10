@@ -44,8 +44,9 @@ export function CockpitPanel({
   const [messages, setMessages] = useState<Message[]>([]);
   const [systemRows, setSystemRows] = useState<SystemRow[]>([]);
   const [pending, setPending] = useState<
-    { id: string; kind: string; toolName: string; rawInput?: unknown }[]
+    { id: string; kind: string; toolName: string; rawInput?: unknown; risk?: string }[]
   >([]);
+  const [confirmAllow, setConfirmAllow] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -195,6 +196,42 @@ export function CockpitPanel({
     }
   };
 
+  // Exec-risk approvals require a two-step Allow confirmation.
+  useEffect(() => {
+    if (!confirmAllow) return;
+    const t = setTimeout(() => setConfirmAllow(null), 3000);
+    return () => clearTimeout(t);
+  }, [confirmAllow]);
+
+  useEffect(() => {
+    if (!confirmAllow) return;
+    const onDown = (e: MouseEvent) => {
+      const card = (e.target as HTMLElement).closest('[data-testid="cockpit-approval"]');
+      if (!card) setConfirmAllow(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [confirmAllow]);
+
+  useEffect(() => {
+    if (confirmAllow && !pending.some((p) => p.id === confirmAllow)) {
+      setConfirmAllow(null);
+    }
+  }, [pending, confirmAllow]);
+
+  function riskBadgeStyle(risk?: string) {
+    switch (risk) {
+      case "exec":
+        return { color: "var(--color-danger)", background: "color-mix(in srgb, var(--color-danger) 14%, transparent)" };
+      case "write":
+        return { color: "var(--color-warn)", background: "color-mix(in srgb, var(--color-warn) 14%, transparent)" };
+      case "mcp":
+        return { color: "var(--color-role-design)", background: "color-mix(in srgb, var(--color-role-design) 14%, transparent)" };
+      default:
+        return { color: "var(--color-text-3)", background: "color-mix(in srgb, var(--color-text-3) 14%, transparent)" };
+    }
+  }
+
   const inputEnabled = !busy && capable && !!src.cockpitPrompt;
   const inputPlaceholder = !capable
     ? "This seat can't host a cockpit"
@@ -343,9 +380,19 @@ export function CockpitPanel({
             >
               <div
                 data-testid="cockpit-approval-tool"
-                className="mb-2 text-[12px] font-[650] text-[var(--color-text-1)]"
+                className="mb-2 flex items-center gap-2 text-[12px] font-[650] text-[var(--color-text-1)]"
               >
-                {p.toolName} <span className="text-[var(--color-text-3)]">· {p.kind}</span>
+                <span>{p.toolName}</span>{" "}
+                <span className="text-[var(--color-text-3)]">· {p.kind}</span>
+                {p.risk && (
+                  <span
+                    data-testid="cockpit-approval-risk"
+                    className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                    style={riskBadgeStyle(p.risk)}
+                  >
+                    {p.risk}
+                  </span>
+                )}
               </div>
               {p.rawInput !== undefined && (
                 <pre
@@ -356,18 +403,41 @@ export function CockpitPanel({
                 </pre>
               )}
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  data-testid="cockpit-approval-allow"
-                  onClick={() => respond(p.id, "allow")}
-                  className="flex-1 rounded-lg bg-[var(--color-success)] px-3 py-1.5 text-[11px] font-[650] text-[var(--color-on-accent)]"
-                >
-                  Allow
-                </button>
+                {p.risk === "exec" && confirmAllow === p.id ? (
+                  <button
+                    type="button"
+                    data-testid="cockpit-approval-allow-confirm"
+                    onClick={() => {
+                      setConfirmAllow(null);
+                      respond(p.id, "allow");
+                    }}
+                    className="flex-1 rounded-lg bg-[var(--color-danger)] px-3 py-1.5 text-[11px] font-[650] text-[var(--color-on-accent)]"
+                  >
+                    Confirm allow ▸
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid="cockpit-approval-allow"
+                    onClick={() => {
+                      if (p.risk === "exec") {
+                        setConfirmAllow(p.id);
+                      } else {
+                        respond(p.id, "allow");
+                      }
+                    }}
+                    className="flex-1 rounded-lg bg-[var(--color-success)] px-3 py-1.5 text-[11px] font-[650] text-[var(--color-on-accent)]"
+                  >
+                    Allow
+                  </button>
+                )}
                 <button
                   type="button"
                   data-testid="cockpit-approval-deny"
-                  onClick={() => respond(p.id, "deny")}
+                  onClick={() => {
+                    setConfirmAllow(null);
+                    respond(p.id, "deny");
+                  }}
                   className="flex-1 rounded-lg bg-[var(--color-danger)] px-3 py-1.5 text-[11px] font-[650] text-[var(--color-danger-ink)]"
                 >
                   Deny

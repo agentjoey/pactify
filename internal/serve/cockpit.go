@@ -360,6 +360,7 @@ type cockpitPendingItem struct {
 	Kind     string          `json:"kind"`
 	ToolName string          `json:"toolName"`
 	RawInput json.RawMessage `json:"rawInput,omitempty"`
+	Risk     string          `json:"risk"`
 }
 
 type cockpitStatusDTO struct {
@@ -405,7 +406,13 @@ func (s *Server) handleCockpitStatus(w http.ResponseWriter, r *http.Request) {
 	pending := cs.Pending()
 	items := make([]cockpitPendingItem, 0, len(pending))
 	for _, p := range pending {
-		items = append(items, cockpitPendingItem{ID: p.ID, Kind: p.Kind, ToolName: p.ToolName, RawInput: p.RawInput})
+		items = append(items, cockpitPendingItem{
+			ID:       p.ID,
+			Kind:     p.Kind,
+			ToolName: p.ToolName,
+			RawInput: p.RawInput,
+			Risk:     cockpit.GradeRisk(p.ToolName, string(p.RawInput)),
+		})
 	}
 	writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: cs.ThreadID(), Capable: true, Pending: items})
 }

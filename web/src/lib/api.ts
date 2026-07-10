@@ -440,7 +440,7 @@ export type CockpitStatus = {
   threadId: string;
   capable: boolean;
   reason?: string;
-  pending: { id: string; kind: string; toolName: string; rawInput?: unknown }[];
+  pending: { id: string; kind: string; toolName: string; rawInput?: unknown; risk?: string }[];
 };
 
 export async function cockpitStatus(project: string, seat: string): Promise<CockpitStatus> {

@@ -131,6 +131,52 @@ describe("CockpitPanel", () => {
     await waitFor(() => expect(cockpitRespond).toHaveBeenCalledWith("p1", "claude", "a1", "allow"));
   });
 
+  it("shows exec risk badge and requires two-step Allow confirmation", async () => {
+    const cockpitRespond = vi.fn().mockResolvedValue(undefined);
+    const source = makeSource({
+      cockpitStatus: vi.fn().mockResolvedValue({
+        threadId: "t1",
+        capable: true,
+        pending: [{ id: "a1", kind: "tool", toolName: "bash", risk: "exec" }],
+      } as CockpitStatus),
+      cockpitRespond,
+    });
+    renderPanel(source);
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-approval")).toBeInTheDocument());
+    const badge = screen.getByTestId("cockpit-approval-risk");
+    expect(badge).toHaveTextContent("exec");
+    expect(badge).toHaveStyle({ color: "var(--color-danger)" });
+
+    fireEvent.click(screen.getByTestId("cockpit-approval-allow"));
+    await waitFor(() =>
+      expect(screen.getByTestId("cockpit-approval-allow-confirm")).toHaveTextContent("Confirm allow ▸"),
+    );
+    expect(cockpitRespond).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("cockpit-approval-allow-confirm"));
+    await waitFor(() => expect(cockpitRespond).toHaveBeenCalledWith("p1", "claude", "a1", "allow"));
+  });
+
+  it("allows read-risk approvals with a single click", async () => {
+    const cockpitRespond = vi.fn().mockResolvedValue(undefined);
+    const source = makeSource({
+      cockpitStatus: vi.fn().mockResolvedValue({
+        threadId: "t1",
+        capable: true,
+        pending: [{ id: "a1", kind: "tool", toolName: "read_file", risk: "read" }],
+      } as CockpitStatus),
+      cockpitRespond,
+    });
+    renderPanel(source);
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-approval")).toBeInTheDocument());
+    expect(screen.getByTestId("cockpit-approval-risk")).toHaveTextContent("read");
+
+    fireEvent.click(screen.getByTestId("cockpit-approval-allow"));
+    await waitFor(() => expect(cockpitRespond).toHaveBeenCalledWith("p1", "claude", "a1", "allow"));
+  });
+
   it("calls onClose when the close button is clicked", () => {
     const onClose = vi.fn();
     renderPanel(makeSource(), onClose);

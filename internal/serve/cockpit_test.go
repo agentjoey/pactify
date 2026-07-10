@@ -174,6 +174,39 @@ func TestCockpitStatusAndPermission(t *testing.T) {
 	}
 }
 
+func TestCockpitStatusPendingRisk(t *testing.T) {
+	srv, fake, _ := newCockpitTestServer(t)
+	h := srv.Handler()
+
+	postCockpit(t, h, "/api/projects/p/cockpit/prompt", map[string]string{
+		"seat": "claude",
+		"text": "do it",
+	})
+
+	fake.EmitApproval(cockpit.ApprovalRequest{
+		Kind:     "command",
+		ToolName: "bash",
+		RawInput: json.RawMessage(`{"command":"echo hi"}`),
+		Respond:  func(_ cockpit.Decision) error { return nil },
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	rr := getCockpit(t, h, "/api/projects/p/cockpit/status?seat=claude")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status: %d %s", rr.Code, rr.Body.String())
+	}
+	var st cockpitStatusDTO
+	if err := json.Unmarshal(rr.Body.Bytes(), &st); err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Pending) != 1 {
+		t.Fatalf("expected 1 pending approval, got %+v", st.Pending)
+	}
+	if st.Pending[0].Risk != "exec" {
+		t.Fatalf("expected risk exec for bash approval, got %q", st.Pending[0].Risk)
+	}
+}
+
 func TestCockpitCancel(t *testing.T) {
 	srv, fake, _ := newCockpitTestServer(t)
 	h := srv.Handler()

@@ -3,6 +3,7 @@ package remoteexec
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -267,3 +268,132 @@ func TestHandle_Task(t *testing.T) {
 		t.Fatal("pact.task disabled when Task nil")
 	}
 }
+
+type fakeCockpiter struct {
+	lastMethod string
+	lastArgs   []string
+	err        error
+}
+
+func (f *fakeCockpiter) Prompt(project, seat, text string) error {
+	f.lastMethod, f.lastArgs = "prompt", []string{project, seat, text}
+	return f.err
+}
+func (f *fakeCockpiter) Permission(project, seat, requestID, decision string) error {
+	f.lastMethod, f.lastArgs = "permission", []string{project, seat, requestID, decision}
+	return f.err
+}
+func (f *fakeCockpiter) Cancel(project, seat string) error {
+	f.lastMethod, f.lastArgs = "cancel", []string{project, seat}
+	return f.err
+}
+func (f *fakeCockpiter) Resume(project, seat string) error {
+	f.lastMethod, f.lastArgs = "resume", []string{project, seat}
+	return f.err
+}
+func (f *fakeCockpiter) Subscribe(project, seat string) error {
+	f.lastMethod, f.lastArgs = "subscribe", []string{project, seat}
+	return f.err
+}
+
+func cockpitDispatcher(cp CockpitPolicy) (*Dispatcher, *fakeCockpiter) {
+	fc := &fakeCockpiter{}
+	return &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{}), Cockpit: fc, CockpitPolicy: cp}, fc
+}
+
+func TestHandle_CockpitRoutes(t *testing.T) {
+	cp := func(project string) (bool, error) {
+		if project == "known" {
+			return true, nil
+		}
+		return false, errors.New("unregistered")
+	}
+
+	d, fc := cockpitDispatcher(cp)
+	r := d.Handle(RPC{Type: "cockpit.prompt", Account: "acct1", Project: "known", Seat: "kimi", Text: "hi"})
+	if !r.OK || fc.lastMethod != "prompt" || fc.lastArgs[2] != "hi" {
+		t.Fatalf("prompt: got %+v / method=%q args=%v", r, fc.lastMethod, fc.lastArgs)
+	}
+
+	d, fc = cockpitDispatcher(cp)
+	r = d.Handle(RPC{Type: "cockpit.permission", Account: "acct1", Project: "known", Seat: "kimi", RequestID: "ap1", Decision: "allow"})
+	if !r.OK || fc.lastMethod != "permission" || fc.lastArgs[3] != "allow" {
+		t.Fatalf("permission: got %+v / method=%q args=%v", r, fc.lastMethod, fc.lastArgs)
+	}
+
+	d, fc = cockpitDispatcher(cp)
+	for _, typ := range []string{"cockpit.cancel", "cockpit.resume", "cockpit.subscribe"} {
+		r = d.Handle(RPC{Type: typ, Account: "acct1", Project: "known", Seat: "kimi"})
+		if !r.OK {
+			t.Fatalf("%s: got %+v", typ, r)
+		}
+		if fc.lastMethod != typ[len("cockpit."):] {
+			t.Fatalf("%s: routed to %q", typ, fc.lastMethod)
+		}
+	}
+
+	// Missing required fields.
+	d, _ = cockpitDispatcher(cp)
+	if r := d.Handle(RPC{Type: "cockpit.prompt", Account: "acct1", Project: "known", Seat: "kimi"}); r.OK {
+		t.Fatal("prompt without text should fail")
+	}
+	if r := d.Handle(RPC{Type: "cockpit.permission", Account: "acct1", Project: "known", Seat: "kimi"}); r.OK {
+		t.Fatal("permission without requestId/decision should fail")
+	}
+	if r := d.Handle(RPC{Type: "cockpit.cancel", Account: "acct1", Project: "known"}); r.OK {
+		t.Fatal("cancel without seat should fail")
+	}
+
+	// Unknown cockpit subtype.
+	if r := d.Handle(RPC{Type: "cockpit.nuke", Account: "acct1", Project: "known", Seat: "kimi"}); r.OK {
+		t.Fatal("unknown cockpit type should fail")
+	}
+}
+
+func TestHandle_CockpitPolicyGate(t *testing.T) {
+	// Gate closed for a known project.
+	closed := func(project string) (bool, error) { return project == "open", nil }
+	d, _ := cockpitDispatcher(closed)
+	r := d.Handle(RPC{Type: "cockpit.prompt", Account: "acct1", Project: "known", Seat: "kimi", Text: "hi"})
+	if r.OK || !containsStr(r.Error, "not enabled") {
+		t.Fatalf("closed gate: want not-enabled error, got %+v", r)
+	}
+
+	// Gate open.
+	r = d.Handle(RPC{Type: "cockpit.prompt", Account: "acct1", Project: "open", Seat: "kimi", Text: "hi"})
+	if !r.OK {
+		t.Fatalf("open gate should accept, got %+v", r)
+	}
+
+	// Unknown project (resolver not used for cockpit; policy returns error).
+	unknown := func(project string) (bool, error) { return false, errors.New("unknown project") }
+	d, _ = cockpitDispatcher(unknown)
+	r = d.Handle(RPC{Type: "cockpit.prompt", Account: "acct1", Project: "known", Seat: "kimi", Text: "hi"})
+	if r.OK || !containsStr(r.Error, "unknown project") {
+		t.Fatalf("unknown project: want error, got %+v", r)
+	}
+
+	// Missing project.
+	d, _ = cockpitDispatcher(closed)
+	if r := d.Handle(RPC{Type: "cockpit.prompt", Account: "acct1", Seat: "kimi", Text: "hi"}); r.OK {
+		t.Fatal("missing project should fail")
+	}
+}
+
+func TestHandle_CockpitAccountScope(t *testing.T) {
+	open := func(project string) (bool, error) { return true, nil }
+	d, _ := cockpitDispatcher(open)
+	r := d.Handle(RPC{Type: "cockpit.prompt", Account: "intruder", Project: "known", Seat: "kimi", Text: "hi"})
+	if r.OK || r.Error != ErrAccountScope.Error() {
+		t.Fatalf("foreign account: want scope error, got %+v", r)
+	}
+}
+
+func TestHandle_CockpitDisabled(t *testing.T) {
+	d := &Dispatcher{Account: "acct1", Resolve: resolverFor(&fakeEngine{})}
+	if r := d.Handle(RPC{Type: "cockpit.prompt", Account: "acct1", Project: "known", Seat: "kimi", Text: "hi"}); r.OK {
+		t.Fatal("cockpit should be disabled when Cockpit nil")
+	}
+}
+
+func containsStr(s, substr string) bool { return strings.Contains(s, substr) }

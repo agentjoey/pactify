@@ -259,6 +259,60 @@ export const PactProvisionRequest = z.object({
 })
 export type PactProvisionRequest = z.infer<typeof PactProvisionRequest>
 
+// ── hosted cockpit remote control (E3) ──────────────────────────────────────
+// Down-channel rpcs that drive a project's cockpit session from the hosted
+// dashboard. Additive: linxd ignores `cockpit.*` types; pactify serve handles
+// them behind the project's RemotePolicy.Cockpit gate. The upward event mirror
+// travels via ephemeral WireMessage ingest on the machine socket.
+
+/** Send a user prompt to the target seat's cockpit session. */
+export const CockpitPromptRequest = z.object({
+  type: z.literal('cockpit.prompt'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  seat: z.string().min(1),
+  text: z.string().min(1),
+})
+export type CockpitPromptRequest = z.infer<typeof CockpitPromptRequest>
+
+/** Resolve a pending approval in the target seat's cockpit session. */
+export const CockpitPermissionRequest = z.object({
+  type: z.literal('cockpit.permission'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  seat: z.string().min(1),
+  requestId: z.string().min(1),
+  decision: z.enum(['allow', 'deny', 'allow_session']),
+})
+export type CockpitPermissionRequest = z.infer<typeof CockpitPermissionRequest>
+
+/** Cancel / interrupt the target seat's current cockpit turn. */
+export const CockpitCancelRequest = z.object({
+  type: z.literal('cockpit.cancel'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  seat: z.string().min(1),
+})
+export type CockpitCancelRequest = z.infer<typeof CockpitCancelRequest>
+
+/** Resume the target seat's persisted cockpit thread, if any. */
+export const CockpitResumeRequest = z.object({
+  type: z.literal('cockpit.resume'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  seat: z.string().min(1),
+})
+export type CockpitResumeRequest = z.infer<typeof CockpitResumeRequest>
+
+/** Subscribe to an ephemeral upward mirror of the seat's cockpit events. */
+export const CockpitSubscribeRequest = z.object({
+  type: z.literal('cockpit.subscribe'),
+  machineId: z.string().min(1),
+  project: z.string().min(1),
+  seat: z.string().min(1),
+})
+export type CockpitSubscribeRequest = z.infer<typeof CockpitSubscribeRequest>
+
 /** client → relay → linxd (or pactify serve) control messages. */
 export const RpcRequest = z.discriminatedUnion('type', [
   SpawnRequest,
@@ -287,6 +341,11 @@ export const RpcRequest = z.discriminatedUnion('type', [
   PlanGenerateRequest,
   PlanApplyRequest,
   PactProvisionRequest,
+  CockpitPromptRequest,
+  CockpitPermissionRequest,
+  CockpitCancelRequest,
+  CockpitResumeRequest,
+  CockpitSubscribeRequest,
 ])
 export type RpcRequest = z.infer<typeof RpcRequest>
 

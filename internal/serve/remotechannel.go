@@ -48,6 +48,8 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 	var plan remoteexec.Planner
 	var prov remoteexec.Provisioner
 	var task remoteexec.TaskAuthor
+	var cockpit remoteexec.Cockpiter
+	var cockpitPolicy remoteexec.CockpitPolicy
 	if remoteControl {
 		resolve = func(project string) (remoteexec.PactEngine, error) {
 			s.pmu.RLock()
@@ -63,6 +65,16 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 		plan = s.newPlanner()      // plan.generate/apply, same policy file
 		prov = s.newProvisioner()  // pact.provision, machine-gated by PACTIFY_PROVISION_DIR
 		task = s.newTaskAuthor()   // pact.task, coordination write (like the verbs)
+		cockpit = s.newCockpiter(mid)
+		cockpitPolicy = func(project string) (bool, error) {
+			s.pmu.RLock()
+			p, ok := s.projects[project]
+			s.pmu.RUnlock()
+			if !ok {
+				return false, fmt.Errorf("unknown project %q", project)
+			}
+			return readRemotePolicy(p.Path).Cockpit, nil
+		}
 	}
 
 	backoff := time.Second
@@ -89,17 +101,20 @@ func (s *Server) StartMachineChannel(ctx context.Context, remoteControl bool) {
 
 		start := time.Now()
 		_ = remotemachine.Run(ctx, remotemachine.Config{
-			RelayURL:  base,
-			Account:   s.relay.accountID,
-			MachineID: mid,
-			Token:     token,
-			Info:      info,
-			Resolve:   resolve,
-			Stint:     stint,
-			Orch:      orch,
-			Plan:      plan,
-			Prov:      prov,
-			Task:      task,
+			RelayURL:      base,
+			Account:       s.relay.accountID,
+			MachineID:     mid,
+			Token:         token,
+			Info:          info,
+			Resolve:       resolve,
+			Stint:         stint,
+			Orch:          orch,
+			Plan:          plan,
+			Prov:          prov,
+			Task:          task,
+			Cockpit:       cockpit,
+			CockpitPolicy: cockpitPolicy,
+			OnClientReady: s.setCockpitEmitter,
 		})
 		if ctx.Err() != nil {
 			return

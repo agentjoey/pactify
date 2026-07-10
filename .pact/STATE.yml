@@ -901,3 +901,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/hc-rpc.md
         evidence: wire cockpit.* rpc types (prompt/permission/cancel/resume/subscribe, additive union); remoteexec Cockpiter + policy-gated dispatch (RemotePolicy.Cockpit fail-closed) + parse; serve serveCockpiter bridging Manager (shared fns with HTTP handlers) + ephemeral ingest mirror (projectKey encrypt, runId cockpit:<project>:<seat>, snapshot-first, TTL 5min renew, pending delta ticker); remotemachine OnClientReady emitter wiring. Reviewer fixes: eventKind 'error' not in wire enum -> delta (relay strict-drop bug) + mirrors map race/lock-order fix + renew-after-TTL recreate + enum conformance guard test. go ./... green, -race green, vet clean, wire tsc clean
+      - id: hc-web
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/hc-web.md
+        evidence: null

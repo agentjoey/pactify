@@ -307,6 +307,19 @@ func featureBranch(st projection.State, feature string) string {
 	return ""
 }
 
+// projectProtocolVersion returns the protocol_version declared by the init event,
+// or 0 when none is declared (legacy logs).
+func projectProtocolVersion(evs []event.Event) int {
+	for _, e := range evs {
+		if e.EventType == "init" {
+			if pv, ok := e.Payload["protocol_version"].(float64); ok {
+				return int(pv)
+			}
+		}
+	}
+	return 0
+}
+
 func checkReviewerVerdict(st projection.State, verb, caller, taskID string) (*projection.Feature, error) {
 	tk, f := findTask(st, taskID)
 	if tk == nil {
@@ -364,15 +377,7 @@ func (p *Project) validateLog() error {
 		declared[a.ID] = true
 	}
 
-	var protocolVersion int
-	for _, e := range evs {
-		if e.EventType == "init" {
-			if pv, ok := e.Payload["protocol_version"].(float64); ok {
-				protocolVersion = int(pv)
-			}
-		}
-	}
-	if protocolVersion > paths.ProtocolVersion {
+	if protocolVersion := projectProtocolVersion(evs); protocolVersion > paths.ProtocolVersion {
 		return fmt.Errorf("pactify validate: protocol_version %d exceeds supported %d; upgrade pactify", protocolVersion, paths.ProtocolVersion)
 	}
 	for _, e := range evs {

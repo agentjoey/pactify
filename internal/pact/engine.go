@@ -314,6 +314,13 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion,
 	if err != nil {
 		return err
 	}
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	if err != nil {
+		return err
+	}
+	if projVer := projectProtocolVersion(evs); projVer > paths.ProtocolVersion {
+		return fmt.Errorf("pactify join: project protocol_version %d exceeds this client's supported %d; upgrade pactify", projVer, paths.ProtocolVersion)
+	}
 	rolesArr := splitCSV(roles)
 	// Join gate: a seat may not join while any task it owns is blocked by a
 	// dependency that has not reached `accepted`. Evaluate against pre-join
@@ -325,7 +332,7 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion,
 	if err := checkJoinGate(preState, seatID); err != nil {
 		return err
 	}
-	payload := map[string]any{"roles": rolesArr}
+	payload := map[string]any{"roles": rolesArr, "protocol_version": paths.ProtocolVersion}
 	// client is emitted ONLY when a name is present, mirroring deps' additive
 	// conditional-serialization discipline (byte-parity for client-free logs).
 	if clientName != "" {

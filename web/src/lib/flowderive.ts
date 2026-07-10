@@ -108,13 +108,46 @@ function buildX(
       }
       if (t < g.t1) {
         const frac = (t - g.t0) / (g.t1 - g.t0);
-        return pos + frac * GAP_W;
+        return pos + (g.t0 - prev) * scale + frac * GAP_W;
       }
       pos += (g.t0 - prev) * scale + GAP_W;
       prev = g.t1;
     }
     return Math.min(1, pos + (t - prev) * scale);
   };
+}
+
+/** Inverse of buildX: map normalized x∈[0,1] back to milliseconds.
+ *  Returns tMin/tMax at the edges. If x falls inside a compressed gap
+ *  segment, returns the gap's start time (t0). */
+export function tAt(model: FlowModel, x: number): number {
+  const { tMin, tMax, gaps } = model;
+  if (tMax <= tMin) return tMin;
+  if (x <= 0) return tMin;
+  if (x >= 1) return tMax;
+
+  const totalReal = tMax - tMin;
+  const gapSum = gaps.reduce((sum, g) => sum + (g.t1 - g.t0), 0);
+  const working = totalReal - gapSum;
+  const workingWidth = Math.max(0, 1 - gaps.length * GAP_W);
+  const scale = working > 0 ? workingWidth / working : 0;
+
+  let pos = 0;
+  let prev = tMin;
+  for (const g of gaps) {
+    const workSeg = (g.t0 - prev) * scale;
+    if (x < pos + workSeg) {
+      if (scale === 0) return prev;
+      return prev + (x - pos) / scale;
+    }
+    if (x < pos + workSeg + GAP_W) {
+      return g.t0;
+    }
+    pos += workSeg + GAP_W;
+    prev = g.t1;
+  }
+  if (scale === 0) return prev;
+  return Math.min(tMax, prev + (x - pos) / scale);
 }
 
 export function deriveFlow(

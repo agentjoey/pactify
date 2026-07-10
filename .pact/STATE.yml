@@ -821,7 +821,7 @@ features:
     tasks:
       - id: mcp-envelope
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/mcp-envelope.md
         evidence: all MCP tools return {ok:true,data}|{ok:false,error} envelope (json.Marshal-built), errors via IsError result instead of protocol-layer (0 bare return-nil-nil-err left); tests updated + shape tests; mcp_project.bats e2e green

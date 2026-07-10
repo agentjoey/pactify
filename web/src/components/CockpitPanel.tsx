@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import type { CockpitEvent } from "../lib/api";
+import type { Seat } from "../lib/types";
 import { useDataSource } from "../lib/datasource";
 import { COCKPIT_STATUS_POLL_MS } from "../lib/constants";
+import { Select } from "./ui/Select";
 
 type Message = { role: "user" | "assistant"; text: string };
 type SystemRow = { id: number; kind: string; text: string };
+
+const COCKPIT_CAPABLE_KINDS = new Set([
+  "claude-code",
+  "codex-cli",
+  "kimi-cli",
+  "gemini-cli",
+  "opencode",
+]);
 
 function prefersReducedMotion(): boolean {
   return (
@@ -31,14 +41,39 @@ function formatSystemRow(ev: CockpitEvent): string {
   return ev.text ?? "";
 }
 
+function isRateLimit(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  return /429|rate|too many/i.test(msg);
+}
+
+function setErrorMessage(
+  e: unknown,
+  setError: (m: string) => void,
+  onNotify?: (m: string, kind?: "error") => void,
+): void {
+  if (isRateLimit(e)) {
+    const m = "Rate limited — please wait a moment.";
+    setError(m);
+    onNotify?.("Rate limited (429)", "error");
+    return;
+  }
+  setError(e instanceof Error ? e.message : String(e));
+}
+
 export function CockpitPanel({
   project,
   seat,
+  agents,
   onClose,
+  onSeatChange,
+  onNotify,
 }: {
   project: string;
   seat: string;
+  agents: Seat[];
   onClose: () => void;
+  onSeatChange?: (seat: string) => void;
+  onNotify?: (msg: string, kind?: "error") => void;
 }) {
   const src = useDataSource();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -60,8 +95,15 @@ export function CockpitPanel({
   const panelRef = useRef<HTMLElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const rowId = useRef(0);
+  const seatInitRef = useRef(true);
   const reduced = prefersReducedMotion();
   const statusUnavailable = statusFailures >= 3;
+
+  const seatKind = agents.find((a) => a.id === seat)?.kind;
+  const seatCapableByRoster = seatKind
+    ? COCKPIT_CAPABLE_KINDS.has(seatKind)
+    : true;
+  const effectiveCapable = capable && seatCapableByRoster;
 
   const loadStatus = async () => {
     if (!src.cockpitStatus) return;
@@ -78,6 +120,25 @@ export function CockpitPanel({
     }
   };
 
+  // When the selected seat changes (prop or dropdown-driven) clear stale stream
+  // content so the previous seat's events don't leak into the new session. Skip
+  // the first render — the stream effect already subscribes with the initial seat.
+  useEffect(() => {
+    if (seatInitRef.current) {
+      seatInitRef.current = false;
+      return;
+    }
+    setMessages([]);
+    setSystemRows([]);
+    setPending([]);
+    setInput("");
+    setError("");
+    setRunningTool(null);
+    setThreadId("");
+    setResumable(false);
+    setStreamKey((k) => k + 1);
+  }, [project, seat]);
+
   useEffect(() => {
     loadStatus();
     const t = setInterval(loadStatus, COCKPIT_STATUS_POLL_MS);
@@ -86,13 +147,19 @@ export function CockpitPanel({
   }, [project, seat, src.cockpitStatus]);
 
   useEffect(() => {
-    if (!src.cockpitStreamUrl) return;
-    const es = new EventSource(src.cockpitStreamUrl(project, seat));
-    es.onmessage = (e) => {
+    if (!src.cockpitSubscribe) return;
+    const off = src.cockpitSubscribe(project, seat, (ev) => {
       try {
-        const ev = JSON.parse(e.data) as CockpitEvent;
         if (ev.kind === "session" && ev.threadId) {
           setThreadId(ev.threadId);
+          return;
+        }
+        if (ev.kind === "status") {
+          if (typeof ev.threadId === "string") setThreadId(ev.threadId);
+          if (typeof ev.resumable === "boolean") setResumable(ev.resumable);
+          if (typeof ev.capable === "boolean") setCapable(ev.capable);
+          if (typeof ev.reason === "string") setCapableReason(ev.reason);
+          if (ev.pending) setPending(ev.pending);
           return;
         }
         if (ev.kind === "tool" && ev.tool) {
@@ -107,9 +174,6 @@ export function CockpitPanel({
           setRunningTool(null);
         }
         if (ev.kind === "message" && typeof ev.text === "string") {
-          // Capture the narrowed value: TS loses the `typeof ev.text === string`
-          // narrowing inside the deferred setMessages closure (property narrowing
-          // doesn't survive across a nested function), so read it into a local.
           const delta = ev.text;
           setMessages((prev) => {
             if (prev.length === 0 || prev[prev.length - 1].role !== "assistant") {
@@ -133,10 +197,10 @@ export function CockpitPanel({
       } catch {
         // ignore malformed frames
       }
-    };
-    return () => es.close();
+    });
+    return () => off();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, seat, src.cockpitStreamUrl, streamKey]);
+  }, [project, seat, src.cockpitSubscribe, streamKey]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -174,7 +238,7 @@ export function CockpitPanel({
         setThreadId(resp.threadId);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setErrorMessage(e, setError, onNotify);
     } finally {
       setBusy(false);
     }
@@ -184,8 +248,8 @@ export function CockpitPanel({
     if (!src.cockpitCancel) return;
     try {
       await src.cockpitCancel(project, seat);
-    } catch {
-      // best-effort
+    } catch (e) {
+      setErrorMessage(e, setError, onNotify);
     }
   };
 
@@ -194,8 +258,8 @@ export function CockpitPanel({
     try {
       await src.cockpitRespond(project, seat, approvalId, decision);
       await loadStatus();
-    } catch {
-      // best-effort
+    } catch (e) {
+      setErrorMessage(e, setError, onNotify);
     }
   };
 
@@ -212,7 +276,7 @@ export function CockpitPanel({
       setStreamKey((k) => k + 1);
       await loadStatus();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setErrorMessage(e, setError, onNotify);
     } finally {
       setBusy(false);
     }
@@ -254,12 +318,26 @@ export function CockpitPanel({
     }
   }
 
-  const inputEnabled = !busy && capable && !!src.cockpitPrompt;
-  const inputPlaceholder = !capable
+  const inputEnabled = !busy && effectiveCapable && !!src.cockpitPrompt;
+  const inputPlaceholder = !effectiveCapable
     ? "This seat can't host a cockpit"
     : !src.cockpitPrompt
       ? "Cockpit unavailable"
       : "Message orchestrator…";
+
+  // Seat dropdown: capable roster seats, orchestrator first, current seat always valid.
+  const orchestratorSeat = agents.find((a) => a.roles.includes("orchestrator"))?.id;
+  let seatOptions = agents
+    .filter((a) => COCKPIT_CAPABLE_KINDS.has(a.kind ?? ""))
+    .map((a) => a.id);
+  if (seat && !seatOptions.includes(seat)) {
+    seatOptions = [seat, ...seatOptions];
+  }
+  seatOptions.sort((a, b) => {
+    if (a === orchestratorSeat) return -1;
+    if (b === orchestratorSeat) return 1;
+    return a.localeCompare(b);
+  });
 
   return (
     <>
@@ -289,7 +367,7 @@ export function CockpitPanel({
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between rounded-t-2xl border-b border-[var(--color-border-subtle)] bg-[linear-gradient(170deg,color-mix(in_srgb,var(--color-role-design)_8%,transparent),transparent_70%)] px-4 py-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="mono text-[11px] text-[var(--color-text-3)]">
               {seat}
               {threadId && (
@@ -303,6 +381,22 @@ export function CockpitPanel({
               )}
             </div>
             <div className="text-[15px] font-[650] text-[var(--color-text-1)]">Cockpit</div>
+            {seatOptions.length > 0 && (
+              <div className="mt-1.5">
+                <Select
+                  data-testid="cockpit-seat-select"
+                  value={seat}
+                  onChange={(e) => onSeatChange?.(e.target.value)}
+                  className="h-7 py-1 text-[11px]"
+                >
+                  {seatOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s === orchestratorSeat ? `${s} (orchestrator)` : s}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1">
             {src.cockpitCancel && (
@@ -328,20 +422,20 @@ export function CockpitPanel({
           </div>
         </div>
 
-        {(statusUnavailable || !capable) && (
+        {(statusUnavailable || !effectiveCapable) && (
           <div
             data-testid="cockpit-notice"
             className={`shrink-0 border-b px-3 py-1.5 text-[11px] ${
-              !capable
+              !effectiveCapable
                 ? "border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] text-[var(--color-text-2)]"
                 : "border-[var(--color-warn)]/20 bg-[var(--color-warn)]/10 text-[var(--color-warn)]"
             }`}
           >
-            {!capable ? capableReason : "Status unavailable — retrying…"}
+            {!effectiveCapable ? capableReason || "This seat can't host a cockpit" : "Status unavailable — retrying…"}
           </div>
         )}
 
-        {capable && resumable && messages.length === 0 && systemRows.length === 0 && (
+        {effectiveCapable && resumable && messages.length === 0 && systemRows.length === 0 && (
           <div
             data-testid="cockpit-resume"
             className="shrink-0 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-raised)] px-3 py-2 text-[11px] text-[var(--color-text-2)]"

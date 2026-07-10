@@ -11,6 +11,7 @@ package remoteexec
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/agentjoey/pactify/internal/pact"
 )
@@ -42,6 +43,9 @@ type RPC struct {
 	Name        string            // provision: registry name for the clone
 	ID          string            // task: task slug
 	SpecMD      string            // task: task draft spec markdown
+	Text        string            // cockpit.prompt: user prompt text
+	RequestID   string            // cockpit.permission: approval id
+	Decision    string            // cockpit.permission: allow/deny/allow_session
 }
 
 // StintRequest is a remote request to run one agent stint (spawn an agent CLI to
@@ -112,6 +116,22 @@ type Stinter interface {
 	RunStint(req StintRequest) error
 }
 
+// Cockpiter drives a project's hosted cockpit session remotely (prompt,
+// permission resolve, cancel, resume, subscribe). serve implements it; the
+// upward event mirror is emitted back through the machine socket.
+type Cockpiter interface {
+	Prompt(project, seat, text string) error
+	Permission(project, seat, requestID, decision string) error
+	Cancel(project, seat string) error
+	Resume(project, seat string) error
+	Subscribe(project, seat string) error
+}
+
+// CockpitPolicy checks whether hosted cockpit is enabled for a project. It
+// returns an error for unknown/unregistered projects; false means the project
+// exists but remote cockpit is disabled.
+type CockpitPolicy func(project string) (bool, error)
+
 // Reply is the executor's result, couriered back to the caller. Errors are
 // operational strings (never leak internals); OK=false always carries Error.
 type Reply struct {
@@ -160,6 +180,10 @@ type Dispatcher struct {
 	Prov Provisioner
 	// Task authors a task draft (pact.task). Nil = disabled.
 	Task TaskAuthor
+	// Cockpit drives hosted cockpit sessions remotely (cockpit.*). Nil = disabled.
+	Cockpit Cockpiter
+	// CockpitPolicy gates cockpit.* rpcs per project. Nil = disabled (fail closed).
+	CockpitPolicy CockpitPolicy
 }
 
 // Handle executes one rpc and returns a Reply. It never panics on bad input:
@@ -242,6 +266,66 @@ func (d *Dispatcher) Handle(rpc RPC) Reply {
 			AgentKind: rpc.AgentKind, Briefing: rpc.Briefing, Branch: rpc.Branch,
 		}); err != nil {
 			return fail(err.Error())
+		}
+		return Reply{OK: true}
+	}
+	// Hosted cockpit remote control (prompt/permission/cancel/resume/subscribe).
+	// Gated per-project by RemotePolicy.Cockpit before touching the session.
+	if strings.HasPrefix(rpc.Type, "cockpit.") {
+		if rpc.Project == "" {
+			return fail("rpc missing project")
+		}
+		if d.Cockpit == nil {
+			return fail("remote cockpit not enabled for this machine")
+		}
+		if d.CockpitPolicy == nil {
+			return fail("remote cockpit policy not configured for this machine")
+		}
+		allowed, err := d.CockpitPolicy(rpc.Project)
+		if err != nil {
+			return fail(fmt.Sprintf("cockpit policy: %v", err))
+		}
+		if !allowed {
+			return fail("remote cockpit not enabled for this project (see .pact/remote.json)")
+		}
+		switch rpc.Type {
+		case "cockpit.prompt":
+			if rpc.Seat == "" || rpc.Text == "" {
+				return fail("cockpit.prompt requires seat and text")
+			}
+			if err := d.Cockpit.Prompt(rpc.Project, rpc.Seat, rpc.Text); err != nil {
+				return fail(err.Error())
+			}
+		case "cockpit.permission":
+			if rpc.Seat == "" || rpc.RequestID == "" || rpc.Decision == "" {
+				return fail("cockpit.permission requires seat, requestId and decision")
+			}
+			if err := d.Cockpit.Permission(rpc.Project, rpc.Seat, rpc.RequestID, rpc.Decision); err != nil {
+				return fail(err.Error())
+			}
+		case "cockpit.cancel":
+			if rpc.Seat == "" {
+				return fail("cockpit.cancel requires seat")
+			}
+			if err := d.Cockpit.Cancel(rpc.Project, rpc.Seat); err != nil {
+				return fail(err.Error())
+			}
+		case "cockpit.resume":
+			if rpc.Seat == "" {
+				return fail("cockpit.resume requires seat")
+			}
+			if err := d.Cockpit.Resume(rpc.Project, rpc.Seat); err != nil {
+				return fail(err.Error())
+			}
+		case "cockpit.subscribe":
+			if rpc.Seat == "" {
+				return fail("cockpit.subscribe requires seat")
+			}
+			if err := d.Cockpit.Subscribe(rpc.Project, rpc.Seat); err != nil {
+				return fail(err.Error())
+			}
+		default:
+			return fail(fmt.Sprintf("unknown rpc type %q", rpc.Type))
 		}
 		return Reply{OK: true}
 	}

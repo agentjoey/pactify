@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { PactEventDetail } from "../lib/types";
+import type { PactEventDetail, State } from "../lib/types";
 import { useDataSource } from "../lib/datasource";
 import { relTime } from "../lib/reltime";
 import { Badge } from "./ui/Badge";
+
+const COCKPIT_REVIEW_STATUSES = new Set(["awaiting_review", "changes_requested"]);
 
 type BadgeColor = Parameters<typeof Badge>[0]["color"];
 
@@ -51,11 +53,15 @@ function strPayload(body: Record<string, unknown>, key: string): string {
 export function TaskDetail({
   project,
   taskId,
+  state,
   onClose,
+  onOpenCockpit,
 }: {
   project: string;
   taskId: string;
+  state?: State;
   onClose?: () => void;
+  onOpenCockpit?: (seat: string) => void;
 }) {
   const src = useDataSource();
   const [events, setEvents] = useState<PactEventDetail[] | null>(null);
@@ -148,15 +154,40 @@ export function TaskDetail({
           <div className="mono text-[11px] text-[var(--color-text-3)]">{taskId}</div>
           <div className="mt-0.5 flex items-center justify-between text-[15px] font-[650] text-[var(--color-text-1)]">
             <span>Event history</span>
-            <button
-              type="button"
-              data-testid="task-detail-close"
-              onClick={onClose}
-              className="rounded-md px-2 py-1 text-[11px] text-[var(--color-text-3)] hover:text-[var(--color-text-1)]"
-              aria-label="Close"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const task = state?.features
+                  .flatMap((f) => f.tasks)
+                  .find((t) => t.id === taskId);
+                if (
+                  task &&
+                  COCKPIT_REVIEW_STATUSES.has(task.status) &&
+                  src.cockpitSubscribe &&
+                  onOpenCockpit
+                ) {
+                  return (
+                    <button
+                      type="button"
+                      data-testid="task-detail-discuss-cockpit"
+                      onClick={() => onOpenCockpit(task.owner)}
+                      className="rounded-md px-2 py-1 text-[11px] font-medium text-[var(--color-role-design)] hover:underline"
+                    >
+                      Discuss in Cockpit →
+                    </button>
+                  );
+                }
+                return null;
+              })()}
+              <button
+                type="button"
+                data-testid="task-detail-close"
+                onClick={onClose}
+                className="rounded-md px-2 py-1 text-[11px] text-[var(--color-text-3)] hover:text-[var(--color-text-1)]"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         </div>
 

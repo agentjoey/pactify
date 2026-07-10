@@ -37,6 +37,13 @@ export interface PactEventBroadcast {
   bodyEnc: string
 }
 
+/** An ephemeral courier event broadcast to the account room (e.g. cockpit mirror). */
+export interface EphemeralMessage {
+  runId: string
+  seq: number
+  body: unknown
+}
+
 /**
  * Framework-agnostic read-client for the zero-knowledge pact relay: challenge
  * auth, HTTP reads (projects + events), realtime socket subscription, and
@@ -126,10 +133,13 @@ export class RelayClient {
 
   /** Decrypt without validating against linx's AgentEvent schema — for foreign
    * payloads like pactify's raw pact ledger lines, which decryptEvent would
-   * reject with `invalid_union_discriminator`. The caller validates the shape. */
-  decryptRaw(projectId: string, bodyEnc: string): unknown {
+   * reject with `invalid_union_discriminator`. The caller validates the shape.
+   * Accepts either the JSON string or the already-parsed EncryptedBlob object. */
+  decryptRaw(projectId: string, bodyEnc: string | unknown): unknown {
     const key = deriveProjectKey(this.master, projectId)
-    const blob = JSON.parse(bodyEnc) as EncryptedBlob
+    const blob = (
+      typeof bodyEnc === 'string' ? JSON.parse(bodyEnc) : JSON.parse(JSON.stringify(bodyEnc))
+    ) as EncryptedBlob
     return decryptEventRaw(key, blob)
   }
 
@@ -194,6 +204,29 @@ export class RelayClient {
    */
   sendRpc(rpc: RpcRequest): void {
     this.controlSocket().emit('rpc', rpc)
+  }
+
+  private ephemeralHandlers = new Set<(e: EphemeralMessage) => void>()
+  private ephemeralListenerAttached = false
+
+  /**
+   * Subscribe to ephemeral account-room events couriered by the relay. The relay
+   * forwards events with a `cockpit:` runId prefix from machine ingest; the
+   * caller filters and decrypts the opaque body. Returns an unsubscribe function.
+   */
+  onEphemeral(cb: (e: EphemeralMessage) => void): () => void {
+    this.ephemeralHandlers.add(cb)
+    if (!this.ephemeralListenerAttached) {
+      this.ephemeralListenerAttached = true
+      this.controlSocket().on('event', (e: EphemeralMessage) => {
+        if (typeof e?.runId === 'string' && e.runId.startsWith('cockpit:')) {
+          this.ephemeralHandlers.forEach((h) => h(e))
+        }
+      })
+    }
+    return () => {
+      this.ephemeralHandlers.delete(cb)
+    }
   }
 }
 

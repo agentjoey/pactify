@@ -3,6 +3,7 @@ package serve
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +17,10 @@ import (
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
 )
+
+// errNothingToResume is surfaced by the resume helper/endpoint when no thread
+// has been persisted for the (project, seat).
+var errNothingToResume = errors.New("nothing to resume")
 
 func (s *Server) registerCockpitRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/projects/{id}/cockpit/prompt", s.handleCockpitPrompt)
@@ -131,6 +136,100 @@ func (s *Server) seatKind(project, seat string) string {
 	return ""
 }
 
+// cockpitProjectDir returns the repo dir for a registered project.
+func (s *Server) cockpitProjectDir(project string) (string, bool) {
+	s.pmu.RLock()
+	defer s.pmu.RUnlock()
+	p, ok := s.projects[project]
+	return p.Path, ok
+}
+
+// cockpitSessionFor gets or starts a cockpit session for (project, seat),
+// persisting a non-empty threadID when one is available. Used by the local
+// HTTP endpoints and the remote Cockpiter implementation so both surfaces share
+// the same lifecycle.
+func (s *Server) cockpitSessionFor(ctx context.Context, project, seat string) (*cockpit.CockpitSession, string, error) {
+	dir, ok := s.cockpitProjectDir(project)
+	if !ok {
+		return nil, "", fmt.Errorf("unknown project %q", project)
+	}
+	if err := s.ensureCockpit(); err != nil {
+		return nil, "", err
+	}
+	key := cockpit.SessionKey{Project: project, Seat: seat}
+	cs, err := s.cockpit.Session(ctx, key, cockpit.StartOpts{RepoDir: dir, Seat: seat})
+	if err != nil {
+		return nil, "", err
+	}
+	tid := cs.ThreadID()
+	if tid != "" {
+		s.cockpit.NoteThread(key, tid)
+	}
+	return cs, tid, nil
+}
+
+// cockpitSessionGet returns an existing live session without creating one.
+func (s *Server) cockpitSessionGet(project, seat string) (*cockpit.CockpitSession, bool, error) {
+	if err := s.ensureCockpit(); err != nil {
+		return nil, false, err
+	}
+	key := cockpit.SessionKey{Project: project, Seat: seat}
+	cs, ok := s.cockpit.Get(key)
+	return cs, ok, nil
+}
+
+// cockpitResumeSession resumes the persisted thread for (project, seat).
+func (s *Server) cockpitResumeSession(ctx context.Context, project, seat string) (*cockpit.CockpitSession, string, error) {
+	if _, ok := s.cockpitProjectDir(project); !ok {
+		return nil, "", fmt.Errorf("unknown project %q", project)
+	}
+	if err := s.ensureCockpit(); err != nil {
+		return nil, "", err
+	}
+	key := cockpit.SessionKey{Project: project, Seat: seat}
+	threadID := s.cockpit.StoredThread(key)
+	if threadID == "" {
+		return nil, "", errNothingToResume
+	}
+	cs, err := s.cockpit.Resume(ctx, key, threadID)
+	if err != nil {
+		return nil, "", err
+	}
+	return cs, cs.ThreadID(), nil
+}
+
+// cockpitDecision parses a remote permission decision string. It accepts both
+// the HTTP endpoint spelling (allow_for_session) and the wire rpc spelling
+// (allow_session) so the two surfaces stay aligned.
+func cockpitDecision(decision string) (cockpit.Decision, bool) {
+	switch decision {
+	case "allow":
+		return cockpit.DecisionAllow, true
+	case "deny":
+		return cockpit.DecisionDeny, true
+	case "allow_for_session", "allow_session":
+		return cockpit.DecisionAllowForSession, true
+	default:
+		return "", false
+	}
+}
+
+// pendingItemsFor returns the pending-approval snapshot for a session.
+func pendingItemsFor(cs *cockpit.CockpitSession) []cockpitPendingItem {
+	pending := cs.Pending()
+	items := make([]cockpitPendingItem, 0, len(pending))
+	for _, p := range pending {
+		items = append(items, cockpitPendingItem{
+			ID:       p.ID,
+			Kind:     p.Kind,
+			ToolName: p.ToolName,
+			RawInput: p.RawInput,
+			Risk:     cockpit.GradeRisk(p.ToolName, string(p.RawInput)),
+		})
+	}
+	return items
+}
+
 type cockpitPromptReq struct {
 	Seat string `json:"seat"`
 	Text string `json:"text"`
@@ -143,8 +242,7 @@ type cockpitPromptResp struct {
 
 func (s *Server) handleCockpitPrompt(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	_, dir, ok := s.project(id)
-	if !ok {
+	if _, _, ok := s.project(id); !ok {
 		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
@@ -161,22 +259,17 @@ func (s *Server) handleCockpitPrompt(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "text is required")
 		return
 	}
-	if err := s.ensureCockpit(); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 
-	key := cockpit.SessionKey{Project: id, Seat: req.Seat}
-	opts := cockpit.StartOpts{RepoDir: dir, Seat: req.Seat}
-	cs, err := s.cockpit.Session(r.Context(), key, opts)
+	cs, _, err := s.cockpitSessionFor(r.Context(), id, req.Seat)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if tid := cs.ThreadID(); tid != "" {
-		s.cockpit.NoteThread(key, tid)
-	}
 	if err := cs.Prompt(r.Context(), req.Text); err != nil {
+		if errors.Is(err, cockpit.ErrPromptRateLimited) {
+			writeErr(w, http.StatusTooManyRequests, err.Error())
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -185,8 +278,7 @@ func (s *Server) handleCockpitPrompt(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCockpitStream(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	_, dir, ok := s.project(id)
-	if !ok {
+	if _, _, ok := s.project(id); !ok {
 		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
@@ -202,13 +294,7 @@ func (s *Server) handleCockpitStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.ensureCockpit(); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	key := cockpit.SessionKey{Project: id, Seat: seat}
-	cs, err := s.cockpit.Session(r.Context(), key, cockpit.StartOpts{RepoDir: dir, Seat: seat})
+	cs, _, err := s.cockpitSessionFor(r.Context(), id, seat)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
@@ -295,22 +381,18 @@ func (s *Server) handleCockpitPermission(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	key := cockpit.SessionKey{Project: id, Seat: req.Seat}
-	cs, ok := s.cockpit.Get(key)
+	cs, ok, err := s.cockpitSessionGet(id, req.Seat)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "session not found")
 		return
 	}
 
-	var d cockpit.Decision
-	switch req.Decision {
-	case "allow":
-		d = cockpit.DecisionAllow
-	case "deny":
-		d = cockpit.DecisionDeny
-	case "allow_for_session":
-		d = cockpit.DecisionAllowForSession
-	default:
+	d, ok := cockpitDecision(req.Decision)
+	if !ok {
 		writeErr(w, http.StatusBadRequest, "decision must be allow, deny or allow_for_session")
 		return
 	}
@@ -346,8 +428,11 @@ func (s *Server) handleCockpitCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := cockpit.SessionKey{Project: id, Seat: req.Seat}
-	cs, ok := s.cockpit.Get(key)
+	cs, ok, err := s.cockpitSessionGet(id, req.Seat)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "session not found")
 		return
@@ -414,18 +499,7 @@ func (s *Server) handleCockpitStatus(w http.ResponseWriter, r *http.Request) {
 		s.cockpit.NoteThread(key, tid)
 	}
 
-	pending := cs.Pending()
-	items := make([]cockpitPendingItem, 0, len(pending))
-	for _, p := range pending {
-		items = append(items, cockpitPendingItem{
-			ID:       p.ID,
-			Kind:     p.Kind,
-			ToolName: p.ToolName,
-			RawInput: p.RawInput,
-			Risk:     cockpit.GradeRisk(p.ToolName, string(p.RawInput)),
-		})
-	}
-	writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: cs.ThreadID(), Capable: true, Resumable: false, Pending: items})
+	writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: cs.ThreadID(), Capable: true, Resumable: false, Pending: pendingItemsFor(cs)})
 }
 
 type cockpitResumeReq struct {
@@ -452,22 +526,15 @@ func (s *Server) handleCockpitResume(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "seat is required")
 		return
 	}
-	if err := s.ensureCockpit(); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 
-	key := cockpit.SessionKey{Project: id, Seat: req.Seat}
-	threadID := s.cockpit.StoredThread(key)
-	if threadID == "" {
-		writeErr(w, http.StatusBadRequest, "nothing to resume")
-		return
-	}
-
-	cs, err := s.cockpit.Resume(r.Context(), key, threadID)
+	_, tid, err := s.cockpitResumeSession(r.Context(), id, req.Seat)
 	if err != nil {
-		writeErr(w, http.StatusBadGateway, err.Error())
+		status := http.StatusBadGateway
+		if errors.Is(err, errNothingToResume) {
+			status = http.StatusBadRequest
+		}
+		writeErr(w, status, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, cockpitResumeResp{OK: true, ThreadID: cs.ThreadID()})
+	writeJSON(w, http.StatusOK, cockpitResumeResp{OK: true, ThreadID: tid})
 }

@@ -3,22 +3,30 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { CockpitPanel } from "./CockpitPanel";
 import { DataSourceProvider } from "../lib/datasource";
 import type { DataSource } from "../lib/datasource";
-import type { CockpitStatus } from "../lib/api";
+import type { CockpitStatus, CockpitEvent } from "../lib/api";
+import type { Seat } from "../lib/types";
 
-let lastES: FakeES | null = null;
+let lastSub: FakeSub | null = null;
 
-class FakeES {
-  onmessage: ((ev: MessageEvent) => void) | null = null;
+class FakeSub {
+  cb: ((e: CockpitEvent) => void) | null = null;
   closed = false;
-  url: string;
-  constructor(url: string) {
-    this.url = url;
-    lastES = this;
+  constructor(cb: (e: CockpitEvent) => void) {
+    this.cb = cb;
+    lastSub = this;
+  }
+  emit(e: CockpitEvent) {
+    this.cb?.(e);
   }
   close() {
     this.closed = true;
   }
 }
+
+const defaultAgents: Seat[] = [
+  { id: "claude", roles: ["orchestrator"], kind: "claude-code" },
+  { id: "kimi", roles: ["worker"], kind: "kimi-cli" },
+];
 
 function makeSource(overrides: {
   cockpitPrompt?: DataSource["cockpitPrompt"];
@@ -27,6 +35,7 @@ function makeSource(overrides: {
   cockpitResume?: DataSource["cockpitResume"];
   cockpitStatus?: DataSource["cockpitStatus"];
   cockpitStreamUrl?: DataSource["cockpitStreamUrl"];
+  cockpitSubscribe?: DataSource["cockpitSubscribe"];
 } = {}): DataSource {
   return {
     capabilities: {
@@ -47,20 +56,41 @@ function makeSource(overrides: {
       overrides.cockpitStatus ??
       vi.fn().mockResolvedValue({ threadId: "", capable: true, pending: [] } as CockpitStatus),
     cockpitStreamUrl: overrides.cockpitStreamUrl ?? vi.fn().mockReturnValue("/fake-cockpit-stream"),
+    cockpitSubscribe:
+      overrides.cockpitSubscribe ??
+      vi.fn((_project, _seat, cb) => {
+        const sub = new FakeSub(cb);
+        return () => sub.close();
+      }),
   } as unknown as DataSource;
 }
 
-function renderPanel(source: DataSource, onClose = vi.fn()) {
+function renderPanel(
+  source: DataSource,
+  opts: {
+    seat?: string;
+    agents?: Seat[];
+    onClose?: () => void;
+    onNotify?: (m: string, kind?: "error") => void;
+    onSeatChange?: (s: string) => void;
+  } = {},
+) {
   return render(
     <DataSourceProvider source={source}>
-      <CockpitPanel project="p1" seat="claude" onClose={onClose} />
+      <CockpitPanel
+        project="p1"
+        seat={opts.seat ?? "claude"}
+        agents={opts.agents ?? defaultAgents}
+        onClose={opts.onClose ?? vi.fn()}
+        onNotify={opts.onNotify}
+        onSeatChange={opts.onSeatChange}
+      />
     </DataSourceProvider>,
   );
 }
 
 beforeEach(() => {
-  lastES = null;
-  vi.stubGlobal("EventSource", FakeES);
+  lastSub = null;
 });
 
 afterEach(() => {
@@ -69,33 +99,27 @@ afterEach(() => {
 });
 
 describe("CockpitPanel", () => {
-  it("opens an EventSource and closes it on unmount", () => {
+  it("subscribes via cockpitSubscribe and unsubscribes on unmount", () => {
     const source = makeSource();
     const { unmount } = renderPanel(source);
-    expect(lastES).not.toBeNull();
-    expect(lastES!.url).toBe("/fake-cockpit-stream");
-    const messages = screen.getByTestId("cockpit-messages");
-    expect(messages).toHaveAttribute("role", "log");
-    expect(messages).toHaveAttribute("aria-label", "Conversation");
+    expect(source.cockpitSubscribe).toHaveBeenCalledWith("p1", "claude", expect.any(Function));
+    expect(lastSub).not.toBeNull();
+    expect(lastSub!.closed).toBe(false);
     unmount();
-    expect(lastES!.closed).toBe(true);
+    expect(lastSub!.closed).toBe(true);
   });
 
   it("accumulates message events into an assistant bubble and renders system rows", async () => {
     renderPanel(makeSource());
-    expect(lastES).not.toBeNull();
+    expect(lastSub).not.toBeNull();
 
-    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: "Hello" }) } as MessageEvent);
-    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: " world" }) } as MessageEvent);
+    lastSub!.emit({ kind: "message", text: "Hello" });
+    lastSub!.emit({ kind: "message", text: " world" });
     await waitFor(() => expect(screen.getByTestId("cockpit-message")).toHaveTextContent("Hello world"));
     expect(screen.getByTestId("cockpit-message").dataset.role).toBe("assistant");
 
-    lastES!.onmessage?.({
-      data: JSON.stringify({ kind: "tool", tool: { name: "read_file", phase: "call", text: "foo.txt" } }),
-    } as MessageEvent);
-    lastES!.onmessage?.({
-      data: JSON.stringify({ kind: "error", err: "something broke" }),
-    } as MessageEvent);
+    lastSub!.emit({ kind: "tool", tool: { name: "read_file", phase: "call", text: "foo.txt" } });
+    lastSub!.emit({ kind: "error", err: "something broke" });
     await waitFor(() => expect(screen.getAllByTestId("cockpit-system-row")).toHaveLength(2));
     const rows = screen.getAllByTestId("cockpit-system-row");
     expect(rows[0]).toHaveTextContent("read_file (call): foo.txt");
@@ -171,26 +195,19 @@ describe("CockpitPanel", () => {
     await waitFor(() => expect(screen.getByTestId("cockpit-resume")).toBeInTheDocument());
     expect(screen.getByTestId("cockpit-resume")).toHaveTextContent("Previous session available — Resume");
 
-    // A successful resume bumps streamKey → the effect reconnects with a NEW
-    // EventSource. Wait for that reconnect INSIDE the test: ending after only
-    // "cockpitResume was called" lets the async continuation run post-afterEach
-    // (EventSource already unstubbed) and the ReferenceError gets attributed here.
-    const prevES = lastES;
+    const prevSub = lastSub;
     fireEvent.click(screen.getByTestId("cockpit-resume-button"));
     await waitFor(() => expect(cockpitResume).toHaveBeenCalledWith("p1", "claude"));
-    await waitFor(() => expect(lastES).not.toBe(prevES));
+    await waitFor(() => expect(source.cockpitSubscribe).toHaveBeenCalledTimes(2));
+    expect(lastSub).not.toBe(prevSub);
   });
 
   it("hides the resume banner once stream content arrives", async () => {
-    const source = makeSource({
-      cockpitStatus: vi
-        .fn()
-        .mockResolvedValue({ threadId: "", capable: true, resumable: true, pending: [] } as CockpitStatus),
-    });
+    const source = makeSource();
     renderPanel(source);
-    await waitFor(() => expect(screen.getByTestId("cockpit-resume")).toBeInTheDocument());
+    await waitFor(() => expect(source.cockpitSubscribe).toHaveBeenCalledTimes(1));
 
-    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: "hi" }) } as MessageEvent);
+    lastSub!.emit({ kind: "message", text: "hi" });
     await waitFor(() => expect(screen.getByTestId("cockpit-message")).toHaveTextContent("hi"));
     expect(screen.queryByTestId("cockpit-resume")).not.toBeInTheDocument();
   });
@@ -216,7 +233,7 @@ describe("CockpitPanel", () => {
 
   it("calls onClose when the close button is clicked", () => {
     const onClose = vi.fn();
-    renderPanel(makeSource(), onClose);
+    renderPanel(makeSource(), { onClose });
     fireEvent.click(screen.getByTestId("cockpit-close"));
     expect(onClose).toHaveBeenCalled();
   });
@@ -273,18 +290,14 @@ describe("CockpitPanel", () => {
 
   it("shows and clears the running-tool indicator", async () => {
     renderPanel(makeSource());
-    expect(lastES).not.toBeNull();
+    expect(lastSub).not.toBeNull();
 
-    lastES!.onmessage?.({
-      data: JSON.stringify({ kind: "tool", tool: { name: "read_file", phase: "start" } }),
-    } as MessageEvent);
+    lastSub!.emit({ kind: "tool", tool: { name: "read_file", phase: "start" } });
     await waitFor(() =>
       expect(screen.getByTestId("cockpit-running")).toHaveTextContent("⏺ read_file running…"),
     );
 
-    lastES!.onmessage?.({
-      data: JSON.stringify({ kind: "state", state: "turn_completed" }),
-    } as MessageEvent);
+    lastSub!.emit({ kind: "state", state: "turn_completed" });
     await waitFor(() => expect(screen.queryByTestId("cockpit-running")).not.toBeInTheDocument());
   });
 
@@ -317,7 +330,7 @@ describe("CockpitPanel", () => {
       },
     });
 
-    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: "hi" }) } as MessageEvent);
+    lastSub!.emit({ kind: "message", text: "hi" });
     await waitFor(() => expect(scrollTop).toBe(200));
   });
 
@@ -336,8 +349,41 @@ describe("CockpitPanel", () => {
       },
     });
 
-    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: "hi" }) } as MessageEvent);
+    lastSub!.emit({ kind: "message", text: "hi" });
     await waitFor(() => expect(screen.getByTestId("cockpit-message")).toHaveTextContent("hi"));
     expect(scrollTop).toBe(10);
+  });
+
+  it("renders a seat dropdown and switches seat on change", async () => {
+    const source = makeSource();
+    const onSeatChange = vi.fn();
+    const { rerender } = renderPanel(source, { agents: defaultAgents, onSeatChange });
+    const select = screen.getByTestId("cockpit-seat-select") as HTMLSelectElement;
+    expect(select.value).toBe("claude");
+
+    fireEvent.change(select, { target: { value: "kimi" } });
+    expect(onSeatChange).toHaveBeenCalledWith("kimi");
+
+    rerender(
+      <DataSourceProvider source={source}>
+        <CockpitPanel project="p1" seat="kimi" agents={defaultAgents} onClose={vi.fn()} onSeatChange={onSeatChange} />
+      </DataSourceProvider>,
+    );
+    await waitFor(() =>
+      expect(source.cockpitSubscribe).toHaveBeenCalledWith("p1", "kimi", expect.any(Function)),
+    );
+  });
+
+  it("notifies on rate-limit errors", async () => {
+    const onNotify = vi.fn();
+    const cockpitPrompt = vi.fn().mockRejectedValue(new Error("429 Too Many Requests"));
+    const source = makeSource({ cockpitPrompt });
+    renderPanel(source, { onNotify });
+
+    fireEvent.change(screen.getByTestId("cockpit-input"), { target: { value: "go" } });
+    fireEvent.click(screen.getByTestId("cockpit-send"));
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-error")).toHaveTextContent("Rate limited"));
+    expect(onNotify).toHaveBeenCalledWith("Rate limited (429)", "error");
   });
 });

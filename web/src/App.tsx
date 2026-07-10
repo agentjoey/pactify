@@ -83,6 +83,11 @@ function AppContent() {
   const [recipes, setRecipes] = useState<RecipeItem[]>([]);
   const [recipeOpen, setRecipeOpen] = useState(false);
   const [cockpitOpen, setCockpitOpen] = useState(false);
+  const [cockpitSeat, setCockpitSeat] = useState("");
+  const openCockpit = (seat: string) => {
+    setCockpitSeat(seat);
+    setCockpitOpen(true);
+  };
   // Live pulse (M3.3b C4): task ids whose status changed on the latest applied
   // LIVE snapshot. Canvas/Board apply a transient `pulse` class; the set is
   // cleared after the keyframe duration so the glow plays exactly once. Replay
@@ -399,8 +404,8 @@ function AppContent() {
         onAddProject={() => setWizardOpen(true)}
         onOpenSettings={() => openSettings(null)}
         onOpenDispatch={() => setDispatchOpen(true)}
-        showCockpit={Boolean(current) && src.capabilities.canOrchestrate && !!src.cockpitStreamUrl}
-        onToggleCockpit={() => setCockpitOpen((v) => !v)}
+        showCockpit={Boolean(current) && src.capabilities.cockpit}
+        onToggleCockpit={() => cockpitOpen ? setCockpitOpen(false) : openCockpit(orchestratorSeat)}
         worktreesByProject={worktreesByProject}
         currentWorktree={currentWorktree}
         onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }}
@@ -418,7 +423,7 @@ function AppContent() {
                 {/* Run rail: the orchestrate banner (renders nothing when the
                     driver is idle) — RunControl strip + driver-touched feature
                     lanes + the five-action ReviewGate on a paused gate. */}
-                <RunRail project={current} state={shownState} refreshTick={refreshTick} author={author} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} />
+                <RunRail project={current} state={shownState} refreshTick={refreshTick} author={author} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} onOpenCockpit={openCockpit} />
                 {/* Board | Flow view switcher + main view. */}
                 <div className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-[18px] py-[9px]">
                   <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] p-0.5">
@@ -444,15 +449,15 @@ function AppContent() {
                     full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
                   {boardMode === "board" ? (
-                    <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>
+                    <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} onOpenCockpit={openCockpit} /></div>
                   ) : (
                     <div data-testid="view-flow" className="flex flex-1 overflow-hidden"><FlowView state={shownState} events={events} project={current} selected={selected} onSelect={setSelected} /></div>
                   )}
                   {src.capabilities.multiMachine
-                    ? <TaskDetail project={current} taskId={selected} onClose={() => setSelected("")} />
+                    ? <TaskDetail project={current} taskId={selected} state={shownState} onClose={() => setSelected("")} onOpenCockpit={openCockpit} />
                     : <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />}
-                  {cockpitOpen && current && src.capabilities.canOrchestrate && src.cockpitStreamUrl && (
-                    <CockpitPanel project={current} seat={orchestratorSeat} onClose={() => setCockpitOpen(false)} />
+                  {cockpitOpen && current && src.capabilities.cockpit && (
+                    <CockpitPanel project={current} seat={cockpitSeat || orchestratorSeat} agents={shownState.agents} onClose={() => setCockpitOpen(false)} onSeatChange={setCockpitSeat} onNotify={pushToast} />
                   )}
                 </div>
                 {/* Event drawer: collapsed one-line ticker of the pact log —

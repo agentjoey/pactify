@@ -130,6 +130,7 @@ them MUST ignore them (§2.2).
 | `withdraw` | `orchestrator` | feature | Excludes the entire feature from the projection. |
 | `config_gate` | `orchestrator` | project | Sets the project's hard verification gate command (see `pactify config gate`). |
 | `rebaseline` | `orchestrator` | project | Overrides the init-time `base_branch` (see `pactify config base-branch`); the latest rebaseline wins. |
+| `escalate` | `orchestrator` | task | Machine-written observability event emitted when the orchestrate driver cannot converge a task and pauses for human intervention. Does not change the task state machine. Payload: `reason` (string), `seat` (string, the seat that triggered or owns the escalation). No idempotency requirement; duplicates are harmless observation noise. |
 
 ---
 

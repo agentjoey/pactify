@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 // SessionKey identifies a cockpit session: one per (project, seat).
@@ -35,12 +36,22 @@ type Manager struct {
 	baseCtx context.Context
 	sink    AuditSink
 
-	mu       sync.Mutex
-	sessions map[SessionKey]*CockpitSession
-	cancels  map[SessionKey]context.CancelFunc
+	mu           sync.Mutex
+	sessions     map[SessionKey]*CockpitSession
+	cancels      map[SessionKey]context.CancelFunc
+	idleTimeout  time.Duration
 
 	threads     map[string]string // SessionKey.String() -> threadID
 	threadsOnce sync.Once
+}
+
+// ManagerOption configures a Manager on creation.
+type ManagerOption func(*Manager)
+
+// WithIdleTimeout overrides the default 30-minute idle timeout. Intended for
+// tests; a value ≤ 0 keeps the default.
+func WithIdleTimeout(d time.Duration) ManagerOption {
+	return func(m *Manager) { m.idleTimeout = d }
 }
 
 func (m *Manager) threadsFile() string {
@@ -124,8 +135,8 @@ func NewManagerCtx(baseCtx context.Context, baseDir string, factory BackendFacto
 
 // NewManagerCtxAudit is NewManagerCtx with an optional audit sink. The sink is
 // invoked for every live CockpitSession under this manager.
-func NewManagerCtxAudit(baseCtx context.Context, baseDir string, factory BackendFactory, sink AuditSink) *Manager {
-	return &Manager{
+func NewManagerCtxAudit(baseCtx context.Context, baseDir string, factory BackendFactory, sink AuditSink, opts ...ManagerOption) *Manager {
+	m := &Manager{
 		baseDir:  baseDir,
 		factory:  factory,
 		baseCtx:  baseCtx,
@@ -134,6 +145,14 @@ func NewManagerCtxAudit(baseCtx context.Context, baseDir string, factory Backend
 		cancels:  make(map[SessionKey]context.CancelFunc),
 		threads:  make(map[string]string),
 	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	if m.idleTimeout <= 0 {
+		m.idleTimeout = 30 * time.Minute
+	}
+	go m.reaper(baseCtx)
+	return m
 }
 
 // wrapSessionLocked creates a CockpitSession from an already-started Session and
@@ -174,6 +193,7 @@ func (m *Manager) Session(_ context.Context, key SessionKey, opts StartOpts) (*C
 	defer m.mu.Unlock()
 
 	if cs, ok := m.sessions[key]; ok {
+		cs.touch()
 		return cs, nil
 	}
 
@@ -189,7 +209,12 @@ func (m *Manager) Session(_ context.Context, key SessionKey, opts StartOpts) (*C
 		return nil, err
 	}
 
-	return m.wrapSessionLocked(sessCtx, key, sess, cancel)
+	cs, err := m.wrapSessionLocked(sessCtx, key, sess, cancel)
+	if err != nil {
+		return nil, err
+	}
+	cs.touch()
+	return cs, nil
 }
 
 // Resume returns the existing live session for key, or resumes a conversation
@@ -203,6 +228,7 @@ func (m *Manager) Resume(_ context.Context, key SessionKey, threadID string) (*C
 	defer m.mu.Unlock()
 
 	if cs, ok := m.sessions[key]; ok {
+		cs.touch()
 		return cs, nil
 	}
 
@@ -218,7 +244,12 @@ func (m *Manager) Resume(_ context.Context, key SessionKey, threadID string) (*C
 		return nil, err
 	}
 
-	return m.wrapSessionLocked(sessCtx, key, sess, cancel)
+	cs, err := m.wrapSessionLocked(sessCtx, key, sess, cancel)
+	if err != nil {
+		return nil, err
+	}
+	cs.touch()
+	return cs, nil
 }
 
 // Get returns the live session for key without creating one.
@@ -282,4 +313,48 @@ func (m *Manager) CloseAll() error {
 		}
 	}
 	return firstErr
+}
+
+// reaper scans for idle sessions and closes them. It exits when baseCtx is
+// cancelled. The scan interval is deliberately coarse (1 minute) because this
+// is a leak-guard, not a precision timer.
+func (m *Manager) reaper(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			m.CloseIdleSessions()
+		}
+	}
+}
+
+// CloseIdleSessions closes every session whose last activity is older than the
+// configured idleTimeout. It is safe to call concurrently and is exported so
+// tests can reap on demand without waiting for the reaper ticker.
+func (m *Manager) CloseIdleSessions() {
+	m.mu.Lock()
+	now := time.Now()
+	type item struct {
+		key SessionKey
+		cs  *CockpitSession
+	}
+	var expired []item
+	for key, cs := range m.sessions {
+		if cs.idleSince(now) > m.idleTimeout {
+			expired = append(expired, item{key: key, cs: cs})
+			delete(m.sessions, key)
+			if cancel := m.cancels[key]; cancel != nil {
+				cancel()
+				delete(m.cancels, key)
+			}
+		}
+	}
+	m.mu.Unlock()
+
+	for _, it := range expired {
+		_ = it.cs.Close()
+	}
 }

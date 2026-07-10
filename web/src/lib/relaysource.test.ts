@@ -5,10 +5,11 @@ import type {
   Project,
   PactEvent,
   PactEventBroadcast,
+  EphemeralMessage,
 } from "@pactify-apps/relay-client";
 import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
 import type { Machine, ProjectMeta, State } from "./types";
-import type { ProjectStats } from "./api";
+import type { ProjectStats, CockpitEvent } from "./api";
 import type { PactEventDetail } from "./types";
 // RelaySource.subscribe emits the web SSE-frame PactEvent (decrypted body), which
 // is a DIFFERENT type from relay-client's stored PactEvent imported above.
@@ -22,6 +23,7 @@ type MockRelayClient = {
   subscribe: RelayClient["subscribe"];
   sendRpc: RelayClient["sendRpc"];
   account: RelayClient["account"];
+  onEphemeral: RelayClient["onEphemeral"];
 };
 
 function makeClient(overrides?: Partial<MockRelayClient>): MockRelayClient {
@@ -33,18 +35,19 @@ function makeClient(overrides?: Partial<MockRelayClient>): MockRelayClient {
     subscribe: vi.fn().mockReturnValue(() => {}),
     sendRpc: vi.fn(),
     account: vi.fn().mockReturnValue("acct1"),
+    onEphemeral: vi.fn().mockReturnValue(() => {}),
     ...overrides,
   } as unknown as MockRelayClient;
 }
 
 describe("RelaySource", () => {
-  it("can drive pact verbs (canWrite) and orchestrate remotely", () => {
+  it("can drive pact verbs (canWrite), orchestrate and cockpit remotely", () => {
     const src = new RelaySource(makeClient() as RelayClient);
     expect(src.capabilities).toEqual({
       canWrite: true,
       canOrchestrate: true,
       multiMachine: true,
-      cockpit: false,
+      cockpit: true,
     });
   });
 
@@ -662,5 +665,145 @@ describe("RelaySource", () => {
     ).resolves.toBeUndefined();
     expect(events).toEqual([]); // undecryptable → skipped
     expect(states.length).toBe(1); // state still re-folds
+  });
+
+  describe("hosted cockpit", () => {
+    function ephemeralClient() {
+      const handlers = new Set<(msg: EphemeralMessage) => void>();
+      const sendRpc = vi.fn();
+      const listMachines = vi.fn().mockResolvedValue([
+        { machineId: "m-1", host: "build", agentKinds: ["opencode"], online: true, lastSeenAt: 1 },
+      ]);
+      const decryptRaw = vi.fn().mockImplementation((_id: string, body: unknown) => body);
+      const client = makeClient({
+        sendRpc,
+        listMachines,
+        decryptRaw,
+        onEphemeral: vi.fn((cb) => {
+          handlers.add(cb);
+          return () => handlers.delete(cb);
+        }),
+      });
+      return { client, handlers, sendRpc, decryptRaw };
+    }
+
+    it("cockpitSubscribe sends cockpit.subscribe rpc and resubscribes", async () => {
+      const { client, sendRpc } = ephemeralClient();
+      const src = new RelaySource(client as RelayClient);
+      vi.useFakeTimers();
+      const off = src.cockpitSubscribe("p1", "claude", vi.fn());
+      await vi.runOnlyPendingTimersAsync();
+      expect(sendRpc).toHaveBeenCalledWith({
+        type: "cockpit.subscribe",
+        machineId: "m-1",
+        project: "p1",
+        seat: "claude",
+      });
+      vi.advanceTimersByTime(4 * 60 * 1000 + 100);
+      await vi.runOnlyPendingTimersAsync();
+      expect(sendRpc.mock.calls.length).toBeGreaterThanOrEqual(2);
+      off();
+      vi.useRealTimers();
+    });
+
+    it("decrypts, reorders by seq, dedupes and forwards cockpit events", () => {
+      const { client, handlers, decryptRaw } = ephemeralClient();
+      const src = new RelaySource(client as RelayClient);
+      const events: CockpitEvent[] = [];
+      src.cockpitSubscribe("p1", "claude", (e) => events.push(e));
+
+      const emit = (seq: number, kind: string, extras?: Record<string, unknown>) => {
+        handlers.forEach((h) =>
+          h({
+            runId: "cockpit:p1:claude",
+            seq,
+            body: { kind, ...extras },
+          } as EphemeralMessage),
+        );
+      };
+
+      // The server mirror's seq is 1-based and delivered in order (TCP); the
+      // client adopts the first-seen seq as its base (mid-stream joins after a
+      // renewal start higher than 1).
+      emit(1, "message", { text: "first" });
+      emit(2, "message", { text: "second" });
+      emit(2, "message", { text: "second" }); // duplicate
+      emit(3, "state", { state: "turn_completed" });
+
+      expect(decryptRaw).toHaveBeenCalledWith("p1", { kind: "message", text: "first" });
+      expect(events.map((e) => ({ kind: e.kind, text: (e as { text?: string }).text })))
+        .toEqual([
+          { kind: "message", text: "first" },
+          { kind: "message", text: "second" },
+          { kind: "state", text: undefined },
+        ]);
+
+      // A fresh mirror server-side (TTL/serve restart) begins at seq 1 again —
+      // the client resets its cursor instead of dropping everything.
+      emit(1, "message", { text: "restarted" });
+      expect(events).toHaveLength(4);
+      expect((events[3] as { text?: string }).text).toBe("restarted");
+    });
+
+    it("caches the status snapshot and returns it from cockpitStatus", async () => {
+      const { client, handlers } = ephemeralClient();
+      const src = new RelaySource(client as RelayClient);
+      src.cockpitSubscribe("p1", "claude", vi.fn());
+      handlers.forEach((h) =>
+        h({
+          runId: "cockpit:p1:claude",
+          seq: 0,
+          body: {
+            kind: "status",
+            threadId: "t-123",
+            resumable: true,
+            pending: [{ id: "a1", kind: "tool", toolName: "bash", risk: "exec" }],
+          },
+        } as EphemeralMessage),
+      );
+      const status = await src.cockpitStatus("p1", "claude");
+      expect(status).toEqual({
+        threadId: "t-123",
+        capable: true,
+        resumable: true,
+        pending: [{ id: "a1", kind: "tool", toolName: "bash", risk: "exec" }],
+      });
+    });
+
+    it("sends cockpit.prompt / permission / cancel / resume rpcs", async () => {
+      const { client, sendRpc } = ephemeralClient();
+      const src = new RelaySource(client as RelayClient);
+      await src.cockpitPrompt("p1", "claude", "hello");
+      expect(sendRpc).toHaveBeenCalledWith({
+        type: "cockpit.prompt",
+        machineId: "m-1",
+        project: "p1",
+        seat: "claude",
+        text: "hello",
+      });
+      await src.cockpitRespond("p1", "claude", "a1", "allow");
+      expect(sendRpc).toHaveBeenCalledWith({
+        type: "cockpit.permission",
+        machineId: "m-1",
+        project: "p1",
+        seat: "claude",
+        requestId: "a1",
+        decision: "allow",
+      });
+      await src.cockpitCancel("p1", "claude");
+      expect(sendRpc).toHaveBeenCalledWith({
+        type: "cockpit.cancel",
+        machineId: "m-1",
+        project: "p1",
+        seat: "claude",
+      });
+      await src.cockpitResume("p1", "claude");
+      expect(sendRpc).toHaveBeenCalledWith({
+        type: "cockpit.resume",
+        machineId: "m-1",
+        project: "p1",
+        seat: "claude",
+      });
+    });
   });
 });

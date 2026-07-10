@@ -9,7 +9,7 @@
     "ts": { "type": "string", "format": "date-time" },
     "agent_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
     "role": { "enum": ["orchestrator", "worker", "reviewer"] },
-    "event_type": { "enum": ["init", "assign", "join", "checkpoint", "accept", "changes_requested", "merge"] },
+    "event_type": { "enum": ["init", "assign", "join", "checkpoint", "accept", "changes_requested", "merge", "escalate"] },
     "task_id": { "type": "string" },
     "feature": { "type": "string" },
     "payload": { "type": "object" }
@@ -29,6 +29,8 @@
     { "if": { "properties": { "event_type": { "const": "checkpoint" } } },
       "then": { "properties": { "payload": { "required": ["evidence"] } } } },
     { "if": { "properties": { "event_type": { "const": "changes_requested" } } },
-      "then": { "properties": { "payload": { "required": ["reason"] } } } }
+      "then": { "properties": { "payload": { "required": ["reason"] } } } },
+    { "if": { "properties": { "event_type": { "const": "escalate" } } },
+      "then": { "properties": { "payload": { "required": ["reason", "seat"] } } } }
   ]
 }

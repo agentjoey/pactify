@@ -3,6 +3,8 @@ package cockpit
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -396,6 +398,95 @@ func TestCockpitSessionAuditApprovalRespond(t *testing.T) {
 	}
 	if strings.Contains(ev.Summary, "secret") || strings.Contains(ev.Summary, "/tmp") {
 		t.Fatalf("summary must not leak raw input, got %q", ev.Summary)
+	}
+}
+
+func TestCockpitSessionPromptRateLimit(t *testing.T) {
+	fs := NewFakeSession("thread-rl")
+	cs, err := NewCockpitSession(fs, t.TempDir()+"/events.jsonl")
+	if err != nil {
+		t.Fatalf("NewCockpitSession: %v", err)
+	}
+	defer cs.Close()
+
+	ctx := context.Background()
+	for i := 0; i < 10; i++ {
+		if err := cs.Prompt(ctx, fmt.Sprintf("prompt %d", i)); err != nil {
+			t.Fatalf("prompt %d: %v", i, err)
+		}
+	}
+	if err := cs.Prompt(ctx, "over limit"); !errors.Is(err, ErrPromptRateLimited) {
+		t.Fatalf("11th prompt want ErrPromptRateLimited, got %v", err)
+	}
+}
+
+func TestCockpitSessionPendingApprovalQueueCap(t *testing.T) {
+	fs := NewFakeSession("thread-cap")
+	cs, err := NewCockpitSession(fs, t.TempDir()+"/events.jsonl")
+	if err != nil {
+		t.Fatalf("NewCockpitSession: %v", err)
+	}
+	defer cs.Close()
+
+	// Respond fires on the approvalPump goroutine — guard the slice.
+	var mu sync.Mutex
+	var decisions []Decision
+	for i := 0; i < 33; i++ {
+		fs.EmitApproval(ApprovalRequest{
+			Kind:     "command",
+			ToolName: "tool",
+			RawInput: json.RawMessage(`{}`),
+			Respond: func(d Decision) error {
+				mu.Lock()
+				decisions = append(decisions, d)
+				mu.Unlock()
+				return nil
+			},
+		})
+	}
+
+	// Wait for the 33rd request to be auto-denied.
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		mu.Lock()
+		n := len(decisions)
+		mu.Unlock()
+		if n == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for auto-deny; got %d decisions", n)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	// The only decision made should be the auto-deny for the 33rd request.
+	mu.Lock()
+	first := decisions[0]
+	mu.Unlock()
+	if first != DecisionDeny {
+		t.Fatalf("auto-deny decision = %q, want deny", first)
+	}
+
+	// The first 32 approvals remain pending; the 33rd was denied immediately.
+	if got := len(cs.Pending()); got != 32 {
+		t.Fatalf("pending = %d, want 32", got)
+	}
+
+	// A system event should be recorded for the dropped request.
+	history, err := cs.History()
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	var found bool
+	for _, e := range history {
+		if e.Kind == EventSystem && strings.Contains(e.Text, "queue full") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected system event for queue full, history: %+v", history)
 	}
 }
 

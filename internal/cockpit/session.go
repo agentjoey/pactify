@@ -4,11 +4,23 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
+
+const (
+	defaultMaxPrompts   = 10
+	defaultPromptWindow = time.Minute
+	maxPendingApprovals = 32
+)
+
+// ErrPromptRateLimited is returned by Prompt when the per-session sliding
+// window (default 10 prompts/minute) is exceeded.
+var ErrPromptRateLimited = errors.New("prompt rate limit exceeded")
 
 // PendingApproval is one unanswered approval, with a session-stable id the UI
 // echoes back to Respond. RawInput is the full tool input (审批卡信任根).
@@ -58,6 +70,13 @@ type CockpitSession struct {
 	subscribers  map[int]*subscriber
 	nextSubID    int
 	closed       bool
+	lastActivity time.Time
+
+	// promptTimes tracks the timestamps of recent prompts for the sliding-window
+	// rate limit (default 10 prompts per minute).
+	promptTimes  []time.Time
+	maxPrompts   int
+	promptWindow time.Duration
 
 	closeOnce sync.Once
 	closeErr  error
@@ -86,11 +105,14 @@ func NewCockpitSessionWithAudit(sess Session, jsonlPath string, audit func(Audit
 	_ = f.Close()
 
 	cs := &CockpitSession{
-		sess:        sess,
-		jsonlPath:   jsonlPath,
-		pending:     make(map[string]*pendingEntry),
-		subscribers: make(map[int]*subscriber),
-		audit:       audit,
+		sess:         sess,
+		jsonlPath:    jsonlPath,
+		pending:      make(map[string]*pendingEntry),
+		subscribers:  make(map[int]*subscriber),
+		audit:        audit,
+		lastActivity: time.Now(),
+		maxPrompts:   defaultMaxPrompts,
+		promptWindow: defaultPromptWindow,
 	}
 
 	cs.pumpsWG.Add(2)
@@ -100,10 +122,49 @@ func NewCockpitSessionWithAudit(sess Session, jsonlPath string, audit func(Audit
 }
 
 // Prompt forwards a user text prompt to the underlying session serially.
+// It enforces a per-session sliding-window rate limit (default 10/min);
+// exceeding the limit returns ErrPromptRateLimited and does NOT queue.
 func (cs *CockpitSession) Prompt(ctx context.Context, text string) error {
 	cs.promptMu.Lock()
 	defer cs.promptMu.Unlock()
-	return cs.sess.Prompt(ctx, UserMessage{Text: text})
+
+	now := time.Now()
+	if err := cs.checkPromptRateLimit(now); err != nil {
+		return err
+	}
+	if err := cs.sess.Prompt(ctx, UserMessage{Text: text}); err != nil {
+		return err
+	}
+	cs.recordPrompt(now)
+	cs.touch()
+	return nil
+}
+
+func (cs *CockpitSession) checkPromptRateLimit(now time.Time) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	cs.dropOldPromptsLocked(now)
+	if len(cs.promptTimes) >= cs.maxPrompts {
+		return fmt.Errorf("%w: %d prompts per %v", ErrPromptRateLimited, cs.maxPrompts, cs.promptWindow)
+	}
+	return nil
+}
+
+func (cs *CockpitSession) recordPrompt(now time.Time) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	cs.promptTimes = append(cs.promptTimes, now)
+}
+
+func (cs *CockpitSession) dropOldPromptsLocked(now time.Time) {
+	cutoff := now.Add(-cs.promptWindow)
+	keep := cs.promptTimes[:0]
+	for _, t := range cs.promptTimes {
+		if t.After(cutoff) {
+			keep = append(keep, t)
+		}
+	}
+	cs.promptTimes = keep
 }
 
 // Interrupt forwards an interrupt request to the underlying session.
@@ -142,6 +203,7 @@ func (cs *CockpitSession) Respond(approvalID string, d Decision) error {
 	respond := entry.respond
 	delete(cs.pending, approvalID)
 	cs.removeFromPendingOrder(approvalID)
+	cs.touchLocked()
 	cs.mu.Unlock()
 
 	if err := respond(d); err != nil {
@@ -171,6 +233,7 @@ func (cs *CockpitSession) Subscribe() (int, <-chan Event) {
 	ch := make(chan Event, 64)
 	sub := &subscriber{id: id, ch: ch}
 	cs.subscribers[id] = sub
+	cs.touchLocked()
 	return id, ch
 }
 
@@ -224,6 +287,25 @@ func (cs *CockpitSession) emitAudit(ev AuditEvent) {
 		return
 	}
 	cs.audit(ev)
+}
+
+// touch updates lastActivity. The caller must NOT hold cs.mu.
+func (cs *CockpitSession) touch() {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	cs.touchLocked()
+}
+
+// touchLocked updates lastActivity. The caller must hold cs.mu.
+func (cs *CockpitSession) touchLocked() {
+	cs.lastActivity = time.Now()
+}
+
+// idleSince returns the duration since lastActivity. Safe for concurrent use.
+func (cs *CockpitSession) idleSince(now time.Time) time.Duration {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	return now.Sub(cs.lastActivity)
 }
 
 func (cs *CockpitSession) close() error {
@@ -311,6 +393,8 @@ func (cs *CockpitSession) fanOut(e Event) {
 }
 
 // approvalPump drains sess.Approvals() and assigns each request a stable id.
+// When the pending queue reaches maxPendingApprovals, new requests are denied
+// immediately and a system event is recorded so the drop is never silent.
 func (cs *CockpitSession) approvalPump() {
 	defer cs.pumpsWG.Done()
 	for a := range cs.sess.Approvals() {
@@ -331,6 +415,13 @@ func (cs *CockpitSession) approvalPump() {
 		}
 
 		cs.mu.Lock()
+		if len(cs.pending) >= maxPendingApprovals {
+			cs.touchLocked()
+			cs.mu.Unlock()
+			_ = wrapped(DecisionDeny)
+			_ = cs.appendEvent(Event{Kind: EventSystem, Text: "approval queue full (max 32)"})
+			continue
+		}
 		cs.nextApproval++
 		id := fmt.Sprintf("ap%d", cs.nextApproval)
 		entry := &pendingEntry{
@@ -345,6 +436,7 @@ func (cs *CockpitSession) approvalPump() {
 		}
 		cs.pending[id] = entry
 		cs.pendingOrder = append(cs.pendingOrder, id)
+		cs.touchLocked()
 		cs.mu.Unlock()
 	}
 }

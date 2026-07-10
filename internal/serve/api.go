@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
@@ -63,6 +64,10 @@ type Server struct {
 	// cockpit hosts the live agent-backend sessions for the cockpit HTTP endpoints.
 	// It is created lazily by ensureCockpit; tests may inject a pre-built Manager.
 	cockpit *cockpit.Manager
+	// cockpitEmit holds the current machine socket's ingest emitter, set on each
+	// successful machine-channel connect. It is an atomic.Value of
+	// func(agentKind string, msg any) error.
+	cockpitEmit atomic.Value
 
 	execOrchestrate func(dir string, args, env []string) error
 	finishRunner    func(dir, name string, args ...string) (string, error)
@@ -83,6 +88,21 @@ func (s *Server) SetRelay(url, token string) {
 		return
 	}
 	s.relay = r
+}
+
+// setCockpitEmitter is called by the machine channel on each connect with a
+// function that emits an "ingest" event on the current socket.
+func (s *Server) setCockpitEmitter(emit func(agentKind string, msg any) error) {
+	s.cockpitEmit.Store(emit)
+}
+
+// getCockpitEmitter returns the current socket emitter, or nil if the machine
+// channel has not yet connected.
+func (s *Server) getCockpitEmitter() func(agentKind string, msg any) error {
+	if v := s.cockpitEmit.Load(); v != nil {
+		return v.(func(agentKind string, msg any) error)
+	}
+	return nil
 }
 
 // projectMu returns the lazily-created mutex serializing author writes for id.

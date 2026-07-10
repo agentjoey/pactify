@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -90,6 +91,29 @@ func TestCockpitPromptCreatesSession(t *testing.T) {
 
 	if len(fake.Prompts) != 1 || fake.Prompts[0].Text != "hi" {
 		t.Fatalf("expected prompt 'hi', got %+v", fake.Prompts)
+	}
+}
+
+func TestCockpitPromptRateLimitReturns429(t *testing.T) {
+	srv, _, _ := newCockpitTestServer(t)
+	h := srv.Handler()
+
+	for i := 0; i < 10; i++ {
+		rr := postCockpit(t, h, "/api/projects/p/cockpit/prompt", map[string]string{
+			"seat": "claude",
+			"text": fmt.Sprintf("prompt %d", i),
+		})
+		if rr.Code != http.StatusOK {
+			t.Fatalf("prompt %d: status = %d, body = %s", i, rr.Code, rr.Body.String())
+		}
+	}
+
+	rr := postCockpit(t, h, "/api/projects/p/cockpit/prompt", map[string]string{
+		"seat": "claude",
+		"text": "over limit",
+	})
+	if rr.Code != http.StatusTooManyRequests {
+		t.Fatalf("11th prompt: status = %d, want 429, body = %s", rr.Code, rr.Body.String())
 	}
 }
 

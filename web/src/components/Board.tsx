@@ -41,6 +41,7 @@ export function Board({
   project,
   author,
   onChanged,
+  onOpenCockpit,
 }: {
   state: State;
   events?: PactEvent[];
@@ -53,6 +54,8 @@ export function Board({
   author?: boolean;
   // Bump the parent refresh tick after a pact verb so the board re-reads state.
   onChanged?: () => void;
+  /** Open the cockpit panel preselecting a seat (e.g. from a task card). */
+  onOpenCockpit?: (seat: string) => void;
 }) {
   const src = useDataSource();
   const canWrite = src.capabilities.canWrite;
@@ -226,7 +229,20 @@ export function Board({
             </div>
           </form>
         ) : (
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {src.cockpitSubscribe && project && onOpenCockpit && (
+              <button
+                type="button"
+                data-testid="card-discuss-cockpit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenCockpit(bt.task.owner);
+                }}
+                className="rounded-[6px] px-2 py-1 text-[11px] font-medium text-[var(--color-role-design)] hover:underline"
+              >
+                Discuss in Cockpit →
+              </button>
+            )}
             <button
               type="button"
               data-testid="card-accept"

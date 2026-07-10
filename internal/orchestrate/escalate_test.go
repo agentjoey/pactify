@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/pact"
 )
 
 // escalationFilename must embed feature+task so a human scanning the directory
@@ -247,4 +250,54 @@ func TestEscalate_StdoutNotifier_DoesNotPanic(t *testing.T) {
 	// side-effect-safe (writes to stdout) and satisfy the Notifier interface.
 	var n Notifier = StdoutNotifier{}
 	n.Notify("escalation written")
+}
+
+// Escalation now dual-writes an escalate event to the pact ledger. The event
+// must be present, validate cleanly, and not change the task state machine.
+func TestEscalate_AppendsLedgerEvent(t *testing.T) {
+	dir := newProject(t)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
+
+	runner := newFakeRunner(t, dir)
+	runner.alwaysChanges = true // reviewer never accepts → rework threshold → escalate
+	opts := baseOpts(dir, runner, &okExec{}, &recNotify{})
+	opts.Orchestrator = "orch"
+	opts.Th.MaxRework = 1
+	opts.Now = fixedNow
+	if err := Run(context.Background(), opts); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if _, err := os.Stat(findEscalation(t, dir, fixedNow())); err != nil {
+		t.Fatalf("escalation file missing: %v", err)
+	}
+
+	evs, err := event.ReadAll(filepath.Join(dir, ".pact", "log.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found bool
+	for _, e := range evs {
+		if e.EventType == "escalate" {
+			found = true
+			if e.TaskID != "t1" || e.Feature != "f" {
+				t.Fatalf("escalate scope wrong: task=%q feature=%q", e.TaskID, e.Feature)
+			}
+			if e.Payload["reason"] == nil || e.Payload["seat"] == nil {
+				t.Fatalf("escalate payload missing reason/seat: %+v", e.Payload)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("escalate event not found in ledger")
+	}
+
+	if err := pact.At(dir).Validate(); err != nil {
+		t.Fatalf("validate after escalate: %v", err)
+	}
+
+	if got := featureStatus(t, dir, "f"); got == "shipped" {
+		t.Fatal("escalated feature should not have shipped")
+	}
 }

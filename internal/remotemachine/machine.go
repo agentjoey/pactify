@@ -65,6 +65,13 @@ type Config struct {
 	Prov remoteexec.Provisioner
 	// Task authors a task draft (pact.task), gated like the verbs. Nil = off.
 	Task remoteexec.TaskAuthor
+	// Cockpit drives hosted cockpit sessions remotely (cockpit.*). Nil = disabled.
+	Cockpit remoteexec.Cockpiter
+	// CockpitPolicy gates cockpit.* rpcs per project. Nil = disabled (fail closed).
+	CockpitPolicy remoteexec.CockpitPolicy
+	// OnClientReady is called once per successful connect with a function that
+	// emits an "ingest" event on the current machine socket. Optional.
+	OnClientReady func(emitIngest func(agentKind string, msg any) error)
 }
 
 // Run connects to the relay as a machine, registers its presence (host + agent
@@ -81,6 +88,12 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 	defer client.Close()
+
+	if cfg.OnClientReady != nil {
+		cfg.OnClientReady(func(agentKind string, msg any) error {
+			return client.Emit("ingest", map[string]any{"agentKind": agentKind, "msg": msg})
+		})
+	}
 
 	// Register presence + heartbeat (the relay upserts the Machine row on each).
 	register := func() { _ = client.Emit("register", cfg.Info) }
@@ -99,7 +112,7 @@ func Run(ctx context.Context, cfg Config) error {
 	}()
 
 	// Remote command execution — only when a resolver or stinter is configured.
-	if cfg.Resolve != nil || cfg.Stint != nil || cfg.Orch != nil || cfg.Plan != nil || cfg.Prov != nil || cfg.Task != nil {
+	if cfg.Resolve != nil || cfg.Stint != nil || cfg.Orch != nil || cfg.Plan != nil || cfg.Prov != nil || cfg.Task != nil || cfg.Cockpit != nil {
 		tr := &socketTransport{ch: make(chan []byte, 32)}
 		client.On("rpc", func(args []json.RawMessage) {
 			if len(args) != 1 {
@@ -111,8 +124,18 @@ func Run(ctx context.Context, cfg Config) error {
 			}
 		})
 		ex := &remoteexec.Executor{
-			Account:    cfg.Account,
-			Dispatcher: &remoteexec.Dispatcher{Account: cfg.Account, Resolve: cfg.Resolve, Stint: cfg.Stint, Orch: cfg.Orch, Plan: cfg.Plan, Prov: cfg.Prov, Task: cfg.Task},
+			Account: cfg.Account,
+			Dispatcher: &remoteexec.Dispatcher{
+				Account:       cfg.Account,
+				Resolve:       cfg.Resolve,
+				Stint:         cfg.Stint,
+				Orch:          cfg.Orch,
+				Plan:          cfg.Plan,
+				Prov:          cfg.Prov,
+				Task:          cfg.Task,
+				Cockpit:       cfg.Cockpit,
+				CockpitPolicy: cfg.CockpitPolicy,
+			},
 		}
 		go func() { _ = ex.Run(ctx, tr) }()
 	}

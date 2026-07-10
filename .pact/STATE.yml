@@ -885,3 +885,25 @@ features:
         reviewer: claude
         spec: .pact/tasks/flow-depth.md
         evidence: blockedTasks(state) shared derivation (Board-parity: dep not accepted/shipped) + blocked chips in all 3 renderers (work-state only); FlowOffice live elapsed (30s tick, cleanup); FlowLanes seat side-card via getStats AgentStat (Tasks/Accepted/Reworked/Tokens/±LOC/duration, error vs no-data copy split, same-row toggle close); FlowFeed chips blocked-aware. tsc clean, vitest 530/530, build green, live-verified side-card with real stats
+  - id: hosted-cockpit
+    branch: feat/hosted-cockpit
+    status: in_progress
+    tasks:
+      - id: hc-core
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/hc-core.md
+        evidence: RemotePolicy.Cockpit gate field; Manager idle reaper (30m default, WithIdleTimeout option, per-session close preserving threads.json); per-session prompt sliding-window 10/min -> 429 at serve; pending approval cap 32 with auto-deny + system event; escalate ledger event (engine Escalate with role gate + withLedgerLock, orchestrate double-write warn-only, LedgerDir pins primary repo across sandbox/parallel, schema enum + protocol doc appended). go test ./... green, -race green (reviewer fixed test-side slice race), vet clean, bats 111/111
+      - id: hc-rpc
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/hc-rpc.md
+        evidence: wire cockpit.* rpc types (prompt/permission/cancel/resume/subscribe, additive union); remoteexec Cockpiter + policy-gated dispatch (RemotePolicy.Cockpit fail-closed) + parse; serve serveCockpiter bridging Manager (shared fns with HTTP handlers) + ephemeral ingest mirror (projectKey encrypt, runId cockpit:<project>:<seat>, snapshot-first, TTL 5min renew, pending delta ticker); remotemachine OnClientReady emitter wiring. Reviewer fixes: eventKind 'error' not in wire enum -> delta (relay strict-drop bug) + mirrors map race/lock-order fix + renew-after-TTL recreate + enum conformance guard test. go ./... green, -race green, vet clean, wire tsc clean
+      - id: hc-web
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/hc-web.md
+        evidence: relay-client onEphemeral acct-room listener; DataSource cockpitSubscribe (Local=EventSource moved in, Relay=subscribe rpc + 4min renew + seq buffer); RelaySource cockpit methods + capabilities.cockpit=true + status snapshot cache; CockpitPanel via cockpitSubscribe + seat dropdown (E4 worker attach) + 429 inline; Discuss-in-Cockpit entries on Board review cards / RunRail gate-review-changes chips / TaskDetail. Reviewer fixes: rpc project must be SHORT name not composite relay id (rpcProject map, also fixes latent pact.*/orchestrate rpc mismatch), runId matches short name, seq adopt-first (server 1-based) + mirror-restart cursor reset, CockpitEvent import (strict build). tsc clean, vitest 538/538, build green, relay-client 7/7, local panel visual OK

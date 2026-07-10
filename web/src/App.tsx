@@ -11,6 +11,7 @@ import { AddProjectWizard } from "./components/shell/AddProjectWizard";
 import { DispatchPanel } from "./components/shell/DispatchPanel";
 import { Agents } from "./components/Agents";
 import { Board } from "./components/Board";
+import { FlowView } from "./components/flow/FlowView";
 import { RunRail } from "./components/board/RunRail";
 import { EventDrawer } from "./components/board/EventDrawer";
 import { RightRail } from "./components/RightRail";
@@ -27,6 +28,7 @@ import { docTitle } from "./lib/docTitle";
 import { STALE_MS, EVENTS_CAP, FETCH_FAIL_THRESHOLD } from "./lib/constants";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
+type BoardMode = "board" | "flow";
 
 // pickInitialProject resolves the default project id from the loaded list and
 // the user's last selection. Preference order: 1) stored id still present,
@@ -70,6 +72,11 @@ function AppContent() {
   // board to that worktree's .pact state (polled, no SSE).
   const [currentWorktree, setCurrentWorktree] = useState("");
   const [worktreesByProject, setWorktreesByProject] = useState<Record<string, Worktree[]>>({});
+  // Board | Flow main-view toggle, persisted per browser.
+  const [boardMode, setBoardMode] = useState<BoardMode>(() => {
+    const saved = typeof localStorage !== "undefined" ? localStorage.getItem("pactify:boardMode") : null;
+    return (saved as BoardMode) === "flow" ? "flow" : "board";
+  });
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
@@ -368,6 +375,11 @@ function AppContent() {
     if (current) localStorage.setItem("pactify:lastProject", current);
   }, [current]);
 
+  // Persist the Board | Flow view preference.
+  useEffect(() => {
+    localStorage.setItem("pactify:boardMode", boardMode);
+  }, [boardMode]);
+
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
   const orchestratorSeat = shownState.agents.find((a) => a.roles.includes("orchestrator"))?.id ?? seat ?? "claude";
   return (
@@ -407,11 +419,35 @@ function AppContent() {
                     driver is idle) — RunControl strip + driver-touched feature
                     lanes + the five-action ReviewGate on a paused gate. */}
                 <RunRail project={current} state={shownState} refreshTick={refreshTick} author={author} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} />
+                {/* Board | Flow view switcher + main view. */}
+                <div className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-[18px] py-[9px]">
+                  <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] p-0.5">
+                    {(["board", "flow"] as BoardMode[]).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        data-testid={`board-mode-${m}`}
+                        onClick={() => setBoardMode(m)}
+                        className="rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors"
+                        style={{
+                          color: boardMode === m ? "var(--color-text-1)" : "var(--color-text-3)",
+                          background: boardMode === m ? "rgba(255,255,255,0.09)" : "transparent",
+                        }}
+                      >
+                        {m === "board" ? "Board" : "Flow"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {/* relative so the slide-over detail panel + its scrim position
                     within this row, overlaying the board. The board takes the
                     full width — the panel is absolute. */}
                 <div className="relative flex flex-1 overflow-hidden">
-                  <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>
+                  {boardMode === "board" ? (
+                    <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} /></div>
+                  ) : (
+                    <div data-testid="view-flow" className="flex flex-1 overflow-hidden"><FlowView state={shownState} events={events} project={current} selected={selected} onSelect={setSelected} /></div>
+                  )}
                   {src.capabilities.multiMachine
                     ? <TaskDetail project={current} taskId={selected} onClose={() => setSelected("")} />
                     : <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />}

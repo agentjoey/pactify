@@ -243,6 +243,31 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("other"));
   });
 
+  it("toggles between Board and Flow views and persists boardMode", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+
+    expect(screen.getByTestId("view-board")).toBeInTheDocument();
+    expect(screen.queryByTestId("view-flow")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("board-mode-flow"));
+    await waitFor(() => expect(screen.getByTestId("view-flow")).toBeInTheDocument());
+    expect(screen.queryByTestId("view-board")).toBeNull();
+    expect(localStorage.getItem("pactify:boardMode")).toBe("flow");
+
+    fireEvent.click(screen.getByTestId("board-mode-board"));
+    await waitFor(() => expect(screen.getByTestId("view-board")).toBeInTheDocument());
+    expect(screen.queryByTestId("view-flow")).toBeNull();
+    expect(localStorage.getItem("pactify:boardMode")).toBe("board");
+  });
+
+  it("restores boardMode from localStorage", async () => {
+    localStorage.setItem("pactify:boardMode", "flow");
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("view-flow")).toBeInTheDocument());
+  });
+
   it("persists project selection changes to localStorage", async () => {
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url === "/api/projects") return {

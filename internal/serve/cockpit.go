@@ -23,6 +23,7 @@ func (s *Server) registerCockpitRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/projects/{id}/cockpit/permission", s.handleCockpitPermission)
 	mux.HandleFunc("POST /api/projects/{id}/cockpit/cancel", s.handleCockpitCancel)
 	mux.HandleFunc("GET /api/projects/{id}/cockpit/status", s.handleCockpitStatus)
+	mux.HandleFunc("POST /api/projects/{id}/cockpit/resume", s.handleCockpitResume)
 }
 
 // ensureCockpit lazily creates the cockpit.Manager used by the HTTP handlers.
@@ -171,6 +172,9 @@ func (s *Server) handleCockpitPrompt(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if tid := cs.ThreadID(); tid != "" {
+		s.cockpit.NoteThread(key, tid)
 	}
 	if err := cs.Prompt(r.Context(), req.Text); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
@@ -364,10 +368,11 @@ type cockpitPendingItem struct {
 }
 
 type cockpitStatusDTO struct {
-	ThreadID string               `json:"threadId"`
-	Capable  bool                 `json:"capable"`
-	Reason   string               `json:"reason"`
-	Pending  []cockpitPendingItem `json:"pending"`
+	ThreadID  string               `json:"threadId"`
+	Capable   bool                 `json:"capable"`
+	Resumable bool                 `json:"resumable"`
+	Reason    string               `json:"reason"`
+	Pending   []cockpitPendingItem `json:"pending"`
 }
 
 func (s *Server) handleCockpitStatus(w http.ResponseWriter, r *http.Request) {
@@ -399,8 +404,14 @@ func (s *Server) handleCockpitStatus(w http.ResponseWriter, r *http.Request) {
 		if !capable {
 			reason = fmt.Sprintf("seat %q has no deep-integration or ACP kind (kind=%q)", seat, kind)
 		}
-		writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: "", Capable: capable, Reason: reason, Pending: []cockpitPendingItem{}})
+		resumable := capable && s.cockpit.StoredThread(key) != ""
+		writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: "", Capable: capable, Resumable: resumable, Reason: reason, Pending: []cockpitPendingItem{}})
 		return
+	}
+
+	// A live session may have received its threadID asynchronously; persist it.
+	if tid := cs.ThreadID(); tid != "" {
+		s.cockpit.NoteThread(key, tid)
 	}
 
 	pending := cs.Pending()
@@ -414,5 +425,49 @@ func (s *Server) handleCockpitStatus(w http.ResponseWriter, r *http.Request) {
 			Risk:     cockpit.GradeRisk(p.ToolName, string(p.RawInput)),
 		})
 	}
-	writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: cs.ThreadID(), Capable: true, Pending: items})
+	writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: cs.ThreadID(), Capable: true, Resumable: false, Pending: items})
+}
+
+type cockpitResumeReq struct {
+	Seat string `json:"seat"`
+}
+
+type cockpitResumeResp struct {
+	OK       bool   `json:"ok"`
+	ThreadID string `json:"threadId"`
+}
+
+func (s *Server) handleCockpitResume(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if _, _, ok := s.project(id); !ok {
+		writeErr(w, http.StatusNotFound, "unknown project")
+		return
+	}
+	var req cockpitResumeReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if req.Seat == "" {
+		writeErr(w, http.StatusBadRequest, "seat is required")
+		return
+	}
+	if err := s.ensureCockpit(); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	key := cockpit.SessionKey{Project: id, Seat: req.Seat}
+	threadID := s.cockpit.StoredThread(key)
+	if threadID == "" {
+		writeErr(w, http.StatusBadRequest, "nothing to resume")
+		return
+	}
+
+	cs, err := s.cockpit.Resume(r.Context(), key, threadID)
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, cockpitResumeResp{OK: true, ThreadID: cs.ThreadID()})
 }

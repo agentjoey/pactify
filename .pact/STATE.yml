@@ -785,3 +785,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/approval-risk-ui.md
         evidence: approval cards risk-graded end-to-end (cockpit.GradeRisk -> serve pending.risk -> panel badges); exec Allow = two-step confirm (3s revert, danger styling), deny/non-exec one-tap; serve+cockpit+web full green
+  - id: cockpit-resume
+    branch: feat/cockpit-resume
+    status: in_progress
+    tasks:
+      - id: cockpit-resume
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-resume.md
+        evidence: cross-restart cockpit resume: threads.json (atomic 0o600) via NoteThread/StoredThread; Manager.Resume reuses wrapSessionLocked; serve resumable flag + POST cockpit/resume; panel Resume button. Pending-approval contract documented (dies with process). -race + web 480 + build green

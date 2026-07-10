@@ -24,6 +24,7 @@ function makeSource(overrides: {
   cockpitPrompt?: DataSource["cockpitPrompt"];
   cockpitRespond?: DataSource["cockpitRespond"];
   cockpitCancel?: DataSource["cockpitCancel"];
+  cockpitResume?: DataSource["cockpitResume"];
   cockpitStatus?: DataSource["cockpitStatus"];
   cockpitStreamUrl?: DataSource["cockpitStreamUrl"];
 } = {}): DataSource {
@@ -41,6 +42,7 @@ function makeSource(overrides: {
     cockpitPrompt: overrides.cockpitPrompt ?? vi.fn(),
     cockpitRespond: overrides.cockpitRespond ?? vi.fn(),
     cockpitCancel: overrides.cockpitCancel ?? vi.fn(),
+    cockpitResume: overrides.cockpitResume ?? vi.fn(),
     cockpitStatus:
       overrides.cockpitStatus ??
       vi.fn().mockResolvedValue({ threadId: "", capable: true, pending: [] } as CockpitStatus),
@@ -156,6 +158,35 @@ describe("CockpitPanel", () => {
 
     fireEvent.click(screen.getByTestId("cockpit-approval-allow-confirm"));
     await waitFor(() => expect(cockpitRespond).toHaveBeenCalledWith("p1", "claude", "a1", "allow"));
+  });
+
+  it("renders a resume banner when resumable and no live stream content", async () => {
+    const cockpitResume = vi.fn().mockResolvedValue({ ok: true, threadId: "stored-thread" });
+    const cockpitStatus = vi
+      .fn()
+      .mockResolvedValue({ threadId: "", capable: true, resumable: true, pending: [] } as CockpitStatus);
+    const source = makeSource({ cockpitResume, cockpitStatus });
+    renderPanel(source);
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-resume")).toBeInTheDocument());
+    expect(screen.getByTestId("cockpit-resume")).toHaveTextContent("Previous session available — Resume");
+
+    fireEvent.click(screen.getByTestId("cockpit-resume-button"));
+    await waitFor(() => expect(cockpitResume).toHaveBeenCalledWith("p1", "claude"));
+  });
+
+  it("hides the resume banner once stream content arrives", async () => {
+    const source = makeSource({
+      cockpitStatus: vi
+        .fn()
+        .mockResolvedValue({ threadId: "", capable: true, resumable: true, pending: [] } as CockpitStatus),
+    });
+    renderPanel(source);
+    await waitFor(() => expect(screen.getByTestId("cockpit-resume")).toBeInTheDocument());
+
+    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: "hi" }) } as MessageEvent);
+    await waitFor(() => expect(screen.getByTestId("cockpit-message")).toHaveTextContent("hi"));
+    expect(screen.queryByTestId("cockpit-resume")).not.toBeInTheDocument();
   });
 
   it("allows read-risk approvals with a single click", async () => {

@@ -299,6 +299,81 @@ func TestManager_AuditSink(t *testing.T) {
 	}
 }
 
+func TestManager_NoteThreadPersisted(t *testing.T) {
+	baseDir := t.TempDir()
+	key := SessionKey{Project: "p1", Seat: "s1"}
+
+	mgr1 := NewManager(baseDir, newTestFactory(t, nil))
+	mgr1.NoteThread(key, "thread-a")
+
+	mgr2 := NewManager(baseDir, newTestFactory(t, nil))
+	if got := mgr2.StoredThread(key); got != "thread-a" {
+		t.Fatalf("StoredThread after rebuild = %q, want thread-a", got)
+	}
+}
+
+func TestManager_NoteThreadIdempotentAndIgnoresEmpty(t *testing.T) {
+	baseDir := t.TempDir()
+	key := SessionKey{Project: "p1", Seat: "s1"}
+
+	mgr := NewManager(baseDir, newTestFactory(t, nil))
+	mgr.NoteThread(key, "thread-a")
+	mgr.NoteThread(key, "thread-a") // duplicate write should be no-op
+	mgr.NoteThread(key, "")         // empty should be ignored
+
+	if got := mgr.StoredThread(key); got != "thread-a" {
+		t.Fatalf("StoredThread = %q, want thread-a", got)
+	}
+}
+
+// recordingBackend captures the threadID passed to Resume.
+type recordingBackend struct {
+	FakeBackend
+	resumeThreadID string
+}
+
+func (b *recordingBackend) Resume(ctx context.Context, threadID string) (Session, error) {
+	b.resumeThreadID = threadID
+	return NewFakeSession(threadID), nil
+}
+
+func TestManager_Resume(t *testing.T) {
+	ctx := context.Background()
+	baseDir := t.TempDir()
+	key := SessionKey{Project: "p1", Seat: "s1"}
+	b := &recordingBackend{}
+	mgr := NewManager(baseDir, func(k SessionKey) (Backend, error) { return b, nil })
+
+	cs, err := mgr.Resume(ctx, key, "persisted-thread")
+	if err != nil {
+		t.Fatalf("Resume: %v", err)
+	}
+	if cs.ThreadID() != "persisted-thread" {
+		t.Fatalf("ThreadID = %q, want persisted-thread", cs.ThreadID())
+	}
+	if b.resumeThreadID != "persisted-thread" {
+		t.Fatalf("backend.Resume threadID = %q, want persisted-thread", b.resumeThreadID)
+	}
+
+	// Second Resume for the same key returns the live session.
+	cs2, err := mgr.Resume(ctx, key, "persisted-thread")
+	if err != nil {
+		t.Fatalf("second Resume: %v", err)
+	}
+	if cs2 != cs {
+		t.Fatal("second Resume should return the same live session")
+	}
+}
+
+func TestManager_ResumeRequiresThreadID(t *testing.T) {
+	baseDir := t.TempDir()
+	mgr := NewManager(baseDir, newTestFactory(t, nil))
+	key := SessionKey{Project: "p1", Seat: "s1"}
+	if _, err := mgr.Resume(context.Background(), key, ""); err == nil {
+		t.Fatal("expected error for empty threadID")
+	}
+}
+
 func unwrapFakeSession(t *testing.T, cs *CockpitSession) *FakeSession {
 	t.Helper()
 	fs, ok := cs.sess.(*FakeSession)

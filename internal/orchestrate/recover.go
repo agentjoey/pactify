@@ -21,7 +21,7 @@ func (opts Options) classifyAndCheckpoint(ctx context.Context, taskID string, ta
 	if !ok {
 		cmd = fallbackGate
 	}
-	passed, detail := runGate(ctx, opts.Exec, opts.Dir, cmd)
+	passed, detail := runGateScoped(ctx, opts.Exec, opts.Dir, cmd, opts.projectBase())
 	if !passed {
 		return false
 	}

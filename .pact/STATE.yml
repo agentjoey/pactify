@@ -845,3 +845,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/flow-derive.md
         evidence: pure deriveFlow(events): lanes(orch-first)/stints state-machine(work-rework-review, open t1=null)/arrows(quorum multi)/marks/gaps>30min compressed monotonic x(); 6 test groups incl. shuffle-equivalence + malformed input; tsc + full vitest green
+  - id: flow-view
+    branch: feat/flow-view
+    status: in_progress
+    tasks:
+      - id: flow-view
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/flow-view.md
+        evidence: null

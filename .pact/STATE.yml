@@ -835,3 +835,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/gate-diff-scope.md
         evidence: gate commands get merge-base changed-set: {files} placeholder (shell-quoted; empty set -> skip-pass; base unresolvable -> fail-closed) + PACT_CHANGED_FILES env always injected; pact.BaseBranch accessor + gitx.ChangedFiles; planner prompt documents {files}. Reviewer added .pact/ exclusion (ledger churn must not enter gates nor defeat skip semantics) + fixed test scaffolding-commit ordering. Full repo green
+  - id: flow-derive
+    branch: feat/flow-derive
+    status: in_progress
+    tasks:
+      - id: flow-derive
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/flow-derive.md
+        evidence: null

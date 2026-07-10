@@ -1,8 +1,10 @@
-import { useMemo } from "react";
-import { deriveFlow, liveStates } from "../../lib/flowderive";
+import { useEffect, useMemo, useState } from "react";
+import { blockedTasks, deriveFlow, liveStates } from "../../lib/flowderive";
 import type { PactEvent, State } from "../../lib/types";
 
 type Verb = "join" | "assign" | "checkpoint" | "changes" | "accept" | "merge";
+
+const ELAPSED_TICK_MS = 30_000;
 
 function asString(v: unknown): string | undefined {
   return typeof v === "string" ? v : undefined;
@@ -66,9 +68,10 @@ interface FlowOfficeProps {
   events: PactEvent[];
   agents: State["agents"];
   onSelect: (taskId: string) => void;
+  state: State;
 }
 
-export function FlowOffice({ events, agents, onSelect }: FlowOfficeProps) {
+export function FlowOffice({ events, agents, onSelect, state }: FlowOfficeProps) {
   const sorted = useMemo(
     () =>
       [...events]
@@ -81,6 +84,23 @@ export function FlowOffice({ events, agents, onSelect }: FlowOfficeProps) {
 
   const model = useMemo(() => deriveFlow(events), [events]);
   const liveMap = useMemo(() => liveStates(model), [model]);
+  const blockedMap = useMemo(() => blockedTasks(state), [state]);
+
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), ELAPSED_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  const openStintStart = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of model.stints) {
+      if (s.t1 === null && !m.has(s.agent)) {
+        m.set(s.agent, s.t0);
+      }
+    }
+    return m;
+  }, [model]);
 
   const agentList = useMemo(() => {
     const firstT = new Map<string, number>();
@@ -150,17 +170,23 @@ export function FlowOffice({ events, agents, onSelect }: FlowOfficeProps) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {agentList.map((a) => {
             const live = liveMap[a.id] ?? { kind: "idle" };
-            const label =
-              live.kind === "work"
-                ? "working"
-                : live.kind === "review"
-                  ? "reviewing"
-                  : live.kind;
-            const color =
-              live.kind === "idle"
-                ? "var(--color-text-3)"
-                : stintColor(live.kind);
+            const blockedDeps = live.task ? blockedMap.get(live.task) : undefined;
+            const isBlocked = live.kind === "work" && blockedDeps && blockedDeps.length > 0;
+            let label: string;
+            let color: string;
+            if (isBlocked) {
+              label = `blocked · 等 ${blockedDeps[0]}`;
+              color = "var(--color-warn)";
+            } else if (live.kind === "idle") {
+              label = "idle";
+              color = "var(--color-text-3)";
+            } else {
+              label = live.kind === "work" ? "working" : live.kind === "review" ? "reviewing" : live.kind;
+              color = stintColor(live.kind);
+            }
             const count = eventCounts.get(a.id) ?? 0;
+            const t0 = openStintStart.get(a.id);
+            const elapsedText = t0 !== undefined ? `elapsed ${Math.max(0, Math.round((now - t0) / 60000))}m` : undefined;
             return (
               <button
                 key={a.id}
@@ -197,18 +223,22 @@ export function FlowOffice({ events, agents, onSelect }: FlowOfficeProps) {
                     }}
                   >
                     {label}
-                    {live.task ? ` · ${live.task}` : ""}
+                    {live.task && !isBlocked ? ` · ${live.task}` : ""}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-[var(--color-text-3)]">
                   <span>
                     events <span className="font-mono text-[var(--color-text-1)]">{count}</span>
                   </span>
-                  {live.task && (
+                  {elapsedText ? (
+                    <span className="font-mono text-[10px] text-[var(--color-text-2)]" data-testid="flow-desk-elapsed">
+                      {elapsedText}
+                    </span>
+                  ) : live.task ? (
                     <span className="font-mono text-[10px] text-[var(--color-text-2)]">
                       {live.task}
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </button>
             );

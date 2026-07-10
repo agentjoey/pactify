@@ -875,3 +875,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/flow-polish.md
         evidence: tAt inverse mapping + x-space even ticks (skip in-gap); fixed pre-existing buildX non-monotonic in-gap bug; stint in-bar labels (truncate, never stretch) + full titles (start/end/duration, gap real-idle titles); zoom x1/x2/x4 + near-right-edge auto-follow; idle lane fold (all-idle guard). tsc clean, vitest 516/516, build green, playwright shots verified x1/x2/pan
+  - id: flow-depth
+    branch: feat/flow-depth
+    status: in_progress
+    tasks:
+      - id: flow-depth
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/flow-depth.md
+        evidence: blockedTasks(state) shared derivation (Board-parity: dep not accepted/shipped) + blocked chips in all 3 renderers (work-state only); FlowOffice live elapsed (30s tick, cleanup); FlowLanes seat side-card via getStats AgentStat (Tasks/Accepted/Reworked/Tokens/±LOC/duration, error vs no-data copy split, same-row toggle close); FlowFeed chips blocked-aware. tsc clean, vitest 530/530, build green, live-verified side-card with real stats

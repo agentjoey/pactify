@@ -16,7 +16,7 @@ interface FlowViewProps {
   onSelect: (taskId: string) => void;
 }
 
-export function FlowView({ state, events, selected, onSelect }: FlowViewProps) {
+export function FlowView({ state, events, project, selected, onSelect }: FlowViewProps) {
   const [mode, setMode] = useState<FlowMode>(() => {
     const saved = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
     return (saved as FlowMode) ?? "lanes";
@@ -52,13 +52,26 @@ export function FlowView({ state, events, selected, onSelect }: FlowViewProps) {
       </div>
 
       {mode === "lanes" && (
-        <FlowLanes model={model} agents={state.agents} selected={selected} onSelect={onSelect} />
+        <FlowLanes
+          model={model}
+          agents={state.agents}
+          selected={selected}
+          onSelect={onSelect}
+          state={state}
+          project={project}
+        />
       )}
       {mode === "feed" && (
-        <FlowFeed events={events} agents={state.agents} selected={selected} onSelect={onSelect} />
+        <FlowFeed
+          events={events}
+          agents={state.agents}
+          selected={selected}
+          onSelect={onSelect}
+          state={state}
+        />
       )}
       {mode === "office" && (
-        <FlowOffice events={events} agents={state.agents} onSelect={onSelect} />
+        <FlowOffice events={events} agents={state.agents} onSelect={onSelect} state={state} />
       )}
     </div>
   );

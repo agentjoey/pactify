@@ -1,4 +1,4 @@
-import type { PactEvent } from "./types";
+import type { PactEvent, State } from "./types";
 
 export interface FlowLane {
   id: string;
@@ -59,6 +59,30 @@ export function liveStates(
   for (const s of model.stints) {
     if (s.t1 === null && out[s.agent]?.kind === "idle") {
       out[s.agent] = { kind: s.kind, task: s.task };
+    }
+  }
+  return out;
+}
+
+/** Returns a map of task ids → ids of their deps that are not yet accepted or
+ *  shipped. Empty map means nothing is blocked. Mirrors the blocked-derivation
+ *  logic in Board.tsx. */
+export function blockedTasks(state: State): Map<string, string[]> {
+  const status = new Map<string, string>();
+  for (const f of state.features) {
+    for (const t of f.tasks) {
+      status.set(t.id, t.status);
+    }
+  }
+  const out = new Map<string, string[]>();
+  for (const f of state.features) {
+    for (const t of f.tasks) {
+      if (!t.deps?.length) continue;
+      const blocked = t.deps.filter((depId) => {
+        const depStatus = status.get(depId);
+        return depStatus !== "accepted" && depStatus !== "shipped";
+      });
+      if (blocked.length) out.set(t.id, blocked);
     }
   }
   return out;

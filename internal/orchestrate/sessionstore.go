@@ -171,6 +171,22 @@ func ClearSession(repoDir, seat, task string) error {
 	})
 }
 
+// RemoveSession removes the record that matches (seat,task,kind). It is a no-op
+// when nothing matches, and it checks kind so a stale record from a different
+// agent kind cannot accidentally be cleared.
+func RemoveSession(repoDir, seat, task, kind string) error {
+	return withSessionsLock(repoDir, func(recs []SessionRecord) []SessionRecord {
+		out := recs[:0]
+		for _, r := range recs {
+			if r.Seat == seat && r.Task == task && r.Kind == kind {
+				continue
+			}
+			out = append(out, r)
+		}
+		return out
+	})
+}
+
 // PruneSessions drops every record for which keep(seat,task) reports false —
 // orchestrate calls it on startup to sweep orphans whose task reached a terminal
 // state (accepted/cancelled) while the driver was down.

@@ -358,3 +358,123 @@ func TestRunnerSubstitutesSeatToken(t *testing.T) {
 		t.Fatalf("args = %v, want {seat}->dev", cap.args)
 	}
 }
+
+func TestParseCodexThreadID(t *testing.T) {
+	if got := parseCodexThreadID(`{"type":"thread.started","thread_id":"abc-123"}`); got != "abc-123" {
+		t.Errorf("single line: got %q, want abc-123", got)
+	}
+	out := "chatter before\n" + `{"type":"thread.started","thread_id":"xyz-9"}` + "\n{\"usage\":{}}\n"
+	if got := parseCodexThreadID(out); got != "xyz-9" {
+		t.Errorf("multi-line: got %q, want xyz-9", got)
+	}
+	if got := parseCodexThreadID("no thread id here"); got != "" {
+		t.Errorf("no match: got %q, want empty", got)
+	}
+}
+
+func TestCodexResumeArgs(t *testing.T) {
+	base := []string{"exec", "--json", "--sandbox", "danger-full-access", "-m", "o4", "{briefing}"}
+	got := codexResumeArgs(base, "th-1")
+	want := []string{"exec", "resume", "th-1", "--json", "-m", "o4", "{briefing}"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("resume args = %v, want %v", got, want)
+	}
+	if argsHave(got, "--sandbox") {
+		t.Error("resume args must not contain --sandbox")
+	}
+
+	// No model, no sandbox: still inserts resume and id.
+	base2 := []string{"exec", "--json", "{briefing}"}
+	got2 := codexResumeArgs(base2, "th-2")
+	want2 := []string{"exec", "resume", "th-2", "--json", "{briefing}"}
+	if !reflect.DeepEqual(got2, want2) {
+		t.Errorf("minimal resume args = %v, want %v", got2, want2)
+	}
+}
+
+func TestCmdRunner_Codex_RecordsThreadID(t *testing.T) {
+	dir := t.TempDir()
+	r := CmdRunner{Exec: emitExec(`{"type":"thread.started","thread_id":"th-abc"}`+"\n", nil)}
+	lc := LaunchContext{Seat: "w1", Kind: "codex-cli", Task: "t1", Briefing: "do it", RepoDir: dir}
+	if err := r.Run(context.Background(), lc); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	got, ok := LookupSession(dir, "w1", "t1")
+	if !ok || got != "th-abc" {
+		t.Fatalf("LookupSession = %q ok=%v, want th-abc true", got, ok)
+	}
+}
+
+func TestCmdRunner_Codex_ResumeRetry(t *testing.T) {
+	dir := t.TempDir()
+	steps := []struct {
+		out string
+		ret error
+	}{
+		{out: `{"type":"thread.started","thread_id":"th-abc"}` + "\n", ret: nil},
+		{out: "", ret: errors.New("resume failed")},
+		{out: `{"type":"thread.started","thread_id":"th-new"}` + "\n", ret: nil},
+	}
+	var calls []struct {
+		name string
+		args []string
+	}
+	fn := func(_ context.Context, name string, args []string, _ string, _ []string, capture io.Writer) error {
+		calls = append(calls, struct {
+			name string
+			args []string
+		}{name, append([]string(nil), args...)})
+		idx := len(calls) - 1
+		if idx < len(steps) && capture != nil {
+			_, _ = io.WriteString(capture, steps[idx].out)
+		}
+		if idx < len(steps) {
+			return steps[idx].ret
+		}
+		return nil
+	}
+
+	r := CmdRunner{Exec: fn}
+	lc := LaunchContext{Seat: "w1", Kind: "codex-cli", Task: "t1", Briefing: "do it", RepoDir: dir}
+
+	if err := r.Run(context.Background(), lc); err != nil {
+		t.Fatalf("run 1: %v", err)
+	}
+	if err := r.Run(context.Background(), lc); err == nil {
+		t.Fatal("run 2 expected resume error, got nil")
+	}
+	recs, _ := LoadSessions(dir)
+	t.Logf("after run 2: %+v", recs)
+	if err := r.Run(context.Background(), lc); err != nil {
+		t.Fatalf("run 3: %v", err)
+	}
+
+	if len(calls) != 3 {
+		t.Fatalf("got %d calls, want 3", len(calls))
+	}
+
+	// Run 1 is a cold start.
+	if calls[0].args[0] != "exec" || argsHave(calls[0].args, "resume") {
+		t.Fatalf("run 1 args = %v, want cold exec", calls[0].args)
+	}
+
+	// Run 2 resumes the recorded thread id and omits --sandbox.
+	if !argsHave(calls[1].args, "resume") || !argsHave(calls[1].args, "th-abc") {
+		t.Fatalf("run 2 args = %v, want resume th-abc", calls[1].args)
+	}
+	if argsHave(calls[1].args, "--sandbox") {
+		t.Fatalf("run 2 args must not contain --sandbox: %v", calls[1].args)
+	}
+
+	// After the failed resume the record is gone, so run 3 is cold again.
+	if calls[2].args[0] != "exec" || argsHave(calls[2].args, "resume") {
+		t.Fatalf("run 3 args = %v, want cold exec after self-heal", calls[2].args)
+	}
+
+	// Run 3 succeeded, so a FRESH session record exists (th-new) — the stale
+	// th-abc was removed by the failed-resume self-heal, not left behind.
+	id, ok := LookupSession(dir, "w1", "t1")
+	if !ok || id != "th-new" {
+		t.Fatalf("after run 3 want fresh session th-new, got %q ok=%v", id, ok)
+	}
+}

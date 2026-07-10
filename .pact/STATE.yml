@@ -815,3 +815,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/join-handshake.md
         evidence: join carries protocol_version and fail-fasts when project major exceeds client (upgrade pactify error); projectProtocolVersion helper shared with validateLog; schema additive; versionless legacy projects still join. Live-verified both paths; go test ./internal/pact/ + schemas.bats 9/9 + full repo green. capabilities[] deferred (no consumer)
+  - id: mcp-envelope
+    branch: feat/mcp-envelope
+    status: in_progress
+    tasks:
+      - id: mcp-envelope
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/mcp-envelope.md
+        evidence: all MCP tools return {ok:true,data}|{ok:false,error} envelope (json.Marshal-built), errors via IsError result instead of protocol-layer (0 bare return-nil-nil-err left); tests updated + shape tests; mcp_project.bats e2e green

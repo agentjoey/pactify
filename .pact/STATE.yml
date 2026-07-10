@@ -867,7 +867,7 @@ features:
         evidence: FlowFeed (verb-colored message cards w/ task ids + live seat chips + click-through + autoscroll) and FlowOffice (desk cards w/ role/live-state/event-count, main-merges banner, 3-line fading ticker) replace placeholders; liveStates extracted to flowderive shared by Lanes. Reviewer fixes: dead roleLabel (strict build), feed cards were missing task ids (added). Live-verified on real 111-event ledger: all three renderers correct. web 506 green + build
   - id: flow-polish
     branch: feat/flow-polish
-    status: in_progress
+    status: shipped
     tasks:
       - id: flow-polish
         owner: kimi-worker

@@ -811,7 +811,7 @@ features:
     tasks:
       - id: join-handshake
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/join-handshake.md
         evidence: join carries protocol_version and fail-fasts when project major exceeds client (upgrade pactify error); projectProtocolVersion helper shared with validateLog; schema additive; versionless legacy projects still join. Live-verified both paths; go test ./internal/pact/ + schemas.bats 9/9 + full repo green. capabilities[] deferred (no consumer)

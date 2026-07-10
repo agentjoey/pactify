@@ -775,3 +775,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/opencode-acp-default.md
         evidence: opencode default transport -> ACP via DefaultTransportModes() seeded in CLI + serve stinter (--transport opencode=cmd still reverts); audit plugin docs degraded to cmd-fallback. A/B: equal delivery, ACP has TOK+18 audit rows vs cmd none. Reviewer live-proof: fresh run w/o flags delivered via ACP (171 tok + audit rows). Full repo green
+  - id: approval-risk-ui
+    branch: feat/approval-risk-ui
+    status: in_progress
+    tasks:
+      - id: approval-risk-ui
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/approval-risk-ui.md
+        evidence: null

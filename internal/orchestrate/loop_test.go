@@ -149,7 +149,7 @@ func (f *fakeRunner) Run(ctx context.Context, lc LaunchContext) error {
 // okExec is a cmdExec that always exits 0 (gate PASS).
 type okExec struct{ calls int }
 
-func (e *okExec) Run(ctx context.Context, dir, command string) (int, string, error) {
+func (e *okExec) Run(ctx context.Context, dir, command string, env map[string]string) (int, string, error) {
 	e.calls++
 	return 0, "ok", nil
 }
@@ -157,7 +157,7 @@ func (e *okExec) Run(ctx context.Context, dir, command string) (int, string, err
 // failExec is a cmdExec that always exits non-zero (gate FAIL).
 type failExec struct{ calls int }
 
-func (e *failExec) Run(ctx context.Context, dir, command string) (int, string, error) {
+func (e *failExec) Run(ctx context.Context, dir, command string, env map[string]string) (int, string, error) {
 	e.calls++
 	return 1, "FAIL: assertion failed", nil
 }

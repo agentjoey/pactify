@@ -379,8 +379,9 @@ func (opts Options) mergeFromWorktree(ctx context.Context, worktreeDir, feature 
 	if feat == nil {
 		return fmt.Errorf("orchestrate: feature %s not found in worktree for merge", feature)
 	}
+	base, _ := pact.At(worktreeDir).BaseBranch()
 	for _, cmd := range gateCommands(worktreeDir, *feat) {
-		ok, detail := runGate(ctx, opts.Exec, worktreeDir, cmd)
+		ok, detail := runGateScoped(ctx, opts.Exec, worktreeDir, cmd, base)
 		if !ok {
 			o := opts
 			o.Dir = worktreeDir

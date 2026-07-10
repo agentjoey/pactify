@@ -825,3 +825,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/mcp-envelope.md
         evidence: all MCP tools return {ok:true,data}|{ok:false,error} envelope (json.Marshal-built), errors via IsError result instead of protocol-layer (0 bare return-nil-nil-err left); tests updated + shape tests; mcp_project.bats e2e green
+  - id: gate-diff-scope
+    branch: feat/gate-diff-scope
+    status: in_progress
+    tasks:
+      - id: gate-diff-scope
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/gate-diff-scope.md
+        evidence: gate commands get merge-base changed-set: {files} placeholder (shell-quoted; empty set -> skip-pass; base unresolvable -> fail-closed) + PACT_CHANGED_FILES env always injected; pact.BaseBranch accessor + gitx.ChangedFiles; planner prompt documents {files}. Reviewer added .pact/ exclusion (ledger churn must not enter gates nor defeat skip semantics) + fixed test scaffolding-commit ordering. Full repo green

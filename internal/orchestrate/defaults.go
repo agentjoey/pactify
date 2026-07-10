@@ -2,6 +2,7 @@ package orchestrate
 
 import (
 	"context"
+	"os"
 	"os/exec"
 )
 
@@ -10,9 +11,15 @@ import (
 // reported as a code (the command ran but failed), distinct from a spawn error.
 type shellExec struct{}
 
-func (shellExec) Run(ctx context.Context, dir, command string) (int, string, error) {
+func (shellExec) Run(ctx context.Context, dir, command string, env map[string]string) (int, string, error) {
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Dir = dir
+	if len(env) > 0 {
+		cmd.Env = os.Environ()
+		for k, v := range env {
+			cmd.Env = append(cmd.Env, k+"="+v)
+		}
+	}
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return 0, string(out), nil

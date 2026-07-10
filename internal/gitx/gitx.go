@@ -205,6 +205,21 @@ func IsAncestor(dir, a, b string) bool {
 	return err == nil
 }
 
+// ChangedFiles returns the names of files changed on the current branch relative
+// to base using git's merge-base-aware `base...HEAD` syntax. The returned slice
+// is empty when there are no changes; an error means base is missing or
+// unreachable.
+func ChangedFiles(dir, base string) ([]string, error) {
+	out, err := run(dir, "diff", "--name-only", base+"...HEAD")
+	if err != nil {
+		return nil, fmt.Errorf("git diff --name-only %s...HEAD: %w", base, err)
+	}
+	if out == "" {
+		return nil, nil
+	}
+	return strings.Split(out, "\n"), nil
+}
+
 // MergeNoFF performs a --no-ff merge of branch into the current branch.
 // --no-verify: the merge commit is machine-generated and must not run the repo's
 // human merge/commit hooks (pre-merge-commit / commit-msg, e.g. commitlint).

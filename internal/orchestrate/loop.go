@@ -99,6 +99,14 @@ type Options struct {
 	pactIgnoredMemo *ignoredMemo
 }
 
+// projectBase returns the repo's integration base branch, or "" when it cannot be
+// determined. A missing base is safe for non-scoped gates (they simply get an
+// empty PACT_CHANGED_FILES) and triggers fail-closed behavior for `{files}` gates.
+func (opts Options) projectBase() string {
+	base, _ := pact.At(opts.Dir).BaseBranch()
+	return base
+}
+
 // ignoredMemo is the once-per-run backing store for Options.pactIgnored.
 type ignoredMemo struct {
 	once    sync.Once
@@ -657,8 +665,9 @@ func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State
 		return true, nil
 	}
 	cmd := opts.taskGateCommand(task)
+	base := opts.projectBase()
 	for {
-		passed, detail := runGate(ctx, opts.Exec, opts.Dir, cmd)
+		passed, detail := runGateScoped(ctx, opts.Exec, opts.Dir, cmd, base)
 		if passed {
 			return true, nil
 		}
@@ -844,8 +853,9 @@ func (opts Options) merge(ctx context.Context, st, view projection.State, act Ac
 		return false, fmt.Errorf("orchestrate: feature %s not found for Merge", act.Feature)
 	}
 
+	base := opts.projectBase()
 	for _, cmd := range gateCommands(opts.Dir, *feat) {
-		ok, detail := runGate(ctx, opts.Exec, opts.Dir, cmd)
+		ok, detail := runGateScoped(ctx, opts.Exec, opts.Dir, cmd, base)
 		if !ok {
 			opts.emitEscalatedStatus(view, act.Feature, "hard gate failed: "+detail, *h)
 			return true, opts.escalate(act.Feature, "", "hard gate failed: "+detail,

@@ -22,7 +22,7 @@ type flakyExec struct {
 	failFirst int
 }
 
-func (e *flakyExec) Run(_ context.Context, _, _ string) (int, string, error) {
+func (e *flakyExec) Run(_ context.Context, _, _ string, _ map[string]string) (int, string, error) {
 	e.calls++
 	if e.calls <= e.failFirst {
 		return 1, "FAIL: assertion failed in TestFoo", nil

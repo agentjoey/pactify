@@ -897,6 +897,21 @@ func (p *Project) configBaseBranchLocked(branch string) error {
 	})
 }
 
+// BaseBranch returns the project's integration base branch: the init-time base
+// overridden by any later rebaseline event. It returns "" when no base has been
+// recorded.
+func (p *Project) BaseBranch() (string, error) {
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	if err != nil {
+		return "", err
+	}
+	b, _ := baseBranch(evs)
+	return b, nil
+}
+
+// BaseBranch returns the current repo's integration base branch.
+func BaseBranch() (string, error) { return At(".").BaseBranch() }
+
 // ConfigGate sets the project hard-gate command in the current working directory's repo.
 func ConfigGate(command string) error { return At(".").ConfigGate(command) }
 

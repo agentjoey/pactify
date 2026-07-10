@@ -110,6 +110,8 @@ func BuildPrompt(in PromptInput) string {
 	b.WriteString("- Prefer `test`/`build` gates (a broken import fails them). Do NOT use a\n")
 	b.WriteString("  whole-repo linter (e.g. `eslint .`) as a task verify — it trips on unrelated\n")
 	b.WriteString("  pre-existing issues the task owner must not fix. Lint only the touched files if at all.\n")
+	b.WriteString("- You MAY scope a verify to the changed files with the `{files}` placeholder,\n")
+	b.WriteString("  e.g. `verify: npx eslint {files}`. An empty change set skips the gate.\n")
 	b.WriteString("- The owner must never modify out-of-scope files just to satisfy a verify.\n\n")
 
 	b.WriteString("## Plan manifest\n")

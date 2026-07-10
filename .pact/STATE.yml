@@ -795,3 +795,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/cockpit-resume.md
         evidence: cross-restart cockpit resume: threads.json (atomic 0o600) via NoteThread/StoredThread; Manager.Resume reuses wrapSessionLocked; serve resumable flag + POST cockpit/resume; panel Resume button. Pending-approval contract documented (dies with process). -race + web 480 + build green
+  - id: codex-exec-resume
+    branch: feat/codex-exec-resume
+    status: in_progress
+    tasks:
+      - id: codex-exec-resume
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/codex-exec-resume.md
+        evidence: null

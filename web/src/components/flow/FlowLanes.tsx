@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { liveStates, tAt, type FlowModel, type FlowStint, type FlowArrow } from "../../lib/flowderive";
+import {
+  blockedTasks,
+  liveStates,
+  tAt,
+  type FlowModel,
+  type FlowStint,
+  type FlowArrow,
+} from "../../lib/flowderive";
 import type { State } from "../../lib/types";
+import { useDataSource } from "../../lib/datasource";
+import type { AgentStat, ProjectStats } from "../../lib/api";
+import { fmtDuration as fmtDurationSec } from "../../lib/api";
 
 const LANE_H = 64;
 const HEADER_H = 32;
@@ -82,14 +92,22 @@ interface FlowLanesProps {
   agents: State["agents"];
   selected: string;
   onSelect: (taskId: string) => void;
+  state: State;
+  project: string;
 }
 
-export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps) {
+export function FlowLanes({ model, agents, selected, onSelect, state, project }: FlowLanesProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [baseWidth, setBaseWidth] = useState(MIN_W);
   const [zoom, setZoom] = useState<1 | 2 | 4>(1);
   const [idleExpanded, setIdleExpanded] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [stats, setStats] = useState<ProjectStats | null>(null);
+  const [statsErr, setStatsErr] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const src = useDataSource();
+  const blockedMap = useMemo(() => blockedTasks(state), [state]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -153,6 +171,37 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
 
   const liveMap = useMemo(() => liveStates(model), [model]);
 
+  useEffect(() => {
+    if (!selectedAgent) return;
+    let cancelled = false;
+    setStatsErr(false);
+    src.getStats(project)
+      .then((s) => {
+        if (!cancelled) setStats(s);
+      })
+      .catch(() => {
+        if (!cancelled) setStatsErr(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAgent, project, src]);
+
+  useEffect(() => {
+    if (!selectedAgent) return;
+    function handle(e: MouseEvent) {
+      const target = e.target as Node;
+      // Lane-row clicks toggle the card themselves; closing here first would
+      // make a same-row click reopen instead of close.
+      if ((target as Element).closest?.('[data-testid="flow-lane-row"]')) return;
+      if (cardRef.current && !cardRef.current.contains(target)) {
+        setSelectedAgent(null);
+      }
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [selectedAgent]);
+
   const ticks = useMemo(() => {
     if (model.tMax <= model.tMin) return [];
     const n = 6;
@@ -191,12 +240,32 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
 
   function renderLaneRow(a: (typeof laneOrder)[number]) {
     const live = liveMap[a.id] ?? { kind: "idle" };
-    const liveLabel =
-      live.kind === "work" ? "working" : live.kind === "review" ? "reviewing" : live.kind;
+    const blockedDeps = live.task ? blockedMap.get(live.task) : undefined;
+    const isBlocked = live.kind === "work" && blockedDeps && blockedDeps.length > 0;
+    const isSelected = selectedAgent === a.id;
+
+    let chipLabel: string;
+    let chipColor: string;
+    if (isBlocked) {
+      chipLabel = `blocked · 等 ${blockedDeps[0]}`;
+      chipColor = "var(--color-warn)";
+    } else if (live.kind !== "idle") {
+      chipLabel = live.kind === "work" ? "working" : live.kind === "review" ? "reviewing" : live.kind;
+      chipColor = stintFill(live.kind);
+    } else {
+      chipLabel = "idle";
+      chipColor = "var(--color-text-3)";
+    }
+
     return (
       <div
         key={a.id}
-        className="flex items-center gap-2.5 border-b border-[var(--color-border-subtle)] px-3"
+        data-testid="flow-lane-row"
+        data-agent={a.id}
+        onClick={() => setSelectedAgent((cur) => (cur === a.id ? null : a.id))}
+        className={`flex items-center gap-2.5 border-b border-[var(--color-border-subtle)] px-3 transition-colors ${
+          isSelected ? "bg-[var(--color-bg-raised)]" : "cursor-pointer hover:bg-[var(--color-bg-page)]"
+        }`}
         style={{ height: LANE_H }}
       >
         <span
@@ -209,31 +278,26 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
           <span className="truncate text-[11.5px] font-medium text-[var(--color-text-1)]">{a.id}</span>
           <span className="text-[10px] text-[var(--color-text-3)]">{roleLabel(a.roles)}</span>
         </div>
-        {live.kind !== "idle" ? (
-          <span
-            className="ml-auto rounded-full px-1.5 py-px text-[9.5px] font-medium"
-            style={{
-              color: stintFill(live.kind),
-              background: `color-mix(in srgb, ${stintFill(live.kind)} 14%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${stintFill(live.kind)} 30%, transparent)`,
-            }}
-          >
-            {liveLabel}
-          </span>
-        ) : (
-          <span
-            className="ml-auto rounded-full px-1.5 py-px text-[9.5px] font-medium text-[var(--color-text-3)]"
-            style={{ background: "rgba(255,255,255,0.06)" }}
-          >
-            idle
-          </span>
-        )}
+        <span
+          className="ml-auto rounded-full px-1.5 py-px text-[9.5px] font-medium"
+          style={{
+            color: chipColor,
+            background: `color-mix(in srgb, ${chipColor} 14%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${chipColor} 30%, transparent)`,
+          }}
+        >
+          {chipLabel}
+        </span>
       </div>
     );
   }
 
+  const selectedStat: AgentStat | undefined = selectedAgent
+    ? stats?.agents.find((a) => a.seat === selectedAgent)
+    : undefined;
+
   return (
-    <div ref={wrapRef} className="flex flex-1 overflow-hidden">
+    <div ref={wrapRef} className="relative flex flex-1 overflow-hidden">
       {/* Left seat rail */}
       <div className="shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)]" style={{ width: 176 }}>
         <div className="flex h-[32px] items-center justify-between px-3 text-[10px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-3)]">
@@ -244,7 +308,10 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
                 key={z}
                 type="button"
                 aria-pressed={zoom === z}
-                onClick={() => setZoom(z as 1 | 2 | 4)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setZoom(z as 1 | 2 | 4);
+                }}
                 className="rounded px-1.5 py-px transition-opacity hover:opacity-80"
                 style={{
                   fontSize: 9.5,
@@ -467,6 +534,72 @@ export function FlowLanes({ model, agents, selected, onSelect }: FlowLanesProps)
           })}
         </svg>
       </div>
+
+      {/* Agent side card */}
+      {selectedAgent && (
+        <div
+          ref={cardRef}
+          data-testid="flow-agent-card"
+          data-agent={selectedAgent}
+          className="absolute right-3 top-3 z-10 w-56 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] p-3 shadow-lg"
+        >
+          <div className="flex items-center gap-2.5">
+            <span
+              className="grid h-8 w-8 place-items-center rounded-[8px] text-[10px] font-semibold"
+              style={{
+                background: roleColor(visibleLanes.find((a) => a.id === selectedAgent)?.roles),
+                color: "var(--color-bg-page)",
+              }}
+            >
+              {selectedAgent.slice(0, 2)}
+            </span>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-[12px] font-semibold text-[var(--color-text-1)]">{selectedAgent}</span>
+              <span className="text-[10px] text-[var(--color-text-3)]">
+                {roleLabel(visibleLanes.find((a) => a.id === selectedAgent)?.roles)}
+              </span>
+            </div>
+            <button
+              type="button"
+              data-testid="flow-agent-card-close"
+              onClick={() => setSelectedAgent(null)}
+              className="grid h-6 w-6 place-items-center rounded-md text-[12px] text-[var(--color-text-3)] hover:bg-[var(--color-bg-raised)]"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+            {statsErr || !selectedStat ? (
+              <div className="col-span-2 rounded-md bg-[var(--color-bg-inset)] px-2 py-1.5 text-[var(--color-text-3)]">
+                {/* Fetch failure vs seat simply having no owned-task stats. */}
+                {statsErr ? "stats unavailable" : "no task stats yet"}
+              </div>
+            ) : (
+              <>
+                <Stat label="Tasks" value={String(selectedStat.tasks)} />
+                <Stat label="Accepted" value={String(selectedStat.accepted)} />
+                <Stat label="Reworked" value={String(selectedStat.reworked)} />
+                <Stat label="Tokens" value={String(selectedStat.tokens)} />
+                <Stat
+                  label="±LOC"
+                  value={`${selectedStat.added > 0 ? "+" : ""}${selectedStat.added - selectedStat.deleted}`}
+                />
+                <Stat label="时长" value={fmtDurationSec(selectedStat.duration_sec)} />
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-[var(--color-bg-inset)] px-2 py-1.5">
+      <div className="text-[9px] uppercase tracking-[.5px] text-[var(--color-text-3)]">{label}</div>
+      <div className="mt-0.5 font-mono text-[var(--color-text-1)]">{value}</div>
     </div>
   );
 }

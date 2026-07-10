@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { FlowView } from "./FlowView";
 import type { State, PactEvent } from "../../lib/types";
+import type { DataSource } from "../../lib/datasource";
+import { DataSourceProvider } from "../../lib/datasource";
 
 const state: State = {
   project: "demo",
@@ -23,34 +25,57 @@ const events: PactEvent[] = [
   },
 ];
 
+function mockSource(): DataSource {
+  return {
+    capabilities: {
+      canWrite: true,
+      canOrchestrate: false,
+      multiMachine: false,
+      cockpit: false,
+    },
+    listProjects: vi.fn(),
+    getState: vi.fn(),
+    getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
+    subscribe: vi.fn(() => () => {}),
+  } as unknown as DataSource;
+}
+
+function renderFlowView(props: React.ComponentProps<typeof FlowView>) {
+  return render(
+    <DataSourceProvider source={mockSource()}>
+      <FlowView {...props} />
+    </DataSourceProvider>,
+  );
+}
+
 beforeEach(() => {
   localStorage.clear();
 });
 
 describe("FlowView", () => {
   it("defaults to lanes mode and renders the lanes renderer", () => {
-    render(<FlowView state={state} events={events} project="demo" selected="" onSelect={() => {}} />);
+    renderFlowView({ state, events, project: "demo", selected: "", onSelect: () => {} });
     expect(screen.getByTestId("flow-tab-lanes")).toBeInTheDocument();
     // The lanes renderer is present (one seat lane shown).
     expect(screen.getByText("bob")).toBeInTheDocument();
   });
 
   it("switches to feed renderer and remembers the mode in localStorage", () => {
-    render(<FlowView state={state} events={events} project="demo" selected="" onSelect={() => {}} />);
+    renderFlowView({ state, events, project: "demo", selected: "", onSelect: () => {} });
     fireEvent.click(screen.getByTestId("flow-tab-feed"));
     expect(screen.getByTestId("flow-msg-join")).toBeInTheDocument();
     expect(localStorage.getItem("pactify:flowMode")).toBe("feed");
   });
 
   it("switches to office renderer", () => {
-    render(<FlowView state={state} events={events} project="demo" selected="" onSelect={() => {}} />);
+    renderFlowView({ state, events, project: "demo", selected: "", onSelect: () => {} });
     fireEvent.click(screen.getByTestId("flow-tab-office"));
     expect(screen.getByTestId("flow-office-main")).toBeInTheDocument();
   });
 
   it("restores the saved flow mode from localStorage", () => {
     localStorage.setItem("pactify:flowMode", "office");
-    render(<FlowView state={state} events={events} project="demo" selected="" onSelect={() => {}} />);
+    renderFlowView({ state, events, project: "demo", selected: "", onSelect: () => {} });
     expect(screen.getByTestId("flow-office-main")).toBeInTheDocument();
   });
 
@@ -66,7 +91,7 @@ describe("FlowView", () => {
       feature: "F1",
       payload: { owner: "bob" },
     };
-    render(<FlowView state={state} events={[...events, assignEvent]} project="demo" selected="" onSelect={onSelect} />);
+    renderFlowView({ state, events: [...events, assignEvent], project: "demo", selected: "", onSelect });
     fireEvent.click(screen.getByTestId("flow-stint"));
     expect(onSelect).toHaveBeenCalledWith("T1");
   });

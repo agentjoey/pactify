@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FlowLanes } from "./FlowLanes";
 import type { FlowModel, FlowStint, FlowArrow, FlowGap } from "../../lib/flowderive";
 import type { State } from "../../lib/types";
+import type { DataSource } from "../../lib/datasource";
+import { DataSourceProvider } from "../../lib/datasource";
 
 function makeModel(overrides: Partial<FlowModel> = {}): FlowModel {
   return {
@@ -23,9 +25,42 @@ const agents: State["agents"] = [
   { id: "bob", roles: ["worker"] },
 ];
 
+const defaultState: State = {
+  project: "demo",
+  awaiting_count: 0,
+  agents,
+  features: [],
+};
+
+function renderLanes(
+  props: Omit<React.ComponentProps<typeof FlowLanes>, "state" | "project">,
+  source?: DataSource,
+) {
+  return render(
+    <DataSourceProvider source={source ?? mockSource()}>
+      <FlowLanes {...props} state={defaultState} project="demo" />
+    </DataSourceProvider>,
+  );
+}
+
+function mockSource(statsReturn?: unknown): DataSource {
+  return {
+    capabilities: {
+      canWrite: true,
+      canOrchestrate: false,
+      multiMachine: false,
+      cockpit: false,
+    },
+    listProjects: vi.fn(),
+    getState: vi.fn(),
+    getStats: vi.fn().mockResolvedValue(statsReturn ?? { tasks: [], agents: [] }),
+    subscribe: vi.fn(() => () => {}),
+  } as unknown as DataSource;
+}
+
 describe("FlowLanes", () => {
   it("renders the empty state when the model has no activity", () => {
-    render(<FlowLanes model={makeModel()} agents={agents} selected="" onSelect={() => {}} />);
+    renderLanes({ model: makeModel(), agents, selected: "", onSelect: () => {} });
     expect(screen.getByText("No activity yet")).toBeInTheDocument();
   });
 
@@ -44,7 +79,7 @@ describe("FlowLanes", () => {
       tMax: 100,
       x: (t: number) => t / 100,
     });
-    render(<FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} />);
+    renderLanes({ model, agents, selected: "", onSelect: () => {} });
     expect(screen.getByText("alice")).toBeInTheDocument();
     expect(screen.getByText("bob")).toBeInTheDocument();
     const stintBars = screen.getAllByTestId("flow-stint");
@@ -66,7 +101,7 @@ describe("FlowLanes", () => {
       tMax: 100,
       x: (t: number) => t / 100,
     });
-    render(<FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} />);
+    renderLanes({ model, agents, selected: "", onSelect: () => {} });
     expect(screen.getByTestId("flow-arrow-changes")).toBeInTheDocument();
   });
 
@@ -82,7 +117,7 @@ describe("FlowLanes", () => {
       tMax: 100,
       x: (t: number) => t / 100,
     });
-    render(<FlowLanes model={model} agents={agents} selected="" onSelect={onSelect} />);
+    renderLanes({ model, agents, selected: "", onSelect });
     fireEvent.click(screen.getByTestId("flow-stint"));
     expect(onSelect).toHaveBeenCalledWith("T1");
   });
@@ -98,7 +133,7 @@ describe("FlowLanes", () => {
       tMax: 100,
       x: (t: number) => t / 100,
     });
-    render(<FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} />);
+    renderLanes({ model, agents, selected: "", onSelect: () => {} });
     // alice has no activity and is folded.
     expect(screen.getByText("1 idle seats")).toBeInTheDocument();
     expect(screen.getByText("working")).toBeInTheDocument();
@@ -125,7 +160,7 @@ describe("FlowLanes", () => {
         return 0.392 + ((t - 64 * M) / (40 * M)) * 0.02;
       },
     });
-    const { container } = render(<FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} />);
+    const { container } = renderLanes({ model, agents, selected: "", onSelect: () => {} });
     const tickTexts = Array.from(container.querySelectorAll("text")).filter(
       (el) => el.getAttribute("y") === "18" && !el.querySelector("title"),
     );
@@ -146,7 +181,7 @@ describe("FlowLanes", () => {
       tMax: 60 * 60 * 1000,
       x: (t: number) => t / (60 * 60 * 1000),
     });
-    const { container } = render(<FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} />);
+    const { container } = renderLanes({ model, agents, selected: "", onSelect: () => {} });
     const title = container.querySelector('[data-testid="flow-stint"] title');
     expect(title).not.toBeNull();
     const text = title?.textContent ?? "";
@@ -164,7 +199,7 @@ describe("FlowLanes", () => {
       tMax: 62 * 60 * 1000,
       x: () => 0,
     });
-    const { container } = render(<FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} />);
+    const { container } = renderLanes({ model, agents, selected: "", onSelect: () => {} });
     const gapTitle = container.querySelector("svg > g title");
     expect(gapTitle).not.toBeNull();
     expect(gapTitle?.textContent).toContain("idle (compressed)");
@@ -182,7 +217,7 @@ describe("FlowLanes", () => {
       tMax: 100,
       x: (t: number) => t / 100,
     });
-    const { container } = render(<FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} />);
+    const { container } = renderLanes({ model, agents, selected: "", onSelect: () => {} });
     const svg = container.querySelector("svg");
     expect(svg).toHaveAttribute("width", "900");
     fireEvent.click(screen.getByText("×2"));
@@ -201,7 +236,7 @@ describe("FlowLanes", () => {
       tMax: 100,
       x: (t: number) => t / 100,
     });
-    render(<FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} />);
+    renderLanes({ model, agents, selected: "", onSelect: () => {} });
     expect(screen.queryByText(/idle seats/)).not.toBeInTheDocument();
     expect(screen.getByText("alice")).toBeInTheDocument();
     expect(screen.getByText("bob")).toBeInTheDocument();
@@ -224,10 +259,128 @@ describe("FlowLanes", () => {
       { id: "bob", roles: ["worker"] },
       { id: "carol", roles: ["worker"] },
     ];
-    render(<FlowLanes model={model} agents={threeAgents} selected="" onSelect={() => {}} />);
+    renderLanes({ model, agents: threeAgents, selected: "", onSelect: () => {} });
     expect(screen.getByText("2 idle seats")).toBeInTheDocument();
     expect(screen.queryByText("carol")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("2 idle seats"));
     expect(screen.getByText("carol")).toBeInTheDocument();
+  });
+
+  it("shows a blocked chip when the current task is blocked", () => {
+    const model = makeModel({
+      lanes: [{ id: "bob", firstT: 0 }],
+      stints: [{ agent: "bob", task: "T2", kind: "work", t0: 0, t1: null }],
+      tMin: 0,
+      tMax: 100,
+      x: (t: number) => t / 100,
+    });
+    const state: State = {
+      ...defaultState,
+      features: [
+        {
+          id: "F1",
+          branch: "F1",
+          status: "open",
+          tasks: [
+            { id: "T1", owner: "bob", status: "working", reviewer: "carol", spec: "", evidence: "" },
+            { id: "T2", owner: "bob", status: "working", reviewer: "carol", spec: "", evidence: "", deps: ["T1"] },
+          ],
+        },
+      ],
+    };
+    render(
+      <DataSourceProvider source={mockSource()}>
+        <FlowLanes model={model} agents={state.agents} selected="" onSelect={() => {}} state={state} project="demo" />
+      </DataSourceProvider>,
+    );
+    expect(screen.getByText(/blocked · 等 T1/)).toBeInTheDocument();
+  });
+
+  it("opens and closes the agent side card when clicking a lane row", async () => {
+    const model = makeModel({
+      lanes: [{ id: "bob", firstT: 0 }],
+      stints: [{ agent: "bob", task: "T1", kind: "work", t0: 0, t1: null }],
+      tMin: 0,
+      tMax: 100,
+      x: (t: number) => t / 100,
+    });
+    const source = mockSource({
+      tasks: [],
+      agents: [
+        {
+          seat: "bob",
+          tasks: 3,
+          accepted: 2,
+          reworked: 1,
+          tokens: 1200,
+          added: 100,
+          deleted: 20,
+          duration_sec: 3600,
+        },
+      ],
+    });
+    render(
+      <DataSourceProvider source={source}>
+        <FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} state={defaultState} project="demo" />
+      </DataSourceProvider>,
+    );
+    const row = screen.getByTestId("flow-lane-row");
+    fireEvent.click(row);
+    await waitFor(() => {
+      expect(screen.getByTestId("flow-agent-card")).toBeInTheDocument();
+    });
+    const card = screen.getByTestId("flow-agent-card");
+    expect(card).toHaveTextContent("bob");
+    expect(card).toHaveTextContent("3");
+    expect(card).toHaveTextContent("2");
+    expect(card).toHaveTextContent("1");
+    expect(card).toHaveTextContent("1200");
+    expect(card).toHaveTextContent("+80");
+    expect(card).toHaveTextContent("1h");
+
+    fireEvent.click(row);
+    expect(screen.queryByTestId("flow-agent-card")).not.toBeInTheDocument();
+  });
+
+  it("shows stats unavailable when getStats fails", async () => {
+    const model = makeModel({
+      lanes: [{ id: "bob", firstT: 0 }],
+      stints: [{ agent: "bob", task: "T1", kind: "work", t0: 0, t1: null }],
+      tMin: 0,
+      tMax: 100,
+      x: (t: number) => t / 100,
+    });
+    const source = mockSource();
+    source.getStats = vi.fn().mockRejectedValue(new Error("boom"));
+    render(
+      <DataSourceProvider source={source}>
+        <FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} state={defaultState} project="demo" />
+      </DataSourceProvider>,
+    );
+    fireEvent.click(screen.getByTestId("flow-lane-row"));
+    await waitFor(() => {
+      expect(screen.getByText("stats unavailable")).toBeInTheDocument();
+    });
+  });
+
+  it("closes the side card when clicking the close button", async () => {
+    const model = makeModel({
+      lanes: [{ id: "bob", firstT: 0 }],
+      stints: [{ agent: "bob", task: "T1", kind: "work", t0: 0, t1: null }],
+      tMin: 0,
+      tMax: 100,
+      x: (t: number) => t / 100,
+    });
+    render(
+      <DataSourceProvider source={mockSource()}>
+        <FlowLanes model={model} agents={agents} selected="" onSelect={() => {}} state={defaultState} project="demo" />
+      </DataSourceProvider>,
+    );
+    fireEvent.click(screen.getByTestId("flow-lane-row"));
+    await waitFor(() => {
+      expect(screen.getByTestId("flow-agent-card")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("flow-agent-card-close"));
+    expect(screen.queryByTestId("flow-agent-card")).not.toBeInTheDocument();
   });
 });

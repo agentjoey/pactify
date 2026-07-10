@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { deriveFlow, liveStates, tAt, type FlowModel } from "./flowderive";
-import type { PactEvent } from "./types";
+import { blockedTasks, deriveFlow, liveStates, tAt, type FlowModel } from "./flowderive";
+import type { PactEvent, State } from "./types";
 
 function makeModel(overrides: Partial<FlowModel> = {}): FlowModel {
   return {
@@ -119,5 +119,88 @@ describe("tAt", () => {
   it("returns tMin for degenerate models", () => {
     const model = makeModel();
     expect(tAt(model, 0.5)).toBe(0);
+  });
+});
+
+function makeState(tasks: { feature: string; id: string; status: string; deps?: string[] }[]): State {
+  return {
+    project: "demo",
+    awaiting_count: 0,
+    agents: [],
+    features: tasks.map((t) => ({
+      id: t.feature,
+      branch: t.feature,
+      status: "open",
+      tasks: [
+        {
+          id: t.id,
+          owner: "owner",
+          status: t.status,
+          reviewer: "reviewer",
+          spec: "",
+          evidence: "",
+          deps: t.deps,
+        },
+      ],
+    })),
+  };
+}
+
+describe("blockedTasks", () => {
+  it("flags a task whose dep is not accepted or shipped", () => {
+    const state = makeState([
+      { feature: "F1", id: "T1", status: "working" },
+      { feature: "F2", id: "T2", status: "assigned", deps: ["T1"] },
+    ]);
+    const blocked = blockedTasks(state);
+    expect(blocked.get("T2")).toEqual(["T1"]);
+  });
+
+  it("does not flag a task whose dep is accepted", () => {
+    const state = makeState([
+      { feature: "F1", id: "T1", status: "accepted" },
+      { feature: "F2", id: "T2", status: "assigned", deps: ["T1"] },
+    ]);
+    const blocked = blockedTasks(state);
+    expect(blocked.has("T2")).toBe(false);
+  });
+
+  it("does not flag a task whose dep is shipped", () => {
+    const state = makeState([
+      { feature: "F1", id: "T1", status: "shipped" },
+      { feature: "F2", id: "T2", status: "assigned", deps: ["T1"] },
+    ]);
+    const blocked = blockedTasks(state);
+    expect(blocked.has("T2")).toBe(false);
+  });
+
+  it("returns an empty map for tasks with no deps", () => {
+    const state = makeState([
+      { feature: "F1", id: "T1", status: "working" },
+      { feature: "F2", id: "T2", status: "assigned" },
+    ]);
+    const blocked = blockedTasks(state);
+    expect(blocked.size).toBe(0);
+  });
+
+  it("propagates chained blockades", () => {
+    const state = makeState([
+      { feature: "F1", id: "T1", status: "working" },
+      { feature: "F2", id: "T2", status: "assigned", deps: ["T1"] },
+      { feature: "F3", id: "T3", status: "assigned", deps: ["T2"] },
+    ]);
+    const blocked = blockedTasks(state);
+    expect(blocked.get("T2")).toEqual(["T1"]);
+    expect(blocked.get("T3")).toEqual(["T2"]);
+  });
+
+  it("lists only the deps that are still blocking", () => {
+    const state = makeState([
+      { feature: "F1", id: "T1", status: "accepted" },
+      { feature: "F2", id: "T2", status: "working" },
+      { feature: "F3", id: "T3", status: "assigned", deps: ["T1", "T2"] },
+    ]);
+    const blocked = blockedTasks(state);
+    expect(blocked.get("T3")).toEqual(["T2"]);
   });
 });

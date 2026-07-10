@@ -397,7 +397,7 @@ export async function getDiff(project: string): Promise<{ diff: string }> {
 // --- Cockpit (orchestrator chat) ---
 
 export type CockpitEvent = {
-  kind: "message" | "tool" | "usage" | "state" | "error" | "session";
+  kind: "message" | "tool" | "usage" | "state" | "error" | "session" | "status";
   text?: string;
   final?: boolean;
   tool?: { phase: string; name: string; text?: string };
@@ -405,6 +405,11 @@ export type CockpitEvent = {
   state?: Record<string, unknown> | string;
   err?: string;
   threadId?: string;
+  // status snapshot (hosted relay mirror forwards the initial state)
+  capable?: boolean;
+  resumable?: boolean;
+  reason?: string;
+  pending?: CockpitStatus["pending"];
 };
 
 export async function cockpitPrompt(

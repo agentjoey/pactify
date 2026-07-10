@@ -7,6 +7,7 @@ import type {
   ShipBody,
   PlanGenStatus,
   CockpitStatus,
+  CockpitEvent,
 } from "./api";
 import type {
   OrchestrateStatusResponse,
@@ -85,6 +86,12 @@ export interface DataSource {
   cockpitResume?(project: string, seat: string): Promise<{ ok: boolean; threadId: string }>;
   cockpitStatus?(project: string, seat: string): Promise<CockpitStatus>;
   cockpitStreamUrl?(project: string, seat: string): string;
+  /** Subscribe to a seat's cockpit event stream. Returns an unsubscribe function. */
+  cockpitSubscribe?(
+    project: string,
+    seat: string,
+    onEvent: (e: CockpitEvent) => void,
+  ): () => void;
 }
 
 export class LocalServeSource implements DataSource {
@@ -219,6 +226,22 @@ export class LocalServeSource implements DataSource {
 
   cockpitStreamUrl(project: string, seat: string): string {
     return api.cockpitStreamUrl(project, seat);
+  }
+
+  cockpitSubscribe(
+    project: string,
+    seat: string,
+    onEvent: (e: CockpitEvent) => void,
+  ): () => void {
+    const es = new EventSource(api.cockpitStreamUrl(project, seat));
+    es.onmessage = (e) => {
+      try {
+        onEvent(JSON.parse(e.data) as CockpitEvent);
+      } catch {
+        // ignore malformed frames
+      }
+    };
+    return () => es.close();
   }
 }
 

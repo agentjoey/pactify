@@ -22,6 +22,7 @@ export function RunRail({
   author,
   events = [],
   onNotify,
+  onOpenCockpit,
 }: {
   project: string;
   state: State;
@@ -29,6 +30,7 @@ export function RunRail({
   author: boolean;
   events?: PactEvent[];
   onNotify?: (message: string, kind?: "error") => void;
+  onOpenCockpit?: (seat: string) => void;
 }) {
   const [status, setStatus] = useState<OrchestrateStatus | null>(null);
   const [present, setPresent] = useState<boolean | null>(null);
@@ -292,6 +294,7 @@ export function RunRail({
             project={project}
             canWrite={canWrite}
             canDiff={canDiff}
+            onOpenCockpit={onOpenCockpit}
           />
         ))}
 
@@ -411,13 +414,15 @@ function chipKindFor(t: Task, os: OrchestrateStatus | null): ChipKind {
 // horizontal task pipeline + (when its hard gate failed) the review gate +
 // (when working and expanded) live agent terminal.
 function FeatureLane({
-  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, onReject, onApproveMerge, gateBusy, canAct, expanded, onToggle, project, canWrite, canDiff,
+  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, onReject, onApproveMerge, gateBusy, canAct, expanded, onToggle, project, canWrite, canDiff, onOpenCockpit,
 }: {
   feature: Feature; os: OrchestrateStatus | null; events: PactEvent[]; state: State;
   author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void;
   onReject: (f: Feature, feedback: string) => void; onApproveMerge: (f: Feature) => void; gateBusy: boolean; canAct: boolean;
   expanded: boolean; onToggle: () => void; project: string; canWrite: boolean; canDiff: boolean;
+  onOpenCockpit?: (seat: string) => void;
 }) {
+  const src = useDataSource();
   const gate = !!os?.escalated;
   const accepted = feature.tasks.filter((t) => t.status === "accepted" || t.status === "shipped").length;
   const tok = feature.tasks.reduce((n, t) => n + taskTokens(t.id, events), 0);
@@ -468,18 +473,30 @@ function FeatureLane({
         </span>
       </div>
 
-      <div className={`flex items-center ${gate ? "mb-[15px]" : ""}`}>
-        {feature.tasks.map((t, i) => (
-          <PipeChipWithConnector
-            key={t.id}
-            first={i === 0}
-            prevKind={i > 0 ? chipKindFor(feature.tasks[i - 1], os) : "pending"}
-            kind={chipKindFor(t, os)}
-            id={t.id}
-            tok={taskTokens(t.id, events)}
-            seat={os && os.task === t.id ? os.seat : undefined}
-          />
-        ))}
+      <div className={`flex flex-wrap items-center ${gate ? "mb-[15px]" : ""}`}>
+        {feature.tasks.map((t, i) => {
+          const k = chipKindFor(t, os);
+          const discuss =
+            src.cockpitSubscribe &&
+            onOpenCockpit &&
+            (k === "gate" || k === "review" || k === "changes");
+          return (
+            <PipeChipWithConnector
+              key={t.id}
+              first={i === 0}
+              prevKind={i > 0 ? chipKindFor(feature.tasks[i - 1], os) : "pending"}
+              kind={k}
+              id={t.id}
+              tok={taskTokens(t.id, events)}
+              seat={os && os.task === t.id ? os.seat : undefined}
+              onDiscuss={
+                discuss
+                  ? () => onOpenCockpit(t.owner)
+                  : undefined
+              }
+            />
+          );
+        })}
         <Connector kind={accepted === feature.tasks.length ? "done" : "pending"} />
         <MergeNode active={mergeable} />
       </div>
@@ -519,18 +536,18 @@ const CHIP: Record<ChipKind, { c: string; glyph: string; dim?: boolean }> = {
   pending: { c: "var(--color-text-3)", glyph: "·", dim: true },
 };
 
-function PipeChipWithConnector({ first, prevKind, kind, id, tok, seat }: {
-  first: boolean; prevKind: ChipKind; kind: ChipKind; id: string; tok: number; seat?: string;
+function PipeChipWithConnector({ first, prevKind, kind, id, tok, seat, onDiscuss }: {
+  first: boolean; prevKind: ChipKind; kind: ChipKind; id: string; tok: number; seat?: string; onDiscuss?: () => void;
 }) {
   return (
     <>
       {!first && <Connector kind={prevKind} />}
-      <PipeChip kind={kind} id={id} tok={tok} seat={seat} />
+      <PipeChip kind={kind} id={id} tok={tok} seat={seat} onDiscuss={onDiscuss} />
     </>
   );
 }
 
-function PipeChip({ kind, id, tok, seat }: { kind: ChipKind; id: string; tok: number; seat?: string }) {
+function PipeChip({ kind, id, tok, seat, onDiscuss }: { kind: ChipKind; id: string; tok: number; seat?: string; onDiscuss?: () => void }) {
   const m = CHIP[kind];
   const lit = kind === "working" || kind === "gate";
   return (
@@ -553,6 +570,19 @@ function PipeChip({ kind, id, tok, seat }: { kind: ChipKind; id: string; tok: nu
       {kind === "gate" && <span className="text-[9px]" style={{ color: m.c }}>gate failed</span>}
       {seat && kind === "working" && <span className="text-[9px]" style={{ color: m.c }}>{seat}</span>}
       {tok > 0 && <span className="mono text-[9px]" style={{ color: lit ? m.c : "var(--color-text-3)" }}>{fmtTokens(tok)}</span>}
+      {onDiscuss && (
+        <button
+          type="button"
+          data-testid="pipe-discuss-cockpit"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDiscuss();
+          }}
+          className="ml-1 rounded-[4px] px-1 py-0.5 text-[9px] font-medium text-[var(--color-role-design)] hover:bg-[var(--color-role-design)]/10"
+        >
+          Cockpit →
+        </button>
+      )}
     </div>
   );
 }

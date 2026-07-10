@@ -3,7 +3,14 @@ import type { RpcRequest } from "@pactify-apps/wire";
 import { project } from "@pactify-apps/pact-project";
 import type { PactEvent as PactProjectEvent } from "@pactify-apps/pact-project";
 import type { DataSource, DataSourceCapabilities } from "./datasource";
-import type { ProjectStats, TaskStat, AgentStat, RunOrchestrateBody } from "./api";
+import type {
+  ProjectStats,
+  TaskStat,
+  AgentStat,
+  RunOrchestrateBody,
+  CockpitEvent,
+  CockpitStatus,
+} from "./api";
 import type { Machine, PactEvent, PactEventDetail, ProjectMeta, State } from "./types";
 
 /**
@@ -22,7 +29,7 @@ export class RelaySource implements DataSource {
     canWrite: true,
     canOrchestrate: true,
     multiMachine: true,
-    cockpit: false,
+    cockpit: true,
   };
 
   constructor(client: RelayClient) {
@@ -31,6 +38,7 @@ export class RelaySource implements DataSource {
 
   async listProjects(): Promise<ProjectMeta[]> {
     const projects = await this.client.listProjects();
+    for (const p of projects) this.projectNames.set(p.id, p.name);
     return projects.map((p) => ({
       id: p.id,
       name: p.name,
@@ -39,6 +47,18 @@ export class RelaySource implements DataSource {
       feature_count: p.feature ? 1 : 0,
       awaiting_count: 0,
     }));
+  }
+
+  /** Relay project ids are composite (`accountId:name`) but the machine-side
+   * dispatcher resolves rpcs by the REGISTERED PROJECT NAME. Every rpc
+   * `project` field must carry the short name; the composite id stays for
+   * REST/decrypt (the encryption key is derived from the composite id). */
+  private projectNames = new Map<string, string>();
+  private rpcProject(id: string): string {
+    const known = this.projectNames.get(id);
+    if (known) return known;
+    const i = id.indexOf(":");
+    return i >= 0 ? id.slice(i + 1) : id;
   }
 
   async getState(id: string, _wt?: string): Promise<State> {
@@ -123,7 +143,7 @@ export class RelaySource implements DataSource {
         rpc = {
           type: "pact.assign",
           machineId,
-          project,
+          project: this.rpcProject(project),
           task: s("task"),
           feature: s("feature"),
           branch: s("branch"),
@@ -134,13 +154,13 @@ export class RelaySource implements DataSource {
         };
         break;
       case "accept":
-        rpc = { type: "pact.accept", machineId, project, task: s("task") };
+        rpc = { type: "pact.accept", machineId, project: this.rpcProject(project), task: s("task") };
         break;
       case "changes":
-        rpc = { type: "pact.changes", machineId, project, task: s("task"), reason: s("reason") };
+        rpc = { type: "pact.changes", machineId, project: this.rpcProject(project), task: s("task"), reason: s("reason") };
         break;
       case "merge":
-        rpc = { type: "pact.merge", machineId, project, feature: s("feature") };
+        rpc = { type: "pact.merge", machineId, project: this.rpcProject(project), feature: s("feature") };
         break;
     }
     this.client.sendRpc(rpc);
@@ -160,7 +180,7 @@ export class RelaySource implements DataSource {
     const rpc: RpcRequest = {
       type: "orchestrate.run",
       machineId,
-      project,
+      project: this.rpcProject(project),
       ...(body?.feature ? { feature: body.feature } : {}),
       ...(body?.seat_kinds ? { seatKinds: body.seat_kinds } : {}),
     };
@@ -177,7 +197,7 @@ export class RelaySource implements DataSource {
     const rpc: RpcRequest = {
       type: "orchestrate.resume",
       machineId,
-      project,
+      project: this.rpcProject(project),
       ...(body?.feature ? { feature: body.feature } : {}),
     };
     this.client.sendRpc(rpc);
@@ -200,7 +220,7 @@ export class RelaySource implements DataSource {
     const rpc: RpcRequest = {
       type: "plan.generate",
       machineId,
-      project,
+      project: this.rpcProject(project),
       goal: body.goal,
       feature: body.feature,
       ...(body.planner_kind ? { plannerKind: body.planner_kind } : {}),
@@ -221,7 +241,7 @@ export class RelaySource implements DataSource {
     const rpc: RpcRequest = {
       type: "pact.task",
       machineId,
-      project,
+      project: this.rpcProject(project),
       id: body.id,
       specMd: body.spec_md,
     };
@@ -237,11 +257,156 @@ export class RelaySource implements DataSource {
     const rpc: RpcRequest = {
       type: "plan.apply",
       machineId,
-      project,
+      project: this.rpcProject(project),
       feature,
     };
     this.client.sendRpc(rpc);
     return { assigned: 0 };
+  }
+
+  // ── Hosted cockpit (E3/E4) ─────────────────────────────────────────────────
+
+  private cockpitSubs = new Map<string, CockpitSub>();
+  private cockpitStatusCache = new Map<string, CockpitStatus>();
+
+  private async sendCockpitSubscribe(project: string, seat: string): Promise<void> {
+    const machineId = await this.resolveMachineId();
+    const rpc: RpcRequest = { type: "cockpit.subscribe", machineId, project: this.rpcProject(project), seat };
+    this.client.sendRpc(rpc);
+  }
+
+  async cockpitPrompt(
+    project: string,
+    seat: string,
+    text: string,
+  ): Promise<{ ok: boolean; threadId: string }> {
+    const machineId = await this.resolveMachineId();
+    this.client.sendRpc({ type: "cockpit.prompt", machineId, project: this.rpcProject(project), seat, text });
+    return { ok: true, threadId: "" };
+  }
+
+  async cockpitRespond(
+    project: string,
+    seat: string,
+    approvalId: string,
+    decision: "allow" | "deny",
+  ): Promise<void> {
+    const machineId = await this.resolveMachineId();
+    this.client.sendRpc({
+      type: "cockpit.permission",
+      machineId,
+      project: this.rpcProject(project),
+      seat,
+      requestId: approvalId,
+      decision,
+    });
+  }
+
+  async cockpitCancel(project: string, seat: string): Promise<void> {
+    const machineId = await this.resolveMachineId();
+    this.client.sendRpc({ type: "cockpit.cancel", machineId, project: this.rpcProject(project), seat });
+  }
+
+  async cockpitResume(
+    project: string,
+    seat: string,
+  ): Promise<{ ok: boolean; threadId: string }> {
+    const machineId = await this.resolveMachineId();
+    this.client.sendRpc({ type: "cockpit.resume", machineId, project: this.rpcProject(project), seat });
+    return { ok: true, threadId: "" };
+  }
+
+  async cockpitStatus(project: string, seat: string): Promise<CockpitStatus> {
+    const cached = this.cockpitStatusCache.get(`${project}:${seat}`);
+    if (cached) return cached;
+    return { threadId: "", capable: true, pending: [] };
+  }
+
+  cockpitSubscribe(
+    project: string,
+    seat: string,
+    onEvent: (e: CockpitEvent) => void,
+  ): () => void {
+    const key = `${project}:${seat}`;
+    // The machine builds runId from the rpc's SHORT project name, not the
+    // composite relay id — match on the same.
+    const runId = `cockpit:${this.rpcProject(project)}:${seat}`;
+    const existing = this.cockpitSubs.get(key);
+    if (existing) {
+      const prev = existing.onEvent;
+      existing.onEvent = (e) => {
+        prev(e);
+        onEvent(e);
+      };
+      return () => {
+        if (this.cockpitSubs.get(key)?.onEvent === existing.onEvent) {
+          existing.onEvent = prev;
+        }
+      };
+    }
+    const sub: CockpitSub = {
+      onEvent,
+      nextSeq: 0,
+      buffer: new Map(),
+      interval: setInterval(
+        () => {
+          void this.sendCockpitSubscribe(project, seat);
+        },
+        COCKPIT_RESUBSCRIBE_MS,
+      ),
+      offEphemeral: () => {},
+    };
+    this.cockpitSubs.set(key, sub);
+    const off = this.client.onEphemeral((msg) => {
+      if (msg.runId !== runId) return;
+      let body: unknown;
+      try {
+        body = this.client.decryptRaw(project, msg.body);
+      } catch {
+        return;
+      }
+      if (!body || typeof body !== "object") return;
+      const raw = body as Record<string, unknown>;
+      if (raw.kind === "status") {
+        const status = parseStatusSnapshot(raw);
+        if (status) this.cockpitStatusCache.set(key, status);
+        return;
+      }
+      if (raw.kind === "approval-request") {
+        const status: CockpitStatus = {
+          threadId: typeof raw.threadId === "string" ? raw.threadId : "",
+          capable: true,
+          resumable: raw.resumable === true,
+          pending: parsePending(raw.pending),
+        };
+        this.cockpitStatusCache.set(key, status);
+      }
+      const seq = msg.seq;
+      if (sub.nextSeq === 0) {
+        // Adopt the server's base (the mirror's seq is 1-based) on first sight.
+        sub.nextSeq = seq;
+      } else if (seq === 1 && sub.nextSeq > 1) {
+        // Mirror restarted server-side (TTL/serve restart): seq began again.
+        sub.nextSeq = 1;
+        sub.buffer.clear();
+      }
+      if (seq < sub.nextSeq) return;
+      sub.buffer.set(seq, raw);
+      while (sub.buffer.has(sub.nextSeq)) {
+        const ev = sub.buffer.get(sub.nextSeq)!;
+        sub.buffer.delete(sub.nextSeq);
+        sub.nextSeq++;
+        const mapped = mapCockpitEvent(ev);
+        if (mapped) sub.onEvent(mapped);
+      }
+    });
+    sub.offEphemeral = off;
+    void this.sendCockpitSubscribe(project, seat);
+    return () => {
+      off();
+      clearInterval(sub.interval);
+      this.cockpitSubs.delete(key);
+    };
   }
 
   async getStats(id: string): Promise<ProjectStats> {
@@ -300,5 +465,71 @@ export class RelaySource implements DataSource {
       },
       onLive,
     );
+  }
+}
+
+const COCKPIT_RESUBSCRIBE_MS = 4 * 60 * 1000;
+
+interface CockpitSub {
+  onEvent: (e: CockpitEvent) => void;
+  nextSeq: number;
+  buffer: Map<number, Record<string, unknown>>;
+  interval: ReturnType<typeof setInterval>;
+  offEphemeral: () => void;
+}
+
+function parsePending(raw: unknown): CockpitStatus["pending"] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (p): p is Record<string, unknown> =>
+        p !== null && typeof p === "object" && typeof (p as Record<string, unknown>).id === "string",
+    )
+    .map((p) => ({
+      id: String(p.id),
+      kind: typeof p.kind === "string" ? p.kind : "",
+      toolName: typeof p.toolName === "string" ? p.toolName : "",
+      rawInput: p.rawInput,
+      risk: typeof p.risk === "string" ? p.risk : undefined,
+    }));
+}
+
+function parseStatusSnapshot(raw: Record<string, unknown>): CockpitStatus | null {
+  return {
+    threadId: typeof raw.threadId === "string" ? raw.threadId : "",
+    capable: true,
+    resumable: raw.resumable === true,
+    reason: typeof raw.reason === "string" ? raw.reason : undefined,
+    pending: parsePending(raw.pending),
+  };
+}
+
+function mapCockpitEvent(raw: Record<string, unknown>): CockpitEvent | null {
+  switch (raw.kind) {
+    case "message":
+      return {
+        kind: "message",
+        text: typeof raw.text === "string" ? raw.text : "",
+        final: raw.final === true,
+      };
+    case "usage": {
+      const usage =
+        raw.usage && typeof raw.usage === "object"
+          ? (raw.usage as Record<string, unknown>)
+          : {};
+      return { kind: "usage", usage };
+    }
+    case "state":
+      return {
+        kind: "state",
+        state: raw.state as Record<string, unknown> | string,
+      };
+    case "error":
+      return {
+        kind: "error",
+        err: typeof raw.err === "string" ? raw.err : "",
+      };
+    default:
+      return null;
   }
 }

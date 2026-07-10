@@ -137,4 +137,22 @@ describe('RelayClient', () => {
     c.sendRpc(rpc)
     expect(lastFakeSocket.emitted).toContainEqual({ ev: 'rpc', arg: rpc })
   })
+
+  it('onEphemeral delivers only cockpit-prefixed events and unsubscribes cleanly', () => {
+    const c = new RelayClient(URL, MASTER)
+    const seen: { runId: string; seq: number; body: unknown }[] = []
+    const off = c.onEphemeral((e) => seen.push(e))
+
+    // The handler is registered on the same control socket used by sendRpc.
+    lastFakeSocket.emit('event', { runId: 'cockpit:p1:claude', seq: 1, body: 'a' })
+    lastFakeSocket.emit('event', { runId: 'run:p1:abc', seq: 2, body: 'b' })
+    lastFakeSocket.emit('event', { runId: 'cockpit:p1:kimi', seq: 3, body: 'c' })
+
+    expect(seen).toHaveLength(2)
+    expect(seen.map((e) => e.runId)).toEqual(['cockpit:p1:claude', 'cockpit:p1:kimi'])
+
+    off()
+    lastFakeSocket.emit('event', { runId: 'cockpit:p1:claude', seq: 4, body: 'd' })
+    expect(seen).toHaveLength(2)
+  })
 })

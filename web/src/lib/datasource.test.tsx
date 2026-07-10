@@ -139,6 +139,37 @@ describe("LocalServeSource", () => {
     expect(await src.applyPlan!("p", "f1")).toEqual({ assigned: 2 });
     expect(api.applyPlan).toHaveBeenCalledWith("p", "f1");
   });
+
+  it("cockpitSubscribe opens an EventSource on cockpitStreamUrl and forwards events", () => {
+    let lastES: FakeES | null = null;
+    class FakeES {
+      onmessage: ((ev: MessageEvent) => void) | null = null;
+      closed = false;
+      url: string;
+      constructor(url: string) {
+        this.url = url;
+        lastES = this;
+      }
+      close() {
+        this.closed = true;
+      }
+    }
+    vi.stubGlobal("EventSource", FakeES);
+    vi.spyOn(api, "cockpitStreamUrl").mockReturnValue("/api/projects/p/cockpit/stream?seat=claude");
+
+    const src = new LocalServeSource();
+    const events: { kind: string; text?: string }[] = [];
+    const off = src.cockpitSubscribe("p", "claude", (e) => events.push(e as { kind: string; text?: string }));
+
+    expect(lastES).not.toBeNull();
+    expect(lastES!.url).toBe("/api/projects/p/cockpit/stream?seat=claude");
+
+    lastES!.onmessage?.({ data: JSON.stringify({ kind: "message", text: "hi" }) } as MessageEvent);
+    expect(events).toEqual([{ kind: "message", text: "hi" }]);
+
+    off();
+    expect(lastES!.closed).toBe(true);
+  });
 });
 
 describe("DataSourceProvider / useDataSource", () => {

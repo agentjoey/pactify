@@ -180,6 +180,27 @@ describe("Board — capability gating", () => {
   });
 });
 
+describe("Board — Discuss in Cockpit entry", () => {
+  it("renders a Discuss in Cockpit button on review cards and calls onOpenCockpit with the owner", () => {
+    const onOpenCockpit = vi.fn();
+    renderBoard(
+      <Board
+        state={fixture}
+        events={[]}
+        selected=""
+        onSelect={() => {}}
+        project="demo"
+        author
+        onOpenCockpit={onOpenCockpit}
+      />,
+    );
+    const discuss = screen.getByTestId("card-discuss-cockpit");
+    expect(discuss).toHaveTextContent("Discuss in Cockpit");
+    fireEvent.click(discuss);
+    expect(onOpenCockpit).toHaveBeenCalledWith("bob");
+  });
+});
+
 describe("Board — blocked dependency visibility", () => {
   const depsFixture: State = {
     project: "demo",

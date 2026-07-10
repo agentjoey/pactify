@@ -825,3 +825,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/mcp-envelope.md
         evidence: all MCP tools return {ok:true,data}|{ok:false,error} envelope (json.Marshal-built), errors via IsError result instead of protocol-layer (0 bare return-nil-nil-err left); tests updated + shape tests; mcp_project.bats e2e green
+  - id: gate-diff-scope
+    branch: feat/gate-diff-scope
+    status: in_progress
+    tasks:
+      - id: gate-diff-scope
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/gate-diff-scope.md
+        evidence: null

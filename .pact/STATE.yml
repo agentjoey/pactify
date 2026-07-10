@@ -891,7 +891,7 @@ features:
     tasks:
       - id: hc-core
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/hc-core.md
         evidence: RemotePolicy.Cockpit gate field; Manager idle reaper (30m default, WithIdleTimeout option, per-session close preserving threads.json); per-session prompt sliding-window 10/min -> 429 at serve; pending approval cap 32 with auto-deny + system event; escalate ledger event (engine Escalate with role gate + withLedgerLock, orchestrate double-write warn-only, LedgerDir pins primary repo across sandbox/parallel, schema enum + protocol doc appended). go test ./... green, -race green (reviewer fixed test-side slice race), vet clean, bats 111/111

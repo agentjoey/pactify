@@ -925,7 +925,7 @@ features:
         evidence: link-by-proof (session-bound single-use 5min challenge via LinkChallenge table, timing-safe compare, consume-before-verify, verifyChallenge reuse, /v1/auth-parity rate limit); POST /v1/id/accounts (free tier, 409 on taken publicKey); POST /v1/id/token minting bearer via shared issueToken (test proves it passes /v1/runs); sessions list/revoke + identities list/unbind (last one 409). Reviewer fix: LinkChallenge table was missing from 11_identity_plane migration (init.sql only) — appended, name-level parity check across all 7 identity tables. relay tsc clean, 248+11 green
       - id: a1-web
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/a1-web.md
         evidence: identity.ts client lib (credentials include + x-aw-csrf from /me body); IdentityGate login page (GitHub 302 + magic link + legacy secret entry folded); session-mode: RelayClient.bearer static factory (bearer-only, clear decrypt errors) + RelaySource locked flag with typed RelayLockedError guards (cleartext projects/machines pass); UnlockPanel inline secret unlock reusing connectRelaySource; account create flow with generateMasterSecret + forced export step (checkbox-gated); link-by-proof flow signing challenge locally; AccountPanel (identities/sessions/machines/tier/logout) in Settings; App/Toolbar wiring (locked hides cockpit, email in toolbar). web tsc clean, vitest 558/558, build green, relay-client tsc+7 tests green

@@ -4,17 +4,7 @@ import { Toolbar } from "./Toolbar";
 
 describe("Toolbar dark chrome", () => {
   const baseProps = {
-    projectName: "demo",
     live: false,
-    author: true,
-    seat: "kimi-worker",
-    agents: [{ id: "kimi-worker", roles: ["worker"] }],
-    projects: [],
-    running: false,
-    onSelectProject: () => {},
-    onRenameProject: () => {},
-    onDeleteProject: () => {},
-    onAddProject: () => {},
     onOpenDispatch: () => {},
     onLensChange: () => {},
     lens: "board" as const,

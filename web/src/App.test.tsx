@@ -58,14 +58,14 @@ describe("App", () => {
     render(<App />);
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
     // The TopBar project chip shows the current project name.
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
   });
 
   it("incoming pact event triggers a state re-fetch", async () => {
     render(<App />);
     // Wait for initial load (project list + initial state fetch)
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
     const callsBefore = fetchMock.mock.calls.filter(([url]) =>
@@ -109,7 +109,7 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     // Fire a pact event to populate events list
     await act(async () => {
@@ -134,7 +134,7 @@ describe("App", () => {
 
   it("shows the fetch-stale indicator after 3 consecutive refresh failures and clears it on success", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
     let failState = true;
@@ -174,7 +174,7 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     // Pick the non-primary worktree from the header project menu. Worktrees are
     // collapsed behind the per-project chevron by default, so expand first.
@@ -255,12 +255,12 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("other"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("other"));
   });
 
   it("toggles between Board and Flow views and persists boardMode", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     expect(screen.getByTestId("view-board")).toBeInTheDocument();
     expect(screen.queryByTestId("view-flow")).toBeNull();
@@ -279,7 +279,6 @@ describe("App", () => {
   it("restores boardMode from localStorage", async () => {
     localStorage.setItem("pactify:boardMode", "flow");
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
     await waitFor(() => expect(screen.getByTestId("view-flow")).toBeInTheDocument());
   });
 
@@ -298,7 +297,7 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
     expect(localStorage.getItem("pactify:lastProject")).toBe("demo");
   });
 });

@@ -620,18 +620,18 @@ body {
 .task-card {
   position: relative;
   border-radius: 11px;
-  padding: 11px 12px 10px;
+  padding: 12px 13px 10px;
   background: linear-gradient(
     170deg,
-    color-mix(in srgb, var(--st, var(--color-bg-surface)) 9%, var(--color-bg-surface)),
-    var(--color-bg-page) 60%
+    color-mix(in srgb, var(--st, var(--color-bg-surface)) 10%, var(--color-bg-surface)),
+    var(--color-bg-inset) 60%
   );
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid color-mix(in srgb, var(--st, var(--color-border-strong)) 34%, var(--color-border-strong));
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
   transition: border-color 0.12s ease, box-shadow 0.2s ease;
 }
 .task-card:hover {
-  border-color: rgba(255,255,255,0.16);
+  border-color: color-mix(in srgb, var(--st, rgba(255,255,255,0.16)) 50%, rgba(255,255,255,0.16));
 }
 .task-card.dashed {
   border-style: dashed;
@@ -653,13 +653,13 @@ body {
 }
 
 .task-card-med {
-  width: 21px;
-  height: 21px;
+  width: 22px;
+  height: 22px;
   border-radius: 7px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   flex-shrink: 0;
   background: color-mix(in srgb, var(--st, var(--color-text-2)) 17%, transparent);
   color: var(--st, var(--color-text-2));
@@ -677,7 +677,7 @@ body {
 }
 
 .task-card .life i {
-  width: 11px;
+  width: 9px;
   height: 3px;
   border-radius: 2px;
   background: rgba(255,255,255,0.1);

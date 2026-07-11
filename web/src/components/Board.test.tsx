@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { State } from "../lib/types";
+import type { State, PactEvent } from "../lib/types";
 import { Board } from "./Board";
 import { getStats } from "../lib/api";
 import { DataSourceProvider } from "../lib/datasource";
@@ -47,8 +47,7 @@ describe("Board — live pulse", () => {
     renderBoard(<Board state={fixture} selected="" onSelect={() => {}} pulses={new Set(["T1"])} />);
     const pulsing = screen.getByTestId("board-pulse");
     expect(pulsing.className).toContain("pulse");
-    // T1 is awaiting_review → the pact-state color (warn) drives the glow, so the
-    // transition pulse reads in the same vocabulary as the StatusPill.
+    // T1 is awaiting_review → the StatusPill warn-gold color drives the glow.
     expect(pulsing.getAttribute("style")).toContain("--pulse-color");
     expect(pulsing.getAttribute("style")).toContain("--color-warn");
     // T1 carries the data-testid; T2 (not pulsing) does not.
@@ -139,10 +138,9 @@ describe("Board — stats-fed TOK", () => {
       agents: [],
     });
     renderBoard(<Board state={fixture} events={[]} selected="" onSelect={() => {}} project="demo" />);
-    // T1's card TOK and the F1 feature chip rollup both show the stats value
-    // once the debounced fetch lands.
+    // T1's card TOK shows the stats value once the debounced fetch lands.
     const hits = await screen.findAllByText("12.4k");
-    expect(hits.length).toBeGreaterThanOrEqual(2);
+    expect(hits.length).toBeGreaterThanOrEqual(1);
     expect(getStatsMock).toHaveBeenCalledWith("demo");
     // T2 has tokens=0 (unknown) → its strip omits the TOK segment.
     expect(screen.queryByText("—")).toBeNull();
@@ -253,5 +251,66 @@ describe("Board — blocked dependency visibility", () => {
     renderBoard(<Board state={depsFixture} selected="" onSelect={() => {}} />);
     const noDeps = cardById("NODEPS");
     expect(within(noDeps).queryByTestId("blocked-badge")).toBeNull();
+  });
+});
+
+describe("Board — context header (ui2-board)", () => {
+  const iso = (secAgo: number) => new Date(Date.now() - secAgo * 1000).toISOString();
+
+  const headerFixture: State = {
+    project: "demo",
+    awaiting_count: 1,
+    agents: [
+      { id: "claude", roles: ["orchestrator"] },
+      { id: "opencode", roles: ["worker"] },
+      { id: "gemini", roles: ["worker"] },
+    ],
+    features: [
+      {
+        id: "F1",
+        branch: "feat/f1",
+        status: "active",
+        tasks: [
+          { id: "T1", owner: "opencode", status: "awaiting_review", reviewer: "claude", spec: "", evidence: "" },
+          { id: "T2", owner: "opencode", status: "in_progress", reviewer: "claude", spec: "", evidence: "" },
+          { id: "T3", owner: "", status: "assigned", reviewer: "claude", spec: "", evidence: "" },
+        ],
+      },
+    ],
+  };
+
+  const headerEvents: PactEvent[] = [
+    { event_id: "e1", ts: iso(120), agent_id: "opencode", role: "worker", event_type: "checkpoint", task_id: "T1", feature: "F1", payload: {} },
+    { event_id: "e2", ts: iso(300), agent_id: "opencode", role: "worker", event_type: "start", task_id: "T2", feature: "F1", payload: {} },
+  ];
+
+  it("renders the project menu, group placeholder and new-task button", () => {
+    renderBoard(<Board state={headerFixture} events={[]} selected="" onSelect={() => {}} />);
+    expect(screen.getByTestId("project-menu-trigger")).toBeInTheDocument();
+    expect(screen.getByTestId("board-group-status")).toHaveTextContent("Group: status");
+    expect(screen.getByTestId("board-new-task")).toHaveTextContent("New task");
+  });
+
+  it("renders notification chips derived from recent events", () => {
+    renderBoard(<Board state={headerFixture} events={headerEvents} selected="" onSelect={() => {}} />);
+    expect(screen.getByText("2 new")).toBeInTheDocument();
+    expect(screen.getByText("T1 awaiting your review")).toBeInTheDocument();
+    expect(screen.getByText("opencode started T2")).toBeInTheDocument();
+  });
+
+  it("dims idle seats in the avatar cluster", () => {
+    renderBoard(<Board state={headerFixture} events={[]} selected="" onSelect={() => {}} />);
+    const header = screen.getByTestId("board-context-header");
+    const tiles = within(header).getAllByTitle(/claude|opencode|gemini/);
+    expect(tiles.length).toBe(3);
+    const gemini = tiles.find((t) => t.getAttribute("title")?.includes("gemini"));
+    expect(gemini).toHaveStyle({ opacity: "0.6" });
+  });
+
+  it("marks an unowned assigned card as draft with the drag hint", () => {
+    renderBoard(<Board state={headerFixture} events={[]} selected="" onSelect={() => {}} />);
+    const draft = screen.getAllByTestId("task-card").find((c) => c.textContent?.includes("T3"));
+    expect(draft).toHaveClass("dashed");
+    expect(within(draft as HTMLElement).getByTestId("draft-hint")).toHaveTextContent("drag onto a seat");
   });
 });

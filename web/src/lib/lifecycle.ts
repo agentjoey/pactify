@@ -27,10 +27,11 @@ export function lifecycleStage(status: string): 0 | 1 | 2 | 3 {
 export function statusColorVar(status: string): string {
   switch (status) {
     case "in_progress":
+      return "var(--color-role-design)";
     case "accepted":
       return "var(--color-role-dev)";
     case "awaiting_review":
-      return "var(--color-role-design)";
+      return "var(--color-role-product)";
     case "changes_requested":
       return "var(--color-danger)";
     case "assigned":

@@ -187,12 +187,12 @@ describe("stat helpers", () => {
       ]);
     });
 
-    it("omits TOK when tokens=0 in stats (treated as unknown, not zero spend)", () => {
+    it("renders italic est metrics for unassigned tasks with no assign event", () => {
       const items = taskMetrics(mkTask("assigned"), [], 1_000_000, mkStat(0));
-      expect(items.find((i) => i.label === "TOK")).toBeUndefined();
+      expect(items.find((i) => i.label === "RUN")).toBeUndefined();
       expect(items).toEqual([
-        { label: "RUN", value: "0s", live: false },
-        { label: "", value: "×1", live: false },
+        { label: "est", value: "~2m", est: true },
+        { label: "", value: "~6k tok", est: true },
       ]);
     });
   });

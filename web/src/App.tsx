@@ -471,26 +471,12 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
       <Toolbar
-        projectName={currentName}
         live={live}
-        author={author}
-        seat={seat}
-        agents={shownState.agents}
-        projects={projects}
-        running={!!runningByProject[current]}
-        runningByProject={runningByProject}
-        onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }}
-        onRenameProject={onRenameProject}
-        onDeleteProject={onDeleteProject}
-        onAddProject={() => setWizardOpen(true)}
         onOpenDispatch={() => setDispatchOpen(true)}
         lens={lens}
         onLensChange={setLens}
         cockpitPending={cockpitPending}
         profileEmail={email}
-        worktreesByProject={worktreesByProject}
-        currentWorktree={currentWorktree}
-        onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }}
       />
       <div className="relative flex flex-1 overflow-hidden">
         {projectsLoaded && projects.length === 0
@@ -598,7 +584,7 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
             </div>
             <div className="relative flex flex-1 overflow-hidden">
               {boardMode === "board" ? (
-                <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} onOpenCockpit={openCockpit} /></div>
+                <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} projectName={currentName} projects={projects} running={!!runningByProject[current]} runningByProject={runningByProject} worktreesByProject={worktreesByProject} currentWorktree={currentWorktree} onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }} onRenameProject={onRenameProject} onDeleteProject={onDeleteProject} onAddProject={() => setWizardOpen(true)} onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }} author={author} onChanged={() => setRefreshTick((t) => t + 1)} onOpenCockpit={openCockpit} /></div>
               ) : (
                 <div data-testid="view-flow" className="flex flex-1 overflow-hidden"><FlowView state={shownState} events={events} project={current} selected={selected} onSelect={setSelected} /></div>
               )}

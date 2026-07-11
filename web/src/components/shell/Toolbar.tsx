@@ -1,53 +1,25 @@
 import { useEffect, useMemo } from "react";
-import type { Seat, ProjectMeta } from "../../lib/types";
-import { ProjectMenu } from "./ProjectMenu";
-import type { Worktree } from "../../lib/api";
 import type { Lens } from "../../App";
 
-// Toolbar — shared product shell (ui2-shell). Left: wordmark + project picker.
+// Toolbar — shared product shell (ui2-shell). Left: wordmark.
 // Center: Dashboard | Board | Cockpit lens segments with Cockpit pending badge.
 // Right: ⌘K, live pill, dispatch (Cockpit lens only), Settings gear, user tile.
 
 const LENSES: Lens[] = ["dashboard", "board", "cockpit"];
 
 export function Toolbar({
-  projectName,
   live,
-  projects,
-  running,
-  runningByProject,
-  onSelectProject,
-  onRenameProject,
-  onDeleteProject,
-  onAddProject,
   onOpenDispatch,
   onLensChange,
   lens,
   cockpitPending,
-  worktreesByProject,
-  currentWorktree,
-  onSelectWorktree,
   profileEmail,
 }: {
-  projectName: string;
   live: boolean;
-  author: boolean;
-  seat?: string;
-  agents?: Seat[];
-  projects: ProjectMeta[];
-  running: boolean;
-  runningByProject?: Record<string, boolean>;
-  onSelectProject: (name: string) => void;
-  onRenameProject: (name: string) => void;
-  onDeleteProject: (name: string) => void;
-  onAddProject: () => void;
   onOpenDispatch: () => void;
   onLensChange: (lens: Lens) => void;
   lens: Lens;
   cockpitPending?: number;
-  worktreesByProject?: Record<string, Worktree[]>;
-  currentWorktree?: string;
-  onSelectWorktree?: (project: string, branch: string) => void;
   profileEmail?: string;
 }) {
   useEffect(() => {
@@ -81,26 +53,12 @@ export function Toolbar({
       data-testid="toolbar"
       className="relative z-50 flex min-h-[48px] items-center gap-3 border-b border-[rgba(255,255,255,0.07)] bg-[rgba(12,17,25,0.82)] px-4 py-2 backdrop-blur-[12px]"
     >
-      {/* left: wordmark + project picker */}
+      {/* left: wordmark */}
       <div className="flex shrink-0 items-center gap-2.5">
         <Wordmark />
         <span className="text-[13px] font-[700] tracking-[-0.01em] text-[var(--color-text-1)]">
           pactify
         </span>
-        <span className="text-[var(--color-text-3)]">·</span>
-        <ProjectMenu
-          projects={projects}
-          current={projectName}
-          running={running}
-          runningByProject={runningByProject}
-          worktreesByProject={worktreesByProject}
-          currentWorktree={currentWorktree}
-          onSelect={onSelectProject}
-          onRename={onRenameProject}
-          onDelete={onDeleteProject}
-          onAdd={onAddProject}
-          onSelectWorktree={onSelectWorktree}
-        />
       </div>
 
       <div className="mx-auto" />

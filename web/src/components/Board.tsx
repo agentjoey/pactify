@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import type { State, BoardTask } from "../lib/types";
-import { designBoard, taskMetrics, fmtTokens, eventsByTask, statsByTask, type DesignColumn } from "../lib/derive";
-import type { PactEvent } from "../lib/types";
+import type { State, BoardTask, ProjectMeta, PactEvent } from "../lib/types";
+import { designBoard, taskMetrics, eventsByTask, statsByTask, deriveNotifications, fmtRelTime, type DesignColumn } from "../lib/derive";
 import { statusColorVar } from "../lib/lifecycle";
 import { TaskCard } from "./TaskCard";
 import { statusColor } from "./ui/StatusPill";
 import { BoardSkeleton } from "./Skeleton";
 import { casteForRoles, padGradient } from "../lib/ants";
-import { type ProjectStats } from "../lib/api";
+import { type ProjectStats, type Worktree } from "../lib/api";
 import { useDataSource } from "../lib/datasource";
 import { humanizeError } from "../lib/protocolErrors";
 import { Alert } from "./ui/Alert";
+import { ProjectMenu } from "./shell/ProjectMenu";
 
 // The five dark-handoff columns, left→right. `review` merges awaiting_review +
 // changes_requested; `shipped` collects delivered features (see derive.designBoard).
@@ -39,6 +39,17 @@ export function Board({
   staleTasks,
   loading,
   project,
+  projectName,
+  projects = [],
+  running,
+  runningByProject,
+  worktreesByProject,
+  currentWorktree,
+  onSelectProject,
+  onRenameProject,
+  onDeleteProject,
+  onAddProject,
+  onSelectWorktree,
   author,
   onChanged,
   onOpenCockpit,
@@ -51,6 +62,17 @@ export function Board({
   staleTasks?: Set<string>;
   loading?: boolean;
   project?: string;
+  projectName?: string;
+  projects?: ProjectMeta[];
+  running?: boolean;
+  runningByProject?: Record<string, boolean>;
+  worktreesByProject?: Record<string, Worktree[]>;
+  currentWorktree?: string;
+  onSelectProject?: (name: string) => void;
+  onRenameProject?: (name: string) => void;
+  onDeleteProject?: (name: string) => void;
+  onAddProject?: () => void;
+  onSelectWorktree?: (project: string, branch: string) => void;
   author?: boolean;
   // Bump the parent refresh tick after a pact verb so the board re-reads state.
   onChanged?: () => void;
@@ -64,7 +86,6 @@ export function Board({
   const RECENT = 6;
   const FOLD_COLS: DesignColumn[] = ["accepted", "shipped"];
   const [expandedCols, setExpandedCols] = useState<Set<DesignColumn>>(new Set());
-  const [featureFilter, setFeatureFilter] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [inlineChangesId, setInlineChangesId] = useState<string | null>(null);
@@ -117,34 +138,32 @@ export function Board({
     if (!stillAwaiting) setPending(null);
   }, [state, pending]);
 
-  // Per-feature rollup for the context-header filter chips (accepted/total +
-  // token volume). Memoized so it doesn't recompute on every hover/selection.
-  const featureChips = useMemo(
-    () =>
-      state.features.map((f) => ({
-        id: f.id,
-        accepted: f.tasks.filter((t) => t.status === "accepted" || t.status === "shipped").length,
-        total: f.tasks.length,
-        tokens: f.tasks.reduce((n, t) => n + (statMap.get(t.id)?.tokens ?? 0), 0),
-      })),
-    [state.features, statMap],
+  // Context-header notification chips: awaiting-review / started / changes-requested.
+  const notifications = useMemo(
+    () => deriveNotifications(events, state, nowMs),
+    [events, state, nowMs],
   );
 
-  const totalTasks = state.features.reduce((n, f) => n + f.tasks.length, 0);
-  const totalTokens = featureChips.reduce((n, c) => n + c.tokens, 0);
   const seated = state.agents.filter((a) => (a.roles?.length ?? 0) > 0);
+  // A seated agent is "idle" when it neither owns an in-progress task nor is the
+  // reviewer of an awaiting-review task.
+  const activeSeats = useMemo(() => {
+    const s = new Set<string>();
+    for (const f of state.features) {
+      for (const t of f.tasks) {
+        if (t.status === "in_progress" && t.owner) s.add(t.owner);
+        if (t.status === "awaiting_review" && t.reviewer) s.add(t.reviewer);
+      }
+    }
+    return s;
+  }, [state]);
 
   if (loading) return <BoardSkeleton />;
 
   const rolesMap = new Map(state.agents.map((a) => [a.id, a.roles]));
   const rolesOf = (seatId: string): string[] => rolesMap.get(seatId) ?? [];
 
-  // Apply the feature filter (null = all) before bucketing.
-  const filtered: State =
-    featureFilter == null
-      ? state
-      : { ...state, features: state.features.filter((f) => f.id === featureFilter) };
-  const cols = designBoard(filtered);
+  const cols = designBoard(state);
 
   async function verb(taskId: string, v: "accept" | "changes", reason?: string): Promise<boolean> {
     if (!project) return false;
@@ -164,6 +183,8 @@ export function Board({
   function renderCard(bt: BoardTask, col: DesignColumn) {
     const pulsing = pulses?.has(bt.task.id);
     const isReview = col === "review";
+    const isShipped = col === "shipped";
+    const isDraft = col === "assigned" && !bt.task.owner;
     const blockedOn =
       (col === "assigned" || col === "working") && bt.task.deps
         ? bt.task.deps.filter((depId) => {
@@ -292,6 +313,8 @@ export function Board({
           ownerRoles={rolesOf(bt.task.owner)}
           reviewerRoles={rolesOf(bt.task.reviewer)}
           stale={staleTasks?.has(bt.task.id)}
+          draft={isDraft}
+          shipped={isShipped}
           blockedOn={blockedOn?.length ? blockedOn : undefined}
           selected={selected === bt.task.id}
           metrics={taskMetrics(bt.task, byTask.get(bt.task.id) ?? [], nowMs, statMap.get(bt.task.id))}
@@ -304,46 +327,62 @@ export function Board({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Context header — feature filter chips + seated cluster + new task */}
+      {/* Context header — project selector + notifications + seat cluster + new task */}
       <div
         data-testid="board-context-header"
-        className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] px-[18px] py-[9px]"
+        className="flex items-center gap-[14px] border-b border-[var(--color-border-subtle)] px-[18px] py-[11px]"
         style={{ background: "var(--color-bg-inset)" }}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-          <FilterChip
-            label={`All tasks ${totalTasks}`}
-            active={featureFilter == null}
-            onClick={() => setFeatureFilter(null)}
-          />
-          {featureChips.map((c) => (
-            <FilterChip
-              key={c.id}
-              label={c.id}
-              active={featureFilter === c.id}
-              progress={c.total ? c.accepted / c.total : 0}
-              tokens={c.tokens ? fmtTokens(c.tokens) : undefined}
-              onClick={() => setFeatureFilter((f) => (f === c.id ? null : c.id))}
-            />
+        <ProjectMenu
+          projects={projects}
+          current={projectName ?? project ?? ""}
+          running={running ?? false}
+          runningByProject={runningByProject}
+          worktreesByProject={worktreesByProject}
+          currentWorktree={currentWorktree}
+          onSelect={onSelectProject ?? (() => {})}
+          onRename={onRenameProject ?? (() => {})}
+          onDelete={onDeleteProject ?? (() => {})}
+          onAdd={onAddProject ?? (() => {})}
+          onSelectWorktree={onSelectWorktree}
+        />
+
+        <span className="h-[18px] w-px bg-[rgba(255,255,255,0.1)]" />
+
+        {/* Message notifications */}
+        <div className="flex min-w-0 flex-1 items-center gap-[9px] overflow-x-auto">
+          <span className="inline-flex shrink-0 items-center gap-[6px] text-[var(--color-text-2)]">
+            <BellIcon />
+            <span
+              className="rounded-full px-[6px] py-[2px] text-[9px] font-semibold"
+              style={{ color: "var(--color-role-design)", background: "color-mix(in srgb, var(--color-role-design) 14%, transparent)" }}
+            >
+              {notifications.length} new
+            </span>
+          </span>
+          {notifications.map((n) => (
+            <NotifChip key={`${n.kind}-${n.taskId}`} n={n} nowMs={nowMs} />
           ))}
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-[14px]">
           <div className="flex items-center">
             {seated.slice(0, 6).map((a, i) => {
+              const idle = !activeSeats.has(a.id);
               const caste = casteForRoles(a.roles ?? []);
               const pad = padGradient(a.id, caste);
               return (
                 <span
                   key={a.id}
-                  title={a.id}
+                  title={`${a.id}${idle ? " (idle)" : ""}`}
                   className="grid h-[26px] w-[26px] place-items-center rounded-[7px] text-[10px] font-semibold"
                   style={{
                     background: `linear-gradient(135deg, ${pad.from}, ${pad.to})`,
                     color: "var(--color-bg-page)",
                     marginLeft: i === 0 ? 0 : -7,
-                    boxShadow: "0 0 0 2px var(--color-bg-page)",
+                    boxShadow: "0 0 0 2px var(--color-bg-inset)",
                     fontFamily: "var(--font-mono)",
+                    opacity: idle ? 0.6 : 1,
                   }}
                 >
                   {a.id.slice(0, 2)}
@@ -351,18 +390,22 @@ export function Board({
               );
             })}
           </div>
-          <span className="mono whitespace-nowrap text-[10.5px] text-[var(--color-text-2)]">
-            {seated.length} seated · {totalTasks} tasks · {fmtTokens(totalTokens)} tok
-          </span>
-          <span className="h-4 w-px bg-[var(--color-border-strong)]" />
+          <span className="h-[18px] w-px bg-[rgba(255,255,255,0.12)]" />
+          <button
+            type="button"
+            data-testid="board-group-status"
+            className="rounded-[8px] border border-[rgba(255,255,255,0.10)] px-[11px] py-[6px] text-[11px] font-medium text-[var(--color-text-2)]"
+          >
+            Group: status ▾
+          </button>
           <button
             type="button"
             data-testid="board-new-task"
             onClick={() => window.dispatchEvent(new CustomEvent("pactify:cmdk"))}
-            className="rounded-[6px] px-3 py-1 text-[11.5px] font-medium"
+            className="inline-flex items-center gap-[6px] rounded-[8px] px-[13px] py-[7px] text-[11.5px] font-semibold"
             style={{ background: "var(--color-role-design)", color: "var(--color-bg-page)" }}
           >
-            ＋ New task
+            <span className="text-[13px]">＋</span>New task
           </button>
         </div>
       </div>
@@ -384,7 +427,9 @@ export function Board({
       >
         {COLS.map(({ key, label }) => {
           const tasks = cols[key] ?? [];
-          const dot = statusColorVar(key === "working" ? "in_progress" : key === "review" ? "awaiting_review" : key);
+          const statusKey = key === "working" ? "in_progress" : key === "review" ? "awaiting_review" : key === "shipped" ? "accepted" : key;
+          const dot = statusColorVar(statusKey);
+          const dotLive = key === "working";
           const dueCount = key === "review" ? tasks.filter((t) => t.task.status === "awaiting_review").length : 0;
           // accepted + shipped fold to the most-recent RECENT (newest first).
           const foldable = FOLD_COLS.includes(key);
@@ -392,10 +437,10 @@ export function Board({
           const shown = foldable && !expandedCols.has(key) ? ordered.slice(0, RECENT) : ordered;
           return (
             <div key={key} className="min-h-[360px]">
-              <div className="flex items-center gap-[7px] px-1 pb-2.5 pt-0.5">
+              <div className="flex items-center gap-[8px] px-1 pb-3 pt-0.5">
                 <span
-                  className="h-[7px] w-[7px] rounded-full"
-                  style={{ background: dot, boxShadow: key === "review" ? `0 0 6px ${dot}` : undefined }}
+                  className={`h-[7px] w-[7px] rounded-full ${dotLive ? "shell-breath" : ""}`}
+                  style={{ background: dot, boxShadow: key === "review" || key === "shipped" ? `0 0 6px ${dot}` : undefined }}
                 />
                 <span className="text-[11px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-2)]">
                   {label}
@@ -405,7 +450,7 @@ export function Board({
                 </span>
                 {dueCount > 0 && (
                   <span
-                    className="rounded-full px-1.5 py-px text-[9.5px] font-medium"
+                    className="rounded-full px-[7px] py-[2px] text-[9px] font-medium"
                     style={{ color: "var(--color-warn)", background: "color-mix(in srgb, var(--color-warn) 14%, transparent)" }}
                   >
                     {dueCount} due
@@ -422,7 +467,7 @@ export function Board({
                       <button
                         type="button"
                         data-testid={`${key}-${expandedCols.has(key) ? "less" : "more"}`}
-                        className="mt-1 w-full rounded-md border border-[var(--color-success)]/30 bg-[var(--color-success)]/8 px-2 py-1.5 text-left text-[11px] text-[var(--color-text-2)]"
+                        className="mt-1 w-full rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success)]/8 px-[10px] py-[7px] text-left text-[11px] text-[var(--color-text-2)]"
                         onClick={() =>
                           setExpandedCols((prev) => {
                             const next = new Set(prev);
@@ -445,38 +490,49 @@ export function Board({
   );
 }
 
-function FilterChip({
-  label,
-  active,
-  progress,
-  tokens,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  progress?: number;
-  tokens?: string;
-  onClick: () => void;
-}) {
+function BellIcon() {
   return (
-    <button
-      type="button"
-      data-testid="feature-chip"
-      onClick={onClick}
-      className="flex shrink-0 items-center gap-2 rounded-[8px] border px-3 py-1.5 text-[11.5px] font-medium"
-      style={{
-        color: active ? "var(--color-text-1)" : "var(--color-text-2)",
-        background: active ? "rgba(255,255,255,.07)" : "transparent",
-        borderColor: active ? "var(--color-border-strong)" : "transparent",
-      }}
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    </svg>
+  );
+}
+
+const NOTIF_GLYPH: Record<import("../lib/derive").NotifKind, { glyph: string; color: string; bg: string; border: string; text: (n: import("../lib/derive").BoardNotification) => string }> = {
+  awaiting: {
+    glyph: "◉",
+    color: "var(--color-warn)",
+    bg: "color-mix(in srgb, var(--color-warn) 8%, transparent)",
+    border: "color-mix(in srgb, var(--color-warn) 22%, transparent)",
+    text: (n) => `${n.taskId} awaiting your review`,
+  },
+  started: {
+    glyph: "⚡",
+    color: "var(--color-role-design)",
+    bg: "rgba(255,255,255,0.03)",
+    border: "rgba(255,255,255,0.07)",
+    text: (n) => `${n.agentId} started ${n.taskId}`,
+  },
+  changes: {
+    glyph: "↺",
+    color: "var(--color-role-ops)",
+    bg: "rgba(255,255,255,0.03)",
+    border: "rgba(255,255,255,0.07)",
+    text: (n) => `${n.taskId} changes requested`,
+  },
+};
+
+function NotifChip({ n, nowMs }: { n: import("../lib/derive").BoardNotification; nowMs: number }) {
+  const style = NOTIF_GLYPH[n.kind];
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-[6px] rounded-lg px-[10px] py-[4px]"
+      style={{ background: style.bg, border: `1px solid ${style.border}` }}
     >
-      <span className="mono">{label}</span>
-      {progress != null && (
-        <span className="h-1 w-[34px] overflow-hidden rounded-full bg-white/10">
-          <span className="block h-full rounded-full" style={{ width: `${Math.round(progress * 100)}%`, background: "var(--color-success)" }} />
-        </span>
-      )}
-      {tokens && <span className="mono text-[10px] text-[var(--color-text-3)]">{tokens}</span>}
-    </button>
+      <span style={{ color: style.color, fontSize: 11 }}>{style.glyph}</span>
+      <span className="text-[11px] font-medium text-[rgba(234,238,245,0.72)]">{style.text(n)}</span>
+      <span className="mono text-[9px] text-[var(--color-text-3)]">{fmtRelTime(nowMs - n.ts)}</span>
+    </span>
   );
 }

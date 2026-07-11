@@ -27,6 +27,16 @@ export function boardColumns(state: State): Record<string, BoardTask[]> {
 // Shipped so the column reflects delivered work.
 export type DesignColumn = "assigned" | "working" | "review" | "accepted" | "shipped";
 
+// Notification kinds surfaced in the Board context-header message strip.
+export type NotifKind = "awaiting" | "started" | "changes";
+
+export interface BoardNotification {
+  kind: NotifKind;
+  taskId: string;
+  agentId: string;
+  ts: number;
+}
+
 export function designBoard(state: State): Record<DesignColumn, BoardTask[]> {
   const cols: Record<DesignColumn, BoardTask[]> = {
     assigned: [],
@@ -108,6 +118,49 @@ export function eventsByTask(events: PactEvent[]): Map<string, PactEvent[]> {
   return m;
 }
 
+// deriveNotifications builds the context-header message chips from recent
+// noteworthy events: awaiting-review (last checkpoint), started, changes-requested.
+// Result is newest-first and capped so the header strip stays compact.
+export function deriveNotifications(
+  events: PactEvent[],
+  state: State,
+  nowMs: number,
+  cap = 8,
+): BoardNotification[] {
+  const byTask = eventsByTask(events);
+  const out: BoardNotification[] = [];
+  for (const f of state.features) {
+    for (const t of f.tasks) {
+      const evs = byTask.get(t.id) ?? [];
+      if (t.status === "awaiting_review") {
+        const cp = [...evs].reverse().find((e) => e.event_type === "checkpoint");
+        if (cp) out.push({ kind: "awaiting", taskId: t.id, agentId: cp.agent_id, ts: parseTs(cp.ts) });
+      } else if (t.status === "changes_requested") {
+        const ch = [...evs].reverse().find((e) => e.event_type === "changes_requested");
+        if (ch) out.push({ kind: "changes", taskId: t.id, agentId: ch.agent_id, ts: parseTs(ch.ts) });
+      } else if (t.status === "in_progress") {
+        const st = [...evs].reverse().find((e) => e.event_type === "start");
+        if (st) out.push({ kind: "started", taskId: t.id, agentId: st.agent_id, ts: parseTs(st.ts) });
+      }
+    }
+  }
+  return out
+    .filter((n) => n.ts > 0 && nowMs - n.ts < 24 * 60 * 60 * 1000)
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, cap);
+}
+
+// fmtRelTime renders a compact "2m" / "5m" / "1h" age for the notification strip.
+export function fmtRelTime(msAgo: number): string {
+  const sec = Math.max(0, Math.floor(msAgo / 1000));
+  if (sec < 60) return "now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
 // statsByTask indexes a GET /api/projects/{id}/stats response by task id for
 // O(1) per-card lookup. Null/undefined (stats not fetched yet) → empty map.
 export function statsByTask(stats: ProjectStats | null | undefined): Map<string, TaskStat> {
@@ -182,6 +235,15 @@ export function taskRuntimeMs(task: Task, events: PactEvent[], nowMs: number): n
   return Math.max(0, end - start);
 }
 
+// Rough estimate for not-yet-run cards (no assign event yet). Derived from the
+// task spec/id size so identical inputs stay stable across renders.
+function estimateMetrics(task: Task): { duration: string; tokens: string } {
+  const chars = (task.spec?.length ?? 0) + (task.id?.length ?? 0);
+  const minutes = Math.max(2, Math.min(15, Math.round(chars / 60) + 2));
+  const tokens = Math.max(6, Math.min(30, Math.round(chars / 40) + 6));
+  return { duration: `~${minutes}m`, tokens: `~${tokens}k tok` };
+}
+
 // taskMetrics builds the compact RUN / TOK / ×iter strip for a task. RUN comes
 // from the event log (contract above); TOK from the task's /stats entry ("—"
 // until the backend attributes tokens — 0 means unknown, not zero spend); iter
@@ -191,6 +253,15 @@ export function taskRuntimeMs(task: Task, events: PactEvent[], nowMs: number): n
 export function taskMetrics(task: Task, events: PactEvent[], nowMs: number, stat?: TaskStat): MetricItem[] {
   const runtime = taskRuntimeMs(task, events, nowMs);
   const live = task.status === "in_progress";
+
+  // Not yet assigned: show an italic estimate instead of a zero runtime.
+  if (runtime === 0 && task.status === "assigned") {
+    const est = estimateMetrics(task);
+    return [
+      { label: "est", value: est.duration, est: true },
+      { label: "", value: est.tokens, est: true },
+    ];
+  }
 
   const tokens = stat?.tokens ?? 0;
 

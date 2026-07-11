@@ -22,6 +22,38 @@ body {
 /* React Flow dark overrides — keep the canvas consistent with the dashboard. */
 .react-flow__attribution { display: none; }
 
+/* ui2-shell shared keyframes (spec §2). Durations/curves match the handoff;
+   all are gated by prefers-reduced-motion so reduced-motion users see static
+   state instead of motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .shell-breath { animation: breath 2s ease-in-out infinite; }
+  .shell-ring { animation: ring 1.8s ease-out infinite; }
+  .shell-eq-bar { animation: eq 1s ease-in-out infinite; transform-origin: bottom; }
+  .shell-blink { animation: blink 1.1s steps(1) infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shell-breath,
+  .shell-ring,
+  .shell-eq-bar,
+  .shell-blink { animation: none; }
+}
+@keyframes breath {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.82); }
+}
+@keyframes ring {
+  0% { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 /* ui/Modal entry — 180ms scale+fade per spec §1. The overlay fades, the panel
    scales up from 96%. Suppressed under reduced-motion (instant, no transform). */
 @media (prefers-reduced-motion: no-preference) {

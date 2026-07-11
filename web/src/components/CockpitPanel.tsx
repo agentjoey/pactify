@@ -67,13 +67,15 @@ export function CockpitPanel({
   onClose,
   onSeatChange,
   onNotify,
+  viewMode,
 }: {
   project: string;
   seat: string;
   agents: Seat[];
-  onClose: () => void;
+  onClose?: () => void;
   onSeatChange?: (seat: string) => void;
   onNotify?: (msg: string, kind?: "error") => void;
+  viewMode?: boolean;
 }) {
   const src = useDataSource();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -203,16 +205,17 @@ export function CockpitPanel({
   }, [project, seat, src.cockpitSubscribe, streamKey]);
 
   useEffect(() => {
+    if (viewMode) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        onClose?.();
       }
     };
     window.addEventListener("keydown", onKey, true);
     panelRef.current?.focus();
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  }, [onClose, viewMode]);
 
   // Auto-scroll to the bottom of the message list, unless the user has
   // intentionally scrolled up (>80px from the bottom).
@@ -339,34 +342,27 @@ export function CockpitPanel({
     return a.localeCompare(b);
   });
 
-  return (
-    <>
-      <div
-        data-testid="cockpit-scrim"
-        onClick={onClose}
-        className="absolute inset-0 z-40 bg-black/10"
-        style={
-          reduced
-            ? undefined
-            : { animation: `panel-scrim-in var(--motion-layout) var(--motion-ease)` }
-        }
-      />
-      <aside
-        ref={panelRef}
-        tabIndex={-1}
-        data-testid="cockpit-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Cockpit"
-        className="absolute right-3 top-3 bottom-3 z-50 flex w-[360px] flex-col overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] shadow-[var(--shadow-raised)]"
-        style={
-          reduced
-            ? undefined
-            : { animation: `panel-slide-in var(--motion-layout) var(--motion-ease)` }
-        }
-      >
+  const panelBody = (
+    <aside
+      ref={panelRef}
+      tabIndex={viewMode ? undefined : -1}
+      data-testid="cockpit-panel"
+      role={viewMode ? undefined : "dialog"}
+      aria-modal={viewMode ? undefined : "true"}
+      aria-label="Cockpit"
+      className={`flex flex-col overflow-hidden border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] ${
+        viewMode
+          ? "flex-1 border-r"
+          : "absolute right-3 top-3 bottom-3 z-50 w-[360px] rounded-2xl border shadow-[var(--shadow-raised)]"
+      }`}
+      style={
+        viewMode || reduced
+          ? undefined
+          : { animation: `panel-slide-in var(--motion-layout) var(--motion-ease)` }
+      }
+    >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between rounded-t-2xl border-b border-[var(--color-border-subtle)] bg-[linear-gradient(170deg,color-mix(in_srgb,var(--color-role-design)_8%,transparent),transparent_70%)] px-4 py-3">
+        <div className={`flex shrink-0 items-center justify-between border-b border-[var(--color-border-subtle)] bg-[linear-gradient(170deg,color-mix(in_srgb,var(--color-role-design)_8%,transparent),transparent_70%)] px-4 py-3 ${viewMode ? "" : "rounded-t-2xl"}`}>
           <div className="min-w-0 flex-1">
             <div className="mono text-[11px] text-[var(--color-text-3)]">
               {seat}
@@ -410,15 +406,17 @@ export function CockpitPanel({
                 Cancel
               </button>
             )}
-            <button
-              type="button"
-              data-testid="cockpit-close"
-              onClick={onClose}
-              className="rounded-md px-2 py-1 text-[11px] text-[var(--color-text-3)] hover:text-[var(--color-text-1)]"
-              aria-label="Close"
-            >
-              ✕
-            </button>
+            {!viewMode && (
+              <button
+                type="button"
+                data-testid="cockpit-close"
+                onClick={onClose}
+                className="rounded-md px-2 py-1 text-[11px] text-[var(--color-text-3)] hover:text-[var(--color-text-1)]"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
@@ -611,6 +609,29 @@ export function CockpitPanel({
           </div>
         </div>
       </aside>
+  );
+
+  if (viewMode) {
+    return (
+      <div data-testid="cockpit-view" className="flex min-w-0 flex-1 overflow-hidden">
+        {panelBody}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div
+        data-testid="cockpit-scrim"
+        onClick={onClose}
+        className="absolute inset-0 z-40 bg-black/10"
+        style={
+          reduced
+            ? undefined
+            : { animation: `panel-scrim-in var(--motion-layout) var(--motion-ease)` }
+        }
+      />
+      {panelBody}
     </>
   );
 }

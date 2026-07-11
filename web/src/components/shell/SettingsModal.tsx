@@ -34,12 +34,14 @@ export function SettingsModal({
   focusSeat,
   onClose,
   onLogout,
+  viewMode,
 }: {
   project: string;
   author: boolean;
   focusSeat?: string | null;
   onClose: () => void;
   onLogout?: () => void;
+  viewMode?: boolean;
 }) {
   // Hosted (relay) mode has no local serve behind /api: the PROJECT and
   // MACHINE panels would render dead fetches, so they are hidden and the
@@ -55,6 +57,7 @@ export function SettingsModal({
   }, [focusSeat]);
 
   useEffect(() => {
+    if (viewMode) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
@@ -92,9 +95,10 @@ export function SettingsModal({
     };
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  }, [onClose, viewMode]);
 
   useEffect(() => {
+    if (viewMode) return;
     const prev = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
     if (panel) {
@@ -104,7 +108,7 @@ export function SettingsModal({
       first?.focus();
     }
     return () => prev?.focus();
-  }, []);
+  }, [viewMode]);
 
   const navGroups: NavGroup[] = [
     // PROJECT/MACHINE panels drive the LOCAL serve's /api; hosted mode has no
@@ -200,30 +204,30 @@ export function SettingsModal({
     }
   }
 
-  return (
+  const panel = (
     <div
-      data-testid="settings-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(6,9,13,0.6)] backdrop-blur-[3px]"
-      onClick={onClose}
+      ref={panelRef}
+      data-testid={viewMode ? "settings-view" : "settings-modal"}
+      role={viewMode ? undefined : "dialog"}
+      aria-modal={viewMode ? undefined : "true"}
+      aria-labelledby={titleId}
+      className={`flex flex-col overflow-hidden border-[var(--color-border-strong)] bg-[var(--color-bg-inset)] ${
+        viewMode
+          ? "flex-1 border-r"
+          : "rounded-[18px] border shadow-[var(--shadow-overlay)]"
+      }`}
+      style={viewMode ? undefined : { width: "min(1000px, calc(100vw - 48px))", height: "min(660px, calc(100vh - 48px))" }}
+      onClick={viewMode ? undefined : (e) => e.stopPropagation()}
     >
-      <div
-        ref={panelRef}
-        data-testid="settings-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="flex flex-col overflow-hidden rounded-[18px] border border-[var(--color-border-strong)] bg-[var(--color-bg-inset)] shadow-[var(--shadow-overlay)]"
-        style={{ width: "min(1000px, calc(100vw - 48px))", height: "min(660px, calc(100vh - 48px))" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b border-[var(--color-border-subtle)] px-5 py-4">
-          <span id={titleId} className="text-[15px] font-[650] text-[var(--color-text-1)]">
-            Settings
-          </span>
-          <span className="text-xs text-[var(--color-text-3)]">
-            scope is shown on every panel — project config never leaks to other repos
-          </span>
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-[var(--color-border-subtle)] px-5 py-4">
+        <span id={titleId} className="text-[15px] font-[650] text-[var(--color-text-1)]">
+          Settings
+        </span>
+        <span className="text-xs text-[var(--color-text-3)]">
+          scope is shown on every panel — project config never leaks to other repos
+        </span>
+        {!viewMode && (
           <button
             type="button"
             onClick={onClose}
@@ -232,79 +236,97 @@ export function SettingsModal({
           >
             ✕
           </button>
-        </div>
+        )}
+      </div>
 
-        <div className="flex min-h-0 flex-1">
-          {/* Left nav */}
-          <nav
-            data-testid="settings-nav"
-            className="w-[244px] flex-none overflow-y-auto border-r border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] px-2.5 py-3.5"
-          >
-            {navGroups.map((group) => (
-              <div key={group.scope} data-testid="settings-nav-group" className="mb-1">
-                <div className="flex items-center gap-2 px-2.5 py-1.5">
-                  <span
-                    className="h-1.5 w-1.5 rounded-[2px]"
-                    style={{ background: SCOPE_COLOR[group.scope] }}
-                  />
-                  <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.8px] text-[var(--color-text-3)]">
-                    {group.label}
-                  </span>
-                </div>
-                {group.items.map((item) => {
-                  const active = item.id === activeId;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      data-testid={`nav-${item.id}`}
-                      aria-current={active ? "true" : "false"}
-                      onClick={() => setActiveId(item.id)}
-                      className={[
-                        "flex w-full items-center gap-2 rounded-lg px-2.5 py-[7px] text-left text-xs font-medium transition-colors duration-[var(--motion-micro)]",
-                        active
-                          ? "bg-[rgba(255,255,255,0.07)] text-[var(--color-text-1)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                          : "text-[var(--color-text-2)] hover:bg-[rgba(255,255,255,0.04)] hover:text-[var(--color-text-1)]",
-                      ].join(" ")}
-                    >
-                      <span style={{ opacity: active ? 1 : 0.6, color: active ? SCOPE_COLOR[group.scope] : undefined }}>
-                        {item.icon}
-                      </span>
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-
-          {/* Right content */}
-          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-5">
-            <div className="mb-1 flex items-center gap-3">
-              <h2 className="text-lg font-semibold tracking-[-0.01em] text-[var(--color-text-1)]">
-                {activeItem.label}
-              </h2>
-              <span
-                data-testid="settings-scope-banner"
-                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
-                style={{
-                  color: SCOPE_COLOR[activeScope],
-                  background: `${SCOPE_COLOR[activeScope]}1F`, // 12% alpha in hex
-                  borderColor: `${SCOPE_COLOR[activeScope]}47`, // 28% alpha in hex
-                }}
-              >
+      <div className="flex min-h-0 flex-1">
+        {/* Left nav */}
+        <nav
+          data-testid="settings-nav"
+          className="w-[244px] flex-none overflow-y-auto border-r border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] px-2.5 py-3.5"
+        >
+          {navGroups.map((group) => (
+            <div key={group.scope} data-testid="settings-nav-group" className="mb-1">
+              <div className="flex items-center gap-2 px-2.5 py-1.5">
                 <span
-                  className="h-[5px] w-[5px] rounded-[2px]"
-                  style={{ background: SCOPE_COLOR[activeScope] }}
+                  className="h-1.5 w-1.5 rounded-[2px]"
+                  style={{ background: SCOPE_COLOR[group.scope] }}
                 />
-                {scopeBannerLabel}
-              </span>
+                <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.8px] text-[var(--color-text-3)]">
+                  {group.label}
+                </span>
+              </div>
+              {group.items.map((item) => {
+                const active = item.id === activeId;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    data-testid={`nav-${item.id}`}
+                    aria-current={active ? "true" : "false"}
+                    onClick={() => setActiveId(item.id)}
+                    className={[
+                      "flex w-full items-center gap-2 rounded-lg px-2.5 py-[7px] text-left text-xs font-medium transition-colors duration-[var(--motion-micro)]",
+                      active
+                        ? "bg-[rgba(255,255,255,0.07)] text-[var(--color-text-1)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+                        : "text-[var(--color-text-2)] hover:bg-[rgba(255,255,255,0.04)] hover:text-[var(--color-text-1)]",
+                    ].join(" ")}
+                  >
+                    <span style={{ opacity: active ? 1 : 0.6, color: active ? SCOPE_COLOR[group.scope] : undefined }}>
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </button>
+                );
+              })}
             </div>
-            <ScopeExplainer scope={activeScope} activeItem={activeItem.id} project={project} />
-            <div className="mt-5 flex-1">{renderPanel()}</div>
+          ))}
+        </nav>
+
+        {/* Right content */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-5">
+          <div className="mb-1 flex items-center gap-3">
+            <h2 className="text-lg font-semibold tracking-[-0.01em] text-[var(--color-text-1)]">
+              {activeItem.label}
+            </h2>
+            <span
+              data-testid="settings-scope-banner"
+              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
+              style={{
+                color: SCOPE_COLOR[activeScope],
+                background: `${SCOPE_COLOR[activeScope]}1F`, // 12% alpha in hex
+                borderColor: `${SCOPE_COLOR[activeScope]}47`, // 28% alpha in hex
+              }}
+            >
+              <span
+                className="h-[5px] w-[5px] rounded-[2px]"
+                style={{ background: SCOPE_COLOR[activeScope] }}
+              />
+              {scopeBannerLabel}
+            </span>
           </div>
+          <ScopeExplainer scope={activeScope} activeItem={activeItem.id} project={project} />
+          <div className="mt-5 flex-1">{renderPanel()}</div>
         </div>
       </div>
+    </div>
+  );
+
+  if (viewMode) {
+    return (
+      <div data-testid="settings-view-wrapper" className="flex min-w-0 flex-1 overflow-hidden">
+        {panel}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-testid="settings-modal-overlay"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(6,9,13,0.6)] backdrop-blur-[3px]"
+      onClick={onClose}
+    >
+      {panel}
     </div>
   );
 }

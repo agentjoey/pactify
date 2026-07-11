@@ -27,10 +27,22 @@ import { Toasts, diffAwaiting, type Toast } from "./components/Toasts";
 import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
 import { docTitle } from "./lib/docTitle";
-import { STALE_MS, EVENTS_CAP, FETCH_FAIL_THRESHOLD } from "./lib/constants";
+import { STALE_MS, EVENTS_CAP, FETCH_FAIL_THRESHOLD, COCKPIT_STATUS_POLL_MS } from "./lib/constants";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
 type BoardMode = "board" | "flow";
+export type Lens = "dashboard" | "board" | "cockpit" | "settings";
+
+const LENS_STORAGE_KEY = "pactify:lens";
+const BOARD_MODE_STORAGE_KEY = "pactify:boardMode";
+const LAST_PROJECT_STORAGE_KEY = "pactify:lastProject";
+
+function readSavedLens(): Lens {
+  if (typeof localStorage === "undefined") return "board";
+  const raw = localStorage.getItem(LENS_STORAGE_KEY);
+  if (raw === "dashboard" || raw === "board" || raw === "cockpit" || raw === "settings") return raw;
+  return "board";
+}
 
 // pickInitialProject resolves the default project id from the loaded list and
 // the user's last selection. Preference order: 1) stored id still present,
@@ -56,13 +68,10 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   const [events, setEvents] = useState<PactEvent[]>([]);
   const [selected, setSelected] = useState("");
   const [live, setLive] = useState(false);
-  // IA v2 shell: ⚙ Settings sheet + AddProjectWizard now owned by App (moved out
-  // of the dropped Sidebar). `running` drives the ProjectMenu status light.
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  // The seat a RosterDock gear was clicked from (null = opened from the toolbar
-  // ⚙, no seat focus). Drives SettingsModal's jump-to-project-seats behavior.
-  const [settingsSeat, setSettingsSeat] = useState<string | null>(null);
-  const openSettings = (seat: string | null) => { setSettingsSeat(seat); setSettingsOpen(true); };
+  // IA v2 shell: lens-based routing. Settings is a peer view, not a modal.
+  const [lens, setLens] = useState<Lens>(() => readSavedLens());
+  const previousLens = useRef<Lens>(lens);
+  const [settingsSeat] = useState<string | null>(null); // future: seat-gear deep link into Settings
   const [wizardOpen, setWizardOpen] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
   // running status per project name → drives the status light on the ProjectMenu
@@ -78,7 +87,7 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   const [worktreesByProject, setWorktreesByProject] = useState<Record<string, Worktree[]>>({});
   // Board | Flow main-view toggle, persisted per browser.
   const [boardMode, setBoardMode] = useState<BoardMode>(() => {
-    const saved = typeof localStorage !== "undefined" ? localStorage.getItem("pactify:boardMode") : null;
+    const saved = typeof localStorage !== "undefined" ? localStorage.getItem(BOARD_MODE_STORAGE_KEY) : null;
     return (saved as BoardMode) === "flow" ? "flow" : "board";
   });
 
@@ -86,12 +95,12 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   const [staleTasks, setStaleTasks] = useState<Set<string>>(new Set());
   const [recipes, setRecipes] = useState<RecipeItem[]>([]);
   const [recipeOpen, setRecipeOpen] = useState(false);
-  const [cockpitOpen, setCockpitOpen] = useState(false);
+  // Cockpit is now a full-page lens. The selected seat is tracked so the view
+  // can survive re-renders and be changed from inside CockpitPanel.
   const [cockpitSeat, setCockpitSeat] = useState("");
-  const openCockpit = (seat: string) => {
-    setCockpitSeat(seat);
-    setCockpitOpen(true);
-  };
+  const openCockpit = (s: string) => { setCockpitSeat(s); setLens("cockpit"); };
+  // Live count of cockpit pending approvals surfaced on the Cockpit lens badge.
+  const [cockpitPending, setCockpitPending] = useState(0);
   // Live pulse (M3.3b C4): task ids whose status changed on the latest applied
   // LIVE snapshot. Canvas/Board apply a transient `pulse` class; the set is
   // cleared after the keyframe duration so the glow plays exactly once. Replay
@@ -134,7 +143,7 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
       setProjectsLoaded(true);
       setCurrent((cur) => {
         if (cur && ps.some((p) => p.id === cur)) return cur;
-        return pickInitialProject(ps, localStorage.getItem("pactify:lastProject"));
+        return pickInitialProject(ps, localStorage.getItem(LAST_PROJECT_STORAGE_KEY));
       });
     }).catch(() => {});
   }
@@ -202,6 +211,50 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
     const t = setInterval(tick, 4000);
     return () => { alive = false; clearInterval(t); };
   }, [projectNames]);
+
+  // Cockpit pending-approval count: poll the orchestrator seat's status so the
+  // toolbar Cockpit badge shows the live queue length. Lifted from CockpitPanel
+  // (ui2-shell spec §3) so the badge can live in the shared shell.
+  const orchestratorSeat = state.agents.find((a) => a.roles.includes("orchestrator"))?.id ?? seat ?? "claude";
+  const cockpitSeatTarget = cockpitSeat || orchestratorSeat;
+  useEffect(() => {
+    // Capture the optional method so TS keeps the narrowing inside the closure.
+    const statusFn = src.cockpitStatus?.bind(src);
+    if (!current || !statusFn || !src.capabilities.cockpit || locked) {
+      setCockpitPending(0);
+      return;
+    }
+    let alive = true;
+    const poll = async () => {
+      try {
+        const st = await statusFn(current, cockpitSeatTarget);
+        if (alive) setCockpitPending(st.pending?.length ?? 0);
+      } catch {
+        if (alive) setCockpitPending(0);
+      }
+    };
+    poll();
+    const t = setInterval(poll, COCKPIT_STATUS_POLL_MS);
+    return () => { alive = false; clearInterval(t); };
+  }, [current, cockpitSeatTarget, src.cockpitStatus, src.capabilities.cockpit, locked]);
+
+  // Persist lens + remember previous non-settings lens so Escape from Settings
+  // returns there instead of hard-coding Board.
+  useEffect(() => {
+    localStorage.setItem(LENS_STORAGE_KEY, lens);
+    if (lens !== "settings") previousLens.current = lens;
+  }, [lens]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && lens === "settings") {
+        e.stopPropagation();
+        setLens(previousLens.current === "settings" ? "board" : previousLens.current);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [lens]);
 
   // Project rename/delete (moved from Sidebar into the header ProjectMenu).
   const onRenameProject = async (name: string) => {
@@ -405,16 +458,16 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
 
   // Remember the selected project id across reloads.
   useEffect(() => {
-    if (current) localStorage.setItem("pactify:lastProject", current);
+    if (current) localStorage.setItem(LAST_PROJECT_STORAGE_KEY, current);
   }, [current]);
 
   // Persist the Board | Flow view preference.
   useEffect(() => {
-    localStorage.setItem("pactify:boardMode", boardMode);
+    localStorage.setItem(BOARD_MODE_STORAGE_KEY, boardMode);
   }, [boardMode]);
 
   const currentName = projects.find((p) => p.id === current)?.name ?? current;
-  const orchestratorSeat = shownState.agents.find((a) => a.roles.includes("orchestrator"))?.id ?? seat ?? "claude";
+
   return (
     <div data-testid="app-root" className="h-screen flex flex-col">
       <Toolbar
@@ -430,78 +483,23 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
         onRenameProject={onRenameProject}
         onDeleteProject={onDeleteProject}
         onAddProject={() => setWizardOpen(true)}
-        onOpenSettings={() => openSettings(null)}
         onOpenDispatch={() => setDispatchOpen(true)}
-        showCockpit={Boolean(current) && src.capabilities.cockpit && !locked}
-        onToggleCockpit={() => cockpitOpen ? setCockpitOpen(false) : openCockpit(orchestratorSeat)}
+        lens={lens}
+        onLensChange={setLens}
+        cockpitPending={cockpitPending}
         profileEmail={email}
         worktreesByProject={worktreesByProject}
         currentWorktree={currentWorktree}
         onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }}
       />
       <div className="relative flex flex-1 overflow-hidden">
-        {/* The dark-handoff Board carries its seated cluster in its own context
-            header (Board.tsx), so the old floating left dock is gone — the board
-            is full-width with no permanent left column. */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <Agents author={author} onChanged={refreshProjects} />
-          {projectsLoaded && projects.length === 0
-            ? <NoProjects onRegistered={refreshProjects} />
-            : locked
-              ? <UnlockPanel onUnlock={onSource} />
-              : (
-                <>
-                  {/* Run rail: the orchestrate banner (renders nothing when the
-                      driver is idle) — RunControl strip + driver-touched feature
-                      lanes + the five-action ReviewGate on a paused gate. */}
-                  <RunRail project={current} state={shownState} refreshTick={refreshTick} author={author} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} onOpenCockpit={openCockpit} />
-                {/* Board | Flow view switcher + main view. */}
-                <div className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-[18px] py-[9px]">
-                  <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] p-0.5">
-                    {(["board", "flow"] as BoardMode[]).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        data-testid={`board-mode-${m}`}
-                        onClick={() => setBoardMode(m)}
-                        className="rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors"
-                        style={{
-                          color: boardMode === m ? "var(--color-text-1)" : "var(--color-text-3)",
-                          background: boardMode === m ? "rgba(255,255,255,0.09)" : "transparent",
-                        }}
-                      >
-                        {m === "board" ? "Board" : "Flow"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* relative so the slide-over detail panel + its scrim position
-                    within this row, overlaying the board. The board takes the
-                    full width — the panel is absolute. */}
-                <div className="relative flex flex-1 overflow-hidden">
-                  {boardMode === "board" ? (
-                    <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} onOpenCockpit={openCockpit} /></div>
-                  ) : (
-                    <div data-testid="view-flow" className="flex flex-1 overflow-hidden"><FlowView state={shownState} events={events} project={current} selected={selected} onSelect={setSelected} /></div>
-                  )}
-                  {src.capabilities.multiMachine
-                    ? <TaskDetail project={current} taskId={selected} state={shownState} onClose={() => setSelected("")} onOpenCockpit={openCockpit} />
-                    : <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />}
-                  {cockpitOpen && current && src.capabilities.cockpit && (
-                    <CockpitPanel project={current} seat={cockpitSeat || orchestratorSeat} agents={shownState.agents} onClose={() => setCockpitOpen(false)} onSeatChange={setCockpitSeat} onNotify={pushToast} />
-                  )}
-                </div>
-                {/* Event drawer: collapsed one-line ticker of the pact log —
-                    expands to the full colorized terminal + seat presence. */}
-                <EventDrawer events={events} agents={shownState.agents} state={shownState} />
-              </>
-            )}
-        </div>
+        {projectsLoaded && projects.length === 0
+          ? <NoProjects onRegistered={refreshProjects} />
+          : locked
+            ? <UnlockPanel onUnlock={onSource} />
+            : renderLens()}
       </div>
       <Toasts toasts={toasts} />
-      {/* Persistent (not a 5s toast: it must outlive the outage) non-blocking
-          indicator for a mid-session refresh outage; toast-styled, bottom-left
-          so it doesn't stack with the toast rail. Cleared on the next success. */}
       {fetchStale && (
         <div
           data-testid="fetch-stale"
@@ -511,7 +509,6 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
           Live updates interrupted — retrying…
         </div>
       )}
-      {settingsOpen && <SettingsModal project={current} author={author} focusSeat={settingsSeat} onClose={() => setSettingsOpen(false)} onLogout={onLogout} />}
       <AddProjectWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onAdded={() => { setWizardOpen(false); refreshProjects(); }} />
       <DispatchPanel
         project={current}
@@ -538,6 +535,89 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
           <Recipes />
         </Modal>
       )}
+    </div>
+  );
+
+  function renderLens() {
+    switch (lens) {
+      case "dashboard":
+        return <DashboardPlaceholder />;
+      case "settings":
+        return (
+          <SettingsModal
+            project={current}
+            author={author}
+            focusSeat={settingsSeat}
+            onClose={() => setLens(previousLens.current === "settings" ? "board" : previousLens.current)}
+            onLogout={onLogout}
+            viewMode
+          />
+        );
+      case "cockpit":
+        if (!current || !src.capabilities.cockpit) {
+          return (
+            <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-text-3)]">
+              Cockpit is not available for this project or data source.
+            </div>
+          );
+        }
+        return (
+          <CockpitPanel
+            project={current}
+            seat={cockpitSeatTarget}
+            agents={shownState.agents}
+            onSeatChange={setCockpitSeat}
+            onNotify={pushToast}
+            viewMode
+          />
+        );
+      case "board":
+      default:
+        return (
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <Agents author={author} onChanged={refreshProjects} />
+            <RunRail project={current} state={shownState} refreshTick={refreshTick} author={author} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} onOpenCockpit={openCockpit} />
+            <div className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-[18px] py-[9px]">
+              <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] p-0.5">
+                {(["board", "flow"] as BoardMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    data-testid={`board-mode-${m}`}
+                    onClick={() => setBoardMode(m)}
+                    className="rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors"
+                    style={{
+                      color: boardMode === m ? "var(--color-text-1)" : "var(--color-text-3)",
+                      background: boardMode === m ? "rgba(255,255,255,0.09)" : "transparent",
+                    }}
+                  >
+                    {m === "board" ? "Board" : "Flow"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="relative flex flex-1 overflow-hidden">
+              {boardMode === "board" ? (
+                <div data-testid="view-board" className="flex flex-1 overflow-hidden"><Board state={shownState} events={events} selected={selected} onSelect={setSelected} pulses={pulses} staleTasks={staleTasks} loading={firstLoad} project={current} author={author} onChanged={() => setRefreshTick((t) => t + 1)} onOpenCockpit={openCockpit} /></div>
+              ) : (
+                <div data-testid="view-flow" className="flex flex-1 overflow-hidden"><FlowView state={shownState} events={events} project={current} selected={selected} onSelect={setSelected} /></div>
+              )}
+              {src.capabilities.multiMachine
+                ? <TaskDetail project={current} taskId={selected} state={shownState} onClose={() => setSelected("")} onOpenCockpit={openCockpit} />
+                : <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />}
+            </div>
+            <EventDrawer events={events} agents={shownState.agents} state={shownState} />
+          </div>
+        );
+    }
+  }
+}
+
+function DashboardPlaceholder() {
+  return (
+    <div data-testid="view-dashboard" className="flex flex-1 flex-col items-center justify-center gap-3 text-[var(--color-text-2)]">
+      <div className="text-sm">Dashboard</div>
+      <div className="text-xs text-[var(--color-text-3)]">Coming in the next slice.</div>
     </div>
   );
 }

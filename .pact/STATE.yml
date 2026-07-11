@@ -919,7 +919,7 @@ features:
         evidence: Prisma 11_identity_plane (User/Identity/WebSession/AccountMember/Subscription/MagicLink + Account.tier/keyEpoch, all additive); identity module: HMAC-indexed opaque sessions (30d sliding, httpOnly), GitHub OAuth (state+PKCE S256 single-use, fetch-injected fake IdP, unverified-email reject), magic link (single-consume, RESEND-or-log, existence-nonleak, 3/h limiter), /me, logout; server wiring env-driven. Reviewer architectural fix: cross-site cookie reality (Vercel vs fly.dev) - SameSite=None + CORS credentials + x-aw-csrf header allowance; CSRF double-submit replaced with session-derived synchronizer token delivered in /me body; server-side Origin allowlist guard on ALL /v1/id routes (writeGuard-style, makes credentialed CORS reflection safe); tests rewritten to real contract + origin-guard suite. relay tsc clean, 236+11 tests green
       - id: a1-link-bearer
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/a1-link-bearer.md
         evidence: link-by-proof (session-bound single-use 5min challenge via LinkChallenge table, timing-safe compare, consume-before-verify, verifyChallenge reuse, /v1/auth-parity rate limit); POST /v1/id/accounts (free tier, 409 on taken publicKey); POST /v1/id/token minting bearer via shared issueToken (test proves it passes /v1/runs); sessions list/revoke + identities list/unbind (last one 409). Reviewer fix: LinkChallenge table was missing from 11_identity_plane migration (init.sql only) — appended, name-level parity check across all 7 identity tables. relay tsc clean, 248+11 green

@@ -162,6 +162,12 @@ export function createServer(opts: ServerOptions): FastifyInstance {
   const app = Fastify()
   const pairStore = new PairStore(now)
 
+  const limits = resolveHttpLimits(opts)
+  // Per-IP token buckets: a strict one for the auth brute-force path, a looser
+  // one for the remaining /v1/* endpoints.
+  const authLimiter = TokenBucketLimiter.fromPerMinute(limits.authPerMin, now)
+  const readsLimiter = TokenBucketLimiter.fromPerMinute(limits.readsPerMin, now)
+
   // Identity plane: SSO sessions live on `/v1/id/*`. The registration is async
   // because it mounts a cookie plugin; the returned app is usable immediately
   // because Fastify's inject waits for the ready lifecycle.
@@ -173,13 +179,9 @@ export function createServer(opts: ServerOptions): FastifyInstance {
     now,
     log,
     config: identityConfig,
+    tokenTtlMs: ttl,
+    authPerMin: limits.authPerMin,
   })
-
-  const limits = resolveHttpLimits(opts)
-  // Per-IP token buckets: a strict one for the auth brute-force path, a looser
-  // one for the remaining /v1/* endpoints.
-  const authLimiter = TokenBucketLimiter.fromPerMinute(limits.authPerMin, now)
-  const readsLimiter = TokenBucketLimiter.fromPerMinute(limits.readsPerMin, now)
 
   // The web (any vercel.app preview/prod origin) calls this API cross-origin.
   // The bearer API is auth'd by header (no cookies), so reflecting the request

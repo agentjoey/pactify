@@ -92,6 +92,9 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@pactify-apps/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@types/pg':
         specifier: ^8.20.0
         version: 8.20.0

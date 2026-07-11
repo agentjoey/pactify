@@ -254,3 +254,12 @@ model MagicLink {
 
   @@index([email])
 }
+
+// ACCT A1-2: single-use key-ownership challenge bound to a WebSession.
+model LinkChallenge {
+  id        String   @id
+  challenge String
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

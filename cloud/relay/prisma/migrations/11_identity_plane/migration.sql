@@ -110,3 +110,16 @@ ALTER TABLE "AccountMember" ADD CONSTRAINT "AccountMember_accountId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- ACCT A1-2: single-use key-ownership challenge bound to a WebSession.
+-- CreateTable
+CREATE TABLE "LinkChallenge" (
+    "id" TEXT NOT NULL,
+    "challenge" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "LinkChallenge_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "LinkChallenge_expiresAt_idx" ON "LinkChallenge"("expiresAt");

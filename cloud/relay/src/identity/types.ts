@@ -31,6 +31,10 @@ export interface IdentityDeps {
   now: () => number
   log: Logger
   config: IdentityPlaneConfig
+  /** Bearer token TTL in ms; must match `/v1/auth`. */
+  tokenTtlMs: number
+  /** Per-minute cap for the `/v1/id/link` brute-force path; mirrors `/v1/auth`. */
+  authPerMin: number
 }
 
 /** Function shape registered by {@link registerIdentityRoutes}. */

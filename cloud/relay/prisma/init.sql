@@ -264,6 +264,16 @@ CREATE TABLE "MagicLink" (
     CONSTRAINT "MagicLink_pkey" PRIMARY KEY ("id")
 );
 
+-- ACCT A1-2: single-use key-ownership challenge bound to a WebSession.
+-- CreateTable
+CREATE TABLE "LinkChallenge" (
+    "id" TEXT NOT NULL,
+    "challenge" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "LinkChallenge_pkey" PRIMARY KEY ("id")
+);
+
 -- AlterTable (additive defaults keep existing rows untouched)
 ALTER TABLE "Account" ADD COLUMN "tier" TEXT NOT NULL DEFAULT 'free';
 ALTER TABLE "Account" ADD COLUMN "keyEpoch" INTEGER NOT NULL DEFAULT 0;
@@ -295,11 +305,17 @@ CREATE UNIQUE INDEX "Subscription_stripeSubId_key" ON "Subscription"("stripeSubI
 -- CreateIndex
 CREATE INDEX "MagicLink_email_idx" ON "MagicLink"("email");
 
+-- CreateIndex
+CREATE INDEX "LinkChallenge_expiresAt_idx" ON "LinkChallenge"("expiresAt");
+
 -- AddForeignKey
 ALTER TABLE "Identity" ADD CONSTRAINT "Identity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "WebSession" ADD CONSTRAINT "WebSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LinkChallenge" ADD CONSTRAINT "LinkChallenge_id_fkey" FOREIGN KEY ("id") REFERENCES "WebSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "AccountMember" ADD CONSTRAINT "AccountMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

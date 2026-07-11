@@ -316,26 +316,39 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
       .then((s) => { if (alive) { noteFetchOk(); applyState(s); } })
       .catch(() => { if (alive) { noteFetchFail(); setState(EMPTY); setLoadFailed(true); } });
     if (!currentWorktree) {
+      // Shared event-append with event_id dedupe: the local SSE backfill can
+      // overlap a live event that raced in between subscribe and replay, and
+      // the hosted REST backfill (below) can overlap the socket stream.
+      const appendEvent = (e: PactEvent) => {
+        if (seenEventIds.current.has(e.event_id)) return;
+        seenEventIds.current.add(e.event_id);
+        setEvents((prev) => {
+          const next = [...prev, e];
+          return next.length > EVENTS_CAP ? next.slice(-EVENTS_CAP) : next;
+        });
+      };
       const off = src.subscribe(
         current,
         (s) => { if (alive) { noteFetchOk(); applyState(s); } },
-        (e) => {
-          if (!alive) return;
-          // Dedupe by event_id: the SSE backfill replays the log tail, which can
-          // overlap a live event that raced in between subscribe and replay.
-          // Checked against the seen-set OUTSIDE the updater (O(1), and keeps the
-          // updater pure), then trimmed to the EVENTS_CAP most recent.
-          if (!seenEventIds.current.has(e.event_id)) {
-            seenEventIds.current.add(e.event_id);
-            setEvents((prev) => {
-              const next = [...prev, e];
-              return next.length > EVENTS_CAP ? next.slice(-EVENTS_CAP) : next;
-            });
-          }
-        },
+        (e) => { if (alive) appendEvent(e); },
         () => { if (alive) noteFetchFail(); },
         (v) => { if (alive) setLive(v); },
       );
+      // Backfill history via the REST log. The LOCAL SSE stream replays the
+      // log tail on connect, but the HOSTED (relay) subscription is live-only
+      // — without this, Flow/EventDrawer start empty on hosted until new
+      // activity arrives. Sort merged history by ts so a live event that
+      // raced in ahead of the backfill can't scramble the timeline.
+      const fetchLog = src.fetchEventsLog?.bind(src) ?? fetchEventsLog;
+      fetchLog(current, undefined, EVENTS_CAP)
+        .then((evs) => {
+          if (!alive) return;
+          evs.forEach(appendEvent);
+          setEvents((prev) =>
+            [...prev].sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0)),
+          );
+        })
+        .catch(() => { /* backfill is best-effort; live stream still works */ });
       return () => {
         alive = false;
         off();

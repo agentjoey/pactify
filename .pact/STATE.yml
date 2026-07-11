@@ -907,3 +907,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/hc-web.md
         evidence: relay-client onEphemeral acct-room listener; DataSource cockpitSubscribe (Local=EventSource moved in, Relay=subscribe rpc + 4min renew + seq buffer); RelaySource cockpit methods + capabilities.cockpit=true + status snapshot cache; CockpitPanel via cockpitSubscribe + seat dropdown (E4 worker attach) + 429 inline; Discuss-in-Cockpit entries on Board review cards / RunRail gate-review-changes chips / TaskDetail. Reviewer fixes: rpc project must be SHORT name not composite relay id (rpcProject map, also fixes latent pact.*/orchestrate rpc mismatch), runId matches short name, seq adopt-first (server 1-based) + mirror-restart cursor reset, CockpitEvent import (strict build). tsc clean, vitest 538/538, build green, relay-client 7/7, local panel visual OK
+  - id: acct-a1
+    branch: feat/acct-a1
+    status: in_progress
+    tasks:
+      - id: a1-schema-auth
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/a1-schema-auth.md
+        evidence: null

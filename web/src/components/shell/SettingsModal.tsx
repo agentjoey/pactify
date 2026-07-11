@@ -7,6 +7,21 @@ import { Wiring } from "../ops/Wiring";
 import { Seats } from "../ops/Seats";
 import { Machines } from "../Machines";
 import { AccountPanel } from "../AccountPanel";
+import {
+  Users,
+  Plugs,
+  ShieldCheck,
+  TreeStructure,
+  SquaresFour,
+  SlidersHorizontal,
+  ClockCounterClockwise,
+  UserCircle,
+  Desktop,
+  Palette,
+  Keyboard,
+  MagnifyingGlass,
+  X,
+} from "@phosphor-icons/react";
 
 type Scope = "project" | "machine" | "account";
 
@@ -16,10 +31,11 @@ const SCOPE_COLOR: Record<Scope, string> = {
   account: "#8ab4ff",
 };
 
+type NavItem = { id: string; label: string; icon: React.ComponentType<any> };
 type NavGroup = {
   scope: Scope;
   label: string;
-  items: { id: string; label: string; icon: string }[];
+  items: NavItem[];
 };
 
 const FOCUSABLE =
@@ -49,10 +65,12 @@ export function SettingsModal({
   const src = useDataSource();
   const hosted = src.capabilities.multiMachine;
   const [activeId, setActiveId] = useState(hosted ? "account" : "agent-configs");
+  const [query, setQuery] = useState("");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (focusSeat) setActiveId("seats");
   }, [focusSeat]);
 
@@ -120,19 +138,19 @@ export function SettingsModal({
             scope: "project",
             label: `PROJECT · ${project}`,
             items: [
-              { id: "seats", label: "Seats & roles", icon: "▣" },
-              { id: "wiring", label: "Agent wiring", icon: "⌁" },
-              { id: "review-gate", label: "Review gate", icon: "⊘" },
-              { id: "worktrees", label: "Worktrees", icon: "⑂" },
+              { id: "seats", label: "Seats & roles", icon: Users },
+              { id: "wiring", label: "Agent wiring", icon: Plugs },
+              { id: "review-gate", label: "Review gate", icon: ShieldCheck },
+              { id: "worktrees", label: "Worktrees", icon: TreeStructure },
             ],
           },
           {
             scope: "machine",
             label: "MACHINE · this computer",
             items: [
-              { id: "registered-agents", label: "Registered agents", icon: "◇" },
-              { id: "agent-configs", label: "Agent configs", icon: "◆" },
-              { id: "sessions", label: "Sessions", icon: "↺" },
+              { id: "registered-agents", label: "Registered agents", icon: SquaresFour },
+              { id: "agent-configs", label: "Agent configs", icon: SlidersHorizontal },
+              { id: "sessions", label: "Sessions", icon: ClockCounterClockwise },
             ],
           },
         ] as NavGroup[])),
@@ -140,13 +158,20 @@ export function SettingsModal({
       scope: "account",
       label: "ACCOUNT",
       items: [
-        { id: "account", label: "Account", icon: "◉" },
-        { id: "machines", label: "Machines", icon: "◈" },
-        { id: "appearance", label: "Appearance", icon: "◐" },
-        { id: "shortcuts", label: "Shortcuts", icon: "⌘" },
+        { id: "account", label: "Account", icon: UserCircle },
+        { id: "machines", label: "Machines", icon: Desktop },
+        { id: "appearance", label: "Appearance", icon: Palette },
+        { id: "shortcuts", label: "Shortcuts", icon: Keyboard },
       ],
     },
   ];
+
+  const filteredGroups = navGroups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => i.label.toLowerCase().includes(query.toLowerCase())),
+    }))
+    .filter((g) => g.items.length > 0);
 
   const allItems = navGroups.flatMap((g) => g.items);
   const activeItem = allItems.find((i) => i.id === activeId) ?? allItems[0];
@@ -157,6 +182,13 @@ export function SettingsModal({
       ? `PROJECT · ${project}`
       : activeScope === "machine"
         ? "MACHINE · all projects"
+        : "ACCOUNT";
+
+  const scopeRowLabel =
+    activeScope === "project"
+      ? `PROJECT · ${project}`
+      : activeScope === "machine"
+        ? "MACHINE · this computer"
         : "ACCOUNT";
 
   function renderPanel(): ReactNode {
@@ -219,94 +251,126 @@ export function SettingsModal({
       style={viewMode ? undefined : { width: "min(1000px, calc(100vw - 48px))", height: "min(660px, calc(100vh - 48px))" }}
       onClick={viewMode ? undefined : (e) => e.stopPropagation()}
     >
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-[var(--color-border-subtle)] px-5 py-4">
-        <span id={titleId} className="text-[15px] font-[650] text-[var(--color-text-1)]">
-          Settings
-        </span>
-        <span className="text-xs text-[var(--color-text-3)]">
-          scope is shown on every panel — project config never leaks to other repos
-        </span>
-        {!viewMode && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="close"
-            className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.10)] text-sm text-[var(--color-text-3)] transition-colors duration-[var(--motion-micro)] hover:text-[var(--color-text-1)]"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
       <div className="flex min-h-0 flex-1">
-        {/* Left nav */}
+        {/* Left nav rail */}
         <nav
           data-testid="settings-nav"
-          className="w-[244px] flex-none overflow-y-auto border-r border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] px-2.5 py-3.5"
+          className="flex w-[250px] flex-none flex-col overflow-hidden border-r border-[var(--border-2)] bg-[var(--bg-panel)]"
         >
-          {navGroups.map((group) => (
-            <div key={group.scope} data-testid="settings-nav-group" className="mb-1">
-              <div className="flex items-center gap-2 px-2.5 py-1.5">
-                <span
-                  className="h-1.5 w-1.5 rounded-[2px]"
-                  style={{ background: SCOPE_COLOR[group.scope] }}
-                />
-                <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.8px] text-[var(--color-text-3)]">
-                  {group.label}
-                </span>
-              </div>
-              {group.items.map((item) => {
-                const active = item.id === activeId;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    data-testid={`nav-${item.id}`}
-                    aria-current={active ? "true" : "false"}
-                    onClick={() => setActiveId(item.id)}
-                    className={[
-                      "flex w-full items-center gap-2 rounded-lg px-2.5 py-[7px] text-left text-xs font-medium transition-colors duration-[var(--motion-micro)]",
-                      active
-                        ? "bg-[rgba(255,255,255,0.07)] text-[var(--color-text-1)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                        : "text-[var(--color-text-2)] hover:bg-[rgba(255,255,255,0.04)] hover:text-[var(--color-text-1)]",
-                    ].join(" ")}
-                  >
-                    <span style={{ opacity: active ? 1 : 0.6, color: active ? SCOPE_COLOR[group.scope] : undefined }}>
-                      {item.icon}
-                    </span>
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-
-        {/* Right content */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-5">
-          <div className="mb-1 flex items-center gap-3">
-            <h2 className="text-lg font-semibold tracking-[-0.01em] text-[var(--color-text-1)]">
-              {activeItem.label}
-            </h2>
-            <span
-              data-testid="settings-scope-banner"
-              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
-              style={{
-                color: SCOPE_COLOR[activeScope],
-                background: `${SCOPE_COLOR[activeScope]}1F`, // 12% alpha in hex
-                borderColor: `${SCOPE_COLOR[activeScope]}47`, // 28% alpha in hex
-              }}
-            >
-              <span
-                className="h-[5px] w-[5px] rounded-[2px]"
-                style={{ background: SCOPE_COLOR[activeScope] }}
-              />
-              {scopeBannerLabel}
+          <div className="px-[18px] pb-[3px] pt-[17px]">
+            <span id={titleId} className="text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">
+              Settings
             </span>
           </div>
-          <ScopeExplainer scope={activeScope} activeItem={activeItem.id} project={project} />
-          <div className="mt-5 flex-1">{renderPanel()}</div>
+
+          <div className="px-[13px] pb-[5px] pt-[11px]">
+            <div className="flex items-center gap-[7px] rounded-lg border border-[var(--border-2)] bg-[var(--bg-input)] px-[9px] py-[7px]">
+              <MagnifyingGlass size={13} className="shrink-0 text-[var(--text-4)]" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search settings"
+                className="min-w-0 flex-1 bg-transparent text-[12px] text-[var(--text)] placeholder:text-[var(--text-4)] outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-[11px] pb-[14px] pt-[4px]">
+            {filteredGroups.map((group) => (
+              <div key={group.scope} data-testid="settings-nav-group" className="mb-1">
+                <div className="flex items-center gap-[6px] px-[8px] pb-[5px] pt-[13px]">
+                  <span
+                    className="h-[6px] w-[6px] rounded-[2px]"
+                    style={{ background: SCOPE_COLOR[group.scope] }}
+                  />
+                  <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-4)]">
+                    {group.label}
+                  </span>
+                </div>
+                {group.items.map((item) => {
+                  const active = item.id === activeId;
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      data-testid={`nav-${item.id}`}
+                      aria-current={active ? "true" : "false"}
+                      onClick={() => setActiveId(item.id)}
+                      className={[
+                        "flex w-full items-center gap-[9px] rounded-lg border px-[9px] py-[6px] text-left transition-colors duration-[var(--motion-micro)]",
+                        active
+                          ? "border-[var(--accent-line)] bg-[var(--accent-2)]"
+                          : "border-transparent hover:bg-[var(--bg-elev2)]",
+                      ].join(" ")}
+                    >
+                      <Icon
+                        size={15}
+                        weight="light"
+                        className={active ? "text-[var(--accent)]" : "text-[var(--text-4)]"}
+                      />
+                      <span
+                        className={[
+                          "text-[12.5px]",
+                          active ? "font-semibold text-[var(--text)]" : "font-medium text-[var(--text-2)]",
+                        ].join(" ")}
+                      >
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </nav>
+
+        {/* Right content pane */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {/* Pane header */}
+          <div className="flex shrink-0 flex-col gap-[6px] border-b border-[var(--border-2)] px-[26px] py-[22px]">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-[var(--text-4)]">
+                {scopeRowLabel}
+              </span>
+              {!viewMode && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="close"
+                  className="ml-3 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.10)] text-sm text-[var(--color-text-3)] transition-colors duration-[var(--motion-micro)] hover:text-[var(--color-text-1)]"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-[22px] font-bold tracking-[-0.015em] text-[var(--text)]">
+                {activeItem.label}
+              </h2>
+              <span
+                data-testid="settings-scope-banner"
+                className="inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[10px] font-medium"
+                style={{
+                  color: SCOPE_COLOR[activeScope],
+                  background: `${SCOPE_COLOR[activeScope]}1F`,
+                  borderColor: `${SCOPE_COLOR[activeScope]}47`,
+                }}
+              >
+                <span
+                  className="h-[5px] w-[5px] rounded-[2px]"
+                  style={{ background: SCOPE_COLOR[activeScope] }}
+                />
+                {scopeBannerLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-[26px] py-5">
+            <ScopeExplainer scope={activeScope} activeItem={activeItem.id} project={project} />
+            <div className="mt-5">{renderPanel()}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -342,7 +406,7 @@ function ScopeExplainer({
 }) {
   if (scope === "machine" && activeItem === "agent-configs") {
     return (
-      <p className="max-w-xl text-xs leading-relaxed text-[var(--color-text-2)]">
+      <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
         Model and permission posture per registered agent. These live in your machine registry and
         apply to every project — seat assignments are set per project under{" "}
         <span className="text-[#ffd479]">Project · Seats &amp; roles</span>.
@@ -351,7 +415,7 @@ function ScopeExplainer({
   }
   if (scope === "project" && activeItem === "seats") {
     return (
-      <p className="max-w-xl text-xs leading-relaxed text-[var(--color-text-2)]">
+      <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
         Seats and roles for <span className="text-[#ffd479]">{project}</span>. Agent models and
         permissions are configured machine-wide under{" "}
         <span className="text-[#6ee7a0]">Machine · Agent configs</span>.
@@ -360,7 +424,7 @@ function ScopeExplainer({
   }
   if (scope === "project" && activeItem === "wiring") {
     return (
-      <p className="max-w-xl text-xs leading-relaxed text-[var(--color-text-2)]">
+      <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
         Wire registered agents into <span className="text-[#ffd479]">{project}</span>. Wiring is
         project-local; agents must first be registered on this machine.
       </p>
@@ -368,7 +432,7 @@ function ScopeExplainer({
   }
   if (scope === "machine" && activeItem === "registered-agents") {
     return (
-      <p className="max-w-xl text-xs leading-relaxed text-[var(--color-text-2)]">
+      <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
         Scan, register and remove agent kinds on this computer. Once registered, configure models
         and permissions under <span className="text-[#6ee7a0]">Machine · Agent configs</span>.
       </p>
@@ -376,14 +440,14 @@ function ScopeExplainer({
   }
   if (scope === "account" && activeItem === "machines") {
     return (
-      <p className="max-w-xl text-xs leading-relaxed text-[var(--color-text-2)]">
+      <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
         Account-wide machine roster. In local mode this list is empty because there is no relay
         presence to aggregate.
       </p>
     );
   }
   return (
-    <p className="max-w-xl text-xs leading-relaxed text-[var(--color-text-2)]">
+    <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
       {scope === "project"
         ? `Project-scoped setting for ${project}. These values stay inside this repo and do not leak to other projects.`
         : scope === "machine"

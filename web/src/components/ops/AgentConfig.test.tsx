@@ -132,12 +132,15 @@ describe("AgentConfig panel", () => {
     });
   });
 
-  it("renders the machine scope banner", async () => {
-    getAgents.mockResolvedValue([]);
+  it("renders a monogram header, effective-config subline, and Save button", async () => {
+    getAgents.mockResolvedValue([{ kind: "opencode", installed: true, detail: "", registered: true }]);
+    getAgentConfig.mockResolvedValue(cfg());
     render(<AgentConfig />);
     await waitFor(() => {
-      expect(screen.getByTestId("agent-config-scope-banner")).toHaveTextContent("MACHINE · all projects");
+      expect(screen.getByTestId("save-opencode")).toBeTruthy();
     });
+    expect(screen.queryByText("not drivable — no model or posture to configure")).toBeNull();
+    expect(screen.getByText(/deepseek\/deepseek-v4-pro/)).toBeTruthy();
   });
 
   it("renders Blanket/Scoped segmented posture and allowed-tools chips", async () => {

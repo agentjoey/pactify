@@ -6,7 +6,6 @@ import { Select } from "../ui/Select";
 import { Alert } from "../ui/Alert";
 import { EmptyState } from "../ui/EmptyState";
 import { Spinner } from "../ui/Spinner";
-import { AgentLogo } from "../../lib/agentLogos";
 
 function arraysEqual(a: string[], b: string[]) {
   if (a.length !== b.length) return false;
@@ -32,23 +31,10 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
 
   useEffect(() => {
     load();
-  }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   return (
     <section data-testid="ops-agent-config" className="mb-4">
-      <div
-        data-testid="agent-config-scope-banner"
-        className="mb-3 flex items-center gap-2 rounded-lg border border-[rgba(110,231,160,0.28)] bg-[rgba(110,231,160,0.10)] px-3 py-2"
-      >
-        <span className="h-1.5 w-1.5 rounded-[2px] bg-[#6ee7a0]" />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.6px] text-[#6ee7a0]">
-          MACHINE · all projects
-        </span>
-        <span className="text-[10.5px] text-[rgba(234,238,245,0.55)]">
-          Model and permissions are machine-level — seat assignments live under Project · Seats &amp; roles.
-        </span>
-      </div>
-
       {error && (
         <Alert tone="danger" onRetry={load}>
           {error}
@@ -68,6 +54,27 @@ export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
         </div>
       )}
     </section>
+  );
+}
+
+function initials(kind: string): string {
+  return kind.slice(0, 2).toLowerCase();
+}
+
+function Monogram({ kind, drivable }: { kind: string; drivable: boolean }) {
+  return (
+    <span
+      className="grid shrink-0 place-items-center rounded-[10px] font-mono text-[13px] font-bold"
+      style={{
+        width: 36,
+        height: 36,
+        color: drivable ? "var(--accent)" : "var(--text-3)",
+        background: drivable ? "var(--accent-2)" : "var(--bg-elev2)",
+        border: `1px solid ${drivable ? "var(--accent-line)" : "var(--border-2)"}`,
+      }}
+    >
+      {initials(kind)}
+    </span>
   );
 }
 
@@ -121,6 +128,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
 
   useEffect(() => {
     if (!saved) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSavedVisible(true);
     const fade = setTimeout(() => setSavedVisible(false), 1500);
     const hide = setTimeout(() => setSaved(false), 2000);
@@ -156,7 +164,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
         autosaveTimer.current = null;
       }
     };
-  }, [hydrated, cfg, model, restricted, tools]);
+  }, [hydrated, cfg, model, restricted, tools]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const flushSave = () => {
     if (autosaveTimer.current) {
@@ -173,6 +181,21 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
     }
   };
 
+  const saveNow = () => {
+    if (autosaveTimer.current) {
+      clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = null;
+    }
+    save({
+      model: model.trim(),
+      restricted,
+      allowed_tools: tools
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    });
+  };
+
   const parsedTools = tools
     .split(",")
     .map((t) => t.trim())
@@ -180,25 +203,44 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
 
   const dim = cfg ? !cfg.drivable : false;
 
+  function removeTool(t: string) {
+    setTools(parsedTools.filter((x) => x !== t).join(", "));
+  }
+
+  function addTool(t: string) {
+    const list = parsedTools;
+    const v = t.trim();
+    if (!v || list.includes(v)) return;
+    setTools([...list, v].join(", "));
+  }
+
+  const effectiveSub =
+    cfg &&
+    `effective ${cfg.effective_model}${
+      cfg.effective_scoped ? " · scoped" : " · blanket"
+    }${cfg.effective_scoped && (cfg.allowed_tools?.length ?? 0) ? ` · ${cfg.allowed_tools!.length} tools` : ""}`;
+
   return (
     <div
       data-testid={`agent-config-${kind}`}
       style={{ animationDelay: `${delay}ms` }}
       className={[
-        "rounded-xl border px-4 py-3.5 fade-rise",
+        "fade-rise overflow-hidden rounded-xl border",
         dim
           ? "border-[rgba(255,255,255,0.07)] bg-[var(--color-bg-inset)] opacity-[.62]"
           : "border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-surface)]",
       ].join(" ")}
     >
-      <div className="flex items-center gap-3">
-        <AgentLogo kind={kind} size={30} />
-        <div>
-          <div className="font-mono text-[13px] font-[650] text-[var(--color-text-1)]">{kind}</div>
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <Monogram kind={kind} drivable={cfg?.drivable ?? false} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[14px] font-semibold text-[var(--color-text-1)]">{kind}</span>
+            {cfg && <span className="text-[12px] text-[var(--color-text-3)]">{kind}</span>}
+          </div>
           {cfg && (
-            <div className="text-[10px] text-[var(--color-text-3)]">
-              effective {cfg.effective_model}
-              {cfg.effective_scoped ? " · scoped" : ""}
+            <div className="font-mono text-[10.5px] text-[var(--color-text-4)]">
+              {dim ? "not drivable — no model or posture to configure" : effectiveSub}
             </div>
           )}
         </div>
@@ -209,7 +251,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
         )}
         {!cfg && <Spinner size="xs" />}
         {cfg && cfg.drivable && (
-          <div data-testid="autosave-state" className="ml-auto text-[11px] font-medium">
+          <div data-testid="autosave-state" className="text-[11px] font-medium">
             {err ? (
               <span className="text-red-400">{err}</span>
             ) : saving ? (
@@ -229,116 +271,163 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       </div>
 
       {cfg && cfg.drivable && (
-        <div className="mt-3.5 flex flex-wrap gap-4">
-          <label className="flex min-w-[230px] flex-1 flex-col gap-1.5">
-            <span className="text-[10px] font-medium text-[var(--color-text-3)]">Model</span>
-            {(cfg.candidate_models ?? []).length > 0 ? (
-              <>
-                <Select
-                  data-testid={`model-select-${kind}`}
-                  value={customMode ? "__custom__" : model}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "__custom__") {
-                      setCustomMode(true);
-                    } else {
-                      setCustomMode(false);
-                      setModel(v);
+        <div className="border-t border-[var(--border-2)] bg-[var(--bg)] px-4 py-3.5">
+          <div className="flex flex-wrap gap-4">
+            <label className="flex min-w-[230px] flex-1 flex-col gap-1.5">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+                Model · built-in list
+              </span>
+              {(cfg.candidate_models ?? []).length > 0 ? (
+                <>
+                  <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] px-3 py-2">
+                    <Select
+                      data-testid={`model-select-${kind}`}
+                      value={customMode ? "__custom__" : model}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "__custom__") {
+                          setCustomMode(true);
+                        } else {
+                          setCustomMode(false);
+                          setModel(v);
+                        }
+                      }}
+                      className="flex-1 border-0 bg-transparent px-0 py-0 font-mono text-[12.5px] text-[var(--text)]"
+                    >
+                      <option value="">default</option>
+                      {(cfg.candidate_models ?? []).map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                      <option value="__custom__">custom…</option>
+                    </Select>
+                    <span className="text-[9px] text-[var(--text-4)]">▾</span>
+                  </div>
+                  {customMode && (
+                    <Input
+                      data-testid={`model-${kind}`}
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="model id"
+                      className="w-full text-xs"
+                    />
+                  )}
+                </>
+              ) : (
+                <Input
+                  data-testid={`model-${kind}`}
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="default"
+                  className="w-full text-xs"
+                />
+              )}
+              <span className="font-mono text-[10.5px] text-[var(--color-text-4)]">
+                pinned · overrides the machine default
+              </span>
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+                Permission posture
+              </span>
+              <div className="inline-flex gap-[3px] rounded-lg border border-[var(--border-2)] bg-[var(--bg-input)] p-[3px]">
+                <button
+                  type="button"
+                  data-testid={`posture-blanket-${kind}`}
+                  aria-pressed={!restricted}
+                  onClick={() => setRestricted(false)}
+                  className={[
+                    "rounded-md px-[15px] py-[7px] text-[11.5px] font-semibold transition-all duration-[var(--motion-micro)]",
+                    !restricted
+                      ? "text-[var(--accent-ink)]"
+                      : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
+                  ].join(" ")}
+                  style={!restricted ? { background: "var(--accent)" } : undefined}
+                >
+                  Blanket
+                </button>
+                <button
+                  type="button"
+                  data-testid={`posture-scoped-${kind}`}
+                  aria-pressed={restricted}
+                  onClick={() => setRestricted(true)}
+                  className={[
+                    "rounded-md px-[15px] py-[7px] text-[11.5px] font-semibold transition-all duration-[var(--motion-micro)]",
+                    restricted
+                      ? "text-[var(--accent-ink)]"
+                      : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
+                  ].join(" ")}
+                  style={restricted ? { background: "var(--accent)" } : undefined}
+                >
+                  Scoped
+                </button>
+              </div>
+            </label>
+          </div>
+
+          {restricted && (
+            <div className="mt-3">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+                Allowed tools
+              </span>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                {parsedTools.map((t) => (
+                  <span
+                    key={t}
+                    data-testid="allowed-tool-chip"
+                    className="inline-flex items-center gap-1 rounded-lg border px-[11px] py-[5px] font-mono text-[11px] font-medium"
+                    style={{
+                      color: "var(--accent)",
+                      background: "var(--accent-2)",
+                      borderColor: "var(--accent-line)",
+                    }}
+                  >
+                    {t}
+                    <button
+                      type="button"
+                      onClick={() => removeTool(t)}
+                      className="ml-0.5 text-[10px] text-[var(--accent)] hover:text-[var(--text)]"
+                      aria-label={`remove ${t}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                <Input
+                  data-testid={`tools-${kind}`}
+                  value={tools}
+                  onChange={(e) => setTools(e.target.value)}
+                  onBlur={flushSave}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = (e.target as HTMLInputElement).value
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .pop();
+                      if (val) addTool(val);
                     }
                   }}
-                  className="w-full text-xs"
-                >
-                  <option value="">default</option>
-                  {(cfg.candidate_models ?? []).map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                  <option value="__custom__">custom…</option>
-                </Select>
-                {customMode && (
-                  <Input
-                    data-testid={`model-${kind}`}
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    placeholder="model id"
-                    className="w-full text-xs"
-                  />
-                )}
-              </>
-            ) : (
-              <Input
-                data-testid={`model-${kind}`}
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder="default"
-                className="w-full text-xs"
-              />
-            )}
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-medium text-[var(--color-text-3)]">Permission posture</span>
-            <div className="inline-flex rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] p-0.5">
-              <button
-                type="button"
-                data-testid={`posture-blanket-${kind}`}
-                aria-pressed={!restricted}
-                onClick={() => setRestricted(false)}
-                className={[
-                  "rounded-md px-3.5 py-1.5 text-[11px] font-medium transition-all duration-[var(--motion-micro)]",
-                  !restricted
-                    ? "bg-[#222b3a] text-[var(--color-text-1)] shadow-[0_1px_2px_rgba(0,0,0,.4)]"
-                    : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
-                ].join(" ")}
-              >
-                Blanket
-              </button>
-              <button
-                type="button"
-                data-testid={`posture-scoped-${kind}`}
-                aria-pressed={restricted}
-                onClick={() => setRestricted(true)}
-                className={[
-                  "rounded-md px-3.5 py-1.5 text-[11px] font-medium transition-all duration-[var(--motion-micro)]",
-                  restricted
-                    ? "bg-[#222b3a] text-[var(--color-text-1)] shadow-[0_1px_2px_rgba(0,0,0,.4)]"
-                    : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
-                ].join(" ")}
-              >
-                Scoped
-              </button>
+                  placeholder="Read, Edit, Bash"
+                  className="min-w-[140px] flex-1 border-dashed border-[rgba(255,255,255,0.16)] bg-transparent font-mono text-[11px] text-[var(--text)] placeholder:text-[var(--text-4)]"
+                />
+              </div>
             </div>
-          </label>
-        </div>
-      )}
+          )}
 
-      {cfg && cfg.drivable && restricted && (
-        <div className="mt-3">
-          <span className="text-[10px] font-medium text-[var(--color-text-3)]">Allowed tools</span>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            {parsedTools.map((t) => (
-              <span
-                key={t}
-                data-testid="allowed-tool-chip"
-                className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10.5px] font-medium"
-                style={{
-                  color: "var(--color-role-design)",
-                  background: "color-mix(in srgb, var(--color-role-design) 10%, transparent)",
-                  borderColor: "color-mix(in srgb, var(--color-role-design) 28%, transparent)",
-                }}
-              >
-                {t}
-              </span>
-            ))}
-            <Input
-              data-testid={`tools-${kind}`}
-              value={tools}
-              onChange={(e) => setTools(e.target.value)}
-              onBlur={flushSave}
-              placeholder="Read, Edit, Bash"
-              className="min-w-[140px] flex-1 border-dashed border-[rgba(255,255,255,0.16)] bg-transparent text-xs placeholder:text-[var(--color-text-3)]"
-            />
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              data-testid={`save-${kind}`}
+              onClick={saveNow}
+              disabled={saving}
+              className="rounded-lg bg-[var(--accent)] px-[18px] py-2 text-[12.5px] font-semibold text-[var(--accent-ink)] transition-colors hover:brightness-110 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
           </div>
         </div>
       )}
@@ -359,7 +448,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       )}
 
       {err && (
-        <div className="mt-2">
+        <div className="px-4 pb-3.5">
           <Alert tone="danger">{err}</Alert>
         </div>
       )}

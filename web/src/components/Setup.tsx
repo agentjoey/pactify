@@ -8,7 +8,6 @@ import { EmptyState } from "./ui/EmptyState";
 import { ConfigSection, Inset } from "./ui/ConfigSection";
 import { Icon } from "../lib/icons";
 import { CableMark } from "./shell/CableMark";
-import { casteForRoles } from "../lib/ants";
 
 // Setup (#1) — the entry-point view bridging "I registered my agents" to "this
 // project can do work". Reads the proposed seat roster from the machine's
@@ -71,13 +70,11 @@ function applyCommands(bindings: SetupBinding[]): string {
   return lines.join("\n");
 }
 
-// Bright role-gradient avatar used on Setup seat rows (orchestrator gold,
-// reviewer blue, worker green).
-function roleGradient(roles: string[]): { from: string; to: string } {
-  const caste = casteForRoles(roles);
-  if (caste === "queen") return { from: "var(--color-role-product)", to: "color-mix(in srgb, var(--color-role-product) 70%, var(--color-bg-page))" };
-  if (caste === "guard") return { from: "var(--color-role-design)", to: "color-mix(in srgb, var(--color-role-design) 70%, var(--color-bg-page))" };
-  return { from: "var(--color-role-dev)", to: "color-mix(in srgb, var(--color-role-dev) 70%, var(--color-bg-page))" };
+// agentGradient gives each registered agent its brand tile (claude = gold,
+// opencode/gemini = green), matching the design-handoff avatar spec.
+function agentGradient(kind: string): { from: string; to: string } {
+  if (kind.startsWith("claude")) return { from: "#ffd479", to: "#e0a93a" };
+  return { from: "#6ee7a0", to: "#39b97a" };
 }
 
 function initials(seat: string): string {
@@ -108,6 +105,7 @@ export function Setup() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 
@@ -292,7 +290,7 @@ export function Setup() {
               {/* Seat rows */}
               <div className="mb-[18px] flex flex-col gap-2.5">
                 {bindings.map((b, i) => {
-                  const pad = roleGradient(b.roles);
+                  const pad = agentGradient(b.kind);
                   return (
                     <div
                       key={b.seat}
@@ -313,47 +311,51 @@ export function Setup() {
                       <Badge color={b.drivable ? "role-dev" : "role-design"}>
                         {b.drivable ? "drivable" : "manual"}
                       </Badge>
-                      <div className="ml-auto flex items-center gap-[7px]">
-                        {ALL_ROLES.map((r) => {
-                          const on = b.roles.includes(r);
-                          const c = ROLE_COLOR[r];
-                          return (
-                            <span key={r} data-testid="role-toggle" data-role={r}>
-                              <button
-                                type="button"
-                                data-testid={`role-${b.seat}-${r}`}
-                                aria-pressed={on}
-                                onClick={() => toggleRole(b.seat, r)}
-                                className="press inline-flex items-center gap-[5px] rounded-full px-[11px] py-1 text-[10.5px] font-medium transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2"
-                                style={
-                                  on
-                                    ? {
-                                        color: c.ink,
-                                        background: `color-mix(in srgb, ${c.main} 16%, transparent)`,
-                                        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${c.main} 32%, transparent)`,
-                                      }
-                                    : {
-                                        color: "var(--color-text-3)",
-                                        background: "var(--color-bg-page)",
-                                        border: "1px solid var(--color-border-subtle)",
-                                      }
-                                }
-                              >
-                                <span
-                                  aria-hidden
-                                  style={{
-                                    width: 5,
-                                    height: 5,
-                                    borderRadius: 999,
-                                    background: on ? c.main : "var(--color-text-3)",
-                                    opacity: on ? 1 : 0.5,
-                                  }}
-                                />
-                                {r}
-                              </button>
-                            </span>
-                          );
-                        })}
+                      <div className="ml-auto flex items-center gap-[9px]">
+                        <span className="font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-3)]">
+                          ROLES
+                        </span>
+                        <div className="flex gap-[7px]">
+                          {ALL_ROLES.map((r) => {
+                            const on = b.roles.includes(r);
+                            const c = ROLE_COLOR[r];
+                            return (
+                              <span key={r} data-testid="role-toggle" data-role={r}>
+                                <button
+                                  type="button"
+                                  data-testid={`role-${b.seat}-${r}`}
+                                  aria-pressed={on}
+                                  onClick={() => toggleRole(b.seat, r)}
+                                  className="press inline-flex items-center gap-[5px] rounded-full px-[11px] py-1 text-[10.5px] font-medium transition-colors duration-[var(--motion-micro)] outline-none focus-visible:ring-2"
+                                  style={
+                                    on
+                                      ? {
+                                          color: c.main,
+                                          background: `color-mix(in srgb, ${c.main} 16%, transparent)`,
+                                          boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${c.main} 32%, transparent)`,
+                                        }
+                                      : {
+                                          color: "rgba(234,238,245,0.5)",
+                                          background: "var(--color-bg-page)",
+                                          border: "1px solid rgba(255,255,255,0.08)",
+                                        }
+                                  }
+                                >
+                                  <span
+                                    aria-hidden
+                                    style={{
+                                      width: 5,
+                                      height: 5,
+                                      borderRadius: 999,
+                                      background: on ? c.main : "rgba(234,238,245,0.4)",
+                                    }}
+                                  />
+                                  {r}
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   );
@@ -362,9 +364,18 @@ export function Setup() {
 
               {/* Role-gap warnings / success note */}
               {ready ? (
-                <Alert tone="success" className="mb-6">
-                  Separation of duties holds — orchestrator, reviewer and worker are all staffed, and no seat is both building and accepting its own work.
-                </Alert>
+                <div
+                  className="mb-6 flex items-start gap-[9px] rounded-[10px] border px-[13px] py-[11px]"
+                  style={{
+                    background: "color-mix(in srgb, var(--color-success) 7%, transparent)",
+                    borderColor: "color-mix(in srgb, var(--color-success) 26%, transparent)",
+                  }}
+                >
+                  <span className="font-mono text-[12px] font-semibold leading-[1.5] text-[var(--color-success)]">✓</span>
+                  <span className="text-[12px] leading-[1.55] text-[var(--color-text-2)]">
+                    Separation of duties holds — orchestrator, reviewer and worker are all staffed, and no seat is both building and accepting its own work.
+                  </span>
+                </div>
               ) : (
                 <div className="mb-6 flex flex-col gap-1.5">
                   {warnings.map((wn) => (
@@ -387,7 +398,8 @@ export function Setup() {
                         value={path}
                         onChange={(e) => handlePathChange(e.target.value)}
                         placeholder="/path/to/new-project"
-                        className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-[11px] py-[9px] font-mono text-[12px] text-[var(--color-text-1)] outline-none focus-visible:border-[var(--color-role-design)]"
+                        className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-[11px] py-[9px] font-mono text-[12px] text-[var(--color-text-1)] outline-none transition-colors focus:border-[color-mix(in_srgb,var(--color-role-design)_45%,transparent)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-role-design)_10%,transparent)]"
+                        style={{ caretColor: "var(--color-role-design)" }}
                       />
                     </label>
                     <label className="flex flex-col gap-[5px]">
@@ -398,7 +410,7 @@ export function Setup() {
                         value={project}
                         onChange={(e) => setProject(e.target.value)}
                         placeholder="new-project"
-                        className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-[11px] py-[9px] font-mono text-[12px] text-[var(--color-text-1)] outline-none focus-visible:border-[var(--color-role-design)]"
+                        className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] px-[11px] py-[9px] font-mono text-[12px] text-[var(--color-text-1)] outline-none transition-colors focus:border-[color-mix(in_srgb,var(--color-role-design)_45%,transparent)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-role-design)_10%,transparent)]"
                       />
                     </label>
                   </Inset>
@@ -412,6 +424,7 @@ export function Setup() {
                   onClick={handleApply}
                   disabled={!canApply}
                   loading={applying}
+                  className="bg-[var(--color-role-design)] shadow-[0_6px_18px_-6px_color-mix(in_srgb,var(--color-role-design)_50%,transparent)]"
                 >
                   Apply · init + wire →
                 </Button>
@@ -491,33 +504,32 @@ export function Setup() {
 
               {/* Commands */}
               <div>
-                <ConfigSection
-                  label="Or copy the commands"
-                  action={
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        void navigator.clipboard?.writeText(commands);
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 1500);
-                      }}
-                    >
-                      {copied ? "Copied ✓" : "Copy"}
-                    </Button>
-                  }
-                >
-                  <pre
-                    data-testid="setup-commands"
-                    className="mono whitespace-pre-wrap rounded-[11px] border border-[var(--color-border-subtle)] bg-[#07090d] px-[16px] py-[14px] text-[11.5px] leading-[1.85] text-[var(--color-text-2)] [overflow-wrap:anywhere]"
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-mono text-[10px] font-semibold uppercase tracking-[1px] text-[var(--color-text-3)]">
+                    Or copy the commands
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(commands);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    }}
                   >
-                    {commands.split("\n").map((line, idx) => (
-                      <span key={idx} className="block">
-                        <span className="text-[var(--color-success)]">$</span> {line}
-                      </span>
-                    ))}
-                  </pre>
-                </ConfigSection>
+                    {copied ? "Copied ✓" : "Copy"}
+                  </Button>
+                </div>
+                <pre
+                  data-testid="setup-commands"
+                  className="mono whitespace-pre-wrap rounded-[11px] border border-[var(--color-border-subtle)] bg-[#07090d] px-[16px] py-[14px] text-[11.5px] leading-[1.85] text-[var(--color-text-2)] [overflow-wrap:anywhere]"
+                >
+                  {commands.split("\n").map((line, idx) => (
+                    <span key={idx} className="block">
+                      <span className="text-[var(--color-success)]">$</span> {line}
+                    </span>
+                  ))}
+                </pre>
               </div>
             </div>
           )}

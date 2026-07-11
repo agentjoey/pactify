@@ -939,3 +939,13 @@ features:
         reviewer: kimi-worker
         spec: .pact/tasks/a1-qa-fixes.md
         evidence: 6 contract/UI fixes from live staging QA (MeResponse nesting, wrapped list unwrap, full session id for revoke, createdAt display, magic link relay-base URL via x-forwarded-proto, email Identity upsert) + hosted Settings capability gating (only ACCOUNT group). Live-verified on staging: magic login, create-account export gate, link-by-proof to board, AccountPanel FREE badge/sessions/revoke. relay 248+11, web 559, build green
+  - id: hosted-events-backfill
+    branch: feat/hosted-events-backfill
+    status: in_progress
+    tasks:
+      - id: hosted-events-backfill
+        owner: claude
+        status: assigned
+        reviewer: kimi-worker
+        spec: .pact/tasks/hosted-events-backfill.md
+        evidence: null

@@ -17,15 +17,19 @@ datasource db {
 }
 
 model Account {
-  id          String    @id @default(cuid())
-  publicKey   String    @unique
-  seq         Int       @default(0)
-  settingsEnc String?
-  createdAt   DateTime  @default(now())
-  devices     Device[]
-  machines    Machine[]
-  runs        Run[]
-  projects    Project[]
+  id            String         @id @default(cuid())
+  publicKey     String         @unique
+  seq           Int            @default(0)
+  settingsEnc   String?
+  tier          String         @default("free")
+  keyEpoch      Int            @default(0)
+  createdAt     DateTime       @default(now())
+  devices       Device[]
+  machines      Machine[]
+  runs          Run[]
+  projects      Project[]
+  members       AccountMember[]
+  subscriptions Subscription[]
 }
 
 model Device {
@@ -180,4 +184,73 @@ model PactEvent {
   @@unique([projectId, eventId])
   @@index([projectId])
   @@index([accountId])
+}
+
+// ACCT A1-1 identity plane: SSO users, sessions, and account membership.
+// Additive (linx never touches these tables) → safe via `prisma migrate deploy`
+// on the shared Neon.
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique
+  createdAt        DateTime        @default(now())
+  stripeCustomerId String?         @unique
+  identities       Identity[]
+  members          AccountMember[]
+  sessions         WebSession[]
+}
+
+model Identity {
+  id       String @id @default(cuid())
+  userId   String
+  provider String
+  subject  String
+  user     User   @relation(fields: [userId], references: [id])
+
+  @@unique([provider, subject])
+  @@index([userId])
+}
+
+model WebSession {
+  // Hashed HMAC of the opaque session token stored in the aw_session cookie.
+  id        String   @id
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  ua        String?
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model AccountMember {
+  userId    String
+  accountId String
+  role      String   @default("owner")
+  linkedAt  DateTime @default(now())
+  account   Account  @relation(fields: [accountId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@id([userId, accountId])
+  @@index([accountId])
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  accountId        String   @unique
+  stripeSubId      String   @unique
+  status           String
+  tier             String
+  currentPeriodEnd DateTime
+  account          Account  @relation(fields: [accountId], references: [id])
+}
+
+model MagicLink {
+  // Hashed HMAC of the opaque one-time token carried in the verify URL.
+  id        String   @id
+  email     String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([email])
 }

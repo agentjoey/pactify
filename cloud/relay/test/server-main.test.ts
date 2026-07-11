@@ -14,6 +14,14 @@ describe('parseServerEnv', () => {
     expect(res).toEqual({ error: expect.stringContaining('RELAY_SECRET') })
   })
 
+  const DEFAULT_IDENTITY = {
+    webUrl: 'https://pactify-linx-linx-web.vercel.app',
+    githubClientId: undefined,
+    githubClientSecret: undefined,
+    resendApiKey: undefined,
+    resendFrom: undefined,
+  }
+
   it('parses a full env and defaults PORT to 4310 and runTtlMs to the 7-day default', () => {
     const res = parseServerEnv({ DATABASE_URL: 'postgres://x', RELAY_SECRET: 's' })
     expect(res).toEqual({
@@ -22,6 +30,7 @@ describe('parseServerEnv', () => {
       port: 4310,
       runTtlMs: DEFAULT_RUN_TTL_MS,
       machineTtlMs: DEFAULT_MACHINE_TTL_MS,
+      identity: DEFAULT_IDENTITY,
     })
   })
 
@@ -37,6 +46,7 @@ describe('parseServerEnv', () => {
       port: 8080,
       runTtlMs: DEFAULT_RUN_TTL_MS,
       machineTtlMs: DEFAULT_MACHINE_TTL_MS,
+      identity: DEFAULT_IDENTITY,
     })
   })
 
@@ -52,6 +62,7 @@ describe('parseServerEnv', () => {
       port: 4310,
       runTtlMs: 0,
       machineTtlMs: DEFAULT_MACHINE_TTL_MS,
+      identity: DEFAULT_IDENTITY,
     })
   })
 
@@ -77,6 +88,7 @@ describe('parseServerEnv', () => {
       redisUrl: 'redis://localhost:6379',
       runTtlMs: DEFAULT_RUN_TTL_MS,
       machineTtlMs: DEFAULT_MACHINE_TTL_MS,
+      identity: DEFAULT_IDENTITY,
     })
   })
 
@@ -91,6 +103,7 @@ describe('parseServerEnv', () => {
       port: 4310,
       runTtlMs: DEFAULT_RUN_TTL_MS,
       machineTtlMs: DEFAULT_MACHINE_TTL_MS,
+      identity: DEFAULT_IDENTITY,
     })
     expect('redisUrl' in res).toBe(false)
   })

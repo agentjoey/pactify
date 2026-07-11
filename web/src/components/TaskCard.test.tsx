@@ -84,9 +84,15 @@ describe("TaskCard — genome", () => {
     expect(ants.length).toBe(1);
   });
 
-  it("draft variant gets the dashed class", () => {
+  it("draft variant gets the dashed class and drag hint", () => {
     render(<TaskCard task={task({ status: "assigned" })} draft {...roleProps} />);
     expect(screen.getByTestId("task-card").className).toContain("dashed");
+    expect(screen.getByTestId("draft-hint").textContent).toContain("drag onto a seat");
+  });
+
+  it("shipped card shows the local-main provenance line", () => {
+    render(<TaskCard task={task({ status: "accepted" })} shipped {...roleProps} />);
+    expect(screen.getByTestId("shipped-provenance").textContent).toBe("→ local main");
   });
 
   it("stale → amber dot", () => {

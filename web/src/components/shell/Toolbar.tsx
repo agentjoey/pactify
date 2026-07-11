@@ -1,194 +1,273 @@
-import { useMemo } from "react";
-import type { Seat, ProjectMeta } from "../../lib/types";
-import { CableMark } from "./CableMark";
-import { Ant } from "../ui/ants/Ant";
-import { casteForRoles, padGradient } from "../../lib/ants";
-import { ProjectMenu } from "./ProjectMenu";
+import { useEffect, useMemo } from "react";
+import type { Lens } from "../../App";
+import type { ProjectMeta } from "../../lib/types";
 import type { Worktree } from "../../lib/api";
+import { ProjectMenu } from "./ProjectMenu";
 
-// Toolbar — the macOS-style unified toolbar (Option A shell). Holds the brand +
-// the ProjectMenu dropdown (project switching / rename / delete / add lives here
-// after IA v2), a ⌘K affordance, the live badge, the ⚙ Settings and 👤 Profile
-// buttons, and the acting-seat avatar. Single-view IA (PR2 of the views
-// consolidation): the Board is the only lens, so the segmented control is gone.
+// Toolbar — shared product shell (ui2-shell). Left: wordmark (+ project selector in Cockpit).
+// Center: Dashboard | Board | Cockpit lens segments with Cockpit pending badge.
+// Right: ⌘K, live pill, dispatch (Cockpit lens only), Settings gear, user tile.
 
+const LENSES: Lens[] = ["dashboard", "board", "cockpit"];
 
 export function Toolbar({
-  projectName,
   live,
-  author,
-  seat,
-  agents,
+  onOpenDispatch,
+  onLensChange,
+  lens,
+  cockpitPending,
+  profileEmail,
   projects,
+  currentProjectId,
   running,
   runningByProject,
+  worktreesByProject,
+  currentWorktree,
   onSelectProject,
   onRenameProject,
   onDeleteProject,
   onAddProject,
-  onOpenSettings,
-  onOpenDispatch,
-  onToggleCockpit,
-  showCockpit,
-  worktreesByProject,
-  currentWorktree,
   onSelectWorktree,
-  profileEmail,
 }: {
-  projectName: string;
   live: boolean;
-  author: boolean;
-  seat?: string;
-  agents?: Seat[];
-  projects: ProjectMeta[];
-  running: boolean;
-  runningByProject?: Record<string, boolean>;
-  onSelectProject: (name: string) => void;
-  onRenameProject: (name: string) => void;
-  onDeleteProject: (name: string) => void;
-  onAddProject: () => void;
-  onOpenSettings: () => void;
   onOpenDispatch: () => void;
-  onToggleCockpit?: () => void;
-  showCockpit?: boolean;
+  onLensChange: (lens: Lens) => void;
+  lens: Lens;
+  cockpitPending?: number;
+  profileEmail?: string;
+  projects?: ProjectMeta[];
+  currentProjectId?: string;
+  running?: boolean;
+  runningByProject?: Record<string, boolean>;
   worktreesByProject?: Record<string, Worktree[]>;
   currentWorktree?: string;
+  onSelectProject?: (name: string) => void;
+  onRenameProject?: (name: string) => void;
+  onDeleteProject?: (name: string) => void;
+  onAddProject?: () => void;
   onSelectWorktree?: (project: string, branch: string) => void;
-  profileEmail?: string;
 }) {
-  const seatRoles = useMemo(
-    () => (seat ? agents?.find((a) => a.id === seat)?.roles ?? [] : []),
-    [agents, seat],
-  );
-  const caste = casteForRoles(seatRoles);
-  const pad = seat ? padGradient(seat, caste) : null;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (
+        !t ||
+        t.tagName === "INPUT" ||
+        t.tagName === "TEXTAREA" ||
+        t.tagName === "SELECT" ||
+        t.isContentEditable
+      ) {
+        return;
+      }
+      if (e.key === "1") onLensChange("dashboard");
+      if (e.key === "2") onLensChange("board");
+      if (e.key === "3") onLensChange("cockpit");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onLensChange]);
+
+  const monogram = useMemo(() => {
+    if (profileEmail) return profileEmail.slice(0, 2).toLowerCase();
+    return "cl";
+  }, [profileEmail]);
 
   return (
     <div
       data-testid="toolbar"
-      className="relative z-50 flex min-h-[46px] items-center gap-3 border-b border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-bg-surface)_82%,var(--color-bg-page))] px-3.5 py-2.5 backdrop-blur-[12px]"
+      className="relative z-50 flex min-h-[48px] items-center gap-3 border-b border-[rgba(255,255,255,0.07)] bg-[rgba(12,17,25,0.82)] px-4 py-2 backdrop-blur-[12px]"
     >
-      {/* brand + project menu */}
-      <div className="flex items-center gap-2 shrink-0">
-        <CableMark />
-        <span className="text-[13px] font-[680] text-[var(--color-text-1)]">pactify</span>
-        <span className="text-[var(--color-text-3)]">·</span>
-        <ProjectMenu
-          projects={projects}
-          current={projectName}
-          running={running}
-          runningByProject={runningByProject}
-          worktreesByProject={worktreesByProject}
-          currentWorktree={currentWorktree}
-          onSelect={onSelectProject}
-          onRename={onRenameProject}
-          onDelete={onDeleteProject}
-          onAdd={onAddProject}
-          onSelectWorktree={onSelectWorktree}
-        />
+      {/* left: wordmark + inline project selector on Cockpit */}
+      <div className="flex shrink-0 items-center gap-2.5">
+        <Wordmark />
+        <span className="text-[13px] font-[700] tracking-[-0.01em] text-[var(--color-text-1)]">
+          pactify
+        </span>
+        {lens === "cockpit" && projects && onSelectProject && onRenameProject && onDeleteProject && onAddProject && (
+          <>
+            <span className="text-[var(--color-text-3)]">·</span>
+            <ProjectMenu
+              projects={projects}
+              current={currentProjectId ?? ""}
+              running={running ?? false}
+              runningByProject={runningByProject}
+              worktreesByProject={worktreesByProject}
+              currentWorktree={currentWorktree}
+              onSelect={onSelectProject}
+              onRename={onRenameProject}
+              onDelete={onDeleteProject}
+              onAdd={onAddProject}
+              onSelectWorktree={onSelectWorktree}
+            />
+          </>
+        )}
       </div>
 
       <div className="mx-auto" />
 
-      {/* right cluster: ⌘K · live · seat · ⚙ settings · 👤 profile */}
-      <button
-        type="button"
-        data-testid="cmdk-hint"
-        aria-label="command palette"
-        onClick={() => window.dispatchEvent(new CustomEvent("pactify:cmdk"))}
-        className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-1.5 py-1 text-[11px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+      {/* center: lens segments */}
+      <div
+        data-testid="lens-segments"
+        role="group"
+        aria-label="lens"
+        className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-[3px] rounded-[9px] border border-[var(--border)] bg-[var(--bg-input)] p-[3px] sm:flex"
       >
-        ⌘K
-      </button>
-      {showCockpit && onToggleCockpit && (
+        {LENSES.map((l) => {
+          const active = lens === l;
+          return (
+            <button
+              key={l}
+              type="button"
+              data-testid={`lens-${l}`}
+              data-active={active ? "true" : "false"}
+              aria-pressed={active}
+              onClick={() => onLensChange(l)}
+              className="relative inline-flex items-center gap-1 rounded-md px-[14px] py-[5px] text-[11.5px] font-semibold transition-colors"
+              style={{
+                color: active ? "var(--color-text-1)" : "var(--color-text-3)",
+                background: active ? "var(--bg-elev2)" : "transparent",
+                boxShadow: active ? "0 1px 2px rgba(0,0,0,.4)" : "none",
+              }}
+            >
+              {l.charAt(0).toUpperCase() + l.slice(1)}
+              {l === "cockpit" && (cockpitPending ?? 0) > 0 && (
+                <span className="ml-0.5 inline-flex items-center gap-1 text-[var(--color-danger)]">
+                  <span
+                    className="h-[6px] w-[6px] rounded-full bg-[var(--color-danger)] shell-breath"
+                    style={{ boxShadow: "0 0 6px var(--color-danger)" }}
+                  />
+                  <span className="font-mono text-[10px] font-semibold">
+                    {cockpitPending}
+                  </span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* right: ⌘K · dispatch (cockpit lens) · live · settings · user tile */}
+      <div className="flex shrink-0 items-center gap-2.5">
         <button
           type="button"
-          data-testid="cockpit-toggle"
-          aria-label="toggle cockpit"
-          title="Cockpit"
-          onClick={onToggleCockpit}
-          className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-2 py-1 text-[11px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+          data-testid="cmdk-hint"
+          aria-label="command palette"
+          onClick={() => window.dispatchEvent(new CustomEvent("pactify:cmdk"))}
+          className="inline-flex items-center gap-1.5 rounded-md border border-[rgba(255,255,255,0.10)] bg-[var(--bg)] px-2 py-1 text-[11px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
         >
-          Cockpit
+          ⌘K
         </button>
-      )}
-      <LiveBadge live={live} />
-      {author && seat && pad ? (
+        {lens === "cockpit" && (
+          <button
+            type="button"
+            data-testid="toolbar-dispatch"
+            aria-label="dispatch"
+            title="Dispatch a task from a goal"
+            onClick={onOpenDispatch}
+            className="grid h-[28px] w-[28px] place-items-center rounded-lg border border-[rgba(255,255,255,0.10)] bg-[var(--bg)] text-[13px] text-[var(--proj)] transition-colors hover:text-[var(--color-role-product)]"
+          >
+            ◉
+          </button>
+        )}
+        <LiveBadge live={live} />
         <button
           type="button"
-          data-testid="seat-avatar"
-          aria-label={`acting as ${seat}`}
-          className="grid h-[24px] w-[24px] shrink-0 place-items-center rounded-[7px] border-0 p-0"
-          style={{ background: `linear-gradient(135deg, ${pad.from}, ${pad.to})`, boxShadow: "inset 0 0 0 1px rgba(255,255,255,.16)" }}
-          title={`acting as ${seat} — ${caste}`}
+          data-testid="toolbar-settings"
+          aria-label="settings"
+          title="Settings"
+          onClick={() => onLensChange("settings")}
+          className="grid h-[28px] w-[28px] place-items-center rounded-lg border border-[rgba(255,255,255,0.10)] bg-[var(--bg)] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+          style={{
+            color: lens === "settings" ? "var(--color-success)" : undefined,
+          }}
         >
-          <Ant caste={caste} size={22} />
+          <GearIcon />
         </button>
-      ) : !author ? (
         <span
-          data-testid="observe-badge"
-          title="read-only — start with: pactify serve --seat <id>"
-          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
-          style={{ color: "var(--color-warn)", background: "color-mix(in srgb, var(--color-warn) 12%, transparent)" }}
+          data-testid="user-avatar-tile"
+          title={profileEmail || "local"}
+          className="grid h-[26px] w-[26px] place-items-center rounded-[8px] font-mono text-[11px] font-semibold text-[#0a0e14]"
+          style={{
+            background: "linear-gradient(135deg,#ffd479,#e0a93a)",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,.16)",
+          }}
         >
-          observing
+          {monogram}
         </span>
-      ) : null}
-      <button
-        type="button"
-        data-testid="toolbar-dispatch"
-        aria-label="dispatch"
-        title="Dispatch a task from a goal"
-        onClick={onOpenDispatch}
-        className="grid h-[26px] w-[26px] place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
-      >
-        ◉
-      </button>
-      <button
-        type="button"
-        data-testid="toolbar-settings"
-        aria-label="settings"
-        title="Settings"
-        onClick={onOpenSettings}
-        className="grid h-[26px] w-[26px] place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
-      >
-        ⚙
-      </button>
-      <button
-        type="button"
-        data-testid="toolbar-profile"
-        aria-label={profileEmail ? `signed in as ${profileEmail}` : "profile"}
-        title={profileEmail ? profileEmail : "Profile"}
-        onClick={onOpenSettings}
-        disabled={!profileEmail}
-        className={[
-          "grid h-[26px] place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] transition-colors",
-          profileEmail
-            ? "px-2 text-[var(--color-text-2)] hover:text-[var(--color-text-1)]"
-            : "w-[26px] cursor-not-allowed text-[var(--color-text-3)] opacity-60",
-        ].join(" ")}
-      >
-        {profileEmail ? profileEmail : "👤"}
-      </button>
+      </div>
     </div>
   );
 }
 
-// LiveBadge — two states (light theme): live = green breathing dot,
-// offline = gray.
+function Wordmark() {
+  return (
+    <svg width="26" height="16" viewBox="0 0 30 18" aria-hidden="true">
+      <path
+        d="M1 4 C10 4, 14 9, 29 9"
+        stroke="#ffd479"
+        strokeWidth="2.2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M1 9 L29 9"
+        stroke="#8ab4ff"
+        strokeWidth="2.2"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M1 14 C10 14, 14 9, 29 9"
+        stroke="#6ee7a0"
+        strokeWidth="2.2"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.6H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8" />
+    </svg>
+  );
+}
+
 function LiveBadge({ live }: { live: boolean }) {
-  const map = live
-    ? { c: "var(--color-success)", label: "live", dot: true }
-    : { c: "var(--color-text-3)", label: "offline", dot: false };
+  if (!live) return null;
   return (
     <span
       data-testid="live-badge"
-      data-state={live ? "live" : "offline"}
+      data-state="live"
       className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-medium"
-      style={{ color: map.c, background: `color-mix(in srgb, ${map.c} 12%, transparent)` }}
+      style={{
+        color: "var(--color-success)",
+        background: "color-mix(in srgb, var(--color-success) 12%, transparent)",
+      }}
     >
-      <span className={map.dot ? "topbar-live-dot" : ""} style={{ width: 5, height: 5, borderRadius: 999, background: map.c, display: "inline-block" }} />
-      {map.label}
+      <span className="relative inline-flex h-[5px] w-[5px]">
+        <span className="absolute inset-0 rounded-full bg-[var(--color-success)] shell-ring" />
+        <span
+          className="h-[5px] w-[5px] rounded-full bg-[var(--color-success)]"
+          style={{ boxShadow: "0 0 6px var(--color-success)" }}
+        />
+      </span>
+      live
     </span>
   );
 }
+
+export default Toolbar;

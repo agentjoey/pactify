@@ -30,11 +30,11 @@ beforeEach(() => {
 });
 
 describe("SettingsModal", () => {
-  it("renders a centered settings sheet with header and close button", () => {
+  it("renders a centered settings sheet with rail, search, and close button", () => {
     render(<SettingsModal project="demo" author={true} onClose={() => {}} />);
     expect(screen.getByTestId("settings-modal")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
-    expect(screen.getByText(/scope is shown on every panel/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search settings")).toBeInTheDocument();
   });
 
   it("closes on the sheet close button", () => {
@@ -48,8 +48,9 @@ describe("SettingsModal", () => {
     render(<SettingsModal project="demo" author={true} onClose={() => {}} />);
     expect(screen.getByTestId("settings-nav")).toBeInTheDocument();
     expect(screen.getAllByTestId("settings-nav-group").length).toBe(3);
-    expect(screen.getByText("PROJECT · demo")).toBeInTheDocument();
-    expect(screen.getByText("MACHINE · this computer")).toBeInTheDocument();
+    // Scope labels appear in both the rail group header and the pane header.
+    expect(screen.getAllByText("PROJECT · demo").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("MACHINE · this computer").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("ACCOUNT").length).toBeGreaterThan(0);
   });
 

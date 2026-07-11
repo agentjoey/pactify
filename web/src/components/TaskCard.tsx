@@ -43,6 +43,7 @@ export interface TaskCardProps {
   reviewerRoles?: string[];
   stale?: boolean;
   draft?: boolean;
+  shipped?: boolean;
   selected?: boolean;
   // Unfinished dependency ids surfaced by the caller from the full task map.
   // Only assigned/working cards normally carry this.
@@ -68,6 +69,7 @@ export function TaskCard({
   reviewerRoles = NO_ROLES,
   stale,
   draft,
+  shipped,
   selected,
   blockedOn,
   metrics,
@@ -118,9 +120,14 @@ export function TaskCard({
           {med}
         </span>
         <div className="min-w-0">
-          <div className="mono text-[10.5px] leading-tight text-[var(--color-text-3)] truncate">
-            {task.id}
-          </div>
+          {/* The mono id line only earns its row when a separate human title
+              exists — the protocol task has no title field today, so most
+              cards would otherwise print the id twice. */}
+          {title && title !== task.id && (
+            <div className="mono text-[9.5px] leading-tight text-[var(--color-text-3)] truncate">
+              {task.id}
+            </div>
+          )}
           <div className="text-[12.5px] font-semibold leading-tight text-[var(--color-text-1)] truncate">
             {title ?? task.id}
           </div>
@@ -156,23 +163,33 @@ export function TaskCard({
 
       {reviewActions ? (
         <div className="task-card-bot mt-[9px] ml-[28px]">{reviewActions}</div>
+      ) : draft ? (
+        <div data-testid="draft-hint" className="task-card-bot mt-[9px] ml-[28px] text-[9.5px] italic text-[var(--color-text-3)]">
+          unassigned · drag onto a seat
+        </div>
       ) : (
       <div className="task-card-bot mt-[9px] ml-[28px] flex items-center gap-[4px]">
-        {task.owner && (
-          <span className="task-card-ant">
-            <Ant caste={ownerCaste} size={14} title={task.owner} />
-          </span>
-        )}
-        {task.owner && (
-          <span className="mono max-w-[68px] truncate text-[9px] text-[var(--color-text-2)]">{task.owner}</span>
-        )}
-        {showReviewer && (
+        {shipped ? (
+          <span data-testid="shipped-provenance" className="mono text-[9px] text-[var(--color-text-3)]">→ local main</span>
+        ) : (
           <>
-            <span className="text-[9px] text-[var(--color-text-3)]">→</span>
-            <span className="task-card-ant">
-              <Ant caste={reviewerCaste} size={14} title={task.reviewer} />
-            </span>
-            <span className="mono max-w-[60px] truncate text-[9px] text-[var(--color-text-2)]">{task.reviewer}</span>
+            {task.owner && (
+              <span className="task-card-ant">
+                <Ant caste={ownerCaste} size={14} title={task.owner} />
+              </span>
+            )}
+            {task.owner && (
+              <span className="mono max-w-[68px] truncate text-[9px] text-[var(--color-text-2)]">{task.owner}</span>
+            )}
+            {showReviewer && (
+              <>
+                <span className="text-[9px] text-[var(--color-text-3)]">→</span>
+                <span className="task-card-ant">
+                  <Ant caste={reviewerCaste} size={14} title={task.reviewer} />
+                </span>
+                <span className="mono max-w-[60px] truncate text-[9px] text-[var(--color-text-2)]">{task.reviewer}</span>
+              </>
+            )}
           </>
         )}
         {blockedOn && blockedOn.length > 0 && (
@@ -189,7 +206,7 @@ export function TaskCard({
             {blockedOn.length > 1 ? ` +${blockedOn.length - 1}` : ""}
           </span>
         )}
-        <span className={`life flex gap-[2.5px] ${blockedOn?.length ? "" : "ml-auto"}`}>
+        <span className={`life flex gap-[2.5px] ${blockedOn?.length || shipped ? "" : "ml-auto"}`}>
           {[0, 1, 2, 3].map((i) => {
             // accepted (stage 3) fills every bar; otherwise bars before the
             // current stage are done and the stage bar glows (board3).

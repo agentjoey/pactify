@@ -99,6 +99,40 @@
   --motion-layout: 200ms;
   --motion-ease: cubic-bezier(0.25, 1, 0.5, 1);
 
+  /* Legacy shell tokens (ui2-shell spec §1). Added as aliases so the shared
+     Toolbar + new views can read the handoff names while existing components
+     keep using --color-* names. No rename = no broad refactor. */
+  --bg: var(--color-bg-page);              /* #0a0e14 */
+  --bg-panel: #0c1119;                     /* panels / rails */
+  --bg-elev: var(--color-bg-surface);      /* #10151e */
+  --bg-elev2: var(--color-bg-raised);      /* #171e2a */
+  --bg-input: #0f141d;                     /* input wells */
+  --bg-code: #07090d;                      /* code / terminal wells */
+  --border: #222b3a;                       /* primary borders */
+  --border-2: #171e2a;                     /* subtle dividers */
+
+  /* Text four-level scale (exact hex from handoff). --color-text-1 is
+     equivalent; -2/-3 in the @theme use opacity approximations for existing
+     components, but the handoff names below are authoritative for new UI. */
+  --text: var(--color-text-1);             /* #eaeef5 */
+  --text-2: #c2cad8;
+  --text-3: #7e889b;
+  --text-4: #52617a;
+
+  /* Role / status semantics (handoff names). */
+  --proj: var(--color-role-product);       /* gold */
+  --info: var(--color-role-design);        /* blue */
+  --dev: var(--color-role-dev);            /* emerald */
+  --ops: var(--color-role-ops);            /* orange */
+  --err: var(--color-danger);              /* red */
+  --warn: var(--color-warn);
+  --success: var(--color-success);
+  /* Accent uses emerald per task decision (README allows single-family route). */
+  --accent: var(--color-role-dev);         /* #6ee7a0 */
+  --accent-ink: #04140b;
+  --accent-2: #0f261b;
+  --accent-line: #236b49;
+
   /* Legacy role vars → new dark brand hexes (supersedes index.css :root). */
   --role-product: var(--color-role-product);
   --role-design: var(--color-role-design);
@@ -108,6 +142,4 @@
      var(--warn)) — without these the declarations are invalid and silently
      render nothing. */
   --danger: var(--color-danger);
-  --warn: var(--color-warn);
-  --success: var(--color-success);
 }

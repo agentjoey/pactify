@@ -48,6 +48,7 @@ beforeEach(() => {
     if (url.includes("/timeline")) return { ok: true, json: async () => ({ total: 0, events: [] }) };
     // SettingsModal mounts ops panels that read array-shaped endpoints.
     if (url.includes("/wiring") || url.includes("/seats")) return { ok: true, json: async () => [] };
+    if (url.includes("/cockpit/status")) return { ok: true, json: async () => ({ capable: true, pending: [], threadId: "" }) };
     return { ok: true, json: async () => ({ project: "demo", agents: [{ id: "claude-opus", roles: ["orchestrator"] }], features: [], awaiting_count: 0 }) };
   }));
 });
@@ -57,14 +58,14 @@ describe("App", () => {
     render(<App />);
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
     // The TopBar project chip shows the current project name.
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
   });
 
   it("incoming pact event triggers a state re-fetch", async () => {
     render(<App />);
     // Wait for initial load (project list + initial state fetch)
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
     const callsBefore = fetchMock.mock.calls.filter(([url]) =>
@@ -108,7 +109,7 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     // Fire a pact event to populate events list
     await act(async () => {
@@ -133,7 +134,7 @@ describe("App", () => {
 
   it("shows the fetch-stale indicator after 3 consecutive refresh failures and clears it on success", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
     let failState = true;
@@ -173,7 +174,7 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     // Pick the non-primary worktree from the header project menu. Worktrees are
     // collapsed behind the per-project chevron by default, so expand first.
@@ -197,30 +198,44 @@ describe("App", () => {
     expect(screen.queryByRole("slider", { name: "replay position" })).toBeNull();
   });
 
-  it("opens the Settings modal from the toolbar gear", async () => {
+  it("opens the Settings view from the toolbar gear", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
     fireEvent.click(screen.getByTestId("toolbar-settings"));
-    await waitFor(() => expect(screen.getByTestId("settings-modal")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("settings-view")).toBeInTheDocument());
   });
 
-  it("opens the Dispatch panel from the toolbar", async () => {
+  it("opens the Dispatch panel from the toolbar in Cockpit lens", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("lens-cockpit"));
+    await waitFor(() => expect(screen.getByTestId("lens-cockpit")).toHaveAttribute("aria-pressed", "true"));
     fireEvent.click(screen.getByTestId("toolbar-dispatch"));
     await waitFor(() => expect(screen.getByTestId("dispatch-panel")).toBeInTheDocument());
   });
 
-  describe("single-view shell (views consolidation)", () => {
-    it("renders the Board with no lens control and the collapsed event drawer", async () => {
+  describe("lens routing", () => {
+    it("renders the Board lens by default with the lens control and collapsed event drawer", async () => {
       render(<App />);
       await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
       expect(screen.getByTestId("view-board")).toBeInTheDocument();
-      // The lens segmented control is gone (single-view IA).
-      expect(screen.queryByRole("group", { name: "lens" })).toBeNull();
-      // The event drawer ships collapsed at the bottom of the board.
+      expect(screen.getByRole("group", { name: "lens" })).toBeInTheDocument();
       await waitFor(() => expect(screen.getByTestId("event-drawer")).toBeInTheDocument());
       expect(screen.getByTestId("event-drawer").dataset.state).toBe("collapsed");
+    });
+
+    it("switches to the Dashboard lens and persists it", async () => {
+      render(<App />);
+      await waitFor(() => expect(screen.getByTestId("toolbar")).toBeInTheDocument());
+      fireEvent.click(screen.getByTestId("lens-dashboard"));
+      await waitFor(() => expect(screen.getByTestId("view-dashboard")).toBeInTheDocument());
+      expect(localStorage.getItem("pactify:lens")).toBe("dashboard");
+    });
+
+    it("restores the saved lens from localStorage", async () => {
+      localStorage.setItem("pactify:lens", "dashboard");
+      render(<App />);
+      await waitFor(() => expect(screen.getByTestId("view-dashboard")).toBeInTheDocument());
     });
   });
 
@@ -240,12 +255,12 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("other"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("other"));
   });
 
   it("toggles between Board and Flow views and persists boardMode", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
 
     expect(screen.getByTestId("view-board")).toBeInTheDocument();
     expect(screen.queryByTestId("view-flow")).toBeNull();
@@ -264,7 +279,6 @@ describe("App", () => {
   it("restores boardMode from localStorage", async () => {
     localStorage.setItem("pactify:boardMode", "flow");
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
     await waitFor(() => expect(screen.getByTestId("view-flow")).toBeInTheDocument());
   });
 
@@ -283,7 +297,7 @@ describe("App", () => {
     }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("toolbar")).toHaveTextContent("demo"));
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
     expect(localStorage.getItem("pactify:lastProject")).toBe("demo");
   });
 });

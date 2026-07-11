@@ -20,14 +20,14 @@ describe("statusColorVar", () => {
   it("assigned → neutral text-2 token", () => {
     expect(statusColorVar("assigned")).toBe("var(--color-text-2)");
   });
-  it("in_progress → role-dev (worker color)", () => {
-    expect(statusColorVar("in_progress")).toBe("var(--color-role-dev)");
+  it("in_progress → role-design (working blue)", () => {
+    expect(statusColorVar("in_progress")).toBe("var(--color-role-design)");
   });
   it("accepted → role-dev (worker color)", () => {
     expect(statusColorVar("accepted")).toBe("var(--color-role-dev)");
   });
-  it("awaiting_review → role-design (reviewer color)", () => {
-    expect(statusColorVar("awaiting_review")).toBe("var(--color-role-design)");
+  it("awaiting_review → role-product (review gold)", () => {
+    expect(statusColorVar("awaiting_review")).toBe("var(--color-role-product)");
   });
   it("changes_requested → danger", () => {
     expect(statusColorVar("changes_requested")).toBe("var(--color-danger)");

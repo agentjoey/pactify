@@ -60,6 +60,7 @@ export interface DataSource {
     project: string,
     body?: RunOrchestrateBody,
   ): Promise<{ status_url: string }>;
+  stopOrchestrate?(project: string): Promise<void>;
   shipFeature?(
     project: string,
     body?: ShipBody,
@@ -169,6 +170,10 @@ export class LocalServeSource implements DataSource {
     body?: RunOrchestrateBody,
   ): Promise<{ status_url: string }> {
     return api.resumeOrchestrate(project, body);
+  }
+
+  stopOrchestrate(project: string): Promise<void> {
+    return api.stopOrchestrate(project);
   }
 
   shipFeature(

@@ -373,6 +373,10 @@ export async function resumeOrchestrate(
   return (await r.json()) as { status_url: string };
 }
 
+export async function stopOrchestrate(project: string): Promise<void> {
+  await writeJSON(`/api/projects/${project}/orchestrate/stop`, "POST", {});
+}
+
 export type ShipBody = {
   remote?: string;
   branch?: string;

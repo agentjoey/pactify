@@ -929,3 +929,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/a1-web.md
         evidence: identity.ts client lib (credentials include + x-aw-csrf from /me body); IdentityGate login page (GitHub 302 + magic link + legacy secret entry folded); session-mode: RelayClient.bearer static factory (bearer-only, clear decrypt errors) + RelaySource locked flag with typed RelayLockedError guards (cleartext projects/machines pass); UnlockPanel inline secret unlock reusing connectRelaySource; account create flow with generateMasterSecret + forced export step (checkbox-gated); link-by-proof flow signing challenge locally; AccountPanel (identities/sessions/machines/tier/logout) in Settings; App/Toolbar wiring (locked hides cockpit, email in toolbar). web tsc clean, vitest 558/558, build green, relay-client tsc+7 tests green
+  - id: a1-qa-fixes
+    branch: feat/a1-qa-fixes
+    status: in_progress
+    tasks:
+      - id: a1-qa-fixes
+        owner: claude
+        status: assigned
+        reviewer: kimi-worker
+        spec: .pact/tasks/a1-qa-fixes.md
+        evidence: null

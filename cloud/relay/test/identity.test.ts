@@ -245,7 +245,7 @@ describe('/v1/id/magic', () => {
       cookies: { aw_session: session! },
     })
     expect(me.statusCode).toBe(200)
-    expect(me.json()).toMatchObject({ user: { email: 'magic@example.com' }, identities: [], accounts: [] })
+    expect(me.json()).toMatchObject({ user: { email: "magic@example.com" }, identities: ["email"], accounts: [] })
   })
 
   it('magic link response is always ok=true and never leaks email existence', async () => {

@@ -150,7 +150,7 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
       setAuthor(src.capabilities.canWrite);
       setSeat("");
       // Display the signed-in email in the toolbar.
-      fetchMe().then((m: MeResponse) => setEmail(m.email)).catch(() => setEmail(""));
+      fetchMe().then((m: MeResponse) => setEmail(m.user.email)).catch(() => setEmail(""));
       return;
     }
     // A non-empty acting seat means this local dashboard can author.

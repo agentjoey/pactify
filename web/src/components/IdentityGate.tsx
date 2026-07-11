@@ -132,7 +132,7 @@ export function IdentityGate({ onSource }: IdentityGateProps) {
 
         {view === "onboarding" && me && (
           <OnboardingPanel
-            email={me.email}
+            email={me.user.email}
             onSource={onSource}
             onLogout={logout}
           />

@@ -33,9 +33,11 @@ describe("identity API", () => {
 
   it("fetchMe reads csrf from the response and returns the session", async () => {
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValue(jsonResponse({ email: "a@b.com", csrf: "csrf-123", accounts: [] }));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ user: { id: "u1", email: "a@b.com" }, identities: [], csrf: "csrf-123", accounts: [] }),
+    );
     const me = await fetchMe();
-    expect(me.email).toBe("a@b.com");
+    expect(me.user.email).toBe("a@b.com");
     expect(fetchMock).toHaveBeenCalledWith(
       `${RELAY}/v1/id/me`,
       expect.objectContaining({ credentials: "include" }),
@@ -44,7 +46,7 @@ describe("identity API", () => {
 
   it("mutating requests include the csrf token from the last fetchMe", async () => {
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValueOnce(jsonResponse({ email: "a@b.com", csrf: "csrf-123", accounts: [] }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: { id: "u1", email: "a@b.com" }, identities: [], csrf: "csrf-123", accounts: [] }));
     await fetchMe();
 
     fetchMock.mockResolvedValueOnce(jsonResponse({}));
@@ -92,7 +94,7 @@ describe("identity API", () => {
 
   it("revokeSession sends DELETE with csrf header", async () => {
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValueOnce(jsonResponse({ email: "a@b.com", csrf: "csrf-123", accounts: [] }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: { id: "u1", email: "a@b.com" }, identities: [], csrf: "csrf-123", accounts: [] }));
     await fetchMe();
     fetchMock.mockResolvedValueOnce(jsonResponse({}));
     await revokeSession("sess1");
@@ -102,7 +104,7 @@ describe("identity API", () => {
 
   it("unlinkIdentity sends DELETE with csrf header", async () => {
     const fetchMock = fetch as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValueOnce(jsonResponse({ email: "a@b.com", csrf: "csrf-123", accounts: [] }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: { id: "u1", email: "a@b.com" }, identities: [], csrf: "csrf-123", accounts: [] }));
     await fetchMe();
     fetchMock.mockResolvedValueOnce(jsonResponse({}));
     await unlinkIdentity("id1");

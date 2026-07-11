@@ -42,7 +42,8 @@ describe("AccountPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (identity.fetchMe as ReturnType<typeof vi.fn>).mockResolvedValue({
-      email: "user@example.com",
+      user: { id: "u1", email: "user@example.com" },
+      identities: ["github"],
       csrf: "tok",
       accounts: [{ accountId: "acct1", role: "owner", tier: "personal" }],
     });

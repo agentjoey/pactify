@@ -977,3 +977,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/ui2-dashboard.md
         evidence: New Dashboard view (context bar w/ gold project dot + mono subtitle, 4-card KPI strip, run control card w/ Run/Stop via new stopOrchestrate + progress bar, feature lane cards w/ shared MiniPipeline extracted from CockpitPanel + embedded ReviewGate same-source with Board accept/changes, seats roster from liveStates+stats, activity feed reusing deriveNotifications w/ N-new localStorage watermark); Pause omitted (no backend endpoint, noted). dashboard.ts derivation lib w/ unit tests. Reviewer fixes: strict-build sweep (type import sources, unused props/params cascade, self-referential test type, OStat casts). tsc clean, vitest 605/605, build green, Dashboard shot vs design verified
+      - id: ui2-settings-setup
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/ui2-settings-setup.md
+        evidence: null

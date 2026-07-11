@@ -951,7 +951,7 @@ features:
         evidence: App subscribe branch now primes events via REST fetchEventsLog (shared event_id dedupe + ts-sorted merge); fixes hosted (relay) Flow/EventDrawer starting empty (RelaySource.subscribe is live-only, no replay). Live-verified on staging relay: ocrc 111 events, pactify 385 events, full swimlane render. tsc clean, vitest 559/559, build green
   - id: product-ui-v2
     branch: feat/product-ui-v2
-    status: in_progress
+    status: shipped
     tasks:
       - id: ui2-shell
         owner: kimi-worker

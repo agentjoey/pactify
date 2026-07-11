@@ -935,7 +935,7 @@ features:
     tasks:
       - id: a1-qa-fixes
         owner: claude
-        status: awaiting_review
+        status: accepted
         reviewer: kimi-worker
         spec: .pact/tasks/a1-qa-fixes.md
         evidence: 6 contract/UI fixes from live staging QA (MeResponse nesting, wrapped list unwrap, full session id for revoke, createdAt display, magic link relay-base URL via x-forwarded-proto, email Identity upsert) + hosted Settings capability gating (only ACCOUNT group). Live-verified on staging: magic login, create-account export gate, link-by-proof to board, AccountPanel FREE badge/sessions/revoke. relay 248+11, web 559, build green

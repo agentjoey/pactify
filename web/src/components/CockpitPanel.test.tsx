@@ -4,7 +4,7 @@ import { CockpitPanel } from "./CockpitPanel";
 import { DataSourceProvider } from "../lib/datasource";
 import type { DataSource } from "../lib/datasource";
 import type { CockpitStatus, CockpitEvent } from "../lib/api";
-import type { Seat } from "../lib/types";
+import type { Seat, State } from "../lib/types";
 
 let lastSub: FakeSub | null = null;
 
@@ -27,6 +27,24 @@ const defaultAgents: Seat[] = [
   { id: "claude", roles: ["orchestrator"], kind: "claude-code" },
   { id: "kimi", roles: ["worker"], kind: "kimi-cli" },
 ];
+
+const sampleState: State = {
+  project: "p1",
+  agents: defaultAgents,
+  features: [
+    {
+      id: "feat-rh",
+      branch: "feat-rh",
+      status: "in_progress",
+      tasks: [
+        { id: "t-cfg", owner: "claude", reviewer: "claude", status: "accepted", spec: "", evidence: "" },
+        { id: "t-impl", owner: "claude", reviewer: "claude", status: "awaiting_review", spec: "", evidence: "" },
+        { id: "t-harden", owner: "kimi", reviewer: "claude", status: "in_progress", spec: "", evidence: "" },
+      ],
+    },
+  ],
+  awaiting_count: 1,
+};
 
 function makeSource(overrides: {
   cockpitPrompt?: DataSource["cockpitPrompt"];
@@ -70,9 +88,11 @@ function renderPanel(
   opts: {
     seat?: string;
     agents?: Seat[];
+    state?: State;
     onClose?: () => void;
     onNotify?: (m: string, kind?: "error") => void;
     onSeatChange?: (s: string) => void;
+    onOpenBoard?: (taskId?: string) => void;
   } = {},
 ) {
   return render(
@@ -81,9 +101,12 @@ function renderPanel(
         project="p1"
         seat={opts.seat ?? "claude"}
         agents={opts.agents ?? defaultAgents}
+        state={opts.state ?? sampleState}
         onClose={opts.onClose ?? vi.fn()}
         onNotify={opts.onNotify}
         onSeatChange={opts.onSeatChange}
+        onOpenBoard={opts.onOpenBoard}
+        viewMode
       />
     </DataSourceProvider>,
   );
@@ -109,7 +132,7 @@ describe("CockpitPanel", () => {
     expect(lastSub!.closed).toBe(true);
   });
 
-  it("accumulates message events into an assistant bubble and renders system rows", async () => {
+  it("accumulates message events into an assistant bubble", async () => {
     renderPanel(makeSource());
     expect(lastSub).not.toBeNull();
 
@@ -117,13 +140,24 @@ describe("CockpitPanel", () => {
     lastSub!.emit({ kind: "message", text: " world" });
     await waitFor(() => expect(screen.getByTestId("cockpit-message")).toHaveTextContent("Hello world"));
     expect(screen.getByTestId("cockpit-message").dataset.role).toBe("assistant");
+  });
 
-    lastSub!.emit({ kind: "tool", tool: { name: "read_file", phase: "call", text: "foo.txt" } });
+  it("renders tool-call cards from tool events", async () => {
+    renderPanel(makeSource());
+    expect(lastSub).not.toBeNull();
+
+    lastSub!.emit({ kind: "tool", tool: { name: "grep", phase: "start" } });
+    lastSub!.emit({ kind: "tool", tool: { name: "grep", phase: "end", text: "internal/relay/config.go:41\ninternal/relay/client.go:88" } });
+    await waitFor(() => expect(screen.getByTestId("cockpit-tool-card")).toHaveTextContent("grep"));
+    expect(screen.getByTestId("cockpit-tool-card")).toHaveTextContent("internal/relay/config.go:41");
+  });
+
+  it("renders system rows for errors", async () => {
+    renderPanel(makeSource());
+    expect(lastSub).not.toBeNull();
+
     lastSub!.emit({ kind: "error", err: "something broke" });
-    await waitFor(() => expect(screen.getAllByTestId("cockpit-system-row")).toHaveLength(2));
-    const rows = screen.getAllByTestId("cockpit-system-row");
-    expect(rows[0]).toHaveTextContent("read_file (call): foo.txt");
-    expect(rows[1]).toHaveTextContent("something broke");
+    await waitFor(() => expect(screen.getByTestId("cockpit-system-row")).toHaveTextContent("something broke"));
   });
 
   it("sends a prompt from the input and renders the user bubble", async () => {
@@ -138,7 +172,7 @@ describe("CockpitPanel", () => {
     expect(screen.getByTestId("cockpit-message").dataset.role).toBe("user");
   });
 
-  it("renders pending approvals and calls cockpitRespond with allow", async () => {
+  it("renders pending approvals in stream and calls cockpitRespond with allow", async () => {
     const cockpitRespond = vi.fn().mockResolvedValue(undefined);
     const source = makeSource({
       cockpitStatus: vi.fn().mockResolvedValue({
@@ -151,7 +185,7 @@ describe("CockpitPanel", () => {
     renderPanel(source);
 
     await waitFor(() => expect(screen.getByTestId("cockpit-approval")).toBeInTheDocument());
-    expect(screen.getByTestId("cockpit-approval-tool")).toHaveTextContent("read_file · tool");
+    expect(screen.getByTestId("cockpit-approval")).toHaveTextContent("read_file");
 
     fireEvent.click(screen.getByTestId("cockpit-approval-allow"));
     await waitFor(() => expect(cockpitRespond).toHaveBeenCalledWith("p1", "claude", "a1", "allow"));
@@ -231,10 +265,14 @@ describe("CockpitPanel", () => {
     await waitFor(() => expect(cockpitRespond).toHaveBeenCalledWith("p1", "claude", "a1", "allow"));
   });
 
-  it("calls onClose when the close button is clicked", () => {
+  it("calls onClose on Escape when not in view mode", () => {
     const onClose = vi.fn();
-    renderPanel(makeSource(), { onClose });
-    fireEvent.click(screen.getByTestId("cockpit-close"));
+    render(
+      <DataSourceProvider source={makeSource()}>
+        <CockpitPanel project="p1" seat="claude" agents={defaultAgents} onClose={onClose} />
+      </DataSourceProvider>,
+    );
+    fireEvent.keyDown(window, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -251,7 +289,7 @@ describe("CockpitPanel", () => {
 
     await waitFor(() => expect(screen.getByTestId("cockpit-approval-rawinput")).toBeInTheDocument());
     const block = screen.getByTestId("cockpit-approval-rawinput");
-    const expected = JSON.stringify({ path: longValue }, null, 1).slice(0, 600) + "…";
+    const expected = "$ " + JSON.stringify({ path: longValue }, null, 1).slice(0, 600) + "…";
     expect(block.textContent).toBe(expected);
   });
 
@@ -288,20 +326,18 @@ describe("CockpitPanel", () => {
     expect(screen.getByTestId("cockpit-send")).toBeDisabled();
   });
 
-  it("shows and clears the running-tool indicator", async () => {
+  it("shows streaming indicator while a tool is running", async () => {
     renderPanel(makeSource());
     expect(lastSub).not.toBeNull();
 
     lastSub!.emit({ kind: "tool", tool: { name: "read_file", phase: "start" } });
-    await waitFor(() =>
-      expect(screen.getByTestId("cockpit-running")).toHaveTextContent("⏺ read_file running…"),
-    );
+    await waitFor(() => expect(screen.getByTestId("cockpit-streaming")).toBeInTheDocument());
 
     lastSub!.emit({ kind: "state", state: "turn_completed" });
-    await waitFor(() => expect(screen.queryByTestId("cockpit-running")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId("cockpit-streaming")).not.toBeInTheDocument());
   });
 
-  it("displays the threadId in the header", async () => {
+  it("displays the threadId in the session info card", async () => {
     const source = makeSource({
       cockpitStatus: vi.fn().mockResolvedValue({
         threadId: "thread-abc-123",
@@ -311,8 +347,7 @@ describe("CockpitPanel", () => {
     });
     renderPanel(source);
 
-    await waitFor(() => expect(screen.getByTestId("cockpit-thread-id")).toHaveTextContent("thread-a"));
-    expect(screen.getByTestId("cockpit-thread-id")).toHaveAttribute("title", "thread-abc-123");
+    await waitFor(() => expect(screen.getByTestId("cockpit-session-info")).toHaveTextContent("thread-abc"));
   });
 
   it("auto-scrolls to the bottom when the user is near the bottom", async () => {
@@ -354,24 +389,15 @@ describe("CockpitPanel", () => {
     expect(scrollTop).toBe(10);
   });
 
-  it("renders a seat dropdown and switches seat on change", async () => {
+  it("switches seat from the sessions list", async () => {
     const source = makeSource();
     const onSeatChange = vi.fn();
-    const { rerender } = renderPanel(source, { agents: defaultAgents, onSeatChange });
-    const select = screen.getByTestId("cockpit-seat-select") as HTMLSelectElement;
-    expect(select.value).toBe("claude");
+    renderPanel(source, { agents: defaultAgents, onSeatChange });
 
-    fireEvent.change(select, { target: { value: "kimi" } });
+    await waitFor(() => expect(screen.getByTestId("cockpit-sessions")).toBeInTheDocument());
+    const kimiRow = screen.getByText(/kimi/);
+    fireEvent.click(kimiRow);
     expect(onSeatChange).toHaveBeenCalledWith("kimi");
-
-    rerender(
-      <DataSourceProvider source={source}>
-        <CockpitPanel project="p1" seat="kimi" agents={defaultAgents} onClose={vi.fn()} onSeatChange={onSeatChange} />
-      </DataSourceProvider>,
-    );
-    await waitFor(() =>
-      expect(source.cockpitSubscribe).toHaveBeenCalledWith("p1", "kimi", expect.any(Function)),
-    );
   });
 
   it("notifies on rate-limit errors", async () => {
@@ -385,5 +411,40 @@ describe("CockpitPanel", () => {
 
     await waitFor(() => expect(screen.getByTestId("cockpit-error")).toHaveTextContent("Rate limited"));
     expect(onNotify).toHaveBeenCalledWith("Rate limited (429)", "error");
+  });
+
+  it("renders the approval queue count pill", async () => {
+    const source = makeSource({
+      cockpitStatus: vi.fn().mockResolvedValue({
+        threadId: "t1",
+        capable: true,
+        pending: [
+          { id: "a1", kind: "tool", toolName: "bash", risk: "exec" },
+          { id: "a2", kind: "tool", toolName: "write_file" },
+        ],
+      } as CockpitStatus),
+    });
+    renderPanel(source);
+
+    await waitFor(() => expect(screen.getByTestId("cockpit-approval-queue")).toHaveTextContent("2 pending"));
+    expect(screen.getAllByTestId("cockpit-queue-approval")).toHaveLength(2);
+  });
+
+  it("renders run context mini-pipeline from state", async () => {
+    renderPanel(makeSource());
+    await waitFor(() => expect(screen.getByTestId("cockpit-run-context")).toBeInTheDocument());
+    const ctx = screen.getByTestId("cockpit-run-context");
+    expect(ctx).toHaveTextContent("feat-rh");
+    expect(ctx).toHaveTextContent("t-cfg");
+    expect(ctx).toHaveTextContent("t-impl");
+    expect(ctx).toHaveTextContent("t-harden");
+  });
+
+  it("navigates to board when run context is clicked", async () => {
+    const onOpenBoard = vi.fn();
+    renderPanel(makeSource(), { onOpenBoard });
+    await waitFor(() => expect(screen.getByTestId("cockpit-run-context")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("cockpit-run-context"));
+    expect(onOpenBoard).toHaveBeenCalled();
   });
 });

@@ -99,6 +99,7 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   // can survive re-renders and be changed from inside CockpitPanel.
   const [cockpitSeat, setCockpitSeat] = useState("");
   const openCockpit = (s: string) => { setCockpitSeat(s); setLens("cockpit"); };
+  const openBoard = (taskId?: string) => { setSelected(taskId ?? ""); setLens("board"); };
   // Live count of cockpit pending approvals surfaced on the Cockpit lens badge.
   const [cockpitPending, setCockpitPending] = useState(0);
   // Live pulse (M3.3b C4): task ids whose status changed on the latest applied
@@ -477,6 +478,17 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
         onLensChange={setLens}
         cockpitPending={cockpitPending}
         profileEmail={email}
+        projects={projects}
+        currentProjectId={current}
+        running={!!runningByProject[currentName]}
+        runningByProject={runningByProject}
+        worktreesByProject={worktreesByProject}
+        currentWorktree={currentWorktree}
+        onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }}
+        onRenameProject={onRenameProject}
+        onDeleteProject={onDeleteProject}
+        onAddProject={() => setWizardOpen(true)}
+        onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }}
       />
       <div className="relative flex flex-1 overflow-hidden">
         {projectsLoaded && projects.length === 0
@@ -552,8 +564,10 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
             project={current}
             seat={cockpitSeatTarget}
             agents={shownState.agents}
+            state={shownState}
             onSeatChange={setCockpitSeat}
             onNotify={pushToast}
+            onOpenBoard={openBoard}
             viewMode
           />
         );

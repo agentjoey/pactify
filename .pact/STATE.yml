@@ -967,7 +967,7 @@ features:
         evidence: Board context header per design (ProjectMenu moved in from toolbar, bell + N-new pill + scrolling notification chips via deriveNotifications, seated avatar cluster w/ idle dimming, Group:status, New task); column headers w/ animated dots + count pills + gold N-due on review; TaskCard genome (medallion, MetricStrip w/ italic est via taskMetrics, owner row, lifecycle bar, draft dashed + hint, shipped -> local main provenance); lifecycle colors in_progress=blue awaiting_review=gold. Reviewer fix: dedupe id-vs-title line when no separate title. tsc clean, vitest 572/572, build green, Board shot vs design verified
       - id: ui2-cockpit
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/ui2-cockpit.md
         evidence: CockpitPanel rebuilt as full-page session view: main stream column (turn dividers, user/agent bubbles w/ RichText code+task link-chips, tool-call cards w/ exit pill + collapse, diff/plan cards event-gated, inline approval cards w/ danger glow + two-step confirm) + 340px right rail (approval queue red pill, session info w/ model/usage/thread copy, run-context mini-pipeline -> Board, sessions list w/ gold current + attach-worker placeholder); sticky input row (disabled attach, Interrupt danger, gold Send, queue hint); ProjectMenu inline in toolbar on cockpit lens. Approval three-rules preserved (rawInput verbatim, advisory title, exec two-step). Reviewer fixes: streaming union narrowing + dead prefersReducedMotion cleanup (strict build). tsc clean, vitest 577/577, build green, cockpit shot vs design verified

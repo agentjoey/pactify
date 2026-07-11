@@ -965,3 +965,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/ui2-board.md
         evidence: Board context header per design (ProjectMenu moved in from toolbar, bell + N-new pill + scrolling notification chips via deriveNotifications, seated avatar cluster w/ idle dimming, Group:status, New task); column headers w/ animated dots + count pills + gold N-due on review; TaskCard genome (medallion, MetricStrip w/ italic est via taskMetrics, owner row, lifecycle bar, draft dashed + hint, shipped -> local main provenance); lifecycle colors in_progress=blue awaiting_review=gold. Reviewer fix: dedupe id-vs-title line when no separate title. tsc clean, vitest 572/572, build green, Board shot vs design verified
+      - id: ui2-cockpit
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/ui2-cockpit.md
+        evidence: null

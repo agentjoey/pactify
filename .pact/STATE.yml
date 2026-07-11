@@ -907,3 +907,25 @@ features:
         reviewer: claude
         spec: .pact/tasks/hc-web.md
         evidence: relay-client onEphemeral acct-room listener; DataSource cockpitSubscribe (Local=EventSource moved in, Relay=subscribe rpc + 4min renew + seq buffer); RelaySource cockpit methods + capabilities.cockpit=true + status snapshot cache; CockpitPanel via cockpitSubscribe + seat dropdown (E4 worker attach) + 429 inline; Discuss-in-Cockpit entries on Board review cards / RunRail gate-review-changes chips / TaskDetail. Reviewer fixes: rpc project must be SHORT name not composite relay id (rpcProject map, also fixes latent pact.*/orchestrate rpc mismatch), runId matches short name, seq adopt-first (server 1-based) + mirror-restart cursor reset, CockpitEvent import (strict build). tsc clean, vitest 538/538, build green, relay-client 7/7, local panel visual OK
+  - id: acct-a1
+    branch: feat/acct-a1
+    status: in_progress
+    tasks:
+      - id: a1-schema-auth
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/a1-schema-auth.md
+        evidence: Prisma 11_identity_plane (User/Identity/WebSession/AccountMember/Subscription/MagicLink + Account.tier/keyEpoch, all additive); identity module: HMAC-indexed opaque sessions (30d sliding, httpOnly), GitHub OAuth (state+PKCE S256 single-use, fetch-injected fake IdP, unverified-email reject), magic link (single-consume, RESEND-or-log, existence-nonleak, 3/h limiter), /me, logout; server wiring env-driven. Reviewer architectural fix: cross-site cookie reality (Vercel vs fly.dev) - SameSite=None + CORS credentials + x-aw-csrf header allowance; CSRF double-submit replaced with session-derived synchronizer token delivered in /me body; server-side Origin allowlist guard on ALL /v1/id routes (writeGuard-style, makes credentialed CORS reflection safe); tests rewritten to real contract + origin-guard suite. relay tsc clean, 236+11 tests green
+      - id: a1-link-bearer
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/a1-link-bearer.md
+        evidence: link-by-proof (session-bound single-use 5min challenge via LinkChallenge table, timing-safe compare, consume-before-verify, verifyChallenge reuse, /v1/auth-parity rate limit); POST /v1/id/accounts (free tier, 409 on taken publicKey); POST /v1/id/token minting bearer via shared issueToken (test proves it passes /v1/runs); sessions list/revoke + identities list/unbind (last one 409). Reviewer fix: LinkChallenge table was missing from 11_identity_plane migration (init.sql only) — appended, name-level parity check across all 7 identity tables. relay tsc clean, 248+11 green
+      - id: a1-web
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/a1-web.md
+        evidence: identity.ts client lib (credentials include + x-aw-csrf from /me body); IdentityGate login page (GitHub 302 + magic link + legacy secret entry folded); session-mode: RelayClient.bearer static factory (bearer-only, clear decrypt errors) + RelaySource locked flag with typed RelayLockedError guards (cleartext projects/machines pass); UnlockPanel inline secret unlock reusing connectRelaySource; account create flow with generateMasterSecret + forced export step (checkbox-gated); link-by-proof flow signing challenge locally; AccountPanel (identities/sessions/machines/tier/logout) in Settings; App/Toolbar wiring (locked hides cockpit, email in toolbar). web tsc clean, vitest 558/558, build green, relay-client tsc+7 tests green

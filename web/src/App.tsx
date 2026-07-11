@@ -4,8 +4,10 @@ import { fetchEventsLog, getActingSeat, renameRegistry, deleteRegistry, getOrche
 import type { Worktree } from "./lib/api";
 import { DataSourceProvider, useDataSource, type DataSource } from "./lib/datasource";
 import { isHostedMode, localSource } from "./lib/source";
-import { RelayConnect } from "./components/RelayConnect";
+import { IdentityGate } from "./components/IdentityGate";
+import { UnlockPanel } from "./components/UnlockPanel";
 import { Toolbar } from "./components/shell/Toolbar";
+import { fetchMe, type MeResponse } from "./lib/identity";
 import { SettingsModal } from "./components/shell/SettingsModal";
 import { AddProjectWizard } from "./components/shell/AddProjectWizard";
 import { DispatchPanel } from "./components/shell/DispatchPanel";
@@ -40,8 +42,10 @@ export function pickInitialProject(ps: ProjectMeta[], stored?: string | null): s
   return alive?.id ?? (ps.length ? ps[0].id : "");
 }
 
-function AppContent() {
+function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void; onLogout: () => void }) {
   const src = useDataSource();
+  const locked = Boolean(src.locked);
+  const [email, setEmail] = useState("");
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
   // A failed first state fetch must NOT read as "still loading" — it suppresses
@@ -145,6 +149,8 @@ function AppContent() {
     if (isHostedMode()) {
       setAuthor(src.capabilities.canWrite);
       setSeat("");
+      // Display the signed-in email in the toolbar.
+      fetchMe().then((m: MeResponse) => setEmail(m.email)).catch(() => setEmail(""));
       return;
     }
     // A non-empty acting seat means this local dashboard can author.
@@ -278,6 +284,15 @@ function AppContent() {
 
   useEffect(() => {
     if (!current) return;
+    if (locked) {
+      // A locked (bearer-only) source cannot decrypt state or events. Keep the
+      // project selector live but skip all decryption-dependent fetches.
+      setState(EMPTY);
+      setEvents([]);
+      setLoadFailed(false);
+      setLive(false);
+      return;
+    }
     let alive = true;
     currentRef.current = current;
     setEvents([]);
@@ -404,8 +419,9 @@ function AppContent() {
         onAddProject={() => setWizardOpen(true)}
         onOpenSettings={() => openSettings(null)}
         onOpenDispatch={() => setDispatchOpen(true)}
-        showCockpit={Boolean(current) && src.capabilities.cockpit}
+        showCockpit={Boolean(current) && src.capabilities.cockpit && !locked}
         onToggleCockpit={() => cockpitOpen ? setCockpitOpen(false) : openCockpit(orchestratorSeat)}
+        profileEmail={email}
         worktreesByProject={worktreesByProject}
         currentWorktree={currentWorktree}
         onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }}
@@ -418,12 +434,14 @@ function AppContent() {
           <Agents author={author} onChanged={refreshProjects} />
           {projectsLoaded && projects.length === 0
             ? <NoProjects onRegistered={refreshProjects} />
-            : (
-              <>
-                {/* Run rail: the orchestrate banner (renders nothing when the
-                    driver is idle) — RunControl strip + driver-touched feature
-                    lanes + the five-action ReviewGate on a paused gate. */}
-                <RunRail project={current} state={shownState} refreshTick={refreshTick} author={author} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} onOpenCockpit={openCockpit} />
+            : locked
+              ? <UnlockPanel onUnlock={onSource} />
+              : (
+                <>
+                  {/* Run rail: the orchestrate banner (renders nothing when the
+                      driver is idle) — RunControl strip + driver-touched feature
+                      lanes + the five-action ReviewGate on a paused gate. */}
+                  <RunRail project={current} state={shownState} refreshTick={refreshTick} author={author} events={events} onNotify={(msg, kind) => pushToast(msg, kind)} onOpenCockpit={openCockpit} />
                 {/* Board | Flow view switcher + main view. */}
                 <div className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-[18px] py-[9px]">
                   <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] p-0.5">
@@ -480,7 +498,7 @@ function AppContent() {
           Live updates interrupted — retrying…
         </div>
       )}
-      {settingsOpen && <SettingsModal project={current} author={author} focusSeat={settingsSeat} onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsModal project={current} author={author} focusSeat={settingsSeat} onClose={() => setSettingsOpen(false)} onLogout={onLogout} />}
       <AddProjectWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onAdded={() => { setWizardOpen(false); refreshProjects(); }} />
       <DispatchPanel
         project={current}
@@ -513,17 +531,17 @@ function AppContent() {
 
 export default function App() {
   // Local build → the co-located serve source is ready immediately. Hosted build
-  // → start with no source and gate on RelayConnect until the user supplies the
-  // master secret; then render the same dashboard against the RelaySource.
+  // → start with no source and gate on IdentityGate until an SSO session is
+  // established (or the user opts into the legacy master-secret paste flow).
   const [source, setSource] = useState<DataSource | null>(() =>
     isHostedMode() ? null : localSource(),
   );
   if (!source) {
-    return <RelayConnect onConnected={setSource} />;
+    return <IdentityGate onSource={setSource} />;
   }
   return (
     <DataSourceProvider source={source}>
-      <AppContent />
+      <AppContent onSource={setSource} onLogout={() => setSource(null)} />
     </DataSourceProvider>
   );
 }

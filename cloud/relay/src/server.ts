@@ -11,6 +11,8 @@ import {
   RunSummary,
 } from '@pactify-apps/wire'
 import { authenticate, verifyToken } from './auth.js'
+import { registerIdentityRoutes } from './identity/index.js'
+import type { IdentityPlaneConfig } from './identity/types.js'
 import { getRun, deleteRun, deleteMachine, renameRun } from './repo.js'
 import {
   subscribePush,
@@ -85,6 +87,16 @@ export interface ServerOptions {
    * push path via {@link createWebPushSender}.
    */
   pushSender?: WebPushSender
+  /**
+   * Identity-plane (SSO / magic link) configuration. OAuth endpoints 503 when
+   * the relevant IdP secrets are absent; magic links fall back to logging.
+   */
+  identity?: IdentityPlaneConfig
+  /**
+   * Fetch implementation for the identity module (mainly OAuth IdP calls).
+   * Defaults to `globalThis.fetch`; injectable so tests can stub the IdP.
+   */
+  fetch?: typeof fetch
 }
 
 // Pact event types that mean a human is needed on the board — the U2 push trigger.
@@ -156,13 +168,32 @@ export function createServer(opts: ServerOptions): FastifyInstance {
   const authLimiter = TokenBucketLimiter.fromPerMinute(limits.authPerMin, now)
   const readsLimiter = TokenBucketLimiter.fromPerMinute(limits.readsPerMin, now)
 
+  // Identity plane: SSO sessions live on `/v1/id/*`. The registration is async
+  // because it mounts a cookie plugin; the returned app is usable immediately
+  // because Fastify's inject waits for the ready lifecycle.
+  const identityConfig = opts.identity ?? { webUrl: 'https://pactify-linx-linx-web.vercel.app' }
+  void registerIdentityRoutes(app, {
+    db,
+    secret,
+    fetch: opts.fetch ?? globalThis.fetch,
+    now,
+    log,
+    config: identityConfig,
+    tokenTtlMs: ttl,
+    authPerMin: limits.authPerMin,
+  })
+
   // The web (any vercel.app preview/prod origin) calls this API cross-origin.
-  // Auth is by bearer token (no cookies), so reflecting the request origin is
-  // safe; this also serves the OPTIONS preflight.
+  // The bearer API is auth'd by header (no cookies), so reflecting the request
+  // origin is safe. `credentials` is on for the /v1/id session-cookie routes —
+  // safe under reflection ONLY because the identity module enforces its own
+  // server-side Origin allowlist (identity/csrf.ts originAllowed): a foreign
+  // origin's credentialed request is rejected there with 403.
   void app.register(cors, {
     origin: true,
+    credentials: true,
     methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-aw-csrf'],
   })
 
   // The bounded, low-cardinality route label for a request: prefer Fastify's

@@ -2,6 +2,7 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import type { PrismaClient } from '@prisma/client'
 import { createPostgresDb } from './db.js'
+import type { IdentityPlaneConfig } from './identity/types.js'
 import { createServer } from './server.js'
 import { attachSockets } from './sockets.js'
 import { createBroadcaster } from './broadcast.js'
@@ -29,6 +30,8 @@ export interface ServerEnv {
    * and {@link startServer} falls back to the 7-day default.
    */
   machineTtlMs?: number
+  /** Identity-plane configuration derived from the environment. */
+  identity: IdentityPlaneConfig
 }
 
 const DEFAULT_PORT = 4310
@@ -62,9 +65,16 @@ export function parseServerEnv(env: NodeJS.ProcessEnv): ServerEnv | { error: str
     machineTtlMs = n
   }
   const redisUrl = env.REDIS_URL
+  const identity: IdentityPlaneConfig = {
+    webUrl: env.ID_WEB_URL ?? 'https://pactify-linx-linx-web.vercel.app',
+    githubClientId: env.ID_GITHUB_CLIENT_ID,
+    githubClientSecret: env.ID_GITHUB_CLIENT_SECRET,
+    resendApiKey: env.RESEND_API_KEY,
+    resendFrom: env.ID_RESEND_FROM,
+  }
   return redisUrl
-    ? { databaseUrl, secret, port, redisUrl, runTtlMs, machineTtlMs }
-    : { databaseUrl, secret, port, runTtlMs, machineTtlMs }
+    ? { databaseUrl, secret, port, redisUrl, runTtlMs, machineTtlMs, identity }
+    : { databaseUrl, secret, port, runTtlMs, machineTtlMs, identity }
 }
 
 /**
@@ -100,6 +110,7 @@ export async function startServer(
     runTtlMs,
     machineTtlMs,
     broadcaster,
+    identity: cfg.identity,
     ...(pushSender ? { pushSender } : {}),
     ...(vapid ? { vapidPublicKey: vapid.publicKey } : {}),
   })

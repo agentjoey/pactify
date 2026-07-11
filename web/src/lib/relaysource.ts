@@ -22,8 +22,25 @@ import type { Machine, PactEvent, PactEventDetail, ProjectMeta, State } from "./
  * run/resume is driven remotely too (M4) via orchestrate.* rpc, so
  * canOrchestrate=true; effects arrive back through the event stream.
  */
+/** Thrown by a locked RelaySource when a caller tries to decrypt content. */
+export class RelayLockedError extends Error {
+  constructor() {
+    super("locked: master secret required to decrypt");
+    this.name = "RelayLockedError";
+  }
+}
+
+function lockedGuard(): never {
+  throw new RelayLockedError();
+}
+
 export class RelaySource implements DataSource {
   private client: RelayClient;
+
+  /** True when this source has no master secret in memory; cleartext metadata
+   * (projects, machines) still works, but any path that decrypts event bodies is
+   * guarded and throws {@link RelayLockedError}. */
+  locked: boolean;
 
   capabilities: DataSourceCapabilities = {
     canWrite: true,
@@ -32,8 +49,9 @@ export class RelaySource implements DataSource {
     cockpit: true,
   };
 
-  constructor(client: RelayClient) {
+  constructor(client: RelayClient, opts?: { locked?: boolean }) {
     this.client = client;
+    this.locked = opts?.locked ?? false;
   }
 
   async listProjects(): Promise<ProjectMeta[]> {
@@ -62,6 +80,7 @@ export class RelaySource implements DataSource {
   }
 
   async getState(id: string, _wt?: string): Promise<State> {
+    if (this.locked) lockedGuard();
     const events = await this.client.getProjectEvents(id);
     const decrypted = events.map(
       (e) => this.client.decryptRaw(id, e.bodyEnc) as PactProjectEvent,
@@ -79,6 +98,7 @@ export class RelaySource implements DataSource {
    * arrive in seq order; slice to the last `n` to match the local endpoint's cap.
    */
   async fetchEventsLog(id: string, _wt?: string, n?: number): Promise<PactEvent[]> {
+    if (this.locked) lockedGuard();
     const events = await this.client.getProjectEvents(id);
     const decrypted = events.map(
       (e) => this.client.decryptRaw(id, e.bodyEnc) as PactEvent,
@@ -87,6 +107,7 @@ export class RelaySource implements DataSource {
   }
 
   async getEvents(id: string): Promise<PactEventDetail[]> {
+    if (this.locked) lockedGuard();
     const events = await this.client.getProjectEvents(id);
     return events.map((e) => ({
       seq: e.seq,
@@ -327,6 +348,7 @@ export class RelaySource implements DataSource {
     seat: string,
     onEvent: (e: CockpitEvent) => void,
   ): () => void {
+    if (this.locked) lockedGuard();
     const key = `${project}:${seat}`;
     // The machine builds runId from the rpc's SHORT project name, not the
     // composite relay id — match on the same.
@@ -410,6 +432,7 @@ export class RelaySource implements DataSource {
   }
 
   async getStats(id: string): Promise<ProjectStats> {
+    if (this.locked) lockedGuard();
     const state = await this.getState(id);
     const tasks: TaskStat[] = [];
     for (const f of state.features) {
@@ -447,6 +470,11 @@ export class RelaySource implements DataSource {
     _onError?: () => void,
     onLive?: (live: boolean) => void,
   ): () => void {
+    if (this.locked) {
+      // No live decryption possible without the master secret. Return a no-op
+      // unsubscribe so the dashboard can mount cleanly in locked session mode.
+      return () => {};
+    }
     return this.client.subscribe(
       id,
       async (e) => {

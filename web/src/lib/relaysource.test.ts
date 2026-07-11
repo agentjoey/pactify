@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { RelaySource } from "./relaysource";
+import { RelaySource, RelayLockedError } from "./relaysource";
 import type {
   RelayClient,
   Project,
@@ -804,6 +804,33 @@ describe("RelaySource", () => {
         project: "p1",
         seat: "claude",
       });
+    });
+  });
+
+  describe("locked session mode", () => {
+    it("exposes the locked flag and keeps metadata methods working", async () => {
+      const listProjects = vi.fn().mockResolvedValue([{ id: "p1", name: "Demo", seq: 0, lastEventAt: 0 }]);
+      const listMachines = vi.fn().mockResolvedValue([]);
+      const src = new RelaySource(makeClient({ listProjects, listMachines }) as RelayClient, { locked: true });
+      expect(src.locked).toBe(true);
+      expect(await src.listProjects()).toHaveLength(1);
+      expect(await src.getMachines()).toEqual([]);
+    });
+
+    it("throws RelayLockedError from decrypting paths", async () => {
+      const src = new RelaySource(makeClient() as RelayClient, { locked: true });
+      await expect(src.getState("p1")).rejects.toThrow(RelayLockedError);
+      await expect(src.fetchEventsLog("p1")).rejects.toThrow(RelayLockedError);
+      await expect(src.getEvents("p1")).rejects.toThrow(RelayLockedError);
+      await expect(src.getStats("p1")).rejects.toThrow(RelayLockedError);
+      expect(() => src.cockpitSubscribe("p1", "claude", vi.fn())).toThrow(RelayLockedError);
+    });
+
+    it("returns a no-op unsubscribe so the dashboard mounts cleanly", () => {
+      const src = new RelaySource(makeClient() as RelayClient, { locked: true });
+      const off = src.subscribe("p1", vi.fn());
+      expect(typeof off).toBe("function");
+      expect(() => off()).not.toThrow();
     });
   });
 });

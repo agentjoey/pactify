@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.3",
+    "@fastify/cookie": "^11.0.0",
     "@fastify/cors": "^11.2.0",
     "@noble/curves": "^2.2.0",
     "@noble/hashes": "^2.2.0",
@@ -50,6 +51,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@pactify-apps/crypto": "workspace:*",
     "@types/pg": "^8.20.0",
     "@types/web-push": "^3.6.4",
     "prisma": "^7.8.0",

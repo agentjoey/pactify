@@ -33,6 +33,7 @@ export function Toolbar({
   worktreesByProject,
   currentWorktree,
   onSelectWorktree,
+  profileEmail,
 }: {
   projectName: string;
   live: boolean;
@@ -53,6 +54,7 @@ export function Toolbar({
   worktreesByProject?: Record<string, Worktree[]>;
   currentWorktree?: string;
   onSelectWorktree?: (project: string, branch: string) => void;
+  profileEmail?: string;
 }) {
   const seatRoles = useMemo(
     () => (seat ? agents?.find((a) => a.id === seat)?.roles ?? [] : []),
@@ -155,12 +157,18 @@ export function Toolbar({
       <button
         type="button"
         data-testid="toolbar-profile"
-        aria-label="profile"
-        aria-disabled="true"
-        title="Profile (coming soon)"
-        className="grid h-[26px] w-[26px] cursor-not-allowed place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] text-[var(--color-text-3)] opacity-60"
+        aria-label={profileEmail ? `signed in as ${profileEmail}` : "profile"}
+        title={profileEmail ? profileEmail : "Profile"}
+        onClick={onOpenSettings}
+        disabled={!profileEmail}
+        className={[
+          "grid h-[26px] place-items-center rounded-md border border-[var(--color-border-subtle)] text-[13px] transition-colors",
+          profileEmail
+            ? "px-2 text-[var(--color-text-2)] hover:text-[var(--color-text-1)]"
+            : "w-[26px] cursor-not-allowed text-[var(--color-text-3)] opacity-60",
+        ].join(" ")}
       >
-        👤
+        {profileEmail ? profileEmail : "👤"}
       </button>
     </div>
   );

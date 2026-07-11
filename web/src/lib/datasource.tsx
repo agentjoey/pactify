@@ -26,6 +26,8 @@ export interface DataSourceCapabilities {
 
 export interface DataSource {
   capabilities: DataSourceCapabilities;
+  /** Hosted-mode sources may be locked (bearer-only, no master secret). */
+  locked?: boolean;
   listProjects(): Promise<ProjectMeta[]>;
   getState(id: string, wt?: string): Promise<State>;
   getStats(id: string): Promise<ProjectStats>;

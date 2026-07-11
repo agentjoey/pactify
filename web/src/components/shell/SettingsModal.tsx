@@ -5,6 +5,7 @@ import { AgentConfig } from "../ops/AgentConfig";
 import { Wiring } from "../ops/Wiring";
 import { Seats } from "../ops/Seats";
 import { Machines } from "../Machines";
+import { AccountPanel } from "../AccountPanel";
 
 type Scope = "project" | "machine" | "account";
 
@@ -31,11 +32,13 @@ export function SettingsModal({
   author,
   focusSeat,
   onClose,
+  onLogout,
 }: {
   project: string;
   author: boolean;
   focusSeat?: string | null;
   onClose: () => void;
+  onLogout?: () => void;
 }) {
   const [activeId, setActiveId] = useState("agent-configs");
   const titleId = useId();
@@ -121,6 +124,7 @@ export function SettingsModal({
       scope: "account",
       label: "ACCOUNT",
       items: [
+        { id: "account", label: "Account", icon: "◉" },
         { id: "machines", label: "Machines", icon: "◈" },
         { id: "appearance", label: "Appearance", icon: "◐" },
         { id: "shortcuts", label: "Shortcuts", icon: "⌘" },
@@ -165,6 +169,8 @@ export function SettingsModal({
         return <AgentConfig />;
       case "machines":
         return <Machines />;
+      case "account":
+        return <AccountPanel onLogout={() => { onClose(); onLogout?.(); }} />;
       case "review-gate":
       case "worktrees":
       case "sessions":

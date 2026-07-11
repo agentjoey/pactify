@@ -9,6 +9,7 @@ export function ProjectMenu({
   runningByProject,
   worktreesByProject,
   currentWorktree,
+  dot,
   onSelect,
   onRename,
   onDelete,
@@ -18,6 +19,7 @@ export function ProjectMenu({
   projects: ProjectMeta[];
   current: string;
   running: boolean;
+  dot?: ReactNode;
   runningByProject?: Record<string, boolean>;
   worktreesByProject?: Record<string, Worktree[]>;
   currentWorktree?: string;
@@ -63,14 +65,16 @@ export function ProjectMenu({
         onClick={() => setOpen((o) => !o)}
         className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-white/5 px-2.5 py-1 text-[13px]"
       >
-        <span
-          data-testid="project-status-light"
-          data-running={running ? "true" : "false"}
-          className={[
-            "h-[7px] w-[7px] rounded-full",
-            running ? "animate-pulse bg-[var(--color-success)] shadow-[0_0_6px_var(--color-success)]" : "bg-[var(--color-text-3)]",
-          ].join(" ")}
-        />
+        {dot ?? (
+          <span
+            data-testid="project-status-light"
+            data-running={running ? "true" : "false"}
+            className={[
+              "h-[7px] w-[7px] rounded-full",
+              running ? "animate-pulse bg-[var(--color-success)] shadow-[0_0_6px_var(--color-success)]" : "bg-[var(--color-text-3)]",
+            ].join(" ")}
+          />
+        )}
         {projects.find((p) => p.id === current)?.name ?? current} ▾
       </button>
       {open && (

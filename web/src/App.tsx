@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ProjectMeta, State, PactEvent, RecipeItem } from "./lib/types";
+import type { ProjectMeta, State, PactEvent, RecipeItem, OrchestrateStatusResponse } from "./lib/types";
 import { fetchEventsLog, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
 import type { Worktree } from "./lib/api";
 import { DataSourceProvider, useDataSource, type DataSource } from "./lib/datasource";
@@ -19,6 +19,7 @@ import { EventDrawer } from "./components/board/EventDrawer";
 import { RightRail } from "./components/RightRail";
 import { TaskDetail } from "./components/TaskDetail";
 import { CockpitPanel } from "./components/CockpitPanel";
+import { Dashboard } from "./components/Dashboard";
 import { CommandK } from "./components/CommandK";
 import { NoProjects } from "./components/NoProjects";
 import { Recipes } from "./components/Recipes";
@@ -77,6 +78,9 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   // running status per project name → drives the status light on the ProjectMenu
   // trigger AND every row in the dropdown (spec §4.1: each project shows a light).
   const [runningByProject, setRunningByProject] = useState<Record<string, boolean>>({});
+  // Full orchestrate status snapshot per project name → feeds the Dashboard run
+  // control card (progress, iter, elapsed). Derived from the same 4s poll.
+  const [orchestrateStatusByProject, setOrchestrateStatusByProject] = useState<Record<string, OrchestrateStatusResponse>>({});
   const [author, setAuthor] = useState(false);
   // The acting seat id (empty when observing) — TopBar resolves its roles from
   // state.agents to pick the ant caste for the seat avatar.
@@ -191,22 +195,36 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
     return () => { alive = false; };
   }, [projectNamesForWt]);
 
-  // ProjectMenu status light: poll orchestrate status for the current project so
-  // the header dot pulses while a run is active (present, not done/escalated).
+  // ProjectMenu status light + Dashboard run card: poll orchestrate status for
+  // every project so the header dot pulses and the Dashboard sees progress/iter.
   const projectNames = projects.map((p) => p.name).join(",");
   useEffect(() => {
     const names = projectNames ? projectNames.split(",") : [];
-    if (names.length === 0) { setRunningByProject({}); return; }
+    if (names.length === 0) {
+      setRunningByProject({});
+      setOrchestrateStatusByProject({});
+      return;
+    }
     let alive = true;
     const tick = async () => {
       const entries = await Promise.all(
         names.map((name) =>
           getOrchestrateStatus(name)
-            .then((s) => [name, Boolean(s.present && s.status && !s.status.done && !s.status.escalated)] as const)
-            .catch(() => [name, false] as const),
+            .then((s): [string, OrchestrateStatusResponse] => [name, s])
+            .catch((): [string, OrchestrateStatusResponse] => [name, { present: false }]),
         ),
       );
-      if (alive) setRunningByProject(Object.fromEntries(entries));
+      if (!alive) return;
+      const statusMap = Object.fromEntries(entries);
+      setOrchestrateStatusByProject(statusMap);
+      setRunningByProject(
+        Object.fromEntries(
+          entries.map(([name, s]) => [
+            name,
+            Boolean(s.present && s.status && !s.status.done && !s.status.escalated),
+          ]),
+        ),
+      );
     };
     tick();
     const t = setInterval(tick, 4000);
@@ -539,7 +557,28 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   function renderLens() {
     switch (lens) {
       case "dashboard":
-        return <DashboardPlaceholder />;
+        return (
+          <Dashboard
+            project={current}
+            projects={projects}
+            state={shownState}
+            events={events}
+            author={author}
+            running={!!runningByProject[currentName]}
+            orchestrateStatus={orchestrateStatusByProject[currentName]}
+            runningByProject={runningByProject}
+            worktreesByProject={worktreesByProject}
+            currentWorktree={currentWorktree}
+            onSelectProject={(name) => { setCurrent(name); setCurrentWorktree(""); }}
+            onRenameProject={onRenameProject}
+            onDeleteProject={onDeleteProject}
+            onAddProject={() => setWizardOpen(true)}
+            onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }}
+            onOpenBoard={openBoard}
+            onOpenCockpit={openCockpit}
+            onChanged={() => setRefreshTick((t) => t + 1)}
+          />
+        );
       case "settings":
         return (
           <SettingsModal
@@ -611,15 +650,6 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
         );
     }
   }
-}
-
-function DashboardPlaceholder() {
-  return (
-    <div data-testid="view-dashboard" className="flex flex-1 flex-col items-center justify-center gap-3 text-[var(--color-text-2)]">
-      <div className="text-sm">Dashboard</div>
-      <div className="text-xs text-[var(--color-text-3)]">Coming in the next slice.</div>
-    </div>
-  );
 }
 
 export default function App() {

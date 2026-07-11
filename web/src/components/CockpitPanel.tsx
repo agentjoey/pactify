@@ -4,6 +4,7 @@ import type { Seat, State, Feature } from "../lib/types";
 import { useDataSource } from "../lib/datasource";
 import { COCKPIT_STATUS_POLL_MS } from "../lib/constants";
 import { MetricStrip } from "./ui/MetricStrip";
+import { MiniPipeline } from "./ui/MiniPipeline";
 
 type PendingApproval = {
   id: string;
@@ -105,36 +106,6 @@ function currentFeature(state: State): Feature | null {
   if (active) return active;
   const nonShipped = state.features.find((f) => f.status !== "shipped");
   return nonShipped ?? state.features[0];
-}
-
-function taskStageGlyph(status: string): { glyph: string; color: string; bg: string } {
-  switch (status) {
-    case "accepted":
-      return {
-        glyph: "✓",
-        color: "var(--color-success)",
-        bg: "color-mix(in srgb, var(--color-success) 12%, transparent)",
-      };
-    case "awaiting_review":
-    case "changes_requested":
-      return {
-        glyph: "◉",
-        color: "var(--color-warn)",
-        bg: "color-mix(in srgb, var(--color-warn) 12%, transparent)",
-      };
-    case "in_progress":
-      return {
-        glyph: "⚡",
-        color: "var(--color-role-design)",
-        bg: "color-mix(in srgb, var(--color-role-design) 12%, transparent)",
-      };
-    default:
-      return {
-        glyph: "·",
-        color: "var(--color-text-3)",
-        bg: "transparent",
-      };
-  }
 }
 
 function extractExit(text?: string): number | undefined {
@@ -1383,26 +1354,7 @@ function RunContextCard({
         <span className="font-mono text-[9.5px] text-[var(--color-text-3)]">{feature.branch}</span>
         <span className="ml-auto text-[9px] text-[var(--color-text-3)]">open Board →</span>
       </div>
-      <div className="flex items-center">
-        {feature.tasks.map((t, i) => {
-          const g = taskStageGlyph(t.status);
-          const isLast = i === feature.tasks.length - 1;
-          return (
-            <div key={t.id} className="flex items-center">
-              <span
-                className="inline-flex items-center gap-1 rounded-md border px-1.5 py-1 font-mono text-[9px]"
-                style={{ color: g.color, background: g.bg, borderColor: "color-mix(in srgb, currentColor 30%, transparent)" }}
-              >
-                {g.glyph} {t.id}
-              </span>
-              {!isLast && <span className="h-0.5 w-2.5 bg-[rgba(255,255,255,0.12)]" />}
-            </div>
-          );
-        })}
-        <span className="inline-flex items-center gap-1 rounded-md border border-dashed border-[rgba(255,255,255,0.16)] px-1.5 py-1 font-mono text-[9px] text-[var(--color-text-3)]">
-          ▸ merge
-        </span>
-      </div>
+      <MiniPipeline tasks={feature.tasks} merge />
     </button>
   );
 }

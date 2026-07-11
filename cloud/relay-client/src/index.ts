@@ -53,17 +53,30 @@ export interface EphemeralMessage {
  */
 export class RelayClient {
   private url: string
-  private master: Uint8Array
+  private master?: Uint8Array
   private token = ''
   private socket: Socket | null = null
 
-  constructor(url: string, master: Uint8Array) {
+  constructor(url: string, master?: Uint8Array) {
     this.url = url.replace(/\/+$/, '')
     this.master = master
   }
 
+  /**
+   * Build a bearer-only client from an existing relay bearer token. This is used
+   * by the hosted web dashboard after an SSO session has exchanged its WebSession
+   * cookie for a relay bearer: the dashboard can read cleartext account metadata
+   * (projects, machines) but cannot decrypt event bodies without the master secret.
+   */
+  static bearer(url: string, token: string): RelayClient {
+    const c = new RelayClient(url)
+    c.token = token
+    return c
+  }
+
   /** Challenge-sign with the account key and exchange for a bearer token. */
   async login(): Promise<void> {
+    if (!this.master) throw new Error('bearer-only client cannot login')
     const kp = deriveAccountKeypair(this.master)
     const challenge = crypto.randomUUID()
     const res = await fetch(`${this.url}/v1/auth`, {
@@ -92,6 +105,7 @@ export class RelayClient {
   private async getJSON<T>(path: string): Promise<T> {
     const res = await fetch(`${this.url}${path}`, { headers: this.auth() })
     if (res.status === 401) {
+      if (!this.master) throw new Error(`${path}: 401`)
       await this.login()
       const retry = await fetch(`${this.url}${path}`, { headers: this.auth() })
       if (!retry.ok) throw new Error(`${path}: ${retry.status}`)
@@ -126,6 +140,7 @@ export class RelayClient {
   /** Decrypt a stored/broadcast event body into its original pact event JSON.
    * The project key is derived locally; the relay never held it. */
   decrypt(projectId: string, bodyEnc: string): unknown {
+    if (!this.master) throw new Error('bearer-only client cannot decrypt')
     const key = deriveProjectKey(this.master, projectId)
     const blob = JSON.parse(bodyEnc) as EncryptedBlob
     return decryptEvent(key, blob)
@@ -136,6 +151,7 @@ export class RelayClient {
    * reject with `invalid_union_discriminator`. The caller validates the shape.
    * Accepts either the JSON string or the already-parsed EncryptedBlob object. */
   decryptRaw(projectId: string, bodyEnc: string | unknown): unknown {
+    if (!this.master) throw new Error('bearer-only client cannot decrypt')
     const key = deriveProjectKey(this.master, projectId)
     const blob = (
       typeof bodyEnc === 'string' ? JSON.parse(bodyEnc) : JSON.parse(JSON.stringify(bodyEnc))

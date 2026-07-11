@@ -31,3 +31,31 @@ if (!(globalThis as { __rfRectPatched?: boolean }).__rfRectPatched) {
     } as DOMRect;
   };
 }
+
+// WebCrypto random source used by @pactify-apps/crypto to generate master secrets.
+if (typeof globalThis.crypto === "undefined" || !globalThis.crypto.getRandomValues) {
+  Object.defineProperty(globalThis, "crypto", {
+    value: {
+      getRandomValues: <T extends ArrayBufferView>(buf: T): T => {
+        const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+        for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 37) % 256;
+        return buf;
+      },
+      randomUUID: () => "00000000-0000-0000-0000-000000000000",
+    },
+    writable: true,
+    configurable: true,
+  });
+}
+
+// navigator.clipboard is absent in jsdom; stub it for copy buttons.
+if (typeof globalThis.navigator === "undefined") {
+  Object.defineProperty(globalThis, "navigator", { value: {}, writable: true, configurable: true });
+}
+if (!(globalThis.navigator as { clipboard?: unknown }).clipboard) {
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    value: { writeText: async () => {} },
+    writable: true,
+    configurable: true,
+  });
+}

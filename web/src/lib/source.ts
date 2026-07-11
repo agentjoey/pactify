@@ -57,6 +57,11 @@ export function hexToBytes(hex: string): Uint8Array {
   return out;
 }
 
+/** Encode bytes back to a lowercase hex string. */
+export function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 /**
  * Build a hosted RelaySource from a hex master secret and authenticate it.
  * The master is derived into the account key locally and never leaves the
@@ -77,4 +82,23 @@ export async function connectRelaySource(masterHex: string): Promise<RelaySource
   const client = new RelayClient(RELAY_URL, master);
   await client.login();
   return new RelaySource(client);
+}
+
+/**
+ * Build a hosted RelaySource from an active SSO session. The relay bearer token is
+ * fetched with the WebSession cookie; decryption is unavailable until the user
+ * supplies the master secret (the source is created in locked mode).
+ */
+export async function connectSessionSource(accountId: string): Promise<RelaySource> {
+  if (!isHostedMode()) {
+    throw new Error("no relay configured (VITE_PACTIFY_RELAY_URL unset)");
+  }
+  const [{ RelaySource }, { RelayClient }, { fetchToken }] = await Promise.all([
+    import("./relaysource"),
+    import("@pactify-apps/relay-client"),
+    import("./identity"),
+  ]);
+  const { token } = await fetchToken(accountId);
+  const client = RelayClient.bearer(RELAY_URL, token);
+  return new RelaySource(client, { locked: true });
 }

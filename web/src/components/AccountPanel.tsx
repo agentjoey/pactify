@@ -82,7 +82,7 @@ export function AccountPanel({ onLogout }: { onLogout: () => void }) {
         <h3 className="mb-2 text-sm font-medium text-[var(--color-text-1)]">Signed in as</h3>
         <div className="flex items-center gap-2">
           <span className="text-sm text-[var(--color-text-1)]" data-testid="account-email">
-            {me?.email ?? "—"}
+            {me?.user.email ?? "—"}
           </span>
           <Badge color={tier === "personal" ? "role-design" : "role-dev"} data-testid="account-tier">
             {tier}
@@ -133,7 +133,7 @@ export function AccountPanel({ onLogout }: { onLogout: () => void }) {
                 <div className="min-w-0">
                   <div className="truncate text-xs text-[var(--color-text-1)]">{s.ua ?? "Web session"}</div>
                   <div className="text-[10px] text-[var(--color-text-3)]">
-                    expires {new Date(s.expiresAt).toLocaleDateString()}
+                    since {new Date(s.createdAt).toLocaleDateString()}
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => handleRevoke(s.id)}>

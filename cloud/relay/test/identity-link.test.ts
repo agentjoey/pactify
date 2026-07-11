@@ -321,8 +321,8 @@ describe('/v1/id/sessions', () => {
     expect(res.statusCode).toBe(200)
     const list = (res.json() as { sessions: Array<{ id: string; ua: string | null; current: boolean }> }).sessions
     expect(list).toHaveLength(2)
-    expect(list.find((s) => s.id === sessionId.slice(0, 8))).toMatchObject({ current: true, ua: 'test-ua' })
-    expect(list.find((s) => s.id === otherSession.id.slice(0, 8))).toMatchObject({ current: false, ua: 'other-ua' })
+    expect(list.find((s) => s.id === sessionId)).toMatchObject({ current: true, ua: 'test-ua' })
+    expect(list.find((s) => s.id === otherSession.id)).toMatchObject({ current: false, ua: 'other-ua' })
 
     // Revoke the other session.
     const del = await app.inject({

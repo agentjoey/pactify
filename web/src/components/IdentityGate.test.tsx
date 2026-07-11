@@ -99,7 +99,7 @@ describe("IdentityGate", () => {
   });
 
   it("boots a locked session source when the user already has an SSO account", async () => {
-    const me: MeResponse = { email: "user@example.com", csrf: "tok", accounts: [{ accountId: "acct1", role: "owner", tier: "personal" }] };
+    const me: MeResponse = { user: { id: "u1", email: "user@example.com" }, identities: ["email"], csrf: "tok", accounts: [{ accountId: "acct1", role: "owner", tier: "personal" }] };
     (identity.fetchMe as ReturnType<typeof vi.fn>).mockResolvedValue(me);
     (source.connectSessionSource as ReturnType<typeof vi.fn>).mockResolvedValue(fakeSource(true));
     const onSource = vi.fn();
@@ -110,7 +110,7 @@ describe("IdentityGate", () => {
   });
 
   it("shows the onboarding panel when signed in but not bound to an account", async () => {
-    const me: MeResponse = { email: "user@example.com", csrf: "tok", accounts: [] };
+    const me: MeResponse = { user: { id: "u1", email: "user@example.com" }, identities: ["email"], csrf: "tok", accounts: [] };
     (identity.fetchMe as ReturnType<typeof vi.fn>).mockResolvedValue(me);
     render(<IdentityGate onSource={vi.fn()} />);
 
@@ -119,7 +119,7 @@ describe("IdentityGate", () => {
   });
 
   it("creates a new account, shows the export step, then unlocks", async () => {
-    const me: MeResponse = { email: "user@example.com", csrf: "tok", accounts: [] };
+    const me: MeResponse = { user: { id: "u1", email: "user@example.com" }, identities: ["email"], csrf: "tok", accounts: [] };
     (identity.fetchMe as ReturnType<typeof vi.fn>).mockResolvedValue(me);
     (identity.createAccount as ReturnType<typeof vi.fn>).mockResolvedValue({ accountId: "acct1" });
     (source.connectRelaySource as ReturnType<typeof vi.fn>).mockResolvedValue(fakeSource(false));
@@ -139,7 +139,7 @@ describe("IdentityGate", () => {
   });
 
   it("links an existing account by signing the challenge", async () => {
-    const me: MeResponse = { email: "user@example.com", csrf: "tok", accounts: [] };
+    const me: MeResponse = { user: { id: "u1", email: "user@example.com" }, identities: ["email"], csrf: "tok", accounts: [] };
     (identity.fetchMe as ReturnType<typeof vi.fn>).mockResolvedValue(me);
     (identity.fetchLinkChallenge as ReturnType<typeof vi.fn>).mockResolvedValue({ challenge: "chal123" });
     (identity.linkAccount as ReturnType<typeof vi.fn>).mockResolvedValue({});

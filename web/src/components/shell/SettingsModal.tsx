@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useDataSource } from "../../lib/datasource";
 import { AgentRoster } from "../ops/AgentRoster";
 import { CustomAgentForm } from "../ops/CustomAgentForm";
 import { AgentConfig } from "../ops/AgentConfig";
@@ -40,7 +41,12 @@ export function SettingsModal({
   onClose: () => void;
   onLogout?: () => void;
 }) {
-  const [activeId, setActiveId] = useState("agent-configs");
+  // Hosted (relay) mode has no local serve behind /api: the PROJECT and
+  // MACHINE panels would render dead fetches, so they are hidden and the
+  // modal opens on the ACCOUNT section instead.
+  const src = useDataSource();
+  const hosted = src.capabilities.multiMachine;
+  const [activeId, setActiveId] = useState(hosted ? "account" : "agent-configs");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -101,25 +107,31 @@ export function SettingsModal({
   }, []);
 
   const navGroups: NavGroup[] = [
-    {
-      scope: "project",
-      label: `PROJECT · ${project}`,
-      items: [
-        { id: "seats", label: "Seats & roles", icon: "▣" },
-        { id: "wiring", label: "Agent wiring", icon: "⌁" },
-        { id: "review-gate", label: "Review gate", icon: "⊘" },
-        { id: "worktrees", label: "Worktrees", icon: "⑂" },
-      ],
-    },
-    {
-      scope: "machine",
-      label: "MACHINE · this computer",
-      items: [
-        { id: "registered-agents", label: "Registered agents", icon: "◇" },
-        { id: "agent-configs", label: "Agent configs", icon: "◆" },
-        { id: "sessions", label: "Sessions", icon: "↺" },
-      ],
-    },
+    // PROJECT/MACHINE panels drive the LOCAL serve's /api; hosted mode has no
+    // such backend, so only the ACCOUNT group is offered there.
+    ...(hosted
+      ? []
+      : ([
+          {
+            scope: "project",
+            label: `PROJECT · ${project}`,
+            items: [
+              { id: "seats", label: "Seats & roles", icon: "▣" },
+              { id: "wiring", label: "Agent wiring", icon: "⌁" },
+              { id: "review-gate", label: "Review gate", icon: "⊘" },
+              { id: "worktrees", label: "Worktrees", icon: "⑂" },
+            ],
+          },
+          {
+            scope: "machine",
+            label: "MACHINE · this computer",
+            items: [
+              { id: "registered-agents", label: "Registered agents", icon: "◇" },
+              { id: "agent-configs", label: "Agent configs", icon: "◆" },
+              { id: "sessions", label: "Sessions", icon: "↺" },
+            ],
+          },
+        ] as NavGroup[])),
     {
       scope: "account",
       label: "ACCOUNT",

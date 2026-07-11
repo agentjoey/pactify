@@ -28,6 +28,7 @@ function normalizeEmail(raw: unknown): string | null {
 export async function requestMagicLink(
   deps: IdentityDeps,
   body: { email?: unknown },
+  baseUrl: string,
   ua?: string,
 ): Promise<{ ok: true } | { error: string; retryAfterSec?: number }> {
   const email = normalizeEmail(body.email)
@@ -38,7 +39,9 @@ export async function requestMagicLink(
   const expiresAt = new Date(deps.now() + MAGIC_TTL_MS)
   await deps.db.magicLink.create({ data: { id, email, expiresAt } })
 
-  const link = `${deps.config.webUrl}/id/magic/verify?token=${token}`
+  // The verify endpoint lives on the RELAY (the session cookie must be set on
+  // this domain) — never on the web app, which has no such route.
+  const link = `${baseUrl}/v1/id/magic/verify?token=${token}`
   if (deps.config.resendApiKey) {
     await sendResendEmail(deps, email, link).catch((err) => {
       deps.log.warn('failed to send magic link', { error: (err as Error).message })
@@ -92,6 +95,12 @@ export async function verifyMagicLink(
   if (!user) {
     user = await deps.db.user.create({ data: { email: magic.email } })
   }
+  // Record the login method as an identity (provider 'email'); idempotent.
+  await deps.db.identity.upsert({
+    where: { provider_subject: { provider: 'email', subject: magic.email } },
+    update: {},
+    create: { userId: user.id, provider: 'email', subject: magic.email },
+  })
   const { token } = await createWebSession(deps.db, deps.secret, user.id, deps.now(), ua)
   setSessionCookie(reply, token)
   return reply.redirect(deps.config.webUrl)

@@ -9,7 +9,9 @@ export interface MeAccount {
 }
 
 export interface MeResponse {
-  email: string;
+  /** Matches the relay's /v1/id/me shape: the email is nested under `user`. */
+  user: { id: string; email: string };
+  identities: string[];
   csrf: string;
   accounts: MeAccount[];
 }
@@ -26,8 +28,8 @@ export interface TokenResponse {
 export interface WebSession {
   id: string;
   createdAt: string;
-  expiresAt: string;
-  ua?: string;
+  current?: boolean;
+  ua?: string | null;
 }
 
 export interface Identity {
@@ -119,8 +121,10 @@ export function fetchToken(accountId: string): Promise<TokenResponse> {
 }
 
 /** List active web sessions for the signed-in user. */
-export function fetchSessions(): Promise<WebSession[]> {
-  return idJSON("/v1/id/sessions");
+export async function fetchSessions(): Promise<WebSession[]> {
+  // The relay wraps the list: { sessions: [...] }.
+  const body = await idJSON<{ sessions: WebSession[] }>("/v1/id/sessions");
+  return body.sessions ?? [];
 }
 
 /** Revoke a web session by id. */
@@ -129,8 +133,10 @@ export function revokeSession(id: string): Promise<unknown> {
 }
 
 /** List SSO identities bound to the signed-in user. */
-export function fetchIdentities(): Promise<Identity[]> {
-  return idJSON("/v1/id/identities");
+export async function fetchIdentities(): Promise<Identity[]> {
+  // The relay wraps the list: { identities: [...] }.
+  const body = await idJSON<{ identities: Identity[] }>("/v1/id/identities");
+  return body.identities ?? [];
 }
 
 /** Unlink an SSO identity by id. */

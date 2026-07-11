@@ -90,7 +90,10 @@ export async function registerIdentityRoutes(app: FastifyInstance, deps: Identit
           .header('Retry-After', String(limited.retryAfterSec))
           .send({ error: 'rate limited' })
       }
-      const result = await requestMagicLink(deps, body, req.headers['user-agent'])
+      // Behind the fly proxy the original scheme rides x-forwarded-proto.
+      const proto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0] ?? req.protocol
+      const baseUrl = `${proto}://${req.headers.host}`
+      const result = await requestMagicLink(deps, body, baseUrl, req.headers['user-agent'])
       if ('error' in result) {
         return reply.code(400).send({ error: result.error })
       }
@@ -244,7 +247,10 @@ export async function registerIdentityRoutes(app: FastifyInstance, deps: Identit
       })
       return {
         sessions: sessions.map((s) => ({
-          id: s.id.slice(0, 8),
+          // Full stored id: it is the HMAC of the cookie token (possession of
+          // the id grants nothing), and DELETE /sessions/:id needs it verbatim
+          // — a truncated id would make list→revoke impossible.
+          id: s.id,
           ua: s.ua ?? null,
           createdAt: s.createdAt.toISOString(),
           current: s.id === ses.session.id,

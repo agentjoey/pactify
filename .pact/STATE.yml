@@ -945,7 +945,7 @@ features:
     tasks:
       - id: hosted-events-backfill
         owner: claude
-        status: assigned
+        status: awaiting_review
         reviewer: kimi-worker
         spec: .pact/tasks/hosted-events-backfill.md
-        evidence: null
+        evidence: App subscribe branch now primes events via REST fetchEventsLog (shared event_id dedupe + ts-sorted merge); fixes hosted (relay) Flow/EventDrawer starting empty (RelaySource.subscribe is live-only, no replay). Live-verified on staging relay: ocrc 111 events, pactify 385 events, full swimlane render. tsc clean, vitest 559/559, build green

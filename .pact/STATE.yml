@@ -973,7 +973,7 @@ features:
         evidence: CockpitPanel rebuilt as full-page session view: main stream column (turn dividers, user/agent bubbles w/ RichText code+task link-chips, tool-call cards w/ exit pill + collapse, diff/plan cards event-gated, inline approval cards w/ danger glow + two-step confirm) + 340px right rail (approval queue red pill, session info w/ model/usage/thread copy, run-context mini-pipeline -> Board, sessions list w/ gold current + attach-worker placeholder); sticky input row (disabled attach, Interrupt danger, gold Send, queue hint); ProjectMenu inline in toolbar on cockpit lens. Approval three-rules preserved (rawInput verbatim, advisory title, exec two-step). Reviewer fixes: streaming union narrowing + dead prefersReducedMotion cleanup (strict build). tsc clean, vitest 577/577, build green, cockpit shot vs design verified
       - id: ui2-dashboard
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/ui2-dashboard.md
         evidence: New Dashboard view (context bar w/ gold project dot + mono subtitle, 4-card KPI strip, run control card w/ Run/Stop via new stopOrchestrate + progress bar, feature lane cards w/ shared MiniPipeline extracted from CockpitPanel + embedded ReviewGate same-source with Board accept/changes, seats roster from liveStates+stats, activity feed reusing deriveNotifications w/ N-new localStorage watermark); Pause omitted (no backend endpoint, noted). dashboard.ts derivation lib w/ unit tests. Reviewer fixes: strict-build sweep (type import sources, unused props/params cascade, self-referential test type, OStat casts). tsc clean, vitest 605/605, build green, Dashboard shot vs design verified

@@ -961,7 +961,7 @@ features:
         evidence: tokens aliased to handoff palette (no renames, emerald pinned #6ee7a0); breath/ring/eq/blink keyframes + reduced-motion off; Toolbar rebuilt: 3-stroke wordmark SVG, Dashboard|Board|Cockpit lens (keys 1/2/3, cockpit pending badge breath dot + mono count), live pill w/ ring pulse, gear->settings view, monogram avatar tile (email initials hosted / cl local); App lens routing (localStorage, dashboard placeholder, cockpit panel full-page via viewMode, settings modal de-shelled full-page w/ hosted gating intact, Escape returns to prior lens). Reviewer fixes: strict-build unused props/fn cleanup + optional-method narrowing bind. tsc clean, vitest 567/567, build green, toolbar/cockpit/settings/dashboard lens states shot-verified
       - id: ui2-board
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/ui2-board.md
-        evidence: null
+        evidence: Board context header per design (ProjectMenu moved in from toolbar, bell + N-new pill + scrolling notification chips via deriveNotifications, seated avatar cluster w/ idle dimming, Group:status, New task); column headers w/ animated dots + count pills + gold N-due on review; TaskCard genome (medallion, MetricStrip w/ italic est via taskMetrics, owner row, lifecycle bar, draft dashed + hint, shipped -> local main provenance); lifecycle colors in_progress=blue awaiting_review=gold. Reviewer fix: dedupe id-vs-title line when no separate title. tsc clean, vitest 572/572, build green, Board shot vs design verified

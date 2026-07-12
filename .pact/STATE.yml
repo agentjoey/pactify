@@ -1005,7 +1005,7 @@ features:
     tasks:
       - id: replay-blocking
         owner: claude
-        status: awaiting_review
+        status: accepted
         reviewer: kimi-worker
         spec: .pact/tasks/egress-serve.md
         evidence: replayProject switches to enqueueBlocking: the evicting enqueue silently dropped most lines on multi-project boot replays (256-cap shared queue vs ~200ms/post consumer), leaving the fresh-DB mirror at 263/~2000 events and misaligning the upload watermark (degrading later restarts to full replays). Blocking send is lock-guarded against send-on-closed (stopMu invariant preserved), waits off-lock in 10ms slices, aborts on stopCh. Live/watch path keeps the non-blocking evicting enqueue. go ./... green, -race green, vet clean

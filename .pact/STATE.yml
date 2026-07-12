@@ -999,3 +999,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/egress-serve.md
         evidence: Persistent per-project upload watermark (.pact/relay-uploaded.json, atomic tmp+rename 0o600, throttled flush 32-lines/2s + stop flush, advance only on 2xx under wmMu); replayProject resumes from watermark with truncation/mid-line fallback to full idempotent replay. Reviewer fixes: (1) CRITICAL seq-continuity — enqueue counter must be seeded with prefix line count (relay upserts by projectId+seq; blind Seek would re-use low seqs and overwrite other events' rows) — prefix now scanned locally (zero network) + regression test asserting resumed seq; (2) gitx.EnsureExcluded wiring so user repos never commit the watermark (serve had no runtime-exclude call); (3) pre-existing TestPlanGenerateSuccess flake root-fixed (pollPlanGen treated initial idle as terminal, 2/10 red on clean tree -> terminal states only, 10/10 green). go ./... green, -race green, vet clean
+  - id: replay-blocking
+    branch: feat/replay-blocking
+    status: in_progress
+    tasks:
+      - id: replay-blocking
+        owner: claude
+        status: assigned
+        reviewer: kimi-worker
+        spec: .pact/tasks/egress-serve.md
+        evidence: null

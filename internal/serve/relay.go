@@ -197,10 +197,55 @@ func (r *relay) replayProject(project, logPath string, upTo int64) {
 			break // a trailing partial line past the watcher offset: leave it to drainNew
 		}
 		if t := strings.TrimRight(line, "\n"); t != "" {
-			r.enqueue(project, t, int64(len(line)))
+			r.enqueueBlocking(project, t, int64(len(line)))
 		}
 		if err != nil {
 			break
+		}
+	}
+}
+
+// enqueueBlocking assigns the project's next line-index seq and WAITS for queue
+// room instead of evicting. Replay uses this: a multi-project boot replay can
+// outpace the HTTP consumer by orders of magnitude, and the evicting enqueue
+// would silently drop most of the ledger (and misalign the upload watermark,
+// degrading every later restart to a full replay). Blocking is safe here —
+// replay runs on its own boot goroutine, never on the watch/live path. nil-safe.
+func (r *relay) enqueueBlocking(project, line string, lineBytes int64) {
+	if r == nil {
+		return
+	}
+	r.stopMu.Lock()
+	if r.stopped {
+		r.stopMu.Unlock()
+		return
+	}
+	r.mu.Lock()
+	seq := r.seqs[project]
+	r.seqs[project] = seq + 1
+	r.mu.Unlock()
+	r.stopMu.Unlock()
+
+	msg := pactMsg{project: project, seq: seq, line: line, lineBytes: lineBytes}
+	for {
+		// Send only under stopMu — stop() flips `stopped` and closes the queue
+		// under the same lock, so this can never send on a closed channel.
+		r.stopMu.Lock()
+		if r.stopped {
+			r.stopMu.Unlock()
+			return
+		}
+		select {
+		case r.queue <- msg:
+			r.stopMu.Unlock()
+			return
+		default:
+			r.stopMu.Unlock()
+		}
+		select {
+		case <-r.stopCh:
+			return
+		case <-time.After(10 * time.Millisecond):
 		}
 	}
 }

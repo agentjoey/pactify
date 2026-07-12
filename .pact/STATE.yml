@@ -989,7 +989,7 @@ features:
     tasks:
       - id: egress-client
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/egress-client.md
         evidence: RelaySource per-project in-memory decrypted event cache (never localStorage): first pull full, then afterSeq cursor increments (relay-client getProjectEvents gained opts.afterSeq, absent=full preserved); live socket frames append locally + local project() refold — ZERO refetch per event (was the dominant egress amplifier at relaysource:491); getState/fetchEventsLog/getEvents share the cache; event_id dedupe both directions; locked = zero network. Poll hygiene: useVisiblePoll hook (hidden pauses, visible immediate tick) applied to 60s/4s/5s loops; hosted skips local-only orchestrate-status polling (Vercel 404 noise). Reviewer: strict-build fixes (unknown-cast, visibilityState defineProperty) + order hardening (stable sort by relay seq, live -1 at tail — reconnect gap-fill can't scramble the fold). web tsc+613/613+build green, relay-client tsc+7 green

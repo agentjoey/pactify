@@ -86,9 +86,14 @@ describe('RelayClient', () => {
     expect((pInit as RequestInit).headers).toMatchObject({ authorization: 'Bearer tok123' })
 
     fetchMock.mockResolvedValueOnce(jsonResponse([{ projectId: 'p1', seq: 1, eventType: 'assign', ts: 1, bodyEnc: 'x' }]))
-    const events = await c.getProjectEvents('p1', 0)
+    const events = await c.getProjectEvents('p1', { afterSeq: 0 })
     expect(events[0]!.eventType).toBe('assign')
     expect(fetchMock.mock.calls[2][0]).toBe(`${URL}/v1/pact/projects/p1/events?after_seq=0`)
+
+    // Omitting the cursor returns the full stream (no ?after_seq=0 default).
+    fetchMock.mockResolvedValueOnce(jsonResponse([]))
+    await c.getProjectEvents('p1')
+    expect(fetchMock.mock.calls[3][0]).toBe(`${URL}/v1/pact/projects/p1/events`)
   })
 
   it('getJSON re-logs in and retries once on 401', async () => {

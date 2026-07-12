@@ -361,7 +361,8 @@ describe("RelaySource", () => {
     expect(state.features[0].tasks[0].owner).toBe("alice");
     expect(state.features[0].tasks[0].reviewer).toBe("bob");
     expect(state.awaiting_count).toBe(0);
-    expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
+    // First fetch has no cursor (absent cursor = full stream per relay semantics).
+    expect(client.getProjectEvents).toHaveBeenCalledWith("p1", undefined);
     expect(client.decryptRaw).toHaveBeenCalledWith("p1", "enc-init");
     expect(client.decryptRaw).toHaveBeenCalledWith("p1", "enc-assign");
   });
@@ -461,7 +462,7 @@ describe("RelaySource", () => {
         body: bodies["enc-accept"],
       },
     ]);
-    expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
+    expect(client.getProjectEvents).toHaveBeenCalledWith("p1", undefined);
     expect(client.decryptRaw).toHaveBeenCalledWith("p1", "enc-assign");
   });
 
@@ -484,39 +485,29 @@ describe("RelaySource", () => {
 
     const all = await src.fetchEventsLog("p1");
     expect(all).toEqual([bodies["enc-a"], bodies["enc-b"], bodies["enc-c"]]);
-    expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
+    expect(client.getProjectEvents).toHaveBeenCalledWith("p1", undefined);
 
     // n slices to the last n events (matches the local /events/log cap semantics).
     const tail = await src.fetchEventsLog("p1", undefined, 2);
     expect(tail).toEqual([bodies["enc-b"], bodies["enc-c"]]);
   });
 
-  it("subscribe fetches and projects state on new events, then unsubscribes", async () => {
-    const events: PactEvent[] = [
-      {
-        projectId: "p1",
-        seq: 1,
-        eventType: "init",
-        ts: 1,
-        bodyEnc: "enc-init",
-      },
-    ];
-    const decrypted: PactProjectEvent[] = [
-      {
-        event_id: "e1",
-        ts: "1",
-        agent_id: "",
-        role: "",
-        event_type: "init",
-        task_id: "",
-        feature: "",
-        payload: { project: "p1", seats: [] },
-      },
-    ];
+  it("subscribe appends live events to the cache and re-projects locally without pulling", async () => {
+    const decrypted: PactProjectEvent = {
+      event_id: "e1",
+      ts: "1",
+      agent_id: "",
+      role: "",
+      event_type: "init",
+      task_id: "",
+      feature: "",
+      payload: { project: "p1", seats: [] },
+    };
     let handler: ((e: PactEventBroadcast) => void) | undefined;
+    const getProjectEvents = vi.fn().mockResolvedValue([]);
     const client = makeClient({
-      getProjectEvents: vi.fn().mockResolvedValue(events),
-      decryptRaw: vi.fn().mockReturnValue(decrypted[0]),
+      getProjectEvents,
+      decryptRaw: vi.fn().mockReturnValue(decrypted),
       subscribe: vi
         .fn()
         .mockImplementation(
@@ -549,7 +540,8 @@ describe("RelaySource", () => {
     });
 
     await new Promise((r) => setTimeout(r, 0));
-    expect(client.getProjectEvents).toHaveBeenCalledWith("p1");
+    // Live events must not trigger a full (or incremental) relay pull.
+    expect(getProjectEvents).not.toHaveBeenCalled();
     expect(onState).toHaveBeenCalledWith(
       expect.objectContaining<Partial<State>>({
         project: "p1",
@@ -598,6 +590,141 @@ describe("RelaySource", () => {
       agents: [
         { seat: "alice", tasks: 0, duration_sec: 0, added: 0, deleted: 0, tokens: 0, accepted: 0, reworked: 0 },
       ],
+    });
+  });
+
+  describe("event cache", () => {
+    function row(seq: number, eventType: string, bodyEnc: string, extra?: Partial<PactEvent>): PactEvent {
+      return {
+        projectId: "p1",
+        seq,
+        eventType,
+        ts: seq,
+        bodyEnc,
+        ...extra,
+      };
+    }
+
+    function body(event_id: string, event_type: string, payload: Record<string, unknown> = {}): PactProjectEvent {
+      return {
+        event_id,
+        ts: event_id,
+        agent_id: "alice",
+        role: "worker",
+        event_type,
+        task_id: "",
+        feature: "",
+        payload,
+      };
+    }
+
+    it("first pull fetches the full stream; later pulls use afterSeq=lastSeq", async () => {
+      const getProjectEvents = vi
+        .fn()
+        .mockResolvedValueOnce([row(0, "init", "e0")])
+        .mockResolvedValueOnce([row(1, "assign", "e1")]);
+      const bodies: Record<string, PactProjectEvent> = {
+        e0: body("i0", "init", { project: "p1", seats: [] }),
+        e1: body("a1", "assign", { owner: "alice", reviewer: "bob", spec: "s.md" }),
+      };
+      const client = makeClient({
+        getProjectEvents,
+        decryptRaw: vi.fn((_id: string, bodyEnc: string) => bodies[bodyEnc as string]),
+      });
+      const src = new RelaySource(client as RelayClient);
+
+      await src.getState("p1");
+      expect(getProjectEvents).toHaveBeenCalledWith("p1", undefined);
+
+      await src.getState("p1");
+      expect(getProjectEvents).toHaveBeenCalledWith("p1", { afterSeq: 0 });
+    });
+
+    it("getState, fetchEventsLog and getEvents share one cache", async () => {
+      const getProjectEvents = vi
+        .fn()
+        .mockResolvedValueOnce([row(0, "init", "e0"), row(1, "assign", "e1", { task: "t1", feature: "f1" })])
+        .mockResolvedValue([]);
+      const bodies: Record<string, PactProjectEvent> = {
+        e0: body("i0", "init", { project: "p1", seats: [] }),
+        e1: body("a1", "assign", { owner: "alice", reviewer: "bob", spec: "s.md" }),
+      };
+      const client = makeClient({
+        getProjectEvents,
+        decryptRaw: vi.fn((_id: string, bodyEnc: string) => bodies[bodyEnc as string]),
+      });
+      const src = new RelaySource(client as RelayClient);
+
+      const state = await src.getState("p1");
+      const log = await src.fetchEventsLog("p1", undefined, 10);
+      const details = await src.getEvents("p1");
+
+      // All three reads share the same cache; the first is a full pull and the
+      // rest are incremental afterSeq pulls.
+      expect(getProjectEvents).toHaveBeenCalledTimes(3);
+      expect(getProjectEvents).toHaveBeenNthCalledWith(1, "p1", undefined);
+      expect(getProjectEvents).toHaveBeenNthCalledWith(2, "p1", { afterSeq: 1 });
+      expect(getProjectEvents).toHaveBeenNthCalledWith(3, "p1", { afterSeq: 1 });
+      expect(state.features).toHaveLength(1);
+      expect(log).toHaveLength(2);
+      expect(details).toHaveLength(2);
+      expect(details[0]!.seq).toBe(0);
+      expect(details[1]!.seq).toBe(1);
+    });
+
+    it("live append dedupes by event_id and overlaps with incremental catch-up", async () => {
+      let handler: ((e: PactEventBroadcast) => void) | undefined;
+      const getProjectEvents = vi
+        .fn()
+        .mockResolvedValueOnce([row(0, "init", "e0")])
+        .mockResolvedValueOnce([row(1, "assign", "e1")])
+        .mockResolvedValueOnce([]);
+      const liveBody = body("a1", "assign", { owner: "alice", reviewer: "bob", spec: "s.md" });
+      const bodies: Record<string, PactProjectEvent> = {
+        e0: body("i0", "init", { project: "p1", seats: [] }),
+        e1: liveBody,
+        live: liveBody,
+      };
+      const client = makeClient({
+        getProjectEvents,
+        decryptRaw: vi.fn((_id: string, bodyEnc: string | unknown) =>
+          typeof bodyEnc === "string" ? bodies[bodyEnc] ?? {} : liveBody,
+        ),
+        subscribe: vi.fn().mockImplementation((_id: string, onEvent: (e: PactEventBroadcast) => void) => {
+          handler = onEvent;
+          return () => {};
+        }),
+      });
+      const src = new RelaySource(client as RelayClient);
+      const states: State[] = [];
+      src.subscribe("p1", (s) => states.push(s));
+
+      // Prime cache with the init event so lastSeq is established.
+      await src.getState("p1");
+
+      // Live event arrives before the incremental pull catches up.
+      await handler!({ projectId: "p1", seq: 1, eventType: "assign", ts: 1, bodyEnc: "live" } as PactEventBroadcast);
+
+      // Incremental pull uses afterSeq=0 and returns the persisted event with the same event_id.
+      await src.getState("p1");
+      expect(getProjectEvents).toHaveBeenLastCalledWith("p1", { afterSeq: 0 });
+
+      await src.getState("p1");
+      expect(getProjectEvents).toHaveBeenLastCalledWith("p1", { afterSeq: 1 });
+
+      // The duplicate event_id appears only once in the projection.
+      const lastState = states[states.length - 1];
+      expect(lastState?.features).toHaveLength(1);
+      expect(lastState?.features[0].tasks).toHaveLength(1);
+    });
+
+    it("locked mode does not fetch or cache", async () => {
+      const getProjectEvents = vi.fn().mockResolvedValue([]);
+      const src = new RelaySource(makeClient({ getProjectEvents }) as RelayClient, { locked: true });
+      await expect(src.getState("p1")).rejects.toThrow(RelayLockedError);
+      await expect(src.fetchEventsLog("p1")).rejects.toThrow(RelayLockedError);
+      await expect(src.getEvents("p1")).rejects.toThrow(RelayLockedError);
+      expect(getProjectEvents).not.toHaveBeenCalled();
     });
   });
 
@@ -664,7 +791,8 @@ describe("RelaySource", () => {
       clientOnEvent!({ projectId: "p1", bodyEnc: "enc" } as PactEventBroadcast),
     ).resolves.toBeUndefined();
     expect(events).toEqual([]); // undecryptable → skipped
-    expect(states.length).toBe(1); // state still re-folds
+    expect(states.length).toBe(0); // no local re-projection when frame can't be decrypted
+    expect(client.getProjectEvents).not.toHaveBeenCalled();
   });
 
   describe("hosted cockpit", () => {

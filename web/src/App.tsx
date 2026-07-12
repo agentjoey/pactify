@@ -29,6 +29,7 @@ import { allTasks } from "./lib/derive";
 import { pulseTargets } from "./lib/comms";
 import { docTitle } from "./lib/docTitle";
 import { STALE_MS, EVENTS_CAP, FETCH_FAIL_THRESHOLD, COCKPIT_STATUS_POLL_MS } from "./lib/constants";
+import { useVisiblePoll } from "./lib/useVisiblePoll";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
 type BoardMode = "board" | "flow";
@@ -55,7 +56,7 @@ export function pickInitialProject(ps: ProjectMeta[], stored?: string | null): s
   return alive?.id ?? (ps.length ? ps[0].id : "");
 }
 
-function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void; onLogout: () => void }) {
+export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void; onLogout: () => void }) {
   const src = useDataSource();
   const locked = Boolean(src.locked);
   const [email, setEmail] = useState("");
@@ -180,10 +181,7 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   }, []);
 
   // Re-evaluate stale tasks on a 60s ticker (and whenever state changes).
-  useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 60_000);
-    return () => clearInterval(t);
-  }, []);
+  useVisiblePoll(() => setTick((n) => n + 1), 60_000);
 
   // Fetch worktrees for all known projects whenever the project list changes.
   const projectNamesForWt = projects.map((p) => p.name).join(",");
@@ -198,23 +196,28 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
   // ProjectMenu status light + Dashboard run card: poll orchestrate status for
   // every project so the header dot pulses and the Dashboard sees progress/iter.
   const projectNames = projects.map((p) => p.name).join(",");
-  useEffect(() => {
+  useVisiblePoll(() => {
     const names = projectNames ? projectNames.split(",") : [];
     if (names.length === 0) {
       setRunningByProject({});
       setOrchestrateStatusByProject({});
       return;
     }
-    let alive = true;
-    const tick = async () => {
-      const entries = await Promise.all(
-        names.map((name) =>
-          getOrchestrateStatus(name)
-            .then((s): [string, OrchestrateStatusResponse] => [name, s])
-            .catch((): [string, OrchestrateStatusResponse] => [name, { present: false }]),
-        ),
-      );
-      if (!alive) return;
+    // Hosted (multiMachine) sources drive orchestrate remotely; the local
+    // /api/projects/:name/orchestrate/status relative path 404s on Vercel, so
+    // skip the noisy poll and report every project as not running here.
+    if (src.capabilities.multiMachine) {
+      setRunningByProject(Object.fromEntries(names.map((name) => [name, false])));
+      setOrchestrateStatusByProject({});
+      return;
+    }
+    void Promise.all(
+      names.map((name) =>
+        getOrchestrateStatus(name)
+          .then((s): [string, OrchestrateStatusResponse] => [name, s])
+          .catch((): [string, OrchestrateStatusResponse] => [name, { present: false }]),
+      ),
+    ).then((entries) => {
       const statusMap = Object.fromEntries(entries);
       setOrchestrateStatusByProject(statusMap);
       setRunningByProject(
@@ -225,37 +228,24 @@ function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void;
           ]),
         ),
       );
-    };
-    tick();
-    const t = setInterval(tick, 4000);
-    return () => { alive = false; clearInterval(t); };
-  }, [projectNames]);
+    });
+  }, 4000);
 
   // Cockpit pending-approval count: poll the orchestrator seat's status so the
   // toolbar Cockpit badge shows the live queue length. Lifted from CockpitPanel
   // (ui2-shell spec §3) so the badge can live in the shared shell.
   const orchestratorSeat = state.agents.find((a) => a.roles.includes("orchestrator"))?.id ?? seat ?? "claude";
   const cockpitSeatTarget = cockpitSeat || orchestratorSeat;
-  useEffect(() => {
-    // Capture the optional method so TS keeps the narrowing inside the closure.
+  useVisiblePoll(() => {
     const statusFn = src.cockpitStatus?.bind(src);
     if (!current || !statusFn || !src.capabilities.cockpit || locked) {
       setCockpitPending(0);
       return;
     }
-    let alive = true;
-    const poll = async () => {
-      try {
-        const st = await statusFn(current, cockpitSeatTarget);
-        if (alive) setCockpitPending(st.pending?.length ?? 0);
-      } catch {
-        if (alive) setCockpitPending(0);
-      }
-    };
-    poll();
-    const t = setInterval(poll, COCKPIT_STATUS_POLL_MS);
-    return () => { alive = false; clearInterval(t); };
-  }, [current, cockpitSeatTarget, src.cockpitStatus, src.capabilities.cockpit, locked]);
+    statusFn(current, cockpitSeatTarget)
+      .then((st) => setCockpitPending(st.pending?.length ?? 0))
+      .catch(() => setCockpitPending(0));
+  }, COCKPIT_STATUS_POLL_MS);
 
   // Persist lens + remember previous non-settings lens so Escape from Settings
   // returns there instead of hard-coding Board.

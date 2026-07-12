@@ -127,14 +127,14 @@ export class RelayClient {
   }
 
   /** A project's stored events in seq order (optionally only seq > afterSeq). */
-  getProjectEvents(projectId: string, afterSeq?: number): Promise<PactEvent[]> {
-    const q = afterSeq !== undefined ? `?after_seq=${afterSeq}` : ''
+  getProjectEvents(projectId: string, opts?: { afterSeq?: number }): Promise<PactEvent[]> {
+    const q = opts?.afterSeq !== undefined ? `?after_seq=${opts.afterSeq}` : ''
     return this.getJSON<PactEvent[]>(`/v1/pact/projects/${encodeURIComponent(projectId)}/events${q}`)
   }
 
   /** Back-compat alias for {@link getProjectEvents} (Mission Control's name). */
-  projectEvents(projectId: string, afterSeq?: number): Promise<PactEvent[]> {
-    return this.getProjectEvents(projectId, afterSeq)
+  projectEvents(projectId: string, opts?: { afterSeq?: number }): Promise<PactEvent[]> {
+    return this.getProjectEvents(projectId, opts)
   }
 
   /** Decrypt a stored/broadcast event body into its original pact event JSON.

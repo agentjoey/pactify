@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, act, fireEvent, within } from "@testing-library/react";
-import App, { pickInitialProject } from "./App";
+import App, { AppContent, pickInitialProject } from "./App";
 import type { ProjectMeta } from "./lib/types";
+import { DataSourceProvider } from "./lib/datasource";
+import type { DataSource } from "./lib/datasource";
 
 // Module-level capture so tests can fire events on the last-constructed instance.
 let lastES: {
@@ -300,6 +302,47 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
     expect(localStorage.getItem("pactify:lastProject")).toBe("demo");
   });
+
+  it("hosted source skips the local /api orchestrate-status poll", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/orchestrate/status")) return { ok: true, json: async () => ({ present: false }) };
+      if (url === "/api/agents") return { ok: true, json: async () => [] };
+      if (url.includes("/recipes")) return { ok: true, json: async () => [] };
+      if (url.includes("/worktrees")) return { ok: true, json: async () => [] };
+      return { ok: true, json: async () => ({}) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const hostedSource: DataSource = {
+      capabilities: {
+        canWrite: true,
+        canOrchestrate: true,
+        multiMachine: true,
+        cockpit: false,
+      },
+      listProjects: vi.fn().mockResolvedValue([
+        { id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 },
+      ]),
+      getState: vi.fn().mockResolvedValue({ project: "demo", agents: [], features: [], awaiting_count: 0 }),
+      getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
+      subscribe: vi.fn().mockReturnValue(() => {}),
+      fetchEventsLog: vi.fn().mockResolvedValue([]),
+      getEvents: vi.fn().mockResolvedValue([]),
+      getMachines: vi.fn().mockResolvedValue([]),
+    };
+
+    render(
+      <DataSourceProvider source={hostedSource}>
+        <AppContent onSource={() => {}} onLogout={() => {}} />
+      </DataSourceProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("project-menu-trigger")).toHaveTextContent("demo"));
+    // The orchestrate-status loop fires every 4s; wait long enough that a local
+    // source would have polled, then assert the hosted source never hit /api.
+    await new Promise((r) => setTimeout(r, 5500));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/orchestrate/status"))).toBe(false);
+  }, 10_000);
 });
 
 describe("pickInitialProject", () => {

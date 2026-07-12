@@ -79,13 +79,73 @@ export class RelaySource implements DataSource {
     return i >= 0 ? id.slice(i + 1) : id;
   }
 
+  // ── Per-project decrypted event cache (memory-only; never localStorage) ──────
+
+  /** One decrypted event plus the relay header fields needed by getEvents(). */
+  private cached = new Map<string, CachedEvent[]>();
+  private lastSeq = new Map<string, number>();
+
+  private async loadProjectEvents(id: string): Promise<CachedEvent[]> {
+    if (this.locked) lockedGuard();
+    let entries = this.cached.get(id) ?? [];
+    const afterSeq = this.lastSeq.get(id);
+    const rows = await this.client.getProjectEvents(
+      id,
+      afterSeq !== undefined ? { afterSeq } : undefined,
+    );
+    const seen = new Set(entries.map((e) => e.body.event_id));
+    for (const row of rows) {
+      try {
+        const body = this.client.decryptRaw(id, row.bodyEnc) as PactProjectEvent;
+        if (seen.has(body.event_id)) continue;
+        entries.push({
+          seq: row.seq,
+          eventType: row.eventType,
+          task: row.task,
+          feature: row.feature,
+          ts: row.ts,
+          body,
+        });
+        seen.add(body.event_id);
+      } catch {
+        /* a row we can't decrypt (key rotation / foreign project) is skipped */
+      }
+    }
+    // The ledger fold is order-sensitive: a reconnect gap-fill can append rows
+    // that are OLDER than already-received live frames. Stable-sort by relay
+    // seq (live frames carry -1 -> keep them at the tail, arrival-ordered).
+    entries.sort((a, b) => {
+      const sa = a.seq < 0 ? Number.MAX_SAFE_INTEGER : a.seq;
+      const sb = b.seq < 0 ? Number.MAX_SAFE_INTEGER : b.seq;
+      return sa - sb;
+    });
+    this.cached.set(id, entries);
+    for (const row of rows) {
+      if (row.seq > (this.lastSeq.get(id) ?? -1)) this.lastSeq.set(id, row.seq);
+    }
+    return entries;
+  }
+
+  private appendLiveEvent(id: string, body: PactProjectEvent): void {
+    let entries = this.cached.get(id) ?? [];
+    if (entries.some((e) => e.body.event_id === body.event_id)) return;
+    entries.push({
+      // Live socket frames carry no relay seq; the next incremental HTTP pull
+      // uses afterSeq=lastSeq and will overlap only on persisted rows.
+      seq: -1,
+      eventType: body.event_type,
+      task: body.task_id || null,
+      feature: body.feature || null,
+      ts: Number(body.ts) || Date.now(),
+      body,
+    });
+    this.cached.set(id, entries);
+  }
+
   async getState(id: string, _wt?: string): Promise<State> {
     if (this.locked) lockedGuard();
-    const events = await this.client.getProjectEvents(id);
-    const decrypted = events.map(
-      (e) => this.client.decryptRaw(id, e.bodyEnc) as PactProjectEvent,
-    );
-    return project(decrypted);
+    const entries = await this.loadProjectEvents(id);
+    return project(entries.map((e) => e.body));
   }
 
   /**
@@ -99,23 +159,21 @@ export class RelaySource implements DataSource {
    */
   async fetchEventsLog(id: string, _wt?: string, n?: number): Promise<PactEvent[]> {
     if (this.locked) lockedGuard();
-    const events = await this.client.getProjectEvents(id);
-    const decrypted = events.map(
-      (e) => this.client.decryptRaw(id, e.bodyEnc) as PactEvent,
-    );
-    return n !== undefined && n > 0 ? decrypted.slice(-n) : decrypted;
+    const entries = await this.loadProjectEvents(id);
+    const events = entries.map((e) => e.body);
+    return n !== undefined && n > 0 ? events.slice(-n) : events;
   }
 
   async getEvents(id: string): Promise<PactEventDetail[]> {
     if (this.locked) lockedGuard();
-    const events = await this.client.getProjectEvents(id);
-    return events.map((e) => ({
+    const entries = await this.loadProjectEvents(id);
+    return entries.map((e) => ({
       seq: e.seq,
       eventType: e.eventType,
       task: e.task,
       feature: e.feature,
       ts: e.ts,
-      body: this.client.decryptRaw(id, e.bodyEnc) as Record<string, unknown>,
+      body: e.body as unknown as Record<string, unknown>,
     }));
   }
 
@@ -488,12 +546,29 @@ export class RelaySource implements DataSource {
             /* a body we can't decrypt (key rotation / foreign project) is skipped */
           }
         }
-        const state = await this.getState(id);
-        onState(state);
+        // Append the live event to the in-memory cache and re-project locally.
+        // Do NOT call getState(): every live event used to pull the whole event
+        // stream from the relay, which was the dominant source of hosted egress.
+        try {
+          const body = this.client.decryptRaw(id, e.bodyEnc) as PactProjectEvent;
+          this.appendLiveEvent(id, body);
+          onState(project(this.cached.get(id)!.map((entry) => entry.body)));
+        } catch {
+          /* an undecryptable live frame is skipped; catch-up happens on next pull */
+        }
       },
       onLive,
     );
   }
+}
+
+interface CachedEvent {
+  seq: number;
+  eventType: string;
+  task?: string | null;
+  feature?: string | null;
+  ts: number;
+  body: PactProjectEvent;
 }
 
 const COCKPIT_RESUBSCRIBE_MS = 4 * 60 * 1000;

@@ -983,3 +983,19 @@ features:
         reviewer: claude
         spec: .pact/tasks/ui2-settings-setup.md
         evidence: Settings standalone page per design: 250px nav rail (search filter, scope groups PROJECT gold/MACHINE emerald/ACCOUNT blue, active item accent-2 fill + accent-line), pane header w/ scope pill, AgentConfig cards (monogram, effective subline, drivable/manual pills w/ dimmed manual, model dropdown + pinned note, Blanket/Scoped posture segments, emerald Save); hosted gating preserved (ACCOUNT-only). Setup wizard refreshed: journey stepper, PROJECT + Roles-complete pills, role toggle pills w/ role-color tint, separation-of-duties callout, project location card w/ blue focus + caret, Apply init+wire button, OR-COPY commands block on bg-code. Note: Setup component currently has no mount point in App (orphaned since wizard flows) — wiring it into onboarding is follow-up. tsc clean, vitest 605/605, build green, Settings shot vs design verified
+  - id: neon-egress-diet
+    branch: feat/neon-egress-diet
+    status: in_progress
+    tasks:
+      - id: egress-client
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/egress-client.md
+        evidence: RelaySource per-project in-memory decrypted event cache (never localStorage): first pull full, then afterSeq cursor increments (relay-client getProjectEvents gained opts.afterSeq, absent=full preserved); live socket frames append locally + local project() refold — ZERO refetch per event (was the dominant egress amplifier at relaysource:491); getState/fetchEventsLog/getEvents share the cache; event_id dedupe both directions; locked = zero network. Poll hygiene: useVisiblePoll hook (hidden pauses, visible immediate tick) applied to 60s/4s/5s loops; hosted skips local-only orchestrate-status polling (Vercel 404 noise). Reviewer: strict-build fixes (unknown-cast, visibilityState defineProperty) + order hardening (stable sort by relay seq, live -1 at tail — reconnect gap-fill can't scramble the fold). web tsc+613/613+build green, relay-client tsc+7 green
+      - id: egress-serve
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/egress-serve.md
+        evidence: Persistent per-project upload watermark (.pact/relay-uploaded.json, atomic tmp+rename 0o600, throttled flush 32-lines/2s + stop flush, advance only on 2xx under wmMu); replayProject resumes from watermark with truncation/mid-line fallback to full idempotent replay. Reviewer fixes: (1) CRITICAL seq-continuity — enqueue counter must be seeded with prefix line count (relay upserts by projectId+seq; blind Seek would re-use low seqs and overwrite other events' rows) — prefix now scanned locally (zero network) + regression test asserting resumed seq; (2) gitx.EnsureExcluded wiring so user repos never commit the watermark (serve had no runtime-exclude call); (3) pre-existing TestPlanGenerateSuccess flake root-fixed (pollPlanGen treated initial idle as terminal, 2/10 red on clean tree -> terminal states only, 10/10 green). go ./... green, -race green, vet clean

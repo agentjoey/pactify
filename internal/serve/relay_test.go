@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -95,14 +96,14 @@ func TestRelayNilOnEmptyURL(t *testing.T) {
 
 func TestRelayNilEnqueueNoPanic(t *testing.T) {
 	var r *relay
-	r.enqueue("p", `{}`)         // must not panic
+	r.enqueue("p", `{}`, 0)         // must not panic
 	r.replayProject("p", "x", 0) // must not panic
 }
 
 func TestRelayEnvelopeHeaderAndEncryptedBody(t *testing.T) {
 	r, got := newTestRelay(t)
 	line := `{"event_id":"e1","ts":"2026-06-13T02:59:28Z","agent_id":"claude","role":"orchestrator","event_type":"checkpoint","task_id":"m0-wire","feature":"cloud-m0","payload":{"spec":"SECRET-EVIDENCE"}}`
-	r.enqueue("pactify", line)
+	r.enqueue("pactify", line, int64(len(line)))
 	c := recv(t, got)
 
 	// Cleartext operational header for the board.
@@ -140,8 +141,9 @@ func TestRelayEnvelopeHeaderAndEncryptedBody(t *testing.T) {
 
 func TestRelaySeqIncrementsPerProject(t *testing.T) {
 	r, got := newTestRelay(t)
+	line := `{"event_type":"assign","ts":"2026-06-13T02:59:28Z"}`
 	for i := 0; i < 3; i++ {
-		r.enqueue("proj", `{"event_type":"assign","ts":"2026-06-13T02:59:28Z"}`)
+		r.enqueue("proj", line, int64(len(line)))
 	}
 	for want := int64(0); want < 3; want++ {
 		if c := recv(t, got); c.Seq != want {
@@ -166,5 +168,169 @@ func TestRelayReplayProjectUploadsExistingLedger(t *testing.T) {
 	}
 	if a.EventType != "assign" || b.EventType != "checkpoint" {
 		t.Fatalf("replay order wrong: %s,%s", a.EventType, b.EventType)
+	}
+}
+
+// lineJSON returns a compact checkpoint event line with the given task_id.
+func lineJSON(taskID string) string {
+	return `{"event_type":"checkpoint","ts":"2026-06-13T02:59:28Z","task_id":"` + taskID + `"}` + "\n"
+}
+
+func TestRelayWatermarkPersistsAndResumesIncremental(t *testing.T) {
+	dir := t.TempDir()
+	lp := filepath.Join(dir, ".pact", "log.jsonl")
+	if err := os.MkdirAll(filepath.Dir(lp), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	line1 := lineJSON("t1")
+	line2 := lineJSON("t2")
+	if err := os.WriteFile(lp, []byte(line1+line2), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// First relay: replay uploads both lines and flushes watermark on stop.
+	r1, got1 := newTestRelay(t)
+	r1.replayProject("proj", lp, int64(len(line1)+len(line2)))
+	recv(t, got1)
+	recv(t, got1)
+	r1.stop()
+
+	wmPath := filepath.Join(dir, ".pact", "relay-uploaded.json")
+	if data, err := os.ReadFile(wmPath); err != nil {
+		t.Fatalf("watermark file missing after stop: %v", err)
+	} else if !strings.Contains(string(data), `"proj": `+strconv.Itoa(len(line1)+len(line2))) {
+		t.Fatalf("watermark content wrong: %s", data)
+	}
+
+	// Append a third line and start a fresh relay.
+	line3 := lineJSON("t3")
+	if err := os.WriteFile(lp, []byte(line1+line2+line3), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r2, got2 := newTestRelay(t)
+	r2.replayProject("proj", lp, int64(len(line1)+len(line2)+len(line3)))
+	// Only the new line should be uploaded.
+	c := recv(t, got2)
+	if c.Task != "t3" {
+		t.Fatalf("expected only t3, got %+v", c)
+	}
+	// seq must continue from the prefix line count: the relay upserts by
+	// (projectId, seq), so a restart that re-used low seqs for tail lines
+	// would overwrite other events' rows.
+	if c.Seq != 2 {
+		t.Fatalf("resumed seq = %d, want 2 (after 2 watermarked lines)", c.Seq)
+	}
+	select {
+	case <-got2:
+		t.Fatal("unexpected extra ingest")
+	case <-time.After(200 * time.Millisecond):
+	}
+	r2.stop()
+}
+
+func TestRelayWatermarkTruncationResetsToFullReplay(t *testing.T) {
+	dir := t.TempDir()
+	lp := filepath.Join(dir, ".pact", "log.jsonl")
+	if err := os.MkdirAll(filepath.Dir(lp), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	line1 := lineJSON("t1")
+	line2 := lineJSON("t2")
+	// Seed a watermark beyond the file size.
+	if err := os.WriteFile(lp, []byte(line1+line2), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	wmPath := filepath.Join(dir, ".pact", "relay-uploaded.json")
+	if err := os.WriteFile(wmPath, []byte(`{"proj": 999999}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	r, got := newTestRelay(t)
+	r.replayProject("proj", lp, int64(len(line1)+len(line2)))
+	a, b := recv(t, got), recv(t, got)
+	if a.Task != "t1" || b.Task != "t2" {
+		t.Fatalf("expected full replay, got %+v %+v", a, b)
+	}
+	r.stop()
+
+	// After reset + full replay + successful posts, the watermark lands at the
+	// end of the successfully uploaded bytes.
+	want := len(line1) + len(line2)
+	if data, err := os.ReadFile(wmPath); err != nil {
+		t.Fatal(err)
+	} else if !strings.Contains(string(data), `"proj": `+strconv.Itoa(want)) {
+		t.Fatalf("watermark should be %d, got %s", want, data)
+	}
+}
+
+func TestRelayFailedPostDoesNotAdvanceWatermark(t *testing.T) {
+	got := make(chan ingestCapture, 4)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/pact/ingest" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		var c ingestCapture
+		_ = json.NewDecoder(r.Body).Decode(&c)
+		got <- c
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	seedRelaySession(t, srv.URL)
+	r, err := newRelay(srv.URL, "")
+	if err != nil {
+		t.Fatalf("newRelay: %v", err)
+	}
+	t.Cleanup(r.stop)
+
+	dir := t.TempDir()
+	lp := filepath.Join(dir, ".pact", "log.jsonl")
+	if err := os.MkdirAll(filepath.Dir(lp), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	r.setWatermarkPath("proj", lp)
+
+	line := lineJSON("t1")
+	r.enqueue("proj", line, int64(len(line)))
+
+	// Wait for the four retry attempts.
+	for i := 0; i < 4; i++ {
+		select {
+		case <-got:
+		case <-time.After(10 * time.Second):
+			t.Fatal("timed out waiting for failed attempt")
+		}
+	}
+
+	// No successful posts => no watermark file should be written.
+	if _, err := os.Stat(filepath.Join(dir, ".pact", "relay-uploaded.json")); !os.IsNotExist(err) {
+		t.Fatal("watermark file should not exist after failures")
+	}
+}
+
+func TestRelayWatermarkAtomicWrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "relay-uploaded.json")
+	marks := map[string]int64{"proj": 42}
+	if err := atomicWriteJSON(path, marks); err != nil {
+		t.Fatalf("atomicWriteJSON: %v", err)
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %o, want 0o600", fi.Mode().Perm())
+	}
+	// No leftover temp files.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".relay-uploaded.json.tmp.") {
+			t.Fatalf("leftover temp file: %s", e.Name())
+		}
 	}
 }

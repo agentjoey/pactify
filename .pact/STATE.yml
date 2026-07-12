@@ -983,3 +983,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/ui2-settings-setup.md
         evidence: Settings standalone page per design: 250px nav rail (search filter, scope groups PROJECT gold/MACHINE emerald/ACCOUNT blue, active item accent-2 fill + accent-line), pane header w/ scope pill, AgentConfig cards (monogram, effective subline, drivable/manual pills w/ dimmed manual, model dropdown + pinned note, Blanket/Scoped posture segments, emerald Save); hosted gating preserved (ACCOUNT-only). Setup wizard refreshed: journey stepper, PROJECT + Roles-complete pills, role toggle pills w/ role-color tint, separation-of-duties callout, project location card w/ blue focus + caret, Apply init+wire button, OR-COPY commands block on bg-code. Note: Setup component currently has no mount point in App (orphaned since wizard flows) — wiring it into onboarding is follow-up. tsc clean, vitest 605/605, build green, Settings shot vs design verified
+  - id: neon-egress-diet
+    branch: feat/neon-egress-diet
+    status: in_progress
+    tasks:
+      - id: egress-client
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/egress-client.md
+        evidence: null

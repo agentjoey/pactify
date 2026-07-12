@@ -65,7 +65,10 @@ func pollPlanGen(t *testing.T, base string) PlanGenStatusDTO {
 		var dto PlanGenStatusDTO
 		_ = json.NewDecoder(resp.Body).Decode(&dto)
 		resp.Body.Close()
-		if dto.State != "running" {
+		// Terminal states only: the generate goroutine is async, so the first
+		// polls may still see the initial "idle" before it flips to "running" —
+		// treating that as final made this test flaky (~2/10).
+		if dto.State == "done" || dto.State == "error" {
 			return dto
 		}
 		time.Sleep(20 * time.Millisecond)

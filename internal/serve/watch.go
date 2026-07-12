@@ -102,6 +102,7 @@ func (s *Server) watchLoop() {
 			}
 			s.pmu.RUnlock()
 			if hitID != "" {
+				s.relay.setWatermarkPath(hitID, hitLP)
 				s.drainNew(hitID, hitLP)
 			}
 		case err, ok := <-s.watcher.Errors:
@@ -148,7 +149,7 @@ func (s *Server) drainNew(id, lp string) {
 		off += int64(len(line)) // len includes the '\n'
 		if t := strings.TrimRight(line, "\n"); t != "" {
 			s.hub.broadcast(id, t)
-			s.relay.enqueue(id, t)
+			s.relay.enqueue(id, t, int64(len(line)))
 		}
 	}
 	s.pmu.Lock()

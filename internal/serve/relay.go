@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/agentjoey/pactify/internal/cloudauth"
 	"github.com/agentjoey/pactify/internal/cloudclient"
+	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/event"
 )
 
@@ -48,12 +50,22 @@ type relay struct {
 	done    chan struct{}
 	dropped int64
 	http    *http.Client
+
+	// Watermark persistence: per-project uploaded byte offset in log.jsonl.
+	// wmMu guards wmPaths, wmMarks, wmDirty, wmPending, and wmLastFlush.
+	wmMu        sync.Mutex
+	wmPaths     map[string]string // project -> .pact/relay-uploaded.json path
+	wmMarks     map[string]int64  // project -> uploaded byte offset
+	wmDirty     map[string]bool   // projects with unflushed mark updates
+	wmPending   int               // successful posts since last flush
+	wmLastFlush time.Time
 }
 
 type pactMsg struct {
-	project string
-	seq     int64
-	line    string
+	project  string
+	seq      int64
+	line     string
+	lineBytes int64 // byte length of the original log.jsonl line (including '\n')
 }
 
 // newRelay builds the pact-event uploader for baseURL. A "" baseURL returns nil
@@ -85,8 +97,13 @@ func newRelay(baseURL, _ string) (*relay, error) {
 		stopCh:      make(chan struct{}),
 		done:        make(chan struct{}),
 		http:        &http.Client{Timeout: 10 * time.Second},
+		wmPaths:     map[string]string{},
+		wmMarks:     map[string]int64{},
+		wmDirty:     map[string]bool{},
+		wmLastFlush: time.Now(),
 	}
 	go r.run()
+	go r.wmFlushLoop()
 	return r, nil
 }
 
@@ -112,23 +129,67 @@ func (r *relay) projectKey(project string) ([]byte, error) {
 	return k, nil
 }
 
-// replayProject uploads the existing ledger bytes [0, upTo) for a project with
-// line-index seq, so the board reflects the current state on connect (not just
-// future appends). `upTo` is the SSE watcher's seeded offset, so replay and the
-// live drain partition the file cleanly (no overlapping/duplicate seq). Called
-// once per project before the watch loop starts. Idempotent on the relay; safe
-// on a nil relay / missing log.
+// replayProject uploads the existing ledger bytes [watermark, upTo) for a
+// project with line-index seq, so the board reflects the current state on
+// connect (not just future appends). `upTo` is the SSE watcher's seeded offset,
+// so replay and the live drain partition the file cleanly (no overlapping/
+// duplicate seq). Called once per project before the watch loop starts.
+// Idempotent on the relay; safe on a nil relay / missing log.
 func (r *relay) replayProject(project, logPath string, upTo int64) {
 	if r == nil {
 		return
 	}
+	r.setWatermarkPath(project, logPath)
 	f, err := os.Open(logPath)
 	if err != nil {
 		return
 	}
 	defer f.Close()
+
+	start := r.loadWatermark(project)
+	if fi, err := f.Stat(); err != nil {
+		r.resetWatermark(project)
+		start = 0
+	} else if start < 0 || start > fi.Size() {
+		r.resetWatermark(project)
+		start = 0
+	}
+
+	// seq is the NON-EMPTY line index in log.jsonl and the relay upserts by
+	// (projectId, seq) — so the enqueue counter MUST be seeded with the number
+	// of lines below the watermark, or the tail would re-use low seqs and
+	// overwrite other events' rows on the relay. We therefore scan the already-
+	// uploaded prefix locally (disk read only, zero network) to count lines,
+	// instead of seeking past it blind.
 	rd := bufio.NewReader(f)
 	var read int64
+	var prefixLines int64
+	for read < start {
+		line, err := rd.ReadString('\n')
+		read += int64(len(line))
+		if read > start {
+			// Watermark landed mid-line (corrupt/foreign file): fall back to a
+			// full idempotent replay from 0.
+			r.resetWatermark(project)
+			_, _ = f.Seek(0, 0)
+			rd = bufio.NewReader(f)
+			read = 0
+			prefixLines = 0
+			break
+		}
+		if strings.TrimRight(line, "\n") != "" {
+			prefixLines++
+		}
+		if err != nil {
+			break
+		}
+	}
+	r.mu.Lock()
+	if r.seqs[project] < prefixLines {
+		r.seqs[project] = prefixLines
+	}
+	r.mu.Unlock()
+
 	for read < upTo {
 		line, err := rd.ReadString('\n')
 		read += int64(len(line))
@@ -136,7 +197,7 @@ func (r *relay) replayProject(project, logPath string, upTo int64) {
 			break // a trailing partial line past the watcher offset: leave it to drainNew
 		}
 		if t := strings.TrimRight(line, "\n"); t != "" {
-			r.enqueue(project, t)
+			r.enqueue(project, t, int64(len(line)))
 		}
 		if err != nil {
 			break
@@ -146,7 +207,7 @@ func (r *relay) replayProject(project, logPath string, upTo int64) {
 
 // enqueue assigns the project's next line-index seq and drops the event into the
 // bounded queue without blocking; a full queue evicts the oldest. nil-safe.
-func (r *relay) enqueue(project, line string) {
+func (r *relay) enqueue(project, line string, lineBytes int64) {
 	if r == nil {
 		return
 	}
@@ -161,7 +222,7 @@ func (r *relay) enqueue(project, line string) {
 	r.mu.Unlock()
 	r.stopMu.Unlock()
 
-	msg := pactMsg{project: project, seq: seq, line: line}
+	msg := pactMsg{project: project, seq: seq, line: line, lineBytes: lineBytes}
 	for {
 		r.stopMu.Lock()
 		if r.stopped {
@@ -187,11 +248,18 @@ func (r *relay) enqueue(project, line string) {
 
 func (r *relay) stop() {
 	r.stopMu.Lock()
+	if r.stopped {
+		r.stopMu.Unlock()
+		return
+	}
 	r.stopped = true
 	close(r.stopCh)
 	close(r.queue)
 	r.stopMu.Unlock()
 	<-r.done
+	r.wmMu.Lock()
+	r.flushWatermarksLocked()
+	r.wmMu.Unlock()
 }
 
 func (r *relay) droppedCount() int64 { return atomic.LoadInt64(&r.dropped) }
@@ -298,6 +366,7 @@ func (r *relay) postOne(msg pactMsg) {
 		}
 		resp.Body.Close()
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			r.advanceWatermark(msg.project, msg.lineBytes)
 			return
 		}
 		if resp.StatusCode == http.StatusUnauthorized && !refreshed {
@@ -322,4 +391,167 @@ func (r *relay) refreshToken() {
 	r.token = sess.Token
 	r.mu.Unlock()
 	_ = cloudclient.SaveSession(sess)
+}
+
+// setWatermarkPath records the path of the per-project watermark file
+// (.pact/relay-uploaded.json) from the project's log.jsonl path. nil-safe.
+func (r *relay) setWatermarkPath(project, logPath string) {
+	if r == nil {
+		return
+	}
+	root := filepath.Dir(filepath.Dir(logPath))
+	path := filepath.Join(root, ".pact", "relay-uploaded.json")
+	// The watermark is machine-local runtime state, but users COMMIT .pact/
+	// (that's the protocol) — route it through .git/info/exclude on every repo
+	// this serve touches, same as orchestrate's runtime artifacts (spec P0b).
+	_ = gitx.EnsureExcluded(root, ".pact/relay-uploaded.json")
+	r.wmMu.Lock()
+	r.wmPaths[project] = path
+	r.wmMu.Unlock()
+}
+
+// loadWatermark returns the persisted uploaded byte offset for project,
+// defaulting to 0 when no watermark file exists yet. Caller should hold wmMu
+// or be prepared to tolerate races; replayProject loads under wmMu.
+func (r *relay) loadWatermark(project string) int64 {
+	r.wmMu.Lock()
+	defer r.wmMu.Unlock()
+	if mark, ok := r.wmMarks[project]; ok {
+		return mark
+	}
+	path := r.wmPaths[project]
+	if path == "" {
+		return 0
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0
+	}
+	var m map[string]int64
+	if err := json.Unmarshal(data, &m); err != nil {
+		return 0
+	}
+	mark := m[project]
+	if mark < 0 {
+		mark = 0
+	}
+	r.wmMarks[project] = mark
+	return mark
+}
+
+// resetWatermark zeroes the in-memory and on-disk watermark for project.
+// Used as an idempotent fallback when the file shrank or became unreadable.
+func (r *relay) resetWatermark(project string) {
+	if r == nil {
+		return
+	}
+	r.wmMu.Lock()
+	defer r.wmMu.Unlock()
+	r.wmMarks[project] = 0
+	r.wmDirty[project] = true
+	r.flushWatermarksLocked()
+}
+
+// advanceWatermark moves the uploaded byte offset for project by n bytes after
+// a successful POST, then throttles disk writes to every 32 lines or 2 seconds.
+func (r *relay) advanceWatermark(project string, n int64) {
+	if r == nil || n <= 0 {
+		return
+	}
+	r.wmMu.Lock()
+	defer r.wmMu.Unlock()
+	r.wmMarks[project] += n
+	r.wmDirty[project] = true
+	r.wmPending++
+	if r.wmPending >= 32 || time.Since(r.wmLastFlush) >= 2*time.Second {
+		r.flushWatermarksLocked()
+	}
+}
+
+// wmFlushLoop periodically flushes dirty watermarks every 2 seconds.
+func (r *relay) wmFlushLoop() {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			r.wmMu.Lock()
+			r.flushWatermarksLocked()
+			r.wmMu.Unlock()
+		case <-r.stopCh:
+			return
+		}
+	}
+}
+
+// flushWatermarksLocked writes all dirty project watermarks to their
+// respective .pact/relay-uploaded.json files via atomic tmp+rename. Existing
+// orphan keys are preserved. Caller must hold wmMu.
+func (r *relay) flushWatermarksLocked() {
+	if len(r.wmDirty) == 0 {
+		r.wmLastFlush = time.Now()
+		return
+	}
+	byPath := make(map[string]map[string]int64)
+	for project := range r.wmDirty {
+		path := r.wmPaths[project]
+		if path == "" {
+			continue
+		}
+		if _, ok := byPath[path]; !ok {
+			existing := make(map[string]int64)
+			if data, err := os.ReadFile(path); err == nil {
+				_ = json.Unmarshal(data, &existing)
+			}
+			byPath[path] = existing
+		}
+		byPath[path][project] = r.wmMarks[project]
+	}
+	for path, marks := range byPath {
+		_ = atomicWriteJSON(path, marks)
+	}
+	r.wmDirty = make(map[string]bool)
+	r.wmPending = 0
+	r.wmLastFlush = time.Now()
+}
+
+// atomicWriteJSON writes v to path as JSON via a temp file in the same
+// directory plus rename, with 0o600 permissions.
+func atomicWriteJSON(path string, v any) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".tmp.*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	failed := true
+	defer func() {
+		if failed {
+			_ = os.Remove(tmpName)
+		}
+	}()
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(b); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		return err
+	}
+	failed = false
+	return nil
 }

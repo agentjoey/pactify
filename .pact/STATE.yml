@@ -1021,7 +1021,7 @@ features:
         evidence: C2 修复：新增 internal/orchestrate/env.go(filteredEnviron，denylist PACT_RELAY_TOKEN+PACTIFY_*)；osExec/osExecIdle/shellExec 三处环境 base 改走 filteredEnviron（shellExec 顺带修了 len(env)==0 不过滤的旧洞→无条件过滤）。验证全绿：go test -run TestSEC_C2 PASS(cmd+verify 两泄露面均不再泄露)；TestCmdRunner*/TestRunner* 无回归；go build ./... OK；go vet 干净。orchestrator 已读 diff 确认仅改 4 个授权文件、PATH 等非密钥变量仍透传。
       - id: phase0-h4
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/phase0-h4.md
         evidence: H4 修复：dispatch.go 的 pact.stint 在 RunStint 前加 gitx.ValidBranchName(rpc.Branch) 校验(空 Branch 仍放行)；gitx.Push/Fetch 在 remote 后位置参数前插 -- 纵深防御(AddWorktree 按 brief 谨慎跳过)。验证全绿：go test ./internal/remoteexec/ -run 'TestSEC_H4|TestHandle_Stint' PASS(四个 option branch 现被拒、合法/空仍放行)；go test ./internal/gitx/ PASS(无回归)；go build ./... OK；vet 干净。orchestrator 已读 diff 确认仅改 2 授权文件。

@@ -493,6 +493,73 @@ func (p *Project) assignLocked(taskID, feature, branch, owner string, reviewers 
 	})
 }
 
+// BatchJoin is a seat registration request for ApplyBatch.
+type BatchJoin struct {
+	SeatID string
+	Roles  []string
+	Kind   string
+}
+
+// BatchAssign is a task assignment request for ApplyBatch.
+type BatchAssign struct {
+	TaskID   string
+	Feature  string
+	Branch   string
+	Owner    string
+	Reviewer string
+	Spec     string
+	Deps     []string
+}
+
+// rerenderLocked re-renders STATE.yml from the current log contents. It must be
+// called while holding the ledger lock.
+func (p *Project) rerenderLocked() error {
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	if err != nil {
+		return err
+	}
+	return projection.WriteState(paths.StateIn(p.dir), projection.Project(evs))
+}
+
+// ApplyBatch executes a batch of seat joins and task assignments under a single
+// ledger lock. If any step fails, the log is truncated to its original size and
+// STATE.yml is re-rendered before the error is returned.
+func (p *Project) ApplyBatch(joins []BatchJoin, assigns []BatchAssign) (int, error) {
+	var assigned int
+	err := p.withLedgerLock(func() error {
+		logPath := paths.LogIn(p.dir)
+		orig, _ := os.Stat(logPath)
+		var origSize int64
+		if orig != nil {
+			origSize = orig.Size()
+		}
+
+		for _, j := range joins {
+			roles := strings.Join(j.Roles, ",")
+			if err := p.As(j.SeatID).joinWithClientLocked(j.SeatID, roles, "pactify-cli", ClientVersion, j.Kind); err != nil {
+				_ = os.Truncate(logPath, origSize)
+				_ = p.rerenderLocked()
+				return fmt.Errorf("join %s: %w", j.SeatID, err)
+			}
+		}
+
+		for _, a := range assigns {
+			var reviewers []string
+			if a.Reviewer != "" {
+				reviewers = []string{a.Reviewer}
+			}
+			if err := p.assignLocked(a.TaskID, a.Feature, a.Branch, a.Owner, reviewers, 0, a.Spec, a.Deps); err != nil {
+				_ = os.Truncate(logPath, origSize)
+				_ = p.rerenderLocked()
+				return fmt.Errorf("assign %s: %w", a.TaskID, err)
+			}
+			assigned++
+		}
+		return nil
+	})
+	return assigned, err
+}
+
 // Merge integrates a feature branch into the base branch (rule: all accepted).
 func (p *Project) Merge(feature string) error {
 	id, err := p.agentID()

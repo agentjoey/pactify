@@ -109,6 +109,11 @@ func osExec(ctx context.Context, name string, args []string, dir string, env []s
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = teeStdout(capture)
 	cmd.Stderr = os.Stderr
+	// TODO(phase0-h7): osExec currently does NOT place the child in its own
+	// process group. Adding cmd.Cancel without also adding Setpgid would make
+	// killGroup send SIGKILL to the parent's process group, so this path is
+	// intentionally left unchanged. The default cmd transport (osExecIdle) has
+	// the group-kill fix; revisit here only if the plain runner is restored.
 	return cmd.Run()
 }
 

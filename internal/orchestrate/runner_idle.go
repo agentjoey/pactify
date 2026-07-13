@@ -110,6 +110,11 @@ func osExecIdle(idle time.Duration) execFn {
 		// whole tree (a killed `sh -c` leaves a child holding the stdout pipe,
 		// which would block cmd.Wait until the child exits on its own).
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		// Group-kill on context cancellation: CommandContext's default Cancel
+		// only kills the direct child, leaving grandchildren (npx/node) orphaned
+		// and burning tokens. killGroup reaps the whole process group.
+		cmd.Cancel = func() error { killGroup(cmd); return nil }
+		cmd.WaitDelay = 2 * time.Second
 		tr := &idleTracker{last: time.Now()}
 		// stdout tees to the parent, the idle tracker, and (when set) the token
 		// capture sink.

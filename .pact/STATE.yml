@@ -1027,7 +1027,7 @@ features:
         evidence: H4 修复：dispatch.go 的 pact.stint 在 RunStint 前加 gitx.ValidBranchName(rpc.Branch) 校验(空 Branch 仍放行)；gitx.Push/Fetch 在 remote 后位置参数前插 -- 纵深防御(AddWorktree 按 brief 谨慎跳过)。验证全绿：go test ./internal/remoteexec/ -run 'TestSEC_H4|TestHandle_Stint' PASS(四个 option branch 现被拒、合法/空仍放行)；go test ./internal/gitx/ PASS(无回归)；go build ./... OK；vet 干净。orchestrator 已读 diff 确认仅改 2 授权文件。
       - id: phase0-h3
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/phase0-h3.md
-        evidence: null
+        evidence: H3 修复：server.ts ingest handler 在 ingestPactEvent 前加 getProject 归属校验(既存 project 的 accountId≠调用方→404,与既有 foreign-read 一致)。验证：vitest test/pact.http.test.ts+test/pact.test.ts 13/13 PASS(H3 注入+顶替两条转绿、既有不破)；tsc 干净。kimi 判 pact.ts 纵深防御可选而跳过——主修已闭合漏洞。orchestrator 已读 diff 确认仅改 server.ts。

@@ -76,7 +76,7 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
     io.to(`acct:${accountId}`).emit('machines', { machines: await listMachines(db, accountId) })
   }
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const auth = socket.handshake.auth as { token?: string; role?: string; machineId?: string }
     const v = verifyToken(secret, auth.token ?? '', now())
     // Auth result only — never the token itself.
@@ -87,6 +87,12 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
     if (auth.role === 'machine' && !auth.machineId) {
       log.warn('socket auth failed', { role: auth.role, reason: 'machineId required' })
       return next(new Error('machineId required'))
+    }
+    if (auth.role === 'machine' && auth.machineId) {
+      const existing = await db.machine.findUnique({ where: { id: auth.machineId } })
+      if (existing && existing.accountId !== v.accountId) {
+        return next(new Error('machine not owned by account'))
+      }
     }
     socket.data.accountId = v.accountId
     socket.data.role = auth.role
@@ -382,7 +388,12 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
         // owning machine. Both stay zero-knowledge — only ids are inspected.
         if ('machineId' in rpc) {
           if (rpc.machineId) {
-            targetRooms.push(`machine:${rpc.machineId}`)
+            const m = await db.machine.findFirst({ where: { id: rpc.machineId, accountId } })
+            if (!m) {
+              socket.emit('rpc-error', { error: 'unknown machine' })
+              return
+            }
+            targetRooms.push(`machine:${m.id}`)
           } else {
             // Best-effort fallback: the web may not know the real machine id yet;
             // broadcast to every machine belonging to this account. With the Redis

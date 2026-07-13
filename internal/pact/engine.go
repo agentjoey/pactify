@@ -1018,9 +1018,15 @@ func (p *Project) configGateLocked(command string) error {
 // the consumer is the pre-merge safety gate, and swallowing a transient I/O error
 // as "unconfigured" would silently degrade it to the type-default fallback.
 func (p *Project) GateConfig() (string, bool, error) {
-	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	evs, stats, err := event.ReadAllWithStats(paths.LogIn(p.dir))
 	if err != nil {
 		return "", false, fmt.Errorf("pact: read log for gate config: %w", err)
+	}
+	// A resilient ledger read skips malformed/oversized lines. If the file exists
+	// but produced no parseable events, treat it as a corrupt log rather than
+	// silently "unconfigured".
+	if len(evs) == 0 && stats.Skipped > 0 {
+		return "", false, fmt.Errorf("pact: read log for gate config: log contains no parseable events")
 	}
 	gate, ok := "", false
 	for _, e := range evs {

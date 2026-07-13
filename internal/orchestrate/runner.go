@@ -105,7 +105,7 @@ func NewCmdRunner(idle time.Duration) CmdRunner {
 func osExec(ctx context.Context, name string, args []string, dir string, env []string, capture io.Writer) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(filteredEnviron(), env...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = teeStdout(capture)
 	cmd.Stderr = os.Stderr

@@ -104,7 +104,7 @@ func osExecIdle(idle time.Duration) execFn {
 	return func(ctx context.Context, name string, args []string, dir string, env []string, capture io.Writer) error {
 		cmd := exec.CommandContext(ctx, name, args...)
 		cmd.Dir = dir
-		cmd.Env = append(os.Environ(), env...)
+		cmd.Env = append(filteredEnviron(), env...)
 		cmd.Stdin = os.Stdin
 		// Run the child in its own process group so the idle-kill can reap the
 		// whole tree (a killed `sh -c` leaves a child holding the stdout pipe,

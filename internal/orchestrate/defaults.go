@@ -2,7 +2,6 @@ package orchestrate
 
 import (
 	"context"
-	"os"
 	"os/exec"
 )
 
@@ -14,11 +13,9 @@ type shellExec struct{}
 func (shellExec) Run(ctx context.Context, dir, command string, env map[string]string) (int, string, error) {
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Dir = dir
-	if len(env) > 0 {
-		cmd.Env = os.Environ()
-		for k, v := range env {
-			cmd.Env = append(cmd.Env, k+"="+v)
-		}
+	cmd.Env = filteredEnviron()
+	for k, v := range env {
+		cmd.Env = append(cmd.Env, k+"="+v)
 	}
 	out, err := cmd.CombinedOutput()
 	if err == nil {

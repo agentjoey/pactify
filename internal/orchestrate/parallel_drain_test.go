@@ -30,8 +30,14 @@ func (f *drainFakeRunner) Run(_ context.Context, lc LaunchContext) error {
 	}
 	if task == "ta" {
 		log := filepath.Join(repoDir, ".pact", "log.jsonl")
-		if err := os.WriteFile(log, []byte("not json\n"), 0o644); err != nil {
-			f.t.Errorf("corrupt fa ledger: %v", err)
+		// Make fa's post-run reprojection fail with a READ error by replacing the
+		// ledger with a directory. Writing malformed JSON no longer errors — the
+		// ledger read now skips bad lines instead of bricking (review finding M10) —
+		// so content corruption would be silently tolerated; a read error still trips
+		// the reprojection, preserving this test's "fa errors mid-flight" scenario.
+		_ = os.Remove(log)
+		if err := os.Mkdir(log, 0o755); err != nil {
+			f.t.Errorf("replace fa ledger with dir: %v", err)
 		}
 		f.once.Do(func() { close(f.unblockB) })
 		return nil // clean exit; the reprojection error is what kills fa's driver

@@ -1045,7 +1045,7 @@ features:
         evidence: C1 修复：sockets.ts 两处——(1) io.use 改 async 加机器归属校验(既存机器属别账号才拒,新机/自有放行,不破首注册)；(2) rpc handler 机器定向分支 push 前 db.machine.findFirst({id,accountId}) 校验,不属则 rpc-error+drop(对齐 run 分支)。验证：full test/sockets.test.ts 20/20 PASS(C1 注入+窃听两条转绿、既有 machine 连接/ingest/same-account 路由全不破)；tsc 干净。orchestrator 已读 diff 确认仅改 sockets.ts。
       - id: phase0-h5
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/phase0-h5.md
-        evidence: null
+        evidence: H5 修复：新增导出 pact.Project.ApplyBatch(joins,assigns)——单个 withLedgerLock 内捕获 origSize、逐个 joinWithClientLocked/assignLocked(*Locked 变体不重入取锁)、失败则持锁内 truncate+rerenderLocked(持锁期间无并发写故安全)；planner.ApplyTx 委托它、删自己的 truncate loop。验证：TestSEC_H5 连跑两次绿(2.4/2.16s 非flaky)；planner+pact 全套(ApplyTx/Apply/Assign/Init/Join)绿；pact+planner -race 全绿(15.4s)；build OK。orchestrator 已读 diff 确认锁全程只取一次、无重入死锁、truncate 在锁内。

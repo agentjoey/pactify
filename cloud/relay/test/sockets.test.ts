@@ -681,3 +681,60 @@ describe('relay sockets — cross-tenant machine isolation (C1)', () => {
     ).rejects.toBeTruthy()
   })
 })
+
+describe('relay sockets — subscribe fan-out is bounded (M13)', () => {
+  it('honors at most maxSubscribeRuns runIds per frame (no unbounded DB fan-out)', async () => {
+    // A dedicated server with a tiny cap so truncation is observable without
+    // seeding hundreds of runs. subscribe did one getRun per client-supplied id
+    // with no bound; a ~1MB frame of ids meant tens of thousands of DB queries.
+    const db2 = await createPgliteDb()
+    const acc = await db2.account.create({ data: { publicKey: 'pk-m13-' + Math.random() } })
+    await db2.machine.create({ data: { id: 'm1', accountId: acc.id, metadataEnc: 'x' } })
+    const app2 = createServer({ db: db2, secret: SECRET, now: () => 1000 })
+    await app2.listen({ port: 0, host: '127.0.0.1' })
+    const io2 = await attachSockets(app2.server, {
+      db: db2,
+      secret: SECRET,
+      now: () => 1000,
+      rateLimits: { maxSubscribeRuns: 2 },
+    })
+    const port2 = (app2.server.address() as { port: number }).port
+    try {
+      // Three owned runs, each with one replayable event at seq 1.
+      for (const id of ['ra', 'rb', 'rc']) {
+        await db2.run.create({
+          data: { id, accountId: acc.id, machineId: 'm1', agentKind: 'claude', state: 'thinking' },
+        })
+        await db2.runEvent.create({
+          data: {
+            runId: id,
+            seq: 1,
+            state: 'thinking',
+            eventKind: 'message',
+            ts: BigInt(1000),
+            bodyEnc: JSON.stringify({ alg: 'xchacha20poly1305', nonce: 'n', ct: id }),
+          },
+        })
+      }
+      const token = issueToken(SECRET, acc.id, 60_000, 1000)
+      const web = await connect(port2, { token, role: 'client' })
+      try {
+        const ends: string[] = []
+        web.on('replay-end', (e: { runId: string }) => ends.push(e.runId))
+        // Ask for all three (seeking seq>0 so each would replay). With the cap at
+        // 2, only the first two ids are honored; the third is truncated away.
+        web.emit('subscribe', {
+          runIds: ['ra', 'rb', 'rc'],
+          afterSeqByRun: { ra: 0, rb: 0, rc: 0 },
+        })
+        await new Promise((r) => setTimeout(r, 150))
+        expect(ends.sort()).toEqual(['ra', 'rb'])
+      } finally {
+        web.disconnect()
+      }
+    } finally {
+      await new Promise((r) => io2.close(() => r(null)))
+      await app2.close()
+    }
+  })
+})

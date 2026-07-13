@@ -16,6 +16,12 @@ import { deliverRunNotification, notifyTypeForHeader, type WebPushSender } from 
 export interface SocketRateLimits {
   /** `rpc` events (spawn / send-message / etc.). Default 60/min/account. */
   rpcPerMin?: number
+  /**
+   * Max `runIds` honored in a single `subscribe` frame. Caps the per-frame DB
+   * fan-out (one `getRun` per id) so a ~1MB frame of ids can't storm the DB.
+   * Default 256 — far above any real machine's concurrent-run count.
+   */
+  maxSubscribeRuns?: number
 }
 
 export interface SocketDeps {
@@ -59,6 +65,24 @@ function resolveRpcPerMin(deps: SocketDeps): number {
   return DEFAULT_RPC_PER_MIN
 }
 
+const DEFAULT_MAX_SUBSCRIBE_RUNS = 256
+
+/**
+ * Resolve the max `runIds` honored per `subscribe` frame: explicit
+ * `deps.rateLimits` wins, then `RELAY_MAX_SUBSCRIBE_RUNS`, then the safe default.
+ * Non-positive/NaN values are ignored so a bad override can't disable the guard.
+ */
+function resolveMaxSubscribeRuns(deps: SocketDeps): number {
+  const override = deps.rateLimits?.maxSubscribeRuns
+  if (override !== undefined && Number.isFinite(override) && override > 0) return Math.floor(override)
+  const raw = process.env.RELAY_MAX_SUBSCRIBE_RUNS
+  if (raw !== undefined) {
+    const n = Number(raw)
+    if (Number.isFinite(n) && n > 0) return Math.floor(n)
+  }
+  return DEFAULT_MAX_SUBSCRIBE_RUNS
+}
+
 export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): Promise<Server> {
   const { db, secret, redisUrl, pushSender } = deps
   const now = deps.now ?? (() => Date.now())
@@ -66,6 +90,7 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
   const metrics = deps.metrics ?? createMetrics()
   // Per-account token bucket for the rpc event.
   const rpcLimiter = TokenBucketLimiter.fromPerMinute(resolveRpcPerMin(deps), now)
+  const maxSubscribeRuns = resolveMaxSubscribeRuns(deps)
   // The web connects cross-origin (vercel.app); socket auth is by token in the
   // handshake, so any origin is allowed.
   const io = new Server(httpServer, { cors: { origin: true } })
@@ -333,9 +358,31 @@ export async function attachSockets(httpServer: HttpServer, deps: SocketDeps): P
     socket.on(
       'subscribe',
       (payload: { runIds?: string[]; afterSeqByRun?: Record<string, number> }) => {
+        // subscribe fans out to one getRun DB query per id, so — like rpc — it
+        // must be rate-limited AND bounded per frame; otherwise a single ~1MB
+        // frame of ids storms the DB, repeatably. It was the only socket event
+        // bypassing the limiter entirely (M13).
+        if (!rpcLimiter.take(accountId).allowed) {
+          metrics.inc('rate_limited_total', { path: 'subscribe' })
+          socket.emit('rate-limited', { event: 'subscribe' })
+          return
+        }
         void (async () => {
           const afterSeqByRun = payload.afterSeqByRun ?? {}
-          const runIds = payload.runIds ?? Object.keys(afterSeqByRun)
+          // Guard the type (a malicious client may send a non-array) and cap the
+          // count so per-frame DB fan-out is bounded regardless of payload size.
+          const requested = Array.isArray(payload.runIds)
+            ? payload.runIds
+            : Object.keys(afterSeqByRun)
+          const runIds = requested.slice(0, maxSubscribeRuns)
+          if (requested.length > runIds.length) {
+            metrics.inc('subscribe_truncated_total')
+            log.warn('subscribe runIds truncated', {
+              account: accountId,
+              requested: requested.length,
+              cap: maxSubscribeRuns,
+            })
+          }
           for (const runId of runIds) {
             const run = await getRun(db, runId)
             // Only replay runs this account owns.

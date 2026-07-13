@@ -50,6 +50,13 @@ func (s *Server) handlePlanReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	feature := r.PathValue("feature")
+	// Reject a non-slug feature before it reaches filepath.Join — an unvalidated
+	// value (e.g. a %2F-encoded traversal) would climb out of .pact/ to read an
+	// arbitrary <path>.json (review finding M3). Matches startPlanGenerate.
+	if !planner.ValidSlug(feature) {
+		writeErr(w, http.StatusBadRequest, "invalid feature name")
+		return
+	}
 
 	path := filepath.Join(p.Path, ".pact", "plan-"+feature+".json")
 	b, err := os.ReadFile(path)

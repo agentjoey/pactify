@@ -45,12 +45,16 @@ jobs:
         run: cd web && npm test
       - name: web typecheck
         run: cd web && npx tsc -b --noEmit
-      - name: cloud workspace (wire tests + wire/relay type-check)
+      - name: cloud workspace (wire + relay tests + type-check)
         run: |
           cd cloud
           npx pnpm@10 --filter @pactify-apps/wire build
           npx pnpm@10 --filter @pactify-apps/wire test
-          npx pnpm@10 --filter @pactify-apps/relay build   # prisma generate + tsc (type-check; no DB)
+          npx pnpm@10 --filter @pactify-apps/relay build   # prisma generate + tsc (type-check)
+          # Run the relay suite on PGlite (no external DB) so tenant-isolation /
+          # auth regressions (e.g. the C1/H3 security tests) actually gate CI —
+          # previously the relay was only type-checked, never run.
+          npx pnpm@10 --filter @pactify-apps/relay test
       - name: embedded dist in sync with web source
         run: |
           cd web && npm run build && cd ..

@@ -48,9 +48,15 @@ jobs:
       - name: cloud workspace (wire + relay tests + type-check)
         run: |
           cd cloud
-          npx pnpm@10 --filter @pactify-apps/wire build
+          # Build the relay AND its workspace deps in dependency order — the
+          # `relay...` filter selects relay plus everything it depends on (wire ←
+          # crypto ← relay) and builds them topologically. Their package entries
+          # resolve to dist/, so vitest can't load them unbuilt: crypto is imported
+          # by identity-link.test.ts, wire by the ingest path, and crypto itself
+          # imports wire (so wire must build first). This build also runs relay's
+          # prisma generate + tsc type-check.
+          npx pnpm@10 --filter "@pactify-apps/relay..." build
           npx pnpm@10 --filter @pactify-apps/wire test
-          npx pnpm@10 --filter @pactify-apps/relay build   # prisma generate + tsc (type-check)
           # Run the relay suite on PGlite (no external DB) so tenant-isolation /
           # auth regressions (e.g. the C1/H3 security tests) actually gate CI —
           # previously the relay was only type-checked, never run.

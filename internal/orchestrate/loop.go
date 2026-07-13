@@ -424,11 +424,20 @@ func (opts Options) run(ctx context.Context) error {
 			// Both pre-review injections (QA report path + critic score) share the
 			// reviewer briefing's single pre-review section; all-empty leaves it
 			// byte-for-byte unchanged.
+			// A rework verdict starts a fresh fix-until-green episode: the owner will
+			// rework and re-checkpoint, and that next awaiting_review deserves its full
+			// MaxFixRounds self-repair budget. fixRounds only ever increments, so
+			// without this reset round 2+ would see round 1's count already at the cap
+			// and escalate with zero fix rounds (review finding M16).
+			reworkBefore := h.Rework[act.Task]
 			if err := opts.runReviewer(ctx, st, &h, act, joinNotes(qaNote, criticNote)); err != nil {
 				if errors.Is(err, errPausedForEscalation) {
 					return nil // escalation written + notified: paused, not failed
 				}
 				return err
+			}
+			if h.Rework[act.Task] > reworkBefore {
+				delete(fixRounds, act.Task) // new rework cycle → reset the self-repair budget
 			}
 			_ = writeHistory(opts.runtimeDir(), scope, h)
 

@@ -1037,3 +1037,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/phase0-h7.md
         evidence: H7 修复：runner_idle.go 的 osExecIdle 在 Setpgid 后加 cmd.Cancel=killGroup + WaitDelay=2s；runner.go 的 osExec 正确地未加 cmd.Cancel(无 Setpgid 会误杀父进程组)，留 TODO 说明危险。验证：go test -run TestSEC_H7 -count=1 连跑两次绿(1.36s/1.73s,非 flaky)；TestCmdRunner*/Runner*/Idle 无回归；build+vet OK。orchestrator 已读 diff 确认 Setpgid/Cancel 配对安全。
+      - id: phase0-c1
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/phase0-c1.md
+        evidence: null

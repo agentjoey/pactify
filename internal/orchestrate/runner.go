@@ -217,6 +217,12 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 		env = append(env, "GEMINI_CLI_TRUST_WORKSPACE=true")
 	}
 
+	// Isolate a single-vendor agent from sibling vendors' credentials (M11): a
+	// kimi / gemini / codex worker must not inherit the user's ANTHROPIC key, etc.
+	// Each kind keeps its OWN key (gemini's is added just above); model-agnostic
+	// kinds (opencode, custom) are left untouched.
+	env = append(env, crossVendorStrip(lc.Kind)...)
+
 	// Siphon a bounded tail of the child's stdout so we can parse token usage from
 	// its headless JSON (the read side surfaces it on the dashboard). Best-effort
 	// telemetry: capture and recording never affect the run's result.

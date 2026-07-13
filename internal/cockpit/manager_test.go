@@ -241,6 +241,7 @@ func TestManager_JsonlPath(t *testing.T) {
 		if len(events) == 1 {
 			break
 		}
+		time.Sleep(10 * time.Millisecond)
 	}
 	if len(events) != 1 {
 		t.Fatalf("expected 1 event in jsonl, got %d", len(events))

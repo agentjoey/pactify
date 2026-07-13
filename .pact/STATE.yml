@@ -1049,3 +1049,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/phase0-h5.md
         evidence: H5 修复：新增导出 pact.Project.ApplyBatch(joins,assigns)——单个 withLedgerLock 内捕获 origSize、逐个 joinWithClientLocked/assignLocked(*Locked 变体不重入取锁)、失败则持锁内 truncate+rerenderLocked(持锁期间无并发写故安全)；planner.ApplyTx 委托它、删自己的 truncate loop。验证：TestSEC_H5 连跑两次绿(2.4/2.16s 非flaky)；planner+pact 全套(ApplyTx/Apply/Assign/Init/Join)绿；pact+planner -race 全绿(15.4s)；build OK。orchestrator 已读 diff 确认锁全程只取一次、无重入死锁、truncate 在锁内。
+      - id: phase0-m10
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/phase0-m10.md
+        evidence: null

@@ -1019,3 +1019,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/phase0-c2.md
         evidence: C2 修复：新增 internal/orchestrate/env.go(filteredEnviron，denylist PACT_RELAY_TOKEN+PACTIFY_*)；osExec/osExecIdle/shellExec 三处环境 base 改走 filteredEnviron（shellExec 顺带修了 len(env)==0 不过滤的旧洞→无条件过滤）。验证全绿：go test -run TestSEC_C2 PASS(cmd+verify 两泄露面均不再泄露)；TestCmdRunner*/TestRunner* 无回归；go build ./... OK；go vet 干净。orchestrator 已读 diff 确认仅改 4 个授权文件、PATH 等非密钥变量仍透传。
+      - id: phase0-h4
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/phase0-h4.md
+        evidence: null

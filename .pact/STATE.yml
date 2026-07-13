@@ -1033,7 +1033,7 @@ features:
         evidence: H3 修复：server.ts ingest handler 在 ingestPactEvent 前加 getProject 归属校验(既存 project 的 accountId≠调用方→404,与既有 foreign-read 一致)。验证：vitest test/pact.http.test.ts+test/pact.test.ts 13/13 PASS(H3 注入+顶替两条转绿、既有不破)；tsc 干净。kimi 判 pact.ts 纵深防御可选而跳过——主修已闭合漏洞。orchestrator 已读 diff 确认仅改 server.ts。
       - id: phase0-h7
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/phase0-h7.md
         evidence: H7 修复：runner_idle.go 的 osExecIdle 在 Setpgid 后加 cmd.Cancel=killGroup + WaitDelay=2s；runner.go 的 osExec 正确地未加 cmd.Cancel(无 Setpgid 会误杀父进程组)，留 TODO 说明危险。验证：go test -run TestSEC_H7 -count=1 连跑两次绿(1.36s/1.73s,非 flaky)；TestCmdRunner*/Runner*/Idle 无回归；build+vet OK。orchestrator 已读 diff 确认 Setpgid/Cancel 配对安全。

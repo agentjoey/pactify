@@ -444,6 +444,10 @@ export function createServer(opts: ServerOptions): FastifyInstance {
       metrics.inc('pact_rejected_total')
       return reply.code(400).send({ error: 'bad request' })
     }
+    const existing = await getProject(db, parsed.data.projectId)
+    if (existing && existing.accountId !== accountId) {
+      return reply.code(404).send({ error: 'not found' })
+    }
     const { created } = await ingestPactEvent(db, accountId, parsed.data)
     metrics.inc('pact_events_total')
     // A re-uploaded event (a machine reconnecting replays its whole ledger) is a

@@ -254,17 +254,20 @@ func HasRemote(dir, name string) bool {
 	return err == nil
 }
 
-// Push pushes branch to remote.
+// Push pushes branch to remote. The "--" separator prevents a branch name that
+// slips past validation from being parsed as a git option (e.g. "--mirror").
 func Push(dir, remote, branch string) error {
-	if out, err := run(dir, "push", remote, branch); err != nil {
+	if out, err := run(dir, "push", remote, "--", branch); err != nil {
 		return fmt.Errorf("push %s %s: %s", remote, branch, strings.TrimSpace(out))
 	}
 	return nil
 }
 
 // Fetch updates remote-tracking refs for ref from remote (e.g. "origin", "main").
+// The "--" separator prevents a ref that slips past validation from being parsed
+// as a git option.
 func Fetch(dir, remote, ref string) error {
-	if out, err := run(dir, "fetch", "--quiet", remote, ref); err != nil {
+	if out, err := run(dir, "fetch", "--quiet", remote, "--", ref); err != nil {
 		return fmt.Errorf("fetch %s %s: %s", remote, ref, strings.TrimSpace(out))
 	}
 	return nil

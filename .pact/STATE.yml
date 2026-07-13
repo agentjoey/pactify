@@ -1051,7 +1051,7 @@ features:
         evidence: H5 修复：新增导出 pact.Project.ApplyBatch(joins,assigns)——单个 withLedgerLock 内捕获 origSize、逐个 joinWithClientLocked/assignLocked(*Locked 变体不重入取锁)、失败则持锁内 truncate+rerenderLocked(持锁期间无并发写故安全)；planner.ApplyTx 委托它、删自己的 truncate loop。验证：TestSEC_H5 连跑两次绿(2.4/2.16s 非flaky)；planner+pact 全套(ApplyTx/Apply/Assign/Init/Join)绿；pact+planner -race 全绿(15.4s)；build OK。orchestrator 已读 diff 确认锁全程只取一次、无重入死锁、truncate 在锁内。
       - id: phase0-m10
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/phase0-m10.md
         evidence: M10 修复：event/log.go 的 parse 改为有界 bufio.Reader(16MiB,ReadSlice)——超长行 drain 跳过(有界内存防 OOM)、畸形 JSON 行跳过、绝不因单行 brick 整读；新增 ParseStats.Skipped 可观测；rules.go checkCheckpoint 加 1MiB evidence 上界(源头预防)。验证：TestSEC_M10 两条绿；event/projection 全套绿(有效行字节等价、snapshot fold 不破)；pact 套件绿；build/vet OK。仅改 2 文件。

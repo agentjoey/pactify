@@ -1043,3 +1043,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/phase0-c1.md
         evidence: C1 修复：sockets.ts 两处——(1) io.use 改 async 加机器归属校验(既存机器属别账号才拒,新机/自有放行,不破首注册)；(2) rpc handler 机器定向分支 push 前 db.machine.findFirst({id,accountId}) 校验,不属则 rpc-error+drop(对齐 run 分支)。验证：full test/sockets.test.ts 20/20 PASS(C1 注入+窃听两条转绿、既有 machine 连接/ingest/same-account 路由全不破)；tsc 干净。orchestrator 已读 diff 确认仅改 sockets.ts。
+      - id: phase0-h5
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/phase0-h5.md
+        evidence: null

@@ -1191,16 +1191,25 @@ func (p *Project) cancelLocked(taskID string) error {
 	if err := requireOrchestrator(st, "cancel", id); err != nil {
 		return err
 	}
-	feature := ""
+	feature, status := "", ""
 	for _, f := range st.Features {
 		for _, t := range f.Tasks {
 			if t.ID == taskID {
-				feature = f.ID
+				feature, status = f.ID, t.Status
 			}
 		}
 	}
 	if feature == "" {
 		return fmt.Errorf("cancel: task %q not found", taskID)
+	}
+	// A checkpointed-but-unaccepted task has commits on the feature branch that no
+	// reviewer has approved. Cancelling drops it from the projection, and checkMerge
+	// only requires the tasks that REMAIN to be accepted — so the feature would then
+	// merge, shipping those unreviewed commits and bypassing invariant (2) (review
+	// finding M8). Refuse: accept it, request changes, or withdraw the feature.
+	if status == "awaiting_review" || status == "changes_requested" {
+		return fmt.Errorf("cancel: task %q is %s and has unreviewed commits on the feature branch; "+
+			"accept it, request changes, or withdraw the feature instead of cancelling", taskID, status)
 	}
 	return p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("cancel"), EventType: "cancel",

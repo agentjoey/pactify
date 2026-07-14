@@ -250,6 +250,18 @@ func (opts Options) run(ctx context.Context) error {
 		}
 	}
 
+	// Heartbeat status.json for the life of the run so a live-but-silent stint (an
+	// agent turn can block up to RunTimeout) never looks stale to serve's 10min
+	// stale-run guard — which, combined with a serve restart that loses the
+	// in-memory running-marker, would otherwise let a second driver spawn on the
+	// same feature (review finding M17). Cancelled when run() returns, so a crashed
+	// driver stops heartbeating and is correctly retired.
+	if !opts.DryRun && statusHeartbeatInterval > 0 {
+		hbCtx, cancelHB := context.WithCancel(ctx)
+		defer cancelHB()
+		go heartbeatStatus(hbCtx, opts.runtimeDir(), statusHeartbeatInterval, func() string { return statusNow(opts.Now) })
+	}
+
 	// Reconstruct threshold history so a driver restart (crash, session limit,
 	// supervisor restart) cannot hand a persistently-failing task a fresh budget:
 	// rework rounds are re-counted from the ledger, and the process-internal

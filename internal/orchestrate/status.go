@@ -1,6 +1,7 @@
 package orchestrate
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +10,12 @@ import (
 
 	"github.com/agentjoey/pactify/internal/projection"
 )
+
+// statusHeartbeatInterval is how often a live driver re-stamps status.json so a
+// long-but-silent stint doesn't look stale. It MUST stay well under serve's
+// stale-run window (10min) so a live run is never mistaken for dead. Overridable
+// in tests.
+var statusHeartbeatInterval = 3 * time.Minute
 
 // Status is the machine-readable runtime snapshot the orchestrate loop emits to
 // .pact/orchestrate/status.json on every iteration and at terminal states.
@@ -243,6 +250,46 @@ func writeStatus(dir string, s Status) error {
 	}
 
 	return nil
+}
+
+// restampStatus bumps status.json's updated_at to now while preserving the rest,
+// marking a live-but-silent run as still fresh. It is a no-op when the file is
+// missing/unreadable or already terminal (done/escalated) — a terminal run must
+// stay terminal so serve's stale guard can retire it.
+func restampStatus(dir string, now func() string) {
+	b, err := os.ReadFile(filepath.Join(dir, ".pact", "orchestrate", "status.json"))
+	if err != nil {
+		return
+	}
+	var s Status
+	if json.Unmarshal(b, &s) != nil {
+		return
+	}
+	if s.Done || s.Escalated {
+		return
+	}
+	s.UpdatedAt = statusNow(now)
+	_ = writeStatus(dir, s)
+}
+
+// heartbeatStatus re-stamps status.json every interval while the driver is alive.
+// An agent turn can block up to RunTimeout without the loop writing a new status,
+// so a stint longer than serve's stale-run window (10min) would make a LIVE run
+// look dead; a concurrent serve restart (which loses the in-memory running-marker)
+// then lets a SECOND driver spawn on the same feature (review finding M17). The
+// heartbeat keeps a live run visibly fresh. Stops when ctx is cancelled (run
+// returns) — so a crashed driver stops heartbeating and IS correctly retired.
+func heartbeatStatus(ctx context.Context, dir string, interval time.Duration, now func() string) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			restampStatus(dir, now)
+		}
+	}
 }
 
 // progress computes total tasks and accepted tasks from a state view.

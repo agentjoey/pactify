@@ -49,6 +49,16 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 		park = "pact-parallel-park"
 	}
 
+	// Crash guard (mirrors RunSandbox): refuse to run over the debris of a parallel
+	// run that died before restoring the primary tree — a surviving park marker, or
+	// a tree still sitting on the park branch. Without this, a child panic/SIGKILL/
+	// OOM that skipped the restore defer leaves HEAD on the park branch, and the next
+	// run captures THAT as base and lands every merge on it. Recovery is a deliberate
+	// human act (post-crash tree state is unknown), so refuse and name the branch.
+	if err := checkStalePark(opts.Dir, park); err != nil {
+		return err
+	}
+
 	st, err := pact.At(opts.Dir).StateProjection()
 	if err != nil {
 		return fmt.Errorf("orchestrate: read state: %w", err)
@@ -73,12 +83,24 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 	// previous run's features.
 	clearParallelStatus(opts.Dir)
 
+	// Persist the parked branch's identity BEFORE parking: the in-memory base dies
+	// with the process, and after a mid-run crash CurrentBranch reads the park branch
+	// itself — the marker is the only record of where the primary tree really was
+	// (and the crash guard above reads it to name the recovery branch).
+	if err := writeParkMarker(opts.Dir, base); err != nil {
+		return fmt.Errorf("orchestrate: record park marker: %w", err)
+	}
 	// Park the primary tree off base so worktrees can take base for their merges.
 	if err := gitx.CheckoutOrCreate(opts.Dir, park); err != nil {
+		removeParkMarker(opts.Dir) // never parked — the marker must not strand a healthy tree
 		return fmt.Errorf("orchestrate: park primary tree: %w", err)
 	}
 	defer func() {
-		_ = gitx.Checkout(opts.Dir, base) // restore base (now carrying the merges)
+		// Only a CONFIRMED restore clears the crash guard; a skipped/failed restore
+		// leaves the marker so the next run refuses instead of corrupting base.
+		if gitx.Checkout(opts.Dir, base) == nil { // restore base (now carrying the merges)
+			removeParkMarker(opts.Dir)
+		}
 	}()
 
 	type result struct {

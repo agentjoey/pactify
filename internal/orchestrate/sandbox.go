@@ -52,7 +52,7 @@ func RunSandbox(ctx context.Context, opts Options) (err error) {
 	// Re-parking would capture the park branch itself as "orig" and permanently lose
 	// the real branch; auto-restoring is unsafe too (the post-crash tree state is
 	// unknown). Refuse, name the recorded branch, and let a human look.
-	if err := checkStalePark(dir); err != nil {
+	if err := checkStalePark(dir, parkBranch); err != nil {
 		return err
 	}
 	if dirty, _ := gitx.HasChanges(dir); dirty {
@@ -176,14 +176,16 @@ func writeParkMarker(dir, orig string) error {
 // restored (or was never parked).
 func removeParkMarker(dir string) { _ = os.Remove(parkMarkerPath(dir)) }
 
-// checkStalePark refuses to run over the debris of a crashed sandbox run. It
-// never removes the marker or restores the branch itself: the tree state after a
-// crash is unknown, so recovery is a deliberate human act, and the error spells
-// out exactly which commands perform it.
-func checkStalePark(dir string) error {
+// checkStalePark refuses to run over the debris of a crashed run (sandbox or
+// parallel — both share the park marker, so a crash in either blocks the next run
+// of either until a human recovers). It never removes the marker or restores the
+// branch itself: the tree state after a crash is unknown, so recovery is a
+// deliberate human act, and the error spells out exactly which commands perform
+// it. `park` is the caller's park branch (they differ per mode).
+func checkStalePark(dir, park string) error {
 	cur, _ := gitx.CurrentBranch(dir)
 	b, rerr := os.ReadFile(parkMarkerPath(dir))
-	if rerr != nil && cur != parkBranch {
+	if rerr != nil && cur != park {
 		return nil // no marker, not parked: a clean tree
 	}
 	orig := "<your-branch>" // marker missing/unreadable: find it via `git reflog`

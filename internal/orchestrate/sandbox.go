@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -37,7 +38,7 @@ var logCopybackLockTimeout = 30 * time.Second
 // the integrated result is visible repo-wide. The pact ledger is gitignored, so it
 // is copied INTO the sandbox and the updated ledger copied back out (回灌) — the
 // .pact stays local, respecting a repo that gitignores it.
-func RunSandbox(ctx context.Context, opts Options) error {
+func RunSandbox(ctx context.Context, opts Options) (err error) {
 	dir := opts.Dir
 	base := gitx.DefaultBranch(dir)
 	if base == "" {
@@ -115,7 +116,29 @@ func RunSandbox(ctx context.Context, opts Options) error {
 	defer func() {
 		ledger := readLedger(sbDir)
 		teardown()
-		writeLedger(dir, ledger)
+		werr := writeLedger(dir, ledger)
+		if werr == nil {
+			return
+		}
+		// The authoritative回灌 failed. For a repo that git-tracks .pact the mid-run
+		// mirror is a no-op, so this is the ONLY write-back — silently dropping it
+		// would lose the whole run's checkpoint/accept/merge events while git already
+		// merged. Preserve the snapshot for reconciliation, surface loudly, and fail
+		// the run (unless it already failed) so the loss can never pass unnoticed (M15).
+		path, perr := preserveUnmergedLedger(dir, ledger)
+		msg := fmt.Sprintf("sandbox: FAILED to write this run's ledger back to %s (%v)", filepath.Join(dir, ".pact", "log.jsonl"), werr)
+		if perr == nil && path != "" {
+			msg += fmt.Sprintf(" — its events were saved to %s; reconcile them into the log (git already applied this run's merges)", path)
+		} else {
+			msg += fmt.Sprintf(" — AND the recovery snapshot could not be saved (%v): this run's events are LOST", perr)
+		}
+		if o.Notify != nil {
+			o.Notify.Notify(msg)
+		}
+		fmt.Fprintln(os.Stderr, msg) // stderr too, so a headless run without a notifier still records it
+		if err == nil {
+			err = errors.New(msg)
+		}
 	}()
 	return o.withDefaults().run(ctx)
 }
@@ -190,10 +213,15 @@ func readLedger(dir string) map[string][]byte {
 // — any event appended to main between seed and copy-back survives — and STATE.yml
 // is reprojected from the merged log (authoritative) rather than copied from the
 // sandbox's stale projection.
-func writeLedger(dir string, m map[string][]byte) {
+// writeLedger returns an error when the merged log could NOT be written (lock
+// contention or a write failure), so the caller can decide whether that loss is
+// tolerable: the mid-run mirror ignores it (best-effort — the next iteration
+// retries), but the epilogue回灌 is the authoritative, last-chance write-back and
+// must NOT drop the run's events silently — it preserves them instead (M15).
+func writeLedger(dir string, m map[string][]byte) error {
 	sandboxLog := m["log.jsonl"]
 	if sandboxLog == nil {
-		return
+		return nil
 	}
 	// The read-merge-write below must be atomic against every other pactify log
 	// writer (CLI verbs, serve) — an event they append between our read and our
@@ -203,15 +231,14 @@ func writeLedger(dir string, m map[string][]byte) {
 	// writer of dir's ledger agrees on one lock file. Lock ORDER when both apply:
 	// the base-integration lock (pactify-base.lock, held by pact.Merge) is acquired
 	// FIRST, then this log lock — never take the base lock while holding the log
-	// lock, or two processes deadlock. Best-effort like the rest of the mirror: an
-	// unresolvable lock path (dir not a repo) proceeds unlocked, and a timeout
-	// SKIPS this copy cycle rather than stalling the loop.
+	// lock, or two processes deadlock. An unresolvable lock path (dir not a repo)
+	// proceeds unlocked; a timeout returns an error (the caller handles the loss).
 	if lockPath, lerr := gitx.GitPath(dir, "pactify-log.lock"); lerr == nil {
 		lctx, cancel := context.WithTimeout(context.Background(), logCopybackLockTimeout)
 		defer cancel()
 		release, aerr := lockx.Acquire(lctx, lockPath)
 		if aerr != nil {
-			return
+			return fmt.Errorf("acquire log lock for 回灌: %w", aerr)
 		}
 		defer release()
 	}
@@ -221,11 +248,33 @@ func writeLedger(dir string, m map[string][]byte) {
 	// event.ReadAll never observes the log mid-truncate — the same pattern
 	// projection.WriteState already uses for STATE.yml.
 	if err := atomicWriteFile(logPath, mergeEventLines(mainLog, sandboxLog)); err != nil {
-		return
+		return fmt.Errorf("write merged log: %w", err)
 	}
 	if evs, err := event.ReadAll(logPath); err == nil {
 		_ = projection.WriteState(filepath.Join(dir, ".pact", "STATE.yml"), projection.Project(evs))
 	}
+	return nil
+}
+
+// preserveUnmergedLedger drops a sandbox ledger snapshot that could not be merged
+// back into dir's log (the epilogue回灌 failed) to a timestamped recovery file, so
+// the run's events — checkpoints/accepts/merges that git already applied — survive
+// for reconciliation instead of vanishing silently (review finding M15). Returns
+// the recovery path.
+func preserveUnmergedLedger(dir string, m map[string][]byte) (string, error) {
+	log := m["log.jsonl"]
+	if log == nil {
+		return "", nil
+	}
+	name := fmt.Sprintf("unmerged-ledger-%s.jsonl", time.Now().UTC().Format("20060102-150405.000"))
+	path := filepath.Join(dir, ".pact", "orchestrate", name)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, log, 0o644); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // atomicWriteFile writes b to path via a temp file in path's own directory plus

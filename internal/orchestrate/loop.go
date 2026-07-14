@@ -155,7 +155,9 @@ func (opts Options) mirrorLedger() {
 	if !opts.pactIgnored(dst) {
 		return
 	}
-	writeLedger(dst, readLedger(opts.Dir))
+	// Best-effort mirror: a failed copy (lock contention) is retried next iteration,
+	// so ignore the error here — unlike the epilogue回灌, which must not drop events.
+	_ = writeLedger(dst, readLedger(opts.Dir))
 }
 
 // pactIgnored reports whether dst git-ignores .pact, memoized per run when the

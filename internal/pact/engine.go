@@ -623,16 +623,39 @@ func (p *Project) mergeLocked(id, feature string) error {
 	if branch != "" && branch != base && !gitx.BranchExists(p.dir, branch) {
 		return fmt.Errorf("merge %s: feature branch %q does not exist — its work never landed there (the owner likely committed to a different branch); refusing to record a no-op merge as shipped", feature, branch)
 	}
-	// Empty-feature guard: the branch exists but carries NO commits over base (base
-	// already contains all of it) → the merge would integrate nothing, and recording
-	// `shipped` would leave base unchanged (a phantom ship, pact state ahead of git —
-	// e.g. a worker that checkpointed without committing any work). Refuse so it
-	// escalates loudly instead of silently shipping. In sandbox runs this is what
-	// makes "shipped but main unchanged" surface as an error rather than pass.
+	// base already contains the branch (IsAncestor). Two very different causes that
+	// must NOT be conflated, since both make IsAncestor true:
+	//   - CRASH RECOVERY: a prior merge integrated the branch into base, but the
+	//     process died after MergeNoFF and before the merge EVENT was appended to
+	//     the ledger. git has the merge commit; the ledger doesn't → the feature is
+	//     "accepted, not shipped" and every retry hit the guard below and refused,
+	//     stranding it unshippable forever (review finding M9). Re-running must
+	//     COMPLETE the merge — record the event — not refuse.
+	//   - PHANTOM: the branch never carried commits over base (a worker checkpointed
+	//     without committing). No merge ever ran; recording `shipped` would put pact
+	//     state ahead of git. Refuse so it escalates loudly.
+	// A real merge commit carrying the branch's tip is the safe discriminator — a
+	// phantom has none, so a false "already merged" (which would ship nothing) is
+	// impossible.
+	alreadyMerged := false
 	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) && gitx.IsAncestor(p.dir, branch, base) {
-		return fmt.Errorf("merge %s: feature branch %q has no commits over base %q — no work was committed there (base would be unchanged); refusing to record shipped", feature, branch, base)
+		merged, herr := gitx.HasMergeOfBranch(p.dir, base, branch)
+		if herr != nil {
+			return fmt.Errorf("merge %s: %w", feature, herr)
+		}
+		if !merged {
+			return fmt.Errorf("merge %s: feature branch %q has no commits over base %q — no work was committed there (base would be unchanged); refusing to record shipped", feature, branch, base)
+		}
+		// Recovery: the git merge already landed. Skip re-merging; land on base so the
+		// merge event + STATE.yml commit onto the merged base, then record the event.
+		if base != "" {
+			if err := gitx.Checkout(p.dir, base); err != nil {
+				return fmt.Errorf("merge %s: checkout base to complete a crashed merge: %w", feature, err)
+			}
+		}
+		alreadyMerged = true
 	}
-	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) {
+	if !alreadyMerged && branch != "" && branch != base && gitx.BranchExists(p.dir, branch) {
 		if ch, _ := gitx.HasChanges(p.dir); ch {
 			if err := gitx.CommitAll(p.dir, "pact "+feature+": ledger before merge"); err != nil {
 				return err

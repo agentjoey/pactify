@@ -196,8 +196,29 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 		done <- result{perr}
 	}()
 
+	// killAndReap tears the connection down and waits BOUNDEDLY for the prompt
+	// goroutine. The reap must not be `<-done` bare: if the child survives the
+	// kill or the transport read wedges, Prompt never returns and Run would hang
+	// past its deadline — turning --run-timeout into a no-op (e2e F2's failure
+	// shape). After the grace period the goroutine is abandoned; it holds no
+	// locks and dies with the process.
+	killAndReap := func(err error) error {
+		conn.Close() // kill → the pending Prompt unblocks with an error
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
+		return err
+	}
 	if r.Idle <= 0 {
-		return (<-done).err
+		// No idle watchdog — but the ctx deadline (--run-timeout) must still cut
+		// the stint short; a bare <-done here ignored cancellation entirely.
+		select {
+		case res := <-done:
+			return res.err
+		case <-ctx.Done():
+			return killAndReap(ctx.Err())
+		}
 	}
 	timer := time.NewTimer(r.Idle)
 	defer timer.Stop()
@@ -214,13 +235,9 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 			}
 			timer.Reset(r.Idle)
 		case <-timer.C:
-			conn.Close() // kill → the pending Prompt unblocks with an error
-			<-done       // reap the prompt goroutine
-			return fmt.Errorf("%w: no ACP session update for %s — killed", errIdle, r.Idle)
+			return killAndReap(fmt.Errorf("%w: no ACP session update for %s — killed", errIdle, r.Idle))
 		case <-ctx.Done():
-			conn.Close()
-			<-done
-			return ctx.Err()
+			return killAndReap(ctx.Err())
 		}
 	}
 }

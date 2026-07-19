@@ -304,6 +304,16 @@ func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*pro
 	if tk.Owner != caller {
 		return nil, fmt.Errorf("pactify checkpoint: %s is not the owner of %s (owner: %s)", caller, taskID, tk.Owner)
 	}
+	// Status guard (2026-07-19 e2e F3): an accepted task carries a reviewer's
+	// verdict, and the projection folds ANY checkpoint back to awaiting_review —
+	// so an owner checkpoint here would unilaterally rewind that verdict (same
+	// invariant family as M8's cancel guard). Only the reviewer (changes) or the
+	// orchestrator (cancel) may reopen reviewed work. Every pre-verdict status
+	// stays checkpointable — including awaiting_review, which the fix-until-green
+	// loop re-checkpoints before any review.
+	if tk.Status == "accepted" {
+		return nil, fmt.Errorf("pactify checkpoint: task %s is already accepted — a reviewer verdict cannot be rewound by the owner (reviewer `changes` or orchestrator `cancel` reopen work)", taskID)
+	}
 	// Close the join-gate ordering hole: a seat that joined BEFORE a dep'd assign
 	// could otherwise checkpoint a still-blocked task. Re-apply the same dep gate
 	// the join uses, but for this single task.

@@ -150,6 +150,22 @@ func wrapGitErr(err error, out string) error {
 	return fmt.Errorf("%w: %s", err, out)
 }
 
+// CheckoutReset checks out branch, creating it at — or RESETTING it to — the
+// current HEAD (`git checkout -B`). For scratch branches whose only valid
+// position is "where HEAD is right now": reusing a stale pointer (as
+// CheckoutOrCreate would) rewinds the working tree to wherever the branch last
+// pointed.
+func CheckoutReset(dir, branch string) error {
+	out, err := run(dir, "checkout", "-q", "-B", branch)
+	return wrapGitErr(err, out)
+}
+
+// DeleteBranch force-deletes a local branch (`git branch -D`).
+func DeleteBranch(dir, branch string) error {
+	out, err := run(dir, "branch", "-q", "-D", branch)
+	return wrapGitErr(err, out)
+}
+
 // Checkout switches to an existing branch.
 func Checkout(dir, branch string) error {
 	out, err := run(dir, "checkout", "-q", branch)

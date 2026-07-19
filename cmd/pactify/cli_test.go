@@ -61,15 +61,18 @@ func TestCLIHelpAndFullFlow(t *testing.T) {
 	if out, err := run(orch, "assign", "t1", "--feature", "f", "--branch", "feat/x", "--owner", "opencode", "--reviewer", "claude-opus", "--spec", ".pact/tasks/t1.md"); err != nil {
 		t.Fatalf("assign: %v %s", err, out)
 	}
-	if out, err := run(work, "join", "opencode", "--roles", "worker"); err != nil {
+	if out, err := run(work, "join", "opencode", "--roles", "worker", "--task", "t1"); err != nil {
 		t.Fatalf("join: %v %s", err, out)
 	}
 	os.WriteFile(filepath.Join(dir, "impl.txt"), []byte("c"), 0o644)
 	if out, err := run(work, "checkpoint", "t1", "--evidence", "ok"); err != nil {
 		t.Fatalf("checkpoint: %v %s", err, out)
 	}
-	if out, err := run(orch, "accept", "t1"); err != nil {
+	if out, err := run(orch, "accept", "t1", "--evidence", "verify green 16/16"); err != nil {
 		t.Fatalf("accept: %v %s", err, out)
+	}
+	if log, err := os.ReadFile(filepath.Join(dir, ".pact/log.jsonl")); err != nil || !strings.Contains(string(log), "verify green 16/16") {
+		t.Fatalf("accept --evidence must reach the ledger: %v\n%s", err, log)
 	}
 	if out, err := run(orch, "merge", "f"); err != nil {
 		t.Fatalf("merge: %v %s", err, out)

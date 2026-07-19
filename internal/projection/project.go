@@ -261,6 +261,10 @@ func (f *Folder) apply(evs []event.Event) {
 			// assigned task the seat owns corrupted the board: dep-blocked and
 			// never-started tasks showed in_progress, and the join gate lost its
 			// startable set. Task-scoped `start` covers the orchestrate path.
+			// A TARGETED join (payload `task`, engine JoinTask) lifts exactly the
+			// named task instead — and nothing when that task isn't liftable, so
+			// replay of arbitrary logs stays deterministic.
+			jtask := str(e.Payload["task"])
 			lifted := false
 			for fi := range st.Features {
 				if lifted {
@@ -269,6 +273,9 @@ func (f *Folder) apply(evs []event.Event) {
 				fe := &st.Features[fi]
 				for ti := range fe.Tasks {
 					t := &fe.Tasks[ti]
+					if jtask != "" && t.ID != jtask {
+						continue
+					}
 					if t.Owner != e.AgentID || t.Status != "assigned" || f.cancelled[fe.ID+"\x00"+t.ID] {
 						continue
 					}

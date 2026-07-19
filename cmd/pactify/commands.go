@@ -61,11 +61,14 @@ func newRootCmd() *cobra.Command {
 	initCmd.Flags().StringVar(&project, "project", "", "project name")
 	initCmd.Flags().StringArrayVar(&seats, "seat", nil, "seat 'id:roles:entry[:kind]' (repeatable)")
 
-	var joinRoles, joinKind string
+	var joinRoles, joinKind, joinTask string
 	joinCmd := &cobra.Command{Use: "join <id>", Args: cobra.ExactArgs(1), Short: "worker cold-start",
-		RunE: func(_ *cobra.Command, a []string) error { return pact.JoinKind(a[0], joinRoles, joinKind) }}
+		RunE: func(_ *cobra.Command, a []string) error {
+			return pact.At(".").JoinWithClientKindTask(a[0], joinRoles, "pactify-cli", pact.ClientVersion, joinKind, joinTask)
+		}}
 	joinCmd.Flags().StringVar(&joinRoles, "roles", "", "comma-separated roles")
 	joinCmd.Flags().StringVar(&joinKind, "kind", "", "declared agent kind recorded on the roster (orchestrate resolves seat→kind from it; dynamic seats)")
+	joinCmd.Flags().StringVar(&joinTask, "task", "", "target task id: lift exactly this task (refused with a task-specific error when unknown, not owned, or dep-blocked)")
 
 	var feature, branch, owner, reviewer, spec string
 	var reviewers []string
@@ -106,8 +109,10 @@ func newRootCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, a []string) error { return pact.Checkpoint(a[0], evidence) }}
 	cpCmd.Flags().StringVar(&evidence, "evidence", "", "evidence text")
 
+	var acceptEvidence string
 	acceptCmd := &cobra.Command{Use: "accept <task>", Args: cobra.ExactArgs(1), Short: "reviewer accepts",
-		RunE: func(_ *cobra.Command, a []string) error { return pact.Accept(a[0]) }}
+		RunE: func(_ *cobra.Command, a []string) error { return pact.AcceptEvidence(a[0], acceptEvidence) }}
+	acceptCmd.Flags().StringVar(&acceptEvidence, "evidence", "", "reviewer evidence backing the verdict (e.g. verify output summary); recorded on the accept event")
 
 	var reason string
 	changesCmd := &cobra.Command{Use: "changes <task>", Args: cobra.ExactArgs(1), Short: "request changes",

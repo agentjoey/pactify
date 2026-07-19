@@ -34,6 +34,7 @@ type statusIn struct {
 type joinIn struct {
 	projectField
 	Roles string `json:"roles,omitempty" jsonschema:"comma-separated roles"`
+	Task  string `json:"task,omitempty" jsonschema:"optional target task id: lift exactly this task (refused with a task-specific error when unknown, not owned by this seat, or dep-blocked) instead of the seat's first workable task"`
 }
 type assignIn struct {
 	projectField
@@ -53,6 +54,11 @@ type checkpointIn struct {
 type taskIn struct {
 	projectField
 	Task string `json:"task"`
+}
+type acceptIn struct {
+	projectField
+	Task     string `json:"task"`
+	Evidence string `json:"evidence,omitempty" jsonschema:"optional reviewer evidence backing the verdict (e.g. the verify command output summary); recorded on the accept event"`
 }
 type changesIn struct {
 	projectField
@@ -168,7 +174,7 @@ func registerTools(s *sdk.Server) {
 			return okResult(text), nil, nil
 		})
 
-	sdk.AddTool(s, &sdk.Tool{Name: "join", Description: "Worker cold-start: register this session's seat (PACT_AGENT_ID) and check out its feature branch. Pass `project` to join a registered project."},
+	sdk.AddTool(s, &sdk.Tool{Name: "join", Description: "Worker cold-start: register this session's seat (PACT_AGENT_ID) and check out its feature branch. Pass `task` to target a specific task (lifts exactly that task). Pass `project` to join a registered project."},
 		func(_ context.Context, req *sdk.CallToolRequest, in joinIn) (*sdk.CallToolResult, any, error) {
 			proj, err := resolveProject(in.Project)
 			if err != nil {
@@ -176,7 +182,7 @@ func registerTools(s *sdk.Server) {
 			}
 			seat := paths.AgentID()
 			name, version := clientInfo(req)
-			if err := proj.JoinWithClient(seat, in.Roles, name, version); err != nil {
+			if err := proj.JoinWithClientTask(seat, in.Roles, name, version, in.Task); err != nil {
 				return errResult(err)
 			}
 			return okResult(fmt.Sprintf("joined %s", seat)), nil, nil
@@ -206,13 +212,13 @@ func registerTools(s *sdk.Server) {
 			return okResult(fmt.Sprintf("checkpointed %s", in.Task)), nil, nil
 		})
 
-	sdk.AddTool(s, &sdk.Tool{Name: "accept", Description: "Accept a task (reviewer-only; task must be awaiting_review). Pass `project` to target a registered project."},
-		func(_ context.Context, _ *sdk.CallToolRequest, in taskIn) (*sdk.CallToolResult, any, error) {
+	sdk.AddTool(s, &sdk.Tool{Name: "accept", Description: "Accept a task (reviewer-only; task must be awaiting_review). Optionally pass `evidence` (your verify run / inspection summary) to record it on the accept event. Pass `project` to target a registered project."},
+		func(_ context.Context, _ *sdk.CallToolRequest, in acceptIn) (*sdk.CallToolResult, any, error) {
 			proj, err := resolveProject(in.Project)
 			if err != nil {
 				return errResult(err)
 			}
-			if err := proj.Accept(in.Task); err != nil {
+			if err := proj.AcceptEvidence(in.Task, in.Evidence); err != nil {
 				return errResult(err)
 			}
 			return okResult(fmt.Sprintf("accepted %s", in.Task)), nil, nil

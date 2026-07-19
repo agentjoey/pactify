@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -181,6 +182,26 @@ func (p *Project) Init(project string, seatSpecs []string) error {
 	return p.withLedgerLock(func() error { return p.initLocked(project, seatSpecs) })
 }
 
+// scaffoldGitignore writes a starter .gitignore covering common tool junk —
+// but ONLY when the repo has none. Workers checkpoint with a broad `git add`,
+// so a repo with no ignore file at all sweeps caches (__pycache__, .DS_Store)
+// into history; a repo that HAS one has an ignore policy pactify must not touch.
+func scaffoldGitignore(dir string) error {
+	path := filepath.Join(dir, ".gitignore")
+	if _, err := os.Lstat(path); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	starter := `# Starter .gitignore scaffolded by pactify init (repo had none). Edit freely.
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+`
+	return os.WriteFile(path, []byte(starter), 0o644)
+}
+
 func (p *Project) initLocked(project string, seatSpecs []string) error {
 	id, err := p.agentID()
 	if err != nil {
@@ -219,6 +240,9 @@ func (p *Project) initLocked(project string, seatSpecs []string) error {
 		}
 	}
 	if err := BakeProject(paths.DirIn(p.dir), project, seats, paths.ProtocolVersion); err != nil {
+		return err
+	}
+	if err := scaffoldGitignore(p.dir); err != nil {
 		return err
 	}
 
@@ -304,12 +328,33 @@ func (p *Project) JoinWithClient(seatID, roles, clientName, clientVersion string
 // into Agents[].Kind; an empty kind emits no kind field, so kind-free joins stay
 // byte-identical to pre-feature logs.
 func (p *Project) JoinWithClientKind(seatID, roles, clientName, clientVersion, kind string) error {
+	return p.JoinWithClientKindTask(seatID, roles, clientName, clientVersion, kind, "")
+}
+
+// JoinTask is Join targeted at a specific task (join --task): instead of
+// lifting the seat's first workable task, the join lifts exactly the named
+// task — and every refusal (unknown/not-owned/dep-blocked) names that task,
+// not a sibling. Use it when a briefing tells the worker WHICH task to start,
+// so the ledger can never diverge from the briefing.
+func (p *Project) JoinTask(seatID, roles, taskID string) error {
+	return p.JoinWithClientKindTask(seatID, roles, "pactify-cli", ClientVersion, "", taskID)
+}
+
+// JoinWithClientTask is JoinWithClient plus a target task (see JoinTask).
+func (p *Project) JoinWithClientTask(seatID, roles, clientName, clientVersion, taskID string) error {
+	return p.JoinWithClientKindTask(seatID, roles, clientName, clientVersion, "", taskID)
+}
+
+// JoinWithClientKindTask is the full join: optional client provenance, optional
+// declared kind, optional target task. Each optional field is emitted on the
+// payload ONLY when present, so joins that don't use it stay byte-identical.
+func (p *Project) JoinWithClientKindTask(seatID, roles, clientName, clientVersion, kind, taskID string) error {
 	return p.withLedgerLock(func() error {
-		return p.joinWithClientLocked(seatID, roles, clientName, clientVersion, kind)
+		return p.joinWithClientLocked(seatID, roles, clientName, clientVersion, kind, taskID)
 	})
 }
 
-func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion, kind string) error {
+func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion, kind, taskID string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -329,7 +374,13 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion,
 	if err != nil {
 		return err
 	}
-	if err := checkJoinGate(preState, seatID); err != nil {
+	if taskID != "" {
+		// Targeted join: the target check subsumes the seat-scoped gate — the
+		// worker is starting THIS task, so only its own readiness matters.
+		if err := checkJoinTarget(preState, seatID, taskID); err != nil {
+			return err
+		}
+	} else if err := checkJoinGate(preState, seatID); err != nil {
 		return err
 	}
 	payload := map[string]any{"roles": rolesArr, "protocol_version": paths.ProtocolVersion}
@@ -342,6 +393,12 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion,
 	// discipline: kind-free joins keep byte-identical payloads.
 	if kind != "" {
 		payload["kind"] = kind
+	}
+	// task is emitted ONLY on a targeted join: the projection lifts exactly this
+	// task (instead of the seat's first workable one), so replay stays
+	// deterministic. Task-free joins keep byte-identical payloads.
+	if taskID != "" {
+		payload["task"] = taskID
 	}
 	if err := p.appendAndRender(event.Event{
 		AgentID:   id,
@@ -364,6 +421,23 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion,
 	// Otherwise prefer the first actionable (not-yet-accepted) owned task's branch,
 	// then any owned task's branch.
 	cur, _ := gitx.CurrentBranch(p.dir)
+	// Targeted join: the branch to be on is the TARGET task's feature branch —
+	// never some other owned feature's (the untargeted heuristic below picks the
+	// first actionable owned task, which may be a different feature entirely).
+	if taskID != "" {
+		for _, f := range st.Features {
+			for _, tk := range f.Tasks {
+				if tk.ID != taskID {
+					continue
+				}
+				if f.Branch == "" || f.Branch == cur {
+					return nil
+				}
+				return gitx.CheckoutOrCreate(p.dir, f.Branch)
+			}
+		}
+		return nil
+	}
 	var actionable, anyOwned string
 	for _, f := range st.Features {
 		if f.Branch == "" {
@@ -536,7 +610,7 @@ func (p *Project) ApplyBatch(joins []BatchJoin, assigns []BatchAssign) (int, err
 
 		for _, j := range joins {
 			roles := strings.Join(j.Roles, ",")
-			if err := p.As(j.SeatID).joinWithClientLocked(j.SeatID, roles, "pactify-cli", ClientVersion, j.Kind); err != nil {
+			if err := p.As(j.SeatID).joinWithClientLocked(j.SeatID, roles, "pactify-cli", ClientVersion, j.Kind, ""); err != nil {
 				_ = os.Truncate(logPath, origSize)
 				_ = p.rerenderLocked()
 				return fmt.Errorf("join %s: %w", j.SeatID, err)
@@ -775,10 +849,19 @@ func (p *Project) startLocked(taskID string) error {
 
 // Accept marks a task accepted (reviewer-only; must be awaiting_review).
 func (p *Project) Accept(taskID string) error {
-	return p.withLedgerLock(func() error { return p.acceptLocked(taskID) })
+	return p.AcceptEvidence(taskID, "")
 }
 
-func (p *Project) acceptLocked(taskID string) error {
+// AcceptEvidence is Accept plus optional reviewer evidence (the verify run or
+// inspection backing the verdict). Evidence is recorded on the accept event's
+// payload ONLY when non-empty — evidence-free accepts stay byte-identical to
+// historical logs — and, like join client provenance, it lives in the log only:
+// it is never projected into STATE.yml.
+func (p *Project) AcceptEvidence(taskID, evidence string) error {
+	return p.withLedgerLock(func() error { return p.acceptLocked(taskID, evidence) })
+}
+
+func (p *Project) acceptLocked(taskID, evidence string) error {
 	id, err := p.agentID()
 	if err != nil {
 		return err
@@ -791,9 +874,13 @@ func (p *Project) acceptLocked(taskID string) error {
 	if err != nil {
 		return err
 	}
+	payload := map[string]any{}
+	if evidence != "" {
+		payload["evidence"] = evidence
+	}
 	return p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("accept"), EventType: "accept",
-		TaskID: taskID, Feature: f.ID, Payload: map[string]any{},
+		TaskID: taskID, Feature: f.ID, Payload: payload,
 	})
 }
 
@@ -945,6 +1032,10 @@ func Merge(feature string) error { return At(".").Merge(feature) }
 
 // Accept marks a task accepted in the current working directory's repo.
 func Accept(taskID string) error { return At(".").Accept(taskID) }
+
+// AcceptEvidence records an accept with optional reviewer evidence in the
+// current working directory's repo (see (*Project).AcceptEvidence).
+func AcceptEvidence(taskID, evidence string) error { return At(".").AcceptEvidence(taskID, evidence) }
 
 // Changes sends a task back in the current working directory's repo.
 func Changes(taskID, reason string) error { return At(".").Changes(taskID, reason) }

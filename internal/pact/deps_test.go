@@ -145,6 +145,30 @@ func TestJoinGateRunnableTaskNotStrandedByFutureDep(t *testing.T) {
 	}
 }
 
+// Regression (2026-07-19 cross-vendor dogfood): a seat whose task is already
+// in_progress must be able to RE-join to resume it, even when it also owns a
+// dep-blocked task. The old gate counted only `assigned`/`changes_requested`
+// as startable, so after the first join lifted t1 to in_progress, a legitimate
+// re-join saw startable={t2 (blocked)}, runnable=0 and refused — with an error
+// pointing at t2, the task the worker wasn't even trying to work.
+func TestJoinGateReJoinWithInProgressTask(t *testing.T) {
+	repo, orch := depsRepo(t)
+	if err := orch.Assign("t1", "f", "feat/x", "w", "rev", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := orch.Assign("t2", "f", "feat/x", "w", "rev", "", []string{"t1"}); err != nil {
+		t.Fatal(err)
+	}
+	w := pact.At(repo).As("w")
+	if err := w.Join("w", "worker"); err != nil {
+		t.Fatalf("first join must succeed, got %v", err)
+	}
+	// t1 is now in_progress; t2 is still dep-blocked. Re-join = resume.
+	if err := w.Join("w", "worker"); err != nil {
+		t.Fatalf("re-join with an in_progress task must succeed, got %v", err)
+	}
+}
+
 func TestProjectionDepsLine(t *testing.T) {
 	repo, orch := depsRepo(t)
 	if err := orch.Assign("t1", "f", "feat/x", "w", "rev", "", nil); err != nil {

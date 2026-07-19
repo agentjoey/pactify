@@ -385,6 +385,13 @@ func (opts Options) run(ctx context.Context) error {
 		if !opts.DryRun && (act.Kind == ActRunOwner || act.Kind == ActRunReviewer) {
 			if reason, tripped := tripped(act.Task, h, opts.Th); tripped {
 				opts.emitEscalatedStatus(view, act.Task, reason, h)
+				// Snapshot the failure history INTO the escalation record before the
+				// circuit-breaker reset below erases it — otherwise "limit exceeded"
+				// ships with an empty history file and no narrative evidence (rerun
+				// F2-c: the persisted counters read {} while the record claimed a
+				// tripped limit).
+				snapshot := fmt.Sprintf("failure history at trip: fails=%d, rework=%d, last=%q (budget reset so a post-fix rerun resumes)",
+					h.Fails[act.Task], h.Rework[act.Task], h.LastFail[act.Task])
 				// The threshold has fired and the human is being notified: drop this
 				// task's persisted failure budget so a post-fix rerun resumes instead
 				// of re-tripping on the loaded count (rework is ledger-derived and
@@ -392,7 +399,8 @@ func (opts Options) run(ctx context.Context) error {
 				delete(h.Fails, act.Task)
 				delete(h.LastFail, act.Task)
 				_ = writeHistory(opts.runtimeDir(), scope, h)
-				return opts.escalate(act.Feature, act.Task, reason, evidenceFor(st, act.Task),
+				return opts.escalate(act.Feature, act.Task, reason,
+					evidenceFor(st, act.Task)+"\n\n"+snapshot,
 					"人工介入后 pactify orchestrate 续跑")
 			}
 		}

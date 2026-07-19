@@ -2,6 +2,8 @@ package orchestrate
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -75,5 +77,38 @@ func TestRunReviewerRecordsTimeoutCause(t *testing.T) {
 	}
 	if c := h.LastFail["t1"]; !strings.Contains(c, "run timeout (--run-timeout) exceeded") {
 		t.Fatalf("reviewer LastFail must carry the mapped timeout attribution, got %q", c)
+	}
+}
+
+// 2026-07-19 Phase C rerun F2-c: the escalation said "failure limit exceeded"
+// while history/<scope>.json read {"fails":{},"last_fail":{}} — the circuit-
+// breaker delete (so a post-fix rerun resumes instead of re-tripping) is
+// deliberate, but it erased the only narrative evidence. The escalation
+// record itself must carry the pre-delete snapshot: how many fails, and the
+// attributed cause.
+func TestEscalationCarriesFailureSnapshot(t *testing.T) {
+	dir := newProject(t)
+	spec := writeSpec(t, dir, "t1", "true")
+	assign(t, dir, "t1", "f", "feat-f", spec)
+
+	notify := &recNotify{}
+	if err := Run(context.Background(), baseOpts(dir, errRunner{context.DeadlineExceeded}, &okExec{}, notify)); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	files, err := filepath.Glob(filepath.Join(dir, ".pact", "orchestrate", "escalation-*.md"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("expected an escalation record, got %v (%v); notify=%v", files, err, notify.msgs)
+	}
+	b, err := os.ReadFile(files[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := string(b)
+	if !strings.Contains(rec, "failure history at trip") || !strings.Contains(rec, "fails=2") {
+		t.Fatalf("escalation must snapshot the failure history before the circuit-breaker reset:\n%s", rec)
+	}
+	if !strings.Contains(rec, "run timeout (--run-timeout) exceeded") {
+		t.Fatalf("escalation must carry the attributed cause end-to-end:\n%s", rec)
 	}
 }

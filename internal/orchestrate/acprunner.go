@@ -179,7 +179,9 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 			umu.Lock()
 			u := agg
 			umu.Unlock()
-			r.OnUsage(lc.RepoDir, lc.Seat, lc.Task, u)
+			// streamDir, not RepoDir: sandbox runs record tokens where they
+			// survive teardown (2026-07-19 e2e F6), matching recordTokens (cmd).
+			r.OnUsage(lc.streamDir(), lc.Seat, lc.Task, u)
 		}
 	}()
 

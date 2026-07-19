@@ -552,6 +552,13 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		opts.mirrorLedger()
 	}
 
+	// Launch-window delivery signal for the rescue below: if the tree fingerprint
+	// (HEAD + porcelain) is unchanged after the stint, the worker produced
+	// NOTHING — and a rescue must never promote nothing (F2-b). Captured after
+	// the Start bookkeeping so only the worker's own effects count.
+	preLaunch := gitx.TreeFingerprint(opts.Dir)
+	delivered := func() bool { return gitx.TreeFingerprint(opts.Dir) != preLaunch }
+
 	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
@@ -561,7 +568,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		// task's verify command now passes, the work is actually done and only the
 		// checkpoint was missing — record it (as owner) and let the next iteration
 		// route to the reviewer, instead of re-burning the worker.
-		if opts.classifyAndCheckpoint(ctx, act.Task, task) {
+		if opts.classifyAndCheckpoint(ctx, act.Task, task, delivered()) {
 			if after, err := pact.At(opts.Dir).StateProjection(); err == nil {
 				if _, t, ok := find(after, act.Feature, act.Task); ok && t.Status == "awaiting_review" {
 					h.Fails[act.Task] = 0
@@ -585,7 +592,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		// Same rescue as the crash path above: if the task's verify command passes,
 		// the work IS done and only the delivery was lost — checkpoint on the
 		// worker's behalf instead of burning failures toward escalation.
-		if opts.classifyAndCheckpoint(ctx, act.Task, task) {
+		if opts.classifyAndCheckpoint(ctx, act.Task, task, delivered()) {
 			if rescued, err := pact.At(opts.Dir).StateProjection(); err == nil {
 				if _, t, ok := find(rescued, act.Feature, act.Task); ok && t.Status == "awaiting_review" {
 					h.Fails[act.Task] = 0

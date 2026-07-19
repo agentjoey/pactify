@@ -150,6 +150,18 @@ func wrapGitErr(err error, out string) error {
 	return fmt.Errorf("%w: %s", err, out)
 }
 
+// TreeFingerprint captures the working tree's observable state — HEAD commit
+// plus the porcelain status of every tracked/untracked change — as an opaque
+// string. Two equal fingerprints mean nothing in the tree changed between the
+// captures: no new commit, no file added/modified/deleted. (Ignored files are
+// invisible on both sides, so runtime noise routed through .git/info/exclude
+// never perturbs the fingerprint.)
+func TreeFingerprint(dir string) string {
+	head, _ := run(dir, "rev-parse", "HEAD")
+	status, _ := run(dir, "status", "--porcelain")
+	return strings.TrimSpace(head) + "\n" + status
+}
+
 // CheckoutReset checks out branch, creating it at — or RESETTING it to — the
 // current HEAD (`git checkout -B`). For scratch branches whose only valid
 // position is "where HEAD is right now": reusing a stale pointer (as

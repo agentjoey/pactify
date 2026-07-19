@@ -55,6 +55,11 @@ func RunSandbox(ctx context.Context, opts Options) (err error) {
 	if err := checkStalePark(dir, parkBranch); err != nil {
 		return err
 	}
+	// Preflight the acting seat BEFORE touching the tree (park/worktree): a
+	// roster error must not leave recovery litter behind (e2e F4).
+	if err := validateDriverSeat(dir, opts.Orchestrator); err != nil {
+		return err
+	}
 	if dirty, _ := gitx.HasChanges(dir); dirty {
 		return fmt.Errorf("sandbox: working tree is dirty — commit/stash before an isolated run, or pass --in-place to run directly in your tree (parking needs a clean tree)")
 	}

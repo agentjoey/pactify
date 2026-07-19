@@ -237,7 +237,40 @@ func featureBranchIn(st projection.State, feature string) string {
 // gate) it writes an escalation record, notifies, and returns nil — paused, not
 // failed; a human fixes the cause and reruns to resume. A genuine error
 // (unreadable state, a Runner/Merge failure) is returned.
+// validateDriverSeat fail-fasts a run whose acting seat can never merge: the
+// seat must exist in the roster WITH the orchestrator role (2026-07-19 e2e F4 —
+// `--as driver` with an un-init'd seat ran every stint and only died at the
+// final merge's role gate, burning the whole run on an error knowable up
+// front). An empty seat is not validated here: the CLI already fail-fasts when
+// both --as and PACT_AGENT_ID are unset, and engine verbs resolve the env
+// fallback themselves.
+func validateDriverSeat(dir, seat string) error {
+	if seat == "" {
+		return nil
+	}
+	evs, err := event.ReadAll(paths.LogIn(dir))
+	if err != nil {
+		return fmt.Errorf("orchestrate: read ledger to validate --as seat: %w", err)
+	}
+	st := projection.Project(evs)
+	for _, a := range st.Agents {
+		if a.ID != seat {
+			continue
+		}
+		for _, r := range a.Roles {
+			if r == "orchestrator" {
+				return nil
+			}
+		}
+		return fmt.Errorf("orchestrate: acting seat %q lacks the orchestrator role (roles: %s) — its merges would be refused; grant the role at init or pass --as <orchestrator seat>", seat, strings.Join(a.Roles, ","))
+	}
+	return fmt.Errorf("orchestrate: acting seat %q is not in the roster — its merges would be refused at the end of the run; init/add the seat with the orchestrator role or pass --as <orchestrator seat>", seat)
+}
+
 func (opts Options) run(ctx context.Context) error {
+	if err := validateDriverSeat(opts.Dir, opts.Orchestrator); err != nil {
+		return err
+	}
 	// Ignore .pact/orchestrate/ before any runtime file (stream logs, status.json,
 	// escalation records) is written, so they never land in the user's git status
 	// or an agent's `git add -A`. Routed through .git/info/exclude (local, never

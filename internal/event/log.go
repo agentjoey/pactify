@@ -32,18 +32,31 @@ func Append(logPath string, ev Event) error {
 	return err
 }
 
+// ParseStats reports what happened during a ledger read.
+type ParseStats struct {
+	Skipped int // lines skipped because they were malformed or oversized
+}
+
 // ReadAll parses every event line. Unknown top-level fields and unknown
 // event_types are tolerated. A missing file yields nil, nil.
 func ReadAll(logPath string) ([]Event, error) {
+	evs, _, err := ReadAllWithStats(logPath)
+	return evs, err
+}
+
+// ReadAllWithStats is like ReadAll but also returns per-line parse statistics.
+// Callers that must distinguish "empty/absent log" from "log exists but is
+// unreadable" can check stats.Skipped.
+func ReadAllWithStats(logPath string) ([]Event, ParseStats, error) {
 	f, err := os.Open(logPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, ParseStats{}, nil
 		}
-		return nil, err
+		return nil, ParseStats{}, err
 	}
 	defer f.Close()
-	return parse(f)
+	return parseWithStats(f)
 }
 
 // ParseAll parses events from an in-memory log slice, byte-for-byte equivalent to
@@ -52,25 +65,64 @@ func ReadAll(logPath string) ([]Event, error) {
 // must start on a line boundary — the ledger is append-only with a trailing newline
 // per event, so the snapshot offset always lands on one.
 func ParseAll(data []byte) ([]Event, error) {
-	return parse(bytes.NewReader(data))
+	evs, _, err := parseWithStats(bytes.NewReader(data))
+	return evs, err
 }
 
 func parse(r io.Reader) ([]Event, error) {
+	evs, _, err := parseWithStats(r)
+	return evs, err
+}
+
+func parseWithStats(r io.Reader) ([]Event, ParseStats, error) {
 	var evs []Event
-	sc := bufio.NewScanner(r)
-	sc.Buffer(make([]byte, 1<<20), 1<<20)
-	for sc.Scan() {
-		b := sc.Bytes()
-		if len(b) == 0 {
+	var stats ParseStats
+	br := bufio.NewReaderSize(r, 16<<20)
+	const maxLine = 16 << 20
+
+	for {
+		line, err := br.ReadSlice('\n')
+		if err == bufio.ErrBufferFull {
+			// Line exceeds the 16 MiB buffer. Drain the rest of the line
+			// without buffering it unboundedly, then skip it.
+			stats.Skipped++
+			for err == bufio.ErrBufferFull {
+				_, err = br.ReadSlice('\n')
+			}
+			if err == io.EOF {
+				break
+			}
 			continue
 		}
-		var ev Event
-		if err := json.Unmarshal(b, &ev); err != nil {
-			return nil, err
+		if err != nil && err != io.EOF {
+			return evs, stats, err
 		}
-		evs = append(evs, ev)
+
+		if len(line) > 0 {
+			// Strip trailing newline (and any CR from CRLF) to match scanner semantics.
+			if line[len(line)-1] == '\n' {
+				line = line[:len(line)-1]
+			}
+			if len(line) > 0 && line[len(line)-1] == '\r' {
+				line = line[:len(line)-1]
+			}
+			if len(line) == 0 {
+				// empty line
+			} else if len(line) <= maxLine {
+				var ev Event
+				if err := json.Unmarshal(line, &ev); err != nil {
+					stats.Skipped++
+					continue
+				}
+				evs = append(evs, ev)
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
 	}
-	return evs, sc.Err()
+	return evs, stats, nil
 }
 
 // writeFile is a small test/helper for writing a whole file.

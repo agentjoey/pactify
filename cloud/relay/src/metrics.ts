@@ -34,6 +34,7 @@ export type CounterName =
   | 'pact_events_total'
   | 'pact_rejected_total'
   | 'rate_limited_total'
+  | 'subscribe_truncated_total'
   | 'runs_deleted_total'
   | 'reconciled_runs_total'
   | 'machines_deleted_total'
@@ -92,6 +93,10 @@ const COUNTERS: Record<CounterName, CounterDef> = {
   rate_limited_total: {
     help: 'Total requests rejected by a rate limiter, by path.',
     labelNames: ['path'],
+  },
+  subscribe_truncated_total: {
+    help: 'Total subscribe frames whose runIds exceeded the per-frame cap and were truncated.',
+    labelNames: [],
   },
   runs_deleted_total: {
     help: 'Total runs deleted via the run-delete endpoint.',

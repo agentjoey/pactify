@@ -1,0 +1,81 @@
+name: publish-cloud-packages
+
+# Publishes the @pactify-apps/* packages (the relay server + its shared libs
+# wire/crypto/…) to npm with `pnpm -r publish`.
+#
+# Why pnpm and not `npm publish`:
+#   - pnpm rewrites each package's `workspace:*` dependency specs to the real
+#     published version at pack time; `npm publish` ships the literal `workspace:*`,
+#     which no consumer can resolve → a broken package. This workflow is the guard
+#     against that class of mistake.
+#   - `pnpm -r publish` SKIPS any (name, version) already on the registry, so it is
+#     idempotent: bump a package's version + run this, and only the changed ones go
+#     out. Private packages (cloud-root) are skipped automatically.
+#
+# Access is per-package via publishConfig.access and honored as-is (no global
+# --access forced): the shared libs (wire / crypto / pact-project / relay-client)
+# are `public`, the relay server is `restricted` (private). Note: pnpm defaults an
+# UNDECLARED scoped package to PUBLIC — so every package here declares its access
+# explicitly; keep that invariant when adding a new one.
+#
+# Prerequisite: repo secret NPM_TOKEN — an npm automation token with publish rights
+# to the @pactify-apps scope.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Validate + pack only, do NOT publish to npm"
+        type: boolean
+        default: true
+
+# Never let two publish runs race the registry.
+concurrency:
+  group: publish-cloud-packages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: cloud
+    steps:
+      - uses: actions/checkout@v4
+
+      # No root package.json carries packageManager, so pin pnpm explicitly to the
+      # version cloud/package.json declares.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org" # writes the auth-token .npmrc
+
+      - name: install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      # Build in dependency order (crypto/wire before relay) so every package's
+      # dist/ exists — the `files` allowlist ships dist/, so an unbuilt package would
+      # publish empty. `pnpm -r build` is topological.
+      - name: build all packages
+        run: pnpm -r build
+
+      # Gate: the same suites CI runs on main — never publish a broken package.
+      - name: test all packages
+        run: pnpm -r test
+
+      # Dry run (default): resolves workspace specs and lists the tarball contents
+      # without touching the registry.
+      - name: publish (dry run)
+        if: ${{ inputs.dry_run }}
+        run: pnpm -r publish --dry-run --no-git-checks
+
+      - name: publish to npm
+        if: ${{ !inputs.dry_run }}
+        run: pnpm -r publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

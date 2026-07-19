@@ -6,10 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/pact"
-	"github.com/agentjoey/pactify/internal/paths"
-	"github.com/agentjoey/pactify/internal/projection"
 )
 
 // joinNewSeats registers each plan-proposed seat that is not already on the live
@@ -77,36 +74,47 @@ func ApplyTx(dir string, plan Plan, roster []string, seat string) (assigned int,
 			return 0, fmt.Errorf("applytx: spec %q: %w", t.Spec, err)
 		}
 	}
-	logPath := filepath.Join(dir, ".pact", "log.jsonl")
-	orig, _ := os.Stat(logPath)
-	var origSize int64
-	if orig != nil {
-		origSize = orig.Size()
-	}
-	// Auto-register any proposed new seats before assigning (dynamic seats). Done
-	// AFTER capturing origSize so a later assign failure's truncate rolls the join
-	// events back too, keeping the whole apply atomic.
-	if err := joinNewSeats(dir, plan); err != nil {
-		_ = os.Truncate(logPath, origSize)
-		_ = rerenderState(dir)
+
+	p := pact.At(dir).As(seat)
+
+	// Auto-register any proposed new seats before assigning (dynamic seats).
+	st, err := p.StateProjection()
+	if err != nil {
 		return 0, fmt.Errorf("applytx: %w", err)
 	}
-	p := pact.At(dir).As(seat)
-	for _, t := range plan.Tasks {
-		if err := p.Assign(t.ID, plan.Feature, plan.Branch, t.Owner, t.Reviewer, t.Spec, t.Deps); err != nil {
-			_ = os.Truncate(logPath, origSize)
-			_ = rerenderState(dir)
-			return assigned, fmt.Errorf("applytx: assign %s rolled back: %w", t.ID, err)
+	onRoster := map[string]bool{}
+	for _, a := range st.Agents {
+		onRoster[a.ID] = true
+	}
+	var joins []pact.BatchJoin
+	for _, s := range plan.Seats {
+		if s.ID == "" || onRoster[s.ID] {
+			continue
 		}
-		assigned++
+		joins = append(joins, pact.BatchJoin{
+			SeatID: s.ID,
+			Roles:  s.Roles,
+			Kind:   s.Kind,
+		})
+		onRoster[s.ID] = true
 	}
-	return assigned, nil
-}
 
-func rerenderState(dir string) error {
-	evs, err := event.ReadAll(paths.LogIn(dir))
-	if err != nil {
-		return err
+	var assigns []pact.BatchAssign
+	for _, t := range plan.Tasks {
+		assigns = append(assigns, pact.BatchAssign{
+			TaskID:   t.ID,
+			Feature:  plan.Feature,
+			Branch:   plan.Branch,
+			Owner:    t.Owner,
+			Reviewer: t.Reviewer,
+			Spec:     t.Spec,
+			Deps:     t.Deps,
+		})
 	}
-	return projection.WriteState(paths.StateIn(dir), projection.Project(evs))
+
+	n, err := p.ApplyBatch(joins, assigns)
+	if err != nil {
+		return n, fmt.Errorf("applytx: %w", err)
+	}
+	return n, nil
 }

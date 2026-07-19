@@ -635,3 +635,106 @@ describe('relay sockets', () => {
     expect(MachineInfo.array().parse(res.json())[0]?.online).toBe(false)
   })
 })
+
+// Security regression — review finding C1 (critical).
+//
+// The machine-targeted rpc branch pushes to `machine:${rpc.machineId}` with no
+// check that the machine belongs to the sender's account (the run-targeted branch
+// one line below DOES check run.accountId === accountId). And io.use accepts any
+// machineId present with a valid token, never verifying ownership. So any
+// authenticated account can (1) inject rpc (spawn/pact.*) into another tenant's
+// machine — attacker-directed code execution — and (2) attach as a victim's
+// machine to join its room and eavesdrop cleartext control payloads.
+describe('relay sockets — cross-tenant machine isolation (C1)', () => {
+  it('a foreign account cannot drive another account\'s machine via a machine-targeted rpc', async () => {
+    // The seeded account (accountId) is attacker A; account B owns machine mB.
+    const attacker = issueToken(SECRET, accountId, 60_000, 1000)
+    const b = await db.account.create({ data: { publicKey: 'pk-b-' + Math.random() } })
+    await db.machine.create({ data: { id: 'mB', accountId: b.id, metadataEnc: 'x' } })
+    const victimToken = issueToken(SECRET, b.id, 60_000, 1000)
+
+    const victimMachine = await connect(port, { token: victimToken, role: 'machine', machineId: 'mB' })
+    const attackerWeb = await connect(port, { token: attacker, role: 'client' })
+    clients.push(victimMachine, attackerWeb)
+
+    let received = false
+    victimMachine.on('rpc', () => {
+      received = true
+    })
+
+    // A aims a machine-targeted rpc at B's machine.
+    attackerWeb.emit('rpc', { type: 'pact.accept', machineId: 'mB', project: 'demo', task: 't1' })
+    await new Promise((r) => setTimeout(r, 100))
+
+    expect(received).toBe(false) // cross-account machine rpc must not be delivered
+  })
+
+  it('a foreign account cannot attach as another account\'s machine (eavesdrop)', async () => {
+    const attacker = issueToken(SECRET, accountId, 60_000, 1000)
+    const b = await db.account.create({ data: { publicKey: 'pk-b2-' + Math.random() } })
+    await db.machine.create({ data: { id: 'mB2', accountId: b.id, metadataEnc: 'x' } })
+
+    // A attaches as B's existing machine to join room machine:mB2 and receive B's
+    // machine-targeted rpc. Must be rejected at the handshake (mB2 is not A's).
+    await expect(
+      connect(port, { token: attacker, role: 'machine', machineId: 'mB2' }),
+    ).rejects.toBeTruthy()
+  })
+})
+
+describe('relay sockets — subscribe fan-out is bounded (M13)', () => {
+  it('honors at most maxSubscribeRuns runIds per frame (no unbounded DB fan-out)', async () => {
+    // A dedicated server with a tiny cap so truncation is observable without
+    // seeding hundreds of runs. subscribe did one getRun per client-supplied id
+    // with no bound; a ~1MB frame of ids meant tens of thousands of DB queries.
+    const db2 = await createPgliteDb()
+    const acc = await db2.account.create({ data: { publicKey: 'pk-m13-' + Math.random() } })
+    await db2.machine.create({ data: { id: 'm1', accountId: acc.id, metadataEnc: 'x' } })
+    const app2 = createServer({ db: db2, secret: SECRET, now: () => 1000 })
+    await app2.listen({ port: 0, host: '127.0.0.1' })
+    const io2 = await attachSockets(app2.server, {
+      db: db2,
+      secret: SECRET,
+      now: () => 1000,
+      rateLimits: { maxSubscribeRuns: 2 },
+    })
+    const port2 = (app2.server.address() as { port: number }).port
+    try {
+      // Three owned runs, each with one replayable event at seq 1.
+      for (const id of ['ra', 'rb', 'rc']) {
+        await db2.run.create({
+          data: { id, accountId: acc.id, machineId: 'm1', agentKind: 'claude', state: 'thinking' },
+        })
+        await db2.runEvent.create({
+          data: {
+            runId: id,
+            seq: 1,
+            state: 'thinking',
+            eventKind: 'message',
+            ts: BigInt(1000),
+            bodyEnc: JSON.stringify({ alg: 'xchacha20poly1305', nonce: 'n', ct: id }),
+          },
+        })
+      }
+      const token = issueToken(SECRET, acc.id, 60_000, 1000)
+      const web = await connect(port2, { token, role: 'client' })
+      try {
+        const ends: string[] = []
+        web.on('replay-end', (e: { runId: string }) => ends.push(e.runId))
+        // Ask for all three (seeking seq>0 so each would replay). With the cap at
+        // 2, only the first two ids are honored; the third is truncated away.
+        web.emit('subscribe', {
+          runIds: ['ra', 'rb', 'rc'],
+          afterSeqByRun: { ra: 0, rb: 0, rc: 0 },
+        })
+        await new Promise((r) => setTimeout(r, 150))
+        expect(ends.sort()).toEqual(['ra', 'rb'])
+      } finally {
+        web.disconnect()
+      }
+    } finally {
+      await new Promise((r) => io2.close(() => r(null)))
+      await app2.close()
+    }
+  })
+})

@@ -234,3 +234,89 @@ func TestFixLoopStatusShowsFixingPhase(t *testing.T) {
 		t.Fatalf("fixing status seat = %q, want the owner w", s.Seat)
 	}
 }
+
+// --- M16: fix-until-green budget resets across rework cycles ------------------
+
+// redGate is verify state shared between the runner and the exec: the gate is
+// RED while red==true. A fix round clears it (the fix went green); a rework
+// re-reddens it (changes_requested re-introduces a failure). This makes each
+// fix-until-green episode start RED regardless of how many times the gate is
+// polled, so the test asserts on episode behavior, not call positions.
+type redGate struct{ red bool }
+
+type stateGateExec struct {
+	g     *redGate
+	calls int
+}
+
+func (e *stateGateExec) Run(_ context.Context, _, _ string, _ map[string]string) (int, string, error) {
+	e.calls++
+	if e.g.red {
+		return 1, "FAIL: verify red", nil
+	}
+	return 0, "ok", nil
+}
+
+// reworkFixRunner drives BOTH the fix-until-green loop and a rework cycle: a fix
+// brief re-checkpoints and greens the gate; a worker/rework brief checkpoints;
+// the reviewer requests changes changesBeforeAccept times (re-reddening the gate)
+// before accepting.
+type reworkFixRunner struct {
+	dir                 string
+	g                   *redGate
+	fixCalls            int
+	reviewerCalls       int
+	changesBeforeAccept int
+	reviewSeen          map[string]int
+}
+
+func (r *reworkFixRunner) Run(_ context.Context, lc LaunchContext) error {
+	task := taskIDFromBrief(lc.Briefing)
+	switch {
+	case strings.Contains(lc.Briefing, "pact fix round"):
+		r.fixCalls++
+		r.g.red = false // the self-repair round makes verify green
+		return pact.At(r.dir).As(lc.Seat).Checkpoint(task, "evidence: fixed")
+	case isWorker(lc.Briefing):
+		return pact.At(r.dir).As(lc.Seat).Checkpoint(task, "evidence: tests pass")
+	default: // reviewer
+		r.reviewerCalls++
+		n := r.reviewSeen[task]
+		r.reviewSeen[task] = n + 1
+		if n < r.changesBeforeAccept {
+			r.g.red = true // the rework re-introduces a verify failure
+			return pact.At(r.dir).As(lc.Seat).Changes(task, "rework the edge case")
+		}
+		return pact.At(r.dir).As(lc.Seat).Accept(task)
+	}
+}
+
+// A rework cycle must reset the fix-until-green budget: after the reviewer
+// requests changes and the owner re-checkpoints, the SECOND awaiting_review gets
+// a fresh MaxFixRounds. With MaxFixRounds=1 and a gate that is red at the start
+// of EACH episode, the feature ships only if the counter reset — otherwise round
+// 2 sees round 1's count already at the cap and escalates with zero fix rounds
+// (review finding M16). RED without the reset; GREEN with it.
+func TestFixLoopBudgetResetsAcrossReworkCycles(t *testing.T) {
+	dir := newProject(t)
+	s1 := writeSpec(t, dir, "t1", "go test ./...")
+	assign(t, dir, "t1", "f", "feat/x", s1)
+
+	g := &redGate{red: true} // verify starts red → episode 1 needs a fix round
+	runner := &reworkFixRunner{dir: dir, g: g, changesBeforeAccept: 1, reviewSeen: map[string]int{}}
+	opts := baseOpts(dir, runner, &stateGateExec{g: g}, &recNotify{})
+	opts.MaxFixRounds = 1
+	if err := Run(context.Background(), opts); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if got := featureStatus(t, dir, "f"); got != "shipped" {
+		t.Fatalf("feature = %q, want shipped — the fix-until-green budget must reset per rework cycle", got)
+	}
+	if runner.reviewerCalls < 2 {
+		t.Fatalf("reviewer ran %d time(s), want >=2 (changes then accept)", runner.reviewerCalls)
+	}
+	if runner.fixCalls != 2 {
+		t.Fatalf("fix rounds = %d, want 2 (one self-repair round in EACH episode)", runner.fixCalls)
+	}
+}

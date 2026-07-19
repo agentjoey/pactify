@@ -42,8 +42,26 @@ func (pv *serveProvisioner) Provision(repoURL, name string) (string, error) {
 		return "", err
 	}
 	// `git clone --` stops repoURL being parsed as an option (no --upload-pack
-	// injection). repoURL is otherwise opaque to us.
+	// injection). repoURL is otherwise opaque to us and arrives over the relay
+	// (untrusted), so also restrict git to safe transports: a crafted
+	// `ext::sh -c '…'` / `fd::` URL would otherwise reach a remote helper and run
+	// an arbitrary command (RCE), and `git://` enables SSRF. GIT_ALLOW_PROTOCOL is
+	// git's native allowlist and also governs submodule URLs fetched during the
+	// clone. Default file:https:ssh (local + the two real remote transports);
+	// overridable for deployments that need http/git.
+	protocols := strings.TrimSpace(os.Getenv("PACTIFY_PROVISION_GIT_PROTOCOLS"))
+	if protocols == "" {
+		protocols = "file:https:ssh"
+	}
 	cmd := exec.Command("git", "clone", "--", repoURL, dest)
+	// Drop any inherited GIT_ALLOW_PROTOCOL so our value is authoritative, then set it.
+	env := make([]string, 0, len(os.Environ())+1)
+	for _, kv := range os.Environ() {
+		if !strings.HasPrefix(kv, "GIT_ALLOW_PROTOCOL=") {
+			env = append(env, kv)
+		}
+	}
+	cmd.Env = append(env, "GIT_ALLOW_PROTOCOL="+protocols)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("git clone failed: %s", strings.TrimSpace(string(out)))
 	}

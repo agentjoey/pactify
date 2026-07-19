@@ -396,7 +396,12 @@ func acpEnv(lc LaunchContext) []string {
 		"PACT_PROJECT=" + lc.Project,
 		"PACT_DIR=" + pactDir,
 	}
+	// Isolate a single-vendor agent from sibling vendors' credentials: a kimi /
+	// gemini / codex stint must not inherit the user's ANTHROPIC key (and so on).
+	env = append(env, crossVendorStrip(lc.Kind)...)
 	if lc.Kind == "claude-code" {
+		// claude-code authenticates via interactive OAuth here, not the metered
+		// API key — strip its own key too (crossVendorStrip keeps it).
 		env = append(env, "ANTHROPIC_API_KEY=")
 	}
 	return env

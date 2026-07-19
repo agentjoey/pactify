@@ -255,6 +255,10 @@ func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*pro
 	if evidence == "" {
 		return nil, fmt.Errorf("pactify checkpoint: --evidence required")
 	}
+	const maxEvidence = 1 << 20
+	if len(evidence) > maxEvidence {
+		return nil, fmt.Errorf("pactify checkpoint: evidence exceeds %d byte limit; use a shorter summary or link", maxEvidence)
+	}
 	tk, f := findTask(st, taskID)
 	if tk == nil {
 		return nil, fmt.Errorf("pactify checkpoint: unknown task %s", taskID)

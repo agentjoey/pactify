@@ -493,6 +493,73 @@ func (p *Project) assignLocked(taskID, feature, branch, owner string, reviewers 
 	})
 }
 
+// BatchJoin is a seat registration request for ApplyBatch.
+type BatchJoin struct {
+	SeatID string
+	Roles  []string
+	Kind   string
+}
+
+// BatchAssign is a task assignment request for ApplyBatch.
+type BatchAssign struct {
+	TaskID   string
+	Feature  string
+	Branch   string
+	Owner    string
+	Reviewer string
+	Spec     string
+	Deps     []string
+}
+
+// rerenderLocked re-renders STATE.yml from the current log contents. It must be
+// called while holding the ledger lock.
+func (p *Project) rerenderLocked() error {
+	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	if err != nil {
+		return err
+	}
+	return projection.WriteState(paths.StateIn(p.dir), projection.Project(evs))
+}
+
+// ApplyBatch executes a batch of seat joins and task assignments under a single
+// ledger lock. If any step fails, the log is truncated to its original size and
+// STATE.yml is re-rendered before the error is returned.
+func (p *Project) ApplyBatch(joins []BatchJoin, assigns []BatchAssign) (int, error) {
+	var assigned int
+	err := p.withLedgerLock(func() error {
+		logPath := paths.LogIn(p.dir)
+		orig, _ := os.Stat(logPath)
+		var origSize int64
+		if orig != nil {
+			origSize = orig.Size()
+		}
+
+		for _, j := range joins {
+			roles := strings.Join(j.Roles, ",")
+			if err := p.As(j.SeatID).joinWithClientLocked(j.SeatID, roles, "pactify-cli", ClientVersion, j.Kind); err != nil {
+				_ = os.Truncate(logPath, origSize)
+				_ = p.rerenderLocked()
+				return fmt.Errorf("join %s: %w", j.SeatID, err)
+			}
+		}
+
+		for _, a := range assigns {
+			var reviewers []string
+			if a.Reviewer != "" {
+				reviewers = []string{a.Reviewer}
+			}
+			if err := p.assignLocked(a.TaskID, a.Feature, a.Branch, a.Owner, reviewers, 0, a.Spec, a.Deps); err != nil {
+				_ = os.Truncate(logPath, origSize)
+				_ = p.rerenderLocked()
+				return fmt.Errorf("assign %s: %w", a.TaskID, err)
+			}
+			assigned++
+		}
+		return nil
+	})
+	return assigned, err
+}
+
 // Merge integrates a feature branch into the base branch (rule: all accepted).
 func (p *Project) Merge(feature string) error {
 	id, err := p.agentID()
@@ -556,16 +623,39 @@ func (p *Project) mergeLocked(id, feature string) error {
 	if branch != "" && branch != base && !gitx.BranchExists(p.dir, branch) {
 		return fmt.Errorf("merge %s: feature branch %q does not exist — its work never landed there (the owner likely committed to a different branch); refusing to record a no-op merge as shipped", feature, branch)
 	}
-	// Empty-feature guard: the branch exists but carries NO commits over base (base
-	// already contains all of it) → the merge would integrate nothing, and recording
-	// `shipped` would leave base unchanged (a phantom ship, pact state ahead of git —
-	// e.g. a worker that checkpointed without committing any work). Refuse so it
-	// escalates loudly instead of silently shipping. In sandbox runs this is what
-	// makes "shipped but main unchanged" surface as an error rather than pass.
+	// base already contains the branch (IsAncestor). Two very different causes that
+	// must NOT be conflated, since both make IsAncestor true:
+	//   - CRASH RECOVERY: a prior merge integrated the branch into base, but the
+	//     process died after MergeNoFF and before the merge EVENT was appended to
+	//     the ledger. git has the merge commit; the ledger doesn't → the feature is
+	//     "accepted, not shipped" and every retry hit the guard below and refused,
+	//     stranding it unshippable forever (review finding M9). Re-running must
+	//     COMPLETE the merge — record the event — not refuse.
+	//   - PHANTOM: the branch never carried commits over base (a worker checkpointed
+	//     without committing). No merge ever ran; recording `shipped` would put pact
+	//     state ahead of git. Refuse so it escalates loudly.
+	// A real merge commit carrying the branch's tip is the safe discriminator — a
+	// phantom has none, so a false "already merged" (which would ship nothing) is
+	// impossible.
+	alreadyMerged := false
 	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) && gitx.IsAncestor(p.dir, branch, base) {
-		return fmt.Errorf("merge %s: feature branch %q has no commits over base %q — no work was committed there (base would be unchanged); refusing to record shipped", feature, branch, base)
+		merged, herr := gitx.HasMergeOfBranch(p.dir, base, branch)
+		if herr != nil {
+			return fmt.Errorf("merge %s: %w", feature, herr)
+		}
+		if !merged {
+			return fmt.Errorf("merge %s: feature branch %q has no commits over base %q — no work was committed there (base would be unchanged); refusing to record shipped", feature, branch, base)
+		}
+		// Recovery: the git merge already landed. Skip re-merging; land on base so the
+		// merge event + STATE.yml commit onto the merged base, then record the event.
+		if base != "" {
+			if err := gitx.Checkout(p.dir, base); err != nil {
+				return fmt.Errorf("merge %s: checkout base to complete a crashed merge: %w", feature, err)
+			}
+		}
+		alreadyMerged = true
 	}
-	if branch != "" && branch != base && gitx.BranchExists(p.dir, branch) {
+	if !alreadyMerged && branch != "" && branch != base && gitx.BranchExists(p.dir, branch) {
 		if ch, _ := gitx.HasChanges(p.dir); ch {
 			if err := gitx.CommitAll(p.dir, "pact "+feature+": ledger before merge"); err != nil {
 				return err
@@ -951,9 +1041,15 @@ func (p *Project) configGateLocked(command string) error {
 // the consumer is the pre-merge safety gate, and swallowing a transient I/O error
 // as "unconfigured" would silently degrade it to the type-default fallback.
 func (p *Project) GateConfig() (string, bool, error) {
-	evs, err := event.ReadAll(paths.LogIn(p.dir))
+	evs, stats, err := event.ReadAllWithStats(paths.LogIn(p.dir))
 	if err != nil {
 		return "", false, fmt.Errorf("pact: read log for gate config: %w", err)
+	}
+	// A resilient ledger read skips malformed/oversized lines. If the file exists
+	// but produced no parseable events, treat it as a corrupt log rather than
+	// silently "unconfigured".
+	if len(evs) == 0 && stats.Skipped > 0 {
+		return "", false, fmt.Errorf("pact: read log for gate config: log contains no parseable events")
 	}
 	gate, ok := "", false
 	for _, e := range evs {
@@ -1118,16 +1214,25 @@ func (p *Project) cancelLocked(taskID string) error {
 	if err := requireOrchestrator(st, "cancel", id); err != nil {
 		return err
 	}
-	feature := ""
+	feature, status := "", ""
 	for _, f := range st.Features {
 		for _, t := range f.Tasks {
 			if t.ID == taskID {
-				feature = f.ID
+				feature, status = f.ID, t.Status
 			}
 		}
 	}
 	if feature == "" {
 		return fmt.Errorf("cancel: task %q not found", taskID)
+	}
+	// A checkpointed-but-unaccepted task has commits on the feature branch that no
+	// reviewer has approved. Cancelling drops it from the projection, and checkMerge
+	// only requires the tasks that REMAIN to be accepted — so the feature would then
+	// merge, shipping those unreviewed commits and bypassing invariant (2) (review
+	// finding M8). Refuse: accept it, request changes, or withdraw the feature.
+	if status == "awaiting_review" || status == "changes_requested" {
+		return fmt.Errorf("cancel: task %q is %s and has unreviewed commits on the feature branch; "+
+			"accept it, request changes, or withdraw the feature instead of cancelling", taskID, status)
 	}
 	return p.appendAndRender(event.Event{
 		AgentID: id, Role: event.RoleFor("cancel"), EventType: "cancel",

@@ -167,3 +167,77 @@ describe('relay pact HTTP (U2 S2)', () => {
     expect(bad.statusCode).toBe(400)
   })
 })
+
+// Security regression — review finding H3 (high).
+//
+// POST /v1/pact/ingest takes projectId straight from the client body and never
+// verifies the caller owns it; PactEvent uniqueness is global per project. So a
+// foreign account can (a) inject forged events into a victim's project — surfaced
+// on the victim's board because getProjectEvents filters by projectId only — and
+// (b) pre-claim a (projectId, seq) so the victim's real event is dropped by
+// skipDuplicates. RED until ingest rejects a foreign projectId (and the read is
+// scoped by accountId).
+describe('relay pact HTTP — cross-tenant ingest isolation (H3)', () => {
+  it('a foreign account cannot inject events into another account\'s project', async () => {
+    const app = createServer({ db, secret: SECRET })
+    const a = await login(app)
+    const b = await login(app) // attacker, a different valid account
+
+    const own = await app.inject({
+      method: 'POST', url: '/v1/pact/ingest',
+      headers: { authorization: `Bearer ${a.token}` },
+      payload: ingestBody({ seq: 0, eventType: 'assign', task: 'legit' }),
+    })
+    expect(own.statusCode).toBe(202) // A creates its project
+
+    // B injects a forged event targeting A's project id.
+    const forged = await app.inject({
+      method: 'POST', url: '/v1/pact/ingest',
+      headers: { authorization: `Bearer ${b.token}` },
+      payload: ingestBody({ seq: 1, eventType: 'merge', task: 'FORGED-by-b' }),
+    })
+    expect(forged.statusCode).not.toBe(202) // cross-tenant ingest must be rejected
+
+    // A's board must never surface B's forged event.
+    const evs = await app.inject({
+      method: 'GET', url: '/v1/pact/projects/p:pactify/events',
+      headers: { authorization: `Bearer ${a.token}` },
+    })
+    expect(evs.json().map((e: any) => e.task)).not.toContain('FORGED-by-b')
+    expect(evs.json()).toHaveLength(1)
+  })
+
+  it('a foreign account cannot clobber a seq the owner will use (idempotency)', async () => {
+    const app = createServer({ db, secret: SECRET })
+    const a = await login(app)
+    const b = await login(app)
+
+    await app.inject({
+      method: 'POST', url: '/v1/pact/ingest',
+      headers: { authorization: `Bearer ${a.token}` },
+      payload: ingestBody({ seq: 0 }),
+    }) // A creates its project
+
+    // B pre-claims (p:pactify, seq 5) with poison.
+    await app.inject({
+      method: 'POST', url: '/v1/pact/ingest',
+      headers: { authorization: `Bearer ${b.token}` },
+      payload: ingestBody({ seq: 5, bodyEnc: 'b-poison' }),
+    })
+
+    // A's real event at seq 5 must still land, not be dropped as a duplicate.
+    await app.inject({
+      method: 'POST', url: '/v1/pact/ingest',
+      headers: { authorization: `Bearer ${a.token}` },
+      payload: ingestBody({ seq: 5, bodyEnc: 'a-real' }),
+    })
+
+    const evs = await app.inject({
+      method: 'GET', url: '/v1/pact/projects/p:pactify/events',
+      headers: { authorization: `Bearer ${a.token}` },
+    })
+    const bodies = evs.json().map((e: any) => e.bodyEnc)
+    expect(bodies).toContain('a-real') // owner's event survived
+    expect(bodies).not.toContain('b-poison') // attacker's poison never on the board
+  })
+})

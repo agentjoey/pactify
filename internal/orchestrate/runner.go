@@ -105,10 +105,15 @@ func NewCmdRunner(idle time.Duration) CmdRunner {
 func osExec(ctx context.Context, name string, args []string, dir string, env []string, capture io.Writer) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(filteredEnviron(), env...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = teeStdout(capture)
 	cmd.Stderr = os.Stderr
+	// TODO(phase0-h7): osExec currently does NOT place the child in its own
+	// process group. Adding cmd.Cancel without also adding Setpgid would make
+	// killGroup send SIGKILL to the parent's process group, so this path is
+	// intentionally left unchanged. The default cmd transport (osExecIdle) has
+	// the group-kill fix; revisit here only if the plain runner is restored.
 	return cmd.Run()
 }
 
@@ -211,6 +216,12 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	if eff.Command == "gemini" {
 		env = append(env, "GEMINI_CLI_TRUST_WORKSPACE=true")
 	}
+
+	// Isolate a single-vendor agent from sibling vendors' credentials (M11): a
+	// kimi / gemini / codex worker must not inherit the user's ANTHROPIC key, etc.
+	// Each kind keeps its OWN key (gemini's is added just above); model-agnostic
+	// kinds (opencode, custom) are left untouched.
+	env = append(env, crossVendorStrip(lc.Kind)...)
 
 	// Siphon a bounded tail of the child's stdout so we can parse token usage from
 	// its headless JSON (the read side surfaces it on the dashboard). Best-effort

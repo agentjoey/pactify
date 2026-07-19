@@ -7,6 +7,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("dispatch: goal → generate → review → dispatch", async ({ page }) => {
+  // Dispatch (◉) lives in the Cockpit lens — Toolbar renders toolbar-dispatch
+  // only when lens === "cockpit". Switch to it first (mirrors App.test.tsx).
+  await page.getByTestId("lens-cockpit").click();
   await page.getByTestId("toolbar-dispatch").click();
   await page.getByTestId("dispatch-panel").waitFor();
   await page.getByTestId("dispatch-goal").fill("add 2fa");

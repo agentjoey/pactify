@@ -155,7 +155,9 @@ func (opts Options) mirrorLedger() {
 	if !opts.pactIgnored(dst) {
 		return
 	}
-	writeLedger(dst, readLedger(opts.Dir))
+	// Best-effort mirror: a failed copy (lock contention) is retried next iteration,
+	// so ignore the error here — unlike the epilogue回灌, which must not drop events.
+	_ = writeLedger(dst, readLedger(opts.Dir))
 }
 
 // pactIgnored reports whether dst git-ignores .pact, memoized per run when the
@@ -246,6 +248,18 @@ func (opts Options) run(ctx context.Context) error {
 		if err := ensureRuntimeExcludedLocal(opts.Dir); err != nil {
 			return fmt.Errorf("orchestrate: exclude runtime files: %w", err)
 		}
+	}
+
+	// Heartbeat status.json for the life of the run so a live-but-silent stint (an
+	// agent turn can block up to RunTimeout) never looks stale to serve's 10min
+	// stale-run guard — which, combined with a serve restart that loses the
+	// in-memory running-marker, would otherwise let a second driver spawn on the
+	// same feature (review finding M17). Cancelled when run() returns, so a crashed
+	// driver stops heartbeating and is correctly retired.
+	if !opts.DryRun && statusHeartbeatInterval > 0 {
+		hbCtx, cancelHB := context.WithCancel(ctx)
+		defer cancelHB()
+		go heartbeatStatus(hbCtx, opts.runtimeDir(), statusHeartbeatInterval, func() string { return statusNow(opts.Now) })
 	}
 
 	// Reconstruct threshold history so a driver restart (crash, session limit,
@@ -424,11 +438,20 @@ func (opts Options) run(ctx context.Context) error {
 			// Both pre-review injections (QA report path + critic score) share the
 			// reviewer briefing's single pre-review section; all-empty leaves it
 			// byte-for-byte unchanged.
+			// A rework verdict starts a fresh fix-until-green episode: the owner will
+			// rework and re-checkpoint, and that next awaiting_review deserves its full
+			// MaxFixRounds self-repair budget. fixRounds only ever increments, so
+			// without this reset round 2+ would see round 1's count already at the cap
+			// and escalate with zero fix rounds (review finding M16).
+			reworkBefore := h.Rework[act.Task]
 			if err := opts.runReviewer(ctx, st, &h, act, joinNotes(qaNote, criticNote)); err != nil {
 				if errors.Is(err, errPausedForEscalation) {
 					return nil // escalation written + notified: paused, not failed
 				}
 				return err
+			}
+			if h.Rework[act.Task] > reworkBefore {
+				delete(fixRounds, act.Task) // new rework cycle → reset the self-repair budget
 			}
 			_ = writeHistory(opts.runtimeDir(), scope, h)
 

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/pact"
 )
 
@@ -260,6 +261,9 @@ func (d *Dispatcher) Handle(rpc RPC) Reply {
 		}
 		if rpc.Seat == "" || rpc.AgentKind == "" || rpc.Task == "" {
 			return fail("pact.stint requires task, seat, agentKind")
+		}
+		if rpc.Branch != "" && !gitx.ValidBranchName(rpc.Branch) {
+			return fail("pact.stint: invalid branch")
 		}
 		if err := d.Stint.RunStint(StintRequest{
 			Project: rpc.Project, Task: rpc.Task, Seat: rpc.Seat,

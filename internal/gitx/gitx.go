@@ -205,6 +205,41 @@ func IsAncestor(dir, a, b string) bool {
 	return err == nil
 }
 
+// HasMergeOfBranch reports whether base's history contains a merge commit that
+// integrated branch — a merge commit carrying branch's tip as a merged-in (non-
+// first) parent. IsAncestor(branch, base) alone can't tell "branch was merged
+// into base" from "branch never diverged, so it's trivially an ancestor"; both
+// are true. Only a real --no-ff merge leaves such a commit, so this is the safe
+// signal that a prior merge actually landed (used to recover a merge whose git
+// step committed but whose ledger event was never recorded — a crash between the
+// two — without re-running or misjudging a genuinely empty feature).
+func HasMergeOfBranch(dir, base, branch string) (bool, error) {
+	tip, err := run(dir, "rev-parse", "--verify", branch+"^{commit}")
+	if err != nil {
+		return false, fmt.Errorf("rev-parse %s: %w", branch, err)
+	}
+	tip = strings.TrimSpace(tip)
+	// Each line: "<merge-sha> <parent1> <parent2>...". A --no-ff merge of branch
+	// into base has base's prior tip as parent1 and branch's tip as parent2, so a
+	// match on any parent AFTER the first means a real merge brought branch in.
+	out, err := run(dir, "rev-list", "--merges", "--parents", base)
+	if err != nil {
+		return false, fmt.Errorf("rev-list --merges %s: %w", base, err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			continue // not a merge with >= 2 parents
+		}
+		for _, parent := range fields[2:] {
+			if parent == tip {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
 // ChangedFiles returns the names of files changed on the current branch relative
 // to base using git's merge-base-aware `base...HEAD` syntax. The returned slice
 // is empty when there are no changes; an error means base is missing or
@@ -254,17 +289,20 @@ func HasRemote(dir, name string) bool {
 	return err == nil
 }
 
-// Push pushes branch to remote.
+// Push pushes branch to remote. The "--" separator prevents a branch name that
+// slips past validation from being parsed as a git option (e.g. "--mirror").
 func Push(dir, remote, branch string) error {
-	if out, err := run(dir, "push", remote, branch); err != nil {
+	if out, err := run(dir, "push", remote, "--", branch); err != nil {
 		return fmt.Errorf("push %s %s: %s", remote, branch, strings.TrimSpace(out))
 	}
 	return nil
 }
 
 // Fetch updates remote-tracking refs for ref from remote (e.g. "origin", "main").
+// The "--" separator prevents a ref that slips past validation from being parsed
+// as a git option.
 func Fetch(dir, remote, ref string) error {
-	if out, err := run(dir, "fetch", "--quiet", remote, ref); err != nil {
+	if out, err := run(dir, "fetch", "--quiet", remote, "--", ref); err != nil {
 		return fmt.Errorf("fetch %s %s: %s", remote, ref, strings.TrimSpace(out))
 	}
 	return nil

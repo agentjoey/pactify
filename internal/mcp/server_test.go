@@ -308,3 +308,46 @@ func TestEnvelopeErrorShape(t *testing.T) {
 		t.Fatalf("error envelope must set IsError")
 	}
 }
+
+// TestAcceptEvidenceViaMCP: the accept tool takes optional reviewer evidence
+// and records it on the accept event (log-only; see engine AcceptEvidence).
+func TestAcceptEvidenceViaMCP(t *testing.T) {
+	dir := newRepo(t)
+	cs := connect(t)
+	callOK(t, cs, "assign", map[string]any{"task": "t1", "feature": "f", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md"})
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	callOK(t, cs, "join", map[string]any{"roles": "worker"})
+	os.WriteFile("impl.txt", []byte("code"), 0o644)
+	callOK(t, cs, "checkpoint", map[string]any{"task": "t1", "evidence": "tests green"})
+	t.Setenv("PACT_AGENT_ID", "claude-opus")
+	callOK(t, cs, "accept", map[string]any{"task": "t1", "evidence": "verify: unittest 16/16 green"})
+	log, err := os.ReadFile(filepath.Join(dir, ".pact", "log.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(log), "unittest 16/16 green") {
+		t.Fatalf("accept evidence must reach the ledger:\n%s", log)
+	}
+}
+
+// TestJoinTargetTaskViaMCP: the join tool takes an optional `task` and lifts
+// exactly that task (engine JoinTask semantics) instead of the first workable.
+func TestJoinTargetTaskViaMCP(t *testing.T) {
+	dir := newRepo(t)
+	cs := connect(t)
+	callOK(t, cs, "assign", map[string]any{"task": "t1", "feature": "f", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t1.md"})
+	callOK(t, cs, "assign", map[string]any{"task": "t2", "feature": "f", "branch": "feat/x", "owner": "opencode", "reviewer": "claude-opus", "spec": ".pact/tasks/t2.md"})
+	t.Setenv("PACT_AGENT_ID", "opencode")
+	callOK(t, cs, "join", map[string]any{"roles": "worker", "task": "t2"})
+	st, err := os.ReadFile(filepath.Join(dir, ".pact", "STATE.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := string(st)
+	if !strings.Contains(state, "id: t2\n        owner: opencode\n        status: in_progress") {
+		t.Fatalf("targeted MCP join must lift t2:\n%s", state)
+	}
+	if !strings.Contains(state, "id: t1\n        owner: opencode\n        status: assigned") {
+		t.Fatalf("targeted MCP join must NOT lift t1:\n%s", state)
+	}
+}

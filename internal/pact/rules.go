@@ -212,16 +212,54 @@ func checkDeps(st projection.State, taskID, feature string, deps []string) error
 // one (the old gate failed the whole join, leaving the feature branch uncreated).
 // The dep gate is then enforced when each task is actually started (orchestrate's
 // nextAction checks depsSatisfied), not across the whole roster at join time.
+// checkJoinTarget validates a TARGETED join (join --task): the named task must
+// exist, be owned by the joining seat, be in a startable/resumable status, and
+// have every dep accepted. Unlike the seat-scoped gate below, every refusal
+// names the task the worker was actually told to work — the seat-scoped gate's
+// error could point at a sibling task the worker wasn't even trying to start.
+func checkJoinTarget(st projection.State, seatID, taskID string) error {
+	t, _ := findTask(st, taskID)
+	if t == nil {
+		return fmt.Errorf("pactify join: unknown task %q", taskID)
+	}
+	if t.Owner != seatID {
+		return fmt.Errorf("pactify join: task %s is owned by %s, not %s", taskID, t.Owner, seatID)
+	}
+	switch t.Status {
+	case "assigned", "changes_requested", "in_progress":
+		// startable or resumable
+	default:
+		return fmt.Errorf("pactify join: task %s is %s — not startable", taskID, t.Status)
+	}
+	for _, d := range t.Deps {
+		// Same dep semantics as the seat-scoped gate: a dep absent from the
+		// projection was cancelled and is vacuously satisfied.
+		dep, _ := findTask(st, d)
+		if dep != nil && dep.Status != "accepted" {
+			return fmt.Errorf("pactify join: task %s blocked by unaccepted dep %s", taskID, d)
+		}
+	}
+	return nil
+}
+
 func checkJoinGate(st projection.State, seatID string) error {
-	startable, runnable := 0, 0
+	startable, runnable, resumable := 0, 0, 0
 	firstBlocked, firstBlockedDep := "", ""
 	for _, f := range st.Features {
 		for _, t := range f.Tasks {
 			if t.Owner != seatID {
 				continue
 			}
+			// A task already in_progress is resumable work: the seat may re-join
+			// to pick it back up (cold-start after a crash, a fresh worker run on
+			// the same seat), so it must keep the gate open even when every other
+			// owned task is dep-blocked.
+			if t.Status == "in_progress" {
+				resumable++
+				continue
+			}
 			// Only assigned/changes_requested tasks are "startable" at join; an
-			// already accepted/shipped/in_progress task doesn't gate a (re)join.
+			// already accepted/shipped task doesn't gate a (re)join.
 			if t.Status != "assigned" && t.Status != "changes_requested" {
 				continue
 			}
@@ -245,7 +283,7 @@ func checkJoinGate(st projection.State, seatID string) error {
 			}
 		}
 	}
-	if startable > 0 && runnable == 0 {
+	if startable > 0 && runnable == 0 && resumable == 0 {
 		return fmt.Errorf("pactify join: task %s blocked by unaccepted dep %s (no runnable task to start)", firstBlocked, firstBlockedDep)
 	}
 	return nil
@@ -265,6 +303,16 @@ func checkCheckpoint(st projection.State, caller, taskID, evidence string) (*pro
 	}
 	if tk.Owner != caller {
 		return nil, fmt.Errorf("pactify checkpoint: %s is not the owner of %s (owner: %s)", caller, taskID, tk.Owner)
+	}
+	// Status guard (2026-07-19 e2e F3): an accepted task carries a reviewer's
+	// verdict, and the projection folds ANY checkpoint back to awaiting_review —
+	// so an owner checkpoint here would unilaterally rewind that verdict (same
+	// invariant family as M8's cancel guard). Only the reviewer (changes) or the
+	// orchestrator (cancel) may reopen reviewed work. Every pre-verdict status
+	// stays checkpointable — including awaiting_review, which the fix-until-green
+	// loop re-checkpoints before any review.
+	if tk.Status == "accepted" {
+		return nil, fmt.Errorf("pactify checkpoint: task %s is already accepted — a reviewer verdict cannot be rewound by the owner (reviewer `changes` or orchestrator `cancel` reopen work)", taskID)
 	}
 	// Close the join-gate ordering hole: a seat that joined BEFORE a dep'd assign
 	// could otherwise checkpoint a still-blocked task. Re-apply the same dep gate

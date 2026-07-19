@@ -16,7 +16,18 @@ import (
 //
 // It uses the task's own `verify:` line (per-task, not the feature-wide gate),
 // falling back to fallbackGate when the spec carries none.
-func (opts Options) classifyAndCheckpoint(ctx context.Context, taskID string, task projection.Task) bool {
+//
+// delivered is the caller's launch-window delivery signal (tree fingerprint
+// before vs after the stint — see runOwner). A green verify only means "the
+// work is finished" when there IS work: a worker killed before producing
+// anything (mid-setup, mid-sleep) changes nothing, and with a weak gate
+// (`verify: true`) the rescue would checkpoint a phantom delivery AND clear
+// the fail budget, so the timeout loop could burn forever without tripping
+// escalation (2026-07-19 Phase C rerun F2-b). No delivery → no rescue.
+func (opts Options) classifyAndCheckpoint(ctx context.Context, taskID string, task projection.Task, delivered bool) bool {
+	if !delivered {
+		return false
+	}
 	cmd, ok := extractVerify(readSpec(opts.Dir, task.Spec))
 	if !ok {
 		cmd = fallbackGate

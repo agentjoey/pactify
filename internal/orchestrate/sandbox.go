@@ -55,6 +55,11 @@ func RunSandbox(ctx context.Context, opts Options) (err error) {
 	if err := checkStalePark(dir, parkBranch); err != nil {
 		return err
 	}
+	// Preflight the acting seat BEFORE touching the tree (park/worktree): a
+	// roster error must not leave recovery litter behind (e2e F4).
+	if err := validateDriverSeat(dir, opts.Orchestrator); err != nil {
+		return err
+	}
 	if dirty, _ := gitx.HasChanges(dir); dirty {
 		return fmt.Errorf("sandbox: working tree is dirty — commit/stash before an isolated run, or pass --in-place to run directly in your tree (parking needs a clean tree)")
 	}
@@ -68,7 +73,15 @@ func RunSandbox(ctx context.Context, opts Options) (err error) {
 	if err := writeParkMarker(dir, orig); err != nil {
 		return fmt.Errorf("sandbox: record park marker: %w", err)
 	}
-	if err := gitx.CheckoutOrCreate(dir, parkBranch); err != nil {
+	// Park at the CURRENT head, always. A stale park branch from an earlier run
+	// points at that run's pre-park commit; reusing it (CheckoutOrCreate) rewound
+	// the main tree — including a git-TRACKED .pact — so syncPact seeded the new
+	// sandbox from an old ledger and the run died with "feature not found in
+	// sandbox" (2026-07-19 e2e F1, deterministic). checkout -B resets the scratch
+	// branch to HEAD; any leftover pointer is garbage by definition (the park
+	// branch never carries its own commits — teardown restores and deletes it,
+	// and a crashed run is caught by checkStalePark above before reaching here).
+	if err := gitx.CheckoutReset(dir, parkBranch); err != nil {
 		removeParkMarker(dir) // never parked — the marker must not strand a healthy tree
 		return fmt.Errorf("sandbox: park main tree: %w", err)
 	}
@@ -80,6 +93,11 @@ func RunSandbox(ctx context.Context, opts Options) (err error) {
 		_ = os.RemoveAll(sbDir)
 		if orig != "" && gitx.Checkout(dir, orig) == nil {
 			removeParkMarker(dir) // only a CONFIRMED restore clears the crash guard
+			// Park hygiene (e2e F9 same family): after a confirmed restore the
+			// park branch is a stale pointer that can only mislead — delete it.
+			// Best-effort: a failed delete leaves exactly the pre-fix state, and
+			// the checkout -B above no longer trusts a leftover anyway.
+			_ = gitx.DeleteBranch(dir, parkBranch)
 		}
 	}
 

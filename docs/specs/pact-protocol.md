@@ -202,7 +202,7 @@ todo → assigned → in_progress → awaiting_review → accepted
 
 - `todo`: task exists in the backlog but has not been assigned via an `assign` event.
 - `assigned`: an `assign` event has been emitted for this task; the owner has not yet joined.
-- `in_progress`: work is underway — the owner has joined (a `join` event lifts the seat's first actionable owned task: the first `assigned` task whose dependencies are all `accepted`) or the orchestrate driver has launched the owner (via a `start` event, §2.6); or the task has been returned from `changes_requested`.
+- `in_progress`: work is underway — the owner has joined (a `join` event lifts the seat's first actionable owned task: the first `assigned` task whose dependencies are all `accepted`; a join carrying a `task` payload field lifts exactly that task instead — see the targeted-join addendum) or the orchestrate driver has launched the owner (via a `start` event, §2.6); or the task has been returned from `changes_requested`.
 - `awaiting_review`: a `checkpoint` event has been emitted; the reviewer must now act.
 - `accepted`: an `accept` event has been emitted by the designated reviewer while the task was `awaiting_review`. This is a terminal state.
 - `changes_requested`: a `changes_requested` event has been emitted by the designated reviewer while the task was `awaiting_review`. The task returns to `in_progress` for the owner to address.
@@ -296,9 +296,12 @@ init   --project <name> --seat "<id>:<roles>:<entry>" [--seat ...]
            Required: --project, at least one --seat.
            Seat format: id:comma-separated-roles:entry-path (exactly 3 fields).
 
-join   <id> --roles <r1,r2>
+join   <id> --roles <r1,r2> [--task <task_id>]
            Worker cold-start (or resume after crash). Emits join event.
            Required: seat id positional arg, --roles.
+           With --task: targeted join — lifts exactly the named task and is
+           refused with a task-specific error when it is unknown, not owned
+           by this seat, or dep-blocked (see the targeted-join addendum).
 
 assign <task_id> --feature <feature_id> --branch <branch_name> \
          --owner <seat_id> --reviewer <seat_id> [--spec <path>]
@@ -312,9 +315,11 @@ checkpoint <task_id> --evidence "<text>"
            Required: task_id, --evidence.
            MUST be called by the task owner (PACT_AGENT_ID == task.owner).
 
-accept <task_id>
+accept <task_id> [--evidence "<text>"]
            Transitions task to accepted. Emits accept event.
-           Required: task_id.
+           Required: task_id. Optional: --evidence — reviewer evidence backing
+           the verdict, recorded on the accept event (log only; see the
+           accept-evidence addendum).
            MUST be called by the task reviewer (PACT_AGENT_ID == task.reviewer).
            Task MUST be in awaiting_review state.
 
@@ -470,3 +475,59 @@ A `join` event's `payload` MAY carry an optional `client` object recording the t
 ### Bash reference is not extended
 
 The bash reference implementation (`pact.sh`) is **not** extended for `client`. It emits no `client` payloads, which is exactly why a client-free Go log stays byte-identical to a bash log. Implementations that don't support client provenance remain fully v1-conformant; they simply never emit the field.
+
+## Addendum: targeted join (additive, v1)
+
+This addendum is **additive to frozen v1**: it introduces one optional field on the `join` event and changes no rule or state machine. Logs that never use it are bit-for-bit unchanged.
+
+### The field
+
+A `join` event's `payload` MAY carry an optional `task` string naming the task this join is starting:
+
+```json
+{ "event_type": "join",
+  "payload": { "roles": ["worker"], "task": "t2-cli" } }
+```
+
+`task` is **emitted only on a targeted join.** A task-free join keeps the historical payload bytes and the historical seat-scoped semantics.
+
+### Why
+
+Cross-vendor dogfood (2026-07-19): a briefing tells the worker WHICH task to start, but a seat-scoped join lifts "the seat's first workable owned task" — which may be a different task. The worker then works the briefed task anyway and only discovers a dep block at `checkpoint`, after the work is done. A targeted join pins the ledger to the briefing.
+
+### Semantics
+
+- **Projection:** a join with `task` lifts exactly that task (`assigned → in_progress`, deps permitting) and never the first-workable fallback. When the named task is not liftable (wrong owner, not `assigned`, dep-blocked, cancelled) the join event lifts nothing — replay over arbitrary logs stays deterministic and total.
+- **Write-time validation (Go engine):** a targeted join is refused up front — naming the TARGET task — when the task is unknown (`unknown task`), owned by another seat (`owned by X, not Y`), in a non-startable status, or dep-blocked (`task X blocked by unaccepted dep Y`). The seat-scoped join gate does not run; the target check subsumes it. `in_progress` targets are allowed (resume).
+- **Branch:** a targeted join checks out the target task's feature branch (never another owned feature's).
+
+### Bash reference is not extended
+
+The bash reference implementation (`pact.sh`) emits no `task` payloads; task-free logs stay byte-identical.
+
+## Addendum: accept reviewer evidence (additive, v1)
+
+This addendum is **additive to frozen v1**: it introduces one optional field on the `accept` event and changes no rule, state machine, or projection. Logs that never use it are bit-for-bit unchanged.
+
+### The field
+
+An `accept` event's `payload` MAY carry an optional `evidence` string — the reviewer's verify run or inspection summary backing the verdict:
+
+```json
+{ "event_type": "accept",
+  "payload": { "evidence": "python3 -m unittest discover -s tests — 16/16 green" } }
+```
+
+`evidence` is **emitted only when non-empty.** An evidence-free accept keeps the historical empty payload.
+
+### Why
+
+Cross-vendor dogfood (2026-07-19): the protocol recorded the OWNER's evidence (checkpoint) but had no channel for the REVIEWER's — the verify run justifying an accept could only live outside the ledger. This closes the review side of the evidence chain.
+
+### Projection — log only
+
+Like join `client` provenance, accept `evidence` is **never projected into `STATE.yml`.** It lives in the log for audit; STATE byte-parity holds trivially for every log.
+
+### Bash reference is not extended
+
+The bash reference implementation (`pact.sh`) emits no accept `evidence`; evidence-free logs stay byte-identical.

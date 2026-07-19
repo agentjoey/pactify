@@ -280,7 +280,10 @@ func recordTokens(lc LaunchContext, output string) {
 	if !ok || n <= 0 {
 		return
 	}
-	recordTaskTokens(lc.RepoDir, lc.Task, n)
+	// streamDir, not RepoDir: in a sandbox run RepoDir is the throwaway worktree
+	// and a store written there dies at teardown (2026-07-19 e2e F6). Tokens are
+	// teardown-surviving runtime, same as status/streams/escalation.
+	recordTaskTokens(lc.streamDir(), lc.Task, n)
 }
 
 // recordTaskTokens accumulates n tokens for task into the repo's token store

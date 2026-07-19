@@ -237,7 +237,40 @@ func featureBranchIn(st projection.State, feature string) string {
 // gate) it writes an escalation record, notifies, and returns nil — paused, not
 // failed; a human fixes the cause and reruns to resume. A genuine error
 // (unreadable state, a Runner/Merge failure) is returned.
+// validateDriverSeat fail-fasts a run whose acting seat can never merge: the
+// seat must exist in the roster WITH the orchestrator role (2026-07-19 e2e F4 —
+// `--as driver` with an un-init'd seat ran every stint and only died at the
+// final merge's role gate, burning the whole run on an error knowable up
+// front). An empty seat is not validated here: the CLI already fail-fasts when
+// both --as and PACT_AGENT_ID are unset, and engine verbs resolve the env
+// fallback themselves.
+func validateDriverSeat(dir, seat string) error {
+	if seat == "" {
+		return nil
+	}
+	evs, err := event.ReadAll(paths.LogIn(dir))
+	if err != nil {
+		return fmt.Errorf("orchestrate: read ledger to validate --as seat: %w", err)
+	}
+	st := projection.Project(evs)
+	for _, a := range st.Agents {
+		if a.ID != seat {
+			continue
+		}
+		for _, r := range a.Roles {
+			if r == "orchestrator" {
+				return nil
+			}
+		}
+		return fmt.Errorf("orchestrate: acting seat %q lacks the orchestrator role (roles: %s) — its merges would be refused; grant the role at init or pass --as <orchestrator seat>", seat, strings.Join(a.Roles, ","))
+	}
+	return fmt.Errorf("orchestrate: acting seat %q is not in the roster — its merges would be refused at the end of the run; init/add the seat with the orchestrator role or pass --as <orchestrator seat>", seat)
+}
+
 func (opts Options) run(ctx context.Context) error {
+	if err := validateDriverSeat(opts.Dir, opts.Orchestrator); err != nil {
+		return err
+	}
 	// Ignore .pact/orchestrate/ before any runtime file (stream logs, status.json,
 	// escalation records) is written, so they never land in the user's git status
 	// or an agent's `git add -A`. Routed through .git/info/exclude (local, never
@@ -352,6 +385,13 @@ func (opts Options) run(ctx context.Context) error {
 		if !opts.DryRun && (act.Kind == ActRunOwner || act.Kind == ActRunReviewer) {
 			if reason, tripped := tripped(act.Task, h, opts.Th); tripped {
 				opts.emitEscalatedStatus(view, act.Task, reason, h)
+				// Snapshot the failure history INTO the escalation record before the
+				// circuit-breaker reset below erases it — otherwise "limit exceeded"
+				// ships with an empty history file and no narrative evidence (rerun
+				// F2-c: the persisted counters read {} while the record claimed a
+				// tripped limit).
+				snapshot := fmt.Sprintf("failure history at trip: fails=%d, rework=%d, last=%q (budget reset so a post-fix rerun resumes)",
+					h.Fails[act.Task], h.Rework[act.Task], h.LastFail[act.Task])
 				// The threshold has fired and the human is being notified: drop this
 				// task's persisted failure budget so a post-fix rerun resumes instead
 				// of re-tripping on the loaded count (rework is ledger-derived and
@@ -359,7 +399,8 @@ func (opts Options) run(ctx context.Context) error {
 				delete(h.Fails, act.Task)
 				delete(h.LastFail, act.Task)
 				_ = writeHistory(opts.runtimeDir(), scope, h)
-				return opts.escalate(act.Feature, act.Task, reason, evidenceFor(st, act.Task),
+				return opts.escalate(act.Feature, act.Task, reason,
+					evidenceFor(st, act.Task)+"\n\n"+snapshot,
 					"人工介入后 pactify orchestrate 续跑")
 			}
 		}
@@ -519,6 +560,13 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		opts.mirrorLedger()
 	}
 
+	// Launch-window delivery signal for the rescue below: if the tree fingerprint
+	// (HEAD + porcelain) is unchanged after the stint, the worker produced
+	// NOTHING — and a rescue must never promote nothing (F2-b). Captured after
+	// the Start bookkeeping so only the worker's own effects count.
+	preLaunch := gitx.TreeFingerprint(opts.Dir)
+	delivered := func() bool { return gitx.TreeFingerprint(opts.Dir) != preLaunch }
+
 	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
@@ -528,7 +576,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		// task's verify command now passes, the work is actually done and only the
 		// checkpoint was missing — record it (as owner) and let the next iteration
 		// route to the reviewer, instead of re-burning the worker.
-		if opts.classifyAndCheckpoint(ctx, act.Task, task) {
+		if opts.classifyAndCheckpoint(ctx, act.Task, task, delivered()) {
 			if after, err := pact.At(opts.Dir).StateProjection(); err == nil {
 				if _, t, ok := find(after, act.Feature, act.Task); ok && t.Status == "awaiting_review" {
 					h.Fails[act.Task] = 0
@@ -536,7 +584,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 				}
 			}
 		}
-		h.LastFail[act.Task] = "agent run failed (crash, timeout, or non-zero exit)"
+		h.LastFail[act.Task] = failCause("worker run", runErr)
 		h.Fails[act.Task]++
 		return nil
 	}
@@ -552,7 +600,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 		// Same rescue as the crash path above: if the task's verify command passes,
 		// the work IS done and only the delivery was lost — checkpoint on the
 		// worker's behalf instead of burning failures toward escalation.
-		if opts.classifyAndCheckpoint(ctx, act.Task, task) {
+		if opts.classifyAndCheckpoint(ctx, act.Task, task, delivered()) {
 			if rescued, err := pact.At(opts.Dir).StateProjection(); err == nil {
 				if _, t, ok := find(rescued, act.Feature, act.Task); ok && t.Status == "awaiting_review" {
 					h.Fails[act.Task] = 0
@@ -599,7 +647,11 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 			// same deterministic dead-end; signal run() to stop (paused).
 			return errPausedForEscalation
 		}
-		h.Fails[act.Task]++ // transient agent crash → soft failure (spec §2.5)
+		// Transient agent crash → soft failure (spec §2.5). Name the cause so a
+		// tripped limit escalates with attribution, not a bare "failure limit
+		// exceeded" — the reviewer path never set LastFail at all (rerun F2-a).
+		h.LastFail[act.Task] = failCause("reviewer run", runErr)
+		h.Fails[act.Task]++
 		return nil
 	}
 
@@ -1073,6 +1125,22 @@ func describe(st projection.State, dir string, act Action) string {
 		return "Done"
 	default:
 		return "Idle"
+	}
+}
+
+// failCause names a stint's soft-failure for History.LastFail — the string
+// tripped() appends to "failure limit exceeded" so the escalation record
+// attributes WHY (rerun F2-a: a bare limit message made a pure-timeout loop
+// unattributable). The two driver-imposed kills get explicit names; anything
+// else carries the runner's own error text.
+func failCause(who string, runErr error) string {
+	switch {
+	case errors.Is(runErr, context.DeadlineExceeded):
+		return who + ": run timeout (--run-timeout) exceeded"
+	case errors.Is(runErr, errIdle):
+		return who + ": " + runErr.Error()
+	default:
+		return who + " failed: " + runErr.Error()
 	}
 }
 

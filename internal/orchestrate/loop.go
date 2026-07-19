@@ -576,7 +576,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 				}
 			}
 		}
-		h.LastFail[act.Task] = "agent run failed (crash, timeout, or non-zero exit)"
+		h.LastFail[act.Task] = failCause("worker run", runErr)
 		h.Fails[act.Task]++
 		return nil
 	}
@@ -639,7 +639,11 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 			// same deterministic dead-end; signal run() to stop (paused).
 			return errPausedForEscalation
 		}
-		h.Fails[act.Task]++ // transient agent crash → soft failure (spec §2.5)
+		// Transient agent crash → soft failure (spec §2.5). Name the cause so a
+		// tripped limit escalates with attribution, not a bare "failure limit
+		// exceeded" — the reviewer path never set LastFail at all (rerun F2-a).
+		h.LastFail[act.Task] = failCause("reviewer run", runErr)
+		h.Fails[act.Task]++
 		return nil
 	}
 
@@ -1113,6 +1117,22 @@ func describe(st projection.State, dir string, act Action) string {
 		return "Done"
 	default:
 		return "Idle"
+	}
+}
+
+// failCause names a stint's soft-failure for History.LastFail — the string
+// tripped() appends to "failure limit exceeded" so the escalation record
+// attributes WHY (rerun F2-a: a bare limit message made a pure-timeout loop
+// unattributable). The two driver-imposed kills get explicit names; anything
+// else carries the runner's own error text.
+func failCause(who string, runErr error) string {
+	switch {
+	case errors.Is(runErr, context.DeadlineExceeded):
+		return who + ": run timeout (--run-timeout) exceeded"
+	case errors.Is(runErr, errIdle):
+		return who + ": " + runErr.Error()
+	default:
+		return who + " failed: " + runErr.Error()
 	}
 }
 

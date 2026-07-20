@@ -573,8 +573,15 @@ func shipBaseBranch(dir string) string {
 	return "main"
 }
 
+// defaultGitDiff returns a REDACTED diff summary — `git diff --stat`: changed
+// file names + per-file insertion/deletion counts, but NO file content. The full
+// patch would leak uncommitted secrets (.env, tokens) and all source over an
+// unauthenticated read endpoint (review finding M1). The stat summary is enough
+// for the dashboard's "what changed" view; viewing actual content must go through
+// an authenticated channel once the read surface gets per-seat auth (deferred to
+// the H1/C4 identity coordination window).
 func defaultGitDiff(dir string, staged bool) (string, error) {
-	args := []string{"-C", dir, "diff"}
+	args := []string{"-C", dir, "diff", "--stat"}
 	if staged {
 		args = append(args, "--staged")
 	}
@@ -582,8 +589,11 @@ func defaultGitDiff(dir string, staged bool) (string, error) {
 	return string(out), err
 }
 
-// handleOrchestrateDiff is intentionally ungated (no actingProject check):
-// it is a read-only operation (git diff) safe for any observer.
+// handleOrchestrateDiff returns a redacted diff summary (file names + line counts,
+// no content — see defaultGitDiff). It stays ungated (no actingProject check) for
+// now; a real per-seat read-surface credential is deferred to H1/C4. The prior
+// "full git diff, safe for any observer" was the M1 leak — the redaction is what
+// makes a read-only summary tolerable until that auth lands.
 func (s *Server) handleOrchestrateDiff(w http.ResponseWriter, r *http.Request) {
 	_, dir, ok := s.project(r.PathValue("id"))
 	if !ok {

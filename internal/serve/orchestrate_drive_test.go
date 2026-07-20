@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -317,5 +318,42 @@ func TestDiff(t *testing.T) {
 	json.NewDecoder(resp2.Body).Decode(&result2)
 	if result2["diff"] != "staged diff output" {
 		t.Fatalf("staged diff=%q, want 'staged diff output'", result2["diff"])
+	}
+}
+
+// M1 redaction: the production defaultGitDiff must return a stat summary (file
+// names + line counts), never file CONTENT — the full patch would leak an
+// uncommitted .env / secrets over the unauthenticated read endpoint.
+func TestDefaultGitDiffRedactsContent(t *testing.T) {
+	dir := t.TempDir()
+	git := func(args ...string) {
+		t.Helper()
+		c := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		c.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	git("init")
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("PLACEHOLDER=x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git("add", ".env")
+	git("commit", "-m", "seed")
+	// Modify the tracked .env to contain a secret in the working tree (unstaged).
+	const secret = "SUPER_SECRET_TOKEN_abc123"
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("PLACEHOLDER=x\nAPI_KEY="+secret+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := defaultGitDiff(dir, false)
+	if err != nil {
+		t.Fatalf("defaultGitDiff: %v", err)
+	}
+	if strings.Contains(out, secret) {
+		t.Fatalf("diff leaked the secret content (M1): %q", out)
+	}
+	if !strings.Contains(out, ".env") {
+		t.Fatalf("stat summary should still name the changed file, got: %q", out)
 	}
 }

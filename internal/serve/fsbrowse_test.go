@@ -38,6 +38,9 @@ func TestFsBrowseValidDir(t *testing.T) {
 	ts := newTestServer(t, srv)
 
 	dir := t.TempDir()
+	// dir must be inside an allowed root (M2 confinement); make its parent a root
+	// so both dir and its parent (the "up" target) are browsable.
+	t.Setenv("PACTIFY_FS_ROOT", filepath.Dir(dir))
 	os.Mkdir(filepath.Join(dir, "subdir"), 0o755)
 	gitDir := filepath.Join(dir, "myrepo")
 	os.Mkdir(gitDir, 0o755)
@@ -108,11 +111,43 @@ func TestFsBrowseBadPath(t *testing.T) {
 	srv.SetSeat("test")
 	ts := newTestServer(t, srv)
 
-	resp, _ := http.Get(ts.URL + "/api/fs/browse?path=/nonexistent/surely/not/a/real/path")
+	// A nonexistent path INSIDE an allowed root still 400s (not a real dir).
+	root := t.TempDir()
+	t.Setenv("PACTIFY_FS_ROOT", root)
+	resp, _ := http.Get(ts.URL + "/api/fs/browse?path=" + filepath.Join(root, "nope", "nada"))
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("want 400 got %d", resp.StatusCode)
 	}
 	resp.Body.Close()
+}
+
+// M2 confinement: an authed seat must NOT be able to enumerate outside the
+// allowed roots, walk a traversal out of them, or descend into a hidden dir.
+func TestFsBrowseConfinement(t *testing.T) {
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, ".secrets"), 0o755)
+	srv := New(nil)
+	srv.SetSeat("test")
+	t.Setenv("PACTIFY_FS_ROOT", root)
+	ts := newTestServer(t, srv)
+
+	cases := []struct {
+		name, path string
+	}{
+		{"outside root (/etc)", "/etc"},
+		{"outside root (system)", "/"},
+		{"traversal out of root", filepath.Join(root, "..", "..", "..")},
+		{"hidden dir under root (~/.ssh class)", filepath.Join(root, ".secrets")},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, _ := http.Get(ts.URL + "/api/fs/browse?path=" + tc.path)
+			if resp.StatusCode != http.StatusForbidden {
+				t.Fatalf("path %q: want 403 (confined), got %d", tc.path, resp.StatusCode)
+			}
+			resp.Body.Close()
+		})
+	}
 }
 
 func TestRegistryAddWithGroup(t *testing.T) {

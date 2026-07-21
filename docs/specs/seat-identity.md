@@ -106,8 +106,8 @@ coordination-authority 把两个隐式资源显式化了：「协调目标（项
 - 验收：**本次诊断的复现脚本反转**——同仓 `lead`+`reviewer` 双 claude-code 座席接线后，入口块一份且 seat-agnostic、配置零身份、两个终端分别 `seat use` 后各自以正确身份走通 join→(assign/checkpoint)→accept。
 
 ### P2 — orchestrate 播种 + 无人闭环回归
-- sandbox/parallel worktree 创建时写 seat 文件；stint 结束随树销毁。
-- dogfood：同仓双 claude-code 座席（lead 编排评审 + worker 同 kind）经 `pactify orchestrate` 全自主走通；kimi 全局配置去身份后重验 F5 场景（不再需要"座席同名迁就"）。
+- **✅ 播种 DONE**：`seedSeatIfIsolated`（launch 单漏斗，per-stint 写当前座席）——仅隔离 worktree（判据 `LedgerDir != "" && LedgerDir != Dir`，sandbox/parallel 都成立），in-place 用户树永不碰；写前 `EnsureExcluded(.pact/seat)`（用户仓 track .pact，否则 worker checkpoint `git add -A` 会把身份文件卷进 feature 分支）；env 注入仍是主通道，此为第二通道，两者皆 best-effort。机制 e2e 实证：隔离 worktree 无 env 解析出 `source: file`。
+- **dogfood（待跑，brief 已交付）**：同仓双 claude-code 座席（lead 编排评审 + worker 同 kind）经 `pactify orchestrate` 全自主走通；kimi 全局配置去身份后重验 F5 场景（不再需要"座席同名迁就"）。
 
 ## 6. 风险
 

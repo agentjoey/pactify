@@ -194,6 +194,27 @@ var errOrchestratorSeat = errors.New("seat is the orchestrator and has no agent 
 // clean nil return, exactly like the escalate-and-return sites do inline.
 var errPausedForEscalation = errors.New("paused for escalation")
 
+// seedSeatIfIsolated writes the stint's seat into the worktree's .pact/seat when
+// this run is in an ISOLATED worktree (sandbox/parallel: LedgerDir points at the
+// primary repo, Dir at the throwaway tree). It is the second identity channel of
+// spec seat-identity §3.3: env injection is primary, but a headless host that
+// does not pass PACT_AGENT_ID through to its MCP server still resolves the acting
+// seat from this file. In-place runs (LedgerDir unset → Dir is the user's tree)
+// are never touched — the user's own `seat use` must stand. Best-effort: a write
+// failure never blocks the launch (env injection remains).
+func (opts Options) seedSeatIfIsolated(seatID string) {
+	if seatID == "" || opts.LedgerDir == "" || opts.LedgerDir == opts.Dir {
+		return
+	}
+	// Exclude BEFORE writing: user repos TRACK .pact (the ledger travels with the
+	// repo), so an un-excluded seat file would be swept into the feature branch by
+	// the worker's checkpoint `git add -A` and merged onto base — the committed-
+	// identity accident this whole design prevents. Both best-effort: env
+	// injection is the primary channel and must not be blocked by git hiccups.
+	_ = gitx.EnsureExcluded(opts.Dir, ".pact/seat")
+	_ = os.WriteFile(paths.SeatFileIn(opts.Dir), []byte(seatID+"\n"), 0o644)
+}
+
 func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task string) error {
 	// Centralized orchestrator-as-actor check: the primary loop guard catches
 	// act.Seat before dispatch, but the owner is also launched from fix/QA
@@ -202,6 +223,11 @@ func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task s
 	if seatID != "" && seatID == opts.Orchestrator && kind == "" {
 		return fmt.Errorf("launch %s for task %s: %w", seatID, task, errOrchestratorSeat)
 	}
+	// Second identity channel (spec seat-identity §3.3): pin this stint's seat in
+	// the isolated worktree's .pact/seat, so a host that doesn't pass env through
+	// to its MCP server still resolves the acting seat. Primary channel (env
+	// injection) is unchanged; this only fires for throwaway worktrees.
+	opts.seedSeatIfIsolated(seatID)
 	runCtx := ctx
 	if opts.RunTimeout > 0 {
 		var cancel context.CancelFunc

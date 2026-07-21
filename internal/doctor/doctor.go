@@ -29,11 +29,13 @@ func checkPath(exePath, pathEnv string) Check {
 	return Check{"pactify on PATH", false, fmt.Sprintf("%s is not on PATH; add it or re-run install.sh", dir)}
 }
 
+// checkSeat reports the resolved acting identity. agentID is the resolved seat
+// (env or .pact/seat file — see paths.AgentIDIn); empty means unresolved.
 func checkSeat(agentID string) Check {
 	if agentID == "" {
-		return Check{"PACT_AGENT_ID set", false, "export PACT_AGENT_ID=<seat> (needed for shell verbs)"}
+		return Check{"seat identity", false, "unresolved — `pactify seat use <id>` (binds this working copy) or export PACT_AGENT_ID=<seat>"}
 	}
-	return Check{"PACT_AGENT_ID set", true, agentID}
+	return Check{"seat identity", true, agentID}
 }
 
 // checkRepo requires cwd to be the process working directory for the validate
@@ -72,6 +74,23 @@ func checkAgentWiring(cwd string) Check {
 	return Check{"agent wiring", true, "found: " + strings.Join(found, ", ")}
 }
 
+// checkPinnedIdentity warns when a project config still hard-codes a seat id in
+// the pact server's env (legacy pre-seat-identity wiring). A pinned identity
+// blocks a second same-kind seat (last-writer-wins collision) and overrides an
+// orchestrate-injected identity; re-wiring drops it (spec seat-identity §3.4).
+func checkPinnedIdentity(cwd string) Check {
+	pinned := agent.PinnedIdentity(cwd)
+	if len(pinned) == 0 {
+		return Check{"seat identity wiring", true, "no config pins a seat id"}
+	}
+	var parts []string
+	for _, p := range pinned {
+		parts = append(parts, fmt.Sprintf("%s pins %q in %s", p.Kind, p.Seat, p.Path))
+	}
+	return Check{"seat identity wiring", false,
+		strings.Join(parts, "; ") + " — re-wire to drop the pinned identity: `pactify agent add <kind>` (identity now resolves from PACT_AGENT_ID or `pactify seat use`)"}
+}
+
 // Run executes the non-MCP checks. The MCP-launch check (spec B1 #5) is run by the
 // command layer's checkMCP, which spawns the PATH-resolved binary and completes an
 // initialize handshake; keeping it there leaves this package pure and unit-testable.
@@ -84,6 +103,7 @@ func Run(cwd, agentID, exePath, pathEnv, home string) []Check {
 		checkRepo(cwd),
 		checkSeat(agentID),
 		checkAgentWiring(cwd),
+		checkPinnedIdentity(cwd),
 	}
 	return append(checks, VendorChecks(home, pathEnv)...)
 }

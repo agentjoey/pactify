@@ -63,6 +63,7 @@ type spec struct {
 	scope     Scope
 	format    Format
 	desktop   bool
+	envExpand bool   // host expands ${VAR} in config env values (documented for claude-code) → pass PACT_AGENT_ID through instead of pinning it
 	detectBin string // CLI binary to LookPath for install detection; "" = desktop kind (detect via Config().Path)
 }
 
@@ -72,12 +73,26 @@ func (s spec) Config() ConfigTarget {
 	return ConfigTarget{Path: s.cfgPath, Scope: s.scope, Format: s.format}
 }
 
+// Invocation builds the pact MCP server entry for this kind's config. It carries
+// NO pinned per-seat identity (spec seat-identity §3.2): pinning PACT_AGENT_ID
+// here made two same-kind seats collide (last-writer-wins) and also let a stale
+// config value override an orchestrate-injected identity. The acting seat is
+// resolved at runtime (env > .pact/seat). For hosts that document ${VAR}
+// expansion (claude-code), we pass the launching env's PACT_AGENT_ID through
+// explicitly so env-based identity survives even if the host doesn't blanket-
+// inherit; others omit the key entirely and rely on env inheritance or the seat
+// file. seatID/repoAbs: repoAbs still roots desktop kinds; seatID is no longer
+// baked in (kept for signature stability).
 func (s spec) Invocation(seatID, repoAbs string) Invoke {
 	args := []string{"mcp"}
 	if s.desktop {
 		args = append(args, "--project", repoAbs)
 	}
-	return Invoke{Command: "pactify", Args: args, Env: map[string]string{"PACT_AGENT_ID": seatID}}
+	env := map[string]string{}
+	if s.envExpand {
+		env["PACT_AGENT_ID"] = "${PACT_AGENT_ID:-}"
+	}
+	return Invoke{Command: "pactify", Args: args, Env: env}
 }
 
 // Runner returns the headless runner spec for this kind; ok=false for kinds with
@@ -99,15 +114,15 @@ func (s spec) Runner() (RunnerSpec, bool) {
 const briefingToken = "{briefing}"
 
 var registry = map[string]spec{
-	"opencode":       {"opencode", "AGENTS.md", "opencode.json", Project, JSONOpencode, false, "opencode"},
-	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, "claude"},
-	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, "gemini"},
-	"codex-cli":      {"codex-cli", "AGENTS.md", ".codex/config.toml", Project, TOML, false, "codex"},
-	"kimi-cli":       {"kimi-cli", "AGENTS.md", "~/.kimi-code/mcp.json", Global, JSONMcpServers, false, "kimi"},
-	"cursor-cli":     {"cursor-cli", "AGENTS.md", ".cursor/mcp.json", Project, JSONMcpServers, false, "cursor-agent"},
-	"claude-desktop": {"claude-desktop", "", "~/Library/Application Support/Claude/claude_desktop_config.json", Global, JSONMcpServers, true, ""},
-	"antigravity":    {"antigravity", "", "~/.gemini/config/mcp_config.json", Global, JSONMcpServers, true, ""},
-	"codex-app":      {"codex-app", "AGENTS.md", "~/.codex/config.toml", Global, TOML, true, ""},
+	"opencode":       {"opencode", "AGENTS.md", "opencode.json", Project, JSONOpencode, false, false, "opencode"},
+	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, true, "claude"},
+	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, false, "gemini"},
+	"codex-cli":      {"codex-cli", "AGENTS.md", ".codex/config.toml", Project, TOML, false, false, "codex"},
+	"kimi-cli":       {"kimi-cli", "AGENTS.md", "~/.kimi-code/mcp.json", Global, JSONMcpServers, false, false, "kimi"},
+	"cursor-cli":     {"cursor-cli", "AGENTS.md", ".cursor/mcp.json", Project, JSONMcpServers, false, false, "cursor-agent"},
+	"claude-desktop": {"claude-desktop", "", "~/Library/Application Support/Claude/claude_desktop_config.json", Global, JSONMcpServers, true, false, ""},
+	"antigravity":    {"antigravity", "", "~/.gemini/config/mcp_config.json", Global, JSONMcpServers, true, false, ""},
+	"codex-app":      {"codex-app", "AGENTS.md", "~/.codex/config.toml", Global, TOML, true, false, ""},
 }
 
 // Get returns the adapter for kind.

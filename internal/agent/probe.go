@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,6 +81,52 @@ func ProbeWiring(dir string) []WiringStatus {
 	out := make([]WiringStatus, 0, len(kinds))
 	for _, k := range kinds {
 		out = append(out, probeKind(k, dir))
+	}
+	return out
+}
+
+// PinnedSeat is a legacy config that hard-codes a seat id in the pact server's
+// env (pre-seat-identity wiring). Reported by PinnedIdentity for the doctor
+// migration warning.
+type PinnedSeat struct {
+	Kind string `json:"kind"`
+	Path string `json:"path"`
+	Seat string `json:"seat"`
+}
+
+// PinnedIdentity scans dir's project-scoped JSON kinds for a pact server whose
+// env pins a LITERAL PACT_AGENT_ID (spec seat-identity §3.4). An empty value or
+// an expansion token (${...}) is the de-identified form and is not flagged. This
+// backs `pactify doctor`'s "re-wire to drop the pinned identity" warning: a
+// pinned seat blocks multiple same-kind seats and overrides orchestrate's
+// injected identity.
+func PinnedIdentity(dir string) []PinnedSeat {
+	var out []PinnedSeat
+	for _, k := range Kinds() {
+		a, _ := Get(k)
+		c := a.Config()
+		if c.Scope != Project || c.Format == TOML {
+			continue // machine-global and doc-only configs are out of scope here
+		}
+		b, err := os.ReadFile(filepath.Join(dir, c.Path))
+		if err != nil {
+			continue
+		}
+		var root map[string]any
+		if json.Unmarshal(b, &root) != nil {
+			continue
+		}
+		servers, _ := root[parentKey(c.Format)].(map[string]any)
+		pact, _ := servers["pact"].(map[string]any)
+		envKey := "env"
+		if c.Format == JSONOpencode {
+			envKey = "environment"
+		}
+		env, _ := pact[envKey].(map[string]any)
+		v, _ := env["PACT_AGENT_ID"].(string)
+		if v != "" && !strings.Contains(v, "${") {
+			out = append(out, PinnedSeat{Kind: k, Path: c.Path, Seat: v})
+		}
 	}
 	return out
 }

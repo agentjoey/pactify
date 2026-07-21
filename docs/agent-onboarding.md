@@ -19,9 +19,7 @@ Config:
         "REPO_DIR"
       ],
       "command": "pactify",
-      "env": {
-        "PACT_AGENT_ID": "SEAT_ID"
-      }
+      "env": {}
     }
   }
 }
@@ -35,9 +33,18 @@ Config:
 Entry block:
 
 ````markdown
-# pact protocol — seat `SEAT_ID`
+# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+This repo uses the **pact protocol** (v1). Seats (who does what) are listed in
+`.pact/PROJECT.md` and `.pact/STATE.yml`.
+
+**Your identity — bind it to this working copy first.** Your seat is resolved
+from `PACT_AGENT_ID` (env), else the untracked `.pact/seat` file. Set the
+file once per working copy:
+```bash
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+```
+For concurrent seats in the same repo, use a separate git worktree per seat.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
@@ -48,8 +55,8 @@ restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=SEAT_ID
-pactify join SEAT_ID --roles ROLES
+pactify seat use <your-seat-id>   # if not already bound
+pactify join --roles <your-roles>
 ```
 then `pactify help` for the verbs.
 
@@ -68,7 +75,7 @@ Config:
       ],
       "command": "pactify",
       "env": {
-        "PACT_AGENT_ID": "SEAT_ID"
+        "PACT_AGENT_ID": "${PACT_AGENT_ID:-}"
       }
     }
   }
@@ -92,9 +99,7 @@ Config:
         "REPO_DIR"
       ],
       "command": "pactify",
-      "env": {
-        "PACT_AGENT_ID": "SEAT_ID"
-      }
+      "env": {}
     }
   }
 }
@@ -108,9 +113,18 @@ Config:
 Entry block:
 
 ````markdown
-# pact protocol — seat `SEAT_ID`
+# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+This repo uses the **pact protocol** (v1). Seats (who does what) are listed in
+`.pact/PROJECT.md` and `.pact/STATE.yml`.
+
+**Your identity — bind it to this working copy first.** Your seat is resolved
+from `PACT_AGENT_ID` (env), else the untracked `.pact/seat` file. Set the
+file once per working copy:
+```bash
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+```
+For concurrent seats in the same repo, use a separate git worktree per seat.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
@@ -121,8 +135,8 @@ restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=SEAT_ID
-pactify join SEAT_ID --roles ROLES
+pactify seat use <your-seat-id>   # if not already bound
+pactify join --roles <your-roles>
 ```
 then `pactify help` for the verbs.
 
@@ -136,7 +150,7 @@ Config:
 [mcp_servers.pact]
 command = "pactify"
 args = ["mcp", "--project", "REPO_DIR"]
-env = { PACT_AGENT_ID = "SEAT_ID" }
+env = {  }
 ```
 
 ## codex-cli
@@ -147,9 +161,18 @@ env = { PACT_AGENT_ID = "SEAT_ID" }
 Entry block:
 
 ````markdown
-# pact protocol — seat `SEAT_ID`
+# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+This repo uses the **pact protocol** (v1). Seats (who does what) are listed in
+`.pact/PROJECT.md` and `.pact/STATE.yml`.
+
+**Your identity — bind it to this working copy first.** Your seat is resolved
+from `PACT_AGENT_ID` (env), else the untracked `.pact/seat` file. Set the
+file once per working copy:
+```bash
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+```
+For concurrent seats in the same repo, use a separate git worktree per seat.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
@@ -160,8 +183,8 @@ restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=SEAT_ID
-pactify join SEAT_ID --roles ROLES
+pactify seat use <your-seat-id>   # if not already bound
+pactify join --roles <your-roles>
 ```
 then `pactify help` for the verbs.
 
@@ -175,7 +198,7 @@ Config:
 [mcp_servers.pact]
 command = "pactify"
 args = ["mcp"]
-env = { PACT_AGENT_ID = "SEAT_ID" }
+env = {  }
 ```
 
 ## cursor-cli
@@ -186,9 +209,18 @@ env = { PACT_AGENT_ID = "SEAT_ID" }
 Entry block:
 
 ````markdown
-# pact protocol — seat `SEAT_ID`
+# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+This repo uses the **pact protocol** (v1). Seats (who does what) are listed in
+`.pact/PROJECT.md` and `.pact/STATE.yml`.
+
+**Your identity — bind it to this working copy first.** Your seat is resolved
+from `PACT_AGENT_ID` (env), else the untracked `.pact/seat` file. Set the
+file once per working copy:
+```bash
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+```
+For concurrent seats in the same repo, use a separate git worktree per seat.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
@@ -199,8 +231,8 @@ restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=SEAT_ID
-pactify join SEAT_ID --roles ROLES
+pactify seat use <your-seat-id>   # if not already bound
+pactify join --roles <your-roles>
 ```
 then `pactify help` for the verbs.
 
@@ -218,9 +250,7 @@ Config:
         "mcp"
       ],
       "command": "pactify",
-      "env": {
-        "PACT_AGENT_ID": "SEAT_ID"
-      }
+      "env": {}
     }
   }
 }
@@ -234,9 +264,18 @@ Config:
 Entry block:
 
 ````markdown
-# pact protocol — seat `SEAT_ID`
+# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+This repo uses the **pact protocol** (v1). Seats (who does what) are listed in
+`.pact/PROJECT.md` and `.pact/STATE.yml`.
+
+**Your identity — bind it to this working copy first.** Your seat is resolved
+from `PACT_AGENT_ID` (env), else the untracked `.pact/seat` file. Set the
+file once per working copy:
+```bash
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+```
+For concurrent seats in the same repo, use a separate git worktree per seat.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
@@ -247,8 +286,8 @@ restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=SEAT_ID
-pactify join SEAT_ID --roles ROLES
+pactify seat use <your-seat-id>   # if not already bound
+pactify join --roles <your-roles>
 ```
 then `pactify help` for the verbs.
 
@@ -266,9 +305,7 @@ Config:
         "mcp"
       ],
       "command": "pactify",
-      "env": {
-        "PACT_AGENT_ID": "SEAT_ID"
-      }
+      "env": {}
     }
   }
 }
@@ -282,9 +319,18 @@ Config:
 Entry block:
 
 ````markdown
-# pact protocol — seat `SEAT_ID`
+# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+This repo uses the **pact protocol** (v1). Seats (who does what) are listed in
+`.pact/PROJECT.md` and `.pact/STATE.yml`.
+
+**Your identity — bind it to this working copy first.** Your seat is resolved
+from `PACT_AGENT_ID` (env), else the untracked `.pact/seat` file. Set the
+file once per working copy:
+```bash
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+```
+For concurrent seats in the same repo, use a separate git worktree per seat.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
@@ -295,8 +341,8 @@ restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=SEAT_ID
-pactify join SEAT_ID --roles ROLES
+pactify seat use <your-seat-id>   # if not already bound
+pactify join --roles <your-roles>
 ```
 then `pactify help` for the verbs.
 
@@ -314,9 +360,7 @@ Config:
         "mcp"
       ],
       "command": "pactify",
-      "env": {
-        "PACT_AGENT_ID": "SEAT_ID"
-      }
+      "env": {}
     }
   }
 }
@@ -330,9 +374,18 @@ Config:
 Entry block:
 
 ````markdown
-# pact protocol — seat `SEAT_ID`
+# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `SEAT_ID`, roles: ROLES.
+This repo uses the **pact protocol** (v1). Seats (who does what) are listed in
+`.pact/PROJECT.md` and `.pact/STATE.yml`.
+
+**Your identity — bind it to this working copy first.** Your seat is resolved
+from `PACT_AGENT_ID` (env), else the untracked `.pact/seat` file. Set the
+file once per working copy:
+```bash
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+```
+For concurrent seats in the same repo, use a separate git worktree per seat.
 
 **Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
 (projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
@@ -343,8 +396,8 @@ restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=SEAT_ID
-pactify join SEAT_ID --roles ROLES
+pactify seat use <your-seat-id>   # if not already bound
+pactify join --roles <your-roles>
 ```
 then `pactify help` for the verbs.
 
@@ -363,9 +416,7 @@ Config:
         "mcp"
       ],
       "enabled": true,
-      "environment": {
-        "PACT_AGENT_ID": "SEAT_ID"
-      },
+      "environment": {},
       "type": "local"
     }
   }

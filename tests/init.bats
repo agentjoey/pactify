@@ -72,7 +72,7 @@ run_init() {
   export PACT_AGENT_ID=opencode
   "$BIN" init --project p --seat "opencode:worker:AGENTS.md:opencode"
   grep -q '"pact"' opencode.json
-  grep -q 'seat `opencode`' AGENTS.md
+  grep -q 'pact protocol' AGENTS.md && grep -q 'pactify seat use' AGENTS.md
 }
 
 @test "init rejects a kinded seat whose entry mismatches the kind default" {

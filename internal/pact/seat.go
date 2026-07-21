@@ -103,17 +103,21 @@ func BakeManagedBlock(path, body string) error {
 	return bakeBlock(path, blockBegin+"\n"+body+"\n"+blockEnd)
 }
 
-// BakeEntry writes a seat's vendor entry file (managed block).
+// BakeEntry writes a seat's vendor entry file (managed block). The block is
+// SEAT-AGNOSTIC (spec seat-identity §3.2): it names no seat, so baking it for
+// every seat at init is idempotent instead of last-writer-wins. Identity is
+// bound per working copy at runtime (`pactify seat use <id>` → the untracked
+// .pact/seat file, or PACT_AGENT_ID). The roster is in .pact/PROJECT.md.
 func BakeEntry(dir string, s Seat) error {
-	roles := strings.Join(s.Roles, ",")
 	block := blockBegin + "\n" +
-		"# pact protocol — seat `" + s.ID + "`\n\n" +
-		"> On session start, run this. If your shell does NOT persist state between commands,\n" +
-		"> prefix every pact command with the export + source.\n\n" +
+		"# pact protocol\n\n" +
+		"> Bind this working copy's seat once, then read the board.\n\n" +
 		"```bash\n" +
-		"export PACT_AGENT_ID=" + s.ID + "\n" +
-		"pactify join " + s.ID + " --roles " + roles + "\n" +
+		"pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md\n" +
+		"pactify join --roles <your-roles>\n" +
 		"```\n\n" +
+		"Your seat resolves from `PACT_AGENT_ID` (env) else the untracked `.pact/seat` file.\n" +
+		"For concurrent seats in one repo, use a separate git worktree per seat.\n" +
 		"Then read `.pact/PROJECT.md` and `.pact/STATE.yml`. Run `pactify help` for the verbs.\n" +
 		blockEnd
 	return bakeBlock(filepath.Join(dir, s.Entry), block)

@@ -83,7 +83,10 @@ func newDoctorCmd() *cobra.Command {
 
 			exe, _ := os.Executable()
 			home, _ := os.UserHomeDir()
-			checks := append(doctor.Run(cwd, paths.AgentID(), exe, os.Getenv("PATH"), home), checkMCP())
+			// Resolve the acting identity through the full chain (env > .pact/seat
+			// file), not env-only, so doctor reports the same seat the verbs use.
+			seatID, _ := paths.AgentIDIn(cwd)
+			checks := append(doctor.Run(cwd, seatID, exe, os.Getenv("PATH"), home), checkMCP())
 
 			if repoRoot, ok := doctor.FindRepoRoot(cwd); ok {
 				checks = append(checks, doctor.BridgeChecks(repoRoot)...)

@@ -61,6 +61,24 @@ func TestCLIHelpAndFullFlow(t *testing.T) {
 	if out, err := run(orch, "assign", "t1", "--feature", "f", "--branch", "feat/x", "--owner", "opencode", "--reviewer", "claude-opus", "--spec", ".pact/tasks/t1.md"); err != nil {
 		t.Fatalf("assign: %v %s", err, out)
 	}
+	// seat identity: `seat use` binds the working copy default (no env needed),
+	// `seat` reports the resolved identity + source. With env set, env wins.
+	if out, err := run(orch, "seat", "use", "opencode"); err != nil {
+		t.Fatalf("seat use: %v %s", err, out)
+	}
+	if b, err := os.ReadFile(filepath.Join(dir, ".pact/seat")); err != nil || strings.TrimSpace(string(b)) != "opencode" {
+		t.Fatalf("seat use must write .pact/seat: %v %q", err, b)
+	}
+	if excl, _ := os.ReadFile(filepath.Join(dir, ".git/info/exclude")); !strings.Contains(string(excl), ".pact/seat") {
+		t.Fatal("seat use must exclude .pact/seat from git")
+	}
+	noEnv := []string{"PACT_AGENT_ID="} // override any ambient identity → file layer
+	if out, _ := run(noEnv, "seat"); !strings.Contains(out, "opencode") || !strings.Contains(out, "file") {
+		t.Fatalf("bare `seat` (no env) must report the file identity: %q", out)
+	}
+	if out, _ := run(orch, "seat"); !strings.Contains(out, "claude-opus") || !strings.Contains(out, "env") {
+		t.Fatalf("`seat` with env must report env identity winning: %q", out)
+	}
 	if out, err := run(work, "join", "opencode", "--roles", "worker", "--task", "t1"); err != nil {
 		t.Fatalf("join: %v %s", err, out)
 	}

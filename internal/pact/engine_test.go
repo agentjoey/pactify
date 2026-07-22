@@ -56,8 +56,8 @@ func TestInitScaffoldsAndWritesInitEvent(t *testing.T) {
 		t.Fatalf("protocol_version = %v", evs[0].Payload["protocol_version"])
 	}
 	b, _ := os.ReadFile("AGENTS.md")
-	if !strings.Contains(string(b), "PACT_AGENT_ID=opencode") {
-		t.Fatal("AGENTS.md not baked")
+	if !strings.Contains(string(b), "pact protocol") || !strings.Contains(string(b), "pactify seat use") {
+		t.Fatalf("AGENTS.md not baked with seat-agnostic block:\n%s", b)
 	}
 }
 

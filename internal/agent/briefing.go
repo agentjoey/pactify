@@ -8,28 +8,43 @@ import (
 	"github.com/agentjoey/pactify/internal/pact"
 )
 
-// briefing renders the agent-agnostic onboarding body (MCP-first, shell fallback).
-func briefing(seatID, roles string) string {
-	return fmt.Sprintf(`# pact protocol — seat `+"`%s`"+`
+// briefing renders the SEAT-AGNOSTIC onboarding body (MCP-first, shell fallback).
+// It names no seat: identity is a working-copy/session property resolved at
+// runtime (env PACT_AGENT_ID > the .pact/seat file — spec seat-identity), not a
+// per-repo shared-file property. This makes the block byte-identical for every
+// seat, so wiring N seats of the same kind into one repo is idempotent instead
+// of last-writer-wins (the 2026-07-22 collision). The roster lives in
+// .pact/PROJECT.md / STATE.yml.
+func briefing() string {
+	return `# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `+"`%s`"+`, roles: %s.
+This repo uses the **pact protocol** (v1). Seats (who does what) are listed in
+` + "`.pact/PROJECT.md`" + ` and ` + "`.pact/STATE.yml`" + `.
 
-**Primary — MCP:** the `+"`pact`"+` MCP server is wired into your config. Use its tools
+**Your identity — bind it to this working copy first.** Your seat is resolved
+from ` + "`PACT_AGENT_ID`" + ` (env), else the untracked ` + "`.pact/seat`" + ` file. Set the
+file once per working copy:
+` + "```bash" + `
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+` + "```" + `
+For concurrent seats in the same repo, use a separate git worktree per seat.
+
+**Primary — MCP:** the ` + "`pact`" + ` MCP server is wired into your config. Use its tools
 (projects / status / join / assign / checkpoint / accept / changes / merge / validate) and
-resources (`+"`pact://state`"+`, `+"`pact://log`"+`). Cold start: call `+"`status`"+`, then `+"`join`"+`
+resources (` + "`pact://state`" + `, ` + "`pact://log`" + `). Cold start: call ` + "`status`" + `, then ` + "`join`" + `
 (registers your seat and checks out your feature branch). Every action tool takes an
-optional `+"`project`"+` (a name from `+"`projects`"+`) to act on another registered repo without
+optional ` + "`project`" + ` (a name from ` + "`projects`" + `) to act on another registered repo without
 restarting — default is this repo.
 
 **Fallback — shell** (if MCP is unavailable):
-`+"```bash"+`
-export PACT_AGENT_ID=%s
-pactify join %s --roles %s
-`+"```"+`
-then `+"`pactify help`"+` for the verbs.
+` + "```bash" + `
+pactify seat use <your-seat-id>   # if not already bound
+pactify join --roles <your-roles>
+` + "```" + `
+then ` + "`pactify help`" + ` for the verbs.
 
 **The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
-feature cannot merge until all its tasks are accepted.`, seatID, seatID, roles, seatID, seatID, roles)
+feature cannot merge until all its tasks are accepted.`
 }
 
 // Render returns the entry-file block (empty if the kind has no entry file) and
@@ -40,7 +55,7 @@ func Render(kind, seatID, roles, repoAbs string) (entry, config string, err erro
 		return "", "", fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
 	}
 	if a.DefaultEntry() != "" {
-		entry = briefing(seatID, roles)
+		entry = briefing()
 	}
 	config = snippet(a.Config().Format, a.Invocation(seatID, repoAbs))
 	return entry, config, nil
@@ -95,7 +110,7 @@ func WireAt(dir, kind, seatID, roles, repoAbs string) error {
 		return fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
 	}
 	if a.DefaultEntry() != "" {
-		if err := pact.BakeManagedBlock(filepath.Join(dir, a.DefaultEntry()), briefing(seatID, roles)); err != nil {
+		if err := pact.BakeManagedBlock(filepath.Join(dir, a.DefaultEntry()), briefing()); err != nil {
 			return err
 		}
 	}

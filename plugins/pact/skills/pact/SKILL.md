@@ -13,11 +13,13 @@ Call the `status` tool to see current state, then `join` (registers your seat + 
 out your feature branch). `validate` checks protocol conformance. Run `pactify doctor`
 if tools are missing.
 
-**Seat identity:** the MCP server inherits `PACT_AGENT_ID` from the environment
-**Claude Code was launched from** — exporting it in this session won't reach the server.
-If `join` reports the seat is unset, ask the human to either launch Claude Code from a
-shell with `PACT_AGENT_ID=<seat>` exported, or run `pactify setup` (wires a seat-baked
-project `.mcp.json`) and restart Claude Code.
+**Seat identity:** your seat resolves from `PACT_AGENT_ID` (inherited from the
+environment **Claude Code was launched from** — exporting it in this session won't
+reach the server) else the untracked `.pact/seat` file. If `join` reports the seat is
+unset, run `pactify seat use <id>` (binds this working copy — no restart needed for
+CLI verbs; for MCP, the file is read on the next tool call), or launch Claude Code from
+a shell with `PACT_AGENT_ID=<seat>` exported. For concurrent seats in one repo, use a
+separate git worktree per seat.
 
 ## Your job by role
 - **orchestrator**: write `.pact/tasks/<id>.md` (spec + acceptance), then call `assign`

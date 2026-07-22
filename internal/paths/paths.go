@@ -4,6 +4,7 @@ package paths
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // ProtocolVersion is the protocol major this binary implements.
@@ -50,5 +51,35 @@ func StateSnapshotIn(base string) string {
 	return filepath.Join(DirIn(base), "state-snapshot.json")
 }
 
-// AgentID returns PACT_AGENT_ID (may be "").
+// AgentID returns PACT_AGENT_ID (may be ""). Env-only; prefer AgentIDIn, which
+// adds the untracked seat-file layer (spec seat-identity §3.1).
 func AgentID() string { return os.Getenv("PACT_AGENT_ID") }
+
+// Seat identity source, reported by AgentIDIn so `pactify seat` can explain where
+// the acting identity came from.
+const (
+	SourceEnv        = "env"        // process env PACT_AGENT_ID
+	SourceFile       = "file"       // the .pact/seat working-copy file
+	SourceUnresolved = "unresolved" // neither present
+)
+
+// SeatFileIn is the per-working-copy seat file: an untracked single-line file
+// holding this checkout's default seat id (spec seat-identity §3.1). It lives
+// under the pact dir so it travels with PACT_DIR addressing.
+func SeatFileIn(base string) string { return filepath.Join(DirIn(base), "seat") }
+
+// AgentIDIn resolves the acting seat through the identity chain (spec
+// seat-identity §3.1): process env PACT_AGENT_ID > the untracked .pact/seat file
+// > unresolved. It returns the id and its source. A blank/whitespace-only file is
+// treated as absent (never a blank seat id, which would corrupt the ledger).
+func AgentIDIn(base string) (id, source string) {
+	if v := strings.TrimSpace(os.Getenv("PACT_AGENT_ID")); v != "" {
+		return v, SourceEnv
+	}
+	if b, err := os.ReadFile(SeatFileIn(base)); err == nil {
+		if v := strings.TrimSpace(string(b)); v != "" {
+			return v, SourceFile
+		}
+	}
+	return "", SourceUnresolved
+}

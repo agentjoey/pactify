@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/agentjoey/pactify/internal/pact"
-	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/registry"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -29,8 +28,9 @@ type statusIn struct {
 	projectField
 }
 
-// joinIn has no seat field: the seat is always the session's PACT_AGENT_ID,
-// so a client cannot join as one seat while the log records another.
+// joinIn has no seat field: the seat is the session's resolved identity
+// (PACT_AGENT_ID, else the working copy's .pact/seat file — see ResolveSeat), so
+// a client cannot join as one seat while the log records another.
 type joinIn struct {
 	projectField
 	Roles string `json:"roles,omitempty" jsonschema:"comma-separated roles"`
@@ -174,13 +174,16 @@ func registerTools(s *sdk.Server) {
 			return okResult(text), nil, nil
 		})
 
-	sdk.AddTool(s, &sdk.Tool{Name: "join", Description: "Worker cold-start: register this session's seat (PACT_AGENT_ID) and check out its feature branch. Pass `task` to target a specific task (lifts exactly that task). Pass `project` to join a registered project."},
+	sdk.AddTool(s, &sdk.Tool{Name: "join", Description: "Worker cold-start: register this session's seat (resolved from PACT_AGENT_ID or the working copy's .pact/seat file) and check out its feature branch. Pass `task` to target a specific task (lifts exactly that task). Pass `project` to join a registered project."},
 		func(_ context.Context, req *sdk.CallToolRequest, in joinIn) (*sdk.CallToolResult, any, error) {
 			proj, err := resolveProject(in.Project)
 			if err != nil {
 				return errResult(err)
 			}
-			seat := paths.AgentID()
+			// Resolve through the seat-identity chain rooted at the target project
+			// (env > .pact/seat file), not env-only — so an MCP session whose host
+			// didn't pass PACT_AGENT_ID still gets its working-copy seat.
+			seat, _, _ := proj.ResolveSeat()
 			name, version := clientInfo(req)
 			if err := proj.JoinWithClientTask(seat, in.Roles, name, version, in.Task); err != nil {
 				return errResult(err)

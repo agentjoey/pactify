@@ -6,16 +6,22 @@ import (
 	"testing"
 )
 
-func TestBriefingMentionsSeatRolesAndMCP(t *testing.T) {
-	b := briefing("opencode", "worker")
-	for _, want := range []string{"seat `opencode`", "worker", "MCP", "status", "join", "cannot self-accept"} {
+func TestBriefingIsSeatAgnosticAndMentionsBindingAndMCP(t *testing.T) {
+	b := briefing()
+	for _, want := range []string{"pact protocol", "pactify seat use", ".pact/seat", "MCP", "status", "join", "cannot self-accept"} {
 		if !strings.Contains(b, want) {
 			t.Fatalf("briefing missing %q:\n%s", want, b)
 		}
 	}
-	// the fiddly backtick-concatenation must yield a balanced code fence
-	if n := strings.Count(b, "```"); n != 2 {
-		t.Fatalf("briefing code fence not balanced: found %d ``` markers", n)
+	// It must name no seat and pin no identity (the whole point of seat-agnostic).
+	for _, bad := range []string{"seat `opencode`", "PACT_AGENT_ID=opencode"} {
+		if strings.Contains(b, bad) {
+			t.Fatalf("briefing must be seat-agnostic, found %q", bad)
+		}
+	}
+	// two code fences (identity bash + shell-fallback bash) must be balanced
+	if n := strings.Count(b, "```"); n != 4 {
+		t.Fatalf("briefing code fences not balanced: found %d ``` markers", n)
 	}
 }
 
@@ -24,8 +30,8 @@ func TestRenderJSONKindReturnsBlockAndSnippet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(entry, "seat `opencode`") {
-		t.Fatalf("entry block wrong:\n%s", entry)
+	if !strings.Contains(entry, "pact protocol") || !strings.Contains(entry, "pactify seat use") {
+		t.Fatalf("entry block must be seat-agnostic onboarding:\n%s", entry)
 	}
 	if !strings.Contains(cfg, `"type": "local"`) {
 		t.Fatalf("config snippet wrong:\n%s", cfg)
@@ -71,8 +77,8 @@ func TestWireJSONKindWritesConfigAndEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("entry not written: %v", err)
 	}
-	if !strings.Contains(string(entry), "seat `opencode`") {
-		t.Fatalf("entry missing briefing:\n%s", entry)
+	if !strings.Contains(string(entry), "pact protocol") || !strings.Contains(string(entry), "pactify seat use") {
+		t.Fatalf("entry missing seat-agnostic briefing:\n%s", entry)
 	}
 }
 
@@ -108,5 +114,49 @@ func TestDocFileInSync(t *testing.T) {
 	}
 	if string(b) != RenderDoc() {
 		t.Fatal("docs/agent-onboarding.md is stale — regenerate with `pactify agent docs`")
+	}
+}
+
+// 2026-07-22 diagnosis REVERSED (spec seat-identity §5 P1): two seats of the
+// same project-scoped kind wired into one repo must NOT collide. The entry
+// block is seat-agnostic (byte-identical for any seat → repeat writes are
+// idempotent), and the config carries no pinned per-seat PACT_AGENT_ID.
+func TestTwoSameKindSeatsDoNotCollide(t *testing.T) {
+	dir := t.TempDir()
+	start, _ := os.Getwd()
+	t.Cleanup(func() { os.Chdir(start) })
+	os.Chdir(dir)
+
+	if err := Wire("claude-code", "lead", "orchestrator,reviewer", "/repo"); err != nil {
+		t.Fatal(err)
+	}
+	entryAfterLead, _ := os.ReadFile("CLAUDE.md")
+	if err := Wire("claude-code", "reviewer", "reviewer", "/repo"); err != nil {
+		t.Fatal(err)
+	}
+	entryAfterRev, _ := os.ReadFile("CLAUDE.md")
+
+	// The lead's wiring is NOT lost — the block is seat-agnostic, so the second
+	// write is byte-identical (idempotent), not an overwrite.
+	if string(entryAfterLead) != string(entryAfterRev) {
+		t.Fatalf("entry block must be seat-agnostic (idempotent across seats):\n--- after lead ---\n%s\n--- after reviewer ---\n%s", entryAfterLead, entryAfterRev)
+	}
+	entry := string(entryAfterRev)
+	for _, bad := range []string{"seat `lead`", "seat `reviewer`", "PACT_AGENT_ID=lead", "PACT_AGENT_ID=reviewer"} {
+		if strings.Contains(entry, bad) {
+			t.Fatalf("entry block must not pin a seat identity, found %q:\n%s", bad, entry)
+		}
+	}
+	// It must still tell the agent HOW to bind an identity.
+	if !strings.Contains(entry, "pactify seat use") {
+		t.Fatalf("entry block must document identity binding:\n%s", entry)
+	}
+	// Config: no pinned per-seat identity. The pact server entry may carry an env
+	// pass-through token (${PACT_AGENT_ID...}) but never a literal seat id.
+	cfg, _ := os.ReadFile(".mcp.json")
+	for _, bad := range []string{`"lead"`, `"reviewer"`} {
+		if strings.Contains(string(cfg), bad) {
+			t.Fatalf("config must not pin a seat id, found %s:\n%s", bad, cfg)
+		}
 	}
 }

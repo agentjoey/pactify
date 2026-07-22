@@ -35,8 +35,12 @@ func TestBakeEntryManagedBlockPreservesContent(t *testing.T) {
 	}
 	b, _ := os.ReadFile(entry)
 	got := string(b)
-	if !strings.Contains(got, "keep this") || !strings.Contains(got, "PACT_AGENT_ID=opencode") || !strings.Contains(got, "pact:begin") {
+	// seat-agnostic block: user content preserved, no pinned seat id.
+	if !strings.Contains(got, "keep this") || !strings.Contains(got, "pactify seat use") || !strings.Contains(got, "pact:begin") {
 		t.Fatalf("bad entry: %s", got)
+	}
+	if strings.Contains(got, "PACT_AGENT_ID=opencode") {
+		t.Fatalf("BakeEntry must not pin a seat id:\n%s", got)
 	}
 	BakeEntry(dir, s)
 	b2, _ := os.ReadFile(entry)

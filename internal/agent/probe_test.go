@@ -136,3 +136,31 @@ func TestProbeWiringCodexDocOnly(t *testing.T) {
 		t.Fatalf("codex-cli with mcp_servers.pact table should be wired: %+v", row)
 	}
 }
+
+// PinnedIdentity flags a legacy config that hard-codes a seat id in the pact
+// server's env — the pre-seat-identity wiring that made same-kind seats collide
+// and overrode orchestrate-injected identity (spec seat-identity §3.4).
+func TestPinnedIdentity(t *testing.T) {
+	dir := t.TempDir()
+	// A legacy claude-code config with a literal pinned seat id.
+	os.WriteFile(filepath.Join(dir, ".mcp.json"),
+		[]byte(`{"mcpServers":{"pact":{"command":"pactify","args":["mcp"],"env":{"PACT_AGENT_ID":"lead"}}}}`), 0o644)
+	got := PinnedIdentity(dir)
+	if len(got) != 1 || got[0].Kind != "claude-code" || got[0].Seat != "lead" {
+		t.Fatalf("must flag the pinned claude-code identity, got %+v", got)
+	}
+}
+
+func TestPinnedIdentity_IgnoresExpansionTokenAndEmpty(t *testing.T) {
+	dir := t.TempDir()
+	// The current de-identified form: an expansion token, not a literal.
+	os.WriteFile(filepath.Join(dir, ".mcp.json"),
+		[]byte(`{"mcpServers":{"pact":{"command":"pactify","args":["mcp"],"env":{"PACT_AGENT_ID":"${PACT_AGENT_ID:-}"}}}}`), 0o644)
+	// And a gemini config with no env key at all.
+	os.MkdirAll(filepath.Join(dir, ".gemini"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".gemini", "settings.json"),
+		[]byte(`{"mcpServers":{"pact":{"command":"pactify","args":["mcp"],"env":{}}}}`), 0o644)
+	if got := PinnedIdentity(dir); len(got) != 0 {
+		t.Fatalf("expansion token / empty env must not be flagged, got %+v", got)
+	}
+}

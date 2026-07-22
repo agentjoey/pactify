@@ -35,17 +35,27 @@ var errNoAgent = errors.New("pactify: PACT_AGENT_ID not set; source your entry f
 // un-stamped builds. It is advisory metadata only — never an identity proof.
 var ClientVersion = "dev"
 
-// agentID resolves the acting seat: the handle's actor override if set, else
-// PACT_AGENT_ID from the environment. Fails closed when neither is present.
+// agentID resolves the acting seat, discarding the source (see ResolveSeat).
 func (p *Project) agentID() (string, error) {
+	id, _, err := p.ResolveSeat()
+	return id, err
+}
+
+// ResolveSeat resolves the acting seat and reports its source (spec
+// seat-identity §3.1): the handle's actor override ("actor", from .As()), else
+// process env PACT_AGENT_ID ("env"), else the untracked .pact/seat working-copy
+// file ("file"), rooted at this project's dir. Fails closed (errNoAgent) when
+// none is present. Every CLI verb and MCP tool funnels through here, so the
+// whole surface shares one identity chain.
+func (p *Project) ResolveSeat() (id, source string, err error) {
 	if p.actor != "" {
-		return p.actor, nil
+		return p.actor, "actor", nil
 	}
-	id := paths.AgentID()
+	id, source = paths.AgentIDIn(p.dir)
 	if id == "" {
-		return "", errNoAgent
+		return "", source, errNoAgent
 	}
-	return id, nil
+	return id, source, nil
 }
 
 // StateProjection returns the current projected state for the repo (exported
@@ -1001,6 +1011,36 @@ func (p *Project) Validate() error { return p.validateLog() }
 func Init(project string, seatSpecs []string) error { return At(".").Init(project, seatSpecs) }
 
 func AddSeat(spec string) error { return At(".").AddSeat(spec) }
+
+// UseSeat binds this working copy's default seat (spec seat-identity §3.1): it
+// validates id is in the roster, writes the untracked .pact/seat file, and
+// excludes it from git so it can never be committed. The seat file is the
+// per-checkout identity the resolution chain falls back to when PACT_AGENT_ID is
+// unset — so `seat use` + a bare agent launch = that seat, with no env dance.
+func UseSeat(id string) error { return At(".").UseSeat(id) }
+
+// UseSeat is the project-rooted form of the package-level UseSeat.
+func (p *Project) UseSeat(id string) error {
+	st, err := p.StateProjection()
+	if err != nil {
+		return fmt.Errorf("pactify seat use: read roster: %w", err)
+	}
+	known := make([]string, 0, len(st.Agents))
+	for _, a := range st.Agents {
+		if a.ID == id {
+			// Exclude BEFORE writing: a committed seat file is the exact accident
+			// this design prevents, so never leave a window where the file exists
+			// untracked-but-not-excluded. Loud on failure (spec §6) — not
+			// best-effort.
+			if err := gitx.EnsureExcluded(p.dir, ".pact/seat"); err != nil {
+				return fmt.Errorf("pactify seat use: exclude .pact/seat from git (refusing to write an un-excluded identity file): %w", err)
+			}
+			return os.WriteFile(paths.SeatFileIn(p.dir), []byte(id+"\n"), 0o644)
+		}
+		known = append(known, a.ID)
+	}
+	return fmt.Errorf("pactify seat use: %q is not in the roster (seats: %s)", id, strings.Join(known, ", "))
+}
 
 // Join registers the seat in the current working directory's repo (CLI client
 // identity: pactify-cli + ClientVersion).

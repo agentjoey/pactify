@@ -98,3 +98,27 @@ func TestAgentWiringCheckIgnoresUnwiredMarkdown(t *testing.T) {
 		t.Fatalf("CLAUDE.md without the pact:begin marker should not count as wiring: %+v", c)
 	}
 }
+
+// A legacy config that pins a seat id must be flagged with a re-wire hint
+// (spec seat-identity §3.4). A de-identified config passes.
+func TestPinnedIdentityCheckFlagsLegacyWiring(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, ".mcp.json"),
+		[]byte(`{"mcpServers":{"pact":{"command":"pactify","args":["mcp"],"env":{"PACT_AGENT_ID":"lead"}}}}`), 0o644)
+	c := checkPinnedIdentity(dir)
+	if c.OK {
+		t.Fatalf("pinned identity must be flagged (not OK): %+v", c)
+	}
+	if !strings.Contains(c.Detail, "lead") || !strings.Contains(c.Detail, "agent add") {
+		t.Fatalf("hint must name the seat and the re-wire fix: %+v", c)
+	}
+}
+
+func TestPinnedIdentityCheckPassesWhenClean(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, ".mcp.json"),
+		[]byte(`{"mcpServers":{"pact":{"command":"pactify","args":["mcp"],"env":{"PACT_AGENT_ID":"${PACT_AGENT_ID:-}"}}}}`), 0o644)
+	if c := checkPinnedIdentity(dir); !c.OK {
+		t.Fatalf("de-identified config must pass: %+v", c)
+	}
+}

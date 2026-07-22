@@ -228,8 +228,29 @@ enable. Override per-run with: pactify orchestrate --critic seat=<seat>`,
 	seatAddCmd.Flags().StringVar(&seatRoles, "roles", "", "comma-separated roles (orchestrator/reviewer/worker)")
 	seatAddCmd.Flags().StringVar(&seatEntry, "entry", "AGENTS.md", "entry file for the seat's agent")
 	seatAddCmd.Flags().StringVar(&seatKind, "kind", "", "agent kind (wiring + orchestrate seat-kind inference)")
-	seatCmd := &cobra.Command{Use: "seat", Short: "manage roster seats"}
-	seatCmd.AddCommand(seatAddCmd)
+	seatUseCmd := &cobra.Command{Use: "use <id>", Args: cobra.ExactArgs(1), Short: "bind this working copy's default seat",
+		Long: "Write this checkout's default seat id to the untracked .pact/seat file\n" +
+			"(excluded from git). The identity chain falls back to it when\n" +
+			"PACT_AGENT_ID is unset, so a bare agent launch in this working copy acts\n" +
+			"as that seat. Use a separate git worktree per concurrent seat.",
+		RunE: func(c *cobra.Command, a []string) error {
+			if err := pact.UseSeat(a[0]); err != nil {
+				return err
+			}
+			fmt.Fprintf(c.OutOrStdout(), "seat: this working copy now defaults to %q (.pact/seat, git-excluded)\n", a[0])
+			return nil
+		}}
+	seatCmd := &cobra.Command{Use: "seat", Short: "manage roster seats and this working copy's identity",
+		RunE: func(c *cobra.Command, _ []string) error {
+			id, source, err := pact.At(".").ResolveSeat()
+			if err != nil {
+				fmt.Fprintf(c.OutOrStdout(), "seat: unresolved — set PACT_AGENT_ID or run `pactify seat use <id>`\n")
+				return nil
+			}
+			fmt.Fprintf(c.OutOrStdout(), "seat: %s (source: %s)\n", id, source)
+			return nil
+		}}
+	seatCmd.AddCommand(seatAddCmd, seatUseCmd)
 
 	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, cancelCmd, withdrawCmd, configCmd, statusCmd, logCmd, validateCmd, seatCmd,
 		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newRunCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd(), newAccountCmd(), newScheduleCmd())

@@ -26,7 +26,7 @@ func TestOpencodeAdapter(t *testing.T) {
 		t.Fatalf("config = %+v", c)
 	}
 	inv := a.Invocation("opencode", "/repo")
-	if inv.Command != "pactify" || strings.Join(inv.Args, " ") != "mcp" || inv.Env["PACT_AGENT_ID"] != "opencode" {
+	if inv.Command != "pactify" || strings.Join(inv.Args, " ") != "mcp" || len(inv.Env) != 0 {
 		t.Fatalf("invocation = %+v", inv)
 	}
 }
@@ -80,8 +80,19 @@ func TestKimiCliAdapter(t *testing.T) {
 		t.Fatalf("config = %+v", c)
 	}
 	inv := a.Invocation("kimi-cli", "/repo")
-	if inv.Command != "pactify" || strings.Join(inv.Args, " ") != "mcp" || inv.Env["PACT_AGENT_ID"] != "kimi-cli" {
+	if inv.Command != "pactify" || strings.Join(inv.Args, " ") != "mcp" || len(inv.Env) != 0 {
 		t.Fatalf("invocation = %+v", inv)
+	}
+}
+
+// claude-code documents ${VAR} config env expansion (spec seat-identity §4-E1),
+// so its Invocation passes PACT_AGENT_ID through as an expansion token — NOT a
+// pinned seat id — preserving env-based identity without collision.
+func TestClaudeCodeAdapterPassesEnvThrough(t *testing.T) {
+	a, _ := Get("claude-code")
+	inv := a.Invocation("lead", "/repo")
+	if got := inv.Env["PACT_AGENT_ID"]; got != "${PACT_AGENT_ID:-}" {
+		t.Fatalf("claude-code must pass env through, got %q", got)
 	}
 }
 
@@ -98,7 +109,7 @@ func TestCursorCliAdapter(t *testing.T) {
 		t.Fatalf("config = %+v", c)
 	}
 	inv := a.Invocation("cursor-cli", "/repo")
-	if inv.Command != "pactify" || strings.Join(inv.Args, " ") != "mcp" || inv.Env["PACT_AGENT_ID"] != "cursor-cli" {
+	if inv.Command != "pactify" || strings.Join(inv.Args, " ") != "mcp" || len(inv.Env) != 0 {
 		t.Fatalf("invocation = %+v", inv)
 	}
 }

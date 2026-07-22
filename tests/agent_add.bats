@@ -12,13 +12,13 @@ setup() {
   "$BIN" agent add opencode --id opencode --roles worker
   grep -q '"pact"' opencode.json
   grep -q '"type": "local"' opencode.json
-  grep -q 'seat `opencode`' AGENTS.md
+  grep -q 'pact protocol' AGENTS.md && grep -q 'pactify seat use' AGENTS.md
 }
 
 @test "agent add codex-cli is doc-only (no config written)" {
   "$BIN" agent add codex-cli --id codex --roles worker
   [ ! -f .codex/config.toml ]
-  grep -q 'seat `codex`' AGENTS.md
+  grep -q 'pact protocol' AGENTS.md && grep -q 'pactify seat use' AGENTS.md
 }
 
 @test "agent add --print writes nothing" {

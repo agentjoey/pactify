@@ -18,8 +18,9 @@ func newRootCmd() *cobra.Command {
 
 	var project string
 	var seats []string
+	var initNoRegister bool
 	initCmd := &cobra.Command{Use: "init", Short: "scaffold .pact/ and bake entry files",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(c *cobra.Command, _ []string) error {
 			// Parse + validate all seats up front so init fails closed (before any writes).
 			parsed := make([]pact.Seat, 0, len(seats))
 			for _, raw := range seats {
@@ -56,10 +57,15 @@ func newRootCmd() *cobra.Command {
 					return err
 				}
 			}
+			// Auto-register so an agent that just init'd this project appears on the
+			// dashboard without a manual `pactify register` (spec: agent-started
+			// projects). Best-effort — never fails init.
+			autoRegister(c.OutOrStdout(), wd, initNoRegister)
 			return nil
 		}}
 	initCmd.Flags().StringVar(&project, "project", "", "project name")
 	initCmd.Flags().StringArrayVar(&seats, "seat", nil, "seat 'id:roles:entry[:kind]' (repeatable)")
+	initCmd.Flags().BoolVar(&initNoRegister, "no-register", false, "do not auto-register this project for the dashboard")
 
 	var joinRoles, joinKind, joinTask string
 	joinCmd := &cobra.Command{Use: "join <id>", Args: cobra.ExactArgs(1), Short: "worker cold-start",

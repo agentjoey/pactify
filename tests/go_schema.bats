@@ -5,6 +5,7 @@ REPO="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 setup() {
   BIN="$BATS_TEST_TMPDIR/pactify"
   go build -o "$BIN" "$REPO/cmd/pactify" || return 1
+  export PACTIFY_HOME="$BATS_TEST_TMPDIR/pactify-home"
   WORK="$BATS_TEST_TMPDIR/work"; rm -rf "$WORK"; mkdir -p "$WORK"; cd "$WORK"
   git init -q; git config user.email t@t.t; git config user.name t
   echo x > base.txt; git add -A; git commit -q -m base

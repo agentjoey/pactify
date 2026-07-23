@@ -44,6 +44,7 @@ func transportModesFromFlags(transports []string) (map[string]string, error) {
 // it escalates to a human (writing .pact/orchestrate/escalation-*.md and pausing).
 func newOrchestrateCmd() *cobra.Command {
 	var feature string
+	var orchNoRegister bool
 	var resume bool
 	var maxRework, maxFails, maxIters int
 	var runTimeoutMin, idleTimeoutMin int
@@ -78,6 +79,10 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 			if err != nil {
 				return err
 			}
+			// Auto-register so a project being driven headlessly shows up live on the
+			// dashboard — covers projects that predate init auto-register (spec:
+			// agent-started projects). Best-effort; never blocks the run.
+			autoRegister(c.OutOrStdout(), dir, orchNoRegister)
 			km := map[string]string{}
 			for _, sk := range seatKinds {
 				parts := strings.SplitN(sk, "=", 2)
@@ -195,6 +200,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	// --resume is documentary: re-running orchestrate always continues from the
 	// current (already-advanced) pact state. Escalations are not auto-cleared.
 	cmd.Flags().BoolVar(&resume, "resume", false, "continue from the current state after fixing an escalation (re-running has the same effect)")
+	cmd.Flags().BoolVar(&orchNoRegister, "no-register", false, "do not auto-register this project for the dashboard")
 	cmd.Flags().IntVar(&maxRework, "max-rework", 3, "escalate after this many changes-requested rounds on a task")
 	cmd.Flags().IntVar(&maxFails, "max-fails", 2, "escalate after this many failed agent runs on a task")
 	cmd.Flags().IntVar(&maxIters, "max-iters", 50, "global iteration cap (backstop against a non-converging loop)")

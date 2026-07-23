@@ -24,7 +24,7 @@ setup() {
   export PACT_AGENT_ID=claude-opus
   (
     cd "$PROJ"
-    "$BIN" init --project demo \
+    "$BIN" init --project demo --no-register \
       --seat "claude-opus:orchestrator,reviewer:CLAUDE.md" \
       --seat "opencode:worker:AGENTS.md" >/dev/null
   )

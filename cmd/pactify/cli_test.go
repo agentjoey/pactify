@@ -28,10 +28,13 @@ func repoRoot(t *testing.T) string {
 func TestCLIHelpAndFullFlow(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()
+	// Isolate the registry: init/orchestrate now auto-register, and tests must
+	// not touch the developer's real ~/.pactify/projects.json.
+	home := t.TempDir()
 	run := func(env []string, args ...string) (string, error) {
 		c := exec.Command(bin, args...)
 		c.Dir = dir
-		c.Env = append(os.Environ(), env...)
+		c.Env = append(append(os.Environ(), "PACTIFY_HOME="+home), env...)
 		out, err := c.CombinedOutput()
 		return string(out), err
 	}
@@ -57,6 +60,12 @@ func TestCLIHelpAndFullFlow(t *testing.T) {
 	work := []string{"PACT_AGENT_ID=opencode"}
 	if out, err := run(orch, "init", "--project", "p", "--seat", "claude-opus:orchestrator,reviewer:CLAUDE.md", "--seat", "opencode:worker:AGENTS.md"); err != nil {
 		t.Fatalf("init: %v %s", err, out)
+	} else if !strings.Contains(out, "registered") {
+		t.Fatalf("init must auto-register the project for the dashboard: %q", out)
+	}
+	// The project is now visible without a manual `pactify register`.
+	if out, _ := run(nil, "list"); !strings.Contains(out, dir) {
+		t.Fatalf("auto-registered project must appear in `list`: %q", out)
 	}
 	if out, err := run(orch, "assign", "t1", "--feature", "f", "--branch", "feat/x", "--owner", "opencode", "--reviewer", "claude-opus", "--spec", ".pact/tasks/t1.md"); err != nil {
 		t.Fatalf("assign: %v %s", err, out)
@@ -135,7 +144,7 @@ func TestCLIFailsClosedWithoutAgentID(t *testing.T) {
 	dir := t.TempDir()
 	c := exec.Command(bin, "init", "--project", "p", "--seat", "a:worker:A.md")
 	c.Dir = dir
-	c.Env = append(os.Environ(), "PACT_AGENT_ID=")
+	c.Env = append(os.Environ(), "PACT_AGENT_ID=", "PACTIFY_HOME="+t.TempDir())
 	if out, err := c.CombinedOutput(); err == nil {
 		t.Fatalf("must fail closed, got: %s", out)
 	}
@@ -201,10 +210,13 @@ func TestAgentScanRegisterUnregister(t *testing.T) {
 func TestCLIOrchestrateHelpAndDryRun(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()
+	// Isolate the registry: init/orchestrate now auto-register, and tests must
+	// not touch the developer's real ~/.pactify/projects.json.
+	home := t.TempDir()
 	run := func(env []string, args ...string) (string, error) {
 		c := exec.Command(bin, args...)
 		c.Dir = dir
-		c.Env = append(os.Environ(), env...)
+		c.Env = append(append(os.Environ(), "PACTIFY_HOME="+home), env...)
 		out, err := c.CombinedOutput()
 		return string(out), err
 	}
@@ -264,10 +276,13 @@ func TestCLIOrchestrateHelpAndDryRun(t *testing.T) {
 func TestCLIPlanApply(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()
+	// Isolate the registry: init/orchestrate now auto-register, and tests must
+	// not touch the developer's real ~/.pactify/projects.json.
+	home := t.TempDir()
 	run := func(env []string, args ...string) (string, error) {
 		c := exec.Command(bin, args...)
 		c.Dir = dir
-		c.Env = append(os.Environ(), env...)
+		c.Env = append(append(os.Environ(), "PACTIFY_HOME="+home), env...)
 		out, err := c.CombinedOutput()
 		return string(out), err
 	}

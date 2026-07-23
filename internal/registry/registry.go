@@ -125,3 +125,39 @@ func (r *Registry) Rename(oldName, newName string) error {
 	r.Projects[idx].Name = newName
 	return nil
 }
+
+// EnsureRegistered idempotently registers path for serve to watch (spec:
+// auto-register so an agent-started project is visible on the dashboard without
+// a manual `pactify register`). If the ABSOLUTE path is already registered under
+// any name, it is a no-op returning the existing name and added=false. A brand-
+// new path is registered under its basename slug (added=true). A different path
+// whose basename collides with an existing name returns the Add error — the
+// caller (init/orchestrate) warns rather than failing, since registration is a
+// convenience, not a prerequisite for the protocol.
+func EnsureRegistered(path string) (name string, added bool, err error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", false, err
+	}
+	r, err := Load()
+	if err != nil {
+		return "", false, err
+	}
+	for _, p := range r.Projects {
+		if p.Path == abs {
+			return p.Name, false, nil
+		}
+	}
+	if err := r.Add("", abs, ""); err != nil {
+		return "", false, err
+	}
+	if err := r.Save(); err != nil {
+		return "", false, err
+	}
+	for _, p := range r.Projects {
+		if p.Path == abs {
+			return p.Name, true, nil
+		}
+	}
+	return "", true, nil
+}

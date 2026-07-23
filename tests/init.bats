@@ -6,6 +6,7 @@ REPO="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 setup() {
   BIN="$BATS_TEST_TMPDIR/pactify"
   go build -o "$BIN" "$REPO/cmd/pactify" || return 1
+  export PACTIFY_HOME="$BATS_TEST_TMPDIR/pactify-home"
 }
 
 run_init() {

@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -121,5 +122,45 @@ func TestRenameToExistingNameIsError(t *testing.T) {
 	_ = r.Add("b", "/tmp/b", "")
 	if err := r.Rename("a", "b"); err == nil {
 		t.Fatal("renaming onto an existing name must error")
+	}
+}
+
+// EnsureRegistered idempotently registers a path (spec: auto-register at init/
+// orchestrate so agent-started projects are visible without a manual step).
+func TestEnsureRegisteredIdempotent(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	dir := t.TempDir()
+
+	name, added, err := EnsureRegistered(dir)
+	if err != nil || !added || name != Slug(filepath.Base(dir)) {
+		t.Fatalf("first call must register: name=%q added=%v err=%v", name, added, err)
+	}
+	// Second call on the SAME path is a no-op (already registered), same name.
+	name2, added2, err := EnsureRegistered(dir)
+	if err != nil || added2 || name2 != name {
+		t.Fatalf("re-register must be a no-op: name=%q added=%v err=%v", name2, added2, err)
+	}
+	// Only one entry.
+	r, _ := Load()
+	if len(r.Projects) != 1 {
+		t.Fatalf("expected exactly one registered project, got %d", len(r.Projects))
+	}
+}
+
+// A different path whose basename slugs to an already-taken name is a real
+// conflict — EnsureRegistered surfaces the error (the caller decides whether to
+// warn or fail; init must warn, not block).
+func TestEnsureRegisteredNameConflict(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	base := t.TempDir()
+	a := filepath.Join(base, "proj")
+	b := filepath.Join(base, "sub", "proj") // same basename "proj", different path
+	os.MkdirAll(a, 0o755)
+	os.MkdirAll(b, 0o755)
+	if _, _, err := EnsureRegistered(a); err != nil {
+		t.Fatal(err)
+	}
+	if _, added, err := EnsureRegistered(b); err == nil || added {
+		t.Fatalf("same-basename different-path must conflict, got added=%v err=%v", added, err)
 	}
 }

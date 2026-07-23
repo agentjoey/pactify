@@ -13,6 +13,7 @@ import (
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/lockx"
+	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/projection"
 )
 
@@ -38,12 +39,28 @@ var logCopybackLockTimeout = 30 * time.Second
 // the integrated result is visible repo-wide. The pact ledger is gitignored, so it
 // is copied INTO the sandbox and the updated ledger copied back out (回灌) — the
 // .pact stays local, respecting a repo that gitignores it.
+// sandboxBase resolves the integration base the sandbox parks off / builds the
+// feature branch from — the SAME base merge integrates into. It is the pact
+// ledger's configured base_branch (init-time capture, overridden by any
+// `config base-branch`), so a project whose base is a non-default branch has its
+// workers build off the branch carrying the authoritative plan (2026-07-23
+// tradelinks feedback: the old `gitx.DefaultBranch` built off main, blind to a
+// plan committed on the real base). Falls back to git's default/current branch
+// only when the ledger records no base (non-pact dir / corrupt log).
+func sandboxBase(dir string) string {
+	if b, err := pact.At(dir).BaseBranch(); err == nil && b != "" {
+		return b
+	}
+	if b := gitx.DefaultBranch(dir); b != "" {
+		return b
+	}
+	b, _ := gitx.CurrentBranch(dir)
+	return b
+}
+
 func RunSandbox(ctx context.Context, opts Options) (err error) {
 	dir := opts.Dir
-	base := gitx.DefaultBranch(dir)
-	if base == "" {
-		base, _ = gitx.CurrentBranch(dir)
-	}
+	base := sandboxBase(dir)
 	if base == "" {
 		return fmt.Errorf("sandbox: cannot determine base branch (set origin/HEAD or check out a branch)")
 	}

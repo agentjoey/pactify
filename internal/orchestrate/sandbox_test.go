@@ -154,19 +154,25 @@ func TestMirrorLedger_SkipsTrackedPactAndInPlace(t *testing.T) {
 // immediately instead of finding the remaining ready task.
 func TestRunSandbox_AfterPartialInPlaceProgress(t *testing.T) {
 	dir := newProject(t)
+	// Keep the ledger out of git (the recommended runtime-ignore setup): after
+	// the base-source fix the sandbox parks off the PACT base, so a worktree
+	// branch switch to an existing feature branch would otherwise conflict on the
+	// tracked, divergent .pact. Recovering a tracked-.pact partial-in-place run is
+	// the separate single-canonical-ledger limitation (see docs/backlog.md); this
+	// test covers the runtime-ignored configuration where recovery works.
+	ignorePact(t, dir)
 	writeSpec(t, dir, "t1", "true")
 	writeSpec(t, dir, "t2", "true")
 	assignNoCheckout(t, dir, "t1", "fa", "feat-a", filepath.Join(".pact", "tasks", "t1.md"))
 	if err := pact.At(dir).As("orch").Assign("t2", "fa", "feat-a", "w", "orch", filepath.Join(".pact", "tasks", "t2.md"), []string{"t1"}); err != nil {
 		t.Fatalf("assign t2: %v", err)
 	}
-	gitCommitAll(t, dir, "assign fa (t1,t2)")
 
 	// Partial --in-place progress: MaxIters=2 stops right after t1's owner+reviewer
 	// iterations (checkpoint + accept), before t2 is ever touched.
 	inPlaceOpts := Options{
 		Dir: dir, Th: Thresholds{MaxRework: 3, MaxFails: 3, MaxIters: 2},
-		Run: parFakeRunner{t: t}, Exec: &okExec{}, Notify: StdoutNotifier{},
+		Run: workRunner{t: t}, Exec: &okExec{}, Notify: StdoutNotifier{},
 		Now:          func() string { return "20260621-000000" },
 		SeatKind:     func(string) string { return "claude-code" },
 		Orchestrator: "orch",
@@ -201,7 +207,7 @@ func TestRunSandbox_AfterPartialInPlaceProgress(t *testing.T) {
 	// invocation would load — to drive the rest of the feature (t2).
 	sbOpts := Options{
 		Dir: dir, Th: Thresholds{MaxRework: 3, MaxFails: 3, MaxIters: 50},
-		Run: parFakeRunner{t: t}, Exec: &okExec{}, Notify: StdoutNotifier{},
+		Run: workRunner{t: t}, Exec: &okExec{}, Notify: StdoutNotifier{},
 		Now:          func() string { return "20260621-000000" },
 		SeatKind:     func(string) string { return "claude-code" },
 		Orchestrator: "orch",
@@ -258,4 +264,17 @@ func branchOf(t *testing.T, dir string) string {
 		return s[i : len(s)-1]
 	}
 	return s
+}
+
+// ignorePact gitignores the .pact ledger dir (the recommended runtime-ignore
+// setup), so a sandbox worktree branch switch never conflicts on tracked
+// ledger files. The pact engine reads .pact from disk regardless of git.
+func ignorePact(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte(".pact/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	exec.Command("git", "-C", dir, "rm", "-r", "--cached", "--quiet", ".pact").Run()
+	exec.Command("git", "-C", dir, "add", "-A").Run()
+	exec.Command("git", "-C", dir, "commit", "-q", "-m", "gitignore .pact").Run()
 }

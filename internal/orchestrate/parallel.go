@@ -63,9 +63,13 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 	if err != nil {
 		return fmt.Errorf("orchestrate: read state: %w", err)
 	}
-	base, err := gitx.CurrentBranch(opts.Dir)
-	if err != nil || base == "" {
-		return fmt.Errorf("orchestrate: resolve base branch: %w", err)
+	// Resolve the integration base the SAME way sandbox and merge do — the pact
+	// ledger's configured base_branch — not just whatever branch happens to be
+	// checked out (2026-07-23 tradelinks: base source must be consistent across
+	// sandbox/parallel/merge).
+	base := sandboxBase(opts.Dir)
+	if base == "" {
+		return fmt.Errorf("orchestrate: resolve base branch")
 	}
 
 	// Independent features branch from the same base, so merging the second one

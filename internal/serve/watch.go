@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/agentjoey/pactify/internal/registry"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -20,6 +22,17 @@ func (s *Server) StartWatchers() error {
 		return err
 	}
 	s.watcher = w
+	// Watch the registry file's directory so a CLI register / auto-register
+	// (which only writes ~/.pactify/projects.json) reconciles live, no restart
+	// (backlog B). Directory-level watch survives atomic saves (write-temp+rename
+	// replaces the inode); the loop filters events to the registry file.
+	if regDir := filepath.Dir(registry.Path()); regDir != "" {
+		if err := os.MkdirAll(regDir, 0o755); err == nil {
+			if werr := w.Add(regDir); werr != nil {
+				fmt.Fprintf(os.Stderr, "pactify serve: watch registry dir %s: %v\n", regDir, werr)
+			}
+		}
+	}
 	s.pmu.Lock()
 	for _, id := range s.order {
 		s.watchProjectLocked(id, s.projects[id].Path)
@@ -38,12 +51,23 @@ func (s *Server) StartWatchers() error {
 		}
 	}
 	s.pmu.Unlock()
-	// Full-ledger replay BEFORE the watch loop starts, so all historical events
-	// get their line-index seq before any live append is enqueued.
-	for _, sd := range seeds {
-		s.relay.replayProject(sd.id, sd.lp, sd.off)
-	}
-	go s.watchLoop()
+	// Relay replay + the watch loop run in a BACKGROUND goroutine so a down or
+	// slow relay can never block serve's HTTP startup (RELAY-2, 2026-07-23: a
+	// scaled-to-0 relay made replayProject's enqueueBlocking wait on a queue that
+	// only drains one 10s-timed-out POST at a time, so StartWatchers — and thus
+	// Run's ListenAndServe — hung and the LOCAL dashboard went fully dark).
+	// Ordering inside the goroutine is preserved: the full-ledger replay seeds
+	// each project's line-index seq BEFORE the watch loop enqueues any live
+	// append, so relay egress seqs never collide (the neon-egress-diet
+	// invariant). The local dashboard (REST + fsnotify) is up the moment
+	// StartWatchers returns; live SSE follows once replay completes (prompt when
+	// the relay is reachable; merely delayed, never fatal, when it is not).
+	go func() {
+		for _, sd := range seeds {
+			s.relay.replayProject(sd.id, sd.lp, sd.off)
+		}
+		s.watchLoop()
+	}()
 	return nil
 }
 
@@ -86,7 +110,13 @@ func (s *Server) watchLoop() {
 			if !ok {
 				return
 			}
-			if ev.Op&(fsnotify.Write|fsnotify.Create) == 0 {
+			if ev.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
+				continue
+			}
+			// Registry file changed (CLI register/unregister/auto-register):
+			// reconcile the live watched set. Rename fires on atomic saves.
+			if filepath.Clean(ev.Name) == filepath.Clean(registry.Path()) {
+				s.reconcileRegistry()
 				continue
 			}
 			// Snapshot the (id,path) whose log changed under the read lock, then

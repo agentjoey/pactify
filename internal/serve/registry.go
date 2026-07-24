@@ -19,6 +19,54 @@ import (
 // must already be running (StartWatchers); if it isn't, the watch registration
 // is a no-op and the project is still served (state/projects work, SSE won't
 // stream until a watcher exists — matches the "register only" contract).
+// reconcileRegistry brings the live watched set in line with the on-disk
+// registry file: entries in the file but not live are added (with a watch),
+// entries live but no longer in the file are removed. This is what makes a CLI
+// `pactify register` / init/orchestrate auto-register (which only write the
+// file) visible on a running serve without a restart — serve watches the file
+// and calls this on change (backlog B, 2026-07-23 urbanbricks/tradelinks).
+// Matches by absolute path so a rename in the file (same path, new name) drops
+// the old name and adds the new. Best-effort per entry: an AddProject failure
+// (bad path, dup) is logged, not fatal, so one broken entry can't stall the rest.
+func (s *Server) reconcileRegistry() {
+	reg, err := registry.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "pactify serve: reconcile registry: %v\n", err)
+		return
+	}
+	fileByPath := map[string]registry.Project{}
+	for _, p := range reg.Projects {
+		fileByPath[filepath.Clean(p.Path)] = p
+	}
+
+	// Snapshot the live set under the read lock, then mutate via Add/RemoveProject
+	// (each takes the write lock) outside it.
+	s.pmu.RLock()
+	liveByPath := map[string]registry.Project{}
+	for _, p := range s.projects {
+		liveByPath[filepath.Clean(p.Path)] = p
+	}
+	s.pmu.RUnlock()
+
+	for path, p := range fileByPath {
+		live, ok := liveByPath[path]
+		if ok && live.Name == p.Name {
+			continue // unchanged
+		}
+		if ok && live.Name != p.Name {
+			_ = s.RemoveProject(live.Name) // renamed in the file: drop old name
+		}
+		if err := s.AddProject(p); err != nil {
+			fmt.Fprintf(os.Stderr, "pactify serve: reconcile add %q: %v\n", p.Name, err)
+		}
+	}
+	for path, live := range liveByPath {
+		if _, stillInFile := fileByPath[path]; !stillInFile {
+			_ = s.RemoveProject(live.Name)
+		}
+	}
+}
+
 func (s *Server) AddProject(p registry.Project) error {
 	s.pmu.Lock()
 	defer s.pmu.Unlock()
@@ -211,7 +259,24 @@ func (s *Server) handleRegistryAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := reg.Add(req.Name, req.Path, req.Group); err != nil {
-		// Add's only user-facing failure here is a duplicate name.
+		// The path passed the live-set dup check above but the FILE already has it
+		// (a CLI/auto register wrote the file, which this running serve never
+		// watched — the divergence backlog C names). Don't 409: reconcile so the
+		// file entry gets a live watch, then report it as registered.
+		s.reconcileRegistry()
+		s.pmu.RLock()
+		var name string
+		for _, p := range s.projects {
+			if filepath.Clean(p.Path) == cleaned {
+				name = p.Name
+				break
+			}
+		}
+		s.pmu.RUnlock()
+		if name != "" {
+			writeJSON(w, http.StatusOK, map[string]string{"name": name})
+			return
+		}
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}
@@ -223,8 +288,19 @@ func (s *Server) handleRegistryAdd(w http.ResponseWriter, r *http.Request) {
 	// name derivation (slug of basename when name is empty).
 	added := reg.Projects[len(reg.Projects)-1]
 	if err := s.AddProject(added); err != nil {
-		// Out-of-band duplicate in the live map (e.g. registered before this
-		// server saw the file): surface as 409 and roll back the registry write.
+		// AddProject failed because `added` is already live. The reg.Save() above
+		// can trip the registry-file watch → reconcileRegistry, which AddProject's
+		// this same entry before we get here — a benign race, not a conflict,
+		// since the project IS now live under this exact path. Treat it as success
+		// (idempotent) when the live path matches; only a real name-collision on a
+		// DIFFERENT path rolls back to 409.
+		s.pmu.RLock()
+		live, ok := s.projects[added.Name]
+		s.pmu.RUnlock()
+		if ok && filepath.Clean(live.Path) == cleaned {
+			writeJSON(w, http.StatusOK, map[string]string{"name": added.Name})
+			return
+		}
 		_ = reg.Remove(added.Name)
 		_ = reg.Save()
 		writeErr(w, http.StatusConflict, err.Error())

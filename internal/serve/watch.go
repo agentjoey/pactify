@@ -51,12 +51,23 @@ func (s *Server) StartWatchers() error {
 		}
 	}
 	s.pmu.Unlock()
-	// Full-ledger replay BEFORE the watch loop starts, so all historical events
-	// get their line-index seq before any live append is enqueued.
-	for _, sd := range seeds {
-		s.relay.replayProject(sd.id, sd.lp, sd.off)
-	}
-	go s.watchLoop()
+	// Relay replay + the watch loop run in a BACKGROUND goroutine so a down or
+	// slow relay can never block serve's HTTP startup (RELAY-2, 2026-07-23: a
+	// scaled-to-0 relay made replayProject's enqueueBlocking wait on a queue that
+	// only drains one 10s-timed-out POST at a time, so StartWatchers — and thus
+	// Run's ListenAndServe — hung and the LOCAL dashboard went fully dark).
+	// Ordering inside the goroutine is preserved: the full-ledger replay seeds
+	// each project's line-index seq BEFORE the watch loop enqueues any live
+	// append, so relay egress seqs never collide (the neon-egress-diet
+	// invariant). The local dashboard (REST + fsnotify) is up the moment
+	// StartWatchers returns; live SSE follows once replay completes (prompt when
+	// the relay is reachable; merely delayed, never fatal, when it is not).
+	go func() {
+		for _, sd := range seeds {
+			s.relay.replayProject(sd.id, sd.lp, sd.off)
+		}
+		s.watchLoop()
+	}()
 	return nil
 }
 

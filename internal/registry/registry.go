@@ -28,6 +28,10 @@ func file() string {
 	return filepath.Join(home, ".pactify", "projects.json")
 }
 
+// Path is the absolute path of the registry file (honoring PACTIFY_HOME). Serve
+// watches it so a CLI `register`/auto-register becomes live without a restart.
+func Path() string { return file() }
+
 var slugRe = regexp.MustCompile(`[^a-z0-9-]+`)
 
 // Slug lowercases and replaces runs of non-slug chars with a single dash.

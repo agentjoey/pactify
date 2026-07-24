@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/agentjoey/pactify/internal/registry"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -20,6 +22,17 @@ func (s *Server) StartWatchers() error {
 		return err
 	}
 	s.watcher = w
+	// Watch the registry file's directory so a CLI register / auto-register
+	// (which only writes ~/.pactify/projects.json) reconciles live, no restart
+	// (backlog B). Directory-level watch survives atomic saves (write-temp+rename
+	// replaces the inode); the loop filters events to the registry file.
+	if regDir := filepath.Dir(registry.Path()); regDir != "" {
+		if err := os.MkdirAll(regDir, 0o755); err == nil {
+			if werr := w.Add(regDir); werr != nil {
+				fmt.Fprintf(os.Stderr, "pactify serve: watch registry dir %s: %v\n", regDir, werr)
+			}
+		}
+	}
 	s.pmu.Lock()
 	for _, id := range s.order {
 		s.watchProjectLocked(id, s.projects[id].Path)
@@ -86,7 +99,13 @@ func (s *Server) watchLoop() {
 			if !ok {
 				return
 			}
-			if ev.Op&(fsnotify.Write|fsnotify.Create) == 0 {
+			if ev.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) == 0 {
+				continue
+			}
+			// Registry file changed (CLI register/unregister/auto-register):
+			// reconcile the live watched set. Rename fires on atomic saves.
+			if filepath.Clean(ev.Name) == filepath.Clean(registry.Path()) {
+				s.reconcileRegistry()
 				continue
 			}
 			// Snapshot the (id,path) whose log changed under the read lock, then

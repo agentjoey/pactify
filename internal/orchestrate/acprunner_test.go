@@ -342,8 +342,8 @@ func TestAcpRunnerStripsAnthropicKey(t *testing.T) {
 	if err := r.Run(context.Background(), LaunchContext{Seat: "w", Kind: "claude-code", RepoDir: "/tmp/x"}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if cap.command != "npx" {
-		t.Fatalf("claude-code should map to an npx ACP adapter, got %q", cap.command)
+	if cap.command != "claude-agent-acp" {
+		t.Fatalf("claude-code should map to the bridge bin (not npx), got %q", cap.command)
 	}
 	if !cap.hasEnv("ANTHROPIC_API_KEY=") {
 		t.Fatalf("claude-code ACP must strip ANTHROPIC_API_KEY, env=%v", cap.env)
@@ -379,15 +379,16 @@ func TestAcpCommandNativeBinariesForAcpTier(t *testing.T) {
 	}
 }
 
-// The legacy/fallback deep-integration-tier bridges (claude, codex) stay pinned
-// via npx (used only as a fallback; the real path is deep integration).
-func TestAcpCommandPinsLegacyBridgeVersions(t *testing.T) {
-	cases := []struct {
-		kind string
-		want string
-	}{
-		{"claude-code", "@agentclientprotocol/claude-agent-acp@0.57.0"},
-		{"codex-cli", "@zed-industries/codex-acp@0.16.0"},
+// The deep-integration-tier bridges (claude, codex) run their globally-installed
+// bin DIRECTLY (a node script with a shebang) — NOT via `npx -y`. npx's first-run
+// download blocks the stdio initialize handshake, so the ACP transport never
+// handshaked (2026-07-23: node-direct returns capabilities instantly, verified
+// against @agentclientprotocol/claude-agent-acp@0.57.0). Not installed →
+// exec.LookPath fails loudly instead of a silent npx-download hang.
+func TestAcpCommandBridgesRunBinDirectlyNotNpx(t *testing.T) {
+	cases := []struct{ kind, cmd string }{
+		{"claude-code", "claude-agent-acp"},
+		{"codex-cli", "codex-acp"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.kind, func(t *testing.T) {
@@ -395,18 +396,14 @@ func TestAcpCommandPinsLegacyBridgeVersions(t *testing.T) {
 			if !ok {
 				t.Fatalf("acpCommand(%q): ok=false", tc.kind)
 			}
-			if command != "npx" {
-				t.Errorf("command = %q, want npx", command)
+			if command == "npx" {
+				t.Fatalf("%s must NOT use npx (first-run download hangs the handshake)", tc.kind)
 			}
-			found := false
-			for _, a := range args {
-				if a == tc.want {
-					found = true
-					break
-				}
+			if command != tc.cmd {
+				t.Errorf("command = %q, want %q (the bridge bin on PATH)", command, tc.cmd)
 			}
-			if !found {
-				t.Errorf("args = %v, want to include %q", args, tc.want)
+			if len(args) != 0 {
+				t.Errorf("args = %v, want none (bin runs the ACP server directly)", args)
 			}
 		})
 	}

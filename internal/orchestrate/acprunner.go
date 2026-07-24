@@ -358,19 +358,20 @@ func autoSelectPermission(opts []acp.PermissionOption) (string, bool) {
 // second return is false for a kind with no ACP transport (e.g. antigravity), which
 // the caller reports with a --transport=cmd hint.
 //
-// Bridge package versions are pinned to avoid latest-tag drift; verified with
-// `npm view` on 2026-07-07. Upgrading is intentional: change the pinned version
-// here only after verifying the new release works.
-// acpCommand maps an agent kind to its ACP-transport launch command.
+// acpCommand maps an agent kind to its ACP-transport launch command — always a
+// binary invoked DIRECTLY (never `npx`), so exec.LookPath resolves it and a
+// missing binary fails loudly instead of hanging.
 //
-// Architecture (2026-07-08 decision): the ACP tier is kimi + gemini — both ship
-// native ACP in their installed binary (`kimi acp` / `gemini --acp`), so we
-// invoke the binary DIRECTLY (no npx). claude + codex are the deep-integration
-// tier (their SDKs, not ACP); their npx-bridge entries below are the LEGACY
-// generic-ACP path, kept only as a fallback — the claude bridge
-// (@agentclientprotocol/claude-agent-acp) additionally hangs the stdio handshake
-// under npx (verified 2026-07-08), so the deep-integration path is the real one
-// for claude/codex.
+// Architecture: kimi + gemini + opencode ship native ACP in their installed
+// binary (`kimi acp` / `gemini --acp` / `opencode acp`). claude + codex are the
+// deep-integration tier (their SDKs, not ACP); their ACP path is the generic
+// bridge, run via the bridge's globally-installed bin (a shebang'd node script:
+// `claude-agent-acp` / `codex-acp`) — NOT `npx -y`, whose first-run download
+// blocks the stdio initialize handshake and made the ACP transport never
+// handshake (the documented "hang"; node-direct returns capabilities instantly,
+// verified 2026-07-23). Install the bridge with `npm i -g <pkg>`. For
+// claude/codex the cmd transport (deep integration) is the default; the ACP path
+// is opt-in via --transport <kind>=acp.
 func acpCommand(kind string) (command string, args []string, ok bool) {
 	switch kind {
 	case "kimi-cli":
@@ -386,12 +387,19 @@ func acpCommand(kind string) (command string, args []string, ok bool) {
 		// session/prompt result, verified 2026-07-09.
 		return "opencode", []string{"acp"}, true
 	case "claude-code":
-		// LEGACY/fallback — claude is deep-integration tier; this npx bridge also
-		// hangs the handshake (see doc above). Prefer the deep-integration path.
-		return "npx", []string{"-y", "@agentclientprotocol/claude-agent-acp@0.57.0"}, true
+		// Run the globally-installed bridge bin DIRECTLY (a node script with a
+		// shebang). NOT `npx -y`: npx's first-run download blocks the stdio
+		// initialize handshake, so the ACP transport never handshaked (the
+		// documented "hang"). node-direct returns capabilities instantly
+		// (verified 2026-07-23). Install with `npm i -g
+		// @agentclientprotocol/claude-agent-acp`; if absent, exec.LookPath fails
+		// loudly instead of hanging. claude is deep-integration tier — cmd is the
+		// default; this ACP path is opt-in via --transport claude-code=acp.
+		return "claude-agent-acp", nil, true
 	case "codex-cli":
-		// LEGACY/fallback — codex is deep-integration tier.
-		return "npx", []string{"-y", "@zed-industries/codex-acp@0.16.0"}, true
+		// Same as claude-code: run the global bin directly, not `npx -y`
+		// (`npm i -g @zed-industries/codex-acp`). codex is deep-integration tier.
+		return "codex-acp", nil, true
 	default:
 		return "", nil, false
 	}

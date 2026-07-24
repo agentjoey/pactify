@@ -288,8 +288,19 @@ func (s *Server) handleRegistryAdd(w http.ResponseWriter, r *http.Request) {
 	// name derivation (slug of basename when name is empty).
 	added := reg.Projects[len(reg.Projects)-1]
 	if err := s.AddProject(added); err != nil {
-		// Out-of-band duplicate in the live map (e.g. registered before this
-		// server saw the file): surface as 409 and roll back the registry write.
+		// AddProject failed because `added` is already live. The reg.Save() above
+		// can trip the registry-file watch → reconcileRegistry, which AddProject's
+		// this same entry before we get here — a benign race, not a conflict,
+		// since the project IS now live under this exact path. Treat it as success
+		// (idempotent) when the live path matches; only a real name-collision on a
+		// DIFFERENT path rolls back to 409.
+		s.pmu.RLock()
+		live, ok := s.projects[added.Name]
+		s.pmu.RUnlock()
+		if ok && filepath.Clean(live.Path) == cleaned {
+			writeJSON(w, http.StatusOK, map[string]string{"name": added.Name})
+			return
+		}
 		_ = reg.Remove(added.Name)
 		_ = reg.Save()
 		writeErr(w, http.StatusConflict, err.Error())

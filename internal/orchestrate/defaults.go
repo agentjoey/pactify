@@ -44,6 +44,9 @@ func (opts Options) withDefaults() Options {
 	// Default the pre-review fix-until-green bound (spec §1 WS-F). 0-unset ==
 	// 0-explicit here (same shape as the Thresholds), so the default stands unless a
 	// caller sets a positive bound; the CLI plumbs --max-fix-rounds.
+	if opts.triedFallbacks == nil {
+		opts.triedFallbacks = map[string][]string{}
+	}
 	if opts.MaxFixRounds == 0 {
 		opts.MaxFixRounds = 2
 	}

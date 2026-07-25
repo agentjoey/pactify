@@ -102,6 +102,11 @@ type Options struct {
 	// the one resolution. RunSandbox wires it (the only caller with RuntimeDir ≠
 	// Dir); nil probes live (direct mirrorLedger use in tests).
 	pactIgnoredMemo *ignoredMemo
+	// triedFallbacks records, per seat, the role profiles this RUN has already
+	// fallen back to, so the chain advances instead of re-proposing the same
+	// profile. Run-scoped by design: approval never persists to the machine
+	// config, because tomorrow's quota may have reset.
+	triedFallbacks map[string][]string
 }
 
 // projectBase returns the repo's integration base branch, or "" when it cannot be
@@ -423,11 +428,32 @@ func (opts Options) run(ctx context.Context) error {
 				// task's persisted failure budget so a post-fix rerun resumes instead
 				// of re-tripping on the loaded count (rework is ledger-derived and
 				// stands until a human accepts the task or raises the bound).
+				// env-class means the agent produced nothing — another (agent, model)
+				// profile may succeed, so propose one and let the human approve it.
+				// logic-class (it worked, the work is wrong) gets the plain
+				// escalation: swapping agents there would just burn a second budget
+				// on the same bad task.
+				proposalNote := ""
+				if h.LastClass[act.Task] == FailEnv {
+					if to, from, ok := nextFallback(act.Seat, opts.triedFallbacks[act.Seat]); ok {
+						p := FallbackProposal{
+							Task: act.Task, Seat: act.Seat, FromRole: from, ToRole: to,
+							Reason: h.LastFail[act.Task],
+							Tried:  append(append([]string{}, opts.triedFallbacks[act.Seat]...), to),
+						}
+						if err := writeProposal(opts.runtimeDir(), p); err == nil {
+							proposalNote = fmt.Sprintf("\n\nfallback proposal: run seat %q as role %q instead of %q — approve with `pactify orchestrate --resume --approve-fallback`",
+								act.Seat, to, from)
+						}
+					}
+				} else {
+					proposalNote = fmt.Sprintf("\n\nthis is a logic-class failure (the agent delivered work; it is the work that is wrong). If you suspect the partial work is poisoned, discard the UNCOMMITTED changes and retry with `pactify orchestrate --resume --reset-task %s`.", act.Task)
+				}
 				delete(h.Fails, act.Task)
 				delete(h.LastFail, act.Task)
 				_ = writeHistory(opts.runtimeDir(), scope, h)
 				return opts.escalate(act.Feature, act.Task, reason,
-					evidenceFor(st, act.Task)+"\n\n"+snapshot,
+					evidenceFor(st, act.Task)+"\n\n"+snapshot+proposalNote,
 					"人工介入后 pactify orchestrate 续跑")
 			}
 		}

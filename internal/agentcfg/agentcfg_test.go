@@ -3,6 +3,8 @@ package agentcfg
 import (
 	"reflect"
 	"testing"
+
+	"github.com/agentjoey/pactify/internal/roles"
 )
 
 func TestResolveWith_DefaultsToBuiltin(t *testing.T) {
@@ -64,5 +66,46 @@ func TestPlaceholderStable(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("resolved args %v missing placeholder %q", eff.Args, Placeholder)
+	}
+}
+
+// Two seats of the SAME kind must be able to run different models — the
+// limitation per-kind resolution could not express.
+func TestResolveSeatGivesSameKindSeatsDifferentModels(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	c, _ := roles.Load()
+	if err := c.SetProfile("pro", roles.Profile{Kind: "opencode", Model: "deepseek/deepseek-v4-pro"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetProfile("cheap", roles.Profile{Kind: "opencode", Model: "deepseek/deepseek-v4-flash"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Bind("w1", "pro"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Bind("w2", "cheap"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	e1, ok1 := ResolveSeat("w1", "opencode")
+	e2, ok2 := ResolveSeat("w2", "opencode")
+	if !ok1 || !ok2 {
+		t.Fatalf("both seats must resolve: %v %v", ok1, ok2)
+	}
+	if e1.Model != "deepseek/deepseek-v4-pro" || e2.Model != "deepseek/deepseek-v4-flash" {
+		t.Fatalf("same-kind seats must differ by profile: w1=%q w2=%q", e1.Model, e2.Model)
+	}
+}
+
+// An unbound seat resolves exactly as before roles existed (per-kind path).
+func TestResolveSeatUnboundMatchesResolve(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	want, okWant := Resolve("opencode")
+	got, okGot := ResolveSeat("unbound-seat", "opencode")
+	if okGot != okWant || got.Model != want.Model || got.Command != want.Command {
+		t.Fatalf("unbound seat must match Resolve: got %+v(%v) want %+v(%v)", got, okGot, want, okWant)
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
+	"github.com/agentjoey/pactify/internal/roles"
 	"github.com/agentjoey/pactify/internal/sessions"
 )
 
@@ -1117,6 +1118,14 @@ func (opts Options) kind(seatID string) string {
 	if opts.SeatKind != nil {
 		if k := opts.SeatKind(seatID); k != "" {
 			return k
+		}
+	}
+	// Role layer (advisory, machine-level): a seat bound to a role launches as
+	// that role's profile kind. Unbound seats fall through to the roster, so a
+	// machine with no roles configured behaves exactly as before.
+	if cfg, err := roles.Load(); err == nil {
+		if p, _, ok := cfg.Lookup(seatID); ok && p.Kind != "" {
+			return p.Kind
 		}
 	}
 	if st, err := pact.At(opts.Dir).StateProjection(); err == nil {

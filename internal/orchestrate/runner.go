@@ -137,7 +137,7 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	}
 	// Resolve the effective launch config: built-in profile overlaid with any
 	// per-agent override (model / scoped permissions) from the machine registry.
-	eff, ok := agentcfg.Resolve(lc.Kind)
+	eff, ok := agentcfg.ResolveSeat(lc.Seat, lc.Kind)
 	if !ok {
 		return fmt.Errorf("orchestrate: kind %q 无 headless runner，改用 CLI 座席或人工那一棒", lc.Kind)
 	}

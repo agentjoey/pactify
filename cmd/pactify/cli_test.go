@@ -356,3 +356,34 @@ func TestCLIPlanApply(t *testing.T) {
 		t.Fatalf("plan apply did not assign t1:\n%s", st)
 	}
 }
+
+func TestCLIRoleSetBindList(t *testing.T) {
+	bin := buildBinary(t)
+	dir := t.TempDir()
+	home := t.TempDir()
+	run := func(args ...string) (string, error) {
+		c := exec.Command(bin, args...)
+		c.Dir = dir
+		c.Env = append(os.Environ(), "PACTIFY_HOME="+home)
+		out, err := c.CombinedOutput()
+		return string(out), err
+	}
+
+	if out, err := run("role", "set", "frontend", "--kind", "claude-code", "--model", "claude-opus-4-8"); err != nil {
+		t.Fatalf("role set: %v %s", err, out)
+	}
+	if out, err := run("role", "bind", "w2", "frontend"); err != nil {
+		t.Fatalf("role bind: %v %s", err, out)
+	}
+	out, err := run("role", "list")
+	if err != nil {
+		t.Fatalf("role list: %v %s", err, out)
+	}
+	if !strings.Contains(out, "frontend") || !strings.Contains(out, "claude-code") || !strings.Contains(out, "w2") {
+		t.Fatalf("role list must show the profile and the binding:\n%s", out)
+	}
+	// Binding to an undefined role fails loudly.
+	if out, err := run("role", "bind", "w3", "nope"); err == nil {
+		t.Fatalf("binding an unknown role must fail: %s", out)
+	}
+}

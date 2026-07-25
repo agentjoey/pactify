@@ -379,3 +379,15 @@ func RebaseOnto(dir, branch, ref string) error {
 	}
 	return nil
 }
+
+// DiscardUncommitted throws away every uncommitted change in dir — tracked
+// modifications (`checkout -- .`) and untracked files (`clean -fd`). Committed
+// history is NEVER touched: reverting delivered commits is a human's call in
+// git, not something the driver does on a retry.
+func DiscardUncommitted(dir string) error {
+	if out, err := run(dir, "checkout", "--", "."); err != nil {
+		return wrapGitErr(err, out)
+	}
+	out, err := run(dir, "clean", "-fd")
+	return wrapGitErr(err, out)
+}

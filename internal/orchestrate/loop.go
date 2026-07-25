@@ -16,6 +16,7 @@ import (
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
+	"github.com/agentjoey/pactify/internal/roles"
 	"github.com/agentjoey/pactify/internal/sessions"
 )
 
@@ -101,6 +102,21 @@ type Options struct {
 	// the one resolution. RunSandbox wires it (the only caller with RuntimeDir ≠
 	// Dir); nil probes live (direct mirrorLedger use in tests).
 	pactIgnoredMemo *ignoredMemo
+	// triedFallbacks records, per seat, the role profiles this RUN has already
+	// fallen back to, so the chain advances instead of re-proposing the same
+	// profile. Run-scoped by design: approval never persists to the machine
+	// config, because tomorrow's quota may have reset.
+	triedFallbacks map[string][]string
+	// ApproveFallback adopts the pending fallback proposal (written by an
+	// env-class escalation) for THIS run: the named seat launches under the
+	// proposed role. Approval is never persisted — tomorrow's quota may differ.
+	ApproveFallback bool
+	// ResetTask names a task whose UNCOMMITTED work is discarded before the run
+	// resumes. Committed work is never touched: reverting delivered commits is a
+	// human's job in git, not the driver's.
+	ResetTask string
+	// roleOverride is the run-scoped seat→role override an approval installs.
+	roleOverride map[string]string
 }
 
 // projectBase returns the repo's integration base branch, or "" when it cannot be
@@ -297,6 +313,15 @@ func (opts Options) run(ctx context.Context) error {
 	if err := validateDriverSeat(opts.Dir, opts.Orchestrator); err != nil {
 		return err
 	}
+	// Adopt a human-approved fallback (run-scoped) before anything launches.
+	opts = opts.applyApprovedFallback()
+	if opts.ResetTask != "" {
+		// Discard ONLY uncommitted changes: committed work is delivered work and
+		// reverting it is a human's call in git, not the driver's.
+		if err := gitx.DiscardUncommitted(opts.Dir); err != nil {
+			return fmt.Errorf("orchestrate: --reset-task %s: %w", opts.ResetTask, err)
+		}
+	}
 	// Ignore .pact/orchestrate/ before any runtime file (stream logs, status.json,
 	// escalation records) is written, so they never land in the user's git status
 	// or an agent's `git add -A`. Routed through .git/info/exclude (local, never
@@ -326,7 +351,7 @@ func (opts Options) run(ctx context.Context) error {
 	// rework rounds are re-counted from the ledger, and the process-internal
 	// failure counters are reloaded from the persisted history file.
 	scope := historyScope(opts.Feature)
-	h := History{Rework: seedRework(opts.Dir), Fails: map[string]int{}, LastFail: map[string]string{}}
+	h := History{Rework: seedRework(opts.Dir), Fails: map[string]int{}, LastFail: map[string]string{}, LastClass: map[string]FailClass{}}
 	loadHistory(opts.runtimeDir(), scope, &h)
 
 	// fixRounds counts the pre-review self-repair rounds already spent per task
@@ -416,17 +441,38 @@ func (opts Options) run(ctx context.Context) error {
 				// ships with an empty history file and no narrative evidence (rerun
 				// F2-c: the persisted counters read {} while the record claimed a
 				// tripped limit).
-				snapshot := fmt.Sprintf("failure history at trip: fails=%d, rework=%d, last=%q (budget reset so a post-fix rerun resumes)",
-					h.Fails[act.Task], h.Rework[act.Task], h.LastFail[act.Task])
+				snapshot := fmt.Sprintf("failure history at trip: fails=%d, rework=%d, class=%s, last=%q (budget reset so a post-fix rerun resumes)",
+					h.Fails[act.Task], h.Rework[act.Task], h.LastClass[act.Task], h.LastFail[act.Task])
 				// The threshold has fired and the human is being notified: drop this
 				// task's persisted failure budget so a post-fix rerun resumes instead
 				// of re-tripping on the loaded count (rework is ledger-derived and
 				// stands until a human accepts the task or raises the bound).
+				// env-class means the agent produced nothing — another (agent, model)
+				// profile may succeed, so propose one and let the human approve it.
+				// logic-class (it worked, the work is wrong) gets the plain
+				// escalation: swapping agents there would just burn a second budget
+				// on the same bad task.
+				proposalNote := ""
+				if h.LastClass[act.Task] == FailEnv {
+					if to, from, ok := nextFallback(act.Seat, opts.triedFallbacks[act.Seat]); ok {
+						p := FallbackProposal{
+							Task: act.Task, Seat: act.Seat, FromRole: from, ToRole: to,
+							Reason: h.LastFail[act.Task],
+							Tried:  append(append([]string{}, opts.triedFallbacks[act.Seat]...), to),
+						}
+						if err := writeProposal(opts.runtimeDir(), p); err == nil {
+							proposalNote = fmt.Sprintf("\n\nfallback proposal: run seat %q as role %q instead of %q — approve with `pactify orchestrate --resume --approve-fallback`",
+								act.Seat, to, from)
+						}
+					}
+				} else {
+					proposalNote = fmt.Sprintf("\n\nthis is a logic-class failure (the agent delivered work; it is the work that is wrong). If you suspect the partial work is poisoned, discard the UNCOMMITTED changes and retry with `pactify orchestrate --resume --reset-task %s`.", act.Task)
+				}
 				delete(h.Fails, act.Task)
 				delete(h.LastFail, act.Task)
 				_ = writeHistory(opts.runtimeDir(), scope, h)
 				return opts.escalate(act.Feature, act.Task, reason,
-					evidenceFor(st, act.Task)+"\n\n"+snapshot,
+					evidenceFor(st, act.Task)+"\n\n"+snapshot+proposalNote,
 					"人工介入后 pactify orchestrate 续跑")
 			}
 		}
@@ -611,6 +657,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 			}
 		}
 		h.LastFail[act.Task] = failCause("worker run", runErr)
+		h.LastClass[act.Task] = classifyFailure(runErr, delivered())
 		h.Fails[act.Task]++
 		return nil
 	}
@@ -677,6 +724,10 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 		// tripped limit escalates with attribution, not a bare "failure limit
 		// exceeded" — the reviewer path never set LastFail at all (rerun F2-a).
 		h.LastFail[act.Task] = failCause("reviewer run", runErr)
+		// A reviewer stint delivers no working-tree change by design, so it is
+		// classified on the error alone — an env-class reviewer failure is exactly
+		// the quota/auth case a fallback profile can rescue.
+		h.LastClass[act.Task] = classifyFailure(runErr, false)
 		h.Fails[act.Task]++
 		return nil
 	}
@@ -1117,6 +1168,23 @@ func (opts Options) kind(seatID string) string {
 	if opts.SeatKind != nil {
 		if k := opts.SeatKind(seatID); k != "" {
 			return k
+		}
+	}
+	// An approved fallback outranks the configured binding: the human just said
+	// "run this seat as that role for this run".
+	if r, ok := opts.roleOverride[seatID]; ok {
+		if cfg, err := roles.Load(); err == nil {
+			if p, defined := cfg.Profiles[r]; defined && p.Kind != "" {
+				return p.Kind
+			}
+		}
+	}
+	// Role layer (advisory, machine-level): a seat bound to a role launches as
+	// that role's profile kind. Unbound seats fall through to the roster, so a
+	// machine with no roles configured behaves exactly as before.
+	if cfg, err := roles.Load(); err == nil {
+		if p, _, ok := cfg.Lookup(seatID); ok && p.Kind != "" {
+			return p.Kind
 		}
 	}
 	if st, err := pact.At(opts.Dir).StateProjection(); err == nil {

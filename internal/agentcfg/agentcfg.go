@@ -9,6 +9,7 @@ package agentcfg
 import (
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/agentreg"
+	"github.com/agentjoey/pactify/internal/roles"
 )
 
 // Placeholder is the briefing token the resolved Args carry; orchestrate
@@ -66,4 +67,28 @@ func Resolve(kind string) (Effective, bool) {
 	reg, _ := agentreg.Load()
 	model, tools, restricted := reg.Config(kind)
 	return ResolveWith(kind, Override{Model: model, AllowedTools: tools, Restricted: restricted})
+}
+
+// ResolveSeat resolves the launch profile for a SEAT rather than just a kind.
+// When the seat is bound to a role, that role's profile decides both the agent
+// kind and the model — which is what lets two seats of the same kind run
+// different models (per-kind Resolve cannot express that). An unbound seat, or
+// a binding whose role was deleted, falls through to the pre-roles behavior so
+// an unconfigured machine is unaffected.
+//
+// The permission posture stays per-kind: it is a machine trust decision about
+// an agent binary, not a property of the role someone plays.
+func ResolveSeat(seat, kind string) (Effective, bool) {
+	if cfg, err := roles.Load(); err == nil {
+		if p, _, ok := cfg.Lookup(seat); ok {
+			k := p.Kind
+			if k == "" {
+				k = kind
+			}
+			reg, _ := agentreg.Load()
+			_, tools, restricted := reg.Config(k)
+			return ResolveWith(k, Override{Model: p.Model, AllowedTools: tools, Restricted: restricted})
+		}
+	}
+	return Resolve(kind)
 }

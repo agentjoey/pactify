@@ -34,7 +34,11 @@ type History struct {
 	Rework   map[string]int    // taskID -> observed changes_requested rounds
 	Fails    map[string]int    // taskID -> consecutive "no expected transition" failures after exec
 	LastFail map[string]string // taskID -> human-readable cause of the most recent failure (for escalation text)
-	Iters    int               // total actions executed
+	// LastClass is the most recent failure's class per task (env vs logic),
+	// read at the threshold trip to decide the escalation's shape: env proposes
+	// a fallback profile, logic points the human at --reset-task.
+	LastClass map[string]FailClass
+	Iters     int // total actions executed
 }
 
 // Thresholds bound the driver before it escalates to a human.

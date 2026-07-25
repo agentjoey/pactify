@@ -24,7 +24,7 @@ func (r errRunner) Run(context.Context, LaunchContext) error { return r.err }
 // cause that names the timeout.
 
 func failHistory() History {
-	return History{Rework: map[string]int{}, Fails: map[string]int{}, LastFail: map[string]string{}}
+	return History{Rework: map[string]int{}, Fails: map[string]int{}, LastFail: map[string]string{}, LastClass: map[string]FailClass{}}
 }
 
 func TestRunOwnerRecordsTimeoutCause(t *testing.T) {

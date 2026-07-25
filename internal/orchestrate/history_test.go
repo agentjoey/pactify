@@ -154,7 +154,7 @@ func TestFailsPersistAcrossDriverRestart(t *testing.T) {
 	}
 	// The fired escalation clears the task's persisted budget, so a post-fix
 	// rerun resumes with a fresh MaxFails instead of insta-tripping.
-	h := History{Rework: map[string]int{}, Fails: map[string]int{}, LastFail: map[string]string{}}
+	h := History{Rework: map[string]int{}, Fails: map[string]int{}, LastFail: map[string]string{}, LastClass: map[string]FailClass{}}
 	loadHistory(dir, historyScopeAll, &h)
 	if h.Fails["t1"] != 0 {
 		t.Fatalf("escalated task's persisted fail count = %d, want 0 (reset on trip)", h.Fails["t1"])

@@ -327,7 +327,7 @@ func (opts Options) run(ctx context.Context) error {
 	// rework rounds are re-counted from the ledger, and the process-internal
 	// failure counters are reloaded from the persisted history file.
 	scope := historyScope(opts.Feature)
-	h := History{Rework: seedRework(opts.Dir), Fails: map[string]int{}, LastFail: map[string]string{}}
+	h := History{Rework: seedRework(opts.Dir), Fails: map[string]int{}, LastFail: map[string]string{}, LastClass: map[string]FailClass{}}
 	loadHistory(opts.runtimeDir(), scope, &h)
 
 	// fixRounds counts the pre-review self-repair rounds already spent per task
@@ -417,8 +417,8 @@ func (opts Options) run(ctx context.Context) error {
 				// ships with an empty history file and no narrative evidence (rerun
 				// F2-c: the persisted counters read {} while the record claimed a
 				// tripped limit).
-				snapshot := fmt.Sprintf("failure history at trip: fails=%d, rework=%d, last=%q (budget reset so a post-fix rerun resumes)",
-					h.Fails[act.Task], h.Rework[act.Task], h.LastFail[act.Task])
+				snapshot := fmt.Sprintf("failure history at trip: fails=%d, rework=%d, class=%s, last=%q (budget reset so a post-fix rerun resumes)",
+					h.Fails[act.Task], h.Rework[act.Task], h.LastClass[act.Task], h.LastFail[act.Task])
 				// The threshold has fired and the human is being notified: drop this
 				// task's persisted failure budget so a post-fix rerun resumes instead
 				// of re-tripping on the loaded count (rework is ledger-derived and
@@ -612,6 +612,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 			}
 		}
 		h.LastFail[act.Task] = failCause("worker run", runErr)
+		h.LastClass[act.Task] = classifyFailure(runErr, delivered())
 		h.Fails[act.Task]++
 		return nil
 	}
@@ -678,6 +679,10 @@ func (opts Options) runReviewer(ctx context.Context, st projection.State, h *His
 		// tripped limit escalates with attribution, not a bare "failure limit
 		// exceeded" — the reviewer path never set LastFail at all (rerun F2-a).
 		h.LastFail[act.Task] = failCause("reviewer run", runErr)
+		// A reviewer stint delivers no working-tree change by design, so it is
+		// classified on the error alone — an env-class reviewer failure is exactly
+		// the quota/auth case a fallback profile can rescue.
+		h.LastClass[act.Task] = classifyFailure(runErr, false)
 		h.Fails[act.Task]++
 		return nil
 	}

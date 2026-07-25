@@ -304,7 +304,7 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 	// the worktree's ledger, failure counters from the PRIMARY tree's persisted
 	// file (opts.Dir — the worktree is destroyed at run end). One file per
 	// feature, so concurrent driveFeatures never contend.
-	h := History{Rework: seedRework(o.Dir), Fails: map[string]int{}, LastFail: map[string]string{}}
+	h := History{Rework: seedRework(o.Dir), Fails: map[string]int{}, LastFail: map[string]string{}, LastClass: map[string]FailClass{}}
 	loadHistory(opts.Dir, feature, &h)
 	// Per-feature status goes to the PRIMARY tree (opts.Dir) so the dashboard can
 	// aggregate all concurrent features; o.Dir is the isolated worktree.

@@ -102,3 +102,42 @@ pactify merge F --push     # 或合并后顺手推 origin
 - **`accept` 永不触发 merge**,即使是 feature 的最后一个 task;merge 永远是独立显式的一步。
 - **`merge` fetch-aware、不分叉**:有 `origin` 时,merge 前先 `git fetch origin <base>` → 本地 base ff 到 `origin/<base>`(分叉则报错)→ feature rebase 到其上(不干净则报错并 abort)→ 再合。无远端的纯本地项目走原路径。
 - **`merge` 默认不 push**:本地合完由你决定何时 `git push`,或 `pactify merge --push` 一并推。origin/main 何时前进完全在 orchestrator 手里。
+
+## Roles and fallback
+
+A **role** is a named (agent, model) profile; a **seat** binds to a role. Roles
+live in `~/.pactify/roles.json` (machine-level, `PACTIFY_HOME`-aware) because
+they reference locally installed agents — they are advisory guidance for task
+assignment, not protocol state.
+
+```bash
+pactify role set frontend --kind claude-code --model claude-opus-4-8 --fallback frontend-cheap
+pactify role set frontend-cheap --kind kimi-cli
+pactify role bind w2 frontend
+pactify role list
+```
+
+At launch a seat resolves in this order: `--seat-kind` override → an approved
+fallback (this run only) → the seat's role binding → the roster kind. Two seats
+of the same kind can therefore run different models.
+
+**Fallback.** When a stint fails having produced *nothing* (quota exhausted,
+auth expired, a missing binary — "env-class"), the driver proposes the seat's
+next fallback role, writes `fallback-proposal.json` beside the escalation, and
+pauses. Approve it with:
+
+```bash
+pactify orchestrate --resume --approve-fallback
+```
+
+The approval applies to the current run only — tomorrow's quota may have reset.
+A failure where the agent *did* deliver work ("logic-class") is not a fallback
+case: swapping agents will not fix wrong work, so the escalation instead offers
+
+```bash
+pactify orchestrate --resume --reset-task <id>   # discards UNCOMMITTED work only
+```
+
+**Known limitation.** Gemini's free (`oauth-personal`) tier silently downgrades
+to flash when it hits a quota instead of failing, so pactify cannot detect that
+case at all. Use an API-key tier when model determinism matters.

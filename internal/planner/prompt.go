@@ -12,6 +12,23 @@ type SeatInfo struct {
 	ID       string
 	Roles    []string
 	Drivable bool
+	// Role is the machine-level role profile this seat is bound to (advisory
+	// routing config, not protocol state); "" when the seat is unbound. Kind and
+	// Model spell out what that role actually launches, so the planner can match
+	// a task's nature to a capable seat instead of guessing from the seat id.
+	Role  string
+	Kind  string
+	Model string
+}
+
+// RoleInfo is one entry of the machine's role catalog: a named (agent, model)
+// profile and the seats currently bound to it. A role with no bound seats is
+// still listed so the planner can name it and the human sees what to bind.
+type RoleInfo struct {
+	Name       string
+	Kind       string
+	Model      string
+	BoundSeats []string
 }
 
 // PromptInput is everything the caller gathers to scaffold the planning prompt.
@@ -20,6 +37,9 @@ type PromptInput struct {
 	Feature  string     // feature id / branch slug the plan targets
 	RepoTree string     // top-level + key directory tree text (caller-collected)
 	Seats    []SeatInfo // roster the plan may assign owners/reviewers from
+	// RoleCatalog is the machine's role profiles (empty when none configured, in
+	// which case the prompt omits the whole routing section and behaves as before).
+	RoleCatalog []RoleInfo
 }
 
 // BuildPrompt assembles goal + repo structure + roster + pactify conventions +
@@ -51,9 +71,45 @@ func BuildPrompt(in PromptInput) string {
 		if s.Drivable {
 			drivable = "Drivable=true (headless — can be launched automatically)"
 		}
-		fmt.Fprintf(&b, "- %s · roles: [%s] · %s\n", s.ID, strings.Join(s.Roles, ", "), drivable)
+		line := fmt.Sprintf("- %s · roles: [%s] · %s", s.ID, strings.Join(s.Roles, ", "), drivable)
+		if s.Role != "" {
+			line += fmt.Sprintf(" · role: %s (%s", s.Role, s.Kind)
+			if s.Model != "" {
+				line += " / " + s.Model
+			}
+			line += ")"
+		}
+		fmt.Fprintf(&b, "%s\n", line)
 	}
 	b.WriteString("\n")
+
+	if len(in.RoleCatalog) > 0 {
+		b.WriteString("## Role catalog (what each role actually launches)\n")
+		for _, r := range in.RoleCatalog {
+			line := fmt.Sprintf("- %s → %s", r.Name, r.Kind)
+			if r.Model != "" {
+				line += " / " + r.Model
+			}
+			if len(r.BoundSeats) > 0 {
+				line += " · seats: " + strings.Join(r.BoundSeats, ", ")
+			} else {
+				line += " · (no seat is bound to this role yet)"
+			}
+			fmt.Fprintf(&b, "%s\n", line)
+		}
+		b.WriteString("\n")
+
+		b.WriteString("## Role routing\n")
+		b.WriteString("- For EACH task, name the kind of work it is (its `role`): e.g. frontend,\n")
+		b.WriteString("  backend, test — use a role name from the catalog above when one fits.\n")
+		b.WriteString("- Put that name in the task's `role` field of the manifest, and PREFER an\n")
+		b.WriteString("  owner seat bound to that role — that is what routes visual work to a\n")
+		b.WriteString("  capable model and mechanical work to a cheap one.\n")
+		b.WriteString("- If the fitting role has NO bound seat, still name the role and pick the\n")
+		b.WriteString("  best available seat: the human reviewing the plan will see the gap.\n")
+		b.WriteString("- The role is advisory routing metadata. It never overrides the two rules\n")
+		b.WriteString("  (owner ≠ reviewer; a feature merges only when every task is accepted).\n\n")
+	}
 
 	b.WriteString("## How to decompose\n")
 	b.WriteString("- Break the goal into the SMALLEST set of independently deliverable tasks.\n")

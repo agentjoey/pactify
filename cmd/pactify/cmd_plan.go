@@ -14,6 +14,7 @@ import (
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/planner"
 	"github.com/agentjoey/pactify/internal/projection"
+	"github.com/agentjoey/pactify/internal/roles"
 	"github.com/spf13/cobra"
 )
 
@@ -58,10 +59,11 @@ By default plan stops after generation so you can review the manifest, then run
 			}
 
 			prompt := planner.BuildPrompt(planner.PromptInput{
-				Goal:     a[0],
-				Feature:  feature,
-				RepoTree: tree,
-				Seats:    seats,
+				Goal:        a[0],
+				Feature:     feature,
+				RepoTree:    tree,
+				Seats:       seats,
+				RoleCatalog: roleCatalog(),
 			})
 
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -125,6 +127,13 @@ func newPlanApplyCmd() *cobra.Command {
 				return err
 			}
 			fmt.Fprintf(c.OutOrStdout(), "plan apply: assigned %d task(s) for feature %q.\n", n, feature)
+			// Advisory routing gaps: a task named a role no seat is bound to. The
+			// plan is already applied — this is information for the human, not a gate.
+			if plan, perr := readPlanFile(dir, feature); perr == nil {
+				for _, w := range roleGapWarnings(plan) {
+					fmt.Fprintf(c.OutOrStdout(), "plan apply: note — %s\n", w)
+				}
+			}
 			if run {
 				fmt.Fprintf(c.OutOrStdout(), "plan apply: drive with `pactify orchestrate --feature %s --seat-kind <seat>=<kind> …`\n", feature)
 			}
@@ -157,6 +166,64 @@ func applyPlan(dir, feature string, roster []string, seat string) (int, error) {
 	return planner.ApplyTx(dir, plan, roster, seat)
 }
 
+// readPlanFile parses .pact/plan-<feature>.json without applying it (the
+// warning pass needs the parsed plan after apply has already consumed it).
+func readPlanFile(dir, feature string) (planner.Plan, error) {
+	b, err := os.ReadFile(filepath.Join(dir, ".pact", "plan-"+feature+".json"))
+	if err != nil {
+		return planner.Plan{}, err
+	}
+	return planner.Parse(b)
+}
+
+// roleGapWarnings reports tasks whose planner-assigned role has no seat bound to
+// it — a routing gap the human should see at the plan review gate. Advisory
+// only: the plan still applies (roles guide assignment, they do not gate it).
+func roleGapWarnings(plan planner.Plan) []string {
+	cfg, err := roles.Load()
+	if err != nil {
+		return nil
+	}
+	bound := map[string]bool{}
+	for _, role := range cfg.Bindings {
+		bound[role] = true
+	}
+	var warns []string
+	for _, t := range plan.Tasks {
+		if t.Role != "" && !bound[t.Role] {
+			warns = append(warns, fmt.Sprintf("task %q wants role %q but no seat is bound to it — bind one with `pactify role bind <seat> %s`, or reassign the task", t.ID, t.Role, t.Role))
+		}
+	}
+	return warns
+}
+
+// roleCatalog renders the machine's role profiles for the planner prompt, with
+// the seats bound to each. Empty when no roles are configured, which makes the
+// prompt omit the whole routing section (pre-roles behavior).
+func roleCatalog() []planner.RoleInfo {
+	cfg, err := roles.Load()
+	if err != nil || len(cfg.Profiles) == 0 {
+		return nil
+	}
+	seatsOf := map[string][]string{}
+	for seat, role := range cfg.Bindings {
+		seatsOf[role] = append(seatsOf[role], seat)
+	}
+	names := make([]string, 0, len(cfg.Profiles))
+	for n := range cfg.Profiles {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	out := make([]planner.RoleInfo, 0, len(names))
+	for _, n := range names {
+		p := cfg.Profiles[n]
+		s := seatsOf[n]
+		sort.Strings(s)
+		out = append(out, planner.RoleInfo{Name: n, Kind: p.Kind, Model: p.Model, BoundSeats: s})
+	}
+	return out
+}
+
 // rosterFromState turns the projected seats into planner SeatInfo (MVP: every
 // seat is Drivable=true; precise GUI detection is backlog) and the flat seat-id
 // roster Apply validates owners/reviewers against.
@@ -164,7 +231,13 @@ func rosterFromState(st projection.State) ([]planner.SeatInfo, []string) {
 	seats := make([]planner.SeatInfo, 0, len(st.Agents))
 	roster := make([]string, 0, len(st.Agents))
 	for _, ag := range st.Agents {
-		seats = append(seats, planner.SeatInfo{ID: ag.ID, Roles: ag.Roles, Drivable: true})
+		si := planner.SeatInfo{ID: ag.ID, Roles: ag.Roles, Drivable: true}
+		if cfg, err := roles.Load(); err == nil {
+			if p, role, ok := cfg.Lookup(ag.ID); ok {
+				si.Role, si.Kind, si.Model = role, p.Kind, p.Model
+			}
+		}
+		seats = append(seats, si)
 		roster = append(roster, ag.ID)
 	}
 	return seats, roster

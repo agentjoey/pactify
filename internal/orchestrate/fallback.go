@@ -86,3 +86,28 @@ func nextFallback(seat string, tried []string) (toRole, fromRole string, ok bool
 	}
 	return "", "", false
 }
+
+// applyApprovedFallback consumes a pending proposal when the operator passed
+// --approve-fallback: the seat runs under the proposed role for this run, the
+// profile is marked tried so a repeat failure advances the chain, and the
+// proposal file is cleared. Without approval nothing changes and the proposal
+// stays pending for the dashboard or a later CLI approval.
+func (opts Options) applyApprovedFallback() Options {
+	if !opts.ApproveFallback {
+		return opts
+	}
+	p, ok := readProposal(opts.runtimeDir())
+	if !ok {
+		return opts
+	}
+	if opts.roleOverride == nil {
+		opts.roleOverride = map[string]string{}
+	}
+	opts.roleOverride[p.Seat] = p.ToRole
+	if opts.triedFallbacks == nil {
+		opts.triedFallbacks = map[string][]string{}
+	}
+	opts.triedFallbacks[p.Seat] = append(opts.triedFallbacks[p.Seat], p.Tried...)
+	_ = clearProposal(opts.runtimeDir())
+	return opts
+}

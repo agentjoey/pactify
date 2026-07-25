@@ -107,6 +107,16 @@ type Options struct {
 	// profile. Run-scoped by design: approval never persists to the machine
 	// config, because tomorrow's quota may have reset.
 	triedFallbacks map[string][]string
+	// ApproveFallback adopts the pending fallback proposal (written by an
+	// env-class escalation) for THIS run: the named seat launches under the
+	// proposed role. Approval is never persisted — tomorrow's quota may differ.
+	ApproveFallback bool
+	// ResetTask names a task whose UNCOMMITTED work is discarded before the run
+	// resumes. Committed work is never touched: reverting delivered commits is a
+	// human's job in git, not the driver's.
+	ResetTask string
+	// roleOverride is the run-scoped seat→role override an approval installs.
+	roleOverride map[string]string
 }
 
 // projectBase returns the repo's integration base branch, or "" when it cannot be
@@ -302,6 +312,15 @@ func validateDriverSeat(dir, seat string) error {
 func (opts Options) run(ctx context.Context) error {
 	if err := validateDriverSeat(opts.Dir, opts.Orchestrator); err != nil {
 		return err
+	}
+	// Adopt a human-approved fallback (run-scoped) before anything launches.
+	opts = opts.applyApprovedFallback()
+	if opts.ResetTask != "" {
+		// Discard ONLY uncommitted changes: committed work is delivered work and
+		// reverting it is a human's call in git, not the driver's.
+		if err := gitx.DiscardUncommitted(opts.Dir); err != nil {
+			return fmt.Errorf("orchestrate: --reset-task %s: %w", opts.ResetTask, err)
+		}
 	}
 	// Ignore .pact/orchestrate/ before any runtime file (stream logs, status.json,
 	// escalation records) is written, so they never land in the user's git status
@@ -1149,6 +1168,15 @@ func (opts Options) kind(seatID string) string {
 	if opts.SeatKind != nil {
 		if k := opts.SeatKind(seatID); k != "" {
 			return k
+		}
+	}
+	// An approved fallback outranks the configured binding: the human just said
+	// "run this seat as that role for this run".
+	if r, ok := opts.roleOverride[seatID]; ok {
+		if cfg, err := roles.Load(); err == nil {
+			if p, defined := cfg.Profiles[r]; defined && p.Kind != "" {
+				return p.Kind
+			}
 		}
 	}
 	// Role layer (advisory, machine-level): a seat bound to a role launches as

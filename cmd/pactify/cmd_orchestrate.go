@@ -45,6 +45,8 @@ func transportModesFromFlags(transports []string) (map[string]string, error) {
 func newOrchestrateCmd() *cobra.Command {
 	var feature string
 	var orchNoRegister bool
+	var approveFallback bool
+	var resetTask string
 	var resume bool
 	var maxRework, maxFails, maxIters int
 	var runTimeoutMin, idleTimeoutMin int
@@ -160,6 +162,8 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				DryRun:          dryRun,
 				Now:             func() string { return time.Now().Format("20060102-150405") },
 				SeatKind:        func(seat string) string { return km[seat] },
+				ApproveFallback: approveFallback,
+				ResetTask:       resetTask,
 				RunTimeout:      time.Duration(runTimeoutMin) * time.Minute,
 				IdleTimeout:     time.Duration(idleTimeoutMin) * time.Minute,
 				Orchestrator:    orchestrator,
@@ -200,6 +204,8 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	// --resume is documentary: re-running orchestrate always continues from the
 	// current (already-advanced) pact state. Escalations are not auto-cleared.
 	cmd.Flags().BoolVar(&resume, "resume", false, "continue from the current state after fixing an escalation (re-running has the same effect)")
+	cmd.Flags().BoolVar(&approveFallback, "approve-fallback", false, "adopt the pending fallback proposal (run the named seat under the proposed role for this run)")
+	cmd.Flags().StringVar(&resetTask, "reset-task", "", "discard the task's UNCOMMITTED work before resuming (committed work is never touched)")
 	cmd.Flags().BoolVar(&orchNoRegister, "no-register", false, "do not auto-register this project for the dashboard")
 	cmd.Flags().IntVar(&maxRework, "max-rework", 3, "escalate after this many changes-requested rounds on a task")
 	cmd.Flags().IntVar(&maxFails, "max-fails", 2, "escalate after this many failed agent runs on a task")

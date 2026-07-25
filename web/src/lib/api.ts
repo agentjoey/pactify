@@ -365,6 +365,28 @@ export async function runOrchestrate(
   return (await r.json()) as { status_url: string };
 }
 
+/** The pending fallback proposal an env-class escalation left, if any. */
+export interface FallbackProposal {
+  pending: boolean;
+  task?: string;
+  seat?: string;
+  fromRole?: string;
+  toRole?: string;
+  reason?: string;
+}
+
+export async function getFallbackProposal(project: string): Promise<FallbackProposal> {
+  const r = await fetch(`/api/projects/${project}/fallback-proposal`);
+  if (!r.ok) return { pending: false };
+  return (await r.json()) as FallbackProposal;
+}
+
+/** Approve the pending proposal: resumes the paused run adopting it (this run only). */
+export async function approveFallback(project: string): Promise<{ status_url: string }> {
+  const r = await writeJSON(`/api/projects/${project}/fallback-proposal/approve`, "POST", {});
+  return (await r.json()) as { status_url: string };
+}
+
 export async function resumeOrchestrate(
   project: string,
   body: RunOrchestrateBody = {},

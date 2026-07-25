@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/pact"
+	"github.com/agentjoey/pactify/internal/planner"
+	"github.com/agentjoey/pactify/internal/roles"
 )
 
 // applyPlan must assign as the PASSED acting seat, not a hardcoded "claude".
@@ -80,5 +83,34 @@ func TestApplyPlanUsesGivenSeatNotHardcodedClaude(t *testing.T) {
 func TestApplyPlanRequiresActingSeat(t *testing.T) {
 	if _, err := applyPlan(t.TempDir(), "g", []string{"orch"}, ""); err == nil {
 		t.Fatal("applyPlan with empty seat should error")
+	}
+}
+
+// P3: a task whose role has no bound seat is a gap the human should see at the
+// review gate — warn, never block (the plan is still applied).
+func TestRoleGapWarnings(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	c, _ := roles.Load()
+	if err := c.SetProfile("frontend", roles.Profile{Kind: "claude-code"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Bind("w2", "frontend"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	plan := planner.Plan{Tasks: []planner.PlanTask{
+		{ID: "t1", Role: "frontend"}, // bound → no warning
+		{ID: "t2", Role: "backend"},  // no such role → warn
+		{ID: "t3"},                   // no role at all → silent
+	}}
+	warns := roleGapWarnings(plan)
+	if len(warns) != 1 {
+		t.Fatalf("expected exactly one gap warning, got %v", warns)
+	}
+	if !strings.Contains(warns[0], "t2") || !strings.Contains(warns[0], "backend") {
+		t.Fatalf("warning must name the task and the role: %q", warns[0])
 	}
 }

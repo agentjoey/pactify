@@ -33,6 +33,11 @@ type PlanTask struct {
 	Verify    string   `json:"verify"`
 	Deps      []string `json:"deps,omitempty"`
 	Dimension string   `json:"dimension,omitempty"`
+	// Role is the advisory kind-of-work label (frontend / backend / test …) the
+	// planner assigns so a human reviewing the plan sees WHY a task went to a
+	// given seat. Purely informational: apply lands only owner/reviewer, and a
+	// manifest without it is unchanged.
+	Role string `json:"role,omitempty"`
 }
 
 // PlanSeat is an OPTIONAL new seat the planner proposes (spec §6 WS-K dynamic

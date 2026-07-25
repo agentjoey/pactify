@@ -341,3 +341,28 @@ func TestValidSlug(t *testing.T) {
 		}
 	}
 }
+
+// P3: a task may carry an advisory `role` naming the kind of work it is. It is
+// informational (plan apply still lands only owner/reviewer), so a manifest
+// without it stays valid and parses byte-identically.
+func TestPlanTaskCarriesOptionalRole(t *testing.T) {
+	withRole := `{"feature":"f","branch":"feat/f","tasks":[
+	  {"id":"t1","owner":"w2","reviewer":"orch","spec":".pact/tasks/t1.md","verify":"true","role":"frontend"}]}`
+	p, err := planner.Parse([]byte(withRole))
+	if err != nil {
+		t.Fatalf("a manifest with a role must parse: %v", err)
+	}
+	if p.Tasks[0].Role != "frontend" {
+		t.Fatalf("role lost in parse: %+v", p.Tasks[0])
+	}
+
+	noRole := `{"feature":"f","branch":"feat/f","tasks":[
+	  {"id":"t1","owner":"w2","reviewer":"orch","spec":".pact/tasks/t1.md","verify":"true"}]}`
+	p2, err := planner.Parse([]byte(noRole))
+	if err != nil {
+		t.Fatalf("a manifest without a role must still parse: %v", err)
+	}
+	if p2.Tasks[0].Role != "" {
+		t.Fatalf("absent role must stay empty, got %q", p2.Tasks[0].Role)
+	}
+}

@@ -191,3 +191,31 @@ func TestPromptStatesReviewDimensions(t *testing.T) {
 		}
 	}
 }
+
+// P3: the prompt must hand the planner the role catalog + each seat's bound
+// role, and instruct it to name a role type per task — that is how a task's
+// nature ("frontend") routes to the seat configured for it.
+func TestPromptCarriesRoleCatalogAndRoutingRule(t *testing.T) {
+	p := planner.BuildPrompt(planner.PromptInput{
+		Goal: "g", Feature: "f", RepoTree: "x",
+		Seats: []planner.SeatInfo{
+			{ID: "w2", Roles: []string{"worker"}, Drivable: true, Role: "frontend", Model: "claude-opus-4-8", Kind: "claude-code"},
+			{ID: "w3", Roles: []string{"worker"}, Drivable: true},
+		},
+		RoleCatalog: []planner.RoleInfo{
+			{Name: "frontend", Kind: "claude-code", Model: "claude-opus-4-8", BoundSeats: []string{"w2"}},
+			{Name: "test", Kind: "opencode", Model: "deepseek/deepseek-v4-flash"},
+		},
+	})
+	for _, want := range []string{
+		"frontend",         // catalog entry
+		"claude-opus-4-8",  // the model behind the role
+		"w2",               // the bound seat
+		"no seat is bound", // the unbound-role warning wording
+		"role",             // the per-task routing instruction
+	} {
+		if !strings.Contains(p, want) {
+			t.Fatalf("prompt missing %q:\n%s", want, p)
+		}
+	}
+}

@@ -8,13 +8,18 @@
 //
 // Usage:
 //   node web/scripts/fallback-card-shot.mjs            # → /tmp/pactify-shots/fallback-card*.png
-//   SHOT_STATE=error node web/scripts/fallback-card-shot.mjs   # the failed-approval state
+//   SHOT_STATE=error node web/scripts/fallback-card-shot.mjs     # the failed-approval state
+//   SHOT_STATE=loading node web/scripts/fallback-card-shot.mjs   # the in-flight state
+//
+// The read-only row of the state matrix has no shot: LocalServeSource always
+// exposes approveFallback, so only a relay-backed source reaches that branch and
+// this harness drives a local serve. It is covered by FallbackCard.test.tsx.
 import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 
 const BASE = process.env.SHOT_BASE || "http://127.0.0.1:17082";
 const OUT = process.env.SHOT_OUT || "/tmp/pactify-shots";
-const STATE = process.env.SHOT_STATE || "pending"; // pending | error
+const STATE = process.env.SHOT_STATE || "pending"; // pending | error | loading
 
 const proposal = {
   pending: true,
@@ -36,6 +41,10 @@ async function main() {
     await page.route("**/fallback-proposal/approve", (r) =>
       r.fulfill({ status: 409, json: { error: "orchestrate is already running" } }),
     );
+  } else if (STATE === "loading") {
+    // Never fulfilled: the request stays in flight so the submitting state holds
+    // still long enough to photograph.
+    await page.route("**/fallback-proposal/approve", () => {});
   }
 
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
@@ -50,9 +59,13 @@ async function main() {
     await page.click('[data-testid="fallback-approve"]');
     await page.waitForSelector('[data-testid="fallback-error"]', { timeout: 5000 });
     await page.waitForTimeout(400);
+  } else if (STATE === "loading") {
+    await page.click('[data-testid="fallback-approve"]');
+    await page.waitForSelector('[data-testid="fallback-approve"][disabled]', { timeout: 5000 });
+    await page.waitForTimeout(400);
   }
 
-  const name = STATE === "error" ? "fallback-card-error" : "fallback-card";
+  const name = STATE === "pending" ? "fallback-card" : `fallback-card-${STATE}`;
   await page.screenshot({ path: `${OUT}/${name}.png` });
   // A tight crop of the card itself, for reviewing type/spacing without hunting.
   const card = await page.$('[data-testid="fallback-card"]');

@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import { getFallbackProposal, approveFallback, type FallbackProposal } from "../../lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ProposalGoneError, type FallbackProposal } from "../../lib/api";
+import { useDataSource } from "../../lib/datasource";
+import { useVisiblePoll } from "../../lib/useVisiblePoll";
 import { Button } from "./Button";
 
 export interface FallbackCardProps {
@@ -8,6 +10,11 @@ export interface FallbackCardProps {
   canWrite: boolean;
   /** Called after a successful approval so the caller can refresh run state. */
   onApproved?: () => void;
+}
+
+/** Identity of a proposal, so dismissing one does not hide the next. */
+function keyOf(p: FallbackProposal): string {
+  return `${p.seat}|${p.task}|${p.toRole}`;
 }
 
 /**
@@ -20,61 +27,83 @@ export interface FallbackCardProps {
  * Swapping which agent does the work is a human decision, so the card asks
  * rather than acting on its own; it carries the same "human decision" framing
  * as ReviewGate, the other card that pauses for a person.
+ *
+ * The escalation happens WHILE the operator is watching a run, so the card
+ * polls: a mount-once fetch would mean the one scenario it exists for never
+ * renders it.
  */
-/**
- * writeJSON prefixes every failure with the endpoint it called
- * ("/api/projects/x/...: orchestrate is already running"). That path is for a
- * log, not for the person deciding whether to swap agents — keep only what the
- * server actually said.
- */
-function serverSays(message: string): string {
-  const m = /^\/api\/\S*:\s*(.+)$/s.exec(message);
-  return m ? m[1] : message;
-}
-
 export function FallbackCard({ project, canWrite, onApproved }: FallbackCardProps) {
+  const src = useDataSource();
   const [proposal, setProposal] = useState<FallbackProposal | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState("");
 
+  // Every piece of state describes ONE project's proposal. Switching projects
+  // without clearing it would show project A's seat and role swap while the
+  // approve button posts to project B.
+  const shown = useRef(project);
   useEffect(() => {
-    let alive = true;
-    getFallbackProposal(project)
+    shown.current = project;
+    setProposal(null);
+    setError("");
+    setDismissed("");
+  }, [project]);
+
+  const read = src.getFallbackProposal;
+  const load = useCallback(() => {
+    if (!read) return;
+    const forProject = project;
+    read(project)
       .then((p) => {
-        if (alive) setProposal(p);
+        if (shown.current === forProject) setProposal(p);
       })
       .catch(() => {
         // A proposal we cannot read is treated as "none pending": the card must
         // never invite an approval it is not sure about.
-        if (alive) setProposal({ pending: false });
+        if (shown.current === forProject) setProposal({ pending: false });
       });
-    return () => {
-      alive = false;
-    };
-  }, [project]);
+  }, [read, project]);
 
-  if (!proposal?.pending || dismissed) return null;
+  useVisiblePoll(load, 10_000);
+
+  if (!proposal?.pending || dismissed === keyOf(proposal)) return null;
+
+  // Approving needs a source that can reach the machine holding the proposal.
+  const approver = src.approveFallback;
+  const actionable = canWrite && !!approver;
 
   async function approve() {
+    if (!approver) return;
+    const forProject = project;
     setPending(true);
     setError("");
     try {
-      await approveFallback(project);
+      await approver(forProject);
+      if (shown.current !== forProject) return;
       setProposal({ pending: false });
       onApproved?.();
     } catch (e) {
+      if (shown.current !== forProject) return;
+      if (e instanceof ProposalGoneError) {
+        // Already handled elsewhere — retire the card instead of offering a
+        // retry that cannot succeed.
+        setProposal({ pending: false });
+        onApproved?.();
+        return;
+      }
       // Keep the card and the proposal: the run is still paused and the
       // operator can retry once they have cleared the cause.
-      setError(serverSays(e instanceof Error ? e.message : String(e)));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setPending(false);
+      if (shown.current === forProject) setPending(false);
     }
   }
 
   return (
-    <div
+    <section
       data-testid="fallback-card"
+      aria-labelledby="fallback-card-title"
       className="rounded-[11px] border p-3"
       style={{
         borderColor: "rgba(224,136,74,0.3)",
@@ -82,10 +111,15 @@ export function FallbackCard({ project, canWrite, onApproved }: FallbackCardProp
       }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-[13px] text-[var(--color-role-ops)]">⇄</span>
-        <span className="text-[12.5px] font-semibold text-[var(--color-text-1)]">
-          {proposal.seat} could not run{proposal.task ? ` · ${proposal.task}` : ""}
+        <span aria-hidden="true" className="text-[13px] text-[var(--color-role-ops)]">
+          ⇄
         </span>
+        <h3
+          id="fallback-card-title"
+          className="text-[12.5px] font-semibold text-[var(--color-text-1)]"
+        >
+          {proposal.seat} could not run{proposal.task ? ` · ${proposal.task}` : ""}
+        </h3>
         <span
           className="ml-auto rounded-full px-2 py-0.5 text-[9px] text-[var(--color-role-ops)]"
           style={{
@@ -111,7 +145,10 @@ export function FallbackCard({ project, canWrite, onApproved }: FallbackCardProp
       </div>
 
       {proposal.reason ? (
-        <div className="mt-2 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--bg-code)] p-2 font-mono text-[10.5px] text-[var(--color-text-3)]">
+        // The driver's failure text is the operator's only diagnostic: it must
+        // be readable (--color-text-2, not the 3.3:1 --color-text-3) and keep
+        // its line breaks — LastFail is routinely multi-line.
+        <div className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-[var(--color-border-subtle)] bg-[var(--bg-code)] p-2 font-mono text-[10.5px] text-[var(--color-text-2)]">
           {proposal.reason}
         </div>
       ) : null}
@@ -119,6 +156,7 @@ export function FallbackCard({ project, canWrite, onApproved }: FallbackCardProp
       {error ? (
         <div
           data-testid="fallback-error"
+          role="alert"
           className="mt-2 rounded-lg border p-2 text-[10.5px]"
           style={{
             borderColor: "color-mix(in srgb, var(--color-danger) 34%, transparent)",
@@ -131,14 +169,9 @@ export function FallbackCard({ project, canWrite, onApproved }: FallbackCardProp
       ) : null}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {canWrite ? (
+        {actionable ? (
           <>
-            <Button
-              data-testid="fallback-approve"
-              size="sm"
-              loading={pending}
-              onClick={approve}
-            >
+            <Button data-testid="fallback-approve" size="sm" loading={pending} onClick={approve}>
               Approve &amp; resume
             </Button>
             <Button
@@ -146,17 +179,18 @@ export function FallbackCard({ project, canWrite, onApproved }: FallbackCardProp
               variant="ghost"
               size="sm"
               disabled={pending}
-              onClick={() => setDismissed(true)}
+              title="Hides this card. The run stays paused — approve it later here or with `pactify orchestrate --resume --approve-fallback`."
+              onClick={() => setDismissed(keyOf(proposal))}
             >
               Dismiss
             </Button>
           </>
         ) : (
-          <span data-testid="fallback-readonly" className="text-[10.5px] text-[var(--color-text-3)]">
+          <span data-testid="fallback-readonly" className="text-[10.5px] text-[var(--color-text-2)]">
             Read-only view — approve from the machine running this project.
           </span>
         )}
       </div>
-    </div>
+    </section>
   );
 }

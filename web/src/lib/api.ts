@@ -382,8 +382,23 @@ export async function getFallbackProposal(project: string): Promise<FallbackProp
 }
 
 /** Approve the pending proposal: resumes the paused run adopting it (this run only). */
+/**
+ * Thrown when the server says nothing is pending: the proposal was already
+ * approved, reset, or consumed by another operator. The card must retire itself
+ * rather than offer a retry that can never succeed.
+ */
+export class ProposalGoneError extends Error {}
+
 export async function approveFallback(project: string): Promise<{ status_url: string }> {
-  const r = await writeJSON(`/api/projects/${project}/fallback-proposal/approve`, "POST", {});
+  const r = await fetch(`/api/projects/${project}/fallback-proposal/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (r.status === 404) throw new ProposalGoneError(await extractErrorMessage(r));
+  // Bare server message: this one is read by a person deciding whether to swap
+  // agents, so it must not carry writeJSON's endpoint prefix.
+  if (!r.ok) throw new Error(await extractErrorMessage(r));
   return (await r.json()) as { status_url: string };
 }
 

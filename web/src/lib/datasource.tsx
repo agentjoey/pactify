@@ -15,6 +15,7 @@ import type {
   PlanReviewResponse,
   PactEvent,
 } from "./types";
+import type { FallbackProposal } from "./api";
 import type { Machine, PactEventDetail, ProjectMeta, State } from "./types";
 
 export interface DataSourceCapabilities {
@@ -60,6 +61,14 @@ export interface DataSource {
     project: string,
     body?: RunOrchestrateBody,
   ): Promise<{ status_url: string }>;
+  /**
+   * Fallback proposals live in the project's runtime dir on the machine that
+   * ran the driver, so only sources talking to that machine can serve them.
+   * A source that omits these renders the card read-only rather than offering
+   * an approval it cannot deliver.
+   */
+  getFallbackProposal?(project: string): Promise<FallbackProposal>;
+  approveFallback?(project: string): Promise<{ status_url: string }>;
   stopOrchestrate?(project: string): Promise<void>;
   shipFeature?(
     project: string,
@@ -163,6 +172,14 @@ export class LocalServeSource implements DataSource {
     body?: RunOrchestrateBody,
   ): Promise<{ status_url: string }> {
     return api.runOrchestrate(project, body);
+  }
+
+  getFallbackProposal(project: string): Promise<FallbackProposal> {
+    return api.getFallbackProposal(project);
+  }
+
+  approveFallback(project: string): Promise<{ status_url: string }> {
+    return api.approveFallback(project);
   }
 
   resumeOrchestrate(

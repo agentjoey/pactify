@@ -17,6 +17,9 @@
 //
 // Test hooks (NOT part of the real API):
 //   POST /__test/reset     → restore the seed state (per-test).
+//   POST /__test/fallback  → arm (body = proposal) or clear (empty body) the
+//                            pending fallback proposal, which the driver would
+//                            otherwise only produce by failing to launch an agent.
 //
 // Draft state is NOT server-side — drafts are browser-local; the connect/author
 // tests create them through the UI.
@@ -41,6 +44,10 @@ const PORT = Number(process.env.PORT || 4173);
 
 // --- mutable per-process state (reset via /__test/reset between tests) --------
 let state = initialState();
+// The pending fallback proposal, if any. Armed by /__test/fallback.
+let fallbackProposal = null;
+// Records that the approve verb actually reached the server.
+let fallbackApprovals = 0;
 const sseClients = new Set(); // live SSE response objects
 let registry = makeRegistry();
 const fsTree = browseTree();
@@ -131,7 +138,18 @@ const server = createServer(async (req, res) => {
   // --- test hooks ---
   if (url === "/__test/reset" && method === "POST") {
     resetState();
+    fallbackProposal = null;
+    fallbackApprovals = 0;
     return sendJSON(res, 200, { status: "ok" });
+  }
+  if (url === "/__test/fallback" && method === "POST") {
+    const raw = await readBody(req);
+    const body = raw ? JSON.parse(raw) : null;
+    fallbackProposal = body && body.seat ? body : null;
+    return sendJSON(res, 200, { status: "ok" });
+  }
+  if (url === "/__test/fallback/approvals" && method === "GET") {
+    return sendJSON(res, 200, { approvals: fallbackApprovals });
   }
 
   // --- real API surface ---
@@ -232,6 +250,16 @@ const server = createServer(async (req, res) => {
     return sendJSON(res, 200, { present: false });
   }
   if (url === `/api/projects/${PROJECT_ID}/orchestrate/run` && method === "POST") {
+    return sendJSON(res, 202, { status_url: "/x" });
+  }
+  if (url === `/api/projects/${PROJECT_ID}/fallback-proposal` && method === "GET") {
+    return sendJSON(res, 200, fallbackProposal ? { pending: true, ...fallbackProposal } : { pending: false });
+  }
+  if (url === `/api/projects/${PROJECT_ID}/fallback-proposal/approve` && method === "POST") {
+    // Nothing pending is a 404, never a silent resume (mirrors the real server).
+    if (!fallbackProposal) return sendJSON(res, 404, { error: "no fallback proposal is pending" });
+    fallbackApprovals += 1;
+    fallbackProposal = null;
     return sendJSON(res, 202, { status_url: "/x" });
   }
 

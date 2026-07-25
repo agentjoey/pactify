@@ -57,6 +57,8 @@ func (s *Server) registerOrchestrateRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/projects/{id}/orchestrate/resume", s.handleOrchestrateResume)
 	mux.HandleFunc("POST /api/projects/{id}/orchestrate/ship", s.handleOrchestrateShip)
 	mux.HandleFunc("GET /api/projects/{id}/orchestrate/diff", s.handleOrchestrateDiff)
+	mux.HandleFunc("GET /api/projects/{id}/fallback-proposal", s.handleFallbackProposal)
+	mux.HandleFunc("POST /api/projects/{id}/fallback-proposal/approve", s.handleFallbackApprove)
 }
 
 // ParallelStatusDTO aggregates the per-feature status files a parallel
@@ -386,6 +388,17 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 // shared core of the dashboard Run button (HTTP) and the remote orchestrate rpc.
 // Returns an HTTP-ish status code with the error for the HTTP caller's mapping.
 func (s *Server) spawnOrchestrate(dir, feature string, seatKinds map[string]string, maxConcurrency int, resume bool) (int, error) {
+	return s.spawnOrchestrateWith(dir, feature, seatKinds, maxConcurrency, resume, false)
+}
+
+// spawnOrchestrateApprove resumes the paused run adopting the pending fallback
+// proposal (the dashboard approval path; CLI equivalent:
+// `pactify orchestrate --resume --approve-fallback`).
+func (s *Server) spawnOrchestrateApprove(dir string) (int, error) {
+	return s.spawnOrchestrateWith(dir, "", nil, 0, true, true)
+}
+
+func (s *Server) spawnOrchestrateWith(dir, feature string, seatKinds map[string]string, maxConcurrency int, resume, approveFallback bool) (int, error) {
 	// Claim the in-memory marker BEFORE the file check: it is the only guard
 	// with no window between check and spawn (see orchRunning).
 	if !orchMarkRunning(dir) {
@@ -413,6 +426,9 @@ func (s *Server) spawnOrchestrate(dir, feature string, seatKinds map[string]stri
 	}
 	if resume {
 		args = append(args, "--resume")
+	}
+	if approveFallback {
+		args = append(args, "--approve-fallback")
 	}
 	env := []string{"PACT_AGENT_ID=" + s.seat}
 

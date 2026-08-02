@@ -44,30 +44,40 @@ test("add-project: browse folders, init a new repo, and see it grouped in the pr
   await expect(menu.getByText("new")).toBeVisible();
 });
 
-// QUARANTINED (2026-07-13): flaky — failed every CI run on main. The delete →
-// window.confirm → registry DELETE → menu-refresh flow races the ProjectMenu
-// open/close toggle. The FEATURE works (App.onDeleteProject calls deleteRegistry +
-// refreshProjects); the TEST needs a robust re-sync (await the DELETE response AND
-// handle the toggle, or expose a deterministic hook). Owned by the ProjectMenu work.
-// Re-enable once stabilized — tracked as a separate task, do not leave red.
-test.fixme("delete-project: removes a project from the project menu", async ({ page }) => {
+// De-quarantined 2026-08-03 (was flaky since 2026-07-13): the old version polled
+// the UI and re-clicked the trigger on every iteration, which TOGGLES the menu —
+// the assertion raced its own re-open. Now it waits for the DELETE response, then
+// closes and reopens once from a known state.
+test("delete-project: removes a project from the project menu", async ({ page }) => {
   // Register the dialog handler BEFORE triggering the delete so it intercepts
   // the window.confirm that onDeleteProject fires.
   page.on("dialog", (d) => d.accept());
 
-  // Open the ProjectMenu and click the delete button for p1.
+  // The fixture holds exactly one project, and deleting the last one drops the
+  // app to its empty state — the menu and its trigger stop existing, so
+  // "reopen and check p1 is gone" cannot be asserted. Register a second project
+  // so this test exercises what it is named for: removal FROM the menu.
+  await page.request.post("/api/registry", { data: { name: "p2", path: "/tmp/p2" } });
+  await page.reload();
+  await page.locator('[data-testid="app-root"]').waitFor();
+
   await page.getByTestId("project-menu-trigger").click();
   await page.getByTestId("project-menu").waitFor();
-  await page.getByRole("button", { name: "delete p1" }).click();
 
-  // After the confirm dialog auto-accepts and the registry DELETE resolves,
-  // the project list refreshes. Re-open the menu and assert p1 is gone.
-  await expect
-    .poll(async () => {
-      // Re-open the dropdown on each poll iteration if it closed.
-      const isOpen = await page.getByTestId("project-menu").isVisible().catch(() => false);
-      if (!isOpen) await page.getByTestId("project-menu-trigger").click();
-      return page.getByRole("button", { name: "delete p1" }).isVisible().catch(() => false);
-    }, { timeout: 5000 })
-    .toBe(false);
+  const deleted = page.waitForResponse(
+    (r) => r.url().includes("/api/registry/p1") && r.request().method() === "DELETE",
+  );
+  await page.getByRole("button", { name: "delete p1" }).click();
+  await deleted;
+
+  // Dismiss via the component's own outside-mousedown handler rather than a
+  // coordinate guess, so the menu is definitively closed before reopening.
+  await page.evaluate(() =>
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })),
+  );
+  await expect(page.getByTestId("project-menu")).toHaveCount(0);
+
+  await page.getByTestId("project-menu-trigger").click();
+  await page.getByTestId("project-menu").waitFor();
+  await expect(page.getByRole("button", { name: "delete p1" })).toHaveCount(0);
 });

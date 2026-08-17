@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ProjectMeta } from "../../lib/types";
 import type { Worktree } from "../../lib/api";
 
@@ -57,6 +57,32 @@ export function ProjectMenu({
     return { grouped: [...g.entries()], flat: f };
   }, [projects]);
 
+  // The panel hangs below a trigger whose y varies by lens and viewport, and CSS
+  // has no "distance from here to the viewport bottom" unit — a fixed vh cap
+  // still runs off-screen on a short window. Measure the room actually left
+  // below the trigger when the menu opens, and re-measure on resize.
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [maxH, setMaxH] = useState<number>();
+  useLayoutEffect(() => {
+    if (!open) return;
+    const fit = () => {
+      const el = panelRef.current;
+      if (!el) return;
+      // The bottom bound is not the viewport: the event drawer is a normal flow
+      // element at the foot of the shell, and this panel (z-30) renders straight
+      // over it — a viewport-only cap clipped "Add project" behind the collapsed
+      // bar. Stop at whichever comes first, and fall back to the viewport where
+      // there is no drawer (Cockpit lens, tests).
+      const drawer = document.querySelector('[data-testid="event-drawer"]');
+      const drawerTop = drawer?.getBoundingClientRect().top ?? 0;
+      const floor = drawerTop > 0 ? Math.min(drawerTop, window.innerHeight) : window.innerHeight;
+      setMaxH(Math.max(160, floor - el.getBoundingClientRect().top - 12));
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [open]);
+
   return (
     <div className="relative" ref={rootRef}>
       <button
@@ -80,8 +106,13 @@ export function ProjectMenu({
       {open && (
         <div
           data-testid="project-menu"
-          className="absolute left-0 top-full z-30 mt-1 w-56 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-overlay)] p-1 shadow-[var(--shadow-overlay)]"
+          ref={panelRef}
+          style={{ maxHeight: maxH }}
+          className="absolute left-0 top-full z-30 mt-1 flex w-56 flex-col rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-overlay)] p-1 shadow-[var(--shadow-overlay)]"
         >
+          {/* The list scrolls; "Add project" below stays pinned. overscroll-contain
+              keeps a wheel at the list's end from scrolling the board behind it. */}
+          <div data-testid="project-menu-list" className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {flat.map((p) => (
             <ProjectEntry key={p.name} p={p} running={!!runningByProject?.[p.name]} worktrees={worktreesByProject?.[p.name]} currentWorktree={currentWorktree} onSelect={(n) => { onSelect(n); setOpen(false); }} onRename={onRename} onDelete={onDelete} onSelectWorktree={(proj, branch) => { onSelectWorktree?.(proj, branch); setOpen(false); }} />
           ))}
@@ -93,11 +124,12 @@ export function ProjectMenu({
               ))}
             </div>
           ))}
+          </div>
           <button
             type="button"
             data-testid="project-menu-add"
             onClick={() => { onAdd(); setOpen(false); }}
-            className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-[12px] text-[var(--color-text-1)] hover:bg-white/5"
+            className="mt-1 w-full shrink-0 rounded-md border-t border-[var(--color-border-subtle)] px-2 pb-1.5 pt-2 text-left text-[12px] text-[var(--color-text-1)] hover:bg-white/5"
           >
             ＋ Add project
           </button>

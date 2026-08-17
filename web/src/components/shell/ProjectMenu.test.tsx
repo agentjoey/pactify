@@ -119,3 +119,35 @@ describe("ProjectMenu", () => {
     expect(screen.queryByTestId("worktree-alpha-main")).toBeNull();
   });
 });
+
+// 项目多到撑出视口时，面板必须自己可滚 —— 否则靠下的项目永远够不到
+// （实测 17 个项目时下拉一路长出视口底部，没有任何可滚区域）。
+describe("ProjectMenu — 长列表", () => {
+  const many: ProjectMeta[] = Array.from({ length: 20 }, (_, i) =>
+    ({ id: `p${i}`, name: `project-${i}`, path: `/p${i}` }) as ProjectMeta,
+  );
+
+  it("scrolls the project list instead of growing past the viewport", () => {
+    render(
+      <ProjectMenu projects={many} current="p0" running={false}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+    const list = screen.getByTestId("project-menu-list");
+    expect(list.className).toContain("overflow-y-auto");
+    // 面板整体必须有高度上界，否则 overflow 永远不会触发。
+    // 上界按实测的可用空间设定（固定 vh 在矮窗口下仍会跑出屏幕）。
+    expect(screen.getByTestId("project-menu").style.maxHeight).toMatch(/^\d+px$/);
+  });
+
+  it("keeps Add project reachable when the list scrolls", () => {
+    render(
+      <ProjectMenu projects={many} current="p0" running={false}
+        onSelect={() => {}} onRename={() => {}} onDelete={() => {}} onAdd={() => {}} />,
+    );
+    fireEvent.click(screen.getByTestId("project-menu-trigger"));
+    const add = screen.getByTestId("project-menu-add");
+    // Add 必须在滚动区之外，否则它会跟着项目一起滚出视野
+    expect(screen.getByTestId("project-menu-list").contains(add)).toBe(false);
+  });
+});

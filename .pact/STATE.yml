@@ -1097,7 +1097,7 @@ features:
     tasks:
       - id: tierui-backend
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/tierui-backend.md
         evidence: go test ./internal/orchestrate/ -run 'SpecTier|Tier' → ok internal/orchestrate 2.324s; go test ./internal/serve/ -run 'Plan|Tier|OrchestrateStatus' → ok internal/serve 1.397s; gate: go test ./internal/orchestrate/ ./internal/serve/ → ok internal/orchestrate 42.528s / ok internal/serve 16.479s. SpecTier 三态+路径加固; planTaskDTO Tier/TierMissing/Dimension/Role/TierConflict; OrchestrateStatusDTO Tier/Effort(serve 侧解析,不改 Status)

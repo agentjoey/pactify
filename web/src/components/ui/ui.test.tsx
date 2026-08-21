@@ -117,6 +117,37 @@ describe("Badge", () => {
     render(<Badge color="warn">stale</Badge>);
     expect(screen.getByText("stale")).toHaveStyle({ color: "var(--color-warn)" });
   });
+
+  it("maps the muted text-2 token to foreground + 15%-alpha background", () => {
+    render(<Badge color="text-2">free</Badge>);
+    const el = screen.getByText("free");
+    expect(el).toHaveStyle({ color: "var(--color-text-2)" });
+    expect(el).toHaveStyle({
+      background: "color-mix(in srgb, var(--color-text-2) 15%, transparent)",
+    });
+  });
+
+  it("passes title through to the root element, and omits it otherwise", () => {
+    render(<Badge title="Personal tier">personal</Badge>);
+    expect(screen.getByText("personal")).toHaveAttribute("title", "Personal tier");
+    render(<Badge>pro</Badge>);
+    expect(screen.getByText("pro")).not.toHaveAttribute("title");
+  });
+
+  it("gives the root role=img + aria-label only when ariaLabel is set", () => {
+    render(<Badge ariaLabel="Tier: personal">personal</Badge>);
+    const named = screen.getByRole("img", { name: "Tier: personal" });
+    expect(named).toHaveTextContent("personal");
+    render(<Badge>pro</Badge>);
+    const plain = screen.getByText("pro");
+    expect(plain).not.toHaveAttribute("role");
+    expect(plain).not.toHaveAttribute("aria-label");
+  });
+
+  it("passes data-testid through to the root element", () => {
+    render(<Badge data-testid="account-tier">personal</Badge>);
+    expect(screen.getByTestId("account-tier")).toHaveTextContent("personal");
+  });
 });
 
 describe("Kbd", () => {

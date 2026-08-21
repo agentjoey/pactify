@@ -31,4 +31,28 @@ describe("PlanDock", () => {
     render(<PlanDock project="p1" features={[]} />);
     expect(screen.getByTestId("plan-dock-empty")).toBeInTheDocument();
   });
+
+  // tierui-render: PlanDock is narrower than the 312px DispatchPanel — it shows
+  // the tier badge ONLY (same fixed-slot rule), never verify/dimension/role.
+  it("renders the tier badge in a fixed slot but no verify / dimension / role", async () => {
+    getPlanReview.mockResolvedValue({
+      present: true, feature: "add-2fa", branch: "feat-2fa", valid: true,
+      tasks: [{
+        id: "t1", owner: "w", reviewer: "r", spec: ".pact/tasks/t1.md", verify: "go test ./...",
+        tier: "L2", dimension: "correctness", role: "frontend",
+      }, {
+        id: "t2", owner: "w", reviewer: "r", spec: ".pact/tasks/t2.md", verify: "go test ./...",
+        tier: "L1", tier_missing: true,
+      }],
+    });
+    render(<PlanDock project="p1" features={["add-2fa"]} />);
+    await waitFor(() => expect(screen.getAllByTestId("plan-dock-task")).toHaveLength(2));
+    const badges = screen.getAllByTestId("tier-badge");
+    expect(badges.map((b) => b.textContent)).toEqual(["L2", "NO TIER"]);
+    expect(badges[0].parentElement).toHaveClass("w-[34px]", "shrink-0");
+    expect(badges[1].parentElement).toHaveClass("w-auto", "shrink-0");
+    expect(screen.queryByText(/verify/i)).toBeNull();
+    expect(screen.queryByText(/correctness/i)).toBeNull();
+    expect(screen.queryByText(/frontend/i)).toBeNull();
+  });
 });

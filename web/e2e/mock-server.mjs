@@ -236,6 +236,21 @@ const server = createServer(async (req, res) => {
           reviewer: "claude-opus",
           spec: ".pact/tasks/x.md",
           verify: "go test ./...",
+          // Exec tiering (tierui-render): the real backend always sends tier
+          // fields; include them so the e2e exercises the badge column.
+          tier: "L2",
+          tier_missing: false,
+          dimension: "correctness",
+          role: "backend",
+        },
+        {
+          id: "add-2fa-docs",
+          owner: "kimi",
+          reviewer: "claude-opus",
+          spec: ".pact/tasks/y.md",
+          verify: "",
+          tier: "L1",
+          tier_missing: true,
         },
       ],
     });

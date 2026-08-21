@@ -1078,3 +1078,10 @@ features:
         spec: .pact/tasks/exec-tiering-route.md
         evidence: null
         deps: [exec-tiering-parse]
+      - id: exec-tiering-budget
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-budget.md
+        evidence: null
+        deps: [exec-tiering-parse]

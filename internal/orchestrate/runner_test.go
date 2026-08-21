@@ -478,3 +478,54 @@ func TestCmdRunner_Codex_ResumeRetry(t *testing.T) {
 		t.Fatalf("after run 3 want fresh session th-new, got %q ok=%v", id, ok)
 	}
 }
+
+// The tier-derived effort budget (LaunchContext.Effort) reaches the argv of a
+// kind that declares effort control: claude-code gets --effort appended.
+func TestCmdRunner_EffortFlagAppended(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	lc := LaunchContext{Seat: "w1", Kind: "claude-code", Briefing: "do it", RepoDir: "/repo", Effort: "low"}
+	if err := r.Run(context.Background(), lc); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	want := []string{"-p", "--no-session-persistence", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "do it", "--effort", "low"}
+	if !reflect.DeepEqual(cap.args, want) {
+		t.Fatalf("args = %v, want %v", cap.args, want)
+	}
+}
+
+// Empty Effort must leave the argv byte-for-byte unchanged, and a kind with no
+// effort control (opencode) must ignore a set Effort — its launch stays
+// byte-for-byte identical either way.
+func TestCmdRunner_EffortZeroChange(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+
+	// Capable kind, empty effort → default argv, no effort flag.
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "claude-code", Briefing: "do it", RepoDir: "/repo"}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	want := []string{"-p", "--no-session-persistence", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "do it"}
+	if !reflect.DeepEqual(cap.args, want) {
+		t.Fatalf("empty-effort args = %v, want %v", cap.args, want)
+	}
+
+	// Incapable kind, effort set → argv identical to an effort-less launch.
+	var withEffort, withoutEffort runCapture
+	rw := CmdRunner{Exec: fakeRunExec(&withEffort, nil)}
+	ro := CmdRunner{Exec: fakeRunExec(&withoutEffort, nil)}
+	lc := LaunchContext{Seat: "w1", Kind: "opencode", Briefing: "do it", RepoDir: "/repo"}
+	lcEff := lc
+	lcEff.Effort = "high"
+	if err := rw.Run(context.Background(), lcEff); err != nil {
+		t.Fatalf("Run with effort: %v", err)
+	}
+	if err := ro.Run(context.Background(), lc); err != nil {
+		t.Fatalf("Run without effort: %v", err)
+	}
+	if !reflect.DeepEqual(withEffort.args, withoutEffort.args) {
+		t.Fatalf("opencode args changed by effort: with=%v without=%v", withEffort.args, withoutEffort.args)
+	}
+}

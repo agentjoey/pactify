@@ -57,6 +57,10 @@ type LaunchContext struct {
 	// "" falls back to RepoDir. A sandbox run sets it to the MAIN dir while RepoDir
 	// is the worktree, so serve tails a path that survives worktree teardown.
 	StreamDir string
+	// Effort is the reasoning-effort budget for this stint, derived from the
+	// task's tier by the driver (execution-tiering §4.5). "" = no effort
+	// injection (launch byte-identical to pre-tiering behavior).
+	Effort string
 }
 
 // streamDir is StreamDir when set, else RepoDir.
@@ -136,8 +140,10 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 		return fmt.Errorf("orchestrate: unknown agent kind %q — 改用 CLI 座席或人工那一棒", lc.Kind)
 	}
 	// Resolve the effective launch config: built-in profile overlaid with any
-	// per-agent override (model / scoped permissions) from the machine registry.
-	eff, ok := agentcfg.ResolveSeat(lc.Seat, lc.Kind)
+	// per-agent override (model / scoped permissions) from the machine registry,
+	// plus the tier-derived effort budget (a bound seat's explicit profile
+	// effort, when set, wins over lc.Effort inside ResolveSeat).
+	eff, ok := agentcfg.ResolveSeat(lc.Seat, lc.Kind, lc.Effort)
 	if !ok {
 		return fmt.Errorf("orchestrate: kind %q 无 headless runner，改用 CLI 座席或人工那一棒", lc.Kind)
 	}

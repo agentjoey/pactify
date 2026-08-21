@@ -18,6 +18,11 @@ type Profile struct {
 	Kind     string   `json:"kind"`
 	Model    string   `json:"model,omitempty"`
 	Fallback []string `json:"fallback,omitempty"`
+	// Effort is an OPTIONAL explicit reasoning-effort pin ("low"/"medium"/"high")
+	// for seats bound to this role. When set it overrides the task-tier-derived
+	// budget outright (execution-tiering §4.5: an operator's explicit per-seat
+	// setting must remain absolute). Empty = follow the task's tier.
+	Effort string `json:"effort,omitempty"`
 }
 
 // Config is the whole machine-level role configuration.

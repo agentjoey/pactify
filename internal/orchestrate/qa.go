@@ -66,7 +66,7 @@ func (opts Options) runQA(ctx context.Context, st, view projection.State, act Ac
 
 	for {
 		// The QA stint reuses the owner's runner/kind (spec §4: keep it simple).
-		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), qaBrief(opts.Dir, task, hint, report), act.Task); runErr != nil {
+		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), qaBrief(opts.Dir, task, hint, report), act.Task, opts.launchEffort(task)); runErr != nil {
 			if ctx.Err() != nil {
 				return "", false, runErr // cancellation: propagate, don't swallow
 			}
@@ -107,7 +107,7 @@ func (opts Options) runQA(ctx context.Context, st, view projection.State, act Ac
 			// ledger event) so a persistently-failing fixer still terminates.
 			fixRounds[act.Task]++
 			opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task])
-			if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), qaFixBrief(task, sentence, report), act.Task); runErr != nil {
+			if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), qaFixBrief(task, sentence, report), act.Task, opts.launchEffort(task)); runErr != nil {
 				if ctx.Err() != nil {
 					return "", false, runErr
 				}

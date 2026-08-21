@@ -26,6 +26,11 @@ type RunnerProfile struct {
 	// when non-empty, is expected to appear in the list.
 	Models    []string
 	BuildArgs func(model string, perm PermPosture, briefing string) []string
+	// EffortArgs renders this CLI's reasoning-effort flag(s). nil means the kind
+	// has no effort control — its launch stays byte-for-byte unchanged. It is a
+	// pure side channel: agentcfg appends EffortArgs(effort) AFTER BuildArgs, so
+	// BuildArgs' default output (locked by launch_test/agent_test) is untouched.
+	EffortArgs func(effort string) []string
 }
 
 // runnerProfiles holds the per-kind launch builders for the three verified
@@ -67,6 +72,11 @@ var runnerProfiles = map[string]RunnerProfile{
 			}
 			return append(args, "--model", model, briefing)
 		},
+		// claude exposes --effort <level> (verified `claude --help` 2026-08:
+		// "Effort level for the current session"; levels low/medium/high).
+		EffortArgs: func(effort string) []string {
+			return []string{"--effort", effort}
+		},
 	},
 	// gemini-cli: the briefing MUST immediately follow -p (else -p swallows the
 	// next flag). Blanket → --approval-mode yolo; scoped → --approval-mode default
@@ -93,6 +103,10 @@ var runnerProfiles = map[string]RunnerProfile{
 	// per-tool allowlist, so a scoped posture can't be expressed (always blanket,
 	// like opencode). NB: the rich/streaming path for kimi 0.18 is ACP (`kimi acp`)
 	// — see docs/backlog; this headless -p form is the minimal worker.
+	// EffortArgs stays nil: this kimi-code build exposes NO reasoning-effort /
+	// thinking flag (verified `kimi --help` 2026-08 — no --effort/--thinking/
+	// --no-thinking), so the safe default is a byte-unchanged launch rather than
+	// a guessed flag name.
 	"kimi-cli": {
 		Command:      "kimi",
 		DefaultModel: "kimi-code/kimi-for-coding",
@@ -126,6 +140,11 @@ var runnerProfiles = map[string]RunnerProfile{
 				args = append(args, "-m", model)
 			}
 			return append(args, briefing)
+		},
+		// codex takes reasoning effort as a -c config override:
+		// `-c model_reasoning_effort=<low|medium|high>` (codex exec config key).
+		EffortArgs: func(effort string) []string {
+			return []string{"-c", "model_reasoning_effort=" + effort}
 		},
 	},
 }

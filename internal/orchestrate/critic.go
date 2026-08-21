@@ -54,7 +54,7 @@ func (opts Options) runCritic(ctx context.Context, st projection.State, act Acti
 		return ""
 	}
 
-	if runErr := opts.launchAgent(ctx, seat, opts.kind(seat), criticBrief(task), act.Task); runErr != nil {
+	if runErr := opts.launchAgent(ctx, seat, opts.kind(seat), criticBrief(task), act.Task, opts.launchEffort(task)); runErr != nil {
 		// Critic stint failure/timeout is soft: skip silently. NEVER block the flow —
 		// the reviewer runs regardless (do not even record a note; the critic did not
 		// produce one).

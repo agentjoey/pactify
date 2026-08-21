@@ -83,6 +83,21 @@ func extractTier(specMarkdown string) Tier {
 	return ParseTier(raw)
 }
 
+// EffortForTier maps a task's tier to its starting reasoning-effort budget
+// (execution-tiering §4.5). L2 deliberately stays at medium: the tier sets the
+// STARTING budget — only evidence of real failure buys more reasoning
+// (failure-driven escalation), so L2 must NOT be "helpfully" raised to high.
+func EffortForTier(t Tier) string {
+	switch t {
+	case TierL0:
+		return "low"
+	case TierL3:
+		return "high"
+	default: // TierL1, TierL2 (and any ParseTier-normalized value)
+		return "medium"
+	}
+}
+
 // extractField is the shared frontmatter-line parser behind extractVerify and
 // extractQA: the first line whose trimmed text starts with prefix wins, its value
 // is trimmed and unquoted, and a bare prefix with no value is treated as absent.

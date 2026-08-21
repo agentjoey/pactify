@@ -231,7 +231,7 @@ func (opts Options) seedSeatIfIsolated(seatID string) {
 	_ = os.WriteFile(paths.SeatFileIn(opts.Dir), []byte(seatID+"\n"), 0o644)
 }
 
-func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task string) error {
+func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task, effort string) error {
 	// Centralized orchestrator-as-actor check: the primary loop guard catches
 	// act.Seat before dispatch, but the owner is also launched from fix/QA
 	// rounds inside the ActRunReviewer branch, and quorum sweeps launch each
@@ -253,7 +253,16 @@ func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task s
 	return opts.Run.Run(runCtx, LaunchContext{
 		Seat: seatID, Kind: kind, Task: task, Project: projectID(opts.Dir),
 		Briefing: brief, RepoDir: opts.Dir, StreamDir: opts.runtimeDir(),
+		Effort: effort,
 	})
+}
+
+// launchEffort derives a stint's reasoning-effort budget from the task spec's
+// tier (execution-tiering §4.5). An unreadable spec defaults to TierL1 →
+// "medium", exactly like the gate's tier handling. This changes only HOW the
+// seat is launched, never WHICH seat runs.
+func (opts Options) launchEffort(task projection.Task) string {
+	return EffortForTier(extractTier(readSpec(opts.Dir, task.Spec)))
 }
 
 // projectID derives a stable project name from the repo dir (its base name) — the
@@ -639,7 +648,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	preLaunch := gitx.TreeFingerprint(opts.Dir)
 	delivered := func() bool { return gitx.TreeFingerprint(opts.Dir) != preLaunch }
 
-	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
+	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task, opts.launchEffort(task)); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
@@ -768,7 +777,7 @@ func (opts Options) launchReviewers(ctx context.Context, act Action, task projec
 	if len(task.Reviewers) == 0 {
 		// Legacy single-reviewer: unchanged. act.Seat == task.Reviewer (nextAction).
 		brief := reviewerBrief(opts.Dir, projection.Seat{ID: act.Seat}, task, criticNote)
-		return opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task)
+		return opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task, opts.launchEffort(task))
 	}
 	for _, reviewer := range task.Reviewers {
 		// Re-read live state: an earlier reviewer's accept/changes in THIS sweep may
@@ -788,7 +797,7 @@ func (opts Options) launchReviewers(ctx context.Context, act Action, task projec
 			continue // already voted this round → skip
 		}
 		brief := reviewerBrief(opts.Dir, projection.Seat{ID: reviewer}, t, criticNote)
-		if err := opts.launchAgent(ctx, reviewer, opts.kind(reviewer), brief, act.Task); err != nil {
+		if err := opts.launchAgent(ctx, reviewer, opts.kind(reviewer), brief, act.Task, opts.launchEffort(t)); err != nil {
 			return err
 		}
 		// Mirror the fresh verdict into the runtime dir so a sandboxed board reflects
@@ -851,7 +860,7 @@ func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State
 		fixRounds[act.Task]++
 		opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task])
 		brief := fixBrief(task, detail)
-		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
+		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task, opts.launchEffort(task)); runErr != nil {
 			if ctx.Err() != nil {
 				return false, runErr // cancellation: propagate, don't swallow
 			}

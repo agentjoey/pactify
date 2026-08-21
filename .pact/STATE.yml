@@ -1109,7 +1109,7 @@ features:
         evidence: vitest: Test Files 5 passed (5), Tests 71 passed (71) — src/components/ui/ + AccountPanel.test.tsx (badge contract: text-2 token, title passthrough, ariaLabel=>role=img+aria-label only when set, data-testid passthrough, account-tier regression). tsc: npx tsc -b --noEmit exit 0, no output.
       - id: tierui-render
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/tierui-render.md
         evidence: 实现：PlanTaskReview 加 tier/tier_missing/tier_conflict/dimension/role；OrchestrateStatusResponse 加 tier/effort。新增 ui/TierBadge.tsx（TierBadge + TierSlot + TIER_LEGEND，Badge.tsx 未动）。DispatchPanel review 行：TierSlot 行首（四档 w-[34px] shrink-0 固定槽，NO TIER 行 w-auto 防重叠）+ id min-w-0 truncate + verify truncate/title + dimension·role 静音文本行（缺则整行不出）+ 列表上方可见图例。PlanDock 只加 TierSlot（无 verify/dimension/role）。RunRail：徽标仅当 chip.id===status.task 且 task!=="" 渲染（并发防贴错）；effort==="" 显示中性说明「未应用 tier 路由」；旧 status 无徽标不报错。四档一律 text-2，warn 只给 NO TIER（role=img + aria-label）。  三层验证（真实输出）： 1 npx vitest run src/components/shell/ src/components/board/ → Test Files 11 passed (11), Tests 90 passed (90) 2) npx vitest run → Test Files 66 passed (66), Tests 643 passed (643)；npx tsc -b --noEmit → 无输出（干净） 3) npm run build 后 npx playwright test → 5 passed (23.3s)（dispatch.spec 现断言 tier-legend / L2 / NO TIER / correctness·backend 可见，mock-server 补齐 tier 字段）；node web/scripts/shots.mjs → board/settings 截图（SHOT_BASE=mock-server 伺服最终 build internal/serve/dist）  截图（全部来自最终 build）：/tmp/pactify-shots/board.png、/tmp/pactify-shots/settings.png、/tmp/pactify-shots/dispatch-review-tier.png（DispatchPanel review 实拍：图例行 + L2 静音徽标固定槽 + NO TIER warn 单行不重叠 + verify + correctness · backend） EOF )

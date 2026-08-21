@@ -206,16 +206,9 @@ type orchestrateRunReq struct {
 	SeatKinds      map[string]string `json:"seat_kinds"`
 }
 
-func seatKindsFromInit(dir string) map[string]string {
-	evs, err := event.ReadAll(logPath(dir))
-	if err != nil {
-		return nil
-	}
-	return seatKindsFromInitEvents(evs)
-}
-
-// seatKindsFromInitEvents is seatKindsFromInit over already-read events, so a
-// caller that folded the ledger once (projectStateFull) doesn't read it again.
+// seatKindsFromInitEvents extracts seat kinds from the most recent init event
+// in an already-read event slice, so a caller that folded the ledger once
+// (projectStateFull) doesn't read it again.
 func seatKindsFromInitEvents(evs []event.Event) map[string]string {
 	for i := len(evs) - 1; i >= 0; i-- {
 		if evs[i].EventType != "init" {
@@ -243,9 +236,10 @@ func seatKindsFromInitEvents(evs []event.Event) map[string]string {
 }
 
 // seatKindsFromFold builds the seat→kind map from an already-folded full
-// ledger — init-event kinds, then roster kinds, then the name heuristic; the
-// same precedence as resolveSeatKinds but with no second read+fold (the polled
-// status handler derives kinds from the events projectStateFull returned).
+// ledger — init-event kinds, then roster kinds, then the name heuristic. It is
+// the single implementation of that precedence; resolveSeatKinds delegates to
+// it after doing its own reads, and the polled status handler passes the events
+// projectStateFull returned (no second read+fold).
 func seatKindsFromFold(evs []event.Event, agents []SeatDTO) map[string]string {
 	km := seatKindsFromInitEvents(evs)
 	if km == nil {
@@ -354,36 +348,21 @@ func inferKindFromName(seat string, known []string) string {
 	return match
 }
 
-// resolveSeatKinds builds the seat→kind map for an orchestrate run: start from
-// init-event kinds, then fill any gaps from the current projection roster's Kind
-// (add-seat kinds), then from a name heuristic against known agent kinds
-// (seat "opencode-worker" → "opencode", "gemini-worker" → "gemini-cli").
+// resolveSeatKinds builds the seat→kind map for an orchestrate run. It does
+// the reads and delegates the precedence (init-event kinds → projection roster
+// kinds → name heuristic against known agent kinds) to seatKindsFromFold, so
+// the priority logic lives in exactly one place. A failed ledger read leaves
+// evs nil, which seatKindsFromFold treats as "no init kinds" — same as the old
+// inline behavior.
 func (s *Server) resolveSeatKinds(dir string) map[string]string {
-	km := seatKindsFromInit(dir)
-	if km == nil {
-		km = map[string]string{}
-	}
-
-	// Fill gaps from projection roster (picks up add-seat events with a kind).
+	evs, _ := event.ReadAll(logPath(dir))
+	var agents []SeatDTO
 	if st, err := pact.At(dir).StateProjection(); err == nil {
 		for _, a := range st.Agents {
-			if _, already := km[a.ID]; !already && a.Kind != "" {
-				km[a.ID] = a.Kind
-			}
-		}
-		// Name heuristic for seats still without a kind.
-		known := agent.Kinds()
-		for _, a := range st.Agents {
-			if _, already := km[a.ID]; already {
-				continue
-			}
-			if inferred := inferKindFromName(a.ID, known); inferred != "" {
-				km[a.ID] = inferred
-			}
+			agents = append(agents, SeatDTO{ID: a.ID, Kind: a.Kind})
 		}
 	}
-
-	return km
+	return seatKindsFromFold(evs, agents)
 }
 
 func (s *Server) defaultExecOrchestrate(dir string, args, env []string) error {

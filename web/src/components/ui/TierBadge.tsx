@@ -40,8 +40,9 @@ export function TierBadge({
   // the badge title AND accessible name (badges are tabIndex=-1, so without
   // ariaLabel this — the feature's most important diagnostic — is mouse-only).
   conflict?: string;
-  // Unrecognized spec tier value (e.g. `tier: L9`); named in the title so the
-  // badge isn't byte-identical to an explicit `tier: L1`.
+  // Unrecognized spec tier value (e.g. `tier: L9`); named in the title AND the
+  // accessible name so the badge isn't byte-identical to an explicit `tier: L1`
+  // and the hint isn't mouse-only (same reasoning as conflict above).
   tierRaw?: string;
 }) {
   if (missing) {
@@ -54,11 +55,13 @@ export function TierBadge({
     );
   }
   if (!tier) return null;
-  const title = conflict
-    || (tierRaw ? `spec 写的是 "${tierRaw}"，无法识别 —— 引擎将按 L1 运行` : undefined)
-    || TIER_TITLE[tier] || `${tier} 执行档位`;
+  // Same title/ariaLabel sharing as `conflict`: a bare badge is tabIndex=-1 and
+  // name-prohibited, so a title-only diagnostic is mouse-only. The tier_raw
+  // hint names a typo a human made in the spec — the one most worth fixing.
+  const tierRawNote = tierRaw ? `spec 写的是 "${tierRaw}"，无法识别 —— 引擎将按 L1 运行` : undefined;
+  const title = conflict || tierRawNote || TIER_TITLE[tier] || `${tier} 执行档位`;
   return (
-    <Badge color="text-2" className="whitespace-nowrap" title={title} ariaLabel={conflict || undefined} data-testid="tier-badge">
+    <Badge color="text-2" className="whitespace-nowrap" title={title} ariaLabel={conflict || tierRawNote || undefined} data-testid="tier-badge">
       {tier}
     </Badge>
   );

@@ -1061,10 +1061,10 @@ features:
     tasks:
       - id: exec-tiering-evidence
         owner: kimi-worker
-        status: assigned
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/exec-tiering-evidence.md
-        evidence: null
+        evidence: 实现：loop.go 迭代帽调用点 "(global cap)" → capEvidence(view, h)；新增纯函数 capEvidence（loop.go，tailBytes 前）：枚举未完结 task（跳过 accepted、跳过 shipped feature），每条带 id/status/last=失败原文/class=/rework=；上限 20 条超出追加 "… (+N more)"，LastFail 截断 200 runes；无未完结 task 返回 "(global cap)"。 新增 exec_tiering_evidence_test.go 4 个测试（含 tradelinks 回归：Fails=0 但 LastFail 有值仍可诊断；>20 条有界性；超长 LastFail 截断）。  $ go test ./internal/orchestrate/ -run 'CapEvidence' ok   github.com/agentjoey/pactify/internal/orchestrate 0.507s  $ go test ./internal/orchestrate/（任务门） --- FAIL: TestCmdRunner_Codex_ResumeRetry (0.00s) FAIL github.com/agentjoey/pactify/internal/orchestrate 41.279s  唯一红测 TestCmdRunner_Codex_ResumeRetry 与本次改动无关且为分支既有失败： git stash 去掉我的全部改动后在分支基线（HEAD 5776fa2）重跑仍 FAIL （runner_test.go:458 "run 1 args = [run --title [pact:w1] -m deepseek/...]，want cold exec"）。 该测试涉及 runner.go/runner_test.go，不在本任务允许改的两个文件内，未触碰。 除该既有红测外全包绿，本任务 4 个新测试全绿。
       - id: exec-tiering-parse
         owner: kimi-worker
         status: assigned

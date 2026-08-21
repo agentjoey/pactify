@@ -1065,3 +1065,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/exec-tiering-evidence.md
         evidence: null
+      - id: exec-tiering-parse
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-parse.md
+        evidence: null

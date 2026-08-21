@@ -1103,7 +1103,7 @@ features:
         evidence: go test ./internal/orchestrate/ -run 'SpecTier|Tier' → ok internal/orchestrate 2.324s; go test ./internal/serve/ -run 'Plan|Tier|OrchestrateStatus' → ok internal/serve 1.397s; gate: go test ./internal/orchestrate/ ./internal/serve/ → ok internal/orchestrate 42.528s / ok internal/serve 16.479s. SpecTier 三态+路径加固; planTaskDTO Tier/TierMissing/Dimension/Role/TierConflict; OrchestrateStatusDTO Tier/Effort(serve 侧解析,不改 Status)
       - id: tierui-badge
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/tierui-badge.md
         evidence: vitest: Test Files 5 passed (5), Tests 71 passed (71) — src/components/ui/ + AccountPanel.test.tsx (badge contract: text-2 token, title passthrough, ariaLabel=>role=img+aria-label only when set, data-testid passthrough, account-tier regression). tsc: npx tsc -b --noEmit exit 0, no output.

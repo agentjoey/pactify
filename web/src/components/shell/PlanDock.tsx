@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getPlanReview } from "../../lib/api";
 import type { PlanReviewResponse } from "../../lib/types";
+import { TierSlot } from "../ui/TierBadge";
 
 // PlanDock — floating read-only plan widget showing the current feature's task
 // breakdown + status. Mounted alongside RosterDock so it's visible across all 3
@@ -64,8 +65,12 @@ export function PlanDock({ project, features }: { project: string; features: str
           )}
           <ul className="flex flex-col gap-1 text-[10px] text-[var(--color-text-2)]">
             {(data?.tasks ?? []).map((t) => (
-              <li key={t.id} data-testid="plan-dock-task" className="truncate">
-                {t.id}{t.deps?.length ? ` · deps: ${t.deps.join(",")}` : ""}
+              // Narrower than the 312px DispatchPanel: tier badge ONLY (same
+              // fixed-slot rule — scannable column, never floating with id
+              // length); no verify / dimension / role here.
+              <li key={t.id} data-testid="plan-dock-task" className="flex items-center gap-1.5">
+                <TierSlot tier={t.tier} missing={t.tier_missing} conflict={t.tier_conflict} />
+                <span className="min-w-0 truncate">{t.id}{t.deps?.length ? ` · deps: ${t.deps.join(",")}` : ""}</span>
               </li>
             ))}
           </ul>

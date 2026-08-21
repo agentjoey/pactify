@@ -1091,3 +1091,38 @@ features:
         reviewer: claude
         spec: .pact/tasks/exec-tiering-hermetic.md
         evidence: 修复：internal/orchestrate/runner_test.go 中 13 个走 CmdRunner.Run→agentcfg.ResolveSeat 的测试各加一行 t.Setenv("PACTIFY_HOME", t.TempDir())（照 approve_test.go:12 先例），只加不改，断言语义未动；git diff --stat: runner_test.go | 13 +++++++++++++ (1 file changed, 13 insertions(+))，零生产代码。验证1（本机真实配置，含 opencode→deepseek 等污染）: go test ./internal/orchestrate/ → ok github.com/agentjoey/pactify/internal/orchestrate 41.899s。验证2（隔离环境）: PACTIFY_HOME=$(mktemp -d) go test ./internal/orchestrate/ → ok github.com/agentjoey/pactify/internal/orchestrate 42.067s。两环境一致全绿。
+  - id: exec-tiering-ui
+    branch: feat/exec-tiering-ui
+    status: in_progress
+    tasks:
+      - id: tierui-backend
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-backend.md
+        evidence: go test ./internal/orchestrate/ -run 'SpecTier|Tier' → ok internal/orchestrate 2.324s; go test ./internal/serve/ -run 'Plan|Tier|OrchestrateStatus' → ok internal/serve 1.397s; gate: go test ./internal/orchestrate/ ./internal/serve/ → ok internal/orchestrate 42.528s / ok internal/serve 16.479s. SpecTier 三态+路径加固; planTaskDTO Tier/TierMissing/Dimension/Role/TierConflict; OrchestrateStatusDTO Tier/Effort(serve 侧解析,不改 Status)
+      - id: tierui-badge
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-badge.md
+        evidence: vitest: Test Files 5 passed (5), Tests 71 passed (71) — src/components/ui/ + AccountPanel.test.tsx (badge contract: text-2 token, title passthrough, ariaLabel=>role=img+aria-label only when set, data-testid passthrough, account-tier regression). tsc: npx tsc -b --noEmit exit 0, no output.
+      - id: tierui-render
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-render.md
+        evidence: 实现：PlanTaskReview 加 tier/tier_missing/tier_conflict/dimension/role；OrchestrateStatusResponse 加 tier/effort。新增 ui/TierBadge.tsx（TierBadge + TierSlot + TIER_LEGEND，Badge.tsx 未动）。DispatchPanel review 行：TierSlot 行首（四档 w-[34px] shrink-0 固定槽，NO TIER 行 w-auto 防重叠）+ id min-w-0 truncate + verify truncate/title + dimension·role 静音文本行（缺则整行不出）+ 列表上方可见图例。PlanDock 只加 TierSlot（无 verify/dimension/role）。RunRail：徽标仅当 chip.id===status.task 且 task!=="" 渲染（并发防贴错）；effort==="" 显示中性说明「未应用 tier 路由」；旧 status 无徽标不报错。四档一律 text-2，warn 只给 NO TIER（role=img + aria-label）。  三层验证（真实输出）： 1 npx vitest run src/components/shell/ src/components/board/ → Test Files 11 passed (11), Tests 90 passed (90) 2) npx vitest run → Test Files 66 passed (66), Tests 643 passed (643)；npx tsc -b --noEmit → 无输出（干净） 3) npm run build 后 npx playwright test → 5 passed (23.3s)（dispatch.spec 现断言 tier-legend / L2 / NO TIER / correctness·backend 可见，mock-server 补齐 tier 字段）；node web/scripts/shots.mjs → board/settings 截图（SHOT_BASE=mock-server 伺服最终 build internal/serve/dist）  截图（全部来自最终 build）：/tmp/pactify-shots/board.png、/tmp/pactify-shots/settings.png、/tmp/pactify-shots/dispatch-review-tier.png（DispatchPanel review 实拍：图例行 + L2 静音徽标固定槽 + NO TIER warn 单行不重叠 + verify + correctness · backend） EOF )
+        deps: [tierui-backend, tierui-badge]
+      - id: tierui-fixes
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-fixes.md
+        evidence: 五项修复全部落地，三层门全绿（顺序：门 → 最终 build → 截图）。  1) 性能回归：orchestrate.go runtimeTierEffort 改用 s.projectStateFull(id, p.Path)（v0.9.0 既有 memo，path+size+mtime 记忆化），seat kinds 由新 seatKindsFromFold(evs, proj.Agents) 从同一次 fold 已返回的事件+DTO 推导 —— 同一 handler 不再出现第二次全量 read+fold；未新造缓存机制。handleOrchestrateStatus 传入 project id。 2) TierRaw：plan.go planTaskDTO 加 TierRaw (json tier_raw,omitempty)，仅当 present && ParseTier(raw)==L1 && !EqualFold(TrimSpace(raw),"L1") 时填；types.ts 加 tier_raw；TierBadge 有 tierRaw 时 title=「spec 写的是 "L9"，无法识别 —— 引擎将按 L1 运行」；DispatchPanel/TierSlot 透传。 3) a11y：DispatchPanel 图例与 verify 行 text-3→text-2；RunRail chip-effort text-3→text-2 且 9px→10px；owner→reviewer 与 dimension·role 保持 text-3 未动。 4) 冲突可达性：TierBadge conflict 非空时同传 ariaLabel={conflict}（Badge 既有管道加 role="img"）；无冲突不加 role。 5) 截图：门全绿后 npm run build（dist 02:10）→ scripts/shots.mjs + plan-review tier 专项图（02:12，来自最终 build）。 backlog：docs/backlog.md 追加 [TIERUI] 段 4 行登记 findings 6–9（只追加未重写）；6–9 代码未动，Badge.tsx 未动。  新增测试：plan_tier_test.go 加 t6 (tier: L9) → TierRaw="L9"，且 t1 显式 L1 断言 TierRaw 为空；DispatchPanel.test.tsx 加 2 例（conflict → role=img+aria-label，无冲突无 role；tier_raw L9 → title 含原始值，显式 L1 的 title 不含「无法识别」）。  三层验证真实输出： - go test ./internal/serve/ -count=1 → ok github.com/agentjoey/pactify/internal/serve 16.186s - cd web && npx vitest run → Test Files 66 passed (66), Tests 645 passed (645) - cd web && npx tsc -b --noEmit → 无输出（TSC_OK） - cd web && npx playwright test → 5 passed (23.5s)（dispatch/fallback×2/project-wizard×2 全绿）  截图路径：/tmp/pactify-shots/board.png、/tmp/pactify-shots/settings.png、/tmp/pactify-shots/dispatch-review-tier.png（plan review tier 专项，02:12 > dist 02:10）
+      - id: tierui-polish
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-polish.md
+        evidence: 三项修复完成。 1) TierBadge.tsx: tierRaw 提示提取为 tierRawNote const,title 与 ariaLabel 共用 (ariaLabel={conflict || tierRawNote || undefined});ui.test.tsx 新增 TierBadge describe——tier_raw 行断言 role=img + aria-label(含原始值提示),普通行钉死无 role/aria-label,conflict 优先于 tier_raw。 2) orchestrate.go: resolveSeatKinds 改为只做读取(event.ReadAll + StateProjection→[]SeatDTO)后 return seatKindsFromFold(evs, agents),优先级逻辑只此一份;删除因此死掉的 seatKindsFromInit;读取失败路径行为不变(nil evs 视为无 init kinds)。 3) git mv .shot-tier.tmp.mjs → scripts/shot-dispatch-review.mjs,修四处:WEB 从 import.meta.url 推导;SHOT_OUT 环境变量(与 shots.mjs 对齐);SHOT_PORT 环境变量,默认 4174(避开 playwright webServer 的 4173,经 PORT env 传给 mock-server);/__test/reset 移到 goto 之前(照 e2e/helpers.ts)。CLAUDE.md 视觉门处只追加一句该脚本用途说明。 门全绿: go test ./internal/serve/ = ok (16.3s);npx vitest run = 66 files / 647 tests passed;npx tsc -b --noEmit = OK;npx playwright test = 5 passed (23.3s)。 截图(用改名后脚本,验证可跑): /tmp/pactify-shots/dispatch-review-tier.png,已目检:dispatch-review 面板、L2/NO TIER 徽标、legend 正常。 最终 build 证明(内容哈希,非 mtime): npm run build 后记录 dist shasum → 出图 → npx vite build --outDir /tmp/pactify-dist-check 重建到 scratch → diff 两份 shasum 列表(7 文件: index.html + 6 个 hash-named assets)完全一致,HASH MATCH——dist 文件名即内容哈希,截图服务的字节与最终 build 字节相同。

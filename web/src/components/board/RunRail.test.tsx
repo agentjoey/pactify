@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { State, Feature, OrchestrateStatus } from "../../lib/types";
 import { DataSourceProvider, type DataSource } from "../../lib/datasource";
@@ -257,6 +257,57 @@ describe("RunRail (Board run banner — the former Live lanes)", () => {
     await waitFor(() => expect(screen.getByText("All shipped")).toBeTruthy());
     expect(screen.queryByText(/accepted/i)).toBeNull();
     expect(screen.queryByRole("button", { name: "Ship" })).toBeNull();
+  });
+});
+
+// tierui-render: runtime tier/effort on the pipe chip. Concurrency safety:
+// the status is a SINGLE snapshot that jumps between concurrent tasks, so the
+// badge may only appear on the chip whose id === status.task.
+describe("RunRail — runtime tier/effort (exec-tiering-ui)", () => {
+  beforeEach(() => {
+    getOrchestrateStatus.mockReset();
+    getParallelOrchestrate.mockReset();
+    getParallelOrchestrate.mockResolvedValue({ present: false });
+  });
+
+  const laneState = () =>
+    st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [
+      task("t1", "accepted"), task("t2", "in_progress"), task("t3", "assigned"),
+    ] }]);
+
+  it("attaches the tier badge + effort to the chip named by status.task, and only that chip", async () => {
+    getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}), tier: "L2", effort: "high" });
+    renderRail({ state: laneState() });
+    await waitFor(() => expect(screen.getByTestId("tier-badge")).toHaveTextContent("L2"));
+    // Exactly one badge in the whole rail — t1/t3 chips carry none.
+    expect(screen.getAllByTestId("tier-badge")).toHaveLength(1);
+    const chip = screen.getByTestId("tier-badge").parentElement!;
+    expect(within(chip).getByText("t2")).toBeTruthy();
+    expect(within(chip).getByTestId("chip-effort")).toHaveTextContent("high");
+    expect(within(chip).queryByText("t1")).toBeNull();
+    expect(within(chip).queryByText("t3")).toBeNull();
+  });
+
+  it("renders no badge for a feature-level escalation (status.task === \"\")", async () => {
+    getOrchestrateStatus.mockResolvedValue({ present: true, status: status({ task: "", escalated: true, action: "stuck", reason: "x" }) });
+    renderRail({ state: laneState() });
+    await waitFor(() => expect(screen.getByTestId("feature-lane")).toBeTruthy());
+    expect(screen.queryByTestId("tier-badge")).toBeNull();
+  });
+
+  it("effort === \"\" (the common case) renders a neutral note, not an empty value", async () => {
+    getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}), tier: "L1", effort: "" });
+    renderRail({ state: laneState() });
+    await waitFor(() => expect(screen.getByTestId("tier-badge")).toHaveTextContent("L1"));
+    expect(screen.getByTestId("chip-effort")).toHaveTextContent("未应用 tier 路由");
+  });
+
+  it("old status responses (no tier fields) render no badge and do not throw", async () => {
+    getOrchestrateStatus.mockResolvedValue({ present: true, status: status({}) });
+    renderRail({ state: laneState() });
+    await waitFor(() => expect(screen.getByTestId("feature-lane")).toBeTruthy());
+    expect(screen.queryByTestId("tier-badge")).toBeNull();
+    expect(screen.queryByTestId("chip-effort")).toBeNull();
   });
 });
 

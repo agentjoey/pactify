@@ -7,6 +7,7 @@ import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { Input } from "../ui/Input";
 import { Textarea } from "../ui/Textarea";
+import { TierBadge } from "../ui/TierBadge";
 
 // RunRail — the Board's run banner (formerly the Live view's lane column,
 // PR2 of the views consolidation): an aggregate run-control strip + one lane
@@ -35,6 +36,11 @@ export function RunRail({
   const [status, setStatus] = useState<OrchestrateStatus | null>(null);
   const [present, setPresent] = useState<boolean | null>(null);
   const [parallel, setParallel] = useState<OrchestrateStatus[] | null>(null);
+  // Server-resolved tier/effort for the CURRENT single status snapshot. It is
+  // only meaningful together with status.task (the snapshot jumps between
+  // concurrent tasks under --concurrency>1), so it must only be attached to
+  // the chip whose id === status.task — never to a whole lane.
+  const [runTier, setRunTier] = useState<{ tier: string; effort: string } | null>(null);
   const [error, setError] = useState("");
   const [resuming, setResuming] = useState(false);
   const [shipping, setShipping] = useState(false);
@@ -73,6 +79,8 @@ export function RunRail({
       .then(([single, par]) => {
         setPresent(single.present);
         setStatus(single.status ?? null);
+        // Old status responses carry no tier fields → no badge, no error.
+        setRunTier(single.tier && single.status?.task ? { tier: single.tier, effort: single.effort ?? "" } : null);
         setParallel(par.present && par.features && par.features.length > 0 ? par.features : null);
         setError("");
       })
@@ -231,6 +239,13 @@ export function RunRail({
   const allDone = present === true && status?.done === true;
   const hasActivity = lanes.length > 0 || present === true;
 
+  // Tier badge for the task the SINGLE status snapshot currently names. Must
+  // match chip.id === status.task (and status.task !== "" — a feature-level
+  // escalation names no task) or it would stick to the wrong chip.
+  const chipTier = status && status.task !== "" && runTier
+    ? { task: status.task, tier: runTier.tier, effort: runTier.effort }
+    : null;
+
   // Nothing to show: hosted sources can't query run status, and an idle local
   // driver means the Board columns already tell the whole story.
   if (!canQueryStatus) return null;
@@ -278,6 +293,7 @@ export function RunRail({
             key={f.id}
             feature={f}
             os={osFor(f.id)}
+            chipTier={chipTier}
             events={events}
             state={state}
             author={author}
@@ -414,9 +430,9 @@ function chipKindFor(t: Task, os: OrchestrateStatus | null): ChipKind {
 // horizontal task pipeline + (when its hard gate failed) the review gate +
 // (when working and expanded) live agent terminal.
 function FeatureLane({
-  feature, os, events, state, author, resuming, loadingDiff, onResume, onDiff, onReject, onApproveMerge, gateBusy, canAct, expanded, onToggle, project, canWrite, canDiff, onOpenCockpit,
+  feature, os, chipTier, events, state, author, resuming, loadingDiff, onResume, onDiff, onReject, onApproveMerge, gateBusy, canAct, expanded, onToggle, project, canWrite, canDiff, onOpenCockpit,
 }: {
-  feature: Feature; os: OrchestrateStatus | null; events: PactEvent[]; state: State;
+  feature: Feature; os: OrchestrateStatus | null; chipTier: { task: string; tier: string; effort: string } | null; events: PactEvent[]; state: State;
   author: boolean; resuming: boolean; loadingDiff: boolean; onResume: () => void; onDiff: () => void;
   onReject: (f: Feature, feedback: string) => void; onApproveMerge: (f: Feature) => void; gateBusy: boolean; canAct: boolean;
   expanded: boolean; onToggle: () => void; project: string; canWrite: boolean; canDiff: boolean;
@@ -489,6 +505,8 @@ function FeatureLane({
               id={t.id}
               tok={taskTokens(t.id, events)}
               seat={os && os.task === t.id ? os.seat : undefined}
+              tier={chipTier && chipTier.task === t.id ? chipTier.tier : undefined}
+              effort={chipTier && chipTier.task === t.id ? chipTier.effort : undefined}
               onDiscuss={
                 discuss
                   ? () => onOpenCockpit(t.owner)
@@ -536,18 +554,19 @@ const CHIP: Record<ChipKind, { c: string; glyph: string; dim?: boolean }> = {
   pending: { c: "var(--color-text-3)", glyph: "·", dim: true },
 };
 
-function PipeChipWithConnector({ first, prevKind, kind, id, tok, seat, onDiscuss }: {
-  first: boolean; prevKind: ChipKind; kind: ChipKind; id: string; tok: number; seat?: string; onDiscuss?: () => void;
+function PipeChipWithConnector({ first, prevKind, kind, id, tok, seat, tier, effort, onDiscuss }: {
+  first: boolean; prevKind: ChipKind; kind: ChipKind; id: string; tok: number; seat?: string;
+  tier?: string; effort?: string; onDiscuss?: () => void;
 }) {
   return (
     <>
       {!first && <Connector kind={prevKind} />}
-      <PipeChip kind={kind} id={id} tok={tok} seat={seat} onDiscuss={onDiscuss} />
+      <PipeChip kind={kind} id={id} tok={tok} seat={seat} tier={tier} effort={effort} onDiscuss={onDiscuss} />
     </>
   );
 }
 
-function PipeChip({ kind, id, tok, seat, onDiscuss }: { kind: ChipKind; id: string; tok: number; seat?: string; onDiscuss?: () => void }) {
+function PipeChip({ kind, id, tok, seat, tier, effort, onDiscuss }: { kind: ChipKind; id: string; tok: number; seat?: string; tier?: string; effort?: string; onDiscuss?: () => void }) {
   const m = CHIP[kind];
   const lit = kind === "working" || kind === "gate";
   return (
@@ -567,6 +586,18 @@ function PipeChip({ kind, id, tok, seat, onDiscuss }: { kind: ChipKind; id: stri
         {kind === "working" ? <Equalizer color={m.c} /> : m.glyph}
       </span>
       <span className="mono text-[10px] font-medium" style={{ color: lit ? "var(--color-text-1)" : "var(--color-text-2)" }}>{id}</span>
+      {/* Runtime tier/effort, attached only to the chip the current status
+          snapshot names (chip.id === status.task). effort === "" is the common
+          case (the seat's kind declares no EffortArgs) → a neutral note, never
+          an empty value or a second magnitude. */}
+      {tier && (
+        <>
+          <TierBadge tier={tier} />
+          <span data-testid="chip-effort" className="text-[10px]" style={{ color: "var(--color-text-2)" }}>
+            {effort ? effort : "未应用 tier 路由"}
+          </span>
+        </>
+      )}
       {kind === "gate" && <span className="text-[9px]" style={{ color: m.c }}>gate failed</span>}
       {seat && kind === "working" && <span className="text-[9px]" style={{ color: m.c }}>{seat}</span>}
       {tok > 0 && <span className="mono text-[9px]" style={{ color: lit ? m.c : "var(--color-text-3)" }}>{fmtTokens(tok)}</span>}

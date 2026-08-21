@@ -92,6 +92,15 @@ export interface OrchestrateStatus {
 export interface OrchestrateStatusResponse {
   present: boolean;
   status?: OrchestrateStatus;
+  // Tier / resolved effort for the status' current task, computed server-side
+  // (tierui-backend). Both are omitted when the status names no task or the
+  // task's spec has no tier line; effort === "" is the COMMON case (only kinds
+  // declaring EffortArgs apply a budget) — render it as a neutral note, not as
+  // a missing value. The status is a SINGLE snapshot: under --concurrency>1 it
+  // jumps between concurrent tasks, so a badge built from these must only be
+  // attached to the chip whose id === status.task.
+  tier?: string;
+  effort?: string;
 }
 
 // Aggregated per-feature statuses from a parallel orchestrate run (one entry per
@@ -160,6 +169,23 @@ export interface PlanTaskReview {
   spec: string;
   verify: string;
   deps?: string[];
+  // Exec tiering (tierui-backend): tier is the NORMALIZED L0..L3 read from the
+  // task's spec file (the engine's own source). tier_missing distinguishes
+  // "spec has no tier line" (planner missed the mandatory tier → NO TIER warn
+  // badge) from an explicit `tier: L1`; the engine collapses both to L1, the
+  // UI must not. tier_conflict is a human-readable note set when the manifest
+  // and the spec disagree (the spec value wins — it's what tier carries).
+  tier?: string;
+  tier_missing?: boolean;
+  tier_conflict?: string;
+  // The spec's UNRECOGNIZED tier value (e.g. `tier: L9`), set only when the
+  // spec has a tier line ParseTier can't map — the badge's title names it so a
+  // typo isn't byte-identical to an explicit `tier: L1`.
+  tier_raw?: string;
+  // Planner's advisory labels, passed through unchanged; rendered as one muted
+  // text line (`correctness · frontend`), never as badges.
+  dimension?: string;
+  role?: string;
 }
 
 export interface PlanReviewResponse {

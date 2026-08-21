@@ -14,9 +14,11 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/agentcfg"
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/finish"
 	"github.com/agentjoey/pactify/internal/gitx"
+	"github.com/agentjoey/pactify/internal/orchestrate"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/schedule"
 )
@@ -26,6 +28,16 @@ import (
 type OrchestrateStatusDTO struct {
 	Present bool            `json:"present"`
 	Status  json.RawMessage `json:"status,omitempty"`
+	// Tier / Effort are resolved SERVER-SIDE for the status' current task
+	// (exec-tiering-ui), so orchestrate.Status stays unchanged: tier is read
+	// from the task's spec via orchestrate.SpecTier (the engine's own source),
+	// effort via agentcfg.ResolveSeat — a per-seat effort pin wins over the
+	// tier-derived budget. Both are omitted when the status names no task
+	// (feature-level escalation, old status files) or the task's spec has no
+	// tier line. Effort == "" is the COMMON case (only kinds declaring
+	// EffortArgs apply a budget); it is not an error.
+	Tier   string `json:"tier,omitempty"`
+	Effort string `json:"effort,omitempty"`
 }
 
 func orchestrateStatusPath(dir string) string {
@@ -137,10 +149,55 @@ func (s *Server) handleOrchestrateStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, OrchestrateStatusDTO{
-		Present: true,
-		Status:  b,
-	})
+	dto := OrchestrateStatusDTO{Present: true, Status: b}
+	if tier, effort, ok := s.runtimeTierEffort(r.PathValue("id"), p.Path, b); ok {
+		dto.Tier, dto.Effort = tier, effort
+	}
+	writeJSON(w, http.StatusOK, dto)
+}
+
+// runtimeTierEffort derives the tier and resolved effort for the task a status
+// snapshot names, WITHOUT touching orchestrate.Status (exec-tiering-ui): the
+// tier is read from the task's spec through orchestrate.SpecTier — the same
+// source the engine runs from — and the effort is resolved serve-side through
+// agentcfg.ResolveSeat, so a per-seat effort pin shows instead of the
+// tier-derived budget. ok=false (both fields omitted) when the status names no
+// task, the task is not in the projection, or its spec has no tier line.
+//
+// RunRail polls this handler every 3s, so the whole lookup rides ONE memoized
+// full fold (projectStateFull): the pre-fix version ran an uncached
+// ProjectStateAt here and a second full read+fold inside resolveSeatKinds —
+// two 296KB folds per poll on this repo's ledger.
+func (s *Server) runtimeTierEffort(id, dir string, statusJSON []byte) (tier, effort string, ok bool) {
+	var st struct {
+		Seat string `json:"seat"`
+		Task string `json:"task"`
+	}
+	if json.Unmarshal(statusJSON, &st) != nil || st.Task == "" {
+		return "", "", false
+	}
+	proj, evs, err := s.projectStateFull(id, dir)
+	if err != nil {
+		return "", "", false
+	}
+	spec := ""
+	for _, f := range proj.Features {
+		for _, t := range f.Tasks {
+			if t.ID == st.Task {
+				spec = t.Spec
+			}
+		}
+	}
+	if spec == "" {
+		return "", "", false
+	}
+	raw, present := orchestrate.SpecTier(dir, spec)
+	if !present {
+		return "", "", false
+	}
+	tt := orchestrate.ParseTier(raw)
+	eff, _ := agentcfg.ResolveSeat(st.Seat, seatKindsFromFold(evs, proj.Agents)[st.Seat], orchestrate.EffortForTier(tt))
+	return string(tt), eff.Effort, true
 }
 
 type orchestrateRunReq struct {
@@ -149,11 +206,10 @@ type orchestrateRunReq struct {
 	SeatKinds      map[string]string `json:"seat_kinds"`
 }
 
-func seatKindsFromInit(dir string) map[string]string {
-	evs, err := event.ReadAll(logPath(dir))
-	if err != nil {
-		return nil
-	}
+// seatKindsFromInitEvents extracts seat kinds from the most recent init event
+// in an already-read event slice, so a caller that folded the ledger once
+// (projectStateFull) doesn't read it again.
+func seatKindsFromInitEvents(evs []event.Event) map[string]string {
 	for i := len(evs) - 1; i >= 0; i-- {
 		if evs[i].EventType != "init" {
 			continue
@@ -177,6 +233,33 @@ func seatKindsFromInit(dir string) map[string]string {
 		break
 	}
 	return nil
+}
+
+// seatKindsFromFold builds the seat→kind map from an already-folded full
+// ledger — init-event kinds, then roster kinds, then the name heuristic. It is
+// the single implementation of that precedence; resolveSeatKinds delegates to
+// it after doing its own reads, and the polled status handler passes the events
+// projectStateFull returned (no second read+fold).
+func seatKindsFromFold(evs []event.Event, agents []SeatDTO) map[string]string {
+	km := seatKindsFromInitEvents(evs)
+	if km == nil {
+		km = map[string]string{}
+	}
+	for _, a := range agents {
+		if _, already := km[a.ID]; !already && a.Kind != "" {
+			km[a.ID] = a.Kind
+		}
+	}
+	known := agent.Kinds()
+	for _, a := range agents {
+		if _, already := km[a.ID]; already {
+			continue
+		}
+		if inferred := inferKindFromName(a.ID, known); inferred != "" {
+			km[a.ID] = inferred
+		}
+	}
+	return km
 }
 
 // orchRunning tracks project dirs with a driver spawned by this process that
@@ -265,36 +348,21 @@ func inferKindFromName(seat string, known []string) string {
 	return match
 }
 
-// resolveSeatKinds builds the seat→kind map for an orchestrate run: start from
-// init-event kinds, then fill any gaps from the current projection roster's Kind
-// (add-seat kinds), then from a name heuristic against known agent kinds
-// (seat "opencode-worker" → "opencode", "gemini-worker" → "gemini-cli").
+// resolveSeatKinds builds the seat→kind map for an orchestrate run. It does
+// the reads and delegates the precedence (init-event kinds → projection roster
+// kinds → name heuristic against known agent kinds) to seatKindsFromFold, so
+// the priority logic lives in exactly one place. A failed ledger read leaves
+// evs nil, which seatKindsFromFold treats as "no init kinds" — same as the old
+// inline behavior.
 func (s *Server) resolveSeatKinds(dir string) map[string]string {
-	km := seatKindsFromInit(dir)
-	if km == nil {
-		km = map[string]string{}
-	}
-
-	// Fill gaps from projection roster (picks up add-seat events with a kind).
+	evs, _ := event.ReadAll(logPath(dir))
+	var agents []SeatDTO
 	if st, err := pact.At(dir).StateProjection(); err == nil {
 		for _, a := range st.Agents {
-			if _, already := km[a.ID]; !already && a.Kind != "" {
-				km[a.ID] = a.Kind
-			}
-		}
-		// Name heuristic for seats still without a kind.
-		known := agent.Kinds()
-		for _, a := range st.Agents {
-			if _, already := km[a.ID]; already {
-				continue
-			}
-			if inferred := inferKindFromName(a.ID, known); inferred != "" {
-				km[a.ID] = inferred
-			}
+			agents = append(agents, SeatDTO{ID: a.ID, Kind: a.Kind})
 		}
 	}
-
-	return km
+	return seatKindsFromFold(evs, agents)
 }
 
 func (s *Server) defaultExecOrchestrate(dir string, args, env []string) error {

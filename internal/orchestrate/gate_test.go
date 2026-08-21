@@ -106,6 +106,78 @@ func TestGate_ExtractTier(t *testing.T) {
 	}
 }
 
+// TestSpecTier pins the three-state contract the plan-review UI depends on:
+// present distinguishes "spec has an explicit tier line" from every flavor of
+// missing (no line / bare `tier:` / unreadable file / empty specRel) — all of
+// which the ENGINE collapses to L1, but which must stay distinguishable from
+// an explicit `tier: L1` so a planner-missed tier is visible.
+func TestSpecTier(t *testing.T) {
+	dir := t.TempDir()
+	write := func(rel, content string) {
+		t.Helper()
+		p := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("tasks/l2.md", "# spec\ntier: L2\n")
+	write("tasks/none.md", "# spec\nverify: go test ./...\n")
+	write("tasks/bare.md", "# spec\ntier:\n")
+	write("tasks/lower.md", "# spec\ntier: l3\n")
+
+	cases := []struct {
+		name    string
+		specRel string
+		raw     string
+		present bool
+	}{
+		{"explicit tier", "tasks/l2.md", "L2", true},
+		{"lowercase tier is reported raw", "tasks/lower.md", "l3", true},
+		{"no tier line", "tasks/none.md", "", false},
+		{"bare tier line is absent", "tasks/bare.md", "", false},
+		{"missing spec file", "tasks/nope.md", "", false},
+		{"empty specRel", "", "", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			raw, present := SpecTier(dir, c.specRel)
+			if raw != c.raw || present != c.present {
+				t.Fatalf("SpecTier(%q) = (%q, %v), want (%q, %v)", c.specRel, raw, present, c.raw, c.present)
+			}
+		})
+	}
+}
+
+// TestSpecTier_PathHardening pins the refusal of absolute paths and `..`
+// escapes: t.Spec is LLM-generated and lands in an HTTP handler's read path,
+// so an out-of-repo specRel must yield ("", false) WITHOUT reading the file —
+// proven here by a real out-of-repo file whose tier line must never surface.
+func TestSpecTier_PathHardening(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "repo")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(base, "outside.md")
+	const sentinel = "tier: L3-ESCAPE-SENTINEL"
+	if err := os.WriteFile(outside, []byte("# escape\n"+sentinel+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, specRel := range []string{outside, "../outside.md", "..", "a/../../outside.md"} {
+		raw, present := SpecTier(dir, specRel)
+		if present || raw != "" {
+			t.Fatalf("SpecTier(%q) = (%q, %v), want (\"\", false)", specRel, raw, present)
+		}
+		if strings.Contains(raw, sentinel) {
+			t.Fatalf("SpecTier(%q) read the escaped file", specRel)
+		}
+	}
+}
+
 // EffortForTier pins the §4.5 ladder — including the deliberate restraint that
 // L2 stays at medium (tier sets the STARTING budget; only real failure buys
 // more reasoning).

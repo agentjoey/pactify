@@ -7,6 +7,7 @@ package orchestrate
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/agentjoey/pactify/internal/gitx"
@@ -81,6 +82,29 @@ func ParseTier(raw string) Tier {
 func extractTier(specMarkdown string) Tier {
 	raw, _ := extractField(specMarkdown, tierPrefix)
 	return ParseTier(raw)
+}
+
+// SpecTier reads specRel under dir and reports the raw `tier:` value and
+// whether a tier line was present at all. present=false covers: empty specRel,
+// a spec that cannot be read, no `tier:` line, and a bare `tier:` with no
+// value — all of which the engine runs as L1, but which a UI must be able to
+// distinguish from an explicit `tier: L1` (exec-tiering-ui: an unlabeled task
+// means the planner missed the mandatory tier, and that must stay visible).
+//
+// It reuses the engine's own read+parse path (readSpec + extractField) so the
+// reported value cannot drift from what the driver will run. Path hardening:
+// specRel comes from an LLM-generated plan manifest with no path validation
+// and here becomes an os.ReadFile inside an HTTP handler, so an absolute path
+// or a `..` escape is refused WITHOUT touching the disk.
+func SpecTier(dir, specRel string) (raw string, present bool) {
+	if specRel == "" || filepath.IsAbs(specRel) {
+		return "", false
+	}
+	rel, err := filepath.Rel(dir, filepath.Join(dir, specRel))
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return extractField(readSpec(dir, specRel), tierPrefix)
 }
 
 // EffortForTier maps a task's tier to its starting reasoning-effort budget

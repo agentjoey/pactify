@@ -4,6 +4,7 @@ import { Button } from "./Button";
 import { Input } from "./Input";
 import { Select } from "./Select";
 import { Badge } from "./Badge";
+import { TierBadge } from "./TierBadge";
 import { Kbd } from "./Kbd";
 import { Modal } from "./Modal";
 import { Popover } from "./Popover";
@@ -116,6 +117,62 @@ describe("Badge", () => {
   it("maps warn color to the warn token", () => {
     render(<Badge color="warn">stale</Badge>);
     expect(screen.getByText("stale")).toHaveStyle({ color: "var(--color-warn)" });
+  });
+
+  it("maps the muted text-2 token to foreground + 15%-alpha background", () => {
+    render(<Badge color="text-2">free</Badge>);
+    const el = screen.getByText("free");
+    expect(el).toHaveStyle({ color: "var(--color-text-2)" });
+    expect(el).toHaveStyle({
+      background: "color-mix(in srgb, var(--color-text-2) 15%, transparent)",
+    });
+  });
+
+  it("passes title through to the root element, and omits it otherwise", () => {
+    render(<Badge title="Personal tier">personal</Badge>);
+    expect(screen.getByText("personal")).toHaveAttribute("title", "Personal tier");
+    render(<Badge>pro</Badge>);
+    expect(screen.getByText("pro")).not.toHaveAttribute("title");
+  });
+
+  it("gives the root role=img + aria-label only when ariaLabel is set", () => {
+    render(<Badge ariaLabel="Tier: personal">personal</Badge>);
+    const named = screen.getByRole("img", { name: "Tier: personal" });
+    expect(named).toHaveTextContent("personal");
+    render(<Badge>pro</Badge>);
+    const plain = screen.getByText("pro");
+    expect(plain).not.toHaveAttribute("role");
+    expect(plain).not.toHaveAttribute("aria-label");
+  });
+
+  it("passes data-testid through to the root element", () => {
+    render(<Badge data-testid="account-tier">personal</Badge>);
+    expect(screen.getByTestId("account-tier")).toHaveTextContent("personal");
+  });
+});
+
+describe("TierBadge", () => {
+  it("names a tier_raw badge via role=img + aria-label (not mouse-only), a plain badge stays anonymous", () => {
+    render(
+      <>
+        <TierBadge tier="L1" tierRaw="L9" />
+        <TierBadge tier="L2" />
+      </>,
+    );
+    // The raw-value hint is the accessible name, shared with the title.
+    const raw = screen.getByRole("img", { name: 'spec 写的是 "L9"，无法识别 —— 引擎将按 L1 运行' });
+    expect(raw).toHaveTextContent("L1");
+    expect(raw).toHaveAttribute("title", 'spec 写的是 "L9"，无法识别 —— 引擎将按 L1 运行');
+    // No conflict and no tier_raw → no role/aria-label (regression pin).
+    const plain = screen.getByText("L2");
+    expect(plain).not.toHaveAttribute("role");
+    expect(plain).not.toHaveAttribute("aria-label");
+  });
+
+  it("conflict wins over tier_raw for both title and accessible name", () => {
+    render(<TierBadge tier="L1" conflict="manifest says L3" tierRaw="L9" />);
+    const badge = screen.getByRole("img", { name: "manifest says L3" });
+    expect(badge).toHaveAttribute("title", "manifest says L3");
   });
 });
 

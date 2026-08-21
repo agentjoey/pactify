@@ -14,12 +14,18 @@ export type BadgeColor =
   | "role-ops"
   | "danger"
   | "warn"
-  | "success";
+  | "success"
+  // Muted informational color (tier badges); contrast verified 5.34–5.77:1
+  // across this project's backgrounds.
+  | "text-2";
 
 export function Badge({
   color = "role-design",
   colorVar,
   className = "",
+  title,
+  ariaLabel,
+  "data-testid": dataTestId,
   children,
 }: {
   color?: BadgeColor;
@@ -27,6 +33,11 @@ export function Badge({
   // Takes precedence over `color`; the token union stays the encouraged path.
   colorVar?: string;
   className?: string;
+  title?: string;
+  // Accessible name. A bare <span> is name-prohibited in ARIA 1.2, so when
+  // (and only when) this is set the root also gets role="img".
+  ariaLabel?: string;
+  "data-testid"?: string;
   children: ReactNode;
 }) {
   const token = colorVar ?? `var(--color-${color})`;
@@ -42,6 +53,10 @@ export function Badge({
         color: token,
         background: `color-mix(in srgb, ${token} 15%, transparent)`,
       }}
+      title={title}
+      role={ariaLabel ? "img" : undefined}
+      aria-label={ariaLabel || undefined}
+      data-testid={dataTestId}
     >
       {children}
     </span>

@@ -59,6 +59,8 @@ describe("AccountPanel", () => {
     renderPanel(makeSource(vi.fn().mockResolvedValue([])));
     await waitFor(() => expect(screen.getByTestId("account-email")).toHaveTextContent("user@example.com"));
     expect(screen.getByText("personal")).toBeInTheDocument();
+    // Regression: data-testid used to be silently dropped by Badge.
+    expect(screen.getByTestId("account-tier")).toHaveTextContent("personal");
   });
 
   it("renders identities and disables unlink for the only identity", async () => {

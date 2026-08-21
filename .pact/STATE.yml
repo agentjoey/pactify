@@ -1087,7 +1087,7 @@ features:
         deps: [exec-tiering-parse]
       - id: exec-tiering-hermetic
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/exec-tiering-hermetic.md
         evidence: 修复：internal/orchestrate/runner_test.go 中 13 个走 CmdRunner.Run→agentcfg.ResolveSeat 的测试各加一行 t.Setenv("PACTIFY_HOME", t.TempDir())（照 approve_test.go:12 先例），只加不改，断言语义未动；git diff --stat: runner_test.go | 13 +++++++++++++ (1 file changed, 13 insertions(+))，零生产代码。验证1（本机真实配置，含 opencode→deepseek 等污染）: go test ./internal/orchestrate/ → ok github.com/agentjoey/pactify/internal/orchestrate 41.899s。验证2（隔离环境）: PACTIFY_HOME=$(mktemp -d) go test ./internal/orchestrate/ → ok github.com/agentjoey/pactify/internal/orchestrate 42.067s。两环境一致全绿。

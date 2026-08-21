@@ -478,7 +478,7 @@ func (opts Options) run(ctx context.Context) error {
 		}
 		if !opts.DryRun && opts.Th.MaxIters > 0 && h.Iters >= opts.Th.MaxIters {
 			opts.emitEscalatedStatus(view, "", "iteration limit exceeded", h)
-			return opts.escalate(opts.Feature, "", "iteration limit exceeded", "(global cap)",
+			return opts.escalate(opts.Feature, "", "iteration limit exceeded", capEvidence(view, h),
 				"放宽 --max-iters 或检查为何 task 图迟迟不收敛")
 		}
 
@@ -900,6 +900,52 @@ func fixBrief(task projection.Task, verifyOutput string) string {
 	b.WriteString("```\n" + tailBytes(verifyOutput, 2048) + "\n```\n\n")
 	fmt.Fprintf(&b, "- 修好后重新 `pactify checkpoint %s` 附上验收命令输出。修到门绿为止,不要自标 accepted。\n", task.ID)
 	return b.String()
+}
+
+// capEvidence renders the per-task context the driver already holds when the
+// global iteration cap fires: every unfinished task with its recorded last
+// failure and class, so an operator can diagnose without re-reading the project.
+// Returns "(global cap)" unchanged when there is nothing more to say.
+func capEvidence(view projection.State, h History) string {
+	const maxTasks = 20
+	const maxFailRunes = 200
+	var lines []string
+	unfinished := 0
+	for _, f := range view.Features {
+		if f.Status == "shipped" {
+			continue
+		}
+		for _, t := range f.Tasks {
+			if t.Status == "accepted" {
+				continue
+			}
+			unfinished++
+			if len(lines) >= maxTasks {
+				continue
+			}
+			line := fmt.Sprintf("%s (%s)", t.ID, t.Status)
+			if fail := h.LastFail[t.ID]; fail != "" {
+				if r := []rune(fail); len(r) > maxFailRunes {
+					fail = string(r[:maxFailRunes]) + "…"
+				}
+				line += fmt.Sprintf(" last=%q", fail)
+			}
+			if class := h.LastClass[t.ID]; class != "" {
+				line += fmt.Sprintf(" class=%s", class)
+			}
+			if n := h.Rework[t.ID]; n > 0 {
+				line += fmt.Sprintf(" rework=%d", n)
+			}
+			lines = append(lines, line)
+		}
+	}
+	if len(lines) == 0 {
+		return "(global cap)"
+	}
+	if unfinished > maxTasks {
+		lines = append(lines, fmt.Sprintf("… (+%d more)", unfinished-maxTasks))
+	}
+	return strings.Join(lines, "\n")
 }
 
 // tailBytes returns the last n bytes of s, trimmed forward to the next rune

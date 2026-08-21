@@ -75,7 +75,7 @@ func TestPromptIncludesManifestSchemaExample(t *testing.T) {
 	out := planner.BuildPrompt(samplePromptInput())
 
 	// JSON schema example must show every PlanTask field name.
-	for _, field := range []string{`"feature"`, `"branch"`, `"tasks"`, `"id"`, `"owner"`, `"reviewer"`, `"spec"`, `"verify"`, `"deps"`, `"dimension"`} {
+	for _, field := range []string{`"feature"`, `"branch"`, `"tasks"`, `"id"`, `"owner"`, `"reviewer"`, `"spec"`, `"verify"`, `"deps"`, `"dimension"`, `"tier"`} {
 		if !strings.Contains(out, field) {
 			t.Errorf("manifest schema example missing field %q", field)
 		}
@@ -100,6 +100,21 @@ func TestPromptStatesAssignmentRules(t *testing.T) {
 	// Complexity-based allocation.
 	if !strings.Contains(low, "complex") {
 		t.Error("prompt does not mention complexity-based allocation")
+	}
+}
+
+// exec-tiering-parse: the prompt must instruct the planner to tier every task
+// and to dual-write it (manifest `tier` field + spec `tier:` line).
+func TestPromptInstructsTiers(t *testing.T) {
+	out := planner.BuildPrompt(samplePromptInput())
+
+	for _, want := range []string{"L0", "L1", "L2", "L3", "tier:"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("prompt missing tier guidance %q", want)
+		}
+	}
+	if !strings.Contains(out, "`tier`") {
+		t.Error("prompt does not require the manifest `tier` field")
 	}
 }
 

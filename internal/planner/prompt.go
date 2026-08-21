@@ -143,6 +143,17 @@ func BuildPrompt(in PromptInput) string {
 	b.WriteString("Write the chosen dimension into the manifest task's `dimension` field, and\n")
 	b.WriteString("state the dimension explicitly in that task's spec under 验收 / Acceptance.\n\n")
 
+	b.WriteString("## Task tiers\n")
+	b.WriteString("Assign EVERY task ONE complexity tier:\n")
+	b.WriteString("- L0 — simple, fully specified work (rename, config bump, doc touch-up)\n")
+	b.WriteString("- L1 — ordinary development (the default; most tasks)\n")
+	b.WriteString("- L2 — cross-module or otherwise complex work\n")
+	b.WriteString("- L3 — high uncertainty or high risk (protocol changes, data migration)\n")
+	b.WriteString("Write the tier in BOTH places (same dual-write convention as `verify`):\n")
+	b.WriteString("the manifest task's `tier` field, and a `tier:` line in the task's spec\n")
+	b.WriteString("file (e.g. `tier: L2`). PREFER assigning L0/L1 tasks to cheap role-bound\n")
+	b.WriteString("seats and L2/L3 tasks to the strongest seats.\n\n")
+
 	b.WriteString("## Per-task spec files\n")
 	fmt.Fprintf(&b, "Write one spec per task to `.pact/tasks/%s-<id>.md` (e.g. `.pact/tasks/%s-<id>.md`).\n", in.Feature, in.Feature)
 	b.WriteString("Each spec must contain:\n")
@@ -204,7 +215,8 @@ func manifestSchemaExample(feature string) string {
       "spec": ".pact/tasks/%s-step1.md",
       "verify": "go test ./internal/%s/",
       "deps": [],
-      "dimension": "correctness"
+      "dimension": "correctness",
+      "tier": "L1"
     },
     {
       "id": "step2",
@@ -212,7 +224,8 @@ func manifestSchemaExample(feature string) string {
       "reviewer": "<other-seat>",
       "spec": ".pact/tasks/%s-step2.md",
       "verify": "go test ./internal/%s/",
-      "deps": ["step1"]
+      "deps": ["step1"],
+      "tier": "L2"
     }
   ]
 }`, feature, "feat-"+feature, feature, feature, feature, feature)

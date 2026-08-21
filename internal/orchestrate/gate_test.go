@@ -75,6 +75,65 @@ func TestGate_ExtractVerify_FirstWins(t *testing.T) {
 	}
 }
 
+func TestParseTier(t *testing.T) {
+	cases := map[string]Tier{
+		"L2":      TierL2,
+		"l2":      TierL2,
+		" L2 ":    TierL2,
+		"L0":      TierL0,
+		"L1":      TierL1,
+		"L3":      TierL3,
+		"":        TierL1,
+		"L9":      TierL1,
+		"garbage": TierL1,
+	}
+	for raw, want := range cases {
+		if got := ParseTier(raw); got != want {
+			t.Errorf("ParseTier(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
+func TestGate_ExtractTier(t *testing.T) {
+	md := "# Task t1\n\nverify: go test ./...\ntier: L3\n"
+	if got := extractTier(md); got != TierL3 {
+		t.Fatalf("extractTier: got %q, want %q", got, TierL3)
+	}
+	// Bare `tier:` with no value is treated as absent.
+	if got := extractTier("# spec\ntier:\n"); got != TierL1 {
+		t.Fatalf("extractTier(bare) = %q, want %q", got, TierL1)
+	}
+}
+
+// TestGate_ExtractTier_BackwardCompat pins the hard requirement: a spec with
+// no `tier:` line sees TierL1 and its verify/QA extraction is byte-for-byte
+// unchanged, and a `tier:` line does not disturb `verify:` extraction.
+func TestGate_ExtractTier_BackwardCompat(t *testing.T) {
+	md := "# Task t1\n\nverify: go test ./internal/serve/\nqa: run the relay e2e\n"
+
+	if got := extractTier(md); got != TierL1 {
+		t.Fatalf("extractTier(tier-less spec) = %q, want default %q", got, TierL1)
+	}
+	cmd, ok := extractVerify(md)
+	if !ok || cmd != "go test ./internal/serve/" {
+		t.Fatalf("extractVerify changed on tier-less spec: got (%q,%v)", cmd, ok)
+	}
+	hint, ok := extractQA(md)
+	if !ok || hint != "run the relay e2e" {
+		t.Fatalf("extractQA changed on tier-less spec: got (%q,%v)", hint, ok)
+	}
+
+	// A `tier:` line must not shadow or corrupt the `verify:` directive.
+	withTier := md + "tier: L2\n"
+	cmd, ok = extractVerify(withTier)
+	if !ok || cmd != "go test ./internal/serve/" {
+		t.Fatalf("extractVerify with tier line: got (%q,%v)", cmd, ok)
+	}
+	if got := extractTier(withTier); got != TierL2 {
+		t.Fatalf("extractTier = %q, want %q", got, TierL2)
+	}
+}
+
 // fakeExec is a deterministic test double for cmdExec — no real subprocess.
 type fakeExec struct {
 	gotDir     string

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/agentjoey/pactify/internal/orchestrate"
 	"github.com/agentjoey/pactify/internal/planner"
 )
 
@@ -29,6 +30,21 @@ type planTaskDTO struct {
 	Spec     string   `json:"spec"`
 	Verify   string   `json:"verify"`
 	Deps     []string `json:"deps,omitempty"`
+	// Tier is the NORMALIZED (L0..L3) tier read from the task's spec file via
+	// orchestrate.SpecTier — the same source the engine runs from, so a human
+	// edit of the spec is what the review shows. TierMissing distinguishes
+	// "spec has no tier line" (planner missed the mandatory tier → warn) from
+	// an explicit `tier: L1`; the engine collapses both to L1, the UI must not.
+	Tier        string `json:"tier"`
+	TierMissing bool   `json:"tier_missing"`
+	// Dimension / Role are the planner's advisory labels, passed through from
+	// the manifest unchanged.
+	Dimension string `json:"dimension,omitempty"`
+	Role      string `json:"role,omitempty"`
+	// TierConflict is a human-readable note set when BOTH the manifest and the
+	// spec name a tier and they disagree after normalization; the spec value
+	// wins (the engine reads the spec), which is what Tier carries.
+	TierConflict string `json:"tier_conflict,omitempty"`
 }
 
 func (s *Server) registerPlanRoutes(mux *http.ServeMux) {
@@ -79,9 +95,19 @@ func (s *Server) handlePlanReview(w http.ResponseWriter, r *http.Request) {
 
 	dto := PlanReviewDTO{Present: true, Feature: plan.Feature, Branch: plan.Branch, Valid: true}
 	for _, t := range plan.Tasks {
-		dto.Tasks = append(dto.Tasks, planTaskDTO{
+		d := planTaskDTO{
 			ID: t.ID, Owner: t.Owner, Reviewer: t.Reviewer, Spec: t.Spec, Verify: t.Verify, Deps: t.Deps,
-		})
+			Dimension: t.Dimension, Role: t.Role,
+		}
+		raw, present := orchestrate.SpecTier(p.Path, t.Spec)
+		d.TierMissing = !present
+		d.Tier = string(orchestrate.ParseTier(raw))
+		if t.Tier != "" && present {
+			if manifest, spec := orchestrate.ParseTier(t.Tier), orchestrate.ParseTier(raw); manifest != spec {
+				d.TierConflict = fmt.Sprintf("manifest says %s, spec file says %s — the engine will use %s", manifest, spec, spec)
+			}
+		}
+		dto.Tasks = append(dto.Tasks, d)
 	}
 	// Validate against the project roster so the UI can flag (but still show) a
 	// plan that references unknown seats or has a bad dependency.

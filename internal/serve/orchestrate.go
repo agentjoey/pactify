@@ -14,9 +14,11 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/agent"
+	"github.com/agentjoey/pactify/internal/agentcfg"
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/finish"
 	"github.com/agentjoey/pactify/internal/gitx"
+	"github.com/agentjoey/pactify/internal/orchestrate"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/schedule"
 )
@@ -26,6 +28,16 @@ import (
 type OrchestrateStatusDTO struct {
 	Present bool            `json:"present"`
 	Status  json.RawMessage `json:"status,omitempty"`
+	// Tier / Effort are resolved SERVER-SIDE for the status' current task
+	// (exec-tiering-ui), so orchestrate.Status stays unchanged: tier is read
+	// from the task's spec via orchestrate.SpecTier (the engine's own source),
+	// effort via agentcfg.ResolveSeat — a per-seat effort pin wins over the
+	// tier-derived budget. Both are omitted when the status names no task
+	// (feature-level escalation, old status files) or the task's spec has no
+	// tier line. Effort == "" is the COMMON case (only kinds declaring
+	// EffortArgs apply a budget); it is not an error.
+	Tier   string `json:"tier,omitempty"`
+	Effort string `json:"effort,omitempty"`
 }
 
 func orchestrateStatusPath(dir string) string {
@@ -137,10 +149,48 @@ func (s *Server) handleOrchestrateStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, OrchestrateStatusDTO{
-		Present: true,
-		Status:  b,
-	})
+	dto := OrchestrateStatusDTO{Present: true, Status: b}
+	if tier, effort, ok := s.runtimeTierEffort(p.Path, b); ok {
+		dto.Tier, dto.Effort = tier, effort
+	}
+	writeJSON(w, http.StatusOK, dto)
+}
+
+// runtimeTierEffort derives the tier and resolved effort for the task a status
+// snapshot names, WITHOUT touching orchestrate.Status (exec-tiering-ui): the
+// tier is read from the task's spec through orchestrate.SpecTier — the same
+// source the engine runs from — and the effort is resolved serve-side through
+// agentcfg.ResolveSeat, so a per-seat effort pin shows instead of the
+// tier-derived budget. ok=false (both fields omitted) when the status names no
+// task, the task is not in the projection, or its spec has no tier line.
+func (s *Server) runtimeTierEffort(dir string, statusJSON []byte) (tier, effort string, ok bool) {
+	var st struct {
+		Seat string `json:"seat"`
+		Task string `json:"task"`
+	}
+	if json.Unmarshal(statusJSON, &st) != nil || st.Task == "" {
+		return "", "", false
+	}
+	spec := ""
+	if proj, err := ProjectStateAt(dir, -1); err == nil {
+		for _, f := range proj.Features {
+			for _, t := range f.Tasks {
+				if t.ID == st.Task {
+					spec = t.Spec
+				}
+			}
+		}
+	}
+	if spec == "" {
+		return "", "", false
+	}
+	raw, present := orchestrate.SpecTier(dir, spec)
+	if !present {
+		return "", "", false
+	}
+	tt := orchestrate.ParseTier(raw)
+	eff, _ := agentcfg.ResolveSeat(st.Seat, s.resolveSeatKinds(dir)[st.Seat], orchestrate.EffortForTier(tt))
+	return string(tt), eff.Effort, true
 }
 
 type orchestrateRunReq struct {

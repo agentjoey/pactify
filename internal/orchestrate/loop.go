@@ -67,6 +67,11 @@ type Options struct {
 	// they do NOT count toward MaxFails/MaxRework. Default 2 (withDefaults); 0
 	// means a RED gate escalates immediately (no self-repair).
 	MaxFixRounds int
+	// ExplicitBudget records which budget knobs the operator set explicitly via
+	// CLI flags (the CLI fills it from cmd.Flags().Changed). Explicit knobs win
+	// over the tier-derived budget in budgetFor (spec execution-tiering §5);
+	// the zero value means nothing was set explicitly.
+	ExplicitBudget BudgetExplicit
 	// RunTimeout bounds a single agent run end-to-end (a hard backstop). On expiry
 	// the agent subprocess is killed and the run counts as a soft failure (retry →
 	// escalate). 0 = no timeout (tests use the fake runner which returns instantly).
@@ -443,7 +448,7 @@ func (opts Options) run(ctx context.Context) error {
 		// is never reached. Enforce per-task bounds here, before dispatching the
 		// action that would spin, so the offending task escalates instead.
 		if !opts.DryRun && (act.Kind == ActRunOwner || act.Kind == ActRunReviewer) {
-			if reason, tripped := tripped(act.Task, h, opts.Th); tripped {
+			if reason, tripped := tripped(act.Task, h, opts.thresholdsFor(st, act)); tripped {
 				opts.emitEscalatedStatus(view, act.Task, reason, h)
 				// Snapshot the failure history INTO the escalation record before the
 				// circuit-breaker reset below erases it — otherwise "limit exceeded"
@@ -530,7 +535,8 @@ func (opts Options) run(ctx context.Context) error {
 			// Fix-until-green self-repair (spec §1 WS-F): before handing a
 			// checkpointed task to the reviewer, run its verify gate. GREEN → fall
 			// through to the reviewer exactly as before. RED → re-run the SAME owner
-			// with a fix briefing (bounded by MaxFixRounds; NOT a failure), rechecking
+			// with a fix briefing (bounded by the task's tier-derived fix budget; NOT
+			// a failure), rechecking
 			// the gate each round. Rounds exhausted → escalate (proceed=false).
 			proceed, err := opts.fixUntilGreen(ctx, st, view, act, &h, fixRounds)
 			if err != nil {
@@ -542,7 +548,7 @@ func (opts Options) run(ctx context.Context) error {
 			// QA-agent gate (spec §4 WS-I, experimental, task-level opt-in): with the
 			// verify gate green and BEFORE the critic (order: 先 QA 后 critic), if the
 			// task declares a `qa:` hint, run the software to verify it. A QA FAIL feeds
-			// the SAME WS-F fix loop, sharing fixRounds/MaxFixRounds. No `qa:` line → ""
+			// the SAME WS-F fix loop, sharing fixRounds/the tier fix budget. No `qa:` line → ""
 			// and zero extra stints (byte-identical flow).
 			qaNote, proceed, err := opts.runQA(ctx, st, view, act, &h, fixRounds)
 			if err != nil {
@@ -827,7 +833,8 @@ func containsSeat(xs []string, seat string) bool {
 //     added effect on a green first try is the gate exec itself).
 //   - RED → re-runs the SAME owner with a fix briefing (tail of the verify output
 //   - "you already checkpointed; fix until the gate is green, then checkpoint
-//     again"), rechecking the gate after each round, bounded by opts.MaxFixRounds.
+//     again"), rechecking the gate after each round, bounded by the task's
+//     tier-derived budget (budgetForTask; spec execution-tiering §5).
 //     Fix rounds are in-stint self-repair: they NEVER touch h.Fails/h.Rework, so
 //     they do not count toward MaxFails/MaxRework.
 //   - Rounds exhausted → escalates with the last verify output as the reason and
@@ -841,13 +848,14 @@ func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State
 	}
 	cmd := opts.taskGateCommand(task)
 	base := opts.projectBase()
+	budget := opts.budgetForTask(task)
 	for {
 		passed, detail := runGateScoped(ctx, opts.Exec, opts.Dir, cmd, base)
 		if passed {
 			return true, nil
 		}
 		// RED. Out of fix rounds → escalate with the last verify output as reason.
-		if fixRounds[act.Task] >= opts.MaxFixRounds {
+		if fixRounds[act.Task] >= budget.FixRounds {
 			reason := fmt.Sprintf("fix-until-green exhausted after %d round(s); verify still failing:\n%s",
 				fixRounds[act.Task], detail)
 			opts.emitEscalatedStatus(view, act.Task, reason, *h)
@@ -856,9 +864,9 @@ func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State
 		}
 		// Re-run the SAME owner with a fix briefing. Count the round FIRST (driver
 		// in-memory only — not a failure, not a ledger event) so a persistently
-		// erroring fixer still terminates at MaxFixRounds.
+		// erroring fixer still terminates at the task's fix-round budget.
 		fixRounds[act.Task]++
-		opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task])
+		opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task], budget.FixRounds)
 		brief := fixBrief(task, detail)
 		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task, opts.launchEffort(task)); runErr != nil {
 			if ctx.Err() != nil {
@@ -1324,10 +1332,11 @@ func (opts Options) emitEscalatedStatus(view projection.State, task, reason stri
 }
 
 // emitFixingStatus writes a `fixing` snapshot so the board shows "fixing n/max"
-// while the pre-review self-repair loop re-runs the owner (spec §1 WS-F).
+// while the pre-review self-repair loop re-runs the owner (spec §1 WS-F). max is
+// the task's tier-derived fix-round budget (spec execution-tiering §5).
 // Write errors are silently ignored (status is observation, not a transaction source).
-func (opts Options) emitFixingStatus(view projection.State, act Action, owner string, h History, round int) {
-	writeStatus(opts.runtimeDir(), buildFixingStatus(view, act, owner, h, round, opts.MaxFixRounds, func() string { return statusNow(opts.Now) }))
+func (opts Options) emitFixingStatus(view projection.State, act Action, owner string, h History, round, max int) {
+	writeStatus(opts.runtimeDir(), buildFixingStatus(view, act, owner, h, round, max, func() string { return statusNow(opts.Now) }))
 }
 
 // --- small state/log helpers -------------------------------------------------

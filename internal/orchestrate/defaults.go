@@ -41,13 +41,15 @@ func (opts Options) withDefaults() Options {
 	if opts.Notify == nil {
 		opts.Notify = StdoutNotifier{}
 	}
-	// Default the pre-review fix-until-green bound (spec §1 WS-F). 0-unset ==
-	// 0-explicit here (same shape as the Thresholds), so the default stands unless a
-	// caller sets a positive bound; the CLI plumbs --max-fix-rounds.
+	// Default the pre-review fix-until-green bound (spec §1 WS-F). An explicit 0
+	// (BudgetExplicit.FixRounds set, e.g. `--max-fix-rounds=0`) is legal semantics
+	// — self-repair disabled — and must NOT be bumped to the default; only a
+	// genuinely unset knob defaults to 2. Per-task tier derivation happens in
+	// budgetFor (spec execution-tiering §5).
 	if opts.triedFallbacks == nil {
 		opts.triedFallbacks = map[string][]string{}
 	}
-	if opts.MaxFixRounds == 0 {
+	if opts.MaxFixRounds == 0 && !opts.ExplicitBudget.FixRounds {
 		opts.MaxFixRounds = 2
 	}
 	// Wire the real session-management runner only when cleanup is enabled, so the

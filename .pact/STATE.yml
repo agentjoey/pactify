@@ -1101,3 +1101,9 @@ features:
         reviewer: claude
         spec: .pact/tasks/tierui-backend.md
         evidence: null
+      - id: tierui-badge
+        owner: kimi-worker
+        status: assigned
+        reviewer: claude
+        spec: .pact/tasks/tierui-badge.md
+        evidence: null

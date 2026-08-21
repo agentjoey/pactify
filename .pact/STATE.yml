@@ -1080,7 +1080,7 @@ features:
         deps: [exec-tiering-parse]
       - id: exec-tiering-budget
         owner: kimi-worker
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/exec-tiering-budget.md
         evidence: go test ./internal/orchestrate/ -run 'Budget|Tier|Threshold' → PASS ok 3.133s（13 个匹配测试全过，含新增 TestBudgetForL1EqualsTodayDefaults / TestBudgetForTierTable / TestBudgetExplicitFlagsOverrideTier / TestBudgetExplicitZeroFixRoundsRespected / TestBudgetExplicitCriticFlagOverridesL0 / TestThresholdsForUsesTierBudget / TestTierL0SkipsCriticAndQAButRunsReviewer / TestTierL0ExplicitCriticFlagStillRuns / TestTierL0FixBudgetIsOne）。任务门：go test ./internal/orchestrate/ → ok 42.838s 全绿。附带：go test ./cmd/... → ok 8.375s。实现：internal/orchestrate/budget.go 新增 Budget/BudgetExplicit/budgetFor/budgetForTask/thresholdsFor；tripped 两处(loop+parallel)、fixUntilGreen、runQA、runCritic 改消费 per-task Budget；emitFixingStatus 传入 tier 上限；withDefaults 不再顶掉显式 0；cmd_orchestrate.go 新增 --max-fix-rounds flag 并用 Flags().Changed 记录 4 个预算 knob 的显式性。reviewer 棒无 tier 门控（TestTierL0SkipsCriticAndQAButRunsReviewer 钉死 reviewerCalls==1）。

@@ -29,6 +29,7 @@ export function TierBadge({
   tier,
   missing,
   conflict,
+  tierRaw,
 }: {
   tier?: string;
   // The spec has no tier line at all (planner missed the mandatory tier) →
@@ -36,8 +37,12 @@ export function TierBadge({
   // span's aria-label is name-prohibited in ARIA 1.2).
   missing?: boolean;
   // manifest↔spec disagreement note from the backend; when present it becomes
-  // the badge title (it already names both values and which one wins).
+  // the badge title AND accessible name (badges are tabIndex=-1, so without
+  // ariaLabel this — the feature's most important diagnostic — is mouse-only).
   conflict?: string;
+  // Unrecognized spec tier value (e.g. `tier: L9`); named in the title so the
+  // badge isn't byte-identical to an explicit `tier: L1`.
+  tierRaw?: string;
 }) {
   if (missing) {
     return (
@@ -49,8 +54,11 @@ export function TierBadge({
     );
   }
   if (!tier) return null;
+  const title = conflict
+    || (tierRaw ? `spec 写的是 "${tierRaw}"，无法识别 —— 引擎将按 L1 运行` : undefined)
+    || TIER_TITLE[tier] || `${tier} 执行档位`;
   return (
-    <Badge color="text-2" className="whitespace-nowrap" title={conflict || TIER_TITLE[tier] || `${tier} 执行档位`} data-testid="tier-badge">
+    <Badge color="text-2" className="whitespace-nowrap" title={title} ariaLabel={conflict || undefined} data-testid="tier-badge">
       {tier}
     </Badge>
   );
@@ -66,14 +74,16 @@ export function TierSlot({
   tier,
   missing,
   conflict,
+  tierRaw,
 }: {
   tier?: string;
   missing?: boolean;
   conflict?: string;
+  tierRaw?: string;
 }) {
   return (
     <span className={`${missing ? "w-auto" : "w-[34px]"} shrink-0`}>
-      <TierBadge tier={tier} missing={missing} conflict={conflict} />
+      <TierBadge tier={tier} missing={missing} conflict={conflict} tierRaw={tierRaw} />
     </span>
   );
 }

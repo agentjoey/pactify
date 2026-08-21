@@ -165,7 +165,7 @@ export function DispatchPanel({
             <div className="text-[11px] text-[var(--color-text-3)]">Feature: {review.feature}</div>
             {/* Visible legend: badge `title`s are mouse-only, so keyboard/touch
                 users need the tier meanings spelled out on screen. */}
-            <div data-testid="tier-legend" className="text-[10px] text-[var(--color-text-3)]">{TIER_LEGEND}</div>
+            <div data-testid="tier-legend" className="text-[10px] text-[var(--color-text-2)]">{TIER_LEGEND}</div>
             <ul className="flex flex-col gap-2">
               {(review.tasks ?? []).map((t) => (
                 <li key={t.id} className="rounded-md border border-[var(--color-border-subtle)] p-2 text-[11px]">
@@ -174,12 +174,12 @@ export function DispatchPanel({
                       is what keeps `L1 L1 L3 L1` scannable instead of line-by-
                       line reading. Never let it float with the id length. */}
                   <div className="flex items-center gap-2">
-                    <TierSlot tier={t.tier} missing={t.tier_missing} conflict={t.tier_conflict} />
+                    <TierSlot tier={t.tier} missing={t.tier_missing} conflict={t.tier_conflict} tierRaw={t.tier_raw} />
                     <span className="min-w-0 truncate font-medium text-[var(--color-text-1)]">{t.id}</span>
                   </div>
                   <div className="text-[var(--color-text-3)]">{t.owner} → {t.reviewer}{t.deps?.length ? ` · deps: ${t.deps.join(",")}` : ""}</div>
                   {t.verify && (
-                    <div className="truncate text-[var(--color-text-3)]" title={t.verify}>verify: {t.verify}</div>
+                    <div className="truncate text-[var(--color-text-2)]" title={t.verify}>verify: {t.verify}</div>
                   )}
                   {/* dimension · role as one muted TEXT line (not badges —
                       MAINTAINABILITY alone would eat ~1/3 of the row and role is

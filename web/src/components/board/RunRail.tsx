@@ -593,7 +593,7 @@ function PipeChip({ kind, id, tok, seat, tier, effort, onDiscuss }: { kind: Chip
       {tier && (
         <>
           <TierBadge tier={tier} />
-          <span data-testid="chip-effort" className="text-[9px]" style={{ color: "var(--color-text-3)" }}>
+          <span data-testid="chip-effort" className="text-[10px]" style={{ color: "var(--color-text-2)" }}>
             {effort ? effort : "未应用 tier 路由"}
           </span>
         </>

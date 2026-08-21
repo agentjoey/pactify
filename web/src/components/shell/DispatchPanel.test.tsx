@@ -235,6 +235,29 @@ describe("DispatchPanel — tier rendering (exec-tiering-ui)", () => {
     expect(badges[1]).toHaveAttribute("title", "manifest says L3, spec file says L0 — the engine will use L0");
   });
 
+  it("a conflict note is ALSO the accessible name (badges are tabIndex=-1 — title alone is mouse-only)", async () => {
+    await openReview([
+      task({ id: "plain", tier: "L2" }),
+      task({ id: "conflict", tier: "L0", tier_conflict: "manifest says L3, spec file says L0 — the engine will use L0" }),
+    ]);
+    const badges = screen.getAllByTestId("tier-badge");
+    expect(badges[1]).toHaveAttribute("role", "img");
+    expect(badges[1]).toHaveAttribute("aria-label", "manifest says L3, spec file says L0 — the engine will use L0");
+    // No conflict → no role/aria-label tacked on a plain badge.
+    expect(badges[0]).not.toHaveAttribute("role");
+    expect(badges[0]).not.toHaveAttribute("aria-label");
+  });
+
+  it("an unrecognized spec tier (tier_raw) is named in the badge title — not byte-identical to explicit L1", async () => {
+    await openReview([
+      task({ id: "explicit", tier: "L1" }),
+      task({ id: "typo", tier: "L1", tier_raw: "L9" }),
+    ]);
+    const badges = screen.getAllByTestId("tier-badge");
+    expect(badges[1]).toHaveAttribute("title", 'spec 写的是 "L9"，无法识别 —— 引擎将按 L1 运行');
+    expect(badges[0].getAttribute("title")).not.toContain("无法识别");
+  });
+
   it("renders verify as scope evidence (truncated, full text in title)", async () => {
     await openReview([task({ tier: "L1", verify: "go test ./internal/foo/ -run TestBar" })]);
     const line = screen.getByText("verify: go test ./internal/foo/ -run TestBar");

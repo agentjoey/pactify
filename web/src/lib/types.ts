@@ -178,6 +178,10 @@ export interface PlanTaskReview {
   tier?: string;
   tier_missing?: boolean;
   tier_conflict?: string;
+  // The spec's UNRECOGNIZED tier value (e.g. `tier: L9`), set only when the
+  // spec has a tier line ParseTier can't map — the badge's title names it so a
+  // typo isn't byte-identical to an explicit `tier: L1`.
+  tier_raw?: string;
   // Planner's advisory labels, passed through unchanged; rendered as one muted
   // text line (`correctness · frontend`), never as badges.
   dimension?: string;

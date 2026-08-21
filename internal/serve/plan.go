@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/agentjoey/pactify/internal/orchestrate"
 	"github.com/agentjoey/pactify/internal/planner"
@@ -37,6 +38,12 @@ type planTaskDTO struct {
 	// an explicit `tier: L1`; the engine collapses both to L1, the UI must not.
 	Tier        string `json:"tier"`
 	TierMissing bool   `json:"tier_missing"`
+	// TierRaw carries the spec's UNRECOGNIZED tier value (e.g. `tier: L9` — a
+	// typo while hand-editing) so the UI can name it; without it such a task is
+	// byte-identical to an explicit `tier: L1` while the engine silently runs
+	// L1. Filled ONLY when ParseTier(raw) collapses to L1 AND raw is not itself
+	// (case-insensitively) "L1" — a normal value never sets it.
+	TierRaw string `json:"tier_raw,omitempty"`
 	// Dimension / Role are the planner's advisory labels, passed through from
 	// the manifest unchanged.
 	Dimension string `json:"dimension,omitempty"`
@@ -102,6 +109,9 @@ func (s *Server) handlePlanReview(w http.ResponseWriter, r *http.Request) {
 		raw, present := orchestrate.SpecTier(p.Path, t.Spec)
 		d.TierMissing = !present
 		d.Tier = string(orchestrate.ParseTier(raw))
+		if present && orchestrate.ParseTier(raw) == orchestrate.TierL1 && !strings.EqualFold(strings.TrimSpace(raw), "L1") {
+			d.TierRaw = raw
+		}
 		if t.Tier != "" && present {
 			if manifest, spec := orchestrate.ParseTier(t.Tier), orchestrate.ParseTier(raw); manifest != spec {
 				d.TierConflict = fmt.Sprintf("manifest says %s, spec file says %s — the engine will use %s", manifest, spec, spec)

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/pact"
+	"github.com/agentjoey/pactify/internal/projection"
 )
 
 func TestGate_ExtractVerify_Found(t *testing.T) {
@@ -72,6 +73,117 @@ func TestGate_ExtractVerify_FirstWins(t *testing.T) {
 	got, ok := extractVerify(md)
 	if !ok || got != "first cmd" {
 		t.Fatalf("extractVerify: got (%q,%v), want (\"first cmd\",true)", got, ok)
+	}
+}
+
+func TestParseTier(t *testing.T) {
+	cases := map[string]Tier{
+		"L2":      TierL2,
+		"l2":      TierL2,
+		" L2 ":    TierL2,
+		"L0":      TierL0,
+		"L1":      TierL1,
+		"L3":      TierL3,
+		"":        TierL1,
+		"L9":      TierL1,
+		"garbage": TierL1,
+	}
+	for raw, want := range cases {
+		if got := ParseTier(raw); got != want {
+			t.Errorf("ParseTier(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
+func TestGate_ExtractTier(t *testing.T) {
+	md := "# Task t1\n\nverify: go test ./...\ntier: L3\n"
+	if got := extractTier(md); got != TierL3 {
+		t.Fatalf("extractTier: got %q, want %q", got, TierL3)
+	}
+	// Bare `tier:` with no value is treated as absent.
+	if got := extractTier("# spec\ntier:\n"); got != TierL1 {
+		t.Fatalf("extractTier(bare) = %q, want %q", got, TierL1)
+	}
+}
+
+// EffortForTier pins the §4.5 ladder — including the deliberate restraint that
+// L2 stays at medium (tier sets the STARTING budget; only real failure buys
+// more reasoning).
+func TestEffortForTier(t *testing.T) {
+	cases := map[Tier]string{
+		TierL0: "low",
+		TierL1: "medium",
+		TierL2: "medium", // deliberate: NOT high
+		TierL3: "high",
+	}
+	for tier, want := range cases {
+		if got := EffortForTier(tier); got != want {
+			t.Errorf("EffortForTier(%q) = %q, want %q", tier, got, want)
+		}
+	}
+	// Any normalized/unknown tier behaves like the default L1.
+	if got := EffortForTier(ParseTier("garbage")); got != "medium" {
+		t.Errorf("EffortForTier(unknown) = %q, want medium", got)
+	}
+}
+
+// launchEffort resolves a stint's budget from the task spec's tier line;
+// a spec without one defaults to L1 → medium.
+func TestLaunchEffort(t *testing.T) {
+	dir := t.TempDir()
+	specRel := ".pact/tasks/t1.md"
+	if err := os.MkdirAll(filepath.Join(dir, ".pact/tasks"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	opts := Options{Dir: dir}
+
+	mustWrite(t, filepath.Join(dir, specRel), "# t1\nverify: go test ./...\ntier: L0\n")
+	if got := opts.launchEffort(projection.Task{Spec: specRel}); got != "low" {
+		t.Errorf("launchEffort(L0 spec) = %q, want low", got)
+	}
+
+	mustWrite(t, filepath.Join(dir, specRel), "# t1\nverify: go test ./...\ntier: L3\n")
+	if got := opts.launchEffort(projection.Task{Spec: specRel}); got != "high" {
+		t.Errorf("launchEffort(L3 spec) = %q, want high", got)
+	}
+
+	mustWrite(t, filepath.Join(dir, specRel), "# t1\nverify: go test ./...\n")
+	if got := opts.launchEffort(projection.Task{Spec: specRel}); got != "medium" {
+		t.Errorf("launchEffort(tier-less spec) = %q, want medium", got)
+	}
+
+	// An unreadable spec falls back to the L1 default, like the gate's handling.
+	if got := opts.launchEffort(projection.Task{Spec: ".pact/tasks/nope.md"}); got != "medium" {
+		t.Errorf("launchEffort(missing spec) = %q, want medium", got)
+	}
+}
+
+// TestGate_ExtractTier_BackwardCompat pins the hard requirement: a spec with
+// no `tier:` line sees TierL1 and its verify/QA extraction is byte-for-byte
+// unchanged, and a `tier:` line does not disturb `verify:` extraction.
+func TestGate_ExtractTier_BackwardCompat(t *testing.T) {
+	md := "# Task t1\n\nverify: go test ./internal/serve/\nqa: run the relay e2e\n"
+
+	if got := extractTier(md); got != TierL1 {
+		t.Fatalf("extractTier(tier-less spec) = %q, want default %q", got, TierL1)
+	}
+	cmd, ok := extractVerify(md)
+	if !ok || cmd != "go test ./internal/serve/" {
+		t.Fatalf("extractVerify changed on tier-less spec: got (%q,%v)", cmd, ok)
+	}
+	hint, ok := extractQA(md)
+	if !ok || hint != "run the relay e2e" {
+		t.Fatalf("extractQA changed on tier-less spec: got (%q,%v)", hint, ok)
+	}
+
+	// A `tier:` line must not shadow or corrupt the `verify:` directive.
+	withTier := md + "tier: L2\n"
+	cmd, ok = extractVerify(withTier)
+	if !ok || cmd != "go test ./internal/serve/" {
+		t.Fatalf("extractVerify with tier line: got (%q,%v)", cmd, ok)
+	}
+	if got := extractTier(withTier); got != TierL2 {
+		t.Fatalf("extractTier = %q, want %q", got, TierL2)
 	}
 }
 

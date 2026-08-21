@@ -44,6 +44,7 @@ func hasEnv(env []string, want string) bool {
 }
 
 func TestCmdRunner_Opencode(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
 	err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", Briefing: "do the work", RepoDir: "/repo"})
@@ -71,6 +72,7 @@ func TestCmdRunner_Opencode(t *testing.T) {
 }
 
 func TestCmdRunner_ClaudeCode(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
 	err := r.Run(context.Background(), LaunchContext{Seat: "r1", Kind: "claude-code", Briefing: "review task t1", RepoDir: "/work"})
@@ -89,6 +91,7 @@ func TestCmdRunner_ClaudeCode(t *testing.T) {
 }
 
 func TestRunnerStampsTaskAndProjectEnv(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
 	lc := LaunchContext{Seat: "dev", Kind: "opencode", Task: "t7", Project: "demo", Briefing: "B", RepoDir: "/repo"}
@@ -191,6 +194,7 @@ func TestTagOpencodeSession(t *testing.T) {
 }
 
 func TestCmdRunner_GUIKind_Errors(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
 	err := r.Run(context.Background(), LaunchContext{Seat: "g1", Kind: "antigravity", Briefing: "brief", RepoDir: "/repo"})
@@ -203,6 +207,7 @@ func TestCmdRunner_GUIKind_Errors(t *testing.T) {
 }
 
 func TestCmdRunner_UnknownKind_Errors(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
 	err := r.Run(context.Background(), LaunchContext{Seat: "x1", Kind: "no-such-kind", Briefing: "brief", RepoDir: "/repo"})
@@ -215,6 +220,7 @@ func TestCmdRunner_UnknownKind_Errors(t *testing.T) {
 }
 
 func TestCmdRunner_ExecError_Propagates(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	want := errors.New("boom")
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, want)}
@@ -239,6 +245,7 @@ func emitExec(out string, ret error) execFn {
 // A run whose stdout carries usage JSON records the parsed total into the repo's
 // token store, keyed by task — the write side the dashboard's cost lens reads.
 func TestCmdRunner_RecordsTokens(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	dir := t.TempDir()
 	r := CmdRunner{Exec: emitExec(`{"usage":{"input_tokens":120,"output_tokens":80}}`+"\n", nil)}
 	err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "claude-code", Task: "t-x", Briefing: "go", RepoDir: dir})
@@ -253,6 +260,7 @@ func TestCmdRunner_RecordsTokens(t *testing.T) {
 // Two stints on the same task accumulate (Add sums); a failing run still records
 // the usage it emitted before failing (telemetry is independent of the verdict).
 func TestCmdRunner_RecordsTokens_AccumulatesAcrossRuns(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	dir := t.TempDir()
 	lc := LaunchContext{Seat: "w1", Kind: "claude-code", Task: "t-y", Briefing: "go", RepoDir: dir}
 	r1 := CmdRunner{Exec: emitExec(`{"usage":{"input_tokens":50,"output_tokens":50}}`, nil)}
@@ -272,6 +280,7 @@ func TestCmdRunner_RecordsTokens_AccumulatesAcrossRuns(t *testing.T) {
 // No task id (a non-orchestrated launch) records nothing and never panics; output
 // with no usage block is likewise a silent no-op.
 func TestCmdRunner_RecordsTokens_NoopWithoutTaskOrUsage(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	dir := t.TempDir()
 	noTask := CmdRunner{Exec: emitExec(`{"usage":{"input_tokens":9,"output_tokens":9}}`, nil)}
 	if err := noTask.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "claude-code", Briefing: "go", RepoDir: dir}); err != nil {
@@ -314,6 +323,7 @@ func TestNewCmdRunner_HasExec(t *testing.T) {
 }
 
 func TestRunMirrorsStdoutToStreamFile(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	dir := t.TempDir()
 	r := CmdRunner{Exec: func(ctx context.Context, name string, args []string, d string, env []string, capture io.Writer) error {
 		capture.Write([]byte("hello from agent\n"))
@@ -340,6 +350,7 @@ func argsHave(args []string, want string) bool {
 }
 
 func TestRunnerSubstitutesSeatToken(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	rp := agent.RunnerProfile{Command: "myagent", DefaultModel: "m1",
 		BuildArgs: func(model string, _ agent.PermPosture, briefing string) []string {
 			return []string{"run", "--id", "{seat}", briefing}
@@ -393,6 +404,7 @@ func TestCodexResumeArgs(t *testing.T) {
 }
 
 func TestCmdRunner_Codex_RecordsThreadID(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	dir := t.TempDir()
 	r := CmdRunner{Exec: emitExec(`{"type":"thread.started","thread_id":"th-abc"}`+"\n", nil)}
 	lc := LaunchContext{Seat: "w1", Kind: "codex-cli", Task: "t1", Briefing: "do it", RepoDir: dir}
@@ -406,6 +418,7 @@ func TestCmdRunner_Codex_RecordsThreadID(t *testing.T) {
 }
 
 func TestCmdRunner_Codex_ResumeRetry(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
 	dir := t.TempDir()
 	steps := []struct {
 		out string
@@ -476,5 +489,56 @@ func TestCmdRunner_Codex_ResumeRetry(t *testing.T) {
 	id, ok := LookupSession(dir, "w1", "t1")
 	if !ok || id != "th-new" {
 		t.Fatalf("after run 3 want fresh session th-new, got %q ok=%v", id, ok)
+	}
+}
+
+// The tier-derived effort budget (LaunchContext.Effort) reaches the argv of a
+// kind that declares effort control: claude-code gets --effort appended.
+func TestCmdRunner_EffortFlagAppended(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	lc := LaunchContext{Seat: "w1", Kind: "claude-code", Briefing: "do it", RepoDir: "/repo", Effort: "low"}
+	if err := r.Run(context.Background(), lc); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	want := []string{"-p", "--no-session-persistence", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "do it", "--effort", "low"}
+	if !reflect.DeepEqual(cap.args, want) {
+		t.Fatalf("args = %v, want %v", cap.args, want)
+	}
+}
+
+// Empty Effort must leave the argv byte-for-byte unchanged, and a kind with no
+// effort control (opencode) must ignore a set Effort — its launch stays
+// byte-for-byte identical either way.
+func TestCmdRunner_EffortZeroChange(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+
+	// Capable kind, empty effort → default argv, no effort flag.
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "claude-code", Briefing: "do it", RepoDir: "/repo"}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	want := []string{"-p", "--no-session-persistence", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "do it"}
+	if !reflect.DeepEqual(cap.args, want) {
+		t.Fatalf("empty-effort args = %v, want %v", cap.args, want)
+	}
+
+	// Incapable kind, effort set → argv identical to an effort-less launch.
+	var withEffort, withoutEffort runCapture
+	rw := CmdRunner{Exec: fakeRunExec(&withEffort, nil)}
+	ro := CmdRunner{Exec: fakeRunExec(&withoutEffort, nil)}
+	lc := LaunchContext{Seat: "w1", Kind: "opencode", Briefing: "do it", RepoDir: "/repo"}
+	lcEff := lc
+	lcEff.Effort = "high"
+	if err := rw.Run(context.Background(), lcEff); err != nil {
+		t.Fatalf("Run with effort: %v", err)
+	}
+	if err := ro.Run(context.Background(), lc); err != nil {
+		t.Fatalf("Run without effort: %v", err)
+	}
+	if !reflect.DeepEqual(withEffort.args, withoutEffort.args) {
+		t.Fatalf("opencode args changed by effort: with=%v without=%v", withEffort.args, withoutEffort.args)
 	}
 }

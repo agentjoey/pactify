@@ -336,7 +336,7 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 			return false, false, nil
 		}
 		if act.Kind == ActRunOwner || act.Kind == ActRunReviewer {
-			if reason, isTripped := tripped(act.Task, h, o.Th); isTripped {
+			if reason, isTripped := tripped(act.Task, h, o.thresholdsFor(st, act)); isTripped {
 				emit(buildEscalatedStatus(view, act.Task, reason, h, now))
 				// Threshold fired, human notified: drop the task's persisted failure
 				// budget so a post-fix rerun resumes instead of re-tripping on the

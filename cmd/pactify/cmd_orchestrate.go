@@ -49,6 +49,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var resetTask string
 	var resume bool
 	var maxRework, maxFails, maxIters int
+	var maxFixRounds int
 	var runTimeoutMin, idleTimeoutMin int
 	var maxConc int
 	var dryRun bool
@@ -169,6 +170,19 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 				Orchestrator:    orchestrator,
 				CleanupSessions: !keepSessions,
 				Critic:          parseCriticSeat(critic),
+				MaxFixRounds:    maxFixRounds,
+				// Record which budget knobs were set EXPLICITLY (spec
+				// execution-tiering §5 rule 1): an explicit flag wins over the
+				// task's tier-derived budget, and an explicit 0 (e.g.
+				// --max-fix-rounds=0, self-repair off) must not be treated as
+				// "unset". cobra's Changed() is the only reliable signal — Go
+				// cannot distinguish a flag default from the user typing it.
+				ExplicitBudget: orchestrate.BudgetExplicit{
+					FixRounds: c.Flags().Changed("max-fix-rounds"),
+					MaxRework: c.Flags().Changed("max-rework"),
+					MaxFails:  c.Flags().Changed("max-fails"),
+					Critic:    c.Flags().Changed("critic"),
+				},
 			}
 			// --max-concurrency > 1 drives independent features in parallel, each in
 			// an isolated worktree, merges serialized onto base. Incompatible with
@@ -209,6 +223,7 @@ Each acting seat needs a headless runner: map it with --seat-kind seat=kind
 	cmd.Flags().BoolVar(&orchNoRegister, "no-register", false, "do not auto-register this project for the dashboard")
 	cmd.Flags().IntVar(&maxRework, "max-rework", 3, "escalate after this many changes-requested rounds on a task")
 	cmd.Flags().IntVar(&maxFails, "max-fails", 2, "escalate after this many failed agent runs on a task")
+	cmd.Flags().IntVar(&maxFixRounds, "max-fix-rounds", 2, "pre-review fix-until-green self-repair rounds per task (0 = disable self-repair); when not set, the task's tier derives it (execution-tiering §5)")
 	cmd.Flags().IntVar(&maxIters, "max-iters", 50, "global iteration cap (backstop against a non-converging loop)")
 	cmd.Flags().IntVar(&runTimeoutMin, "run-timeout", 30, "minutes for one agent run end-to-end before killing it as a soft failure (0 = no timeout)")
 	cmd.Flags().IntVar(&idleTimeoutMin, "idle-timeout", 5, "patrol window: kill an agent as hung only after this many minutes of NO output AND NO working-tree changes (a quiet-but-writing agent keeps running); soft failure → retry; 0 = no idle watchdog")

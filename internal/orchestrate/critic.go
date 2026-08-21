@@ -45,16 +45,23 @@ func (opts Options) criticSeat() string {
 //   - Critic ran but emitted no parseable score → records a note with a null
 //     score and returns "" (the reviewer still runs).
 func (opts Options) runCritic(ctx context.Context, st projection.State, act Action) string {
-	seat := opts.criticSeat()
-	if seat == "" {
-		return "" // feature OFF (default): zero behavior change, no stint launched
-	}
 	_, task, ok := find(st, act.Feature, act.Task)
 	if !ok {
 		return ""
 	}
+	// Tier gate (spec execution-tiering §5): L0 skips the optional critic stint
+	// unless the operator passed --critic explicitly. The reviewer stint itself
+	// is NEVER tier-gated — "a worker cannot accept its own work" is a protocol
+	// invariant, not a budget.
+	if !opts.budgetForTask(task).Critic {
+		return ""
+	}
+	seat := opts.criticSeat()
+	if seat == "" {
+		return "" // feature OFF (default): zero behavior change, no stint launched
+	}
 
-	if runErr := opts.launchAgent(ctx, seat, opts.kind(seat), criticBrief(task), act.Task); runErr != nil {
+	if runErr := opts.launchAgent(ctx, seat, opts.kind(seat), criticBrief(task), act.Task, opts.launchEffort(task)); runErr != nil {
 		// Critic stint failure/timeout is soft: skip silently. NEVER block the flow —
 		// the reviewer runs regardless (do not even record a note; the critic did not
 		// produce one).

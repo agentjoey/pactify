@@ -1055,3 +1055,39 @@ features:
         reviewer: claude
         spec: .pact/tasks/phase0-m10.md
         evidence: M10 修复：event/log.go 的 parse 改为有界 bufio.Reader(16MiB,ReadSlice)——超长行 drain 跳过(有界内存防 OOM)、畸形 JSON 行跳过、绝不因单行 brick 整读；新增 ParseStats.Skipped 可观测；rules.go checkCheckpoint 加 1MiB evidence 上界(源头预防)。验证：TestSEC_M10 两条绿；event/projection 全套绿(有效行字节等价、snapshot fold 不破)；pact 套件绿；build/vet OK。仅改 2 文件。
+  - id: exec-tiering
+    branch: feat-exec-tiering
+    status: in_progress
+    tasks:
+      - id: exec-tiering-evidence
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-evidence.md
+        evidence: 实现：loop.go 迭代帽调用点 "(global cap)" → capEvidence(view, h)；新增纯函数 capEvidence（loop.go，tailBytes 前）：枚举未完结 task（跳过 accepted、跳过 shipped feature），每条带 id/status/last=失败原文/class=/rework=；上限 20 条超出追加 "… (+N more)"，LastFail 截断 200 runes；无未完结 task 返回 "(global cap)"。 新增 exec_tiering_evidence_test.go 4 个测试（含 tradelinks 回归：Fails=0 但 LastFail 有值仍可诊断；>20 条有界性；超长 LastFail 截断）。  $ go test ./internal/orchestrate/ -run 'CapEvidence' ok   github.com/agentjoey/pactify/internal/orchestrate 0.507s  $ go test ./internal/orchestrate/（任务门） --- FAIL: TestCmdRunner_Codex_ResumeRetry (0.00s) FAIL github.com/agentjoey/pactify/internal/orchestrate 41.279s  唯一红测 TestCmdRunner_Codex_ResumeRetry 与本次改动无关且为分支既有失败： git stash 去掉我的全部改动后在分支基线（HEAD 5776fa2）重跑仍 FAIL （runner_test.go:458 "run 1 args = [run --title [pact:w1] -m deepseek/...]，want cold exec"）。 该测试涉及 runner.go/runner_test.go，不在本任务允许改的两个文件内，未触碰。 除该既有红测外全包绿，本任务 4 个新测试全绿。
+      - id: exec-tiering-parse
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-parse.md
+        evidence: 实现：tier 解析与校验管线（零运行时行为变化）。 - internal/orchestrate/gate.go: 新增 tierPrefix / Tier 类型 / ParseTier（大小写不敏感、去空白、未知→TierL1）/ extractTier（复用既有 extractField）。 - internal/planner/manifest.go: PlanTask.Tier `json:"tier,omitempty"` + Validate 校验（大小写不敏感，非 L0-L3 拒绝；空=L1 合法），含刻意重复 orchestrate.Tier 字面量的注释。 - internal/planner/prompt.go: BuildPrompt 新增「Task tiers」一节（每任务标 tier、manifest tier 字段 + spec tier: 行双写、L0/L1 派便宜座席 L2/L3 派强座席）；manifestSchemaExample 带 "tier"。 测试：orchestrate 新增 TestParseTier / TestGate_ExtractTier / TestGate_ExtractTier_BackwardCompat（钉住无 tier 既有 spec 的 verify/QA 行为逐字节不变）；planner 新增 TestPlanTaskTier（合法 round-trip / 小写接受 / L9 拒绝 / 无 tier 老清单合法）与 TestPromptInstructsTiers，schema 字段列表加 "tier"。  go test ./internal/orchestrate/ ./internal/planner/ -run 'Tier|Parse|Manifest|Prompt': ok  github.com/agentjoey/pactify/internal/orchestrate  6.102s ok  github.com/agentjoey/pactify/internal/planner      1.387s  go test ./internal/orchestrate/ ./internal/planner/: --- FAIL: TestCmdRunner_Codex_ResumeRetry (0.00s)   ← 已知既有失败（读本机 ~/.pactify/agents.json，非 hermetic），与本任务无关，按任务说明忽略 FAIL github.com/agentjoey/pactify/internal/orchestrate  41.351s ok   github.com/agentjoey/pactify/internal/planner      3.350s orchestrate 包内除该既有失败外全部通过；无其它测试从绿变红。
+      - id: exec-tiering-route
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-route.md
+        evidence: 实现：tier → reasoning-effort 旁路注入（append-only，BuildArgs 签名/默认输出未动）。  改动： - agent/launch.go: RunnerProfile 新增可选 EffortArgs func(effort string) []string（nil=无 effort 能力）。   codex-cli → -c model_reasoning_effort=<effort>；claude-code → --effort <effort>（均已用本机   `claude --help` 核实 --effort 存在）。kimi-cli 置 nil：本机 `kimi --help` 无任何   thinking/effort flag（无 --no-thinking），按安全默认不瞎猜，注释已说明。opencode/gemini-cli 无   已知 flag，保持 nil。 - agentcfg: Override/Effective 新增 Effort；ResolveWith 仅在 EffortArgs!=nil 且 Effort!="" 时把   EffortArgs(effort) 追加到 Args，否则逐字节不变。ResolveSeat 加第 3 参 tierEffort；per-kind   fallthrough 路径保留 registry 的 model/权限覆盖仅叠加 effort。 - roles.Profile 新增 effort,omitempty（显式 per-seat pin）：ResolveSeat 中 profile.Effort 显式值   绝对优先于 tier 推导值——这是"显式 per-seat Override 优先"的落点（roles.json 是 ResolveSeat   唯一读取的 per-seat 配置，Model 同理）。 - orchestrate: gate.go 新增 EffortForTier（L0→low, L1→medium, L2→medium[刻意不升档], L3→high）；   loop.go 新增 opts.launchEffort(task)（readSpec→extractTier→EffortForTier），launchAgent 加   effort 参数并写入 LaunchContext.Effort；6 个启动点（runOwner/launchReviewers×2/fixUntilGreen/   critic/runQA×2）全部传入；runner.go CmdRunner 经 agentcfg.ResolveSeat(seat,kind,lc.Effort) 接线。   未动 owner/reviewer 选择、账本、调度。  验证（两层，均真实执行）： 1 go test ./internal/agent/ ./internal/agentcfg/ -run 'Effort|Tier|Resolve'    ok  github.com/agentjoey/pactify/internal/agent      1.293s    ok  github.com/agentjoey/pactify/internal/agentcfg   0.891s 2) go test ./internal/agent/ ./internal/agentcfg/ ./internal/orchestrate/    ok  github.com/agentjoey/pactify/internal/agent    (launch_test/agent_test 全绿 = BuildArgs 未破)    ok  github.com/agentjoey/pactify/internal/agentcfg    orchestrate 唯一红：TestCmdRunner_Codex_ResumeRetry —— 任务书第 3 条声明的本机既有失败    （非 hermetic：本机 ~/.pactify/roles.json 把 w1 绑到 opencode profile，导致 codex 用例解析成    opencode argv）。失败输出确认与该原因一致：run 1 args = [run --title [pact:w1] -m    deepseek/deepseek-v4-pro do it]。与本任务无关，按要求未修。    另：go test ./internal/roles/ ok（roles.go 有改动，补充确认）。  新增测试：EffortForTier 阶梯（含 L2=medium 钉死）、launchEffort（L0/L3/无 tier/缺 spec）、 launch_test EffortArgs 形状+未声明 kind 必须 nil、agentcfg 的 effort 追加/空值不变/无 EffortArgs kind 逐字节不变/显式 profile pin 优先于 tier、runner_test 的 LaunchContext.Effort 到达 argv 及 空 effort/opencode 逐字节不变。 EOF )
+        deps: [exec-tiering-parse]
+      - id: exec-tiering-budget
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-budget.md
+        evidence: go test ./internal/orchestrate/ -run 'Budget|Tier|Threshold' → PASS ok 3.133s（13 个匹配测试全过，含新增 TestBudgetForL1EqualsTodayDefaults / TestBudgetForTierTable / TestBudgetExplicitFlagsOverrideTier / TestBudgetExplicitZeroFixRoundsRespected / TestBudgetExplicitCriticFlagOverridesL0 / TestThresholdsForUsesTierBudget / TestTierL0SkipsCriticAndQAButRunsReviewer / TestTierL0ExplicitCriticFlagStillRuns / TestTierL0FixBudgetIsOne）。任务门：go test ./internal/orchestrate/ → ok 42.838s 全绿。附带：go test ./cmd/... → ok 8.375s。实现：internal/orchestrate/budget.go 新增 Budget/BudgetExplicit/budgetFor/budgetForTask/thresholdsFor；tripped 两处(loop+parallel)、fixUntilGreen、runQA、runCritic 改消费 per-task Budget；emitFixingStatus 传入 tier 上限；withDefaults 不再顶掉显式 0；cmd_orchestrate.go 新增 --max-fix-rounds flag 并用 Flags().Changed 记录 4 个预算 knob 的显式性。reviewer 棒无 tier 门控（TestTierL0SkipsCriticAndQAButRunsReviewer 钉死 reviewerCalls==1）。
+        deps: [exec-tiering-parse]
+      - id: exec-tiering-hermetic
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-hermetic.md
+        evidence: 修复：internal/orchestrate/runner_test.go 中 13 个走 CmdRunner.Run→agentcfg.ResolveSeat 的测试各加一行 t.Setenv("PACTIFY_HOME", t.TempDir())（照 approve_test.go:12 先例），只加不改，断言语义未动；git diff --stat: runner_test.go | 13 +++++++++++++ (1 file changed, 13 insertions(+))，零生产代码。验证1（本机真实配置，含 opencode→deepseek 等污染）: go test ./internal/orchestrate/ → ok github.com/agentjoey/pactify/internal/orchestrate 41.899s。验证2（隔离环境）: PACTIFY_HOME=$(mktemp -d) go test ./internal/orchestrate/ → ok github.com/agentjoey/pactify/internal/orchestrate 42.067s。两环境一致全绿。

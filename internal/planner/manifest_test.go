@@ -366,3 +366,57 @@ func TestPlanTaskCarriesOptionalRole(t *testing.T) {
 		t.Fatalf("absent role must stay empty, got %q", p2.Tasks[0].Role)
 	}
 }
+
+// exec-tiering-parse: a task may carry a `tier` (L0|L1|L2|L3). A valid tier
+// round-trips, an unknown tier is rejected at plan review, and a tier-less
+// manifest stays valid (empty = L1).
+func TestPlanTaskTier(t *testing.T) {
+	withTier := `{"feature":"f","branch":"feat/f","tasks":[
+	  {"id":"t1","owner":"w2","reviewer":"orch","spec":".pact/tasks/t1.md","verify":"true","tier":"L2"}]}`
+	p, err := planner.Parse([]byte(withTier))
+	if err != nil {
+		t.Fatalf("a manifest with a tier must parse: %v", err)
+	}
+	if p.Tasks[0].Tier != "L2" {
+		t.Fatalf("tier lost in parse: %+v", p.Tasks[0])
+	}
+	if err := p.Validate([]string{"w2", "orch"}); err != nil {
+		t.Fatalf("a manifest with a valid tier must validate: %v", err)
+	}
+
+	// Case-insensitive: lowercase tiers are accepted too.
+	lower := `{"feature":"f","branch":"feat/f","tasks":[
+	  {"id":"t1","owner":"w2","reviewer":"orch","spec":".pact/tasks/t1.md","verify":"true","tier":"l3"}]}`
+	pl, err := planner.Parse([]byte(lower))
+	if err != nil {
+		t.Fatalf("a manifest with a lowercase tier must parse: %v", err)
+	}
+	if err := pl.Validate([]string{"w2", "orch"}); err != nil {
+		t.Fatalf("lowercase tier must validate: %v", err)
+	}
+
+	// Unknown tiers are rejected at plan review, not at runtime.
+	bad := `{"feature":"f","branch":"feat/f","tasks":[
+	  {"id":"t1","owner":"w2","reviewer":"orch","spec":".pact/tasks/t1.md","verify":"true","tier":"L9"}]}`
+	pb, err := planner.Parse([]byte(bad))
+	if err != nil {
+		t.Fatalf("a manifest with an unknown tier must still parse: %v", err)
+	}
+	if err := pb.Validate([]string{"w2", "orch"}); err == nil || !strings.Contains(err.Error(), "L9") {
+		t.Fatalf("tier L9 must fail validation, got %v", err)
+	}
+
+	// Backward compatibility: a tier-less manifest stays valid.
+	noTier := `{"feature":"f","branch":"feat/f","tasks":[
+	  {"id":"t1","owner":"w2","reviewer":"orch","spec":".pact/tasks/t1.md","verify":"true"}]}`
+	pn, err := planner.Parse([]byte(noTier))
+	if err != nil {
+		t.Fatalf("a manifest without a tier must parse: %v", err)
+	}
+	if pn.Tasks[0].Tier != "" {
+		t.Fatalf("absent tier must stay empty, got %q", pn.Tasks[0].Tier)
+	}
+	if err := pn.Validate([]string{"w2", "orch"}); err != nil {
+		t.Fatalf("a tier-less manifest must validate: %v", err)
+	}
+}

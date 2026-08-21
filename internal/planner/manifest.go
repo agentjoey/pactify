@@ -25,6 +25,18 @@ var validDimensions = map[string]bool{
 	"ux":              true,
 }
 
+// validTiers is the allowed set of complexity tiers a planner may assign to a
+// task. Empty is allowed and means L1 (backward compatible). The literals
+// intentionally duplicate orchestrate.Tier: planner and orchestrate do not
+// import each other, and orchestrate.Tier remains the behavioral source of
+// truth (spec execution-tiering §4.1).
+var validTiers = map[string]bool{
+	"L0": true,
+	"L1": true,
+	"L2": true,
+	"L3": true,
+}
+
 type PlanTask struct {
 	ID        string   `json:"id"`
 	Owner     string   `json:"owner"`
@@ -33,6 +45,10 @@ type PlanTask struct {
 	Verify    string   `json:"verify"`
 	Deps      []string `json:"deps,omitempty"`
 	Dimension string   `json:"dimension,omitempty"`
+	// Tier is the complexity grade (L0|L1|L2|L3); empty = L1. Purely routing
+	// metadata: apply lands only owner/reviewer, and a manifest without it is
+	// unchanged.
+	Tier string `json:"tier,omitempty"`
 	// Role is the advisory kind-of-work label (frontend / backend / test …) the
 	// planner assigns so a human reviewing the plan sees WHY a task went to a
 	// given seat. Purely informational: apply lands only owner/reviewer, and a
@@ -138,6 +154,9 @@ func (p Plan) Validate(roster []string) error {
 		}
 		if t.Dimension != "" && !validDimensions[t.Dimension] {
 			errs = append(errs, fmt.Sprintf("task %s: dimension %q not one of correctness|security|performance|maintainability|ux", t.ID, t.Dimension))
+		}
+		if t.Tier != "" && !validTiers[strings.ToUpper(t.Tier)] {
+			errs = append(errs, fmt.Sprintf("task %s: tier %q not one of L0|L1|L2|L3", t.ID, t.Tier))
 		}
 		if t.Spec == "" {
 			errs = append(errs, prefix+"spec must not be empty")

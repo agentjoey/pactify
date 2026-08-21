@@ -67,6 +67,11 @@ type Options struct {
 	// they do NOT count toward MaxFails/MaxRework. Default 2 (withDefaults); 0
 	// means a RED gate escalates immediately (no self-repair).
 	MaxFixRounds int
+	// ExplicitBudget records which budget knobs the operator set explicitly via
+	// CLI flags (the CLI fills it from cmd.Flags().Changed). Explicit knobs win
+	// over the tier-derived budget in budgetFor (spec execution-tiering §5);
+	// the zero value means nothing was set explicitly.
+	ExplicitBudget BudgetExplicit
 	// RunTimeout bounds a single agent run end-to-end (a hard backstop). On expiry
 	// the agent subprocess is killed and the run counts as a soft failure (retry →
 	// escalate). 0 = no timeout (tests use the fake runner which returns instantly).
@@ -231,7 +236,7 @@ func (opts Options) seedSeatIfIsolated(seatID string) {
 	_ = os.WriteFile(paths.SeatFileIn(opts.Dir), []byte(seatID+"\n"), 0o644)
 }
 
-func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task string) error {
+func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task, effort string) error {
 	// Centralized orchestrator-as-actor check: the primary loop guard catches
 	// act.Seat before dispatch, but the owner is also launched from fix/QA
 	// rounds inside the ActRunReviewer branch, and quorum sweeps launch each
@@ -253,7 +258,16 @@ func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task s
 	return opts.Run.Run(runCtx, LaunchContext{
 		Seat: seatID, Kind: kind, Task: task, Project: projectID(opts.Dir),
 		Briefing: brief, RepoDir: opts.Dir, StreamDir: opts.runtimeDir(),
+		Effort: effort,
 	})
+}
+
+// launchEffort derives a stint's reasoning-effort budget from the task spec's
+// tier (execution-tiering §4.5). An unreadable spec defaults to TierL1 →
+// "medium", exactly like the gate's tier handling. This changes only HOW the
+// seat is launched, never WHICH seat runs.
+func (opts Options) launchEffort(task projection.Task) string {
+	return EffortForTier(extractTier(readSpec(opts.Dir, task.Spec)))
 }
 
 // projectID derives a stable project name from the repo dir (its base name) — the
@@ -434,7 +448,7 @@ func (opts Options) run(ctx context.Context) error {
 		// is never reached. Enforce per-task bounds here, before dispatching the
 		// action that would spin, so the offending task escalates instead.
 		if !opts.DryRun && (act.Kind == ActRunOwner || act.Kind == ActRunReviewer) {
-			if reason, tripped := tripped(act.Task, h, opts.Th); tripped {
+			if reason, tripped := tripped(act.Task, h, opts.thresholdsFor(st, act)); tripped {
 				opts.emitEscalatedStatus(view, act.Task, reason, h)
 				// Snapshot the failure history INTO the escalation record before the
 				// circuit-breaker reset below erases it — otherwise "limit exceeded"
@@ -478,7 +492,7 @@ func (opts Options) run(ctx context.Context) error {
 		}
 		if !opts.DryRun && opts.Th.MaxIters > 0 && h.Iters >= opts.Th.MaxIters {
 			opts.emitEscalatedStatus(view, "", "iteration limit exceeded", h)
-			return opts.escalate(opts.Feature, "", "iteration limit exceeded", "(global cap)",
+			return opts.escalate(opts.Feature, "", "iteration limit exceeded", capEvidence(view, h),
 				"放宽 --max-iters 或检查为何 task 图迟迟不收敛")
 		}
 
@@ -521,7 +535,8 @@ func (opts Options) run(ctx context.Context) error {
 			// Fix-until-green self-repair (spec §1 WS-F): before handing a
 			// checkpointed task to the reviewer, run its verify gate. GREEN → fall
 			// through to the reviewer exactly as before. RED → re-run the SAME owner
-			// with a fix briefing (bounded by MaxFixRounds; NOT a failure), rechecking
+			// with a fix briefing (bounded by the task's tier-derived fix budget; NOT
+			// a failure), rechecking
 			// the gate each round. Rounds exhausted → escalate (proceed=false).
 			proceed, err := opts.fixUntilGreen(ctx, st, view, act, &h, fixRounds)
 			if err != nil {
@@ -533,7 +548,7 @@ func (opts Options) run(ctx context.Context) error {
 			// QA-agent gate (spec §4 WS-I, experimental, task-level opt-in): with the
 			// verify gate green and BEFORE the critic (order: 先 QA 后 critic), if the
 			// task declares a `qa:` hint, run the software to verify it. A QA FAIL feeds
-			// the SAME WS-F fix loop, sharing fixRounds/MaxFixRounds. No `qa:` line → ""
+			// the SAME WS-F fix loop, sharing fixRounds/the tier fix budget. No `qa:` line → ""
 			// and zero extra stints (byte-identical flow).
 			qaNote, proceed, err := opts.runQA(ctx, st, view, act, &h, fixRounds)
 			if err != nil {
@@ -639,7 +654,7 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	preLaunch := gitx.TreeFingerprint(opts.Dir)
 	delivered := func() bool { return gitx.TreeFingerprint(opts.Dir) != preLaunch }
 
-	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
+	if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task, opts.launchEffort(task)); runErr != nil {
 		if ctx.Err() != nil {
 			return runErr // cancellation: propagate, don't count as a task failure
 		}
@@ -768,7 +783,7 @@ func (opts Options) launchReviewers(ctx context.Context, act Action, task projec
 	if len(task.Reviewers) == 0 {
 		// Legacy single-reviewer: unchanged. act.Seat == task.Reviewer (nextAction).
 		brief := reviewerBrief(opts.Dir, projection.Seat{ID: act.Seat}, task, criticNote)
-		return opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task)
+		return opts.launchAgent(ctx, task.Reviewer, opts.kind(task.Reviewer), brief, act.Task, opts.launchEffort(task))
 	}
 	for _, reviewer := range task.Reviewers {
 		// Re-read live state: an earlier reviewer's accept/changes in THIS sweep may
@@ -788,7 +803,7 @@ func (opts Options) launchReviewers(ctx context.Context, act Action, task projec
 			continue // already voted this round → skip
 		}
 		brief := reviewerBrief(opts.Dir, projection.Seat{ID: reviewer}, t, criticNote)
-		if err := opts.launchAgent(ctx, reviewer, opts.kind(reviewer), brief, act.Task); err != nil {
+		if err := opts.launchAgent(ctx, reviewer, opts.kind(reviewer), brief, act.Task, opts.launchEffort(t)); err != nil {
 			return err
 		}
 		// Mirror the fresh verdict into the runtime dir so a sandboxed board reflects
@@ -818,7 +833,8 @@ func containsSeat(xs []string, seat string) bool {
 //     added effect on a green first try is the gate exec itself).
 //   - RED → re-runs the SAME owner with a fix briefing (tail of the verify output
 //   - "you already checkpointed; fix until the gate is green, then checkpoint
-//     again"), rechecking the gate after each round, bounded by opts.MaxFixRounds.
+//     again"), rechecking the gate after each round, bounded by the task's
+//     tier-derived budget (budgetForTask; spec execution-tiering §5).
 //     Fix rounds are in-stint self-repair: they NEVER touch h.Fails/h.Rework, so
 //     they do not count toward MaxFails/MaxRework.
 //   - Rounds exhausted → escalates with the last verify output as the reason and
@@ -832,13 +848,14 @@ func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State
 	}
 	cmd := opts.taskGateCommand(task)
 	base := opts.projectBase()
+	budget := opts.budgetForTask(task)
 	for {
 		passed, detail := runGateScoped(ctx, opts.Exec, opts.Dir, cmd, base)
 		if passed {
 			return true, nil
 		}
 		// RED. Out of fix rounds → escalate with the last verify output as reason.
-		if fixRounds[act.Task] >= opts.MaxFixRounds {
+		if fixRounds[act.Task] >= budget.FixRounds {
 			reason := fmt.Sprintf("fix-until-green exhausted after %d round(s); verify still failing:\n%s",
 				fixRounds[act.Task], detail)
 			opts.emitEscalatedStatus(view, act.Task, reason, *h)
@@ -847,11 +864,11 @@ func (opts Options) fixUntilGreen(ctx context.Context, st, view projection.State
 		}
 		// Re-run the SAME owner with a fix briefing. Count the round FIRST (driver
 		// in-memory only — not a failure, not a ledger event) so a persistently
-		// erroring fixer still terminates at MaxFixRounds.
+		// erroring fixer still terminates at the task's fix-round budget.
 		fixRounds[act.Task]++
-		opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task])
+		opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task], budget.FixRounds)
 		brief := fixBrief(task, detail)
-		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task); runErr != nil {
+		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), brief, act.Task, opts.launchEffort(task)); runErr != nil {
 			if ctx.Err() != nil {
 				return false, runErr // cancellation: propagate, don't swallow
 			}
@@ -900,6 +917,52 @@ func fixBrief(task projection.Task, verifyOutput string) string {
 	b.WriteString("```\n" + tailBytes(verifyOutput, 2048) + "\n```\n\n")
 	fmt.Fprintf(&b, "- 修好后重新 `pactify checkpoint %s` 附上验收命令输出。修到门绿为止,不要自标 accepted。\n", task.ID)
 	return b.String()
+}
+
+// capEvidence renders the per-task context the driver already holds when the
+// global iteration cap fires: every unfinished task with its recorded last
+// failure and class, so an operator can diagnose without re-reading the project.
+// Returns "(global cap)" unchanged when there is nothing more to say.
+func capEvidence(view projection.State, h History) string {
+	const maxTasks = 20
+	const maxFailRunes = 200
+	var lines []string
+	unfinished := 0
+	for _, f := range view.Features {
+		if f.Status == "shipped" {
+			continue
+		}
+		for _, t := range f.Tasks {
+			if t.Status == "accepted" {
+				continue
+			}
+			unfinished++
+			if len(lines) >= maxTasks {
+				continue
+			}
+			line := fmt.Sprintf("%s (%s)", t.ID, t.Status)
+			if fail := h.LastFail[t.ID]; fail != "" {
+				if r := []rune(fail); len(r) > maxFailRunes {
+					fail = string(r[:maxFailRunes]) + "…"
+				}
+				line += fmt.Sprintf(" last=%q", fail)
+			}
+			if class := h.LastClass[t.ID]; class != "" {
+				line += fmt.Sprintf(" class=%s", class)
+			}
+			if n := h.Rework[t.ID]; n > 0 {
+				line += fmt.Sprintf(" rework=%d", n)
+			}
+			lines = append(lines, line)
+		}
+	}
+	if len(lines) == 0 {
+		return "(global cap)"
+	}
+	if unfinished > maxTasks {
+		lines = append(lines, fmt.Sprintf("… (+%d more)", unfinished-maxTasks))
+	}
+	return strings.Join(lines, "\n")
 }
 
 // tailBytes returns the last n bytes of s, trimmed forward to the next rune
@@ -1269,10 +1332,11 @@ func (opts Options) emitEscalatedStatus(view projection.State, task, reason stri
 }
 
 // emitFixingStatus writes a `fixing` snapshot so the board shows "fixing n/max"
-// while the pre-review self-repair loop re-runs the owner (spec §1 WS-F).
+// while the pre-review self-repair loop re-runs the owner (spec §1 WS-F). max is
+// the task's tier-derived fix-round budget (spec execution-tiering §5).
 // Write errors are silently ignored (status is observation, not a transaction source).
-func (opts Options) emitFixingStatus(view projection.State, act Action, owner string, h History, round int) {
-	writeStatus(opts.runtimeDir(), buildFixingStatus(view, act, owner, h, round, opts.MaxFixRounds, func() string { return statusNow(opts.Now) }))
+func (opts Options) emitFixingStatus(view projection.State, act Action, owner string, h History, round, max int) {
+	writeStatus(opts.runtimeDir(), buildFixingStatus(view, act, owner, h, round, max, func() string { return statusNow(opts.Now) }))
 }
 
 // --- small state/log helpers -------------------------------------------------

@@ -45,6 +45,59 @@ func extractQA(specMarkdown string) (string, bool) {
 	return extractField(specMarkdown, qaPrefix)
 }
 
+// tierPrefix marks the machine-readable complexity tier inside a task spec
+// (spec execution-tiering §4.1). Convention: a single frontmatter-style line
+// `tier: L0|L1|L2|L3`. Its absence resolves to TierL1, so every existing spec
+// keeps today's behavior byte-for-byte.
+const tierPrefix = "tier:"
+
+// Tier is a task's complexity grade. TierL1 is the default.
+type Tier string
+
+const (
+	TierL0 Tier = "L0"
+	TierL1 Tier = "L1" // default
+	TierL2 Tier = "L2"
+	TierL3 Tier = "L3"
+)
+
+// ParseTier normalizes a raw tier string. Case-insensitive, whitespace-trimmed.
+// Any absent, empty, or unrecognized value resolves to TierL1 so every existing
+// spec keeps today's behavior byte-for-byte.
+func ParseTier(raw string) Tier {
+	switch Tier(strings.ToUpper(strings.TrimSpace(raw))) {
+	case TierL0:
+		return TierL0
+	case TierL2:
+		return TierL2
+	case TierL3:
+		return TierL3
+	default:
+		return TierL1
+	}
+}
+
+// extractTier pulls `tier:` out of a task spec markdown, defaulting to TierL1.
+func extractTier(specMarkdown string) Tier {
+	raw, _ := extractField(specMarkdown, tierPrefix)
+	return ParseTier(raw)
+}
+
+// EffortForTier maps a task's tier to its starting reasoning-effort budget
+// (execution-tiering §4.5). L2 deliberately stays at medium: the tier sets the
+// STARTING budget — only evidence of real failure buys more reasoning
+// (failure-driven escalation), so L2 must NOT be "helpfully" raised to high.
+func EffortForTier(t Tier) string {
+	switch t {
+	case TierL0:
+		return "low"
+	case TierL3:
+		return "high"
+	default: // TierL1, TierL2 (and any ParseTier-normalized value)
+		return "medium"
+	}
+}
+
 // extractField is the shared frontmatter-line parser behind extractVerify and
 // extractQA: the first line whose trimmed text starts with prefix wins, its value
 // is trimmed and unquoted, and a bare prefix with no value is treated as absent.

@@ -98,6 +98,42 @@ func TestLaunchProfile_NonDrivable(t *testing.T) {
 	}
 }
 
+// EffortArgs is an optional per-kind side channel (execution-tiering §4.5):
+// kinds that declare it render their CLI's reasoning-effort flag(s); kinds that
+// declare none must launch byte-for-byte unchanged. codex takes a -c config
+// override; claude takes --effort. opencode/gemini-cli/kimi-cli have no verified
+// effort flag on their current builds, so they MUST stay nil.
+func TestLaunchProfile_EffortArgs(t *testing.T) {
+	px, _ := RunnerProfileFor("codex-cli")
+	if px.EffortArgs == nil {
+		t.Fatal("codex-cli: EffortArgs = nil, want declared")
+	}
+	if got := px.EffortArgs("low"); !reflect.DeepEqual(got, []string{"-c", "model_reasoning_effort=low"}) {
+		t.Errorf("codex-cli EffortArgs(low) = %v", got)
+	}
+	if got := px.EffortArgs("high"); !reflect.DeepEqual(got, []string{"-c", "model_reasoning_effort=high"}) {
+		t.Errorf("codex-cli EffortArgs(high) = %v", got)
+	}
+
+	pc, _ := RunnerProfileFor("claude-code")
+	if pc.EffortArgs == nil {
+		t.Fatal("claude-code: EffortArgs = nil, want declared")
+	}
+	if got := pc.EffortArgs("low"); !reflect.DeepEqual(got, []string{"--effort", "low"}) {
+		t.Errorf("claude-code EffortArgs(low) = %v", got)
+	}
+	if got := pc.EffortArgs("high"); !reflect.DeepEqual(got, []string{"--effort", "high"}) {
+		t.Errorf("claude-code EffortArgs(high) = %v", got)
+	}
+
+	// No verified effort flag → nil (safe default: launch unchanged).
+	for _, k := range []string{"opencode", "gemini-cli", "kimi-cli"} {
+		if p, _ := RunnerProfileFor(k); p.EffortArgs != nil {
+			t.Errorf("%s: EffortArgs declared — an unverified effort flag must stay nil", k)
+		}
+	}
+}
+
 // CandidateModels returns each drivable kind's curated list (default first),
 // nil for kinds with no curated list or no profile.
 func TestCandidateModels(t *testing.T) {

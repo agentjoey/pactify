@@ -49,7 +49,7 @@ const (
 //     path, proceed.
 //   - FAIL → treated like a RED verify gate: it feeds the SAME WS-F self-repair
 //     mechanism, re-running the owner with a fix briefing and SHARING the fixRounds
-//     budget + opts.MaxFixRounds bound with fixUntilGreen (a round burned by a
+//     budget + the task's tier fix-round bound with fixUntilGreen (a round burned by a
 //     verify-red fix leaves fewer QA-fix rounds, and vice-versa). After each owner
 //     fix it re-runs the QA stint. Rounds exhausted → escalate (proceed=false),
 //     exactly like a permanently-red verify gate.
@@ -57,6 +57,10 @@ func (opts Options) runQA(ctx context.Context, st, view projection.State, act Ac
 	_, task, ok := find(st, act.Feature, act.Task)
 	if !ok {
 		return "", true, nil
+	}
+	budget := opts.budgetForTask(task)
+	if !budget.QA {
+		return "", true, nil // tier L0 skips the optional QA stint (spec execution-tiering §5)
 	}
 	hint, ok := extractQA(readSpec(opts.Dir, task.Spec))
 	if !ok {
@@ -66,7 +70,7 @@ func (opts Options) runQA(ctx context.Context, st, view projection.State, act Ac
 
 	for {
 		// The QA stint reuses the owner's runner/kind (spec §4: keep it simple).
-		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), qaBrief(opts.Dir, task, hint, report), act.Task); runErr != nil {
+		if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), qaBrief(opts.Dir, task, hint, report), act.Task, opts.launchEffort(task)); runErr != nil {
 			if ctx.Err() != nil {
 				return "", false, runErr // cancellation: propagate, don't swallow
 			}
@@ -95,8 +99,8 @@ func (opts Options) runQA(ctx context.Context, st, view projection.State, act Ac
 			return qaInjection(report, ""), true, nil
 		case qaFail:
 			// Equivalent to a RED verify gate → feed the WS-F fix loop, SHARING the
-			// round budget with fixUntilGreen (same map, same MaxFixRounds bound).
-			if fixRounds[act.Task] >= opts.MaxFixRounds {
+			// round budget with fixUntilGreen (same map, same tier fix-round bound).
+			if fixRounds[act.Task] >= budget.FixRounds {
 				reason := fmt.Sprintf("QA gate FAIL — fix rounds exhausted after %d round(s): %s",
 					fixRounds[act.Task], sentence)
 				opts.emitEscalatedStatus(view, act.Task, reason, *h)
@@ -106,8 +110,8 @@ func (opts Options) runQA(ctx context.Context, st, view projection.State, act Ac
 			// Count the shared round FIRST (driver in-memory only — not a failure, not a
 			// ledger event) so a persistently-failing fixer still terminates.
 			fixRounds[act.Task]++
-			opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task])
-			if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), qaFixBrief(task, sentence, report), act.Task); runErr != nil {
+			opts.emitFixingStatus(view, act, task.Owner, *h, fixRounds[act.Task], budget.FixRounds)
+			if runErr := opts.launchAgent(ctx, task.Owner, opts.kind(task.Owner), qaFixBrief(task, sentence, report), act.Task, opts.launchEffort(task)); runErr != nil {
 				if ctx.Err() != nil {
 					return "", false, runErr
 				}

@@ -319,3 +319,81 @@ func TestResolveSeat_AntigravityProfilesDefinedButUnboundMatchesResolve(t *testi
 		t.Fatalf("unbound seat with profiles defined-but-unbound must match Resolve byte-for-byte: got %+v(%v) want %+v(%v)", got, okGot, want, okWant)
 	}
 }
+
+func TestResolveWith_PopulatesKind(t *testing.T) {
+	eff, ok := ResolveWith("claude-code", Override{})
+	if !ok {
+		t.Fatal("ResolveWith ok=false")
+	}
+	if eff.Kind != "claude-code" {
+		t.Errorf("eff.Kind = %q, want claude-code", eff.Kind)
+	}
+
+	effAgy, ok := ResolveWith("antigravity", Override{})
+	if !ok {
+		t.Fatal("ResolveWith antigravity ok=false")
+	}
+	if effAgy.Kind != "antigravity" {
+		t.Errorf("effAgy.Kind = %q, want antigravity", effAgy.Kind)
+	}
+}
+
+func TestResolveSeat_EffectiveKind(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	c, _ := roles.Load()
+	if err := c.SetProfile("claude-reviewer", roles.Profile{Kind: "claude-code", Model: "claude-opus-4-8"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetProfile("agy-worker", roles.Profile{Kind: "antigravity", Model: "gemini-3.7-flash-medium"}); err != nil {
+		t.Fatal(err)
+	}
+	c.Profiles["no-kind-override"] = roles.Profile{Model: "custom-model"}
+	if err := c.Bind("reviewer", "claude-reviewer"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Bind("worker", "agy-worker"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Bind("fallback", "no-kind-override"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Seat bound to claude-code profile, but passed kind="antigravity" -> Effective.Kind must be "claude-code"
+	eff, ok := ResolveSeat("reviewer", "antigravity", "")
+	if !ok {
+		t.Fatal("ResolveSeat reviewer ok=false")
+	}
+	if eff.Kind != "claude-code" {
+		t.Errorf("reviewer eff.Kind = %q, want claude-code", eff.Kind)
+	}
+
+	// 2. Seat bound to antigravity profile, passed kind="claude-code" -> Effective.Kind must be "antigravity"
+	eff, ok = ResolveSeat("worker", "claude-code", "")
+	if !ok {
+		t.Fatal("ResolveSeat worker ok=false")
+	}
+	if eff.Kind != "antigravity" {
+		t.Errorf("worker eff.Kind = %q, want antigravity", eff.Kind)
+	}
+
+	// 3. Seat bound to profile with empty Kind -> fallback to passed kind
+	eff, ok = ResolveSeat("fallback", "opencode", "")
+	if !ok {
+		t.Fatal("ResolveSeat fallback ok=false")
+	}
+	if eff.Kind != "opencode" {
+		t.Errorf("fallback eff.Kind = %q, want opencode", eff.Kind)
+	}
+
+	// 4. Unbound seat -> Effective.Kind is passed kind
+	eff, ok = ResolveSeat("unbound", "claude-code", "")
+	if !ok {
+		t.Fatal("ResolveSeat unbound ok=false")
+	}
+	if eff.Kind != "claude-code" {
+		t.Errorf("unbound eff.Kind = %q, want claude-code", eff.Kind)
+	}
+}

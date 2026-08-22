@@ -10,7 +10,7 @@ features:
     tasks:
       - id: t1
         owner: opencode
-        status: assigned
+        status: in_progress
         reviewer: claude-opus
         spec: .pact/tasks/t1.md
         evidence: null

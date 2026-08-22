@@ -1159,7 +1159,7 @@ features:
     tasks:
       - id: registry-missing-tests
         owner: agy-w
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/registry-missing-tests.md
         evidence: 按照 review 要求进行了全部返工： 1. git rm 清理了 A.md、evidence.txt、revert.patch 及 .orig/.rej 等冗余文件。 2. 避免使用 patch，直接修改对应包的测试文件：    - internal/registry/registry_test.go 补充 TestMissing，同时修正了 `os.MkdirAll` 与 `os.WriteFile` 错误返回值未用 `t.Fatal` 检查的漏洞。    - internal/serve/api_test.go 补充 TestAPIProjectsMissing，测试正确解码为 `map[string]any`，断言健康项目中不存在 `missing` 键。    - cmd/pactify/cli_test.go 补充 TestListMissing。 3. 对回归的自检：临时将 `registry.Missing` 改成 `return false`，此时执行三个测试全红，报错完全符合期望：    - TestMissing: 目录不存在、.pact为文件等 case 全部报 `want true`。    - TestAPIProjectsMissing: 报 `expected broken project to have 'missing': true`。    - TestListMissing: 报 `missing project wrong text, got: broken...` 找不到 (missing...) 后缀。    恢复代码后，三个测试再次全绿。隔离测试也均已通过。

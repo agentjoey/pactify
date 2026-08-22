@@ -45,8 +45,15 @@ func newListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// Mark dead registrations inline. Without this the only signal that a
+			// project's path is gone is an empty board in the dashboard, which reads
+			// as a broken tool rather than a stale entry (see registry.Missing).
 			for _, p := range r.Projects {
-				fmt.Fprintf(c.OutOrStdout(), "%s\t%s\n", p.Name, p.Path)
+				suffix := ""
+				if registry.Missing(p.Path) {
+					suffix = "\t(missing — no .pact/ at this path; `pactify unregister " + p.Name + "` to remove)"
+				}
+				fmt.Fprintf(c.OutOrStdout(), "%s\t%s%s\n", p.Name, p.Path, suffix)
 			}
 			return nil
 		}}

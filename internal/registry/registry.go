@@ -91,6 +91,28 @@ func (r *Registry) Add(name, path, group string) error {
 	return nil
 }
 
+// Missing reports whether a registered project no longer resolves to a real pact
+// project on disk — its directory is gone, or the directory survives but its
+// `.pact/` no longer does.
+//
+// This exists because a dead registration is otherwise INDISTINGUISHABLE from a
+// healthy but empty one: both surface as zero features, so the dashboard renders
+// a normal-looking board with nothing in it and the user reads that as "the tool
+// is broken" (reported 2026-08-22 against a project auto-registered at a since-
+// deleted $TMPDIR path).
+//
+// It is deliberately a FLAG, never an auto-delete: a path can be missing because
+// a volume is unmounted or a worktree is temporarily away, and silently dropping
+// the user's registration for that would be worse than showing it as unavailable.
+// `pactify unregister <name>` remains the way to remove one.
+func Missing(path string) bool {
+	if path == "" {
+		return true
+	}
+	fi, err := os.Stat(filepath.Join(path, ".pact"))
+	return err != nil || !fi.IsDir()
+}
+
 // Remove deletes a project by name.
 func (r *Registry) Remove(name string) error {
 	name = Slug(name)

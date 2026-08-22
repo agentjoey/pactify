@@ -183,6 +183,11 @@ func (s *Server) handleProjects(w http.ResponseWriter, _ *http.Request) {
 		Project       string `json:"project"`
 		FeatureCount  int    `json:"feature_count"`
 		AwaitingCount int    `json:"awaiting_count"`
+		// Missing marks a registration whose path no longer holds a pact project.
+		// Without it a dead entry is byte-identical to a healthy empty one in this
+		// response (both feature_count 0), so the UI cannot tell the user why the
+		// board is blank. omitempty keeps healthy projects' payloads unchanged.
+		Missing bool `json:"missing,omitempty"`
 	}
 	s.pmu.RLock()
 	projs := make([]registry.Project, 0, len(s.order))
@@ -193,7 +198,8 @@ func (s *Server) handleProjects(w http.ResponseWriter, _ *http.Request) {
 	out := []item{}
 	for _, p := range projs {
 		dto, _, _ := s.projectStateFull(p.Name, p.Path)
-		out = append(out, item{ID: p.Name, Name: p.Name, Path: p.Path, Project: dto.Project, FeatureCount: len(dto.Features), AwaitingCount: dto.AwaitingCount})
+		out = append(out, item{ID: p.Name, Name: p.Name, Path: p.Path, Project: dto.Project,
+			FeatureCount: len(dto.Features), AwaitingCount: dto.AwaitingCount, Missing: registry.Missing(p.Path)})
 	}
 	writeJSON(w, http.StatusOK, out)
 }

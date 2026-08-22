@@ -2,3 +2,4 @@
 {"event_id":"d021c56af2db8f89ebfc1c30f028efdf","ts":"2026-08-22T11:56:09Z","agent_id":"claude-opus","role":"orchestrator","event_type":"assign","task_id":"t1","feature":"f","payload":{"branch":"feat/x","owner":"opencode","reviewer":"claude-opus","spec":".pact/tasks/t1.md"}}
 {"event_id":"9719d41c4589b9bf59c3f7a771dc2c81","ts":"2026-08-22T11:56:09Z","agent_id":"opencode","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"protocol_version":1,"roles":["worker"]}}
 {"event_id":"253db0024c43138429e816fc2640678e","ts":"2026-08-22T11:56:10Z","agent_id":"opencode","role":"worker","event_type":"checkpoint","task_id":"t1","feature":"f","payload":{"evidence":"PASS\nok"}}
+{"event_id":"1d64e4f99c403c5e9a9b0fe41e778803","ts":"2026-08-22T11:56:10Z","agent_id":"claude-opus","role":"reviewer","event_type":"accept","task_id":"t1","feature":"f","payload":{}}

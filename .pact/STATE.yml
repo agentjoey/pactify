@@ -1149,7 +1149,7 @@ features:
         evidence: null
       - id: join-identity-guard
         owner: agy-w
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/join-identity-guard.md
         evidence: null

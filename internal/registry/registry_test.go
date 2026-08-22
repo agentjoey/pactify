@@ -6,6 +6,40 @@ import (
 	"testing"
 )
 
+func TestMissing(t *testing.T) {
+	if !Missing("") {
+		t.Errorf("Missing(\"\") = false, want true")
+	}
+
+	d := t.TempDir()
+	pactDir := filepath.Join(d, ".pact")
+	if err := os.MkdirAll(pactDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if Missing(d) {
+		t.Errorf("Missing(%q) = true, want false (has .pact dir)", d)
+	}
+
+	d2 := t.TempDir()
+	if !Missing(d2) {
+		t.Errorf("Missing(%q) = false, want true (no .pact dir)", d2)
+	}
+
+	notExist := filepath.Join(d, "not-exist")
+	if !Missing(notExist) {
+		t.Errorf("Missing(%q) = false, want true (directory completely missing)", notExist)
+	}
+
+	d3 := t.TempDir()
+	pactFile := filepath.Join(d3, ".pact")
+	if err := os.WriteFile(pactFile, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !Missing(d3) {
+		t.Errorf("Missing(%q) = false, want true (.pact is a file)", d3)
+	}
+}
+
 func TestSlug(t *testing.T) {
 	cases := map[string]string{"Pactify": "pactify", "my repo!": "my-repo", "TradeLinks": "tradelinks"}
 	for in, want := range cases {

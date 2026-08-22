@@ -40,22 +40,16 @@ cat .agent/CURRENT.md
 3. 如有架构变更：更新 docs/architecture.md
 
 <!-- pact:begin (managed by pactify — edit outside this block) -->
-# pact protocol — seat `opencode-worker`
+# pact protocol
 
-This repo uses the **pact protocol** (v1). You are seat `opencode-worker`, roles: worker.
+> Bind this working copy's seat once, then read the board.
 
-**Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
-(status / join / assign / checkpoint / accept / changes / merge / list) and resources
-(`pact://state`, `pact://log`). Cold start: call `status`, then `join`
-(registers your seat and checks out your feature branch).
-
-**Fallback — shell** (if MCP is unavailable):
 ```bash
-export PACT_AGENT_ID=opencode-worker
-pactify join opencode-worker --roles worker
+pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
+pactify join --roles <your-roles>
 ```
-then `pactify help` for the verbs.
 
-**The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
-feature cannot merge until all its tasks are accepted.
+Your seat resolves from `PACT_AGENT_ID` (env) else the untracked `.pact/seat` file.
+For concurrent seats in one repo, use a separate git worktree per seat.
+Then read `.pact/PROJECT.md` and `.pact/STATE.yml`. Run `pactify help` for the verbs.
 <!-- pact:end -->

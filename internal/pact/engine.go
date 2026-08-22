@@ -365,9 +365,23 @@ func (p *Project) JoinWithClientKindTask(seatID, roles, clientName, clientVersio
 }
 
 func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion, kind, taskID string) error {
-	id, err := p.agentID()
+	id, source, err := p.ResolveSeat()
 	if err != nil {
 		return err
+	}
+	if seatID != "" && seatID != id {
+		var fix string
+		switch source {
+		case "actor":
+			fix = fmt.Sprintf("use .As(%q) / --as %s to act as %s", seatID, seatID, seatID)
+		case paths.SourceEnv:
+			fix = fmt.Sprintf("run `export PACT_AGENT_ID=%s`", seatID)
+		case paths.SourceFile:
+			fix = fmt.Sprintf("run `pactify seat use %s` (or `export PACT_AGENT_ID=%s`)", seatID, seatID)
+		default:
+			fix = fmt.Sprintf("switch identity to %s", seatID)
+		}
+		return fmt.Errorf("pactify join: cannot join seat %q; current identity is %q (source: %s); join can only register self: %s", seatID, id, source, fix)
 	}
 	evs, err := event.ReadAll(paths.LogIn(p.dir))
 	if err != nil {

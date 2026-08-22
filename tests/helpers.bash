@@ -8,6 +8,7 @@ PACT_SH="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/.pact/bin/pact.sh"
 setup_pact_repo() {
   cd "$BATS_TEST_TMPDIR" || return 1
   rm -rf work && mkdir work && cd work || return 1
+  unset PACT_DIR
   git init -q
   git config user.email t@t.t
   git config user.name t

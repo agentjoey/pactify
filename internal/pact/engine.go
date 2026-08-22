@@ -373,7 +373,11 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion,
 		var fix string
 		switch source {
 		case "actor":
-			fix = fmt.Sprintf("use .As(%q) / --as %s to act as %s", seatID, seatID, seatID)
+			// The actor source is only reachable from an in-process Go caller that
+			// built the handle with .As() (planner/orchestrate/MCP) — `pactify join`
+			// has no --as flag, so naming one here would send a CLI user looking for
+			// something that does not exist.
+			fix = fmt.Sprintf("construct the handle as pact.At(dir).As(%q)", seatID)
 		case paths.SourceEnv:
 			fix = fmt.Sprintf("run `export PACT_AGENT_ID=%s`", seatID)
 		case paths.SourceFile:

@@ -89,9 +89,10 @@ func TestLaunchProfile_OpencodeIgnoresPosture(t *testing.T) {
 	}
 }
 
-// Non-drivable kinds have no profile.
+// Non-drivable kinds have no profile. antigravity is now drivable (agy-kind
+// task, 2026-08-22) and removed from this list — see TestLaunchProfile_Antigravity.
 func TestLaunchProfile_NonDrivable(t *testing.T) {
-	for _, k := range []string{"antigravity", "claude-desktop", "codex-app", "no-such"} {
+	for _, k := range []string{"claude-desktop", "codex-app", "no-such"} {
 		if _, ok := RunnerProfileFor(k); ok {
 			t.Errorf("%s: expected no runner profile, got ok=true", k)
 		}
@@ -126,11 +127,37 @@ func TestLaunchProfile_EffortArgs(t *testing.T) {
 		t.Errorf("claude-code EffortArgs(high) = %v", got)
 	}
 
-	// No verified effort flag → nil (safe default: launch unchanged).
-	for _, k := range []string{"opencode", "gemini-cli", "kimi-cli"} {
+	// No verified effort flag → nil (safe default: launch unchanged). antigravity
+	// is a DELIBERATE nil (not just unverified): verified 2026-08-22 that `agy
+	// --model <tier-suffixed> --effort <mismatched>` hard-errors, so effort must
+	// be routed through model choice instead — see the comment on its
+	// runnerProfiles entry.
+	for _, k := range []string{"opencode", "gemini-cli", "kimi-cli", "antigravity"} {
 		if p, _ := RunnerProfileFor(k); p.EffortArgs != nil {
-			t.Errorf("%s: EffortArgs declared — an unverified effort flag must stay nil", k)
+			t.Errorf("%s: EffortArgs declared — an unverified/unsafe effort flag must stay nil", k)
 		}
+	}
+}
+
+// antigravity (agy): --add-dir/--print-timeout/--dangerously-skip-permissions
+// are non-negotiable (agy-kind task, 2026-08-22 — see launch.go comment for the
+// silent-scratch-dir and 5-minute-timeout failure modes each guards against).
+// Posture is accepted but ignored (agy has no per-tool allowlist), like
+// opencode/kimi-cli.
+func TestLaunchProfile_Antigravity(t *testing.T) {
+	p, ok := RunnerProfileFor("antigravity")
+	if !ok {
+		t.Fatal("antigravity: expected a runner profile")
+	}
+	if p.Command != "agy" {
+		t.Errorf("antigravity command = %q, want agy", p.Command)
+	}
+	got := p.BuildArgs(p.DefaultModel, PermPosture{Scoped: true, AllowedTools: []string{"x"}}, "B")
+	want := []string{"-p", "B", "--model", "gemini-3.7-flash-medium",
+		"--add-dir", "{repoDir}", "--output-format", "json",
+		"--dangerously-skip-permissions", "--print-timeout", "30m"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("antigravity BuildArgs = %v, want %v (posture must be ignored — always blanket)", got, want)
 	}
 }
 
@@ -143,7 +170,7 @@ func TestCandidateModels(t *testing.T) {
 		t.Errorf("claude-code candidates = %v, want %v", got, want)
 	}
 	// DefaultModel must appear in the curated list for kinds that pin one.
-	for _, k := range []string{"opencode", "claude-code", "gemini-cli", "kimi-cli"} {
+	for _, k := range []string{"opencode", "claude-code", "gemini-cli", "kimi-cli", "antigravity"} {
 		p, _ := RunnerProfileFor(k)
 		if p.DefaultModel == "" {
 			continue
@@ -170,7 +197,13 @@ func TestCandidateModels(t *testing.T) {
 		t.Errorf("codex-cli candidates = %v, want nil", got)
 	}
 	// Non-drivable / unknown → nil.
-	if got := CandidateModels("antigravity"); got != nil {
-		t.Errorf("antigravity candidates = %v, want nil", got)
+	if got := CandidateModels("claude-desktop"); got != nil {
+		t.Errorf("claude-desktop candidates = %v, want nil", got)
+	}
+	// antigravity is drivable now and curates its own list (agy-kind task, 2026-08-22).
+	wantAnti := []string{"gemini-3.7-flash-high", "gemini-3.7-flash-medium", "gemini-3.7-flash-low",
+		"gemini-3.1-pro-high", "gemini-3.1-pro-low"}
+	if got := CandidateModels("antigravity"); !reflect.DeepEqual(got, wantAnti) {
+		t.Errorf("antigravity candidates = %v, want %v", got, wantAnti)
 	}
 }

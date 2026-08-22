@@ -34,19 +34,38 @@ func TestSuggest_NoClaudeFirstDrivableLeads(t *testing.T) {
 	}
 }
 
-func TestSuggest_NonDrivableMarked(t *testing.T) {
-	got := Suggest([]string{"claude-code", "antigravity"})
-	var anti Binding
+// Binding.Drivable mirrors agent.Drivable, so this test pins BOTH branches of
+// it. antigravity moved to the true branch when it became the agy CLI (agy-kind
+// task, 2026-08-22) — this test used to assert the opposite. claude-desktop is
+// kept here as the GUI example so the FALSE branch stays covered: without it,
+// an agent.Drivable that returned true unconditionally would pass the suite.
+func TestSuggest_DrivableAndNonDrivableMarked(t *testing.T) {
+	got := Suggest([]string{"claude-code", "antigravity", "claude-desktop"})
+	byKind := make(map[string]Binding, len(got))
 	for _, b := range got {
-		if b.Kind == "antigravity" {
-			anti = b
-		}
+		byKind[b.Kind] = b
 	}
-	if anti.Drivable {
-		t.Error("antigravity should be marked non-drivable")
+
+	anti, ok := byKind["antigravity"]
+	if !ok {
+		t.Fatalf("antigravity missing from Suggest output: %+v", got)
+	}
+	if !anti.Drivable {
+		t.Error("antigravity (agy) should be marked drivable")
 	}
 	if anti.Roles[0] != "worker" {
 		t.Errorf("antigravity roles = %v, want worker", anti.Roles)
+	}
+
+	desk, ok := byKind["claude-desktop"]
+	if !ok {
+		t.Fatalf("claude-desktop missing from Suggest output: %+v", got)
+	}
+	if desk.Drivable {
+		t.Error("claude-desktop is a GUI kind with no headless runner and must NOT be marked drivable")
+	}
+	if desk.Roles[0] != "worker" {
+		t.Errorf("claude-desktop roles = %v, want worker", desk.Roles)
 	}
 }
 

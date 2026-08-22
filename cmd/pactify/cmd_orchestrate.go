@@ -75,8 +75,8 @@ task can't converge (rework/fail limits) or the hard gate fails — writing a re
 under .pact/orchestrate/ and notifying. Fix the cause and re-run to resume.
 
 Each acting seat needs a headless runner: map it with --seat-kind seat=kind
-(kinds with a runner: opencode, claude-code, gemini-cli, kimi-cli, codex-cli). GUI/desktop agents
-(antigravity, *-desktop) cannot be driven headlessly.`,
+(kinds with a runner: opencode, claude-code, gemini-cli, kimi-cli, codex-cli, antigravity). GUI/desktop
+agents (*-desktop, codex-app) cannot be driven headlessly.`,
 		RunE: func(c *cobra.Command, _ []string) error {
 			dir, err := os.Getwd()
 			if err != nil {

@@ -153,9 +153,15 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 
 	// codex retry-resume: if a previous successful stint recorded a thread id for
 	// this (seat,task), switch from a cold `exec` to `exec resume <id>`.
+	// antigravity retry-resume: same idea, isomorphic mechanic — agy's headless
+	// JSON carries conversation_id where codex's carries thread_id, and agy takes
+	// a `--conversation <id>` flag rather than a `resume` subcommand (agy-resume).
 	resumed := false
-	if lc.Kind == "codex-cli" {
+	switch lc.Kind {
+	case "codex-cli":
 		args, resumed = codexResumeArgsIfAny(lc, args)
+	case "antigravity":
+		args, resumed = agyResumeArgsIfAny(lc, args)
 	}
 
 	for i, a := range args {
@@ -166,6 +172,11 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 			// A custom-agent manifest with identity.via=arg carries {seat} in its
 			// argv; substitute the acting seat id at exec (built-in kinds never emit it).
 			args[i] = lc.Seat
+		case "{repoDir}":
+			// A kind whose CLI needs the workspace passed explicitly (antigravity/agy
+			// uses --add-dir; without it the agent writes into its own scratch dir)
+			// carries this token in its argv; substitute the stint's repo at exec.
+			args[i] = lc.RepoDir
 		}
 	}
 
@@ -233,9 +244,17 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// its headless JSON (the read side surfaces it on the dashboard). Best-effort
 	// telemetry: capture and recording never affect the run's result.
 	cap := &tailWriter{max: tokenCaptureCap}
+	// A HEAD window as well as the tail. Every JSONL kind (codex/opencode/claude)
+	// puts its usage on the LAST line, so a tail is sufficient for them. agy emits
+	// ONE object whose leading fields are conversation_id and status and whose
+	// trailing field is usage — so a >1 MiB response truncates the tail's opening
+	// brace away and loses both the resume id and the status, silently (no tokens
+	// recorded, resume never engages). 8 KiB is far more than those leading fields
+	// need and is negligible next to the 1 MiB tail.
+	headCap := &headWriter{max: headCaptureCap}
 	// Mirror this stint's stdout to the per-task live stream (best-effort: a sink
 	// error just means no live mirror this run, never a run failure).
-	var capture io.Writer = cap
+	var capture io.Writer = io.MultiWriter(cap, headCap)
 	if lc.Task != "" {
 		if sink, serr := OpenStreamSink(lc.streamDir(), lc.Task); serr == nil {
 			defer sink.Close()
@@ -244,7 +263,7 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 			// child's stdout pipe and stall (hang) the agent. Swallowing the sink's
 			// errors keeps the live mirror truly best-effort — a failing stream file
 			// never affects the run.
-			capture = io.MultiWriter(cap, bestEffortWriter{sink})
+			capture = io.MultiWriter(cap, headCap, bestEffortWriter{sink})
 		}
 	}
 	err = r.Exec(ctx, eff.Command, args, lc.RepoDir, env, capture)
@@ -263,6 +282,77 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 		}
 	}
 
+	// antigravity session lifecycle (agy-resume): reuses the SAME store as the
+	// ACP path (LookupSession/RecordSession/ClearSession, keyed by (seat,task)
+	// regardless of kind) per spec, rather than codex's kind-filtered
+	// LoadSessions/RemoveSession loop above.
+	//
+	// On success, ALWAYS re-record whatever conversation_id THIS stint actually
+	// reports (not conditionally, unlike codex — agy's result JSON carries
+	// conversation_id on every SUCCESS, cold or resumed; codex only emits
+	// thread.started on a cold run). This is what makes a rejected resume
+	// self-heal without any special-case detection: live-verified 2026-08-22, a
+	// stale/unknown --conversation id does NOT fail the agy process — agy prints
+	// a `warning: ... not found` line to stderr (invisible to this stdout-only
+	// capture) and transparently mints a fresh conversation, still exiting
+	// 0/SUCCESS. Re-recording that fresh id overwrites the stale one — the
+	// store's record of "cold start" for next time — while THIS stint never
+	// fails because of it (mirrors the ACP path's "LoadSession fails →
+	// ClearSession then NewSession, stint still succeeds" shape, just landing on
+	// agy's actual self-healing behavior instead of a synchronous in-process
+	// retry, since a one-shot CLI process has no separate load-then-prompt step
+	// to intercept).
+	//
+	// The err!=nil branch below is defensive symmetry with codex's pattern for a
+	// resumed run that hard-fails — NOT reproduced against the real binary (every
+	// --conversation rejection observed live fell back silently, never a
+	// non-zero exit); kept so a future agy hard-failure mode still self-heals the
+	// store instead of wedging every subsequent retry on a now-dead id.
+	//
+	// Cleanup uses kind-checked RemoveSession, not kind-blind ClearSession: the
+	// store is shared with codex-cli and the ACP path, and an agy failure must not
+	// delete another kind's record for the same (seat,task) — see LookupSessionKind.
+	if lc.Kind == "antigravity" && lc.Task != "" {
+		// agy can exit 0 while reporting {"status":"ERROR"} — verified live
+		// 2026-08-22, a mid-run tool rejection does exactly that, while an
+		// argv-validation failure (--model/--effort conflict) exits 1 with the same
+		// status. So the exit code alone does not tell us the run was healthy.
+		//
+		// This deliberately does NOT convert status=ERROR into a stint failure. It
+		// was written that way first and the live e2e proved it wrong: in the
+		// observed ERROR runs agy had ALREADY delivered — marker file written,
+		// `pactify checkpoint` executed — because it recovered from the rejected
+		// tool call via a shell command and only then reported ERROR. Failing the
+		// stint would invent a failure for a seat that did its job. Whether a stint
+		// delivered is the LOOP's question, answered from the ledger (the v0.8.1
+		// "clean exit, nothing committed" attribution), not the runner's to guess
+		// from a vendor status string.
+		//
+		// What the status IS used for: gating the resume record. Re-entering a
+		// conversation that ended in an error state is not something we have any
+		// evidence works, so a non-SUCCESS run starts cold next time. Tokens stay
+		// recorded either way — they were really spent.
+		healthy := true
+		if st, ok := parseAntigravityStatus(headCap.String()); ok && st != "SUCCESS" {
+			healthy = false
+		}
+		switch {
+		case err != nil && resumed:
+			_ = RemoveSession(lc.RepoDir, lc.Seat, lc.Task, "antigravity")
+		case err == nil && !healthy && resumed:
+			// The resumed conversation is the thing that errored — drop it so the
+			// next attempt cold-starts rather than re-entering the same bad state.
+			_ = RemoveSession(lc.RepoDir, lc.Seat, lc.Task, "antigravity")
+		case err == nil && healthy:
+			// conversation_id is the FIRST field of agy's single result object, so it
+			// is read from the HEAD capture: the tail window alone loses it whenever
+			// the object exceeds tokenCaptureCap (agy emits one object, not JSONL).
+			if id, ok := parseAntigravityConversationID(headCap.String()); ok {
+				_ = RecordSession(lc.RepoDir, lc.Seat, lc.Task, "antigravity", id)
+			}
+		}
+	}
+
 	return err
 }
 
@@ -271,6 +361,11 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 // line) without buffering an entire long run. Usage lives at the END of JSONL
 // output, so a tail is the right window.
 const tokenCaptureCap = 1 << 20 // 1 MiB
+
+// headCaptureCap bounds the stdout HEAD kept for agy's leading result fields
+// (conversation_id, status). See the headWriter splice in Run for why a tail
+// alone is not sufficient for a single-object emitter.
+const headCaptureCap = 8 << 10 // 8 KiB
 
 // recordTokens parses token usage from an agent stint's captured stdout and
 // accumulates it into the repo's token store, keyed by task. Pure best-effort: a
@@ -282,7 +377,7 @@ func recordTokens(lc LaunchContext, output string) {
 	if lc.Task == "" {
 		return
 	}
-	n, ok := tokens.Parse(lc.Kind, output)
+	n, ok := parseTokenUsage(lc.Kind, output)
 	if !ok || n <= 0 {
 		return
 	}
@@ -290,6 +385,20 @@ func recordTokens(lc LaunchContext, output string) {
 	// and a store written there dies at teardown (2026-07-19 e2e F6). Tokens are
 	// teardown-surviving runtime, same as status/streams/escalation.
 	recordTaskTokens(lc.streamDir(), lc.Task, n)
+}
+
+// parseTokenUsage dispatches to the kind-specific stdout token parser. antigravity
+// (agy) gets its own path (parseAntigravityTokens, agy_tokens.go) because agy's
+// usage shape is not a documented/versioned contract pactify controls —
+// tokens.Parse's generic input+output-sum heuristic could silently diverge from
+// the real usage.total_tokens the moment agy's shape changes, so agy reads
+// total_tokens verbatim instead (dm-agy-tokens). Every other kind is untouched:
+// same tokens.Parse call as before, so no behavior change for codex/claude/opencode/etc.
+func parseTokenUsage(kind, output string) (int, bool) {
+	if kind == "antigravity" {
+		return parseAntigravityTokens(output)
+	}
+	return tokens.Parse(kind, output)
 }
 
 // recordTaskTokens accumulates n tokens for task into the repo's token store
@@ -375,6 +484,54 @@ func codexResumeArgs(base []string, threadID string) []string {
 	}
 	return out
 }
+
+// agyResumeArgsIfAny returns argv with `--conversation <id>` appended when a
+// prior agy session for (seat,task) is stored; otherwise base unchanged. The
+// bool reports whether a resume was selected.
+//
+// This reuses the shared session store (rather than rolling a codex-shaped
+// duplicate) per the task spec, but goes through the kind-CHECKED
+// LookupSessionKind rather than the kind-blind LookupSession the spec named.
+// The spec's instruction predates the observation that (seat,task) alone is not
+// a sufficient key: the store is shared with codex-cli and the ACP path, and a
+// seat can change kind mid-feature (dynamic `join --kind`, `--seat-kind`, a
+// fallback-role switch). Kind-blind, an agy stint would then be handed a codex
+// thread_id as its --conversation. Isolation across (seat,task) pairs was never
+// the exposure — kind was.
+func agyResumeArgsIfAny(lc LaunchContext, base []string) ([]string, bool) {
+	if lc.Task == "" {
+		return base, false
+	}
+	id, ok := LookupSessionKind(lc.RepoDir, lc.Seat, lc.Task, "antigravity")
+	if !ok {
+		return base, false
+	}
+	out := make([]string, 0, len(base)+2)
+	out = append(out, base...)
+	out = append(out, "--conversation", id)
+	return out, true
+}
+
+// headWriter keeps only the FIRST max bytes written to it and discards the rest.
+// Counterpart to tailWriter for a kind whose result object leads with the fields
+// we need (agy: conversation_id, status) — those are unrecoverable from a tail
+// window once the object outgrows it.
+type headWriter struct {
+	max int
+	buf []byte
+}
+
+func (w *headWriter) Write(p []byte) (int, error) {
+	if n := w.max - len(w.buf); n > 0 {
+		if n > len(p) {
+			n = len(p)
+		}
+		w.buf = append(w.buf, p[:n]...)
+	}
+	return len(p), nil
+}
+
+func (w *headWriter) String() string { return string(w.buf) }
 
 // tailWriter keeps only the last max bytes written to it. Splicing it into the
 // child's stdout bounds memory regardless of how chatty an agent is, while

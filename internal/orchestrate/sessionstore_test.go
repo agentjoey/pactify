@@ -185,6 +185,83 @@ func taskName(seat string, i int) string {
 	return seat + "-t" + string(rune('0'+i/10)) + string(rune('0'+i%10))
 }
 
+// LookupSessionKind is the kind-CHECKED read: a resume id is only interchangeable
+// within the kind that minted it, so a record of a DIFFERENT kind for the same
+// (seat,task) must be invisible. This is what stops an agy stint being handed a
+// codex thread_id as its --conversation after a seat is re-kinded mid-feature
+// (dynamic `join --kind`, `--seat-kind`, a fallback-role switch).
+func TestLookupSessionKind(t *testing.T) {
+	dir := t.TempDir()
+	if err := RecordSession(dir, "w", "t1", "codex-cli", "codex-thread"); err != nil {
+		t.Fatalf("record: %v", err)
+	}
+
+	// Matching kind: hit.
+	if id, ok := LookupSessionKind(dir, "w", "t1", "codex-cli"); !ok || id != "codex-thread" {
+		t.Fatalf("LookupSessionKind(codex-cli) = (%q,%v), want (codex-thread,true)", id, ok)
+	}
+	// Different kind, SAME (seat,task): miss. The kind-blind LookupSession still
+	// returns it — that difference IS the safeguard.
+	if id, ok := LookupSessionKind(dir, "w", "t1", "antigravity"); ok || id != "" {
+		t.Fatalf("LookupSessionKind(antigravity) = (%q,%v), want (\"\",false) — "+
+			"a codex-cli record must never be served to another kind", id, ok)
+	}
+	if id, ok := LookupSession(dir, "w", "t1"); !ok || id != "codex-thread" {
+		t.Fatalf("sanity: kind-blind LookupSession = (%q,%v), want (codex-thread,true) — "+
+			"if this misses too, the test above proves nothing", id, ok)
+	}
+
+	// Wrong seat / wrong task / empty store: all miss even with a matching kind.
+	if _, ok := LookupSessionKind(dir, "other", "t1", "codex-cli"); ok {
+		t.Fatal("a different seat must not match")
+	}
+	if _, ok := LookupSessionKind(dir, "w", "t2", "codex-cli"); ok {
+		t.Fatal("a different task must not match")
+	}
+	if _, ok := LookupSessionKind(t.TempDir(), "w", "t1", "codex-cli"); ok {
+		t.Fatal("an empty store must not match")
+	}
+	// An empty kind argument must not act as a wildcard.
+	if _, ok := LookupSessionKind(dir, "w", "t1", ""); ok {
+		t.Fatal("an empty kind must not match a kinded record")
+	}
+
+	// A row with a matching kind but no session id is not a hit either.
+	if err := writeSessions(sessionsPath(dir), []SessionRecord{
+		{Seat: "w", Task: "t3", Kind: "antigravity", SessionID: ""},
+	}); err != nil {
+		t.Fatalf("seed empty-id row: %v", err)
+	}
+	if _, ok := LookupSessionKind(dir, "w", "t3", "antigravity"); ok {
+		t.Fatal("a row with an empty session id must not be reported as a hit")
+	}
+}
+
+// Two rows for the same (seat,task) differing only in kind: each kind sees ONLY
+// its own. The store is shared by codex-cli, the ACP path and agy, so the kind
+// field — not (seat,task) — is what isolates them on the read side.
+func TestLookupSessionKind_SameSeatTaskTwoKinds(t *testing.T) {
+	dir := t.TempDir()
+	// Seeded directly: RecordSession keys by (seat,task) alone and would upsert
+	// one row over the other, so it cannot express this state — but the readers
+	// must tolerate it (a hand-edited or older-format store).
+	if err := writeSessions(sessionsPath(dir), []SessionRecord{
+		{Seat: "w", Task: "t1", Kind: "codex-cli", SessionID: "codex-thread"},
+		{Seat: "w", Task: "t1", Kind: "antigravity", SessionID: "agy-conv"},
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if id, ok := LookupSessionKind(dir, "w", "t1", "codex-cli"); !ok || id != "codex-thread" {
+		t.Fatalf("codex lookup = (%q,%v), want (codex-thread,true)", id, ok)
+	}
+	if id, ok := LookupSessionKind(dir, "w", "t1", "antigravity"); !ok || id != "agy-conv" {
+		t.Fatalf("agy lookup = (%q,%v), want (agy-conv,true)", id, ok)
+	}
+	if _, ok := LookupSessionKind(dir, "w", "t1", "kimi-cli"); ok {
+		t.Fatal("a third kind must see nothing")
+	}
+}
+
 // RemoveSession drops only the row matching (seat,task,kind); other rows and
 // other kinds for the same (seat,task) are left intact.
 func TestRemoveSession(t *testing.T) {

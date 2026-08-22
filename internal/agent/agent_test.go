@@ -31,15 +31,18 @@ func TestOpencodeAdapter(t *testing.T) {
 	}
 }
 
+// claude-desktop is the desktop/GUI example here (antigravity is no longer a
+// desktop kind — agy-kind task, 2026-08-22 — see TestRunnerCLIKinds for its new
+// CLI-kind coverage).
 func TestDesktopAdapterAddsProject(t *testing.T) {
-	a, _ := Get("antigravity")
+	a, _ := Get("claude-desktop")
 	if a.DefaultEntry() != "" {
 		t.Fatalf("desktop app should have no entry file, got %q", a.DefaultEntry())
 	}
 	if a.Config().Scope != Global || a.Config().Format != JSONMcpServers {
 		t.Fatalf("config = %+v", a.Config())
 	}
-	inv := a.Invocation("antigravity", "/abs/repo")
+	inv := a.Invocation("claude-desktop", "/abs/repo")
 	if strings.Join(inv.Args, " ") != "mcp --project /abs/repo" {
 		t.Fatalf("desktop args = %v", inv.Args)
 	}
@@ -125,6 +128,9 @@ func TestRunnerCLIKinds(t *testing.T) {
 		{"gemini-cli", "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}},
 		{"kimi-cli", "kimi", []string{"-p", "{briefing}", "-m", "kimi-code/kimi-for-coding"}},
 		{"codex-cli", "codex", []string{"exec", "--json", "--sandbox", "danger-full-access", "{briefing}"}},
+		{"antigravity", "agy", []string{"-p", "{briefing}", "--model", "gemini-3.7-flash-medium",
+			"--add-dir", "{repoDir}", "--output-format", "json",
+			"--dangerously-skip-permissions", "--print-timeout", "30m"}},
 	}
 	for _, tc := range cases {
 		a, ok := Get(tc.kind)
@@ -145,7 +151,9 @@ func TestRunnerCLIKinds(t *testing.T) {
 }
 
 func TestRunnerNoHeadless(t *testing.T) {
-	for _, kind := range []string{"antigravity", "claude-desktop", "codex-app", "cursor-cli"} {
+	// antigravity is now a CLI kind (agy) with a headless runner — removed from
+	// this GUI/unverified list (agy-kind task, 2026-08-22); see TestRunnerCLIKinds.
+	for _, kind := range []string{"claude-desktop", "codex-app", "cursor-cli"} {
 		a, ok := Get(kind)
 		if !ok {
 			t.Fatalf("%s not registered", kind)

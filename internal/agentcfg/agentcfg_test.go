@@ -46,9 +46,43 @@ func TestResolveWith_ScopedPermissions(t *testing.T) {
 	}
 }
 
+// claude-desktop is the non-drivable example here — antigravity is now the CLI
+// binary agy and IS drivable (agy-kind task, 2026-08-22); see
+// TestResolveWith_AntigravityDrivable.
 func TestResolveWith_NonDrivable(t *testing.T) {
-	if _, ok := ResolveWith("antigravity", Override{}); ok {
-		t.Error("expected ok=false for non-drivable antigravity")
+	if _, ok := ResolveWith("claude-desktop", Override{}); ok {
+		t.Error("expected ok=false for non-drivable claude-desktop")
+	}
+}
+
+// antigravity: EffortArgs is deliberately nil (verified 2026-08-22 — agy
+// hard-errors on a mismatched --model tier suffix / --effort pair), so an
+// Override.Effort must be a no-op — Args stay byte-for-byte what BuildArgs
+// rendered, same as any kind with no declared EffortArgs.
+func TestResolveWith_AntigravityDrivable(t *testing.T) {
+	eff, ok := ResolveWith("antigravity", Override{})
+	if !ok {
+		t.Fatal("ResolveWith antigravity ok=false")
+	}
+	if eff.Command != "agy" {
+		t.Errorf("Command = %q, want agy", eff.Command)
+	}
+	if eff.Model != "gemini-3.7-flash-medium" {
+		t.Errorf("Model = %q, want default gemini-3.7-flash-medium", eff.Model)
+	}
+	want := []string{"-p", "{briefing}", "--model", "gemini-3.7-flash-medium",
+		"--add-dir", "{repoDir}", "--output-format", "json",
+		"--dangerously-skip-permissions", "--print-timeout", "30m"}
+	if !reflect.DeepEqual(eff.Args, want) {
+		t.Errorf("Args = %v, want %v", eff.Args, want)
+	}
+
+	effWithEffort, _ := ResolveWith("antigravity", Override{Effort: "low"})
+	if !reflect.DeepEqual(effWithEffort.Args, want) {
+		t.Errorf("Effort override must no-op (EffortArgs nil): Args = %v, want unchanged %v", effWithEffort.Args, want)
+	}
+	if effWithEffort.Effort != "" {
+		t.Errorf("Effort = %q, want empty (no EffortArgs declared)", effWithEffort.Effort)
 	}
 }
 
@@ -207,5 +241,81 @@ func TestResolveSeat_ExplicitProfileEffortWins(t *testing.T) {
 	}
 	if plain.Effort != "low" {
 		t.Errorf("unpinned seat Effort = %q, want tier-derived \"low\"", plain.Effort)
+	}
+}
+
+// A seat bound to the antigravity "frontend" role (docs/operations.md's
+// recommended catalog) must resolve to agy with the profile's model and NO
+// --effort flag — even when the caller passes a tierEffort, because the
+// profile's Effort is "" and agentcfg only ever injects a flag when
+// EffortArgs is non-nil (nil for antigravity, per agy-kind's hard-error
+// finding: a mismatched --model/--effort pair exits 1).
+func TestResolveSeat_AntigravityRoleBinding(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	c, _ := roles.Load()
+	if err := c.SetProfile("frontend", roles.Profile{Kind: "antigravity", Model: "gemini-3.7-flash-medium"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetProfile("ops", roles.Profile{Kind: "antigravity", Model: "gemini-3.7-flash-low"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Bind("agy-1", "frontend"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	// tierEffort="high" must NOT survive into Args: antigravity has no
+	// EffortArgs, so ResolveWith's append-only side channel is a no-op.
+	eff, ok := ResolveSeat("agy-1", "antigravity", "high")
+	if !ok {
+		t.Fatal("ResolveSeat agy-1 ok=false")
+	}
+	if eff.Command != "agy" {
+		t.Errorf("Command = %q, want agy", eff.Command)
+	}
+	if eff.Model != "gemini-3.7-flash-medium" {
+		t.Errorf("Model = %q, want gemini-3.7-flash-medium (the frontend role's model)", eff.Model)
+	}
+	if eff.Effort != "" {
+		t.Errorf("Effort = %q, want empty — antigravity must never carry an --effort flag", eff.Effort)
+	}
+	for _, a := range eff.Args {
+		if a == "--effort" {
+			t.Fatalf("Args must never contain --effort for antigravity (hard-errors on mismatched tier): %v", eff.Args)
+		}
+	}
+}
+
+// Defining the antigravity role profiles is not the same as binding a seat to
+// one: an UNBOUND seat must resolve exactly as it did before agy-roles landed
+// — i.e. identically to the plain per-kind Resolve — even though the
+// "frontend"/"ops" profiles now exist in roles.json. This is the hard
+// regression requirement (byte-for-byte unchanged for projects with no role
+// bound) exercised specifically against the new antigravity catalog.
+func TestResolveSeat_AntigravityProfilesDefinedButUnboundMatchesResolve(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	c, _ := roles.Load()
+	if err := c.SetProfile("frontend", roles.Profile{Kind: "antigravity", Model: "gemini-3.7-flash-medium"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetProfile("test", roles.Profile{Kind: "antigravity", Model: "gemini-3.7-flash-medium"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetProfile("ops", roles.Profile{Kind: "antigravity", Model: "gemini-3.7-flash-low"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SetProfile("docs", roles.Profile{Kind: "antigravity", Model: "gemini-3.7-flash-low"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	want, okWant := Resolve("antigravity")
+	got, okGot := ResolveSeat("some-other-seat", "antigravity", "")
+	if okGot != okWant || !reflect.DeepEqual(got, want) {
+		t.Fatalf("unbound seat with profiles defined-but-unbound must match Resolve byte-for-byte: got %+v(%v) want %+v(%v)", got, okGot, want, okWant)
 	}
 }

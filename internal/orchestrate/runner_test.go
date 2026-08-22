@@ -193,16 +193,47 @@ func TestTagOpencodeSession(t *testing.T) {
 	}
 }
 
+// claude-desktop is the GUI-kind example here — antigravity is now the CLI
+// binary agy and IS driven by CmdRunner (agy-kind task, 2026-08-22); see
+// TestCmdRunner_Antigravity_SubstitutesRepoDir below.
 func TestCmdRunner_GUIKind_Errors(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	var cap runCapture
 	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
-	err := r.Run(context.Background(), LaunchContext{Seat: "g1", Kind: "antigravity", Briefing: "brief", RepoDir: "/repo"})
+	err := r.Run(context.Background(), LaunchContext{Seat: "g1", Kind: "claude-desktop", Briefing: "brief", RepoDir: "/repo"})
 	if err == nil {
-		t.Fatal("expected error for GUI kind antigravity, got nil")
+		t.Fatal("expected error for GUI kind claude-desktop, got nil")
 	}
 	if cap.called {
 		t.Fatal("execFn must not be called for a kind without a headless runner")
+	}
+}
+
+// antigravity (agy) is a headless CLI kind now: CmdRunner must launch it and
+// substitute both {briefing} and {repoDir} (the latter via --add-dir, guarding
+// the silent-scratch-dir failure mode — agy-kind task, 2026-08-22).
+func TestCmdRunner_Antigravity_SubstitutesRepoDir(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	err := r.Run(context.Background(), LaunchContext{Seat: "a1", Kind: "antigravity", Briefing: "brief", RepoDir: "/repo"})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !cap.called {
+		t.Fatal("execFn must be called for antigravity — it has a headless runner")
+	}
+	if cap.name != "agy" {
+		t.Fatalf("command = %q, want agy", cap.name)
+	}
+	if argsHave(cap.args, "{repoDir}") || !argsHave(cap.args, "/repo") {
+		t.Fatalf("args = %v, want {repoDir}->/repo substituted", cap.args)
+	}
+	if argsHave(cap.args, "{briefing}") || !argsHave(cap.args, "brief") {
+		t.Fatalf("args = %v, want {briefing}->brief substituted", cap.args)
+	}
+	if !argsHave(cap.args, "--print-timeout") {
+		t.Fatalf("args = %v, want --print-timeout present", cap.args)
 	}
 }
 
@@ -367,6 +398,57 @@ func TestRunnerSubstitutesSeatToken(t *testing.T) {
 	}
 	if argsHave(cap.args, "{seat}") || !argsHave(cap.args, "dev") {
 		t.Fatalf("args = %v, want {seat}->dev", cap.args)
+	}
+}
+
+// TestRunnerSubstitutesRepoDirToken mirrors TestRunnerSubstitutesSeatToken:
+// a kind whose argv carries the {repoDir} token (as agy/antigravity will, via
+// --add-dir) must have it replaced with lc.RepoDir at exec.
+func TestRunnerSubstitutesRepoDirToken(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	rp := agent.RunnerProfile{Command: "myagent", DefaultModel: "m1",
+		BuildArgs: func(model string, _ agent.PermPosture, briefing string) []string {
+			return []string{"run", "--add-dir", "{repoDir}", briefing}
+		}}
+	if err := agent.RegisterExternal(agent.External{Kind: "repodirkind", Binary: "myagent", Runner: &rp}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { agent.UnregisterExternal("repodirkind") })
+
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "dev", Kind: "repodirkind", Briefing: "B", RepoDir: "/some/repo"}); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if argsHave(cap.args, "{repoDir}") || !argsHave(cap.args, "/some/repo") {
+		t.Fatalf("args = %v, want {repoDir}->/some/repo", cap.args)
+	}
+}
+
+// TestRunnerSubstitutesRepoDirToken_Empty asserts the substitution does not
+// panic when lc.RepoDir is empty — it should substitute the empty string,
+// same as any other placeholder replacement.
+func TestRunnerSubstitutesRepoDirToken_Empty(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	rp := agent.RunnerProfile{Command: "myagent", DefaultModel: "m1",
+		BuildArgs: func(model string, _ agent.PermPosture, briefing string) []string {
+			return []string{"run", "--add-dir", "{repoDir}", briefing}
+		}}
+	if err := agent.RegisterExternal(agent.External{Kind: "repodirkind-empty", Binary: "myagent", Runner: &rp}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { agent.UnregisterExternal("repodirkind-empty") })
+
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	if err := r.Run(context.Background(), LaunchContext{Seat: "dev", Kind: "repodirkind-empty", Briefing: "B", RepoDir: ""}); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if argsHave(cap.args, "{repoDir}") {
+		t.Fatalf("args = %v, want {repoDir} substituted (even with empty RepoDir)", cap.args)
+	}
+	if !argsHave(cap.args, "") {
+		t.Fatalf("args = %v, want an empty-string element where {repoDir} was", cap.args)
 	}
 }
 

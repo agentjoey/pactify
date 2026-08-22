@@ -14,7 +14,6 @@ This repo uses the **pact protocol** (v1). Any agent that can read files + run g
 2. A feature cannot merge until all its tasks are accepted.
 
 ## Seats
-- `claude-opus` — roles: orchestrator, reviewer — entry: CLAUDE.md
 - `opencode` — roles: worker — entry: AGENTS.md
 
 ## Commands

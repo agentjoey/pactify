@@ -1153,3 +1153,13 @@ features:
         reviewer: claude
         spec: .pact/tasks/join-identity-guard.md
         evidence: 实现与验证：1) 契约守卫：在 joinWithClientLocked (internal/pact/engine.go) 中改用 p.ResolveSeat() 解析当前身份 id 与 source，若 seatID != "" 且 seatID != id，在追加任何事件及切换分支前拒绝并报错；2) 可操作错误文案：错误包含目标座席、当前身份、来源标识 (actor/env/file) 及具体修复命令；3) 测试覆盖：新增 internal/pact/join_identity_guard_test.go，覆盖 actor/env/file 三种来源在 seatID 不一致时的拒绝（断言报错、账本零事件新增、分支不变），以及一致时的正常 join；4) 门全绿：go test -count=1 ./internal/pact/ (ok 19.3s) && bats tests/join.bats tests/accept.bats (5/5 passed)。
+  - id: registry-missing
+    branch: feat/registry-missing
+    status: in_progress
+    tasks:
+      - id: registry-missing-tests
+        owner: agy-w
+        status: in_progress
+        reviewer: claude
+        spec: .pact/tasks/registry-missing-tests.md
+        evidence: null

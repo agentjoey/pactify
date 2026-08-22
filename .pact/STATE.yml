@@ -1143,7 +1143,7 @@ features:
     tasks:
       - id: kind-effective
         owner: agy-w
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/kind-effective.md
         evidence: 实现与验证：1) agentcfg.Effective 增加 Kind 字段并在 ResolveWith 中赋值 kind；2) runner.go 统一改用 eff.Kind 分派：crossVendorStrip(eff.Kind)、recordTokens(lc, eff.Kind, ...)、resume switch eff.Kind、codex/agy session lifecycle 均按实际执行的有效 kind 运转；3) 测试加固：agentcfg_test.go 补全 Effective.Kind 单测；kind_effective_test.go 覆盖正向（claude profile + agy lc.Kind 下保留 ANTHROPIC_API_KEY、使用 claude token 解析器记录 150 tokens、不触发 agy resume）、反向（agy profile + claude lc.Kind 下清空所有厂商 key、使用 agy 解析器记录 75 tokens、记录 agy session）及未绑定座席回归；4) 验收门全部通过：go test -count=1 ./internal/agentcfg/ ./internal/orchestrate/ ./internal/serve/ (ok agentcfg 0.382s / ok orchestrate 45.339s / ok serve 16.641s)；go build ./... && go vet ./internal/... 干净通过。

@@ -4,3 +4,1153 @@ agents:
   - { id: claude-opus, roles: [orchestrator, reviewer] }
   - { id: opencode, roles: [worker] }
 features:
+  - id: planner
+    branch: feat-planner
+    status: shipped
+    tasks:
+      - id: p-manifest
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/planner-manifest.md
+        evidence: ok   github.com/agentjoey/pactify/internal/planner (cached)
+      - id: p-prompt
+        owner: claude
+        status: accepted
+        reviewer: opencode-worker
+        spec: .pact/tasks/planner-prompt.md
+        evidence: go test ./internal/planner/ -run Prompt — PASS (9 tests): TestPromptContainsGoalFeatureAndRepoTree, TestPromptListsSeatsWithDrivable, TestPromptMentionsTaskAndManifestPaths, TestPromptIncludesManifestSchemaExample, TestPromptStatesAssignmentRules, TestPromptRequiresVerifyLine, TestPromptRequiresDependencyChain, TestPromptManifestExampleParses (embedded JSON parses via planner.Parse), TestPromptDeterministic. Full pkg green, go vet clean. New files: internal/planner/prompt.go (PromptInput, SeatInfo, BuildPrompt) + prompt_test.go. BuildPrompt is pure/deterministic; emits Goal/Feature/RepoTree, roster with Drivable flags, serial-deps+single-worktree rationale, owner≠reviewer + prefer-drivable + complexity allocation rules, .pact/tasks/<feature>-<id>.md spec layout with mandatory verify: line, and a schema-correct .pact/plan-<feature>.json example.
+        deps: [p-manifest]
+      - id: p-apply
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/planner-apply.md
+        evidence: === RUN   TestApplyValidPlan --- PASS: TestApplyValidPlan (0.08s) === RUN   TestApplySpecMissing --- PASS: TestApplySpecMissing (0.06s) === RUN   TestApplyInvalidPlan --- PASS: TestApplyInvalidPlan (0.05s) PASS ok   github.com/agentjoey/pactify/internal/planner 0.532s
+        deps: [p-manifest]
+      - id: p-cmd
+        owner: claude
+        status: accepted
+        reviewer: opencode-worker
+        spec: .pact/tasks/planner-cmd.md
+        evidence: verify: `go test ./cmd/pactify/ -run Plan && go build ./...` — PASS.  === go test ./cmd/pactify/ -run Plan -v === === RUN   TestCLIPlanApply --- PASS: TestCLIPlanApply (0.90s) PASS ok  github.com/agentjoey/pactify/cmd/pactify  === go build ./... === build OK === go vet ./cmd/pactify/ === vet OK  Files changed: - cmd/pactify/cmd_plan.go (NEW): newPlanCmd() = `pactify plan "<goal>" --feature <id> [--auto] [--run] [--planner-kind <kind>]` (gathers repoTree via git ls-files shallow + roster from StateProjection → SeatInfo with MVP Drivable=true → planner.BuildPrompt → orchestrate.NewCmdRunner().Run("planner", plannerKind default "claude-code", prompt, cwd); default stops with review hint, --auto applies, --run also prints orchestrate next-step) + `plan apply <feature> [--run]` subcommand (reads .pact/plan-<feature>.json → planner.Parse → planner.Apply, reports assign count). Helpers: applyPlan, rosterFromState, repoTree, shallowWalk. - cmd/pactify/commands.go: registered newPlanCmd() in root.AddCommand. - cmd/pactify/cli_test.go: TestCLIPlanApply smoke — plan --help carries --feature/--auto/--run/--planner-kind, plan apply --help carries --run, and `plan apply f1` over a committed plan-f1.json + spec assigns t1 (status shows assigned). Smoke tests apply path only (launching a real planner agent needs a live LLM → integration acceptance), per spec.  Note: two pre-existing failures in internal/orchestrate (TestCmdRunner_Opencode/ClaudeCode — model-pinning specs vs un-updated runner tests) exist on clean HEAD and are unrelated to this task's files (confirmed via git stash). p-cmd touches only cmd/pactify/.
+        deps: [p-prompt, p-apply]
+  - id: finishstep
+    branch: feat-finishstep
+    status: shipped
+    tasks:
+      - id: t-finish
+        owner: oc-finish
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/finishstep-core.md
+        evidence: Acceptance criteria met: 1. go build ./... — clean (no output) 2. go test ./internal/finish/... — 7/7 PASS 3. pactify finish --help — shows command with flags: --remote, --branch, --pr, --head, --title, --body 4. Full project test suite: 15/15 packages green, zero regressions
+  - id: sessions
+    branch: feat-sessions
+    status: shipped
+    tasks:
+      - id: t-sessions
+        owner: oc-sessions
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/sessions-core.md
+        evidence: === ACCEPTANCE === go build ./... — clean go test ./internal/sessions/... -v — 15/15 PASS pactify sessions --help — list/prune subcommands shown pactify sessions prune opencode — 'kind opencode: session cleanup not supported (no verified command)', exit 0 go vet ./cmd/pactify/ — clean === FILES === internal/sessions/sessions.go (NEW): Manager, Spec, Runner types + Supported/CanPrune/List/Prune internal/sessions/sessions_test.go (NEW): 15 table-driven + fake-Runner tests cmd/pactify/cmd_sessions.go (NEW): pactify sessions {list,prune} CLI cmd/pactify/commands.go: +newSessionsCmd() registration
+  - id: recipe
+    branch: feat-recipe
+    status: shipped
+    tasks:
+      - id: t-recipe
+        owner: oc-recipe
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/recipe-core.md
+        evidence: === go build ./... === clean (no output)  === go test ./internal/recipe/... === === RUN   TestNames --- PASS === RUN   TestGet --- PASS (4 sub-tests: add-tests, review-harden, spec-to-plan, nope) === RUN   TestGetReturnsRecipeWithTasks --- PASS === RUN   TestExpand --- PASS (5 sub-tests: single task, two tasks, two tasks, empty goal, whitespace-only goal) === RUN   TestExpandSubstitutesGoal --- PASS === RUN   TestExpandPreservesDeps --- PASS === RUN   TestExpandDepsAreIndependentSlices --- PASS ok  github.com/agentjoey/pactify/internal/recipe  0.413s  === ./pactify recipe list === add-tests            给一个现有功能补测试 review-harden        实现 + 独立评审加固（两棒，第二棒依赖第一棒） spec-to-plan         把需求拆成设计 + 实现两棒  === ./pactify recipe show review-harden --goal 加缓存层 === --- task: t-impl deps=[] --- task: t-harden deps=[t-impl]  === go test ./... === 17/17 packages PASS, zero regressions === go vet ./... === clean  Files: internal/recipe/recipe.go (NEW), internal/recipe/recipe_test.go (NEW), cmd/pactify/cmd_recipe.go (NEW), cmd/pactify/commands.go (+newRecipeCmd)
+  - id: recipeserve
+    branch: feat-recipeserve
+    status: shipped
+    tasks:
+      - id: t-recipe-serve
+        owner: oc-recipeserve
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/recipe-serve.md
+        evidence: === RUN TestRecipeList --- PASS (0.00s) === RUN TestRecipeExpand/happy_path --- PASS === RUN TestRecipeExpand/empty_goal_->_400 --- PASS === RUN TestRecipeExpand/unknown_recipe_->_404 --- PASS ok github.com/agentjoey/pactify/internal/serve 0.357s go build ./... clean Full serve suite: go test ./internal/serve/... ok 14.993s Files: internal/serve/recipes.go (NEW) internal/serve/recipes_test.go (NEW) internal/serve/api.go (+1 line registerRecipeRoutes)
+  - id: agentcfgserve
+    branch: feat-agentcfgserve
+    status: shipped
+    tasks:
+      - id: t-agentcfg-serve
+        owner: oc-acfg
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/agent-config-serve.md
+        evidence: === VERIFY === go build ./... clean (no output). go test ./internal/serve/ -v -count=1 — 76 PASS (4 new: TestAgentConfigGetUnregistered PASS, TestAgentConfigGetUnknownKind PASS, TestAgentConfigSetAndGet PASS, TestAgentConfigSetUnregistered PASS), 0 FAIL, all pre-existing tests green, zero regressions. FILES CHANGED: internal/serve/agents.go (added agentcfg import + 2 routes + agentConfigDTO + agentConfigReq + handleAgentConfigGet + handleAgentConfigSet), internal/serve/agents_test.go (4 new httptest tests per spec).
+  - id: audit-core
+    branch: feat-audit-core
+    status: shipped
+    tasks:
+      - id: t-audit-store
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/audit-store.md
+        evidence: === RUN   TestAppendAndStorePath --- PASS: TestAppendAndStorePath (0.00s) === RUN   TestAppendDateBucketsByUTC --- PASS: TestAppendDateBucketsByUTC (0.00s) PASS ok   github.com/agentjoey/pactify/internal/audit 0.377s  go build ./... — clean (no output).  Files created: - internal/audit/audit.go (NEW): Record struct, home(), dayOf(), storePath(), Append() - internal/audit/audit_test.go (NEW): 2 tests — store path/append, date bucketing by UTC
+      - id: t-audit-query
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/audit-query.md
+        evidence: === RUN   TestAppendAndStorePath --- PASS: TestAppendAndStorePath (0.00s) === RUN   TestAppendDateBucketsByUTC --- PASS: TestAppendDateBucketsByUTC (0.00s) === RUN   TestQueryFiltersAndOrder --- PASS: TestQueryFiltersAndOrder (0.00s) === RUN   TestQuerySkipsTornLines --- PASS: TestQuerySkipsTornLines (0.00s) === RUN   TestSummarize --- PASS: TestSummarize (0.00s) PASS ok   github.com/agentjoey/pactify/internal/audit 0.730s  go build ./... — clean (no output).  Files changed: - internal/audit/audit.go: added Filter struct + match(), Query(), Summary struct, Summarize() - internal/audit/audit_test.go: added TestQueryFiltersAndOrder, TestQuerySkipsTornLines, TestSummarize
+        deps: [t-audit-store]
+  - id: manifest-cd
+    branch: feat-manifest-cd
+    status: shipped
+    tasks:
+      - id: t-serve-manifests
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/serve-manifests.md
+        evidence: === RUN   TestManifestsCRUD --- PASS: TestManifestsCRUD (0.00s) PASS ok   github.com/agentjoey/pactify/internal/serve 0.409s  go build ./... — clean (no output).  Full serve suite: go test ./internal/serve/ ok 15.829s — all green, zero regressions.  Note: DELETE route changed from /api/agents/manifests/{kind} to /api/manifests/{kind} to resolve Go 1.22+ mux ambiguity with existing DELETE /api/agents/{kind}/register route. GET and POST also moved to /api/manifests for namespace consistency.  Files changed: - internal/serve/manifests.go (NEW): registerManifestRoutes + handleManifestList (GET) + handleManifestCreate (POST, 422 on invalid) + handleManifestDelete (DELETE) — uses agentmanifest.Load/Install/Remove - internal/serve/manifests_test.go (NEW): TestManifestsCRUD — POST valid (file written), POST invalid (422), GET list, DELETE - internal/serve/api.go: wired s.registerManifestRoutes(mux) next to registerAuditRoutes
+      - id: t-web-customagent
+        owner: gemini-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/web-customagent-form.md
+        evidence: npx tsc --noEmit clean. npm test -- CustomAgentForm: 1 file, 2 tests PASS. Full web vitest: 53 files, 441 tests PASS. Playwright e2e: 7/7 PASS. Files: web/src/lib/api.ts (+ManifestRow/listManifests/createManifest/deleteManifest on /api/manifests), web/src/components/ops/CustomAgentForm.tsx + .test.tsx, web/src/components/ops/OpsView.tsx (mount). Built dist committed.
+        deps: [t-serve-manifests]
+  - id: sp1-backend
+    branch: feat-sp1-backend
+    status: shipped
+    tasks:
+      - id: t-plan-apply
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/t-plan-apply.md
+        evidence: === VERIFY === go test ./internal/planner/ ./internal/serve/ ok github.com/agentjoey/pactify/internal/planner 0.906s ok github.com/agentjoey/pactify/internal/serve 15.594s go vet ./internal/planner/ ./internal/serve/ — clean === ApplyTx tests (2 new) === TestApplyTx_AllOrNothing_Success PASS — 3 tasks assigned transactionally TestApplyTx_RejectsAtomically PASS — invalid deps rejected, log.jsonl unchanged === Endpoint test (1 new) === TestHandlePlanApply PASS — POST .../plan/F/apply → 200 {assigned:2}; no seat → 422 === FILES CHANGED === internal/planner/apply.go: added ApplyTx(dir, plan, roster, seat) + rerenderState helper; Validate→spec-exists precheck→log-size snapshot→loop Assign→on-error truncate+rerender rollback internal/planner/apply_tx_test.go (NEW): seedPlan helper + 2 tests (success + atomic rejection) internal/serve/plan.go: registerPlanRoutes +POST route + handlePlanApply (project→actingProject→parse→lock→ApplyTx→200) internal/serve/plan_apply_test.go (NEW): seedProjectWithPlan helper + 1 test (200 with seat + 422 without seat)
+      - id: t-acting-seat
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/t-acting-seat.md
+        evidence: === VERIFY === go test ./internal/serve/ -count=1 ok github.com/agentjoey/pactify/internal/serve 15.175s go vet ./internal/serve/ — clean === NEW TESTS (3 in acting_seat_test.go) === TestMachineEndpoints_RequireSeat PASS — POST/DELETE to 9 machine endpoints without seat → all 422 TestMachineEndpoints_PassWithSeat PASS — with seat configured, recipe expand not blocked by seat gate TestWire_RequiresActingProject PASS — wire POST without seat → 422 mentioning "acting seat" === FILES CHANGED === internal/serve/author.go: added requireSeat(w) bool method (seat=="" → writeErr 422 + false) internal/serve/agents.go: added requireSeat guard to handleAgentRegister, handleAgentUnregister, handleAgentConfigSet internal/serve/manifests.go: added requireSeat guard to handleManifestCreate, handleManifestDelete internal/serve/registry.go: added requireSeat guard to handleRegistryAdd, handleRegistryDelete internal/serve/sessions.go: added requireSeat guard to handleSessionsPrune internal/serve/recipes.go: added requireSeat guard to handleRecipeExpand internal/serve/wiring.go: added actingProject guard to handleWire (project-scoped, roster check) internal/serve/acting_seat_test.go (NEW): 3 tests covering no-seat→422, with-seat→pass, wire→actingProject === EXISTING TESTS FIXED (SetSeat added) === agents_test.go (4 tests), manifests_test.go, registry_test.go, sessions_test.go, recipes_test.go, wiring_test.go (4 tests), setup_test.go — all updated to set seat before calling write endpoints
+  - id: sp-backend
+    branch: feat-sp-backend
+    status: shipped
+    tasks:
+      - id: t-sp2-backend
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/t-sp2-backend.md
+        evidence: === REWORK: BLOCKER + MINOR resolved ===  BLOCKER FIXED: run/resume now pass --seat-kind flags. handleOrchestrateRunOrResume builds --seat-kind seat=kind from two sources: (a) init event seats (optional kind field, forward-compatible) (b) request body seat_kinds map (overrides init-derived kinds) Merged map appended as --seat-kind seat=kind flags to the orchestrate argv.  Source resolution: projection.Seat has no Kind (confirmed). Real init seats have no kind today. Primary source = request body seat_kinds (dashboard supplies it); secondary = init event seats (when the init carries optional kind — forward compat for future init formats).  === NEW TESTS (2 in orchestrate_drive_test.go) === TestRunSeatKindsFromBody PASS — POST run with seat_kinds body → 202, args contain --seat-kind alice=opencode and --seat-kind claude=claude-code TestRunSeatKindsFromInit PASS — init event seats carry kind field → args contain --seat-kind flags without body seat_kinds  MINOR: handleOrchestrateDiff confirmed intentionally ungated — added comment: read-only operation (git diff) safe for any observer, consistent with handleOrchestrateStatus/handleOrchestrateParallel which are also read-only and ungated.  === go vet ./internal/serve/ === clean  === Full serve suite === go test ./internal/serve/ -count=1 ok github.com/agentjoey/pactify/internal/serve 15.708s — all green, zero regressions  === Orchestrate drive tests (9 total, all PASS) === TestRunNoSeat PASS TestRunAlreadyRunning PASS TestRunSuccess PASS TestRunSeatKindsFromBody PASS TestRunSeatKindsFromInit PASS TestResumeHasResumeFlag PASS TestShipPush PASS TestShipPR PASS TestDiff PASS  === FILES CHANGED === - internal/serve/orchestrate.go: added event import + SeatKinds field on orchestrateRunReq + seatKindsFromInit helper (parses init event seats for optional kind) + --seat-kind argv building in handleOrchestrateRunOrResume + comment on handleOrchestrateDiff confirming read-only ungated - internal/serve/orchestrate_drive_test.go: 2 new tests (TestRunSeatKindsFromBody, TestRunSeatKindsFromInit) asserting --seat-kind appears in fakeRunner argv
+      - id: t-sp3-backend
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/t-sp3-backend.md
+        evidence: === RUN   TestSetupApplyNoSeat --- PASS: TestSetupApplyNoSeat (0.00s) === RUN   TestSetupApplyAlreadyInit --- PASS: TestSetupApplyAlreadyInit (0.17s) === RUN   TestSetupApplySuccess --- PASS: TestSetupApplySuccess (0.10s) === RUN   TestSetupApplyTOMLDocOnly --- PASS: TestSetupApplyTOMLDocOnly (0.11s) PASS ok github.com/agentjoey/pactify/internal/serve 15.474s go vet ./internal/serve/ — clean Files changed: - internal/serve/setup.go: added POST /api/setup/apply route + handleSetupApply (requireSeat gate, path-exists + no-.pact validation, seat spec building, pact.Init, per-kind agent.WireAt with best-effort error collection, TOML docOnly snippet via agent.Render) - internal/serve/setup_apply_test.go (NEW): 4 tests (no-seat→422, already-init→409, success with 2 JSON kinds, TOML codex-cli docOnly+snippet)
+  - id: sp-frontend
+    branch: feat-sp-frontend
+    status: shipped
+    tasks:
+      - id: t-sp2-frontend
+        owner: gemini-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/t-sp2-frontend.md
+        evidence:   RUN  v4.1.8 /Users/xtation/AgentWorks/Code_Claude/pactify/web    Test Files  53 passed (53)       Tests  450 passed (450)    Start at  18:44:56    Duration  4.95s (transform 1.61s, setup 1.88s, import 7.01s, tests 7.46s, environment 21.46s)   Running 7 tests using 1 worker    ✓  1 [chromium] › e2e/canvas.spec.ts:30:1 › drag-isolation: dragging one node leaves the others put (2.2s)   ✓  2 [chromium] › e2e/canvas.spec.ts:75:1 › connect: wiring two drafts adds an edge (972ms)   ✓  3 [chromium] › e2e/canvas.spec.ts:123:1 › connect: wiring to a committed task is rejected (edge count held + notice) (908ms)   ✓  4 [chromium] › e2e/canvas.spec.ts:165:1 › connect: cross-feature wiring is rejected (edge count held + notice) (1.0s)   ✓  5 [chromium] › e2e/canvas.spec.ts:211:1 › drag-during-sse: an SSE snapshot mid-drag does not teleport the dragged node (1.4s)   ✓  6 [chromium] › e2e/office.spec.ts:25:1 › office-zoom: wheel + HUD buttons change viewport scale; fit resets (1.9s)   ✓  7 [chromium] › e2e/office.spec.ts:72:1 › office-author: new feature + task, dock drag to idle desk opens dispatch (265ms)    7 passed (9.1s)
+      - id: t-sp3-frontend
+        owner: gemini-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/t-sp3-frontend.md
+        evidence:   RUN  v4.1.8 /Users/xtation/AgentWorks/Code_Claude/pactify/web    Test Files  53 passed (53)       Tests  454 passed (454)    Start at  18:58:14    Duration  4.99s (transform 1.75s, setup 1.88s, import 6.90s, tests 7.43s, environment 21.71s)
+  - id: projwiz
+    branch: feat-projwiz
+    status: shipped
+    tasks:
+      - id: t-projwiz-backend
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/t-projwiz-backend.md
+        evidence: === VERIFY === go test ./internal/serve/ ./internal/registry/ -count=1 ok github.com/agentjoey/pactify/internal/serve 15.910s ok github.com/agentjoey/pactify/internal/registry 0.342s go vet ./internal/serve/ ./internal/registry/ ./cmd/pactify/ — clean go build ./... — clean === NEW TESTS (6 in fsbrowse_test.go + 1 in registry_test.go) === TestFsBrowseNoSeat PASS — no seat → 422 TestFsBrowseValidDir PASS — lists 3 subdirs (subdir/myrepo/pactproj), skips file.txt/.hidden/.git/node_modules, marks isGit/hasPact correctly TestFsBrowseEmptyPathHome PASS — empty path → os.UserHomeDir TestFsBrowseBadPath PASS — nonexistent path → 400 TestRegistryAddWithGroup PASS — POST /api/registry with group → GET /api/registry returns group TestSetupApplyAutoRegisters PASS — POST /api/setup/apply with group → project auto-registered in registry with group TestAddGroupPersists PASS — registry.Add with group → Save → Load → Group persisted === FILES CHANGED === - internal/serve/fsbrowse.go (NEW): GET /api/fs/browse endpoint (requireSeat, empty path→home, ReadDir only subdirs, skip .git/node_modules/dot-prefix, isGit/hasPact markers, parent path) - internal/serve/fsbrowse_test.go (NEW): 6 httptest tests - internal/registry/registry.go: Project +Group string json:"group,omitempty"; Add(name, path, group) signature - internal/registry/registry_test.go: +TestAddGroupPersists; existing callers updated to 3-arg Add - internal/serve/registry.go: registerReq +Group; registryItem +Group; handleRegistryAdd passes req.Group to reg.Add - internal/serve/setup.go: setupApplyReq +Group; handleSetupApply auto-registers in registry after init+wire (Load→Add→Save→AddProject) - internal/serve/api.go: wired registerFsBrowseRoutes - cmd/pactify/cmd_register.go: updated Add call to 3-arg (group="")
+      - id: t-projwiz-frontend
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/t-projwiz-frontend.md
+        evidence: VERIFY: cd web && npx tsc --noEmit && npx vitest run && npx playwright test\n\n- tsc --noEmit: clean (no output)\n- vitest: 56 test files passed, 476 tests passed\n- playwright: 9 e2e tests passed (including new project-wizard add-project + delete-project specs)\n\nFILES CHANGED:\n- web/src/lib/types.ts: ProjectMeta + RegistryEntry group field\n- web/src/lib/api.ts: browseFs, fetchProjects merges group from /api/registry, postRegister/setupApply group support\n- web/src/lib/api.test.ts: coverage for new api functions\n- web/src/lib/icons.tsx: added chevron-up + folder icons\n- web/src/components/shell/Sidebar.tsx: grouped rendering, add-project button, delete confirm modal\n- web/src/components/shell/Sidebar.test.tsx: grouping/add/delete tests\n- web/src/components/shell/FolderPicker.tsx + test: directory browser with multi-select\n- web/src/components/shell/AddProjectWizard.tsx + test: two-step wizard with register/setup-apply分流\n- web/src/App.tsx: pass onChanged to Sidebar\n- web/src/App.test.tsx: mock /api/registry for fetchProjects\n- web/e2e/fixtures.mjs + mock-server.mjs: hermetic endpoints for wizard e2e\n- web/e2e/project-wizard.spec.ts: add-project + delete-project e2e\n- internal/serve/dist: rebuilt SPA
+        deps: [t-projwiz-backend]
+  - id: cloud-m0
+    branch: feat-cloud-m0
+    status: shipped
+    tasks:
+      - id: m0-wire
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cloud-m0-wire.md
+        evidence: cd cloud && pnpm install && pnpm -r build && pnpm -r test — wire: tsc clean, 10 test files / 144 tests PASS. Migration fidelity (re-verified by reviewer): src/ and test/ byte-identical to linx packages/wire; package.json deviations = allowed set only (version 0.1.0, private removed, files+publishConfig added); tsconfig extends path adjusted one level for cloud/ layout; linx root tsconfig.base.json copied to cloud/. Work committed as 01b2d1c (workspace skeleton + wire). Ledger events for this task were lost to the sandbox branch-clobber bug (backlogged); this checkpoint restores the record.
+      - id: m0-crypto
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cloud-m0-crypto.md
+        evidence: cd cloud && pnpm install && pnpm -r build && pnpm -r test — wire 144 + crypto 16 tests all PASS, tsc clean both. BOUNDARY CHECK: keys.ts/crypto.ts/pairing.ts import only noble/scure + @pactify/wire, no core-internal imports. FIDELITY: keys.ts, crypto.ts, pairing.ts and their three test files byte-identical to linx packages/core sources (diff empty, zero import rewrites needed). New files (allowed): package.json, tsconfig.json, src/index.ts barrel. ZERO deviations, zero suspected bugs recorded. (Work executed by opencode/deepseek-v4-pro in run r4; checkpoint was lost to the sandbox ledger-clobber bug and is restored here; verify re-run independently by reviewer before this checkpoint.)
+        deps: [m0-wire]
+      - id: m0-relay
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cloud-m0-relay.md
+        evidence: === VERIFY === cd cloud && pnpm install && pnpm -r build && pnpm --filter @pactify/relay test  pnpm install: all 4 workspace projects resolved, 210 packages added (18.9s) pnpm -r build: wire+crypto+relay all build green (tsc + prisma generate) pnpm --filter @pactify/relay test: ALL 212 tests PASS (23 test files in default config + 5 in node config)   - Default vitest: 23 passed, 201 tests PASS (36.45s)   - Node vitest: 5 passed, 11 tests PASS (4.21s)  === DIFF VERIFICATION === diff -r <linx>/packages/linx-relay/src cloud/relay/src --exclude=testing.ts  → EXIT 0 (byte-identical) diff -r <linx>/packages/linx-relay/test cloud/relay/test                        → EXIT 0 (byte-identical) diff -r <linx>/packages/linx-relay/prisma cloud/relay/prisma                    → EXIT 0 (byte-identical)  === FILES CHANGED === - NEW cloud/relay/: entire package directory (src/, test/, prisma/, bin/, Dockerfile, package.json, tsconfig.json, vitest.config.ts, vitest.node.config.ts, prisma.config.ts) - NEW cloud/relay/src/testing.ts: re-exports createPgliteDb, createServer, attachSockets, issueToken - NEW cloud/relay/fly.toml: app=pactify-relay, dockerfile=relay/Dockerfile, sin region, 4310 port - NEW cloud/relay/fly.staging.toml: app=pactify-relay-staging, same config - MOD cloud/relay/package.json: name=@pactify/relay, version=0.1.0, removed private, added publishConfig(access:public), bin renamed to pactify-relay, added exports["./testing"], added files[] array - MOD cloud/relay/tsconfig.json: extends changed from "../../tsconfig.base.json" to "../tsconfig.base.json" - MOD cloud/relay/Dockerfile: rewritten for cloud/ build context (wire/ relay/ paths, prisma migrate deploy path) - MOD cloud/relay/bin/pactify-relay.mjs: renamed from linx-relay.mjs (content unchanged) - MOD cloud/pnpm-lock.yaml: updated with relay dependencies  === NO DEVIATIONS === src/ and test/ byte-identical to source. Zero import rewrites needed (all imports reference only @pactify/wire, noble/scure, fastify, socket.io, prisma — unchanged). Zero suspected bugs recorded.
+        deps: [m0-crypto]
+  - id: ds-abstraction
+    branch: feat-ds-abstraction
+    status: shipped
+    tasks:
+      - id: ds-core
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ds-core.md
+        evidence: cd web && npx tsc --noEmit && npx vitest run src/lib  - tsc --noEmit: clean (no output) - vitest: 14 test files passed, 179 tests passed  Files changed: - web/src/lib/datasource.tsx (NEW): DataSourceCapabilities/DataSource interfaces, LocalServeSource thin delegate over api.ts, DataSourceProvider + useDataSource context hook - web/src/lib/datasource.test.tsx (NEW): vitest coverage for capabilities, delegation to api functions, SSE subscribe/unsubscribe, provider/hook behavior  Boundary respected: read-only use of api.ts/types.ts; no components/App.tsx changes.
+      - id: ds-wire
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ds-wire.md
+        evidence: cd web && npx tsc --noEmit && npx vitest run && npx playwright test\n\n- tsc --noEmit: clean (no output)\n- vitest: 54 test files passed, 468 tests passed\n- playwright: 5 e2e tests passed\n- npm run build: rebuilt internal/serve/dist SPA\n\nFiles changed:\n- web/src/lib/datasource.tsx: extended DataSource interface + LocalServeSource with orchestrate/plan/diff ops and subscribe event/error/live callbacks; fetchEventsLog delegate\n- web/src/App.tsx: wrap in DataSourceProvider; route listProjects/getState/subscribe/fetchEventsLog through useDataSource\n- web/src/components/Board.tsx: useDataSource for getStats/postVerb; canWrite gate on Accept/Changes\n- web/src/components/LiveOrchestrate.tsx: useDataSource for orchestrate status/run/resume/ship/diff; canWrite gate on Run/Resume/Ship\n- web/src/components/shell/DispatchPanel.tsx: useDataSource for generatePlan/getPlanGenStatus/getPlanReview/applyPlan/runOrchestrate; canWrite gate on Generate/Dispatch\n- web/src/components/RightRail.tsx: useDataSource for getStats/postVerb; canWrite gate on Accept/Changes/Merge\n- Tests updated to wrap with DataSourceProvider and mock source; added canWrite=false capability-gating tests for Board/LiveOrchestrate/DispatchPanel/RightRail\n- internal/serve/dist: rebuilt production bundle
+        deps: [ds-core]
+  - id: ts-projection
+    branch: feat-ts-projection
+    status: shipped
+    tasks:
+      - id: proj-fixture
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/proj-fixture.md
+        evidence: === RUN   TestFixtureExport --- PASS: TestFixtureExport (0.00s) PASS ok  github.com/agentjoey/pactify/internal/serve
+      - id: pact-project
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/pact-project.md
+        evidence: pact-project: pure-TS project(events)→State (cloud/pact-project/src/index.ts). tsc build clean + 21 tests PASS (2 parity vs Go golden + 19 unit). verify: cd cloud && pnpm --filter @pactify-apps/pact-project build && test. [checkpoint recorded by orchestrator claude on worker's behalf — worker's in-branch ledger view showed dep unaccepted due to ledger/worktree coupling; code verified independently by reviewer]
+        deps: [proj-fixture]
+  - id: web-hygiene
+    branch: feat-web-hygiene
+    status: shipped
+    tasks:
+      - id: fe-apihygiene
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/fe-apihygiene.md
+        evidence: verify: cd web && npx tsc --noEmit && npx vitest run src/lib\n\n- tsc --noEmit: clean (no output)\n- vitest src/lib: 14 test files passed, 183 tests passed (including 4 new manifest mutation tests)\n- bonus full web vitest: 54 test files passed, 472 tests passed\n\nFILES CHANGED:\n- web/src/lib/api.ts: extracted shared extractErrorMessage helper; createManifest/deleteManifest now use it for consistent server error messages\n- web/src/lib/api.test.ts: added 4 tests covering createManifest/deleteManifest success + 4xx error-message extraction
+  - id: p3-relaysource
+    branch: feat-p3-relaysource
+    status: shipped
+    tasks:
+      - id: relay-client
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/p3-relay-client.md
+        evidence: relay-client: @pactify-apps/relay-client extracted. build clean (tsc), 5 tests PASS (mock fetch/socket + real-crypto decrypt round-trip). cloud/web re-exports it, still builds + 5 board tests PASS. verify: cd cloud && pnpm --filter @pactify-apps/relay-client build && test && pnpm --filter @pactify-apps/web build. [implemented by claude after opencode stalled]
+      - id: relay-source
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/p3-relay-source.md
+        evidence: verify: cd web && npx tsc -b && npx vitest run src/lib  - npx tsc -b: clean (no output) - npx vitest run src/lib: 17 test files passed, 190 tests passed  Files changed: - web/vite.config.ts: added @pactify-apps/relay-client alias - web/tsconfig.app.json: added @pactify-apps/relay-client path - web/src/lib/relaysource.ts (NEW): RelaySource implements DataSource against RelayClient; read-only (canWrite=false, canOrchestrate=false, multiMachine=true); listProjects/getState/getState/subscribe implemented; write/orchestrate methods left undefined per spec - web/src/lib/relaysource.test.ts (NEW): 5 vitest tests covering capabilities, listProjects mapping, getState decrypt+project, subscribe callback+unsubscribe, getStats derived from state
+        deps: [relay-client]
+  - id: web-polish
+    branch: feat-web-polish
+    status: shipped
+    tasks:
+      - id: fe-codesplit
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/fe-codesplit.md
+        evidence: === VERIFY === cd web && npx tsc -b && npx vitest run && npx playwright test  BEFORE (baseline npm run build): - assets/index-OAAdnraF.js 896.76 kB │ gzip: 260.86 kB (Vercel >500 kB warning)  AFTER (manualChunks split): - assets/index-B9Nv_C81.js        372.52 kB │ gzip:  95.94 kB - assets/react-vendor-CCIEwYL0.js 189.64 kB │ gzip:  59.65 kB - assets/xyflow-ZNlHqwZp.js       175.25 kB │ gzip:  56.60 kB - assets/crypto-relay-CIo5B-gh.js 157.84 kB │ gzip:  48.54 kB Main index chunk dropped 58% (896.76 kB → 372.52 kB), gzip down 63% (260.86 kB → 95.94 kB). No more Vercel 500 kB warning.  - npx tsc -b: clean (no output) - npx vitest run: 59 test files passed, 489 tests passed - npx playwright test: 5 passed - go build ./...: clean  FILES CHANGED: - web/vite.config.ts: added build.rollupOptions.output.manualChunks (react-vendor, xyflow, crypto-relay) - internal/serve/dist/: rebuilt SPA with new chunking
+  - id: web-polish2
+    branch: feat-web-polish2
+    status: shipped
+    tasks:
+      - id: fe-lazycanvas
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/fe-lazycanvas.md
+        evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test  - npx tsc -b: clean (no output) - npx vitest run: 59 test files passed, 489 tests passed - npx playwright test: 5 passed (dispatch + office + project-wizard) - npm run build: rebuilt internal/serve/dist SPA  Build chunk list (lazy Canvas now its own async chunk; xyflow remains a separate on-demand chunk): ../internal/serve/dist/assets/index-8rvluMIA.js          344.12 kB │ gzip:  88.45 kB ../internal/serve/dist/assets/Canvas-B_NBSutq.js          30.41 kB │ gzip:   9.37 kB ../internal/serve/dist/assets/xyflow-ZNlHqwZp.js         175.25 kB │ gzip:  56.60 kB ../internal/serve/dist/assets/react-vendor-CCIEwYL0.js   189.64 kB │ gzip:  59.65 kB ../internal/serve/dist/assets/crypto-relay-CIo5B-gh.js   157.84 kB │ gzip:  48.54 kB  Boundary check: no @xyflow strings in the main index chunk (grep -c "@xyflow" = 0), confirming xyflow is only pulled in by the async Canvas chunk.  Files changed: - web/src/App.tsx: Canvas is now lazy(() => import("./components/Canvas")) wrapped in <Suspense fallback={<Spinner />}> - internal/serve/dist/: rebuilt production bundle with new async Canvas chunk
+  - id: web-polish3
+    branch: feat-web-polish3
+    status: shipped
+    tasks:
+      - id: fe-lazyrelay
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/fe-lazyrelay.md
+        evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test  - npx tsc -b: clean (no output) - npx vitest run: 59 test files passed, 489 tests passed - npx playwright test: 5 passed (dispatch + office + project-wizard) - npm run build: rebuilt internal/serve/dist SPA  LOCAL build chunk list (no VITE_PACTIFY_RELAY_URL): ../internal/serve/dist/assets/index-BVcjIxYz.js        340.69 kB │ gzip: 87.26 kB ../internal/serve/dist/assets/react-vendor-CCIEwYL0.js 189.64 kB │ gzip: 59.65 kB ../internal/serve/dist/assets/xyflow-ZNlHqwZp.js       175.25 kB │ gzip: 56.60 kB ../internal/serve/dist/assets/crypto-relay-BE_I707P.js 158.45 kB │ gzip: 48.67 kB ../internal/serve/dist/assets/Canvas-BST8cvtt.js        30.41 kB │ gzip:  9.37 kB ../internal/serve/dist/assets/relaysource-NQ4u1R_X.js    3.60 kB │ gzip:  1.41 kB  Static-reference check: index.html only preloads rolldown-runtime + react-vendor; main index chunk has no static import of crypto-relay/relay-client (only __vite__mapDeps for the dynamic import inside connectRelaySource). Local mode no longer eagerly fetches crypto-relay.  HOSTED build check (VITE_PACTIFY_RELAY_URL=https://relay.example.com): still emits crypto-relay-BE_I707P.js and builds cleanly.  Files changed: - web/src/lib/source.ts: RelayClient/RelaySource now imported dynamically inside connectRelaySource; top-level import changed to type-only import { RelaySource }. - internal/serve/dist/: rebuilt production SPA with lazy relay loading.
+  - id: web-drilldown
+    branch: feat-web-drilldown
+    status: shipped
+    tasks:
+      - id: fe-drilldown
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/fe-drilldown.md
+        evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test\n\n- tsc -b: clean (no output)\n- vitest: 60 test files passed, 498 tests passed (including new RelaySource.getEvents + TaskDetail tests)\n- playwright: 5 e2e tests passed\n- npm run build: rebuilt internal/serve/dist SPA\n- go build ./...: clean\n\nFiles changed:\n- web/src/lib/types.ts: added PactEventDetail type\n- web/src/lib/datasource.tsx: added optional getEvents to DataSource\n- web/src/lib/relaysource.ts: implemented RelaySource.getEvents\n- web/src/lib/relaysource.test.ts: added getEvents decryption test\n- web/src/components/TaskDetail.tsx + .test.tsx: hosted-mode task event-history panel\n- web/src/App.tsx: render TaskDetail in multiMachine (hosted) mode, keep RightRail for local\n- internal/serve/dist/: rebuilt production bundle
+  - id: m1-machines
+    branch: feat-m1-machines
+    status: shipped
+    tasks:
+      - id: fe-machines
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/fe-machines.md
+        evidence: verify: cd web && npx tsc -b && npx vitest run && npx playwright test\n\n- npx tsc -b: clean (no output)\n- npx vitest run: 61 test files passed, 505 tests passed\n- npx playwright test: 5 e2e tests passed\n- npm run build: rebuilt internal/serve/dist SPA\n- go build ./...: clean\n\nFiles changed:\n- web/src/lib/types.ts: added Machine type\n- web/src/lib/datasource.tsx: added optional getMachines to DataSource; LocalServeSource does not implement\n- web/src/lib/relaysource.ts: implemented RelaySource.getMachines via client.listMachines()\n- web/src/lib/relaysource.test.ts: added getMachines mapping test\n- web/src/components/Machines.tsx + .test.tsx: new read-only machine roster view\n- web/src/components/shell/SettingsModal.tsx: added 'Machines' item under ACCOUNT scope\n- internal/serve/dist/: rebuilt production SPA
+  - id: driver-modernization
+    branch: feat-driver-modernization
+    status: shipped
+    tasks:
+      - id: dm-acp-core
+        owner: claude-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-acp-core.md
+        evidence: verify: go test ./internal/acp/ PASS + go vet clean + go build ./... clean. 11 tests all PASS (also under -race): TestHandshakeAndPrompt, TestUsageParsedFromUpdate, TestPermissionAutoSelect, TestPermissionDefaultCancel, TestLoadSessionSupported/Unsupported/ServerError, TestMalformedFrameSkipped, TestPendingFailOnTransportClose, TestSpawnProcessDeathFailsPending, TestContextCancelUnblocksCall. gofmt clean. NEW: internal/acp/acp.go (Go ACP client: Spawn stdio subprocess, JSON-RPC 2.0 ndjson, single writer+reader goroutine, id->chan correlation + notification/server-request dispatch; Initialize/NewSession/LoadSession(ErrNotSupported gate)/Prompt/Close; OnSessionUpdate w/ Usage parse, OnPermissionRequest w/ reply+default-cancel; process death/stdio close -> all pending+future calls error via sync.Once terminate; minimal types + json.RawMessage). NEW: acp_test.go (11 TDD tests, usage+permission mutation-verified). NEW: fakeserver_test.go (hermetic in-process ACP server over io.Pipe, real-subprocess death via sh). Boundary: only internal/acp; no orchestrate integration; no real vendor calls.
+      - id: dm-acp-runner
+        owner: claude-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-acp-runner.md
+        evidence: verify: go test ./internal/orchestrate/ -run 'Acp|Routed' + go build ./... — both PASS. Also -race green (full orchestrate pkg), go vet clean, gofmt clean. 11 new tests PASS (FullStintSuccess, IdleKill, IdleResetByActivity, PermissionAuto/Deny/Escalate, UsageCallback, StripsAnthropicKey, UnknownKindGuidesToCmd, RoutedLocalRunnerRoutesByKind, RoutedLocalRunnerDefaultsToCmd). NEW internal/orchestrate/acprunner.go: AcpRunner implements Runner over ACP (Spawn(kind->cmd map)->Initialize->NewSession(RepoDir)->Prompt(Briefing) off-goroutine->StopReason->Close; PACT_* env same as CmdRunner). kind->ACP map spec A.2: kimi-cli='kimi acp'; claude-code='npx -y @agentclientprotocol/claude-agent-acp' (ANTHROPIC_API_KEY stripped via empty override, os/exec last-wins); codex-cli='npx -y @zed-industries/codex-acp'; gemini-cli='npx -y @google/gemini-cli --acp'; opencode none->error guides to --transport kind=cmd. Idle watchdog on OnSessionUpdate activity->errIdle soft failure. PermissionPolicy auto/escalate/deny (escalate reuses writeEscalation + denies). Usage aggregated across updates->OnUsage(seat,task,Usage) hook (nil in prod; dm-acp-usage wires it). RoutedLocalRunner per-kind mode, empty=all-cmd zero-behavior-change; *acp.Client satisfies acpConn seam. cmd_orchestrate.go: --transport kind=acp|cmd repeatable, validated, wired to RoutedLocalRunner only when set (else CmdRunner default; also RemoteRunner.Local under --seat-host). Boundary: no loop.go changes, no session persistence, default all-cmd. Only touched acprunner.go(new), acprunner_test.go(new), cmd_orchestrate.go.
+        deps: [dm-acp-core]
+      - id: dm-acp-usage
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-acp-usage.md
+        evidence: go test ./internal/orchestrate/ ./internal/tokens/ ./internal/serve/ PASS + build clean. Found store internal/tokens → .pact/orchestrate/tokens.json; extracted shared recordTaskTokens (CmdRunner behavior identical); AcpRunner.OnUsage(repoDir,seat,task,Usage) wired in NewAcpRunner → recordAcpUsage sums in+out tokens into same store. Fixes TOK=0 debt (ACP session/update usage is the real data source). +2 production tests.
+        deps: [dm-acp-runner]
+      - id: dm-session-resume
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-session-resume.md
+        evidence: go test ./internal/orchestrate/ PASS (+ -race on Session tests) + build/vet clean. NEW sessionstore.go: .pact/orchestrate/sessions.json via lockx + atomic write; API Load/Record/Lookup/Clear/Prune. AcpRunner: after Initialize, if server advertises loadSession + prior (seat,task) id → LoadSession + resume-briefing-prefix; fail → Clear+NewSession (unchanged). loop.go: clear on accept (beside cleanupTaskSessions) + prune orphans on startup. usage/idle/permission untouched. Concurrent-write test (2×25) no loss.
+        deps: [dm-acp-runner]
+      - id: dm-knowledge
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-knowledge.md
+        evidence: go test ./internal/orchestrate/ -run 'Brief|Knowledge' 13/13 PASS + build clean. New knowledge.go KnowledgeFor(dir,role,taskHint): reads .pact/memory.md + .pact/skills/*.md (hand frontmatter roles/keywords, no yaml dep), role+keyword match, 4KB truncate; brief.go worker/reviewerBrief append when non-empty (dir threaded from loop.go). No-knowledge case byte-identical (golden asserted). Malformed frontmatter skipped.
+      - id: dm-doctor
+        owner: gemini-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-doctor.md
+        evidence: go test ./internal/doctor/ PASS + build/vet clean. New internal/doctor/vendor.go VendorChecks(home,pathEnv): per-headless-kind binary(LookPath injected)+auth(static no-net cred probe, claude/kimi lenient, codex/gemini strict)+ACP-availability checks; doctor.Run gained home param (caller cmd_doctor.go updated); serve startup prints red preflights to stderr non-blocking (cmd_serve.go). Hermetic table tests (fake HOME+PATH).
+      - id: dm-stats
+        owner: gemini-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-stats.md
+        evidence: go test ./internal/stats/ ./internal/serve/ PASS; build+vet clean. AgentStat+Accepted/Reworked, fold from accept + changes_requested events (real event type verified vs internal/event), owner-attributed; serve /stats auto-carries (embedded); +2 fold tests incl chaining survival.
+      - id: dm-stats-web
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-stats-web.md
+        evidence: vitest 521 PASS (62 files) + tsc -b clean. AgentStat TS type +accepted/reworked; OfficeView Cost lens seat row appends ✓{accepted} ↻{reworked} badge (success/warn tokens, data-testid seat-reliability-<seat>); relaysource getStats fills zeros (no relay fold); +test asserts ✓3↻1/✓2↻0.
+        deps: [dm-stats]
+      - id: dm-e2e-docs
+        owner: claude-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/dm-e2e-docs.md
+        evidence: 全仓门绿:go build/vet/test ./... + -race(pact/orchestrate/serve) · vitest 521 · tsc -b clean · bats 111/111. 新增 acp_smoke_test.go(//go:build acpsmoke,无 kimi 时 skip,-tags 编译验证过);docs/architecture.md 加驱动层小节(CmdRunner/AcpRunner/路由/会话续接/知识注入/可观测);CLAUDE.md Version 行补 driver-modernization。
+        deps: [dm-acp-runner, dm-session-resume]
+  - id: review-runtime
+    branch: feat-review-runtime
+    status: shipped
+    tasks:
+      - id: rp-fix-loop
+        owner: claude-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rp-fix-loop.md
+        evidence: go test ./internal/orchestrate/ -run Fix|Gate + full pkg + build/vet clean. loop.go pre-review fixUntilGreen (verify gate red→re-run owner fixBrief, MaxFixRounds=2, not counted to MaxFails; exhausted→escalate; green first-try byte-identical), status.go fixing phase, 5 tests.
+      - id: rp-quorum
+        owner: claude-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rp-quorum.md
+        evidence: go test ./internal/pact/ ./internal/projection/ ./internal/orchestrate/ PASS + build/vet clean. assign --reviewers a,b,c --quorum N (excl --reviewer); fold: distinct reviewer accepts after checkpoint ≥ quorum → accepted, changes/checkpoint reset Accepts tally; checkReviewerVerdict generalized (caller∈Reviewers; worker self-accept still rejected); single-reviewer byte-identical (quorum==0 writes classic payload, map-key sort → identical bytes; regression golden). loop launchReviewers serial + early-stop. DTO reviewers/quorum/accepts.
+      - id: rp-snapshot
+        owner: claude-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rp-snapshot.md
+        evidence: go test ./internal/pact/ ./internal/projection/ ./internal/event/ PASS + -race green + full repo green + build/vet clean. .pact/state-snapshot.json {version,ledger_bytes,head_hash,state}; read-path validity (version+bytes≤size+sha256 prefix match, else silent full fold; PACT_NO_SNAPSHOT=1 bypass); write in appendAndRender under lock (atomic, info/exclude registered). projection Folder resumable; stores pre-retirement accumulator (cancel-then-reassign correctness). Equivalence asserted at EVERY split point over 11 ledgers + corruption fallbacks. Bench 5k: 11.5x faster (7.44ms→0.65ms), >5x hard gate.
+      - id: rp-critic
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rp-critic.md
+        evidence: go test ./internal/orchestrate/ -run Critic + full pkg + build/vet clean. Config pair ConfigCritic/CriticConfig (engine.go, like gate) + Note (start event_type, no new type); orchestrate/critic.go runCritic runs gate-green pre-reviewer if critic seat set (--critic or config critic, default OFF); parse CRITIC_SCORE (missing→null, clamp), inject reviewer brief (no gating power — low score still ships); failure swallowed. Default-off byte-identical (0 stints). 5 tests.
+        deps: [rp-fix-loop]
+      - id: rp-qa-gate
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rp-qa-gate.md
+        evidence: go test ./internal/orchestrate/ (incl QA) PASS + build/vet clean. gate.go extractQA (qa: line, shares extractField w/ verify:); qa.go runQA runs gate-green, BEFORE critic (先QA后critic): QA stint briefing = qa-guide skill + hint + 'run software, write .pact/orchestrate/qa-<task>.md, QA_RESULT: PASS|FAIL'; FAIL feeds SHARED fixRounds/MaxFixRounds budget (re-run owner, exhausted→escalate); PASS/missing/failure lenient (note via start event_type, never hard-block). No qa: line → 0 stints byte-identical. Report path injected reviewer brief.
+        deps: [rp-fix-loop]
+      - id: rp-dynamic-seats
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rp-dynamic-seats.md
+        evidence: go test ./internal/pact/ ./internal/orchestrate/ ./internal/planner/ PASS + build/vet clean + projection/serve/mcp/cmd no regression. JoinKind threads kind→join payload(仅非空)→projection Agents[].Kind(刷新已有/追加新座席,不覆盖 init roles;kind-free join byte-identical); join --kind flag. loop opts.kind() 每次调用:SeatKind override 优先,否则实时读 roster(mid-run join 下轮可驱动)。planner manifest +Seats[], apply 对未在 roster 的 seat 自动 JoinKind(ApplyTx 原子回滚)。3 测试文件。follow-up(未做,记 backlog):validate 仍只认 init 座席。
+      - id: rp-schedule
+        owner: opencode-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rp-schedule.md
+        evidence: go test ./internal/schedule/ ./internal/serve/ PASS + build/vet clean. NEW internal/schedule: NextFire pure (daily@HH:MM local + every:Nh|Nm, no cron dep), ~/.pactify/schedules.json (PACTIFY_HOME injectable, atomic), Runner injectable Spawn+Now, arms-forward (restart won't insta-fire). cmd_schedule add/list/remove (validates expr). serve StartScheduler goroutine reuses spawnOrchestrate + conflict guard (already-running=skip). Cross-midnight/boundary tests + fake-spawn runner tests.
+      - id: rp-e2e-docs
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rp-e2e-docs.md
+        evidence: 全仓门绿:go build/vet/test ./... + -race · vitest 526(+5 badge/fixing) · tsc -b · dist rebuilt · bats 111. web:Task 类型 +reviewers/quorum/accepts + OrchestrateStatus +fix_round/fix_max;TaskCard quorum 徽标 {accepts}/{quorum} ✓(单 reviewer 不变);LiveOrchestrate 修复中 n/max 指示。docs/architecture.md 加 review-runtime 小节;CLAUDE.md Version 补包2。
+        deps: [rp-quorum, rp-fix-loop]
+  - id: cockpit
+    branch: feat/acp-hardening
+    status: shipped
+    tasks:
+      - id: acp-hardening
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/acp-hardening.md
+        evidence: acprunner.go pins @agentclientprotocol/claude-agent-acp@0.57.0 / @zed-industries/codex-acp@0.16.0 / @google/gemini-cli@0.49.0; acp.go filteredEnviron drops PACT_RELAY_TOKEN+PACTIFY_*. build ✓, new tests pass, both pkgs green, gofmt clean. commit 8e0d3bc
+  - id: unattended
+    branch: feat/doctor-gemini
+    status: shipped
+    tasks:
+      - id: doctor-gemini
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/doctor-gemini.md
+        evidence: doctor gemini auth accepts google_accounts.json OR oauth_creds.json; go test ./internal/doctor/ green
+  - id: planner-dimensions
+    branch: feat/planner-dimensions
+    status: shipped
+    tasks:
+      - id: planner-dimensions
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/planner-dimensions.md
+        evidence: PlanTask.Dimension optional field + validation (correctness|security|performance|maintainability|ux); prompt Review dimensions section; go test ./internal/planner/ green, gofmt+vet clean
+  - id: sarif-output
+    branch: feat/sarif-output
+    status: shipped
+    tasks:
+      - id: sarif-output
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/sarif-output.md
+        evidence: new internal/sarif (reusable SARIF 2.1.0 builder, rule dedup, level normalize) + pactify audit sarif subcommand; go test ./internal/sarif/ ./cmd/pactify/ green; e2e emits valid SARIF 2.1.0
+  - id: audit-redact
+    branch: feat/audit-redact
+    status: shipped
+    tasks:
+      - id: audit-redact
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/audit-redact.md
+        evidence: audit redaction denylist extended: Slack/Google-API/Stripe/GCP-OAuth/JWT/PEM-key; positive+negative tests each; go test ./internal/audit/ green, gofmt+vet clean; existing patterns untouched
+  - id: validate-dynamic-seats
+    branch: feat/validate-dynamic-seats
+    status: shipped
+    tasks:
+      - id: validate-dynamic-seats
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/validate-dynamic-seats.md
+        evidence: validateLog declared-set now from st.Agents (init+add-seat+join) fixing FU-1 dynamic-seat false-negative; protocol_version scan preserved; reviewer hardened negative test to regenerate STATE post-tamper so it exercises roster check not drift; go test ./internal/pact/ green
+  - id: doctor-json
+    branch: feat/doctor-json
+    status: shipped
+    tasks:
+      - id: doctor-json
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/doctor-json.md
+        evidence: pactify doctor --json emits []Check as JSON array (name/ok/detail tags); text path byte-unchanged, allOK hoisted; exit-code semantics preserved; go test ./internal/doctor/ ./cmd/pactify/ green; e2e emits 19-check valid array
+  - id: cockpit-backend
+    branch: feat/cockpit-backend
+    status: shipped
+    tasks:
+      - id: cockpit-backend-iface
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-backend-iface.md
+        evidence: internal/cockpit Backend/Session interface + Event/ApprovalRequest envelope (§2 verbatim) + in-mem FakeBackend/FakeSession (buffered chans, sync.Once close, idempotent Respond); go test -race green, gofmt+vet clean
+  - id: cockpit-codex
+    branch: feat/cockpit-codex
+    status: shipped
+    tasks:
+      - id: cockpit-codex-backend
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-codex-backend.md
+        evidence: codexAppServer backend: native codex app-server JSON-RPC client (writeCh/pending/3-branch dispatch, Setpgid/killGroup), envelope mapping, approval RawInput, vendored schema + drift guard. Reviewer fixed 3 defects the fake masked: (1) nextID started at 0 -> id,omitempty dropped it -> codex saw initialize as notification -> 60s hang; set nextID=1; (2) vet: append no-op; (3) vet: t.Fatalf from goroutine. REAL codex round-trip smoke now PASSES 0.14s; -race + vet clean
+  - id: cockpit-claude
+    branch: feat/cockpit-claude
+    status: shipped
+    tasks:
+      - id: cockpit-claude-backend
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-claude-backend.md
+        evidence: shared rpcConn transport extracted from codex.go (codex still green); claudeSdkBridge (claude.go) over validated host.mjs Agent-SDK bridge; cockpit/* event + approval/request mapping, async ThreadID via cockpit/session. Orchestrator wrote+validated host.mjs (real canUseTool round-trip). Reviewer fixes: relocated bridge out of vendor/ (broke Go default build -> bridge/claude-host/), findClaudeHost infinite uptree loop (filepath.Dir(/)==/) + env-first. Default build/vet/race clean; BOTH real smokes (codex+claude) pass 9s
+  - id: cockpit-doctor-bridge
+    branch: feat/cockpit-doctor-bridge
+    status: shipped
+    tasks:
+      - id: doctor-setup-bridge
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/doctor-setup-bridge.md
+        evidence: pactify doctor --setup-bridge materializes bridge/claude-host node deps (npm ci); doctor adds node + claude-bridge-deps checks (text+json); FindRepoRoot root-terminates (parent==dir). Real --setup-bridge verified idempotent; --json intact; go test green
+  - id: codex-json-usage
+    branch: feat/codex-json-usage
+    status: shipped
+    tasks:
+      - id: codex-json-usage
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/codex-json-usage.md
+        evidence: codex worker BuildArgs adds --json -> emits turn.completed usage JSONL -> existing tokens.Parse extracts it (fixes codex TOK=0); updated launch_test + agent_test + tokens_test (real codex line -> 11886); full repo go test green
+  - id: relay-event-id
+    branch: feat/relay-event-id
+    status: shipped
+    tasks:
+      - id: relay-event-id
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/relay-event-id.md
+        evidence: relay idempotency: additive nullable eventId + @@unique([projectId,eventId]) keeping @@unique([projectId,seq]); zod optional eventId (.strict kept); ingest dedups on either; machine buildBody sends ev.EventID; wire doc updated. typecheck + go test ./internal/serve/ + vitest 11/11 green. DB migrate+deploy+resync = human end-step
+  - id: acp-per-session
+    branch: feat/acp-per-session
+    status: shipped
+    tasks:
+      - id: acp-per-session
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/acp-per-session.md
+        evidence: acp Client per-session update/permission routing (perUpdate/perPerm maps + OnSessionUpdateFor/OnPermissionRequestFor/ClearSession), global handler fallback preserved (single-session zero regression); lock released before callback; go test -race green
+  - id: cockpit-session
+    branch: feat/cockpit-session
+    status: shipped
+    tasks:
+      - id: cockpit-session
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-session.md
+        evidence: CockpitSession: serial Prompt, event pump (JSONL 0o600 persist + non-blocking fan-out), approval pump (stable ap<n> ids) + Respond/Pending, Subscribe/History, idempotent Close (deadlock-free: close sess -> wait pumps -> close subs). Reviewer hardened close() to reclaim even on sess.Close error. go test -race x3 green
+  - id: cockpit-manager
+    branch: feat/cockpit-manager
+    status: shipped
+    tasks:
+      - id: cockpit-manager
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-manager.md
+        evidence: CockpitManager: per-(project,seat) single session via injectable BackendFactory; get-or-create under lock (single-flight, factory once under 50-goroutine concurrency); Get/List/Close/CloseAll; jsonl at baseDir/cockpit/. go test -race x2 green
+  - id: cockpit-serve
+    branch: feat/cockpit-serve
+    status: shipped
+    tasks:
+      - id: cockpit-serve
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-serve.md
+        evidence: serve cockpit endpoints (prompt/stream-SSE/permission/cancel/status) wired to cockpit.Manager, inherit SEC-1 writeGuard; backendForKey selects claude-code/codex-cli by roster kind; injectable Manager for httptest w/ FakeBackend. BONUS: fixed a genuinely pre-existing -race in relay enqueue/stop (close(queue) vs send; verified DATA RACE on main) via stopMu serialization. Full repo + -race x2 green
+  - id: cockpit-panel
+    branch: feat/cockpit-panel
+    status: shipped
+    tasks:
+      - id: cockpit-panel
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-panel.md
+        evidence: dashboard Cockpit slide-out panel: SSE event stream (message bubbles + tool/state/usage/error system rows) + prompt input + approval cards (allow/deny) + cancel; DataSource cockpit* methods + capability on LocalServeSource; App cockpit-toggle gated on canOrchestrate; fixed 8 capability mocks. Reviewer fixed a TS narrowing error the build (not tsc --noEmit) caught. tsc + vitest 438 + prod build green; browser smoke: panel renders correctly, seat auto-resolves to orchestrator
+  - id: cockpit-acp-backend
+    branch: feat/cockpit-acp-backend
+    status: shipped
+    tasks:
+      - id: cockpit-acp-backend
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-acp-backend.md
+        evidence: ACP-tier cockpit backend (kimi/gemini) over internal/acp: SessionUpdate->Event mapping (message/usage/tool/plan), sync->async permission bridge (buffered resCh + done-escape, deadlock-safe), MapDecisionToOutcome; backendForKey wires kimi-cli/gemini-cli. Pure mapping + bridge concurrency unit tests; real kimi acp smoke PASS 6s; -race/vet/build clean
+  - id: cockpit-audit-write
+    branch: feat/cockpit-audit-write
+    status: shipped
+    tasks:
+      - id: cockpit-audit
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-audit.md
+        evidence: cockpit tool-start + approval-decision direct-write to audit pipe w/ risk grading (read/write/exec/mcp); optional AuditSink (nil = zero regression, NewCockpitSession preserved); Summary carries only tool name/phrase (never rawInput -> no secret leak); Risk grades from rawInput. go test -race ./internal/cockpit/ ./internal/serve/ green
+  - id: cockpit-approval-rawinput
+    branch: feat/cockpit-approval-rawinput
+    status: shipped
+    tasks:
+      - id: cockpit-approval-rawinput
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-approval-rawinput.md
+        evidence: approval cards now carry+render verbatim RawInput (trust root per cockpit spec 4): serve DTO rawInput passthrough, panel mono code block (600-char truncation marked), absent-safe; serve+web tests green
+  - id: cockpit-panel-polish
+    branch: feat/cockpit-panel-polish
+    status: shipped
+    tasks:
+      - id: cockpit-panel-polish
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-panel-polish.md
+        evidence: 6-item polish: on-accent token fixes invisible text on solid fills (user bubble/Send/Approve); auto-scroll; running-tool indicator; threadId in header; event-driven status + 5s fallback + failure banner; capability pre-flight (capable/reason) w/ friendly gate. Reviewer fixed hollow impl: handler never set Capable (zero-value also mis-gated VALID seats) - wired + wrote the missing serve test. Visual: gate + Send label verified in browser; web 446+ green
+  - id: board-shell-fixes
+    branch: feat/board-shell-fixes
+    status: shipped
+    tasks:
+      - id: board-shell-fixes
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/board-shell-fixes.md
+        evidence: cockpit toggle moved into header Toolbar (collision with New task gone); board header chips min-w-0/flex-1 + right cluster shrink-0 (no overlap); RunRail all-shipped state (All shipped label, no 0/0 counts, no Ship); TOK segment hidden when no data. Reviewer fixed 2 unused imports + a strict-build bool coercion. Visual verify on real board: all four confirmed; web 449 green + build clean
+  - id: rail-and-default-project
+    branch: feat/rail-and-default-project
+    status: shipped
+    tasks:
+      - id: rail-and-default-project
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/rail-and-default-project.md
+        evidence: RightRail shipped-state: SHIPPED badge, Merge block hidden, in-flight label suppressed for done tasks (duration kept); default project = localStorage last-selection -> first non-unknown -> ps[0], pickInitialProject unit-tested. Visual verify: dead-project default gone, shipped rail clean; web 458 green + build clean
+  - id: project-menu-collapse
+    branch: feat/project-menu-collapse
+    status: shipped
+    tasks:
+      - id: project-menu-collapse
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/project-menu-collapse.md
+        evidence: project menu worktrees collapsed by default behind chevron+count (aria-expanded, keyboard-accessible); auto-expand when currentWorktree active; single-tree rows unchanged; 8 tests
+  - id: board-blocked-visibility
+    branch: feat/board-blocked-visibility
+    status: shipped
+    tasks:
+      - id: board-blocked-visibility
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/board-blocked-visibility.md
+        evidence: assigned/working cards show blocked-badge (awaiting <dep> +N, full list in title) when deps not accepted; stale dot title appends awaiting info; zero change for dep-less tasks; web 469 green + build clean
+  - id: interaction-fixes
+    branch: feat/interaction-fixes
+    status: shipped
+    tasks:
+      - id: interaction-fixes
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/interaction-fixes.md
+        evidence: cmdk observe-mode hint now conditional on !showActions; review cards get inline Changes form (reason textarea + send/cancel, reuses existing changes verb, empty-reason disabled); rail path untouched; web 475 green + build clean
+  - id: ui-hygiene
+    branch: feat/ui-hygiene
+    status: shipped
+    tasks:
+      - id: ui-hygiene
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ui-hygiene.md
+        evidence: dead code removed (CanvasSkeleton/OpsSkeleton/getSessionsList/dispatchGoal remnant/TODO-W3); a11y (icon buttons labeled, seat avatar -> button, cockpit log role/aria-live); hardcoded hexes -> role tokens; constants.ts consolidation. Zero behavior change; web 475 green + build clean
+  - id: gemini-audit-hook
+    branch: feat/gemini-audit-hook
+    status: shipped
+    tasks:
+      - id: gemini-audit-hook
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/gemini-audit-hook.md
+        evidence: gemini native audit capture: audit install --gemini writes claude-compatible hook under hooks.BeforeTool in .gemini/settings.json (reviewer corrected event key — PreToolUse loads as 0 entries; authoritative via gemini hooks migrate); FromHook maps run_shell_command/write_file/replace/read_* risks; orchestrate injects GEMINI_CLI_TRUST_WORKSPACE=true (skip-trust alone leaves workspace untrusted -> hooks never load, verified live). Reviewer also fixed pre-existing projectless audit-log bug (Query read literal _unknown dir -> always empty; now walks all project dirs). REAL e2e: gemini -p run -> BeforeTool -> audit record (bash/exec) readable via audit log
+  - id: acp-audit-capture
+    branch: feat/acp-audit-capture
+    status: shipped
+    tasks:
+      - id: acp-audit-capture
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/acp-audit-capture.md
+        evidence: AcpRunner writes audit records for ACP tool_call updates (kind acp:<kind>, title-only summary — never rawInput, conservative exec/write/read grading, best-effort Append); tool_call_update ignored; covers kimi (no native hooks). Unit-tested acpAuditRecord 3 shapes; orchestrate+audit green
+  - id: settings-autosave
+    branch: feat/settings-autosave
+    status: shipped
+    tasks:
+      - id: settings-autosave
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/settings-autosave.md
+        evidence: AgentConfig cards auto-save (600ms debounce, hydration-guarded, blur flush) with Saving/Saved/error indicator replacing per-card Save buttons; tests updated to autosave assertions; web full suite + build green
+  - id: opencode-acp-wiring
+    branch: feat/opencode-acp-wiring
+    status: shipped
+    tasks:
+      - id: opencode-acp-wiring
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/opencode-acp-wiring.md
+        evidence: opencode wired into ACP tier: acpCommand/acpCommandFor -> opencode acp (native), cockpitCapableKind+backendForKey, doctor acpKinds; tests incl. gated real smoke. Facts pre-verified live: model currentValue=deepseek/deepseek-v4-pro from opencode config (kimi-symmetric), usage in prompt result. Reviewer ran REAL opencode cockpit smoke: PASS 6.2s; -race all green; default transport unchanged
+  - id: opencode-acp-default
+    branch: feat/opencode-acp-default
+    status: shipped
+    tasks:
+      - id: opencode-acp-default
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/opencode-acp-default.md
+        evidence: opencode default transport -> ACP via DefaultTransportModes() seeded in CLI + serve stinter (--transport opencode=cmd still reverts); audit plugin docs degraded to cmd-fallback. A/B: equal delivery, ACP has TOK+18 audit rows vs cmd none. Reviewer live-proof: fresh run w/o flags delivered via ACP (171 tok + audit rows). Full repo green
+  - id: approval-risk-ui
+    branch: feat/approval-risk-ui
+    status: shipped
+    tasks:
+      - id: approval-risk-ui
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/approval-risk-ui.md
+        evidence: approval cards risk-graded end-to-end (cockpit.GradeRisk -> serve pending.risk -> panel badges); exec Allow = two-step confirm (3s revert, danger styling), deny/non-exec one-tap; serve+cockpit+web full green
+  - id: cockpit-resume
+    branch: feat/cockpit-resume
+    status: shipped
+    tasks:
+      - id: cockpit-resume
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/cockpit-resume.md
+        evidence: cross-restart cockpit resume: threads.json (atomic 0o600) via NoteThread/StoredThread; Manager.Resume reuses wrapSessionLocked; serve resumable flag + POST cockpit/resume; panel Resume button. Pending-approval contract documented (dies with process). -race + web 480 + build green
+  - id: codex-exec-resume
+    branch: feat/codex-exec-resume
+    status: shipped
+    tasks:
+      - id: codex-exec-resume
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/codex-exec-resume.md
+        evidence: codex worker retries resume via exec resume <thread_id> (captured from --json thread.started into sessions.json); failed resume self-heals (RemoveSession -> next run cold). resume takes --json but NOT --sandbox (sandbox persists with session; self-heal covers regressions). Reviewer fixed 2 self-contradictory test assertions (RecordSession replaces by seat+task; run-3 success records fresh id). REAL proof: resume recalled PINEAPPLE-42 across runs. -race green
+  - id: join-handshake
+    branch: feat/join-handshake
+    status: shipped
+    tasks:
+      - id: join-handshake
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/join-handshake.md
+        evidence: join carries protocol_version and fail-fasts when project major exceeds client (upgrade pactify error); projectProtocolVersion helper shared with validateLog; schema additive; versionless legacy projects still join. Live-verified both paths; go test ./internal/pact/ + schemas.bats 9/9 + full repo green. capabilities[] deferred (no consumer)
+  - id: mcp-envelope
+    branch: feat/mcp-envelope
+    status: shipped
+    tasks:
+      - id: mcp-envelope
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/mcp-envelope.md
+        evidence: all MCP tools return {ok:true,data}|{ok:false,error} envelope (json.Marshal-built), errors via IsError result instead of protocol-layer (0 bare return-nil-nil-err left); tests updated + shape tests; mcp_project.bats e2e green
+  - id: gate-diff-scope
+    branch: feat/gate-diff-scope
+    status: shipped
+    tasks:
+      - id: gate-diff-scope
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/gate-diff-scope.md
+        evidence: gate commands get merge-base changed-set: {files} placeholder (shell-quoted; empty set -> skip-pass; base unresolvable -> fail-closed) + PACT_CHANGED_FILES env always injected; pact.BaseBranch accessor + gitx.ChangedFiles; planner prompt documents {files}. Reviewer added .pact/ exclusion (ledger churn must not enter gates nor defeat skip semantics) + fixed test scaffolding-commit ordering. Full repo green
+  - id: flow-derive
+    branch: feat/flow-derive
+    status: shipped
+    tasks:
+      - id: flow-derive
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/flow-derive.md
+        evidence: pure deriveFlow(events): lanes(orch-first)/stints state-machine(work-rework-review, open t1=null)/arrows(quorum multi)/marks/gaps>30min compressed monotonic x(); 6 test groups incl. shuffle-equivalence + malformed input; tsc + full vitest green
+  - id: flow-view
+    branch: feat/flow-view
+    status: shipped
+    tasks:
+      - id: flow-view
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/flow-view.md
+        evidence: Board|Flow main-view toggle (localStorage) + FlowView shell w/ 3 mode tabs + FlowLanes SVG renderer over deriveFlow (stints/arrows incl. red changes arc/merge diamonds/gap marks/join dots, live chips, click-through onSelect, empty state); feed/office placeholders. Reviewer live-verified against real ledger (111-event project renders correctly). web 498 green + tsc + build. F3 note: time-ruler tick overlap under compression
+  - id: flow-renderers
+    branch: feat/flow-renderers
+    status: shipped
+    tasks:
+      - id: flow-renderers
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/flow-renderers.md
+        evidence: FlowFeed (verb-colored message cards w/ task ids + live seat chips + click-through + autoscroll) and FlowOffice (desk cards w/ role/live-state/event-count, main-merges banner, 3-line fading ticker) replace placeholders; liveStates extracted to flowderive shared by Lanes. Reviewer fixes: dead roleLabel (strict build), feed cards were missing task ids (added). Live-verified on real 111-event ledger: all three renderers correct. web 506 green + build
+  - id: flow-polish
+    branch: feat/flow-polish
+    status: shipped
+    tasks:
+      - id: flow-polish
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/flow-polish.md
+        evidence: tAt inverse mapping + x-space even ticks (skip in-gap); fixed pre-existing buildX non-monotonic in-gap bug; stint in-bar labels (truncate, never stretch) + full titles (start/end/duration, gap real-idle titles); zoom x1/x2/x4 + near-right-edge auto-follow; idle lane fold (all-idle guard). tsc clean, vitest 516/516, build green, playwright shots verified x1/x2/pan
+  - id: flow-depth
+    branch: feat/flow-depth
+    status: shipped
+    tasks:
+      - id: flow-depth
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/flow-depth.md
+        evidence: blockedTasks(state) shared derivation (Board-parity: dep not accepted/shipped) + blocked chips in all 3 renderers (work-state only); FlowOffice live elapsed (30s tick, cleanup); FlowLanes seat side-card via getStats AgentStat (Tasks/Accepted/Reworked/Tokens/±LOC/duration, error vs no-data copy split, same-row toggle close); FlowFeed chips blocked-aware. tsc clean, vitest 530/530, build green, live-verified side-card with real stats
+  - id: hosted-cockpit
+    branch: feat/hosted-cockpit
+    status: shipped
+    tasks:
+      - id: hc-core
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/hc-core.md
+        evidence: RemotePolicy.Cockpit gate field; Manager idle reaper (30m default, WithIdleTimeout option, per-session close preserving threads.json); per-session prompt sliding-window 10/min -> 429 at serve; pending approval cap 32 with auto-deny + system event; escalate ledger event (engine Escalate with role gate + withLedgerLock, orchestrate double-write warn-only, LedgerDir pins primary repo across sandbox/parallel, schema enum + protocol doc appended). go test ./... green, -race green (reviewer fixed test-side slice race), vet clean, bats 111/111
+      - id: hc-rpc
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/hc-rpc.md
+        evidence: wire cockpit.* rpc types (prompt/permission/cancel/resume/subscribe, additive union); remoteexec Cockpiter + policy-gated dispatch (RemotePolicy.Cockpit fail-closed) + parse; serve serveCockpiter bridging Manager (shared fns with HTTP handlers) + ephemeral ingest mirror (projectKey encrypt, runId cockpit:<project>:<seat>, snapshot-first, TTL 5min renew, pending delta ticker); remotemachine OnClientReady emitter wiring. Reviewer fixes: eventKind 'error' not in wire enum -> delta (relay strict-drop bug) + mirrors map race/lock-order fix + renew-after-TTL recreate + enum conformance guard test. go ./... green, -race green, vet clean, wire tsc clean
+      - id: hc-web
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/hc-web.md
+        evidence: relay-client onEphemeral acct-room listener; DataSource cockpitSubscribe (Local=EventSource moved in, Relay=subscribe rpc + 4min renew + seq buffer); RelaySource cockpit methods + capabilities.cockpit=true + status snapshot cache; CockpitPanel via cockpitSubscribe + seat dropdown (E4 worker attach) + 429 inline; Discuss-in-Cockpit entries on Board review cards / RunRail gate-review-changes chips / TaskDetail. Reviewer fixes: rpc project must be SHORT name not composite relay id (rpcProject map, also fixes latent pact.*/orchestrate rpc mismatch), runId matches short name, seq adopt-first (server 1-based) + mirror-restart cursor reset, CockpitEvent import (strict build). tsc clean, vitest 538/538, build green, relay-client 7/7, local panel visual OK
+  - id: acct-a1
+    branch: feat/acct-a1
+    status: shipped
+    tasks:
+      - id: a1-schema-auth
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/a1-schema-auth.md
+        evidence: Prisma 11_identity_plane (User/Identity/WebSession/AccountMember/Subscription/MagicLink + Account.tier/keyEpoch, all additive); identity module: HMAC-indexed opaque sessions (30d sliding, httpOnly), GitHub OAuth (state+PKCE S256 single-use, fetch-injected fake IdP, unverified-email reject), magic link (single-consume, RESEND-or-log, existence-nonleak, 3/h limiter), /me, logout; server wiring env-driven. Reviewer architectural fix: cross-site cookie reality (Vercel vs fly.dev) - SameSite=None + CORS credentials + x-aw-csrf header allowance; CSRF double-submit replaced with session-derived synchronizer token delivered in /me body; server-side Origin allowlist guard on ALL /v1/id routes (writeGuard-style, makes credentialed CORS reflection safe); tests rewritten to real contract + origin-guard suite. relay tsc clean, 236+11 tests green
+      - id: a1-link-bearer
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/a1-link-bearer.md
+        evidence: link-by-proof (session-bound single-use 5min challenge via LinkChallenge table, timing-safe compare, consume-before-verify, verifyChallenge reuse, /v1/auth-parity rate limit); POST /v1/id/accounts (free tier, 409 on taken publicKey); POST /v1/id/token minting bearer via shared issueToken (test proves it passes /v1/runs); sessions list/revoke + identities list/unbind (last one 409). Reviewer fix: LinkChallenge table was missing from 11_identity_plane migration (init.sql only) — appended, name-level parity check across all 7 identity tables. relay tsc clean, 248+11 green
+      - id: a1-web
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/a1-web.md
+        evidence: identity.ts client lib (credentials include + x-aw-csrf from /me body); IdentityGate login page (GitHub 302 + magic link + legacy secret entry folded); session-mode: RelayClient.bearer static factory (bearer-only, clear decrypt errors) + RelaySource locked flag with typed RelayLockedError guards (cleartext projects/machines pass); UnlockPanel inline secret unlock reusing connectRelaySource; account create flow with generateMasterSecret + forced export step (checkbox-gated); link-by-proof flow signing challenge locally; AccountPanel (identities/sessions/machines/tier/logout) in Settings; App/Toolbar wiring (locked hides cockpit, email in toolbar). web tsc clean, vitest 558/558, build green, relay-client tsc+7 tests green
+  - id: a1-qa-fixes
+    branch: feat/a1-qa-fixes
+    status: shipped
+    tasks:
+      - id: a1-qa-fixes
+        owner: claude
+        status: accepted
+        reviewer: kimi-worker
+        spec: .pact/tasks/a1-qa-fixes.md
+        evidence: 6 contract/UI fixes from live staging QA (MeResponse nesting, wrapped list unwrap, full session id for revoke, createdAt display, magic link relay-base URL via x-forwarded-proto, email Identity upsert) + hosted Settings capability gating (only ACCOUNT group). Live-verified on staging: magic login, create-account export gate, link-by-proof to board, AccountPanel FREE badge/sessions/revoke. relay 248+11, web 559, build green
+  - id: hosted-events-backfill
+    branch: feat/hosted-events-backfill
+    status: shipped
+    tasks:
+      - id: hosted-events-backfill
+        owner: claude
+        status: accepted
+        reviewer: kimi-worker
+        spec: .pact/tasks/hosted-events-backfill.md
+        evidence: App subscribe branch now primes events via REST fetchEventsLog (shared event_id dedupe + ts-sorted merge); fixes hosted (relay) Flow/EventDrawer starting empty (RelaySource.subscribe is live-only, no replay). Live-verified on staging relay: ocrc 111 events, pactify 385 events, full swimlane render. tsc clean, vitest 559/559, build green
+  - id: product-ui-v2
+    branch: feat/product-ui-v2
+    status: shipped
+    tasks:
+      - id: ui2-shell
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ui2-shell.md
+        evidence: tokens aliased to handoff palette (no renames, emerald pinned #6ee7a0); breath/ring/eq/blink keyframes + reduced-motion off; Toolbar rebuilt: 3-stroke wordmark SVG, Dashboard|Board|Cockpit lens (keys 1/2/3, cockpit pending badge breath dot + mono count), live pill w/ ring pulse, gear->settings view, monogram avatar tile (email initials hosted / cl local); App lens routing (localStorage, dashboard placeholder, cockpit panel full-page via viewMode, settings modal de-shelled full-page w/ hosted gating intact, Escape returns to prior lens). Reviewer fixes: strict-build unused props/fn cleanup + optional-method narrowing bind. tsc clean, vitest 567/567, build green, toolbar/cockpit/settings/dashboard lens states shot-verified
+      - id: ui2-board
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ui2-board.md
+        evidence: Board context header per design (ProjectMenu moved in from toolbar, bell + N-new pill + scrolling notification chips via deriveNotifications, seated avatar cluster w/ idle dimming, Group:status, New task); column headers w/ animated dots + count pills + gold N-due on review; TaskCard genome (medallion, MetricStrip w/ italic est via taskMetrics, owner row, lifecycle bar, draft dashed + hint, shipped -> local main provenance); lifecycle colors in_progress=blue awaiting_review=gold. Reviewer fix: dedupe id-vs-title line when no separate title. tsc clean, vitest 572/572, build green, Board shot vs design verified
+      - id: ui2-cockpit
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ui2-cockpit.md
+        evidence: CockpitPanel rebuilt as full-page session view: main stream column (turn dividers, user/agent bubbles w/ RichText code+task link-chips, tool-call cards w/ exit pill + collapse, diff/plan cards event-gated, inline approval cards w/ danger glow + two-step confirm) + 340px right rail (approval queue red pill, session info w/ model/usage/thread copy, run-context mini-pipeline -> Board, sessions list w/ gold current + attach-worker placeholder); sticky input row (disabled attach, Interrupt danger, gold Send, queue hint); ProjectMenu inline in toolbar on cockpit lens. Approval three-rules preserved (rawInput verbatim, advisory title, exec two-step). Reviewer fixes: streaming union narrowing + dead prefersReducedMotion cleanup (strict build). tsc clean, vitest 577/577, build green, cockpit shot vs design verified
+      - id: ui2-dashboard
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ui2-dashboard.md
+        evidence: New Dashboard view (context bar w/ gold project dot + mono subtitle, 4-card KPI strip, run control card w/ Run/Stop via new stopOrchestrate + progress bar, feature lane cards w/ shared MiniPipeline extracted from CockpitPanel + embedded ReviewGate same-source with Board accept/changes, seats roster from liveStates+stats, activity feed reusing deriveNotifications w/ N-new localStorage watermark); Pause omitted (no backend endpoint, noted). dashboard.ts derivation lib w/ unit tests. Reviewer fixes: strict-build sweep (type import sources, unused props/params cascade, self-referential test type, OStat casts). tsc clean, vitest 605/605, build green, Dashboard shot vs design verified
+      - id: ui2-settings-setup
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/ui2-settings-setup.md
+        evidence: Settings standalone page per design: 250px nav rail (search filter, scope groups PROJECT gold/MACHINE emerald/ACCOUNT blue, active item accent-2 fill + accent-line), pane header w/ scope pill, AgentConfig cards (monogram, effective subline, drivable/manual pills w/ dimmed manual, model dropdown + pinned note, Blanket/Scoped posture segments, emerald Save); hosted gating preserved (ACCOUNT-only). Setup wizard refreshed: journey stepper, PROJECT + Roles-complete pills, role toggle pills w/ role-color tint, separation-of-duties callout, project location card w/ blue focus + caret, Apply init+wire button, OR-COPY commands block on bg-code. Note: Setup component currently has no mount point in App (orphaned since wizard flows) — wiring it into onboarding is follow-up. tsc clean, vitest 605/605, build green, Settings shot vs design verified
+  - id: neon-egress-diet
+    branch: feat/neon-egress-diet
+    status: shipped
+    tasks:
+      - id: egress-client
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/egress-client.md
+        evidence: RelaySource per-project in-memory decrypted event cache (never localStorage): first pull full, then afterSeq cursor increments (relay-client getProjectEvents gained opts.afterSeq, absent=full preserved); live socket frames append locally + local project() refold — ZERO refetch per event (was the dominant egress amplifier at relaysource:491); getState/fetchEventsLog/getEvents share the cache; event_id dedupe both directions; locked = zero network. Poll hygiene: useVisiblePoll hook (hidden pauses, visible immediate tick) applied to 60s/4s/5s loops; hosted skips local-only orchestrate-status polling (Vercel 404 noise). Reviewer: strict-build fixes (unknown-cast, visibilityState defineProperty) + order hardening (stable sort by relay seq, live -1 at tail — reconnect gap-fill can't scramble the fold). web tsc+613/613+build green, relay-client tsc+7 green
+      - id: egress-serve
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/egress-serve.md
+        evidence: Persistent per-project upload watermark (.pact/relay-uploaded.json, atomic tmp+rename 0o600, throttled flush 32-lines/2s + stop flush, advance only on 2xx under wmMu); replayProject resumes from watermark with truncation/mid-line fallback to full idempotent replay. Reviewer fixes: (1) CRITICAL seq-continuity — enqueue counter must be seeded with prefix line count (relay upserts by projectId+seq; blind Seek would re-use low seqs and overwrite other events' rows) — prefix now scanned locally (zero network) + regression test asserting resumed seq; (2) gitx.EnsureExcluded wiring so user repos never commit the watermark (serve had no runtime-exclude call); (3) pre-existing TestPlanGenerateSuccess flake root-fixed (pollPlanGen treated initial idle as terminal, 2/10 red on clean tree -> terminal states only, 10/10 green). go ./... green, -race green, vet clean
+  - id: replay-blocking
+    branch: feat/replay-blocking
+    status: shipped
+    tasks:
+      - id: replay-blocking
+        owner: claude
+        status: accepted
+        reviewer: kimi-worker
+        spec: .pact/tasks/egress-serve.md
+        evidence: replayProject switches to enqueueBlocking: the evicting enqueue silently dropped most lines on multi-project boot replays (256-cap shared queue vs ~200ms/post consumer), leaving the fresh-DB mirror at 263/~2000 events and misaligning the upload watermark (degrading later restarts to full replays). Blocking send is lock-guarded against send-on-closed (stopMu invariant preserved), waits off-lock in 10ms slices, aborts on stopCh. Live/watch path keeps the non-blocking evicting enqueue. go ./... green, -race green, vet clean
+  - id: phase0-sec
+    branch: feat-phase0-sec
+    status: in_progress
+    tasks:
+      - id: phase0-c2
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/phase0-c2.md
+        evidence: C2 修复：新增 internal/orchestrate/env.go(filteredEnviron，denylist PACT_RELAY_TOKEN+PACTIFY_*)；osExec/osExecIdle/shellExec 三处环境 base 改走 filteredEnviron（shellExec 顺带修了 len(env)==0 不过滤的旧洞→无条件过滤）。验证全绿：go test -run TestSEC_C2 PASS(cmd+verify 两泄露面均不再泄露)；TestCmdRunner*/TestRunner* 无回归；go build ./... OK；go vet 干净。orchestrator 已读 diff 确认仅改 4 个授权文件、PATH 等非密钥变量仍透传。
+      - id: phase0-h4
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/phase0-h4.md
+        evidence: H4 修复：dispatch.go 的 pact.stint 在 RunStint 前加 gitx.ValidBranchName(rpc.Branch) 校验(空 Branch 仍放行)；gitx.Push/Fetch 在 remote 后位置参数前插 -- 纵深防御(AddWorktree 按 brief 谨慎跳过)。验证全绿：go test ./internal/remoteexec/ -run 'TestSEC_H4|TestHandle_Stint' PASS(四个 option branch 现被拒、合法/空仍放行)；go test ./internal/gitx/ PASS(无回归)；go build ./... OK；vet 干净。orchestrator 已读 diff 确认仅改 2 授权文件。
+      - id: phase0-h3
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/phase0-h3.md
+        evidence: H3 修复：server.ts ingest handler 在 ingestPactEvent 前加 getProject 归属校验(既存 project 的 accountId≠调用方→404,与既有 foreign-read 一致)。验证：vitest test/pact.http.test.ts+test/pact.test.ts 13/13 PASS(H3 注入+顶替两条转绿、既有不破)；tsc 干净。kimi 判 pact.ts 纵深防御可选而跳过——主修已闭合漏洞。orchestrator 已读 diff 确认仅改 server.ts。
+      - id: phase0-h7
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/phase0-h7.md
+        evidence: H7 修复：runner_idle.go 的 osExecIdle 在 Setpgid 后加 cmd.Cancel=killGroup + WaitDelay=2s；runner.go 的 osExec 正确地未加 cmd.Cancel(无 Setpgid 会误杀父进程组)，留 TODO 说明危险。验证：go test -run TestSEC_H7 -count=1 连跑两次绿(1.36s/1.73s,非 flaky)；TestCmdRunner*/Runner*/Idle 无回归；build+vet OK。orchestrator 已读 diff 确认 Setpgid/Cancel 配对安全。
+      - id: phase0-c1
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/phase0-c1.md
+        evidence: C1 修复：sockets.ts 两处——(1) io.use 改 async 加机器归属校验(既存机器属别账号才拒,新机/自有放行,不破首注册)；(2) rpc handler 机器定向分支 push 前 db.machine.findFirst({id,accountId}) 校验,不属则 rpc-error+drop(对齐 run 分支)。验证：full test/sockets.test.ts 20/20 PASS(C1 注入+窃听两条转绿、既有 machine 连接/ingest/same-account 路由全不破)；tsc 干净。orchestrator 已读 diff 确认仅改 sockets.ts。
+      - id: phase0-h5
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/phase0-h5.md
+        evidence: H5 修复：新增导出 pact.Project.ApplyBatch(joins,assigns)——单个 withLedgerLock 内捕获 origSize、逐个 joinWithClientLocked/assignLocked(*Locked 变体不重入取锁)、失败则持锁内 truncate+rerenderLocked(持锁期间无并发写故安全)；planner.ApplyTx 委托它、删自己的 truncate loop。验证：TestSEC_H5 连跑两次绿(2.4/2.16s 非flaky)；planner+pact 全套(ApplyTx/Apply/Assign/Init/Join)绿；pact+planner -race 全绿(15.4s)；build OK。orchestrator 已读 diff 确认锁全程只取一次、无重入死锁、truncate 在锁内。
+      - id: phase0-m10
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/phase0-m10.md
+        evidence: M10 修复：event/log.go 的 parse 改为有界 bufio.Reader(16MiB,ReadSlice)——超长行 drain 跳过(有界内存防 OOM)、畸形 JSON 行跳过、绝不因单行 brick 整读；新增 ParseStats.Skipped 可观测；rules.go checkCheckpoint 加 1MiB evidence 上界(源头预防)。验证：TestSEC_M10 两条绿；event/projection 全套绿(有效行字节等价、snapshot fold 不破)；pact 套件绿；build/vet OK。仅改 2 文件。
+  - id: exec-tiering
+    branch: feat-exec-tiering
+    status: shipped
+    tasks:
+      - id: exec-tiering-evidence
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-evidence.md
+        evidence: 实现：loop.go 迭代帽调用点 "(global cap)" → capEvidence(view, h)；新增纯函数 capEvidence（loop.go，tailBytes 前）：枚举未完结 task（跳过 accepted、跳过 shipped feature），每条带 id/status/last=失败原文/class=/rework=；上限 20 条超出追加 "… (+N more)"，LastFail 截断 200 runes；无未完结 task 返回 "(global cap)"。 新增 exec_tiering_evidence_test.go 4 个测试（含 tradelinks 回归：Fails=0 但 LastFail 有值仍可诊断；>20 条有界性；超长 LastFail 截断）。  $ go test ./internal/orchestrate/ -run 'CapEvidence' ok   github.com/agentjoey/pactify/internal/orchestrate 0.507s  $ go test ./internal/orchestrate/（任务门） --- FAIL: TestCmdRunner_Codex_ResumeRetry (0.00s) FAIL github.com/agentjoey/pactify/internal/orchestrate 41.279s  唯一红测 TestCmdRunner_Codex_ResumeRetry 与本次改动无关且为分支既有失败： git stash 去掉我的全部改动后在分支基线（HEAD 5776fa2）重跑仍 FAIL （runner_test.go:458 "run 1 args = [run --title [pact:w1] -m deepseek/...]，want cold exec"）。 该测试涉及 runner.go/runner_test.go，不在本任务允许改的两个文件内，未触碰。 除该既有红测外全包绿，本任务 4 个新测试全绿。
+      - id: exec-tiering-parse
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-parse.md
+        evidence: 实现：tier 解析与校验管线（零运行时行为变化）。 - internal/orchestrate/gate.go: 新增 tierPrefix / Tier 类型 / ParseTier（大小写不敏感、去空白、未知→TierL1）/ extractTier（复用既有 extractField）。 - internal/planner/manifest.go: PlanTask.Tier `json:"tier,omitempty"` + Validate 校验（大小写不敏感，非 L0-L3 拒绝；空=L1 合法），含刻意重复 orchestrate.Tier 字面量的注释。 - internal/planner/prompt.go: BuildPrompt 新增「Task tiers」一节（每任务标 tier、manifest tier 字段 + spec tier: 行双写、L0/L1 派便宜座席 L2/L3 派强座席）；manifestSchemaExample 带 "tier"。 测试：orchestrate 新增 TestParseTier / TestGate_ExtractTier / TestGate_ExtractTier_BackwardCompat（钉住无 tier 既有 spec 的 verify/QA 行为逐字节不变）；planner 新增 TestPlanTaskTier（合法 round-trip / 小写接受 / L9 拒绝 / 无 tier 老清单合法）与 TestPromptInstructsTiers，schema 字段列表加 "tier"。  go test ./internal/orchestrate/ ./internal/planner/ -run 'Tier|Parse|Manifest|Prompt': ok  github.com/agentjoey/pactify/internal/orchestrate  6.102s ok  github.com/agentjoey/pactify/internal/planner      1.387s  go test ./internal/orchestrate/ ./internal/planner/: --- FAIL: TestCmdRunner_Codex_ResumeRetry (0.00s)   ← 已知既有失败（读本机 ~/.pactify/agents.json，非 hermetic），与本任务无关，按任务说明忽略 FAIL github.com/agentjoey/pactify/internal/orchestrate  41.351s ok   github.com/agentjoey/pactify/internal/planner      3.350s orchestrate 包内除该既有失败外全部通过；无其它测试从绿变红。
+      - id: exec-tiering-route
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-route.md
+        evidence: 实现：tier → reasoning-effort 旁路注入（append-only，BuildArgs 签名/默认输出未动）。  改动： - agent/launch.go: RunnerProfile 新增可选 EffortArgs func(effort string) []string（nil=无 effort 能力）。   codex-cli → -c model_reasoning_effort=<effort>；claude-code → --effort <effort>（均已用本机   `claude --help` 核实 --effort 存在）。kimi-cli 置 nil：本机 `kimi --help` 无任何   thinking/effort flag（无 --no-thinking），按安全默认不瞎猜，注释已说明。opencode/gemini-cli 无   已知 flag，保持 nil。 - agentcfg: Override/Effective 新增 Effort；ResolveWith 仅在 EffortArgs!=nil 且 Effort!="" 时把   EffortArgs(effort) 追加到 Args，否则逐字节不变。ResolveSeat 加第 3 参 tierEffort；per-kind   fallthrough 路径保留 registry 的 model/权限覆盖仅叠加 effort。 - roles.Profile 新增 effort,omitempty（显式 per-seat pin）：ResolveSeat 中 profile.Effort 显式值   绝对优先于 tier 推导值——这是"显式 per-seat Override 优先"的落点（roles.json 是 ResolveSeat   唯一读取的 per-seat 配置，Model 同理）。 - orchestrate: gate.go 新增 EffortForTier（L0→low, L1→medium, L2→medium[刻意不升档], L3→high）；   loop.go 新增 opts.launchEffort(task)（readSpec→extractTier→EffortForTier），launchAgent 加   effort 参数并写入 LaunchContext.Effort；6 个启动点（runOwner/launchReviewers×2/fixUntilGreen/   critic/runQA×2）全部传入；runner.go CmdRunner 经 agentcfg.ResolveSeat(seat,kind,lc.Effort) 接线。   未动 owner/reviewer 选择、账本、调度。  验证（两层，均真实执行）： 1 go test ./internal/agent/ ./internal/agentcfg/ -run 'Effort|Tier|Resolve'    ok  github.com/agentjoey/pactify/internal/agent      1.293s    ok  github.com/agentjoey/pactify/internal/agentcfg   0.891s 2) go test ./internal/agent/ ./internal/agentcfg/ ./internal/orchestrate/    ok  github.com/agentjoey/pactify/internal/agent    (launch_test/agent_test 全绿 = BuildArgs 未破)    ok  github.com/agentjoey/pactify/internal/agentcfg    orchestrate 唯一红：TestCmdRunner_Codex_ResumeRetry —— 任务书第 3 条声明的本机既有失败    （非 hermetic：本机 ~/.pactify/roles.json 把 w1 绑到 opencode profile，导致 codex 用例解析成    opencode argv）。失败输出确认与该原因一致：run 1 args = [run --title [pact:w1] -m    deepseek/deepseek-v4-pro do it]。与本任务无关，按要求未修。    另：go test ./internal/roles/ ok（roles.go 有改动，补充确认）。  新增测试：EffortForTier 阶梯（含 L2=medium 钉死）、launchEffort（L0/L3/无 tier/缺 spec）、 launch_test EffortArgs 形状+未声明 kind 必须 nil、agentcfg 的 effort 追加/空值不变/无 EffortArgs kind 逐字节不变/显式 profile pin 优先于 tier、runner_test 的 LaunchContext.Effort 到达 argv 及 空 effort/opencode 逐字节不变。 EOF )
+        deps: [exec-tiering-parse]
+      - id: exec-tiering-budget
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-budget.md
+        evidence: go test ./internal/orchestrate/ -run 'Budget|Tier|Threshold' → PASS ok 3.133s（13 个匹配测试全过，含新增 TestBudgetForL1EqualsTodayDefaults / TestBudgetForTierTable / TestBudgetExplicitFlagsOverrideTier / TestBudgetExplicitZeroFixRoundsRespected / TestBudgetExplicitCriticFlagOverridesL0 / TestThresholdsForUsesTierBudget / TestTierL0SkipsCriticAndQAButRunsReviewer / TestTierL0ExplicitCriticFlagStillRuns / TestTierL0FixBudgetIsOne）。任务门：go test ./internal/orchestrate/ → ok 42.838s 全绿。附带：go test ./cmd/... → ok 8.375s。实现：internal/orchestrate/budget.go 新增 Budget/BudgetExplicit/budgetFor/budgetForTask/thresholdsFor；tripped 两处(loop+parallel)、fixUntilGreen、runQA、runCritic 改消费 per-task Budget；emitFixingStatus 传入 tier 上限；withDefaults 不再顶掉显式 0；cmd_orchestrate.go 新增 --max-fix-rounds flag 并用 Flags().Changed 记录 4 个预算 knob 的显式性。reviewer 棒无 tier 门控（TestTierL0SkipsCriticAndQAButRunsReviewer 钉死 reviewerCalls==1）。
+        deps: [exec-tiering-parse]
+      - id: exec-tiering-hermetic
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/exec-tiering-hermetic.md
+        evidence: 修复：internal/orchestrate/runner_test.go 中 13 个走 CmdRunner.Run→agentcfg.ResolveSeat 的测试各加一行 t.Setenv("PACTIFY_HOME", t.TempDir())（照 approve_test.go:12 先例），只加不改，断言语义未动；git diff --stat: runner_test.go | 13 +++++++++++++ (1 file changed, 13 insertions(+))，零生产代码。验证1（本机真实配置，含 opencode→deepseek 等污染）: go test ./internal/orchestrate/ → ok github.com/agentjoey/pactify/internal/orchestrate 41.899s。验证2（隔离环境）: PACTIFY_HOME=$(mktemp -d) go test ./internal/orchestrate/ → ok github.com/agentjoey/pactify/internal/orchestrate 42.067s。两环境一致全绿。
+  - id: exec-tiering-ui
+    branch: feat/exec-tiering-ui
+    status: shipped
+    tasks:
+      - id: tierui-backend
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-backend.md
+        evidence: go test ./internal/orchestrate/ -run 'SpecTier|Tier' → ok internal/orchestrate 2.324s; go test ./internal/serve/ -run 'Plan|Tier|OrchestrateStatus' → ok internal/serve 1.397s; gate: go test ./internal/orchestrate/ ./internal/serve/ → ok internal/orchestrate 42.528s / ok internal/serve 16.479s. SpecTier 三态+路径加固; planTaskDTO Tier/TierMissing/Dimension/Role/TierConflict; OrchestrateStatusDTO Tier/Effort(serve 侧解析,不改 Status)
+      - id: tierui-badge
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-badge.md
+        evidence: vitest: Test Files 5 passed (5), Tests 71 passed (71) — src/components/ui/ + AccountPanel.test.tsx (badge contract: text-2 token, title passthrough, ariaLabel=>role=img+aria-label only when set, data-testid passthrough, account-tier regression). tsc: npx tsc -b --noEmit exit 0, no output.
+      - id: tierui-render
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-render.md
+        evidence: 实现：PlanTaskReview 加 tier/tier_missing/tier_conflict/dimension/role；OrchestrateStatusResponse 加 tier/effort。新增 ui/TierBadge.tsx（TierBadge + TierSlot + TIER_LEGEND，Badge.tsx 未动）。DispatchPanel review 行：TierSlot 行首（四档 w-[34px] shrink-0 固定槽，NO TIER 行 w-auto 防重叠）+ id min-w-0 truncate + verify truncate/title + dimension·role 静音文本行（缺则整行不出）+ 列表上方可见图例。PlanDock 只加 TierSlot（无 verify/dimension/role）。RunRail：徽标仅当 chip.id===status.task 且 task!=="" 渲染（并发防贴错）；effort==="" 显示中性说明「未应用 tier 路由」；旧 status 无徽标不报错。四档一律 text-2，warn 只给 NO TIER（role=img + aria-label）。  三层验证（真实输出）： 1 npx vitest run src/components/shell/ src/components/board/ → Test Files 11 passed (11), Tests 90 passed (90) 2) npx vitest run → Test Files 66 passed (66), Tests 643 passed (643)；npx tsc -b --noEmit → 无输出（干净） 3) npm run build 后 npx playwright test → 5 passed (23.3s)（dispatch.spec 现断言 tier-legend / L2 / NO TIER / correctness·backend 可见，mock-server 补齐 tier 字段）；node web/scripts/shots.mjs → board/settings 截图（SHOT_BASE=mock-server 伺服最终 build internal/serve/dist）  截图（全部来自最终 build）：/tmp/pactify-shots/board.png、/tmp/pactify-shots/settings.png、/tmp/pactify-shots/dispatch-review-tier.png（DispatchPanel review 实拍：图例行 + L2 静音徽标固定槽 + NO TIER warn 单行不重叠 + verify + correctness · backend） EOF )
+        deps: [tierui-backend, tierui-badge]
+      - id: tierui-fixes
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-fixes.md
+        evidence: 五项修复全部落地，三层门全绿（顺序：门 → 最终 build → 截图）。  1) 性能回归：orchestrate.go runtimeTierEffort 改用 s.projectStateFull(id, p.Path)（v0.9.0 既有 memo，path+size+mtime 记忆化），seat kinds 由新 seatKindsFromFold(evs, proj.Agents) 从同一次 fold 已返回的事件+DTO 推导 —— 同一 handler 不再出现第二次全量 read+fold；未新造缓存机制。handleOrchestrateStatus 传入 project id。 2) TierRaw：plan.go planTaskDTO 加 TierRaw (json tier_raw,omitempty)，仅当 present && ParseTier(raw)==L1 && !EqualFold(TrimSpace(raw),"L1") 时填；types.ts 加 tier_raw；TierBadge 有 tierRaw 时 title=「spec 写的是 "L9"，无法识别 —— 引擎将按 L1 运行」；DispatchPanel/TierSlot 透传。 3) a11y：DispatchPanel 图例与 verify 行 text-3→text-2；RunRail chip-effort text-3→text-2 且 9px→10px；owner→reviewer 与 dimension·role 保持 text-3 未动。 4) 冲突可达性：TierBadge conflict 非空时同传 ariaLabel={conflict}（Badge 既有管道加 role="img"）；无冲突不加 role。 5) 截图：门全绿后 npm run build（dist 02:10）→ scripts/shots.mjs + plan-review tier 专项图（02:12，来自最终 build）。 backlog：docs/backlog.md 追加 [TIERUI] 段 4 行登记 findings 6–9（只追加未重写）；6–9 代码未动，Badge.tsx 未动。  新增测试：plan_tier_test.go 加 t6 (tier: L9) → TierRaw="L9"，且 t1 显式 L1 断言 TierRaw 为空；DispatchPanel.test.tsx 加 2 例（conflict → role=img+aria-label，无冲突无 role；tier_raw L9 → title 含原始值，显式 L1 的 title 不含「无法识别」）。  三层验证真实输出： - go test ./internal/serve/ -count=1 → ok github.com/agentjoey/pactify/internal/serve 16.186s - cd web && npx vitest run → Test Files 66 passed (66), Tests 645 passed (645) - cd web && npx tsc -b --noEmit → 无输出（TSC_OK） - cd web && npx playwright test → 5 passed (23.5s)（dispatch/fallback×2/project-wizard×2 全绿）  截图路径：/tmp/pactify-shots/board.png、/tmp/pactify-shots/settings.png、/tmp/pactify-shots/dispatch-review-tier.png（plan review tier 专项，02:12 > dist 02:10）
+      - id: tierui-polish
+        owner: kimi-worker
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/tierui-polish.md
+        evidence: 三项修复完成。 1) TierBadge.tsx: tierRaw 提示提取为 tierRawNote const,title 与 ariaLabel 共用 (ariaLabel={conflict || tierRawNote || undefined});ui.test.tsx 新增 TierBadge describe——tier_raw 行断言 role=img + aria-label(含原始值提示),普通行钉死无 role/aria-label,conflict 优先于 tier_raw。 2) orchestrate.go: resolveSeatKinds 改为只做读取(event.ReadAll + StateProjection→[]SeatDTO)后 return seatKindsFromFold(evs, agents),优先级逻辑只此一份;删除因此死掉的 seatKindsFromInit;读取失败路径行为不变(nil evs 视为无 init kinds)。 3) git mv .shot-tier.tmp.mjs → scripts/shot-dispatch-review.mjs,修四处:WEB 从 import.meta.url 推导;SHOT_OUT 环境变量(与 shots.mjs 对齐);SHOT_PORT 环境变量,默认 4174(避开 playwright webServer 的 4173,经 PORT env 传给 mock-server);/__test/reset 移到 goto 之前(照 e2e/helpers.ts)。CLAUDE.md 视觉门处只追加一句该脚本用途说明。 门全绿: go test ./internal/serve/ = ok (16.3s);npx vitest run = 66 files / 647 tests passed;npx tsc -b --noEmit = OK;npx playwright test = 5 passed (23.3s)。 截图(用改名后脚本,验证可跑): /tmp/pactify-shots/dispatch-review-tier.png,已目检:dispatch-review 面板、L2/NO TIER 徽标、legend 正常。 最终 build 证明(内容哈希,非 mtime): npm run build 后记录 dist shasum → 出图 → npx vite build --outDir /tmp/pactify-dist-check 重建到 scratch → diff 两份 shasum 列表(7 文件: index.html + 6 个 hash-named assets)完全一致,HASH MATCH——dist 文件名即内容哈希,截图服务的字节与最终 build 字节相同。
+  - id: agy-validate
+    branch: feat/agy-validate
+    status: shipped
+    tasks:
+      - id: agy-repodir-doc
+        owner: agy-w
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/agy-repodir-doc.md
+        evidence: 返工完成：已通过 gofmt -w internal/agentmanifest/render_test.go 移除文件末尾多余空行。验证：gofmt -l internal/agentmanifest/ 干净无输出；go test -count=1 -v ./internal/agentmanifest/ ./internal/orchestrate/ -run 'Render|RepoDir|Manifest'（ok 0.877s / ok 1.239s 全绿）；go test -count=1 -v ./internal/agentmanifest/（ok 0.377s 全绿）。
+  - id: kind-ux
+    branch: feat/kind-ux-fixes
+    status: shipped
+    tasks:
+      - id: kind-effective
+        owner: agy-w
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/kind-effective.md
+        evidence: 实现与验证：1) agentcfg.Effective 增加 Kind 字段并在 ResolveWith 中赋值 kind；2) runner.go 统一改用 eff.Kind 分派：crossVendorStrip(eff.Kind)、recordTokens(lc, eff.Kind, ...)、resume switch eff.Kind、codex/agy session lifecycle 均按实际执行的有效 kind 运转；3) 测试加固：agentcfg_test.go 补全 Effective.Kind 单测；kind_effective_test.go 覆盖正向（claude profile + agy lc.Kind 下保留 ANTHROPIC_API_KEY、使用 claude token 解析器记录 150 tokens、不触发 agy resume）、反向（agy profile + claude lc.Kind 下清空所有厂商 key、使用 agy 解析器记录 75 tokens、记录 agy session）及未绑定座席回归；4) 验收门全部通过：go test -count=1 ./internal/agentcfg/ ./internal/orchestrate/ ./internal/serve/ (ok agentcfg 0.382s / ok orchestrate 45.339s / ok serve 16.641s)；go build ./... && go vet ./internal/... 干净通过。
+      - id: join-identity-guard
+        owner: agy-w
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/join-identity-guard.md
+        evidence: 实现与验证：1) 契约守卫：在 joinWithClientLocked (internal/pact/engine.go) 中改用 p.ResolveSeat() 解析当前身份 id 与 source，若 seatID != "" 且 seatID != id，在追加任何事件及切换分支前拒绝并报错；2) 可操作错误文案：错误包含目标座席、当前身份、来源标识 (actor/env/file) 及具体修复命令；3) 测试覆盖：新增 internal/pact/join_identity_guard_test.go，覆盖 actor/env/file 三种来源在 seatID 不一致时的拒绝（断言报错、账本零事件新增、分支不变），以及一致时的正常 join；4) 门全绿：go test -count=1 ./internal/pact/ (ok 19.3s) && bats tests/join.bats tests/accept.bats (5/5 passed)。
+  - id: registry-missing
+    branch: feat/registry-missing
+    status: in_progress
+    tasks:
+      - id: registry-missing-tests
+        owner: agy-w
+        status: accepted
+        reviewer: claude
+        spec: .pact/tasks/registry-missing-tests.md
+        evidence: 按照 review 要求进行了全部返工： 1. git rm 清理了 A.md、evidence.txt、revert.patch 及 .orig/.rej 等冗余文件。 2. 避免使用 patch，直接修改对应包的测试文件：    - internal/registry/registry_test.go 补充 TestMissing，同时修正了 `os.MkdirAll` 与 `os.WriteFile` 错误返回值未用 `t.Fatal` 检查的漏洞。    - internal/serve/api_test.go 补充 TestAPIProjectsMissing，测试正确解码为 `map[string]any`，断言健康项目中不存在 `missing` 键。    - cmd/pactify/cli_test.go 补充 TestListMissing。 3. 对回归的自检：临时将 `registry.Missing` 改成 `return false`，此时执行三个测试全红，报错完全符合期望：    - TestMissing: 目录不存在、.pact为文件等 case 全部报 `want true`。    - TestAPIProjectsMissing: 报 `expected broken project to have 'missing': true`。    - TestListMissing: 报 `missing project wrong text, got: broken...` 找不到 (missing...) 后缀。    恢复代码后，三个测试再次全绿。隔离测试也均已通过。

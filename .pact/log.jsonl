@@ -613,3 +613,4 @@
 {"event_id":"6e79efced35bbe5d26741c022d66ff7a","ts":"2026-08-22T11:00:29Z","agent_id":"claude","role":"reviewer","event_type":"accept","task_id":"join-identity-guard","feature":"kind-ux","payload":{}}
 {"event_id":"463b7a91e40f0d60f5411a9ac922bad5","ts":"2026-08-22T11:02:04Z","agent_id":"claude","role":"orchestrator","event_type":"merge","task_id":"","feature":"kind-ux","payload":{}}
 {"event_id":"7af95b988cd9db3110ecb808de9c14ee","ts":"2026-08-22T11:03:03Z","agent_id":"claude","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"kind":"antigravity","protocol_version":1,"roles":["worker"]}}
+{"event_id":"3c970bb66809d3ef1e800181dd1feab1","ts":"2026-08-22T11:04:18Z","agent_id":"claude","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"kind":"claude-code","protocol_version":1,"roles":["orchestrator","reviewer"]}}

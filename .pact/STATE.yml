@@ -1,5 +1,6 @@
-project: demo
+project: pactify
 working_tree_holder: null
 agents:
-  - { id: claude-opus, roles: [worker] }
+  - { id: claude-opus, roles: [orchestrator, reviewer] }
+  - { id: opencode, roles: [worker] }
 features:

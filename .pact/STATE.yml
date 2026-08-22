@@ -1133,7 +1133,7 @@ features:
     tasks:
       - id: agy-repodir-doc
         owner: agy-w
-        status: changes_requested
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/agy-repodir-doc.md
-        evidence: 1) render.go 补全 {repoDir} 文档说明（left literal 由 orchestrate runner 在 exec 时替换为 stint 的 RepoDir）；2) render_test.go 新增对 {repoDir} 原样透传断言。门：go test -count=1 -v ./internal/agentmanifest/ ./internal/orchestrate/ -run 'Render|RepoDir|Manifest'（ok 0.352s / ok 0.701s 全绿）+ go test -count=1 -v ./internal/agentmanifest/（ok 0.356s 全绿）
+        evidence: 返工完成：已通过 gofmt -w internal/agentmanifest/render_test.go 移除文件末尾多余空行。验证：gofmt -l internal/agentmanifest/ 干净无输出；go test -count=1 -v ./internal/agentmanifest/ ./internal/orchestrate/ -run 'Render|RepoDir|Manifest'（ok 0.877s / ok 1.239s 全绿）；go test -count=1 -v ./internal/agentmanifest/（ok 0.377s 全绿）。

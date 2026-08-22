@@ -1159,7 +1159,7 @@ features:
     tasks:
       - id: registry-missing-tests
         owner: agy-w
-        status: in_progress
+        status: awaiting_review
         reviewer: claude
         spec: .pact/tasks/registry-missing-tests.md
-        evidence: null
+        evidence: 实现并验证了三处针对失效项目区分的回归测试： 1. `internal/registry/registry_test.go` 中补充了 `TestMissing`，覆盖五种场景（空路径、正常、无.pact目录、完全不存在、.pact为文件）。 2. `internal/serve/api_test.go` 中补充了 `TestAPIProjectsMissing`，断言健康项目原始 JSON 中无 `missing` 键，而失效项目有 `missing: true`。 3. `cmd/pactify/cli_test.go` 中补充了 `TestListMissing`，断言 `pactify list` 对失效项目能输出对应提示（且包含正确的项目名），健康项目无提示。  自检结果： 将 `registry.Missing` 强制 `return false` 后，新增的三组测试均准确变红拦截： - `TestMissing` 在 ""、no-pact、not-exist、pact-file 四个用例上失败。 - `TestAPIProjectsMissing` 报错：`expected missing project to have 'missing': true`。 - `TestListMissing` 报错：`missing project wrong text` 找不到 expected 的 missing 后缀。  改回后恢复全绿。 （注：当前分支上部分既有测试因先前修改 `registry.Add` 对 `.pact` 的校验等导致自身未通过，非本任务代码所致；本任务新增的所有测试单独运行皆为 PASS）。

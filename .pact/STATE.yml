@@ -4,3 +4,13 @@ agents:
   - { id: orch, roles: [orchestrator, reviewer] }
   - { id: w, roles: [worker] }
 features:
+  - id: f1
+    branch: feat-f1
+    status: in_progress
+    tasks:
+      - id: t1
+        owner: w
+        status: assigned
+        reviewer: orch
+        spec: .pact/tasks/t1.md
+        evidence: null

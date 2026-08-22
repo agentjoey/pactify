@@ -6,7 +6,7 @@ agents:
 features:
   - id: f
     branch: feat/x
-    status: in_progress
+    status: shipped
     tasks:
       - id: t1
         owner: opencode

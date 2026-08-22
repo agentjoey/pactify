@@ -3,3 +3,4 @@
 {"event_id":"10d479d9e5a58c01ed1897f7d4222bc7","ts":"2026-08-22T11:56:20Z","agent_id":"opencode","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"protocol_version":1,"roles":["worker"]}}
 {"event_id":"158bf505668ef113757134e4c5961f66","ts":"2026-08-22T11:56:20Z","agent_id":"opencode","role":"worker","event_type":"checkpoint","task_id":"t1","feature":"f","payload":{"evidence":"ok"}}
 {"event_id":"b0054a1d1c60a928b7cac0aaa5470b50","ts":"2026-08-22T11:56:20Z","agent_id":"claude-opus","role":"reviewer","event_type":"accept","task_id":"t1","feature":"f","payload":{}}
+{"event_id":"15a2e9217372f39c609ac053cc8d1827","ts":"2026-08-22T11:56:22Z","agent_id":"claude-opus","role":"orchestrator","event_type":"merge","task_id":"","feature":"f","payload":{}}

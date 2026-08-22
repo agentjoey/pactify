@@ -387,3 +387,57 @@ func TestCLIRoleSetBindList(t *testing.T) {
 		t.Fatalf("binding an unknown role must fail: %s", out)
 	}
 }
+
+func TestListMissing(t *testing.T) {
+	bin := buildBinary(t)
+	home := t.TempDir()
+	
+	// register a healthy project
+	healthyDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(healthyDir, ".pact"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	run := func(args ...string) string {
+		c := exec.Command(bin, args...)
+		c.Env = append(os.Environ(), "PACTIFY_HOME="+home)
+		out, _ := c.CombinedOutput()
+		return string(out)
+	}
+
+	run("register", healthyDir, "--name", "healthy")
+
+	// register a missing project
+	missingDir := filepath.Join(t.TempDir(), "missing-dir")
+	// do NOT create the missingDir
+
+	run("register", missingDir, "--name", "broken")
+
+	out := run("list")
+	
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	foundHealthy := false
+	foundBroken := false
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "healthy\t") {
+			foundHealthy = true
+			if strings.Contains(line, "missing") {
+				t.Errorf("expected healthy project to NOT have 'missing', got: %s", line)
+			}
+		}
+		if strings.HasPrefix(line, "broken\t") {
+			foundBroken = true
+			if !strings.Contains(line, "(missing — no .pact/ at this path; `pactify unregister broken` to remove)") {
+				t.Errorf("missing project wrong text, got: %s", line)
+			}
+		}
+	}
+
+	if !foundHealthy {
+		t.Error("healthy project not found in list output")
+	}
+	if !foundBroken {
+		t.Error("broken project not found in list output")
+	}
+}

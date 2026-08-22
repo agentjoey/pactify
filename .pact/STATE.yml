@@ -6,11 +6,11 @@ agents:
 features:
   - id: f
     branch: feat/x
-    status: in_progress
+    status: shipped
     tasks:
       - id: t1
         owner: opencode
-        status: in_progress
+        status: accepted
         reviewer: claude-opus
         spec: .pact/tasks/t1.md
-        evidence: null
+        evidence: ok

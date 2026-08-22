@@ -1,4 +1,4 @@
-project: demo
+project: opencode
 working_tree_holder: null
 agents:
   - { id: lead, roles: [worker] }

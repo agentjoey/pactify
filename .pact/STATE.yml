@@ -11,6 +11,7 @@ agents:
   - { id: oc-acfg, roles: [worker] }
   - { id: kimi-worker, roles: [worker] }
   - { id: claude-worker, roles: [worker] }
+  - { id: agy-w, roles: [worker] }
 features:
   - id: planner
     branch: feat-planner
@@ -1132,7 +1133,7 @@ features:
     tasks:
       - id: agy-repodir-doc
         owner: agy-w
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/agy-repodir-doc.md
         evidence: null

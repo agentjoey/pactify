@@ -47,4 +47,3 @@ func TestRenderArgs(t *testing.T) {
 		t.Fatalf("repoDir = %v, want %v", got, want)
 	}
 }
-

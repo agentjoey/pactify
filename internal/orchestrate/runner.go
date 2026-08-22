@@ -157,7 +157,7 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// JSON carries conversation_id where codex's carries thread_id, and agy takes
 	// a `--conversation <id>` flag rather than a `resume` subcommand (agy-resume).
 	resumed := false
-	switch lc.Kind {
+	switch eff.Kind {
 	case "codex-cli":
 		args, resumed = codexResumeArgsIfAny(lc, args)
 	case "antigravity":
@@ -238,7 +238,7 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// kimi / gemini / codex worker must not inherit the user's ANTHROPIC key, etc.
 	// Each kind keeps its OWN key (gemini's is added just above); model-agnostic
 	// kinds (opencode, custom) are left untouched.
-	env = append(env, crossVendorStrip(lc.Kind)...)
+	env = append(env, crossVendorStrip(eff.Kind)...)
 
 	// Siphon a bounded tail of the child's stdout so we can parse token usage from
 	// its headless JSON (the read side surfaces it on the dashboard). Best-effort
@@ -267,12 +267,12 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 		}
 	}
 	err = r.Exec(ctx, eff.Command, args, lc.RepoDir, env, capture)
-	recordTokens(lc, cap.String())
+	recordTokens(lc, eff.Kind, cap.String())
 
 	// codex session lifecycle: capture the thread id on a successful cold run so a
 	// future retry can resume; if a resume attempt itself fails, delete the stale
 	// record so the next retry falls back to a cold start (self-healing).
-	if lc.Kind == "codex-cli" && lc.Task != "" {
+	if eff.Kind == "codex-cli" && lc.Task != "" {
 		if err != nil && resumed {
 			_ = RemoveSession(lc.RepoDir, lc.Seat, lc.Task, "codex-cli")
 		} else if err == nil {
@@ -312,7 +312,7 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// Cleanup uses kind-checked RemoveSession, not kind-blind ClearSession: the
 	// store is shared with codex-cli and the ACP path, and an agy failure must not
 	// delete another kind's record for the same (seat,task) — see LookupSessionKind.
-	if lc.Kind == "antigravity" && lc.Task != "" {
+	if eff.Kind == "antigravity" && lc.Task != "" {
 		// agy can exit 0 while reporting {"status":"ERROR"} — verified live
 		// 2026-08-22, a mid-run tool rejection does exactly that, while an
 		// argv-validation failure (--model/--effort conflict) exits 1 with the same
@@ -373,11 +373,11 @@ const headCaptureCap = 8 << 10 // 8 KiB
 // telemetry must never break a run. Concurrency-safe by construction: the serial
 // loop runs one stint at a time, and parallel features each run in their own
 // worktree (distinct RepoDir), so no two callers touch the same tokens.json.
-func recordTokens(lc LaunchContext, output string) {
+func recordTokens(lc LaunchContext, kind, output string) {
 	if lc.Task == "" {
 		return
 	}
-	n, ok := parseTokenUsage(lc.Kind, output)
+	n, ok := parseTokenUsage(kind, output)
 	if !ok || n <= 0 {
 		return
 	}

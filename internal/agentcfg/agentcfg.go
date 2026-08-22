@@ -35,6 +35,7 @@ type Override struct {
 // scan output). Effort is the resolved reasoning-effort budget ("" = none
 // injected), likewise surfaced for display/telemetry.
 type Effective struct {
+	Kind    string
 	Command string
 	Args    []string
 	Model   string
@@ -67,6 +68,7 @@ func ResolveWith(kind string, ov Override) (Effective, bool) {
 		effort = ov.Effort
 	}
 	return Effective{
+		Kind:    kind,
 		Command: p.Command,
 		Args:    args,
 		Model:   model,

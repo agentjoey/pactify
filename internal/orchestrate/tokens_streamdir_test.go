@@ -40,7 +40,7 @@ func TestAcpUsageTokensLandInStreamDirNotSandbox(t *testing.T) {
 func TestCmdTokensLandInStreamDirNotSandbox(t *testing.T) {
 	mainDir, sbDir := t.TempDir(), t.TempDir()
 	lc := LaunchContext{Seat: "w", Task: "t-cmd", Kind: "opencode", RepoDir: sbDir, StreamDir: mainDir}
-	recordTokens(lc, `{"usage":{"input_tokens":30,"output_tokens":12}}`)
+	recordTokens(lc, lc.Kind, `{"usage":{"input_tokens":30,"output_tokens":12}}`)
 	if got := tokens.Load(mainDir).Get("t-cmd"); got != 42 {
 		t.Fatalf("cmd-transport tokens must land in the StreamDir, got %d want 42", got)
 	}

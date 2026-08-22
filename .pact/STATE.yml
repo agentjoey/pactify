@@ -1143,7 +1143,7 @@ features:
     tasks:
       - id: kind-effective
         owner: agy-w
-        status: assigned
+        status: in_progress
         reviewer: claude
         spec: .pact/tasks/kind-effective.md
         evidence: null

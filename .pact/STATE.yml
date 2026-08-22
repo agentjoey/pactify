@@ -1,5 +1,6 @@
-project: opencode
+project: 001
 working_tree_holder: null
 agents:
-  - { id: lead, roles: [worker] }
+  - { id: claude, roles: [orchestrator, reviewer] }
+  - { id: opencode, roles: [worker] }
 features:

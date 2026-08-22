@@ -48,3 +48,44 @@ func TestAPIProjectsAndState(t *testing.T) {
 	}
 	resp.Body.Close()
 }
+
+func TestAPIProjectsMissing(t *testing.T) {
+	rootHealth := t.TempDir()
+	seedProject(t, rootHealth, "healthy")
+	
+	rootMissing := filepath.Join(t.TempDir(), "missing-dir") // does not exist
+
+	srv := New([]registry.Project{
+		{Name: "healthy", Path: rootHealth},
+		{Name: "broken", Path: rootMissing},
+	})
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	resp, _ := http.Get(ts.URL + "/api/projects")
+	var projects []map[string]any
+	json.NewDecoder(resp.Body).Decode(&projects)
+	resp.Body.Close()
+
+	if len(projects) != 2 {
+		t.Fatalf("expected 2 projects, got %d", len(projects))
+	}
+
+	var healthyProj, brokenProj map[string]any
+	for _, p := range projects {
+		if p["name"] == "healthy" {
+			healthyProj = p
+		}
+		if p["name"] == "broken" {
+			brokenProj = p
+		}
+	}
+
+	if _, ok := healthyProj["missing"]; ok {
+		t.Errorf("expected healthy project NOT to have 'missing' key, but got %v", healthyProj["missing"])
+	}
+
+	if missingVal, ok := brokenProj["missing"]; !ok || missingVal != true {
+		t.Errorf("expected broken project to have 'missing': true, got ok=%v, val=%v", ok, missingVal)
+	}
+}

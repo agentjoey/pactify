@@ -38,8 +38,11 @@ func TestRenderJSONKindReturnsBlockAndSnippet(t *testing.T) {
 	}
 }
 
+// claude-desktop is the desktop/GUI example here — antigravity is no longer a
+// desktop kind (agy-kind task, 2026-08-22); see TestRenderAntigravityHasGEMINIEntry
+// for its new CLI-kind entry-file coverage.
 func TestRenderDesktopAppHasNoEntry(t *testing.T) {
-	entry, cfg, err := Render("antigravity", "antigravity", "worker", "/repo")
+	entry, cfg, err := Render("claude-desktop", "claude-desktop", "worker", "/repo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,6 +51,29 @@ func TestRenderDesktopAppHasNoEntry(t *testing.T) {
 	}
 	if !strings.Contains(cfg, "--project") {
 		t.Fatalf("desktop snippet should include --project:\n%s", cfg)
+	}
+}
+
+// antigravity (agy) now has an entry file (GEMINI.md, not AGENTS.md — agy reads
+// GEMINI.md and would never see an AGENTS.md briefing, verified 2026-08-22) and
+// is no longer desktop-scoped, so its config snippet must NOT carry --project.
+func TestRenderAntigravityHasGEMINIEntry(t *testing.T) {
+	a, ok := Get("antigravity")
+	if !ok {
+		t.Fatal("antigravity not registered")
+	}
+	if a.DefaultEntry() != "GEMINI.md" {
+		t.Fatalf("antigravity entry file = %q, want GEMINI.md", a.DefaultEntry())
+	}
+	entry, cfg, err := Render("antigravity", "antigravity", "worker", "/repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(entry, "pact protocol") || !strings.Contains(entry, "pactify seat use") {
+		t.Fatalf("antigravity entry block must be the seat-agnostic onboarding block:\n%s", entry)
+	}
+	if strings.Contains(cfg, "--project") {
+		t.Fatalf("antigravity is no longer desktop-scoped, snippet must not include --project:\n%s", cfg)
 	}
 }
 

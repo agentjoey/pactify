@@ -67,7 +67,7 @@ pactify orchestrate \
   --seat-kind w=opencode \
   --seat-kind orch=claude-code
 ```
-- **座席→kind**：`--seat-kind seat=kind`（可重复）。有 headless runner 的 kind：`opencode`/`claude-code`/`gemini-cli`。GUI/桌面 agent（antigravity、*-desktop）无法被驱动——那一棒换 CLI 座席或人工。
+- **座席→kind**：`--seat-kind seat=kind`（可重复）。有 headless runner 的 kind：`opencode`/`claude-code`/`gemini-cli`/`kimi-cli`/`codex-cli`/`antigravity`（antigravity 走 `agy` CLI，2026-08-22 起可被驱动）。GUI/桌面 agent（`*-desktop`、`codex-app`）无法被驱动——那一棒换 CLI 座席或人工。
 - **task 规格 `verify:` 字段**：硬测试门与 reviewer 都用它跑验收，例 `verify: go test ./internal/serve/ -run Relay`。缺失则退化为**项目门**（见下）。**只放一行专用 `verify:` 指令，勿写成散文**（首条 `verify:` 行胜出；`>`/`-`/`#` 前缀的不计）。
 - **项目硬门（`pactify config gate`）**：task 无 `verify:` 时的回退门按**项目**配置，优先级 task `verify:` > `config gate` > 按项目类型推断的默认。
   - 类型默认：`pnpm-lock.yaml`→`pnpm build && pnpm test`；`package.json`→`npm run build && npm test`；`Cargo.toml`→`cargo build && cargo test`；`go.mod`→`go build ./... && go test ./...`。
@@ -120,6 +120,50 @@ pactify role list
 At launch a seat resolves in this order: `--seat-kind` override → an approved
 fallback (this run only) → the seat's role binding → the roster kind. Two seats
 of the same kind can therefore run different models.
+
+**Recommended profiles — antigravity (`agy`).** Given `gemini-3.7-flash`'s
+current capability, antigravity suits lightweight work — frontend, test, ops,
+docs — not planner/orchestrator or architecture-class tasks (those stay on
+stronger roster kinds). This is a role/kind binding, not a tier default: tier
+is about task complexity, role is about who's suited for it; the two stay
+orthogonal. Nothing below is built in — `roles.Load()` reads exactly one file,
+`roles.Path()` (`$PACTIFY_HOME/roles.json` when `PACTIFY_HOME` is set, else
+`~/.pactify/roles.json`), and treats a missing file as an empty config, so a
+fresh machine behaves exactly as before until you opt in with these commands (or
+the equivalent hand-edited JSON):
+
+```bash
+pactify role set frontend --kind antigravity --model gemini-3.7-flash-medium
+pactify role set test     --kind antigravity --model gemini-3.7-flash-medium
+pactify role set ops      --kind antigravity --model gemini-3.7-flash-low
+pactify role set docs     --kind antigravity --model gemini-3.7-flash-low
+pactify role bind <seat> frontend   # etc. — binding is what actually routes work
+```
+
+Equivalent `roles.json` fragment (`$PACTIFY_HOME/roles.json`, default
+`~/.pactify/roles.json`):
+
+```json
+{
+  "profiles": {
+    "frontend": {"kind": "antigravity", "model": "gemini-3.7-flash-medium"},
+    "test":     {"kind": "antigravity", "model": "gemini-3.7-flash-medium"},
+    "ops":      {"kind": "antigravity", "model": "gemini-3.7-flash-low"},
+    "docs":     {"kind": "antigravity", "model": "gemini-3.7-flash-low"}
+  }
+}
+```
+
+Do **not** set `--fallback` on these profiles, and leave the profile's `effort`
+field unset. (`pactify role set` takes only `--kind`, `--model` and
+`--fallback` — there is no `--effort` flag; `Profile.Effort` is reachable only
+by hand-editing `roles.json`.) `agy`'s tier is fully encoded in the model
+name's `-medium`/`-low` suffix; antigravity's
+`RunnerProfile.EffortArgs` is `nil` because `agy --model <tier> --effort
+<mismatched-tier>` hard-errors (exit 1, `status:ERROR`, "conflicts with" — see
+the antigravity kind registration). Leaving `Profile.Effort` empty means
+`agentcfg.ResolveSeat` never has an explicit per-seat effort to inject for
+this kind, so it can't reconstruct that conflicting flag pair.
 
 **Fallback.** When a stint fails having produced *nothing* (quota exhausted,
 auth expired, a missing binary — "env-class"), the driver proposes the seat's

@@ -156,8 +156,32 @@ func LookupSession(repoDir, seat, task string) (string, bool) {
 	return "", false
 }
 
+// LookupSessionKind is LookupSession restricted to one agent kind. A resume id is
+// only interchangeable within the kind that minted it — a codex thread_id handed
+// to agy's --conversation, or an agy conversation_id handed to an ACP LoadSession,
+// is a category error. Both happen to self-heal today (agy warns and mints fresh;
+// ACP clears and re-NewSessions), so this is about not relying on that: a seat
+// re-kinded mid-feature (dynamic `join --kind`, `--seat-kind`, a fallback-role
+// switch) leaves a record of the OLD kind under the same (seat,task) key, which
+// kind-blind LookupSession would happily return. Mirrors RemoveSession's rationale
+// on the read side.
+func LookupSessionKind(repoDir, seat, task, kind string) (string, bool) {
+	recs, err := LoadSessions(repoDir)
+	if err != nil {
+		return "", false
+	}
+	for _, r := range recs {
+		if r.Seat == seat && r.Task == task && r.Kind == kind && r.SessionID != "" {
+			return r.SessionID, true
+		}
+	}
+	return "", false
+}
+
 // ClearSession removes the record for (seat,task) if present. It is a no-op (nil
 // error) when nothing matches, so terminal-state cleanup can call it blindly.
+// Prefer RemoveSession when a specific kind owns the record — this one is
+// kind-blind and will drop another kind's record for the same (seat,task).
 func ClearSession(repoDir, seat, task string) error {
 	return withSessionsLock(repoDir, func(recs []SessionRecord) []SessionRecord {
 		out := recs[:0]

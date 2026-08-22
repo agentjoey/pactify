@@ -1,9 +1,11 @@
 package planner_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/planner"
 )
 
@@ -228,6 +230,71 @@ func TestPromptCarriesRoleCatalogAndRoutingRule(t *testing.T) {
 		"w2",               // the bound seat
 		"no seat is bound", // the unbound-role warning wording
 		"role",             // the per-task routing instruction
+	} {
+		if !strings.Contains(p, want) {
+			t.Fatalf("prompt missing %q:\n%s", want, p)
+		}
+	}
+}
+
+// A project with NO role bound (RoleCatalog empty, the default zero value of
+// PromptInput) must render byte-for-byte as it did before role routing
+// existed: no Role catalog / Role routing section at all. This is the hard
+// regression requirement agy-roles must not break — reusing samplePromptInput
+// (which never sets RoleCatalog) proves it directly against the same fixture
+// every other prompt test already exercises.
+func TestPromptOmitsRoleCatalogWhenEmpty(t *testing.T) {
+	out := planner.BuildPrompt(samplePromptInput())
+	for _, unwanted := range []string{"## Role catalog", "## Role routing"} {
+		if strings.Contains(out, unwanted) {
+			t.Fatalf("prompt with no RoleCatalog must omit %q:\n%s", unwanted, out)
+		}
+	}
+}
+
+// Once antigravity is bound to a lightweight-work role (agy-roles, using the
+// exact catalog docs/operations.md recommends), the planner's existing
+// role-catalog rendering must surface its kind and model like any other
+// role — proving the routing mechanism (already covered by
+// TestPromptCarriesRoleCatalogAndRoutingRule) works unmodified for the new
+// kind rather than requiring bespoke prompt-rendering support.
+func TestPromptCarriesAntigravityRoleCatalog(t *testing.T) {
+	// The fixture must be built from REAL values rather than plausible-looking
+	// strings: the kind has to be registered and both models have to come from
+	// antigravity's curated RunnerProfile.Models (read through
+	// agent.CandidateModels — never duplicated here). Otherwise this test would
+	// go on passing over a kind or a model that no longer exists.
+	const kind = "antigravity"
+	if _, ok := agent.Get(kind); !ok {
+		t.Fatalf("%s is not a registered agent kind (%v)", kind, agent.Kinds())
+	}
+	models := agent.CandidateModels(kind)
+	boundModel, unboundModel := "gemini-3.7-flash-medium", "gemini-3.7-flash-low"
+	for _, m := range []string{boundModel, unboundModel} {
+		if !slices.Contains(models, m) {
+			t.Fatalf("model %q is not in %s's curated models %v", m, kind, models)
+		}
+	}
+
+	p := planner.BuildPrompt(planner.PromptInput{
+		Goal: "g", Feature: "f", RepoTree: "x",
+		Seats: []planner.SeatInfo{
+			{ID: "agy-1", Roles: []string{"worker"}, Drivable: true, Role: "frontend", Kind: kind, Model: boundModel},
+		},
+		RoleCatalog: []planner.RoleInfo{
+			{Name: "frontend", Kind: kind, Model: boundModel, BoundSeats: []string{"agy-1"}},
+			{Name: "ops", Kind: kind, Model: unboundModel},
+		},
+	})
+	for _, want := range []string{
+		"## Role catalog",
+		"frontend",                          // bound role name
+		kind,                                // the kind behind it
+		boundModel,                          // the bound role's model
+		"agy-1",                             // the bound seat
+		"ops",                               // unbound role still listed
+		unboundModel,                        // unbound role's model
+		"no seat is bound to this role yet", // unbound-role catalog wording
 	} {
 		if !strings.Contains(p, want) {
 			t.Fatalf("prompt missing %q:\n%s", want, p)

@@ -121,8 +121,15 @@ var registry = map[string]spec{
 	"kimi-cli":       {"kimi-cli", "AGENTS.md", "~/.kimi-code/mcp.json", Global, JSONMcpServers, false, false, "kimi"},
 	"cursor-cli":     {"cursor-cli", "AGENTS.md", ".cursor/mcp.json", Project, JSONMcpServers, false, false, "cursor-agent"},
 	"claude-desktop": {"claude-desktop", "", "~/Library/Application Support/Claude/claude_desktop_config.json", Global, JSONMcpServers, true, false, ""},
-	"antigravity":    {"antigravity", "", "~/.gemini/config/mcp_config.json", Global, JSONMcpServers, true, false, ""},
-	"codex-app":      {"codex-app", "AGENTS.md", "~/.codex/config.toml", Global, TOML, true, false, ""},
+	// antigravity is the CLI binary `agy` (historical kind name kept for roster/
+	// task continuity — this is no longer the GUI/desktop app). agy reads
+	// GEMINI.md, not AGENTS.md (verified 2026-08-22: placed both files with
+	// different content in the same repo and asked the same question; it
+	// answered from GEMINI.md — an AGENTS.md entry would be invisible to it).
+	// mcpConfigPath is unchanged: `agy mcp add` writes to the same
+	// ~/.gemini/config/mcp_config.json the old GUI entry already pointed at.
+	"antigravity": {"antigravity", "GEMINI.md", "~/.gemini/config/mcp_config.json", Global, JSONMcpServers, false, false, "agy"},
+	"codex-app":   {"codex-app", "AGENTS.md", "~/.codex/config.toml", Global, TOML, true, false, ""},
 }
 
 // Get returns the adapter for kind.

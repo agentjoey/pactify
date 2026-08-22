@@ -147,6 +147,53 @@ var runnerProfiles = map[string]RunnerProfile{
 			return []string{"-c", "model_reasoning_effort=" + effort}
 		},
 	},
+	// antigravity (binary: agy) — headless via `-p`. --add-dir "{repoDir}" is
+	// belt-and-braces, NOT the load-bearing guard an earlier version of this
+	// comment claimed. The original dogfood observed agy writing into its own
+	// ~/.gemini/antigravity-cli/scratch/ while still returning SUCCESS — but that
+	// run was launched from a DIFFERENT cwd. CmdRunner sets cmd.Dir = lc.RepoDir
+	// (runner.go), so agy already has the repo as its working directory and the
+	// scratch-fallback does not reproduce in this invocation shape: verified
+	// 2026-08-22 by deleting this flag and re-running the live e2e twice — both
+	// PASSED, zero new scratch entries. The flag is kept because it is free and
+	// because it pins the workspace explicitly rather than depending on cwd
+	// semantics that another caller could change; it is NOT evidence that the
+	// scratch failure mode is guarded against. The runner substitutes {repoDir}
+	// at exec (see orchestrate/runner.go).
+	// --print-timeout defaults to 5m (agy --help), too
+	// short for a typical pactify stint, so it's raised to 30m; not raising it
+	// manifests as a clean exit with no checkpoint. --dangerously-skip-permissions
+	// is the blanket posture; agy has no per-tool allowlist flag, so — like
+	// opencode/kimi-cli — perm is accepted but ignored (always blanket).
+	// --output-format json is required for the runner's JSON usage/status parsing.
+	//
+	// EffortArgs is deliberately NOT declared (deviation from the task's
+	// illustrative snippet). Verified empirically 2026-08-22: `agy --model
+	// gemini-3.7-flash-high --effort low` (and the reverse mismatch) both HARD
+	// ERROR — exit 1, {"status":"ERROR","error":"invalid model selection ...
+	// conflicts with --effort=..."} — agy validates that --effort must agree
+	// with the tier already embedded in --model's suffix; a mismatch is not a
+	// silent override or a combine, it refuses to run at all. Since role/model
+	// config picks the model name independently of tier→effort routing, wiring
+	// EffortArgs here would turn every mismatched tier into a guaranteed launch
+	// failure instead of a no-op. Effort for this kind must be expressed by
+	// choosing a model name with the matching -high/-medium/-low suffix, not by
+	// an appended --effort flag.
+	"antigravity": {
+		Command:      "agy",
+		DefaultModel: "gemini-3.7-flash-medium",
+		Models: []string{
+			"gemini-3.7-flash-high", "gemini-3.7-flash-medium", "gemini-3.7-flash-low",
+			"gemini-3.1-pro-high", "gemini-3.1-pro-low",
+		},
+		BuildArgs: func(model string, _ PermPosture, briefing string) []string {
+			return []string{"-p", briefing, "--model", model,
+				"--add-dir", "{repoDir}",
+				"--output-format", "json",
+				"--dangerously-skip-permissions",
+				"--print-timeout", "30m"}
+		},
+	},
 }
 
 // RunnerProfileFor returns the launch profile for a drivable kind; ok=false for

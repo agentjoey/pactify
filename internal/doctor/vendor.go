@@ -52,6 +52,18 @@ var vendorAuth = map[string]authProbe{
 		installHint: "install the kimi CLI",
 		loginHint:   "run `kimi login`"},
 	"opencode": {installHint: "install opencode (see opencode.ai)"},
+	// antigravity (binary agy) authenticates via an OAuth token FILE. It is not
+	// the ONLY path agy accepts — GOOGLE_API_KEY/GEMINI_API_KEY/
+	// GOOGLE_APPLICATION_CREDENTIALS are alternate tiers baked into the binary
+	// (see orchestrate/env.go, which strips all three) — but it is the only one
+	// pactify permits: an orchestrated agy stint has every vendor key blanked, so
+	// the OAuth file is load-bearing for exactly the runs doctor is preflighting.
+	// Hence lenient=false: an absent token is a real red, same as codex-cli/
+	// gemini-cli. Caveat this reports a false red for someone who drives agy by
+	// hand on an API key and never through pactify.
+	"antigravity": {authRel: ".gemini/antigravity-cli/antigravity-oauth-token",
+		installHint: "install the Antigravity CLI (agy) — see antigravity.google docs",
+		loginHint:   "run `agy` once and complete the OAuth login flow"},
 }
 
 // VendorChecks returns the per-vendor-CLI preflight checks: for every kind with a

@@ -40,4 +40,10 @@ func TestRenderArgs(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("seat = %v, want %v", got, want)
 	}
+
+	got = RenderArgs([]string{"run", "--dir", "{repoDir}", "{briefing}"}, Permission{}, agent.PermPosture{}, "", "B")
+	want = []string{"run", "--dir", "{repoDir}", "B"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("repoDir = %v, want %v", got, want)
+	}
 }

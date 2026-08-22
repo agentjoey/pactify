@@ -47,6 +47,7 @@ func TestVendorChecks_Binary(t *testing.T) {
 		{"gemini-cli", "gemini"},
 		{"kimi-cli", "kimi"},
 		{"opencode", "opencode"},
+		{"antigravity", "agy"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.kind, func(t *testing.T) {
@@ -112,6 +113,7 @@ func TestVendorChecks_Auth(t *testing.T) {
 		{kind: "gemini-cli", rel: ".gemini/oauth_creds.json", lenient: false, hasAuth: true},
 		{kind: "kimi-cli", rel: ".kimi", isDir: true, lenient: true, hasAuth: true},
 		{kind: "opencode", hasAuth: false},
+		{kind: "antigravity", rel: ".gemini/antigravity-cli/antigravity-oauth-token", lenient: false, hasAuth: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.kind, func(t *testing.T) {
@@ -234,16 +236,36 @@ func TestVendorChecks_TransportClassification(t *testing.T) {
 			t.Fatalf("%s transport should be %q: %+v", kind, sub, c)
 		}
 	}
+
+	// antigravity (agy) has no known ACP bridge (agy --help lists no `acp`
+	// subcommand) — it must classify as cmd-only, same as any kind absent from
+	// acpKinds, while still (unlike before) producing a check at all.
+	c, ok := findCheck(checks, "cli antigravity: transport")
+	if !ok {
+		t.Fatal("missing transport check for antigravity")
+	}
+	if !c.OK || !strings.Contains(c.Detail, "cmd only") {
+		t.Fatalf("antigravity transport should be cmd-only informational-OK: %+v", c)
+	}
 }
 
 // Desktop / non-headless kinds must not appear in the vendor checks at all.
+// antigravity is now a headless CLI kind (agy-kind task, 2026-08-22) and is
+// deliberately absent from this list — see TestVendorChecks_Binary /
+// TestVendorChecks_Auth / TestVendorChecks_TransportClassification for its
+// positive (INCLUDED) coverage.
 func TestVendorChecks_SkipsNonHeadlessKinds(t *testing.T) {
 	checks := VendorChecks(t.TempDir(), t.TempDir())
 	for _, c := range checks {
-		for _, bad := range []string{"claude-desktop", "antigravity", "codex-app", "cursor-cli"} {
+		for _, bad := range []string{"claude-desktop", "codex-app", "cursor-cli"} {
 			if strings.Contains(c.Name, bad) {
 				t.Fatalf("non-headless kind %s should not produce a check: %+v", bad, c)
 			}
+		}
+	}
+	for _, want := range []string{"cli antigravity: binary", "cli antigravity: auth", "cli antigravity: transport"} {
+		if _, ok := findCheck(checks, want); !ok {
+			t.Fatalf("antigravity is a headless CLI kind now — expected check %q", want)
 		}
 	}
 }

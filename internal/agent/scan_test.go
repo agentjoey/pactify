@@ -16,12 +16,14 @@ func byKind(rs []ScanResult) map[string]ScanResult {
 }
 
 func TestScanWithCoversCLIAndDesktop(t *testing.T) {
-	// claude binary resolves; claude-desktop config exists; everything else misses.
+	// claude and agy binaries resolve; claude-desktop config exists; everything
+	// else misses. antigravity is a CLI kind now (detectBin "agy"), no longer
+	// detected via its config path — agy-kind task, 2026-08-22.
 	desktopPath := ExpandPath(registry["claude-desktop"].cfgPath)
 	p := scanProbe{
 		lookPath: func(bin string) (string, error) {
-			if bin == "claude" {
-				return "/usr/local/bin/claude", nil
+			if bin == "claude" || bin == "agy" {
+				return "/usr/local/bin/" + bin, nil
 			}
 			return "", errors.New("not found")
 		},
@@ -36,6 +38,10 @@ func TestScanWithCoversCLIAndDesktop(t *testing.T) {
 	if r := got["claude-code"]; !r.Installed || r.Detail != "/usr/local/bin/claude" {
 		t.Errorf("claude-code: got %+v, want installed with binary path", r)
 	}
+	// antigravity CLI hit: detectBin "agy" resolves → installed with the binary path.
+	if r := got["antigravity"]; !r.Installed || r.Detail != "/usr/local/bin/agy" {
+		t.Errorf("antigravity: got %+v, want installed with binary path", r)
+	}
 	// CLI miss: detectBin does not resolve.
 	if r := got["opencode"]; r.Installed || r.Detail != "not found" {
 		t.Errorf("opencode: got %+v, want not installed / not found", r)
@@ -45,8 +51,8 @@ func TestScanWithCoversCLIAndDesktop(t *testing.T) {
 		t.Errorf("claude-desktop: got %+v, want installed with %q", r, desktopPath)
 	}
 	// Desktop miss: config path absent.
-	if r := got["antigravity"]; r.Installed || r.Detail != "not found" {
-		t.Errorf("antigravity: got %+v, want not installed / not found", r)
+	if r := got["codex-app"]; r.Installed || r.Detail != "not found" {
+		t.Errorf("codex-app: got %+v, want not installed / not found", r)
 	}
 }
 

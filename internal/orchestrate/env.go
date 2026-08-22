@@ -37,6 +37,13 @@ var allVendorAPIKeys = []string{
 	"GOOGLE_API_KEY",
 	"MOONSHOT_API_KEY",
 	"KIMI_API_KEY",
+	// Application Default Credentials: a Google service-account path, and a real
+	// alternate auth tier for both Google kinds (`strings $(which agy)` carries it
+	// alongside GOOGLE_API_KEY/GEMINI_API_KEY). Listed here so a NON-Google kind
+	// cannot inherit it, and so antigravity — which owns no key and must reach its
+	// OAuth token file — cannot silently authenticate as whatever service account
+	// happens to be configured on the machine.
+	"GOOGLE_APPLICATION_CREDENTIALS",
 }
 
 // vendorOwnKeys maps a single-vendor agent kind to the API keys that ARE its own.
@@ -45,8 +52,33 @@ var allVendorAPIKeys = []string{
 var vendorOwnKeys = map[string][]string{
 	"claude-code": {"ANTHROPIC_API_KEY"},
 	"codex-cli":   {"OPENAI_API_KEY"},
-	"gemini-cli":  {"GEMINI_API_KEY", "GOOGLE_API_KEY"},
+	"gemini-cli":  {"GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS"},
 	"kimi-cli":    {"MOONSHOT_API_KEY", "KIMI_API_KEY"},
+	// antigravity (agy) authenticates via an OAuth token FILE
+	// (~/.gemini/antigravity-cli/antigravity-oauth-token) by default — but
+	// `strings $(which agy)` (re-verified 2026-08-22 by independent review)
+	// DOES contain GOOGLE_API_KEY/GEMINI_API_KEY/GOOGLE_APPLICATION_CREDENTIALS
+	// as alternate-auth fallback strings (agy warns if both GOOGLE_API_KEY and
+	// GEMINI_API_KEY are set). So agy CAN authenticate via those — but they are
+	// gemini-cli's credential, not agy's own, and `env -u <all of the above>
+	// agy -p ...` still authenticates fine via the OAuth file alone. Treating
+	// them as antigravity's "own" keys would be wrong (that's what gemini-cli
+	// owns); the safe choice is the opposite — explicit empty slice (present in
+	// the map, owns nothing) so crossVendorStrip blanks every sibling vendor key,
+	// including GEMINI_API_KEY/GOOGLE_API_KEY, from agy's environment. This also
+	// prevents agy from silently falling back to a leaked/wrong-vendor key
+	// instead of its intended OAuth file. An omitted map key (vs. an explicit
+	// empty slice) is treated as model-agnostic and left UNSTRIPPED — see
+	// crossVendorStrip — which is not what we want here.
+	//
+	// Verified 2026-08-22 under the mechanism actually used (blanking to the EMPTY
+	// STRING, not unsetting — os/exec keeps the last duplicate, so a trailing
+	// `KEY=` shadows the inherited value): `agy -p ... --output-format json` with
+	// all six keys blanked still authenticates via the OAuth file and returns
+	// SUCCESS. The earlier evidence for this used `env -u`, which is not the same
+	// thing — a CLI testing for presence rather than non-emptiness would behave
+	// differently between the two.
+	"antigravity": {},
 }
 
 // crossVendorStrip returns environment entries that blank every vendor API key

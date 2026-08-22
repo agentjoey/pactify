@@ -1133,7 +1133,7 @@ features:
     tasks:
       - id: agy-repodir-doc
         owner: agy-w
-        status: awaiting_review
+        status: accepted
         reviewer: claude
         spec: .pact/tasks/agy-repodir-doc.md
         evidence: 返工完成：已通过 gofmt -w internal/agentmanifest/render_test.go 移除文件末尾多余空行。验证：gofmt -l internal/agentmanifest/ 干净无输出；go test -count=1 -v ./internal/agentmanifest/ ./internal/orchestrate/ -run 'Render|RepoDir|Manifest'（ok 0.877s / ok 1.239s 全绿）；go test -count=1 -v ./internal/agentmanifest/（ok 0.377s 全绿）。

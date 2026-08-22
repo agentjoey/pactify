@@ -1,5 +1,5 @@
 <!-- pact:begin (managed by pactify — edit outside this block) -->
-# p — Pact Charter (protocol_version: 1)
+# pactify — Pact Charter (protocol_version: 1)
 
 This repo uses the **pact protocol** (v1). Any agent that can read files + run git can participate.
 
@@ -14,7 +14,9 @@ This repo uses the **pact protocol** (v1). Any agent that can read files + run g
 2. A feature cannot merge until all its tasks are accepted.
 
 ## Seats
-- `opencode` — roles: worker — entry: AGENTS.md
+- `claude` — roles: orchestrator, reviewer — entry: CLAUDE.md
+- `opencode-worker` — roles: worker — entry: AGENTS.md
+- `gemini-worker` — roles: worker — entry: GEMINI.md
 
 ## Commands
 Run `pactify help` for the verb reference.

@@ -46,16 +46,22 @@ cat .agent/CURRENT.md
 - **视觉门**：UI 改动提交前必须 playwright 截图实测（`node web/scripts/shots.mjs [view]`；escalated/review-gate 等无法按需触发的态用 `live-gate-shot.mjs` 注入 mock）——vitest/tsc 绿 ≠ 视觉对。要证明截图来自**最终 build**（而非长驻 daemon 可能提供的陈旧 dist）用 `node web/scripts/shot-dispatch-review.mjs`——它 spawn hermetic 的 `e2e/mock-server.mjs`，直接服务 `internal/serve/dist`。
 
 <!-- pact:begin (managed by pactify — edit outside this block) -->
-# pact protocol
+# pact protocol — seat `claude`
 
-> Bind this working copy's seat once, then read the board.
+This repo uses the **pact protocol** (v1). You are seat `claude`, roles: orchestrator,reviewer.
 
+**Primary — MCP:** the `pact` MCP server is wired into your config. Use its tools
+(status / join / assign / checkpoint / accept / changes / merge / list) and resources
+(`pact://state`, `pact://log`). Cold start: call `status`, then `join`
+(registers your seat and checks out your feature branch).
+
+**Fallback — shell** (if MCP is unavailable):
 ```bash
-pactify seat use <your-seat-id>   # from the roster in .pact/PROJECT.md
-pactify join --roles <your-roles>
+export PACT_AGENT_ID=claude
+pactify join claude --roles orchestrator,reviewer
 ```
+then `pactify help` for the verbs.
 
-Your seat resolves from `PACT_AGENT_ID` (env) else the untracked `.pact/seat` file.
-For concurrent seats in one repo, use a separate git worktree per seat.
-Then read `.pact/PROJECT.md` and `.pact/STATE.yml`. Run `pactify help` for the verbs.
+**The two rules:** a worker cannot self-accept (only the task's reviewer accepts); a
+feature cannot merge until all its tasks are accepted.
 <!-- pact:end -->

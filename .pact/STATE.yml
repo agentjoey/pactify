@@ -1,5 +1,6 @@
 project: p
 working_tree_holder: null
 agents:
-  - { id: a, roles: [worker] }
+  - { id: orch, roles: [orchestrator, reviewer] }
+  - { id: w, roles: [worker] }
 features:

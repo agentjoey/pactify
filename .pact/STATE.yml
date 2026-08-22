@@ -1,16 +1,5 @@
 project: p
 working_tree_holder: null
 agents:
-  - { id: claude-opus, roles: [orchestrator, reviewer] }
   - { id: opencode, roles: [worker] }
 features:
-  - id: f
-    branch: feat/x
-    status: in_progress
-    tasks:
-      - id: t1
-        owner: opencode
-        status: accepted
-        reviewer: claude-opus
-        spec: .pact/tasks/t1.md
-        evidence: ok

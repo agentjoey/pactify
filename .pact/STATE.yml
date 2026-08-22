@@ -1,6 +1,5 @@
-project: demo
+project: p
 working_tree_holder: null
 agents:
-  - { id: claude-opus, roles: [orchestrator, reviewer] }
-  - { id: opencode, roles: [worker] }
+  - { id: x, roles: [worker] }
 features:

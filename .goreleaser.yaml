@@ -43,4 +43,27 @@ release:
   prerelease: auto
 
 changelog:
-  use: github
+  # `use: git` (not github) so the filters below actually apply — pactify's own
+  # dogfood writes one "pact: ledger sync" commit per protocol event, so a raw
+  # commit list is ~75% coordination noise (759 commits between v0.9.0 and
+  # v0.10.0, of which ~299 are substantive).
+  use: git
+  filters:
+    exclude:
+      - '^pact: ledger sync'
+      - '^pact [a-z0-9-]+: (checkpoint|accept|assign|ledger)'
+      - '^Merge (f|[a-z-]+) \(feat/'
+      - '^spec\('
+      - '^docs\(backlog'
+  groups:
+    - title: Features
+      regexp: '^feat'
+      order: 0
+    - title: Fixes
+      regexp: '^fix'
+      order: 1
+    - title: Security
+      regexp: '^security'
+      order: 2
+    - title: Other
+      order: 99

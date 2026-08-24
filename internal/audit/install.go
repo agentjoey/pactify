@@ -47,14 +47,30 @@ export const PactAudit: Plugin = async ({ directory, $ }) => ({
 })
 `
 
+// antigravityHooksPath is the workspace-scoped lifecycle-hooks file agy loads
+// (`<workspace>/.agents/hooks.json`). agy does NOT read gemini-cli's
+// `.gemini/settings.json` hooks block — verified 2026-08-24 against agy 1.1.19.
+func antigravityHooksPath(repoDir string) string {
+	return filepath.Join(repoDir, ".agents", "hooks.json")
+}
+
+// antigravityHookName is our entry's key in hooks.json. agy's top level is a map
+// of hook NAME → event config, so a named key (not a list slot) is what we own;
+// foreign names in the same file are left untouched.
+const antigravityHookName = "pactify-audit"
+
 // Install registers the project-scoped audit capture for kind.
 //
 // claude-code uses a command-style PreToolUse hook in .claude/settings.json.
 // opencode has no command hook (verified 2026-06-16) — its only tool-call
 // interception is a plugin, so we write a `.opencode/plugin/pact-audit.ts`
 // (`tool.execute.before` → `pactify audit hook`), verified against a real run.
+// antigravity has a native PreToolUse hook, but in its own file and its own
+// shape — see installAntigravity.
 func Install(kind, repoDir string) error {
 	switch kind {
+	case "antigravity":
+		return installAntigravity(antigravityHooksPath(repoDir))
 	case "claude-code":
 		return installClaudeStyle(kind, filepath.Join(repoDir, ".claude", "settings.json"), "PreToolUse")
 	case "gemini":
@@ -73,9 +89,68 @@ func Install(kind, repoDir string) error {
 	}
 }
 
+// installAntigravity writes our named PreToolUse hook into agy's
+// `.agents/hooks.json`. The event config is grouped (matcher + hooks wrapper),
+// which is what agy requires for tool-scoped events; the command's stdout may be
+// empty — verified that agy still runs the tool and exits 0 when a PreToolUse
+// hook prints nothing, so `pactify audit hook` needs no decision wrapper.
+func installAntigravity(path string) error {
+	s := readSettings(path)
+	dropAntigravityAuditHooks(s)
+	s[antigravityHookName] = map[string]any{
+		"PreToolUse": []any{map[string]any{
+			"matcher": "*",
+			"hooks":   []any{map[string]any{"type": "command", "command": hookCommand("antigravity")}},
+		}},
+	}
+	return writeSettings(path, s)
+}
+
+// uninstallAntigravity drops our named hook, preserving any foreign ones. When
+// nothing is left, the file is removed rather than left as an empty `{}`.
+func uninstallAntigravity(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil
+	}
+	s := readSettings(path)
+	dropAntigravityAuditHooks(s)
+	if len(s) == 0 {
+		return os.Remove(path)
+	}
+	return writeSettings(path, s)
+}
+
+// dropAntigravityAuditHooks deletes every top-level named hook that fires a
+// `pactify audit hook` command, keyed on the command rather than on our name so
+// an entry written under an older name is still replaced (keeps install
+// idempotent).
+func dropAntigravityAuditHooks(s map[string]any) {
+	for name, v := range s {
+		for _, e := range sliceOf(mapAny(v), "PreToolUse") {
+			if isAuditEntry(e) {
+				delete(s, name)
+				break
+			}
+		}
+	}
+}
+
+func detectAntigravity(path string) bool {
+	for _, v := range readSettings(path) {
+		for _, e := range sliceOf(mapAny(v), "PreToolUse") {
+			if isAuditEntry(e) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Uninstall removes the audit capture for kind, leaving other config intact.
 func Uninstall(kind, repoDir string) error {
 	switch kind {
+	case "antigravity":
+		return uninstallAntigravity(antigravityHooksPath(repoDir))
 	case "opencode":
 		err := os.Remove(opencodePluginPath(repoDir))
 		if os.IsNotExist(err) {
@@ -97,7 +172,8 @@ type Status struct {
 
 // Detect reports, per supported kind, whether the project-scoped audit capture is
 // installed in repoDir: claude-code via its PreToolUse settings entry, opencode
-// via the presence of its plugin file.
+// via the presence of its plugin file, antigravity via its named hook in
+// .agents/hooks.json.
 func Detect(repoDir string) []Status {
 	claudeInstalled := detectClaudeStyle(filepath.Join(repoDir, ".claude", "settings.json"), "PreToolUse")
 	geminiInstalled := detectClaudeStyle(filepath.Join(repoDir, ".gemini", "settings.json"), "BeforeTool")
@@ -106,6 +182,7 @@ func Detect(repoDir string) []Status {
 		{Kind: "claude-code", Installed: claudeInstalled},
 		{Kind: "gemini", Installed: geminiInstalled},
 		{Kind: "opencode", Installed: ocErr == nil},
+		{Kind: "antigravity", Installed: detectAntigravity(antigravityHooksPath(repoDir))},
 	}
 }
 

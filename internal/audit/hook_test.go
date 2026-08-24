@@ -77,6 +77,90 @@ func TestFromHookGeminiTools(t *testing.T) {
 	}
 }
 
+// TestFromHookAntigravityTools pins agy's PreToolUse payload shape. Unlike
+// gemini-cli, agy does NOT send claude's {tool_name, tool_input, session_id,
+// cwd}: it sends protojson camelCase with the call nested under `toolCall` and
+// the session as `conversationId`. Every payload/arg name below is copied from a
+// real agy 1.1.19 run captured through `.agents/hooks.json` (see docs/backlog.md
+// [AUDIT]).
+func TestFromHookAntigravityTools(t *testing.T) {
+	run := []byte(`{"conversationId":"7a81210f","modelName":"gemini-3.7-flash-high","stepIdx":3,` +
+		`"toolCall":{"name":"run_command","args":{"CommandLine":"echo PACTPROBE > probe-out.txt","Cwd":"/repo/demo","WaitMsBeforeAsync":5000}},` +
+		`"workspacePaths":["/repo/demo"]}`)
+	r, ok := FromHook("antigravity", run, Env{Seat: "agy", Task: "t9"}, fixedTime)
+	if !ok {
+		t.Fatal("expected ok=true for run_command")
+	}
+	if r.Tool != "bash" || r.Risk != "exec" || r.Summary != "echo PACTPROBE > probe-out.txt" {
+		t.Fatalf("run_command = %+v", r)
+	}
+	if r.Kind != "antigravity" || r.Session != "7a81210f" || r.Repo != "/repo/demo" || r.Seat != "agy" || r.Task != "t9" {
+		t.Fatalf("attribution = %+v", r)
+	}
+	// No PACT_PROJECT in env → project falls back to the workspace basename.
+	if r.Project != "demo" {
+		t.Fatalf("project = %q, want demo", r.Project)
+	}
+	if r.Decision != "allow" || r.TS != "2026-06-16T05:10:00Z" {
+		t.Fatalf("fields = %+v", r)
+	}
+
+	view := []byte(`{"conversationId":"c1","toolCall":{"name":"view_file","args":{"AbsolutePath":"/repo/seed.txt"}},"workspacePaths":["/repo"]}`)
+	if r, _ := FromHook("antigravity", view, Env{}, fixedTime); r.Tool != "fs.read" || r.Risk != "read" || r.Summary != "/repo/seed.txt" {
+		t.Fatalf("view_file = %+v", r)
+	}
+
+	write := []byte(`{"conversationId":"c1","toolCall":{"name":"write_to_file","args":{"TargetFile":"/repo/notes.md","CodeContent":"alpha\n","Overwrite":true}},"workspacePaths":["/repo"]}`)
+	if r, _ := FromHook("antigravity", write, Env{}, fixedTime); r.Tool != "fs.write" || r.Risk != "write" || r.Summary != "/repo/notes.md" {
+		t.Fatalf("write_to_file = %+v", r)
+	}
+
+	repl := []byte(`{"conversationId":"c1","toolCall":{"name":"replace_file_content","args":{"TargetFile":"/repo/notes.md","ReplacementContent":"beta","TargetContent":"alpha"}},"workspacePaths":["/repo"]}`)
+	if r, _ := FromHook("antigravity", repl, Env{}, fixedTime); r.Tool != "fs.write" || r.Risk != "write" || r.Summary != "/repo/notes.md" {
+		t.Fatalf("replace_file_content = %+v", r)
+	}
+
+	ls := []byte(`{"conversationId":"c1","toolCall":{"name":"list_dir","args":{"DirectoryPath":"/repo/sub"}},"workspacePaths":["/repo"]}`)
+	if r, _ := FromHook("antigravity", ls, Env{}, fixedTime); r.Tool != "fs.read" || r.Risk != "read" || r.Summary != "/repo/sub" {
+		t.Fatalf("list_dir = %+v", r)
+	}
+
+	grep := []byte(`{"conversationId":"c1","toolCall":{"name":"grep_search","args":{"Query":"needle","SearchPath":"/repo","MatchPerLine":true}},"workspacePaths":["/repo"]}`)
+	if r, _ := FromHook("antigravity", grep, Env{}, fixedTime); r.Tool != "fs.read" || r.Risk != "read" || r.Summary != "needle" {
+		t.Fatalf("grep_search = %+v", r)
+	}
+
+	find := []byte(`{"conversationId":"c1","toolCall":{"name":"find_by_name","args":{"Pattern":"*.txt","SearchDirectory":"/repo"}},"workspacePaths":["/repo"]}`)
+	if r, _ := FromHook("antigravity", find, Env{}, fixedTime); r.Tool != "fs.read" || r.Risk != "read" || r.Summary != "*.txt" {
+		t.Fatalf("find_by_name = %+v", r)
+	}
+}
+
+// The claude-shaped payload must NOT be accepted under --kind antigravity, and a
+// tool agy never emits must stay unmapped, so a shape regression fails loudly
+// rather than silently recording nothing.
+func TestFromHookAntigravityRejectsForeignShapes(t *testing.T) {
+	claudeShaped := []byte(`{"tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"/repo"}`)
+	if _, ok := FromHook("antigravity", claudeShaped, Env{}, fixedTime); ok {
+		t.Fatal("claude-shaped payload should not parse as antigravity")
+	}
+	if _, ok := FromHook("antigravity", []byte(`{not json`), Env{}, fixedTime); ok {
+		t.Fatal("malformed stdin should return ok=false")
+	}
+	unmapped := []byte(`{"conversationId":"c1","toolCall":{"name":"brain_update","args":{}},"workspacePaths":["/repo"]}`)
+	if _, ok := FromHook("antigravity", unmapped, Env{}, fixedTime); ok {
+		t.Fatal("unmapped agy tool should return ok=false")
+	}
+}
+
+// PACT_PROJECT (set by the runner) must win over the workspace basename.
+func TestFromHookAntigravityEnvProjectWins(t *testing.T) {
+	in := []byte(`{"conversationId":"c1","toolCall":{"name":"run_command","args":{"CommandLine":"ls"}},"workspacePaths":["/home/me/checkout"]}`)
+	if r, _ := FromHook("antigravity", in, Env{Project: "pactify"}, fixedTime); r.Project != "pactify" {
+		t.Fatalf("project = %q, want pactify", r.Project)
+	}
+}
+
 func TestFromHookProjectFallsBackToCwdBase(t *testing.T) {
 	in := []byte(`{"tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"/home/me/myrepo"}`)
 	if r, _ := FromHook("claude-code", in, Env{}, fixedTime); r.Project != "myrepo" {

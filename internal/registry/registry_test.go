@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -163,6 +164,10 @@ func TestRenameToExistingNameIsError(t *testing.T) {
 // orchestrate so agent-started projects are visible without a manual step).
 func TestEnsureRegisteredIdempotent(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
+	// t.TempDir() is under os.TempDir(), which auto-register now refuses (see
+	// TestEnsureRegisteredSkipsSystemTempPath). Opt back in: this test is about
+	// idempotence, not about the temp guard.
+	t.Setenv("PACTIFY_ALLOW_TEMP_REGISTER", "1")
 	dir := t.TempDir()
 
 	name, added, err := EnsureRegistered(dir)
@@ -186,6 +191,7 @@ func TestEnsureRegisteredIdempotent(t *testing.T) {
 // warn or fail; init must warn, not block).
 func TestEnsureRegisteredNameConflict(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
+	t.Setenv("PACTIFY_ALLOW_TEMP_REGISTER", "1") // see TestEnsureRegisteredIdempotent
 	base := t.TempDir()
 	a := filepath.Join(base, "proj")
 	b := filepath.Join(base, "sub", "proj") // same basename "proj", different path
@@ -196,5 +202,131 @@ func TestEnsureRegisteredNameConflict(t *testing.T) {
 	}
 	if _, added, err := EnsureRegistered(b); err == nil || added {
 		t.Fatalf("same-basename different-path must conflict, got added=%v err=%v", added, err)
+	}
+}
+
+// [REGISTRY-2] Auto-registration must refuse throwaway temp paths. Every one-off
+// `mktemp -d` experiment used to be written permanently into the user's real
+// ~/.pactify/projects.json; a project called "agyproj" actually ended up there,
+// and picking it on the dashboard showed a blank board that read as a broken
+// product rather than a dead registration.
+func TestEnsureRegisteredSkipsSystemTempPath(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	dir := t.TempDir() // under os.TempDir() by construction
+
+	name, added, err := EnsureRegistered(dir)
+	if added {
+		t.Errorf("a path under %s must not be auto-registered", os.TempDir())
+	}
+	if name != "" {
+		t.Errorf("skipped path must not report a name, got %q", name)
+	}
+	if err == nil {
+		t.Fatal("the skip must be reported to the caller so it can tell the user why the project is not on the dashboard")
+	}
+	// A deliberate skip must be distinguishable from a real failure.
+	if !errors.Is(err, ErrTempPath) {
+		t.Errorf("err = %v, want errors.Is(err, ErrTempPath)", err)
+	}
+
+	r, lerr := Load()
+	if lerr != nil {
+		t.Fatal(lerr)
+	}
+	if len(r.Projects) != 0 {
+		t.Fatalf("registry must stay empty, got %+v", r.Projects)
+	}
+}
+
+// macOS spells the same temp directory two ways: /tmp is a symlink to
+// /private/tmp, and $TMPDIR lives under /var/folders which is really
+// /private/var/folders. A guard that compares raw strings catches whichever
+// spelling it happens to be handed and misses the other, so both must be refused.
+func TestEnsureRegisteredSkipsTmpSymlinkAliasBothSpellings(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+
+	dir, err := os.MkdirTemp("/tmp", "pactify-tempguard-")
+	if err != nil {
+		t.Skipf("no writable /tmp on this platform: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range []string{dir, resolved} {
+		if _, added, err := EnsureRegistered(p); added || !errors.Is(err, ErrTempPath) {
+			t.Errorf("EnsureRegistered(%q) = added:%v err:%v, want ErrTempPath", p, added, err)
+		}
+		if !TempPath(p) {
+			t.Errorf("TempPath(%q) = false, want true", p)
+		}
+	}
+	if r, _ := Load(); len(r.Projects) != 0 {
+		t.Fatalf("registry must stay empty, got %+v", r.Projects)
+	}
+}
+
+// A non-temp path still auto-registers: the feature (agent-started projects show
+// up on the dashboard without a manual step) is wanted and must not regress.
+func TestEnsureRegisteredStillRegistersNonTempPath(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	dir := filepath.FromSlash("/pactify-test-not-a-temp-path/demo-project")
+
+	name, added, err := EnsureRegistered(dir)
+	if err != nil || !added || name != "demo-project" {
+		t.Fatalf("non-temp path must register: name=%q added=%v err=%v", name, added, err)
+	}
+}
+
+func TestTempPath(t *testing.T) {
+	tmp := t.TempDir()
+	cases := map[string]bool{
+		tmp:                        true,
+		filepath.Join(tmp, "proj"): true, // need not exist
+		os.TempDir():               true, // the root itself
+		"/tmp":                     true,
+		"/tmp/agyproj":             true,
+		"/private/tmp/agyproj":     true, // macOS spelling of the same dir
+		"/pactify-not-temp/demo":   false,
+		"/Users":                   false,
+		// A path that merely starts with the same characters as a temp root is
+		// NOT under it — the check is on path components, not on a raw prefix.
+		"/tmp-not-really":      false,
+		"/tmp-not-really/proj": false,
+	}
+	for path, want := range cases {
+		if got := TempPath(path); got != want {
+			t.Errorf("TempPath(%q) = %v, want %v", path, got, want)
+		}
+	}
+}
+
+// The opt-out exists for test harnesses, which must run whole projects out of
+// temp dirs. Without it there is no way to exercise auto-registration at all.
+func TestEnsureRegisteredTempOptOut(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	t.Setenv(allowTempEnv, "1")
+	dir := t.TempDir()
+
+	if _, added, err := EnsureRegistered(dir); err != nil || !added {
+		t.Fatalf("%s=1 must re-enable temp auto-register: added=%v err=%v", allowTempEnv, added, err)
+	}
+}
+
+// The guard belongs to the AUTOMATIC path only. `pactify register <path>` goes
+// through Add, and an explicit command is a deliberate act (debugging a scratch
+// repo, a genuinely temp-rooted checkout) — so Add must keep accepting it.
+func TestAddAcceptsTempPathExplicitly(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	dir := t.TempDir()
+
+	var r Registry
+	if err := r.Add("", dir, ""); err != nil {
+		t.Fatalf("explicit registration of a temp path must be allowed: %v", err)
+	}
+	if len(r.Projects) != 1 {
+		t.Fatalf("want 1 project, got %+v", r.Projects)
 	}
 }

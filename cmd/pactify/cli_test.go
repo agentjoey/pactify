@@ -34,7 +34,12 @@ func TestCLIHelpAndFullFlow(t *testing.T) {
 	run := func(env []string, args ...string) (string, error) {
 		c := exec.Command(bin, args...)
 		c.Dir = dir
-		c.Env = append(append(os.Environ(), "PACTIFY_HOME="+home), env...)
+		// PACTIFY_ALLOW_TEMP_REGISTER: this flow runs the whole project out of
+		// t.TempDir(), and auto-register now refuses temp paths on purpose
+		// (registry.ErrTempPath). Opt back in — the assertions below are about
+		// auto-registration itself; the guard has its own coverage in
+		// autoregister_test.go and internal/registry.
+		c.Env = append(append(os.Environ(), "PACTIFY_HOME="+home, "PACTIFY_ALLOW_TEMP_REGISTER=1"), env...)
 		out, err := c.CombinedOutput()
 		return string(out), err
 	}

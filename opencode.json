@@ -7,9 +7,7 @@
         "mcp"
       ],
       "enabled": true,
-      "environment": {
-        "PACT_AGENT_ID": "opencode-worker"
-      },
+      "environment": {},
       "type": "local"
     }
   }

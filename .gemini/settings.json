@@ -5,9 +5,7 @@
         "mcp"
       ],
       "command": "pactify",
-      "env": {
-        "PACT_AGENT_ID": "gemini-worker"
-      }
+      "env": {}
     }
   }
 }

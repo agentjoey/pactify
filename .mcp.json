@@ -6,7 +6,7 @@
       ],
       "command": "pactify",
       "env": {
-        "PACT_AGENT_ID": "claude"
+        "PACT_AGENT_ID": "${PACT_AGENT_ID:-}"
       }
     }
   }

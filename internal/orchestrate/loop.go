@@ -630,8 +630,12 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	// that owns tasks in several features commits to the right branch — not whichever
 	// branch the worker's `pactify join` happens to pick first. Parallel runs already
 	// start in the feature's worktree, so this is a no-op there.
+	// checkoutFeatureBranch, not gitx.CheckoutOrCreate: in a repo that git-TRACKS
+	// .pact the sandbox's seeded ledger is an uncommitted change to a tracked path,
+	// which git refuses to check out over — it carries the ledger across instead
+	// (plain CheckoutOrCreate when .pact is untracked).
 	if br := featureBranchIn(st, act.Feature); br != "" {
-		if err := gitx.CheckoutOrCreate(opts.Dir, br); err != nil {
+		if err := checkoutFeatureBranch(opts.Dir, br); err != nil {
 			return fmt.Errorf("orchestrate: checkout feature branch %q for task %s: %w", br, act.Task, err)
 		}
 	}

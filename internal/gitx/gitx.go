@@ -214,6 +214,29 @@ func CommitPaths(dir, msg string, paths ...string) error {
 	return err
 }
 
+// RestorePaths discards working-tree modifications to exactly the named paths,
+// restoring them from the index/HEAD (`git checkout -- <paths>`) — the surgical
+// counterpart of DiscardUncommitted, which wipes the whole tree. DESTRUCTIVE and
+// unrecoverable: the caller must already hold whatever it needs of the old
+// content (orchestrate.checkoutFeatureBranch snapshots the ledger first). Every
+// path must be known to git — an untracked pathspec is an error, not a no-op —
+// so filter with PathTracked.
+func RestorePaths(dir string, paths ...string) error {
+	out, err := run(dir, append([]string{"checkout", "-q", "--"}, paths...)...)
+	return wrapGitErr(err, out)
+}
+
+// PathsDirty reports whether any of paths carries an uncommitted change, i.e.
+// the path-scoped form of HasChanges. The scoping is what makes it usable as a
+// commit guard next to CommitPaths: `git commit` FAILS when nothing is staged,
+// so a caller that commits unconditionally turns a legitimate no-op (the files
+// were already up to date) into an error, while whole-tree HasChanges says
+// nothing about these particular files.
+func PathsDirty(dir string, paths ...string) bool {
+	out, err := run(dir, append([]string{"status", "--porcelain", "--"}, paths...)...)
+	return err == nil && strings.TrimSpace(out) != ""
+}
+
 // DefaultBranch returns the repo's default branch via origin/HEAD (e.g. "main"),
 // or "" when it can't be determined (no origin, or origin/HEAD unset). Used to
 // catch a pact base branch that was accidentally captured as a feature branch.

@@ -322,30 +322,10 @@ func (s *Server) orchestrateRunning(dir string) bool {
 // exact match or the unique kind that has the base as a prefix; returns "" when
 // there is no match or the match is ambiguous.
 func inferKindFromName(seat string, known []string) string {
-	base := seat
-	for _, sfx := range []string{"-worker", "-reviewer", "-orchestrator"} {
-		if strings.HasSuffix(seat, sfx) {
-			base = strings.TrimSuffix(seat, sfx)
-			break
-		}
-	}
-	// exact match first
-	for _, k := range known {
-		if k == base {
-			return k
-		}
-	}
-	// unique prefix match
-	var match string
-	for _, k := range known {
-		if strings.HasPrefix(k, base) {
-			if match != "" {
-				return "" // ambiguous
-			}
-			match = k
-		}
-	}
-	return match
+	// Delegates to agent.InferKindFrom so `pactify doctor` (which scopes its
+	// vendor preflight with the same heuristic) and this driver can never drift
+	// into two different answers about what a kind-less seat launches as.
+	return agent.InferKindFrom(seat, known)
 }
 
 // resolveSeatKinds builds the seat→kind map for an orchestrate run. It does

@@ -4,23 +4,47 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
 // WiringStatus is the content-aware wiring state of one registry kind for a
 // given repo dir. Wired is true when EITHER the kind's config target contains
-// the pact server key OR its entry file (in dir) carries the managed-block
-// marker. Global and DocOnly are static properties of the kind (global =
+// the pact server key OR its entry file (in dir) carries a managed block that
+// names this kind (see entrymark.go — entry files are shared between kinds, so
+// the block's mere presence proves nothing about which kind was wired). Global
+// and DocOnly are static properties of the kind (global =
 // machine-level config outside the repo; doc-only = TOML config not written by
-// Wire, only the snippet is shown).
+// Wire, only the snippet is shown). Via names WHICH probe proved the wiring —
+// "config" (the kind's own config file) or "entry" (the kind's entry markdown),
+// empty when not wired — for callers that care about the provenance, e.g.
+// doctor.RelevantKinds, which discounts machine-global config wiring because it
+// says nothing about THIS repo.
 type WiringStatus struct {
 	Kind    string `json:"kind"`
 	Wired   bool   `json:"wired"`
+	Via     string `json:"via,omitempty"`
 	Detail  string `json:"detail"`
 	Path    string `json:"path"`
 	Global  bool   `json:"global"`
 	DocOnly bool   `json:"docOnly"`
 }
+
+// Wiring probe sources (WiringStatus.Via).
+//
+// ViaEntry and ViaEntryLegacy are both "the entry file says so", but they carry
+// very different confidence, and callers must not conflate them: ViaEntry means
+// the managed block NAMES this kind, so the attribution is exact. Legacy means
+// the block predates attribution and this kind was credited by the back-compat
+// rule (doc-only, or sole tenant of that entry file) — which is right for "is it
+// wired?" (a doc-only kind has no other evidence anywhere) but too loose for
+// "does this project DEPEND on it?", where a wrong yes costs a spurious red and
+// other signals are available. See doctor.RelevantKinds.
+const (
+	ViaConfig      = "config"
+	ViaEntry       = "entry"
+	ViaEntryLegacy = "entry-legacy"
+)
 
 // configMarker is the substring a wired config file must contain for a kind's
 // format. JSON kinds key the server under "pact"; TOML kinds carry the
@@ -56,16 +80,29 @@ func probeKind(kind string, dir string) WiringStatus {
 	}
 	if b, err := os.ReadFile(cfgPath); err == nil && strings.Contains(string(b), configMarker(c.Format)) {
 		ws.Wired = true
+		ws.Via = ViaConfig
 		ws.Detail = "config " + c.Path
 		return ws
 	}
 
-	// Entry probe: the kind's entry file in dir carries the managed block.
+	// Entry probe: the kind's entry file in dir carries a managed block that
+	// claims THIS kind. Presence alone is not enough — entry files are shared
+	// (AGENTS.md by five kinds, GEMINI.md by two) and the block is kind-agnostic,
+	// so `agent add opencode` used to mark every co-tenant wired. An attributed
+	// block (pact:kinds line, written by WireAt) is authoritative; an older
+	// unattributed block falls back to legacyEntryCredits.
 	if entry := a.DefaultEntry(); entry != "" {
-		if b, err := os.ReadFile(filepath.Join(dir, entry)); err == nil && strings.Contains(string(b), "pact:begin") {
-			ws.Wired = true
-			ws.Detail = "entry " + entry
-			return ws
+		if b, err := os.ReadFile(filepath.Join(dir, entry)); err == nil && hasManagedBlock(string(b)) {
+			credited, via := legacyEntryCredits(entry, c), ViaEntryLegacy
+			if kinds, attributed := entryKinds(string(b)); attributed {
+				credited, via = slices.Contains(kinds, kind), ViaEntry
+			}
+			if credited {
+				ws.Wired = true
+				ws.Via = via
+				ws.Detail = "entry " + entry
+				return ws
+			}
 		}
 	}
 
@@ -130,3 +167,46 @@ func PinnedIdentity(dir string) []PinnedSeat {
 	}
 	return out
 }
+
+// InferKindFrom derives an agent kind from a seat name by stripping a trailing
+// role suffix (-worker/-reviewer/-orchestrator) and matching the resulting base
+// against known. It returns the kind if it is an exact match or the unique kind
+// that has the base as a prefix; "" when there is no match or it is ambiguous.
+//
+// This is a HEURISTIC, and the orchestrate driver's last resort for a seat that
+// never recorded a kind (serve/orchestrate.go seatKindsFromFold). It lives here
+// so `pactify doctor` scopes its vendor preflight to the same kinds the driver
+// would actually launch — two copies would drift into two different answers.
+func InferKindFrom(seat string, known []string) string {
+	base := seat
+	for _, sfx := range []string{"-worker", "-reviewer", "-orchestrator"} {
+		if strings.HasSuffix(seat, sfx) {
+			base = strings.TrimSuffix(seat, sfx)
+			break
+		}
+	}
+	// exact match first
+	for _, k := range known {
+		if k == base {
+			return k
+		}
+	}
+	// unique prefix match
+	var match string
+	for _, k := range known {
+		if strings.HasPrefix(k, base) {
+			if match != "" {
+				return "" // ambiguous
+			}
+			match = k
+		}
+	}
+	return match
+}
+
+// EntryOwners returns every registry kind whose DefaultEntry is the given
+// filename, sorted. A file owned by exactly one kind (CLAUDE.md → claude-code)
+// identifies that kind unambiguously; a shared one (AGENTS.md → five kinds)
+// identifies none of them on its own. Exported for doctor.RelevantKinds, which
+// needs it to score a pre-attribution managed block: see ViaEntryLegacy.
+func EntryOwners(entry string) []string { return entryTenants(entry) }

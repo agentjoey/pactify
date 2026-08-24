@@ -109,7 +109,21 @@ func BakeManagedBlock(path, body string) error {
 // bound per working copy at runtime (`pactify seat use <id>` → the untracked
 // .pact/seat file, or PACT_AGENT_ID). The roster is in .pact/PROJECT.md.
 func BakeEntry(dir string, s Seat) error {
+	// Attribution line: entry files are shared between kinds (AGENTS.md is the
+	// default for five), and the briefing below is deliberately kind-agnostic, so
+	// without this the block's mere presence would credit every co-tenant as
+	// "wired" (agent.probeKind). Emitted here rather than imported because
+	// internal/agent imports internal/pact — the reverse would be a cycle. The
+	// format is owned by internal/agent/entrymark.go (kindsMarker); the two are
+	// pinned together by TestBakeEntryAttributionParsesInAgent over there, so a
+	// change on either side fails a gate rather than silently un-attributing
+	// every project initialized by `pactify init`.
+	attribution := ""
+	if s.Kind != "" {
+		attribution = "<!-- pact:kinds: " + s.Kind + " -->\n\n"
+	}
 	block := blockBegin + "\n" +
+		attribution +
 		"# pact protocol\n\n" +
 		"> Bind this working copy's seat once, then read the board.\n\n" +
 		"```bash\n" +

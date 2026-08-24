@@ -58,6 +58,48 @@ func checkMCP() doctor.Check {
 	return doctor.Check{Name: "mcp server", OK: true, Detail: bin + " mcp answers initialize"}
 }
 
+// gatingOK reports whether the exit code should be zero. An ADVISORY failure
+// (a vendor CLI for an agent kind this project does not depend on — see
+// doctor.RelevantKinds) is reported but never counted: doctor's exit code
+// answers "is my setup OK for THIS project?", and a red for a toolchain the
+// repo never touches is exactly the noise that teaches people to ignore it.
+func gatingOK(checks []doctor.Check) bool {
+	for _, ck := range checks {
+		if !ck.OK && !ck.Advisory {
+			return false
+		}
+	}
+	return true
+}
+
+// renderChecks prints the human report. Three marks, so a reader never has to
+// guess why a red line did not fail the command:
+//
+//	✓  passing
+//	✗  failing — this is why doctor exits non-zero
+//	!  failing, advisory — reported for completeness, does not affect the exit
+//
+// A legend is printed only when at least one advisory red is on screen.
+func renderChecks(w io.Writer, checks []doctor.Check) {
+	advisoryReds := 0
+	for _, ck := range checks {
+		mark := "✓"
+		switch {
+		case ck.OK:
+		case ck.Advisory:
+			mark = "!"
+			advisoryReds++
+		default:
+			mark = "✗"
+		}
+		fmt.Fprintf(w, "%s %s — %s\n", mark, ck.Name, ck.Detail)
+	}
+	if advisoryReds > 0 {
+		fmt.Fprintf(w, "\n! = %d advisory issue(s): an agent CLI this project does not use. "+
+			"Reported so you can see the whole toolchain; not counted in the exit code.\n", advisoryReds)
+	}
+}
+
 func newDoctorCmd() *cobra.Command {
 	var asJSON bool
 	var setupBridge bool
@@ -92,13 +134,7 @@ func newDoctorCmd() *cobra.Command {
 				checks = append(checks, doctor.BridgeChecks(repoRoot)...)
 			}
 
-			allOK := true
-			for _, ck := range checks {
-				if !ck.OK {
-					allOK = false
-					break
-				}
-			}
+			allOK := gatingOK(checks)
 
 			if asJSON {
 				enc := json.NewEncoder(c.OutOrStdout())
@@ -112,13 +148,7 @@ func newDoctorCmd() *cobra.Command {
 				return nil
 			}
 
-			for _, ck := range checks {
-				mark := "✓"
-				if !ck.OK {
-					mark = "✗"
-				}
-				fmt.Fprintf(c.OutOrStdout(), "%s %s — %s\n", mark, ck.Name, ck.Detail)
-			}
+			renderChecks(c.OutOrStdout(), checks)
 			if !allOK {
 				return fmt.Errorf("doctor found issues")
 			}

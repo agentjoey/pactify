@@ -293,6 +293,89 @@ func writeLedger(dir string, m map[string][]byte) error {
 	return nil
 }
 
+// ledgerTrackedPaths returns the ledger files (the same two readLedger/writeLedger
+// own) that dir's git index actually TRACKS — nil for the common case of a
+// gitignored/never-committed .pact. Filtering per file matters twice: it is the
+// gate for the ledger-preserving checkout below, and RestorePaths errors on any
+// pathspec git does not know, so a repo that tracks only log.jsonl must not have
+// STATE.yml handed to it.
+func ledgerTrackedPaths(dir string) []string {
+	var tracked []string
+	for _, f := range []string{"log.jsonl", "STATE.yml"} {
+		p := filepath.Join(dir, ".pact", f)
+		if gitx.PathTracked(dir, p) {
+			tracked = append(tracked, p)
+		}
+	}
+	return tracked
+}
+
+// checkoutFeatureBranch switches dir to br the way CheckoutOrCreate does, but
+// WITHOUT losing a ledger that git tracks.
+//
+// The problem it solves: in a repo that git-tracks .pact (uncommon but
+// deliberate — this repo does it for a full audit history), RunSandbox seeds the
+// sandbox worktree's ledger by raw copy (syncPact), which lands as an
+// UNCOMMITTED modification of tracked paths. The driver then checks out each
+// task's feature branch — and git refuses outright when that branch carries a
+// different ledger snapshot ("Your local changes ... would be overwritten by
+// checkout"), which is what forced users off the safe default onto --in-place.
+// Reordering cannot help: the branch name is read from the worktree's OWN
+// ledger, so the seed necessarily precedes the checkout. skip-worktree /
+// assume-unchanged do not work (git still refuses), and commit-then-checkout /
+// checkout -m / stash all "succeed" by letting the branch's older snapshot win —
+// silently destroying the seed, strictly worse than failing.
+//
+// So: snapshot the ledger, restore the tracked paths to HEAD (git now has
+// nothing to complain about), checkout, then union the snapshot back in and
+// commit. That write-back is not new machinery — it is exactly writeLedger, the
+// same union-by-event_id + reprojection under the per-worktree log lock that the
+// sandbox 回灌 already relies on, so no event from either side is ever dropped.
+//
+// When .pact is NOT tracked — the common case, and the shape RunSandbox was
+// designed around — this is a plain CheckoutOrCreate: no restore, no rewrite, no
+// extra commit, byte-identical to the behaviour before this wrapper existed.
+func checkoutFeatureBranch(dir, br string) error {
+	tracked := ledgerTrackedPaths(dir)
+	if len(tracked) == 0 {
+		return gitx.CheckoutOrCreate(dir, br)
+	}
+	// Load-bearing ORDER: RestorePaths below is destructive and unrecoverable, so
+	// a snapshot we could not take must abort here, with nothing discarded yet.
+	// (readLedger reports a missing/unreadable file as an absent key.)
+	snap := readLedger(dir)
+	if snap["log.jsonl"] == nil {
+		return fmt.Errorf("orchestrate: refusing to check out %q — the ledger %s could not be read, so the checkout cannot preserve it", br, filepath.Join(dir, ".pact", "log.jsonl"))
+	}
+	if err := gitx.RestorePaths(dir, tracked...); err != nil {
+		return fmt.Errorf("orchestrate: reset tracked ledger before checkout of %q: %w", br, err)
+	}
+	if err := gitx.CheckoutOrCreate(dir, br); err != nil {
+		// The restore already threw the snapshot away on disk; put it back so a
+		// failed checkout leaves the ledger exactly as it found it. If the
+		// rollback ITSELF fails (writeLedger can time out on the log lock), the
+		// seed's events really are gone — that must not hide behind the checkout
+		// error, or the run reports "checkout failed" while silently having lost
+		// the ledger it was told to preserve.
+		if rerr := writeLedger(dir, snap); rerr != nil {
+			return errors.Join(err, fmt.Errorf("orchestrate: ledger rollback after the failed checkout of %q also failed — this run's seeded events are LOST: %w", br, rerr))
+		}
+		return err
+	}
+	if err := writeLedger(dir, snap); err != nil {
+		return fmt.Errorf("orchestrate: restore ledger onto %q after checkout: %w", br, err)
+	}
+	// Only commit when the merge actually changed something: `git commit` fails on
+	// an empty index, so an unconditional commit would turn the steady-state case
+	// (second task on a branch whose ledger is already current) into a hard error.
+	if gitx.PathsDirty(dir, tracked...) {
+		if err := gitx.CommitPaths(dir, "pact: ledger sync", tracked...); err != nil {
+			return fmt.Errorf("orchestrate: commit ledger on %q: %w", br, err)
+		}
+	}
+	return nil
+}
+
 // preserveUnmergedLedger drops a sandbox ledger snapshot that could not be merged
 // back into dir's log (the epilogue回灌 failed) to a timestamped recovery file, so
 // the run's events — checkpoints/accepts/merges that git already applied — survive

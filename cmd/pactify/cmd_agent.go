@@ -127,6 +127,20 @@ func newAgentCmd() *cobra.Command {
 			if _, ok := agent.Get(kind); !ok {
 				return fmt.Errorf("unknown agent kind %q — known kinds: %s", kind, strings.Join(agent.Kinds(), ", "))
 			}
+			// agent.Get is a static catalog lookup — it says the kind EXISTS, not
+			// that it is on this machine. Without the same probe `agent scan` runs,
+			// registering a kind nobody installed succeeds silently and the failure
+			// surfaces much later, as an orchestrate run that cannot launch its
+			// seat. Warn, never fail: registering ahead of installing is a real
+			// workflow (the dashboard's "Add manually / Register anyway" does
+			// exactly this for supported-but-undetected kinds), so blocking it here
+			// would break a supported path to fix a discoverability problem.
+			if res, ok := agent.Installed(kind); ok && !res.Installed {
+				fmt.Fprintf(c.ErrOrStderr(),
+					"warning: %s is not installed on this machine (%s) — registering anyway.\n"+
+						"  install it (see docs/agent-onboarding.md), then `pactify agent scan` to confirm before orchestrating.\n",
+					kind, agent.NotInstalledHint(kind))
+			}
 			reg, err := agentreg.Load()
 			if err != nil {
 				return err

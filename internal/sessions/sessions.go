@@ -47,6 +47,14 @@ type Spec struct {
 //     It is therefore absent from this CLI-command map and cleaned at the filesystem
 //     level instead — see CleanupKimiSeat, which matches the seat marker the briefing
 //     leaves in each session's title.
+//   - antigravity (binary agy): NO session/conversation list/delete/prune
+//     subcommand at all (probed against agy 1.1.19, 2026-08-24: the only
+//     conversation-shaped surface is `--continue` / `--conversation <id>`), and no
+//     way to TAG a conversation — no --title/--name, and `--project <name>` is
+//     accepted but persists nowhere on disk. So it is absent from this CLI map too
+//     and cleaned at the filesystem level — see CleanupAntigravityConversations,
+//     which is keyed on the conversation ids pactify itself recorded when it
+//     launched the stint, never on a workspace path.
 //   - claude/codex: no verified headless prune/delete; intentionally absent.
 var specs = map[string]Spec{
 	"opencode":   {Command: "opencode", List: []string{"session", "list"}, Delete: []string{"session", "delete"}},

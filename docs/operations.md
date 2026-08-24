@@ -118,8 +118,17 @@ pactify role list
 ```
 
 At launch a seat resolves in this order: `--seat-kind` override → an approved
-fallback (this run only) → the seat's role binding → the roster kind. Two seats
-of the same kind can therefore run different models.
+fallback (this run only) → the seat's role binding → the roster kind → a
+spawner's `--roster-kind` hint. Two seats of the same kind can therefore run
+different models.
+
+`--seat-kind` is an OPERATOR flag and is the only one that outranks a role
+binding (it drops the profile's model pin and warns — see `[KIND-2]`).
+`--roster-kind` is the machine-facing twin `pactify serve` writes when it starts
+a run: the kinds it derives from the ledger (init events → roster → seat-name
+heuristic) are configuration, not intent, so they go on their own channel and
+lose to everything above. Don't type it by hand; typing `--seat-kind` when you
+mean "use the configured kind" is what silently unbinds a role.
 
 **Recommended profiles — antigravity (`agy`).** Given `gemini-3.7-flash`'s
 current capability, antigravity suits lightweight work — frontend, test, ops,

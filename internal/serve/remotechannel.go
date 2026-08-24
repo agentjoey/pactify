@@ -144,14 +144,26 @@ func hostname() string {
 }
 
 // pactToWireKind maps pactify's launch kind keys to the relay's AgentKind enum
-// (wire: opencode/claude/codex/kimi/gemini). Unknown kinds are dropped so the
-// relay's MachineInfo.agentKinds validation never rejects the register.
+// (wire: opencode/claude/codex/kimi/gemini/antigravity). Unknown kinds are
+// dropped so the relay's MachineInfo.agentKinds validation never rejects the
+// register.
+//
+// Every VALUE here must exist in cloud/wire/src/rpc.ts's `AgentKind` zod enum.
+// That is not a soft contract: the relay maps its machine rows through a
+// THROWING `MachineInfo.parse` (cloud/relay/src/machines.ts), so an
+// out-of-vocabulary kind doesn't degrade to a dropped field — it throws inside
+// listMachines and takes down the whole account's machine broadcast and
+// `GET /v1/machines`. TestPactToWireKindConformsToWireEnum guards the pair.
 var pactToWireKind = map[string]string{
 	"opencode":    "opencode",
 	"claude-code": "claude",
 	"gemini-cli":  "gemini",
 	"kimi-cli":    "kimi",
 	"codex-cli":   "codex",
+	// antigravity (binary `agy`) is a headless, drivable CLI kind since
+	// 2026-08-22 (RunnerProfile in internal/agent/launch.go), staffed as a real
+	// worker/reviewer — so the machine must advertise it like any other.
+	"antigravity": "antigravity",
 }
 
 // machineAgentKinds is the drivable-agent roster this machine advertises, in the

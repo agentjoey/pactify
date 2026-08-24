@@ -35,6 +35,12 @@ describe('MachineInfo', () => {
     expect(MachineInfo.safeParse({ ...valid, agentKinds: ['cursor'] }).success).toBe(false)
   })
 
+  // agy is a first-class headless kind; a machine with it installed must be able
+  // to advertise it (before this, MachineInfo.parse threw on the whole machine).
+  it('accepts a machine advertising antigravity (agy)', () => {
+    expect(MachineInfo.safeParse({ ...valid, agentKinds: ['antigravity'] }).success).toBe(true)
+  })
+
   it('rejects a non-boolean online', () => {
     expect(MachineInfo.safeParse({ ...valid, online: 'yes' }).success).toBe(false)
   })

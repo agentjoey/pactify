@@ -23,6 +23,7 @@ web/*.png
 # Internal dev records — not part of the public product (kept locally, not published)
 .agent/
 docs/backlog.md
+docs/backlog-archive-*.md
 docs/ROADMAP.md
 docs/roadmap-next.md
 docs/retrospective-8h-2026-06-14.md

@@ -44,10 +44,32 @@ type Options struct {
 	Now     func() string // injected timestamp for escalation filenames
 	// SeatKind is the seat→kind OVERRIDE, highest priority: prod passes only the
 	// operator's explicit `--seat-kind` flags, tests inject a fixed map. A non-empty
-	// result wins over the live roster. When it returns "" (or is nil) opts.kind
-	// falls back to re-reading the live roster's Agents[].Kind each iteration, so a
-	// seat that joins mid-run is drivable next iteration (spec §6 WS-K).
+	// result wins over every other source of a seat's kind — the approved-fallback
+	// role, the seat's role binding, and the live roster — and it stays winning at
+	// launch: the stint is tagged LaunchContext.KindExplicit, which makes
+	// agentcfg.ResolveSeatFrom prefer it over a bound role profile's Kind and emit
+	// an operator-facing warning about the displacement (KIND-2). Without such an
+	// override the role binding still outranks the roster, both in opts.kind and in
+	// the resolver — that precedence is what role binding is FOR.
+	// When it returns "" (or is nil) opts.kind falls back to re-reading the live
+	// roster's Agents[].Kind each iteration, so a seat that joins mid-run is
+	// drivable next iteration (spec §6 WS-K).
 	SeatKind func(seatID string) string
+	// RosterKind is the seat→kind map a SPAWNER derived from configuration and
+	// passed down (`--roster-kind seat=kind`, written by `pactify serve`). It is
+	// deliberately a SEPARATE channel from SeatKind: serve computes its map from
+	// the ledger's init events, the roster, and a seat-name heuristic — pure
+	// configuration nobody typed — and routing that through SeatKind would tag it
+	// as explicit operator intent, silently displacing the seat's role binding at
+	// launch (KIND-2). Provenance cannot be recovered downstream from the string
+	// itself, so it has to be kept apart on the way in.
+	//
+	// It sits at the BOTTOM of the precedence list, below the live roster read:
+	// the only thing it contributes that the child cannot derive for itself is
+	// the spawner's name heuristic, and a spawn-time snapshot must never shadow
+	// live state (a seat that re-declares its kind mid-run still wins — spec §6
+	// WS-K). Never makes a launch KindExplicit.
+	RosterKind func(seatID string) string
 	// Orchestrator is the seat the driver acts as for its OWN protocol writes
 	// (Merge). "" falls back to PACT_AGENT_ID (tests rely on the env fallback; the
 	// CLI resolves it from --as / PACT_AGENT_ID and fail-fasts when both are empty).
@@ -259,6 +281,14 @@ func (opts Options) launchAgent(ctx context.Context, seatID, kind, brief, task, 
 		Seat: seatID, Kind: kind, Task: task, Project: projectID(opts.Dir),
 		Briefing: brief, RepoDir: opts.Dir, StreamDir: opts.runtimeDir(),
 		Effort: effort,
+		// Provenance, not inference: the stint's kind is an operator override
+		// only when it IS this seat's `--seat-kind` value. Every caller derives
+		// kind from opts.kind(seat), whose top branch is that same value, so the
+		// comparison is exact — and a caller that passes some other kind is
+		// correctly NOT treated as explicit. This is the bit agentcfg needs to
+		// tell "the operator typed claude-code" from "the roster says
+		// claude-code" (KIND-2).
+		KindExplicit: kind != "" && opts.seatKindOverride(seatID) == kind,
 	})
 }
 
@@ -630,8 +660,12 @@ func (opts Options) runOwner(ctx context.Context, st projection.State, h *Histor
 	// that owns tasks in several features commits to the right branch — not whichever
 	// branch the worker's `pactify join` happens to pick first. Parallel runs already
 	// start in the feature's worktree, so this is a no-op there.
+	// checkoutFeatureBranch, not gitx.CheckoutOrCreate: in a repo that git-TRACKS
+	// .pact the sandbox's seeded ledger is an uncommitted change to a tracked path,
+	// which git refuses to check out over — it carries the ledger across instead
+	// (plain CheckoutOrCreate when .pact is untracked).
 	if br := featureBranchIn(st, act.Feature); br != "" {
-		if err := gitx.CheckoutOrCreate(opts.Dir, br); err != nil {
+		if err := checkoutFeatureBranch(opts.Dir, br); err != nil {
 			return fmt.Errorf("orchestrate: checkout feature branch %q for task %s: %w", br, act.Task, err)
 		}
 	}
@@ -982,10 +1016,12 @@ func tailBytes(s string, n int) string {
 	return "...(truncated)...\n" + cut
 }
 
-// cleanupTaskSessions closes the sessions an accepted task's agents created,
-// matched by the per-seat title the runner stamped (sessions.SessionTag). No-op
-// when cleanup is disabled (SessionRun nil) or the seat's kind has no verified
-// list+delete support. Reports what it closed via Notify; failures are logged,
+// cleanupTaskSessions closes the sessions an accepted task's agents created. How
+// a session is identified is per-kind: a CLI kind is matched by the per-seat title
+// the runner stamped (sessions.SessionTag); kimi by the seat marker in its
+// on-disk session title; antigravity by the conversation id pactify recorded at
+// launch. No-op when cleanup is disabled (SessionRun nil) or the seat's kind has
+// no verified support. Reports what it closed via Notify; failures are logged,
 // never fatal.
 func (opts Options) cleanupTaskSessions(task projection.Task) {
 	if opts.SessionRun == nil {
@@ -1004,6 +1040,33 @@ func (opts Options) cleanupTaskSessions(task projection.Task) {
 		// session's title (see sessions.CleanupKimiSeat).
 		if sessions.IsKimi(kind) {
 			ids, err := sessions.CleanupKimiSeat(sessions.KimiHome(), seat)
+			opts.notifyCleanup(task, seat, kind, ids, err)
+			continue
+		}
+
+		// agy has neither a session CLI nor any way to tag a conversation, so its
+		// cleanup is keyed on the conversation ids pactify ITSELF recorded when it
+		// launched this seat's stint on this task (the runner writes them from agy's
+		// own result JSON — see RecordSession in runner.go). LookupSessionKind, not
+		// LookupSession: a row this (seat,task) picked up from another kind is a
+		// thread id, not an agy conversation id, and must not become a path.
+		//
+		// Ordering matters: this runs BEFORE clearTaskSessionRecords wipes the store
+		// (loop.go's accepted branch calls them in that order) — reversed, every agy
+		// conversation would leak. Covered by
+		// TestCleanupTaskSessions_AntigravityRunsBeforeStoreIsCleared.
+		//
+		// Known gap, registered in docs/backlog.md: the store keeps only the LATEST
+		// conversation per (seat,task) — RecordSession upserts, and a non-SUCCESS
+		// resumed stint drops the row entirely — so a task that cold-started agy more
+		// than once leaves the earlier conversations behind. Closing that needs the
+		// store to keep a history, which is a sessionstore change, not a cleanup one.
+		if sessions.IsAntigravity(kind) {
+			id, ok := LookupSessionKind(opts.Dir, seat, task.ID, kind)
+			if !ok {
+				continue
+			}
+			ids, err := sessions.CleanupAntigravityConversations(sessions.AntigravityHome(), []string{id})
 			opts.notifyCleanup(task, seat, kind, ids, err)
 			continue
 		}
@@ -1216,22 +1279,67 @@ func (opts Options) filtered(st projection.State) projection.State {
 	return out
 }
 
+// seatKindOverride returns the operator's explicit `--seat-kind` value for a
+// seat ("" when unset or no override function is wired). It is the single reader
+// of Options.SeatKind, so kind() and launchAgent agree on what "explicit" means:
+// launchAgent tags a stint KindExplicit exactly when the kind it is launching is
+// the one this returns, which is how provenance reaches agentcfg (KIND-2).
+func (opts Options) seatKindOverride(seatID string) string {
+	if opts.SeatKind == nil {
+		return ""
+	}
+	return opts.SeatKind(seatID)
+}
+
+// rosterKindHint returns the spawner-derived kind for a seat ("" when unset or
+// no map is wired). Unlike seatKindOverride this is NOT operator intent, so it
+// never makes a launch KindExplicit — see Options.RosterKind.
+func (opts Options) rosterKindHint(seatID string) string {
+	if opts.RosterKind == nil {
+		return ""
+	}
+	return opts.RosterKind(seatID)
+}
+
+// ParseSeatKinds parses the repeated `seat=kind` values of one of the driver's
+// two seat-kind flags into a map. Exported because the seat→kind command line is
+// a CROSS-PROCESS contract — `pactify serve` writes the argv that `pactify
+// orchestrate` reads — so the spawner side can be tested against the child's
+// real parser instead of a re-implementation. flag names the flag for errors.
+func ParseSeatKinds(flag string, vals []string) (map[string]string, error) {
+	m := map[string]string{}
+	for _, v := range vals {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return nil, fmt.Errorf("--%s must be seat=kind, got %q", flag, v)
+		}
+		m[parts[0]] = parts[1]
+	}
+	return m, nil
+}
+
 // kind resolves a seat id to its agent kind at the moment of launch, so a seat
 // that joined mid-run (or re-declared its kind via `pactify join --kind`) is
 // drivable on the NEXT iteration without restarting the driver (spec §6 WS-K).
 // Priority (highest first):
 //  1. the injected SeatKind override — the operator's explicit `--seat-kind` flags
-//     (prod) or a test's fixed map. A non-empty override always wins.
-//  2. the LIVE roster's Agents[].Kind, re-read from opts.Dir's ledger on every
+//     (prod) or a test's fixed map. A non-empty override always wins, and stays
+//     winning inside agentcfg via LaunchContext.KindExplicit.
+//  2. an approved fallback role's profile Kind (this run's human decision).
+//  3. the seat's configured role binding's profile Kind (machine-level roles).
+//  4. the LIVE roster's Agents[].Kind, re-read from opts.Dir's ledger on every
 //     call. This is what makes a mid-run join take effect: the startup km no longer
 //     freezes the mapping.
+//  5. the spawner's derived RosterKind hint (`--roster-kind`, written by `pactify
+//     serve`) — last, because its init/roster tiers merely duplicate (4) from a
+//     stale snapshot; its one unique contribution is serve's seat-name heuristic,
+//     which is exactly a LAST resort. Not operator intent, so it never wins
+//     inside agentcfg over a role binding.
 //
-// Empty when neither resolves (the Runner then fails closed on an unknown kind).
+// Empty when none resolves (the Runner then fails closed on an unknown kind).
 func (opts Options) kind(seatID string) string {
-	if opts.SeatKind != nil {
-		if k := opts.SeatKind(seatID); k != "" {
-			return k
-		}
+	if k := opts.seatKindOverride(seatID); k != "" {
+		return k
 	}
 	// An approved fallback outranks the configured binding: the human just said
 	// "run this seat as that role for this run".
@@ -1257,7 +1365,7 @@ func (opts Options) kind(seatID string) string {
 			}
 		}
 	}
-	return ""
+	return opts.rosterKindHint(seatID)
 }
 
 // describe renders a one-line dry-run summary of an action and the command it

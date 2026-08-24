@@ -3,10 +3,12 @@ package registry
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -113,6 +115,85 @@ func Missing(path string) bool {
 	return err != nil || !fi.IsDir()
 }
 
+// ErrTempPath is what EnsureRegistered returns instead of registering a path
+// that lives under a system temp root. Callers match it with errors.Is when they
+// want to distinguish "deliberately skipped" from "registration actually broke";
+// autoRegister does not need to — both are a non-fatal note.
+var ErrTempPath = errors.New("path is under the system temp dir")
+
+// allowTempEnv opts OUT of the temp guard for one process. It exists for test
+// harnesses (the Go suite and the bats e2e both run whole projects out of
+// t.TempDir()/BATS_TEST_TMPDIR, where auto-registration is the behavior under
+// test) — NOT as a user-facing feature. It is deliberately not keyed on
+// PACTIFY_HOME: PACTIFY_HOME is a legitimate production override, and a user who
+// relocates their registry must not silently lose this protection.
+const allowTempEnv = "PACTIFY_ALLOW_TEMP_REGISTER"
+
+func allowTempRegister() bool {
+	v := os.Getenv(allowTempEnv)
+	return v != "" && v != "0" && v != "false"
+}
+
+// tempRoots returns the directory prefixes treated as throwaway scratch space.
+//
+// Each root is recorded in BOTH its raw and its symlink-resolved spelling,
+// because macOS names the same directory two ways: $TMPDIR reads as
+// /var/folders/... while the real path is /private/var/folders/..., and /tmp is a
+// symlink to /private/tmp. Comparing only one spelling is precisely the
+// /tmp-vs-/private/tmp mismatch that has already defeated a fix in this repo, so
+// the normalization is done on both sides — here, and on the candidate path in
+// TempPath.
+//
+// /tmp is added explicitly on top of os.TempDir(): on macOS TMPDIR points at
+// per-user /var/folders storage, so /tmp would otherwise not be covered at all,
+// yet `mktemp -d /tmp/...` and hand-made /tmp/scratch dirs are exactly the
+// throwaway projects this guard is for.
+func tempRoots() []string {
+	var roots []string
+	add := func(p string) {
+		if p == "" {
+			return
+		}
+		abs, err := filepath.Abs(p)
+		if err != nil {
+			return
+		}
+		roots = append(roots, filepath.Clean(abs))
+		if real, err := filepath.EvalSymlinks(abs); err == nil {
+			roots = append(roots, filepath.Clean(real))
+		}
+	}
+	add(os.TempDir())
+	if runtime.GOOS != "windows" {
+		add("/tmp")
+	}
+	return roots
+}
+
+// TempPath reports whether path lives under a system temp root (or is one).
+//
+// Non-existent paths are handled: EvalSymlinks fails on them, so only the literal
+// spelling is compared — which still matches, because tempRoots carries both
+// spellings of every root.
+func TempPath(path string) bool {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	spellings := []string{filepath.Clean(abs)}
+	if real, err := filepath.EvalSymlinks(abs); err == nil {
+		spellings = append(spellings, filepath.Clean(real))
+	}
+	for _, root := range tempRoots() {
+		for _, s := range spellings {
+			if s == root || strings.HasPrefix(s, root+string(filepath.Separator)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Remove deletes a project by name.
 func (r *Registry) Remove(name string) error {
 	name = Slug(name)
@@ -160,10 +241,24 @@ func (r *Registry) Rename(oldName, newName string) error {
 // whose basename collides with an existing name returns the Add error — the
 // caller (init/orchestrate) warns rather than failing, since registration is a
 // convenience, not a prerequisite for the protocol.
+//
+// A path under a system temp root is REFUSED with ErrTempPath. Auto-registration
+// is permanent while a $TMPDIR project is not, so every throwaway `mktemp -d`
+// experiment used to leave a dead entry in the user's real
+// ~/.pactify/projects.json — one ("agyproj") did, and selecting it on the
+// dashboard produced a blank board that read as a broken product. Missing() flags
+// such an entry after the fact; this stops it being created. The guard is scoped
+// to the AUTOMATIC path only: `pactify register <path>` calls Add directly and
+// still accepts a temp path, because typing the command is a deliberate act,
+// whereas auto-registration is a side effect of `init`/`orchestrate` that the
+// user never asked for.
 func EnsureRegistered(path string) (name string, added bool, err error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return "", false, err
+	}
+	if TempPath(abs) && !allowTempRegister() {
+		return "", false, fmt.Errorf("registry: %w: %s", ErrTempPath, abs)
 	}
 	r, err := Load()
 	if err != nil {

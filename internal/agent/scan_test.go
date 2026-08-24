@@ -3,6 +3,7 @@ package agent
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -69,6 +70,60 @@ func TestScanWithOrderMatchesKinds(t *testing.T) {
 	}
 	if !reflect.DeepEqual(order, Kinds()) {
 		t.Errorf("scan order = %v, want Kinds() order %v", order, Kinds())
+	}
+}
+
+// Installed is the single-kind probe `agent register` uses to warn about a kind
+// that is not on this machine. It must agree with Scan exactly — a second,
+// slightly different detection rule is how "scan says installed, register warns
+// anyway" bugs happen.
+func TestInstalledWithMatchesScanPerKind(t *testing.T) {
+	desktopPath := ExpandPath(registry["claude-desktop"].cfgPath)
+	p := scanProbe{
+		lookPath: func(bin string) (string, error) {
+			if bin == "claude" {
+				return "/usr/local/bin/claude", nil
+			}
+			return "", errors.New("not found")
+		},
+		statPath: func(path string) bool { return path == desktopPath },
+	}
+
+	scanned := byKind(scanWith(p))
+	for _, kind := range Kinds() {
+		got, ok := installedWith(p, kind)
+		if !ok {
+			t.Errorf("installedWith(%q): ok=false for a known kind", kind)
+			continue
+		}
+		if got != scanned[kind] {
+			t.Errorf("installedWith(%q) = %+v, want %+v (must match scan)", kind, got, scanned[kind])
+		}
+	}
+
+	if got, ok := installedWith(p, "no-such-kind"); ok || got.Installed {
+		t.Errorf("unknown kind: got %+v ok=%v, want not-ok and not-installed", got, ok)
+	}
+}
+
+// The warning has to say WHAT was looked for: a bare "not installed" leaves the
+// user guessing between a missing install and a PATH problem.
+func TestNotInstalledHintNamesTheMissingThing(t *testing.T) {
+	// CLI kind → the binary the probe looked for on PATH.
+	if got := NotInstalledHint("opencode"); !strings.Contains(got, `"opencode"`) || !strings.Contains(got, "PATH") {
+		t.Errorf("NotInstalledHint(opencode) = %q, want it to name the binary and PATH", got)
+	}
+	// Desktop kind → the config path that did not exist, expanded (no bare "~").
+	got := NotInstalledHint("claude-desktop")
+	want := ExpandPath(registry["claude-desktop"].cfgPath)
+	if !strings.Contains(got, want) {
+		t.Errorf("NotInstalledHint(claude-desktop) = %q, want it to contain %q", got, want)
+	}
+	if strings.Contains(got, "~") {
+		t.Errorf("hint must show the expanded path, got %q", got)
+	}
+	if got := NotInstalledHint("no-such-kind"); got != "" {
+		t.Errorf("unknown kind hint = %q, want empty", got)
 	}
 }
 

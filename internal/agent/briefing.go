@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +56,9 @@ func Render(kind, seatID, roles, repoAbs string) (entry, config string, err erro
 		return "", "", fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
 	}
 	if a.DefaultEntry() != "" {
-		entry = briefing()
+		// The rendered block carries the kind attribution WireAt would bake, so a
+		// hand-pasted block is probed exactly like a wired one (entrymark.go).
+		entry = entryBody([]string{kind})
 	}
 	config = snippet(a.Config().Format, a.Invocation(seatID, repoAbs))
 	return entry, config, nil
@@ -109,8 +112,21 @@ func WireAt(dir, kind, seatID, roles, repoAbs string) error {
 	if !ok {
 		return fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
 	}
-	if a.DefaultEntry() != "" {
-		if err := pact.BakeManagedBlock(filepath.Join(dir, a.DefaultEntry()), briefing()); err != nil {
+	if entry := a.DefaultEntry(); entry != "" {
+		// Bake the briefing plus the kind attribution, UNIONed with whatever the
+		// block already claimed: entry files are shared (AGENTS.md by five kinds),
+		// so wiring a second kind must add to the claim, not replace it. A block
+		// with no attribution line (baked by an older pactify) carries no claim to
+		// preserve — it is replaced by this kind's, which is the only wiring this
+		// run can actually vouch for (entrymark.go).
+		p := filepath.Join(dir, entry)
+		kinds := []string{kind}
+		if b, err := os.ReadFile(p); err == nil {
+			if existing, attributed := entryKinds(string(b)); attributed {
+				kinds = mergeEntryKinds(existing, kind)
+			}
+		}
+		if err := pact.BakeManagedBlock(p, entryBody(kinds)); err != nil {
 			return err
 		}
 	}

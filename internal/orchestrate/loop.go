@@ -1016,10 +1016,12 @@ func tailBytes(s string, n int) string {
 	return "...(truncated)...\n" + cut
 }
 
-// cleanupTaskSessions closes the sessions an accepted task's agents created,
-// matched by the per-seat title the runner stamped (sessions.SessionTag). No-op
-// when cleanup is disabled (SessionRun nil) or the seat's kind has no verified
-// list+delete support. Reports what it closed via Notify; failures are logged,
+// cleanupTaskSessions closes the sessions an accepted task's agents created. How
+// a session is identified is per-kind: a CLI kind is matched by the per-seat title
+// the runner stamped (sessions.SessionTag); kimi by the seat marker in its
+// on-disk session title; antigravity by the conversation id pactify recorded at
+// launch. No-op when cleanup is disabled (SessionRun nil) or the seat's kind has
+// no verified support. Reports what it closed via Notify; failures are logged,
 // never fatal.
 func (opts Options) cleanupTaskSessions(task projection.Task) {
 	if opts.SessionRun == nil {
@@ -1038,6 +1040,33 @@ func (opts Options) cleanupTaskSessions(task projection.Task) {
 		// session's title (see sessions.CleanupKimiSeat).
 		if sessions.IsKimi(kind) {
 			ids, err := sessions.CleanupKimiSeat(sessions.KimiHome(), seat)
+			opts.notifyCleanup(task, seat, kind, ids, err)
+			continue
+		}
+
+		// agy has neither a session CLI nor any way to tag a conversation, so its
+		// cleanup is keyed on the conversation ids pactify ITSELF recorded when it
+		// launched this seat's stint on this task (the runner writes them from agy's
+		// own result JSON — see RecordSession in runner.go). LookupSessionKind, not
+		// LookupSession: a row this (seat,task) picked up from another kind is a
+		// thread id, not an agy conversation id, and must not become a path.
+		//
+		// Ordering matters: this runs BEFORE clearTaskSessionRecords wipes the store
+		// (loop.go's accepted branch calls them in that order) — reversed, every agy
+		// conversation would leak. Covered by
+		// TestCleanupTaskSessions_AntigravityRunsBeforeStoreIsCleared.
+		//
+		// Known gap, registered in docs/backlog.md: the store keeps only the LATEST
+		// conversation per (seat,task) — RecordSession upserts, and a non-SUCCESS
+		// resumed stint drops the row entirely — so a task that cold-started agy more
+		// than once leaves the earlier conversations behind. Closing that needs the
+		// store to keep a history, which is a sessionstore change, not a cleanup one.
+		if sessions.IsAntigravity(kind) {
+			id, ok := LookupSessionKind(opts.Dir, seat, task.ID, kind)
+			if !ok {
+				continue
+			}
+			ids, err := sessions.CleanupAntigravityConversations(sessions.AntigravityHome(), []string{id})
 			opts.notifyCleanup(task, seat, kind, ids, err)
 			continue
 		}

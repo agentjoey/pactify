@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
 // WiringStatus is the content-aware wiring state of one registry kind for a
 // given repo dir. Wired is true when EITHER the kind's config target contains
-// the pact server key OR its entry file (in dir) carries the managed-block
-// marker. Global and DocOnly are static properties of the kind (global =
+// the pact server key OR its entry file (in dir) carries a managed block that
+// names this kind (see entrymark.go — entry files are shared between kinds, so
+// the block's mere presence proves nothing about which kind was wired). Global
+// and DocOnly are static properties of the kind (global =
 // machine-level config outside the repo; doc-only = TOML config not written by
 // Wire, only the snippet is shown).
 type WiringStatus struct {
@@ -60,12 +63,23 @@ func probeKind(kind string, dir string) WiringStatus {
 		return ws
 	}
 
-	// Entry probe: the kind's entry file in dir carries the managed block.
+	// Entry probe: the kind's entry file in dir carries a managed block that
+	// claims THIS kind. Presence alone is not enough — entry files are shared
+	// (AGENTS.md by five kinds, GEMINI.md by two) and the block is kind-agnostic,
+	// so `agent add opencode` used to mark every co-tenant wired. An attributed
+	// block (pact:kinds line, written by WireAt) is authoritative; an older
+	// unattributed block falls back to legacyEntryCredits.
 	if entry := a.DefaultEntry(); entry != "" {
-		if b, err := os.ReadFile(filepath.Join(dir, entry)); err == nil && strings.Contains(string(b), "pact:begin") {
-			ws.Wired = true
-			ws.Detail = "entry " + entry
-			return ws
+		if b, err := os.ReadFile(filepath.Join(dir, entry)); err == nil && hasManagedBlock(string(b)) {
+			credited := legacyEntryCredits(entry, c)
+			if kinds, attributed := entryKinds(string(b)); attributed {
+				credited = slices.Contains(kinds, kind)
+			}
+			if credited {
+				ws.Wired = true
+				ws.Detail = "entry " + entry
+				return ws
+			}
 		}
 	}
 

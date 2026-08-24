@@ -466,6 +466,18 @@ func (s *Server) spawnOrchestrateApprove(dir string) (int, error) {
 	return s.spawnOrchestrateWith(dir, "", nil, 0, true, true)
 }
 
+// sortedKeys returns m's keys in a stable order, so the child's argv is
+// deterministic (map range order is not) — one spawn's command line is
+// comparable to the next's, in logs and in tests.
+func sortedKeys(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
 func (s *Server) spawnOrchestrateWith(dir, feature string, seatKinds map[string]string, maxConcurrency int, resume, approveFallback bool) (int, error) {
 	// Claim the in-memory marker BEFORE the file check: it is the only guard
 	// with no window between check and spawn (see orchRunning).
@@ -477,14 +489,29 @@ func (s *Server) spawnOrchestrateWith(dir, feature string, seatKinds map[string]
 		return http.StatusConflict, fmt.Errorf("orchestrate is already running")
 	}
 
-	km := s.resolveSeatKinds(dir)
-	for seat, kind := range seatKinds {
-		km[seat] = kind
-	}
-
+	// Two CHANNELS, kept apart on purpose. seatKinds is caller-supplied — a human
+	// picked those kinds in the HTTP body / the orchestrate.run rpc — so it is
+	// genuine operator intent and rides `--seat-kind`, which the child treats as
+	// explicit and lets win over a seat's role binding (KIND-2). resolveSeatKinds
+	// is DERIVED from configuration (init events → roster → seat-name heuristic);
+	// nobody typed it. Sending it as `--seat-kind` too would launder config into
+	// the intent channel and silently displace every bound role — including its
+	// model pin — on every dashboard / Dispatch / schedule / approve-fallback run.
+	// Derived kinds therefore ride `--roster-kind`, which the child ranks BELOW
+	// its own live roster read (its only unique contribution is the name
+	// heuristic) and never treats as explicit.
 	args := []string{"orchestrate", "--as", s.seat}
-	for seat, kind := range km {
-		args = append(args, "--seat-kind", seat+"="+kind)
+	for _, seat := range sortedKeys(seatKinds) {
+		args = append(args, "--seat-kind", seat+"="+seatKinds[seat])
+	}
+	derived := s.resolveSeatKinds(dir)
+	for _, seat := range sortedKeys(derived) {
+		// A seat the caller named is already spoken for; re-sending its derived
+		// kind on the other channel would just be a losing duplicate.
+		if _, explicit := seatKinds[seat]; explicit {
+			continue
+		}
+		args = append(args, "--roster-kind", seat+"="+derived[seat])
 	}
 	if feature != "" {
 		args = append(args, "--feature", feature)

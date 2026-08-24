@@ -54,6 +54,7 @@ func newOrchestrateCmd() *cobra.Command {
 	var maxConc int
 	var dryRun bool
 	var seatKinds []string
+	var rosterKinds []string
 	var seatHosts []string
 	var transports []string
 	var asSeat string
@@ -86,19 +87,24 @@ agents (*-desktop, codex-app) cannot be driven headlessly.`,
 			// dashboard — covers projects that predate init auto-register (spec:
 			// agent-started projects). Best-effort; never blocks the run.
 			autoRegister(c.OutOrStdout(), dir, orchNoRegister)
-			km := map[string]string{}
-			for _, sk := range seatKinds {
-				parts := strings.SplitN(sk, "=", 2)
-				if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-					return fmt.Errorf("--seat-kind must be seat=kind, got %q", sk)
-				}
-				km[parts[0]] = parts[1]
+			km, err := orchestrate.ParseSeatKinds("seat-kind", seatKinds)
+			if err != nil {
+				return err
 			}
 			// km carries ONLY the explicit --seat-kind flags (the highest-priority
 			// override). Defaulting each seat's kind from the roster now happens LIVE in
 			// the driver loop (opts.kind re-reads Agents[].Kind every iteration), so a
 			// seat that joins mid-run — or re-declares its kind — is drivable next
 			// iteration without a restart (spec §6 WS-K dynamic seats).
+			//
+			// rkm is the SEPARATE, non-explicit channel: kinds a spawner (`pactify
+			// serve`) derived from configuration rather than from a person. Keeping
+			// them off --seat-kind is what stops derived config from displacing a
+			// seat's role binding at launch (KIND-2 provenance).
+			rkm, err := orchestrate.ParseSeatKinds("roster-kind", rosterKinds)
+			if err != nil {
+				return err
+			}
 
 			// The driver needs an acting seat for its own merges. Resolve --as, else
 			// PACT_AGENT_ID; fail fast (before any agent runs) when neither is set, so
@@ -163,6 +169,7 @@ agents (*-desktop, codex-app) cannot be driven headlessly.`,
 				DryRun:          dryRun,
 				Now:             func() string { return time.Now().Format("20060102-150405") },
 				SeatKind:        func(seat string) string { return km[seat] },
+				RosterKind:      func(seat string) string { return rkm[seat] },
 				ApproveFallback: approveFallback,
 				ResetTask:       resetTask,
 				RunTimeout:      time.Duration(runTimeoutMin) * time.Minute,
@@ -233,7 +240,8 @@ agents (*-desktop, codex-app) cannot be driven headlessly.`,
 	cmd.Flags().BoolVar(&sandbox, "sandbox", false, "deprecated: sandbox is now the default (this flag is a no-op; use --in-place to opt out)")
 	_ = cmd.Flags().MarkDeprecated("sandbox", "sandbox is now the default; use --in-place to opt out")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
-	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code")
+	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code; an explicit kind here OVERRIDES the seat's role binding (with a warning)")
+	cmd.Flags().StringArrayVar(&rosterKinds, "roster-kind", nil, "seat=kind DERIVED from configuration by a spawner (repeatable; `pactify serve` fills this in). Lowest priority — a role binding and the live roster both outrank it, and it never overrides a role binding the way --seat-kind does")
 	cmd.Flags().StringArrayVar(&seatHosts, "seat-host", nil, "seat=machineId to run that seat's stints on another machine via the relay (repeatable; requires a cloud session + the project's git origin)")
 	cmd.Flags().StringArrayVar(&transports, "transport", nil, "kind=acp|cmd to drive that kind over the Agent Client Protocol instead of a headless command (repeatable), e.g. --transport kimi-cli=acp; default: opencode=acp (all others cmd); --transport opencode=cmd to revert")
 	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")

@@ -7,6 +7,8 @@
 package agentcfg
 
 import (
+	"fmt"
+
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/agentreg"
 	"github.com/agentjoey/pactify/internal/roles"
@@ -87,12 +89,58 @@ func Resolve(kind string) (Effective, bool) {
 	return ResolveWith(kind, Override{Model: model, AllowedTools: tools, Restricted: restricted})
 }
 
-// ResolveSeat resolves the launch profile for a SEAT rather than just a kind.
-// When the seat is bound to a role, that role's profile decides both the agent
-// kind and the model — which is what lets two seats of the same kind run
-// different models (per-kind Resolve cannot express that). An unbound seat, or
-// a binding whose role was deleted, falls through to the pre-roles behavior so
-// an unconfigured machine is unaffected.
+// KindSource is the PROVENANCE of the kind handed to ResolveSeatFrom. It exists
+// because provenance cannot be recovered from the string itself: the driver's
+// opts.kind() returns the operator's `--seat-kind` value when there is one and
+// the live roster's value otherwise, and both arrive here as the same
+// `"claude-code"`. Without this parameter the resolver cannot tell "the operator
+// typed it" from "the roster happens to say it", and those two cases must
+// resolve differently against a bound role profile (KIND-2).
+type KindSource int
+
+const (
+	// KindFromRoster: the kind was derived from configuration — the ledger
+	// roster's Agents[].Kind, a role-derived default, or any other fallback. A
+	// bound role profile's Kind OUTRANKS it; that precedence is the entire point
+	// of role binding and is unchanged by KIND-2.
+	KindFromRoster KindSource = iota
+	// KindExplicit: the kind is the operator's explicit `--seat-kind seat=kind`
+	// flag. It OUTRANKS a bound role profile's Kind — a typed flag beats stored
+	// configuration, which is the CLI convention orchestrate's Options.SeatKind
+	// has always documented. Displacing a DIFFERENT profile kind also yields a
+	// warning so the override is never silent.
+	KindExplicit
+)
+
+// ResolveSeat resolves the launch profile for a SEAT rather than just a kind,
+// treating kind as roster-provenance (KindFromRoster). Callers that hold the
+// operator's explicit `--seat-kind` must use ResolveSeatFrom so the flag can win
+// and its warning can be surfaced.
+func ResolveSeat(seat, kind, tierEffort string) (Effective, bool) {
+	eff, _, ok := ResolveSeatFrom(seat, kind, KindFromRoster, tierEffort)
+	return eff, ok
+}
+
+// ResolveSeatFrom is ResolveSeat with the kind's provenance made explicit.
+//
+// When the seat is bound to a role, that role's profile normally decides both
+// the agent kind and the model — which is what lets two seats of the same kind
+// run different models (per-kind Resolve cannot express that). An unbound seat,
+// or a binding whose role was deleted, falls through to the pre-roles behavior
+// so an unconfigured machine is unaffected.
+//
+// Kind precedence (highest first):
+//  1. an EXPLICIT operator kind (src == KindExplicit, kind non-empty) — a typed
+//     `--seat-kind` flag beats stored configuration;
+//  2. the bound role profile's Kind;
+//  3. the passed-in kind (roster/default).
+//
+// When (1) displaces a different (2), the profile's MODEL pin is dropped and the
+// overriding kind's own registry/built-in default applies: a model name is
+// vendor-specific (`gemini-3.7-flash-medium` handed to `claude --model` just
+// hard-fails), so a pin chosen for the displaced kind must not travel across the
+// override. The profile's Effort pin DOES survive — it is a vendor-neutral tier
+// word, and a per-seat effort pin stays absolute.
 //
 // tierEffort is the reasoning-effort budget the caller derived from the task's
 // tier (execution-tiering §4.5); "" means "no effort injection". A role
@@ -101,26 +149,56 @@ func Resolve(kind string) (Effective, bool) {
 //
 // The permission posture stays per-kind: it is a machine trust decision about
 // an agent binary, not a property of the role someone plays.
-func ResolveSeat(seat, kind, tierEffort string) (Effective, bool) {
+//
+// The second return value is an operator-facing warning, non-empty ONLY when an
+// explicit kind actually displaced a different profile kind (an override that
+// agrees with the profile, or lands on an unbound seat, displaces nothing and
+// stays silent). agentcfg is a pure library with no output channel of its own,
+// so the caller decides where the warning surfaces.
+func ResolveSeatFrom(seat, kind string, src KindSource, tierEffort string) (Effective, string, bool) {
 	if cfg, err := roles.Load(); err == nil {
-		if p, _, ok := cfg.Lookup(seat); ok {
-			k := p.Kind
-			if k == "" {
+		if p, role, ok := cfg.Lookup(seat); ok {
+			k, model, warning, displaced := p.Kind, p.Model, "", false
+			switch {
+			case k == "":
+				// Kind-agnostic profile: it decorates whatever kind the caller
+				// supplies, so its model pin still describes the launching kind.
 				k = kind
+			case src == KindExplicit && kind != "" && kind != p.Kind:
+				// KIND-2: the operator typed a kind for this seat and it differs
+				// from the binding. Honor the flag, drop the now cross-vendor
+				// model pin, and say so.
+				k, model, displaced = kind, "", true
+				warning = fmt.Sprintf(
+					"seat %s: explicit --seat-kind %s=%s overrides role %q (kind %s); the role's model pin is dropped and %s's own defaults apply",
+					seat, seat, kind, role, p.Kind, kind)
 			}
 			effort := tierEffort
 			if p.Effort != "" {
 				effort = p.Effort
 			}
 			reg, _ := agentreg.Load()
-			_, tools, restricted := reg.Config(k)
-			return ResolveWith(k, Override{Model: p.Model, AllowedTools: tools, Restricted: restricted, Effort: effort})
+			regModel, tools, restricted := reg.Config(k)
+			if displaced {
+				// The profile's pin named the DISPLACED kind's model, so this
+				// launch takes the overriding kind's own configuration: its
+				// registry override, else "" → ResolveWith's built-in default.
+				// Exactly what an unbound seat of that kind would get. Only the
+				// displaced branch does this — an unpinned model on a profile
+				// that was NOT displaced keeps its pre-KIND-2 meaning (built-in
+				// default, registry model deliberately not consulted).
+				model = regModel
+			}
+			e, ok := ResolveWith(k, Override{Model: model, AllowedTools: tools, Restricted: restricted, Effort: effort})
+			return e, warning, ok
 		}
 	}
 	// Per-kind path (unbound seat): same registry overlay as Resolve, plus the
 	// tier-derived budget. ResolveWith no-ops an empty Effort, so a "" tierEffort
-	// keeps this byte-for-byte identical to Resolve(kind).
+	// keeps this byte-for-byte identical to Resolve(kind). No binding exists, so
+	// an explicit kind displaces nothing and there is nothing to warn about.
 	reg, _ := agentreg.Load()
 	model, tools, restricted := reg.Config(kind)
-	return ResolveWith(kind, Override{Model: model, AllowedTools: tools, Restricted: restricted, Effort: tierEffort})
+	e, ok := ResolveWith(kind, Override{Model: model, AllowedTools: tools, Restricted: restricted, Effort: tierEffort})
+	return e, "", ok
 }

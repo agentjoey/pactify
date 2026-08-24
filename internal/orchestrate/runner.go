@@ -61,6 +61,9 @@ type LaunchContext struct {
 	// task's tier by the driver (execution-tiering §4.5). "" = no effort
 	// injection (launch byte-identical to pre-tiering behavior).
 	Effort string
+	// KindExplicit records the PROVENANCE of Kind: true only when it came from
+	// the operator's explicit `--seat-kind seat=kind` flag (Options.SeatKind).
+	KindExplicit bool
 }
 
 // streamDir is StreamDir when set, else RepoDir.
@@ -90,7 +93,25 @@ type execFn func(ctx context.Context, name string, args []string, dir string, en
 // CmdRunner is the production Runner: it resolves agent.Get(kind).Runner(),
 // substitutes the {briefing} placeholder, injects PACT_AGENT_ID=seatID, and execs
 // via its Exec seam.
-type CmdRunner struct{ Exec execFn }
+type CmdRunner struct {
+	Exec execFn
+	// Warn is the operator-facing warning sink for launch-resolution notices
+	// (currently: an explicit --seat-kind displacing a seat's role binding).
+	// nil falls back to stderr — the same channel the escalate/sandbox paths use
+	// so a headless run with no notifier still records it. Injected in tests.
+	Warn func(string)
+}
+
+// warn surfaces an operator-facing notice, nil-safe: the injected sink when set,
+// else stderr (matching loop.go's escalate-failure line and sandbox.go's
+// ledger-writeback line).
+func (r CmdRunner) warn(msg string) {
+	if r.Warn != nil {
+		r.Warn(msg)
+		return
+	}
+	fmt.Fprintln(os.Stderr, "orchestrate: "+msg)
+}
 
 // NewCmdRunner returns a CmdRunner wired to the real os/exec-backed execFn. When
 // idle>0 the execFn kills a child that produces no output for that long (errIdle
@@ -142,8 +163,20 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	// Resolve the effective launch config: built-in profile overlaid with any
 	// per-agent override (model / scoped permissions) from the machine registry,
 	// plus the tier-derived effort budget (a bound seat's explicit profile
-	// effort, when set, wins over lc.Effort inside ResolveSeat).
-	eff, ok := agentcfg.ResolveSeat(lc.Seat, lc.Kind, lc.Effort)
+	// effort, when set, wins over lc.Effort inside ResolveSeatFrom).
+	//
+	// lc.KindExplicit carries the kind's PROVENANCE: an operator-typed
+	// `--seat-kind` wins over the seat's role binding (KIND-2), a roster-derived
+	// kind still yields to it. A displacement returns a warning, surfaced here
+	// so the override is visible instead of silent.
+	src := agentcfg.KindFromRoster
+	if lc.KindExplicit {
+		src = agentcfg.KindExplicit
+	}
+	eff, warning, ok := agentcfg.ResolveSeatFrom(lc.Seat, lc.Kind, src, lc.Effort)
+	if warning != "" {
+		r.warn(warning)
+	}
 	if !ok {
 		return fmt.Errorf("orchestrate: kind %q 无 headless runner，改用 CLI 座席或人工那一棒", lc.Kind)
 	}

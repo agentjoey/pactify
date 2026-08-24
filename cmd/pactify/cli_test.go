@@ -247,7 +247,7 @@ func TestCLIOrchestrateHelpAndDryRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("orchestrate --help: %v %s", err, help)
 	}
-	for _, flag := range []string{"--feature", "--resume", "--max-rework", "--max-iters", "--dry-run", "--seat-kind"} {
+	for _, flag := range []string{"--feature", "--resume", "--max-rework", "--max-iters", "--dry-run", "--seat-kind", "--roster-kind"} {
 		if !strings.Contains(help, flag) {
 			t.Fatalf("orchestrate --help missing %s:\n%s", flag, help)
 		}
@@ -270,6 +270,16 @@ func TestCLIOrchestrateHelpAndDryRun(t *testing.T) {
 	out, err := run(env, "orchestrate", "--dry-run", "--seat-kind", "w=opencode", "--seat-kind", "orch=claude-code")
 	if err != nil {
 		t.Fatalf("orchestrate --dry-run: %v %s", err, out)
+	}
+	// The spawner-facing channel parses the same way (this is the argv `pactify
+	// serve` actually writes; a rename or a parse change here breaks every
+	// dashboard-started run).
+	out, err = run(env, "orchestrate", "--dry-run", "--roster-kind", "w=opencode", "--roster-kind", "orch=claude-code")
+	if err != nil {
+		t.Fatalf("orchestrate --dry-run --roster-kind: %v %s", err, out)
+	}
+	if out, err := run(env, "orchestrate", "--dry-run", "--roster-kind", "bogus"); err == nil {
+		t.Fatalf("--roster-kind bogus should be rejected, got %q", out)
 	}
 }
 

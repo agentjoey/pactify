@@ -179,11 +179,16 @@ func TestRunSeatKindsFromInit(t *testing.T) {
 	fake.mu.Lock()
 	defer fake.mu.Unlock()
 	args := strings.Join(fake.args, " ")
-	if !strings.Contains(args, "--seat-kind alice=opencode") {
-		t.Errorf("args %q should contain --seat-kind alice=opencode", args)
+	// Kinds READ OUT of the ledger are configuration, not operator intent, so
+	// they ride the non-explicit channel (see seatkind_channel_test.go).
+	if !strings.Contains(args, "--roster-kind alice=opencode") {
+		t.Errorf("args %q should contain --roster-kind alice=opencode", args)
 	}
-	if !strings.Contains(args, "--seat-kind claude=claude-code") {
-		t.Errorf("args %q should contain --seat-kind claude=claude-code", args)
+	if !strings.Contains(args, "--roster-kind claude=claude-code") {
+		t.Errorf("args %q should contain --roster-kind claude=claude-code", args)
+	}
+	if strings.Contains(args, "--seat-kind") {
+		t.Errorf("args %q must not use --seat-kind: nobody typed these kinds", args)
 	}
 }
 

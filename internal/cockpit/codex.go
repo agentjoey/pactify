@@ -92,11 +92,15 @@ func newCodexSession(ctx context.Context, repoDir, resumeThreadID string) (*code
 	}
 
 	if resumeThreadID != "" {
-		if err := s.client.threadResume(ctx, resumeThreadID); err != nil {
+		id, err := s.client.threadResume(ctx, resumeThreadID)
+		if err != nil {
 			_ = s.Close()
 			return nil, fmt.Errorf("codex: thread/resume: %w", err)
 		}
-		s.threadID = resumeThreadID
+		if id == "" {
+			id = resumeThreadID
+		}
+		s.threadID = id
 	} else {
 		id, err := s.client.threadStart(ctx, repoDir)
 		if err != nil {
@@ -166,6 +170,49 @@ type codexClient struct {
 
 	dispatchEvent    func(Event)
 	dispatchApproval func(ApprovalRequest)
+
+	mu sync.Mutex
+	// turnID is the id of the turn currently in flight. TurnInterruptParams
+	// requires it, and it is only knowable from the wire: it is recorded from
+	// the (synchronous) turn/start response and from the turn/started
+	// notification, and cleared when the turn completes.
+	turnID string
+	// lastErr is the last error message already surfaced for turnID. A failed
+	// turn is reported twice by the protocol — once as the `error`
+	// notification and again as turn/completed{status:failed} carrying the
+	// same TurnError — and the cockpit stream must show it once.
+	lastErr string
+}
+
+// setTurnID records the in-flight turn. Starting a DIFFERENT turn clears the
+// reported-error memo; clearing the id (turn over) deliberately does not, so
+// that turn/completed{status:failed} can still recognise the message the
+// `error` notification just reported for that same turn.
+func (c *codexClient) setTurnID(id string) {
+	c.mu.Lock()
+	if id != "" && id != c.turnID {
+		c.lastErr = ""
+	}
+	c.turnID = id
+	c.mu.Unlock()
+}
+
+func (c *codexClient) currentTurnID() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.turnID
+}
+
+// noteErr records msg as reported for the current turn and returns false if it
+// had already been reported.
+func (c *codexClient) noteErr(msg string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if msg != "" && msg == c.lastErr {
+		return false
+	}
+	c.lastErr = msg
+	return true
 }
 
 func newCodexClient(w io.WriteCloser, r io.Reader, closeFn func() error,
@@ -210,8 +257,26 @@ func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, erro
 	return res.Thread.ID, nil
 }
 
-func (c *codexClient) threadResume(ctx context.Context, threadID string) error {
-	return c.rpc.notify("thread/resume", map[string]any{"threadId": threadID})
+// threadResume resumes an existing thread and returns the resumed thread's id.
+//
+// thread/resume is a ClientRequest (ThreadResumeParams -> ThreadResumeResponse),
+// not a notification: sent id-less the server never answers, so a resume that
+// failed — unknown thread, wrong cwd — was indistinguishable from one that
+// worked, and the session went on to prompt a thread that did not exist.
+func (c *codexClient) threadResume(ctx context.Context, threadID string) (string, error) {
+	raw, err := c.rpc.call(ctx, "thread/resume", map[string]any{"threadId": threadID})
+	if err != nil {
+		return "", err
+	}
+	var res struct {
+		Thread struct {
+			ID string `json:"id"`
+		} `json:"thread"`
+	}
+	if err := json.Unmarshal(raw, &res); err != nil {
+		return "", fmt.Errorf("parse thread/resume result: %w", err)
+	}
+	return res.Thread.ID, nil
 }
 
 func (c *codexClient) turnStart(ctx context.Context, threadID, text string) error {
@@ -219,13 +284,41 @@ func (c *codexClient) turnStart(ctx context.Context, threadID, text string) erro
 		"threadId": threadID,
 		"input":    []map[string]any{{"type": "text", "text": text}},
 	}
-	_, err := c.rpc.call(ctx, "turn/start", params)
-	return err
+	raw, err := c.rpc.call(ctx, "turn/start", params)
+	if err != nil {
+		return err
+	}
+	// TurnStartResponse carries the Turn. Recording the id here — rather than
+	// waiting for the turn/started notification — means an interrupt issued the
+	// instant after Prompt returns already has a turn to name.
+	var res struct {
+		Turn struct {
+			ID string `json:"id"`
+		} `json:"turn"`
+	}
+	if json.Unmarshal(raw, &res) == nil && res.Turn.ID != "" {
+		c.setTurnID(res.Turn.ID)
+	}
+	return nil
 }
 
+// turnInterrupt cancels the in-flight turn.
+//
+// turn/interrupt is a ClientRequest and TurnInterruptParams requires BOTH
+// threadId and turnId; the old id-less, turnId-less notification could not have
+// interrupted anything. With no turn id there is no turn running (the id is
+// recorded from the turn/start response before Prompt returns), so interrupting
+// is a no-op rather than a request the server would reject.
 func (c *codexClient) turnInterrupt(ctx context.Context, threadID string) error {
-	params := map[string]any{"threadId": threadID}
-	return c.rpc.notify("turn/interrupt", params)
+	turnID := c.currentTurnID()
+	if turnID == "" {
+		return nil
+	}
+	_, err := c.rpc.call(ctx, "turn/interrupt", map[string]any{
+		"threadId": threadID,
+		"turnId":   turnID,
+	})
+	return err
 }
 
 func (c *codexClient) Close() error {
@@ -269,7 +362,7 @@ func (c *codexClient) handleApprovalRequest(id json.RawMessage, method string, p
 			triggered := false
 			once.Do(func() {
 				triggered = true
-				innerErr = c.replyApproval(id, d)
+				innerErr = c.replyApproval(id, kind, params, d)
 			})
 			if !triggered {
 				return errors.New("approval already responded")
@@ -283,12 +376,52 @@ func (c *codexClient) handleApprovalRequest(id json.RawMessage, method string, p
 	}
 }
 
-func (c *codexClient) replyApproval(id json.RawMessage, d Decision) error {
+// replyApproval answers a server-initiated approval request.
+//
+// The three approval kinds do NOT share a response shape:
+//   - CommandExecutionRequestApprovalResponse = {decision}
+//   - FileChangeRequestApprovalResponse       = {decision}
+//   - PermissionsRequestApprovalResponse      = {permissions, scope,
+//     strictAutoReview} — it has no `decision` field at all, so answering a
+//     permissions prompt with {"decision": …} is structurally invalid.
+func (c *codexClient) replyApproval(id json.RawMessage, kind string, params json.RawMessage, d Decision) error {
+	if kind == "permission" {
+		return c.replyPermissionsApproval(id, params, d)
+	}
 	decision := decisionString(d)
 	if decision == "" {
 		return fmt.Errorf("codex: unsupported decision %q", d)
 	}
 	return c.rpc.reply(id, map[string]any{"decision": decision})
+}
+
+// replyPermissionsApproval answers item/permissions/requestApproval with a
+// GrantedPermissionProfile. Granting means handing back the very profile that
+// was requested (RequestPermissionProfile and GrantedPermissionProfile are the
+// same {fileSystem, network} shape); denying means granting an empty profile.
+// PermissionGrantScope distinguishes a one-turn grant from a session-wide one.
+func (c *codexClient) replyPermissionsApproval(id json.RawMessage, params json.RawMessage, d Decision) error {
+	scope := "turn"
+	grant := json.RawMessage("{}")
+
+	switch d {
+	case DecisionAllow:
+	case DecisionAllowForSession:
+		scope = "session"
+	case DecisionDeny:
+		// Grant nothing; scope stays "turn" so the refusal is not cached.
+		return c.rpc.reply(id, map[string]any{"permissions": grant, "scope": scope})
+	default:
+		return fmt.Errorf("codex: unsupported decision %q", d)
+	}
+
+	var p struct {
+		Permissions json.RawMessage `json:"permissions"`
+	}
+	if json.Unmarshal(params, &p) == nil && len(p.Permissions) > 0 {
+		grant = p.Permissions
+	}
+	return c.rpc.reply(id, map[string]any{"permissions": grant, "scope": scope})
 }
 
 func approvalKindFromMethod(method string) string {
@@ -324,40 +457,26 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 
 	switch method {
 	case "item/agentMessage/delta":
-		text := jsonStringAt(params, "delta", "text")
-		c.dispatchEvent(Event{Kind: EventMessage, Text: text, Final: false, Raw: raw})
+		// AgentMessageDeltaNotification.delta is a plain string, not an object.
+		c.dispatchEvent(Event{Kind: EventMessage, Text: jsonStringAt(params, "delta"), Final: false, Raw: raw})
 
 	case "item/completed":
-		itemType := jsonStringAt(params, "item", "type")
-		switch itemType {
-		case "agentMessage":
-			c.dispatchEvent(Event{Kind: EventMessage, Final: true, Raw: raw})
-		case "commandExecution", "fileChange", "mcpTool":
-			name := jsonStringAt(params, "item", "command")
-			if name == "" {
-				name = jsonStringAt(params, "item", "name")
+		if item, ok := decodeCodexItem(params); ok {
+			switch {
+			case item.Type == "agentMessage":
+				c.dispatchEvent(Event{Kind: EventMessage, Final: true, Raw: raw})
+			case item.isTool():
+				c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "end", Name: item.displayName()}, Raw: raw})
 			}
-			if name == "" {
-				name = jsonStringAt(params, "item", "path")
-			}
-			c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "end", Name: name}, Raw: raw})
 		}
 
 	case "item/commandExecution/outputDelta":
-		text := jsonStringAt(params, "delta", "text")
-		c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "output", Text: text}, Raw: raw})
+		// CommandExecutionOutputDeltaNotification.delta is a plain string too.
+		c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "output", Text: jsonStringAt(params, "delta")}, Raw: raw})
 
 	case "item/started":
-		itemType := jsonStringAt(params, "item", "type")
-		if itemType == "commandExecution" || itemType == "fileChange" || itemType == "mcpTool" {
-			name := jsonStringAt(params, "item", "command")
-			if name == "" {
-				name = jsonStringAt(params, "item", "name")
-			}
-			if name == "" {
-				name = jsonStringAt(params, "item", "path")
-			}
-			c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: name}, Raw: raw})
+		if item, ok := decodeCodexItem(params); ok && item.isTool() {
+			c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: item.displayName()}, Raw: raw})
 		}
 
 	case "thread/tokenUsage/updated":
@@ -366,20 +485,39 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 		}
 
 	case "turn/started":
+		c.setTurnID(jsonStringAt(params, "turn", "id"))
 		c.dispatchEvent(Event{Kind: EventState, State: "turn_started", Raw: raw})
 
 	case "turn/completed":
-		c.dispatchEvent(Event{Kind: EventState, State: "turn_completed", Raw: raw})
-		if u := parseUsageFromParams(params); u != nil {
-			c.dispatchEvent(Event{Kind: EventUsage, Usage: u, Raw: raw})
+		// turn/completed is the ONLY terminal turn notification: there is no
+		// turn/failed method in this protocol. Failure arrives here as
+		// turn.status == "failed" with turn.error populated.
+		c.setTurnID("")
+		if jsonStringAt(params, "turn", "status") == "failed" {
+			c.dispatchEvent(Event{Kind: EventState, State: "turn_failed", Raw: raw})
+			summary := jsonStringAt(params, "turn", "error", "message")
+			if summary == "" {
+				summary = "codex: turn failed"
+			}
+			// The `error` notification usually reported this already.
+			if c.noteErr(summary) {
+				c.dispatchEvent(Event{Kind: EventError, Err: summary, Raw: raw})
+			}
+			return
 		}
+		// "completed" and "interrupted" are both terminal and non-error.
+		c.dispatchEvent(Event{Kind: EventState, State: "turn_completed", Raw: raw})
 
-	case "turn/failed", "error":
+	case "error":
+		// ErrorNotification.error is a TurnError, whose only required field is
+		// `message`.
 		summary := jsonStringAt(params, "error", "message")
 		if summary == "" {
 			summary = jsonStringAt(params, "message")
 		}
-		c.dispatchEvent(Event{Kind: EventError, Err: summary, Raw: raw})
+		if c.noteErr(summary) {
+			c.dispatchEvent(Event{Kind: EventError, Err: summary, Raw: raw})
+		}
 
 	case "turn/diff/updated":
 		c.dispatchEvent(Event{Kind: EventDiff, Raw: raw})
@@ -398,6 +536,16 @@ func cloneRaw(r json.RawMessage) json.RawMessage {
 	return out
 }
 
+// jsonStringAt walks keys through a decoded JSON object and returns the first
+// string it reaches.
+//
+// Note the "first string it reaches" part: traversal STOPS as soon as a hop
+// yields a string, so trailing keys are ignored. jsonStringAt(p, "delta",
+// "text") therefore returns p.delta whenever delta is a plain string — which
+// is why codex.go reading the (non-existent) delta.text still produced correct
+// streaming text, and why the wrong path went unnoticed for so long. Callers
+// must pass the real path anyway: a lenient lookup that happens to work is not
+// a mapping anyone can reason about.
 func jsonStringAt(params json.RawMessage, keys ...string) string {
 	if len(params) == 0 {
 		return ""
@@ -427,46 +575,109 @@ func jsonStringAt(params json.RawMessage, keys ...string) string {
 	return ""
 }
 
+// codexThreadItem is the subset of v2/ThreadItem the cockpit surfaces. Only
+// variants that belong on the tool timeline contribute fields here; each field
+// exists on exactly one variant, so decoding them together is unambiguous.
+type codexThreadItem struct {
+	Type    string `json:"type"`
+	Command string `json:"command"` // commandExecution
+	Server  string `json:"server"`  // mcpToolCall
+	Tool    string `json:"tool"`    // mcpToolCall
+	Changes []struct {
+		Path string `json:"path"`
+	} `json:"changes"` // fileChange
+}
+
+// decodeCodexItem pulls the ThreadItem out of an item/started or item/completed
+// notification.
+func decodeCodexItem(params json.RawMessage) (codexThreadItem, bool) {
+	var p struct {
+		Item *codexThreadItem `json:"item"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil || p.Item == nil {
+		return codexThreadItem{}, false
+	}
+	return *p.Item, true
+}
+
+// isTool reports whether this item belongs on the cockpit's tool timeline.
+// The MCP variant tag is "mcpToolCall" — "mcpTool" is not a ThreadItem type and
+// never matched anything.
+func (it codexThreadItem) isTool() bool {
+	switch it.Type {
+	case "commandExecution", "fileChange", "mcpToolCall":
+		return true
+	}
+	return false
+}
+
+// displayName renders the one-line label shown for a tool item. Each variant
+// keeps its name somewhere different: commandExecution has `command`,
+// mcpToolCall has `server`/`tool`, and fileChange has neither — its only
+// identifying data is the `changes` array of {path, kind, diff}.
+func (it codexThreadItem) displayName() string {
+	switch it.Type {
+	case "commandExecution":
+		return it.Command
+	case "mcpToolCall":
+		switch {
+		case it.Server != "" && it.Tool != "":
+			return it.Server + "/" + it.Tool
+		case it.Tool != "":
+			return it.Tool
+		default:
+			return it.Server
+		}
+	case "fileChange":
+		if len(it.Changes) == 0 {
+			return ""
+		}
+		name := it.Changes[0].Path
+		if rest := len(it.Changes) - 1; rest > 0 {
+			name = fmt.Sprintf("%s (+%d more)", name, rest)
+		}
+		return name
+	}
+	return ""
+}
+
+// parseUsageFromParams reads a ThreadTokenUsageUpdatedNotification.
+//
+// The counters are nested: tokenUsage is a ThreadTokenUsage
+// {last, total, modelContextWindow} whose last/total are TokenUsageBreakdown
+// {cachedInputTokens, inputTokens, outputTokens, reasoningOutputTokens,
+// totalTokens}. Nothing is flat at the top level.
+//
+// `last` is the right bucket, not `total`: every consumer of EventUsage
+// ACCUMULATES (internal/serve/cockpit_remote.go sums Usage across events, and
+// the acp/claude backends emit per-update deltas), while `total` is the
+// thread's running sum. Summing `total` would double-count — in a captured
+// two-request turn codex reported total=15264 then total=30572, whose sum
+// (45836) exceeds the true 30572, while the `last` values 15264 + 15308 add up
+// to exactly 30572.
+//
+// The protocol carries no cost in this notification, so CostUSD stays 0 rather
+// than being invented.
 func parseUsageFromParams(params json.RawMessage) *Usage {
 	if len(params) == 0 {
 		return nil
 	}
-	var m map[string]json.RawMessage
-	if err := json.Unmarshal(params, &m); err != nil {
+	var p struct {
+		TokenUsage *struct {
+			Last *struct {
+				InputTokens  int `json:"inputTokens"`
+				OutputTokens int `json:"outputTokens"`
+				TotalTokens  int `json:"totalTokens"`
+			} `json:"last"`
+		} `json:"tokenUsage"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil || p.TokenUsage == nil || p.TokenUsage.Last == nil {
 		return nil
 	}
-	u := &Usage{
-		InputTokens:  firstInt(m, "inputTokens", "input_tokens", "promptTokens", "prompt_tokens"),
-		OutputTokens: firstInt(m, "outputTokens", "output_tokens", "completionTokens", "completion_tokens"),
-		TotalTokens:  firstInt(m, "totalTokens", "total_tokens"),
-		CostUSD:      firstFloat(m, "costUsd", "cost_usd", "cost", "totalCost", "total_cost"),
+	last := p.TokenUsage.Last
+	return &Usage{
+		InputTokens:  last.InputTokens,
+		OutputTokens: last.OutputTokens,
+		TotalTokens:  last.TotalTokens,
 	}
-	if u.InputTokens == 0 && u.OutputTokens == 0 && u.TotalTokens == 0 && u.CostUSD == 0 {
-		return nil
-	}
-	return u
-}
-
-func firstInt(m map[string]json.RawMessage, keys ...string) int {
-	for _, k := range keys {
-		if v, ok := m[k]; ok {
-			var n int
-			if json.Unmarshal(v, &n) == nil {
-				return n
-			}
-		}
-	}
-	return 0
-}
-
-func firstFloat(m map[string]json.RawMessage, keys ...string) float64 {
-	for _, k := range keys {
-		if v, ok := m[k]; ok {
-			var f float64
-			if json.Unmarshal(v, &f) == nil {
-				return f
-			}
-		}
-	}
-	return 0
 }

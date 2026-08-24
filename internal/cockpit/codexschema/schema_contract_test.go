@@ -49,34 +49,19 @@ To resolve:
 // gives the vendored schema a real Go consumer so it can no longer rot
 // unnoticed.
 //
-// Scope note: this test asserts what the PROTOCOL provides, not that codex.go
-// consumes it correctly. The 2026-08 audit that regenerated the schema for
-// codex 0.144.4 found the mappings below already disagreeing with the schema —
-// identically in 0.142.5, so they are pre-existing bugs and NOT drift. They are
-// deliberately not encoded as assertions here, because asserting codex.go's
-// current beliefs would freeze the bugs into the contract:
+// Scope note: the schema is the source of truth here, codex.go is not. Every
+// assertion below names the exact thing codex.go reads or sends, so that a
+// protocol change which invalidates a mapping fails HERE — loudly and with a
+// regeneration hint — rather than silently degrading the cockpit at runtime.
 //
-//   - item/agentMessage/delta and item/commandExecution/outputDelta carry
-//     `delta` as a plain string, but codex.go reads delta.text -> always "".
-//   - the ThreadItem variant is `mcpToolCall`, not `mcpTool`, so codex.go's
-//     item/started + item/completed switch never matches MCP tool items.
-//   - fileChange items expose `changes`, not command/name/path, so the tool
-//     event Name is always "".
-//   - thread/tokenUsage/updated nests the counters under
-//     tokenUsage.{last,total}, but parseUsageFromParams reads flat top-level
-//     keys -> no usage event is ever emitted; turn/completed carries a Turn,
-//     which has no usage field at all.
-//   - "turn/failed" is not a method in this protocol; a failed turn arrives as
-//     turn/completed with turn.status == "failed" (plus turn.error), or as the
-//     `error` notification.
-//   - thread/resume and turn/interrupt are ClientRequests (they take an id),
-//     but codex.go sends them as notifications; turn/interrupt additionally
-//     requires turnId, which codex.go does not send.
-//   - permissions approvals must be answered with a GrantedPermissionProfile
-//     under `permissions`; codex.go answers every approval with {"decision"}.
-//
-// See docs/backlog.md before "fixing" any assertion below to make it match
-// codex.go — the schema is the source of truth here, codex.go is not.
+// History: an earlier revision of this file documented seven mappings that
+// codex.go got wrong from the day they were written (a plain-string `delta`
+// read as delta.text, a "mcpTool" variant that does not exist, flat token
+// counters that are actually nested under tokenUsage.last/total, a "turn/failed"
+// method that is not in the protocol, thread/resume and turn/interrupt sent as
+// notifications when both are ClientRequests, and permissions approvals
+// answered with {"decision"}). Those were fixed in the CODEX-MAP change and the
+// assertions below now guard the corrected mappings.
 func TestSchemaContract(t *testing.T) {
 	doc := loadSchemaDoc(t)
 	t.Cleanup(func() {
@@ -117,6 +102,32 @@ func TestSchemaContract(t *testing.T) {
 				t.Errorf("codex.go uses method %q but it is absent from the schema", m)
 			}
 		}
+		// "turn/failed" was handled by codex.go for a long time and has never
+		// existed. If it ever appears, handleNotification should grow a real
+		// case for it instead of the dead one that was removed.
+		if methods["turn/failed"] {
+			t.Errorf(`"turn/failed" now exists in the schema; codex.go treats turn/completed{status:"failed"} as the only failure path`)
+		}
+	})
+
+	t.Run("client_requests_vs_notifications", func(t *testing.T) {
+		// codexClient sends these with an id and waits for the response.
+		// Demoting any of them back to rpc.notify() would hang or silently
+		// no-op, which is exactly the bug CODEX-MAP fixed.
+		requests := doc.methodsOf(t, "ClientRequest")
+		for _, m := range []string{"initialize", "thread/start", "thread/resume", "turn/start", "turn/interrupt"} {
+			if !requests[m] {
+				t.Errorf("codex.go calls %q as a JSON-RPC request, but it is not a ClientRequest", m)
+			}
+		}
+		// ...and this one is the single client notification.
+		notifications := doc.methodsOf(t, "ClientNotification")
+		if !notifications["initialized"] {
+			t.Errorf(`codex.go sends "initialized" as a notification, but it is not a ClientNotification`)
+		}
+		if requests["initialized"] {
+			t.Errorf(`"initialized" is now a ClientRequest; codex.go must wait for its response`)
+		}
 	})
 
 	t.Run("thread_start_result", func(t *testing.T) {
@@ -124,56 +135,99 @@ func TestSchemaContract(t *testing.T) {
 		doc.requireStringField(t, "v2/ThreadStartResponse", "thread", "id")
 	})
 
+	t.Run("thread_resume", func(t *testing.T) {
+		// threadResume sends {threadId} and reads result.thread.id back.
+		doc.requireStringField(t, "v2/ThreadResumeParams", "threadId")
+		doc.requireStringField(t, "v2/ThreadResumeResponse", "thread", "id")
+	})
+
+	t.Run("turn_start_and_interrupt", func(t *testing.T) {
+		// turnStart records result.turn.id so that turnInterrupt can name the
+		// turn: TurnInterruptParams requires BOTH ids.
+		doc.requireStringField(t, "v2/TurnStartResponse", "turn", "id")
+		doc.requireStringField(t, "v2/TurnInterruptParams", "threadId")
+		doc.requireStringField(t, "v2/TurnInterruptParams", "turnId")
+		doc.requireRequired(t, "v2/TurnInterruptParams", "threadId", "turnId")
+	})
+
 	t.Run("stream_deltas", func(t *testing.T) {
-		// handleNotification reads the streaming text out of these.
+		// handleNotification reads the streaming text straight out of `delta`.
+		// These are plain strings; reading delta.text yields "" forever.
 		doc.requireStringField(t, "v2/AgentMessageDeltaNotification", "delta")
 		doc.requireStringField(t, "v2/CommandExecutionOutputDeltaNotification", "delta")
 	})
 
 	t.Run("token_usage", func(t *testing.T) {
-		// parseUsageFromParams is fed the params of thread/tokenUsage/updated.
-		for _, bucket := range []string{"last", "total"} {
-			for _, field := range []string{"inputTokens", "outputTokens", "totalTokens"} {
-				doc.requireIntField(t, "v2/ThreadTokenUsageUpdatedNotification", "tokenUsage", bucket, field)
-			}
+		// parseUsageFromParams is fed the params of thread/tokenUsage/updated
+		// and reads tokenUsage.last, because every EventUsage consumer sums.
+		for _, field := range []string{"inputTokens", "outputTokens", "totalTokens"} {
+			doc.requireIntField(t, "v2/ThreadTokenUsageUpdatedNotification", "tokenUsage", "last", field)
+		}
+		// `total` is the running per-thread sum and is deliberately NOT read.
+		// Asserted so the "why last, not total" reasoning stays checkable.
+		for _, field := range []string{"inputTokens", "outputTokens", "totalTokens"} {
+			doc.requireIntField(t, "v2/ThreadTokenUsageUpdatedNotification", "tokenUsage", "total", field)
+		}
+		// There is no cost anywhere in this notification, so Usage.CostUSD
+		// stays 0 rather than being invented.
+		if _, ok := doc.field(t, "v2/ThreadTokenUsage", "cost"); ok {
+			t.Errorf("ThreadTokenUsage now carries a cost; parseUsageFromParams leaves Usage.CostUSD at 0")
 		}
 	})
 
 	t.Run("turn_lifecycle", func(t *testing.T) {
-		// turn/started and turn/completed carry the turn; failure is reported
-		// through turn.status/turn.error, and separately by the `error`
-		// notification.
+		// turn/started gives handleNotification the turn id to interrupt with;
+		// turn/completed is the ONLY terminal turn notification, and reports
+		// failure through turn.status == "failed" + turn.error.message.
+		doc.requireStringField(t, "v2/TurnStartedNotification", "turn", "id")
 		doc.requireStringField(t, "v2/TurnCompletedNotification", "turn", "id")
-		doc.requireField(t, "v2/TurnCompletedNotification", "turn", "status")
-		doc.requireField(t, "v2/TurnCompletedNotification", "turn", "error")
+		doc.requireStringField(t, "v2/TurnCompletedNotification", "turn", "error", "message")
+		statuses := doc.enumValues(t, "v2/TurnStatus")
+		for _, want := range []string{"completed", "failed", "interrupted"} {
+			if !statuses[want] {
+				t.Errorf("TurnStatus no longer has %q, which handleNotification branches on", want)
+			}
+		}
+		// The separate `error` notification carries the same TurnError shape;
+		// handleNotification de-duplicates the two.
 		doc.requireStringField(t, "v2/ErrorNotification", "error", "message")
 	})
 
 	t.Run("thread_items", func(t *testing.T) {
 		// item/started and item/completed carry a ThreadItem; codex.go
 		// switches on item.type and then reads a display name off the item.
+		// Each variant keeps that name in a different place.
 		variants := doc.threadItemVariants(t)
-		for itemType, field := range map[string]string{
-			"agentMessage":     "text",
-			"commandExecution": "command",
-			"fileChange":       "changes",
-			"mcpToolCall":      "tool",
+		for itemType, fields := range map[string][]string{
+			"agentMessage":     {"text"},
+			"commandExecution": {"command"},
+			"fileChange":       {"changes"},
+			"mcpToolCall":      {"server", "tool"},
 		} {
 			props, ok := variants[itemType]
 			if !ok {
-				t.Errorf("ThreadItem has no %q variant; codex.go's item/completed switch depends on it", itemType)
+				t.Errorf("ThreadItem has no %q variant; codex.go's item/started + item/completed switch depends on it", itemType)
 				continue
 			}
-			if !props[field] {
-				t.Errorf("ThreadItem variant %q lost field %q", itemType, field)
+			for _, f := range fields {
+				if !props[f] {
+					t.Errorf("ThreadItem variant %q lost field %q, which codexThreadItem.displayName() reads", itemType, f)
+				}
 			}
 		}
+		// codex.go used to match "mcpTool", which is not a variant tag. Guard
+		// against the typo coming back by name.
+		if _, ok := variants["mcpTool"]; ok {
+			t.Errorf(`ThreadItem now has an "mcpTool" variant; codex.go only handles "mcpToolCall"`)
+		}
+		// fileChange has no name of its own: displayName() falls back to the
+		// path of the first FileUpdateChange.
+		doc.requireStringField(t, "v2/FileUpdateChange", "path")
 	})
 
 	t.Run("approval_replies", func(t *testing.T) {
-		// replyApproval answers every approval with {"decision": ...}. That is
-		// correct for the two decision-shaped approvals below; the values must
-		// stay valid.
+		// Command and file-change approvals are answered with {"decision": …}
+		// and the values decisionString() emits must stay valid.
 		for _, def := range []string{"CommandExecutionApprovalDecision", "FileChangeApprovalDecision"} {
 			values := doc.enumValues(t, def)
 			for _, want := range []string{"accept", "acceptForSession", "decline"} {
@@ -182,11 +236,29 @@ func TestSchemaContract(t *testing.T) {
 				}
 			}
 		}
-		// Permissions approvals answer with a granted profile, not a decision.
-		// codex.go replies with {"decision": ...} here, which this schema does
-		// not accept — asserted so the mismatch stays visible rather than
-		// being silently "fixed" by a future schema change.
+		for _, def := range []string{"CommandExecutionRequestApprovalResponse", "FileChangeRequestApprovalResponse"} {
+			doc.requireField(t, def, "decision")
+		}
+
+		// Permissions approvals are a DIFFERENT shape: no decision at all.
+		// replyPermissionsApproval echoes the requested profile back under
+		// `permissions` and picks a `scope`.
+		if _, ok := doc.field(t, "PermissionsRequestApprovalResponse", "decision"); ok {
+			t.Errorf("PermissionsRequestApprovalResponse now has a `decision`; replyPermissionsApproval sends {permissions, scope}")
+		}
 		doc.requireField(t, "PermissionsRequestApprovalResponse", "permissions")
+		doc.requireField(t, "PermissionsRequestApprovalResponse", "scope")
+		doc.requireRequired(t, "PermissionsRequestApprovalResponse", "permissions")
+		scopes := doc.enumValues(t, "PermissionGrantScope")
+		for _, want := range []string{"turn", "session"} {
+			if !scopes[want] {
+				t.Errorf("PermissionGrantScope no longer accepts %q, which replyPermissionsApproval sends", want)
+			}
+		}
+		// The grant is the request echoed back, so the two profiles must stay
+		// structurally interchangeable.
+		doc.requireSameProperties(t, "v2/RequestPermissionProfile", "GrantedPermissionProfile")
+		doc.requireField(t, "PermissionsRequestApprovalParams", "permissions")
 	})
 }
 
@@ -251,24 +323,53 @@ func loadSchemaDoc(t *testing.T) *schemaDoc {
 	return &schemaDoc{path: path, root: root}
 }
 
-// deref follows "$ref": "#/definitions/..." one or more times.
+// deref follows "$ref": "#/definitions/..." one or more times, and collapses
+// the single-payload wrappers this schema uses around a ref: `allOf: [X]` and
+// the nullable `anyOf: [X, {"type":"null"}]`. Without the latter, an optional
+// field such as Turn.error would look like it had no properties at all.
 func (d *schemaDoc) deref(node any) any {
 	for i := 0; i < 16; i++ {
 		m, ok := node.(map[string]any)
 		if !ok {
 			return node
 		}
-		ref, ok := m["$ref"].(string)
-		if !ok {
-			return node
+		if ref, ok := m["$ref"].(string); ok {
+			next, ok := d.lookup(strings.TrimPrefix(ref, "#/"))
+			if !ok {
+				return node
+			}
+			node = next
+			continue
 		}
-		next, ok := d.lookup(strings.TrimPrefix(ref, "#/"))
-		if !ok {
-			return node
+		if inner, ok := soleNonNullBranch(m); ok {
+			node = inner
+			continue
 		}
-		node = next
+		return node
 	}
 	return node
+}
+
+// soleNonNullBranch returns the only non-null branch of an anyOf/allOf/oneOf
+// wrapper, if there is exactly one.
+func soleNonNullBranch(m map[string]any) (any, bool) {
+	for _, key := range []string{"anyOf", "allOf", "oneOf"} {
+		branches, ok := m[key].([]any)
+		if !ok {
+			continue
+		}
+		var kept []any
+		for _, b := range branches {
+			if bm, ok := b.(map[string]any); ok && hasType(bm, "null") {
+				continue
+			}
+			kept = append(kept, b)
+		}
+		if len(kept) == 1 {
+			return kept[0], true
+		}
+	}
+	return nil, false
 }
 
 // lookup resolves a slash-separated pointer against the document root.
@@ -371,6 +472,89 @@ func hasType(node map[string]any, want string) bool {
 		}
 	}
 	return false
+}
+
+// requireRequired asserts a definition lists the given properties as required.
+func (d *schemaDoc) requireRequired(t *testing.T, def string, want ...string) {
+	t.Helper()
+	node := d.definition(t, def)
+	have := map[string]bool{}
+	if arr, ok := node["required"].([]any); ok {
+		for _, v := range arr {
+			if s, ok := v.(string); ok {
+				have[s] = true
+			}
+		}
+	}
+	for _, w := range want {
+		if !have[w] {
+			t.Errorf("%s no longer requires %q, which codex.go always sends", def, w)
+		}
+	}
+}
+
+// requireSameProperties asserts two definitions expose the same property names.
+// replyPermissionsApproval echoes a RequestPermissionProfile back as a
+// GrantedPermissionProfile, so the two must not drift apart.
+func (d *schemaDoc) requireSameProperties(t *testing.T, a, b string) {
+	t.Helper()
+	names := func(def string) []string {
+		props, _ := d.definition(t, def)["properties"].(map[string]any)
+		var out []string
+		for k := range props {
+			out = append(out, k)
+		}
+		sort.Strings(out)
+		return out
+	}
+	an, bn := names(a), names(b)
+	if len(an) == 0 {
+		t.Errorf("%s has no properties", a)
+		return
+	}
+	if strings.Join(an, ",") != strings.Join(bn, ",") {
+		t.Errorf("%s (%v) and %s (%v) no longer have the same shape; codex.go echoes the requested profile back as the granted one",
+			a, an, b, bn)
+	}
+}
+
+// methodsOf collects the method names declared by one of the four top-level
+// message unions (ClientRequest / ClientNotification / ServerRequest /
+// ServerNotification). It is how the contract tells "must be sent with an id"
+// from "must be sent without one".
+func (d *schemaDoc) methodsOf(t *testing.T, union string) map[string]bool {
+	t.Helper()
+	node, ok := d.lookup("definitions/" + union)
+	if !ok {
+		t.Fatalf("schema %s has no %s union", d.path, union)
+	}
+	m, ok := node.(map[string]any)
+	if !ok {
+		t.Fatalf("%s is not an object", union)
+	}
+	branches, ok := m["oneOf"].([]any)
+	if !ok {
+		t.Fatalf("%s has no oneOf", union)
+	}
+	out := map[string]bool{}
+	for _, b := range branches {
+		bm, ok := b.(map[string]any)
+		if !ok {
+			continue
+		}
+		props, ok := bm["properties"].(map[string]any)
+		if !ok {
+			continue
+		}
+		mn, ok := props["method"].(map[string]any)
+		if !ok {
+			continue
+		}
+		for _, e := range enumOf(mn) {
+			out[e] = true
+		}
+	}
+	return out
 }
 
 // threadItemVariants maps each ThreadItem "type" value to its property set.

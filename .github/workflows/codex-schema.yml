@@ -1,0 +1,124 @@
+name: codex schema
+
+# The vendored codex app-server schema (internal/cockpit/codexschema/) is the
+# early-warning system for internal/cockpit/codex.go, which hand-maps the codex
+# JSON-RPC protocol and IS wired into production (internal/serve/cockpit.go).
+#
+# The main CI job cannot run the drift check because it never installs codex, so
+# this workflow is the half that does. It deliberately splits the signal in two:
+#
+#   HARD GATE  — does codex@latest still provide everything codex.go reads?
+#                (TestSchemaContract against the freshly generated schema)
+#                A failure here means production is, or is about to be, broken.
+#
+#   SOFT SIGNAL — is the vendored copy byte-identical to codex@latest?
+#                (TestSchemaDrift) codex ships often, so the vendored copy is
+#                expected to fall behind between deliberate regens. Blocking on
+#                that would recreate the permanent-red-everyone-ignores problem,
+#                so it is reported in the job summary instead of failing the run.
+on:
+  schedule:
+    # Monday 06:17 UTC — weekly staleness sweep. Nothing else is blocked by it.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "internal/cockpit/codex.go"
+      - "internal/cockpit/codexschema/**"
+      - ".github/workflows/codex-schema.yml"
+
+concurrency:
+  group: codex-schema-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # Deliberately @latest, not the pinned CODEX_VERSION: pinning to the
+      # vendored version would make drift undetectable by construction.
+      - name: install codex@latest
+        id: install
+        continue-on-error: true
+        run: |
+          npm install -g @openai/codex@latest
+          echo "version=$(codex --version | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+
+      - name: report install failure
+        if: steps.install.outcome != 'success'
+        run: |
+          echo "::warning title=codex schema check did not run::Installing @openai/codex failed; the vendored schema was NOT verified this run."
+          {
+            echo "### codex schema check: :warning: DID NOT RUN"
+            echo "Installing \`@openai/codex@latest\` failed, so neither the contract gate nor the"
+            echo "drift check executed. This is a tooling/network problem, not a drift signal."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: generate schema from codex@latest
+        if: steps.install.outcome == 'success'
+        run: |
+          mkdir -p "$RUNNER_TEMP/codex-schema"
+          codex app-server generate-json-schema --out "$RUNNER_TEMP/codex-schema"
+
+      # HARD GATE. Runs the contract assertions against codex@latest's schema
+      # rather than the vendored one, so a protocol change that breaks codex.go
+      # fails here even before anybody vendors the new schema.
+      - name: contract check against codex@latest
+        if: steps.install.outcome == 'success'
+        env:
+          PACTIFY_CODEX_SCHEMA: ${{ runner.temp }}/codex-schema/codex_app_server_protocol.schemas.json
+        run: go test ./internal/cockpit/codexschema/ -run TestSchemaContract -v
+
+      # SOFT SIGNAL. PACTIFY_REQUIRE_CODEX=1 makes the test fail rather than skip
+      # if codex somehow is not on PATH, so this step can never pass vacuously.
+      - name: vendored-vs-latest drift
+        id: drift
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        env:
+          PACTIFY_REQUIRE_CODEX: "1"
+        run: go test ./internal/cockpit/codexschema/ -run TestSchemaDrift -v
+
+      - name: summary
+        if: steps.install.outcome == 'success'
+        run: |
+          VENDORED="$(tr -d '[:space:]' < internal/cockpit/codexschema/CODEX_VERSION)"
+          LATEST="${{ steps.install.outputs.version }}"
+          if [ "${{ steps.drift.outcome }}" = "success" ]; then
+            {
+              echo "### codex schema check: :white_check_mark: up to date"
+              echo "Vendored schema matches codex \`$LATEST\` exactly."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=vendored codex schema is stale::vendored=$VENDORED latest=$LATEST — regenerate and re-verify internal/cockpit/codex.go"
+            {
+              echo "### codex schema check: :warning: vendored schema is STALE"
+              echo ""
+              echo "| | version |"
+              echo "|---|---|"
+              echo "| vendored (\`CODEX_VERSION\`) | \`$VENDORED\` |"
+              echo "| codex@latest | \`$LATEST\` |"
+              echo ""
+              echo "The contract gate passed, so \`internal/cockpit/codex.go\` still reads fields"
+              echo "codex \`$LATEST\` provides — this is **not** a production break. It does mean the"
+              echo "vendored reference copy is behind. To clear it:"
+              echo ""
+              echo '```'
+              echo "codex app-server generate-json-schema --out /tmp/codex-schema"
+              echo "cp /tmp/codex-schema/codex_app_server_protocol.schemas.json internal/cockpit/codexschema/"
+              echo "codex --version | awk '{print \$NF}' > internal/cockpit/codexschema/CODEX_VERSION"
+              echo '```'
+              echo ""
+              echo "Then re-read the diff and re-verify codex.go's request/notification mappings."
+              echo "See the failing \`vendored-vs-latest drift\` step above for the changed definitions."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

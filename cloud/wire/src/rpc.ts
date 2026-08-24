@@ -1,7 +1,26 @@
 import { z } from 'zod'
 
-/** Agent kinds linxd can drive. */
-export const AgentKind = z.enum(['opencode', 'claude', 'codex', 'kimi', 'gemini'])
+/**
+ * Agent kinds a machine can drive.
+ *
+ * Additive-only: a machine announces these in `MachineInfo.agentKinds`, and
+ * `toMachineInfo` (relay) validates with a THROWING `MachineInfo.parse` — a
+ * kind outside this enum does not degrade to a dropped field, it throws and
+ * takes down the whole account's machine list. So the relay must ship a version
+ * that KNOWS a kind before any machine announces it. Kept in lockstep with
+ * pactify's `pactToWireKind` (internal/serve/remotechannel.go), guarded by
+ * TestPactToWireKindConformsToWireEnum.
+ *
+ * `antigravity` is the `agy` CLI — a headless, drivable kind since 2026-08-22.
+ */
+export const AgentKind = z.enum([
+  'opencode',
+  'claude',
+  'codex',
+  'kimi',
+  'gemini',
+  'antigravity',
+])
 export type AgentKind = z.infer<typeof AgentKind>
 
 export const SpawnRequest = z.object({

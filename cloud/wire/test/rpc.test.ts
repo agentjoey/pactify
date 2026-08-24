@@ -74,6 +74,31 @@ describe('RpcRequest', () => {
     expect(AgentKind.options).toContain('opencode')
   })
 
+  // Kept in lockstep with pactify's pactToWireKind (internal/serve/remotechannel.go):
+  // a machine announcing a kind outside this enum makes the relay's throwing
+  // MachineInfo.parse blow up the whole account's machine list.
+  it('enumerates every drivable kind pactify advertises', () => {
+    expect([...AgentKind.options].sort()).toEqual([
+      'antigravity',
+      'claude',
+      'codex',
+      'gemini',
+      'kimi',
+      'opencode',
+    ])
+  })
+
+  it('accepts a spawn with the antigravity (agy) kind', () => {
+    const r = RpcRequest.parse({
+      type: 'spawn',
+      machineId: 'm1',
+      agentKind: 'antigravity',
+      workdir: '/repo',
+    })
+    if (r.type === 'spawn') expect(r.agentKind).toBe('antigravity')
+    else throw new Error('expected spawn')
+  })
+
   it('parses a list-files request', () => {
     const r = RpcRequest.parse({
       type: 'list-files',

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -288,7 +289,6 @@ func TestTempPath(t *testing.T) {
 		os.TempDir():               true, // the root itself
 		"/tmp":                     true,
 		"/tmp/agyproj":             true,
-		"/private/tmp/agyproj":     true, // macOS spelling of the same dir
 		"/pactify-not-temp/demo":   false,
 		"/Users":                   false,
 		// A path that merely starts with the same characters as a temp root is
@@ -296,6 +296,14 @@ func TestTempPath(t *testing.T) {
 		"/tmp-not-really":      false,
 		"/tmp-not-really/proj": false,
 	}
+	// "/private/tmp" is only the same directory as "/tmp" where the OS makes
+	// /tmp a symlink to it (macOS). On Linux (the CI runner) /tmp is a real
+	// directory and /private/tmp is not a temp root at all, so asserting this
+	// case unconditionally fails there — it must track the OS, not be a
+	// universal truth. Confirmed as an actual CI failure (PR #47), not a
+	// hypothetical: TempPath("/private/tmp/agyproj") on ubuntu-latest is
+	// correctly false, and a portable test must expect that.
+	cases["/private/tmp/agyproj"] = runtime.GOOS == "darwin"
 	for path, want := range cases {
 		if got := TempPath(path); got != want {
 			t.Errorf("TempPath(%q) = %v, want %v", path, got, want)

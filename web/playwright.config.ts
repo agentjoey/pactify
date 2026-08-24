@@ -5,7 +5,10 @@ import { defineConfig, devices } from "@playwright/test";
 //   npm run e2e        → npm run build && playwright test
 //   npm run e2e:test   → playwright test (dist assumed already built)
 // CI builds in its own step then runs e2e:test via `npm run e2e`.
-const PORT = 4173;
+// Env-overridable because `reuseExistingServer` below silently ATTACHES to
+// whatever already owns this port — a stray preview server from another project
+// turns the whole gate into a socket-hang-up. Default unchanged; CI keeps 4173.
+const PORT = Number(process.env.E2E_PORT || 4173);
 
 export default defineConfig({
   testDir: "e2e",
@@ -23,6 +26,7 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "node e2e/mock-server.mjs",
+    env: { PORT: String(PORT) },
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

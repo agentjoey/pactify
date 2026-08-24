@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fetchProjects, fetchState, subscribeEvents, subscribeAgentStream, browseFs, postRegister, setupApply, renameRegistry, createManifest, deleteManifest } from "./api";
+import { fetchProjects, fetchState, subscribeEvents, subscribeAgentStream, browseFs, postRegister, setupApply, renameRegistry, createManifest, deleteManifest, getFallbackProposals, approveFallback, ProposalGoneError } from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -278,6 +278,83 @@ describe("manifest mutations", () => {
   it("deleteManifest throws with the server error message on 4xx", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "not installed" }), { status: 400 })));
     await expect(deleteManifest("myx")).rejects.toThrow("not installed");
+    vi.unstubAllGlobals();
+  });
+});
+
+// The dashboard's fallback cards and internal/serve/fallback_proposal.go have to
+// agree on one wire shape. They did not, silently, in both directions: the card
+// gated on a `pending` flag the list response does not carry, and approve posted
+// a hard-coded "{}" that the server 404s — which the card renders as "someone
+// else already approved it". Both suites stayed green. These payloads are copied
+// from the Go handler; a revert on either side has to fail here.
+describe("fallback proposals wire shape", () => {
+  const serveResponse = {
+    proposals: [
+      {
+        scope: "p3",
+        task: "p3-process-b",
+        seat: "build2",
+        fromRole: "frontend",
+        toRole: "frontend-cheap",
+        reason: "worker run: run timeout (--run-timeout) exceeded",
+      },
+      { scope: "p4", task: "p4-x", seat: "build3", toRole: "backup" },
+    ],
+  };
+
+  it("getFallbackProposals returns every element of {proposals: [...]}", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => serveResponse })));
+    const list = await getFallbackProposals("p1");
+    expect(list).toEqual(serveResponse.proposals);
+    expect(fetch).toHaveBeenCalledWith("/api/projects/p1/fallback-proposal");
+    vi.unstubAllGlobals();
+  });
+
+  it("getFallbackProposals reads the empty list as nothing pending", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ proposals: [] }) })));
+    expect(await getFallbackProposals("p1")).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+
+  it("getFallbackProposals refuses a response that is not the list shape", async () => {
+    // The retired single-object shape. Fail closed: half-understanding a
+    // response must not put an approve button in front of a person.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, json: async () => ({ pending: true, task: "t1", seat: "s" }) })),
+    );
+    expect(await getFallbackProposals("p1")).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+
+  it("getFallbackProposals treats a non-2xx as nothing pending", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })));
+    expect(await getFallbackProposals("p1")).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+
+  it("approveFallback names the task in the body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ status_url: "/s" }), { status: 202 })),
+    );
+    await approveFallback("p1", "p3-process-b");
+    const f = fetch as unknown as ReturnType<typeof vi.fn>;
+    const [url, init] = f.mock.calls[0];
+    expect(url).toBe("/api/projects/p1/fallback-proposal/approve");
+    expect(init.method).toBe("POST");
+    // The server matches the pending proposal BY TASK; an empty body 404s.
+    expect(JSON.parse(init.body)).toEqual({ task: "p3-process-b" });
+    vi.unstubAllGlobals();
+  });
+
+  it("approveFallback maps the server's 404 to ProposalGoneError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ error: "no fallback proposal is pending for that task" }), { status: 404 })),
+    );
+    await expect(approveFallback("p1", "gone")).rejects.toBeInstanceOf(ProposalGoneError);
     vi.unstubAllGlobals();
   });
 });

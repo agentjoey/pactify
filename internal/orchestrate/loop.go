@@ -129,22 +129,38 @@ type Options struct {
 	// the one resolution. RunSandbox wires it (the only caller with RuntimeDir ≠
 	// Dir); nil probes live (direct mirrorLedger use in tests).
 	pactIgnoredMemo *ignoredMemo
-	// triedFallbacks records, per seat, the role profiles this RUN has already
-	// fallen back to, so the chain advances instead of re-proposing the same
-	// profile. Run-scoped by design: approval never persists to the machine
-	// config, because tomorrow's quota may have reset.
-	triedFallbacks map[string][]string
-	// ApproveFallback adopts the pending fallback proposal (written by an
-	// env-class escalation) for THIS run: the named seat launches under the
-	// proposed role. Approval is never persisted — tomorrow's quota may differ.
-	ApproveFallback bool
+	// triedFallbacks records, per SCOPE then seat, the role profiles this run has
+	// already fallen back to, so the chain advances instead of re-proposing the
+	// same profile. Scoped like roleOverride (the chain advances per scope, since
+	// that is where proposals and approvals live). Run-scoped by design:
+	// approval never persists to the machine config, because tomorrow's quota may
+	// have reset.
+	triedFallbacks map[string]map[string][]string
+	// ApproveFallback names the TASKS whose pending fallback proposals this run
+	// adopts (repeatable `--approve-fallback <task>`): each proposal's seat
+	// launches under its proposed role for this run. The key is the task id
+	// because task ids are globally unique in the pact protocol and the
+	// escalation's own hint already names one, so the message is copy-pasteable.
+	// Approval is never persisted — tomorrow's quota may differ.
+	ApproveFallback []string
 	// ResetTask names a task whose UNCOMMITTED work is discarded before the run
 	// resumes. Committed work is never touched: reverting delivered commits is a
 	// human's job in git, not the driver's.
 	ResetTask string
-	// roleOverride is the run-scoped seat→role override an approval installs.
-	roleOverride map[string]string
+	// roleOverride is the seat→role override an approval installs, keyed by SCOPE
+	// first. Scope-level, not run-level: two features driven concurrently can
+	// share one seat (a `build2` that owns work in both), and a run-level map
+	// would silently apply an approval the operator gave for one feature to the
+	// other as well — approving something that was never approved (FALLBACK-PAR
+	// §2.3).
+	roleOverride map[string]map[string]string
 }
+
+// scope names the fallback/history partition this Options value drives: the
+// feature filter when set, else "all". The parallel driver hands each feature
+// its own Options copy with Feature set, which is what keeps scope-keyed state
+// (roleOverride, triedFallbacks) from leaking between concurrent features.
+func (opts Options) scope() string { return historyScope(opts.Feature) }
 
 // projectBase returns the repo's integration base branch, or "" when it cannot be
 // determined. A missing base is safe for non-scoped gates (they simply get an
@@ -357,8 +373,17 @@ func (opts Options) run(ctx context.Context) error {
 	if err := validateDriverSeat(opts.Dir, opts.Orchestrator); err != nil {
 		return err
 	}
-	// Adopt a human-approved fallback (run-scoped) before anything launches.
-	opts = opts.applyApprovedFallback()
+	// Adopt human-approved fallbacks before anything launches. The alias scope is
+	// this run's own: serial drives exactly one scope, so an approval typed on the
+	// command line must take effect even when the proposal was filed under a
+	// different --feature filter (serve's approve resumes without one). A task
+	// with no pending proposal aborts the run rather than starting it under the
+	// same configuration the operator thought they had just changed (§2.2).
+	adopted, err := opts.applyApprovedFallback(opts.scope())
+	if err != nil {
+		return err
+	}
+	opts = adopted
 	if opts.ResetTask != "" {
 		// Discard ONLY uncommitted changes: committed work is delivered work and
 		// reverting it is a human's call in git, not the driver's.
@@ -376,6 +401,11 @@ func (opts Options) run(ctx context.Context) error {
 		if err := ensureRuntimeExcludedLocal(opts.Dir); err != nil {
 			return fmt.Errorf("orchestrate: exclude runtime files: %w", err)
 		}
+		// Record this run's shape so a resume spawned by another process (serve's
+		// fallback approval) reproduces it. Serial writes 1 for the same reason
+		// RunParallel writes N: whoever ran LAST owns the file, so a previous
+		// parallel run's concurrency can never leak into this run's resume (§2.8).
+		_ = WriteRunParams(opts.runtimeDir(), RunParams{MaxConcurrency: 1})
 	}
 
 	// Heartbeat status.json for the life of the run so a live-but-silent stint (an
@@ -480,44 +510,7 @@ func (opts Options) run(ctx context.Context) error {
 		if !opts.DryRun && (act.Kind == ActRunOwner || act.Kind == ActRunReviewer) {
 			if reason, tripped := tripped(act.Task, h, opts.thresholdsFor(st, act)); tripped {
 				opts.emitEscalatedStatus(view, act.Task, reason, h)
-				// Snapshot the failure history INTO the escalation record before the
-				// circuit-breaker reset below erases it — otherwise "limit exceeded"
-				// ships with an empty history file and no narrative evidence (rerun
-				// F2-c: the persisted counters read {} while the record claimed a
-				// tripped limit).
-				snapshot := fmt.Sprintf("failure history at trip: fails=%d, rework=%d, class=%s, last=%q (budget reset so a post-fix rerun resumes)",
-					h.Fails[act.Task], h.Rework[act.Task], h.LastClass[act.Task], h.LastFail[act.Task])
-				// The threshold has fired and the human is being notified: drop this
-				// task's persisted failure budget so a post-fix rerun resumes instead
-				// of re-tripping on the loaded count (rework is ledger-derived and
-				// stands until a human accepts the task or raises the bound).
-				// env-class means the agent produced nothing — another (agent, model)
-				// profile may succeed, so propose one and let the human approve it.
-				// logic-class (it worked, the work is wrong) gets the plain
-				// escalation: swapping agents there would just burn a second budget
-				// on the same bad task.
-				proposalNote := ""
-				if h.LastClass[act.Task] == FailEnv {
-					if to, from, ok := nextFallback(act.Seat, opts.triedFallbacks[act.Seat]); ok {
-						p := FallbackProposal{
-							Task: act.Task, Seat: act.Seat, FromRole: from, ToRole: to,
-							Reason: h.LastFail[act.Task],
-							Tried:  append(append([]string{}, opts.triedFallbacks[act.Seat]...), to),
-						}
-						if err := writeProposal(opts.runtimeDir(), p); err == nil {
-							proposalNote = fmt.Sprintf("\n\nfallback proposal: run seat %q as role %q instead of %q — approve with `pactify orchestrate --resume --approve-fallback`",
-								act.Seat, to, from)
-						}
-					}
-				} else {
-					proposalNote = fmt.Sprintf("\n\nthis is a logic-class failure (the agent delivered work; it is the work that is wrong). If you suspect the partial work is poisoned, discard the UNCOMMITTED changes and retry with `pactify orchestrate --resume --reset-task %s`.", act.Task)
-				}
-				delete(h.Fails, act.Task)
-				delete(h.LastFail, act.Task)
-				_ = writeHistory(opts.runtimeDir(), scope, h)
-				return opts.escalate(act.Feature, act.Task, reason,
-					evidenceFor(st, act.Task)+"\n\n"+snapshot+proposalNote,
-					"人工介入后 pactify orchestrate 续跑")
+				return opts.escalateTripped(scope, act, reason, h, st)
 			}
 		}
 		if !opts.DryRun && opts.Th.MaxIters > 0 && h.Iters >= opts.Th.MaxIters {
@@ -1203,6 +1196,63 @@ func gateCommands(dir string, f projection.Feature) []string {
 	return cmds
 }
 
+// escalateTripped is the single place a tripped threshold becomes an escalation.
+// Both drivers call it so the two paths cannot drift again (FALLBACK-PAR: the
+// parallel copy had silently lost the fallback proposal and the failure
+// snapshot). Status emission stays with the caller: the serial loop writes one
+// status.json, the parallel driver writes one file per feature — both correct,
+// and different.
+//
+// scope is the fallback/history partition (a feature id, or "all" for an
+// unfiltered serial run). It keys the proposal file and this run's tried-profile
+// chain, so two concurrent features that share a seat propose — and are approved
+// — independently.
+//
+// In order: snapshot the failure history into the evidence (before the
+// circuit-breaker reset erases it), branch on the failure class for the
+// proposal/hint, reset the task's failure budget, persist the history, write the
+// record + notify.
+func (opts Options) escalateTripped(scope string, act Action, reason string, h History, st projection.State) error {
+	// Snapshot the failure history INTO the escalation record before the
+	// circuit-breaker reset below erases it — otherwise "limit exceeded" ships
+	// with an empty history file and no narrative evidence (rerun F2-c: the
+	// persisted counters read {} while the record claimed a tripped limit).
+	snapshot := fmt.Sprintf("failure history at trip: fails=%d, rework=%d, class=%s, last=%q (budget reset so a post-fix rerun resumes)",
+		h.Fails[act.Task], h.Rework[act.Task], h.LastClass[act.Task], h.LastFail[act.Task])
+	// env-class means the agent produced nothing — another (agent, model) profile
+	// may succeed, so propose one and let the human approve it. logic-class (it
+	// worked, the work is wrong) gets the plain escalation: swapping agents there
+	// would just burn a second budget on the same bad task.
+	proposalNote := ""
+	if h.LastClass[act.Task] == FailEnv {
+		if to, from, ok := nextFallback(act.Seat, opts.triedFallbacks[scope][act.Seat]); ok {
+			p := FallbackProposal{
+				Task: act.Task, Seat: act.Seat, FromRole: from, ToRole: to,
+				Reason: h.LastFail[act.Task],
+				Tried:  append(append([]string{}, opts.triedFallbacks[scope][act.Seat]...), to),
+			}
+			// A proposal that cannot be written must not block the escalation: the
+			// pause is what the human needs; the suggestion is a bonus.
+			if err := writeProposal(opts.runtimeDir(), scope, p); err == nil {
+				proposalNote = fmt.Sprintf("\n\nfallback proposal: run seat %q as role %q instead of %q — approve with `pactify orchestrate --resume --approve-fallback %s`",
+					act.Seat, to, from, act.Task)
+			}
+		}
+	} else {
+		proposalNote = fmt.Sprintf("\n\nthis is a logic-class failure (the agent delivered work; it is the work that is wrong). If you suspect the partial work is poisoned, discard the UNCOMMITTED changes and retry with `pactify orchestrate --resume --reset-task %s`.", act.Task)
+	}
+	// The threshold has fired and the human is being notified: drop this task's
+	// persisted failure budget so a post-fix rerun resumes instead of re-tripping
+	// on the loaded count (rework is ledger-derived and stands until a human
+	// accepts the task or raises the bound).
+	delete(h.Fails, act.Task)
+	delete(h.LastFail, act.Task)
+	_ = writeHistory(opts.runtimeDir(), scope, h)
+	return opts.escalate(act.Feature, act.Task, reason,
+		evidenceFor(st, act.Task)+"\n\n"+snapshot+proposalNote,
+		"人工介入后 pactify orchestrate 续跑")
+}
+
 // escalate writes the escalation record and notifies. It returns nil even on a
 // write/notify failure path's own error only when the record cannot be written,
 // because escalation is a pause, not a hard stop — but a write error is a real
@@ -1343,7 +1393,7 @@ func (opts Options) kind(seatID string) string {
 	}
 	// An approved fallback outranks the configured binding: the human just said
 	// "run this seat as that role for this run".
-	if r, ok := opts.roleOverride[seatID]; ok {
+	if r, ok := opts.roleOverride[opts.scope()][seatID]; ok {
 		if cfg, err := roles.Load(); err == nil {
 			if p, defined := cfg.Profiles[r]; defined && p.Kind != "" {
 				return p.Kind

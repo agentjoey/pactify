@@ -21,8 +21,12 @@ const BASE = process.env.SHOT_BASE || "http://127.0.0.1:17082";
 const OUT = process.env.SHOT_OUT || "/tmp/pactify-shots";
 const STATE = process.env.SHOT_STATE || "pending"; // pending | error | loading
 
+// Wire shape = internal/serve's {"proposals": [...]}. For the multi-card view
+// against the FINAL built bundle use scripts/shot-fallback-cards.mjs instead:
+// this one intercepts the API against a long-running serve, which may be
+// serving a stale dist.
 const proposal = {
-  pending: true,
+  scope: "p3",
   task: "p3-process-b",
   seat: "build2",
   fromRole: "frontend",
@@ -35,7 +39,7 @@ async function main() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 
-  await page.route("**/fallback-proposal", (r) => r.fulfill({ json: proposal }));
+  await page.route("**/fallback-proposal", (r) => r.fulfill({ json: { proposals: [proposal] } }));
   if (STATE === "error") {
     // The approve path failing: the card must keep the proposal and show why.
     await page.route("**/fallback-proposal/approve", (r) =>

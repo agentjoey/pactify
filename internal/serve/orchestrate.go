@@ -436,14 +436,26 @@ func (s *Server) handleOrchestrateRunOrResume(w http.ResponseWriter, r *http.Req
 // shared core of the dashboard Run button (HTTP) and the remote orchestrate rpc.
 // Returns an HTTP-ish status code with the error for the HTTP caller's mapping.
 func (s *Server) spawnOrchestrate(dir, feature string, seatKinds map[string]string, maxConcurrency int, resume bool) (int, error) {
-	return s.spawnOrchestrateWith(dir, feature, seatKinds, maxConcurrency, resume, false)
+	return s.spawnOrchestrateWith(dir, feature, seatKinds, maxConcurrency, resume, nil)
 }
 
-// spawnOrchestrateApprove resumes the paused run adopting the pending fallback
-// proposal (the dashboard approval path; CLI equivalent:
-// `pactify orchestrate --resume --approve-fallback`).
-func (s *Server) spawnOrchestrateApprove(dir string) (int, error) {
-	return s.spawnOrchestrateWith(dir, "", nil, 0, true, true)
+// spawnOrchestrateApprove resumes the paused run adopting task's pending
+// fallback proposal (the dashboard approval path; CLI equivalent:
+// `pactify orchestrate --resume --approve-fallback <task>`).
+//
+// The concurrency is read back from the run-params file the driver leaves,
+// because serve has no other record of it: orchRunning is an in-memory set of
+// directories carrying no run parameters at all. This used to be hardcoded to 0,
+// so approving one agent swap silently downgraded a `--max-concurrency 3` run to
+// serial — cancelling out the very capability the approval exists to restore
+// (FALLBACK-PAR §2.8). Missing or unreadable params mean serial, which is
+// exactly what this path did before.
+func (s *Server) spawnOrchestrateApprove(dir, task string) (int, error) {
+	maxConcurrency := 0
+	if p, ok := orchestrate.ReadRunParams(dir); ok && p.MaxConcurrency > 1 {
+		maxConcurrency = p.MaxConcurrency
+	}
+	return s.spawnOrchestrateWith(dir, "", nil, maxConcurrency, true, []string{task})
 }
 
 // sortedKeys returns m's keys in a stable order, so the child's argv is
@@ -458,7 +470,7 @@ func sortedKeys(m map[string]string) []string {
 	return out
 }
 
-func (s *Server) spawnOrchestrateWith(dir, feature string, seatKinds map[string]string, maxConcurrency int, resume, approveFallback bool) (int, error) {
+func (s *Server) spawnOrchestrateWith(dir, feature string, seatKinds map[string]string, maxConcurrency int, resume bool, approveFallback []string) (int, error) {
 	// Claim the in-memory marker BEFORE the file check: it is the only guard
 	// with no window between check and spawn (see orchRunning).
 	if !orchMarkRunning(dir) {
@@ -502,8 +514,10 @@ func (s *Server) spawnOrchestrateWith(dir, feature string, seatKinds map[string]
 	if resume {
 		args = append(args, "--resume")
 	}
-	if approveFallback {
-		args = append(args, "--approve-fallback")
+	// One flag per approved task: the child keys approvals by task id, so a
+	// bare --approve-fallback would no longer even parse.
+	for _, task := range approveFallback {
+		args = append(args, "--approve-fallback", task)
 	}
 	env := []string{"PACT_AGENT_ID=" + s.seat}
 

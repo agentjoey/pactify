@@ -43,21 +43,19 @@ func TestNextFallbackWalksTheChain(t *testing.T) {
 
 func TestProposalRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	if _, ok := readProposal(dir); ok {
+	if _, ok := readProposal(dir, historyScopeAll); ok {
 		t.Fatal("no proposal should exist yet")
 	}
 	p := FallbackProposal{Task: "t1", Seat: "w", FromRole: "primary", ToRole: "second", Reason: "env failure", Tried: []string{"second"}}
-	if err := writeProposal(dir, p); err != nil {
+	if err := writeProposal(dir, historyScopeAll, p); err != nil {
 		t.Fatal(err)
 	}
-	got, ok := readProposal(dir)
+	got, ok := readProposal(dir, historyScopeAll)
 	if !ok || got.Task != "t1" || got.ToRole != "second" || len(got.Tried) != 1 {
 		t.Fatalf("round-trip lost data: %+v (ok=%v)", got, ok)
 	}
-	if err := clearProposal(dir); err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := readProposal(dir); ok {
+	clearProposals(dir, []string{historyScopeAll})
+	if _, ok := readProposal(dir, historyScopeAll); ok {
 		t.Fatal("cleared proposal must be gone")
 	}
 }

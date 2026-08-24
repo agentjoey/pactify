@@ -47,7 +47,7 @@ func (opts Options) withDefaults() Options {
 	// genuinely unset knob defaults to 2. Per-task tier derivation happens in
 	// budgetFor (spec execution-tiering §5).
 	if opts.triedFallbacks == nil {
-		opts.triedFallbacks = map[string][]string{}
+		opts.triedFallbacks = map[string]map[string][]string{}
 	}
 	if opts.MaxFixRounds == 0 && !opts.ExplicitBudget.FixRounds {
 		opts.MaxFixRounds = 2

@@ -36,7 +36,7 @@ func TestEnvClassTripWritesProposal(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	p, ok := readProposal(dir)
+	p, ok := readProposal(dir, historyScopeAll)
 	if !ok {
 		t.Fatalf("env-class trip must write a fallback proposal; notify=%v", notify.msgs)
 	}
@@ -57,7 +57,7 @@ func TestUnboundSeatWritesNoProposal(t *testing.T) {
 	if err := Run(context.Background(), baseOpts(dir, errRunner{context.DeadlineExceeded}, &okExec{}, &recNotify{})); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if _, ok := readProposal(dir); ok {
+	if _, ok := readProposal(dir, historyScopeAll); ok {
 		t.Fatal("an unbound seat must not get a fallback proposal")
 	}
 }

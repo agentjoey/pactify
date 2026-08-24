@@ -176,12 +176,21 @@ this kind, so it can't reconstruct that conflicting flag pair.
 
 **Fallback.** When a stint fails having produced *nothing* (quota exhausted,
 auth expired, a missing binary — "env-class"), the driver proposes the seat's
-next fallback role, writes `fallback-proposal.json` beside the escalation, and
-pauses. Approve it with:
+next fallback role, writes `.pact/orchestrate/fallback/<scope>.json` beside the
+escalation, and pauses. `scope` is the feature id (one file per concurrently
+driven feature under `--max-concurrency > 1`) or `all` for an unfiltered serial
+run. Approve a proposal by naming its **task**:
 
 ```bash
-pactify orchestrate --resume --approve-fallback
+pactify orchestrate --resume --approve-fallback <task-id>   # repeatable
 ```
+
+The escalation record prints the exact command. Naming a task that has no
+pending proposal is an error and the run does not start — otherwise you would
+believe the agent was swapped while the run burns another budget cycle on the
+same configuration. Under `--max-concurrency > 1` the approval applies **only to
+the feature whose proposal you named**, even when another feature shares that
+seat.
 
 The approval applies to the current run only — tomorrow's quota may have reset.
 A failure where the agent *did* deliver work ("logic-class") is not a fallback

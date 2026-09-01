@@ -1,4 +1,4 @@
-# Pactify — Claude Code Context
+# Pactify — Agent Context (GEMINI.md：gemini-cli · antigravity/agy)
 
 ## ⭐ Session 启动（每次必执行）
 ```bash
@@ -11,33 +11,59 @@ cat .agent/CURRENT.md
 协议核心：`.pact/` 文件契约；CLI 是协议的标准实现；各厂商入口是薄封装。
 **Location:** ~/AgentWorks/Code_Claude/pactify
 **GitHub:**   agentjoey/pactify
-**Version:**  v0.1.0
+**Version:** **v0.11.0**（2026-08-24，tag 已发、Release + CI 全绿）。工作分支 `feat/fallback-par` 领先 `main` 一个提交（`[FALLBACK-PAR]` 并行 run 的 fallback 提案闭环，已过全门，**未 push、未开 PR** —— 按约定提交/推送只在 Human Owner 要求时做）。完整版本历史见 **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)**；开着的条目见 `docs/backlog.md`（gitignored）。
+
+**当前状况（2026-08-29 首次核实 · 2026-09-01 更新，全部逐条实测，非文档互证）**
+- **本地闭环健康**：`go build ./...` + `go test ./...` 全绿（37 包）· vitest 669/669 · tsc clean。`main` 与 `origin/main` 同步、CI 绿、无未合 PR。**本地分支已于 2026-09-01 清理**（10 条 `ahead=0` 的残留分支已 `git branch -d`），现只剩 `main` / `staging` / `feat/fallback-par` 三条。
+- **⚠️ 云端整层离线**：`pactify-relay` 与 `pactify-relay-staging` 两个 fly app **都是 0 machines**，`/health` 连不上；`origin/production` 停在 2026-07-04（落后 main **652** 提交），`origin/staging` 落后 **224**。docs 站 pactify.dev 与 dashboard orx.pactify.dev（Vercel）本身正常。⇒ **hosted 模式当前不可用**，只有 local 模式（`pactify serve`）是活的。连带：v0.11.0 记的「relay 必须先于二进制部署」这条硬约束**至今未执行**——因整层没跑，眼下没有线上事故面，但**一旦拉起 relay，必须先部署 relay 再放二进制**，否则线上 `origin/production` 的 wire 枚举缺 `antigravity`，而 relay 走 throwing 的 `MachineInfo.parse`，一台 agy 机器就能打掉整个账户的机器列表。
+- **⚠️ 产品级缺口 `[UI-GATE]`**（2026-08-29 用户实撞，已记 backlog）：账本滞后于现实时（agent 交付了但没走完协议流转），Board 只给 Accept/Changes 两个按钮，需要的「代 owner 补 checkpoint」没有入口，Human Owner 只能回命令行。同一次实撞还坐实：`Checkpoint` 的 `CommitAll`（`engine.go:975`）在**有并发 run 的仓库里本质不安全**——两次 checkpoint 之间 worker 写出的文件被一并提交，代码量归因失真。建议先做最便宜的那条：`checkpoint` 加 in-place run 守卫。
+- **架构债主线未动**：账本与 git 工作目录耦合（"单一规范 ledger" 重构）仍未排期；`[SANDBOX]` 只是定点修复，ledger 漂移无检测、tracked-`.pact` 恢复限制两条根因仍在。
+- **⚠️ `[ACP-MODEL]` per-seat 模型绑定在 opencode 上 100% 失效**（2026-08-31 实撞并逐层坐实）：`opencode` 是**默认走 ACP** 的 kind（`DefaultTransportModes()`），而 ACP 路径根本不调 `agentcfg.ResolveSeat*`、`acpCommand` 也不传 `--model`——role binding 的模型钉被静默丢弃，实跑的是 opencode 全局默认。已用 opencode 自己的日志坐实（243 次 `modelID=deepseek-v4-pro`，绑定写的是 `minimax/MiniMax-M3`）。**这个静默失真直接导致 Human Owner 误判「worker 没干活」**。临时绕过 `--transport opencode=cmd`；建议先做「有 model pin 却走 ACP 时打警告」这条止血。
+- **⚠️ `[REPO-PRIVATE]` 仓库是 private**：`README.md` 里的 `go install github.com/agentjoey/pactify/...` 与 `/plugin marketplace add agentjoey/pactify` 对外**都不可用**（curl|sh 那条通）。当初 `376ede4` 的提交信息写的是「Public repo」，说明意图是公开——需要决定翻开关还是改文档。
+- **`[COMPETITOR]` getpaseo/paseo**：同赛道，15.7k star / Apache-2.0 / 五端客户端，功能重叠面很大但**没有**任务状态机与验收不变量（其 agent 生命周期只有 5 个纯进程状态）。详见 backlog `[COMPETITOR]` 与对比 artifact。战略取向需 Human Owner 决策，**agent 不要自行推进方向性改动**。
 
 **Technical docs:** [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Operations](docs/operations.md)
 
 ## Tech Stack
 | Layer | Tech |
 |-------|------|
-| CLI | TBD (Go 单静态二进制 / Node) |
-| Protocol | Plain files (.pact/) |
-| CI | GitHub Actions |
+| CLI | **Go** 单静态二进制（cobra），`cmd/pactify` + `internal/*` 37 包 |
+| Dashboard | Vite + React + Tailwind v4（`web/`），构建产物经 `go:embed` 打进 `internal/serve/dist`（git 跟踪） |
+| Protocol | Plain files (`.pact/`)：`log.jsonl` append-only 为源，`STATE.yml` 为投影 |
+| Cloud | fly.io relay（`cloud/relay`，Node + Prisma）+ Vercel 静态站；zod 线协议在 `cloud/wire` |
+| CI | GitHub Actions（`ci.yml` + `codex-schema.yml` + `release.yml`/goreleaser） |
 
 ## Key Implementation Details
 - `.pact/` = 产品协议文件（用户 repo 使用）；`.agent/` = 本 repo 开发工作台（不是产品一部分）
 - `log.jsonl` 为源，`STATE.yml` 为投影，CLI 重算；防多 agent 并发写 STATE 冲突
 - worker 不能自标 `accepted`，只能置 `awaiting_review`；只有 reviewer 能转 `accepted`
 - 拉取式派发：worker 启动时读 STATE.yml，人是"启动按钮"
-- 画布工艺规约（spec 2026-06-12 §5）：节点位置只有两个写入者（placeNew 首现一次 + 用户拖拽），禁止渲染时算位置；RF 节点数组只走 merge-by-id；生产代码禁止伪造 RF 几何（measured/handles）；画布 PR 合并门 = vitest + Playwright e2e 双绿
+- 画布工艺规约已随 Canvas 视图移除退役（2026-07-07 视图收敛：Canvas 删除、Live 并入 Board——见 docs/backlog.md [VIEWS]）；UI 改动合并门 = vitest + Playwright e2e 双绿保持不变
 
 ## Dev Commands
 ```bash
-# CLI 语言未定，Sprint 001 T1 决策后补充
+go build ./... && go test ./...          # Go 全仓（编译 + 37 包测试）
+go test -race ./internal/{pact,orchestrate,serve}/...
+cd web && npx tsc --noEmit && npx vitest run   # 前端类型 + 单测
+cd web && npx playwright test            # e2e（会起 e2e/mock-server.mjs）
+bats tests/                              # CLI 端到端
+cd cloud && pnpm -r build                # 云端 workspace（wire/crypto/relay）
+
+cd web && npm run build && go build -o pactify ./cmd/pactify   # 重建带 dist 的二进制
+codesign --force -s - ./pactify          # ⚠️ 给 launchd 跑之前必做（否则 OS_REASON_CODESIGNING SIGKILL）
 ```
 
 ## Release 后必做（任何 agent 通用）
-1. .agent/CURRENT.md：补充 Version History 描述
-2. 更新 Current Sprint Summary
-3. 如有架构变更：更新 docs/architecture.md
+1. **`docs/CHANGELOG.md` 顶部加一节**（`## vX.Y.Z — 日期 · 一句话主线`），写「改了什么 + 为什么 + 跑了哪些门」。
+2. **`CLAUDE.md` 的 Version 段改写为当前版**（只保留当前版 + 「当前状况」几条实测事实 + 指向 CHANGELOG 的链接）——**不要再把历史往这一段里堆**，2026-08-29 之前它已累积成 17KB 的单行，正是文档漂移的来源。
+3. **`AGENTS.md` / `GEMINI.md` 同步**（三份 entry 文件的 Overview/Tech Stack/Dev Commands/Version 必须一致；pact 托管块与各自的 kinds 归属行不要动——**正文里绝对不要出现托管块的起止标记字面量**，`internal/agent` 靠首次出现定位块边界）。
+4. 如有架构变更：更新 `docs/architecture.md`（它的状态行同样只写当前版 + 链 CHANGELOG）。
+5. `.agent/CURRENT.md`（本地工作台，gitignored）：补充交接说明。
+
+## 工程约定（2026-06-19 dark-ui 复盘）
+- **已知妥协必登记**：在代码注释里写下 later/TODO/「精确做法需…」之类的妥协时，**同步在 docs/backlog.md 加一行**，否则债隐形——`internal/stats` 的 per-task LOC bug（每任务都显示整分支 +842/−307）正是 `WithLOC` 注释自承认「精确归因需 commit SHA」却搁置成债，直到用户肉眼发现才修。
+- **前端改动看效果走 dev proxy**：`cd web && npm run dev` 经 vite proxy 直连常驻 serve（PACTIFY_SERVE_URL，默认 :17082）热重载；只有最终验收 / 要 live 才 `npm run build` + 重建二进制 + `launchctl kickstart`。
+- **视觉门**：UI 改动提交前必须 playwright 截图实测（`node web/scripts/shots.mjs [view]`；escalated/review-gate 等无法按需触发的态用 `live-gate-shot.mjs` 注入 mock）——vitest/tsc 绿 ≠ 视觉对。要证明截图来自**最终 build**（而非长驻 daemon 可能提供的陈旧 dist）用 `node web/scripts/shot-dispatch-review.mjs`——它 spawn hermetic 的 `e2e/mock-server.mjs`，直接服务 `internal/serve/dist`。
 
 <!-- pact:begin (managed by pactify — edit outside this block) -->
 <!-- pact:kinds: gemini-cli -->

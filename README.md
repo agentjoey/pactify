@@ -6,9 +6,14 @@ Any agent that can read files and run git — Claude, opencode, Gemini, Cursor, 
 (orchestrator, worker, reviewer) and coordinate through plain files in `.pact/`. No SDK, no server,
 no external dependency. The repo is the single source of truth.
 
-> Status: **early.** Protocol **v1 is frozen** (see [`docs/specs/pact-protocol.md`](docs/specs/pact-protocol.md)).
-> A bash reference implementation and the `pactify` Go CLI both drive the protocol today.
-> Site: [pactify.dev](https://pactify.dev) · Part of the **Pact-Base** open core (see [ROADMAP](docs/ROADMAP.md)).
+> Status: **early**, actively developed. Latest release **v0.11.0** (2026-08-24) — see
+> [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Protocol **v1 is frozen**
+> (see [`docs/specs/pact-protocol.md`](docs/specs/pact-protocol.md)); a bash reference
+> implementation and the `pactify` Go CLI both drive it today.
+> Site: [pactify.dev](https://pactify.dev) · Part of the **Pact-Base** open core.
+>
+> The **hosted relay is not currently running** — `pactify serve` (local mode) is the
+> supported path; the dashboard's hosted mode is offline.
 
 ## Install
 
@@ -87,7 +92,8 @@ The verbs (`pact_<verb>` in bash today, `pactify <verb>` in the Go CLI) are one 
 
 - **Protocol spec (v1):** [`docs/specs/pact-protocol.md`](docs/specs/pact-protocol.md) — independently implementable.
 - **JSON Schemas:** [`schemas/`](schemas/) — `event` / `seat` / `task`.
-- **Architecture:** [`docs/architecture.md`](docs/architecture.md) · **Roadmap:** [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- **Architecture:** [`docs/architecture.md`](docs/architecture.md) · **Changelog:** [`docs/CHANGELOG.md`](docs/CHANGELOG.md)
+- **Onboarding:** [`docs/onboarding.md`](docs/onboarding.md) · **Operations:** [`docs/operations.md`](docs/operations.md) · **Deployment:** [`docs/deployment.md`](docs/deployment.md)
 - **Contributing & git workflow:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## License

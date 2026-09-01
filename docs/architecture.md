@@ -1,10 +1,14 @@
 # Pactify — Architecture
 
-> Last updated: 2026-08-24 | Status: **v0.11.0 已发布** — backlog 全量核实后的清理批次（PR #47）：默认沙箱在 tracked-`.pact` 仓恢复可用（保账本的 checkout）· relay 广播 antigravity kind（⚠️ relay 必须先于二进制部署）· `--seat-kind` 真正优先于 role binding 并分离出 `--roster-kind` 派生渠道 · codex cockpit 后端 7 条协议映射修复（MCP 事件/TOK 指标/resume/interrupt/审批回复此前均失效）· agy 审计接入与会话清理 · codex schema 漂移预警重建 · doctor 退出码按项目收敛 · entry 文件接线状态按 kind 归属。承接 **v0.10.0 已发布** — 自 v0.9.0 起的合并发布：phase-0 安全加固（PR #36）· seat-identity 身份解析链 + `pactify seat` verb · role routing + failure policy（role profile/seat 绑定、env-vs-logic 失败分类、fallback 提案链与审批）· execution tiering（tier 经 spec 文件传递，不动冻结的 pact v1）· antigravity(agy) 从 GUI 座席改造为可 headless 驱动的 CLI kind · auto-register + registry 热重载 · ACP npx 握手根修（此前 ACP 实际从未握手成功）· RELAY-2 · 测试污染根治（`internal/testenv`）。**已知架构债**：账本与 git 工作目录耦合——sandbox 默认路径在 tracked-`.pact` 仓库不可用，只能退回 `--in-place`；根治方案「单一规范账本」spec 待起草。承接 v0.9.0 + 视图收敛（Canvas 删除、Live 并入 Board——见下「视图收敛」节）**（全仓 review 驱动的三轮加固:pact ledger 全 verb 跨进程锁 + Checkpoint 写序翻转 + orchestrator 角色门 + slug/ref 校验、orchestrate sandbox mid-run ledger mirror + park 崩溃恢复 + History 持久化、`join`/`start` 语义修正(任务级而非座席级)、base 锁改走 git common dir、serve 状态 memo + worktree events 端点 + live 流 Last-Event-ID 续传、TOK 指标接上真实 `/stats`）+ v0.8.2（dashboard 隐藏 pact 内部 worktree:`serve` worktree 列表过滤 `.pact/orchestrate/` 树 + `pact-*-park` 分支,消除「同一任务跨 tree 状态不一致」)+ v0.8.1（worker 投递完整性补丁:`PACT_DIR` 钉 worker 到 driver worktree · 回灌 event_id union 合并 · escalation 归因)+ v0.8.0（coordination-authority + dark product UI）— 协议 v1 冻结 · Go CLI + MCP + dashboard · orchestrate 自主驱动 + planner · 成本/可观测(D1) + 巡检(D2) · session 清理(opencode) · GLM 端点可配 · Settings agent 管理 · **深色 dashboard（dark product UI，6 屏照设计稿重制）** · native audit layer(claude-code hook + opencode 插件) · pactify.dev 文档站 · **coordination-authority**(base hygiene `.git/info/exclude` · autonomous 默认 sandbox · merge 跨进程 flock 锁 · MCP 项目按名寻址 · base 写入契约「只 merge 写 base / fetch-aware 不分叉 / 默认不 push / accept 不连 merge / checkpoint base 守卫」· per-project `config gate` · 空分支拒绝 ship · 机器提交 `--no-verify`)。下方「增量子系统」段记录这些子系统的细节。
+> Last updated: **2026-08-29** | Status: **v0.11.0 已发布**（tag + CI 绿）。本次更新只改状态行与失效链接，架构内容未变。
+>
+> **版本历史已迁出**——本行原先累积成一段 5KB 的单行 changelog，现全部移到 [`CHANGELOG.md`](CHANGELOG.md)（原文逐字保留）。本行今后只写「当前版 + 与架构有关的当前事实」。
+>
+> **与本文档相关的当前事实（2026-08-29 实测）**：①**云端整层未运行**——`pactify-relay` / `pactify-relay-staging` 两个 fly app 均 0 machines，`origin/production` 停在 2026-07-04（落后 main 652 提交）；下文「通讯架构」「M3.4 relay 接口」描述的是**设计与已实现的代码**，不是当前运行中的部署。②**账本与 git 工作目录耦合**这条架构债仍在（v0.11.0 的 `[SANDBOX]` 只是定点修复），彻底解「单一规范 ledger」尚未起草 spec。
 
 ## Overview
 
-Pactify = **多 agent 协同协议 + 薄 CLI + 可视化编排**，分三产品层（[ROADMAP](ROADMAP.md)）：
+Pactify = **多 agent 协同协议 + 薄 CLI + 可视化编排**，分三产品层：
 
 ```
 Pact-Base   读 + 协议机制     免费开源
@@ -157,7 +161,7 @@ pactify serve          # MCP server + SSE dashboard
 
 ## Open-core 边界
 
-见 [ADR-001](decisions/ADR-001-open-core-boundary.md)：守 Team。所有付费价值落在云端 relay 之上；log.jsonl 事件 schema 同时服务本地（免费）和云端（付费），零改动 agent 端。
+**ADR-001（决策记录留在本地工作台，未随公开仓库发布）**：守 Team。所有付费价值落在云端 relay 之上；log.jsonl 事件 schema 同时服务本地（免费）和云端（付费），零改动 agent 端。
 
 ## Squad (Phase 3, M3.1+M3.2)
 

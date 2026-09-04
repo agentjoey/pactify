@@ -1,8 +1,12 @@
 import { chromium } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const OUT = process.env.SHOT_OUT || "/tmp/pactify-shots";
-const REF = process.env.REF_PATH || "/Users/xtation/AgentWorks/Code_Claude/design_handoff_dark_product_ui/designs/Pactify Settings.dc.html";
+const REF =
+  process.env.REF_PATH ||
+  join(homedir(), "AgentWorks/Code_Claude/design_handoff_dark_product_ui/designs/Pactify Settings.dc.html");
 
 await mkdir(OUT, { recursive: true });
 const b = await chromium.launch();

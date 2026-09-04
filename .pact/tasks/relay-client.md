@@ -50,7 +50,7 @@ func (r *relay) stop()
 
 ## 验收命令
 ```
-cd /Users/xtation/AgentWorks/Code_Claude/pactify && go test ./internal/serve/ -run Relay -v
+cd <repo> && go test ./internal/serve/ -run Relay -v
 ```
 
 ## 完成方式

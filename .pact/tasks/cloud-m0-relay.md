@@ -4,7 +4,7 @@
 > 改名 @pactify/relay，并补一个 `/testing` 子路径导出（linx 仓的测试要靠它活）。
 
 ## 源仓（只读！）
-`/Users/xtation/AgentWorks/CodeSpace/pactify-apps/linx` — **绝对不许改动源仓任何文件**。
+`~/AgentWorks/CodeSpace/pactify-apps/linx` — **绝对不许改动源仓任何文件**。
 
 ## 目标
 1. 把源仓 `packages/linx-relay/` 整目录复制为 `cloud/relay/`（src/、prisma/、bin/、测试、

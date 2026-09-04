@@ -23,7 +23,7 @@
 
 ## 验收命令
 ```
-cd /Users/xtation/AgentWorks/Code_Claude/pactify && go test ./internal/serve/ && go build ./... && go run ./cmd/pactify serve --help 2>&1 | grep relay
+cd <repo> && go test ./internal/serve/ && go build ./... && go run ./cmd/pactify serve --help 2>&1 | grep relay
 ```
 （t1 已 accepted，本 task deps 已解锁；t1 交付的 relay.go 在 newRelay 内自启后台 goroutine，SetRelay 只需调 newRelay 即可，无需额外 start。）
 

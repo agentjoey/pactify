@@ -119,12 +119,26 @@ canonical = 一个不属于任何分支的 git ref（下称 `refs/pact/ledger`�
 | WS | 内容 | 行为变化 | 门 |
 |---|---|---|---|
 | **A** | 抽出 `internal/ledger`，收敛 §3.2 的全部读写入口 | **零** | 全量测试逐字节等价 |
+| ↳ A.1 | ✅ **已做**（2026-09-05，PR #54）：`internal/ledger` 建包 + `serve` 全量迁移 + 约束测试 | 零（外加一处 bug 修复） | serve/ledger/pact/orchestrate 四包绿 |
+| ↳ A.2 | 待做：`internal/pact` 引擎自身改走 `ledger`（进程级变体），`orchestrate/remote.go` 的 git pathspec 用共享常量 | 零 | — |
 | **B** | ref 存储 + CAS 实现，**双写双读校验**（flag 关闭时走旧路径） | 零（默认关） | 双读比对测试 + `-race` |
 | **C** | 切换 canonical 到 ref，工作树文件降级为导出 | 有 | 迁移测试 + 全门 |
 | **D** | 删除 §3.4 的变通代码路径 | 有（都是删） | `ignorePact` 拿掉后 sandbox 测试仍绿 |
 | **E** | 迁移工具（`pactify migrate-ledger`）+ `validate` 扩展 + 文档 + 三份 entry 文件同步 | — | bats + 真仓库演练 |
 
 **WS-A 现在就能做**，且无论 §5 怎么拍板都不会白做——它本身就是在还「8 处各自读文件」的债。
+
+**A.1 落地后的一条实证（值得记住，因为它把「收敛入口」从洁癖变成了修 bug）**：
+迁移 `serve` 时发现它内部对「项目 X 的账本在哪」有**两种答案**——`dto.go`/`stats.go` 拼
+`<projectRoot>/.pact/log.jsonl`（项目级，对），而 `cockpit.go:125` 的 `seatKind` 兜底走
+`paths.LogIn(p.Path)`（进程级）。后者在 `PACT_DIR` 是绝对路径时会**忽略传入的 base**，
+于是 serve 这个多项目进程会**静默改读 PACT_DIR 指向的那个仓库**，折出别的项目的座席 kind，
+进而拉起错的 agent。它从来测不出来，是因为 `testenv.Isolate()` 为整个测试二进制清掉了
+`PACT_DIR`——**没有任何测试处在能触发它的环境里**。
+
+⇒ 教训写进包注释并用约束测试钉住：「进程级」与「项目级」是两种都正当的语义
+（前者承载 runner 把 worker 钉到 driver worktree 的机制），混用不是风格问题而是 bug 来源。
+后续 WS 每碰一个包，都应先问它属于哪一种。
 
 ## 5. 待 Human Owner 拍板（不定这四条，后面无法开工）
 

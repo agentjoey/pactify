@@ -93,22 +93,52 @@ func (r AcpRunner) warn(msg string) {
 	fmt.Fprintln(os.Stderr, "orchestrate: "+msg)
 }
 
-// warnDroppedModelPin tells the operator that this seat's role binding pins a
-// model the ACP transport silently drops.
+// acpModelEnv returns the child-environment entries that pin model for kind over
+// the ACP transport, and whether this kind has such a channel at all.
+//
+// [ACP-MODEL] root fix. acpCommand carries no --model for any kind (opencode's
+// `acp` subcommand has no model flag at all — checked against opencode 1.18.23),
+// so the pin has to travel some other way. For opencode that way is
+// OPENCODE_CONFIG_CONTENT, a JSON config injected by env.
+//
+// Verified end-to-end against a real `opencode acp` server before shipping:
+// without it a session runs providerID=deepseek modelID=deepseek-v4-pro (the
+// reported bug); with it the same session runs providerID=minimax
+// modelID=MiniMax-M3. `opencode debug config` confirms the value MERGES into the
+// resolved config (provider/mcp/agent/permission/plugin stay byte-identical), so
+// pinning a model cannot clobber the operator's own setup.
+func acpModelEnv(kind, model string) ([]string, bool) {
+	switch kind {
+	case "opencode":
+		b, err := json.Marshal(map[string]string{"model": model})
+		if err != nil {
+			return nil, false
+		}
+		return []string{"OPENCODE_CONFIG_CONTENT=" + string(b)}, true
+	}
+	return nil, false
+}
+
+// applyModelPin honours this seat's role-binding model pin if the kind has an
+// ACP channel for it, and otherwise says out loud that the pin is being dropped.
 //
 // [ACP-MODEL],坐实于 2026-08-31: the ACP path never calls agentcfg.ResolveSeat*
-// and acpCommand emits no --model, so the agent runs on its own global default.
-// Because opencode DEFAULTS to ACP (DefaultTransportModes), every bound opencode
-// seat hits this — a Human Owner read the resulting mismatch as "the worker did
-// nothing". This does not fix the drop; it makes it impossible to miss.
-func (r AcpRunner) warnDroppedModelPin(lc LaunchContext) {
+// and acpCommand emits no --model, so an unpinnable kind runs on its own global
+// default. Because opencode DEFAULTS to ACP (DefaultTransportModes), every bound
+// opencode seat hit this — a Human Owner read the resulting mismatch as "the
+// worker did nothing".
+func (r AcpRunner) applyModelPin(lc LaunchContext) []string {
 	model, role, ok := agentcfg.SeatModelPin(lc.Seat)
 	if !ok {
-		return
+		return nil
+	}
+	if env, ok := acpModelEnv(lc.Kind, model); ok {
+		return env
 	}
 	r.warn(fmt.Sprintf(
-		"seat %s: role %q pins model %s, but the ACP transport cannot pass a model — %s will run on its own global default. Route this seat over the command transport (--transport %s=cmd) to make the pin take effect.",
+		"seat %s: role %q pins model %s, but the ACP transport has no way to pass a model to %s — it will run on its own global default. Route this seat over the command transport (--transport %s=cmd) to make the pin take effect.",
 		lc.Seat, role, model, lc.Kind, lc.Kind))
+	return nil
 }
 
 // NewAcpRunner returns an AcpRunner wired to the real acp.Spawn, with the given
@@ -142,9 +172,9 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 	}
 
 	// Before the agent starts, not after a turn has already run on the wrong model.
-	r.warnDroppedModelPin(lc)
+	env := append(acpEnv(lc), r.applyModelPin(lc)...)
 
-	conn, err := r.Spawn(ctx, command, args, acpEnv(lc), lc.RepoDir)
+	conn, err := r.Spawn(ctx, command, args, env, lc.RepoDir)
 	if err != nil {
 		return fmt.Errorf("orchestrate: acp spawn %q: %w", lc.Kind, err)
 	}

@@ -34,14 +34,17 @@ const fallbackGate = "go build ./... && go test ./..."
 // (Run), the gate command executor (Exec), the human-escalation notifier
 // (Notify), the timestamp source (Now), and the seat→kind mapping (SeatKind).
 type Options struct {
-	Dir     string        // repo root
-	Feature string        // limit the loop to this feature ("" = all features)
-	Th      Thresholds    // rework / fail / iteration bounds
-	DryRun  bool          // compute + print actions, never exec/merge/escalate
-	Run     Runner        // injected agent launcher (prod CmdRunner, test fake)
-	Exec    cmdExec       // injected gate command executor
-	Notify  Notifier      // injected escalation notifier
-	Now     func() string // injected timestamp for escalation filenames
+	Dir     string     // repo root
+	Feature string     // limit the loop to this feature ("" = all features)
+	Th      Thresholds // rework / fail / iteration bounds
+	DryRun  bool       // compute + print actions, never exec/merge/escalate
+	Run     Runner     // injected agent launcher (prod CmdRunner, test fake)
+	Exec    cmdExec    // injected gate command executor
+	Notify  Notifier   // injected escalation notifier
+	// mergeWorktree overrides the parallel driver's merge step (see
+	// mergeWorktreeFn). Unexported: a test seam, never an operator knob.
+	mergeWorktree func(ctx context.Context, worktreeDir, feature string) (bool, error)
+	Now           func() string // injected timestamp for escalation filenames
 	// SeatKind is the seat→kind OVERRIDE, highest priority: prod passes only the
 	// operator's explicit `--seat-kind` flags, tests inject a fixed map. A non-empty
 	// result wins over every other source of a seat's kind — the approved-fallback

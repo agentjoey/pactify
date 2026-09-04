@@ -154,14 +154,34 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 		case r.mergeable:
 			// Serialize merges: only one worktree holds base at a time.
 			mergeMu.Lock()
-			merr := opts.mergeFromWorktree(ctx, r.worktree, r.feature)
+			escalated, merr := opts.mergeWorktreeFn()(ctx, r.worktree, r.feature)
 			mergeMu.Unlock()
 			_ = gitx.RemoveWorktree(opts.Dir, r.worktree)
-			if merr != nil {
+			switch {
+			case merr != nil:
+				// A merge that fails here leaves an all-accepted feature unmerged —
+				// exactly the state a human has to resolve. The serial path pages a
+				// human for this; the parallel path used to only record the error,
+				// so the run ended with a silent unmerged feature.
+				if eerr := opts.escalate(r.feature, "", "merge failed: "+merr.Error(),
+					"", "解决冲突/门失败后 pactify orchestrate 续跑"); eerr != nil {
+					fmt.Fprintf(os.Stderr, "orchestrate: escalate after merge failure: %v\n", eerr)
+				}
+				_ = writeFeatureStatus(opts.Dir, r.feature, Status{
+					Feature: r.feature, Action: "stuck", Phase: "stuck", Escalated: true,
+					Reason: "merge failed: " + merr.Error(), UpdatedAt: statusNow(opts.Now),
+				})
 				if dispatchErr == nil {
 					dispatchErr = merr
 				}
-			} else {
+			case escalated:
+				// Hard gate failed: paused for a human, NOT shipped. mergeFromWorktree
+				// already wrote the record and notified.
+				_ = writeFeatureStatus(opts.Dir, r.feature, Status{
+					Feature: r.feature, Action: "stuck", Phase: "stuck", Escalated: true,
+					Reason: "hard gate failed", UpdatedAt: statusNow(opts.Now),
+				})
+			default:
 				// Mark the feature shipped in the aggregated view.
 				_ = writeFeatureStatus(opts.Dir, r.feature, Status{
 					Feature: r.feature, Action: "done", Phase: "done", Done: true,
@@ -410,16 +430,33 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 	}
 }
 
+// mergeWorktreeFn returns the merge step settle uses: the real
+// mergeFromWorktree unless a test injected a substitute. The seam exists because
+// the failure it guards — a merge that fails AFTER every task is accepted — is
+// impractical to provoke with real git from a test, and that branch is precisely
+// the one that used to end a run with a silently unmerged feature.
+func (opts Options) mergeWorktreeFn() func(context.Context, string, string) (bool, error) {
+	if opts.mergeWorktree != nil {
+		return opts.mergeWorktree
+	}
+	return opts.mergeFromWorktree
+}
+
 // mergeFromWorktree runs the hard gate in the feature's worktree (which holds the
 // accepted work on its branch), then merges via the ordinary pact merge executed
 // FROM that worktree. The worktree checks out base (free because the primary tree
 // is parked and this runs under the coordinator's merge lock), merges the feature
 // branch, and appends the merge event — exactly the serial merge path, just
 // relocated to the worktree so base contention is serialized.
-func (opts Options) mergeFromWorktree(ctx context.Context, worktreeDir, feature string) error {
+// It returns escalated=true when the hard gate failed and a human was paged:
+// that is a PAUSE, not a failure, and mirrors the serial merge()'s (done, err)
+// shape. Collapsing the two into a bare error made a failed gate indistinguishable
+// from a clean merge — escalate() returns nil on success, so settle stamped the
+// feature "done" for work that was never merged.
+func (opts Options) mergeFromWorktree(ctx context.Context, worktreeDir, feature string) (escalated bool, err error) {
 	st, err := pact.At(worktreeDir).StateProjection()
 	if err != nil {
-		return fmt.Errorf("orchestrate: read worktree state (%s): %w", feature, err)
+		return false, fmt.Errorf("orchestrate: read worktree state (%s): %w", feature, err)
 	}
 	var feat *projection.Feature
 	for i := range st.Features {
@@ -428,20 +465,26 @@ func (opts Options) mergeFromWorktree(ctx context.Context, worktreeDir, feature 
 		}
 	}
 	if feat == nil {
-		return fmt.Errorf("orchestrate: feature %s not found in worktree for merge", feature)
+		return false, fmt.Errorf("orchestrate: feature %s not found in worktree for merge", feature)
 	}
 	base, _ := pact.At(worktreeDir).BaseBranch()
 	for _, cmd := range gateCommands(worktreeDir, *feat) {
 		ok, detail := runGateScoped(ctx, opts.Exec, worktreeDir, cmd, base)
 		if !ok {
+			// Run the gate in the worktree, but write the escalation record and the
+			// ledger event to the PRIMARY tree: settle removes this worktree moments
+			// later, and a record inside it dies with it — leaving the operator a
+			// notification pointing at a path that no longer exists.
 			o := opts
 			o.Dir = worktreeDir
-			return o.escalate(feature, "", "hard gate failed: "+detail,
+			o.RuntimeDir = opts.runtimeDir()
+			o.LedgerDir = opts.ledgerDir()
+			return true, o.escalate(feature, "", "hard gate failed: "+detail,
 				evidenceFor(st, ""), "修复实现/规格后 pactify orchestrate 续跑")
 		}
 	}
 	if err := pact.At(worktreeDir).As(opts.Orchestrator).Merge(feature); err != nil {
-		return fmt.Errorf("orchestrate: merge %s from worktree: %w", feature, err)
+		return false, fmt.Errorf("orchestrate: merge %s from worktree: %w", feature, err)
 	}
 	// Feature shipped: archive its own escalation files (see the serial merge()
 	// for why — spec P1).
@@ -450,5 +493,5 @@ func (opts Options) mergeFromWorktree(ctx context.Context, worktreeDir, feature 
 	// worktree's HEAD already carries the shipped state before we discard it.
 	// (The old explicit CommitAll here is gone — it would now be a redundant second
 	// commit and fail with nothing-to-commit.)
-	return nil
+	return false, nil
 }

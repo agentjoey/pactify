@@ -88,7 +88,21 @@ canonical = 一个不属于任何分支的 git ref（下称 `refs/pact/ledger`�
 ### 3.3 导出（工作树文件的新地位）
 - 每个 verb 之后导出 `.pact/log.jsonl` + `STATE.yml`（与今天 `appendAndRender` 的时机一致）。
 - `pactify export-ledger` 供手工重建。
-- **工作树文件是否仍被 git tracked，是 §5 的待决问题**，不是本节能定的。
+- **工作树文件不再被 git tracked**（Human Owner 2026-09-04 拍板，见 §5.1）。
+  两个文件都进 `.git/info/exclude`（沿用今天 `EnsureExcluded` 的做法，不动用户的 `.gitignore`）。
+
+**这条拍板带来的连锁后果（都是好事，但要一起做）**：
+
+1. **`commitLedgerIfTracked`（`engine.go:130-136`）整个消失**——不再有「每个 verb 后自动提交账本」，
+   代码提交与协议记账彻底分离。今天那种「一个 checkpoint 里既有代码又有账本」的混合提交不复存在。
+2. **`ensureUnionAttrs`（`parallel.go:284-294`）连同它往用户 base 提交的 `.gitattributes` 一起退役**——
+   工作树账本不入库，就没有 merge 冲突要靠 union driver 化解。
+3. **`checkoutFeatureBranch` 五步舞（`sandbox.go:338-377`）退役**，`gitx.RestorePaths` 的破坏性用法随之消失。
+4. **⚠️ `parallel.go` 必须改造**：它今天**结构性依赖 tracked `.pact`**——worktree 的账本是从分支
+   checkout 出来的（全仓确认 `syncPact` 只被 sandbox 调用）。账本不入库后，worktree **拿不到账本**，
+   必须改成从 ref 读。这是 WS-C 的主要工作量，也是这条决定唯一的成本。
+5. **本仓自身要迁移**：pactify 自己的 `.pact/` 现在就是 tracked 的（624 行账本已在 git 里），
+   迁移工具必须能把它平滑转成「ref 为准 + 工作树导出」，且**保留既有 624 个事件的完整历史**。
 
 ### 3.4 可以删掉的（重构的实际收益）
 `syncPact` · `writeLedger`/`mergeEventLines` · `checkoutFeatureBranch` 五步舞与 `gitx.RestorePaths`
@@ -114,10 +128,13 @@ canonical = 一个不属于任何分支的 git ref（下称 `refs/pact/ledger`�
 
 ## 5. 待 Human Owner 拍板（不定这四条，后面无法开工）
 
-1. **工作树的 `.pact/log.jsonl` 还要不要被 git tracked？**
-   tracked = 账本继续出现在代码 diff 里（可见、可审计，但每个 commit 都带账本噪音）；
-   untracked = 干净，但「账本进 git」的直观性只剩 ref（要 `git log refs/pact/ledger` 才看得到）。
-   **这条直接决定 I-2 兑现到什么程度。**
+1. ~~**工作树的 `.pact/log.jsonl` 还要不要被 git tracked？**~~
+   **✅ 已拍板（Human Owner，2026-09-04）：不 tracked。**
+   ⇒ 账本的 git 可见性**全部**由 `refs/pact/ledger` 承担（`git log refs/pact/ledger` 看历史），
+   工作树文件退化为纯本地导出产物，代码 diff 里不再出现账本噪音。
+   连锁后果见 §3.3，其中 **`parallel.go` 的改造是这条决定唯一的成本**，必须与 WS-C 同批做。
+   ⚠️ 这也意味着 **I-2 完全押在 ref 上**：如果 §5.2 的 refspec 不配好，账本就既不进 diff、
+   也不跟着 push——那才是真的把差异化丢掉。**§5.2 因此从「可以晚做」升级为「必须与 WS-C 同批」。**
 2. **ref 的 push/fetch 默认行为**：是否自动为用户仓库配置 refspec？
    不配 = 跨机同步默认失灵（今天靠分支自带账本，是能工作的）；
    自动配 = pactify 动用户的 `.git/config`。

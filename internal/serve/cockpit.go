@@ -13,8 +13,7 @@ import (
 
 	"github.com/agentjoey/pactify/internal/audit"
 	"github.com/agentjoey/pactify/internal/cockpit"
-	"github.com/agentjoey/pactify/internal/event"
-	"github.com/agentjoey/pactify/internal/paths"
+	"github.com/agentjoey/pactify/internal/ledger"
 	"github.com/agentjoey/pactify/internal/projection"
 )
 
@@ -122,7 +121,7 @@ func (s *Server) seatKind(project, seat string) string {
 	dto, _, err := s.projectStateFull(project, p.Path)
 	if err != nil {
 		// Fallback to a direct fold if the memo path errors (e.g. unreadable dir).
-		evts, rerr := event.ReadAll(paths.LogIn(p.Path))
+		evts, rerr := ledger.Read(p.Path)
 		if rerr != nil {
 			return ""
 		}

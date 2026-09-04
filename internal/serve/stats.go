@@ -2,11 +2,11 @@ package serve
 
 import (
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/diffstat"
 	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/ledger"
 	"github.com/agentjoey/pactify/internal/projection"
 	"github.com/agentjoey/pactify/internal/stats"
 	"github.com/agentjoey/pactify/internal/tokens"
@@ -27,7 +27,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
-	evs, err := event.ReadAll(filepath.Join(p.Path, ".pact", "log.jsonl"))
+	evs, err := ledger.Read(p.Path)
 	if err != nil {
 		// uninitialized project (no log) → empty stats, not a 500.
 		writeJSON(w, http.StatusOK, stats.Stats{Tasks: []stats.TaskStat{}, Agents: []stats.AgentStat{}})

@@ -18,6 +18,7 @@ import (
 	"github.com/agentjoey/pactify/internal/event"
 	"github.com/agentjoey/pactify/internal/finish"
 	"github.com/agentjoey/pactify/internal/gitx"
+	"github.com/agentjoey/pactify/internal/ledger"
 	"github.com/agentjoey/pactify/internal/orchestrate"
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/runguard"
@@ -321,7 +322,7 @@ func inferKindFromName(seat string, known []string) string {
 // evs nil, which seatKindsFromFold treats as "no init kinds" — same as the old
 // inline behavior.
 func (s *Server) resolveSeatKinds(dir string) map[string]string {
-	evs, _ := event.ReadAll(logPath(dir))
+	evs, _ := ledger.Read(dir)
 	var agents []SeatDTO
 	if st, err := pact.At(dir).StateProjection(); err == nil {
 		for _, a := range st.Agents {
@@ -638,7 +639,7 @@ func (s *Server) handleOrchestrateShip(w http.ResponseWriter, r *http.Request) {
 // resort. The dashboard never sends a branch, so a hardcoded "main" default
 // shipped/PR'd against the wrong base on projects whose base differs.
 func shipBaseBranch(dir string) string {
-	if evs, err := event.ReadAll(logPath(dir)); err == nil {
+	if evs, err := ledger.Read(dir); err == nil {
 		base := ""
 		for _, e := range evs {
 			switch e.EventType {

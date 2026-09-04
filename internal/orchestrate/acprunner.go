@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/acp"
+	"github.com/agentjoey/pactify/internal/agentcfg"
 	"github.com/agentjoey/pactify/internal/audit"
 )
 
@@ -75,6 +77,38 @@ type AcpRunner struct {
 	OnUsage func(repoDir, seat, task string, u acp.Usage)
 	// Now supplies the escalation-record timestamp; nil defaults to wall clock.
 	Now func() string
+	// Warn is the operator-facing warning sink, mirroring CmdRunner.Warn: nil
+	// falls back to stderr, the same channel escalate/sandbox use so a headless
+	// run still records the notice. Currently carries one notice: a role
+	// binding's model pin that this transport cannot honor.
+	Warn func(string)
+}
+
+// warn surfaces an operator-facing notice, nil-safe (injected sink, else stderr).
+func (r AcpRunner) warn(msg string) {
+	if r.Warn != nil {
+		r.Warn(msg)
+		return
+	}
+	fmt.Fprintln(os.Stderr, "orchestrate: "+msg)
+}
+
+// warnDroppedModelPin tells the operator that this seat's role binding pins a
+// model the ACP transport silently drops.
+//
+// [ACP-MODEL],坐实于 2026-08-31: the ACP path never calls agentcfg.ResolveSeat*
+// and acpCommand emits no --model, so the agent runs on its own global default.
+// Because opencode DEFAULTS to ACP (DefaultTransportModes), every bound opencode
+// seat hits this — a Human Owner read the resulting mismatch as "the worker did
+// nothing". This does not fix the drop; it makes it impossible to miss.
+func (r AcpRunner) warnDroppedModelPin(lc LaunchContext) {
+	model, role, ok := agentcfg.SeatModelPin(lc.Seat)
+	if !ok {
+		return
+	}
+	r.warn(fmt.Sprintf(
+		"seat %s: role %q pins model %s, but the ACP transport cannot pass a model — %s will run on its own global default. Route this seat over the command transport (--transport %s=cmd) to make the pin take effect.",
+		lc.Seat, role, model, lc.Kind, lc.Kind))
 }
 
 // NewAcpRunner returns an AcpRunner wired to the real acp.Spawn, with the given
@@ -106,6 +140,9 @@ func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 	if !ok {
 		return fmt.Errorf("orchestrate: kind %q has no ACP transport — route it over the command transport with --transport %s=cmd", lc.Kind, lc.Kind)
 	}
+
+	// Before the agent starts, not after a turn has already run on the wrong model.
+	r.warnDroppedModelPin(lc)
 
 	conn, err := r.Spawn(ctx, command, args, acpEnv(lc), lc.RepoDir)
 	if err != nil {

@@ -36,6 +36,12 @@ func At(dir string) *Project {
 	return &Project{dir: dir}
 }
 
+// Dir returns the repo root this handle is rooted at, after the PACT_DIR
+// resolution in At. Callers that need to inspect repo state outside the engine
+// (the checkpoint run-guard reads .pact/orchestrate/) must use this rather than
+// the process cwd, or they inspect a different repo than the verb writes to.
+func (p *Project) Dir() string { return p.dir }
+
 // As returns a copy of p acting as seat, overriding PACT_AGENT_ID for the
 // returned handle only. The receiver is left unchanged.
 func (p *Project) As(seat string) *Project {

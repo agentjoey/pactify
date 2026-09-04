@@ -38,18 +38,18 @@ func okStint() *fakeAcpConn {
 	return fc
 }
 
-// [ACP-MODEL]: the ACP transport never consults agentcfg.ResolveSeat and
-// acpCommand carries no --model, so a role binding's model pin is silently
-// dropped and the agent runs on its own global default. opencode defaults to
-// ACP, so this is the common case, not an edge one. Until the pin is actually
-// honored, the operator must at least be told.
+// [ACP-MODEL]: acpCommand carries no --model, so for a kind with no other model
+// channel the pin is silently dropped and the agent runs on its own global
+// default. opencode is no longer such a kind (its pin now travels via
+// OPENCODE_CONFIG_CONTENT — see acp_model_env_test.go); kinds that still have no
+// channel must say so rather than run the wrong model in silence.
 func TestAcpRunWarnsWhenRoleBindingPinsAModel(t *testing.T) {
-	bindSeatProfile(t, "w1", "mm", roles.Profile{Kind: "opencode", Model: "minimax/MiniMax-M3"})
+	bindSeatProfile(t, "w1", "mm", roles.Profile{Kind: "kimi-cli", Model: "kimi-k2.5"})
 
 	var warnings []string
 	r := AcpRunner{Spawn: captureSpawn(okStint(), nil), Warn: func(m string) { warnings = append(warnings, m) }}
 
-	if err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", RepoDir: "/tmp/x"}); err != nil {
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "kimi-cli", RepoDir: "/tmp/x"}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 
@@ -57,7 +57,7 @@ func TestAcpRunWarnsWhenRoleBindingPinsAModel(t *testing.T) {
 		t.Fatalf("want exactly one warning, got %d: %v", len(warnings), warnings)
 	}
 	w := warnings[0]
-	for _, want := range []string{"w1", "minimax/MiniMax-M3", "--transport opencode=cmd"} {
+	for _, want := range []string{"w1", "kimi-k2.5", "--transport kimi-cli=cmd"} {
 		if !strings.Contains(w, want) {
 			t.Errorf("warning must mention %q, got: %s", want, w)
 		}
@@ -67,12 +67,12 @@ func TestAcpRunWarnsWhenRoleBindingPinsAModel(t *testing.T) {
 // No pin, nothing to warn about — a bound seat that only names a kind gets the
 // kind it asked for, so the warning would be pure noise on every ACP stint.
 func TestAcpRunSilentWhenBindingHasNoModelPin(t *testing.T) {
-	bindSeatProfile(t, "w1", "plain", roles.Profile{Kind: "opencode"})
+	bindSeatProfile(t, "w1", "plain", roles.Profile{Kind: "kimi-cli"})
 
 	var warnings []string
 	r := AcpRunner{Spawn: captureSpawn(okStint(), nil), Warn: func(m string) { warnings = append(warnings, m) }}
 
-	if err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", RepoDir: "/tmp/x"}); err != nil {
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "kimi-cli", RepoDir: "/tmp/x"}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if len(warnings) != 0 {
@@ -98,7 +98,7 @@ func TestAcpRunSilentForUnboundSeat(t *testing.T) {
 // before the agent is spawned — not after a turn has already run on the wrong
 // model.
 func TestAcpModelPinWarningPrecedesSpawn(t *testing.T) {
-	bindSeatProfile(t, "w1", "mm", roles.Profile{Kind: "opencode", Model: "minimax/MiniMax-M3"})
+	bindSeatProfile(t, "w1", "kk", roles.Profile{Kind: "kimi-cli", Model: "kimi-k2.5"})
 
 	var order []string
 	spawn := func(ctx context.Context, command string, args, env []string, dir string) (acpConn, error) {
@@ -107,7 +107,7 @@ func TestAcpModelPinWarningPrecedesSpawn(t *testing.T) {
 	}
 	r := AcpRunner{Spawn: spawn, Warn: func(string) { order = append(order, "warn") }}
 
-	if err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "opencode", RepoDir: "/tmp/x"}); err != nil {
+	if err := r.Run(context.Background(), LaunchContext{Seat: "w1", Kind: "kimi-cli", RepoDir: "/tmp/x"}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if len(order) != 2 || order[0] != "warn" {

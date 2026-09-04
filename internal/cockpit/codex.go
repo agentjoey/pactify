@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -182,6 +183,44 @@ type codexClient struct {
 	// notification and again as turn/completed{status:failed} carrying the
 	// same TurnError — and the cockpit stream must show it once.
 	lastErr string
+	// itemNames maps a live fileChange item's id to its rendered label.
+	// FileChangeRequestApprovalParams carries only itemId — the paths under
+	// review live on the item announced earlier by item/started — so without
+	// this correlation the approval card has no title at all
+	// ([CODEX-APPROVAL-NAME]). Entries are dropped when the item completes.
+	itemNames map[string]string
+}
+
+// maxTrackedItems bounds itemNames so a long thread whose items never complete
+// cannot grow it without limit. Approvals arrive while their item is in flight,
+// so a reset only ever costs a stale label, never a wrong one.
+const maxTrackedItems = 256
+
+// noteItem records a live item's label for later approval correlation.
+func (c *codexClient) noteItem(id, name string) {
+	if id == "" || name == "" {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.itemNames == nil || len(c.itemNames) >= maxTrackedItems {
+		c.itemNames = map[string]string{}
+	}
+	c.itemNames[id] = name
+}
+
+// forgetItem drops a completed item's label.
+func (c *codexClient) forgetItem(id string) {
+	c.mu.Lock()
+	delete(c.itemNames, id)
+	c.mu.Unlock()
+}
+
+// itemName returns the recorded label for id, if the item is still tracked.
+func (c *codexClient) itemName(id string) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.itemNames[id]
 }
 
 // setTurnID records the in-flight turn. Starting a DIFFERENT turn clears the
@@ -337,20 +376,7 @@ func (c *codexClient) handleServerRequest(id json.RawMessage, method string, par
 func (c *codexClient) handleApprovalRequest(id json.RawMessage, method string, params json.RawMessage) {
 	kind := approvalKindFromMethod(method)
 
-	var p struct {
-		Command string `json:"command"`
-		Tool    string `json:"tool"`
-		Name    string `json:"name"`
-	}
-	_ = json.Unmarshal(params, &p)
-
-	toolName := p.Command
-	if toolName == "" {
-		toolName = p.Tool
-	}
-	if toolName == "" {
-		toolName = p.Name
-	}
+	toolName := c.approvalToolName(kind, params)
 
 	var once sync.Once
 	var innerErr error
@@ -424,6 +450,74 @@ func (c *codexClient) replyPermissionsApproval(id json.RawMessage, params json.R
 	return c.rpc.reply(id, map[string]any{"permissions": grant, "scope": scope})
 }
 
+// approvalToolName renders the approval card's title. Each approval variant
+// keeps its identity somewhere different, and only the command one has a
+// `command` field — reading command/tool/name for all three left fileChange and
+// permissions cards blank, so the user could only guess from RawInput what they
+// were approving ([CODEX-APPROVAL-NAME]).
+func (c *codexClient) approvalToolName(kind string, params json.RawMessage) string {
+	var p struct {
+		Command     string                     `json:"command"`
+		Tool        string                     `json:"tool"`
+		Name        string                     `json:"name"`
+		ItemID      string                     `json:"itemId"`
+		Reason      string                     `json:"reason"`
+		Permissions map[string]json.RawMessage `json:"permissions"`
+	}
+	_ = json.Unmarshal(params, &p)
+
+	switch kind {
+	case "file_change":
+		// The paths live on the fileChange item announced by item/started.
+		if name := c.itemName(p.ItemID); name != "" {
+			return name
+		}
+		if p.Reason != "" {
+			return "file change: " + p.Reason
+		}
+		return "file change"
+	case "permission":
+		// RequestPermissionProfile — which classes of access are being asked for.
+		if classes := permissionClasses(p.Permissions); len(classes) > 0 {
+			name := "permissions: " + strings.Join(classes, ", ")
+			if p.Reason != "" {
+				name += " (" + p.Reason + ")"
+			}
+			return name
+		}
+		if p.Reason != "" {
+			return "permissions: " + p.Reason
+		}
+		return "permissions"
+	}
+
+	// commandExecution: `command` is the real field; tool/name are kept as
+	// tolerant fallbacks for shapes this client has not seen.
+	for _, s := range []string{p.Command, p.Tool, p.Name} {
+		if s != "" {
+			return s
+		}
+	}
+	if p.Reason != "" {
+		return p.Reason
+	}
+	return ""
+}
+
+// permissionClasses lists the non-null keys of a RequestPermissionProfile
+// (fileSystem / network), sorted so the label is stable.
+func permissionClasses(perms map[string]json.RawMessage) []string {
+	var out []string
+	for k, v := range perms {
+		if len(v) == 0 || string(v) == "null" {
+			continue
+		}
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
 func approvalKindFromMethod(method string) string {
 	switch {
 	case strings.HasSuffix(method, "commandExecution/requestApproval"):
@@ -466,6 +560,7 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 			case item.Type == "agentMessage":
 				c.dispatchEvent(Event{Kind: EventMessage, Final: true, Raw: raw})
 			case item.isTool():
+				c.forgetItem(item.ID)
 				c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "end", Name: item.displayName()}, Raw: raw})
 			}
 		}
@@ -476,6 +571,9 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 
 	case "item/started":
 		if item, ok := decodeCodexItem(params); ok && item.isTool() {
+			// Remember the label: a fileChange approval that arrives later
+			// identifies its subject by this item's id and nothing else.
+			c.noteItem(item.ID, item.displayName())
 			c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: item.displayName()}, Raw: raw})
 		}
 
@@ -579,7 +677,10 @@ func jsonStringAt(params json.RawMessage, keys ...string) string {
 // variants that belong on the tool timeline contribute fields here; each field
 // exists on exactly one variant, so decoding them together is unambiguous.
 type codexThreadItem struct {
-	Type    string `json:"type"`
+	Type string `json:"type"`
+	// ID is on every ThreadItem variant; it is the key a later
+	// requestApproval uses to point back at this item.
+	ID      string `json:"id"`
 	Command string `json:"command"` // commandExecution
 	Server  string `json:"server"`  // mcpToolCall
 	Tool    string `json:"tool"`    // mcpToolCall

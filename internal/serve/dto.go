@@ -3,11 +3,11 @@ package serve
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/ledger"
 	"github.com/agentjoey/pactify/internal/projection"
 )
 
@@ -48,9 +48,11 @@ type StateDTO struct {
 	AwaitingCount int          `json:"awaiting_count"`
 }
 
-func logPath(projectRoot string) string {
-	return filepath.Join(projectRoot, ".pact", "log.jsonl")
-}
+// logPath is serve's project-scoped ledger path. It delegates to internal/ledger
+// so this package has exactly one answer to "where is project X's log", and so
+// the reason it must NOT be paths.LogIn lives with the rule (see
+// TestServeNeverResolvesLedgerPathsFromProcessEnv).
+func logPath(projectRoot string) string { return ledger.Path(projectRoot) }
 
 // splitNonEmptyLines splits s on newlines, trimming \r and dropping blanks.
 func splitNonEmptyLines(s string) []string {
@@ -150,7 +152,7 @@ func (s *Server) dropStateMemo(id string) {
 // JSON DTO. `at` < 0 means "all events"; `at` >= len(evs) clamps to the full
 // log. `at` == 0 yields the empty-fold state.
 func ProjectStateAt(projectRoot string, at int) (StateDTO, error) {
-	evs, err := event.ReadAll(logPath(projectRoot))
+	evs, err := ledger.Read(projectRoot)
 	if err != nil {
 		return StateDTO{}, err
 	}

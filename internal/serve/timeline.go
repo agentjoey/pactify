@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/ledger"
 )
 
 // TimelineEventDTO is one entry in the timeline index: a 1-based position plus
@@ -40,7 +40,7 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
-	evs, err := event.ReadAll(logPath(dir))
+	evs, err := ledger.Read(dir)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

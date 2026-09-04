@@ -155,6 +155,25 @@ func ResolveSeat(seat, kind, tierEffort string) (Effective, bool) {
 // agrees with the profile, or lands on an unbound seat, displaces nothing and
 // stays silent). agentcfg is a pure library with no output channel of its own,
 // so the caller decides where the warning surfaces.
+// SeatModelPin reports the model a seat's role binding pins, and the role that
+// pins it. ok=false when the seat is unbound or its profile names no model.
+//
+// It exists for transports that CANNOT honor the pin: they must be able to say
+// so instead of silently running on the vendor's own default ([ACP-MODEL]).
+// Callers that can honor it should go through ResolveSeatFrom, which returns the
+// whole launch configuration rather than this one field.
+func SeatModelPin(seat string) (model, role string, ok bool) {
+	cfg, err := roles.Load()
+	if err != nil {
+		return "", "", false
+	}
+	p, r, found := cfg.Lookup(seat)
+	if !found || p.Model == "" {
+		return "", "", false
+	}
+	return p.Model, r, true
+}
+
 func ResolveSeatFrom(seat, kind string, src KindSource, tierEffort string) (Effective, string, bool) {
 	if cfg, err := roles.Load(); err == nil {
 		if p, role, ok := cfg.Lookup(seat); ok {

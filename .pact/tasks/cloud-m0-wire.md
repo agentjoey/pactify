@@ -5,7 +5,7 @@
 > 本任务是第一棒：搭 workspace 骨架 + 迁 wire。
 
 ## 源仓（只读！）
-`/Users/xtation/AgentWorks/CodeSpace/pactify-apps/linx` — **绝对不许改动源仓任何文件**，只读复制。
+`~/AgentWorks/CodeSpace/pactify-apps/linx` — **绝对不许改动源仓任何文件**，只读复制。
 
 ## 目标
 1. 新建 `cloud/` pnpm workspace 骨架：

@@ -25,7 +25,7 @@
 
 ## 验收命令
 ```
-cd /Users/xtation/AgentWorks/Code_Claude/pactify && go test ./internal/serve/ -v && go test ./...
+cd <repo> && go test ./internal/serve/ -v && go test ./...
 ```
 （全绿）
 

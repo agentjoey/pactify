@@ -49,7 +49,7 @@ run 路径仍在用）实现了**同一套**三级优先级：init 事件 kind �
 
 **修**：改名为 `web/scripts/shot-dispatch-review.mjs`（按它拍什么命名，不按工单号），并修四处：
 
-1. 硬编码的 `const WEB = "/Users/xtation/..."` —— 改为从 `import.meta.url` 推导
+1. 硬编码的 `const WEB = "~/..."` —— 改为从 `import.meta.url` 推导
    （照抄 `e2e/mock-server.mjs` 的做法）
 2. 硬编码输出 `/tmp/pactify-shots/dispatch-review-tier.png` —— 支持 `SHOT_OUT` 环境变量，
    与 `shots.mjs` 对齐

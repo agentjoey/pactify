@@ -4,7 +4,7 @@
 > 把账户层密码学从 linx 的 core 包抽成独立共享包。
 
 ## 源仓（只读！）
-`/Users/xtation/AgentWorks/CodeSpace/pactify-apps/linx` — **绝对不许改动源仓任何文件**。
+`~/AgentWorks/CodeSpace/pactify-apps/linx` — **绝对不许改动源仓任何文件**。
 
 ## 目标
 1. 新建 `cloud/crypto/` 包，`package.json`：

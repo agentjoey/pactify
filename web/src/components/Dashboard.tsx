@@ -5,7 +5,7 @@ import { useDataSource } from "../lib/datasource";
 import { ProjectMenu } from "./shell/ProjectMenu";
 import { MiniPipeline } from "./ui/MiniPipeline";
 import { ReviewGate } from "./ui/ReviewGate";
-import { FallbackCard } from "./ui/FallbackCard";
+import { FallbackCards } from "./ui/FallbackCard";
 import {
   deriveDashboardKPIs,
   deriveFeatureLanes,
@@ -172,7 +172,7 @@ export function Dashboard({
               author={author}
               onChanged={onChanged}
             />
-            <FallbackCard
+            <FallbackCards
               project={project}
               canWrite={!!author && src.capabilities.canWrite}
               onApproved={onChanged}

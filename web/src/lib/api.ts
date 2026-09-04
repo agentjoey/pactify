@@ -365,9 +365,14 @@ export async function runOrchestrate(
   return (await r.json()) as { status_url: string };
 }
 
-/** The pending fallback proposal an env-class escalation left, if any. */
+/**
+ * ONE pending fallback proposal an env-class escalation left. Mirrors
+ * internal/serve's fallbackProposalDTO: every field but `scope` is `omitempty`
+ * on the wire, so every field but `scope` is optional here.
+ */
 export interface FallbackProposal {
-  pending: boolean;
+  /** The partition the proposal was filed under: a feature id, or "all". */
+  scope: string;
   task?: string;
   seat?: string;
   fromRole?: string;
@@ -375,25 +380,43 @@ export interface FallbackProposal {
   reason?: string;
 }
 
-export async function getFallbackProposal(project: string): Promise<FallbackProposal> {
+/**
+ * The project's pending fallback proposals — a LIST, because a
+ * --max-concurrency > 1 run pauses each feature independently and can leave
+ * several pending at once. Empty means nothing is pending.
+ *
+ * Anything that is not the documented `{proposals: [...]}` shape is read as
+ * "nothing pending": inventing cards out of a response we do not understand
+ * would put approve buttons in front of a person on a guess.
+ */
+export async function getFallbackProposals(project: string): Promise<FallbackProposal[]> {
   const r = await fetch(`/api/projects/${project}/fallback-proposal`);
-  if (!r.ok) return { pending: false };
-  return (await r.json()) as FallbackProposal;
+  if (!r.ok) return [];
+  const body = (await r.json()) as { proposals?: FallbackProposal[] } | null;
+  return Array.isArray(body?.proposals) ? body.proposals : [];
 }
 
-/** Approve the pending proposal: resumes the paused run adopting it (this run only). */
 /**
- * Thrown when the server says nothing is pending: the proposal was already
- * approved, reset, or consumed by another operator. The card must retire itself
- * rather than offer a retry that can never succeed.
+ * Thrown when the server says nothing is pending for that task: the proposal was
+ * already approved, reset, or consumed by another operator. The card must retire
+ * itself rather than offer a retry that can never succeed.
  */
 export class ProposalGoneError extends Error {}
 
-export async function approveFallback(project: string): Promise<{ status_url: string }> {
+/**
+ * Approve ONE named proposal: resumes the paused run adopting it (this run
+ * only). The task id is required — approval is per-decision, and the server
+ * 404s a body that names no pending task, so an omitted task would look to the
+ * card exactly like "someone else already handled it" while nothing happened.
+ */
+export async function approveFallback(
+  project: string,
+  task: string,
+): Promise<{ status_url: string }> {
   const r = await fetch(`/api/projects/${project}/fallback-proposal/approve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: "{}",
+    body: JSON.stringify({ task }),
   });
   if (r.status === 404) throw new ProposalGoneError(await extractErrorMessage(r));
   // Bare server message: this one is read by a person deciding whether to swap

@@ -67,8 +67,8 @@ export interface DataSource {
    * A source that omits these renders the card read-only rather than offering
    * an approval it cannot deliver.
    */
-  getFallbackProposal?(project: string): Promise<FallbackProposal>;
-  approveFallback?(project: string): Promise<{ status_url: string }>;
+  getFallbackProposals?(project: string): Promise<FallbackProposal[]>;
+  approveFallback?(project: string, task: string): Promise<{ status_url: string }>;
   stopOrchestrate?(project: string): Promise<void>;
   shipFeature?(
     project: string,
@@ -174,12 +174,12 @@ export class LocalServeSource implements DataSource {
     return api.runOrchestrate(project, body);
   }
 
-  getFallbackProposal(project: string): Promise<FallbackProposal> {
-    return api.getFallbackProposal(project);
+  getFallbackProposals(project: string): Promise<FallbackProposal[]> {
+    return api.getFallbackProposals(project);
   }
 
-  approveFallback(project: string): Promise<{ status_url: string }> {
-    return api.approveFallback(project);
+  approveFallback(project: string, task: string): Promise<{ status_url: string }> {
+    return api.approveFallback(project, task);
   }
 
   resumeOrchestrate(

@@ -25,20 +25,22 @@ func TestApproveFallbackOverridesSeatForRun(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	if err := writeProposal(dir, FallbackProposal{Task: "t1", Seat: "w", FromRole: "primary", ToRole: "backup", Tried: []string{"backup"}}); err != nil {
+	if err := writeProposal(dir, historyScopeAll, FallbackProposal{Task: "t1", Seat: "w", FromRole: "primary", ToRole: "backup", Tried: []string{"backup"}}); err != nil {
 		t.Fatal(err)
 	}
 
-	opts := Options{Dir: dir, ApproveFallback: true, triedFallbacks: map[string][]string{}}
-	opts = opts.applyApprovedFallback()
+	opts, err := (Options{Dir: dir, ApproveFallback: []string{"t1"}}).applyApprovedFallback()
+	if err != nil {
+		t.Fatalf("applyApprovedFallback: %v", err)
+	}
 
 	if got := opts.kind("w"); got != "opencode" {
 		t.Fatalf("approved fallback must launch seat w as the backup role's kind, got %q", got)
 	}
-	if len(opts.triedFallbacks["w"]) != 1 || opts.triedFallbacks["w"][0] != "backup" {
+	if tried := opts.triedFallbacks[historyScopeAll]["w"]; len(tried) != 1 || tried[0] != "backup" {
 		t.Fatalf("approval must record the tried profile: %v", opts.triedFallbacks)
 	}
-	if _, ok := readProposal(dir); ok {
+	if _, ok := readProposal(dir, historyScopeAll); ok {
 		t.Fatal("an adopted proposal must be cleared")
 	}
 }
@@ -62,15 +64,18 @@ func TestNoApproveLeavesProposalAndRole(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	if err := writeProposal(dir, FallbackProposal{Task: "t1", Seat: "w", ToRole: "backup"}); err != nil {
+	if err := writeProposal(dir, historyScopeAll, FallbackProposal{Task: "t1", Seat: "w", ToRole: "backup"}); err != nil {
 		t.Fatal(err)
 	}
 
-	opts := Options{Dir: dir, triedFallbacks: map[string][]string{}}.applyApprovedFallback()
+	opts, err := (Options{Dir: dir}).applyApprovedFallback()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got := opts.kind("w"); got != "kimi-cli" {
 		t.Fatalf("without approval the seat keeps its role kind, got %q", got)
 	}
-	if _, ok := readProposal(dir); !ok {
+	if _, ok := readProposal(dir, historyScopeAll); !ok {
 		t.Fatal("an unapproved proposal must stay pending")
 	}
 }

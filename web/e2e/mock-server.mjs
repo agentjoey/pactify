@@ -17,9 +17,16 @@
 //
 // Test hooks (NOT part of the real API):
 //   POST /__test/reset     → restore the seed state (per-test).
-//   POST /__test/fallback  → arm (body = proposal) or clear (empty body) the
-//                            pending fallback proposal, which the driver would
-//                            otherwise only produce by failing to launch an agent.
+//   POST /__test/fallback  → arm (body = one proposal, or an array of them) or
+//                            clear (empty body) the pending fallback proposals,
+//                            which the driver would otherwise only produce by
+//                            failing to launch an agent.
+//   GET  /__test/fallback/approvals → {approvals: [task, …]} — WHICH tasks the
+//                            approve verb actually named, in call order. The
+//                            task ids are the point: a client that posts no task
+//                            gets a 404 the card renders as "already handled",
+//                            so only server-side evidence distinguishes a real
+//                            approval from a silent no-op.
 //
 // Draft state is NOT server-side — drafts are browser-local; the connect/author
 // tests create them through the UI.
@@ -44,10 +51,30 @@ const PORT = Number(process.env.PORT || 4173);
 
 // --- mutable per-process state (reset via /__test/reset between tests) --------
 let state = initialState();
-// The pending fallback proposal, if any. Armed by /__test/fallback.
-let fallbackProposal = null;
-// Records that the approve verb actually reached the server.
-let fallbackApprovals = 0;
+// The pending fallback proposals, if any. Armed by /__test/fallback. A LIST,
+// because a --max-concurrency > 1 run pauses each feature independently
+// (internal/serve/fallback_proposal.go).
+let fallbackProposals = [];
+// The task id of every approval that actually reached the server, in order.
+let fallbackApprovals = [];
+
+// FALLBACK_DTO_FIELDS is the exact wire field set of internal/serve's
+// fallbackProposalDTO, in tag order. `scope` leads and is always present; the
+// rest are `omitempty`. src/lib/fallbackContract.test.ts reads this literal and
+// the Go struct and fails if they disagree — the two sides mocking their own
+// assumptions is what let the list-shape change ship broken and green.
+const FALLBACK_DTO_FIELDS = ["scope", "task", "seat", "fromRole", "toRole", "reason"];
+
+// fallbackProposalDTO mirrors that struct field for field, INCLUDING the
+// `omitempty`: an absent optional field must be absent here too, or the mock
+// quietly hands the client a key the real server never sends.
+function fallbackProposalDTO(scope, p) {
+  const dto = { scope };
+  for (const k of FALLBACK_DTO_FIELDS.slice(1)) {
+    if (p[k]) dto[k] = p[k];
+  }
+  return dto;
+}
 const sseClients = new Set(); // live SSE response objects
 let registry = makeRegistry();
 const fsTree = browseTree();
@@ -138,14 +165,21 @@ const server = createServer(async (req, res) => {
   // --- test hooks ---
   if (url === "/__test/reset" && method === "POST") {
     resetState();
-    fallbackProposal = null;
-    fallbackApprovals = 0;
+    fallbackProposals = [];
+    fallbackApprovals = [];
     return sendJSON(res, 200, { status: "ok" });
   }
   if (url === "/__test/fallback" && method === "POST") {
     const raw = await readBody(req);
     const body = raw ? JSON.parse(raw) : null;
-    fallbackProposal = body && body.seat ? body : null;
+    const armed = Array.isArray(body) ? body : body ? [body] : [];
+    fallbackProposals = armed
+      // serve skips any file it cannot fully understand — a proposal missing a
+      // field an approval acts on must never become a live approve button.
+      .filter((p) => p && p.seat && p.toRole)
+      .map((p, i) => fallbackProposalDTO(p.scope || `scope${i}`, p))
+      // serve sorts by scope (the filename) for a stable card order.
+      .sort((a, b) => (a.scope < b.scope ? -1 : a.scope > b.scope ? 1 : 0));
     return sendJSON(res, 200, { status: "ok" });
   }
   if (url === "/__test/fallback/approvals" && method === "GET") {
@@ -268,13 +302,26 @@ const server = createServer(async (req, res) => {
     return sendJSON(res, 202, { status_url: "/x" });
   }
   if (url === `/api/projects/${PROJECT_ID}/fallback-proposal` && method === "GET") {
-    return sendJSON(res, 200, fallbackProposal ? { pending: true, ...fallbackProposal } : { pending: false });
+    // Never null: an empty list and "nothing pending" are the same thing.
+    return sendJSON(res, 200, { proposals: fallbackProposals });
   }
   if (url === `/api/projects/${PROJECT_ID}/fallback-proposal/approve` && method === "POST") {
-    // Nothing pending is a 404, never a silent resume (mirrors the real server).
-    if (!fallbackProposal) return sendJSON(res, 404, { error: "no fallback proposal is pending" });
-    fallbackApprovals += 1;
-    fallbackProposal = null;
+    // Approval is per-decision: the body names ONE task, and only that task's
+    // proposal is consumed. An absent/unparseable body leaves task empty, which
+    // matches nothing and falls into the 404 — the same fail-closed answer the
+    // real handler gives a stale card.
+    let task = "";
+    try {
+      task = (JSON.parse(await readBody(req)) || {}).task || "";
+    } catch {
+      task = "";
+    }
+    const hit = task ? fallbackProposals.find((p) => p.task === task) : undefined;
+    if (!hit) {
+      return sendJSON(res, 404, { error: "no fallback proposal is pending for that task" });
+    }
+    fallbackApprovals.push(task);
+    fallbackProposals = fallbackProposals.filter((p) => p !== hit);
     return sendJSON(res, 202, { status_url: "/x" });
   }
 

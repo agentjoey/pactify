@@ -37,6 +37,25 @@ func RunParallel(ctx context.Context, popts ParallelOptions) error {
 		return opts.run(ctx)
 	}
 
+	// Adopt human-approved fallbacks before anything is dispatched. This call site
+	// is the FALLBACK-PAR §1(2) fix: applyApprovedFallback used to live only in
+	// run()'s prologue, and --max-concurrency > 1 is precisely the path that
+	// bypasses run() — so --approve-fallback was a silent no-op for every parallel
+	// run. No alias scope here: under concurrency, distinct scopes are distinct
+	// decisions and an approval must not leak to a feature that merely shares the
+	// seat (§2.3). Done before any git side effect so a bad approval fails without
+	// parking the primary tree.
+	adopted, aerr := opts.applyApprovedFallback()
+	if aerr != nil {
+		return aerr
+	}
+	opts = adopted
+	// Record how THIS run was launched so a resume initiated by another process
+	// (serve's fallback approval) can reproduce its concurrency instead of
+	// silently downgrading N concurrent features to serial (§2.8). Best-effort:
+	// losing it costs a serial resume, never the run.
+	_ = WriteRunParams(opts.runtimeDir(), RunParams{MaxConcurrency: popts.MaxConcurrency})
+
 	root := popts.WorktreeRoot
 	if root == "" {
 		root = filepath.Join(opts.Dir, ".pact", "orchestrate", "wt")
@@ -298,6 +317,14 @@ func ensureFileContains(path, marker, block string) (bool, error) {
 func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature string) (mergeable bool, escalated bool, err error) {
 	o := opts
 	o.LedgerDir = opts.Dir // escalate events go to the primary repo ledger
+	// Twin of LedgerDir, and for the same reason: everything written through
+	// runtimeDir() — the escalation record, the fallback proposal, per-task stream
+	// logs — must land in the PRIMARY tree, because settle() removes this worktree
+	// the moment the feature goes terminal. Without this line the escalation .md
+	// was written into the worktree and deleted on the very next statement, so the
+	// notification's `see <path>` pointed at a file that no longer existed
+	// (FALLBACK-PAR §1(3)). Git work still happens in worktreeDir via o.Dir.
+	o.RuntimeDir = opts.Dir
 	o.Dir = worktreeDir
 	o.Feature = feature
 	// Reconstruct threshold history across driver restarts: rework rounds from
@@ -337,15 +364,12 @@ func (opts Options) driveFeature(ctx context.Context, worktreeDir, feature strin
 		}
 		if act.Kind == ActRunOwner || act.Kind == ActRunReviewer {
 			if reason, isTripped := tripped(act.Task, h, o.thresholdsFor(st, act)); isTripped {
+				// Status first (one file per feature, this driver's job), then the
+				// SHARED escalation: the proposal, the failure snapshot, the budget
+				// reset and the history write all live in escalateTripped so this
+				// path can never drift from the serial one again.
 				emit(buildEscalatedStatus(view, act.Task, reason, h, now))
-				// Threshold fired, human notified: drop the task's persisted failure
-				// budget so a post-fix rerun resumes instead of re-tripping on the
-				// loaded count (mirrors the serial loop; rework is ledger-derived).
-				delete(h.Fails, act.Task)
-				delete(h.LastFail, act.Task)
-				_ = writeHistory(opts.Dir, feature, h)
-				return false, true, o.escalate(feature, act.Task, reason, evidenceFor(st, act.Task),
-					"人工介入后 pactify orchestrate 续跑")
+				return false, true, o.escalateTripped(feature, act, reason, h, st)
 			}
 		}
 		if o.Th.MaxIters > 0 && h.Iters >= o.Th.MaxIters {

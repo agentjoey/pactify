@@ -1,21 +1,42 @@
 # Pactify — Operations
 
-> Last updated: 2026-06-13 | Status: Placeholder
+> Last updated: **2026-08-29** | Status: **在用**（本文不是占位稿——`relay 配置与运维` 之后的
+> 每一节都对应当前代码里真实存在的命令与契约）。
+>
+> **⚠️ 当前部署实况（2026-08-29 实测）**：**云端 relay 整层没有在运行**——`pactify-relay` 与
+> `pactify-relay-staging` 两个 fly app 都是 **0 machines**，`/health` 不可达；`origin/production`
+> 停在 2026-07-04（落后 `main` **652** 提交），`origin/staging` 落后 **224**。
+> 文档站 pactify.dev 与 dashboard orx.pactify.dev（Vercel）本身正常，但 dashboard 的 hosted 模式
+> 打到的是这个不存在的 relay。**当前唯一可用路径是 local 模式**（`pactify serve`，见下）。
+>
+> **⚠️ 重新拉起 relay 时的硬约束**：`origin/production` 上 `cloud/wire` 的 `AgentKind` zod 枚举
+> **没有 `antigravity`**，而 relay 的 `cloud/relay/src/machines.ts:19` 走的是**会抛异常的**
+> `MachineInfo.parse`（那条路径没有 catch）。v0.11.0 起的二进制会广播 `antigravity` kind，
+> 所以**必须先把 relay 部署到 ≥ `main` 的版本，再让任何 v0.11.0+ 的客户端连上**；
+> 顺序反了，一台 agy 机器就能打掉整个账户的机器列表（`GET /v1/machines` 500）。
 
 ## 日常开发流程
 
 ```bash
 git pull
-cat .agent/CURRENT.md     # 查当前状态
-cat .agent/sprints/sprint-001.md  # 查当前 Sprint 任务
+pactify doctor                 # 装机 + 接线 + 各 vendor CLI 预检
+pactify status                 # 当前任务图（账本投影）
+cat docs/backlog.md            # 开着的条目（gitignored，只在本地）
+cat .agent/CURRENT.md          # 本地工作台的交接说明（gitignored）
 ```
+
+（`.agent/sprints/` 这套 Sprint 文件已于 2026-06-17 随「仓库只留产品文档」一并退役，
+不要再去找它们；排期现在走 `docs/backlog.md`。）
 
 ## 故障排查
 
 | 症状 | 排查步骤 |
 |------|---------|
 | STATE.yml 与 log.jsonl 不一致 | `pactify log` 重算，用输出覆盖 STATE.yml |
-| task 状态无法转换 | 检查契约规则（worker 不能自标 accepted） |
+| task 状态无法转换 | 检查契约规则（worker 不能自标 accepted；只有 reviewer 能 accept，且必须先 `awaiting_review`） |
+| Board 上任务卡在 `changes_requested` / `in_progress`，但活其实已经完成 | 账本滞后于现实（agent 交付了没走完协议流转）。**当前只能回命令行**：以 **owner 身份** `pactify checkpoint <task> --evidence …`，再由 reviewer `pactify accept`。⚠️ 先确认没有并发 run 在跑、工作树干净——`Checkpoint` 走 `CommitAll`，会把别人的在途改动一并提交。已记 backlog `[UI-GATE]`。 |
+| launchd 拉起的 `serve` 立刻被杀 | `go build` 的 ad-hoc 签名不够，`codesign --force -s - ./pactify` 后重试（见「发版」节） |
+| dashboard hosted 模式空白 / 连不上 | 云端 relay 当前未运行（见顶部）。用 local 模式：`pactify serve` |
 
 ## relay 配置与运维
 
@@ -52,11 +73,23 @@ pactify serve   # relay 禁用
 
 ## 发版
 
+二进制走 goreleaser + `v*` tag；详见 [`release-process.md`](release-process.md) 与
+[`deployment.md`](deployment.md)，版本历史见 [`CHANGELOG.md`](CHANGELOG.md)。
+
 ```bash
-./scripts/release.sh [patch|minor|major]
+git tag v0.11.0 && git push origin v0.11.0      # 触发 .github/workflows/release.yml
 ```
 
-（release.sh 待 CLI 实现后创建）
+云端（relay）走分支快进：`main` → `staging` → `production`。**见本文顶部的硬约束**——
+拉起 relay 时必须先部署 relay、后放二进制。
+
+**⚠️ 本地重建的二进制要自己签名**：`go build` 产出的 ad-hoc linker 签名不足以让 launchd 拉起，
+会被 `OS_REASON_CODESIGNING` 直接 SIGKILL。`install.sh:74-75` 的 `codesign -s - --force` + `xattr -c`
+只覆盖 curl 安装的 release 二进制，**不覆盖本地 `go build` + `launchctl kickstart` 这条开发流程**：
+
+```bash
+go build -o pactify ./cmd/pactify && codesign --force -s - ./pactify
+```
 
 ## orchestrate 自主驱动（pactify orchestrate）
 写好任务图（assign 各 task + owner/reviewer/deps + 每个 task 规格里加一行机器可读 `verify: <命令>`），然后让 orchestrate 跑到底：
@@ -176,12 +209,21 @@ this kind, so it can't reconstruct that conflicting flag pair.
 
 **Fallback.** When a stint fails having produced *nothing* (quota exhausted,
 auth expired, a missing binary — "env-class"), the driver proposes the seat's
-next fallback role, writes `fallback-proposal.json` beside the escalation, and
-pauses. Approve it with:
+next fallback role, writes `.pact/orchestrate/fallback/<scope>.json` beside the
+escalation, and pauses. `scope` is the feature id (one file per concurrently
+driven feature under `--max-concurrency > 1`) or `all` for an unfiltered serial
+run. Approve a proposal by naming its **task**:
 
 ```bash
-pactify orchestrate --resume --approve-fallback
+pactify orchestrate --resume --approve-fallback <task-id>   # repeatable
 ```
+
+The escalation record prints the exact command. Naming a task that has no
+pending proposal is an error and the run does not start — otherwise you would
+believe the agent was swapped while the run burns another budget cycle on the
+same configuration. Under `--max-concurrency > 1` the approval applies **only to
+the feature whose proposal you named**, even when another feature shares that
+seat.
 
 The approval applies to the current run only — tomorrow's quota may have reset.
 A failure where the agent *did* deliver work ("logic-class") is not a fallback

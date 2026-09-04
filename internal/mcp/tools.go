@@ -9,6 +9,7 @@ import (
 
 	"github.com/agentjoey/pactify/internal/pact"
 	"github.com/agentjoey/pactify/internal/registry"
+	"github.com/agentjoey/pactify/internal/runguard"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -208,6 +209,13 @@ func registerTools(s *sdk.Server) {
 			proj, err := resolveProject(in.Project)
 			if err != nil {
 				return errResult(err)
+			}
+			// Checkpoint commits the whole worktree: taken while a driver is
+			// mid-stint on another task, it sweeps that task's half-written files
+			// into this one. The run's own task is exempt — this tool is exactly
+			// how a briefed worker hands off.
+			if blocked := runguard.CheckpointBlocked(proj.Dir(), in.Task); blocked != "" {
+				return errResult(fmt.Errorf("%s\nwait for that run to finish; if the tree really is yours, a human can override with `pactify checkpoint %s --force`", blocked, in.Task))
 			}
 			if err := proj.Checkpoint(in.Task, in.Evidence); err != nil {
 				return errResult(err)

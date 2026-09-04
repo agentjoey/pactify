@@ -8,6 +8,7 @@ import (
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/pact"
+	"github.com/agentjoey/pactify/internal/runguard"
 	"github.com/spf13/cobra"
 )
 
@@ -111,9 +112,25 @@ func newRootCmd() *cobra.Command {
 	assignCmd.Flags().StringSliceVar(&deps, "deps", nil, "comma-separated dep task ids (same feature)")
 
 	var evidence string
+	var cpForce bool
 	cpCmd := &cobra.Command{Use: "checkpoint <task>", Args: cobra.ExactArgs(1), Short: "submit for review",
-		RunE: func(_ *cobra.Command, a []string) error { return pact.Checkpoint(a[0], evidence) }}
+		RunE: func(_ *cobra.Command, a []string) error {
+			proj := pact.At(".")
+			// Checkpoint commits the whole worktree, so a manual checkpoint taken
+			// while a driver is mid-stint on another task commits that task's
+			// half-written files under this one (real incident: an m4 worker's
+			// file landed in an m3 checkpoint, skewing per-task LOC). A run's own
+			// task is exempt — the briefing tells every worker to end with
+			// `pactify checkpoint <task>`.
+			if !cpForce {
+				if blocked := runguard.CheckpointBlocked(proj.Dir(), a[0]); blocked != "" {
+					return fmt.Errorf("%s\nwait for it to finish, or re-run with --force if you are sure the tree is yours", blocked)
+				}
+			}
+			return proj.Checkpoint(a[0], evidence)
+		}}
 	cpCmd.Flags().StringVar(&evidence, "evidence", "", "evidence text")
+	cpCmd.Flags().BoolVar(&cpForce, "force", false, "checkpoint even while another orchestrate run is in flight (commits the whole worktree)")
 
 	var acceptEvidence string
 	acceptCmd := &cobra.Command{Use: "accept <task>", Args: cobra.ExactArgs(1), Short: "reviewer accepts",

@@ -20,6 +20,7 @@ import (
 	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/orchestrate"
 	"github.com/agentjoey/pactify/internal/pact"
+	"github.com/agentjoey/pactify/internal/runguard"
 	"github.com/agentjoey/pactify/internal/schedule"
 )
 
@@ -291,29 +292,14 @@ func orchClearRunning(dir string) {
 }
 
 func (s *Server) orchestrateRunning(dir string) bool {
-	b, err := os.ReadFile(orchestrateStatusPath(dir))
-	if err != nil {
-		return false
-	}
-	var st struct {
-		Done      bool   `json:"done"`
-		Escalated bool   `json:"escalated"`
-		UpdatedAt string `json:"updated_at"`
-	}
-	if json.Unmarshal(b, &st) != nil {
-		return false
-	}
-	if st.Done || st.Escalated {
-		return false
-	}
-	// Stale guard: a crashed/abandoned run leaves done=false forever. Treat it as
-	// running ONLY if its status updated recently (RFC3339). An old or unparseable
-	// timestamp means a dead run that must not block new ones.
-	t, err := time.Parse(time.RFC3339, st.UpdatedAt)
-	if err != nil {
-		return false
-	}
-	return time.Since(t) < 10*time.Minute
+	// Delegates to runguard so this spawn guard and the checkpoint guard can
+	// never drift into two different answers about whether a run is alive.
+	// Semantics are unchanged: serial status.json only (a parallel driver is
+	// spawned through a different path), done/escalated/missing/corrupt/stale
+	// all mean "not running" — a crashed run leaves done=false forever and must
+	// not block new ones.
+	_, running := runguard.Serial(dir)
+	return running
 }
 
 // inferKindFromName derives an agent kind from a seat name by stripping a

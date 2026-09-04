@@ -11,12 +11,11 @@ concurrency:
 
 jobs:
   test:
-    # 25, not 15: measured on run 33861706998, the job spends ~10 min INSTALLING
-    # (cloud deps 308s + web deps 302s) and only ~3.7 min testing (go test 62s,
-    # bats 66s, web tests 95s, cloud 12s). At 15 it died mid-suite with every
-    # test already green — the same starvation that once hid bats/web/cloud
-    # behind a failing earlier step. The pnpm cache below cuts the common case;
-    # this ceiling is the headroom for a cold one.
+    # 25, not 15. Measured (run 33863178072, the first run that finished): with a
+    # warm pnpm cache this job is ~10 min, and a slow runner day pushed the
+    # 15-minute version past its ceiling with every test already green. The pnpm
+    # cache below cuts the common case (cloud deps 312s → 8s); the ceiling is the
+    # headroom for a cold one. The ~340s cloud step now runs in its own job.
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -59,6 +58,33 @@ jobs:
         run: cd web && npm test
       - name: web typecheck
         run: cd web && npx tsc -b --noEmit
+      - name: embedded dist in sync with web source
+        run: |
+          cd web && npm run build && cd ..
+          git diff --exit-code -- internal/serve/dist || {
+            echo "::error::internal/serve/dist is stale — run 'cd web && npm run build' and commit it"; exit 1; }
+
+  # Split out of `test` (2026-09-04): this step is ~340s and depends only on the
+  # cloud workspace — no Go, no web. Sitting last in `test` it was the step the
+  # job timeout always cut, so it went a long time without ever running to
+  # completion (its "12s" in the run 33861706998 timings was a CANCELLED step,
+  # not a fast one). As its own job it runs in parallel and cannot be starved.
+  cloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('cloud/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: install cloud workspace deps
+        run: cd cloud && npx pnpm@10 install --frozen-lockfile --store-dir ~/.pnpm-store
       - name: cloud workspace (wire + relay tests + type-check)
         run: |
           cd cloud
@@ -75,11 +101,6 @@ jobs:
           # auth regressions (e.g. the C1/H3 security tests) actually gate CI —
           # previously the relay was only type-checked, never run.
           npx pnpm@10 --filter @pactify-apps/relay test
-      - name: embedded dist in sync with web source
-        run: |
-          cd web && npm run build && cd ..
-          git diff --exit-code -- internal/serve/dist || {
-            echo "::error::internal/serve/dist is stale — run 'cd web && npm run build' and commit it"; exit 1; }
 
   e2e:
     runs-on: ubuntu-latest

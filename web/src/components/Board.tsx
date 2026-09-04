@@ -30,6 +30,25 @@ const GHOST: Record<DesignColumn, string> = {
   shipped: "Nothing shipped yet",
 };
 
+// The engine takes `accept` and `changes` only from awaiting_review
+// (engine.go:878 / :915). The Review column also carries changes_requested
+// cards, so gate the buttons on the task's own status — otherwise the only way
+// to learn an action is illegal is to click it and read the server's rejection,
+// which is the dead end a Human Owner hit in the [UI-GATE] incident.
+function reviewable(status: string): boolean {
+  return status === "awaiting_review";
+}
+
+// reviewBlockedReason explains a disabled review button, reusing the existing
+// title-as-reason pattern. undefined when the button is live.
+function reviewBlockedReason(status: string, canWrite: boolean): string | undefined {
+  if (!canWrite) return "Remote control needs U3";
+  if (!reviewable(status)) {
+    return `任务处于 ${status}，需 owner 先 checkpoint 才能评审`;
+  }
+  return undefined;
+}
+
 export function Board({
   state,
   events = [],
@@ -267,8 +286,8 @@ export function Board({
             <button
               type="button"
               data-testid="card-accept"
-              disabled={pending === bt.task.id || !canWrite}
-              title={canWrite ? undefined : "Remote control needs U3"}
+              disabled={pending === bt.task.id || !canWrite || !reviewable(bt.task.status)}
+              title={reviewBlockedReason(bt.task.status, canWrite)}
               onClick={(e) => {
                 e.stopPropagation();
                 verb(bt.task.id, "accept");
@@ -281,8 +300,8 @@ export function Board({
             <button
               type="button"
               data-testid="card-changes"
-              disabled={!canWrite}
-              title={canWrite ? undefined : "Remote control needs U3"}
+              disabled={!canWrite || !reviewable(bt.task.status)}
+              title={reviewBlockedReason(bt.task.status, canWrite)}
               onClick={(e) => {
                 e.stopPropagation();
                 setInlineChangesId(bt.task.id);

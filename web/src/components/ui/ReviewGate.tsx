@@ -71,7 +71,10 @@ export function ReviewGate({
         </span>
       </div>
 
-      <div className="mt-2 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--bg-code)] p-2 font-mono text-[10.5px] text-[var(--color-text-3)]">
+      {/* Evidence is the reviewer's primary read: --color-text-3 measures 3.39:1
+          on --bg-code, under the 4.5:1 body-text line. --color-text-2 is 6.80:1.
+          Same call FallbackCard already made for its own evidence well. */}
+      <div className="mt-2 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--bg-code)] p-2 font-mono text-[10.5px] text-[var(--color-text-2)]">
         {task.evidence || "Awaiting review evidence"}
       </div>
 

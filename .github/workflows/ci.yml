@@ -11,8 +11,14 @@ concurrency:
 
 jobs:
   test:
+    # 25, not 15: measured on run 33861706998, the job spends ~10 min INSTALLING
+    # (cloud deps 308s + web deps 302s) and only ~3.7 min testing (go test 62s,
+    # bats 66s, web tests 95s, cloud 12s). At 15 it died mid-suite with every
+    # test already green — the same starvation that once hid bats/web/cloud
+    # behind a failing earlier step. The pnpm cache below cuts the common case;
+    # this ceiling is the headroom for a cold one.
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -23,10 +29,18 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
+      # The pnpm store had NO cache in either job, so this install paid full
+      # network cost on every run (237s in e2e, 308s here, same commit).
+      - name: cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('cloud/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
       # web bundles cloud/* source (vite alias), which imports @noble/@scure —
       # so cloud deps must be present before ANY web build/type-check/test.
       - name: install cloud workspace deps
-        run: cd cloud && npx pnpm@10 install --frozen-lockfile
+        run: cd cloud && npx pnpm@10 install --frozen-lockfile --store-dir ~/.pnpm-store
       - name: install web deps
         run: cd web && npm ci
       - name: go mod tidy check
@@ -77,9 +91,15 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('cloud/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
       # e2e builds web too → same cloud-deps prerequisite as the test job.
       - name: install cloud workspace deps
-        run: cd cloud && npx pnpm@10 install --frozen-lockfile
+        run: cd cloud && npx pnpm@10 install --frozen-lockfile --store-dir ~/.pnpm-store
       - name: install web deps
         run: cd web && npm ci
       - name: install chromium

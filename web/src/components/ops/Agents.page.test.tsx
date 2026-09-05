@@ -104,7 +104,10 @@ describe("Agents page — 合并页", () => {
 
     fireEvent.click(screen.getByTestId("agent-test-claude-code"));
 
+    // 结果条只在展开态出现（独立验证指出收起态渲染它会破坏「收起=单行」），
+    // 因此点 Test 必须自动展开该行——否则点了按钮看不到任何结果。
     const strip = await screen.findByTestId("agent-test-result-claude-code");
+    expect(screen.getByTestId("agent-disclosure-claude-code")).toHaveAttribute("aria-expanded", "true");
     expect(strip).toHaveTextContent("auth");
     expect(strip).toHaveTextContent("claude login");
     // 不能只靠颜色：失败项必须带可读的文字标记
@@ -118,6 +121,13 @@ describe("Agents page — 合并页", () => {
     expect(screen.queryByTestId("agent-register-codex-app")).not.toBeInTheDocument();
     // Test 是只读探测，只读模式下仍然允许
     expect(screen.getByTestId("agent-test-claude-code")).toBeInTheDocument();
+
+    // 独立验证指出：旧断言只查 Register 按钮，正好绕开了配置体——只读模式下
+    // 模型下拉/权限档/Save 当时全都可用且真的发出了写请求。这条堵住那道缝。
+    fireEvent.click(screen.getByTestId("agent-disclosure-claude-code"));
+    await waitFor(() => expect(screen.getByTestId("agent-config-claude-code")).toBeInTheDocument());
+    expect(screen.getByTestId("model-select-claude-code")).toBeDisabled();
+    expect(screen.getByTestId("posture-blanket-claude-code")).toBeDisabled();
   });
 
   it("Rescan 重新拉取列表与版本", async () => {

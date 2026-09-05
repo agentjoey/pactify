@@ -18,8 +18,16 @@ function arraysEqual(a: string[], b: string[]) {
 // registered kind gets a row that loads its config and saves overrides.
 // AgentConfigBody 是 AgentConfigRow 的 embedded 形态，供 Agents 合并页在展开态
 // 复用同一份配置逻辑（自动保存 / 模型下拉 / 权限档 / Save）。
-export function AgentConfigBody({ kind, initial }: { kind: string; initial?: Config }) {
-  return <AgentConfigRow kind={kind} embedded initial={initial} />;
+export function AgentConfigBody({
+  kind,
+  initial,
+  author,
+}: {
+  kind: string;
+  initial?: Config;
+  author?: boolean;
+}) {
+  return <AgentConfigRow kind={kind} embedded initial={initial} author={author} />;
 }
 
 export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
@@ -94,11 +102,16 @@ function AgentConfigRow({
   delay = 0,
   embedded = false,
   initial,
+  author = true,
 }: {
   kind: string;
   delay?: number;
   embedded?: boolean;
   initial?: Config;
+  // author=false（hosted 只读）必须一路禁到配置体：独立验证实测发现，只读模式下
+  // 模型下拉/权限档/Save 全部可用且真的发出了写请求——旧测试只断言 Register 按钮
+  // 不存在，恰好绕开了这里。
+  author?: boolean;
 }) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [model, setModel] = useState("");
@@ -165,7 +178,7 @@ function AgentConfigRow({
   }, [saved]);
 
   useEffect(() => {
-    if (!hydrated || !cfg) return;
+    if (!hydrated || !cfg || !author) return;
     const payload = {
       model: model.trim(),
       restricted,
@@ -262,6 +275,7 @@ function AgentConfigRow({
                   <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] px-3 py-2">
                     <Select
                       data-testid={`model-select-${kind}`}
+                  disabled={!author}
                       value={customMode ? "__custom__" : model}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -287,6 +301,7 @@ function AgentConfigRow({
                   {customMode && (
                     <Input
                       data-testid={`model-${kind}`}
+                  disabled={!author}
                       value={model}
                       onChange={(e) => setModel(e.target.value)}
                       placeholder="model id"
@@ -316,6 +331,7 @@ function AgentConfigRow({
                 <button
                   type="button"
                   data-testid={`posture-blanket-${kind}`}
+                  disabled={!author}
                   aria-pressed={!restricted}
                   onClick={() => setRestricted(false)}
                   className={[
@@ -331,6 +347,7 @@ function AgentConfigRow({
                 <button
                   type="button"
                   data-testid={`posture-scoped-${kind}`}
+                  disabled={!author}
                   aria-pressed={restricted}
                   onClick={() => setRestricted(true)}
                   className={[
@@ -377,6 +394,7 @@ function AgentConfigRow({
                 ))}
                 <Input
                   data-testid={`tools-${kind}`}
+                  disabled={!author}
                   value={tools}
                   onChange={(e) => setTools(e.target.value)}
                   onBlur={flushSave}
@@ -403,7 +421,7 @@ function AgentConfigRow({
               type="button"
               data-testid={`save-${kind}`}
               onClick={saveNow}
-              disabled={saving}
+              disabled={saving || !author}
               className="rounded-lg bg-[var(--accent)] px-[18px] py-2 text-[12.5px] font-semibold text-[var(--accent-ink)] transition-colors hover:brightness-110 disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save"}

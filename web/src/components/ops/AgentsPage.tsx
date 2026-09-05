@@ -38,6 +38,15 @@ function label(c: AgentCheck): string {
   return detail.toLowerCase().startsWith(aspect.toLowerCase()) ? detail : `${aspect} ${detail}`;
 }
 
+// serverMessage 从 API 错误里取服务端那句话；取不到才退回原始文本。
+function serverMessage(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  const m = raw.match(/\{.*"error"\s*:\s*"([^"]+)"/);
+  if (m) return m[1];
+  const tail = raw.split(":").slice(1).join(":").trim();
+  return tail || raw;
+}
+
 type TestState =
   | { phase: "idle" }
   | { phase: "running" }
@@ -54,6 +63,7 @@ export function AgentsPage({ author }: { author?: boolean }) {
   const [tests, setTests] = useState<Record<string, TestState>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState("");
+  const [pruneResult, setPruneResult] = useState<{ kind: string; text: string } | null>(null);
 
   const load = useCallback((rescan = false) => {
     if (rescan) setScanning(true);
@@ -70,7 +80,15 @@ export function AgentsPage({ author }: { author?: boolean }) {
             .catch(() => {});
         }
       })
-      .catch(() => setError("Failed to load agents"))
+      .catch(() => {
+        // 已经有列表时，一次瞬时失败只报错，不把整页换成 Alert——
+        // 否则 rescan 抖动一下就会清空用户正在看的内容。
+        setRows((prev) => {
+          if (prev) setActionErr("Rescan failed — showing the last known list");
+          else setError("Failed to load agents");
+          return prev;
+        });
+      })
       .finally(() => setScanning(false));
     // Versions are a separate, slower probe (~572ms for the slowest CLI). They
     // arrive after the list and must never gate it.
@@ -84,18 +102,24 @@ export function AgentsPage({ author }: { author?: boolean }) {
   }, [load]);
 
   const runTest = (kind: string) => {
+    // 结果条只在展开态渲染（保住「收起 = 单行」），所以点 Test 必须顺带展开这一行——
+    // 否则用户点了按钮却什么也看不见。两个约束由此同时成立。
+    setOpen((o) => ({ ...o, [kind]: true }));
     setTests((t) => ({ ...t, [kind]: { phase: "running" } }));
     testAgent(kind)
       .then((r) => setTests((t) => ({ ...t, [kind]: { phase: "done", ok: r.ok, checks: r.checks } })))
       .catch((e) =>
         setTests((t) => ({
           ...t,
-          [kind]: { phase: "error", message: e instanceof Error ? e.message : "test failed" },
+          // 服务端已经说明了原因（如 "has no headless runner to test"）；
+          // 只回显裸 HTTP 码等于把 Test 的全部价值丢掉。
+          [kind]: { phase: "error", message: serverMessage(e) },
         })),
       );
   };
 
   const toggleRegister = async (kind: string, registered: boolean) => {
+    if (registered && !window.confirm(`从本机注册表移除 ${kind}？该 agent 的模型与权限设置会一并失效。`)) return;
     setBusy(kind);
     setActionErr("");
     try {
@@ -110,10 +134,16 @@ export function AgentsPage({ author }: { author?: boolean }) {
   };
 
   const prune = async (kind: string) => {
+    // 破坏性操作：`…` 承诺了确认，就必须真的确认（独立验证指出 affordance 在说谎）。
+    if (!window.confirm(`Prune ${kind} 的会话？这会删除该 agent 在本机的会话记录，不可撤销。`)) return;
     setBusy(kind);
     setActionErr("");
+    setPruneResult(null);
     try {
-      await pruneSessions(kind);
+      const r = await pruneSessions(kind);
+      // 结果必须回显：旧 RosterRow 会显示 "Nothing to prune" 或输出，
+      // 合并时被丢弃，导致破坏性操作零反馈。
+      setPruneResult({ kind, text: r.skipped ? "Nothing to prune" : r.output || "pruned" });
     } catch (e) {
       setActionErr(e instanceof Error ? e.message : "prune failed");
     } finally {
@@ -145,6 +175,7 @@ export function AgentsPage({ author }: { author?: boolean }) {
       open={!!open[a.kind]}
       author={author}
       busy={busy === a.kind}
+      pruneResult={pruneResult?.kind === a.kind ? pruneResult.text : undefined}
       test={tests[a.kind] ?? { phase: "idle" }}
       onToggleOpen={() => setOpen((o) => ({ ...o, [a.kind]: !o[a.kind] }))}
       onTest={() => runTest(a.kind)}
@@ -213,6 +244,7 @@ function AgentRowCard({
   open,
   author,
   busy,
+  pruneResult,
   test,
   onToggleOpen,
   onTest,
@@ -225,6 +257,7 @@ function AgentRowCard({
   open: boolean;
   author?: boolean;
   busy: boolean;
+  pruneResult?: string;
   test: TestState;
   onToggleOpen: () => void;
   onTest: () => void;
@@ -289,7 +322,9 @@ function AgentRowCard({
               {test.phase === "running" ? "Testing…" : "Test"}
             </Button>
           )}
-          {author && row.installed && (
+          {/* 未安装的 kind 也要能注册：旧 AgentRoster 的 manual 区正是为「预置座席 /
+              非标准安装」而设，独立验证发现合并时被 row.installed 门掉了。 */}
+          {author && (
             <Button
               size="sm"
               variant="ghost"
@@ -303,35 +338,35 @@ function AgentRowCard({
         </span>
       </div>
 
-      {(test.phase === "done" || test.phase === "error") && (
-        <div
-          data-testid={`agent-test-result-${kind}`}
-          role="status"
-          aria-live="polite"
-          className="flex flex-col gap-1.5 border-t border-[rgba(255,255,255,0.07)] bg-[var(--bg-code)] px-3.5 py-2 sm:flex-row sm:flex-wrap sm:gap-4"
-        >
-          {test.phase === "error" ? (
-            <span className="font-mono text-[11px] text-[var(--color-danger)]">
-              ✕ {test.message}
-            </span>
-          ) : (
-            test.checks.map((c) => (
-              <span key={c.name} className="font-mono text-[11px] text-[var(--color-text-2)]">
-                {/* Mark carries the meaning; colour only reinforces it, so a
-                    failed layer is identifiable without colour vision. */}
-                <span className={c.ok ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                  {c.ok ? "✓" : "✕"}
-                </span>{" "}
-                {label(c)}
-              </span>
-            ))
-          )}
-        </div>
-      )}
-
       {open && expandable && (
         <div id={bodyId} className="border-t border-[rgba(255,255,255,0.07)]">
-          <AgentConfigBody kind={kind} initial={config} />
+          {(test.phase === "done" || test.phase === "error") && (
+            <div
+              data-testid={`agent-test-result-${kind}`}
+              role="status"
+              aria-live="polite"
+              className="flex flex-col gap-1.5 border-t border-[rgba(255,255,255,0.07)] bg-[var(--bg-code)] px-3.5 py-2 sm:flex-row sm:flex-wrap sm:gap-4"
+            >
+                  {test.phase === "error" ? (
+                <span className="font-mono text-[11px] text-[var(--color-danger)]">
+                  ✕ {test.message}
+                </span>
+              ) : (
+                test.checks.map((c) => (
+                  <span key={c.name} className="font-mono text-[11px] text-[var(--color-text-2)]">
+                        {/* Mark carries the meaning; colour only reinforces it, so a
+                        failed layer is identifiable without colour vision. */}
+                    <span className={c.ok ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
+                          {c.ok ? "✓" : "✕"}
+                    </span>{" "}
+                        {label(c)}
+                  </span>
+                ))
+              )}
+            </div>
+      )}
+
+          <AgentConfigBody kind={kind} initial={config} author={author} />
           {author && (
             <div className="flex items-center gap-2 border-t border-[rgba(255,255,255,0.07)] px-3.5 py-2">
               <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-2)]">
@@ -341,6 +376,16 @@ function AgentRowCard({
               <Button size="sm" variant="ghost" data-testid={`agent-prune-${kind}`} loading={busy} onClick={onPrune}>
                 Prune sessions…
               </Button>
+            </div>
+          )}
+          {pruneResult !== undefined && (
+            <div
+              data-testid={`agent-prune-result-${kind}`}
+              role="status"
+              aria-live="polite"
+              className="border-t border-[rgba(255,255,255,0.07)] px-3.5 py-2 font-mono text-[11px] text-[var(--color-text-2)]"
+            >
+              {pruneResult}
             </div>
           )}
         </div>

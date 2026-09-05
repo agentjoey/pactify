@@ -1,9 +1,10 @@
 # Spec — Single Canonical Ledger(单一规范账本)
 
-> Status: **DRAFT · 待 Human Owner 决策** · 2026-09-04
+> Status: **DRAFT** · 2026-09-04 起草，2026-09-05 更新（§5.1 已拍板 · §5.2 有实测结论待拍板 · WS-A.1 已落地）
 > 承接 `docs/backlog.md` 的「🔴 架构级债务」三条（共同根因）与 `[UI-GATE]`。
-> 本文只到「方案与分期」为止，**不含实现**；§5 的四个问题不拍板，后面全是空谈。
-> 所有现状描述均为源码实读，标注 `文件:行号`（HEAD = `feat/fallback-par`）。
+> 本文只到「方案与分期」为止，**不含实现**。§5 的 1、2 已解决（2 是带实测依据的建议，待一句确认），
+> 3、4 要等 WS-B/C 开工才有意义。
+> 所有现状描述均为源码实读，标注 `文件:行号`（起草时 HEAD = `feat/fallback-par`，现已并入 main）。
 
 ## 0. 问题陈述
 
@@ -56,15 +57,17 @@
 `mergeEventLines` 的问题换个地方复现。
 
 **C. 专用 git ref（推荐）**
-canonical = 一个不属于任何分支的 git ref（下称 `refs/pact/ledger`）里的 blob；
+canonical = 一个**不被 checkout 的孤儿分支** `pact-ledger`（§5.2 实测后由 `refs/pact/*` 改为
+`refs/heads/*`：只有后者能被朴素 `git clone` 自动带走，而 §5.1 拍板工作树文件不再 tracked 之后，
+账本在 git 里的存在全部押在这个 ref 上）里的 blob；
 工作树的 `.pact/log.jsonl` **降级为导出产物**——地位与今天的 `STATE.yml` 完全一致
 （`STATE.yml` 早就是投影，`rules.go:416-425` 要求它逐字节等于 `Render(log)`）。
 
 为什么 C 同时满足两边：
 
 - 分支切换、worktree 创建、merge **不再碰 canonical**——ref 不在任何分支的树里（解耦）。
-- 仍然在 git 里：可 `git push`/`fetch` 该 refspec 跨机同步，可 `git cat-file` 逐版本 diff，
-  clone 带 refspec 即完整历史（守住 I-2）。
+- 仍然在 git 里：**朴素 `git clone` 自动带走**（§5.2 实测），可 `git cat-file` 逐版本 diff，
+  历史完整（守住 I-2）。
 - 工作树仍有 `.pact/log.jsonl` 供 `cat`（守住 I-3）。
 - 并发从「文件锁」升级为 **`git update-ref <ref> <new> <old>` 的 CAS**——
   今天的锁是 `gitx.GitPath(dir,"pactify-log.lock")`（`engine.go:94-109`），
@@ -140,18 +143,48 @@ canonical = 一个不属于任何分支的 git ref（下称 `refs/pact/ledger`�
 （前者承载 runner 把 worker 钉到 driver worktree 的机制），混用不是风格问题而是 bug 来源。
 后续 WS 每碰一个包，都应先问它属于哪一种。
 
-## 5. 待 Human Owner 拍板（不定这四条，后面无法开工）
+## 5. 决策状态（1、2 已解决；3、4 要等 WS-B/C 真正开工才有意义）
 
 1. ~~**工作树的 `.pact/log.jsonl` 还要不要被 git tracked？**~~
    **✅ 已拍板（Human Owner，2026-09-04）：不 tracked。**
-   ⇒ 账本的 git 可见性**全部**由 `refs/pact/ledger` 承担（`git log refs/pact/ledger` 看历史），
+   ⇒ 账本的 git 可见性**全部**由那个 ref 承担（`git log pact-ledger` 看历史），
    工作树文件退化为纯本地导出产物，代码 diff 里不再出现账本噪音。
    连锁后果见 §3.3，其中 **`parallel.go` 的改造是这条决定唯一的成本**，必须与 WS-C 同批做。
-   ⚠️ 这也意味着 **I-2 完全押在 ref 上**：如果 §5.2 的 refspec 不配好，账本就既不进 diff、
-   也不跟着 push——那才是真的把差异化丢掉。**§5.2 因此从「可以晚做」升级为「必须与 WS-C 同批」。**
-2. **ref 的 push/fetch 默认行为**：是否自动为用户仓库配置 refspec？
-   不配 = 跨机同步默认失灵（今天靠分支自带账本，是能工作的）；
-   自动配 = pactify 动用户的 `.git/config`。
+   ⚠️ 这也意味着 **I-2 完全押在那个 ref 上**：它若不能跟着 clone/push 走，账本就既不进 diff、
+   也不跨机——那才是真的把差异化丢掉。**这正是 §5.2 从「可以晚做」升级为前置的原因，
+   而 §5.2 的实测结论（孤儿分支）恰好把这个风险消掉了。**
+2. ~~**ref 的 push/fetch 默认行为**：是否自动为用户仓库配置 refspec？~~
+   **✅ 已有实测答案与建议（2026-09-05）：改用孤儿分支 `pact-ledger`，不用 `refs/pact/*`，
+   因而这个问题消失——不需要动用户的 `.git/config`。**
+   ⚠️ 这是**带实测依据的建议，尚未被 Human Owner 明确批准**；WS-B 开工前需要一句确认。
+
+   **全部结论来自真 git 实验**（临时 bare remote + 多个 clone，非查文档）：
+
+   | | 自定义 ref `refs/pact/ledger` | 孤儿分支 `refs/heads/pact-ledger` |
+   |---|---|---|
+   | `git push`（默认）带上 | ✗ | ✗（两者都要显式推，而这一步由 pactify 自己做） |
+   | `git push --all` 带上 | ✗ | ✓ |
+   | **全新 `git clone` 自动获得** | **✗** | **✓** |
+   | 需要改用户 `.git/config` | ✓ **每个克隆都要**加 `remote.origin.fetch` | ✗ |
+   | 日常噪音 | 无 | `git branch -a`/`-r` 与 GitHub 分支下拉多一条 |
+   | 工作树污染 | 无 | 无（不 checkout，实测 clone 后工作树只有原文件） |
+   | 并发写 | 非快进拒绝 | 非快进拒绝 |
+
+   **决定性的一条**：§5.1 已拍板工作树文件**不再 tracked**，于是账本在 git 里的存在**全部**押在这个
+   ref 上。若它需要每个克隆手工配 refspec，那么一次朴素的 `git clone` 得到的是一个**完全没有账本**
+   的仓库——比今天更差，且对没跑过 pactify 初始化步骤的人直接破坏 I-2/I-3。孤儿分支零配置就能跨机
+   传播（实测：全新 clone 立刻可 `git cat-file -p origin/pact-ledger:log.jsonl` 读到账本）。
+
+   代价是 `git branch -a` 与 GitHub 分支列表多一条。这是真代价，但它同时是**可发现性**——
+   「账本确实在 git 里」这件事肉眼可见，与 I-2 的意图一致。
+
+   **并发写的处理（已验证收敛）**：两台机器基于同一 base 各追加一条事件后，
+   先推的成功、后推的被 git 以非快进拒绝；后者 `fetch` → 按 `event_id` union 两侧 → 重推即成功，
+   最终双方都看到全部事件。**这正是 `mergeEventLines`（`sandbox.go:433-456`）已有的语义**，
+   WS-C 可直接复用到 ref 层，不需要新算法。
+
+   **推送时机的建议**：不要每个 verb 都推（每次 checkpoint 都联网不可接受）。挂在既有的
+   push 时点上（merge / 显式 `pactify sync`），并保留「本地可用、联网可选」这个当前性质。
 3. **并行模式的过渡**：`parallel.go` 今天**结构性依赖 tracked `.pact`**——
    worktree 的账本是从分支 checkout 出来的（全仓确认 `syncPact` 只被 sandbox 调用）。
    切 ref 之后 worktree 怎么拿账本，是 WS-C 的主要风险点。
@@ -164,12 +197,15 @@ canonical = 一个不属于任何分支的 git ref（下称 `refs/pact/ledger`�
 - `sandbox_test.go` 的 `ignorePact(t, dir)` **删掉后测试仍绿**（今天靠它才过）。
 - `checkout_feature_test.go` 断言的那个前提（「plain CheckoutOrCreate 必须失败」）**不再成立**，
   该测试连同 `checkoutFeatureBranch` 一起退役。
-- 一个 tracked-`.pact` 仓库在**并发 run 期间**切分支 / 建 worktree / merge，账本零冲突、零丢失。
-- `mirrorLedger` 对 tracked 与 untracked 仓库走**同一条路径**（实时 board 恢复）。
+- 一个**从 tracked-`.pact` 迁移过来的**仓库，在并发 run 期间切分支 / 建 worktree / merge，
+  账本零冲突、零丢失（迁移前的 624 个事件一条不少）。
+- `mirrorLedger` 不再需要区分仓库是否 tracked——那条分支判断随之删除（实时 board 恢复）。
+- 一次朴素 `git clone` 后，不做任何配置就能读到账本（§5.2 的零配置承诺，用真 remote 验）。
 - 漂移检测：构造「代码已在 base 但任务仍 assigned」，`pactify validate` 能报出来。
 - 全门：`go test ./...` + `-race`（pact/orchestrate/serve）· bats · vitest · e2e。
 
 ---
 
 *事实来源：2026-09-04 对 `internal/pact`、`internal/orchestrate`、`internal/projection`、`internal/gitx`、
-`internal/paths`、`internal/serve` 的逐行实读；跨 worktree 锁的结论为 `git rev-parse --git-path` 实测。*
+`internal/paths`、`internal/serve` 的逐行实读；跨 worktree 锁的结论为 `git rev-parse --git-path` 实测；
+§5.2 的传播与并发结论为 2026-09-05 用临时 bare remote + 多 clone 的真 git 实验。定稿于 `48bccf4`。*

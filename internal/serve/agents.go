@@ -15,6 +15,8 @@ func (s *Server) registerAgentRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/agents", s.handleAgents)
 	mux.HandleFunc("POST /api/agents/{kind}/register", s.handleAgentRegister)
 	mux.HandleFunc("DELETE /api/agents/{kind}/register", s.handleAgentUnregister)
+	mux.HandleFunc("GET /api/agents/versions", s.handleAgentVersions)
+	mux.HandleFunc("GET /api/agents/{kind}/test", s.handleAgentTest)
 	mux.HandleFunc("GET /api/agents/{kind}/config", s.handleAgentConfigGet)
 	mux.HandleFunc("POST /api/agents/{kind}/config", s.handleAgentConfigSet)
 }

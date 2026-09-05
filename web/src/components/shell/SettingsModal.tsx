@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useDataSource } from "../../lib/datasource";
-import { AgentRoster } from "../ops/AgentRoster";
+import { AgentsPage } from "../ops/AgentsPage";
 import { CustomAgentForm } from "../ops/CustomAgentForm";
 import { AgentConfig } from "../ops/AgentConfig";
 import { Wiring } from "../ops/Wiring";
@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   TreeStructure,
   SquaresFour,
-  SlidersHorizontal,
   ClockCounterClockwise,
   UserCircle,
   Desktop,
@@ -64,7 +63,7 @@ export function SettingsModal({
   // modal opens on the ACCOUNT section instead.
   const src = useDataSource();
   const hosted = src.capabilities.multiMachine;
-  const [activeId, setActiveId] = useState(hosted ? "account" : "agent-configs");
+  const [activeId, setActiveId] = useState(hosted ? "account" : "agents");
   const [query, setQuery] = useState("");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -148,8 +147,10 @@ export function SettingsModal({
             scope: "machine",
             label: "MACHINE · this computer",
             items: [
-              { id: "registered-agents", label: "Registered agents", icon: SquaresFour },
-              { id: "agent-configs", label: "Agent configs", icon: SlidersHorizontal },
+              // 2026-09-05：Registered agents 与 Agent configs 合并为单一 Agents 页。
+              // 拆成两页正是困惑的来源：扫描/分区在前者，而「7 行常驻展开」的痛点在后者，
+              // 且两者都答不了「这个 agent 现在到底能不能用」。
+              { id: "agents", label: "Agents", icon: SquaresFour },
               { id: "sessions", label: "Sessions", icon: ClockCounterClockwise },
             ],
           },
@@ -206,15 +207,13 @@ export function SettingsModal({
         );
       case "wiring":
         return <Wiring project={project} author={author} />;
-      case "registered-agents":
+      case "agents":
         return (
           <>
-            <AgentRoster author={author} refreshKey={0} onChanged={undefined} />
+            <AgentsPage author={author} />
             <CustomAgentForm author={author} onCreated={() => {}} />
           </>
         );
-      case "agent-configs":
-        return <AgentConfig />;
       case "machines":
         return <Machines />;
       case "account":
@@ -404,12 +403,12 @@ function ScopeExplainer({
   activeItem: string;
   project: string;
 }) {
-  if (scope === "machine" && activeItem === "agent-configs") {
+  if (scope === "machine" && activeItem === "agents") {
     return (
       <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
-        Model and permission posture per registered agent. These live in your machine registry and
-        apply to every project — seat assignments are set per project under{" "}
-        <span className="text-[#ffd479]">Project · Seats &amp; roles</span>.
+        这台机器上的 agent CLI：扫描、注册、设置模型与权限档，并测试连通性。
+        展开一行即可配置它——这些设置存在机器注册表里，对所有项目生效；
+        每个项目的座席分配在 <span className="text-[#ffd479]">Project · Seats &amp; roles</span>。
       </p>
     );
   }
@@ -418,7 +417,7 @@ function ScopeExplainer({
       <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
         Seats and roles for <span className="text-[#ffd479]">{project}</span>. Agent models and
         permissions are configured machine-wide under{" "}
-        <span className="text-[#6ee7a0]">Machine · Agent configs</span>.
+        <span className="text-[#6ee7a0]">Machine · Agents</span>.
       </p>
     );
   }
@@ -427,14 +426,6 @@ function ScopeExplainer({
       <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
         Wire registered agents into <span className="text-[#ffd479]">{project}</span>. Wiring is
         project-local; agents must first be registered on this machine.
-      </p>
-    );
-  }
-  if (scope === "machine" && activeItem === "registered-agents") {
-    return (
-      <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
-        Scan, register and remove agent kinds on this computer. Once registered, configure models
-        and permissions under <span className="text-[#6ee7a0]">Machine · Agent configs</span>.
       </p>
     );
   }

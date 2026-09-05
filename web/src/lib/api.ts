@@ -268,6 +268,31 @@ export async function registerAgent(kind: string, label?: string): Promise<void>
   await writeJSON(`/api/agents/${encodeURIComponent(kind)}/register`, "POST", body);
 }
 
+/** One doctor check as returned by the per-kind connectivity test. */
+export interface AgentCheck {
+  name: string;
+  ok: boolean;
+  detail: string;
+}
+
+/**
+ * Connectivity test for one agent kind. The server reuses doctor's
+ * binary/auth/transport checks, so this can never disagree with
+ * `pactify doctor` about whether an agent is usable.
+ */
+export const testAgent = (kind: string) =>
+  getJSON<{ kind: string; ok: boolean; checks: AgentCheck[] }>(
+    `/api/agents/${encodeURIComponent(kind)}/test`,
+  );
+
+/**
+ * CLI versions, probed server-side in parallel. Separate from getAgents because
+ * probing costs ~2s sequentially (gemini alone is 572ms) and the list must
+ * render before versions arrive.
+ */
+export const getAgentVersions = () =>
+  getJSON<{ versions: Record<string, string> }>("/api/agents/versions");
+
 export async function unregisterAgent(kind: string): Promise<void> {
   await writeJSON(`/api/agents/${encodeURIComponent(kind)}/register`, "DELETE", undefined);
 }

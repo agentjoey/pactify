@@ -16,6 +16,20 @@ function arraysEqual(a: string[], b: string[]) {
 // registered agent, edit the model pin and the permission posture orchestrate
 // drives it under. Author-gated (it mutates the machine agent registry). Each
 // registered kind gets a row that loads its config and saves overrides.
+// AgentConfigBody 是 AgentConfigRow 的 embedded 形态，供 Agents 合并页在展开态
+// 复用同一份配置逻辑（自动保存 / 模型下拉 / 权限档 / Save）。
+export function AgentConfigBody({
+  kind,
+  initial,
+  author,
+}: {
+  kind: string;
+  initial?: Config;
+  author?: boolean;
+}) {
+  return <AgentConfigRow kind={kind} embedded initial={initial} author={author} />;
+}
+
 export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
   const [kinds, setKinds] = useState<string[] | null>(null);
   const [error, setError] = useState("");
@@ -78,7 +92,27 @@ function Monogram({ kind, drivable }: { kind: string; drivable: boolean }) {
   );
 }
 
-function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
+// AgentConfigRow 有两种形态：
+//   standalone（默认）—— 自带卡片头部与边框
+//   embedded —— 只渲染配置体，供 Agents 合并页在展开态复用
+// 抽 prop 而不是另写一份配置 UI：自动保存 / 模型下拉 / 权限档这套逻辑与其测试只能有一份。
+// initial 让父组件把已拉到的 config 传下来，避免展开时重复请求。
+function AgentConfigRow({
+  kind,
+  delay = 0,
+  embedded = false,
+  initial,
+  author = true,
+}: {
+  kind: string;
+  delay?: number;
+  embedded?: boolean;
+  initial?: Config;
+  // author=false（hosted 只读）必须一路禁到配置体：独立验证实测发现，只读模式下
+  // 模型下拉/权限档/Save 全部可用且真的发出了写请求——旧测试只断言 Register 按钮
+  // 不存在，恰好绕开了这里。
+  author?: boolean;
+}) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [model, setModel] = useState("");
   const [restricted, setRestricted] = useState(false);
@@ -104,13 +138,18 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
   }
 
   useEffect(() => {
+    if (initial) {
+      apply(initial);
+      setHydrated(true);
+      return;
+    }
     getAgentConfig(kind)
       .then((c) => {
         apply(c);
         setHydrated(true);
       })
       .catch(() => setErr("load failed"));
-  }, [kind]);
+  }, [kind, initial]);
 
   const save = async (payload: { model: string; restricted: boolean; allowed_tools: string[] }) => {
     setSaving(true);
@@ -139,7 +178,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
   }, [saved]);
 
   useEffect(() => {
-    if (!hydrated || !cfg) return;
+    if (!hydrated || !cfg || !author) return;
     const payload = {
       model: model.trim(),
       restricted,
@@ -220,61 +259,15 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       cfg.effective_scoped ? " · scoped" : " · blanket"
     }${cfg.effective_scoped && (cfg.allowed_tools?.length ?? 0) ? ` · ${cfg.allowed_tools!.length} tools` : ""}`;
 
-  return (
-    <div
-      data-testid={`agent-config-${kind}`}
-      style={{ animationDelay: `${delay}ms` }}
-      className={[
-        "fade-rise overflow-hidden rounded-xl border",
-        dim
-          ? "border-[rgba(255,255,255,0.07)] bg-[var(--color-bg-inset)] opacity-[.62]"
-          : "border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-surface)]",
-      ].join(" ")}
-    >
-      <div className="flex items-center gap-3 px-4 py-3.5">
-        <Monogram kind={kind} drivable={cfg?.drivable ?? false} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-[14px] font-semibold text-[var(--color-text-1)]">{kind}</span>
-            {cfg && <span className="text-[12px] text-[var(--color-text-3)]">{kind}</span>}
-          </div>
-          {cfg && (
-            <div className="font-mono text-[10.5px] text-[var(--color-text-4)]">
-              {dim ? "not drivable — no model or posture to configure" : effectiveSub}
-            </div>
-          )}
-        </div>
-        {cfg && (
-          <Badge color={cfg.drivable ? "role-dev" : "role-design"}>
-            {cfg.drivable ? "drivable" : "manual"}
-          </Badge>
-        )}
-        {!cfg && <Spinner size="xs" />}
-        {cfg && cfg.drivable && (
-          <div data-testid="autosave-state" className="text-[11px] font-medium">
-            {err ? (
-              <span className="text-red-400">{err}</span>
-            ) : saving ? (
-              <span className="text-[var(--color-text-3)]">Saving…</span>
-            ) : saved ? (
-              <span
-                className={[
-                  "text-[#6ee7a0] transition-opacity duration-500",
-                  savedVisible ? "opacity-100" : "opacity-0",
-                ].join(" ")}
-              >
-                Saved ✓
-              </span>
-            ) : null}
-          </div>
-        )}
-      </div>
-
+  // configBody = 模型 / 权限档 / Save / legacy scoped 隐藏按钮 / 错误条。
+  // standalone 与 embedded 共用同一份 —— 各写一份必然漂移。
+  const configBody = (
+    <>
       {cfg && cfg.drivable && (
         <div className="border-t border-[var(--border-2)] bg-[var(--bg)] px-4 py-3.5">
           <div className="flex flex-wrap gap-4">
             <label className="flex min-w-[230px] flex-1 flex-col gap-1.5">
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-2)]">
                 Model · built-in list
               </span>
               {(cfg.candidate_models ?? []).length > 0 ? (
@@ -282,6 +275,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                   <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-input)] px-3 py-2">
                     <Select
                       data-testid={`model-select-${kind}`}
+                  disabled={!author}
                       value={customMode ? "__custom__" : model}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -302,11 +296,12 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                       ))}
                       <option value="__custom__">custom…</option>
                     </Select>
-                    <span className="text-[9px] text-[var(--text-4)]">▾</span>
+                    <span aria-hidden className="text-[9px] text-[var(--color-text-2)]">▾</span>
                   </div>
                   {customMode && (
                     <Input
                       data-testid={`model-${kind}`}
+                  disabled={!author}
                       value={model}
                       onChange={(e) => setModel(e.target.value)}
                       placeholder="model id"
@@ -323,26 +318,27 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                   className="w-full text-xs"
                 />
               )}
-              <span className="font-mono text-[10.5px] text-[var(--color-text-4)]">
+              <span className="font-mono text-[10.5px] text-[var(--color-text-2)]">
                 pinned · overrides the machine default
               </span>
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-2)]">
                 Permission posture
               </span>
               <div className="inline-flex gap-[3px] rounded-lg border border-[var(--border-2)] bg-[var(--bg-input)] p-[3px]">
                 <button
                   type="button"
                   data-testid={`posture-blanket-${kind}`}
+                  disabled={!author}
                   aria-pressed={!restricted}
                   onClick={() => setRestricted(false)}
                   className={[
                     "rounded-md px-[15px] py-[7px] text-[11.5px] font-semibold transition-all duration-[var(--motion-micro)]",
                     !restricted
                       ? "text-[var(--accent-ink)]"
-                      : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
+                      : "text-[var(--color-text-2)] hover:text-[var(--color-text-1)]",
                   ].join(" ")}
                   style={!restricted ? { background: "var(--accent)" } : undefined}
                 >
@@ -351,13 +347,14 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                 <button
                   type="button"
                   data-testid={`posture-scoped-${kind}`}
+                  disabled={!author}
                   aria-pressed={restricted}
                   onClick={() => setRestricted(true)}
                   className={[
                     "rounded-md px-[15px] py-[7px] text-[11.5px] font-semibold transition-all duration-[var(--motion-micro)]",
                     restricted
                       ? "text-[var(--accent-ink)]"
-                      : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
+                      : "text-[var(--color-text-2)] hover:text-[var(--color-text-1)]",
                   ].join(" ")}
                   style={restricted ? { background: "var(--accent)" } : undefined}
                 >
@@ -369,7 +366,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
 
           {restricted && (
             <div className="mt-3">
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-2)]">
                 Allowed tools
               </span>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -397,6 +394,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                 ))}
                 <Input
                   data-testid={`tools-${kind}`}
+                  disabled={!author}
                   value={tools}
                   onChange={(e) => setTools(e.target.value)}
                   onBlur={flushSave}
@@ -412,7 +410,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
                     }
                   }}
                   placeholder="Read, Edit, Bash"
-                  className="min-w-[140px] flex-1 border-dashed border-[rgba(255,255,255,0.16)] bg-transparent font-mono text-[11px] text-[var(--text)] placeholder:text-[var(--text-4)]"
+                  className="min-w-[140px] flex-1 border-dashed border-[rgba(255,255,255,0.16)] bg-transparent font-mono text-[11px] text-[var(--text)] placeholder:text-[var(--color-text-2)]"
                 />
               </div>
             </div>
@@ -423,7 +421,7 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
               type="button"
               data-testid={`save-${kind}`}
               onClick={saveNow}
-              disabled={saving}
+              disabled={saving || !author}
               className="rounded-lg bg-[var(--accent)] px-[18px] py-2 text-[12.5px] font-semibold text-[var(--accent-ink)] transition-colors hover:brightness-110 disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save"}
@@ -452,6 +450,101 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
           <Alert tone="danger">{err}</Alert>
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    if (!cfg) return <div className="px-4 py-3"><Spinner size="xs" /></div>;
+    if (!cfg.drivable) {
+      return (
+        <div className="px-4 py-3 text-[11.5px] text-[var(--color-text-2)]">
+          not drivable — no model or posture to configure
+        </div>
+      );
+    }
+    return (
+      <div data-testid={`agent-config-${kind}`}>
+        {/* standalone 的保存指示挂在卡片头上，embedded 没有头 —— 独立验证指出
+            展开态改模型时 600ms 自动保存全程无可见状态。这里补回来。 */}
+        {author && (
+          <div
+            data-testid="autosave-state"
+            role="status"
+            aria-live="polite"
+            className="px-4 pt-3 text-[11px] font-medium"
+          >
+            {err ? (
+              <span className="text-[var(--color-danger)]">{err}</span>
+            ) : saving ? (
+              <span className="text-[var(--color-text-2)]">Saving…</span>
+            ) : saved ? (
+              <span
+                className={[
+                  "text-[#6ee7a0] transition-opacity duration-500",
+                  savedVisible ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+              >
+                Saved ✓
+              </span>
+            ) : null}
+          </div>
+        )}
+        {configBody}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-testid={`agent-config-${kind}`}
+      style={{ animationDelay: `${delay}ms` }}
+      className={[
+        "fade-rise overflow-hidden rounded-xl border",
+        dim
+          ? "border-[rgba(255,255,255,0.07)] bg-[var(--color-bg-inset)] opacity-[.62]"
+          : "border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-surface)]",
+      ].join(" ")}
+    >
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <Monogram kind={kind} drivable={cfg?.drivable ?? false} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[14px] font-semibold text-[var(--color-text-1)]">{kind}</span>
+            {cfg && <span className="text-[12px] text-[var(--color-text-2)]">{kind}</span>}
+          </div>
+          {cfg && (
+            <div className="font-mono text-[10.5px] text-[var(--color-text-2)]">
+              {dim ? "not drivable — no model or posture to configure" : effectiveSub}
+            </div>
+          )}
+        </div>
+        {cfg && (
+          <Badge color={cfg.drivable ? "role-dev" : "role-design"}>
+            {cfg.drivable ? "drivable" : "manual"}
+          </Badge>
+        )}
+        {!cfg && <Spinner size="xs" />}
+        {cfg && cfg.drivable && (
+          <div data-testid="autosave-state" className="text-[11px] font-medium">
+            {err ? (
+              <span className="text-red-400">{err}</span>
+            ) : saving ? (
+              <span className="text-[var(--color-text-2)]">Saving…</span>
+            ) : saved ? (
+              <span
+                className={[
+                  "text-[#6ee7a0] transition-opacity duration-500",
+                  savedVisible ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+              >
+                Saved ✓
+              </span>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {configBody}
     </div>
   );
 }

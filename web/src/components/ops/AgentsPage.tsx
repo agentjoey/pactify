@@ -354,12 +354,16 @@ function AgentRowCard({
               ) : (
                 test.checks.map((c) => (
                   <span key={c.name} className="font-mono text-[11px] text-[var(--color-text-2)]">
-                        {/* Mark carries the meaning; colour only reinforces it, so a
-                        failed layer is identifiable without colour vision. */}
-                    <span className={c.ok ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                          {c.ok ? "✓" : "✕"}
-                    </span>{" "}
-                        {label(c)}
+                    {/* 形状承载语义、颜色只作增强：色觉障碍下仍能定位失败层。
+                        符号对屏读无意义，故 aria-hidden + sr-only 文字。 */}
+                    <span
+                      aria-hidden
+                      className={c.ok ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}
+                    >
+                      {c.ok ? "✓" : "✕"}
+                    </span>
+                    <span className="sr-only">{c.ok ? "通过：" : "失败："}</span>{" "}
+                    {label(c)}
                   </span>
                 ))
               )}

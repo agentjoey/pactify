@@ -143,6 +143,39 @@ describe("Agents page — 合并页", () => {
     expect(vi.mocked(getAgentVersions).mock.calls.length).toBeGreaterThan(1);
   });
 
+  it("零 CLI：给出可操作的 empty state，而不是一片空白", async () => {
+    vi.mocked(getAgents).mockResolvedValue([] as never);
+    render(<AgentsPage author />);
+
+    const installed = await screen.findByTestId("agents-installed");
+    expect(installed).toHaveTextContent(/No supported agents detected/i);
+    // 空状态必须告诉人下一步做什么
+    expect(installed).toHaveTextContent(/Rescan/i);
+  });
+
+  it("rescan 瞬时失败：保留已渲染的列表，只提示，不清空", async () => {
+    render(<AgentsPage author />);
+    await screen.findByTestId("agents-installed");
+    expect(screen.getByTestId("agent-row-claude-code")).toBeInTheDocument();
+
+    vi.mocked(getAgents).mockRejectedValueOnce(new Error("network blip"));
+    fireEvent.click(screen.getByTestId("agents-rescan"));
+
+    // 独立验证指出：原实现把整页换成 Alert，一次抖动就清空用户正在看的内容。
+    await waitFor(() => expect(screen.getByText(/Rescan failed/i)).toBeInTheDocument());
+    expect(screen.getByTestId("agent-row-claude-code")).toBeInTheDocument();
+    expect(screen.queryByTestId("agents-error")).not.toBeInTheDocument();
+  });
+
+  it("展开态改动会显示自动保存状态（embedded 此前完全没有指示）", async () => {
+    render(<AgentsPage author />);
+    await screen.findByTestId("agents-installed");
+
+    fireEvent.click(screen.getByTestId("agent-disclosure-claude-code"));
+    await waitFor(() => expect(screen.getByTestId("agent-config-claude-code")).toBeInTheDocument());
+    expect(screen.getByTestId("autosave-state")).toBeInTheDocument();
+  });
+
   it("加载失败给出可重试的错误，而不是空白页", async () => {
     vi.mocked(getAgents).mockRejectedValue(new Error("boom"));
     render(<AgentsPage author />);

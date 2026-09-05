@@ -267,7 +267,7 @@ function AgentConfigRow({
         <div className="border-t border-[var(--border-2)] bg-[var(--bg)] px-4 py-3.5">
           <div className="flex flex-wrap gap-4">
             <label className="flex min-w-[230px] flex-1 flex-col gap-1.5">
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-2)]">
                 Model · built-in list
               </span>
               {(cfg.candidate_models ?? []).length > 0 ? (
@@ -296,7 +296,7 @@ function AgentConfigRow({
                       ))}
                       <option value="__custom__">custom…</option>
                     </Select>
-                    <span className="text-[9px] text-[var(--text-4)]">▾</span>
+                    <span aria-hidden className="text-[9px] text-[var(--color-text-2)]">▾</span>
                   </div>
                   {customMode && (
                     <Input
@@ -318,13 +318,13 @@ function AgentConfigRow({
                   className="w-full text-xs"
                 />
               )}
-              <span className="font-mono text-[10.5px] text-[var(--color-text-4)]">
+              <span className="font-mono text-[10.5px] text-[var(--color-text-2)]">
                 pinned · overrides the machine default
               </span>
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-2)]">
                 Permission posture
               </span>
               <div className="inline-flex gap-[3px] rounded-lg border border-[var(--border-2)] bg-[var(--bg-input)] p-[3px]">
@@ -338,7 +338,7 @@ function AgentConfigRow({
                     "rounded-md px-[15px] py-[7px] text-[11.5px] font-semibold transition-all duration-[var(--motion-micro)]",
                     !restricted
                       ? "text-[var(--accent-ink)]"
-                      : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
+                      : "text-[var(--color-text-2)] hover:text-[var(--color-text-1)]",
                   ].join(" ")}
                   style={!restricted ? { background: "var(--accent)" } : undefined}
                 >
@@ -354,7 +354,7 @@ function AgentConfigRow({
                     "rounded-md px-[15px] py-[7px] text-[11.5px] font-semibold transition-all duration-[var(--motion-micro)]",
                     restricted
                       ? "text-[var(--accent-ink)]"
-                      : "text-[var(--color-text-3)] hover:text-[var(--color-text-2)]",
+                      : "text-[var(--color-text-2)] hover:text-[var(--color-text-1)]",
                   ].join(" ")}
                   style={restricted ? { background: "var(--accent)" } : undefined}
                 >
@@ -366,7 +366,7 @@ function AgentConfigRow({
 
           {restricted && (
             <div className="mt-3">
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-3)]">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-2)]">
                 Allowed tools
               </span>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -410,7 +410,7 @@ function AgentConfigRow({
                     }
                   }}
                   placeholder="Read, Edit, Bash"
-                  className="min-w-[140px] flex-1 border-dashed border-[rgba(255,255,255,0.16)] bg-transparent font-mono text-[11px] text-[var(--text)] placeholder:text-[var(--text-4)]"
+                  className="min-w-[140px] flex-1 border-dashed border-[rgba(255,255,255,0.16)] bg-transparent font-mono text-[11px] text-[var(--text)] placeholder:text-[var(--color-text-2)]"
                 />
               </div>
             </div>
@@ -462,7 +462,36 @@ function AgentConfigRow({
         </div>
       );
     }
-    return <div data-testid={`agent-config-${kind}`}>{configBody}</div>;
+    return (
+      <div data-testid={`agent-config-${kind}`}>
+        {/* standalone 的保存指示挂在卡片头上，embedded 没有头 —— 独立验证指出
+            展开态改模型时 600ms 自动保存全程无可见状态。这里补回来。 */}
+        {author && (
+          <div
+            data-testid="autosave-state"
+            role="status"
+            aria-live="polite"
+            className="px-4 pt-3 text-[11px] font-medium"
+          >
+            {err ? (
+              <span className="text-[var(--color-danger)]">{err}</span>
+            ) : saving ? (
+              <span className="text-[var(--color-text-2)]">Saving…</span>
+            ) : saved ? (
+              <span
+                className={[
+                  "text-[#6ee7a0] transition-opacity duration-500",
+                  savedVisible ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+              >
+                Saved ✓
+              </span>
+            ) : null}
+          </div>
+        )}
+        {configBody}
+      </div>
+    );
   }
 
   return (
@@ -481,10 +510,10 @@ function AgentConfigRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="text-[14px] font-semibold text-[var(--color-text-1)]">{kind}</span>
-            {cfg && <span className="text-[12px] text-[var(--color-text-3)]">{kind}</span>}
+            {cfg && <span className="text-[12px] text-[var(--color-text-2)]">{kind}</span>}
           </div>
           {cfg && (
-            <div className="font-mono text-[10.5px] text-[var(--color-text-4)]">
+            <div className="font-mono text-[10.5px] text-[var(--color-text-2)]">
               {dim ? "not drivable — no model or posture to configure" : effectiveSub}
             </div>
           )}
@@ -500,7 +529,7 @@ function AgentConfigRow({
             {err ? (
               <span className="text-red-400">{err}</span>
             ) : saving ? (
-              <span className="text-[var(--color-text-3)]">Saving…</span>
+              <span className="text-[var(--color-text-2)]">Saving…</span>
             ) : saved ? (
               <span
                 className={[

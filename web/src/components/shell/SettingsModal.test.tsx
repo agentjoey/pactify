@@ -54,10 +54,18 @@ describe("SettingsModal", () => {
     expect(screen.getAllByText("ACCOUNT").length).toBeGreaterThan(0);
   });
 
-  it("defaults to Agent configs with a MACHINE scope banner", () => {
+  // 2026-09-05：Registered agents 与 Agent configs 合并为单一 Agents 页，
+  // 默认页与 nav id 随之改变。这是被批准的改动带来的合法测试更新，不是迁就实现。
+  it("defaults to Agents with a MACHINE scope banner", () => {
     render(<SettingsModal project="demo" author={true} onClose={() => {}} />);
     expect(screen.getByTestId("settings-scope-banner")).toHaveTextContent("MACHINE · all projects");
-    expect(screen.getByTestId("nav-agent-configs")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("nav-agents")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("旧的两个入口不再存在（合并后不应留下空壳导航）", () => {
+    render(<SettingsModal project="demo" author={true} onClose={() => {}} />);
+    expect(screen.queryByTestId("nav-agent-configs")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("nav-registered-agents")).not.toBeInTheDocument();
   });
 
   it("switches panels when clicking nav items", () => {

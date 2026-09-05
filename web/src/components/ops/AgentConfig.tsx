@@ -16,6 +16,12 @@ function arraysEqual(a: string[], b: string[]) {
 // registered agent, edit the model pin and the permission posture orchestrate
 // drives it under. Author-gated (it mutates the machine agent registry). Each
 // registered kind gets a row that loads its config and saves overrides.
+// AgentConfigBody 是 AgentConfigRow 的 embedded 形态，供 Agents 合并页在展开态
+// 复用同一份配置逻辑（自动保存 / 模型下拉 / 权限档 / Save）。
+export function AgentConfigBody({ kind, initial }: { kind: string; initial?: Config }) {
+  return <AgentConfigRow kind={kind} embedded initial={initial} />;
+}
+
 export function AgentConfig({ refreshKey }: { refreshKey?: number }) {
   const [kinds, setKinds] = useState<string[] | null>(null);
   const [error, setError] = useState("");
@@ -78,7 +84,22 @@ function Monogram({ kind, drivable }: { kind: string; drivable: boolean }) {
   );
 }
 
-function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
+// AgentConfigRow 有两种形态：
+//   standalone（默认）—— 自带卡片头部与边框
+//   embedded —— 只渲染配置体，供 Agents 合并页在展开态复用
+// 抽 prop 而不是另写一份配置 UI：自动保存 / 模型下拉 / 权限档这套逻辑与其测试只能有一份。
+// initial 让父组件把已拉到的 config 传下来，避免展开时重复请求。
+function AgentConfigRow({
+  kind,
+  delay = 0,
+  embedded = false,
+  initial,
+}: {
+  kind: string;
+  delay?: number;
+  embedded?: boolean;
+  initial?: Config;
+}) {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [model, setModel] = useState("");
   const [restricted, setRestricted] = useState(false);
@@ -104,13 +125,18 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
   }
 
   useEffect(() => {
+    if (initial) {
+      apply(initial);
+      setHydrated(true);
+      return;
+    }
     getAgentConfig(kind)
       .then((c) => {
         apply(c);
         setHydrated(true);
       })
       .catch(() => setErr("load failed"));
-  }, [kind]);
+  }, [kind, initial]);
 
   const save = async (payload: { model: string; restricted: boolean; allowed_tools: string[] }) => {
     setSaving(true);
@@ -220,56 +246,10 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
       cfg.effective_scoped ? " · scoped" : " · blanket"
     }${cfg.effective_scoped && (cfg.allowed_tools?.length ?? 0) ? ` · ${cfg.allowed_tools!.length} tools` : ""}`;
 
-  return (
-    <div
-      data-testid={`agent-config-${kind}`}
-      style={{ animationDelay: `${delay}ms` }}
-      className={[
-        "fade-rise overflow-hidden rounded-xl border",
-        dim
-          ? "border-[rgba(255,255,255,0.07)] bg-[var(--color-bg-inset)] opacity-[.62]"
-          : "border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-surface)]",
-      ].join(" ")}
-    >
-      <div className="flex items-center gap-3 px-4 py-3.5">
-        <Monogram kind={kind} drivable={cfg?.drivable ?? false} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-[14px] font-semibold text-[var(--color-text-1)]">{kind}</span>
-            {cfg && <span className="text-[12px] text-[var(--color-text-3)]">{kind}</span>}
-          </div>
-          {cfg && (
-            <div className="font-mono text-[10.5px] text-[var(--color-text-4)]">
-              {dim ? "not drivable — no model or posture to configure" : effectiveSub}
-            </div>
-          )}
-        </div>
-        {cfg && (
-          <Badge color={cfg.drivable ? "role-dev" : "role-design"}>
-            {cfg.drivable ? "drivable" : "manual"}
-          </Badge>
-        )}
-        {!cfg && <Spinner size="xs" />}
-        {cfg && cfg.drivable && (
-          <div data-testid="autosave-state" className="text-[11px] font-medium">
-            {err ? (
-              <span className="text-red-400">{err}</span>
-            ) : saving ? (
-              <span className="text-[var(--color-text-3)]">Saving…</span>
-            ) : saved ? (
-              <span
-                className={[
-                  "text-[#6ee7a0] transition-opacity duration-500",
-                  savedVisible ? "opacity-100" : "opacity-0",
-                ].join(" ")}
-              >
-                Saved ✓
-              </span>
-            ) : null}
-          </div>
-        )}
-      </div>
-
+  // configBody = 模型 / 权限档 / Save / legacy scoped 隐藏按钮 / 错误条。
+  // standalone 与 embedded 共用同一份 —— 各写一份必然漂移。
+  const configBody = (
+    <>
       {cfg && cfg.drivable && (
         <div className="border-t border-[var(--border-2)] bg-[var(--bg)] px-4 py-3.5">
           <div className="flex flex-wrap gap-4">
@@ -452,6 +432,72 @@ function AgentConfigRow({ kind, delay = 0 }: { kind: string; delay?: number }) {
           <Alert tone="danger">{err}</Alert>
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    if (!cfg) return <div className="px-4 py-3"><Spinner size="xs" /></div>;
+    if (!cfg.drivable) {
+      return (
+        <div className="px-4 py-3 text-[11.5px] text-[var(--color-text-2)]">
+          not drivable — no model or posture to configure
+        </div>
+      );
+    }
+    return <div data-testid={`agent-config-${kind}`}>{configBody}</div>;
+  }
+
+  return (
+    <div
+      data-testid={`agent-config-${kind}`}
+      style={{ animationDelay: `${delay}ms` }}
+      className={[
+        "fade-rise overflow-hidden rounded-xl border",
+        dim
+          ? "border-[rgba(255,255,255,0.07)] bg-[var(--color-bg-inset)] opacity-[.62]"
+          : "border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-surface)]",
+      ].join(" ")}
+    >
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <Monogram kind={kind} drivable={cfg?.drivable ?? false} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[14px] font-semibold text-[var(--color-text-1)]">{kind}</span>
+            {cfg && <span className="text-[12px] text-[var(--color-text-3)]">{kind}</span>}
+          </div>
+          {cfg && (
+            <div className="font-mono text-[10.5px] text-[var(--color-text-4)]">
+              {dim ? "not drivable — no model or posture to configure" : effectiveSub}
+            </div>
+          )}
+        </div>
+        {cfg && (
+          <Badge color={cfg.drivable ? "role-dev" : "role-design"}>
+            {cfg.drivable ? "drivable" : "manual"}
+          </Badge>
+        )}
+        {!cfg && <Spinner size="xs" />}
+        {cfg && cfg.drivable && (
+          <div data-testid="autosave-state" className="text-[11px] font-medium">
+            {err ? (
+              <span className="text-red-400">{err}</span>
+            ) : saving ? (
+              <span className="text-[var(--color-text-3)]">Saving…</span>
+            ) : saved ? (
+              <span
+                className={[
+                  "text-[#6ee7a0] transition-opacity duration-500",
+                  savedVisible ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+              >
+                Saved ✓
+              </span>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {configBody}
     </div>
   );
 }

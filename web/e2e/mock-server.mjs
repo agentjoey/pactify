@@ -190,6 +190,70 @@ const server = createServer(async (req, res) => {
   if (url === "/api/projects" && method === "GET") {
     return sendJSON(res, 200, makeProjects(registry));
   }
+  // --- agents（Settings · Agents 合并页）---------------------------------
+  // 这个面板此前在 hermetic 环境下零覆盖：mock server 没有 /api/agents，
+  // 面板只会渲染 "Failed to load agents"，视觉门与 e2e 都跑不到真界面。
+  // fixture 覆盖四种真实形态：已注册可驱动 / 已安装未注册 / 不可驱动 / 未安装。
+  if (url === "/api/agents" && method === "GET") {
+    return sendJSON(res, 200, [
+      { kind: "claude-code", installed: true, registered: true, detail: "/usr/local/bin/claude", label: "" },
+      { kind: "codex-cli", installed: true, registered: true, detail: "/usr/local/bin/codex", label: "" },
+      { kind: "kimi-cli", installed: true, registered: true, detail: "/usr/local/bin/kimi", label: "" },
+      { kind: "codex-app", installed: true, registered: false, detail: "~/.codex/config.toml", label: "" },
+      { kind: "claude-desktop", installed: true, registered: true, detail: "~/Library/.../claude_desktop_config.json", label: "" },
+      { kind: "cursor-cli", installed: false, registered: false, detail: "not found", label: "" },
+    ]);
+  }
+  if (url === "/api/agents/versions" && method === "GET") {
+    return sendJSON(res, 200, {
+      versions: { "claude-code": "2.1.259", "codex-cli": "0.144.4", "kimi-cli": "0.39.0" },
+    });
+  }
+  {
+    const m = url.match(/^\/api\/agents\/([^/]+)\/test$/);
+    if (m && method === "GET") {
+      const kind = m[1];
+      // kimi-cli 固定返回 auth 失败：Test 的价值在于说明「哪一层」失败，
+      // 全绿的 fixture 测不到这条，视觉门也就看不到失败态。
+      if (kind === "kimi-cli") {
+        return sendJSON(res, 200, {
+          kind, ok: false,
+          checks: [
+            { name: `cli ${kind}: binary`, ok: true, detail: "/usr/local/bin/kimi" },
+            { name: `cli ${kind}: auth`, ok: false, detail: "no ~/.kimi — run `kimi login`" },
+            { name: `cli ${kind}: transport`, ok: true, detail: "transport: acp available" },
+          ],
+        });
+      }
+      if (kind === "claude-desktop") {
+        return sendJSON(res, 400, { error: `${kind} has no headless runner to test` });
+      }
+      return sendJSON(res, 200, {
+        kind, ok: true,
+        checks: [
+          { name: `cli ${kind}: binary`, ok: true, detail: `/usr/local/bin/${kind}` },
+          { name: `cli ${kind}: auth`, ok: true, detail: "credentials present" },
+          { name: `cli ${kind}: transport`, ok: true, detail: "transport: acp available" },
+        ],
+      });
+    }
+  }
+  {
+    const m = url.match(/^\/api\/agents\/([^/]+)\/config$/);
+    if (m && method === "GET") {
+      const kind = m[1];
+      const models = { "claude-code": "claude-opus-5", "codex-cli": "gpt-5.6-sol", "kimi-cli": "kimi-code/k3" };
+      return sendJSON(res, 200, {
+        kind, model: models[kind] || "", effective_model: models[kind] || "default",
+        restricted: false, allowed_tools: [], drivable: kind !== "claude-desktop",
+        candidate_models: [models[kind] || "default", "other-model"],
+      });
+    }
+    if (m && method === "POST") {
+      return sendJSON(res, 200, { kind: m[1], model: "", effective_model: "default", restricted: false, allowed_tools: [], drivable: true, candidate_models: [] });
+    }
+  }
+
   if (url === "/api/registry" && method === "GET") {
     return sendJSON(res, 200, registry);
   }

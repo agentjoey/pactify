@@ -250,11 +250,14 @@ export function SettingsModal({
       style={viewMode ? undefined : { width: "min(1000px, calc(100vw - 48px))", height: "min(660px, calc(100vh - 48px))" }}
       onClick={viewMode ? undefined : (e) => e.stopPropagation()}
     >
-      <div className="flex min-h-0 flex-1">
+      {/* 窄屏（<640px）改为纵向堆叠：固定 250px 的侧栏在 390px 下会把内容区挤到
+          ~140px，正文被压成一行一个词（实测未改动的 Appearance 页同样如此，属外壳
+          缺陷而非某一页的问题）。这里只调断点，不引入抽屉/返回那类新交互。 */}
+      <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
         {/* Left nav rail */}
         <nav
           data-testid="settings-nav"
-          className="flex w-[250px] flex-none flex-col overflow-hidden border-r border-[var(--border-2)] bg-[var(--bg-panel)]"
+          className="flex max-h-[42vh] w-full flex-none flex-col overflow-hidden border-b border-[var(--border-2)] bg-[var(--bg-panel)] sm:max-h-none sm:w-[250px] sm:border-b-0 sm:border-r"
         >
           <div className="px-[18px] pb-[3px] pt-[17px]">
             <span id={titleId} className="text-[17px] font-bold tracking-[-0.01em] text-[var(--text)]">

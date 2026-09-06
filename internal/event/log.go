@@ -9,7 +9,20 @@ import (
 )
 
 // Append writes one event as a single JSON line (atomic under O_APPEND).
+// Append writes one event and returns nothing; callers that need the exact
+// bytes written should use AppendLine.
 func Append(logPath string, ev Event) error {
+	_, err := AppendLine(logPath, ev)
+	return err
+}
+
+// AppendLine appends the event and returns the EXACT line written.
+//
+// The defaults below (event_id, ts, payload) are filled in HERE, not by the
+// caller — so a caller that marshals its own copy of `ev` produces a different
+// line than the one on disk. The ledger-ref mirror needs byte-identical content
+// or its drift check reports a difference on every single event.
+func AppendLine(logPath string, ev Event) (string, error) {
 	if ev.EventID == "" {
 		ev.EventID = NewEventID()
 	}
@@ -21,15 +34,17 @@ func Append(logPath string, ev Event) error {
 	}
 	line, err := json.Marshal(ev)
 	if err != nil {
-		return err
+		return "", err
 	}
 	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
-	_, err = f.Write(append(line, '\n'))
-	return err
+	if _, err := f.Write(append(line, '\n')); err != nil {
+		return "", err
+	}
+	return string(line), nil
 }
 
 // ParseStats reports what happened during a ledger read.

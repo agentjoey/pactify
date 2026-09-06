@@ -40,12 +40,22 @@ import "os"
 // This replaces a convention that had already failed twice: a scattering of
 // per-test t.Setenv("PACT_DIR", "") calls across planner/mcp/orchestrate, which
 // only ever protected the tests somebody remembered to patch.
+//   - PACTIFY_LEDGER_REF (WS-B 的 ref 镜像开关) is cleared for the same reason
+//     as PACT_DIR: a developer who exported it to try the dark launch would
+//     otherwise have EVERY test in the suite start writing a git ref, silently
+//     changing what the suite exercises. Per-test t.Setenv still works, which is
+//     how internal/ledger and internal/pact drive both branches deliberately.
 func Isolate() func() {
 	prev, had := os.LookupEnv("PACT_DIR")
 	os.Unsetenv("PACT_DIR")
+	prevRef, hadRef := os.LookupEnv("PACTIFY_LEDGER_REF")
+	os.Unsetenv("PACTIFY_LEDGER_REF")
 	return func() {
 		if had {
 			os.Setenv("PACT_DIR", prev)
+		}
+		if hadRef {
+			os.Setenv("PACTIFY_LEDGER_REF", prevRef)
 		}
 	}
 }

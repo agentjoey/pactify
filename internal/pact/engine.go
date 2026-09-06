@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
+	"github.com/agentjoey/pactify/internal/ledger"
 	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/lockx"
 	"github.com/agentjoey/pactify/internal/paths"
@@ -137,8 +138,20 @@ func (p *Project) commitLedgerIfTracked() {
 
 func (p *Project) appendAndRender(ev event.Event) error {
 	logPath := paths.LogIn(p.dir)
-	if err := event.Append(logPath, ev); err != nil {
+	// AppendLine (not Append) so the mirror below writes the EXACT bytes that
+	// landed on disk: event_id/ts/payload defaults are filled inside the append,
+	// so re-marshalling `ev` here would produce a different line and make the
+	// drift check fire on every event.
+	written, err := event.AppendLine(logPath, ev)
+	if err != nil {
 		return err
+	}
+	// WS-B dark launch: mirror the event into the ledger ref when the operator
+	// opted in (PACTIFY_LEDGER_REF). The file above stays authoritative and this
+	// call never returns an error — a defect in brand-new storage must not be
+	// able to fail a protocol verb whose write already landed.
+	if ledger.ShadowEnabled() {
+		_ = ledger.ShadowAppend(p.dir, written)
 	}
 	// Read the whole log ONCE as bytes: reuse them both to re-render STATE.yml and
 	// to fingerprint the snapshot (its head hash is over these exact bytes).

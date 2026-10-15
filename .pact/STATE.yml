@@ -1175,3 +1175,10 @@ features:
         reviewer: claude-session
         spec: .pact/tasks/p0-schema.md
         evidence: null
+      - id: p0-codex-backend
+        owner: codex-worker
+        status: assigned
+        reviewer: claude-session
+        spec: .pact/tasks/p0-codex-backend.md
+        evidence: null
+        deps: [p0-schema]

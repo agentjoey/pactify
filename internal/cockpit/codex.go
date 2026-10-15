@@ -13,6 +13,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/agentjoey/pactify/internal/procx"
 )
 
 // NewCodexBackend returns a Backend that spawns a local `codex app-server`
@@ -46,7 +48,8 @@ type codexSession struct {
 	threadID string
 	info     SessionInfo
 	effort   string
-	hidden   bool // archive the thread on Close (StartOpts.Hidden)
+	turnMu   sync.Mutex // Hidden jobs serialize prompt startup with interruption.
+	hidden   bool       // archive the thread on Close (StartOpts.Hidden)
 
 	events    chan Event
 	approvals chan ApprovalRequest
@@ -62,6 +65,8 @@ type codexSession struct {
 
 func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string) (*codexSession, error) {
 	s := &codexSession{
+		hidden:    opts.Hidden,
+		threadID:  resumeThreadID,
 		events:    make(chan Event, 64),
 		approvals: make(chan ApprovalRequest, 16),
 		done:      make(chan struct{}),
@@ -85,7 +90,7 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 	if err != nil {
 		return nil, fmt.Errorf("codex: stdout pipe: %w", err)
 	}
-	if err := cmd.Start(); err != nil {
+	if err := procx.Start(ctx, cmd); err != nil {
 		return nil, fmt.Errorf("codex: start app-server: %w", err)
 	}
 
@@ -112,8 +117,11 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 
 	if resumeThreadID != "" {
 		info, id, err := s.client.threadResumeOpts(ctx, resumeThreadID, opts)
+		if id != "" {
+			s.threadID = id
+		}
 		if err != nil {
-			_ = s.Close()
+			err = errors.Join(err, s.Close())
 			return nil, fmt.Errorf("codex: thread/resume: %w", err)
 		}
 		if id == "" {
@@ -124,8 +132,9 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 		s.client.setMainThread(id)
 	} else {
 		info, id, err := s.client.threadStartOpts(ctx, opts)
+		s.threadID = id
 		if err != nil {
-			_ = s.Close()
+			err = errors.Join(err, s.Close())
 			return nil, fmt.Errorf("codex: thread/start: %w", err)
 		}
 		s.threadID = id
@@ -139,10 +148,24 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 }
 
 func (s *codexSession) Prompt(ctx context.Context, msg UserMessage) error {
+	if s.hidden {
+		s.turnMu.Lock()
+		defer s.turnMu.Unlock()
+		// Once sent, retain the start response even if cancellation arrives first:
+		// Interrupt needs its turn ID. Close bounds a server that never responds.
+		return s.client.turnStartEffortContexts(ctx, context.WithoutCancel(ctx), s.threadID, msg.Text, s.effort)
+	}
 	return s.client.turnStartEffort(ctx, s.threadID, msg.Text, s.effort)
 }
 
 func (s *codexSession) Interrupt(ctx context.Context) error {
+	if s.hidden {
+		s.turnMu.Lock()
+		defer s.turnMu.Unlock()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	return s.client.turnInterrupt(ctx, s.threadID)
 }
 
@@ -429,7 +452,7 @@ func (c *codexClient) threadOpts(ctx context.Context, method string, params map[
 		return SessionInfo{}, "", fmt.Errorf("parse %s result: %w", method, err)
 	}
 	if model != "" && res.Model != model {
-		return SessionInfo{}, "", c.modelRequestError(ctx, model, fmt.Errorf("server reported model %q", res.Model))
+		return res.info(), res.Thread.ID, c.modelRequestError(ctx, model, fmt.Errorf("server reported model %q", res.Model))
 	}
 	return res.info(), res.Thread.ID, nil
 }
@@ -506,6 +529,9 @@ func (c *codexClient) turnStart(ctx context.Context, threadID, text string) erro
 }
 
 func (c *codexClient) turnStartEffort(ctx context.Context, threadID, text, effort string) error {
+	return c.turnStartEffortContexts(ctx, ctx, threadID, text, effort)
+}
+func (c *codexClient) turnStartEffortContexts(sendCtx, responseCtx context.Context, threadID, text, effort string) error {
 	params := map[string]any{
 		"threadId": threadID,
 		"input":    []map[string]any{{"type": "text", "text": text}},
@@ -513,7 +539,7 @@ func (c *codexClient) turnStartEffort(ctx context.Context, threadID, text, effor
 	if effort != "" {
 		params["effort"] = effort
 	}
-	raw, err := c.rpc.call(ctx, "turn/start", params)
+	raw, err := c.rpc.callContexts(sendCtx, responseCtx, "turn/start", params)
 	if err != nil {
 		return err
 	}

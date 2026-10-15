@@ -133,3 +133,14 @@ type Session interface {
 	ThreadID() string                  // 持久续接句柄
 	Close() error                      // 收割；幂等
 }
+
+// StartError preserves the ID of a session created before configuration failed.
+// Delegation callers can conceal it without receiving a usable Session.
+type StartError struct {
+	ID  string
+	Err error
+}
+
+func (e *StartError) Error() string     { return e.Err.Error() }
+func (e *StartError) Unwrap() error     { return e.Err }
+func (e *StartError) SessionID() string { return e.ID }

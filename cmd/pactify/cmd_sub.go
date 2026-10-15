@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/procx"
 	"github.com/agentjoey/pactify/internal/sub"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +40,7 @@ func subArgs(n int) cobra.PositionalArgs {
 	}
 }
 func subTerminal(s sub.Status) bool {
-	return s == sub.StatusSucceeded || s == sub.StatusFailed || s == sub.StatusCanceled
+	return sub.Terminal(s)
 }
 func newSubCmd() *cobra.Command {
 	command := &cobra.Command{Use: "sub", Short: "Run a local coding harness as a background job", Args: subArgs(0), RunE: func(c *cobra.Command, _ []string) error { return c.Help() }}
@@ -100,7 +102,7 @@ func newSubCmd() *cobra.Command {
 			subExit(c, 1, err)
 			return
 		}
-		st, err := store.Load(a[0])
+		st, err := store.Recover(a[0])
 		if err != nil {
 			subExit(c, 1, err)
 			return
@@ -212,10 +214,27 @@ func subStartWorker(store sub.Store, id string) error {
 	cmd.Stdout = out
 	cmd.Stderr = out
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if err = cmd.Start(); err != nil {
-		return err
-	}
-	return cmd.Process.Release()
+	return store.WithState(context.Background(), id, func(st *sub.State) error {
+		if subTerminal(st.Status) || st.CancelRequested {
+			return nil
+		}
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		identity, err := procx.Inspect(cmd.Process.Pid)
+		if err == nil {
+			st.PID = identity.PID
+			st.Worker = &identity
+			st.UpdatedAt = time.Now().UTC()
+			err = store.Save(*st)
+		}
+		if err != nil {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+			return err
+		}
+		return cmd.Process.Release()
+	})
 }
 func subPending(c *cobra.Command, id string, jsonOut bool) error {
 	if jsonOut {
@@ -244,7 +263,7 @@ func subWait(c *cobra.Command, store sub.Store, id string, timeout time.Duration
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		st, err := store.Load(id)
+		st, err := store.Recover(id)
 		if err != nil {
 			return 1, err
 		}
@@ -293,7 +312,7 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 	}
 	states := []sub.State{}
 	if len(ids) > 0 {
-		st, e := store.Load(ids[0])
+		st, e := store.Recover(ids[0])
 		if e != nil {
 			return 1, e
 		}
@@ -307,7 +326,7 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 			if !entry.IsDir() {
 				continue
 			}
-			st, e := store.Load(entry.Name())
+			st, e := store.Recover(entry.Name())
 			if e == nil {
 				states = append(states, st)
 			}
@@ -347,49 +366,55 @@ func subCancel(c *cobra.Command, id string) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	deadline := time.Now().Add(15 * time.Second)
-	signaled := false
+	st, err := store.RequestCancel(id)
+	if err != nil {
+		return 1, err
+	}
+	if st.Worker != nil && !subTerminal(st.Status) {
+		if err = st.Worker.Signal(syscall.SIGTERM, true); err != nil {
+			return 1, err
+		}
+	}
+	deadline := time.Now().Add(24 * time.Second)
 	for {
-		st, e := store.Load(id)
-		if e != nil {
-			return 1, e
-		}
+		// Even a terminal worker can leave a wedged harness behind.
 		if subTerminal(st.Status) {
-			_, e = fmt.Fprintf(c.OutOrStdout(), "%s %s\n", id, st.Status)
-			return 0, e
+			if err = st.KillHarnesses(); err != nil {
+				return 1, err
+			}
+			_, err = fmt.Fprintf(c.OutOrStdout(), "%s %s\n", id, st.Status)
+			return 0, err
 		}
-		if st.PID > 1 && !signaled {
-			pgid, e := syscall.Getpgid(st.PID)
-			if e != nil && !os.IsNotExist(e) && e != syscall.ESRCH {
-				return 1, e
+		alive := false
+		if st.Worker != nil {
+			alive, err = st.Worker.Alive()
+			if err != nil {
+				return 1, err
 			}
-			if e == nil && pgid != st.PID {
-				return 1, fmt.Errorf("job worker %d is not its process group leader", st.PID)
-			}
-			if e = syscall.Kill(-st.PID, syscall.SIGTERM); e != nil && e != syscall.ESRCH {
-				return 1, e
-			}
-			signaled = true
 		}
-		if time.Now().After(deadline) {
-			if st.PID > 1 {
-				if e = syscall.Kill(-st.PID, syscall.SIGKILL); e != nil && e != syscall.ESRCH {
-					return 1, e
-				}
+		if !alive || time.Now().After(deadline) {
+			cleanupErr := st.KillHarnesses()
+			if st.Worker != nil {
+				cleanupErr = errors.Join(cleanupErr, st.Worker.Signal(syscall.SIGKILL, true))
 			}
-			// Reload after killing: preserve a terminal result written during the grace period.
-			latest, e := store.Load(id)
-			if e != nil {
-				return 1, e
+			if cleanupErr != nil {
+				return 1, cleanupErr
 			}
-			if !subTerminal(latest.Status) {
-				latest.Status = sub.StatusCanceled
-				latest.Error = "任务已取消（强制终止）"
-				latest.UpdatedAt = time.Now().UTC()
-				latest.FinishedAt = latest.UpdatedAt
-				if e = subSaveFallback(store, latest); e != nil {
-					return 1, e
+			if st.CancelRequested {
+				st.Status = sub.StatusCanceled
+				st.Error = "任务已取消（worker 已退出）"
+				if alive {
+					st.Error = "任务已取消（强制终止）"
 				}
+			} else if !alive {
+				st.Status = sub.StatusFailed
+				st.Error = "job worker is absent or its process identity no longer matches"
+			} else {
+				st.Status = sub.StatusCanceled
+				st.Error = "任务已取消（强制终止）"
+			}
+			if err = subSaveFallback(store, st); err != nil {
+				return 1, err
 			}
 			return 0, nil
 		}
@@ -398,6 +423,10 @@ func subCancel(c *cobra.Command, id string) (int, error) {
 			return 1, c.Context().Err()
 		case <-time.After(100 * time.Millisecond):
 		}
+		st, err = store.Load(id)
+		if err != nil {
+			return 1, err
+		}
 	}
 }
 func subSaveFallback(store sub.Store, st sub.State) error {
@@ -405,14 +434,7 @@ func subSaveFallback(store sub.Store, st sub.State) error {
 	if h, ok := sub.Lookup(st.Request.Harness); ok && h.Experimental != "" {
 		result.Warnings = append([]string{h.Experimental}, result.Warnings...)
 	}
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err = os.WriteFile(store.ResultPath(st.ID), append(data, '\n'), 0600); err != nil {
-		return err
-	}
-	return store.Save(st)
+	return store.Finish(st.ID, &result, st.Error, time.Now())
 }
 func subWorker(parent context.Context, id string) (code int, err error) {
 	store, err := sub.DefaultStore()

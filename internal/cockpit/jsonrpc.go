@@ -22,7 +22,7 @@ type rpcConn struct {
 	r       io.Reader
 	closeFn func() error
 
-	writeCh chan []byte
+	writeCh chan rpcFrame
 	done    chan struct{}
 	once    sync.Once
 
@@ -83,7 +83,7 @@ func newRPCConn(
 		w:              w,
 		r:              r,
 		closeFn:        closeFn,
-		writeCh:        make(chan []byte),
+		writeCh:        make(chan rpcFrame),
 		done:           make(chan struct{}),
 		pending:        map[int]chan rpcResponse{},
 		onRequest:      onRequest,
@@ -100,6 +100,12 @@ func newRPCConn(
 }
 
 func (c *rpcConn) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
+	return c.callContexts(ctx, ctx, method, params)
+}
+func (c *rpcConn) callContexts(sendCtx, ctx context.Context, method string, params any) (json.RawMessage, error) {
+	if err := sendCtx.Err(); err != nil {
+		return nil, err
+	}
 	c.mu.Lock()
 	if c.dead {
 		err := c.deadErr
@@ -117,7 +123,7 @@ func (c *rpcConn) call(ctx context.Context, method string, params any) (json.Raw
 		c.dropPending(id)
 		return nil, fmt.Errorf("marshal %s: %w", method, err)
 	}
-	if err := c.write(b); err != nil {
+	if err := c.writeContext(sendCtx, b); err != nil {
 		c.dropPending(id)
 		return nil, err
 	}
@@ -170,15 +176,38 @@ func (c *rpcConn) dropPending(id int) {
 	c.mu.Unlock()
 }
 
-func (c *rpcConn) write(b []byte) error {
+type rpcFrame struct {
+	ctx      context.Context
+	data     []byte
+	accepted chan error
+}
+
+func (c *rpcConn) write(b []byte) error { return c.writeContext(context.Background(), b) }
+func (c *rpcConn) writeContext(ctx context.Context, b []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	frame := rpcFrame{ctx: ctx, data: b, accepted: make(chan error, 1)}
 	select {
 	case <-c.done:
 		c.mu.Lock()
 		err := c.deadErr
 		c.mu.Unlock()
 		return err
-	case c.writeCh <- b:
-		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	case c.writeCh <- frame:
+	}
+	// The writer acknowledges its cancellation check before touching the pipe.
+	// Once accepted, a hidden prompt must retain the eventual turn/start response.
+	select {
+	case err := <-frame.accepted:
+		return err
+	case <-c.done:
+		c.mu.Lock()
+		err := c.deadErr
+		c.mu.Unlock()
+		return err
 	}
 }
 
@@ -188,7 +217,12 @@ func (c *rpcConn) writeLoop() {
 		case <-c.done:
 			return
 		case b := <-c.writeCh:
-			frame := append(b, '\n')
+			err := b.ctx.Err()
+			b.accepted <- err
+			if err != nil {
+				continue
+			}
+			frame := append(b.data, '\n')
 			if _, err := c.w.Write(frame); err != nil {
 				c.terminate(fmt.Errorf("write: %w", err))
 				return

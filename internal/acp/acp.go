@@ -23,6 +23,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/agentjoey/pactify/internal/procx"
 )
 
 // ProtocolVersion is the ACP protocol version this client advertises in the
@@ -158,7 +160,7 @@ type Client struct {
 	closeFn func() error
 	cwd     string
 
-	writeCh chan []byte
+	writeCh chan acpFrame
 	done    chan struct{}
 	once    sync.Once
 
@@ -242,7 +244,7 @@ func Spawn(ctx context.Context, command string, args, env []string, dir string, 
 	if err != nil {
 		return nil, fmt.Errorf("acp: stdout pipe: %w", err)
 	}
-	if err := cmd.Start(); err != nil {
+	if err := procx.Start(ctx, cmd); err != nil {
 		return nil, fmt.Errorf("acp: start %q: %w", command, err)
 	}
 	c := newClient(stdin, stdout, func() error {
@@ -291,7 +293,7 @@ func newClient(w io.WriteCloser, r io.Reader, closeFn func() error, cwd string) 
 		w:         w,
 		closeFn:   closeFn,
 		cwd:       cwd,
-		writeCh:   make(chan []byte),
+		writeCh:   make(chan acpFrame),
 		done:      make(chan struct{}),
 		pending:   map[int64]chan rpcResponse{},
 		perUpdate: map[SessionID]func(SessionUpdate){},
@@ -524,6 +526,9 @@ func (c *Client) Close() error {
 // call sends a request and blocks for its response, the context's cancellation, or
 // the client dying — whichever comes first.
 func (c *Client) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	c.mu.Lock()
 	if c.dead {
 		err := c.deadErr
@@ -541,7 +546,7 @@ func (c *Client) call(ctx context.Context, method string, params any) (json.RawM
 		c.dropPending(id)
 		return nil, fmt.Errorf("acp: marshal %s: %w", method, err)
 	}
-	if err := c.write(b); err != nil {
+	if err := c.writeContext(ctx, b); err != nil {
 		c.dropPending(id)
 		return nil, err
 	}
@@ -578,14 +583,25 @@ func (c *Client) dropPending(id int64) {
 }
 
 // write hands a frame to the writer goroutine, or fails if the client is dead.
-func (c *Client) write(b []byte) error {
+type acpFrame struct {
+	ctx  context.Context
+	data []byte
+}
+
+func (c *Client) write(b []byte) error { return c.writeContext(context.Background(), b) }
+func (c *Client) writeContext(ctx context.Context, b []byte) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	select {
 	case <-c.done:
 		c.mu.Lock()
 		err := c.deadErr
 		c.mu.Unlock()
 		return err
-	case c.writeCh <- b:
+	case <-ctx.Done():
+		return ctx.Err()
+	case c.writeCh <- acpFrame{ctx: ctx, data: b}:
 		return nil
 	}
 }
@@ -598,7 +614,10 @@ func (c *Client) writeLoop() {
 		case <-c.done:
 			return
 		case b := <-c.writeCh:
-			frame := append(b, '\n')
+			if b.ctx.Err() != nil {
+				continue
+			}
+			frame := append(b.data, '\n')
 			if _, err := c.w.Write(frame); err != nil {
 				c.terminate(fmt.Errorf("acp: write: %w", err))
 				return

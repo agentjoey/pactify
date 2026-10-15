@@ -84,6 +84,8 @@ pactify sub status [<job>] | result <job> | cancel <job> | list
 pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模型绑定
 ```
 
+`sub status --json` 的共享任务摘要字段、兼容规则和过滤选项见 [任务摘要契约](../sub-status.md)。
+
 `run` 的行为：起一个 **detached worker**（独立进程组）持有 harness 会话并写 job 状态；
 前台 CLI 只是等 job 文件。`--wait` 到点仍未完成 → 返回「仍在运行 + job id」，worker 继续跑。
 这样同时解决 Claude Code Bash 单次 10 分钟上限和 host 重启后找回 job。

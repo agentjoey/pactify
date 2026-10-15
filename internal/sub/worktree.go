@@ -18,6 +18,7 @@ import (
 // Worktree is shared by every turn of a resumed session. Owner names the first
 // job, whose worktree.lock serializes resume, apply and discard across turns.
 type Worktree struct {
+	Applied      bool   `json:"applied,omitempty"`
 	Path         string `json:"path"`
 	BaseCommit   string `json:"baseCommit"`
 	OriginalRoot string `json:"originalRoot"`
@@ -61,10 +62,14 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 			if err != nil {
 				return st, err
 			}
-			if h.Home != nil {
-				st.HarnessHome = previous.HarnessHome
-				err = s.Save(st)
-			}
+			err = s.WithState(context.Background(), id, func(current *State) error {
+				current.ResumeOf = previous.ID
+				if h.Home != nil {
+					current.HarnessHome = previous.HarnessHome
+				}
+				st = *current
+				return s.Save(*current)
+			})
 			return st, err
 		}
 		req.Resume = session
@@ -100,6 +105,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 			}
 			err = s.WithState(context.Background(), id, func(st *State) error {
 				copy := *w
+				copy.Applied = false
 				st.Worktree = &copy
 				created = *st
 				return s.Save(*st)
@@ -381,7 +387,7 @@ func (s Store) ApplyWorktree(id string) error {
 			return err
 		}
 		if len(change.patch) == 0 {
-			return nil
+			return s.markWorktreeApplied(w)
 		}
 		// Check both index and working tree against the base. A staged edit
 		// restored only in the working tree is still a user change.
@@ -418,7 +424,10 @@ func (s Store) ApplyWorktree(id string) error {
 			return err
 		}
 		// git apply without --reject validates the whole patch before writing.
-		return apply(false)
+		if err := apply(false); err != nil {
+			return err
+		}
+		return s.markWorktreeApplied(w)
 	})
 }
 
@@ -480,4 +489,30 @@ func (r *Result) describeWorktree(st State) {
 	if st.Worktree.SourceDirty {
 		r.Warnings = append([]string{dirtyWorktreeWarning}, r.Warnings...)
 	}
+}
+
+// markWorktreeApplied records a successful apply for every existing turn sharing
+// this worktree. The caller holds the owner worktree lock; a new turn resets its
+// own marker because it can introduce further changes.
+func (s Store) markWorktreeApplied(w *Worktree) error {
+	entries, err := os.ReadDir(s.Root)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		st, err := s.Load(entry.Name())
+		if err != nil || st.Worktree == nil || st.Worktree.Owner != w.Owner {
+			continue
+		}
+		if err := s.WithState(context.Background(), st.ID, func(current *State) error {
+			current.Worktree.Applied = true
+			return s.Save(*current)
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

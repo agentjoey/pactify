@@ -73,9 +73,7 @@ func TestSubStatusListJSONContract(t *testing.T) {
 			t.Errorf("missing %s: %s", key, out)
 		}
 	}
-	if len(rows[0]) != 5 || len(rows[1]) != 6 {
-		t.Errorf("unexpected list fields: %s", out)
-	}
+	// AJ-657 adds summary fields; the original keys above remain required.
 	if _, ok := rows[0]["finishedAt"]; ok {
 		t.Errorf("unfinished job has finishedAt: %s", out)
 	}

@@ -58,6 +58,7 @@ func (s Store) claim(ctx context.Context, id string, now time.Time) (st State, e
 		current.PID = identity.PID
 		current.Worker = &identity
 		current.Status = StatusRunning
+		current.StartedAt = now.UTC()
 		current.UpdatedAt = now.UTC()
 		if e := s.Save(*current); e != nil {
 			return e

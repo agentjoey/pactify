@@ -48,14 +48,19 @@ callee 不提交代码，改动留给 host 审查。
 
 job 存在 `$PACTIFY_HOME/jobs/<jobId>/`，默认 `~/.pactify/jobs/<jobId>/`。
 
-**不留痕**：委派出去的 codex 会话在 job 结束时自动归档，不会出现在你自己的 Codex 会话 / 项目列表里（桌面与手机端都不会）；
-`--resume` 会先取消归档、续接，结束后再归档。要查看某次委派的原始会话：`codex unarchive <会话 id>`（id 在摘要的「会话」一行）。
-归档失败时摘要首行会提示。
+**不留痕**：委派出去的会话在 job 结束时自动隐藏，不会出现在你自己用这些工具时的会话 / 项目列表里。每个接入的 harness 都必须声明隐藏方式（有测试强制）：
+
+| harness | 怎么隐藏 | 想看原始会话 |
+|---|---|---|
+| codex | 结束时归档线程（Codex 桌面与手机端都不显示） | `codex unarchive <会话 id>` |
+| kimi | 结束时在会话的 `state.json` 置 kimi 自己的 `archived` 标记；若这个目录的 workspace 是本次 job 新建的，也一并移除；最后用 `kimi session list` 核对确实不显示 | `kimi session list --archived --cwd <目录>`，或 `kimi -S <会话 id>` 直接打开 |
+
+`--resume` 会先取消隐藏、续接，结束后再隐藏。会话 id 在摘要的「会话」一行。隐藏失败时摘要首行会提示（例如 kimi 自动更新后改了会话格式）。
 
 ## 已知限制
 
 - 第一版不提供 kimi 只读档（`sub run kimi --read-only` 退出 2）：Phase 0 实测 kimi 的 plan 模式在只读任务上不收敛。只读任务用 codex。
-- kimi 的会话仍留在 `~/.kimi-code/sessions/` 下（模型与 token 的独立核实要读它），只在 kimi 自己的会话列表里可见。
+- job 在启动阶段就失败时（例如请求的模型不可用），callee 可能已经建了会话但还没把 id 交回，这个会话不会被隐藏。
 - 每次委派在 callee 侧约有 2–5 万 token 固定开销，不适合零碎小任务。
 - 只有本机已安装、已登录的官方 CLI 可用。模型独立核实失败时，以摘要中的警告为准。
 - 自动测试不涵盖真实 Claude Code 安装与委派；发布验收还需要在 Claude Code 中完成冒烟。

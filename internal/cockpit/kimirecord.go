@@ -22,26 +22,9 @@ type KimiRecord struct {
 // ReadKimiRecord reads Kimi's session index and the selected main agent's wire log.
 func ReadKimiRecord(kimiHome, sessionID string) (KimiRecord, error) {
 	var record KimiRecord
-	index := filepath.Join(kimiHome, "session_index.jsonl")
-	sessionDir := ""
-	err := readKimiLines(index, false, func(line []byte) error {
-		var entry struct {
-			SessionID  string `json:"sessionId"`
-			SessionDir string `json:"sessionDir"`
-		}
-		if err := json.Unmarshal(line, &entry); err != nil {
-			return err
-		}
-		if entry.SessionID == sessionID {
-			sessionDir = entry.SessionDir
-		}
-		return nil
-	})
+	sessionDir, err := kimiSessionDir(kimiHome, sessionID)
 	if err != nil {
 		return record, err
-	}
-	if sessionDir == "" {
-		return record, fmt.Errorf("kimi session %q not found in %s", sessionID, index)
 	}
 	seen := map[string]bool{}
 	err = readKimiLines(filepath.Join(sessionDir, "agents", "main", "wire.jsonl"), true, func(line []byte) error {
@@ -117,4 +100,30 @@ func readKimiLines(path string, allowTruncatedTail bool, visit func([]byte) erro
 			return nil
 		}
 	}
+}
+
+// kimiSessionDir resolves a session's directory through kimi's session_index.jsonl.
+func kimiSessionDir(kimiHome, sessionID string) (string, error) {
+	index := filepath.Join(kimiHome, "session_index.jsonl")
+	sessionDir := ""
+	err := readKimiLines(index, false, func(line []byte) error {
+		var entry struct {
+			SessionID  string `json:"sessionId"`
+			SessionDir string `json:"sessionDir"`
+		}
+		if err := json.Unmarshal(line, &entry); err != nil {
+			return err
+		}
+		if entry.SessionID == sessionID {
+			sessionDir = entry.SessionDir
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if sessionDir == "" {
+		return "", fmt.Errorf("kimi session %q not found in %s", sessionID, index)
+	}
+	return sessionDir, nil
 }

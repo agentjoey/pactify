@@ -20,27 +20,69 @@ SessionStart hook 只检查 pactify 与 `sub` 命令是否可用，缺失时提�
 
 ```text
 /delegate 为 src/cache/ 增加过期策略和回归测试，运行项目全量测试
-/codex 为 src/cache/ 增加过期策略和回归测试，只修改该目录，运行 npm test -- cache
+/codex 为 src/cache/ 增加过期策略和回归测试，只修改该目录，运行 npm test 全量测试
 /kimi 为 src/cache/ 增加过期策略和回归测试，允许写入，运行项目全量测试
 ```
 
 也可始终使用完整入口 `/pactify:delegate`、`/pactify:codex`、`/pactify:kimi`，避免与其他同名 skill 冲突。
 `/delegate` 使用默认 codex；`/codex`、`/kimi` 显式选择 harness。显式调用以上任一入口时一定外派，无论任务大小。
 适合涉及 3 个以上文件、需要探索和测试、或预计超过约 10 分钟的任务；小改动直接由 Claude 完成。
+自主判断时也不要外派依赖大量口头上下文、无法写成自足说明的任务，或需要与用户频繁交互的任务。
+显式调用仍一定外派，但 kimi 的只读限制不变，不得自行升级为写权限。
 
-Claude 主线程先写包含目标、路径、边界、权限、验收命令的完整 brief，再调用
-`pactify sub run [harness] --write --wait 0s --json`。省略 harness 时使用 codex，
-例如 `/delegate` 调用 `pactify sub run --write --wait 0s --json`。显式 codex / kimi 仍可用。
+Claude 主线程先写完整 brief，固定包含：背景、编号目标、已知约束与特例、通用约束、验收命令。
+写清路径、范围、权限与已知例外，callee 无法推断当前对话中的约束；验收必须包含项目全量测试命令。
+要求改规则前检查调用方、特例及文档例外，每个行为改动先写回归测试并看到失败；不许为迁就新行为修改已有测试，
+只有 brief 明确判定旧行为错误才可改对应测试，并在最终回复点名。禁止提交及读取凭据；可选禁止派子代理、写报告文件。
+三份 skill 都内嵌同一份模板、完整示例及评审流程，共享标记区由 bats 检查逐字一致。
+
+主线程调用 `pactify sub run [harness] --write --worktree --wait 0s --json`。
+省略 harness 时使用 codex，例如 `/delegate` 调用 `pactify sub run --write --worktree --wait 0s --json`。
 只读任务用 codex，改用 `--read-only`；kimi 仍拒绝只读任务（退出 2）。
 退出码 3 表示仍在执行，stdout 包含 `jobId`；主线程以 `run_in_background: true` 执行
-`pactify sub wait <jobId>`，完成后读取摘要并检查 diff。退出码 0 / 1 / 2 分别表示成功、失败、参数错误。
+`pactify sub wait <jobId>`，同时设置 `timeout: 7200000`，完成后进入下面的评审流程。
+若后台 wait 因时限停止，先查 `pactify sub status` 再继续同一个 wait；不要重复启动任务。
+退出码 0 / 1 / 2 分别表示成功、失败、参数错误。
 可用 `pactify sub result <jobId>` 重新读取结果。
 
 如需指定模型，在任务中明确写出模型名；CLI 无法兑现时应拒绝执行并给出可选模型，不静默降级。
-续接同一仓库中该 harness 的上一次成功会话时明确要求 `--resume`。
+返工时明确要求 `--resume --worktree`，保持原始 cwd 和 harness。
 愿意等待约 9 分钟以内的任务，也可交给 `pactify:codex` / `pactify:kimi` 转发 subagent：
 它使用 `model: haiku`、仅有 Bash 工具，只调用一次 Bash，原样返回 stdout；超时后由主线程继续 wait。
 callee 不提交代码，改动留给 host 审查。
+
+## Reviewing a delegation
+
+1. 读取摘要及首行警告，先看完整 diff 和新增文件。worktree 从原仓库 HEAD 创建，不带入原工作区未提交的改动。
+   从结果取得 `worktreePath`、`baseCommit`，运行 `git -C <worktreePath> diff <baseCommit> --` 及
+   `git -C <worktreePath> ls-files --others --exclude-standard`，并打开列出的新文件。
+2. 主线程亲自在 worktree 重跑所有验收命令，包括全量测试；Go 测试使用 `PACTIFY_HOME="$(mktemp -d)"`。
+   callee 自报通过不能代替主线程验收。
+3. 能在真实环境验证的，主线程亲自试用一次，观察真实用户流程、日志可读性和模型实际行为等相关结果。
+   记录做过的验证及无法验证的缺口，不把自动测试当成真机验证。
+4. 并发、权限、删数据等高风险改动另请独立评审；处理发现的问题后重跑验收。
+5. 评审通过 → `pactify sub apply <jobId>`，成功后 `pactify sub discard <jobId>` 清理 worktree。
+   apply 不提交；相关路径存在用户改动或冲突时整次拒绝，先查原因，不强行覆盖或盲目重试。
+   返工 → 不 apply、不 discard，用原始 `--cwd` 和同一 harness 执行 `sub run ... --resume --worktree`，
+   保持原权限、指定模型和 effort，在 stdin 提供返工说明，再按同一后台 wait 流程收回结果，重复步骤 1–4。
+   放弃 → 不 apply，直接 `pactify sub discard <jobId>`；运行中的 job 必须先 `pactify sub cancel <jobId>`。
+
+返工消息模板：
+
+```text
+在同一个 worktree 继续原任务，原范围与约束保持不变。
+评审发现：<文件/行号、实际与预期行为、复现步骤或失败输出>
+需要修改：<逐条修复要求及必须保留的约束>
+补充测试：<回归场景，先见失败；不弱化已有测试>
+重跑验收：<所有原验收命令，包含全量测试>
+最终回复贴出改动、命令输出及剩余缺口；不提交、不写报告文件。
+```
+
+`--resume` 按原始 cwd 与 harness 选最近有 session id 的已结束 worktree 会话，包括失败或取消的轮次；
+续接前核对目标会话，续接后核对仍是同一个 worktree 和 base commit，不在同一 worktree 并发开轮次。
+不带 `--worktree` 续接也会沿用原隔离；已 discard 或丢失的 worktree 不能续接。
+旧的非隔离会话仍须成功才能续接，不能中途加隔离，需去掉 `--resume` 新建 worktree 任务。
+apply / discard 可使用续接链上任一 job id，作用于共享 worktree；discard 会标记整条链。
 
 ## 结果摘要
 

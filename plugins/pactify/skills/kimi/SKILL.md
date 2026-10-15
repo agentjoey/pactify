@@ -12,67 +12,118 @@ The result summary reports this warning without changing the job status.
 **If the user invoked this skill explicitly (`/kimi` or `/pactify:kimi`), always delegate — whatever the task
 size. The user chose the harness; do not do the work yourself instead.**
 
-When you are deciding on your own whether to delegate, use kimi only for **large** tasks: touching 3+ files, or
-needing exploration and test runs, or likely to take you more than ~10 minutes. Small edits: do them yourself —
-each delegation carries a fixed cost of tens of thousands of tokens on the callee side.
+Launch command (step 2 below):
 
-1. Write a self-contained brief. The callee starts cold and cannot see this conversation. Include:
-   goal; relevant file paths; constraints (what must not change); acceptance criteria (exact commands to run);
-   whether it is read-only. Explicitly forbid committing code; leave changes in the workspace for the host
-   to review. Do not include credentials or ask the callee to inspect them.
-   The acceptance commands must include the project's **full** test command (e.g. `go test ./...`), not just
-   the packages you expect to change: callees break callers in other packages, and a narrow command hides it.
-   State any non-obvious invariant you know of (reserved names, special cases) — the callee cannot infer it.
-   Do not edit existing tests to fit the new behavior unless the brief says the old behavior is wrong.
-2. Start it from the **main thread** (not a subagent — a subagent's background command notifies only that
-   subagent). The worker runs in the background:
+    pactify sub run kimi --write --worktree --wait 0s --json <<'BRIEF'
+    ...complete brief from step 1...
+    BRIEF
 
-       pactify sub run kimi --write --worktree --wait 0s --json <<'BRIEF'
-       ...brief...
-       BRIEF
+Always pass `--write`; kimi read-only tasks must go to codex. Never raise permissions yourself.
 
-   Always pass `--write` (kimi has no read-only mode in this version; see below). Preserve an explicitly
-   requested model with `--model <name>` and effort with `--effort <level>`, quoting shell arguments.
-   Use a quoted heredoc delimiter absent from the brief. Never silently choose a different model.
-   It exits 3 immediately with `{"jobId": ...}`. This means pending, not failure. Parse the job id from
-   stdout. For any other error, report the error and available models if supplied; do not blindly retry.
-   Then run, with `run_in_background: true` **and `timeout: 7200000`** (a background command
-   otherwise stops at the default ~10-minute limit while the job keeps running):
+<!-- BEGIN SHARED-DELEGATION -->
+When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than
+~10 minutes. Handle small edits directly; each delegation costs tens of thousands of callee tokens.
+Do not delegate tasks that depend on conversation context you cannot turn into a self-contained brief,
+or tasks needing frequent user interaction. Explicit skill invocations still delegate regardless of size;
+harness permission restrictions still apply.
+
+1. Write a self-contained brief using the five sections below. The callee starts cold and cannot see
+   this conversation. Include relevant paths, scope, access mode, numbered goals and exact acceptance
+   commands. Known constraints and special cases must be written down: the callee cannot infer them.
+   Before changing a rule, require checking callers, special cases and documented exceptions, and
+   reporting those dependencies in the final reply.
+   Do not edit existing tests to fit the new behavior unless the brief explicitly says the old behavior
+   is wrong; name any such exception in the final reply. Require a failing regression test before each
+   behavior change. The acceptance commands must include the project's **full** test command, not just
+   affected packages. For Go tests use `PACTIFY_HOME="$(mktemp -d)"` to isolate pactify state.
+   Forbid commits and credential access. Optionally add: "Do not spawn subagents or write report files;
+   put conclusions and command output in the final reply."
+   Use this complete example as a template, replacing its paths, constraints and commands for the project:
+
+   ```text
+   Background:
+   src/cache/ expires entries on read; concurrent refreshes can serve stale data.
+   Goals:
+   1. Fix refresh ordering in src/cache/ without changing its public API.
+   2. Add regression coverage; first run each new test and see it fail.
+   Known constraints and special cases:
+   Zero TTL means no expiry; preserve it. Inspect callers and document exceptions in the final reply.
+   General constraints:
+   Write access only in src/cache/. Do not commit or inspect credentials.
+   Do not edit existing tests to fit the new behavior; fix the implementation instead.
+   Do not spawn subagents or write report files; reply with conclusions and command output.
+   Acceptance commands:
+   go build ./...
+   PACTIFY_HOME="$(mktemp -d)" go test ./... -count=1
+   ```
+
+2. Start the launch command above from the **main thread** (not a subagent — its background command
+   notifies only that subagent). Supply the complete brief on stdin, with a quoted heredoc delimiter
+   absent from the brief. Preserve requested models with `--model <name>` and effort with
+   `--effort <level>`, quoting shell arguments; never silently switch models.
+   It exits 3 immediately with `{"jobId": ...}`: pending, not failure. Parse the job id from stdout.
+   For any other error, report it and available models if supplied; do not blindly retry.
+   Then run, with `run_in_background: true` **and `timeout: 7200000`** (otherwise the background
+   command stops at the default ~10-minute limit while the job keeps running):
 
        pactify sub wait <jobId>
 
-   If the background command is reported as stopped (time limit) rather than completed, the
-   job is still running: check `pactify sub status`, then start the same wait again.
+   If the background command is reported as stopped (time limit) rather than completed, check
+   `pactify sub status`, then start the same wait again.
 
-3. When the background command completes, read its output: the result summary. The first line carries any
-   warning (model mismatch, tool-call limit, idle timeout). Review the diff it lists before building on it.
-   If needed, retrieve the summary again with `pactify sub result <jobId>`. Only claim independent model
-   verification when the result confirms it. Full logs stay at the reported path.
-   Large tasks use a detached worktree based on the original HEAD. Uncommitted source changes are not
-   carried over; the summary warns when the source was dirty. Read `worktreePath` and `baseCommit` from
-   the result JSON (or Worktree and base commit in the summary), then inspect the complete change:
+3. When the background command completes, review before using or applying its changes:
+   - Read the summary and first-line warnings (model mismatch, tool-call limit, idle timeout).
+     Retrieve it again with `pactify sub result <jobId>` if needed. Only claim independent model
+     verification when the result confirms it; full logs stay at the reported path.
+   - Inspect the complete diff first. Large tasks use a detached worktree based on the original HEAD;
+     uncommitted source changes are not carried over. Read `worktreePath` and `baseCommit` from the
+     result JSON (or Worktree and base commit in the summary), then run:
 
-       git -C <worktreePath> diff <baseCommit> --
-       git -C <worktreePath> ls-files --others --exclude-standard
+         git -C <worktreePath> diff <baseCommit> --
+         git -C <worktreePath> ls-files --others --exclude-standard
 
-   Also open the listed new files: `git diff` alone does not show untracked content.
-   After reviewing and accepting the change, run `pactify sub apply <jobId>` to apply it to the original
-   workspace without committing. Apply checks all affected paths first; a related user edit or conflict
-   fails without partially applying. Resolve it deliberately; do not force or blindly retry.
-   After a successful apply, run `pactify sub discard <jobId>` to remove the worktree. To reject the work,
-   use discard without apply. A running job must be canceled before discard.
-4. To request rework, pass `--resume --worktree` on the next `run` with the original `--cwd` and harness.
+     Open the listed new files too: `git diff` alone does not show untracked content.
+   - The main thread must personally rerun all acceptance commands, including the full test suite,
+     in the worktree. Do not treat the callee's test report as host verification.
+   - Where feasible, personally try the change in the real environment: exercise the actual user
+     flow and inspect output readability and actual model behavior when relevant. Record what was
+     tried and what could not be verified; automated tests alone do not establish real-world behavior.
+   - For high-risk changes involving concurrency, permissions, or data deletion, obtain an independent reviewer
+     before approval. Give that reviewer the brief and complete diff; resolve findings and rerun acceptance.
+   - Decide: on approval, run `pactify sub apply <jobId>` to apply without committing. Apply checks all
+     affected paths first; related user edits or conflicts fail without partially applying. Resolve them
+     deliberately; do not force or blindly retry. After successful apply, run `pactify sub discard <jobId>`
+     to remove the worktree. For rework, keep it and follow step 4. To abandon, discard without apply;
+     a running job must first be canceled with `pactify sub cancel <jobId>`.
+
+4. To request rework, do not apply or discard. Pass `--resume --worktree` on the next `run` with the
+   original `--cwd` and harness, preserving access mode and any requested model/effort. Supply a new
+   brief on stdin and collect it with the same main-thread wait procedure in step 2.
    Resume continues in the same worktree with the same base commit; the summary shows the full change
-   from that base across all turns. Omitting `--worktree` on resume also preserves existing isolation.
+   across all turns. Omitting `--worktree` on resume also preserves existing isolation.
    It selects the most recent completed worktree session with a session id, including a failed or canceled
-   turn; legacy workspace sessions still require success. Do not start concurrent turns in one worktree.
+   turn; legacy workspace sessions still require success. Confirm this is the intended session before
+   resuming, and check the returned worktree path/base commit. Do not start concurrent turns in one worktree.
    A discarded or missing worktree cannot resume. A legacy session cannot acquire isolation mid-session:
    start a fresh `--worktree` job instead. Apply and discard accept any job id in the resumed chain and
    affect its shared worktree; discard marks every turn as discarded.
+   Use this rework message template, filling in concrete evidence and exact commands:
+
+   ```text
+   Continue the same task in the same worktree; the original scope and constraints still apply.
+   Review findings: <file/line, observed behavior, expected behavior, reproduction or failing output>
+   Required changes: <numbered fixes and constraints to preserve>
+   Tests to add: <regression cases; see them fail first; do not weaken existing tests>
+   Rerun acceptance: <every original acceptance command, including the full test suite>
+   Reply with changes, command output and remaining gaps; do not commit or write report files.
+   ```
+
+   Repeat step 3 after every rework turn; apply only after all required checks and reviews pass.
+<!-- END SHARED-DELEGATION -->
 
 For a quick task you are willing to block on (under ~9 minutes), you may instead delegate the complete
-brief to the `pactify:kimi` subagent, which calls `pactify sub run kimi --wait 540s --json` once and
-returns stdout verbatim. If it returns a pending job id (exit 3), the main thread must still run
+brief to the `pactify:kimi` subagent, which calls `pactify sub run kimi --worktree --wait 540s --json` once,
+with access/model/effort flags from the brief, and returns stdout verbatim. If it returns a pending job id (exit 3), the main thread must still run
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.
 
 **Read-only tasks are not offered for kimi in this version**: `pactify sub run kimi --read-only` exits 2.

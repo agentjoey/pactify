@@ -45,8 +45,10 @@ func (r Result) Markdown() string {
 	var b strings.Builder
 	if len(r.Warnings) > 0 {
 		fmt.Fprintf(&b, "⚠️ %s\n", strings.Join(r.Warnings, "；"))
-	} else {
+	} else if r.Status == StatusSucceeded {
 		fmt.Fprintf(&b, "✓ %s 完成\n", r.Harness)
+	} else {
+		fmt.Fprintf(&b, "✗ %s %s\n", r.Harness, r.Status)
 	}
 	fmt.Fprintf(&b, "\nHarness: %s · CLI: %s\n", r.Harness, r.CLIVersion)
 	fmt.Fprintf(&b, "模型: %s → %s", r.ModelRequested, r.ModelActual)

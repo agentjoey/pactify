@@ -148,6 +148,7 @@ func (s Store) LastSessionFor(harness, cwd string) (string, error) {
 		return "", err
 	}
 	var latest State
+	var sessionID string
 	found := false
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -155,24 +156,22 @@ func (s Store) LastSessionFor(harness, cwd string) (string, error) {
 		}
 		st, err := s.Load(entry.Name())
 		if err != nil {
-			return "", err
+			continue
 		}
-		if st.Request.Harness == harness && st.Request.Cwd == cwd && st.Status == StatusSucceeded && (!found || st.FinishedAt.After(latest.FinishedAt)) {
-			latest, found = st, true
+		if st.Request.Harness != harness || st.Request.Cwd != cwd || st.Status != StatusSucceeded || (found && !st.FinishedAt.After(latest.FinishedAt)) {
+			continue
 		}
+		data, err := os.ReadFile(s.ResultPath(st.ID))
+		if err != nil {
+			continue
+		}
+		var result struct {
+			SessionID string `json:"sessionId"`
+		}
+		if err := json.Unmarshal(data, &result); err != nil {
+			continue
+		}
+		latest, sessionID, found = st, result.SessionID, true
 	}
-	if !found {
-		return "", nil
-	}
-	data, err := os.ReadFile(s.ResultPath(latest.ID))
-	if err != nil {
-		return "", err
-	}
-	var result struct {
-		SessionID string `json:"sessionId"`
-	}
-	if err := json.Unmarshal(data, &result); err != nil {
-		return "", fmt.Errorf("job %s result: %w", latest.ID, err)
-	}
-	return result.SessionID, nil
+	return sessionID, nil
 }

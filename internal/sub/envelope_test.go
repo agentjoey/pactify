@@ -34,6 +34,18 @@ func TestMarkdownFlagsModelMismatchFirst(t *testing.T) {
 	}
 }
 
+func TestMarkdownFailedWithoutWarningsIsNotSuccess(t *testing.T) {
+	for _, status := range []Status{StatusFailed, StatusCanceled} {
+		t.Run(string(status), func(t *testing.T) {
+			r := Result{Status: status, Harness: "codex", FinalText: "failure details\nmore details"}
+			first := strings.SplitN(r.Markdown(), "\n", 2)[0]
+			if want := "✗ codex " + string(status); first != want {
+				t.Fatalf("first line = %q, want %q", first, want)
+			}
+		})
+	}
+}
+
 func TestMarkdownIncludesMetadataAndLimitsFiles(t *testing.T) {
 	r := Result{Status: StatusSucceeded, Harness: "codex", CLIVersion: "0.162.1", ModelRequested: "gpt-test", ModelActual: "gpt-test", ModelVerified: true, Access: "write", Duration: "2s", InputTokens: 100, OutputTokens: 20, CostUSD: 0.01, ToolCalls: 3, FinalText: "result\n```\nembedded fence", SessionID: "th-9", LogPath: "/tmp/log"}
 	for i := 0; i < 21; i++ {

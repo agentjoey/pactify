@@ -101,6 +101,70 @@ func TestStoreDefaultAndMissing(t *testing.T) {
 	}
 }
 
+func TestStoreLastSessionSkipsInvalidStates(t *testing.T) {
+	s := Store{Root: t.TempDir()}
+	for _, id := range []string{"a-corrupt", "b-missing", "c-unreadable"} {
+		if err := os.Mkdir(s.Dir(id), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(s.Dir("a-corrupt"), "state.json"), []byte(`{"id":`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// A directory at the file path reliably produces a read error, even as root.
+	if err := os.Mkdir(filepath.Join(s.Dir("c-unreadable"), "state.json"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	st, err := s.Create("z-good", Request{Harness: "codex", Cwd: "/repo"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Status, st.FinishedAt = StatusSucceeded, time.Unix(1, 0).UTC()
+	if err := s.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(s.ResultPath(st.ID), []byte(`{"sessionId":"good-session"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.LastSessionFor("codex", "/repo"); got != "good-session" || err != nil {
+		t.Fatalf("last session = %q, %v; want good-session", got, err)
+	}
+}
+
+func TestStoreLastSessionSkipsInvalidResults(t *testing.T) {
+	for _, damage := range []string{"missing", "corrupt", "unreadable"} {
+		t.Run(damage, func(t *testing.T) {
+			s := Store{Root: t.TempDir()}
+			for i, id := range []string{"good", "newer"} {
+				st, err := s.Create(id, Request{Harness: "codex", Cwd: "/repo"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Status, st.FinishedAt = StatusSucceeded, time.Unix(int64(i+1), 0).UTC()
+				if err := s.Save(st); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(s.ResultPath("good"), []byte(`{"sessionId":"good-session"}`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			switch damage {
+			case "corrupt":
+				if err := os.WriteFile(s.ResultPath("newer"), []byte(`{"sessionId":`), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			case "unreadable":
+				if err := os.Mkdir(s.ResultPath("newer"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if got, err := s.LastSessionFor("codex", "/repo"); got != "good-session" || err != nil {
+				t.Fatalf("last session = %q, %v; want good-session", got, err)
+			}
+		})
+	}
+}
+
 func TestStoreRejectsDuplicateAndUnsafeIDs(t *testing.T) {
 	s := Store{Root: t.TempDir()}
 	first, err := s.Create("job", Request{Brief: "keep"})

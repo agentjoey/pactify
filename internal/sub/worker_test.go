@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,6 +23,7 @@ type fakeSession struct {
 	info      cockpit.SessionInfo
 	canceled  atomic.Bool
 	closed    atomic.Bool
+	closeErr  error
 }
 
 func (s *fakeSession) Prompt(ctx context.Context, m cockpit.UserMessage) error {
@@ -36,7 +38,7 @@ func (s *fakeSession) Interrupt(context.Context) error {
 func (s *fakeSession) Events() <-chan cockpit.Event              { return s.events }
 func (s *fakeSession) Approvals() <-chan cockpit.ApprovalRequest { return s.approvals }
 func (s *fakeSession) ThreadID() string                          { return "th-fake" }
-func (s *fakeSession) Close() error                              { s.closed.Store(true); return nil }
+func (s *fakeSession) Close() error                              { s.closed.Store(true); return s.closeErr }
 func (s *fakeSession) Info() cockpit.SessionInfo                 { return s.info }
 
 type fakeBackend struct {
@@ -434,5 +436,39 @@ func TestSubKimiVerifyUsesIsolatedHome(t *testing.T) {
 	model, in, out, ok := h.Verify("isolated-session", cockpit.SessionInfo{})
 	if !ok || model != "kimi-code/kimi-for-coding" || in != 110 || out != 4 {
 		t.Fatalf("verify=%q,%d,%d,%v", model, in, out, ok)
+	}
+}
+
+// Delegated jobs ask the backend to hide their session (codex archives the thread),
+// and a failed archive is surfaced as a warning without failing the job.
+func TestRunJobHidesSessionAndReportsArchiveFailure(t *testing.T) {
+	store, s, b := workerFixture(t, "write")
+	s.closeErr = fmt.Errorf("codex: %w th-fake: boom", cockpit.ErrArchive)
+	s.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "done"}
+		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
+	}
+	r, err := RunJob(context.Background(), store, "j1", newFakeHarness(b), WorkerConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !b.gotOpts.Hidden {
+		t.Fatal("sub jobs must start hidden sessions")
+	}
+	if r.Status != StatusSucceeded || !contains(r.Warnings, "归档") {
+		t.Fatalf("status=%s warnings=%v", r.Status, r.Warnings)
+	}
+}
+
+// Ordinary teardown errors (not archive failures) stay out of the summary.
+func TestRunJobIgnoresNonArchiveCloseErrors(t *testing.T) {
+	store, s, b := workerFixture(t, "write")
+	s.closeErr = fmt.Errorf("signal: terminated")
+	s.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
+	}
+	r, err := RunJob(context.Background(), store, "j1", newFakeHarness(b), WorkerConfig{})
+	if err != nil || len(r.Warnings) != 0 {
+		t.Fatalf("err=%v warnings=%v", err, r.Warnings)
 	}
 }

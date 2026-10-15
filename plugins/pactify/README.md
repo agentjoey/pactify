@@ -48,9 +48,14 @@ callee 不提交代码，改动留给 host 审查。
 
 job 存在 `$PACTIFY_HOME/jobs/<jobId>/`，默认 `~/.pactify/jobs/<jobId>/`。
 
+**不留痕**：委派出去的 codex 会话在 job 结束时自动归档，不会出现在你自己的 Codex 会话 / 项目列表里（桌面与手机端都不会）；
+`--resume` 会先取消归档、续接，结束后再归档。要查看某次委派的原始会话：`codex unarchive <会话 id>`（id 在摘要的「会话」一行）。
+归档失败时摘要首行会提示。
+
 ## 已知限制
 
-- kimi 只读依赖 plan 模式；首行若出现「工具调用超限」，可改用 codex，或取得用户写入授权后改为可写任务。
+- 第一版不提供 kimi 只读档（`sub run kimi --read-only` 退出 2）：Phase 0 实测 kimi 的 plan 模式在只读任务上不收敛。只读任务用 codex。
+- kimi 的会话仍留在 `~/.kimi-code/sessions/` 下（模型与 token 的独立核实要读它），只在 kimi 自己的会话列表里可见。
 - 每次委派在 callee 侧约有 2–5 万 token 固定开销，不适合零碎小任务。
 - 只有本机已安装、已登录的官方 CLI 可用。模型独立核实失败时，以摘要中的警告为准。
 - 自动测试不涵盖真实 Claude Code 安装与委派；发布验收还需要在 Claude Code 中完成冒烟。

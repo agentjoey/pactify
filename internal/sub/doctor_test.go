@@ -27,6 +27,9 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 			t.Run(name+"/"+fault, func(t *testing.T) {
 				home := t.TempDir()
 				t.Setenv("PACTIFY_HOME", home)
+				if name == "kimi" {
+					fakeKimiUserHome(t)
+				}
 				store := Store{Root: filepath.Join(home, "jobs")}
 				tempParent := t.TempDir()
 				h, _ := Lookup(name)
@@ -60,6 +63,27 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 						t.Fatal(err)
 					}
 					r := Result{Status: StatusSucceeded, CLIVersion: "1.2.3", ModelVerified: true, ModelActual: req.Model, FinalText: "done", InputTokens: 10, ToolCalls: 1}
+					if name == "kimi" {
+						// AJ-643 requires independent managed-home evidence as
+						// well as the synthetic worker result.
+						managed, err := managedKimiHome()
+						if err != nil {
+							t.Fatal(err)
+						}
+						source, err := kimiHomeDir()
+						if err != nil {
+							t.Fatal(err)
+						}
+						if err := prepareKimiHome(ctx, managed, source); err != nil {
+							t.Fatal(err)
+						}
+						st.HarnessHome = managed
+						if err := s.Save(st); err != nil {
+							t.Fatal(err)
+						}
+						r.SessionID = "probe"
+						writeKimiJobRecord(t, managed, r.SessionID, "")
+					}
 					if req.Access == "write" {
 						if fault != "write" {
 							if err := os.WriteFile(filepath.Join(req.Cwd, "out.txt"), []byte("ok"), 0600); err != nil {
@@ -117,7 +141,11 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 				if len(reports) != 1 || reports[0].Passed() != (fault == "") {
 					t.Fatalf("fault=%s reports=%+v", fault, reports)
 				}
-				if len(reports[0].Checks) != 6 {
+				wantChecks := 6
+				if name == "kimi" {
+					wantChecks = 7
+				}
+				if len(reports[0].Checks) != wantChecks {
 					t.Fatalf("checks=%+v", reports[0].Checks)
 				}
 				if name == "kimi" && reports[0].Checks[3].Status != "SKIP" {

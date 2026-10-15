@@ -36,6 +36,7 @@ type Request struct {
 }
 
 type State struct {
+	HarnessHome     string           `json:"harnessHome,omitempty"`
 	ConfigMode      string           `json:"configMode,omitempty"`
 	ID              string           `json:"id"`
 	Status          Status           `json:"status"`

@@ -148,3 +148,11 @@ func TestReadKimiRecordCorruptLineLocation(t *testing.T) {
 		})
 	}
 }
+
+func TestKimiRecordReportsMCPDiscovery(t *testing.T) {
+	home := writeKimiFixture(t, `{"sessionId":"session_abc","sessionDir":"SESSION_DIR"}`, "{\"type\":\"mcp.tools_discovered\",\"tools\":[]}\n")
+	r, err := ReadKimiRecord(home, "session_abc")
+	if err != nil || !r.MCPToolsDiscovered {
+		t.Fatalf("MCP discovery missing: %+v %v", r, err)
+	}
+}

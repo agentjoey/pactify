@@ -22,7 +22,7 @@ type Harness struct {
 	Kind    string
 	Backend func() cockpit.Backend
 	Version func(context.Context) (string, error)
-	Verify  func(string, cockpit.SessionInfo) (model string, in, out int, ok bool)
+	Verify  func(context.Context, VerificationInput) Verification
 	// NoReadOnly, when set, is why this harness refuses --read-only jobs.
 	NoReadOnly string
 	// Experimental is an informational warning, independent of job status.
@@ -38,10 +38,27 @@ type Harness struct {
 	Conceal     func(ConcealContext) error
 }
 
+// VerificationInput bounds independent verification to this job's prompts.
+type VerificationInput struct {
+	SessionID  string
+	Info       cockpit.SessionInfo
+	WireOffset int64
+	Prompts    int
+}
+
+type Verification struct {
+	Model        string
+	InputTokens  int
+	OutputTokens int
+	Verified     bool
+	Warning      string
+}
+
 // ConcealContext identifies the session a finished job leaves behind.
 type ConcealContext struct {
 	SessionID string
 	Cwd       string
+	Home      string // Actual harness home used by this job.
 }
 
 var registry = map[string]Harness{
@@ -49,31 +66,19 @@ var registry = map[string]Harness{
 		Name: "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
 		HidesItself:   true,
 		MinimalConfig: true,
-		Verify: func(_ string, info cockpit.SessionInfo) (string, int, int, bool) {
-			return info.Model, 0, 0, info.Model != ""
+		Verify: func(_ context.Context, v VerificationInput) Verification {
+			return Verification{Model: v.Info.Model, Verified: v.Info.Model != ""}
 		},
 	},
 	"kimi": {
 		Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
-		Experimental: "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)",
-		// No MinimalConfig (AJ-636, kimi 2.2.0): ACP does not forward --skills-dir and
-		// has no per-session switch for user MCP servers and plugins, so kimi keeps
-		// user config. The result's Harness line says "(user config)".
+		Experimental:  "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)",
+		MinimalConfig: true,
 		// Phase 0 (2026-10-15): in plan mode kimi keeps trying to write a plan file and
 		// exit plan; all 3 read-only tasks hit the tool-call limit without findings.
 		NoReadOnly: "Read-only access is not offered for kimi in the first release: all 3 Phase 0 read-only tasks hit the tool-call limit in plan mode without returning a conclusion. Use codex --read-only for read-only tasks; use kimi --write only with explicit write permission",
 		Conceal:    concealKimi,
-		Verify: func(sid string, _ cockpit.SessionInfo) (string, int, int, bool) {
-			kimiHome, err := kimiHomeDir()
-			if err != nil {
-				return "", 0, 0, false
-			}
-			rec, err := cockpit.ReadKimiRecord(kimiHome, sid)
-			if err != nil || len(rec.Models) == 0 {
-				return "", 0, 0, false
-			}
-			return rec.Models[len(rec.Models)-1], rec.InputTokens, rec.OutputTokens, true
-		},
+		Verify:     verifyKimiUsage,
 	},
 }
 
@@ -129,7 +134,9 @@ func cliVersion(bin string) func(context.Context) (string, error) {
 
 // The opt-in fixture exercises the detached CLI lifecycle without an installed agent.
 func fakeHarness() Harness {
-	return Harness{Name: "fake", HidesItself: true, Kind: "codex-cli", Backend: func() cockpit.Backend { return fixtureBackend{} }, Version: func(context.Context) (string, error) { return "test", nil }, Verify: func(_ string, i cockpit.SessionInfo) (string, int, int, bool) { return i.Model, 0, 0, i.Model != "" }}
+	return Harness{Name: "fake", HidesItself: true, Kind: "codex-cli", Backend: func() cockpit.Backend { return fixtureBackend{} }, Version: func(context.Context) (string, error) { return "test", nil }, Verify: func(_ context.Context, v VerificationInput) Verification {
+		return Verification{Model: v.Info.Model, Verified: v.Info.Model != ""}
+	}}
 }
 
 type fixtureBackend struct{}
@@ -202,17 +209,28 @@ func kimiHomeDir() (string, error) {
 func concealKimi(c ConcealContext) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
-	apiErr := kimiServerArchive(ctx, c.SessionID)
-	if apiErr != nil {
-		home, err := kimiHomeDir()
+	home := c.Home
+	archive := kimiServerArchive
+	list := kimiListHides
+	if home == "" {
+		var err error
+		home, err = kimiHomeDir()
 		if err != nil {
 			return err
 		}
+	} else {
+		archive = func(ctx context.Context, sid string) error {
+			return cockpit.ArchiveKimiSessionsViaServer(ctx, []string{sid}, home)
+		}
+		list = func(cwd, sid string) error { return kimiListHidesInHome(home, cwd, sid) }
+	}
+	apiErr := archive(ctx, c.SessionID)
+	if apiErr != nil {
 		if _, err := cockpit.ArchiveKimiSession(home, c.SessionID); err != nil {
 			return fmt.Errorf("kimi archive API: %v; file fallback: %w", apiErr, err)
 		}
 	}
-	if err := kimiListHides(c.Cwd, c.SessionID); err != nil {
+	if err := list(c.Cwd, c.SessionID); err != nil {
 		return err
 	}
 	if apiErr != nil {
@@ -227,10 +245,16 @@ var kimiServerArchive = func(ctx context.Context, sessionID string) error {
 
 // kimiListHides fails only when `kimi session list` still shows the session; a CLI
 // that cannot be run (not installed, timed out) is not evidence either way.
-var kimiListHides = func(cwd, sessionID string) error {
+var kimiListHides = func(cwd, sessionID string) error { return kimiListHidesInHome("", cwd, sessionID) }
+
+func kimiListHidesInHome(home, cwd, sessionID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "kimi", "session", "list", "--cwd", cwd, "--json").Output()
+	cmd := exec.CommandContext(ctx, "kimi", "session", "list", "--cwd", cwd, "--json")
+	if home != "" {
+		cmd.Env = append(os.Environ(), "KIMI_CODE_HOME="+home)
+	}
+	out, err := cmd.Output()
 	if err != nil {
 		return nil
 	}

@@ -50,12 +50,29 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 		if session == "" {
 			return State{}, &NoSessionError{Harness: req.Harness}
 		}
+		if req.Harness == "kimi" {
+			h, _ := Lookup(req.Harness)
+			if previous.EffectiveConfigMode() != h.configMode(req.WithUserConfig) {
+				return State{}, fmt.Errorf("kimi resume requires the original config mode (%s); use the matching --with-user-config setting or start a fresh session", previous.EffectiveConfigMode())
+			}
+		}
+		createResume := func() (State, error) {
+			st, err := s.Create(id, req)
+			if err != nil {
+				return st, err
+			}
+			if req.Harness == "kimi" {
+				st.HarnessHome = previous.HarnessHome
+				err = s.Save(st)
+			}
+			return st, err
+		}
 		req.Resume = session
 		if previous.Worktree == nil {
 			if isolated {
 				return State{}, fmt.Errorf("The latest session did not use a worktree; remove --resume to create an isolated session")
 			}
-			return s.Create(id, req)
+			return createResume()
 		}
 		var created State
 		err = s.withWorktree(previous.ID, func(_ *State, w *Worktree) error {
@@ -77,7 +94,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 			if actual != expected {
 				return fmt.Errorf("worktree path no longer points to the original isolated repository")
 			}
-			created, err = s.Create(id, req)
+			created, err = createResume()
 			if err != nil {
 				return err
 			}

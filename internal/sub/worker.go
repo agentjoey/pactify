@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
@@ -24,9 +25,10 @@ const (
 )
 
 type WorkerConfig struct {
-	ToolCallLimit int // 0 disables the limit; CLI default is 40.
-	IdleTimeout   time.Duration
-	Now           func() time.Time
+	ToolCallLimit   int // 0 disables the limit; CLI default is 40.
+	IdleTimeout     time.Duration
+	KimiWireTimeout time.Duration // Default 10s to flush per-job wire usage before Close.
+	Now             func() time.Time
 }
 
 // Serialize backend stderr with event records in the shared log.
@@ -44,6 +46,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	if cfg.IdleTimeout <= 0 {
 		cfg.IdleTimeout = 10 * time.Minute
+	}
+	if cfg.KimiWireTimeout <= 0 {
+		cfg.KimiWireTimeout = 10 * time.Second
 	}
 	started := cfg.Now()
 	st, err := store.claim(ctx, id, started)
@@ -135,6 +140,42 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	opts := cockpit.StartOpts{RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
 	opts.MinimalConfig = result.ConfigMode == "minimal"
 	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root))
+	harnessHome := st.HarnessHome
+	minimalKimi := h.Kind == "kimi-cli" && opts.MinimalConfig
+	if h.Kind == "kimi-cli" {
+		source, e := kimiHomeDir()
+		if e != nil {
+			return fail(e)
+		}
+		source, e = filepath.Abs(source)
+		if e != nil {
+			return fail(e)
+		}
+		if harnessHome == "" {
+			harnessHome = source
+			if minimalKimi {
+				harnessHome, e = managedKimiHome()
+				if e != nil {
+					return fail(e)
+				}
+			}
+		}
+		if minimalKimi {
+			if e := prepareKimiHome(ctx, harnessHome, source); e != nil {
+				return fail(e)
+			}
+			// Runs after session Close, including startup errors and panics,
+			// and before the terminal result is persisted.
+			defer func() { result.Warnings = append(result.Warnings, cleanupKimiHome(harnessHome)...) }()
+		}
+		if e := store.WithState(ctx, id, func(current *State) error {
+			current.HarnessHome = harnessHome
+			return store.Save(*current)
+		}); e != nil {
+			return fail(e)
+		}
+		opts.Env = append(opts.Env, "KIMI_CODE_HOME="+harnessHome)
+	}
 	// Startup follows cancellation. Once started, Interrupt gets a grace period before Close.
 	sessionCtx, stopSession := context.WithCancel(context.WithoutCancel(ctx))
 	sessionCtx = procx.WithLauncher(sessionCtx, func(cmd *exec.Cmd) error { return store.StartProcess(ctx, id, cmd) })
@@ -156,8 +197,8 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		var identified interface{ SessionID() string }
 		if errors.As(err, &identified) {
 			result.SessionID = identified.SessionID()
-			if h.Conceal != nil && result.SessionID != "" {
-				if e := h.Conceal(ConcealContext{SessionID: result.SessionID, Cwd: req.Cwd}); e != nil {
+			if h.Conceal != nil && !minimalKimi && result.SessionID != "" {
+				if e := h.Conceal(ConcealContext{SessionID: result.SessionID, Cwd: req.Cwd, Home: harnessHome}); e != nil {
 					result.Warnings = append(result.Warnings, sessionHidingFailed+"; it will remain in the harness session list: "+e.Error())
 				}
 			}
@@ -196,12 +237,23 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			}
 		}
 	}()
+	wireOffset := int64(0)
+	if h.Kind == "kimi-cli" && h.Verify != nil && req.Resume != "" {
+		var baselineErr error
+		wireOffset, baselineErr = cockpit.KimiWireOffset(harnessHome, sess.ThreadID())
+		if baselineErr != nil {
+			wireOffset = -1 // Never count historical usage when the baseline is unknown.
+			result.Warnings = append(result.Warnings, "Kimi wire baseline unavailable; tokens may be incomplete: "+baselineErr.Error())
+		}
+	}
+	var prompts atomic.Int32
 	promptErr := make(chan error, 1)
 	go func() {
 		if err := workCtx.Err(); err != nil {
 			promptErr <- err
 			return
 		}
+		prompts.Add(1)
 		promptErr <- sess.Prompt(workCtx, cockpit.UserMessage{Text: req.Brief})
 	}()
 	var collector Collector
@@ -317,15 +369,21 @@ loop:
 	if !collector.TurnDone {
 		stopWork()
 	}
-	// Close now (the deferred Close is then a no-op) so a hidden session's
-	// archive failure can still reach the summary.
-	if err := sess.Close(); errors.Is(err, cockpit.ErrArchive) {
-		result.Warnings = append(result.Warnings, sessionArchivingFailed+"; it will remain in the harness session list: "+err.Error())
+	closeSession := func() {
+		if err := sess.Close(); errors.Is(err, cockpit.ErrArchive) {
+			result.Warnings = append(result.Warnings, sessionArchivingFailed+"; it will remain in the harness session list: "+err.Error())
+		}
 	}
+	// Codex archives on Close. Kimi must flush wire records before process teardown.
+	if h.Kind != "kimi-cli" {
+		closeSession()
+	}
+
 	info := cockpit.SessionInfo{}
 	if s, ok := sess.(cockpit.InfoSession); ok {
 		info = s.Info()
 	}
+	info.Home = harnessHome
 	result.ModelActual = info.Model
 	result.InputTokens = collector.Usage.InputTokens
 	result.OutputTokens = collector.Usage.OutputTokens
@@ -333,18 +391,31 @@ loop:
 	result.ToolCalls = collector.ToolCalls
 	result.RateLimit = SummarizeRateLimit(collector.RateLimit)
 	if h.Verify != nil {
-		model, in, out, ok := h.Verify(sess.ThreadID(), info)
-		result.ModelVerified = ok
-		if ok {
-			result.ModelActual = model
-			if h.Kind == "kimi-cli" {
-				result.InputTokens = in
-				result.OutputTokens = out
-			}
+		verifyCtx := ctx
+		if h.Kind == "kimi-cli" {
+			var cancel context.CancelFunc
+			verifyCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), cfg.KimiWireTimeout)
+			defer cancel()
+		}
+		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load())})
+		result.ModelVerified = verified.Verified
+		if verified.Verified {
+			result.ModelActual = verified.Model
+		}
+		if h.Kind == "kimi-cli" {
+			result.InputTokens = verified.InputTokens
+			result.OutputTokens = verified.OutputTokens
+		}
+		if verified.Warning != "" {
+			result.Warnings = append(result.Warnings, verified.Warning)
 		}
 	}
-	if h.Conceal != nil {
-		if err := h.Conceal(ConcealContext{SessionID: sess.ThreadID(), Cwd: req.Cwd}); err != nil {
+	if h.Kind == "kimi-cli" {
+		closeSession()
+	}
+
+	if h.Conceal != nil && !minimalKimi {
+		if err := h.Conceal(ConcealContext{SessionID: sess.ThreadID(), Cwd: req.Cwd, Home: harnessHome}); err != nil {
 			result.Warnings = append(result.Warnings, sessionHidingFailed+"; it will remain in the harness session list: "+err.Error())
 		}
 	}

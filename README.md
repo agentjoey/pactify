@@ -77,9 +77,21 @@ Delegated codex sessions use a minimal configuration by default: user MCP server
 plugins, skills and memories are disabled for that process. Authentication, model
 provider, sandbox settings and global/repository `AGENTS.md` discovery are retained.
 Use `pactify sub run --with-user-config` to load all user integrations, including
-when resuming a session. `sub doctor` uses the same default policy. Kimi 2.2.0
-cannot reliably isolate these integrations through ACP, so it keeps user config
-(its Harness line reads `kimi (user config)`). Job records and JSON expose `configMode` (`minimal` or
+when resuming a codex session. Kimi delegations also default to minimal config
+(`kimi (minimal config)`): `KIMI_CODE_HOME` points to the persistent shared
+`$PACTIFY_HOME/harness-homes/kimi` directory (0700; `PACTIFY_HOME` defaults to
+`~/.pactify`). Only `config.toml`, `credentials/` and `device_id` are symlinked
+from the pactify process's `KIMI_CODE_HOME`, or `~/.kimi-code` when unset.
+Pactify never reads or copies their contents; missing originals require `kimi login`.
+The managed home has no `mcp.json`, and delegated sessions stay outside your own
+session list without starting `kimi web`. Links are repaired before each launch;
+if kimi replaces one with a file or directory, the job warns and deletes that
+private copy afterward. Keep the shared directory for resume. Kimi resume retains
+the recorded home and requires the original config mode; use `--with-user-config`
+for user-config sessions, or start fresh to switch modes. User-config kimi jobs
+use your home and the existing archive workflow. `sub doctor` verifies the default
+managed-home path, session-index isolation and absence of MCP discovery events.
+Job records and JSON expose `configMode` (`minimal` or
 `user`); the result's Harness line shows the same mode. Existing jobs without
 this field are treated as user config.
 

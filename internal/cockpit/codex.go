@@ -361,6 +361,12 @@ func codexStartParams(opts StartOpts) map[string]any {
 		p["sandbox"] = m
 		p["approvalPolicy"] = "never"
 	}
+	if opts.Access == AccessWrite {
+		// Write mode may use the network (Owner decision 2026-10-15): delegated work
+		// must be able to run a project's full test suite, which often binds local
+		// ports, and fetch dependencies. Read-only keeps codex's default (no network).
+		p["config"] = map[string]any{"sandbox_workspace_write": map[string]any{"network_access": true}}
+	}
 	return p
 }
 

@@ -158,7 +158,7 @@ callee 冷启动，没有 host 的对话上下文。第一版做法：转发 sub
 | 档位 | codex | opencode（ACP） | kimi（ACP） | agy（命令行） | claude（CLI / SDK） |
 |---|---|---|---|---|---|
 | `--read-only` | `sandbox: read-only` ✅ | 拒绝写类权限请求 ✅ | `session/set_mode plan` ✅⚠️ | `--mode plan` ✅ | `--allowedTools=Read,Grep,Glob` ✅ |
-| `--write` | `sandbox: workspace-write` ✅ | 批准权限请求 ✅ | 默认模式（直接写）✅ | `--mode accept-edits` ✅ | `--permission-mode acceptEdits` ✅ |
+| `--write` | `sandbox: workspace-write` + 网络开放（`sandbox_workspace_write.network_access`，2026-10-15 Owner 拍板）✅ | 批准权限请求 ✅ | 默认模式（直接写）✅ | `--mode accept-edits` ✅ | `--permission-mode acceptEdits` ✅ |
 
 ✅ = 2026-10-15 实测：只读档写文件被拦、可写档写成功。⚠️ kimi 的 plan 模式拦得住，但被拒后会反复申请退出、反复提问
 （一轮 32 次工具调用），需在 brief 里写明只读且对 `ExitPlanMode` 自动拒绝并附说明，同时设每轮调用上限。
@@ -201,7 +201,7 @@ codex 全部达标（Q1 9/10）。Q2–Q5 达标：Q2 的 host 内容开销中�
 **kimi 的 Q1 为 6/10，未达标** → 按停止线先改交接方式：brief 模板已加入全量测试命令、隐含约束、禁止为迁就新行为改旧测试；是否先重测 kimi 再进 M1，待 Owner 拍板。
 **K1 未达标**（3/3 只读任务打满工具调用上限、无结论）→ 第一版不开放 kimi 只读档，`sub run kimi --read-only` 拒绝执行并指向 codex。
 K2 达标。K3 实测期间两家 CLI 都没有更新，未触发；版本变化提示已实现。
-**补测（同日）**：用新模板重测 kimi 失败的 4 题，一次完成数仍为 6/10（T07 再次改测试迁就新行为）；同模板下 codex 补上了 T07 的关键缺口。→ 建议 M1 以 codex 为默认 callee、kimi 不作默认，待 Owner 拍板。新缺口：codex 可写沙箱默认禁本地网络，导致「全量测试」在部分项目里跑不全，是否开放 `networkAccess` 待 Owner 定。
+**补测（同日）**：用新模板重测 kimi 失败的 4 题，一次完成数仍为 6/10（T07 再次改测试迁就新行为）；同模板下 codex 补上了 T07 的关键缺口。**2026-10-15 Owner 拍板**：M1 以 codex 为默认 harness，kimi 不作默认；codex 可写档开放网络（全量测试可起本地服务、可拉依赖），只读档仍不联网。
 
 ## 7. 路线图
 

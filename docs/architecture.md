@@ -1,10 +1,10 @@
 # Pactify — Architecture
 
-> Last updated: **2026-08-29** | Status: **v0.11.0 已发布**（tag + CI 绿）。本次更新只改状态行与失效链接，架构内容未变。
+> Last updated: **2026-10-15** | Status: **v0.12.0 已发布**——编排器方向的最后一个正式版本；产品已转向 harness 路由器（见 [`specs/harness-subagents.md`](specs/harness-subagents.md)），本文描述的编排架构进入冻结。完整历史见 [`CHANGELOG.md`](CHANGELOG.md)。
 >
 > **版本历史已迁出**——本行原先累积成一段 5KB 的单行 changelog，现全部移到 [`CHANGELOG.md`](CHANGELOG.md)（原文逐字保留）。本行今后只写「当前版 + 与架构有关的当前事实」。
 >
-> **与本文档相关的当前事实（2026-08-29 实测）**：①**云端整层未运行**——`pactify-relay` / `pactify-relay-staging` 两个 fly app 均 0 machines，`origin/production` 停在 2026-07-04（落后 main 652 提交）；下文「通讯架构」「M3.4 relay 接口」描述的是**设计与已实现的代码**，不是当前运行中的部署。②**账本与 git 工作目录耦合**这条架构债仍在（v0.11.0 的 `[SANDBOX]` 只是定点修复），彻底解「单一规范 ledger」尚未起草 spec。
+> **与本文档相关的当前事实（2026-08-29 实测，2026-10-15 更新）**：①**云端整层未运行**——`pactify-relay` / `pactify-relay-staging` 两个 fly app 均 0 machines，`origin/production` 停在 2026-07-04（落后 main 652 提交）；下文「通讯架构」「M3.4 relay 接口」描述的是**设计与已实现的代码**，不是当前运行中的部署。②**账本与 git 工作目录耦合**这条架构债仍在：「单一规范 ledger」已起草 spec（`specs/single-canonical-ledger.md`）并完成 WS-A/WS-B（flag 默认关），随 2026-10-15 的转向暂停。
 
 ## Overview
 

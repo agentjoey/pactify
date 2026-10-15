@@ -39,6 +39,7 @@ type JobSummary struct {
 	ResumedBy      []string         `json:"resumedBy"`
 	InputTokens    int              `json:"inputTokens"`
 	OutputTokens   int              `json:"outputTokens"`
+	UsagePartial   bool             `json:"usagePartial,omitempty"`
 	ChangedFiles   int              `json:"changedFiles"`
 	AddedLines     int              `json:"addedLines"`
 	DeletedLines   int              `json:"deletedLines"`
@@ -196,6 +197,7 @@ func (s Store) Summarize(st State, peers []State, now time.Time) JobSummary {
 	}
 	row.ModelActual = result.ModelActual
 	row.InputTokens, row.OutputTokens = result.InputTokens, result.OutputTokens
+	row.UsagePartial = result.UsagePartial
 	row.ChangedFiles, row.AddedLines, row.DeletedLines = len(result.Diff.Files), result.Diff.Added, result.Diff.Deleted
 	row.WarningCount, row.SessionID = len(result.Warnings), result.SessionID
 	if Terminal(st.Status) {

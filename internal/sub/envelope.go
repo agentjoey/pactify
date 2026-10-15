@@ -22,6 +22,7 @@ type Result struct {
 	InputTokens    int      `json:"inputTokens"`
 	OutputTokens   int      `json:"outputTokens"`
 	CostUSD        float64  `json:"costUSD,omitempty"`
+	UsagePartial   bool     `json:"usagePartial,omitempty"`
 	ToolCalls      int      `json:"toolCalls"`
 	Diff           Diff     `json:"diff"`
 	FinalText      string   `json:"finalText"`
@@ -32,6 +33,15 @@ type Result struct {
 	Warnings       []string `json:"warnings,omitempty"`
 	WorktreePath   string   `json:"worktreePath,omitempty"`
 	BaseCommit     string   `json:"baseCommit,omitempty"`
+}
+
+const partialUsageWarning = "Usage may be incomplete; only recorded usage is included"
+
+func (r *Result) markUsagePartial() {
+	if !r.UsagePartial {
+		r.Warnings = append(r.Warnings, partialUsageWarning)
+	}
+	r.UsagePartial = true
 }
 
 const FinalTextLimit = 4096

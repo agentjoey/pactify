@@ -40,6 +40,7 @@ Render a compact Markdown table with these six columns and at most 10 rows:
   If `repo` is empty, label `cwd` as the request directory rather than inventing a repo root.
   `cwd` retains the original request directory; `runCwd` is the actual execution directory.
 - Tokens: show `in / out` from top-level `inputTokens` / `outputTokens` for terminal jobs.
+  Mark approximate/partial if top-level `usagePartial` is true.
   For running jobs use `activity.inputTokens` / `activity.outputTokens` when present;
   mark approximate/partial if `activity.usagePartial` is true. Missing usage is `unknown`,
   never an invented zero. Terminal zeroes may mean no recorded result, so show `0 (unrecorded

@@ -1,7 +1,10 @@
 package sub
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
+	"os"
 	"strings"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
@@ -17,6 +20,31 @@ type Collector struct {
 	RateLimit json.RawMessage
 
 	threadTotals map[string]cockpit.Usage
+}
+
+// Recover only newline-committed events after a worker disappears. A truncated
+// final record cannot be trusted; stderr and malformed lines carry no usage.
+func collectLoggedUsage(path string) Collector {
+	var c Collector
+	f, err := os.Open(path)
+	if err != nil {
+		return c
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 65536), 16*1024*1024)
+	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
+		if atEOF && bytes.IndexByte(data, '\n') < 0 {
+			return 0, nil, nil
+		}
+		return bufio.ScanLines(data, atEOF)
+	})
+	for scanner.Scan() {
+		if event, ok := parseLogEvent(scanner.Text()); ok && (event.Kind == cockpit.EventUsage || event.Kind == cockpit.EventTool) {
+			c.Add(event.Event)
+		}
+	}
+	return c
 }
 
 func (c *Collector) Add(e cockpit.Event) {

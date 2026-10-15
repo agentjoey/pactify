@@ -399,6 +399,12 @@ loop:
 	result.CostUSD = collector.Usage.CostUSD
 	result.ToolCalls = collector.ToolCalls
 	result.RateLimit = SummarizeRateLimit(collector.RateLimit)
+	// An abnormal end may omit the last accounting update, even if earlier
+	// requests reported usage. Treat retained counters as a lower bound.
+	recoverUsage := turnFailed || interrupted || !collector.TurnDone
+	if recoverUsage {
+		result.markUsagePartial()
+	}
 	if h.Verify != nil {
 		verifyCtx := ctx
 		if h.LocalUsageBaseline != nil {
@@ -411,7 +417,7 @@ loop:
 			verifyCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 			defer cancel()
 		}
-		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
+		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd, RecoverUsage: recoverUsage})
 		result.ModelVerified = verified.Verified
 		if verified.CostUSD != nil {
 			result.CostUSD = *verified.CostUSD
@@ -425,6 +431,9 @@ loop:
 		}
 		if verified.Warning != "" {
 			result.Warnings = append(result.Warnings, verified.Warning)
+		}
+		if verified.UsagePartial {
+			result.markUsagePartial()
 		}
 	}
 	if h.LocalUsageBaseline != nil {

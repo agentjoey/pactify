@@ -170,6 +170,17 @@ func (s Store) fallbackLocked(st *State, status Status, reason string) error {
 		}
 	}
 	r := Result{JobID: st.ID, Status: status, Harness: st.Request.Harness, Access: st.Request.Access, ModelRequested: st.Request.Model, LogPath: s.LogPath(st.ID), Warnings: []string{reason}}
+	if st.Status == StatusRunning {
+		c := collectLoggedUsage(r.LogPath)
+		r.InputTokens, r.OutputTokens, r.CostUSD = c.Usage.InputTokens, c.Usage.OutputTokens, c.Usage.CostUSD
+		if st.Request.Harness == "opencode" {
+			// usage_update carries session cost, including jobs before a resume.
+			// The lost worker's export baseline cannot be reconstructed from logs.
+			r.CostUSD = 0
+		}
+		r.ToolCalls = c.ToolCalls
+		r.markUsagePartial()
+	}
 	if h, ok := Lookup(st.Request.Harness); ok && h.Experimental != "" {
 		r.Warnings = append([]string{h.Experimental}, r.Warnings...)
 	}

@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/agentjoey/pactify/internal/acp"
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/agentjoey/pactify/internal/acp"
 )
 
 type opencodeMessage struct {
@@ -16,6 +17,13 @@ type opencodeMessage struct {
 		ProviderID string  `json:"providerID"`
 		ModelID    string  `json:"modelID"`
 		Cost       float64 `json:"cost"`
+		Tokens     *struct {
+			Input  int `json:"input"`
+			Output int `json:"output"`
+			Cache  struct {
+				Read int `json:"read"`
+			} `json:"cache"`
+		} `json:"tokens"`
 	} `json:"info"`
 }
 
@@ -55,7 +63,7 @@ func opencodeBaseline(ctx context.Context, v VerificationInput) (int64, error) {
 }
 func verifyOpencode(ctx context.Context, v VerificationInput) Verification {
 	cost := 0.0
-	result := Verification{CostUSD: &cost}
+	result := Verification{CostUSD: &cost, UsagePartial: true}
 	if v.WireOffset < 0 {
 		result.Warning = "opencode export baseline unavailable; model and job cost could not be verified"
 		return result
@@ -69,17 +77,27 @@ func verifyOpencode(ctx context.Context, v VerificationInput) Verification {
 		result.Warning = "opencode export history changed; model and job cost could not be verified"
 		return result
 	}
+	result.UsagePartial = false
 	for _, m := range messages[v.WireOffset:] {
 		if m.Info.Role != "assistant" {
 			continue
 		}
 		cost += m.Info.Cost
+		if v.RecoverUsage {
+			if m.Info.Tokens == nil {
+				result.UsagePartial = true
+			} else {
+				result.InputTokens += m.Info.Tokens.Input + m.Info.Tokens.Cache.Read
+				result.OutputTokens += m.Info.Tokens.Output
+			}
+		}
 		if m.Info.ModelID != "" && m.Info.ProviderID != "" {
 			result.Model = m.Info.ProviderID + "/" + m.Info.ModelID
 			result.Verified = true
 		}
 	}
 	if !result.Verified {
+		result.UsagePartial = true
 		result.Warning = "opencode export contains no new assistant model; model and job cost could not be verified"
 	}
 	return result

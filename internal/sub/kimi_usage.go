@@ -22,7 +22,7 @@ func verifyKimiUsage(ctx context.Context, v VerificationInput) Verification {
 		var err error
 		home, err = kimiHomeDir()
 		if err != nil {
-			return Verification{Warning: fmt.Sprintf("Kimi wire unavailable; tokens may be incomplete: %v", err)}
+			return Verification{UsagePartial: true, Warning: fmt.Sprintf("Kimi wire unavailable; tokens may be incomplete: %v", err)}
 		}
 	}
 	var latest cockpit.KimiRecord
@@ -44,6 +44,7 @@ func verifyKimiUsage(ctx context.Context, v VerificationInput) Verification {
 		}
 		select {
 		case <-ctx.Done():
+			result.UsagePartial = true
 			result.Warning = fmt.Sprintf("Kimi wire verification timed out; tokens may be incomplete (prompts=%d, prompt.completed=%d, turn.ended=%d, usage records=%d)", v.Prompts, latest.CompletedPrompts, latest.EndedTurns, latest.Turns)
 			if err != nil {
 				result.Warning += ": " + err.Error()

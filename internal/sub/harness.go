@@ -47,12 +47,13 @@ type Harness struct {
 
 // VerificationInput bounds independent verification to this job's prompts.
 type VerificationInput struct {
-	Env        []string
-	Cwd        string
-	SessionID  string
-	Info       cockpit.SessionInfo
-	WireOffset int64 // Byte offset for kimi; exported message count for opencode.
-	Prompts    int
+	Env          []string
+	Cwd          string
+	SessionID    string
+	Info         cockpit.SessionInfo
+	WireOffset   int64 // Byte offset for kimi; exported message count for opencode.
+	Prompts      int
+	RecoverUsage bool // Recover tokens independently when a prompt did not finish normally.
 }
 
 type Verification struct {
@@ -62,6 +63,7 @@ type Verification struct {
 	OutputTokens int
 	Verified     bool
 	Warning      string
+	UsagePartial bool
 }
 
 // ConcealContext identifies the session a finished job leaves behind.

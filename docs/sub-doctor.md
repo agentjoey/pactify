@@ -107,6 +107,9 @@ Session hiding 和 Managed home 使用可写探测的结果，不依赖只读探
 结束前用同一工作目录和环境执行 `opencode export <sid>`，独立读取 assistant 的 providerID/modelID；
 续接前记录导出消息边界，只累计本 job 新 assistant 消息的 cost，避免计入历史成本。
 导出失败、历史边界失效或没有新 assistant 时明确警告；不能核实的成本不冒充本轮费用。
+失败、取消或空闲超时仍在同一隔离环境下导出；按本 job 的消息边界累计 assistant 的
+`tokens.input + tokens.cache.read`、`tokens.output` 和 cost，并核实模型。成功路径的 token
+仍取 prompt 返回值。异常结束保留已记录用量并标记 `usagePartial`，提示可能缺少最后一段。
 
 可写档用 build 配合 `OPENCODE_CONFIG_CONTENT` 的 edit/bash/webfetch allow。
 只读档仍用 build，但注入 edit/webfetch deny、bash ask，并对所有权限请求选 reject_once；

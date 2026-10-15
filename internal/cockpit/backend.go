@@ -29,6 +29,9 @@ type StartOpts struct {
 	// archives the thread when the session closes and unarchives it before a
 	// resume. Backends without such a list ignore it.
 	Hidden bool
+	// MinimalConfig disables optional user integrations for delegated sessions.
+	// The zero value preserves the shared cockpit backends' existing behavior.
+	MinimalConfig bool
 }
 
 // SessionInfo reports actual session parameters; empty fields were not reported.

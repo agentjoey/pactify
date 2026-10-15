@@ -56,6 +56,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		req.Cwd = st.Worktree.Cwd
 	}
 	result = Result{JobID: id, Harness: req.Harness, ModelRequested: req.Model, Access: req.Access, Status: StatusFailed, LogPath: store.LogPath(id)}
+	result.ConfigMode = st.EffectiveConfigMode()
 	if h.Experimental != "" {
 		result.Warnings = append(result.Warnings, h.Experimental)
 	}
@@ -132,6 +133,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	log := &jobLog{w: file}
 	encoder := json.NewEncoder(log)
 	opts := cockpit.StartOpts{RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
+	opts.MinimalConfig = result.ConfigMode == "minimal"
 	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root))
 	// Startup follows cancellation. Once started, Interrupt gets a grace period before Close.
 	sessionCtx, stopSession := context.WithCancel(context.WithoutCancel(ctx))

@@ -72,7 +72,20 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 		done:      make(chan struct{}),
 	}
 
-	cmd := exec.CommandContext(ctx, "codex", "app-server")
+	args := []string{"app-server"}
+	if opts.MinimalConfig {
+		// Process-local overrides retain CODEX_HOME, authentication, provider,
+		// sandbox settings and AGENTS.md discovery. Disable plugins before init.
+		for _, override := range []string{
+			"features.plugins=false", "features.apps=false",
+			"features.skip_host_skill_discovery=true", "skills.include_instructions=false",
+			"features.memories=false", "features.memory_tool=false",
+			"memories.use_memories=false", "memories.generate_memories=false",
+		} {
+			args = append(args, "-c", override)
+		}
+	}
+	cmd := exec.CommandContext(ctx, "codex", args...)
 	cmd.Dir = opts.RepoDir
 	cmd.Env = append(filteredEnviron(), opts.Env...)
 	cmd.Stderr = opts.Stderr
@@ -435,7 +448,45 @@ func (r codexThreadResult) info() SessionInfo {
 }
 
 func (c *codexClient) threadStartOpts(ctx context.Context, opts StartOpts) (SessionInfo, string, error) {
-	return c.threadOpts(ctx, "thread/start", codexStartParams(opts), opts.Model)
+	params, err := c.delegationParams(ctx, opts)
+	if err != nil {
+		return SessionInfo{}, "", err
+	}
+	return c.threadOpts(ctx, "thread/start", params, opts.Model)
+}
+
+// An empty MCP table merges with the user's table in codex 0.162.1; it does
+// not clear it. Read the effective names (including project config) and disable
+// each before creating a thread. Never write config or log the returned values.
+func (c *codexClient) delegationParams(ctx context.Context, opts StartOpts) (map[string]any, error) {
+	params := codexStartParams(opts)
+	if !opts.MinimalConfig {
+		return params, nil
+	}
+	raw, err := c.rpc.call(ctx, "config/read", map[string]any{"cwd": opts.RepoDir, "includeLayers": false})
+	if err != nil {
+		return nil, fmt.Errorf("codex: minimal configuration: %w", err)
+	}
+	var res struct {
+		Config struct {
+			Servers map[string]json.RawMessage `json:"mcp_servers"`
+		} `json:"config"`
+	}
+	if err := json.Unmarshal(raw, &res); err != nil {
+		return nil, fmt.Errorf("codex: parse minimal configuration: %w", err)
+	}
+	servers := make(map[string]any, len(res.Config.Servers))
+	for name := range res.Config.Servers {
+		servers[name] = map[string]any{"enabled": false}
+	}
+	config, _ := params["config"].(map[string]any)
+	if config == nil {
+		config = map[string]any{}
+	}
+	// Nested keys preserve literal server names containing dots or quotes.
+	config["mcp_servers"] = servers
+	params["config"] = config
+	return params, nil
 }
 
 // threadOpts verifies the server's actual model before exposing a usable session.
@@ -504,13 +555,16 @@ func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, erro
 
 // threadResume is a request (not a notification), so server failures propagate.
 func (c *codexClient) threadResumeOpts(ctx context.Context, threadID string, opts StartOpts) (SessionInfo, string, error) {
+	params, err := c.delegationParams(ctx, opts)
+	if err != nil {
+		return SessionInfo{}, "", err
+	}
 	if opts.Hidden {
 		// codex refuses to resume an archived thread; a hidden job archived it on
 		// Close. A thread that is not archived makes this fail, which is fine:
 		// thread/resume reports any real problem.
 		_, _ = c.rpc.call(ctx, "thread/unarchive", map[string]any{"threadId": threadID})
 	}
-	params := codexStartParams(opts)
 	// Preserve the original resume frame when no cwd override was provided.
 	if opts.RepoDir == "" {
 		delete(params, "cwd")

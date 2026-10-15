@@ -73,6 +73,16 @@ Phase 0 large tasks completed in one attempt 6/10, and read-only work did not co
 kimi results include an informational warning; `kimi --read-only` still exits 2.
 See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.
 
+Delegated codex sessions use a minimal configuration by default: user MCP servers,
+plugins, skills and memories are disabled for that process. Authentication, model
+provider, sandbox settings and global/repository `AGENTS.md` discovery are retained.
+Use `pactify sub run --with-user-config` to load all user integrations, including
+when resuming a session. `sub doctor` uses the same default policy. Kimi 2.2.0
+cannot reliably isolate these integrations through ACP, so it keeps user config
+(its Harness line reads `kimi (user config)`). Job records and JSON expose `configMode` (`minimal` or
+`user`); the result's Harness line shows the same mode. Existing jobs without
+this field are treated as user config.
+
 ## The idea in 30 seconds
 
 - **`.pact/log.jsonl`** is an append-only event log — the authoritative source of truth and the

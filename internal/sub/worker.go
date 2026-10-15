@@ -66,7 +66,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		result.Warnings = append(result.Warnings, h.Experimental)
 	}
 	result.describeWorktree(st)
-	unverifiedWarning := ""
+	unverifiedWarning, versionWarning := "", ""
 	// Persist the result before the terminal state, so waiters never observe a partial result.
 	defer func() {
 		p := recover()
@@ -88,7 +88,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		} else {
 			for _, warning := range result.Warnings {
 				// These warnings describe harness readiness, not a job error.
-				if warning != h.Experimental && warning != unverifiedWarning && warning != dirtyWorktreeWarning {
+				if warning != h.Experimental && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
 					reason = warning
 					break
 				}
@@ -123,7 +123,8 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	if result.CLIVersion != "" {
 		if previous := store.lastCLIVersionFor(req.Harness); previous != "" && previous != result.CLIVersion {
-			result.Warnings = append(result.Warnings, fmt.Sprintf("CLI version changed: %s → %s", previous, result.CLIVersion))
+			versionWarning = fmt.Sprintf("CLI version changed: %s → %s", previous, result.CLIVersion)
+			result.Warnings = append(result.Warnings, versionWarning)
 		}
 	}
 	unverifiedWarning = unverifiedVersionWarning(filepath.Dir(store.Root), h, result.CLIVersion)

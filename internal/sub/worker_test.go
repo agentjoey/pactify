@@ -267,6 +267,11 @@ func TestRunJobCLIVersionChange(t *testing.T) {
 			if err != nil || st.Status != wantStatus {
 				t.Fatalf("state=%+v err=%v", st, err)
 			}
+			// A version change is a readiness note, never the job's failure reason
+			// (AJ-650: agy auto-updated mid-evaluation and masked real causes).
+			if strings.HasPrefix(st.Error, "CLI version changed") {
+				t.Fatalf("version warning recorded as the job error: %q", st.Error)
+			}
 		})
 	}
 }

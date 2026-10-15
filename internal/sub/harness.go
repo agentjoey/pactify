@@ -34,7 +34,6 @@ type Harness struct {
 type ConcealContext struct {
 	SessionID string
 	Cwd       string
-	Since     time.Time // job start: anything the harness created after it is the job's
 }
 
 var registry = map[string]Harness{
@@ -165,25 +164,35 @@ func kimiHomeDir() (string, error) {
 	return filepath.Join(home, ".kimi-code"), nil
 }
 
-// concealKimi archives the job's kimi session with kimi's own flag, asks the
-// official CLI whether the session is really hidden, then drops the workspace
-// entry the job created — kimi auto-updates, and a changed on-disk format must surface
-// as a warning, not as silent clutter.
+// concealKimi archives the job's kimi session through kimi's own server API, so the
+// CLI, the web UI and Remote Control all hide it. If that path fails it falls back
+// to kimi's on-disk archive fields (CLI lists only) and says so. Either way it then
+// asks the official CLI whether the session is really hidden — kimi auto-updates,
+// and a changed format must surface as a warning, not as silent clutter.
 func concealKimi(c ConcealContext) error {
-	home, err := kimiHomeDir()
-	if err != nil {
-		return err
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	apiErr := kimiServerArchive(ctx, c.SessionID)
+	if apiErr != nil {
+		home, err := kimiHomeDir()
+		if err != nil {
+			return err
+		}
+		if _, err := cockpit.ArchiveKimiSession(home, c.SessionID); err != nil {
+			return fmt.Errorf("kimi archive API: %v; file fallback: %w", apiErr, err)
+		}
 	}
-	if _, err := cockpit.ArchiveKimiSession(home, c.SessionID); err != nil {
-		return err
-	}
-	// The check must run before the prune: `kimi session list --cwd` registers
-	// that directory as a workspace again.
 	if err := kimiListHides(c.Cwd, c.SessionID); err != nil {
 		return err
 	}
-	_, err = cockpit.PruneKimiWorkspace(home, c.Cwd, c.Since)
-	return err
+	if apiErr != nil {
+		return fmt.Errorf("已从 kimi 命令行的会话列表隐藏，但 kimi web / Remote Control 可能仍可见（官方归档接口失败：%v）", apiErr)
+	}
+	return nil
+}
+
+var kimiServerArchive = func(ctx context.Context, sessionID string) error {
+	return cockpit.ArchiveKimiSessionsViaServer(ctx, []string{sessionID})
 }
 
 // kimiListHides fails only when `kimi session list` still shows the session; a CLI

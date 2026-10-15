@@ -280,7 +280,7 @@ loop:
 		}
 	}
 	if h.Conceal != nil {
-		if err := h.Conceal(ConcealContext{SessionID: sess.ThreadID(), Cwd: req.Cwd, Since: started}); err != nil {
+		if err := h.Conceal(ConcealContext{SessionID: sess.ThreadID(), Cwd: req.Cwd}); err != nil {
 			result.Warnings = append(result.Warnings, "会话隐藏失败，会留在 harness 自己的会话列表里："+err.Error())
 		}
 	}

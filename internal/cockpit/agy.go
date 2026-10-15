@@ -272,6 +272,10 @@ func (s *agySession) run(ctx, turnCtx context.Context, process *agyProcess, stde
 	scanner.Buffer(make([]byte, 65536), 16*1024*1024)
 	started, ended := map[int]bool{}, map[int]bool{}
 	steps := map[int]Usage{}
+	// agy's result.response concatenates every agent_response step of the turn,
+	// including narration between tool calls; the final reply is the last step
+	// that said something (AJ-650 eval, agy 1.3.5).
+	stepText, lastSpoke := map[int]string{}, -1
 	var turn Usage
 	failure, final := "", ""
 	gotResult := false
@@ -304,6 +308,10 @@ func (s *agySession) run(ctx, turnCtx context.Context, process *agyProcess, stde
 			if step.Type == "agent_response" {
 				if step.Text != "" {
 					emit(Event{Kind: EventMessage, Text: step.Text, Raw: raw})
+					stepText[step.Index] += step.Text
+					if strings.TrimSpace(stepText[step.Index]) != "" && step.Index >= lastSpoke {
+						lastSpoke = step.Index
+					}
 				}
 				if step.State == "DONE" && step.Usage != nil {
 					steps[step.Index] = step.Usage.cockpit()
@@ -341,6 +349,9 @@ func (s *agySession) run(ctx, turnCtx context.Context, process *agyProcess, stde
 				}
 			}
 			final = wire.Result.Response
+			if lastSpoke >= 0 {
+				final = stepText[lastSpoke]
+			}
 			if wire.Result.Usage != nil {
 				turn = wire.Result.Usage.cockpit()
 			}

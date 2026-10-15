@@ -17,7 +17,7 @@ Pactify 是 **harness 路由器**：在 Claude Code 里用 slash 命令委派大
 - **4 个 harness**：codex 为默认；kimi、agy、opencode 为实验性。agy 大任务一次完成 1/10，见 [`docs/agy-eval.md`](docs/agy-eval.md)；opencode 评估待定。
 - **M1 功能已合入、未发布**：v0.13.0 挂起，Owner 选择继续内部自用；已支持后台 job、续接、取消、日志、worktree 隔离与 `sub doctor`。
 - **任务查看**：Claude Code 新增 `/jobs`，CLI 新增本地只读面板 `pactify sub panel`；摘要契约见 [`docs/sub-status.md`](docs/sub-status.md)。
-- **云端与 gemini-cli 清理**：云端 Go 和 web 部分已删除；`cloud/` 及 CI 保留，去向待定（AJ-664）。gemini-cli 已移除（web #106、Go #107）。
+- **云端与 gemini-cli 清理**：云端 Go、web 与共享 workspace 及其构建 / 发布 CI 已删除（AJ-664）。gemini-cli 已移除（web #106、Go #107）。
 - **本地闭环**：当前有 37 个 `internal` 包；本次 `go build ./...` 与隔离 `PACTIFY_HOME` 的 `go test ./...` 通过，bats 结果见 CHANGELOG。
 - **治理模式冻结**：单一规范账本暂停在 WS-B（flag 默认关）；`[RUNGUARD-DEAD]` 与 `[UI-GATE]` 等既有问题不再排期。
 - **仓库已公开**（2026-09-04，全历史凭据审查零命中）；**两个曾在对话里出现的 token 是否已轮换，仍待人工确认。**
@@ -30,7 +30,7 @@ Pactify 是 **harness 路由器**：在 Claude Code 里用 slash 命令委派大
 | CLI | **Go** 单静态二进制（cobra），`cmd/pactify` + 37 个 `internal` 包 |
 | Dashboard | Vite + React + Tailwind v4（`web/`），构建产物经 `go:embed` 打进 `internal/serve/dist`（git 跟踪） |
 | Protocol | Plain files (`.pact/`)：`log.jsonl` append-only 为源，`STATE.yml` 为投影 |
-| Cloud | Go / web 云端代码已删除；`cloud/` 目录及 CI 保留，去向待定（AJ-664） |
+| Cloud | 已删除（AJ-664） |
 | CI | GitHub Actions（`ci.yml` + `codex-schema.yml` + `release.yml`/goreleaser） |
 
 ## Key Implementation Details
@@ -47,7 +47,6 @@ PACTIFY_HOME="$(mktemp -d)" go test -race ./internal/{pact,orchestrate,serve}/..
 cd web && npx tsc --noEmit && npx vitest run   # 前端类型 + 单测
 cd web && npx playwright test            # e2e（会起 e2e/mock-server.mjs）
 bats tests/                              # CLI 端到端
-cd cloud && pnpm -r build                # cloud/ 去向待定（AJ-664），目录及 CI 仍保留
 
 cd web && npm run build && go build -o pactify ./cmd/pactify   # 重建带 dist 的二进制
 codesign --force -s - ./pactify          # ⚠️ 给 launchd 跑之前必做（否则 OS_REASON_CODESIGNING SIGKILL）

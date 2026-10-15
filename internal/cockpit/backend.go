@@ -36,6 +36,7 @@ type StartOpts struct {
 
 // SessionInfo reports actual session parameters; empty fields were not reported.
 type SessionInfo struct {
+	Home     string // Actual data directory, when supplied by the session owner.
 	Model    string
 	Provider string
 	Effort   string

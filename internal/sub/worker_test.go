@@ -62,7 +62,7 @@ func (b *fakeBackend) ResumeWith(_ context.Context, id string, o cockpit.StartOp
 	return b.sess, b.startErr
 }
 func newFakeHarness(b *fakeBackend) Harness {
-	return Harness{Name: "fake", Kind: "codex-cli", Backend: func() cockpit.Backend { return b }, Version: func(context.Context) (string, error) { return "9.9.9", nil }, Verify: func(string, cockpit.SessionInfo) (string, int, int, bool) { return "", 0, 0, false }}
+	return Harness{Name: "fake", Kind: "codex-cli", Backend: func() cockpit.Backend { return b }, Version: func(context.Context) (string, error) { return "9.9.9", nil }, Verify: func(context.Context, VerificationInput) Verification { return Verification{} }}
 }
 func gitRepo(t *testing.T) string {
 	t.Helper()
@@ -334,11 +334,11 @@ func TestRunJobModelVerificationAndResume(t *testing.T) {
 	}
 	h := newFakeHarness(b)
 	h.Kind = "kimi-cli"
-	h.Verify = func(sid string, info cockpit.SessionInfo) (string, int, int, bool) {
-		if sid != "th-fake" || info.Model != "advertised" {
+	h.Verify = func(_ context.Context, v VerificationInput) Verification {
+		if v.SessionID != "th-fake" || v.Info.Model != "advertised" {
 			t.Errorf("bad verification inputs")
 		}
-		return "actual", 321, 12, true
+		return Verification{Model: "actual", InputTokens: 321, OutputTokens: 12, Verified: true}
 	}
 	r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
 	if err != nil {
@@ -429,13 +429,15 @@ func TestSubKimiVerifyUsesIsolatedHome(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, "session_index.jsonl"), append(index, '\n'), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(session, "agents", "main", "wire.jsonl"), []byte("{\"type\":\"llm.request\",\"model\":\"kimi-for-coding\",\"modelAlias\":\"kimi-code/kimi-for-coding\"}\n{\"type\":\"usage.record\",\"usageScope\":\"turn\",\"usage\":{\"inputOther\":10,\"inputCacheRead\":100,\"output\":4}}\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(session, "agents", "main", "wire.jsonl"), []byte("{\"type\":\"llm.request\",\"model\":\"kimi-for-coding\",\"modelAlias\":\"kimi-code/kimi-for-coding\"}\n{\"type\":\"usage.record\",\"usageScope\":\"turn\",\"usage\":{\"inputOther\":10,\"inputCacheRead\":100,\"output\":4}}\n{\"type\":\"prompt.completed\"}\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	h, _ := Lookup("kimi")
-	model, in, out, ok := h.Verify("isolated-session", cockpit.SessionInfo{})
-	if !ok || model != "kimi-code/kimi-for-coding" || in != 110 || out != 4 {
-		t.Fatalf("verify=%q,%d,%d,%v", model, in, out, ok)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	verified := h.Verify(ctx, VerificationInput{SessionID: "isolated-session", Prompts: 1})
+	if !verified.Verified || verified.Model != "kimi-code/kimi-for-coding" || verified.InputTokens != 110 || verified.OutputTokens != 4 || verified.Warning != "" {
+		t.Fatalf("verify=%+v", verified)
 	}
 }
 

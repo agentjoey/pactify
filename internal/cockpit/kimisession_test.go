@@ -127,3 +127,25 @@ func TestArchiveKimiSessionsHTTP(t *testing.T) {
 		t.Fatal("a partially failed archive must be an error")
 	}
 }
+
+func TestArchiveKimiServerUsesExplicitHome(t *testing.T) {
+	bin, inherited, actual, record := t.TempDir(), t.TempDir(), t.TempDir(), filepath.Join(t.TempDir(), "home")
+	script := "#!/bin/sh\nprintf '%s' \"$KIMI_CODE_HOME\" > \"$PACTIFY_TEST_KIMI_HOME_RECORD\"\n"
+	if err := os.WriteFile(filepath.Join(bin, "kimi"), []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("KIMI_CODE_HOME", inherited)
+	t.Setenv("PACTIFY_TEST_KIMI_HOME_RECORD", record)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	// The fake server records its environment and exits without an API token.
+	// The timeout is expected; only the process boundary is under test here.
+	if err := ArchiveKimiSessionsViaServer(ctx, []string{"probe"}, actual); err == nil {
+		t.Fatal("fake web server unexpectedly archived a session")
+	}
+	data, err := os.ReadFile(record)
+	if err != nil || string(data) != actual {
+		t.Fatalf("web home=%q err=%v", data, err)
+	}
+}

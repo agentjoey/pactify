@@ -19,6 +19,9 @@ func TestMinimalConfigJobPolicyAndPersistence(t *testing.T) {
 			for _, resume := range []bool{true, false} {
 				t.Run(fmt.Sprintf("%s/user=%v/resume=%v", name, user, resume), func(t *testing.T) {
 					store, sess, backend := workerFixture(t, "write")
+					if name == "kimi" {
+						fakeKimiUserHome(t)
+					}
 					base, _ := store.Load("j1")
 					base.Request.Harness = name
 					base.Request.WithUserConfig = user
@@ -30,7 +33,7 @@ func TestMinimalConfigJobPolicyAndPersistence(t *testing.T) {
 						t.Fatal(err)
 					}
 					want := "user"
-					if name == "codex" && !user {
+					if !user {
 						want = "minimal"
 					}
 					if st.ConfigMode != want || st.Request.WithUserConfig != user {
@@ -58,7 +61,7 @@ func TestMinimalConfigJobPolicyAndPersistence(t *testing.T) {
 					if persisted["configMode"] != want || !strings.Contains(r.Markdown(), "Harness: "+name+" ("+want+" config)") {
 						t.Fatalf("result=%s markdown=%s", data, r.Markdown())
 					}
-					// The Harness line already reports kimi's user config; a per-job
+					// The Harness line already reports the config mode; a per-job
 					// warning on every kimi run would only add noise.
 					if contains(r.Warnings, "configuration") {
 						t.Fatalf("config mode belongs in the Harness line: %v", r.Warnings)

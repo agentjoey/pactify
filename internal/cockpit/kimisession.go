@@ -88,12 +88,15 @@ func writeJSONFile(path string, v any) error {
 // (the call the kimi web UI makes), so the CLI, the web UI and Remote Control all
 // agree. It starts a private, loopback-only `kimi web --no-open` on a free port,
 // reads the bearer token from its startup output, and stops it afterwards.
-func ArchiveKimiSessionsViaServer(ctx context.Context, ids []string) error {
+func ArchiveKimiSessionsViaServer(ctx context.Context, ids []string, home ...string) error {
 	port, err := freeLoopbackPort()
 	if err != nil {
 		return err
 	}
 	cmd := exec.CommandContext(ctx, "kimi", "web", "--no-open", "--port", strconv.Itoa(port))
+	if len(home) > 0 {
+		cmd.Env = append(os.Environ(), "KIMI_CODE_HOME="+home[0])
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	out, err := cmd.StdoutPipe()
 	if err != nil {

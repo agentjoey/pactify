@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/agentjoey/pactify/internal/cockpit"
 )
 
 type DoctorCheck struct {
@@ -120,6 +122,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			for _, name := range []string{"Write access", "Model", "Read-only access", "Network", "Session hiding"} {
 				skip(name, "CLI unavailable; not run")
 			}
+			if h.Kind == "kimi-cli" {
+				skip("Managed home", "CLI unavailable; not run")
+			}
 			reports = append(reports, r)
 			continue
 		}
@@ -195,7 +200,19 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				reason = strings.Join(warnings, "; ")
 			}
 		}
-		add("Session hiding", hidden, reason)
+		if h.Kind == "kimi-cli" {
+			homeErr := doctorKimiHome(jobStore, "write", writable, goodWrite)
+			homeReason := "Probe succeeded in the shared home with intact links, no entry in the user session index, and no mcp.tools_discovered event"
+			if homeErr != nil {
+				homeReason = homeErr.Error()
+				hidden = false
+				reason = "Cannot confirm session hiding: " + homeReason
+			}
+			add("Session hiding", hidden, reason)
+			add("Managed home", homeErr == nil, homeReason)
+		} else {
+			add("Session hiding", hidden, reason)
+		}
 		if r.Passed() {
 			if err := recordVerifiedVersion(ctx, filepath.Dir(store.Root), h.Name, r.Version, d.now()); err != nil {
 				return append(reports, r), fmt.Errorf("save verified version for %s: %w", h.Name, err)
@@ -245,3 +262,46 @@ with socket.socket() as listener:
         json.dump({"bind": True, "external": True}, evidence)
 print("local bind and external HTTPS succeeded")
 `
+
+func doctorKimiHome(store Store, id string, result Result, succeeded bool) error {
+	if !succeeded || result.SessionID == "" {
+		return fmt.Errorf("managed-home probe did not succeed with a session id")
+	}
+	home, err := managedKimiHome()
+	if err != nil {
+		return err
+	}
+	st, err := store.Load(id)
+	if err != nil {
+		return err
+	}
+	if st.HarnessHome != home || st.EffectiveConfigMode() != "minimal" {
+		return fmt.Errorf("probe did not use the shared minimal home")
+	}
+	source, err := kimiHomeDir()
+	if err != nil {
+		return err
+	}
+	source, err = filepath.Abs(source)
+	if err != nil {
+		return err
+	}
+	if err := checkKimiLinks(home, source); err != nil {
+		return err
+	}
+	listed, err := cockpit.KimiSessionListed(source, result.SessionID)
+	if err != nil {
+		return fmt.Errorf("user session index: %w", err)
+	}
+	if listed {
+		return fmt.Errorf("probe session appeared in the user session index")
+	}
+	record, err := cockpit.ReadKimiRecord(st.HarnessHome, result.SessionID)
+	if err != nil {
+		return fmt.Errorf("probe wire record: %w", err)
+	}
+	if record.MCPToolsDiscovered {
+		return fmt.Errorf("probe wire record contains mcp.tools_discovered")
+	}
+	return nil
+}

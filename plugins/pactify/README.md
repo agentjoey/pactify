@@ -103,9 +103,23 @@ Jobs are stored in `$PACTIFY_HOME/jobs/<jobId>/`, defaulting to `~/.pactify/jobs
 | Harness | Hiding mechanism | View the original session |
 |---|---|---|
 | codex | Archive the thread at completion (hidden in Codex desktop and mobile) | `codex unarchive <sessionId>` |
-| kimi | Call kimi's archive API at completion, as kimi web does: pactify briefly starts a localhost-only `kimi web --no-open`, then closes it. This hides the session from CLI, web, and Remote Control. If the API is unavailable, fall back to the archive field in the session file, which only hides the CLI entry and produces a first-line warning. Finally, verify with `kimi session list`. | `kimi session list --archived --cwd <directory>`, or restore it from archived sessions in kimi web |
+| kimi (minimal config, default) | Use the persistent shared `$PACTIFY_HOME/harness-homes/kimi` via `KIMI_CODE_HOME`; sessions never enter your own index. No `kimi web` or archive call. | `KIMI_CODE_HOME="$PACTIFY_HOME/harness-homes/kimi" kimi session list --cwd <directory>` (use `~/.pactify` if `PACTIFY_HOME` is unset) |
+| kimi (`--with-user-config`) | Use the user's home and call kimi's archive API via a temporary localhost-only `kimi web --no-open`. If unavailable, fall back to the session archive field (CLI only, with a warning), then verify with `kimi session list`. | `kimi session list --archived --cwd <directory>`, or restore from archived sessions in kimi web |
 
-`--resume` unhides the session before continuing and hides it again afterward. The `Session` line contains its id. Hiding failures appear on the first line, for example if a kimi update changes its session format. kimi derives workspace entries from session records and keeps them after archiving, just as when you archive a session manually.
+Archived sessions are unhidden by `--resume` and hidden again afterward. Minimal kimi sessions stay in their separate home throughout resume. The `Session` line contains its id. Hiding failures appear on the first line, for example if a kimi update changes its session format. kimi derives workspace entries from session records and keeps them after archiving, just as when you archive a session manually.
+
+Kimi's managed home is 0700 and has no `mcp.json`. Before each launch pactify
+repairs three symlinks: `config.toml`, `credentials/`, and `device_id`, pointing
+to the process's `KIMI_CODE_HOME` or `~/.kimi-code` when unset. Missing originals
+require `kimi login`; pactify never reads or copies credential/config contents.
+If kimi replaces a link with a regular file or directory, the job warns and
+removes that private copy at completion; the next launch recreates the link.
+Keep this shared home for resume. Kimi resume preserves the recorded home and
+requires the original minimal/user config mode; use a fresh session to switch.
+Codex's minimal configuration and `--with-user-config` behavior are unchanged.
+Run `pactify sub doctor kimi` to verify the managed links, a successful probe in
+that home, no probe entry in the user's index, and no `mcp.tools_discovered` event.
+The result's Harness line reports `kimi (minimal config)` or `kimi (user config)`.
 
 ## Access modes
 
@@ -117,7 +131,7 @@ Jobs are stored in `$PACTIFY_HOME/jobs/<jobId>/`, defaulting to `~/.pactify/jobs
 ## Known limitations
 
 - kimi read-only access is not offered in the first release (`sub run kimi --read-only` exits 2): Phase 0 plan mode never converged on read-only tasks. Use codex instead.
-- If a job fails during startup, for example because the requested model is unavailable, the callee may have created a session without returning its id. That session will not be hidden.
+- A user-config job that fails during startup without returning a session id cannot be archived. Minimal kimi sessions remain separate even in this case.
 - Each delegation has about 20–50 thousand tokens of fixed callee overhead, making it unsuitable for small tasks.
 - Only locally installed, logged-in official CLIs are supported. Follow the summary warnings when independent model verification fails.
 - Automated tests do not cover installation and delegation in real Claude Code. Release acceptance still requires a Claude Code smoke test.

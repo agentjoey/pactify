@@ -24,6 +24,98 @@ func fakeOpencodeExport(t *testing.T, data, config string) string {
 	return record
 }
 
+// A shortened export with the same info/parts structure as the T01 sample.
+// Cache writes and tokens.total must not be added to the input/output counters.
+const opencodeJobExport = `{"info":{"id":"sid"},"messages":[
+{"info":{"id":"user","role":"user"},"parts":[]},
+{"info":{"id":"step-1","role":"assistant","providerID":"test","modelID":"flash","cost":0.1,"tokens":{"total":140,"input":20,"output":3,"reasoning":7,"cache":{"read":100,"write":10}}},"parts":[]},
+{"info":{"id":"step-2","role":"assistant","providerID":"test","modelID":"flash","cost":0.15,"tokens":{"total":13,"input":3,"output":4,"reasoning":6,"cache":{"read":0,"write":0}}},"parts":[]}
+]}`
+
+func TestOpencodeJobExportUsage(t *testing.T) {
+	for _, resume := range []bool{false, true} {
+		for _, ending := range []string{"succeeded", "failed"} {
+			for _, source := range []string{"complete", "zero", "export-failed", "invalid-json", "history-changed", "missing-tokens"} {
+				t.Run(fmt.Sprintf("resume=%t/%s/%s", resume, ending, source), func(t *testing.T) {
+					fakeOpencodeUserHome(t)
+					store, s, b := workerFixture(t, "write")
+					root, _ := managedHarnessHome("opencode")
+					record := fakeOpencodeExport(t, filepath.Join(root, "share"), filepath.Join(root, "config"))
+					history := `{"info":{"role":"assistant","providerID":"old","modelID":"old","cost":9,"tokens":{"input":9000,"output":900,"reasoning":90,"cache":{"read":90000}}},"parts":[]},`
+					writeExport := func(data string) {
+						t.Helper()
+						if err := os.WriteFile(record, []byte(data), 0600); err != nil {
+							t.Fatal(err)
+						}
+					}
+					writeExport(`{"messages":[` + strings.TrimSuffix(history, ",") + `]}`)
+					st, _ := store.Load("j1")
+					st.Request.Harness, st.ConfigMode = "opencode", "minimal"
+					if resume {
+						st.Request.Resume = s.ThreadID()
+					}
+					if err := store.Save(st); err != nil {
+						t.Fatal(err)
+					}
+					h, _ := Lookup("opencode")
+					h.Version = nil
+					h.Backend = func() cockpit.Backend { return b }
+					s.script = func(s *fakeSession) {
+						data := opencodeJobExport
+						if source == "zero" {
+							data = `{"messages":[{"info":{"role":"assistant","providerID":"test","modelID":"flash","tokens":{"input":0,"output":0,"reasoning":0}}}]}`
+						} else if source == "missing-tokens" {
+							data = `{"messages":[{"info":{"role":"assistant","providerID":"test","modelID":"flash","cost":0.25}}]}`
+						}
+						if resume {
+							data = strings.Replace(data, `"messages":[`, `"messages":[`+history, 1)
+						}
+						if source == "export-failed" {
+							os.Remove(record)
+						} else if source == "invalid-json" {
+							writeExport(`{"messages":`)
+						} else if source == "history-changed" {
+							writeExport(`{"messages":[]}`)
+						} else {
+							writeExport(data)
+						}
+						s.events <- cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 333, OutputTokens: 8, CostUSD: 9.25}}
+						state := cockpit.StateTurnCompleted
+						if ending == "failed" {
+							state = cockpit.StateTurnFailed
+						}
+						s.events <- cockpit.Event{Kind: cockpit.EventState, State: state, Err: "provider error"}
+					}
+					r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
+					wantStatus := StatusSucceeded
+					if ending == "failed" {
+						wantStatus = StatusFailed
+					}
+					if err != nil || r.Status != wantStatus {
+						t.Fatalf("result=%+v err=%v", r, err)
+					}
+					wantInput, wantOutput, wantCost := 333, 8, 0.0
+					if source == "complete" {
+						wantInput, wantOutput, wantCost = 123, 20, 0.25
+					} else if source == "zero" {
+						wantInput, wantOutput = 0, 0
+					} else if source == "missing-tokens" {
+						wantCost = 0.25
+					}
+					if r.InputTokens != wantInput || r.OutputTokens != wantOutput || r.CostUSD != wantCost {
+						t.Errorf("want in=%d out=%d cost=%g; result=%+v", wantInput, wantOutput, wantCost, r)
+					}
+					if ending == "failed" || (source != "complete" && source != "zero") {
+						assertPartialUsage(t, store, r)
+					} else if r.UsagePartial {
+						t.Errorf("complete usage marked partial: %+v", r)
+					}
+				})
+			}
+		}
+	}
+}
+
 func TestOpencodeIndependentVerificationAndResumeCost(t *testing.T) {
 	for _, fault := range []string{"", "mismatch", "export-failed", "no-assistant", "baseline-failed"} {
 		t.Run(fault, func(t *testing.T) {
@@ -52,7 +144,7 @@ func TestOpencodeIndependentVerificationAndResumeCost(t *testing.T) {
 				if fault == "mismatch" {
 					model = "other"
 				}
-				after := fmt.Sprintf(`{"messages":[{"info":{"role":"assistant","providerID":"old","modelID":"old-model","cost":9}},{"info":{"role":"user"}},{"info":{"role":"assistant","providerID":"test","modelID":%q,"cost":0.25}}]}`, model)
+				after := fmt.Sprintf(`{"messages":[{"info":{"role":"assistant","providerID":"old","modelID":"old-model","cost":9}},{"info":{"role":"user"}},{"info":{"role":"assistant","providerID":"test","modelID":%q,"cost":0.25,"tokens":{"input":20,"output":3,"reasoning":7,"cache":{"read":100}}}}]}`, model)
 				if fault == "export-failed" {
 					os.Remove(record)
 				} else if fault == "no-assistant" {
@@ -69,7 +161,11 @@ func TestOpencodeIndependentVerificationAndResumeCost(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if r.InputTokens != 300 || r.OutputTokens != 7 {
+			wantInput, wantOutput := 300, 7
+			if fault == "" || fault == "mismatch" {
+				wantInput, wantOutput = 120, 10
+			}
+			if r.InputTokens != wantInput || r.OutputTokens != wantOutput {
 				t.Fatalf("tokens=%+v", r)
 			}
 			if fault == "" || fault == "mismatch" {

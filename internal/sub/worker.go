@@ -457,7 +457,7 @@ loop:
 			verifyCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 			defer cancel()
 		}
-		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd, RecoverUsage: recoverUsage})
+		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
 		result.ModelVerified = verified.Verified
 		if verified.CostUSD != nil {
 			result.CostUSD = *verified.CostUSD
@@ -465,7 +465,7 @@ loop:
 		if verified.Verified {
 			result.ModelActual = verified.Model
 		}
-		if h.LocalUsageBaseline != nil || verified.InputTokens != 0 || verified.OutputTokens != 0 {
+		if h.LocalUsageBaseline != nil || verified.UsageRecorded || verified.InputTokens != 0 || verified.OutputTokens != 0 {
 			result.InputTokens = verified.InputTokens
 			result.OutputTokens = verified.OutputTokens
 		}

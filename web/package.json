@@ -9,8 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "e2e": "npm run build && playwright test",
-    "e2e:test": "playwright test"
+    "e2e": "npm run build && npm run build:panel && playwright test",
+    "e2e:test": "playwright test",
+    "build:panel": "tsc -b && vite build --config vite.panel.config.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

@@ -24,11 +24,21 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: "node e2e/mock-server.mjs",
-    env: { PORT: String(PORT) },
-    port: PORT,
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  },
+  // Separate servers keep the panel independent of the frozen dashboard mock.
+  webServer: [
+    {
+      command: "node e2e/mock-server.mjs",
+      env: { PORT: String(PORT) },
+      port: PORT,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+    {
+      command: "node e2e/panel-mock.mjs",
+      env: { PANEL_E2E_PORT: process.env.PANEL_E2E_PORT || "4176" },
+      url: `http://127.0.0.1:${process.env.PANEL_E2E_PORT || 4176}`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+  ],
 });

@@ -58,6 +58,12 @@ jobs:
         run: cd web && npm test
       - name: web typecheck
         run: cd web && npx tsc -b --noEmit
+      - name: embedded panel dist in sync with panel source
+        run: |
+          cd web && npm run build:panel && cd ..
+          git diff --exit-code -- internal/subpanel/dist || {
+            echo "::error::internal/subpanel/dist is stale — run 'cd web && npm run build:panel' and commit it"; exit 1; }
+          test -z "$(git ls-files --others --exclude-standard internal/subpanel/dist)"
       - name: embedded dist in sync with web source
         run: |
           cd web && npm run build && cd ..

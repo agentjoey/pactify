@@ -121,7 +121,7 @@ func newSubCmd() *cobra.Command {
 	result.Flags().BoolVar(&resultJSON, "json", false, "Print JSON")
 	cancel := &cobra.Command{Use: "cancel <job>", Short: "Cancel a worker and its agent", Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subCancel(c, a[0]); subExit(c, code, err) }}
 	worker := &cobra.Command{Use: "__worker <job>", Hidden: true, Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subWorker(c.Context(), a[0]); subExit(c, code, err) }}
-	command.AddCommand(run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd())
+	command.AddCommand(run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd(), newSubPanelCmd())
 	addSubWorktreeCommands(command, run)
 	return command
 }

@@ -119,6 +119,7 @@ func newSubCmd() *cobra.Command {
 	cancel := &cobra.Command{Use: "cancel <job>", Short: "Cancel a worker and its agent", Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subCancel(c, a[0]); subExit(c, code, err) }}
 	worker := &cobra.Command{Use: "__worker <job>", Hidden: true, Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subWorker(c.Context(), a[0]); subExit(c, code, err) }}
 	command.AddCommand(run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd())
+	addSubWorktreeCommands(command, run)
 	return command
 }
 func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool) (int, error) {
@@ -168,19 +169,10 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if readOnly {
 		req.Access = "read-only"
 	}
-	if resume {
-		req.Resume, err = store.LastSessionFor(name, dir)
-		if err != nil {
-			return 1, err
-		}
-		if req.Resume == "" {
-			return 2, fmt.Errorf("该仓库还没有可续接的 %s 会话", name)
-		}
-	}
 	id := sub.NewJobID(time.Now(), rand.Reader)
-	st, err := store.Create(id, req)
+	st, code, err := subCreateRun(c, store, id, req, resume)
 	if err != nil {
-		return 1, err
+		return code, err
 	}
 	if err = subStartWorker(store, id); err != nil {
 		st.Status = sub.StatusFailed

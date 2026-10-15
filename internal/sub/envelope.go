@@ -29,6 +29,8 @@ type Result struct {
 	LogPath        string   `json:"logPath"`
 	RateLimit      string   `json:"rateLimit,omitempty"`
 	Warnings       []string `json:"warnings,omitempty"`
+	WorktreePath   string   `json:"worktreePath,omitempty"`
+	BaseCommit     string   `json:"baseCommit,omitempty"`
 }
 
 const FinalTextLimit = 4096
@@ -70,6 +72,9 @@ func (r Result) Markdown() string {
 		fmt.Fprintf(&b, "\n额度: %s", r.RateLimit)
 	}
 	fmt.Fprintf(&b, "\n工具调用: %d\n改动: %d 个文件 · +%d/-%d\n", r.ToolCalls, len(r.Diff.Files), r.Diff.Added, r.Diff.Deleted)
+	if r.WorktreePath != "" {
+		fmt.Fprintf(&b, "Worktree: %s\n基准 commit: %s\n", r.WorktreePath, r.BaseCommit)
+	}
 	for i, f := range r.Diff.Files {
 		if i == 20 {
 			fmt.Fprintf(&b, "…另 %d 个文件\n", len(r.Diff.Files)-20)

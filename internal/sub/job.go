@@ -46,6 +46,7 @@ type State struct {
 	UpdatedAt       time.Time        `json:"updatedAt"`
 	FinishedAt      time.Time        `json:"finishedAt,omitempty"`
 	Error           string           `json:"error,omitempty"`
+	Worktree        *Worktree        `json:"worktree,omitempty"`
 }
 
 type Store struct{ Root string }

@@ -47,10 +47,14 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 
 	req := st.Request
+	if st.Worktree != nil {
+		req.Cwd = st.Worktree.Cwd
+	}
 	result = Result{JobID: id, Harness: req.Harness, ModelRequested: req.Model, Access: req.Access, Status: StatusFailed, LogPath: store.LogPath(id)}
 	if h.Experimental != "" {
 		result.Warnings = append(result.Warnings, h.Experimental)
 	}
+	result.describeWorktree(st)
 	unverifiedWarning := ""
 	// Persist the result before the terminal state, so waiters never observe a partial result.
 	defer func() {
@@ -73,7 +77,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		} else {
 			for _, warning := range result.Warnings {
 				// These warnings describe harness readiness, not a job error.
-				if warning != h.Experimental && warning != unverifiedWarning {
+				if warning != h.Experimental && warning != unverifiedWarning && warning != dirtyWorktreeWarning {
 					reason = warning
 					break
 				}
@@ -96,9 +100,12 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if req.Access != "write" && req.Access != "read-only" {
 		return fail(fmt.Errorf("invalid access %q", req.Access))
 	}
-	snap, err := TakeSnapshot(req.Cwd)
-	if err != nil {
-		return fail(err)
+	var snap Snapshot
+	if st.Worktree == nil {
+		snap, err = TakeSnapshot(req.Cwd)
+		if err != nil {
+			return fail(err)
+		}
 	}
 	if h.Version != nil {
 		result.CLIVersion, _ = h.Version(ctx)
@@ -338,7 +345,9 @@ loop:
 		result.Warnings = append(result.Warnings, "实际模型与请求不一致")
 	}
 	result.FinalText, result.Truncated = TruncateFinal(collector.FinalText())
-	result.Diff, err = DiffSince(req.Cwd, snap)
+	if st.Worktree == nil {
+		result.Diff, err = DiffSince(req.Cwd, snap)
+	} // Worktree jobs publish the full final-tree diff in Finish, including failures.
 	if err != nil {
 		result.Warnings = append(result.Warnings, err.Error())
 	}

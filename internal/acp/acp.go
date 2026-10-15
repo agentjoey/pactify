@@ -36,6 +36,52 @@ var ErrNotSupported = errors.New("acp: operation not supported by server")
 // SessionID identifies an ACP session (created by NewSession, reusable via LoadSession).
 type SessionID string
 
+// ConfigValue is one available value for a session configuration option.
+type ConfigValue struct {
+	Value string `json:"value"`
+	Name  string `json:"name"`
+}
+
+// ConfigOption describes a session setting such as model or thought level.
+type ConfigOption struct {
+	ID           string        `json:"id"`
+	Name         string        `json:"name"`
+	Category     string        `json:"category"`
+	Type         string        `json:"type"`
+	CurrentValue string        `json:"currentValue"`
+	Options      []ConfigValue `json:"options"`
+}
+
+// SessionMode describes an available agent operating mode.
+type SessionMode struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// NewSessionResult includes the session's advertised settings and modes.
+type NewSessionResult struct {
+	SessionID     SessionID
+	ConfigOptions []ConfigOption
+	Modes         []SessionMode
+	CurrentModeID string
+}
+
+// FindConfig prefers an exact ID match, then matches by category.
+func FindConfig(opts []ConfigOption, idOrCategory string) (ConfigOption, bool) {
+	for _, o := range opts {
+		if o.ID == idOrCategory {
+			return o, true
+		}
+	}
+	for _, o := range opts {
+		if o.Category == idOrCategory {
+			return o, true
+		}
+	}
+	return ConfigOption{}, false
+}
+
 // StopReason is why a prompt turn ended (e.g. "end_turn", "max_tokens", "cancelled").
 type StopReason string
 
@@ -355,20 +401,71 @@ func parseLoadSession(caps json.RawMessage) bool {
 // NewSession creates a fresh session rooted at cwd and returns its id. cwd also
 // becomes the client's default working directory for a later LoadSession.
 func (c *Client) NewSession(ctx context.Context, cwd string) (SessionID, error) {
+	res, err := c.NewSessionDetailed(ctx, cwd)
+	return res.SessionID, err
+}
+
+// NewSessionDetailed creates a session and returns its settings and modes.
+// Agents that omit these optional fields still return a usable session ID.
+func (c *Client) NewSessionDetailed(ctx context.Context, cwd string) (NewSessionResult, error) {
 	if cwd != "" {
 		c.cwd = cwd
 	}
 	raw, err := c.call(ctx, "session/new", map[string]any{"cwd": cwd, "mcpServers": []any{}})
 	if err != nil {
-		return "", err
+		return NewSessionResult{}, err
 	}
 	var wire struct {
-		SessionID SessionID `json:"sessionId"`
+		SessionID     SessionID      `json:"sessionId"`
+		ConfigOptions []ConfigOption `json:"configOptions"`
+		Modes         *struct {
+			CurrentModeID  string        `json:"currentModeId"`
+			AvailableModes []SessionMode `json:"availableModes"`
+		} `json:"modes"`
 	}
 	if err := json.Unmarshal(raw, &wire); err != nil {
-		return "", fmt.Errorf("acp: session/new result: %w", err)
+		return NewSessionResult{}, fmt.Errorf("acp: session/new result: %w", err)
 	}
-	return wire.SessionID, nil
+	res := NewSessionResult{SessionID: wire.SessionID, ConfigOptions: wire.ConfigOptions}
+	if wire.Modes != nil {
+		res.Modes, res.CurrentModeID = wire.Modes.AvailableModes, wire.Modes.CurrentModeID
+	}
+	return res, nil
+}
+
+// SetConfigOption sets one session option and returns the updated option list.
+func (c *Client) SetConfigOption(ctx context.Context, sid SessionID, configID, value string) ([]ConfigOption, error) {
+	raw, err := c.call(ctx, "session/set_config_option", map[string]any{"sessionId": sid, "configId": configID, "value": value})
+	if err != nil {
+		return nil, err
+	}
+	var wire struct {
+		ConfigOptions []ConfigOption `json:"configOptions"`
+	}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		return nil, fmt.Errorf("acp: session/set_config_option result: %w", err)
+	}
+	return wire.ConfigOptions, nil
+}
+
+// SetMode switches the session to an advertised operating mode.
+func (c *Client) SetMode(ctx context.Context, sid SessionID, modeID string) error {
+	_, err := c.call(ctx, "session/set_mode", map[string]any{"sessionId": sid, "modeId": modeID})
+	return err
+}
+
+// Cancel notifies the agent to cancel a session's ongoing turn. The agent does
+// not acknowledge this notification; Prompt reports when the turn actually ends.
+func (c *Client) Cancel(sid SessionID) error {
+	return c.notify("session/cancel", map[string]any{"sessionId": sid})
+}
+
+func (c *Client) notify(method string, params any) error {
+	b, err := json.Marshal(request{Jsonrpc: "2.0", Method: method, Params: params})
+	if err != nil {
+		return fmt.Errorf("acp: marshal %s: %w", method, err)
+	}
+	return c.write(b)
 }
 
 // LoadSession re-establishes a previously-created session so the agent resumes its

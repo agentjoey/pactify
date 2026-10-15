@@ -111,12 +111,13 @@ pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模
   用它补齐核实与成本（路径经 `~/.kimi-code/session_index.jsonl` 按 sessionId 查）。
 - **命令行后端（agy）**：agy 没有 ACP，也没有 server 协议，只能走命令行。这是第一个非协议后端，须满足以下几点（AJ-648 实测，agy 1.3.5）：
   - 子进程输出写进缓冲区，不碰父进程 stdio；
-  - 用 `-p … --output-format stream-json` 运行：`init` 给出会话 id 与模型，`step_update` 给出文本增量、工具步骤和每步用量，`result` 给出状态、终稿与累计用量；**token 与会话 id 直接取自事件流**；
+  - 提示词经 stdin 传入（`--input-format stream-json --output-format stream-json`，不占命令行参数、不出现在进程列表里）；事件流中`init` 给出会话 id 与模型，`step_update` 给出文本增量、工具步骤和每步用量，`result` 给出状态、终稿与累计用量；**token 与会话 id 直接取自事件流**；
   - 实际输入 token = `input_tokens + cache_read_tokens`；
   - 续接用 `--conversation <id>`；
   - 取消先发 SIGINT（进程立即退出，`result.status=ERROR`、原因 `interrupted`，子进程被清理），超过宽限期再 kill；
   - 模型从 `agy models` 动态获取，不再写死；不存在的模型会返回退出码 1 并列出可选项；
-  - 必须识别「工具被无头模式自动拒绝、但 `result.status` 仍为 SUCCESS」的情况：拒绝只出现在 stderr 的 `auto-denied`，以及空终稿。
+  - 必须识别「工具被无头模式自动拒绝、但 `result.status` 仍为 SUCCESS」的情况：拒绝只出现在 stderr 的 `auto-denied`，以及空终稿。AJ-649 的实现判为失败；只读档下的拒绝同样判为失败，但错误说明只读档的限制（见 §5.4）；
+  - 取消时先快照 agy 的全部后代进程（agy 把工具命令放进独立的进程组或会话，按进程组 kill 无效），agy 退出后逐个结束仍存活的后代，并核对进程身份（AJ-649）。
 - **精简 callee 的启动配置**：实测每次委派的输入基线约 2–5 万 token，主要来自 callee 加载用户全部的 MCP 服务器与插件
   （codex 启动了 17 个 MCP 服务器；claude 带了 359 个工具）。新方案应默认以最小配置启动 callee（ACP 会话已传
   `mcpServers: []`；codex 经 `ThreadStartParams.config`、claude 经 `--strict-mcp-config` 一类参数，**[待验证]**）。
@@ -163,8 +164,13 @@ callee 冷启动，没有 host 的对话上下文。第一版做法：转发 sub
 
 | 档位 | codex | opencode（ACP） | kimi（ACP） | agy（命令行） | claude（CLI / SDK） |
 |---|---|---|---|---|---|
-| `--read-only` | `sandbox: read-only` ✅ | 拒绝写类权限请求 ✅ | `session/set_mode plan` ✅⚠️ | `--mode=plan` ✅（1.3.5：文件与 shell 写入都被挡，评审类任务能直接给出结论） | `--allowedTools=Read,Grep,Glob` ✅ |
+| `--read-only` | `sandbox: read-only` ✅ | 拒绝写类权限请求 ✅ | `session/set_mode plan` ✅⚠️ | `--mode=plan`，不加 skip；靠无头权限自动拒绝保护，只能用自带文件工具，任何 shell 命令/写入都会被拒并结束本轮 | `--allowedTools=Read,Grep,Glob` ✅ |
 | `--write` | `sandbox: workspace-write` + 网络开放（`sandbox_workspace_write.network_access`，2026-10-15 Owner 拍板）✅ | 批准权限请求 ✅ | 默认模式（直接写）✅ | `--dangerously-skip-permissions` ✅（1.3.5：`--mode=accept-edits` 只放行写文件，shell 命令会被自动拒绝；`--mode=auto` 对本账号不可用） | `--permission-mode acceptEdits` ✅ |
+
+**agy 1.3.5 host 复核（AJ-649）**：保护来自无头模式下的自动拒绝，不来自 plan 模式本身。
+`--mode=plan` 加 `--dangerously-skip-permissions` 时，shell 写入会实际执行，因此只读档绝不能带 skip。
+只读档下任何 shell 命令（包括只读的 `git log`、`grep`）都会被拒绝并结束本轮，终稿为空；
+可完成的只读评审必须仅使用自带文件工具。需要命令的只读任务使用 codex `--read-only`。
 
 ✅ = 2026-10-15 实测：只读档写文件被拦、可写档写成功。⚠️ kimi 的 plan 模式拦得住，但被拒后会反复申请退出、反复提问
 （一轮 32 次工具调用），需在 brief 里写明只读且对 `ExitPlanMode` 自动拒绝并附说明，同时设每轮调用上限。

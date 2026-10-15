@@ -50,10 +50,10 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 		if session == "" {
 			return State{}, &NoSessionError{Harness: req.Harness}
 		}
-		if req.Harness == "kimi" {
-			h, _ := Lookup(req.Harness)
+		h, _ := Lookup(req.Harness)
+		if h.Home != nil {
 			if previous.EffectiveConfigMode() != h.configMode(req.WithUserConfig) {
-				return State{}, fmt.Errorf("kimi resume requires the original config mode (%s); use the matching --with-user-config setting or start a fresh session", previous.EffectiveConfigMode())
+				return State{}, fmt.Errorf("%s resume requires the original config mode (%s); use the matching --with-user-config setting or start a fresh session", h.Name, previous.EffectiveConfigMode())
 			}
 		}
 		createResume := func() (State, error) {
@@ -61,7 +61,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 			if err != nil {
 				return st, err
 			}
-			if req.Harness == "kimi" {
+			if h.Home != nil {
 				st.HarnessHome = previous.HarnessHome
 				err = s.Save(st)
 			}

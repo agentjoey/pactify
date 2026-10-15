@@ -229,3 +229,37 @@ for term in ('Background', 'numbered goals', 'Known constraints and special case
 PY
   [ "$status" -eq 0 ]
 }
+
+@test "agy skill and forwarder preserve the shared guide and explicit permissions" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+text = (root / 'skills/agy/SKILL.md').read_text()
+original = (root / 'skills/kimi/SKILL.md').read_text()
+start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->'
+assert text.split(start)[1].split(end)[0] == original.split(start)[1].split(end)[0]
+for term in ('name: agy', 'experimental', 'evaluation pending', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
+    assert term in text, term
+agent = (root / 'agents/agy.md').read_text()
+for term in ('model: haiku', 'tools: Bash', 'pactify sub run agy', '--read-only', '--write', '--resume', '--worktree', '--cwd'):
+    assert term in agent, term
+for path in (root / 'README.md', root.parent.parent / 'README.md'):
+    assert '/agy' in path.read_text(), path
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "agy documents file-only read-only access and the source of write protection" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+skill = (root / 'skills/agy/SKILL.md').read_text().split('<!-- BEGIN SHARED-DELEGATION -->')[0]
+for term in ('file tools only', 'shell command', 'ends the turn', 'codex `--read-only`', 'skip-permissions', 'plan plus skip permits writes'):
+    assert term in skill, term
+readme = (root / 'README.md').read_text()
+assert '/agy Review src/cache/ with read-only access and run its tests' not in readme
+for term in ('file-only reviews', 'Every shell command', 'ends the turn', 'not a write sandbox'):
+    assert term in readme, term
+PY
+  [ "$status" -eq 0 ]
+}

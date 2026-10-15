@@ -68,7 +68,7 @@ the plugin reminds you on session start — run the curl|sh installer above, the
 
 For harness delegation, install `/plugin install pactify@pactify` and use `/delegate`
 (or `/pactify:delegate`). `pactify sub run [harness]` defaults to **codex** when the
-harness is omitted; `/codex` and `/kimi` select one explicitly. **kimi is experimental**:
+harness is omitted; `/codex`, `/kimi` and `/agy` select one explicitly. **agy is experimental (evaluation pending)**. **kimi is experimental**:
 Phase 0 large tasks completed in one attempt 6/10, and read-only work did not converge.
 kimi results include an informational warning; `kimi --read-only` still exits 2.
 See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.
@@ -94,6 +94,22 @@ managed-home path, session-index isolation and absence of MCP discovery events.
 Job records and JSON expose `configMode` (`minimal` or
 `user`); the result's Harness line shows the same mode. Existing jobs without
 this field are treated as user config.
+
+agy uses the CLI stream-json backend (Antigravity CLI 1.3.5). Prompts go through stdin;
+`agy models` supplies the allowed model ids and `init.model` verifies the actual model.
+Write access uses `--dangerously-skip-permissions`; read-only uses `--mode=plan` without skip.
+agy read-only reviews must use built-in file tools only: any shell command or write
+is auto-denied and ends the turn without a reply. Use codex `--read-only` for commands;
+plan mode alone does not block writes when skip-permissions is enabled.
+Headless permission auto-denial fails the job even if agy reports SUCCESS.
+The default `HOME=$PACTIFY_HOME/harness-homes/agy` (0700) mirrors top-level user HOME
+entries with symlinks, excluding `.gemini`. Its private `.gemini/antigravity-cli`
+links only `antigravity-oauth-token` to the original; token contents are never read
+or copied by pactify. User sessions and integrations stay separate. Links refresh
+under a lock before launch; replaced copies are removed with a warning after exit.
+Resume keeps the recorded home. `--with-user-config` restores real HOME and warns
+that agy sessions are visible in the user's list (no archive API).
+Run `pactify sub doctor agy` for compatibility checks.
 
 ## The idea in 30 seconds
 

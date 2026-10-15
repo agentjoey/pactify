@@ -109,8 +109,14 @@ pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模
   与 `id=mode`（工作模式）两项。kimi 的 ACP 不回报 token 与实际模型，但本地会话记录
   `~/.kimi-code/sessions/<工作目录>/<sessionId>/agents/main/wire.jsonl` 逐轮记有 `model` 与 `usage`，实测与协议内设定一致，
   用它补齐核实与成本（路径经 `~/.kimi-code/session_index.jsonl` 按 sessionId 查）。
-- **命令行模式兜底**：只剩 agy 走命令行（无 ACP、无 server 协议），且必须改成输出进缓冲区、不碰父进程 stdio。
-  agy 的模型名表已过期（见 §10），需从 `agy models` 动态获取，不再写死。
+- **命令行后端（agy）**：agy 没有 ACP，也没有 server 协议，只能走命令行。这是第一个非协议后端，须满足以下几点（AJ-648 实测，agy 1.3.5）：
+  - 子进程输出写进缓冲区，不碰父进程 stdio；
+  - 用 `-p … --output-format stream-json` 运行：`init` 给出会话 id 与模型，`step_update` 给出文本增量、工具步骤和每步用量，`result` 给出状态、终稿与累计用量；**token 与会话 id 直接取自事件流**；
+  - 实际输入 token = `input_tokens + cache_read_tokens`；
+  - 续接用 `--conversation <id>`；
+  - 取消先发 SIGINT（进程立即退出，`result.status=ERROR`、原因 `interrupted`，子进程被清理），超过宽限期再 kill；
+  - 模型从 `agy models` 动态获取，不再写死；不存在的模型会返回退出码 1 并列出可选项；
+  - 必须识别「工具被无头模式自动拒绝、但 `result.status` 仍为 SUCCESS」的情况：拒绝只出现在 stderr 的 `auto-denied`，以及空终稿。
 - **精简 callee 的启动配置**：实测每次委派的输入基线约 2–5 万 token，主要来自 callee 加载用户全部的 MCP 服务器与插件
   （codex 启动了 17 个 MCP 服务器；claude 带了 359 个工具）。新方案应默认以最小配置启动 callee（ACP 会话已传
   `mcpServers: []`；codex 经 `ThreadStartParams.config`、claude 经 `--strict-mcp-config` 一类参数，**[待验证]**）。
@@ -157,8 +163,8 @@ callee 冷启动，没有 host 的对话上下文。第一版做法：转发 sub
 
 | 档位 | codex | opencode（ACP） | kimi（ACP） | agy（命令行） | claude（CLI / SDK） |
 |---|---|---|---|---|---|
-| `--read-only` | `sandbox: read-only` ✅ | 拒绝写类权限请求 ✅ | `session/set_mode plan` ✅⚠️ | `--mode plan` ✅ | `--allowedTools=Read,Grep,Glob` ✅ |
-| `--write` | `sandbox: workspace-write` + 网络开放（`sandbox_workspace_write.network_access`，2026-10-15 Owner 拍板）✅ | 批准权限请求 ✅ | 默认模式（直接写）✅ | `--mode accept-edits` ✅ | `--permission-mode acceptEdits` ✅ |
+| `--read-only` | `sandbox: read-only` ✅ | 拒绝写类权限请求 ✅ | `session/set_mode plan` ✅⚠️ | `--mode=plan` ✅（1.3.5：文件与 shell 写入都被挡，评审类任务能直接给出结论） | `--allowedTools=Read,Grep,Glob` ✅ |
+| `--write` | `sandbox: workspace-write` + 网络开放（`sandbox_workspace_write.network_access`，2026-10-15 Owner 拍板）✅ | 批准权限请求 ✅ | 默认模式（直接写）✅ | `--dangerously-skip-permissions` ✅（1.3.5：`--mode=accept-edits` 只放行写文件，shell 命令会被自动拒绝；`--mode=auto` 对本账号不可用） | `--permission-mode acceptEdits` ✅ |
 
 ✅ = 2026-10-15 实测：只读档写文件被拦、可写档写成功。⚠️ kimi 的 plan 模式拦得住，但被拒后会反复申请退出、反复提问
 （一轮 32 次工具调用），需在 brief 里写明只读且对 `ExitPlanMode` 自动拒绝并附说明，同时设每轮调用上限。
@@ -279,7 +285,7 @@ Q1（brief 交接质量）与 Q2（host 开销）需要真实任务，属于 Pha
 | **协议 schema 漂移 CI** | 沿用现有 `codex-schema.yml` 的做法，扩展到 ACP schema；只比对协议，不需要登录 | M3 |
 | **会话不留痕** | 每个 harness 必须声明「委派会话怎么从用户自己的会话列表里隐藏」，并在新 harness 接入时由测试强制（`TestEveryHarnessHidesItsSessions`）。codex：归档线程；kimi：默认写在独立配置目录里，天然隐藏（AJ-643）；`--with-user-config` 时调用 kimi 自己的归档接口（临时本机 `kimi web` 服务，CLI / web / Remote Control 一致），失败时退回会话文件的归档字段，并用官方 CLI 核对；workspace 由 kimi 从会话派生，不另行删除。厂商更新改了格式时以警告暴露 | M0（2026-10-15，Owner 要求覆盖所有接入的 coding agent） |
 | **callee 最小配置启动** | 默认不继承用户的 MCP 服务器、插件、skills、记忆，压低固定开销并避免子代理拿到用户私有工具；`--with-user-config` 恢复全部配置，job 记录 `configMode`。codex：进程级 `-c` 覆盖项，加上经 `config/read` 逐个禁用 MCP（空 `mcp_servers` 表只会和用户配置合并、清不掉），实测输入 token 20,950 → 13,658（−35%）；kimi：见下一行 | M1（AJ-636，2026-10-15 提前做） |
-| **独立配置目录（harness home）** | pactify 为委派管理一个 harness 专用的配置目录（`$PACTIFY_HOME/harness-homes/<harness>`，所有 job 共用以便续接）。登录凭据与必要配置用**符号链接**指向用户原文件，不复制密钥，也不带用户的 MCP 等集成；委派会话写在这个目录里，天然不进用户的会话列表，不必再走各家的归档接口。job 结束后检查链接，被 harness 以「写临时文件再改名」替换成普通文件时，报警并删除副本。kimi：`KIMI_CODE_HOME`，链接 `config.toml`、`credentials/`、`device_id`，实测 MCP 不加载、用户会话索引不变、原文件不改（AJ-642/AJ-643） | kimi：M1（AJ-643） |
+| **独立配置目录（harness home）** | pactify 为委派管理一个 harness 专用的配置目录（`$PACTIFY_HOME/harness-homes/<harness>`，所有 job 共用以便续接）。登录凭据与必要配置用**符号链接**指向用户原文件，不复制密钥，也不带用户的 MCP 等集成；委派会话写在这个目录里，天然不进用户的会话列表，不必再走各家的归档接口。job 结束后检查链接，被 harness 以「写临时文件再改名」替换成普通文件时，报警并删除副本。kimi：`KIMI_CODE_HOME`，链接 `config.toml`、`credentials/`、`device_id`，实测 MCP 不加载、用户会话索引不变、原文件不改（AJ-642/AJ-643）。agy：没有可以改数据目录的环境变量（数据目录由 `HOME` 推出），删除索引行或移走会话文件都会被 agy 从 protobuf 缓存重建，因此采用**镜像 HOME**（AJ-648，Owner 2026-10-15 同意）：受管目录里，真实 HOME 的每个顶层项都用符号链接映射进去，只有 `.gemini` 换成受管目录，并且只链接 `antigravity-cli/antigravity-oauth-token`；以 `HOME=<镜像>` 运行。实测登录有效、用户会话索引不变、git 与 Go 等工具经链接使用同一份文件、用户插件不加载。代价：子进程的 `$HOME` 改变，工具新建的顶层 dotfile 落在镜像里；每次启动前刷新镜像；删除操作绝不能穿过符号链接。**实现上是同一个公共组件**：受管目录、一组链接、启动前刷新、结束后检查副本、doctor 检查；各 harness 只声明自己要链接哪些文件和环境变量（AJ-649 从 kimi 的实现中抽取） | kimi：M1（AJ-643）；agy：M2（AJ-649） |
 
 **接入新 harness 时的约定**（M2 起，agy、opencode、claude-code 依次适用）：先实测独立配置目录能否同时做到三件事——保留登录、关闭用户集成、委派会话不进用户列表。三项都做到就优先采用它来满足「会话不留痕」和「最小配置启动」；做不到的（例如凭据在 macOS 钥匙串里、与配置目录绑定），再退回该 harness 自己的协议内覆盖项加归档，并把原因写进本表。实测结论与所用环境变量记入已验证版本表对应的 harness 条目。
 

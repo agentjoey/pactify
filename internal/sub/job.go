@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/agentjoey/pactify/internal/procx"
 )
 
 type Status string
@@ -33,14 +35,17 @@ type Request struct {
 }
 
 type State struct {
-	ID         string    `json:"id"`
-	Status     Status    `json:"status"`
-	Request    Request   `json:"request"`
-	PID        int       `json:"pid,omitempty"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
-	FinishedAt time.Time `json:"finishedAt,omitempty"`
-	Error      string    `json:"error,omitempty"`
+	ID              string           `json:"id"`
+	Status          Status           `json:"status"`
+	Request         Request          `json:"request"`
+	PID             int              `json:"pid,omitempty"`
+	Worker          *procx.Identity  `json:"worker,omitempty"`
+	Processes       []procx.Identity `json:"processes,omitempty"`
+	CancelRequested bool             `json:"cancelRequested,omitempty"`
+	CreatedAt       time.Time        `json:"createdAt"`
+	UpdatedAt       time.Time        `json:"updatedAt"`
+	FinishedAt      time.Time        `json:"finishedAt,omitempty"`
+	Error           string           `json:"error,omitempty"`
 }
 
 type Store struct{ Root string }
@@ -116,6 +121,7 @@ func (s Store) Load(id string) (State, error) {
 }
 
 // Save atomically replaces state.json; the caller owns state timestamps.
+// Runtime lifecycle mutations must hold the per-job lock via WithState.
 func (s Store) Save(st State) error {
 	if err := validJobID(st.ID); err != nil {
 		return err

@@ -50,7 +50,7 @@ func (b *acpBackend) Start(ctx context.Context, opts StartOpts) (Session, error)
 	info, err := applyACPOpts(ctx, client, res.SessionID, res, opts)
 	if err != nil {
 		_ = client.Close()
-		return nil, fmt.Errorf("acp configure %q: %w", b.kind, err)
+		return nil, &StartError{ID: string(res.SessionID), Err: fmt.Errorf("acp configure %q: %w", b.kind, err)}
 	}
 	sess := newACPSession(client, res.SessionID)
 	sess.info = info
@@ -86,7 +86,7 @@ func (b *acpBackend) ResumeWith(ctx context.Context, threadID string, opts Start
 	info, err := applyACPResumeOpts(ctx, client, sid, opts)
 	if err != nil {
 		_ = client.Close()
-		return nil, fmt.Errorf("acp configure resumed %q: %w", b.kind, err)
+		return nil, &StartError{ID: threadID, Err: fmt.Errorf("acp configure resumed %q: %w", b.kind, err)}
 	}
 	sess := newACPSession(client, sid)
 	sess.info = info

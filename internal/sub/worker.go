@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/procx"
 )
 
 type WorkerConfig struct {
@@ -32,13 +34,6 @@ func (l *jobLog) Write(p []byte) (int, error) { l.mu.Lock(); defer l.mu.Unlock()
 
 // RunJob owns a single job from its queued state through durable terminal output.
 func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerConfig) (result Result, runErr error) {
-	st, err := store.Load(id)
-	if err != nil {
-		return result, err
-	}
-	if st.Status != StatusQueued {
-		return result, fmt.Errorf("job %s is %s, expected queued", id, st.Status)
-	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
@@ -46,12 +41,11 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		cfg.IdleTimeout = 10 * time.Minute
 	}
 	started := cfg.Now()
-	st.Status = StatusRunning
-	st.PID = os.Getpid()
-	st.UpdatedAt = started.UTC()
-	if err = store.Save(st); err != nil {
+	st, err := store.claim(ctx, id, started)
+	if err != nil {
 		return result, err
 	}
+
 	req := st.Request
 	result = Result{JobID: id, Harness: req.Harness, ModelRequested: req.Model, Access: req.Access, Status: StatusFailed, LogPath: store.LogPath(id)}
 	if h.Experimental != "" {
@@ -60,6 +54,12 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	unverifiedWarning := ""
 	// Persist the result before the terminal state, so waiters never observe a partial result.
 	defer func() {
+		p := recover()
+		if p != nil {
+			runErr = fmt.Errorf("worker panic: %v", p)
+			result.Status = StatusFailed
+			result.Warnings = append(result.Warnings, runErr.Error())
+		}
 		finished := cfg.Now()
 		elapsed := finished.Sub(started)
 		if elapsed < 0 {
@@ -67,31 +67,24 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		}
 		secs := int(elapsed.Seconds())
 		result.Duration = fmt.Sprintf("%dm%02ds", secs/60, secs%60)
-		data, e := json.MarshalIndent(result, "", "  ")
-		if e == nil {
-			e = os.WriteFile(store.ResultPath(id), append(data, '\n'), 0600)
-		}
-		if e != nil {
-			runErr = fmt.Errorf("write result: %w", e)
-			result.Status = StatusFailed
-		}
-		st.Status = result.Status
-		st.UpdatedAt = finished.UTC()
-		st.FinishedAt = finished.UTC()
+		reason := ""
 		if runErr != nil {
-			st.Error = runErr.Error()
+			reason = runErr.Error()
 		} else {
 			for _, warning := range result.Warnings {
 				// These warnings describe harness readiness, not a job error.
 				if warning != h.Experimental && warning != unverifiedWarning {
-					st.Error = warning
+					reason = warning
 					break
 				}
 			}
 		}
-		if e = store.Save(st); e != nil {
-			runErr = fmt.Errorf("save terminal state: %w", e)
+		if e := store.Finish(id, &result, reason, finished); e != nil {
+			runErr = fmt.Errorf("save terminal output: %w", e)
 		}
+		if p != nil {
+			panic(p)
+		} // subWorker records the stack; the result already has the cause.
 	}()
 	fail := func(err error) (Result, error) {
 		result.Warnings = append(result.Warnings, err.Error())
@@ -130,6 +123,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root))
 	// Startup follows cancellation. Once started, Interrupt gets a grace period before Close.
 	sessionCtx, stopSession := context.WithCancel(context.WithoutCancel(ctx))
+	sessionCtx = procx.WithLauncher(sessionCtx, func(cmd *exec.Cmd) error { return store.StartProcess(ctx, id, cmd) })
 	defer stopSession()
 	stopStartup := context.AfterFunc(ctx, stopSession)
 	backend := h.Backend()
@@ -145,25 +139,35 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	stopStartup()
 	if err != nil {
+		var identified interface{ SessionID() string }
+		if errors.As(err, &identified) {
+			result.SessionID = identified.SessionID()
+			if h.Conceal != nil && result.SessionID != "" {
+				if e := h.Conceal(ConcealContext{SessionID: result.SessionID, Cwd: req.Cwd}); e != nil {
+					result.Warnings = append(result.Warnings, "会话隐藏失败，会留在 harness 自己的会话列表里："+e.Error())
+				}
+			}
+		}
 		return fail(err)
 	}
 	defer sess.Close()
 	result.SessionID = sess.ThreadID()
-	workCtx, stopWork := context.WithCancel(sessionCtx)
+	workCtx, stopWork := context.WithCancel(ctx)
 	defer stopWork()
 	approvalErr := make(chan error, 1)
 	go func() {
 		approvals := sess.Approvals()
 		for {
 			select {
-			case <-workCtx.Done():
+			case <-sessionCtx.Done():
 				return
 			case a, ok := <-approvals:
 				if !ok {
 					return
 				}
 				decision := cockpit.DecisionAllow
-				if req.Access == "read-only" {
+				latest, stateErr := store.Load(id)
+				if req.Access == "read-only" || ctx.Err() != nil || stateErr != nil || latest.CancelRequested {
 					decision = cockpit.DecisionDeny
 				}
 				if a.Respond != nil {
@@ -179,7 +183,13 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		}
 	}()
 	promptErr := make(chan error, 1)
-	go func() { promptErr <- sess.Prompt(workCtx, cockpit.UserMessage{Text: req.Brief}) }()
+	go func() {
+		if err := workCtx.Err(); err != nil {
+			promptErr <- err
+			return
+		}
+		promptErr <- sess.Prompt(workCtx, cockpit.UserMessage{Text: req.Brief})
+	}()
 	var collector Collector
 	lastActivity := cfg.Now()
 	fingerprint := gitx.TreeFingerprint(req.Cwd)
@@ -200,6 +210,8 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		}
 	}()
 	interrupted := false
+	interruptDone := make(chan struct{})
+	graceExpired := false
 	canceled := false
 	turnFailed := false
 	interrupt := func(warning string) {
@@ -211,6 +223,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		grace = time.NewTimer(10 * time.Second)
 		deadline = grace.C
 		go func() {
+			defer close(interruptDone)
 			c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			_ = sess.Interrupt(c)
@@ -226,6 +239,7 @@ loop:
 			cancelCh = nil
 			interrupt("任务已取消")
 		case <-deadline:
+			graceExpired = true
 			break loop
 		case e := <-approvalErr:
 			interrupt("审批失败：" + e.Error())
@@ -256,6 +270,14 @@ loop:
 				result.Warnings = append(result.Warnings, message)
 			}
 		case <-ticker.C:
+			latest, e := store.Load(id)
+			if e != nil {
+				interrupt("读取 job 状态失败：" + e.Error())
+			} else if latest.CancelRequested && !canceled {
+				canceled = true
+				stopWork()
+				interrupt("任务已取消")
+			}
 			current := gitx.TreeFingerprint(req.Cwd)
 			if current != fingerprint {
 				fingerprint = current
@@ -264,6 +286,18 @@ loop:
 			if cfg.Now().Sub(lastActivity) >= cfg.IdleTimeout {
 				interrupt("空闲超时")
 			}
+		}
+	}
+	if ctx.Err() != nil {
+		canceled = true
+		interrupt("任务已取消")
+	}
+	// Prompt cancellation can generate a local terminal event before the remote
+	// turn ends. Let Interrupt reach the harness before teardown, within its grace.
+	if canceled && !graceExpired {
+		select {
+		case <-interruptDone:
+		case <-deadline:
 		}
 	}
 	if !collector.TurnDone {

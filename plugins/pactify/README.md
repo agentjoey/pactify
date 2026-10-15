@@ -35,7 +35,7 @@ The Claude main thread first writes a complete brief with Background, numbered g
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
 Require inspection of callers, special cases, and documented exceptions before changing rules, and a failing regression test before each behavior change. Do not change existing tests to accommodate new behavior unless the brief explicitly identifies the old behavior as wrong; name any such changes in the final reply.
 Forbid commits and credential access; optionally forbid subagents and report files.
-All four skills embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
+The four delegation skills embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
@@ -51,6 +51,23 @@ For rework, explicitly request `--resume --worktree`, preserving the original cw
 For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` / `pactify:agy` forwarding subagent:
 it uses `model: haiku`, has only Bash, calls Bash once, and returns stdout verbatim. After a timeout, the main thread continues waiting.
 The callee leaves changes uncommitted for the host to review.
+
+## Viewing delegation jobs
+
+Use `/jobs` (or `/pactify:jobs`) to view the latest 10 jobs across repositories in a compact
+table: title/issue, harness, status, repository and access/worktree mode, tokens, and activity
+or attention. Running jobs appear first; pending matters are highlighted with next-step suggestions.
+`/jobs all` reads all jobs but shows at most 20 rows within about 30 lines, counting the rest.
+`/jobs <id>` shows one job's result excerpt, last 20 log lines, recorded diff statistics and
+direct resume links. The namespaced forms also accept `all` or a job id.
+
+The jobs skill is read-only: it never applies, discards, cancels or resumes jobs.
+Suggestions follow the review workflow below: inspect the full diff and new files, personally
+rerun acceptance including the full test suite, then apply after approval. Rework uses the
+same worktree with `--resume --worktree` after confirming the selected session.
+Lists use `pactify sub status --json` (`--all` for all jobs); see the
+[summary field contract](../../docs/sub-status.md). JSON is projected locally before entering
+the conversation; list mode does not load individual results or logs.
 
 ## Reviewing a delegation
 

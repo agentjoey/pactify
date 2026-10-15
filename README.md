@@ -73,6 +73,14 @@ Phase 0 large tasks completed in one attempt 6/10, and read-only work did not co
 kimi results include an informational warning; `kimi --read-only` still exits 2.
 See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.
 
+Use `/jobs` (or `/pactify:jobs`) in Claude Code to see the latest 10 delegation jobs,
+running jobs first, with activity, tokens and next-step suggestions. `/jobs all` shows a
+bounded overview of all jobs; `/jobs <id>` shows result excerpts, a log tail, diff statistics
+and resume links. This skill is read-only and never applies, discards, cancels or resumes
+jobs. Suggestions require reviewing changes and personally rerunning acceptance, including
+the full test suite, before apply. See the [jobs skill](plugins/pactify/skills/jobs/SKILL.md)
+and [status JSON contract](docs/sub-status.md).
+
 Delegated codex sessions use a minimal configuration by default: user MCP servers,
 plugins, skills and memories are disabled for that process. Authentication, model
 provider, sandbox settings and global/repository `AGENTS.md` discovery are retained.

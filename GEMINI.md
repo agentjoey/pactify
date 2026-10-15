@@ -66,7 +66,7 @@ codesign --force -s - ./pactify          # ⚠️ 给 launchd 跑之前必做（
 - **视觉门**：UI 改动提交前必须 playwright 截图实测（`node web/scripts/shots.mjs [view]`；escalated/review-gate 等无法按需触发的态用 `live-gate-shot.mjs` 注入 mock）——vitest/tsc 绿 ≠ 视觉对。要证明截图来自**最终 build**（而非长驻 daemon 可能提供的陈旧 dist）用 `node web/scripts/shot-dispatch-review.mjs`——它 spawn hermetic 的 `e2e/mock-server.mjs`，直接服务 `internal/serve/dist`。
 
 <!-- pact:begin (managed by pactify — edit outside this block) -->
-<!-- pact:kinds: gemini-cli -->
+<!-- pact:kinds: antigravity -->
 
 # pact protocol
 

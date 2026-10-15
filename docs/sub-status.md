@@ -74,3 +74,16 @@ worktree 的 `applied` 是一次成功 apply 的持久化记录（空补丁的�
 失败、取消、空闲超时或连接提前关闭时，保留已收到的用量，保守标记 `usagePartial: true`，并在 result 中警告 `Usage may be incomplete; only recorded usage is included`。用量独立核实失败也设置同一标记，不改变任务的成功状态。尚未启动就取消的 job 不因此标记 partial。worker 本身消失时，兜底结果从日志中的完整事件恢复用量；opencode 的日志成本是会话累计值，无法还原本 job 的 export 边界，因此不作为本 job 成本。
 
 State 沿用原子 rename 约定，status 沿用现有 Recover 和生命周期锁处理失联 worker。JSON 摘要遇到缺失或损坏的 result 仍显示 job，结果字段留空或为 0；人类输出中的全量用量汇总继续对损坏/缺失的终态 result 报错，不静默给出不完整汇总。旧 job 缺少新增元数据时正常输出。
+
+列表查询跳过尚未写入 `state.json` 的 job 目录（包含 `/jobs` 所用的
+`sub status --all --json`）；直接查询该 job 仍报告状态文件缺失。
+
+面板日志流首次连接只读最后 1 MiB，忽略窗口截断的首条记录，最多展示 100 行；
+之后从当前偏移增量读取。跟随模式中单条记录最多保留 64 KiB，超长行截断；
+没有新字节时不复制未完成的行。CLI 非跟随读取及显式 `--tail -1` 的完整历史读取保留。
+
+worker 每 100 ms 将后代进程的 PID 和内核启动时间保存到 `state.json`，
+包括已观察到的独立进程组，并继续跟踪仍存活的已保存后代。恢复时合并实时快照，
+逐个校验身份后清理；确认已登记的进程退出后才删除 job TMPDIR。
+检查、持久化或终止失败时保留 TMPDIR。周期快照仍有采样间隙，不能保证记录到
+在两次采样间创建并立即脱离整个已知进程树的进程。

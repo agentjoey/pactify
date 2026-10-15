@@ -240,3 +240,17 @@ func TestSubStatusUsageRejectsBrokenResults(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityStatusSkipsIncompleteDirectory(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	store, _ := statusFixture(t, "valid", "codex", time.Now(), &sub.Result{Status: sub.StatusSucceeded})
+	if err := os.Mkdir(store.Dir("half-created"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, jsonOut := range []bool{true, false} {
+		out, code, err := captureStatus(t, nil, jsonOut)
+		if err != nil || code != 0 || !strings.Contains(out, "valid") {
+			t.Fatalf("status: %d %v %s", code, err, out)
+		}
+	}
+}

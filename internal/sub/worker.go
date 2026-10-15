@@ -153,11 +153,28 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if err != nil {
 		return fail(err)
 	}
+	var layouts []*managedHome
+	// Release home leases only after process cleanup, including detached tools.
+	defer func() {
+		for _, layout := range layouts {
+			result.Warnings = append(result.Warnings, layout.Cleanup()...)
+		}
+	}()
 	if err := store.prepareJobTemp(ctx, id); err != nil {
 		return fail(err)
 	}
+	stopTracking := store.trackProcesses(id)
 	defer func() {
-		if err := store.cleanupJobTemp(id); err != nil {
+		trackErr := stopTracking()
+		current, loadErr := store.Load(id)
+		cleanupErr := errors.Join(trackErr, loadErr)
+		if loadErr == nil {
+			cleanupErr = errors.Join(cleanupErr, current.KillHarnesses())
+		}
+		if cleanupErr == nil {
+			cleanupErr = store.cleanupJobTemp(id)
+		}
+		if err := cleanupErr; err != nil {
 			result.Warnings = append(result.Warnings, "Job temp cleanup failed: "+err.Error())
 		}
 	}()
@@ -174,14 +191,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	minimalHome := h.Home != nil && opts.MinimalConfig
 	if h.Home != nil {
 		var env []string
-		var layouts []*managedHome
 		var homes map[string]string
 		harnessHome, homes, env, layouts, err = prepareHarnessHomes(ctx, h.Home, harnessHome, st.HarnessHomes, minimalHome)
-		defer func() {
-			for _, layout := range layouts {
-				result.Warnings = append(result.Warnings, layout.Cleanup()...)
-			}
-		}()
+
 		if err != nil {
 			return fail(err)
 		}

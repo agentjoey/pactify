@@ -1,3 +1,4 @@
+import { panelFetch, streamLogs } from "./auth";
 import { useEffect, useState } from "react";
 
 export interface Job {
@@ -226,7 +227,7 @@ export function LogView({
         {lines.length ? lines.join("\n") : "Waiting for logs…"}
       </pre>
       <p className="panel-caption">
-        Starts with the last 100 lines and keeps up to 1,000 lines. Use the CLI
+        Starts within the last 1 MiB (up to 100 lines) and keeps up to 1,000 lines. Use the CLI
         for the full log.
       </p>
     </section>
@@ -242,13 +243,7 @@ export function splitDiff(patch: string): { name: string; patch: string }[] {
     }));
 }
 async function getJSON<T>(path: string, signal: AbortSignal): Promise<T> {
-  const response = await fetch(path, { signal });
-  if (!response.ok)
-    throw new Error(
-      response.status === 401
-        ? "Access expired. Run pactify sub panel again and open the printed URL."
-        : `Failed to load (${response.status}). Retrying shortly.`,
-    );
+  const response = await panelFetch(path, signal);
   return response.json() as Promise<T>;
 }
 function CopyCommand({ command }: { command: string }) {
@@ -331,31 +326,16 @@ function JobDetail({ id }: { id: string }) {
     };
   }, [id]);
   useEffect(() => {
-    const stream = new EventSource(`/api/jobs/${encodeURIComponent(id)}/logs`);
-    stream.onopen = () => setLogStatus("Connected");
-    stream.onmessage = (e) => {
-      try {
-        const line: unknown = JSON.parse(e.data);
-        if (typeof line === "string")
-          setLines((current) => [...current, line].slice(-1000));
-      } catch {
-        setLogStatus("Could not parse log entry");
-      }
-    };
-    stream.addEventListener("done", () => {
-      setLogStatus("Finished");
-      stream.close();
+    const controller = new AbortController();
+    void streamLogs(
+      `/api/jobs/${encodeURIComponent(id)}/logs`,
+      controller.signal,
+      (line) => setLines((current) => [...current, line].slice(-1000)),
+      setLogStatus,
+    ).catch((error: Error) => {
+      if (!controller.signal.aborted) setLogStatus(error.message);
     });
-    stream.addEventListener("log-error", () =>
-      setLogStatus("Failed to read logs. Reload to retry."),
-    );
-    // EventSource's automatic reconnect would replay the initial tail. Close on
-    // transport failure and let an explicit reload start a fresh stream.
-    stream.onerror = () => {
-      setLogStatus("Connection lost. Reload to retry.");
-      stream.close();
-    };
-    return () => stream.close();
+    return () => controller.abort();
   }, [id]);
   return (
     <>

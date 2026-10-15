@@ -95,3 +95,32 @@ test("panel mobile wraps long titles and repository paths", async ({
     ),
   ).toBe(true);
 });
+
+test("panel exchanges launch metadata and keeps bearer authentication after refresh", async ({ page }) => {
+  await page.route("**/?token=one-time-launch", async (route) => {
+    const response = await route.fetch();
+    const html = (await response.text()).replace(
+      "</head>",
+      '<meta name="pactify-session" content="tab-session"></head>',
+    );
+    await route.fulfill({ response, body: html });
+  });
+  const authorizedJobs = () => page.waitForRequest((request) =>
+    request.url().includes("/api/jobs?all=1") &&
+    request.headers().authorization === "Bearer tab-session",
+  );
+  let jobs = authorizedJobs();
+  await page.goto("/?token=one-time-launch");
+  await jobs;
+  await expect(page).toHaveURL(/\/$/);
+  jobs = authorizedJobs();
+  await page.reload();
+  await jobs;
+  const logs = page.waitForRequest((request) =>
+    request.url().endsWith("/api/jobs/job-panel/logs") &&
+    request.headers().authorization === "Bearer tab-session",
+  );
+  await page.getByRole("link", { name: "AJ-659 · Local read-only job panel" }).click();
+  await logs;
+  await expect(page.getByRole("log")).toContainText("message Tests passed.");
+});

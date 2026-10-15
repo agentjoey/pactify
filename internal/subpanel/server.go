@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/sub"
@@ -27,9 +28,11 @@ import (
 var assets embed.FS
 
 type Server struct {
-	store  sub.Store
-	token  string
-	cookie string
+	store       sub.Store
+	token       string
+	launchToken string
+	tokenMu     sync.Mutex
+	exchanged   bool
 }
 
 type Detail struct {
@@ -46,7 +49,10 @@ func New(store sub.Store) (*Server, error) {
 		return nil, err
 	}
 	token := hex.EncodeToString(secret[:])
-	return &Server{store: store, token: token, cookie: "pactify_panel_" + token[:12]}, nil
+	if _, err := rand.Read(secret[:]); err != nil {
+		return nil, err
+	}
+	return &Server{store: store, token: token, launchToken: hex.EncodeToString(secret[:])}, nil
 }
 
 // Listen deliberately has no host option: even a specified port stays on IPv4 loopback.
@@ -57,7 +63,7 @@ func Listen(port int) (net.Listener, error) {
 	return net.Listen("tcp4", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
 }
 func (s *Server) URL(ln net.Listener) string {
-	return "http://" + ln.Addr().String() + "/?token=" + s.token
+	return "http://" + ln.Addr().String() + "/?token=" + s.launchToken
 }
 
 func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
@@ -89,11 +95,20 @@ func (s *Server) matches(token string) bool {
 	return subtle.ConstantTimeCompare([]byte(token), []byte(s.token)) == 1
 }
 func (s *Server) authenticated(r *http.Request) bool {
-	if s.matches(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")) {
-		return true
+	auth := r.Header.Get("Authorization")
+	return strings.HasPrefix(auth, "Bearer ") && s.matches(strings.TrimPrefix(auth, "Bearer "))
+}
+
+// exchange consumes the launch secret atomically. The independent session secret
+// is delivered only in this response, never in cookies or redirect URLs.
+func (s *Server) exchange(token string) bool {
+	s.tokenMu.Lock()
+	defer s.tokenMu.Unlock()
+	if s.exchanged || subtle.ConstantTimeCompare([]byte(token), []byte(s.launchToken)) != 1 {
+		return false
 	}
-	cookie, err := r.Cookie(s.cookie)
-	return err == nil && s.matches(cookie.Value)
+	s.exchanged = true
+	return true
 }
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -117,15 +132,20 @@ func (s *Server) Handler() http.Handler {
 			return
 		}
 		if r.Method == http.MethodGet && r.URL.Path == "/" && r.URL.Query().Has("token") {
-			if !s.matches(r.URL.Query().Get("token")) {
+			if !s.exchange(r.URL.Query().Get("token")) {
 				http.Error(w, "unauthorized", 401)
 				return
 			}
-			http.SetCookie(w, &http.Cookie{Name: s.cookie, Value: s.token, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})
-			http.Redirect(w, r, "/", http.StatusSeeOther)
+			page, err := fs.ReadFile(root, "index.html")
+			if err != nil {
+				apiError(w, err)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = io.WriteString(w, strings.Replace(string(page), "</head>", `<meta name="pactify-session" content="`+s.token+`"></head>`, 1))
 			return
 		}
-		if !s.authenticated(r) {
+		if strings.HasPrefix(r.URL.Path, "/api/") && !s.authenticated(r) {
 			http.Error(w, "unauthorized", 401)
 			return
 		}
@@ -160,6 +180,9 @@ func (s *Server) states() ([]sub.State, error) {
 			continue
 		}
 		st, err := s.store.Load(entry.Name())
+		if os.IsNotExist(err) {
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}

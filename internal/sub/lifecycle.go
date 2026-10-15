@@ -157,7 +157,11 @@ func (s Store) Finish(id string, result *Result, reason string, finished time.Ti
 			return json.Unmarshal(data, result)
 		}
 		if st.TempDirOwned {
-			if err := s.cleanupJobTemp(id); err != nil {
+			cleanupErr := st.KillHarnesses()
+			if cleanupErr == nil {
+				cleanupErr = s.cleanupJobTemp(id)
+			}
+			if err := cleanupErr; err != nil {
 				warning := "Job temp cleanup failed: " + err.Error()
 				if !slices.Contains(result.Warnings, warning) {
 					result.Warnings = append(result.Warnings, warning)
@@ -276,13 +280,111 @@ func (s Store) failStoppedWorkerLocked(st *State, reason string) error {
 	return errors.Join(killErr, cleanupErr, finishErr)
 }
 
-// KillHarnesses reaps the independent groups registered before protocol startup.
+// KillHarnesses combines durable snapshots with a last snapshot before stopping
+// leaders, so detached groups are still owned after their ancestry disappears.
 func (st State) KillHarnesses() error {
 	var cleanupErr error
+	if st.ProcessTrackingError != "" {
+		cleanupErr = errors.New(st.ProcessTrackingError)
+	}
+	descendants := append([]procx.Identity(nil), st.Descendants...)
+	for _, p := range append(append([]procx.Identity(nil), st.Processes...), st.Descendants...) {
+		found, err := procx.Descendants(p)
+		cleanupErr = errors.Join(cleanupErr, err)
+		for _, child := range found {
+			if !slices.Contains(descendants, child) {
+				descendants = append(descendants, child)
+			}
+		}
+	}
 	for _, p := range st.Processes {
 		if err := p.Signal(syscall.SIGKILL, true); err != nil {
 			cleanupErr = errors.Join(cleanupErr, fmt.Errorf("kill harness %d: %w", p.PID, err))
 		}
 	}
+	cleanupErr = errors.Join(cleanupErr, procx.TerminateDescendants("job", descendants, 200*time.Millisecond))
+	remaining, err := procx.WaitDescendants("harness", st.Processes, 200*time.Millisecond)
+	cleanupErr = errors.Join(cleanupErr, err)
+	if len(remaining) > 0 {
+		cleanupErr = errors.Join(cleanupErr, fmt.Errorf("%d harness processes still alive", len(remaining)))
+	}
 	return cleanupErr
+}
+
+// snapshotDescendants retains live identities even after they are reparented.
+// An inspection failure is latched: subsequent snapshots cannot prove that no
+// process escaped during that gap, so temp cleanup must remain conservative.
+func (s Store) snapshotDescendants(id string) error {
+	return s.WithState(context.Background(), id, func(st *State) error {
+		if Terminal(st.Status) {
+			return nil
+		}
+		var descendants []procx.Identity
+		var snapshotErr error
+		for _, p := range st.Descendants {
+			alive, err := p.Alive()
+			snapshotErr = errors.Join(snapshotErr, err)
+			if alive || err != nil {
+				descendants = append(descendants, p)
+			}
+		}
+		roots := append(append([]procx.Identity(nil), st.Processes...), descendants...)
+		seen := map[procx.Identity]bool{}
+		for _, p := range roots {
+			if seen[p] {
+				continue
+			}
+			seen[p] = true
+			found, err := procx.Descendants(p)
+			snapshotErr = errors.Join(snapshotErr, err)
+			for _, child := range found {
+				seen[child] = true
+				if !slices.Contains(descendants, child) {
+					descendants = append(descendants, child)
+				}
+			}
+		}
+		if snapshotErr != nil && st.ProcessTrackingError == "" {
+			st.ProcessTrackingError = snapshotErr.Error()
+		}
+		if slices.Equal(st.Descendants, descendants) && snapshotErr == nil {
+			return nil
+		}
+		st.Descendants = descendants
+		return errors.Join(snapshotErr, s.Save(*st))
+	})
+}
+
+func (s Store) trackProcesses(id string) func() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		var trackErr error
+		for {
+			if err := s.snapshotDescendants(id); err != nil && trackErr == nil {
+				trackErr = err
+			}
+			select {
+			case <-ctx.Done():
+				if trackErr != nil {
+					// Include persistence failures, not just inspection failures, in the
+					// durable cleanup decision. Do not retain one error per polling tick.
+					err := s.WithState(context.Background(), id, func(st *State) error {
+						if st.ProcessTrackingError != "" {
+							return nil
+						}
+						st.ProcessTrackingError = trackErr.Error()
+						return s.Save(*st)
+					})
+					trackErr = errors.Join(trackErr, err)
+				}
+				done <- trackErr
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+	return func() error { cancel(); return <-done }
 }

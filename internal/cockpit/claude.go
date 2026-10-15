@@ -41,8 +41,8 @@ func (b *claudeBackend) Resume(ctx context.Context, threadID string) (Session, e
 
 // claudeSession owns one Claude host process and its JSON-RPC connection.
 type claudeSession struct {
-	rpc *rpcConn
-	cmd *exec.Cmd
+	rpc     *rpcConn
+	process *processGroup
 
 	mu       sync.RWMutex
 	threadID string
@@ -88,8 +88,8 @@ func (s *claudeSession) Close() error {
 		if s.rpc != nil {
 			s.closeErr = s.rpc.Close()
 		}
-		if s.cmd != nil {
-			killGroup(s.cmd)
+		if s.process != nil {
+			_ = s.process.kill()
 		}
 		close(s.events)
 		close(s.approvals)
@@ -258,7 +258,8 @@ func spawnClaudeSession(ctx context.Context, hostPath string, opts StartOpts, re
 	cmd.Env = filteredEnviron()
 	cmd.Stderr = os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { killGroup(cmd); return nil }
+	group := &processGroup{}
+	cmd.Cancel = group.kill
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -268,19 +269,19 @@ func spawnClaudeSession(ctx context.Context, hostPath string, opts StartOpts, re
 	if err != nil {
 		return nil, fmt.Errorf("claude: stdout pipe: %w", err)
 	}
-	if err := cmd.Start(); err != nil {
+	if err := group.start(ctx, cmd); err != nil {
 		return nil, fmt.Errorf("claude: start host: %w", err)
 	}
 
 	s := &claudeSession{
-		cmd:       cmd,
+		process:   group,
 		events:    make(chan Event, 64),
 		approvals: make(chan ApprovalRequest, 16),
 	}
 
 	closeFn := func() error {
 		_ = stdin.Close()
-		killGroup(cmd)
+		_ = group.kill()
 		return nil
 	}
 	s.rpc = newRPCConn(stdin, stdout, closeFn, s.handleRequest, s.handleNotification)

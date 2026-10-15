@@ -81,16 +81,12 @@ func TestAuthenticationAndReadOnlyRoutes(t *testing.T) {
 	if w := request(s, "GET", "/api/jobs?token="+s.token, ""); w.Code != 401 {
 		t.Fatal("API accepted query token")
 	}
-	w := request(s, "GET", "/?token="+s.token, "")
-	if w.Code != 303 || w.Header().Get("Location") != "/" {
+	w := request(s, "GET", "/?token="+s.launchToken, "")
+	if w.Code != 200 || len(w.Result().Cookies()) != 0 || !strings.Contains(w.Body.String(), `content="`+s.token+`"`) {
 		t.Fatalf("exchange: %d %v", w.Code, w.Header())
 	}
-	cookies := w.Result().Cookies()
-	if len(cookies) != 1 || !cookies[0].HttpOnly || cookies[0].SameSite != http.SameSiteStrictMode {
-		t.Fatal("unsafe cookie")
-	}
 	r := httptest.NewRequest("GET", "http://127.0.0.1/api/jobs", nil)
-	r.AddCookie(cookies[0])
+	r.Header.Set("Authorization", "Bearer "+s.token)
 	out := httptest.NewRecorder()
 	s.Handler().ServeHTTP(out, r)
 	if out.Code != 200 {
@@ -294,7 +290,7 @@ func TestListenAndShutdown(t *testing.T) {
 		t.Fatal(ln.Addr())
 	}
 	u, _ := url.Parse(s.URL(ln))
-	if u.Query().Get("token") != s.token {
+	if u.Query().Get("token") != s.launchToken {
 		t.Fatal(u)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -374,28 +370,20 @@ func TestDiffNeverFollowsUntrackedSymlinks(t *testing.T) {
 	}
 }
 
-func TestPanelCookieIsScopedToLaunch(t *testing.T) {
+func TestPanelSessionIsScopedToLaunch(t *testing.T) {
 	s, _ := fixture(t)
-	exchange := request(s, "GET", "/?token="+s.token, "")
-	cookie := exchange.Result().Cookies()[0]
+	if w := request(s, "GET", "/?token="+s.launchToken, ""); w.Code != 200 {
+		t.Fatal(w.Code)
+	}
 	next, err := New(s.store)
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := httptest.NewRequest("GET", "http://127.0.0.1/api/jobs", nil)
-	r.AddCookie(cookie)
-	w := httptest.NewRecorder()
-	next.Handler().ServeHTTP(w, r)
-	if w.Code != 401 {
-		t.Fatal("previous launch cookie accepted")
+	if w := request(next, "GET", "/api/jobs", s.token); w.Code != 401 {
+		t.Fatal("previous launch session accepted")
 	}
-	cookie.Value = "wrong"
-	r = httptest.NewRequest("GET", "http://127.0.0.1/api/jobs", nil)
-	r.AddCookie(cookie)
-	w = httptest.NewRecorder()
-	s.Handler().ServeHTTP(w, r)
-	if w.Code != 401 {
-		t.Fatal("incorrect cookie accepted")
+	if w := request(s, "GET", "/api/jobs", "wrong"); w.Code != 401 {
+		t.Fatal("incorrect session accepted")
 	}
 	if w := request(s, "GET", "/?token=wrong", ""); w.Code != 401 || len(w.Result().Cookies()) != 0 {
 		t.Fatal("invalid exchange accepted")

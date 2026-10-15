@@ -107,7 +107,7 @@ func cliVersion(bin string) func(context.Context) (string, error) {
 
 // The opt-in fixture exercises the detached CLI lifecycle without an installed agent.
 func fakeHarness() Harness {
-	return Harness{Name: "fake", Kind: "codex-cli", Backend: func() cockpit.Backend { return fixtureBackend{} }, Version: func(context.Context) (string, error) { return "test", nil }, Verify: func(_ string, i cockpit.SessionInfo) (string, int, int, bool) { return i.Model, 0, 0, i.Model != "" }}
+	return Harness{Name: "fake", HidesItself: true, Kind: "codex-cli", Backend: func() cockpit.Backend { return fixtureBackend{} }, Version: func(context.Context) (string, error) { return "test", nil }, Verify: func(_ string, i cockpit.SessionInfo) (string, int, int, bool) { return i.Model, 0, 0, i.Model != "" }}
 }
 
 type fixtureBackend struct{}
@@ -146,6 +146,8 @@ func (s *fixtureSession) Prompt(context.Context, cockpit.UserMessage) error {
 				return
 			}
 		}
+		s.events <- cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 10, OutputTokens: 1}}
+		s.events <- cockpit.Event{Kind: cockpit.EventTool, Tool: &cockpit.ToolEvent{Phase: "start"}}
 		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "DONE"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}()

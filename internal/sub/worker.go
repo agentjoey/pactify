@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -56,6 +57,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if h.Experimental != "" {
 		result.Warnings = append(result.Warnings, h.Experimental)
 	}
+	unverifiedWarning := ""
 	// Persist the result before the terminal state, so waiters never observe a partial result.
 	defer func() {
 		finished := cfg.Now()
@@ -80,8 +82,8 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			st.Error = runErr.Error()
 		} else {
 			for _, warning := range result.Warnings {
-				// Experimental describes the harness, not a job error.
-				if warning != h.Experimental {
+				// These warnings describe harness readiness, not a job error.
+				if warning != h.Experimental && warning != unverifiedWarning {
 					st.Error = warning
 					break
 				}
@@ -113,6 +115,10 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			result.Warnings = append(result.Warnings, fmt.Sprintf("CLI 版本变化：%s → %s", previous, result.CLIVersion))
 		}
 	}
+	unverifiedWarning = unverifiedVersionWarning(filepath.Dir(store.Root), h, result.CLIVersion)
+	if unverifiedWarning != "" {
+		result.Warnings = append(result.Warnings, unverifiedWarning)
+	}
 	file, err := os.OpenFile(store.LogPath(id), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		return fail(err)
@@ -121,6 +127,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	log := &jobLog{w: file}
 	encoder := json.NewEncoder(log)
 	opts := cockpit.StartOpts{RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
+	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root))
 	// Startup follows cancellation. Once started, Interrupt gets a grace period before Close.
 	sessionCtx, stopSession := context.WithCancel(context.WithoutCancel(ctx))
 	defer stopSession()

@@ -1,1 +1,0 @@
-ALTER TABLE "Run" ADD COLUMN "title" TEXT;

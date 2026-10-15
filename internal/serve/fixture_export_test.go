@@ -15,26 +15,8 @@ const (
 	stateGoldenFile  = "state-golden.json"
 )
 
-func goldenTestdataDir(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return filepath.Join(dir, "cloud", "pact-project", "testdata")
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("cannot find repo root (.git)")
-		}
-		dir = parent
-	}
-}
-
 func TestFixtureExport(t *testing.T) {
-	td := goldenTestdataDir(t)
+	td := "testdata"
 	eventsPath := filepath.Join(td, eventsGoldenFile)
 	statePath := filepath.Join(td, stateGoldenFile)
 

@@ -11,11 +11,6 @@ concurrency:
 
 jobs:
   test:
-    # 25, not 15. Measured (run 33863178072, the first run that finished): with a
-    # warm pnpm cache this job is ~10 min, and a slow runner day pushed the
-    # 15-minute version past its ceiling with every test already green. The pnpm
-    # cache below cuts the common case (cloud deps 312s → 8s); the ceiling is the
-    # headroom for a cold one. The ~340s cloud step now runs in its own job.
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -28,18 +23,6 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
-      # The pnpm store had NO cache in either job, so this install paid full
-      # network cost on every run (237s in e2e, 308s here, same commit).
-      - name: cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('cloud/pnpm-lock.yaml') }}
-          restore-keys: pnpm-${{ runner.os }}-
-      # web bundles cloud/* source (vite alias), which imports @noble/@scure —
-      # so cloud deps must be present before ANY web build/type-check/test.
-      - name: install cloud workspace deps
-        run: cd cloud && npx pnpm@10 install --frozen-lockfile --store-dir ~/.pnpm-store
       - name: install web deps
         run: cd web && npm ci
       - name: go mod tidy check
@@ -70,44 +53,6 @@ jobs:
           git diff --exit-code -- internal/serve/dist || {
             echo "::error::internal/serve/dist is stale — run 'cd web && npm run build' and commit it"; exit 1; }
 
-  # Split out of `test` (2026-09-04): this step is ~340s and depends only on the
-  # cloud workspace — no Go, no web. Sitting last in `test` it was the step the
-  # job timeout always cut, so it went a long time without ever running to
-  # completion (its "12s" in the run 33861706998 timings was a CANCELLED step,
-  # not a fast one). As its own job it runs in parallel and cannot be starved.
-  cloud:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - name: cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('cloud/pnpm-lock.yaml') }}
-          restore-keys: pnpm-${{ runner.os }}-
-      - name: install cloud workspace deps
-        run: cd cloud && npx pnpm@10 install --frozen-lockfile --store-dir ~/.pnpm-store
-      - name: cloud workspace (wire + relay tests + type-check)
-        run: |
-          cd cloud
-          # Build the relay AND its workspace deps in dependency order — the
-          # `relay...` filter selects relay plus everything it depends on (wire ←
-          # crypto ← relay) and builds them topologically. Their package entries
-          # resolve to dist/, so vitest can't load them unbuilt: crypto is imported
-          # by identity-link.test.ts, wire by the ingest path, and crypto itself
-          # imports wire (so wire must build first). This build also runs relay's
-          # prisma generate + tsc type-check.
-          npx pnpm@10 --filter "@pactify-apps/relay..." build
-          npx pnpm@10 --filter @pactify-apps/wire test
-          # Run the relay suite on PGlite (no external DB) so tenant-isolation /
-          # auth regressions (e.g. the C1/H3 security tests) actually gate CI —
-          # previously the relay was only type-checked, never run.
-          npx pnpm@10 --filter @pactify-apps/relay test
-
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -118,15 +63,6 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - name: cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('cloud/pnpm-lock.yaml') }}
-          restore-keys: pnpm-${{ runner.os }}-
-      # e2e builds web too → same cloud-deps prerequisite as the test job.
-      - name: install cloud workspace deps
-        run: cd cloud && npx pnpm@10 install --frozen-lockfile --store-dir ~/.pnpm-store
       - name: install web deps
         run: cd web && npm ci
       - name: install chromium

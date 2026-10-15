@@ -3,7 +3,7 @@
 > Last updated: **2026-10-16** | Status: **v0.12.0 已发布**；M1 已合入但未发布，v0.13.0 挂起、继续内部自用。历史与未发布变更见 [`CHANGELOG.md`](CHANGELOG.md)。
 >
 > 产品主线为 harness 路由器，当前支持 codex（默认）及实验性的 kimi、agy、opencode，见 [`specs/harness-subagents.md`](specs/harness-subagents.md)。下文保留的编排架构已冻结；单一规范账本暂停在 WS-B（flag 默认关）。
-> 云端 Go 与 web 部分已删除，`cloud/` 及 CI 保留，去向待定（AJ-664）；gemini-cli 已移除（#106、#107）。
+> 云端 Go、web 与共享 workspace 及其构建 / 发布 CI 已删除（AJ-664）；gemini-cli 已移除（#106、#107）。
 
 ## Overview
 

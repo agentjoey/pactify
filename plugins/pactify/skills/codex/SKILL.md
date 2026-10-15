@@ -16,6 +16,10 @@ each delegation carries a fixed cost of tens of thousands of tokens on the calle
    goal; relevant file paths; constraints (what must not change); acceptance criteria (exact commands to run);
    whether it is read-only. Explicitly forbid committing code; leave changes in the workspace for the host
    to review. Do not include credentials or ask the callee to inspect them.
+   The acceptance commands must include the project's **full** test command (e.g. `go test ./...`), not just
+   the packages you expect to change: callees break callers in other packages, and a narrow command hides it.
+   State any non-obvious invariant you know of (reserved names, special cases) — the callee cannot infer it.
+   Do not edit existing tests to fit the new behavior unless the brief says the old behavior is wrong.
 2. Start it from the **main thread** (not a subagent — a subagent's background command notifies only that
    subagent). The worker runs in the background:
 
@@ -28,9 +32,13 @@ each delegation carries a fixed cost of tens of thousands of tokens on the calle
    Use a quoted heredoc delimiter absent from the brief. Never silently choose a different model.
    It exits 3 immediately with `{"jobId": ...}`. This means pending, not failure. Parse the job id from
    stdout. For any other error, report the error and available models if supplied; do not blindly retry.
-   Then run, with `run_in_background: true`:
+   Then run, with `run_in_background: true` **and `timeout: 7200000`** (a background command
+   otherwise stops at the default ~10-minute limit while the job keeps running):
 
        pactify sub wait <jobId>
+
+   If the background command is reported as stopped (time limit) rather than completed, the
+   job is still running: check `pactify sub status`, then start the same wait again.
 
 3. When the background command completes, read its output: the result summary. The first line carries any
    warning (model mismatch, tool-call limit, idle timeout). Review the diff it lists before building on it.
@@ -41,4 +49,4 @@ each delegation carries a fixed cost of tens of thousands of tokens on the calle
 For a quick task you are willing to block on (under ~9 minutes), you may instead delegate the complete
 brief to the `pactify:codex` subagent, which calls `pactify sub run codex --wait 540s --json` once and
 returns stdout verbatim. If it returns a pending job id (exit 3), the main thread must still run
-`pactify sub wait <jobId>` with `run_in_background: true` to collect the result.
+`pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.

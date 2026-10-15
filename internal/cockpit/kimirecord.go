@@ -2,6 +2,7 @@ package cockpit
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,7 +24,7 @@ func ReadKimiRecord(kimiHome, sessionID string) (KimiRecord, error) {
 	var record KimiRecord
 	index := filepath.Join(kimiHome, "session_index.jsonl")
 	sessionDir := ""
-	err := readKimiLines(index, func(line []byte) error {
+	err := readKimiLines(index, false, func(line []byte) error {
 		var entry struct {
 			SessionID  string `json:"sessionId"`
 			SessionDir string `json:"sessionDir"`
@@ -43,7 +44,7 @@ func ReadKimiRecord(kimiHome, sessionID string) (KimiRecord, error) {
 		return record, fmt.Errorf("kimi session %q not found in %s", sessionID, index)
 	}
 	seen := map[string]bool{}
-	err = readKimiLines(filepath.Join(sessionDir, "agents", "main", "wire.jsonl"), func(line []byte) error {
+	err = readKimiLines(filepath.Join(sessionDir, "agents", "main", "wire.jsonl"), true, func(line []byte) error {
 		var entry struct {
 			Type       string `json:"type"`
 			Model      string `json:"model"`
@@ -85,7 +86,7 @@ func ReadKimiRecord(kimiHome, sessionID string) (KimiRecord, error) {
 	return record, nil
 }
 
-func readKimiLines(path string, visit func([]byte) error) error {
+func readKimiLines(path string, allowTruncatedTail bool, visit func([]byte) error) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -94,16 +95,26 @@ func readKimiLines(path string, visit func([]byte) error) error {
 	r := bufio.NewReader(f)
 	for lineNo := 1; ; lineNo++ {
 		line, err := r.ReadBytes('\n')
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("read %s: %w", path, err)
+		}
 		if len(line) > 0 && string(line) != "\n" {
 			if parseErr := visit(line); parseErr != nil {
+				if allowTruncatedTail {
+					// Decode distinguishes incomplete JSON from corruption; Peek also
+					// detects EOF when the final line has a trailing newline.
+					var raw json.RawMessage
+					if json.NewDecoder(bytes.NewReader(bytes.TrimSpace(line))).Decode(&raw) == io.ErrUnexpectedEOF {
+						if _, peekErr := r.Peek(1); peekErr == io.EOF {
+							return nil
+						}
+					}
+				}
 				return fmt.Errorf("%s:%d: %w", path, lineNo, parseErr)
 			}
 		}
 		if err == io.EOF {
 			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("read %s: %w", path, err)
 		}
 	}
 }

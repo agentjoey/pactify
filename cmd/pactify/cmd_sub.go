@@ -111,11 +111,15 @@ func newSubCmd() *cobra.Command {
 	return command
 }
 func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool) (int, error) {
-	if _, ok := sub.Lookup(name); !ok {
+	h, ok := sub.Lookup(name)
+	if !ok {
 		return 2, fmt.Errorf("未知 harness %q；可用：%s", name, strings.Join(sub.Names(), ", "))
 	}
 	if readOnly && write {
 		return 2, fmt.Errorf("--read-only 与 --write 不能同时使用")
+	}
+	if readOnly && h.NoReadOnly != "" {
+		return 2, fmt.Errorf("%s", h.NoReadOnly)
 	}
 	if resume && fresh {
 		return 2, fmt.Errorf("--resume 与 --fresh 不能同时使用")

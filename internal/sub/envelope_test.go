@@ -76,3 +76,19 @@ func TestMarkdownNamesDefaultModelWhenNoneRequested(t *testing.T) {
 		t.Fatalf("model line:\n%s", md)
 	}
 }
+
+// Q4: codex's account/rateLimits/updated must reach the summary, not only the job log.
+func TestSummarizeRateLimit(t *testing.T) {
+	raw := []byte(`{"rateLimits":{"limitId":"codex","primary":{"usedPercent":10,"windowDurationMins":10080,"resetsAt":1792606731},"secondary":null}}`)
+	got := SummarizeRateLimit(raw)
+	if !strings.Contains(got, "10%") || !strings.Contains(got, "7 天") {
+		t.Fatalf("summary = %q", got)
+	}
+	if SummarizeRateLimit(nil) != "" || SummarizeRateLimit([]byte(`{"x":1}`)) != "" {
+		t.Fatal("no rate limit data must summarize to empty")
+	}
+	r := Result{Status: StatusSucceeded, Harness: "codex", RateLimit: got}
+	if !strings.Contains(r.Markdown(), "额度: "+got) {
+		t.Fatalf("markdown lacks rate limit:\n%s", r.Markdown())
+	}
+}

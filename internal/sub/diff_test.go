@@ -66,6 +66,41 @@ func TestDiffSinceExcludesPreexistingChanges(t *testing.T) {
 	}
 }
 
+func TestDiffSinceUntrackedLineCounts(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		want int
+	}{
+		{"empty", "", 0},
+		{"newline only", "\n", 1},
+		{"one line without newline", "hi", 1},
+		{"one line with newline", "hi\n", 1},
+		{"multiple lines without final newline", "hi\nthere", 2},
+		{"multiple lines with final newline", "hi\nthere\n", 2},
+		{"blank lines", "\n\n", 2},
+		{"binary without final newline", "hi\x00\nthere", 0},
+		{"binary with final newline", "hi\x00\n", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := repo(t)
+			snap, err := TakeSnapshot(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			write(t, dir, "new.txt", tc.body)
+			d, err := DiffSince(dir, snap)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := Diff{Files: []FileDelta{{Path: "new.txt", Added: tc.want, New: true}}, Added: tc.want}
+			if !reflect.DeepEqual(d, want) {
+				t.Fatalf("diff=%+v want=%+v", d, want)
+			}
+		})
+	}
+}
+
 func TestDiffSinceCleanStagedDeletedAndOddPaths(t *testing.T) {
 	dir := repo(t)
 	snap, err := TakeSnapshot(dir)

@@ -34,6 +34,9 @@ setup() {
     grep -q 'pactify sub wait' "$P/skills/$h/SKILL.md"
     # An explicit /<harness> invocation must delegate regardless of task size (Phase 0 smoke, 2026-10-15).
     grep -q 'invoked this skill explicitly' "$P/skills/$h/SKILL.md"
+    # The background wait must outlive the default ~10-minute background limit (Phase 0: 5 of 26 runs).
+    grep -q 'timeout: 7200000' "$P/skills/$h/SKILL.md"
+    grep -q 'full\*\* test command' "$P/skills/$h/SKILL.md"
   done
 }
 
@@ -78,4 +81,9 @@ CLI
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ "$(cat "$PACTIFY_HOOK_CALL")" = "sub --help" ]
+}
+
+@test "kimi skill does not offer read-only (Phase 0 K1)" {
+  grep -q 'not offered for kimi' "$P/skills/kimi/SKILL.md"
+  ! grep -q 'run kimi --read-only --wait' "$P/skills/kimi/SKILL.md"
 }

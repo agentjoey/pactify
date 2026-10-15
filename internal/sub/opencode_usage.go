@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/agentjoey/pactify/internal/acp"
+	"os"
 	"os/exec"
 	"time"
 )
@@ -21,10 +22,22 @@ type opencodeMessage struct {
 func opencodeExport(ctx context.Context, v VerificationInput) ([]opencodeMessage, error) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
+	// opencode exits before a piped stdout drains, cutting large exports at
+	// 64/128 KiB (AJ-653); a regular file always receives the full JSON.
+	file, err := os.CreateTemp("", "pactify-opencode-export-*.json")
+	if err != nil {
+		return nil, fmt.Errorf("opencode export unavailable: %w", err)
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
 	cmd := exec.CommandContext(ctx, "opencode", "export", v.SessionID)
 	cmd.Dir = v.Cwd
 	cmd.Env = acp.CommandEnv(v.Env)
-	out, err := cmd.Output()
+	cmd.Stdout = file
+	if err = cmd.Run(); err != nil {
+		return nil, fmt.Errorf("opencode export unavailable: %w", err)
+	}
+	out, err := os.ReadFile(file.Name())
 	if err != nil {
 		return nil, fmt.Errorf("opencode export unavailable: %w", err)
 	}

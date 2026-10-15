@@ -220,3 +220,26 @@ printf '{"messages":[]}'
 		t.Fatal(err)
 	}
 }
+
+// opencode 1.19.0 exits before a piped stdout drains: 'opencode export' piped
+// to another process was cut at 64/128 KiB boundaries (AJ-653), while a regular
+// file always received the full JSON. The fake mimics that: truncated JSON on a
+// pipe, complete JSON on a file.
+func TestOpencodeExportReadsFullOutputWhenPipesTruncate(t *testing.T) {
+	bin := t.TempDir()
+	script := `#!/bin/sh
+if [ -p /dev/stdout ]; then printf '{"messages":[{"info":'; exit 0; fi
+printf '{"messages":[{"info":{"role":"assistant","providerID":"p","modelID":"m","cost":0.5}}]}'
+`
+	if err := os.WriteFile(filepath.Join(bin, "opencode"), []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	messages, err := opencodeExport(context.Background(), VerificationInput{SessionID: "sid", Cwd: t.TempDir()})
+	if err != nil {
+		t.Fatalf("export read through a pipe: %v", err)
+	}
+	if len(messages) != 1 || messages[0].Info.ModelID != "m" {
+		t.Fatalf("messages=%+v", messages)
+	}
+}

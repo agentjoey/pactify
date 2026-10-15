@@ -16,6 +16,10 @@ each delegation carries a fixed cost of tens of thousands of tokens on the calle
    goal; relevant file paths; constraints (what must not change); acceptance criteria (exact commands to run);
    whether it is read-only. Explicitly forbid committing code; leave changes in the workspace for the host
    to review. Do not include credentials or ask the callee to inspect them.
+   The acceptance commands must include the project's **full** test command (e.g. `go test ./...`), not just
+   the packages you expect to change: callees break callers in other packages, and a narrow command hides it.
+   State any non-obvious invariant you know of (reserved names, special cases) — the callee cannot infer it.
+   Do not edit existing tests to fit the new behavior unless the brief says the old behavior is wrong.
 2. Start it from the **main thread** (not a subagent — a subagent's background command notifies only that
    subagent). The worker runs in the background:
 

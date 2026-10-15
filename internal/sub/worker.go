@@ -257,6 +257,7 @@ loop:
 	result.OutputTokens = collector.Usage.OutputTokens
 	result.CostUSD = collector.Usage.CostUSD
 	result.ToolCalls = collector.ToolCalls
+	result.RateLimit = SummarizeRateLimit(collector.RateLimit)
 	if h.Verify != nil {
 		model, in, out, ok := h.Verify(sess.ThreadID(), info)
 		result.ModelVerified = ok

@@ -19,6 +19,8 @@ type Harness struct {
 	Backend func() cockpit.Backend
 	Version func(context.Context) (string, error)
 	Verify  func(string, cockpit.SessionInfo) (model string, in, out int, ok bool)
+	// NoReadOnly, when set, is why this harness refuses --read-only jobs.
+	NoReadOnly string
 }
 
 var registry = map[string]Harness{
@@ -30,6 +32,9 @@ var registry = map[string]Harness{
 	},
 	"kimi": {
 		Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
+		// Phase 0 (2026-10-15): in plan mode kimi keeps trying to write a plan file and
+		// exit plan; all 3 read-only tasks hit the tool-call limit without findings.
+		NoReadOnly: "kimi 的只读档在第一版不开放：Phase 0 实测 3 个只读任务在 plan 模式下全部打满工具调用上限、没有交回结论。只读任务请用 codex --read-only；用户明确允许写入时可用 kimi --write",
 		Verify: func(sid string, _ cockpit.SessionInfo) (string, int, int, bool) {
 			kimiHome := os.Getenv("KIMI_CODE_HOME")
 			if kimiHome == "" {

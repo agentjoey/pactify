@@ -16,6 +16,10 @@ each delegation carries a fixed cost of tens of thousands of tokens on the calle
    goal; relevant file paths; constraints (what must not change); acceptance criteria (exact commands to run);
    whether it is read-only. Explicitly forbid committing code; leave changes in the workspace for the host
    to review. Do not include credentials or ask the callee to inspect them.
+   The acceptance commands must include the project's **full** test command (e.g. `go test ./...`), not just
+   the packages you expect to change: callees break callers in other packages, and a narrow command hides it.
+   State any non-obvious invariant you know of (reserved names, special cases) — the callee cannot infer it.
+   Do not edit existing tests to fit the new behavior unless the brief says the old behavior is wrong.
 2. Start it from the **main thread** (not a subagent — a subagent's background command notifies only that
    subagent). The worker runs in the background:
 
@@ -23,7 +27,7 @@ each delegation carries a fixed cost of tens of thousands of tokens on the calle
        ...brief...
        BRIEF
 
-   Replace `--write` with `--read-only` for read-only tasks; never pass both. Preserve an explicitly
+   Always pass `--write` (kimi has no read-only mode in this version; see below). Preserve an explicitly
    requested model with `--model <name>` and effort with `--effort <level>`, quoting shell arguments.
    Use a quoted heredoc delimiter absent from the brief. Never silently choose a different model.
    It exits 3 immediately with `{"jobId": ...}`. This means pending, not failure. Parse the job id from
@@ -47,5 +51,7 @@ brief to the `pactify:kimi` subagent, which calls `pactify sub run kimi --wait 5
 returns stdout verbatim. If it returns a pending job id (exit 3), the main thread must still run
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.
 
-只读任务：kimi 用 plan 模式。结果首行若出现「工具调用超限」，说明 kimi 在只读模式下没收敛；
-可改用 codex，或在用户明确允许写入后改成可写任务。不要自行提高权限。
+**Read-only tasks are not offered for kimi in this version**: `pactify sub run kimi --read-only` exits 2.
+In Phase 0 kimi's plan mode never converged on read-only work (3 of 3 hit the tool-call limit with no
+findings). Send read-only investigations and reviews to codex (`/codex`, `--read-only`). Only use kimi with
+`--write` when the user has allowed changes; do not raise permissions on your own.

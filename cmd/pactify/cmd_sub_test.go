@@ -149,3 +149,18 @@ func TestSubCancelStopsWorker(t *testing.T) {
 		t.Fatalf("canceled worker wrote file: %v", err)
 	}
 }
+
+// Phase 0 K1: kimi's plan mode never converged on read-only tasks (3/3 hit the
+// tool-call limit with no findings), so v1 refuses kimi --read-only up front.
+func TestSubRunKimiReadOnlyRefused(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	bin := buildPactify(t)
+	repo := gitRepoForCLI(t)
+	// Keep the real kimi off PATH: if the refusal ever regresses, the job must fail
+	// to start rather than drive a real kimi session from a unit test.
+	t.Setenv("PATH", "/usr/bin:/bin")
+	out, code := runCLI(t, bin, repo, "review this", "sub", "run", "kimi", "--read-only", "--wait", "0s")
+	if code != 2 || !strings.Contains(out, "codex") {
+		t.Fatalf("code=%d out=%s", code, out)
+	}
+}

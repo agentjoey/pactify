@@ -1,8 +1,10 @@
 package sub
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -25,6 +27,7 @@ type Result struct {
 	Truncated      bool     `json:"truncated"`
 	SessionID      string   `json:"sessionId"`
 	LogPath        string   `json:"logPath"`
+	RateLimit      string   `json:"rateLimit,omitempty"`
 	Warnings       []string `json:"warnings,omitempty"`
 }
 
@@ -63,6 +66,9 @@ func (r Result) Markdown() string {
 	if r.CostUSD != 0 {
 		fmt.Fprintf(&b, " · 成本 $%.6f", r.CostUSD)
 	}
+	if r.RateLimit != "" {
+		fmt.Fprintf(&b, "\n额度: %s", r.RateLimit)
+	}
 	fmt.Fprintf(&b, "\n工具调用: %d\n改动: %d 个文件 · +%d/-%d\n", r.ToolCalls, len(r.Diff.Files), r.Diff.Added, r.Diff.Deleted)
 	for i, f := range r.Diff.Files {
 		if i == 20 {
@@ -82,4 +88,43 @@ func (r Result) Markdown() string {
 	}
 	fmt.Fprintf(&b, "\n会话: %s\n日志: %s\n", r.SessionID, r.LogPath)
 	return b.String()
+}
+
+// rateWindow is one window of codex's account/rateLimits/updated payload.
+type rateWindow struct {
+	UsedPercent        float64 `json:"usedPercent"`
+	WindowDurationMins int     `json:"windowDurationMins"`
+	ResetsAt           int64   `json:"resetsAt"`
+}
+
+// SummarizeRateLimit renders codex's rate-limit payload as one line, e.g.
+// "7 天窗口已用 10%，10-22 13:38 重置"; empty when there is none.
+func SummarizeRateLimit(raw []byte) string {
+	var p struct {
+		RateLimits struct {
+			Primary   *rateWindow `json:"primary"`
+			Secondary *rateWindow `json:"secondary"`
+		} `json:"rateLimits"`
+	}
+	if len(raw) == 0 || json.Unmarshal(raw, &p) != nil {
+		return ""
+	}
+	var parts []string
+	for _, w := range []*rateWindow{p.RateLimits.Primary, p.RateLimits.Secondary} {
+		if w == nil {
+			continue
+		}
+		window := fmt.Sprintf("%d 分钟", w.WindowDurationMins)
+		if w.WindowDurationMins%1440 == 0 {
+			window = fmt.Sprintf("%d 天", w.WindowDurationMins/1440)
+		} else if w.WindowDurationMins%60 == 0 {
+			window = fmt.Sprintf("%d 小时", w.WindowDurationMins/60)
+		}
+		part := fmt.Sprintf("%s窗口已用 %.0f%%", window, w.UsedPercent)
+		if w.ResetsAt > 0 {
+			part += "，" + time.Unix(w.ResetsAt, 0).Local().Format("01-02 15:04") + " 重置"
+		}
+		parts = append(parts, part)
+	}
+	return strings.Join(parts, "；")
 }

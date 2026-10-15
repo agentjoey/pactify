@@ -121,6 +121,7 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 		}
 		s.threadID = id
 		s.info = info
+		s.client.setMainThread(id)
 	} else {
 		info, id, err := s.client.threadStartOpts(ctx, opts)
 		if err != nil {
@@ -129,6 +130,7 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 		}
 		s.threadID = id
 		s.info = info
+		s.client.setMainThread(id)
 	}
 	s.effort = opts.Effort
 	s.hidden = opts.Hidden
@@ -219,6 +221,9 @@ func (s *codexSession) dispatchApproval(a ApprovalRequest) {
 // client. It is used by pipe-backed tests so they can drive the JSON-RPC layer
 // without spawning a real subprocess.
 func newCodexSessionWithClient(c *codexClient, threadID string) *codexSession {
+	if c != nil && threadID != "" {
+		c.setMainThread(threadID)
+	}
 	return &codexSession{
 		client:    c,
 		threadID:  threadID,
@@ -252,6 +257,10 @@ type codexClient struct {
 	// this correlation the approval card has no title at all
 	// ([CODEX-APPROVAL-NAME]). Entries are dropped when the item completes.
 	itemNames map[string]string
+	// mainThread is the session's own thread. codex can run sub-agents in child
+	// threads on the same connection; their turn ends and replies are not the
+	// session's (see handleChildNotification).
+	mainThread string
 }
 
 // maxTrackedItems bounds itemNames so a long thread whose items never complete
@@ -297,6 +306,22 @@ func (c *codexClient) setTurnID(id string) {
 	}
 	c.turnID = id
 	c.mu.Unlock()
+}
+
+func (c *codexClient) setMainThread(id string) {
+	c.mu.Lock()
+	c.mainThread = id
+	c.mu.Unlock()
+}
+
+// childThread reports whether a notification belongs to a thread other than the
+// session's own (a codex sub-agent).
+func (c *codexClient) childThread(params json.RawMessage) bool {
+	c.mu.Lock()
+	main := c.mainThread
+	c.mu.Unlock()
+	tid := jsonStringAt(params, "threadId")
+	return main != "" && tid != "" && tid != main
 }
 
 func (c *codexClient) currentTurnID() string {
@@ -707,12 +732,44 @@ func decisionString(d Decision) string {
 	return ""
 }
 
+// handleChildNotification handles a sub-agent thread's notification. Its work
+// still counts (tool calls, token usage), but it never ends the session's turn,
+// never supplies the final reply and never takes over the in-flight turn id; its
+// replies and turn ends reach the event log as system events.
+func (c *codexClient) handleChildNotification(method string, params, raw json.RawMessage) {
+	switch method {
+	case "item/started":
+		if item, ok := decodeCodexItem(params); ok && item.isTool() {
+			c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: item.displayName()}, Raw: raw})
+		}
+	case "item/completed":
+		if item, ok := decodeCodexItem(params); ok {
+			switch {
+			case item.Type == "agentMessage":
+				c.dispatchEvent(Event{Kind: EventSystem, State: "subagent_message", Text: item.Text, Raw: raw})
+			case item.isTool():
+				c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "end", Name: item.displayName()}, Raw: raw})
+			}
+		}
+	case "thread/tokenUsage/updated":
+		if u := parseUsageFromParams(params); u != nil {
+			c.dispatchEvent(Event{Kind: EventUsage, Usage: u, Raw: raw})
+		}
+	case "turn/completed":
+		c.dispatchEvent(Event{Kind: EventSystem, State: "subagent_turn_completed", Raw: raw})
+	}
+}
+
 func (c *codexClient) handleNotification(method string, params json.RawMessage) {
 	if c.dispatchEvent == nil {
 		return
 	}
 
 	raw := cloneRaw(params)
+	if c.childThread(params) {
+		c.handleChildNotification(method, params, raw)
+		return
+	}
 
 	switch method {
 	case "item/agentMessage/delta":

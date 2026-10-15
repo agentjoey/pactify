@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"fmt"
 	"github.com/agentjoey/pactify/internal/cockpit"
 	"testing"
 )
@@ -79,5 +80,21 @@ func TestCollectorUsesCodexThreadTotal(t *testing.T) {
 	d.Add(cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 10, OutputTokens: 2}, Raw: []byte(`{"x":1}`)})
 	if d.Usage.InputTokens != 10 || d.Usage.OutputTokens != 2 {
 		t.Fatalf("usage=%+v", d.Usage)
+	}
+}
+
+// A job's cost spans every codex thread it ran (the main agent and its sub-agents):
+// each thread reports its own running total, so the job total is their sum.
+func TestCollectorSumsUsageAcrossCodexThreads(t *testing.T) {
+	var c Collector
+	ev := func(thread string, in, out int) cockpit.Event {
+		raw := []byte(fmt.Sprintf(`{"threadId":%q,"tokenUsage":{"total":{"inputTokens":%d,"outputTokens":%d,"totalTokens":%d}}}`, thread, in, out, in+out))
+		return cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{}, Raw: raw}
+	}
+	c.Add(ev("main", 100, 10))
+	c.Add(ev("child", 40, 4))
+	c.Add(ev("main", 300, 30)) // running total: replaces main's earlier 100/10
+	if c.Usage.InputTokens != 340 || c.Usage.OutputTokens != 34 {
+		t.Fatalf("usage=%+v, want 340/34", c.Usage)
 	}
 }

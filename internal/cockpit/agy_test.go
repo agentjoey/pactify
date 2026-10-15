@@ -95,6 +95,10 @@ func TestAgyProcessHelper(t *testing.T) {
 	if mode == "resume" && !has("--conversation") {
 		os.Exit(17)
 	}
+	if mode == "narration" {
+		fmt.Println(`{"event":"step_update","step_update":{"step_index":0,"step_type":"agent_response","state":"ACTIVE","text_delta":"Running the tests first."}}`)
+		fmt.Println(`{"event":"step_update","step_update":{"step_index":0,"step_type":"agent_response","state":"DONE","text_delta":"\n"}}`)
+	}
 	fmt.Println(`{"event":"step_update","step_update":{"step_index":1,"step_type":"tool","state":"ACTIVE","tool_name":"run_command","tool_info":{"parameters":{"command":"pwd"}}}}`)
 	fmt.Println(`{"event":"step_update","step_update":{"step_index":1,"step_type":"tool","state":"ACTIVE","tool_name":"run_command"}}`)
 	fmt.Println(`{"event":"step_update","step_update":{"step_index":1,"step_type":"tool","state":"DONE","tool_name":"run_command","tool_info":{"output":"ok"}}}`)
@@ -103,6 +107,9 @@ func TestAgyProcessHelper(t *testing.T) {
 	case "denied":
 		fmt.Fprintln(os.Stderr, `jetski: no output produced — a tool required the "run_command" permission that headless mode cannot prompt for, so it was auto-denied`)
 		fmt.Println(`{"event":"result","result":{"status":"SUCCESS","response":""}}`)
+	case "narration":
+		// agy 1.3.5 concatenates every agent_response step into result.response.
+		fmt.Println(`{"event":"result","result":{"conversation_id":"session-a","status":"SUCCESS","response":"Running the tests first.\nanswer"}}`)
 	case "missing":
 	case "invalid":
 		fmt.Println("not-json")
@@ -341,5 +348,25 @@ func TestAgyCockpitWrapperCloses(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("cockpit wrapper close blocked")
+	}
+}
+
+// The final reply is the last agent_response step, not agy's result.response,
+// which also carries narration from earlier steps of the turn.
+func TestAgyFinalReplyIsLastResponseStep(t *testing.T) {
+	b, o := agyFixture(t, "narration", AccessWrite)
+	s, err := b.Start(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	final := ""
+	for _, e := range agyTurn(t, s) {
+		if e.Final {
+			final = e.Text
+		}
+	}
+	if final != "answer" {
+		t.Fatalf("final reply = %q, want only the last response step", final)
 	}
 }

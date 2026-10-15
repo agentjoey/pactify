@@ -192,6 +192,17 @@ func TestCollectorPrefersCodexFinal(t *testing.T) {
 	}
 }
 
+// 2026-10-15 真机发现：codex 一轮会发出多条 Final 的 agentMessage（先是开场说明，最后才是答案），必须取最后一条。
+func TestCollectorTakesLastCodexFinal(t *testing.T) {
+	var c Collector
+	c.Add(cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "我会尝试在当前工作区创建 probe.txt。"})
+	c.Add(cockpit.Event{Kind: cockpit.EventTool, Tool: &cockpit.ToolEvent{Phase: "start", Name: "shell"}})
+	c.Add(cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "BLOCKED"})
+	if c.FinalText() != "BLOCKED" {
+		t.Fatalf("final=%q", c.FinalText())
+	}
+}
+
 func TestCollectorACPChunksAfterLastTool(t *testing.T) {
 	var c Collector
 	c.Add(cockpit.Event{Kind: cockpit.EventMessage, Text: "thinking out loud"})

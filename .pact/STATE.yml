@@ -12,6 +12,7 @@ agents:
   - { id: kimi-worker, roles: [worker] }
   - { id: claude-worker, roles: [worker] }
   - { id: agy-w, roles: [worker] }
+  - { id: claude-session, roles: [orchestrator, reviewer] }
 features:
   - id: planner
     branch: feat-planner

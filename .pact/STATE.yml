@@ -1171,7 +1171,7 @@ features:
     tasks:
       - id: p0-schema
         owner: codex-worker
-        status: assigned
+        status: in_progress
         reviewer: claude-session
         spec: .pact/tasks/p0-schema.md
         evidence: null

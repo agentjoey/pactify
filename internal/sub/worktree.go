@@ -66,6 +66,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 				current.ResumeOf = previous.ID
 				if h.Home != nil {
 					current.HarnessHome = previous.HarnessHome
+					current.HarnessHomes = previous.HarnessHomes
 				}
 				st = *current
 				return s.Save(*current)

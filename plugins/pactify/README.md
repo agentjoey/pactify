@@ -1,6 +1,6 @@
 # Pactify harness plugin
 
-Delegate large tasks from Claude Code to the official codex / kimi / agy CLI installed locally, then review the result summary and workspace changes.
+Delegate large tasks from Claude Code to the official codex / kimi / agy / opencode CLI installed locally, then review the result summary and workspace changes.
 The default harness is codex; kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged).
 
 ## Installation
@@ -12,7 +12,7 @@ Run these commands in Claude Code:
 /plugin install pactify@pactify
 ```
 
-Prerequisites: `pactify` is on PATH and `pactify sub --help` works; the official codex / kimi / agy CLI you want to call is installed and logged in.
+Prerequisites: `pactify` is on PATH and `pactify sub --help` works; the official codex / kimi / agy / opencode CLI you want to call is installed and logged in.
 The SessionStart hook only checks that pactify and its `sub` command are available. It suggests installing or upgrading when needed without blocking the session.
 The plugin does not proxy models, manage logins, or read or copy credentials.
 
@@ -21,12 +21,13 @@ The plugin does not proxy models, manage logins, or read or copy credentials.
 ```text
 /delegate Add expiration and regression tests to src/cache/, then run the project's full test suite
 /codex Add expiration and regression tests to src/cache/, modify only that directory, and run the full npm test suite
+/opencode Review src/cache/ using read tools only; do not run shell commands
 /agy Review src/cache/ with read-only access using built-in file tools only; do not run shell commands
 /kimi Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
 ```
 
-Use `/pactify:delegate`, `/pactify:codex`, `/pactify:kimi`, or `/pactify:agy` to avoid conflicts with other skills of the same name.
-`/delegate` uses the default codex harness; `/codex`, `/kimi` and `/agy` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
+Use `/pactify:delegate`, `/pactify:codex`, `/pactify:kimi`, `/pactify:agy`, or `/pactify:opencode` to avoid conflicts with other skills of the same name.
+`/delegate` uses the default codex harness; `/codex`, `/kimi`, `/agy` and `/opencode` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
 Delegation suits tasks involving 3 or more files, exploration and testing, or more than about 10 minutes of work. Claude can handle small edits directly.
 When choosing autonomously, avoid delegating tasks that depend on extensive conversation context that cannot fit in a self-contained brief, or require frequent user interaction.
 Explicit invocations still delegate, but kimi's read-only restriction remains: never raise permissions yourself.
@@ -35,7 +36,7 @@ The Claude main thread first writes a complete brief with Background, numbered g
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
 Require inspection of callers, special cases, and documented exceptions before changing rules, and a failing regression test before each behavior change. Do not change existing tests to accommodate new behavior unless the brief explicitly identifies the old behavior as wrong; name any such changes in the final reply.
 Forbid commits and credential access; optionally forbid subagents and report files.
-The four delegation skills embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
+The five delegation skills (codex, kimi, agy, opencode, delegate) embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
@@ -48,7 +49,7 @@ Retrieve the result again with `pactify sub result <jobId>`.
 
 To select a model, name it explicitly in the task. If the CLI cannot honor it, execution must fail with the available models instead of silently falling back.
 For rework, explicitly request `--resume --worktree`, preserving the original cwd and harness.
-For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` / `pactify:agy` forwarding subagent:
+For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` / `pactify:agy` / `pactify:opencode` forwarding subagent:
 it uses `model: haiku`, has only Bash, calls Bash once, and returns stdout verbatim. After a timeout, the main thread continues waiting.
 The callee leaves changes uncommitted for the host to review.
 
@@ -174,10 +175,10 @@ normal minimal configuration, including directory permissions and link integrity
 
 ## Access modes
 
-| | codex | kimi | agy |
-|---|---|---|---|
-| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) |
-| `--read-only` | read-only sandbox, no network | Not offered in the first release | `--mode=plan` without skip; built-in file tools only; shell commands/writes auto-deny and end the turn |
+| | codex | kimi | agy | opencode |
+|---|---|---|---|---|
+| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + edit/bash/webfetch allow |
+| `--read-only` | read-only sandbox, no network | Not offered in the first release | `--mode=plan` without skip; built-in file tools only; shell commands/writes auto-deny and end the turn | build + edit/webfetch deny, bash ask; reject all requests; read tools only |
 
 ## Known limitations
 
@@ -186,3 +187,28 @@ normal minimal configuration, including directory permissions and link integrity
 - Each delegation has about 20–50 thousand tokens of fixed callee overhead, making it unsuitable for small tasks.
 - Only locally installed, logged-in official CLIs are supported. Follow the summary warnings when independent model verification fails.
 - Automated tests do not cover installation and delegation in real Claude Code. Release acceptance still requires a Claude Code smoke test.
+
+## opencode (experimental)
+
+opencode is an experimental harness (evaluation pending), adapted to 1.19.0 ACP.
+`/opencode` and `/pactify:opencode` use the same shared delegation guide and host
+review workflow. Requested models use dynamic `provider/model` ids; omitting the
+model preserves opencode's default. The actual model is independently checked with
+`opencode export` under the job's exact environment. Input includes cached reads;
+USD cost counts new assistant messages only, excluding previous rounds on resume.
+
+Write access selects build mode with process-local edit/bash/webfetch allow permissions.
+Read-only uses edit/webfetch deny, bash ask and rejects all permission requests.
+Only read tools are available; no shell command can run, even a read-only command.
+A denial with no final reply fails and explains the restriction. The host runs tests;
+use codex read-only for command-based investigations. Plan mode is not a sandbox.
+
+Two persistent 0700 mirrors at `$PACTIFY_HOME/harness-homes/opencode/share` and
+`config` replace `XDG_DATA_HOME` and `XDG_CONFIG_HOME`. Each mirrors the user's
+corresponding directory except `opencode`; only `share/opencode/auth.json` links
+to the original. Credentials are never read or copied. Delegated sessions stay in
+the private database. The three flags `OPENCODE_DISABLE_CLAUDE_CODE=1`,
+`OPENCODE_DISABLE_EXTERNAL_SKILLS=1`, `OPENCODE_PURE=1` disable optional integrations.
+`--with-user-config` restores both original XDG directories and integrations, with
+a warning that sessions remain visible. Resume preserves both recorded directories
+and requires the same config mode. `sub doctor opencode` verifies the default path.

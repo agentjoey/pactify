@@ -88,3 +88,46 @@ Session hiding 和 Managed home 使用可写探测的结果，不依赖只读探
 | 适配版本 | 证据与范围 |
 |---|---|
 | agy 1.3.5 | Owner 提供的 host 实测：权限、取消、动态模型、stream-json、续接、镜像 HOME 登录与会话隔离；本变更只使用假 HOME / 假 agy 自动测试，完整真机 doctor 由 host 执行后写入本机版本表 |
+
+
+## opencode（AJ-652，实验性）
+
+`pactify sub doctor opencode` 输出七项：安装、可写、独立模型核实、只读、网络（SKIP）、
+会话隐藏、受管目录。opencode 是 experimental harness（evaluation pending），评估完成前
+优先使用默认 codex。适配版本为 1.19.0；本变更的自动测试全部使用假 opencode 和假 HOME/XDG。
+下列 1.19.0 行为由 Owner 提供的 host 实测确认；完整真机 doctor 由 host 运行，通过后才写本机版本表。
+
+模型从 ACP `session/new.configOptions` 动态获取。按名称依次选第一个含 `flash` 的模型、
+第一个含 `mini` / `lite` / `nano` / `haiku` 的模型、第一个不含 `pro` 的模型，最后才退回
+列表首项；同一档保留原列表顺序。这是低成本档位的名称启发式，不是价格保证，也不写死模型 id。
+普通 job 不指定模型时保留 opencode 默认值，指定模型经 `session/set_config_option` 设置并确认。
+
+输入 token = prompt 返回的 `inputTokens + cachedReadTokens`，输出取 `outputTokens`。
+`usage_update.cost` 是会话累计成本（[上游实现](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/opencode/src/acp/usage.ts)）。
+结束前用同一工作目录和环境执行 `opencode export <sid>`，独立读取 assistant 的 providerID/modelID；
+续接前记录导出消息边界，只累计本 job 新 assistant 消息的 cost，避免计入历史成本。
+导出失败、历史边界失效或没有新 assistant 时明确警告；不能核实的成本不冒充本轮费用。
+
+可写档用 build 配合 `OPENCODE_CONFIG_CONTENT` 的 edit/bash/webfetch allow。
+只读档仍用 build，但注入 edit/webfetch deny、bash ask，并对所有权限请求选 reject_once；
+plan 模式只是模型自觉，不构成只读保护。只读只能用读工具，不能运行任何 shell 命令。
+拒绝后终稿为空时 job 失败并说明限制。doctor 主动尝试 shell 写入，只在后端有真实拒绝证据、
+目标不存在且无其他 diff、版本一致时通过；不以模型终稿的声称为证据。
+
+两个镜像复用受管目录组件：`XDG_DATA_HOME=$PACTIFY_HOME/harness-homes/opencode/share`
+镜像原 `$XDG_DATA_HOME`（默认 `~/.local/share`）；`XDG_CONFIG_HOME=…/opencode/config`
+镜像原 `$XDG_CONFIG_HOME`（默认 `~/.config`）。两者都排除 `opencode`，数据镜像仅显式链接
+`opencode/auth.json`。不读取、打印或复制 auth 内容。其余 XDG 项保持链接，供 git 等工具使用。
+缺失的用户配置目录按空目录处理，不创建原目录。每次启动刷新镜像，结束时清理被替换的链接副本。
+最小配置另设 `OPENCODE_DISABLE_CLAUDE_CODE=1`、`OPENCODE_DISABLE_EXTERNAL_SKILLS=1`、
+`OPENCODE_PURE=1`，host 空任务总 token 实测 18,930 → 7,690。
+
+受管目录检查要求成功的可写探测、两个目录路径和权限、镜像链接、私有 opencode 目录与普通
+`opencode.db`，并比较用户 auth/db/WAL/SHM 的元数据确认未变；不读取凭据或用户数据库内容。
+已知厂商 key 在 sub 的运行、模型列表、版本与 export 进程中清空；公共 CrossVendorStrip 的
+多提供方例外保持原样。会话隐藏与受管目录使用可写探测证据。`--with-user-config` 不隔离，
+并警告会话进入用户列表；续接必须保持原配置模式和两个记录的目录。
+
+| 适配版本 | 证据与范围 |
+|---|---|
+| opencode 1.19.0 | Owner host 实测 ACP 配置、权限、token/cost、export、取消、续接、XDG 隔离和最小配置；本地自动测试为假进程，完整真机 doctor 待 host 执行 |

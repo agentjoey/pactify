@@ -145,35 +145,33 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 
 	minimalHome := h.Home != nil && opts.MinimalConfig
 	if h.Home != nil {
-		source, e := h.Home.Source()
-		if e != nil {
-			return fail(e)
-		}
-		source, e = filepath.Abs(source)
-		if e != nil {
-			return fail(e)
-		}
-		if harnessHome == "" {
-			harnessHome = source
-			if minimalHome {
-				harnessHome, e = h.Home.Managed()
-				if e != nil {
-					return fail(e)
-				}
+		var env []string
+		var layouts []*managedHome
+		var homes map[string]string
+		harnessHome, homes, env, layouts, err = prepareHarnessHomes(ctx, h.Home, harnessHome, st.HarnessHomes, minimalHome)
+		defer func() {
+			for _, layout := range layouts {
+				result.Warnings = append(result.Warnings, layout.Cleanup()...)
 			}
+		}()
+		if err != nil {
+			return fail(err)
 		}
-		if minimalHome {
-			layout := h.Home.Layout(harnessHome, source)
-			if e := layout.Prepare(ctx); e != nil {
-				return fail(e)
-			}
-			// Cleanup follows Close, including startup errors and panics.
-			defer func() { result.Warnings = append(result.Warnings, layout.Cleanup()...) }()
-		}
-		if e := store.WithState(ctx, id, func(current *State) error { current.HarnessHome = harnessHome; return store.Save(*current) }); e != nil {
+		if e := store.WithState(ctx, id, func(current *State) error {
+			current.HarnessHome = harnessHome
+			current.HarnessHomes = homes
+			return store.Save(*current)
+		}); e != nil {
 			return fail(e)
 		}
-		opts.Env = append(opts.Env, h.Home.Env+"="+harnessHome)
+		opts.Env = append(opts.Env, env...)
+	}
+	if h.Name == "opencode" {
+		opts.Env = append(opts.Env, opencodeVendorStrip()...)
+		opts.Env, err = cockpit.OpencodeEnv(opts)
+		if err != nil {
+			return fail(err)
+		}
 	}
 
 	// Startup follows cancellation. Once started, Interrupt gets a grace period before Close.
@@ -244,6 +242,13 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		if baselineErr != nil {
 			wireOffset = -1 // Never count historical usage when the baseline is unknown.
 			result.Warnings = append(result.Warnings, "Kimi wire baseline unavailable; tokens may be incomplete: "+baselineErr.Error())
+		}
+	}
+	if h.VerificationBaseline != nil && h.Verify != nil && req.Resume != "" {
+		wireOffset, err = h.VerificationBaseline(ctx, VerificationInput{SessionID: sess.ThreadID(), Env: opts.Env, Cwd: req.Cwd})
+		if err != nil {
+			wireOffset = -1
+			result.Warnings = append(result.Warnings, "opencode export baseline unavailable: "+err.Error())
 		}
 	}
 	var prompts atomic.Int32
@@ -324,6 +329,9 @@ loop:
 			}
 			lastActivity = cfg.Now()
 			collector.Add(event)
+			if event.Kind == cockpit.EventSystem && event.State == "opencode_read_only_denied" {
+				result.Warnings = append(result.Warnings, cockpit.OpencodeReadOnlyDenied)
+			}
 			if req.Access == "read-only" && cfg.ToolCallLimit > 0 && collector.ToolCalls > cfg.ToolCallLimit {
 				interrupt(fmt.Sprintf("Tool-call limit exceeded (%d calls)", collector.ToolCalls))
 			}
@@ -398,8 +406,16 @@ loop:
 			verifyCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), cfg.KimiWireTimeout)
 			defer cancel()
 		}
-		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load())})
+		if h.VerificationBaseline != nil {
+			var cancel context.CancelFunc
+			verifyCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+			defer cancel()
+		}
+		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
 		result.ModelVerified = verified.Verified
+		if verified.CostUSD != nil {
+			result.CostUSD = *verified.CostUSD
+		}
 		if verified.Verified {
 			result.ModelActual = verified.Model
 		}

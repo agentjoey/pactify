@@ -68,7 +68,7 @@ the plugin reminds you on session start — run the curl|sh installer above, the
 
 For harness delegation, install `/plugin install pactify@pactify` and use `/delegate`
 (or `/pactify:delegate`). `pactify sub run [harness]` defaults to **codex** when the
-harness is omitted; `/codex`, `/kimi` and `/agy` select one explicitly. **agy is experimental (evaluation pending)**. **kimi is experimental**:
+harness is omitted; `/codex`, `/kimi`, `/agy` and `/opencode` select one explicitly. **agy and opencode are experimental (evaluation pending)**. **kimi is experimental**:
 Phase 0 large tasks completed in one attempt 6/10, and read-only work did not converge.
 kimi results include an informational warning; `kimi --read-only` still exits 2.
 See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.
@@ -159,6 +159,29 @@ npm ci
 npm run build:panel
 node scripts/shots-panel.mjs # prints temporary paths: list/detail × light/dark × desktop/mobile
 ```
+
+opencode 1.19.0 uses ACP with dynamic provider/model ids. `/opencode` (or
+`/pactify:opencode`) selects this experimental harness; evaluation is pending.
+An omitted model keeps opencode's default; `opencode export <sessionId>` independently
+verifies the actual model in the same isolated environment. Input tokens include
+cached reads. Cost uses only this job's new assistant messages, including on resume.
+Write access sets `build` mode and process-local edit/bash/webfetch allow permissions.
+Read-only access sets edit/webfetch deny and bash ask, then rejects every permission
+request. It supports read tools only; shell commands cannot run, and a denial may
+leave an empty final reply. Plan mode alone does not enforce read-only access.
+
+Minimal configuration mirrors the user's XDG data and config directories under
+`$PACTIFY_HOME/harness-homes/opencode/{share,config}`, excluding `opencode` in both.
+Only `share/opencode/auth.json` links to the original login file; its contents are
+never read or copied. Other XDG entries remain available through symlinks.
+`OPENCODE_DISABLE_CLAUDE_CODE=1`, `OPENCODE_DISABLE_EXTERNAL_SKILLS=1` and
+`OPENCODE_PURE=1` reduce optional integrations. Known sibling vendor API keys are
+cleared for sub's opencode processes; login comes from the linked auth file.
+`--with-user-config` restores both original XDG directories and optional integrations,
+with a warning that sessions remain in the user's list. Resume requires the same
+config mode and retains both recorded directories. Run `pactify sub doctor opencode`
+for model, permission, session hiding and managed directory checks.
+
 
 ## The idea in 30 seconds
 

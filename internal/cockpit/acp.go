@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/agentjoey/pactify/internal/acp"
 )
@@ -31,6 +32,12 @@ func (b *acpBackend) Start(ctx context.Context, opts StartOpts) (Session, error)
 		return nil, err
 	}
 
+	if b.kind == "opencode" {
+		opts.Env, err = OpencodeEnv(opts)
+		if err != nil {
+			return nil, err
+		}
+	}
 	client, err := acp.Spawn(ctx, cmd, args, opts.Env, opts.RepoDir, opts.Stderr)
 	if err != nil {
 		return nil, fmt.Errorf("acp spawn %q: %w", b.kind, err)
@@ -47,12 +54,17 @@ func (b *acpBackend) Start(ctx context.Context, opts StartOpts) (Session, error)
 		return nil, fmt.Errorf("acp new session %q: %w", b.kind, err)
 	}
 
-	info, err := applyACPOpts(ctx, client, res.SessionID, res, opts)
+	var info SessionInfo
+	if b.kind == "opencode" {
+		info, err = applyOpencodeOpts(ctx, client, res.SessionID, res, opts)
+	} else {
+		info, err = applyACPOpts(ctx, client, res.SessionID, res, opts)
+	}
 	if err != nil {
 		_ = client.Close()
 		return nil, &StartError{ID: string(res.SessionID), Err: fmt.Errorf("acp configure %q: %w", b.kind, err)}
 	}
-	sess := newACPSession(client, res.SessionID)
+	sess := configuredACPSession(client, res.SessionID, b.kind, opts)
 	sess.info = info
 	return sess, nil
 }
@@ -67,6 +79,12 @@ func (b *acpBackend) ResumeWith(ctx context.Context, threadID string, opts Start
 		return nil, err
 	}
 
+	if b.kind == "opencode" {
+		opts.Env, err = OpencodeEnv(opts)
+		if err != nil {
+			return nil, err
+		}
+	}
 	client, err := acp.Spawn(ctx, cmd, args, opts.Env, opts.RepoDir, opts.Stderr)
 	if err != nil {
 		return nil, fmt.Errorf("acp spawn %q: %w", b.kind, err)
@@ -78,17 +96,27 @@ func (b *acpBackend) ResumeWith(ctx context.Context, threadID string, opts Start
 	}
 
 	sid := acp.SessionID(threadID)
-	if err := client.LoadSession(ctx, sid); err != nil {
-		_ = client.Close()
-		return nil, fmt.Errorf("acp load session %q: %w", b.kind, err)
+	var info SessionInfo
+	if b.kind == "opencode" {
+		res, loadErr := client.LoadSessionDetailed(ctx, sid)
+		if loadErr != nil {
+			_ = client.Close()
+			return nil, fmt.Errorf("acp load session %q: %w", b.kind, loadErr)
+		}
+		info, err = applyOpencodeOpts(ctx, client, sid, res, opts)
+	} else {
+		if loadErr := client.LoadSession(ctx, sid); loadErr != nil {
+			_ = client.Close()
+			return nil, fmt.Errorf("acp load session %q: %w", b.kind, loadErr)
+		}
+		info, err = applyACPResumeOpts(ctx, client, sid, opts)
 	}
 
-	info, err := applyACPResumeOpts(ctx, client, sid, opts)
 	if err != nil {
 		_ = client.Close()
 		return nil, &StartError{ID: threadID, Err: fmt.Errorf("acp configure resumed %q: %w", b.kind, err)}
 	}
-	sess := newACPSession(client, sid)
+	sess := configuredACPSession(client, sid, b.kind, opts)
 	sess.info = info
 	return sess, nil
 }
@@ -116,18 +144,28 @@ type acpSession struct {
 	approvals chan ApprovalRequest
 	done      chan struct{}
 
-	closeOnce  sync.Once
-	closeErr   error
-	dispatchMu sync.RWMutex
-	closed     bool
-	info       SessionInfo
-	promptFn   func(context.Context, string) (acp.StopReason, error)
-	cancelFn   func() error
+	closeOnce    sync.Once
+	closeErr     error
+	dispatchMu   sync.RWMutex
+	closed       bool
+	info         SessionInfo
+	opencode     bool
+	readOnly     bool
+	denied       atomic.Bool
+	accountingMu sync.Mutex
+	usage        Usage
+	hasReply     bool
+	promptFn     func(context.Context, string) (acp.StopReason, error)
+	cancelFn     func() error
 }
 
 func newACPSession(client *acp.Client, sid acp.SessionID) *acpSession {
+	return configuredACPSession(client, sid, "", StartOpts{})
+}
+func configuredACPSession(client *acp.Client, sid acp.SessionID, kind string, opts StartOpts) *acpSession {
 	s := &acpSession{
-		client:    client,
+		client:   client,
+		opencode: kind == "opencode", readOnly: opts.Access == AccessReadOnly,
 		sid:       sid,
 		events:    make(chan Event, 64),
 		approvals: make(chan ApprovalRequest, 16),
@@ -138,12 +176,30 @@ func newACPSession(client *acp.Client, sid acp.SessionID) *acpSession {
 		s.promptFn = func(ctx context.Context, text string) (acp.StopReason, error) { return client.Prompt(ctx, sid, text) }
 		s.cancelFn = func() error { return client.Cancel(sid) }
 		client.OnSessionUpdateFor(sid, func(u acp.SessionUpdate) {
+			if s.opencode {
+				s.opencodeUpdate(u)
+				return
+			}
 			if e, ok := MapACPUpdateToEvent(u); ok {
 				s.dispatchEvent(e)
 			}
 		})
 		handler := newPermissionHandler(s.approvals, s.done)
 		client.OnPermissionRequestFor(sid, func(req acp.PermissionRequest) acp.PermissionOutcome {
+			if s.opencode && s.readOnly {
+				// Text preceding the denied operation is a preamble, not a final reply.
+				s.accountingMu.Lock()
+				s.hasReply = false
+				s.accountingMu.Unlock()
+				s.denied.Store(true)
+				s.dispatchEvent(Event{Kind: EventSystem, State: "opencode_read_only_denied"})
+				for _, o := range req.Options {
+					if o.Kind == "reject_once" {
+						return acp.PermissionOutcome{OptionID: o.OptionID}
+					}
+				}
+				return MapDecisionToOutcome(DecisionDeny, req.Options)
+			}
 			s.dispatchMu.RLock()
 			defer s.dispatchMu.RUnlock()
 			if s.closed {
@@ -157,10 +213,26 @@ func newACPSession(client *acp.Client, sid acp.SessionID) *acpSession {
 }
 
 func (s *acpSession) Prompt(ctx context.Context, msg UserMessage) error {
+	if s.opencode {
+		s.denied.Store(false)
+		s.accountingMu.Lock()
+		s.hasReply = false
+		s.accountingMu.Unlock()
+	}
 	stop, err := s.promptFn(ctx, msg.Text)
 	e := Event{Kind: EventState, State: StateTurnCompleted, Text: string(stop)}
 	if err != nil {
 		e = Event{Kind: EventState, State: StateTurnFailed, Err: err.Error()}
+	}
+	if s.opencode {
+		s.accountingMu.Lock()
+		if s.denied.Load() && !s.hasReply {
+			e = Event{Kind: EventState, State: StateTurnFailed, Err: OpencodeReadOnlyDenied}
+		}
+		s.accountingMu.Unlock()
+		if stop == "cancelled" {
+			e = Event{Kind: EventState, State: StateTurnFailed, Err: "opencode cancelled"}
+		}
 	}
 	s.dispatchEvent(e)
 	return err
@@ -193,7 +265,7 @@ func (s *acpSession) dispatchEvent(e Event) {
 	if s.closed {
 		return
 	}
-	if e.Kind == EventState && (e.State == StateTurnCompleted || e.State == StateTurnFailed) {
+	if (s.opencode && e.Kind == EventUsage) || (e.Kind == EventState && (e.State == StateTurnCompleted || e.State == StateTurnFailed)) {
 		select {
 		case s.events <- e:
 		case <-s.done:
@@ -476,4 +548,42 @@ func applyACPResumeOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID,
 		info.Access = mode
 	}
 	return info, nil
+}
+
+// opencode emits cumulative session cost separately from per-prompt token usage.
+// Preserve cost across prompt replies and never interpret context-window used as tokens.
+func (s *acpSession) opencodeUpdate(u acp.SessionUpdate) {
+	s.accountingMu.Lock()
+	defer s.accountingMu.Unlock()
+	if u.Kind == "usage_update" {
+		var update struct {
+			Cost *struct {
+				Amount   float64 `json:"amount"`
+				Currency string  `json:"currency"`
+			} `json:"cost"`
+		}
+		if json.Unmarshal(u.Raw, &update) == nil && update.Cost != nil && update.Cost.Currency == "USD" {
+			s.usage.CostUSD = update.Cost.Amount
+		}
+		usage := s.usage
+		s.dispatchEvent(Event{Kind: EventUsage, Usage: &usage, Raw: cloneRaw(u.Raw)})
+		return
+	}
+	if u.Usage != nil {
+		s.usage.InputTokens += u.Usage.InputTokens + u.Usage.CachedReadTokens
+		s.usage.OutputTokens += u.Usage.OutputTokens
+		s.usage.TotalTokens = s.usage.InputTokens + s.usage.OutputTokens
+		usage := s.usage
+		s.dispatchEvent(Event{Kind: EventUsage, Usage: &usage, Raw: cloneRaw(u.Raw)})
+		return
+	}
+	if u.Kind == "tool_call" {
+		s.hasReply = false
+	}
+	if u.Kind == "agent_message_chunk" && strings.TrimSpace(parseACPMessageText(u.Raw)) != "" {
+		s.hasReply = true
+	}
+	if e, ok := MapACPUpdateToEvent(u); ok {
+		s.dispatchEvent(e)
+	}
 }

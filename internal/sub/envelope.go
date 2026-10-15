@@ -9,6 +9,7 @@ import (
 )
 
 type Result struct {
+	ConfigMode     string   `json:"configMode"`
 	JobID          string   `json:"jobId"`
 	Status         Status   `json:"status"`
 	Harness        string   `json:"harness"`
@@ -55,7 +56,12 @@ func (r Result) Markdown() string {
 	} else {
 		fmt.Fprintf(&b, "✗ %s %s\n", r.Harness, r.Status)
 	}
-	fmt.Fprintf(&b, "\nHarness: %s · CLI: %s\n", r.Harness, r.CLIVersion)
+	if r.ConfigMode == "" {
+		// Keep historical results' rendering; new jobs always record their mode.
+		fmt.Fprintf(&b, "\nHarness: %s · CLI: %s\n", r.Harness, r.CLIVersion)
+	} else {
+		fmt.Fprintf(&b, "\nHarness: %s (%s config) · CLI: %s\n", r.Harness, r.ConfigMode, r.CLIVersion)
+	}
 	requested := r.ModelRequested
 	if requested == "" {
 		requested = "(default)"

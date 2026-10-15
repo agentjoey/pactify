@@ -27,6 +27,9 @@ type Harness struct {
 	NoReadOnly string
 	// Experimental is an informational warning, independent of job status.
 	Experimental string
+	// MinimalConfig is supported only after a native, process-local path has
+	// been verified. Unavailable harnesses retain user config and say why.
+	MinimalConfig bool
 	// Every harness must keep delegated sessions out of the user's own session
 	// lists (TestEveryHarnessHidesItsSessions). HidesItself: the backend does it
 	// (codex archives the thread on Close via StartOpts.Hidden). Otherwise Conceal
@@ -44,7 +47,8 @@ type ConcealContext struct {
 var registry = map[string]Harness{
 	"codex": {
 		Name: "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
-		HidesItself: true,
+		HidesItself:   true,
+		MinimalConfig: true,
 		Verify: func(_ string, info cockpit.SessionInfo) (string, int, int, bool) {
 			return info.Model, 0, 0, info.Model != ""
 		},
@@ -52,6 +56,9 @@ var registry = map[string]Harness{
 	"kimi": {
 		Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
 		Experimental: "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)",
+		// No MinimalConfig (AJ-636, kimi 2.2.0): ACP does not forward --skills-dir and
+		// has no per-session switch for user MCP servers and plugins, so kimi keeps
+		// user config. The result's Harness line says "(user config)".
 		// Phase 0 (2026-10-15): in plan mode kimi keeps trying to write a plan file and
 		// exit plan; all 3 read-only tasks hit the tool-call limit without findings.
 		NoReadOnly: "Read-only access is not offered for kimi in the first release: all 3 Phase 0 read-only tasks hit the tool-call limit in plan mode without returning a conclusion. Use codex --read-only for read-only tasks; use kimi --write only with explicit write permission",
@@ -68,6 +75,21 @@ var registry = map[string]Harness{
 			return rec.Models[len(rec.Models)-1], rec.InputTokens, rec.OutputTokens, true
 		},
 	},
+}
+
+func (h Harness) configMode(withUserConfig bool) string {
+	if h.MinimalConfig && !withUserConfig {
+		return "minimal"
+	}
+	return "user"
+}
+
+// EffectiveConfigMode treats records from before AJ-636 as user config.
+func (s State) EffectiveConfigMode() string {
+	if s.ConfigMode == "" {
+		return "user"
+	}
+	return s.ConfigMode
 }
 
 func Lookup(name string) (Harness, bool) {

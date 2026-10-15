@@ -69,6 +69,7 @@ func newSubCmd() *cobra.Command {
 	run.Flags().BoolVar(&fresh, "fresh", false, "Start a fresh session (default)")
 	run.Flags().DurationVar(&wait, "wait", 540*time.Second, "How long to wait before returning the job id")
 	run.Flags().BoolVar(&jsonOut, "json", false, "Print JSON")
+	run.Flags().Bool("with-user-config", false, "Load all user integrations instead of the minimal configuration")
 	var timeout time.Duration
 	var waitJSON bool
 	waitCmd := &cobra.Command{Use: "wait <job>", Short: "Wait for a job result", Args: subArgs(1), Run: func(c *cobra.Command, args []string) {
@@ -111,7 +112,7 @@ func newSubCmd() *cobra.Command {
 		if subTerminal(st.Status) {
 			code, err = subOutput(c, store, st, resultJSON)
 		} else {
-			err = subPending(c, a[0], resultJSON)
+			err = subPending(c, a[0], resultJSON, st.EffectiveConfigMode())
 		}
 		subExit(c, code, err)
 	}}
@@ -166,6 +167,7 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 		return 1, err
 	}
 	req := sub.Request{Harness: name, Model: model, Effort: effort, Cwd: dir, Brief: string(brief), Access: "write"}
+	req.WithUserConfig, _ = c.Flags().GetBool("with-user-config")
 	if readOnly {
 		req.Access = "read-only"
 	}
@@ -228,13 +230,14 @@ func subStartWorker(store sub.Store, id string) error {
 		return cmd.Process.Release()
 	})
 }
-func subPending(c *cobra.Command, id string, jsonOut bool) error {
+func subPending(c *cobra.Command, id string, jsonOut bool, configMode string) error {
 	if jsonOut {
 		return subJSON(c, struct {
-			JobID  string `json:"jobId"`
-			Status string `json:"status"`
-			Hint   string `json:"hint"`
-		}{id, "running", "pactify sub wait " + id})
+			JobID      string `json:"jobId"`
+			Status     string `json:"status"`
+			Hint       string `json:"hint"`
+			ConfigMode string `json:"configMode"`
+		}{id, "running", "pactify sub wait " + id, configMode})
 	}
 	_, err := fmt.Fprintf(c.OutOrStdout(), "%s is still running; use pactify sub wait %s to view the result\n", id, id)
 	return err
@@ -266,7 +269,7 @@ func subWait(c *cobra.Command, store sub.Store, id string, timeout time.Duration
 		case <-c.Context().Done():
 			return 1, c.Context().Err()
 		case <-deadline:
-			return 3, subPending(c, id, jsonOut)
+			return 3, subPending(c, id, jsonOut, st.EffectiveConfigMode())
 		case <-ticker.C:
 		}
 	}

@@ -121,6 +121,7 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 	if Terminal(st.Status) {
 		return nil
 	}
+	result.ConfigMode = st.EffectiveConfigMode()
 	if result.WorktreePath == "" {
 		result.describeWorktree(*st)
 	}

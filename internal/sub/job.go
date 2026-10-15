@@ -25,16 +25,18 @@ const (
 )
 
 type Request struct {
-	Harness string `json:"harness"`
-	Model   string `json:"model,omitempty"`
-	Effort  string `json:"effort,omitempty"`
-	Access  string `json:"access"`
-	Cwd     string `json:"cwd"`
-	Resume  string `json:"resume,omitempty"`
-	Brief   string `json:"brief"`
+	WithUserConfig bool   `json:"withUserConfig"`
+	Harness        string `json:"harness"`
+	Model          string `json:"model,omitempty"`
+	Effort         string `json:"effort,omitempty"`
+	Access         string `json:"access"`
+	Cwd            string `json:"cwd"`
+	Resume         string `json:"resume,omitempty"`
+	Brief          string `json:"brief"`
 }
 
 type State struct {
+	ConfigMode      string           `json:"configMode,omitempty"`
 	ID              string           `json:"id"`
 	Status          Status           `json:"status"`
 	Request         Request          `json:"request"`
@@ -96,6 +98,8 @@ func (s Store) Create(id string, req Request) (State, error) {
 	}
 	now := time.Now().UTC()
 	st := State{ID: id, Status: StatusQueued, Request: req, CreatedAt: now, UpdatedAt: now}
+	h, _ := Lookup(req.Harness)
+	st.ConfigMode = h.configMode(req.WithUserConfig)
 	if err := s.Save(st); err != nil {
 		_ = os.Remove(s.Dir(id))
 		return State{}, err

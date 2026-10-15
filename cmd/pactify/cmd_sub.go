@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
-	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -104,7 +103,8 @@ func newSubCmd() *cobra.Command {
 		}
 		st, err := store.Recover(a[0])
 		if err != nil {
-			subExit(c, 1, err)
+			code, err := subJobError(store, a[0], err)
+			subExit(c, code, err)
 			return
 		}
 		code := 3
@@ -118,7 +118,7 @@ func newSubCmd() *cobra.Command {
 	result.Flags().BoolVar(&resultJSON, "json", false, "Print JSON")
 	cancel := &cobra.Command{Use: "cancel <job>", Short: "Cancel a worker and its agent", Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subCancel(c, a[0]); subExit(c, code, err) }}
 	worker := &cobra.Command{Use: "__worker <job>", Hidden: true, Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subWorker(c.Context(), a[0]); subExit(c, code, err) }}
-	command.AddCommand(run, waitCmd, status, result, cancel, worker, newSubDoctorCmd())
+	command.AddCommand(run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd())
 	return command
 }
 func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool) (int, error) {
@@ -265,7 +265,7 @@ func subWait(c *cobra.Command, store sub.Store, id string, timeout time.Duration
 	for {
 		st, err := store.Recover(id)
 		if err != nil {
-			return 1, err
+			return subJobError(store, id, err)
 		}
 		if subTerminal(st.Status) {
 			return subOutput(c, store, st, jsonOut)
@@ -305,62 +305,6 @@ func subOutput(c *cobra.Command, store sub.Store, st sub.State, jsonOut bool) (i
 	}
 	return 1, nil
 }
-func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
-	store, err := sub.DefaultStore()
-	if err != nil {
-		return 1, err
-	}
-	states := []sub.State{}
-	if len(ids) > 0 {
-		st, e := store.Recover(ids[0])
-		if e != nil {
-			return 1, e
-		}
-		states = append(states, st)
-	} else {
-		entries, e := os.ReadDir(store.Root)
-		if e != nil && !os.IsNotExist(e) {
-			return 1, e
-		}
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-			st, e := store.Recover(entry.Name())
-			if e == nil {
-				states = append(states, st)
-			}
-		}
-		sort.Slice(states, func(i, j int) bool { return states[i].CreatedAt.After(states[j].CreatedAt) })
-		if len(states) > 10 {
-			states = states[:10]
-		}
-	}
-	type statusRow struct {
-		sub.State
-		Duration string `json:"duration"`
-	}
-	rows := make([]statusRow, 0, len(states))
-	for _, st := range states {
-		end := st.FinishedAt
-		if end.IsZero() {
-			end = time.Now()
-		}
-		rows = append(rows, statusRow{st, end.Sub(st.CreatedAt).Round(time.Second).String()})
-	}
-	if jsonOut {
-		if len(ids) > 0 {
-			return 0, subJSON(c, rows[0])
-		}
-		return 0, subJSON(c, rows)
-	}
-	for _, row := range rows {
-		if _, err = fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s  %s\n", row.ID, row.Status, row.Request.Harness, row.Duration); err != nil {
-			return 1, err
-		}
-	}
-	return 0, nil
-}
 func subCancel(c *cobra.Command, id string) (int, error) {
 	store, err := sub.DefaultStore()
 	if err != nil {
@@ -368,7 +312,7 @@ func subCancel(c *cobra.Command, id string) (int, error) {
 	}
 	st, err := store.RequestCancel(id)
 	if err != nil {
-		return 1, err
+		return subJobError(store, id, err)
 	}
 	if st.Worker != nil && !subTerminal(st.Status) {
 		if err = st.Worker.Signal(syscall.SIGTERM, true); err != nil {

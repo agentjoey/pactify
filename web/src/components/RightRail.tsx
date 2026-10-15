@@ -283,7 +283,7 @@ export function RightRail({
         {/* Output — live tail of the task's agent stream (PR2: the Live view's
             terminal now lives here; the stream SSE resumes via Last-Event-ID).
             Mounted only for tasks that can plausibly have a stream — terminal
-            states skip the connection. Local-only: hosted uses TaskDetail. */}
+            states skip the connection. */}
         {project && ["in_progress", "awaiting_review", "changes_requested"].includes(task.status) && (
           <div data-testid="panel-output" className="border-b border-[var(--color-border-subtle)] px-4 py-3">
             <div className="mb-2 text-[9.5px] uppercase tracking-[.6px] text-[var(--color-text-3)]">Output · live</div>
@@ -330,7 +330,7 @@ export function RightRail({
                 variant="primary"
                 className="flex-1"
                 disabled={busy || !canWrite}
-                title={canWrite ? undefined : "Remote control needs U3"}
+                title={canWrite ? undefined : "Requires a writable local serve"}
                 loading={pending === "accept"}
                 onClick={() => run("accept", () => src.verb!(project, "accept", { task: task.id }))}
               >
@@ -340,7 +340,7 @@ export function RightRail({
                 variant="ghost"
                 className="flex-1"
                 disabled={busy || !canWrite}
-                title={canWrite ? undefined : "Remote control needs U3"}
+                title={canWrite ? undefined : "Requires a writable local serve"}
                 onClick={() => setShowChanges((s) => !s)}
               >
                 ↺ Changes…
@@ -360,7 +360,7 @@ export function RightRail({
                   size="sm"
                   className="mt-1.5"
                   disabled={busy || !reason.trim() || !canWrite}
-                  title={canWrite ? undefined : "Remote control needs U3"}
+                  title={canWrite ? undefined : "Requires a writable local serve"}
                   loading={pending === "changes"}
                   onClick={() =>
                     run("changes", async () => {
@@ -389,7 +389,7 @@ export function RightRail({
               size="sm"
               disabled={busy || !mergeable || !canWrite}
               loading={pending === "merge"}
-              title={canWrite ? (mergeable ? "" : "all tasks must be accepted") : "Remote control needs U3"}
+              title={canWrite ? (mergeable ? "" : "all tasks must be accepted") : "Requires a writable local serve"}
               onClick={() => run("merge", () => src.verb!(project, "merge", { feature }))}
             >
               Merge {feature}

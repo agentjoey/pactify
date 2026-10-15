@@ -1,24 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { SettingsModal } from "./SettingsModal";
-import { DataSourceProvider, type DataSource } from "../../lib/datasource";
-
-// SettingsModal reads capabilities to gate PROJECT/MACHINE groups in hosted
-// mode; these tests exercise the LOCAL layout (multiMachine: false).
-function localSource(): DataSource {
-  return {
-    capabilities: { canWrite: true, canOrchestrate: false, multiMachine: false, cockpit: false },
-    listProjects: vi.fn(),
-    getState: vi.fn(),
-    subscribe: vi.fn(() => () => {}),
-  } as unknown as DataSource;
-}
-
-function render(ui: ReactElement) {
-  return rtlRender(<DataSourceProvider source={localSource()}>{ui}</DataSourceProvider>);
-}
-
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     if (url.includes("/api/agents")) return new Response("[]", { status: 200 });
@@ -37,6 +19,14 @@ describe("SettingsModal", () => {
     expect(screen.getByPlaceholderText("Search settings")).toBeInTheDocument();
   });
 
+  it("keeps local settings without Account or Machines navigation", () => {
+    render(<SettingsModal project="demo" author={true} onClose={() => {}} />);
+    expect(screen.queryByTestId("nav-account")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("nav-machines")).not.toBeInTheDocument();
+    expect(screen.getByTestId("nav-appearance")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-shortcuts")).toBeInTheDocument();
+  });
+
   it("closes on the sheet close button", () => {
     const onClose = vi.fn();
     render(<SettingsModal project="demo" author={true} onClose={onClose} />);
@@ -44,14 +34,14 @@ describe("SettingsModal", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("renders scope-grouped left nav with PROJECT/MACHINE/ACCOUNT groups", () => {
+  it("renders scope-grouped left nav with PROJECT/MACHINE groups", () => {
     render(<SettingsModal project="demo" author={true} onClose={() => {}} />);
     expect(screen.getByTestId("settings-nav")).toBeInTheDocument();
-    expect(screen.getAllByTestId("settings-nav-group").length).toBe(3);
+    expect(screen.getAllByTestId("settings-nav-group").length).toBe(2);
     // Scope labels appear in both the rail group header and the pane header.
     expect(screen.getAllByText("PROJECT · demo").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("MACHINE · this computer").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("ACCOUNT").length).toBeGreaterThan(0);
+    expect(screen.queryByText("ACCOUNT")).not.toBeInTheDocument();
   });
 
   // 2026-09-05：Registered agents 与 Agent configs 合并为单一 Agents 页，
@@ -92,25 +82,5 @@ describe("SettingsModal", () => {
     fireEvent.click(screen.getByTestId("nav-review-gate"));
     expect(screen.getByTestId("settings-scope-banner")).toHaveTextContent("PROJECT · demo");
     expect(screen.getByTestId("settings-placeholder")).toBeInTheDocument();
-  });
-
-  it("hosted mode hides PROJECT/MACHINE groups and opens on Account", () => {
-    const hosted = {
-      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true, cockpit: true },
-      listProjects: vi.fn(),
-      getState: vi.fn(),
-      subscribe: vi.fn(() => () => {}),
-      // AccountPanel mounts and fetches; fetch is stubbed in beforeEach.
-    } as unknown as DataSource;
-    rtlRender(
-      <DataSourceProvider source={hosted}>
-        <SettingsModal project="demo" author={true} onClose={() => {}} />
-      </DataSourceProvider>,
-    );
-    expect(screen.queryByText(/PROJECT ·/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/MACHINE · this computer/)).not.toBeInTheDocument();
-    expect(screen.getAllByText("ACCOUNT").length).toBeGreaterThan(0);
-    // Opens directly on the Account panel (banner shows ACCOUNT scope).
-    expect(screen.queryByText("Agent configs")).not.toBeInTheDocument();
   });
 });

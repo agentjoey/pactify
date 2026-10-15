@@ -16,7 +16,6 @@ describe("LocalServeSource", () => {
     expect(src.capabilities).toEqual({
       canWrite: true,
       canOrchestrate: true,
-      multiMachine: false,
       cockpit: true,
     });
   });

@@ -56,24 +56,14 @@ export function RunRail({
   const [gateBusy, setGateBusy] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const src = useDataSource();
-  // Orchestrate (Run/Resume/Ship) needs the drive capability, not just write:
-  // the relay source can drive pact verbs (accept/changes) but not orchestrate.
+  // Orchestrate actions need the drive capability in addition to pact writes.
   const canWrite = src.capabilities.canOrchestrate;
 
-  // Hosted (RelaySource) omits the orchestrate READ/ACTION methods — run status,
-  // parallel status, working diff, ship — because they read/act on the machine's
-  // live driver + git tree, which the zero-knowledge relay doesn't hold yet.
-  // Guard every call on method PRESENCE so hosted degrades gracefully (event
-  // stream + lanes still render) instead of throwing on a non-null assertion.
-  // Local serve implements them all, so local behavior is byte-identical.
-  const canQueryStatus =
-    typeof src.getOrchestrateStatus === "function" && typeof src.getParallelOrchestrate === "function";
   const canShip = typeof src.shipFeature === "function";
   const canDiff = typeof src.getDiff === "function";
 
   function load() {
     if (!project) return;
-    // Hosted has no run-status source — skip the poll (the note renders instead).
     if (!src.getOrchestrateStatus || !src.getParallelOrchestrate) return;
     Promise.all([src.getOrchestrateStatus(project), src.getParallelOrchestrate(project)])
       .then(([single, par]) => {
@@ -139,7 +129,7 @@ export function RunRail({
 
   // canAct gates the Review Gate's pact-verb decisions (Reject→rework, Approve
   // merge). These are writes (accept/changes/merge), not orchestrate drives, so
-  // they gate on canWrite + verb presence — the relay source supports them too.
+  // they gate on canWrite + verb presence.
   const canAct = author && src.capabilities.canWrite && typeof src.verb === "function";
 
   // handleReject — the human requests changes on every awaiting-review task of a
@@ -246,9 +236,7 @@ export function RunRail({
     ? { task: status.task, tier: runTier.tier, effort: runTier.effort }
     : null;
 
-  // Nothing to show: hosted sources can't query run status, and an idle local
-  // driver means the Board columns already tell the whole story.
-  if (!canQueryStatus) return null;
+  // An idle driver means the Board columns already tell the whole story.
   if (!hasActivity) return null;
 
   return (
@@ -404,10 +392,10 @@ function RunControl({
             </span>
           </div>
           {author && escalated && (
-            <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume</Button>
+            <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Requires a writable local serve"} onClick={onResume}>Resume</Button>
           )}
           {author && done && canShip && (
-            <Button size="sm" disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onShip}>Ship</Button>
+            <Button size="sm" disabled={!canWrite} title={canWrite ? undefined : "Requires a writable local serve"} onClick={onShip}>Ship</Button>
           )}
         </div>
       )}
@@ -690,7 +678,7 @@ function ReviewGate({ reason, author, resuming, loadingDiff, onResume, onDiff, o
               <Button size="sm" loading={gateBusy} data-testid="approve-merge-confirm" onClick={onApproveMerge} style={{ background: "var(--color-danger)" }}>Override gate & merge ▸</Button>
             )}
             <Button size="sm" variant="ghost" onClick={() => { setTakeoverOpen((v) => !v); setRejectOpen(false); setConfirmMerge(false); }}>Take over</Button>
-            <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Remote control needs U3"} onClick={onResume}>Resume run ▸</Button>
+            <Button size="sm" loading={resuming} disabled={!canWrite} title={canWrite ? undefined : "Requires a writable local serve"} onClick={onResume}>Resume run ▸</Button>
           </div>
 
           {confirmMerge && (

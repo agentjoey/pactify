@@ -1,12 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { useDataSource } from "../../lib/datasource";
 import { AgentsPage } from "../ops/AgentsPage";
 import { CustomAgentForm } from "../ops/CustomAgentForm";
 import { AgentConfig } from "../ops/AgentConfig";
 import { Wiring } from "../ops/Wiring";
 import { Seats } from "../ops/Seats";
-import { Machines } from "../Machines";
-import { AccountPanel } from "../AccountPanel";
 import {
   Users,
   Plugs,
@@ -14,20 +11,17 @@ import {
   TreeStructure,
   SquaresFour,
   ClockCounterClockwise,
-  UserCircle,
-  Desktop,
   Palette,
   Keyboard,
   MagnifyingGlass,
   X,
 } from "@phosphor-icons/react";
 
-type Scope = "project" | "machine" | "account";
+type Scope = "project" | "machine";
 
 const SCOPE_COLOR: Record<Scope, string> = {
   project: "#ffd479",
   machine: "#6ee7a0",
-  account: "#8ab4ff",
 };
 
 type NavItem = { id: string; label: string; icon: React.ComponentType<any> };
@@ -41,29 +35,22 @@ const FOCUSABLE =
   'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 // SettingsModal — scoped two-pane sheet. Left nav groups config by scope
-// (PROJECT / MACHINE / ACCOUNT); right pane shows the selected panel plus a
+// (PROJECT / MACHINE); right pane shows the selected panel plus a
 // scope banner that cross-links the related scope.
 export function SettingsModal({
   project,
   author,
   focusSeat,
   onClose,
-  onLogout,
   viewMode,
 }: {
   project: string;
   author: boolean;
   focusSeat?: string | null;
   onClose: () => void;
-  onLogout?: () => void;
   viewMode?: boolean;
 }) {
-  // Hosted (relay) mode has no local serve behind /api: the PROJECT and
-  // MACHINE panels would render dead fetches, so they are hidden and the
-  // modal opens on the ACCOUNT section instead.
-  const src = useDataSource();
-  const hosted = src.capabilities.multiMachine;
-  const [activeId, setActiveId] = useState(hosted ? "account" : "agents");
+  const [activeId, setActiveId] = useState("agents");
   const [query, setQuery] = useState("");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -128,39 +115,22 @@ export function SettingsModal({
   }, [viewMode]);
 
   const navGroups: NavGroup[] = [
-    // PROJECT/MACHINE panels drive the LOCAL serve's /api; hosted mode has no
-    // such backend, so only the ACCOUNT group is offered there.
-    ...(hosted
-      ? []
-      : ([
-          {
-            scope: "project",
-            label: `PROJECT · ${project}`,
-            items: [
-              { id: "seats", label: "Seats & roles", icon: Users },
-              { id: "wiring", label: "Agent wiring", icon: Plugs },
-              { id: "review-gate", label: "Review gate", icon: ShieldCheck },
-              { id: "worktrees", label: "Worktrees", icon: TreeStructure },
-            ],
-          },
-          {
-            scope: "machine",
-            label: "MACHINE · this computer",
-            items: [
-              // 2026-09-05：Registered agents 与 Agent configs 合并为单一 Agents 页。
-              // 拆成两页正是困惑的来源：扫描/分区在前者，而「7 行常驻展开」的痛点在后者，
-              // 且两者都答不了「这个 agent 现在到底能不能用」。
-              { id: "agents", label: "Agents", icon: SquaresFour },
-              { id: "sessions", label: "Sessions", icon: ClockCounterClockwise },
-            ],
-          },
-        ] as NavGroup[])),
     {
-      scope: "account",
-      label: "ACCOUNT",
+      scope: "project",
+      label: `PROJECT · ${project}`,
       items: [
-        { id: "account", label: "Account", icon: UserCircle },
-        { id: "machines", label: "Machines", icon: Desktop },
+        { id: "seats", label: "Seats & roles", icon: Users },
+        { id: "wiring", label: "Agent wiring", icon: Plugs },
+        { id: "review-gate", label: "Review gate", icon: ShieldCheck },
+        { id: "worktrees", label: "Worktrees", icon: TreeStructure },
+      ],
+    },
+    {
+      scope: "machine",
+      label: "MACHINE · this computer",
+      items: [
+        { id: "agents", label: "Agents", icon: SquaresFour },
+        { id: "sessions", label: "Sessions", icon: ClockCounterClockwise },
         { id: "appearance", label: "Appearance", icon: Palette },
         { id: "shortcuts", label: "Shortcuts", icon: Keyboard },
       ],
@@ -181,16 +151,12 @@ export function SettingsModal({
   const scopeBannerLabel =
     activeScope === "project"
       ? `PROJECT · ${project}`
-      : activeScope === "machine"
-        ? "MACHINE · all projects"
-        : "ACCOUNT";
+      : "MACHINE · all projects";
 
   const scopeRowLabel =
     activeScope === "project"
       ? `PROJECT · ${project}`
-      : activeScope === "machine"
-        ? "MACHINE · this computer"
-        : "ACCOUNT";
+      : "MACHINE · this computer";
 
   function renderPanel(): ReactNode {
     switch (activeId) {
@@ -214,10 +180,6 @@ export function SettingsModal({
             <CustomAgentForm author={author} onCreated={() => {}} />
           </>
         );
-      case "machines":
-        return <Machines />;
-      case "account":
-        return <AccountPanel onLogout={() => { onClose(); onLogout?.(); }} />;
       case "review-gate":
       case "worktrees":
       case "sessions":
@@ -432,21 +394,11 @@ function ScopeExplainer({
       </p>
     );
   }
-  if (scope === "account" && activeItem === "machines") {
-    return (
-      <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
-        Account-wide machine roster. In local mode this list is empty because there is no relay
-        presence to aggregate.
-      </p>
-    );
-  }
   return (
     <p className="max-w-xl text-[12.5px] leading-[1.6] text-[var(--text-3)]">
       {scope === "project"
         ? `Project-scoped setting for ${project}. These values stay inside this repo and do not leak to other projects.`
-        : scope === "machine"
-          ? "Machine-scoped setting. These values live in your local agent registry and apply to every project on this computer."
-          : "Account-scoped setting. Changes apply to your signed-in Pactify account."}
+        : "Machine-scoped setting. These values live in your local agent registry and apply to every project on this computer."}
     </p>
   );
 }
@@ -469,9 +421,7 @@ function PlaceholderPanel({
       <p className="text-xs text-[var(--color-text-2)]">
         {scope === "project"
           ? `${label} is project-scoped for ${project}. This panel is coming soon — no backend changes were made for this task.`
-          : scope === "machine"
-            ? `${label} is machine-scoped. This panel is coming soon — no backend changes were made for this task.`
-            : `${label} is account-scoped. This panel is coming soon — no backend changes were made for this task.`}
+          : `${label} is machine-scoped. This panel is coming soon — no backend changes were made for this task.`}
       </p>
     </div>
   );

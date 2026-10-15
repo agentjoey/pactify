@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import type { Lens } from "../../App";
 import type { ProjectMeta } from "../../lib/types";
 import type { Worktree } from "../../lib/api";
@@ -16,7 +16,6 @@ export function Toolbar({
   onLensChange,
   lens,
   cockpitPending,
-  profileEmail,
   projects,
   currentProjectId,
   running,
@@ -34,7 +33,6 @@ export function Toolbar({
   onLensChange: (lens: Lens) => void;
   lens: Lens;
   cockpitPending?: number;
-  profileEmail?: string;
   projects?: ProjectMeta[];
   currentProjectId?: string;
   running?: boolean;
@@ -67,11 +65,6 @@ export function Toolbar({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onLensChange]);
-
-  const monogram = useMemo(() => {
-    if (profileEmail) return profileEmail.slice(0, 2).toLowerCase();
-    return "cl";
-  }, [profileEmail]);
 
   return (
     <div
@@ -186,14 +179,14 @@ export function Toolbar({
         </button>
         <span
           data-testid="user-avatar-tile"
-          title={profileEmail || "local"}
+          title="local"
           className="grid h-[26px] w-[26px] place-items-center rounded-[8px] font-mono text-[11px] font-semibold text-[#0a0e14]"
           style={{
             background: "linear-gradient(135deg,#ffd479,#e0a93a)",
             boxShadow: "inset 0 0 0 1px rgba(255,255,255,.16)",
           }}
         >
-          {monogram}
+          cl
         </span>
       </div>
     </div>

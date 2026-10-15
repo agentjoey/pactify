@@ -108,7 +108,7 @@ function AgentConfigRow({
   delay?: number;
   embedded?: boolean;
   initial?: Config;
-  // author=false（hosted 只读）必须一路禁到配置体：独立验证实测发现，只读模式下
+  // author=false（只读）必须一路禁到配置体：独立验证实测发现，只读模式下
   // 模型下拉/权限档/Save 全部可用且真的发出了写请求——旧测试只断言 Register 按钮
   // 不存在，恰好绕开了这里。
   author?: boolean;

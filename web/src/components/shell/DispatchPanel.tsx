@@ -26,12 +26,6 @@ export function DispatchPanel({
   // Dispatch generates + runs an orchestrate plan → needs the drive capability,
   // not just write.
   const canWrite = src.capabilities.canOrchestrate;
-  // Hosted (relay) sources can't read the machine's files, so they have no
-  // status/review/apply round-trip: plan.generate is one-shot (generates AND
-  // auto-applies on the machine, assigns arrive via the event stream). The
-  // local serve source exposes getPlanGenStatus → keep the generate→poll→
-  // review→apply flow. Branch on method presence, never on canOrchestrate.
-  const hosted = src.getPlanGenStatus == null;
   const [phase, setPhase] = useState<Phase>("compose");
   const [goal, setGoal] = useState("");
   const [feature, setFeature] = useState("");
@@ -58,10 +52,11 @@ export function DispatchPanel({
 
   if (!open) return null;
 
-  const canGenerate = goal.trim() !== "" && /^[a-z0-9][a-z0-9-]*$/.test(feature) && roster.length > 0 && canWrite;
+  const canPlan = Boolean(src.generatePlan && src.getPlanGenStatus && src.getPlanReview && src.applyPlan);
+  const canGenerate = canPlan && goal.trim() !== "" && /^[a-z0-9][a-z0-9-]*$/.test(feature) && roster.length > 0 && canWrite;
 
   async function startGenerate() {
-    if (!canWrite || !src.generatePlan) return;
+    if (!canGenerate || !src.generatePlan || !src.getPlanGenStatus) return;
     setError("");
     setPhase("generating");
     try {
@@ -69,12 +64,6 @@ export function DispatchPanel({
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setPhase("error");
-      return;
-    }
-    // Hosted one-shot: generate already applied on the machine; the assigns
-    // stream onto the board. Nothing to poll — confirm and let the user watch.
-    if (hosted || !src.getPlanGenStatus) {
-      setPhase("done");
       return;
     }
     pollRef.current = setInterval(async () => {
@@ -152,7 +141,7 @@ export function DispatchPanel({
                 type="button"
                 data-testid="dispatch-generate"
                 disabled={!canGenerate}
-                title={canWrite ? undefined : "Remote control needs U3"}
+                title={canWrite ? undefined : "Requires a writable local serve"}
                 onClick={startGenerate}
                 className="rounded-md bg-[var(--color-text-1)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-bg-surface)] disabled:opacity-40"
               >Generate</button>
@@ -197,7 +186,7 @@ export function DispatchPanel({
                 type="button"
                 data-testid="dispatch-confirm"
                 disabled={review.valid === false || !canWrite}
-                title={canWrite ? undefined : "Remote control needs U3"}
+                title={canWrite ? undefined : "Requires a writable local serve"}
                 onClick={dispatch}
                 className="rounded-md bg-[var(--color-success)] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-40"
               >✓ Dispatch</button>
@@ -210,9 +199,7 @@ export function DispatchPanel({
         {phase === "done" && (
           <div data-testid="dispatch-done" className="flex flex-col gap-3">
             <p className="text-[12px] text-[var(--color-text-1)]">
-              {hosted
-                ? "Dispatched — generating the plan on the remote machine. Watch the board as tasks arrive."
-                : `Dispatched — ${assigned} task(s) assigned, orchestrating.`}
+              {`Dispatched — ${assigned} task(s) assigned, orchestrating.`}
             </p>
             <button type="button" data-testid="dispatch-golive" onClick={onGoLive} className="rounded-md border border-[var(--color-border-subtle)] px-3 py-1.5 text-[12px]">Watch on Board →</button>
           </div>

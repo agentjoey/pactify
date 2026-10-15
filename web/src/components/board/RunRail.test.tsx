@@ -314,7 +314,7 @@ describe("RunRail — runtime tier/effort (exec-tiering-ui)", () => {
 describe("RunRail — capability gating", () => {
   it("disables Ship when the source is read-only", async () => {
     const readOnly = {
-      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true, cockpit: false },
+      capabilities: { canWrite: false, canOrchestrate: false, cockpit: false },
       listProjects: vi.fn(),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
@@ -338,17 +338,15 @@ describe("RunRail — capability gating", () => {
     );
     await waitFor(() => expect(screen.getByRole("button", { name: "Ship" })).toBeTruthy());
     expect(screen.getByRole("button", { name: "Ship" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Ship" })).toHaveAttribute("title", "Remote control needs U3");
+    expect(screen.getByRole("button", { name: "Ship" })).toHaveAttribute("title", "Requires a writable local serve");
   });
 });
 
-// A hosted-like source omits the orchestrate read methods entirely: the rail
-// must render NOTHING (no throw, no note) — hosted boards stay clean and the
-// event drawer/board columns carry the story.
-describe("RunRail — hosted method-presence guard", () => {
+// Optional DataSource methods remain guarded until the interface is narrowed.
+describe("RunRail — optional methods", () => {
   it("renders nothing when status methods are absent", () => {
-    const hosted = {
-      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true, cockpit: false },
+    const limited = {
+      capabilities: { canWrite: true, canOrchestrate: true, cockpit: false },
       listProjects: vi.fn().mockResolvedValue([]),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
@@ -358,7 +356,7 @@ describe("RunRail — hosted method-presence guard", () => {
       // deliberately no getOrchestrateStatus / getParallelOrchestrate
     };
     render(
-      <DataSourceProvider source={hosted as unknown as DataSource}>
+      <DataSourceProvider source={limited as unknown as DataSource}>
         <RunRail
           project="p1"
           state={st([{ id: "feat-x", branch: "feat/x", status: "in_progress", tasks: [task("t1", "accepted"), task("t2", "in_progress")] }])}
@@ -372,7 +370,7 @@ describe("RunRail — hosted method-presence guard", () => {
 
   it("hides the Ship button when the source lacks shipFeature (even when done)", async () => {
     const src = {
-      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true, cockpit: false },
+      capabilities: { canWrite: true, canOrchestrate: true, cockpit: false },
       listProjects: vi.fn().mockResolvedValue([]),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),

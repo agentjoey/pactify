@@ -4,16 +4,6 @@ export interface Feature { id: string; branch: string; status: string; tasks: Ta
 export interface State { project: string; agents: Seat[]; features: Feature[]; awaiting_count: number }
 export interface PactEvent { event_id: string; ts: string; agent_id: string; role: string; event_type: string; task_id: string; feature: string; payload: Record<string, unknown> }
 
-/** Decrypted pact event with its relay header preserved. Returned by hosted-mode sources. */
-export interface PactEventDetail {
-  seq: number;
-  eventType: string;
-  task?: string | null;
-  feature?: string | null;
-  ts: number;
-  body: Record<string, unknown>;
-}
-
 export interface ProjectMeta { id: string; name: string; path: string; project: string; feature_count: number; awaiting_count: number; group?: string }
 export interface BoardTask { task: Task; feature: string }
 
@@ -141,16 +131,6 @@ export interface FsBrowseResponse {
   path: string;
   parent: string;
   entries: FsBrowseEntry[];
-}
-
-// Multi-machine roster surfaced by hosted-mode sources (relay account machines).
-export interface Machine {
-  machineId: string;
-  host?: string;
-  agentKinds: string[];
-  workdirs?: string[];
-  online: boolean;
-  lastSeenAt: number;
 }
 
 // Planner-generated task graph surfaced for human review before `plan apply`

@@ -75,7 +75,7 @@ const stats: ProjectStats = {
 
 function makeSource(overrides: Record<string, unknown> = {}) {
   return {
-    capabilities: { canWrite: true, canOrchestrate: true, multiMachine: false, cockpit: true },
+    capabilities: { canWrite: true, canOrchestrate: true, cockpit: true },
     listProjects: vi.fn(),
     getState: vi.fn(),
     getStats: vi.fn().mockResolvedValue(stats),
@@ -290,7 +290,7 @@ describe("Dashboard", () => {
         onOpenBoard={() => {}}
         onOpenCockpit={() => {}}
       />,
-      { capabilities: { canWrite: false, canOrchestrate: true, multiMachine: false, cockpit: true } },
+      { capabilities: { canWrite: false, canOrchestrate: true, cockpit: true } },
     );
     expect(screen.getByTestId("review-gate-accept")).toBeDisabled();
     expect(screen.getByTestId("review-gate-changes")).toBeDisabled();

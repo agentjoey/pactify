@@ -482,7 +482,7 @@ export type CockpitEvent = {
   state?: Record<string, unknown> | string;
   err?: string;
   threadId?: string;
-  // status snapshot (hosted relay mirror forwards the initial state)
+  // status snapshot
   capable?: boolean;
   resumable?: boolean;
   reason?: string;

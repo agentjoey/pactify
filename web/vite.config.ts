@@ -1,6 +1,5 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vitest/config";
-import { fileURLToPath, URL } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -13,7 +12,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           // Vendor split: keep the heavy dependencies out of the main entry chunk
-          // so the initial dashboard load stays under Vercel's 500 kB warning.
+          // so the initial dashboard load stays small.
           if (
             id.includes("node_modules/react/") ||
             id.includes("node_modules/react-dom/")
@@ -23,39 +22,8 @@ export default defineConfig({
           if (id.includes("node_modules/@xyflow/")) {
             return "xyflow";
           }
-          if (
-            id.includes("/cloud/crypto/") ||
-            id.includes("/cloud/relay-client/") ||
-            id.includes("/node_modules/@noble/") ||
-            id.includes("/node_modules/@scure/") ||
-            id.includes("/node_modules/socket.io-client/")
-          ) {
-            return "crypto-relay";
-          }
         },
       },
-    },
-  },
-  // Monorepo local linking (path B): the dashboard bundles shared cloud/ TS
-  // packages straight from source — no npm publish, no build-dist round-trip.
-  // Keeps cloud/ (its own pnpm workspace + fly-deployed relay) untouched; only
-  // Vite/tsc resolve these aliases. A full pnpm-workspace unification would also
-  // move the relay Docker to a repo-root build context (deploy-touching) — left
-  // as a follow-up. Mirror every alias in tsconfig.app.json `paths`.
-  resolve: {
-    alias: {
-      "@pactify-apps/pact-project": fileURLToPath(
-        new URL("../cloud/pact-project/src/index.ts", import.meta.url),
-      ),
-      "@pactify-apps/crypto": fileURLToPath(
-        new URL("../cloud/crypto/src/index.ts", import.meta.url),
-      ),
-      "@pactify-apps/wire": fileURLToPath(
-        new URL("../cloud/wire/src/index.ts", import.meta.url),
-      ),
-      "@pactify-apps/relay-client": fileURLToPath(
-        new URL("../cloud/relay-client/src/index.ts", import.meta.url),
-      ),
     },
   },
   // Dev server proxies the API + SSE stream (both live under /api) to the running

@@ -42,7 +42,7 @@ function reviewable(status: string): boolean {
 // reviewBlockedReason explains a disabled review button, reusing the existing
 // title-as-reason pattern. undefined when the button is live.
 function reviewBlockedReason(status: string, canWrite: boolean): string | undefined {
-  if (!canWrite) return "Remote control needs U3";
+  if (!canWrite) return "Requires a writable local serve";
   if (!reviewable(status)) {
     return `任务处于 ${status}，需 owner 先 checkpoint 才能评审`;
   }

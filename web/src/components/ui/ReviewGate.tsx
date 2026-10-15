@@ -133,7 +133,7 @@ export function ReviewGate({
               type="button"
               data-testid="review-gate-accept"
               disabled={!canWrite || pending === "accept"}
-              title={canWrite ? undefined : "Remote control needs U3"}
+              title={canWrite ? undefined : "Requires a writable local serve"}
               onClick={() => verb("accept")}
               className="rounded-md px-3 py-1 text-[11.5px] font-semibold text-[var(--color-on-accent)] disabled:opacity-50"
               style={{ background: "var(--color-success)" }}
@@ -144,7 +144,7 @@ export function ReviewGate({
               type="button"
               data-testid="review-gate-changes"
               disabled={!canWrite || pending === "changes"}
-              title={canWrite ? undefined : "Remote control needs U3"}
+              title={canWrite ? undefined : "Requires a writable local serve"}
               onClick={() => setShowReason(true)}
               className="rounded-md px-3 py-1 text-[11.5px] font-semibold disabled:opacity-50"
               style={{

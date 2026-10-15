@@ -2,12 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import type { ProjectMeta, State, PactEvent, RecipeItem, OrchestrateStatusResponse } from "./lib/types";
 import { fetchEventsLog, getActingSeat, renameRegistry, deleteRegistry, getOrchestrateStatus, getRecipes, getWorktrees } from "./lib/api";
 import type { Worktree } from "./lib/api";
-import { DataSourceProvider, useDataSource, type DataSource } from "./lib/datasource";
-import { isHostedMode, localSource } from "./lib/source";
-import { IdentityGate } from "./components/IdentityGate";
-import { UnlockPanel } from "./components/UnlockPanel";
+import { DataSourceProvider, useDataSource } from "./lib/datasource";
+import { localSource } from "./lib/source";
 import { Toolbar } from "./components/shell/Toolbar";
-import { fetchMe, type MeResponse } from "./lib/identity";
 import { SettingsModal } from "./components/shell/SettingsModal";
 import { AddProjectWizard } from "./components/shell/AddProjectWizard";
 import { DispatchPanel } from "./components/shell/DispatchPanel";
@@ -17,7 +14,6 @@ import { FlowView } from "./components/flow/FlowView";
 import { RunRail } from "./components/board/RunRail";
 import { EventDrawer } from "./components/board/EventDrawer";
 import { RightRail } from "./components/RightRail";
-import { TaskDetail } from "./components/TaskDetail";
 import { CockpitPanel } from "./components/CockpitPanel";
 import { Dashboard } from "./components/Dashboard";
 import { CommandK } from "./components/CommandK";
@@ -56,10 +52,8 @@ export function pickInitialProject(ps: ProjectMeta[], stored?: string | null): s
   return alive?.id ?? (ps.length ? ps[0].id : "");
 }
 
-export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) => void; onLogout: () => void }) {
+export function AppContent() {
   const src = useDataSource();
-  const locked = Boolean(src.locked);
-  const [email, setEmail] = useState("");
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
   // A failed first state fetch must NOT read as "still loading" — it suppresses
@@ -156,18 +150,6 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
 
   useEffect(() => {
     refreshProjects();
-    // Hosted has no /api/acting-seat (that endpoint is local-serve only); its
-    // authority comes from the relay source's capabilities — it drives via the
-    // remote-control down-channel as the account, with no per-project seat. So
-    // deriving author from getActingSeat() left every hosted dashboard stuck in
-    // "observing". Use the capability flag instead.
-    if (isHostedMode()) {
-      setAuthor(src.capabilities.canWrite);
-      setSeat("");
-      // Display the signed-in email in the toolbar.
-      fetchMe().then((m: MeResponse) => setEmail(m.user.email)).catch(() => setEmail(""));
-      return;
-    }
     // A non-empty acting seat means this local dashboard can author.
     getActingSeat().then((r) => {
       setAuthor(!!(r?.seat));
@@ -203,14 +185,6 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
       setOrchestrateStatusByProject({});
       return;
     }
-    // Hosted (multiMachine) sources drive orchestrate remotely; the local
-    // /api/projects/:name/orchestrate/status relative path 404s on Vercel, so
-    // skip the noisy poll and report every project as not running here.
-    if (src.capabilities.multiMachine) {
-      setRunningByProject(Object.fromEntries(names.map((name) => [name, false])));
-      setOrchestrateStatusByProject({});
-      return;
-    }
     void Promise.all(
       names.map((name) =>
         getOrchestrateStatus(name)
@@ -238,7 +212,7 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
   const cockpitSeatTarget = cockpitSeat || orchestratorSeat;
   useVisiblePoll(() => {
     const statusFn = src.cockpitStatus?.bind(src);
-    if (!current || !statusFn || !src.capabilities.cockpit || locked) {
+    if (!current || !statusFn || !src.capabilities.cockpit) {
       setCockpitPending(0);
       return;
     }
@@ -346,15 +320,6 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
 
   useEffect(() => {
     if (!current) return;
-    if (locked) {
-      // A locked (bearer-only) source cannot decrypt state or events. Keep the
-      // project selector live but skip all decryption-dependent fetches.
-      setState(EMPTY);
-      setEvents([]);
-      setLoadFailed(false);
-      setLive(false);
-      return;
-    }
     let alive = true;
     currentRef.current = current;
     setEvents([]);
@@ -378,9 +343,7 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
       .then((s) => { if (alive) { noteFetchOk(); applyState(s); } })
       .catch(() => { if (alive) { noteFetchFail(); setState(EMPTY); setLoadFailed(true); } });
     if (!currentWorktree) {
-      // Shared event-append with event_id dedupe: the local SSE backfill can
-      // overlap a live event that raced in between subscribe and replay, and
-      // the hosted REST backfill (below) can overlap the socket stream.
+      // SSE replay and REST backfill can overlap live events; dedupe by event_id.
       const appendEvent = (e: PactEvent) => {
         if (seenEventIds.current.has(e.event_id)) return;
         seenEventIds.current.add(e.event_id);
@@ -396,11 +359,8 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
         () => { if (alive) noteFetchFail(); },
         (v) => { if (alive) setLive(v); },
       );
-      // Backfill history via the REST log. The LOCAL SSE stream replays the
-      // log tail on connect, but the HOSTED (relay) subscription is live-only
-      // — without this, Flow/EventDrawer start empty on hosted until new
-      // activity arrives. Sort merged history by ts so a live event that
-      // raced in ahead of the backfill can't scramble the timeline.
+      // Backfill via REST and sort merged history by ts so live events that
+      // race ahead of the backfill cannot scramble the timeline.
       const fetchLog = src.fetchEventsLog?.bind(src) ?? fetchEventsLog;
       fetchLog(current, undefined, EVENTS_CAP)
         .then((evs) => {
@@ -485,7 +445,6 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
         lens={lens}
         onLensChange={setLens}
         cockpitPending={cockpitPending}
-        profileEmail={email}
         projects={projects}
         currentProjectId={current}
         running={!!runningByProject[currentName]}
@@ -501,9 +460,7 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
       <div className="relative flex flex-1 overflow-hidden">
         {projectsLoaded && projects.length === 0
           ? <NoProjects onRegistered={refreshProjects} />
-          : locked
-            ? <UnlockPanel onUnlock={onSource} />
-            : renderLens()}
+          : renderLens()}
       </div>
       <Toasts toasts={toasts} />
       {fetchStale && (
@@ -576,7 +533,6 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
             author={author}
             focusSeat={settingsSeat}
             onClose={() => setLens(previousLens.current === "settings" ? "board" : previousLens.current)}
-            onLogout={onLogout}
             viewMode
           />
         );
@@ -631,9 +587,7 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
               ) : (
                 <div data-testid="view-flow" className="flex flex-1 overflow-hidden"><FlowView state={shownState} events={events} project={current} selected={selected} onSelect={setSelected} /></div>
               )}
-              {src.capabilities.multiMachine
-                ? <TaskDetail project={current} taskId={selected} state={shownState} onClose={() => setSelected("")} onOpenCockpit={openCockpit} />
-                : <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />}
+              <RightRail state={shownState} events={events} selected={selected} project={current} author={author} onSelect={setSelected} />
             </div>
             <EventDrawer events={events} agents={shownState.agents} state={shownState} />
           </div>
@@ -643,18 +597,10 @@ export function AppContent({ onSource, onLogout }: { onSource: (s: DataSource) =
 }
 
 export default function App() {
-  // Local build → the co-located serve source is ready immediately. Hosted build
-  // → start with no source and gate on IdentityGate until an SSO session is
-  // established (or the user opts into the legacy master-secret paste flow).
-  const [source, setSource] = useState<DataSource | null>(() =>
-    isHostedMode() ? null : localSource(),
-  );
-  if (!source) {
-    return <IdentityGate onSource={setSource} />;
-  }
+  const [source] = useState(localSource);
   return (
     <DataSourceProvider source={source}>
-      <AppContent onSource={setSource} onLogout={() => setSource(null)} />
+      <AppContent />
     </DataSourceProvider>
   );
 }

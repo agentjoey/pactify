@@ -98,6 +98,11 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if h.Version != nil {
 		result.CLIVersion, _ = h.Version(ctx)
 	}
+	if result.CLIVersion != "" {
+		if previous := store.lastCLIVersionFor(req.Harness); previous != "" && previous != result.CLIVersion {
+			result.Warnings = append(result.Warnings, fmt.Sprintf("CLI 版本变化：%s → %s", previous, result.CLIVersion))
+		}
+	}
 	file, err := os.OpenFile(store.LogPath(id), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		return fail(err)

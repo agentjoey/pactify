@@ -158,6 +158,9 @@ func DiffSince(dir string, snap Snapshot) (Diff, error) {
 		f := FileDelta{Path: path, New: true}
 		if !bytes.ContainsRune(data, 0) {
 			f.Added = bytes.Count(data, []byte{'\n'})
+			if len(data) > 0 && data[len(data)-1] != '\n' {
+				f.Added++
+			}
 		}
 		d.Files = append(d.Files, f)
 	}

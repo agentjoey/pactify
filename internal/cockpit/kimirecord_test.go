@@ -72,7 +72,7 @@ func TestReadKimiRecordErrors(t *testing.T) {
 	for _, tc := range []struct{ name, index, wire string }{
 		{"bad index", "{", ""},
 		{"missing directory", `{"sessionId":"session_abc"}`, ""},
-		{"bad wire", `{"sessionId":"session_abc","sessionDir":"SESSION_DIR"}`, "{"},
+		{"bad wire", `{"sessionId":"session_abc","sessionDir":"SESSION_DIR"}`, "{\n{}\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			home := writeKimiFixture(t, tc.index, tc.wire)
@@ -83,5 +83,68 @@ func TestReadKimiRecordErrors(t *testing.T) {
 	}
 	if _, err := ReadKimiRecord(t.TempDir(), "missing"); err == nil {
 		t.Fatal("want missing index error")
+	}
+}
+
+func TestReadKimiRecordTruncatedFinalLine(t *testing.T) {
+	const prefix = `{"type":"llm.request","model":"kimi"}
+{"type":"usage.record","usage":{"inputOther":10,"output":2},"usageScope":"turn"}
+`
+	for _, tc := range []struct {
+		name string
+		tail string
+	}{
+		{"without trailing newline", `{"type":"usage.record","usage":{"inputOther":100`},
+		{"with trailing newline", "{\"type\":\"usage.record\",\"usage\":{\"inputOther\":100\n"},
+		{"truncated string", `{"type":"llm.request","model":"unfinished`},
+		{"truncated literal", `{"type":tru`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := writeKimiFixture(t, `{"sessionId":"session_abc","sessionDir":"SESSION_DIR"}`, prefix+tc.tail)
+			r, err := ReadKimiRecord(home, "session_abc")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := KimiRecord{Models: []string{"kimi"}, InputTokens: 10, OutputTokens: 2, Turns: 1}
+			if !reflect.DeepEqual(r, want) {
+				t.Fatalf("record=%+v want=%+v", r, want)
+			}
+		})
+	}
+}
+
+func TestReadKimiRecordEmptyOrTruncatedWire(t *testing.T) {
+	for _, wire := range []string{"", "\n", "{", "{\n"} {
+		t.Run(wire, func(t *testing.T) {
+			home := writeKimiFixture(t, `{"sessionId":"session_abc","sessionDir":"SESSION_DIR"}`, wire)
+			r, err := ReadKimiRecord(home, "session_abc")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(r, KimiRecord{}) {
+				t.Fatalf("record=%+v want empty record", r)
+			}
+		})
+	}
+}
+
+func TestReadKimiRecordCorruptLineLocation(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		wire string
+	}{
+		{"truncated middle line", "{}\n\n{\n{}\n"},
+		{"corrupt middle line", "{}\n\nnot json\n{}\n"},
+		{"corrupt final line", "{}\n\nnot json\n"},
+		{"invalid final field type", "{}\n\n{\"type\":42}\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := writeKimiFixture(t, `{"sessionId":"session_abc","sessionDir":"SESSION_DIR"}`, tc.wire)
+			_, err := ReadKimiRecord(home, "session_abc")
+			path := filepath.Join(home, "sessions", "wd_x", "session_abc", "agents", "main", "wire.jsonl")
+			if err == nil || !strings.Contains(err.Error(), path+":3:") {
+				t.Fatalf("err=%v want %s:3:", err, path)
+			}
+		})
 	}
 }

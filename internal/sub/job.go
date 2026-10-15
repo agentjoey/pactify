@@ -175,3 +175,40 @@ func (s Store) LastSessionFor(harness, cwd string) (string, error) {
 	}
 	return sessionID, nil
 }
+
+// lastCLIVersionFor is best-effort history across repositories and terminal statuses.
+func (s Store) lastCLIVersionFor(harness string) string {
+	entries, err := os.ReadDir(s.Root)
+	if err != nil {
+		return ""
+	}
+	var latest time.Time
+	var version string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		st, err := s.Load(entry.Name())
+		if err != nil || st.Request.Harness != harness {
+			continue
+		}
+		switch st.Status {
+		case StatusSucceeded, StatusFailed, StatusCanceled:
+		default:
+			continue
+		}
+		if version != "" && !st.FinishedAt.After(latest) {
+			continue
+		}
+		data, err := os.ReadFile(s.ResultPath(st.ID))
+		if err != nil {
+			continue
+		}
+		var result Result
+		if err := json.Unmarshal(data, &result); err != nil || result.CLIVersion == "" {
+			continue
+		}
+		latest, version = st.FinishedAt, result.CLIVersion
+	}
+	return version
+}

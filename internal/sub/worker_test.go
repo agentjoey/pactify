@@ -145,6 +145,130 @@ func TestRunJobWriteSucceeds(t *testing.T) {
 		t.Fatalf("log=%s err=%v", data, err)
 	}
 }
+
+func TestRunJobCLIVersionChange(t *testing.T) {
+	type previousJob struct {
+		id, harness, version string
+		status               Status
+		finished             int64
+		damage               string
+	}
+	old := previousJob{id: "z-old", harness: "fake", version: "2.0.0", status: StatusSucceeded, finished: 1}
+	type testCase struct {
+		name    string
+		history []previousJob
+		current string
+		failed  bool
+		want    string
+	}
+	tests := []testCase{
+		{name: "first job", current: "2.2.0"},
+		{name: "unchanged", history: []previousJob{old}, current: "2.0.0"},
+		{name: "changed", history: []previousJob{old}, current: "2.2.0", want: "CLI 版本变化：2.0.0 → 2.2.0"},
+		{name: "unknown current", history: []previousJob{old}},
+		{name: "run still fails", history: []previousJob{old}, current: "2.2.0", failed: true, want: "CLI 版本变化：2.0.0 → 2.2.0"},
+	}
+	for _, status := range []Status{StatusSucceeded, StatusFailed, StatusCanceled} {
+		latest := previousJob{id: "a-new", harness: "fake", version: "2.1.0", status: status, finished: 2}
+		tests = append(tests, testCase{name: "latest " + string(status), history: []previousJob{latest, old}, current: "2.2.0", want: "CLI 版本变化：2.1.0 → 2.2.0"})
+	}
+	for _, skip := range []string{"empty version", "other harness", "queued", "running", "missing state", "corrupt state", "unreadable state", "missing result", "corrupt result", "unreadable result"} {
+		newer := previousJob{id: "a-new", harness: "fake", version: "ignored", status: StatusSucceeded, finished: 3}
+		switch skip {
+		case "empty version":
+			newer.version = ""
+		case "other harness":
+			newer.harness = "other"
+		case "queued", "running":
+			newer.status = Status(skip)
+		default:
+			newer.damage = skip
+		}
+		tests = append(tests, testCase{name: "skip " + skip, history: []previousJob{old, newer}, current: "2.2.0", want: "CLI 版本变化：2.0.0 → 2.2.0"})
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			store, s, b := workerFixture(t, "write")
+			for _, prev := range tc.history {
+				st, err := store.Create(prev.id, Request{Harness: prev.harness, Cwd: "/other-repo"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.Status, st.FinishedAt = prev.status, time.Unix(prev.finished, 0).UTC()
+				if err := store.Save(st); err != nil {
+					t.Fatal(err)
+				}
+				data, err := json.Marshal(Result{JobID: prev.id, Harness: prev.harness, Status: prev.status, CLIVersion: prev.version})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(store.ResultPath(prev.id), data, 0600); err != nil {
+					t.Fatal(err)
+				}
+				if prev.damage != "" {
+					kind, file, _ := strings.Cut(prev.damage, " ")
+					path := filepath.Join(store.Dir(prev.id), file+".json")
+					if err := os.Remove(path); err != nil {
+						t.Fatal(err)
+					}
+					switch kind {
+					case "corrupt":
+						if err := os.WriteFile(path, []byte("{"), 0600); err != nil {
+							t.Fatal(err)
+						}
+					case "unreadable":
+						// A directory fails reads even when tests run as root.
+						if err := os.Mkdir(path, 0700); err != nil {
+							t.Fatal(err)
+						}
+					}
+				}
+			}
+			s.script = func(s *fakeSession) {
+				state := cockpit.StateTurnCompleted
+				if tc.failed {
+					state = cockpit.StateTurnFailed
+				}
+				s.events <- cockpit.Event{Kind: cockpit.EventState, State: state}
+			}
+			h := newFakeHarness(b)
+			h.Version = func(context.Context) (string, error) { return tc.current, nil }
+			r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(store.ResultPath("j1"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var persisted Result
+			if err := json.Unmarshal(data, &persisted); err != nil {
+				t.Fatal(err)
+			}
+			wantStatus := StatusSucceeded
+			if tc.failed {
+				wantStatus = StatusFailed
+			}
+			for _, result := range []Result{r, persisted} {
+				if result.Status != wantStatus || result.CLIVersion != tc.current {
+					t.Fatalf("result=%+v", result)
+				}
+				if tc.want == "" {
+					if contains(result.Warnings, "CLI 版本变化：") {
+						t.Fatalf("unexpected version warning: %v", result.Warnings)
+					}
+				} else if len(result.Warnings) == 0 || result.Warnings[0] != tc.want || !strings.HasPrefix(result.Markdown(), "⚠️ "+tc.want) {
+					t.Fatalf("missing first-line warning %q: %s", tc.want, result.Markdown())
+				}
+			}
+			st, err := store.Load("j1")
+			if err != nil || st.Status != wantStatus {
+				t.Fatalf("state=%+v err=%v", st, err)
+			}
+		})
+	}
+}
+
 func TestRunJobApprovals(t *testing.T) {
 	for _, access := range []string{"write", "read-only"} {
 		t.Run(access, func(t *testing.T) {

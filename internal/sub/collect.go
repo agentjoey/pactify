@@ -36,6 +36,20 @@ func (c *Collector) Add(e cockpit.Event) {
 		if e.Usage != nil {
 			c.Usage = *e.Usage
 		}
+		// codex reports the last request as Usage; the job's cost is the thread total.
+		var raw struct {
+			TokenUsage struct {
+				Total *struct {
+					InputTokens  int `json:"inputTokens"`
+					OutputTokens int `json:"outputTokens"`
+					TotalTokens  int `json:"totalTokens"`
+				} `json:"total"`
+			} `json:"tokenUsage"`
+		}
+		if json.Unmarshal(e.Raw, &raw) == nil && raw.TokenUsage.Total != nil {
+			t := raw.TokenUsage.Total
+			c.Usage.InputTokens, c.Usage.OutputTokens, c.Usage.TotalTokens = t.InputTokens, t.OutputTokens, t.TotalTokens
+		}
 	case cockpit.EventState:
 		if e.State == cockpit.StateTurnCompleted || e.State == cockpit.StateTurnFailed {
 			c.TurnDone = true

@@ -63,3 +63,21 @@ func TestCollectorFailureAndRateLimits(t *testing.T) {
 		t.Fatalf("collector=%+v", c)
 	}
 }
+
+// codex's thread/tokenUsage/updated carries both the last request ("last") and the
+// thread's running total ("total"); cockpit maps "last" into Usage. A job summary must
+// report the job's cost, i.e. the total (Phase 0 found a 17x undercount from "last").
+func TestCollectorUsesCodexThreadTotal(t *testing.T) {
+	var c Collector
+	raw := []byte(`{"tokenUsage":{"total":{"inputTokens":1067257,"cachedInputTokens":1014784,"outputTokens":3932},"last":{"inputTokens":62506,"outputTokens":258}}}`)
+	c.Add(cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 62506, OutputTokens: 258}, Raw: raw})
+	if c.Usage.InputTokens != 1067257 || c.Usage.OutputTokens != 3932 {
+		t.Fatalf("usage=%+v, want thread total 1067257/3932", c.Usage)
+	}
+	// Usage events without a total (other harnesses) keep the mapped values.
+	var d Collector
+	d.Add(cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 10, OutputTokens: 2}, Raw: []byte(`{"x":1}`)})
+	if d.Usage.InputTokens != 10 || d.Usage.OutputTokens != 2 {
+		t.Fatalf("usage=%+v", d.Usage)
+	}
+}

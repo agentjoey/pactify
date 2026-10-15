@@ -1209,3 +1209,10 @@ features:
         reviewer: claude-session
         spec: .pact/tasks/p0-sub-core.md
         evidence: null
+      - id: p0-sub-cli
+        owner: codex-worker
+        status: assigned
+        reviewer: claude-session
+        spec: .pact/tasks/p0-sub-cli.md
+        evidence: null
+        deps: [p0-sub-core]

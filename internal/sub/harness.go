@@ -14,6 +14,9 @@ import (
 	"github.com/agentjoey/pactify/internal/cockpit"
 )
 
+// DefaultHarness is used when the CLI's harness argument is omitted.
+const DefaultHarness = "codex"
+
 type Harness struct {
 	Name    string
 	Kind    string
@@ -22,6 +25,8 @@ type Harness struct {
 	Verify  func(string, cockpit.SessionInfo) (model string, in, out int, ok bool)
 	// NoReadOnly, when set, is why this harness refuses --read-only jobs.
 	NoReadOnly string
+	// Experimental is an informational warning, independent of job status.
+	Experimental string
 	// Every harness must keep delegated sessions out of the user's own session
 	// lists (TestEveryHarnessHidesItsSessions). HidesItself: the backend does it
 	// (codex archives the thread on Close via StartOpts.Hidden). Otherwise Conceal
@@ -46,6 +51,7 @@ var registry = map[string]Harness{
 	},
 	"kimi": {
 		Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
+		Experimental: "kimi 为实验性 harness（Phase 0：大任务一次完成 6/10，只读不收敛）",
 		// Phase 0 (2026-10-15): in plan mode kimi keeps trying to write a plan file and
 		// exit plan; all 3 read-only tasks hit the tool-call limit without findings.
 		NoReadOnly: "kimi 的只读档在第一版不开放：Phase 0 实测 3 个只读任务在 plan 模式下全部打满工具调用上限、没有交回结论。只读任务请用 codex --read-only；用户明确允许写入时可用 kimi --write",

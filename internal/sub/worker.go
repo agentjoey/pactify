@@ -53,6 +53,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	req := st.Request
 	result = Result{JobID: id, Harness: req.Harness, ModelRequested: req.Model, Access: req.Access, Status: StatusFailed, LogPath: store.LogPath(id)}
+	if h.Experimental != "" {
+		result.Warnings = append(result.Warnings, h.Experimental)
+	}
 	// Persist the result before the terminal state, so waiters never observe a partial result.
 	defer func() {
 		finished := cfg.Now()
@@ -75,8 +78,14 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		st.FinishedAt = finished.UTC()
 		if runErr != nil {
 			st.Error = runErr.Error()
-		} else if len(result.Warnings) > 0 {
-			st.Error = result.Warnings[0]
+		} else {
+			for _, warning := range result.Warnings {
+				// Experimental describes the harness, not a job error.
+				if warning != h.Experimental {
+					st.Error = warning
+					break
+				}
+			}
 		}
 		if e = store.Save(st); e != nil {
 			runErr = fmt.Errorf("save terminal state: %w", e)

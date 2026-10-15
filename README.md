@@ -66,6 +66,13 @@ Inside Claude Code:
 This adds the `pact` skill and MCP server. If the `pactify` binary isn't installed yet,
 the plugin reminds you on session start — run the curl|sh installer above, then `pactify setup`.
 
+For harness delegation, install `/plugin install pactify@pactify` and use `/delegate`
+(or `/pactify:delegate`). `pactify sub run [harness]` defaults to **codex** when the
+harness is omitted; `/codex` and `/kimi` select one explicitly. **kimi is experimental**:
+Phase 0 large tasks completed in one attempt 6/10, and read-only work did not converge.
+kimi results include an informational warning; `kimi --read-only` still exits 2.
+See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.
+
 ## The idea in 30 seconds
 
 - **`.pact/log.jsonl`** is an append-only event log — the authoritative source of truth and the

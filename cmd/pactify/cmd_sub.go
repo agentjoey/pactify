@@ -46,8 +46,17 @@ func newSubCmd() *cobra.Command {
 	var model, effort, cwd string
 	var readOnly, write, resume, fresh, jsonOut bool
 	var wait time.Duration
-	run := &cobra.Command{Use: "run <harness>", Short: "Read a task from stdin and start a background worker", Args: subArgs(1), Run: func(c *cobra.Command, args []string) {
-		code, err := subRun(c, args[0], model, effort, cwd, readOnly, write, resume, fresh, wait, jsonOut)
+	run := &cobra.Command{Use: "run [harness]", Short: "Read a task from stdin and start a background worker (default: " + sub.DefaultHarness + ")", Args: func(c *cobra.Command, args []string) error {
+		if err := cobra.MaximumNArgs(1)(c, args); err != nil {
+			subExit(c, 2, err)
+		}
+		return nil
+	}, Run: func(c *cobra.Command, args []string) {
+		name := sub.DefaultHarness
+		if len(args) > 0 {
+			name = args[0]
+		}
+		code, err := subRun(c, name, model, effort, cwd, readOnly, write, resume, fresh, wait, jsonOut)
 		subExit(c, code, err)
 	}}
 	run.Flags().StringVar(&model, "model", "", "Requested model (must be available)")
@@ -393,6 +402,9 @@ func subCancel(c *cobra.Command, id string) (int, error) {
 }
 func subSaveFallback(store sub.Store, st sub.State) error {
 	result := sub.Result{JobID: st.ID, Status: st.Status, Harness: st.Request.Harness, Access: st.Request.Access, ModelRequested: st.Request.Model, LogPath: store.LogPath(st.ID), Warnings: []string{st.Error}}
+	if h, ok := sub.Lookup(st.Request.Harness); ok && h.Experimental != "" {
+		result.Warnings = append([]string{h.Experimental}, result.Warnings...)
+	}
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		return err

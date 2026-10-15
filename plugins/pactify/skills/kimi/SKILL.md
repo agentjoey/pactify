@@ -1,9 +1,13 @@
 ---
 name: kimi
-description: Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly.
+description: Experimental harness — Phase 0 large tasks completed in one attempt 6/10; read-only work never converged. Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly.
 ---
 
-# Delegate to kimi
+# Delegate to kimi (experimental)
+
+**kimi is an experimental harness**: Phase 0 large tasks completed in one attempt 6/10;
+read-only work never converged. Prefer the default codex harness (`/delegate` or `/codex`).
+The result summary reports this warning without changing the job status.
 
 **If the user invoked this skill explicitly (`/kimi` or `/pactify:kimi`), always delegate — whatever the task
 size. The user chose the harness; do not do the work yourself instead.**

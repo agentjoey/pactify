@@ -1,6 +1,7 @@
 # Pactify harness 插件
 
 在 Claude Code 中把大任务交给本机官方 codex / kimi CLI，完成后收回结果摘要并审查工作区改动。
+默认 harness 为 codex；kimi 为实验性 harness（Phase 0：大任务一次完成 6/10，只读不收敛）。
 
 ## 安装
 
@@ -18,15 +19,19 @@ SessionStart hook 只检查 pactify 与 `sub` 命令是否可用，缺失时提�
 ## 使用
 
 ```text
+/delegate 为 src/cache/ 增加过期策略和回归测试，运行项目全量测试
 /codex 为 src/cache/ 增加过期策略和回归测试，只修改该目录，运行 npm test -- cache
-/kimi 只读调查 internal/sub/ 的取消流程，列出风险和证据，不修改任何文件
+/kimi 为 src/cache/ 增加过期策略和回归测试，允许写入，运行项目全量测试
 ```
 
-也可始终使用完整入口 `/pactify:codex`、`/pactify:kimi`，避免与其他同名 skill 冲突。
+也可始终使用完整入口 `/pactify:delegate`、`/pactify:codex`、`/pactify:kimi`，避免与其他同名 skill 冲突。
+`/delegate` 使用默认 codex；`/codex`、`/kimi` 显式选择 harness。显式调用以上任一入口时一定外派，无论任务大小。
 适合涉及 3 个以上文件、需要探索和测试、或预计超过约 10 分钟的任务；小改动直接由 Claude 完成。
 
 Claude 主线程先写包含目标、路径、边界、权限、验收命令的完整 brief，再调用
-`pactify sub run <harness> --write --wait 0s --json`。只读任务改用 `--read-only`。
+`pactify sub run [harness] --write --wait 0s --json`。省略 harness 时使用 codex，
+例如 `/delegate` 调用 `pactify sub run --write --wait 0s --json`。显式 codex / kimi 仍可用。
+只读任务用 codex，改用 `--read-only`；kimi 仍拒绝只读任务（退出 2）。
 退出码 3 表示仍在执行，stdout 包含 `jobId`；主线程以 `run_in_background: true` 执行
 `pactify sub wait <jobId>`，完成后读取摘要并检查 diff。退出码 0 / 1 / 2 分别表示成功、失败、参数错误。
 可用 `pactify sub result <jobId>` 重新读取结果。
@@ -40,6 +45,7 @@ callee 不提交代码，改动留给 host 审查。
 ## 结果摘要
 
 - 首行：完成状态或模型、工具调用上限、空闲超时等警告。
+- kimi job 的首行包含实验性提示；提示保存在 `Result.Warnings` 中，不改变 job 状态。
 - Harness 与 CLI 版本：实际调用的工具及其版本。
 - 模型与权限：请求模型、实际模型及独立核实状态，`read-only` 或 `write`。
 - 用量：耗时、输入 / 输出 token、工具调用次数；token 用量不代表精确账单金额。

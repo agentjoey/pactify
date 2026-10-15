@@ -87,3 +87,47 @@ CLI
   grep -q 'not offered for kimi' "$P/skills/kimi/SKILL.md"
   ! grep -q 'run kimi --read-only --wait' "$P/skills/kimi/SKILL.md"
 }
+
+@test "delegate skill is self-contained and uses the default harness" {
+  skill="$P/skills/delegate/SKILL.md"
+  grep -q '^name: delegate$' "$skill"
+  grep -q 'default.*codex' "$skill"
+  grep -q '/delegate' "$skill"
+  grep -q '/pactify:delegate' "$skill"
+  grep -q 'invoked this skill explicitly' "$skill"
+  grep -q 'always delegate' "$skill"
+  grep -q 'pactify sub run --write --wait 0s --json' "$skill"
+  ! grep -q 'pactify sub run codex' "$skill"
+  grep -q 'run_in_background' "$skill"
+  grep -q 'timeout: 7200000' "$skill"
+  grep -q 'pactify sub wait' "$skill"
+  # Brief-writing and result-review rules must stay identical to codex's.
+  run python3 - "$P/skills/codex/SKILL.md" "$skill" <<'PY'
+import pathlib, sys
+codex, delegate = [pathlib.Path(p).read_text() for p in sys.argv[1:]]
+assert codex.split('1. Write', 1)[1].split('2. Start', 1)[0] == delegate.split('1. Write', 1)[1].split('2. Start', 1)[0]
+assert codex.split('3. When', 1)[1].split('4. To', 1)[0] == delegate.split('3. When', 1)[1].split('4. To', 1)[0]
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "kimi skill labels its experimental status and Phase 0 limitations" {
+  run python3 - "$P/skills/kimi/SKILL.md" <<'PY'
+import pathlib, sys
+text = pathlib.Path(sys.argv[1]).read_text()
+frontmatter, body = text.split('---')[1:3]
+description = next(line for line in frontmatter.splitlines() if line.startswith('description:'))
+for part in (description, body):
+    for term in ('experimental', '6/10', 'read-only', 'never converged'):
+        assert term in part.lower(), (term, part)
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "README documents default delegation and experimental kimi" {
+  grep -q '/delegate' "$P/README.md"
+  grep -q '/pactify:delegate' "$P/README.md"
+  grep -q '默认.*codex' "$P/README.md"
+  grep -q 'kimi.*实验性' "$P/README.md"
+  grep -q '6/10' "$P/README.md"
+}

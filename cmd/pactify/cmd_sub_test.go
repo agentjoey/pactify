@@ -124,7 +124,7 @@ func TestSubRunInvalidArgumentsExit2(t *testing.T) {
 	for _, tc := range []struct {
 		args  []string
 		brief string
-	}{{[]string{"nope"}, "x"}, {[]string{"run", "nope", "--write"}, "x"}, {[]string{"run", "fake", "--write", "--read-only"}, "x"}, {[]string{"run", "fake"}, " "}, {[]string{"run", "fake", "--resume", "--fresh"}, "x"}, {[]string{"run", "fake", "--resume"}, "x"}, {[]string{"run"}, "x"}, {[]string{"run", "fake", "--wat"}, "x"}, {[]string{"run", "fake", "--wait", "-1s"}, "x"}} {
+	}{{[]string{"nope"}, "x"}, {[]string{"run", "nope", "--write"}, "x"}, {[]string{"run", "fake", "--write", "--read-only"}, "x"}, {[]string{"run", "fake"}, " "}, {[]string{"run", "fake", "--resume", "--fresh"}, "x"}, {[]string{"run", "fake", "--resume"}, "x"}, {[]string{"run", "fake", "--wat"}, "x"}, {[]string{"run", "fake", "--wait", "-1s"}, "x"}} {
 		out, code := runCLI(t, bin, repo, tc.brief, append([]string{"sub"}, tc.args...)...)
 		if code != 2 {
 			t.Errorf("%v: code=%d out=%s", tc.args, code, out)

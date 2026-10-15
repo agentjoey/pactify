@@ -623,3 +623,4 @@
 {"event_id":"84ff966d250e8ecf5f5748fc9de18dbf","ts":"2026-08-22T12:11:04Z","agent_id":"claude","role":"reviewer","event_type":"accept","task_id":"registry-missing-tests","feature":"registry-missing","payload":{}}
 {"event_id":"0e096b2391d55da2aea77d95c11de0f1","ts":"2026-08-22T12:13:11Z","agent_id":"claude","role":"orchestrator","event_type":"merge","task_id":"","feature":"registry-missing","payload":{}}
 {"event_id":"bb7a371285ad8787f1d558d86618fdaa","ts":"2026-10-15T03:05:45Z","agent_id":"claude-session","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"protocol_version":1,"roles":["orchestrator","reviewer"]}}
+{"event_id":"49eaeb882432dc060f5a6c3f7f123aeb","ts":"2026-10-15T03:05:45Z","agent_id":"codex-worker","role":"worker","event_type":"join","task_id":"","feature":"","payload":{"client":{"name":"pactify-cli","version":"dev"},"kind":"codex-cli","protocol_version":1,"roles":["worker"]}}

@@ -13,6 +13,7 @@ agents:
   - { id: claude-worker, roles: [worker] }
   - { id: agy-w, roles: [worker] }
   - { id: claude-session, roles: [orchestrator, reviewer] }
+  - { id: codex-worker, roles: [worker] }
 features:
   - id: planner
     branch: feat-planner

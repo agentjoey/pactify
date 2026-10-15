@@ -57,6 +57,13 @@ job 存在 `$PACTIFY_HOME/jobs/<jobId>/`，默认 `~/.pactify/jobs/<jobId>/`。
 
 `--resume` 会先取消隐藏、续接，结束后再隐藏。会话 id 在摘要的「会话」一行。隐藏失败时摘要首行会提示（例如 kimi 自动更新后改了会话格式）。kimi 的 workspace 条目由它自己从会话记录派生，归档后仍会保留——与你在 kimi 里手动归档一个会话的效果相同。
 
+## 权限档
+
+| | codex | kimi |
+|---|---|---|
+| `--write` | 沙箱 workspace-write，**可联网**（能跑起本地服务的测试、能拉依赖） | kimi 默认模式（直接写，无沙箱） |
+| `--read-only` | 沙箱 read-only，不联网 | 第一版不提供 |
+
 ## 已知限制
 
 - 第一版不提供 kimi 只读档（`sub run kimi --read-only` 退出 2）：Phase 0 实测 kimi 的 plan 模式在只读任务上不收敛。只读任务用 codex。

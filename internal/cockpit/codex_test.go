@@ -1024,6 +1024,21 @@ func TestCodexWriteAccessMapsToWorkspaceWrite(t *testing.T) {
 	if got["sandbox"] != "workspace-write" || got["approvalPolicy"] != "never" {
 		t.Fatalf("params = %v", got)
 	}
+	// Owner 2026-10-15: write mode has network access, so delegated work can run a
+	// project's full test suite (local listeners) and fetch dependencies.
+	want := map[string]any{"sandbox_workspace_write": map[string]any{"network_access": true}}
+	if !reflect.DeepEqual(got["config"], want) {
+		t.Fatalf("config = %v, want %v", got["config"], want)
+	}
+}
+
+// Read-only (and the serve default) keep codex's default: no network.
+func TestCodexReadOnlyAndDefaultHaveNoNetworkOverride(t *testing.T) {
+	for _, a := range []Access{AccessReadOnly, AccessDefault} {
+		if _, ok := codexStartParams(StartOpts{RepoDir: "/r", Access: a})["config"]; ok {
+			t.Fatalf("%q must not override sandbox config", a)
+		}
+	}
 }
 
 func TestCodexTurnStartCarriesEffort(t *testing.T) {
@@ -1102,7 +1117,8 @@ func TestCodexThreadResumeCarriesOptsAndPreservesDefaults(t *testing.T) {
 			want := map[string]any{"threadId": "old"}
 			if explicit {
 				opts = StartOpts{RepoDir: "/repo", Model: "gpt-6-luna", Access: AccessWrite}
-				want = map[string]any{"threadId": "old", "cwd": "/repo", "model": "gpt-6-luna", "sandbox": "workspace-write", "approvalPolicy": "never"}
+				want = map[string]any{"threadId": "old", "cwd": "/repo", "model": "gpt-6-luna", "sandbox": "workspace-write", "approvalPolicy": "never",
+					"config": map[string]any{"sandbox_workspace_write": map[string]any{"network_access": true}}}
 			}
 			info, id, err := s.client.threadResumeOpts(context.Background(), "old", opts)
 			if err != nil || id != "resumed" || info.Model != "gpt-6-luna" || info.Access != "workspaceWrite" {

@@ -12,7 +12,7 @@ await page.waitForTimeout(1000);
 await page.screenshot({ path: `${OUT}/setup.png` });
 console.log("shot: setup");
 // toggle worker off on one seat to capture the warning state
-const t = page.locator('[data-testid="role-gemini-worker"]');
+const t = page.locator('[data-testid="role-antigravity-worker"]');
 if (await t.count()) { await t.click(); await page.waitForTimeout(500);
   // also toggle opencode worker off so a real gap appears
   const t2 = page.locator('[data-testid="role-opencode-worker"]');

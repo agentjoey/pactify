@@ -209,7 +209,7 @@ export function AgentsPage({ author }: { author?: boolean }) {
         {installed.length === 0 ? (
           <EmptyState
             title="No supported agents detected"
-            hint="Install an agent CLI (claude, opencode, gemini, codex …), then Rescan."
+            hint="Install an agent CLI (claude, opencode, agy, codex …), then Rescan."
           />
         ) : (
           installed.map(row)

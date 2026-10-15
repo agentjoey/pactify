@@ -34,14 +34,14 @@ describe("AgentConfig panel", () => {
   it("only lists registered agents and shows their effective model", async () => {
     getAgents.mockResolvedValue([
       { kind: "opencode", installed: true, detail: "", registered: true },
-      { kind: "gemini-cli", installed: true, detail: "", registered: false },
+      { kind: "antigravity", installed: true, detail: "", registered: false },
     ]);
     getAgentConfig.mockResolvedValue(cfg());
     render(<AgentConfig />);
     await waitFor(() => {
       expect(screen.getByTestId("agent-config-opencode")).toBeTruthy();
     });
-    expect(screen.queryByTestId("agent-config-gemini-cli")).toBeNull();
+    expect(screen.queryByTestId("agent-config-antigravity")).toBeNull();
     // effective model comes from the row's own async getAgentConfig — wait for it
     // (was a flaky sync assertion racing the fetch).
     await waitFor(() => {

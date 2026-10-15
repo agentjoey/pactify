@@ -50,6 +50,27 @@ describe("AddProjectWizard", () => {
     expect(screen.getByTestId("role-claude-orchestrator")).toBeTruthy();
   });
 
+  it.each([
+    ["antigravity", "GEMINI.md"],
+    ["claude-code", "CLAUDE.md"],
+    ["opencode", "AGENTS.md"],
+  ])("initializes a %s seat with %s as its entry file", async (kind, entry) => {
+    getSetupSuggest.mockResolvedValue({
+      bindings: [{ seat: "agent", kind, roles: ["orchestrator", "reviewer", "worker"], drivable: true }],
+      warnings: [],
+    });
+    setupApply.mockResolvedValue({ inited: true, wired: [], notes: [] });
+    render(<AddProjectWizard open onClose={() => {}} onAdded={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("folder-entry-new-checkbox")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("folder-entry-new-checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    await waitFor(() => expect(screen.getByTestId("wizard-step2")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Submit/i }));
+    await waitFor(() => expect(setupApply).toHaveBeenCalledWith(expect.objectContaining({
+      seats: [{ id: "agent", kind, entry, roles: ["orchestrator", "reviewer", "worker"] }],
+    })));
+  });
+
   it("registers existing pactify projects and initializes new ones", async () => {
     postRegister.mockResolvedValue({ name: "existing" });
     setupApply.mockResolvedValue({ inited: true, wired: [], notes: [] });
@@ -120,7 +141,7 @@ describe("AddProjectWizard", () => {
       bindings: [
         { seat: "claude", kind: "claude-code", roles: ["orchestrator", "reviewer", "worker"], drivable: true },
         { seat: "opencode", kind: "opencode", roles: ["worker"], drivable: true },
-        { seat: "gemini", kind: "gemini-cli", roles: ["worker"], drivable: true },
+        { seat: "gemini", kind: "antigravity", roles: ["worker"], drivable: true },
       ],
       warnings: [],
     });

@@ -277,7 +277,10 @@ Q1（brief 交接质量）与 Q2（host 开销）需要真实任务，属于 Pha
 | **`pactify sub doctor` 自检** | 把 §10 的探测做成命令：安装与登录、设模型并核实、只读被拦、可写成功、拿到最终回复与 token。只用最便宜的模型档、一次性临时仓库 | M1 |
 | **已验证版本表** | 每个 harness 记录「自检通过的版本」；运行时发现新版本 → 先自检（或提示用户跑），通过后写入表 | M1 |
 | **协议 schema 漂移 CI** | 沿用现有 `codex-schema.yml` 的做法，扩展到 ACP schema；只比对协议，不需要登录 | M3 |
-| **会话不留痕** | 每个 harness 必须声明「委派会话怎么从用户自己的会话列表里隐藏」，并在新 harness 接入时由测试强制（`TestEveryHarnessHidesItsSessions`）。codex：归档线程；kimi：调用 kimi 自己的归档接口（临时本机 `kimi web` 服务，CLI / web / Remote Control 一致），失败时退回会话文件的归档字段，并用官方 CLI 核对；workspace 由 kimi 从会话派生，不另行删除。厂商更新改了格式时以警告暴露 | M0（2026-10-15，Owner 要求覆盖所有接入的 coding agent） |
-| **callee 最小配置启动** | 不继承用户全部 MCP 服务器与插件，压低固定开销（实测 2–5 万 token） | M3 |
+| **会话不留痕** | 每个 harness 必须声明「委派会话怎么从用户自己的会话列表里隐藏」，并在新 harness 接入时由测试强制（`TestEveryHarnessHidesItsSessions`）。codex：归档线程；kimi：默认写在独立配置目录里，天然隐藏（AJ-643）；`--with-user-config` 时调用 kimi 自己的归档接口（临时本机 `kimi web` 服务，CLI / web / Remote Control 一致），失败时退回会话文件的归档字段，并用官方 CLI 核对；workspace 由 kimi 从会话派生，不另行删除。厂商更新改了格式时以警告暴露 | M0（2026-10-15，Owner 要求覆盖所有接入的 coding agent） |
+| **callee 最小配置启动** | 默认不继承用户的 MCP 服务器、插件、skills、记忆，压低固定开销并避免子代理拿到用户私有工具；`--with-user-config` 恢复全部配置，job 记录 `configMode`。codex：进程级 `-c` 覆盖项，加上经 `config/read` 逐个禁用 MCP（空 `mcp_servers` 表只会和用户配置合并、清不掉），实测输入 token 20,950 → 13,658（−35%）；kimi：见下一行 | M1（AJ-636，2026-10-15 提前做） |
+| **独立配置目录（harness home）** | pactify 为委派管理一个 harness 专用的配置目录（`$PACTIFY_HOME/harness-homes/<harness>`，所有 job 共用以便续接）。登录凭据与必要配置用**符号链接**指向用户原文件，不复制密钥，也不带用户的 MCP 等集成；委派会话写在这个目录里，天然不进用户的会话列表，不必再走各家的归档接口。job 结束后检查链接，被 harness 以「写临时文件再改名」替换成普通文件时，报警并删除副本。kimi：`KIMI_CODE_HOME`，链接 `config.toml`、`credentials/`、`device_id`，实测 MCP 不加载、用户会话索引不变、原文件不改（AJ-642/AJ-643） | kimi：M1（AJ-643） |
+
+**接入新 harness 时的约定**（M2 起，agy、opencode、claude-code 依次适用）：先实测独立配置目录能否同时做到三件事——保留登录、关闭用户集成、委派会话不进用户列表。三项都做到就优先采用它来满足「会话不留痕」和「最小配置启动」；做不到的（例如凭据在 macOS 钥匙串里、与配置目录绑定），再退回该 harness 自己的协议内覆盖项加归档，并把原因写进本表。实测结论与所用环境变量记入已验证版本表对应的 harness 条目。
 
 CI 里无法登录各家账号，所以「真跑一遍」的自检只在用户本机执行；CI 只守协议层面的漂移。

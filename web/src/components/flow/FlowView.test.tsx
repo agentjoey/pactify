@@ -30,7 +30,6 @@ function mockSource(): DataSource {
     capabilities: {
       canWrite: true,
       canOrchestrate: false,
-      multiMachine: false,
       cockpit: false,
     },
     listProjects: vi.fn(),

@@ -59,7 +59,6 @@ function makeSource(overrides: {
     capabilities: {
       canWrite: true,
       canOrchestrate: true,
-      multiMachine: false,
       cockpit: true,
     },
     listProjects: vi.fn(),

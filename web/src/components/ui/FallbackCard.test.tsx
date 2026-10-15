@@ -29,7 +29,7 @@ const approve = vi.fn();
 /** A source that can reach the machine holding the proposal (local serve). */
 function localSource(): DataSource {
   return {
-    capabilities: { canWrite: true, canOrchestrate: true, multiMachine: false, cockpit: true },
+    capabilities: { canWrite: true, canOrchestrate: true, cockpit: true },
     getFallbackProposals: getProposals,
     approveFallback: approve,
   } as unknown as DataSource;
@@ -123,7 +123,7 @@ describe("FallbackCard — approved state matrix", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  // 只读（hosted）→ 动作不可用并说明原因
+  // 只读→ 动作不可用并说明原因
   it("is read-only without write capability", async () => {
     getProposals.mockResolvedValue([pending]);
     renderCard(<FallbackCards project="p" canWrite={false} />);
@@ -132,14 +132,14 @@ describe("FallbackCard — approved state matrix", () => {
     expect(screen.getByTestId("fallback-readonly")).toBeTruthy();
   });
 
-  // 源本身够不着那台机器（relay）→ 同样只读，不给发不出去的按钮
+  // 缺少审批方法时保持只读，不显示无法执行的按钮
   it("is read-only when the source cannot approve", async () => {
-    const relay = {
-      capabilities: { canWrite: true, canOrchestrate: true, multiMachine: true, cockpit: false },
+    const limited = {
+      capabilities: { canWrite: true, canOrchestrate: true, cockpit: false },
       getFallbackProposals: getProposals,
     } as unknown as DataSource;
     getProposals.mockResolvedValue([pending]);
-    renderCard(<FallbackCards project="p" canWrite />, relay);
+    renderCard(<FallbackCards project="p" canWrite />, limited);
     expect(await screen.findByTestId("fallback-card")).toBeTruthy();
     expect(screen.queryByTestId("fallback-approve")).toBeNull();
     expect(screen.getByTestId("fallback-readonly")).toBeTruthy();

@@ -6,7 +6,7 @@ import { Button } from "./Button";
 
 export interface FallbackCardsProps {
   project: string;
-  /** Write capability (hosted read-only sources render the cards without actions). */
+  /** Write capability (read-only sources render the cards without actions). */
   canWrite: boolean;
   /** Called after a successful approval so the caller can refresh run state. */
   onApproved?: () => void;

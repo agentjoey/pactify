@@ -61,9 +61,4 @@ describe("Toolbar dark chrome", () => {
     expect(tile).toHaveTextContent("cl");
     expect(tile.style.background).toContain("linear-gradient");
   });
-
-  it("uses the first two letters of the hosted email for the avatar tile", () => {
-    render(<Toolbar {...baseProps} profileEmail="Ada@example.com" />);
-    expect(screen.getByTestId("user-avatar-tile")).toHaveTextContent("ad");
-  });
 });

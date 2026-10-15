@@ -16,19 +16,16 @@ import type {
   PactEvent,
 } from "./types";
 import type { FallbackProposal } from "./api";
-import type { Machine, PactEventDetail, ProjectMeta, State } from "./types";
+import type { ProjectMeta, State } from "./types";
 
 export interface DataSourceCapabilities {
   canWrite: boolean;
   canOrchestrate: boolean;
-  multiMachine: boolean;
   cockpit: boolean;
 }
 
 export interface DataSource {
   capabilities: DataSourceCapabilities;
-  /** Hosted-mode sources may be locked (bearer-only, no master secret). */
-  locked?: boolean;
   listProjects(): Promise<ProjectMeta[]>;
   getState(id: string, wt?: string): Promise<State>;
   getStats(id: string): Promise<ProjectStats>;
@@ -40,10 +37,6 @@ export interface DataSource {
     onLive?: (live: boolean) => void,
   ): () => void;
   fetchEventsLog?(id: string, wt?: string, n?: number): Promise<PactEvent[]>;
-  /** Hosted-mode sources may expose the full decrypted event history. */
-  getEvents?(project: string): Promise<PactEventDetail[]>;
-  /** Hosted-mode sources may expose the account's machine roster. */
-  getMachines?(): Promise<Machine[]>;
 
   verb?(
     project: string,
@@ -110,7 +103,6 @@ export class LocalServeSource implements DataSource {
   capabilities: DataSourceCapabilities = {
     canWrite: true,
     canOrchestrate: true,
-    multiMachine: false,
     cockpit: true,
   };
 

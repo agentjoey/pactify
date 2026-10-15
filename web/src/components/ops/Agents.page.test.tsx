@@ -114,7 +114,7 @@ describe("Agents page — 合并页", () => {
     expect(strip.textContent).toMatch(/[✕✓]/);
   });
 
-  it("hosted 只读：author=false 时不渲染任何写操作", async () => {
+  it("只读：author=false 时不渲染任何写操作", async () => {
     render(<AgentsPage author={false} />);
     await screen.findByTestId("agents-installed");
 

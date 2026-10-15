@@ -158,7 +158,7 @@ describe("Board — stats-fed TOK", () => {
 describe("Board — capability gating", () => {
   it("disables Accept/Changes when the source is read-only", () => {
     const readOnly = {
-      capabilities: { canWrite: false, canOrchestrate: false, multiMachine: true, cockpit: false },
+      capabilities: { canWrite: false, canOrchestrate: false, cockpit: false },
       listProjects: vi.fn(),
       getState: vi.fn(),
       getStats: vi.fn().mockResolvedValue({ tasks: [], agents: [] }),
@@ -174,7 +174,7 @@ describe("Board — capability gating", () => {
     const changes = screen.getByTestId("card-changes");
     expect(accept).toBeDisabled();
     expect(changes).toBeDisabled();
-    expect(accept).toHaveAttribute("title", "Remote control needs U3");
+    expect(accept).toHaveAttribute("title", "Requires a writable local serve");
   });
 });
 

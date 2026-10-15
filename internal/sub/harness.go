@@ -2,6 +2,7 @@ package sub
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,11 +22,25 @@ type Harness struct {
 	Verify  func(string, cockpit.SessionInfo) (model string, in, out int, ok bool)
 	// NoReadOnly, when set, is why this harness refuses --read-only jobs.
 	NoReadOnly string
+	// Every harness must keep delegated sessions out of the user's own session
+	// lists (TestEveryHarnessHidesItsSessions). HidesItself: the backend does it
+	// (codex archives the thread on Close via StartOpts.Hidden). Otherwise Conceal
+	// runs after the session has closed.
+	HidesItself bool
+	Conceal     func(ConcealContext) error
+}
+
+// ConcealContext identifies the session a finished job leaves behind.
+type ConcealContext struct {
+	SessionID string
+	Cwd       string
+	Since     time.Time // job start: anything the harness created after it is the job's
 }
 
 var registry = map[string]Harness{
 	"codex": {
 		Name: "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
+		HidesItself: true,
 		Verify: func(_ string, info cockpit.SessionInfo) (string, int, int, bool) {
 			return info.Model, 0, 0, info.Model != ""
 		},
@@ -35,14 +50,11 @@ var registry = map[string]Harness{
 		// Phase 0 (2026-10-15): in plan mode kimi keeps trying to write a plan file and
 		// exit plan; all 3 read-only tasks hit the tool-call limit without findings.
 		NoReadOnly: "kimi 的只读档在第一版不开放：Phase 0 实测 3 个只读任务在 plan 模式下全部打满工具调用上限、没有交回结论。只读任务请用 codex --read-only；用户明确允许写入时可用 kimi --write",
+		Conceal:    concealKimi,
 		Verify: func(sid string, _ cockpit.SessionInfo) (string, int, int, bool) {
-			kimiHome := os.Getenv("KIMI_CODE_HOME")
-			if kimiHome == "" {
-				home, err := os.UserHomeDir()
-				if err != nil {
-					return "", 0, 0, false
-				}
-				kimiHome = filepath.Join(home, ".kimi-code")
+			kimiHome, err := kimiHomeDir()
+			if err != nil {
+				return "", 0, 0, false
 			}
 			rec, err := cockpit.ReadKimiRecord(kimiHome, sid)
 			if err != nil || len(rec.Models) == 0 {
@@ -140,3 +152,59 @@ func (s *fixtureSession) Approvals() <-chan cockpit.ApprovalRequest { return nil
 func (s *fixtureSession) ThreadID() string                          { return "fixture-thread" }
 func (s *fixtureSession) Info() cockpit.SessionInfo                 { return cockpit.SessionInfo{Model: s.opts.Model} }
 func (s *fixtureSession) Close() error                              { s.cancel(); return nil }
+
+// kimiHomeDir is kimi-code's data directory: KIMI_CODE_HOME, else ~/.kimi-code.
+func kimiHomeDir() (string, error) {
+	if h := os.Getenv("KIMI_CODE_HOME"); h != "" {
+		return h, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".kimi-code"), nil
+}
+
+// concealKimi archives the job's kimi session with kimi's own flag, asks the
+// official CLI whether the session is really hidden, then drops the workspace
+// entry the job created — kimi auto-updates, and a changed on-disk format must surface
+// as a warning, not as silent clutter.
+func concealKimi(c ConcealContext) error {
+	home, err := kimiHomeDir()
+	if err != nil {
+		return err
+	}
+	if _, err := cockpit.ArchiveKimiSession(home, c.SessionID); err != nil {
+		return err
+	}
+	// The check must run before the prune: `kimi session list --cwd` registers
+	// that directory as a workspace again.
+	if err := kimiListHides(c.Cwd, c.SessionID); err != nil {
+		return err
+	}
+	_, err = cockpit.PruneKimiWorkspace(home, c.Cwd, c.Since)
+	return err
+}
+
+// kimiListHides fails only when `kimi session list` still shows the session; a CLI
+// that cannot be run (not installed, timed out) is not evidence either way.
+var kimiListHides = func(cwd, sessionID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "kimi", "session", "list", "--cwd", cwd, "--json").Output()
+	if err != nil {
+		return nil
+	}
+	var sessions []struct {
+		ID string `json:"id"`
+	}
+	if json.Unmarshal(out, &sessions) != nil {
+		return nil
+	}
+	for _, s := range sessions {
+		if s.ID == sessionID {
+			return fmt.Errorf("kimi session list 仍列出 %s：当前 kimi 版本可能改了会话格式", sessionID)
+		}
+	}
+	return nil
+}

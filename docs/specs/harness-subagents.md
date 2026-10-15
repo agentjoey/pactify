@@ -277,6 +277,7 @@ Q1（brief 交接质量）与 Q2（host 开销）需要真实任务，属于 Pha
 | **`pactify sub doctor` 自检** | 把 §10 的探测做成命令：安装与登录、设模型并核实、只读被拦、可写成功、拿到最终回复与 token。只用最便宜的模型档、一次性临时仓库 | M1 |
 | **已验证版本表** | 每个 harness 记录「自检通过的版本」；运行时发现新版本 → 先自检（或提示用户跑），通过后写入表 | M1 |
 | **协议 schema 漂移 CI** | 沿用现有 `codex-schema.yml` 的做法，扩展到 ACP schema；只比对协议，不需要登录 | M3 |
+| **会话不留痕** | 每个 harness 必须声明「委派会话怎么从用户自己的会话列表里隐藏」，并在新 harness 接入时由测试强制（`TestEveryHarnessHidesItsSessions`）。codex：归档线程；kimi：会话自身的 `archived` 标记 + 移除 job 新建的 workspace，并用官方 CLI 核对。厂商更新改了格式时以警告暴露 | M0（2026-10-15，Owner 要求覆盖所有接入的 coding agent） |
 | **callee 最小配置启动** | 不继承用户全部 MCP 服务器与插件，压低固定开销（实测 2–5 万 token） | M3 |
 
 CI 里无法登录各家账号，所以「真跑一遍」的自检只在用户本机执行；CI 只守协议层面的漂移。

@@ -1192,3 +1192,10 @@ features:
         reviewer: claude-session
         spec: .pact/tasks/p0-acp-client.md
         evidence: null
+      - id: p0-kimi-backend
+        owner: codex-worker
+        status: assigned
+        reviewer: claude-session
+        spec: .pact/tasks/p0-kimi-backend.md
+        evidence: null
+        deps: [p0-acp-client]

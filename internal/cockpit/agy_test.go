@@ -24,6 +24,9 @@ func TestAgyProcessHelper(t *testing.T) {
 	}
 	args = args[1:]
 	if len(args) > 0 && args[0] == "models" {
+		if os.Getenv("PACTIFY_AGY_MODE") == "models-fail" {
+			os.Exit(9)
+		}
 		fmt.Println("model-a\tModel A\nmodel-b\tModel B")
 		os.Exit(0)
 	}
@@ -368,5 +371,20 @@ func TestAgyFinalReplyIsLastResponseStep(t *testing.T) {
 	}
 	if final != "answer" {
 		t.Fatalf("final reply = %q, want only the last response step", final)
+	}
+}
+
+// A failed 'agy models' listing (network fetch, killed by its timeout under
+// load) must not fail the job: agy and init.model still verify the model.
+func TestAgyStartSurvivesFailedModelListing(t *testing.T) {
+	b, o := agyFixture(t, "models-fail", AccessWrite)
+	s, err := b.Start(context.Background(), o)
+	if err != nil {
+		t.Fatalf("start failed on a model-listing error: %v", err)
+	}
+	defer s.Close()
+	events := agyTurn(t, s)
+	if events[len(events)-1].State != StateTurnCompleted || s.(InfoSession).Info().Model != "model-a" {
+		t.Fatalf("events=%+v", events)
 	}
 }

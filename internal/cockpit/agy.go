@@ -69,7 +69,11 @@ func (b *agyBackend) ResumeWith(ctx context.Context, id string, o StartOpts) (Se
 	if o.Model != "" {
 		models, err := b.models(ctx, o)
 		if err != nil {
-			return nil, err
+			// The listing is only a fast pre-check: 'agy models' fetches over the
+			// network and was killed by its timeout under load (AJ-650). agy itself
+			// rejects an unknown model with an explicit error, and init.model is
+			// verified on every turn, so a failed listing must not fail the job.
+			models = []string{o.Model}
 		}
 		found := false
 		for _, m := range models {

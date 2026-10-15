@@ -25,12 +25,17 @@ type codexBackend struct{}
 // Start spawns codex app-server, performs initialize/initialized, and starts a
 // new thread rooted at opts.RepoDir.
 func (b *codexBackend) Start(ctx context.Context, opts StartOpts) (Session, error) {
-	return newCodexSession(ctx, opts.RepoDir, "")
+	return newCodexSession(ctx, opts, "")
 }
 
 // Resume spawns codex app-server and resumes an existing thread.
 func (b *codexBackend) Resume(ctx context.Context, threadID string) (Session, error) {
-	return newCodexSession(ctx, "", threadID)
+	return b.ResumeWith(ctx, threadID, StartOpts{})
+}
+
+// ResumeWith resumes a thread with explicit delegation options.
+func (b *codexBackend) ResumeWith(ctx context.Context, threadID string, opts StartOpts) (Session, error) {
+	return newCodexSession(ctx, opts, threadID)
 }
 
 // codexSession owns one codex app-server process and its JSON-RPC connection.
@@ -38,24 +43,35 @@ type codexSession struct {
 	client *codexClient
 
 	threadID string
+	info     SessionInfo
+	effort   string
 
 	events    chan Event
 	approvals chan ApprovalRequest
+
+	done chan struct{}
+	// Serialize channel closure against all dispatch callbacks.
+	dispatchMu sync.RWMutex
+	closed     bool
 
 	closeOnce sync.Once
 	closeErr  error
 }
 
-func newCodexSession(ctx context.Context, repoDir, resumeThreadID string) (*codexSession, error) {
+func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string) (*codexSession, error) {
 	s := &codexSession{
 		events:    make(chan Event, 64),
 		approvals: make(chan ApprovalRequest, 16),
+		done:      make(chan struct{}),
 	}
 
 	cmd := exec.CommandContext(ctx, "codex", "app-server")
-	cmd.Dir = repoDir
-	cmd.Env = filteredEnviron()
-	cmd.Stderr = os.Stderr
+	cmd.Dir = opts.RepoDir
+	cmd.Env = append(filteredEnviron(), opts.Env...)
+	cmd.Stderr = opts.Stderr
+	if cmd.Stderr == nil {
+		cmd.Stderr = os.Stderr
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { killGroup(cmd); return nil }
 
@@ -93,7 +109,7 @@ func newCodexSession(ctx context.Context, repoDir, resumeThreadID string) (*code
 	}
 
 	if resumeThreadID != "" {
-		id, err := s.client.threadResume(ctx, resumeThreadID)
+		info, id, err := s.client.threadResumeOpts(ctx, resumeThreadID, opts)
 		if err != nil {
 			_ = s.Close()
 			return nil, fmt.Errorf("codex: thread/resume: %w", err)
@@ -102,20 +118,23 @@ func newCodexSession(ctx context.Context, repoDir, resumeThreadID string) (*code
 			id = resumeThreadID
 		}
 		s.threadID = id
+		s.info = info
 	} else {
-		id, err := s.client.threadStart(ctx, repoDir)
+		info, id, err := s.client.threadStartOpts(ctx, opts)
 		if err != nil {
 			_ = s.Close()
 			return nil, fmt.Errorf("codex: thread/start: %w", err)
 		}
 		s.threadID = id
+		s.info = info
 	}
+	s.effort = opts.Effort
 
 	return s, nil
 }
 
 func (s *codexSession) Prompt(ctx context.Context, msg UserMessage) error {
-	return s.client.turnStart(ctx, s.threadID, msg.Text)
+	return s.client.turnStartEffort(ctx, s.threadID, msg.Text, s.effort)
 }
 
 func (s *codexSession) Interrupt(ctx context.Context) error {
@@ -128,18 +147,36 @@ func (s *codexSession) Approvals() <-chan ApprovalRequest { return s.approvals }
 
 func (s *codexSession) ThreadID() string { return s.threadID }
 
+func (s *codexSession) Info() SessionInfo { return s.info }
+
 func (s *codexSession) Close() error {
 	s.closeOnce.Do(func() {
+		close(s.done)
 		if s.client != nil {
 			s.closeErr = s.client.Close()
 		}
+		s.dispatchMu.Lock()
+		s.closed = true
 		close(s.events)
 		close(s.approvals)
+		s.dispatchMu.Unlock()
 	})
 	return s.closeErr
 }
 
 func (s *codexSession) dispatchEvent(e Event) {
+	s.dispatchMu.RLock()
+	defer s.dispatchMu.RUnlock()
+	if s.closed {
+		return
+	}
+	if e.Kind == EventState && (e.State == StateTurnCompleted || e.State == StateTurnFailed) {
+		select {
+		case s.events <- e:
+		case <-s.done:
+		}
+		return
+	}
 	select {
 	case s.events <- e:
 	default:
@@ -147,6 +184,11 @@ func (s *codexSession) dispatchEvent(e Event) {
 }
 
 func (s *codexSession) dispatchApproval(a ApprovalRequest) {
+	s.dispatchMu.RLock()
+	defer s.dispatchMu.RUnlock()
+	if s.closed {
+		return
+	}
 	select {
 	case s.approvals <- a:
 	default:
@@ -162,6 +204,7 @@ func newCodexSessionWithClient(c *codexClient, threadID string) *codexSession {
 		threadID:  threadID,
 		events:    make(chan Event, 64),
 		approvals: make(chan ApprovalRequest, 16),
+		done:      make(chan struct{}),
 	}
 }
 
@@ -279,49 +322,139 @@ func (c *codexClient) initialized(ctx context.Context) error {
 	return c.rpc.notify("initialized", nil)
 }
 
-func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, error) {
-	params := map[string]any{"cwd": cwd}
-	raw, err := c.rpc.call(ctx, "thread/start", params)
-	if err != nil {
-		return "", err
+func sandboxMode(a Access) string {
+	switch a {
+	case AccessReadOnly:
+		return "read-only"
+	case AccessWrite:
+		return "workspace-write"
 	}
-	var res struct {
-		Thread struct {
-			ID string `json:"id"`
-		} `json:"thread"`
-	}
-	if err := json.Unmarshal(raw, &res); err != nil {
-		return "", fmt.Errorf("parse thread/start result: %w", err)
-	}
-	return res.Thread.ID, nil
+	return ""
 }
 
-// threadResume resumes an existing thread and returns the resumed thread's id.
-//
-// thread/resume is a ClientRequest (ThreadResumeParams -> ThreadResumeResponse),
-// not a notification: sent id-less the server never answers, so a resume that
-// failed — unknown thread, wrong cwd — was indistinguishable from one that
-// worked, and the session went on to prompt a thread that did not exist.
-func (c *codexClient) threadResume(ctx context.Context, threadID string) (string, error) {
-	raw, err := c.rpc.call(ctx, "thread/resume", map[string]any{"threadId": threadID})
+func codexStartParams(opts StartOpts) map[string]any {
+	p := map[string]any{"cwd": opts.RepoDir}
+	if opts.Model != "" {
+		p["model"] = opts.Model
+	}
+	if m := sandboxMode(opts.Access); m != "" {
+		p["sandbox"] = m
+		p["approvalPolicy"] = "never"
+	}
+	return p
+}
+
+type codexThreadResult struct {
+	Thread struct {
+		ID string `json:"id"`
+	} `json:"thread"`
+	Model           string `json:"model"`
+	ModelProvider   string `json:"modelProvider"`
+	ReasoningEffort string `json:"reasoningEffort"`
+	Sandbox         struct {
+		Type string `json:"type"`
+	} `json:"sandbox"`
+}
+
+func (r codexThreadResult) info() SessionInfo {
+	return SessionInfo{Model: r.Model, Provider: r.ModelProvider, Effort: r.ReasoningEffort, Access: r.Sandbox.Type}
+}
+
+func (c *codexClient) threadStartOpts(ctx context.Context, opts StartOpts) (SessionInfo, string, error) {
+	return c.threadOpts(ctx, "thread/start", codexStartParams(opts), opts.Model)
+}
+
+// threadOpts verifies the server's actual model before exposing a usable session.
+func (c *codexClient) threadOpts(ctx context.Context, method string, params map[string]any, model string) (SessionInfo, string, error) {
+	raw, err := c.rpc.call(ctx, method, params)
 	if err != nil {
-		return "", err
+		if model != "" {
+			err = c.modelRequestError(ctx, model, err)
+		}
+		return SessionInfo{}, "", err
 	}
-	var res struct {
-		Thread struct {
-			ID string `json:"id"`
-		} `json:"thread"`
-	}
+	var res codexThreadResult
 	if err := json.Unmarshal(raw, &res); err != nil {
-		return "", fmt.Errorf("parse thread/resume result: %w", err)
+		return SessionInfo{}, "", fmt.Errorf("parse %s result: %w", method, err)
 	}
-	return res.Thread.ID, nil
+	if model != "" && res.Model != model {
+		return SessionInfo{}, "", c.modelRequestError(ctx, model, fmt.Errorf("server reported model %q", res.Model))
+	}
+	return res.info(), res.Thread.ID, nil
+}
+
+// Only explicit model failures query the catalog; default serve traffic is unchanged.
+func (c *codexClient) modelRequestError(ctx context.Context, requested string, cause error) error {
+	var models []string
+	cursor := ""
+	seen := map[string]bool{}
+	for {
+		params := map[string]any{}
+		if cursor != "" {
+			params["cursor"] = cursor
+		}
+		raw, err := c.rpc.call(ctx, "model/list", params)
+		if err != nil {
+			return fmt.Errorf("codex: requested model %q: %w; could not list available models: %v", requested, cause, err)
+		}
+		var page struct {
+			Data []struct {
+				Model string `json:"model"`
+			} `json:"data"`
+			NextCursor string `json:"nextCursor"`
+		}
+		if err := json.Unmarshal(raw, &page); err != nil {
+			return fmt.Errorf("codex: requested model %q: %w; could not parse available models: %v", requested, cause, err)
+		}
+		for _, m := range page.Data {
+			if m.Model != "" {
+				models = append(models, m.Model)
+			}
+		}
+		if page.NextCursor == "" {
+			break
+		}
+		if seen[page.NextCursor] {
+			return fmt.Errorf("codex: requested model %q: %w; model/list repeated cursor", requested, cause)
+		}
+		cursor = page.NextCursor
+		seen[cursor] = true
+	}
+	return fmt.Errorf("codex: requested model %q: %w; available models: %s", requested, cause, strings.Join(models, ", "))
+}
+
+func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, error) {
+	_, id, err := c.threadStartOpts(ctx, StartOpts{RepoDir: cwd})
+	return id, err
+}
+
+// threadResume is a request (not a notification), so server failures propagate.
+func (c *codexClient) threadResumeOpts(ctx context.Context, threadID string, opts StartOpts) (SessionInfo, string, error) {
+	params := codexStartParams(opts)
+	// Preserve the original resume frame when no cwd override was provided.
+	if opts.RepoDir == "" {
+		delete(params, "cwd")
+	}
+	params["threadId"] = threadID
+	return c.threadOpts(ctx, "thread/resume", params, opts.Model)
+}
+
+func (c *codexClient) threadResume(ctx context.Context, threadID string) (string, error) {
+	_, id, err := c.threadResumeOpts(ctx, threadID, StartOpts{})
+	return id, err
 }
 
 func (c *codexClient) turnStart(ctx context.Context, threadID, text string) error {
+	return c.turnStartEffort(ctx, threadID, text, "")
+}
+
+func (c *codexClient) turnStartEffort(ctx context.Context, threadID, text, effort string) error {
 	params := map[string]any{
 		"threadId": threadID,
 		"input":    []map[string]any{{"type": "text", "text": text}},
+	}
+	if effort != "" {
+		params["effort"] = effort
 	}
 	raw, err := c.rpc.call(ctx, "turn/start", params)
 	if err != nil {
@@ -558,7 +691,7 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 		if item, ok := decodeCodexItem(params); ok {
 			switch {
 			case item.Type == "agentMessage":
-				c.dispatchEvent(Event{Kind: EventMessage, Final: true, Raw: raw})
+				c.dispatchEvent(Event{Kind: EventMessage, Final: true, Text: item.Text, Raw: raw})
 			case item.isTool():
 				c.forgetItem(item.ID)
 				c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "end", Name: item.displayName()}, Raw: raw})
@@ -577,6 +710,9 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 			c.dispatchEvent(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: item.displayName()}, Raw: raw})
 		}
 
+	case "account/rateLimits/updated":
+		c.dispatchEvent(Event{Kind: EventSystem, State: "rate_limits", Raw: raw})
+
 	case "thread/tokenUsage/updated":
 		if u := parseUsageFromParams(params); u != nil {
 			c.dispatchEvent(Event{Kind: EventUsage, Usage: u, Raw: raw})
@@ -592,7 +728,7 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 		// turn.status == "failed" with turn.error populated.
 		c.setTurnID("")
 		if jsonStringAt(params, "turn", "status") == "failed" {
-			c.dispatchEvent(Event{Kind: EventState, State: "turn_failed", Raw: raw})
+			c.dispatchEvent(Event{Kind: EventState, State: StateTurnFailed, Raw: raw})
 			summary := jsonStringAt(params, "turn", "error", "message")
 			if summary == "" {
 				summary = "codex: turn failed"
@@ -604,7 +740,7 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 			return
 		}
 		// "completed" and "interrupted" are both terminal and non-error.
-		c.dispatchEvent(Event{Kind: EventState, State: "turn_completed", Raw: raw})
+		c.dispatchEvent(Event{Kind: EventState, State: StateTurnCompleted, Raw: raw})
 
 	case "error":
 		// ErrorNotification.error is a TurnError, whose only required field is
@@ -674,10 +810,11 @@ func jsonStringAt(params json.RawMessage, keys ...string) string {
 }
 
 // codexThreadItem is the subset of v2/ThreadItem the cockpit surfaces. Only
-// variants that belong on the tool timeline contribute fields here; each field
+// message/tool variants contribute fields here; each field
 // exists on exactly one variant, so decoding them together is unambiguous.
 type codexThreadItem struct {
 	Type string `json:"type"`
+	Text string `json:"text"` // agentMessage
 	// ID is on every ThreadItem variant; it is the key a later
 	// requestApproval uses to point back at this item.
 	ID      string `json:"id"`

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -17,8 +19,10 @@ import (
 
 // compile-time interface checks.
 var (
-	_ Backend = (*codexBackend)(nil)
-	_ Session = (*codexSession)(nil)
+	_ Backend     = (*codexBackend)(nil)
+	_ Session     = (*codexSession)(nil)
+	_ OptsResumer = (*codexBackend)(nil)
+	_ InfoSession = (*codexSession)(nil)
 )
 
 // TestCodexClientPipe runs a fake app-server over io.Pipe and exercises the
@@ -352,7 +356,7 @@ func codexNotifCases() []codexNotifCase {
 			name:   "agentMessage item/completed is the final-message marker",
 			method: "item/completed",
 			params: `{"item":{"type":"agentMessage","id":"msg_1","text":"The command printed ` + "`hello-from-pactify .`" + `","phase":"final_answer","memoryCitation":null},"threadId":"t","turnId":"u","completedAtMs":1787578701555}`,
-			want:   []Event{{Kind: EventMessage, Final: true}},
+			want:   []Event{{Kind: EventMessage, Final: true, Text: "The command printed `hello-from-pactify .`"}},
 		},
 		{
 			// CAPTURED. userMessage items must not appear on the tool timeline.
@@ -481,7 +485,7 @@ func TestCodexThreadResumeIsARequest(t *testing.T) {
 			"cwd":               "/tmp/repo",
 			"model":             "gpt-5",
 			"modelProvider":     "openai",
-			"sandbox":           "read-only",
+			"sandbox":           map[string]any{"type": "readOnly"},
 			"approvalPolicy":    "on-request",
 			"approvalsReviewer": "user",
 		}
@@ -756,6 +760,7 @@ func newFakeCodexServer(t *testing.T) *fakeCodexServer {
 	)
 
 	go s.loop()
+	t.Cleanup(s.Close)
 	return s
 }
 
@@ -956,5 +961,421 @@ func mustWriteJSON(w io.Writer, v any) {
 	}
 	if _, err := w.Write(append(b, '\n')); err != nil && !errors.Is(err, io.ErrClosedPipe) {
 		panic(err)
+	}
+}
+
+func TestCodexThreadStartCarriesOptsAndReportsActualModel(t *testing.T) {
+	s := newFakeCodexServer(t)
+	var got map[string]any
+	s.handle("thread/start", func(m wireMessage) any {
+		_ = json.Unmarshal(m.Params, &got)
+		return map[string]any{
+			"thread":          map[string]any{"id": "th-1"},
+			"model":           "gpt-6-luna",
+			"modelProvider":   "openai",
+			"reasoningEffort": "high",
+			"sandbox":         map[string]any{"type": "readOnly", "networkAccess": false},
+			"approvalPolicy":  "never",
+		}
+	})
+	info, id, err := s.client.threadStartOpts(context.Background(), StartOpts{
+		RepoDir: "/repo", Model: "gpt-6-luna", Access: AccessReadOnly,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != "th-1" {
+		t.Fatalf("thread id = %q", id)
+	}
+	if got["model"] != "gpt-6-luna" || got["sandbox"] != "read-only" || got["approvalPolicy"] != "never" || got["cwd"] != "/repo" {
+		t.Fatalf("thread/start params = %v", got)
+	}
+	want := SessionInfo{Model: "gpt-6-luna", Provider: "openai", Effort: "high", Access: "readOnly"}
+	if info != want {
+		t.Fatalf("info = %+v, want %+v", info, want)
+	}
+}
+
+func TestCodexThreadStartDefaultAccessSendsOnlyCwd(t *testing.T) {
+	s := newFakeCodexServer(t)
+	var got map[string]any
+	s.handle("thread/start", func(m wireMessage) any {
+		_ = json.Unmarshal(m.Params, &got)
+		return map[string]any{"thread": map[string]any{"id": "th-2"}}
+	})
+	if _, _, err := s.client.threadStartOpts(context.Background(), StartOpts{RepoDir: "/repo"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got["cwd"] != "/repo" {
+		t.Fatalf("serve path must send only cwd, got %v", got)
+	}
+}
+
+func TestCodexWriteAccessMapsToWorkspaceWrite(t *testing.T) {
+	s := newFakeCodexServer(t)
+	var got map[string]any
+	s.handle("thread/start", func(m wireMessage) any {
+		_ = json.Unmarshal(m.Params, &got)
+		return map[string]any{"thread": map[string]any{"id": "th-3"}}
+	})
+	if _, _, err := s.client.threadStartOpts(context.Background(), StartOpts{RepoDir: "/r", Access: AccessWrite}); err != nil {
+		t.Fatal(err)
+	}
+	if got["sandbox"] != "workspace-write" || got["approvalPolicy"] != "never" {
+		t.Fatalf("params = %v", got)
+	}
+}
+
+func TestCodexTurnStartCarriesEffort(t *testing.T) {
+	s := newFakeCodexServer(t)
+	var got map[string]any
+	s.handle("turn/start", func(m wireMessage) any {
+		_ = json.Unmarshal(m.Params, &got)
+		return map[string]any{"turn": map[string]any{"id": "tu-1"}}
+	})
+	if err := s.client.turnStartEffort(context.Background(), "th-1", "do it", "low"); err != nil {
+		t.Fatal(err)
+	}
+	if got["effort"] != "low" {
+		t.Fatalf("turn/start params = %v", got)
+	}
+}
+
+func TestCodexItemCompletedCarriesFinalText(t *testing.T) {
+	c, evs := newCodexRecordingClient()
+	c.handleNotification("item/completed", json.RawMessage(`{"item":{"type":"agentMessage","id":"m1","text":"WROTE"}}`))
+	if len(*evs) != 1 || (*evs)[0].Kind != EventMessage || !(*evs)[0].Final || (*evs)[0].Text != "WROTE" {
+		t.Fatalf("events = %s", dumpEvents(*evs))
+	}
+}
+
+func TestCodexRateLimitsSurfaceAsSystemEvent(t *testing.T) {
+	c, evs := newCodexRecordingClient()
+	c.handleNotification("account/rateLimits/updated", json.RawMessage(`{"rateLimits":{"primary":{"usedPercent":12}}}`))
+	if len(*evs) != 1 || (*evs)[0].Kind != EventSystem || (*evs)[0].State != "rate_limits" {
+		t.Fatalf("events = %s", dumpEvents(*evs))
+	}
+}
+
+// Review Focus 1：缓冲区满时回合结束事件不能丢。
+func TestCodexTurnEndNeverDropped(t *testing.T) {
+	assertCodexTerminalNotDropped(t, StateTurnCompleted)
+}
+
+func assertCodexTerminalNotDropped(t *testing.T, state string) {
+	t.Helper()
+	s := &codexSession{events: make(chan Event, 1), approvals: make(chan ApprovalRequest, 1), done: make(chan struct{})}
+	defer s.Close()
+	s.events <- Event{Kind: EventMessage, Text: "filler"}
+	finished := make(chan struct{})
+	go func() { s.dispatchEvent(Event{Kind: EventState, State: state}); close(finished) }()
+	// A terminal send must remain blocked while the channel is full. Waiting
+	// before draining makes this fail reliably with the old dropping sender.
+	select {
+	case <-finished:
+		t.Fatal("terminal dispatch returned while the buffer was full")
+	case <-time.After(20 * time.Millisecond):
+	}
+	<-s.events
+	select {
+	case e := <-s.events:
+		if e.State != state {
+			t.Fatalf("got %+v", e)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("terminal event was dropped")
+	}
+	<-finished
+}
+
+func TestCodexThreadResumeCarriesOptsAndPreservesDefaults(t *testing.T) {
+	for _, explicit := range []bool{false, true} {
+		t.Run(fmt.Sprint(explicit), func(t *testing.T) {
+			s := newFakeCodexServer(t)
+			defer s.Close()
+			var got map[string]any
+			s.handle("thread/resume", func(m wireMessage) any {
+				_ = json.Unmarshal(m.Params, &got)
+				return map[string]any{"thread": map[string]any{"id": "resumed"}, "model": "gpt-6-luna", "modelProvider": "openai", "sandbox": map[string]any{"type": "workspaceWrite"}}
+			})
+			opts := StartOpts{}
+			want := map[string]any{"threadId": "old"}
+			if explicit {
+				opts = StartOpts{RepoDir: "/repo", Model: "gpt-6-luna", Access: AccessWrite}
+				want = map[string]any{"threadId": "old", "cwd": "/repo", "model": "gpt-6-luna", "sandbox": "workspace-write", "approvalPolicy": "never"}
+			}
+			info, id, err := s.client.threadResumeOpts(context.Background(), "old", opts)
+			if err != nil || id != "resumed" || info.Model != "gpt-6-luna" || info.Access != "workspaceWrite" {
+				t.Fatalf("resume: %+v %q %v", info, id, err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("params = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestCodexTurnFailedNeverDropped(t *testing.T) {
+	assertCodexTerminalNotDropped(t, StateTurnFailed)
+}
+
+func TestCodexCloseUnblocksTerminalDispatch(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		s := &codexSession{events: make(chan Event, 1), approvals: make(chan ApprovalRequest, 1), done: make(chan struct{})}
+		s.events <- Event{Kind: EventMessage, Text: "filler"}
+		started, finished := make(chan struct{}), make(chan struct{})
+		go func() {
+			close(started)
+			s.dispatchEvent(Event{Kind: EventState, State: StateTurnCompleted})
+			close(finished)
+		}()
+		<-started
+		if err := s.Close(); err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case <-finished:
+		case <-time.After(2 * time.Second):
+			t.Fatal("Close did not unblock terminal dispatch")
+		}
+		// Late callbacks are harmless even after output channels have closed.
+		s.dispatchEvent(Event{Kind: EventMessage, Text: "late"})
+		s.dispatchApproval(ApprovalRequest{})
+		if err := s.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// Run the real CLI only when explicitly requested; all repository writes stay
+// in temporary git repositories, and the backend never reads vendor credentials.
+func TestCodexDelegationProbe(t *testing.T) {
+	if os.Getenv("COCKPIT_DELEGATION_PROBE") != "1" {
+		t.Skip("set COCKPIT_DELEGATION_PROBE=1 for real codex permission probes")
+	}
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	version, err := exec.Command("codex", "--version").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("CLI: %s", strings.TrimSpace(string(version)))
+	for _, tc := range []struct {
+		access   Access
+		reply    string
+		exists   bool
+		reported string
+	}{
+		{AccessReadOnly, "BLOCKED", false, "readOnly"},
+		{AccessWrite, "WROTE", true, "workspaceWrite"},
+	} {
+		t.Run(string(tc.access), func(t *testing.T) {
+			repo := t.TempDir()
+			if err := os.WriteFile(filepath.Join(repo, "README"), []byte("probe repository\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			for _, args := range [][]string{{"init", "-q"}, {"add", "README"}, {"-c", "user.name=Probe", "-c", "user.email=probe@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "init"}} {
+				cmd := exec.Command("git", args...)
+				cmd.Dir = repo
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Fatalf("git: %v: %s", err, out)
+				}
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+			defer cancel()
+			log, err := os.CreateTemp(t.TempDir(), "codex-stderr-*.log")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer log.Close()
+			sess, err := NewCodexBackend().Start(ctx, StartOpts{RepoDir: repo, Model: "gpt-6-luna", Access: tc.access, Stderr: log})
+			if err != nil {
+				t.Fatalf("Start: %v (stderr %s)", err, log.Name())
+			}
+			defer sess.Close()
+			info := sess.(InfoSession).Info()
+			t.Logf("Info: %+v", info)
+			if info.Model != "gpt-6-luna" || info.Access != tc.reported {
+				t.Fatalf("unexpected Info: %+v", info)
+			}
+			if err := sess.Prompt(ctx, UserMessage{Text: "Create a file named probe.txt containing hi. Then reply with one line: WROTE or BLOCKED."}); err != nil {
+				t.Fatal(err)
+			}
+			var final string
+			for {
+				select {
+				case e, ok := <-sess.Events():
+					if !ok {
+						t.Fatal("events closed before turn completion")
+					}
+					if e.Kind == EventMessage && e.Final {
+						final = strings.TrimSpace(e.Text)
+						t.Logf("Final: %q", final)
+					}
+					if e.Kind == EventError {
+						t.Logf("Error: %s", e.Err)
+					}
+					if e.Kind == EventState && e.State == StateTurnFailed {
+						t.Fatalf("turn failed: %s", e.Raw)
+					}
+					if e.Kind == EventState && e.State == StateTurnCompleted {
+						content, err := os.ReadFile(filepath.Join(repo, "probe.txt"))
+						if tc.exists {
+							if err != nil || strings.TrimSpace(string(content)) != "hi" {
+								t.Fatalf("file = %q, %v", content, err)
+							}
+						} else if !errors.Is(err, os.ErrNotExist) {
+							t.Fatalf("read-only file should not exist: %q, %v", content, err)
+						}
+						t.Logf("probe.txt exists: %v", err == nil)
+						if final != tc.reply {
+							t.Fatalf("final = %q, want %q", final, tc.reply)
+						}
+						return
+					}
+				case a := <-sess.Approvals():
+					_ = a.Respond(DecisionDeny)
+					t.Fatal("unexpected approval with approvalPolicy=never")
+				case <-ctx.Done():
+					t.Fatalf("probe timed out: %v", ctx.Err())
+				}
+			}
+		})
+	}
+}
+
+func TestCodexRequestedModelCannotSilentlyChange(t *testing.T) {
+	for _, method := range []string{"thread/start", "thread/resume"} {
+		for _, actual := range []string{"other-model", ""} {
+			t.Run(method+"/"+actual, func(t *testing.T) {
+				s := newFakeCodexServer(t)
+				s.handle(method, func(wireMessage) any { return map[string]any{"thread": map[string]any{"id": "th"}, "model": actual} })
+				s.handle("model/list", func(m wireMessage) any {
+					var p struct {
+						Cursor string `json:"cursor"`
+					}
+					_ = json.Unmarshal(m.Params, &p)
+					if p.Cursor == "page-2" {
+						return map[string]any{"data": []any{map[string]any{"model": "available-b"}}, "nextCursor": nil}
+					}
+					return map[string]any{"data": []any{map[string]any{"model": "available-a"}}, "nextCursor": "page-2"}
+				})
+				opts := StartOpts{Model: "requested"}
+				var err error
+				if method == "thread/start" {
+					_, _, err = s.client.threadStartOpts(context.Background(), opts)
+				} else {
+					_, _, err = s.client.threadResumeOpts(context.Background(), "th", opts)
+				}
+				if err == nil || !strings.Contains(err.Error(), "requested") || !strings.Contains(err.Error(), "available-a") || !strings.Contains(err.Error(), "available-b") {
+					t.Fatalf("expected model refusal with alternatives, got %v", err)
+				}
+			})
+		}
+	}
+}
+
+func TestCodexExplicitModelFailureListsAlternatives(t *testing.T) {
+	s := newFakeCodexServer(t)
+	s.handleErr("thread/start", -32602, "model unavailable")
+	s.handle("model/list", func(wireMessage) any { return map[string]any{"data": []any{map[string]any{"model": "gpt-choice"}}} })
+	_, _, err := s.client.threadStartOpts(context.Background(), StartOpts{Model: "requested"})
+	if err == nil || !strings.Contains(err.Error(), "model unavailable") || !strings.Contains(err.Error(), "gpt-choice") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+// Re-exec the test binary as the external CLI, exercising the real spawn and
+// JSON-RPC paths without a vendor login or access to a developer's home.
+func TestCodexProcessHelper(t *testing.T) {
+	if os.Getenv("COCKPIT_PROCESS_HELPER") != "1" {
+		return
+	}
+	fmt.Fprintln(os.Stderr, "helper-stderr:"+os.Getenv("COCKPIT_PROBE_MARKER"))
+	in := json.NewDecoder(os.Stdin)
+	for {
+		var m wireMessage
+		if in.Decode(&m) != nil {
+			os.Exit(0)
+		}
+		if m.ID == 0 {
+			continue
+		}
+		var p map[string]any
+		_ = json.Unmarshal(m.Params, &p)
+		var result any = map[string]any{}
+		switch m.Method {
+		case "thread/start", "thread/resume":
+			access := "readOnly"
+			if p["sandbox"] == "workspace-write" {
+				access = "workspaceWrite"
+			}
+			result = map[string]any{"thread": map[string]any{"id": "helper-thread"}, "model": "gpt-6-luna", "modelProvider": "openai", "reasoningEffort": "high", "sandbox": map[string]any{"type": access}}
+		case "turn/start":
+			result = map[string]any{"turn": map[string]any{"id": "helper-turn"}}
+		}
+		mustWriteJSON(os.Stdout, map[string]any{"jsonrpc": "2.0", "id": m.ID, "result": result})
+		if m.Method == "turn/start" {
+			text := fmt.Sprintf("%s|%v", os.Getenv("COCKPIT_PROBE_MARKER"), p["effort"])
+			mustWriteJSON(os.Stdout, map[string]any{"jsonrpc": "2.0", "method": "item/completed", "params": map[string]any{"threadId": "helper-thread", "turnId": "helper-turn", "item": map[string]any{"type": "agentMessage", "id": "msg", "text": text}}})
+		}
+	}
+}
+
+func TestCodexSessionOptionsReachProcess(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	t.Setenv("COCKPIT_PROCESS_HELPER", "1")
+	t.Setenv("COCKPIT_PROBE_MARKER", "inherited")
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin := t.TempDir()
+	quotedExe := "'" + strings.ReplaceAll(exe, "'", "'\"'\"'") + "'"
+	script := "#!/bin/sh\nexec " + quotedExe + " -test.run='^TestCodexProcessHelper$' -- \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(bin, "codex"), []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	for _, resume := range []bool{false, true} {
+		t.Run(fmt.Sprintf("resume=%v", resume), func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			stderr, err := os.CreateTemp(t.TempDir(), "stderr")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer stderr.Close()
+			opts := StartOpts{RepoDir: t.TempDir(), Model: "gpt-6-luna", Access: AccessWrite, Effort: "low", Env: []string{"COCKPIT_PROBE_MARKER=override"}, Stderr: stderr}
+			backend := NewCodexBackend()
+			var sess Session
+			if resume {
+				sess, err = backend.(OptsResumer).ResumeWith(ctx, "old-thread", opts)
+			} else {
+				sess, err = backend.Start(ctx, opts)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer sess.Close()
+			want := SessionInfo{Model: "gpt-6-luna", Provider: "openai", Effort: "high", Access: "workspaceWrite"}
+			if got := sess.(InfoSession).Info(); got != want {
+				t.Fatalf("Info = %+v, want %+v", got, want)
+			}
+			if err := sess.Prompt(ctx, UserMessage{Text: "probe"}); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case e := <-sess.Events():
+				if e.Kind != EventMessage || !e.Final || e.Text != "override|low" {
+					t.Fatalf("final event = %+v", e)
+				}
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+			out, err := os.ReadFile(stderr.Name())
+			if err != nil || string(out) != "helper-stderr:override\n" {
+				t.Fatalf("stderr = %q, %v", out, err)
+			}
+		})
 	}
 }

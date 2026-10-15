@@ -37,37 +37,8 @@ func (s *Server) StartWatchers() error {
 	for _, id := range s.order {
 		s.watchProjectLocked(id, s.projects[id].Path)
 	}
-	// Snapshot (id, logPath, seededOffset) so the relay can replay the existing
-	// ledger up to the same offset the SSE watch was seeded at — replay and the
-	// live drain then partition each file with no overlapping seq.
-	type seed struct {
-		id, lp string
-		off    int64
-	}
-	var seeds []seed
-	if s.relay != nil {
-		for id, lp := range s.watchPaths {
-			seeds = append(seeds, seed{id, lp, s.offsets[id]})
-		}
-	}
 	s.pmu.Unlock()
-	// Relay replay + the watch loop run in a BACKGROUND goroutine so a down or
-	// slow relay can never block serve's HTTP startup (RELAY-2, 2026-07-23: a
-	// scaled-to-0 relay made replayProject's enqueueBlocking wait on a queue that
-	// only drains one 10s-timed-out POST at a time, so StartWatchers — and thus
-	// Run's ListenAndServe — hung and the LOCAL dashboard went fully dark).
-	// Ordering inside the goroutine is preserved: the full-ledger replay seeds
-	// each project's line-index seq BEFORE the watch loop enqueues any live
-	// append, so relay egress seqs never collide (the neon-egress-diet
-	// invariant). The local dashboard (REST + fsnotify) is up the moment
-	// StartWatchers returns; live SSE follows once replay completes (prompt when
-	// the relay is reachable; merely delayed, never fatal, when it is not).
-	go func() {
-		for _, sd := range seeds {
-			s.relay.replayProject(sd.id, sd.lp, sd.off)
-		}
-		s.watchLoop()
-	}()
+	go s.watchLoop()
 	return nil
 }
 
@@ -132,7 +103,6 @@ func (s *Server) watchLoop() {
 			}
 			s.pmu.RUnlock()
 			if hitID != "" {
-				s.relay.setWatermarkPath(hitID, hitLP)
 				s.drainNew(hitID, hitLP)
 			}
 		case err, ok := <-s.watcher.Errors:
@@ -179,7 +149,6 @@ func (s *Server) drainNew(id, lp string) {
 		off += int64(len(line)) // len includes the '\n'
 		if t := strings.TrimRight(line, "\n"); t != "" {
 			s.hub.broadcast(id, t)
-			s.relay.enqueue(id, t, int64(len(line)))
 		}
 	}
 	s.pmu.Lock()
@@ -192,12 +161,9 @@ func (s *Server) drainNew(id, lp string) {
 	s.pmu.Unlock()
 }
 
-// Stop closes the fsnotify watcher and the relay.
+// Stop closes the fsnotify watcher.
 func (s *Server) Stop() {
 	if s.watcher != nil {
 		_ = s.watcher.Close()
-	}
-	if s.relay != nil {
-		s.relay.stop()
 	}
 }

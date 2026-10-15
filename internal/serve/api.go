@@ -2,12 +2,9 @@ package serve
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
@@ -59,15 +56,9 @@ type Server struct {
 	muGuard sync.Mutex
 	mu      map[string]*sync.Mutex
 
-	relay *relay
-
 	// cockpit hosts the live agent-backend sessions for the cockpit HTTP endpoints.
 	// It is created lazily by ensureCockpit; tests may inject a pre-built Manager.
 	cockpit *cockpit.Manager
-	// cockpitEmit holds the current machine socket's ingest emitter, set on each
-	// successful machine-channel connect. It is an atomic.Value of
-	// func(agentKind string, msg any) error.
-	cockpitEmit atomic.Value
 
 	execOrchestrate func(dir string, args, env []string) error
 	finishRunner    func(dir, name string, args ...string) (string, error)
@@ -77,33 +68,6 @@ type Server struct {
 
 // SetSeat configures the acting seat used for author (write) endpoints.
 func (s *Server) SetSeat(seat string) { s.seat = seat }
-
-// SetRelay configures the optional best-effort pact-event uploader (U2). A
-// relay URL with no cloud session / master secret is surfaced (not silently
-// dropped) and serve runs without the relay.
-func (s *Server) SetRelay(url, token string) {
-	r, err := newRelay(url, token)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "pactify serve: relay disabled: %v\n", err)
-		return
-	}
-	s.relay = r
-}
-
-// setCockpitEmitter is called by the machine channel on each connect with a
-// function that emits an "ingest" event on the current socket.
-func (s *Server) setCockpitEmitter(emit func(agentKind string, msg any) error) {
-	s.cockpitEmit.Store(emit)
-}
-
-// getCockpitEmitter returns the current socket emitter, or nil if the machine
-// channel has not yet connected.
-func (s *Server) getCockpitEmitter() func(agentKind string, msg any) error {
-	if v := s.cockpitEmit.Load(); v != nil {
-		return v.(func(agentKind string, msg any) error)
-	}
-	return nil
-}
 
 // projectMu returns the lazily-created mutex serializing author writes for id.
 func (s *Server) projectMu(id string) *sync.Mutex {

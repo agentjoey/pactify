@@ -96,7 +96,7 @@ CLI
   grep -q '/pactify:delegate' "$skill"
   grep -q 'invoked this skill explicitly' "$skill"
   grep -q 'always delegate' "$skill"
-  grep -q 'pactify sub run --write --wait 0s --json' "$skill"
+  grep -q 'pactify sub run --write --worktree --wait 0s --json' "$skill"
   ! grep -q 'pactify sub run codex' "$skill"
   grep -q 'run_in_background' "$skill"
   grep -q 'timeout: 7200000' "$skill"
@@ -130,4 +130,22 @@ PY
   grep -q '默认.*codex' "$P/README.md"
   grep -q 'kimi.*实验性' "$P/README.md"
   grep -q '6/10' "$P/README.md"
+}
+
+@test "skills isolate large tasks and share the review apply discard resume workflow" {
+  run python3 - "$P" <<'PY'
+import pathlib, re, sys
+root = pathlib.Path(sys.argv[1])
+sections = []
+for name in ('delegate', 'codex', 'kimi'):
+    text = (root / 'skills' / name / 'SKILL.md').read_text()
+    command = next(line.strip() for line in text.splitlines() if "<<'BRIEF'" in line)
+    assert '--worktree' in command, (name, command)
+    review = text.split('3. When', 1)[1].split('\nFor a quick', 1)[0]
+    for term in ('git -C', 'diff', 'ls-files', 'pactify sub apply <jobId>', 'pactify sub discard <jobId>', '--resume', 'same worktree', 'HEAD'):
+        assert term in review, (name, term)
+    sections.append(review)
+assert sections[0] == sections[1] == sections[2], 'review and rework rules differ'
+PY
+  [ "$status" -eq 0 ]
 }

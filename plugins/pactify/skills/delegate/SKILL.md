@@ -23,7 +23,7 @@ each delegation carries a fixed cost of tens of thousands of tokens on the calle
 2. Start it from the **main thread** (not a subagent — a subagent's background command notifies only that
    subagent). The worker runs in the background:
 
-       pactify sub run --write --wait 0s --json <<'BRIEF'
+       pactify sub run --write --worktree --wait 0s --json <<'BRIEF'
        ...brief...
        BRIEF
 
@@ -44,7 +44,27 @@ each delegation carries a fixed cost of tens of thousands of tokens on the calle
    warning (model mismatch, tool-call limit, idle timeout). Review the diff it lists before building on it.
    If needed, retrieve the summary again with `pactify sub result <jobId>`. Only claim independent model
    verification when the result confirms it. Full logs stay at the reported path.
-4. To continue the same codex session in this repository, pass `--resume` on the next `run`.
+   Large tasks use a detached worktree based on the original HEAD. Uncommitted source changes are not
+   carried over; the summary warns when the source was dirty. Read `worktreePath` and `baseCommit` from
+   the result JSON (or Worktree and base commit in the summary), then inspect the complete change:
+
+       git -C <worktreePath> diff <baseCommit> --
+       git -C <worktreePath> ls-files --others --exclude-standard
+
+   Also open the listed new files: `git diff` alone does not show untracked content.
+   After reviewing and accepting the change, run `pactify sub apply <jobId>` to apply it to the original
+   workspace without committing. Apply checks all affected paths first; a related user edit or conflict
+   fails without partially applying. Resolve it deliberately; do not force or blindly retry.
+   After a successful apply, run `pactify sub discard <jobId>` to remove the worktree. To reject the work,
+   use discard without apply. A running job must be canceled before discard.
+4. To request rework, pass `--resume --worktree` on the next `run` with the original `--cwd` and harness.
+   Resume continues in the same worktree with the same base commit; the summary shows the full change
+   from that base across all turns. Omitting `--worktree` on resume also preserves existing isolation.
+   It selects the most recent completed worktree session with a session id, including a failed or canceled
+   turn; legacy workspace sessions still require success. Do not start concurrent turns in one worktree.
+   A discarded or missing worktree cannot resume. A legacy session cannot acquire isolation mid-session:
+   start a fresh `--worktree` job instead. Apply and discard accept any job id in the resumed chain and
+   affect its shared worktree; discard marks every turn as discarded.
 
 For a quick task you are willing to block on (under ~9 minutes), the main thread may instead call
 `pactify sub run --wait 540s --json` with the complete brief on stdin.

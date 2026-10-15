@@ -121,6 +121,20 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 	if Terminal(st.Status) {
 		return nil
 	}
+	if result.WorktreePath == "" {
+		result.describeWorktree(*st)
+	}
+	if st.Worktree != nil && !st.Worktree.Discarded {
+		if change, err := worktreeChanges(st.Worktree, false); err == nil {
+			result.Diff = change.diff
+		} else {
+			result.Warnings = append(result.Warnings, "worktree diff 统计失败："+err.Error())
+			if result.Status == StatusSucceeded {
+				result.Status = StatusFailed
+				reason = err.Error()
+			}
+		}
+	}
 	if err := atomicJSON(s.ResultPath(st.ID), result); err != nil {
 		return fmt.Errorf("write result: %w", err)
 	}
@@ -208,7 +222,13 @@ func (s Store) Recover(id string) (st State, err error) {
 					return e
 				}
 			}
-			pending := current.Status == StatusQueued && current.PID == 0 && current.Worker == nil && time.Since(current.CreatedAt) < 5*time.Second
+			pendingSince := current.CreatedAt
+			if current.Worktree != nil && current.UpdatedAt.After(pendingSince) {
+				// Worktree checkout holds this lock; its completion starts the
+				// same short launch window that ordinary jobs get at creation.
+				pendingSince = current.UpdatedAt
+			}
+			pending := current.Status == StatusQueued && current.PID == 0 && current.Worker == nil && time.Since(pendingSince) < 5*time.Second
 			if !alive && !pending {
 				e := errors.Join(s.fallbackLocked(current, StatusFailed, "job worker is absent or its process identity no longer matches"), current.KillHarnesses())
 				st = *current

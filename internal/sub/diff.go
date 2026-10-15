@@ -2,6 +2,7 @@ package sub
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,8 +13,9 @@ import (
 )
 
 type Snapshot struct {
-	Base      string
-	Untracked []string
+	Base         string
+	Untracked    []string
+	Fingerprints map[string][32]byte
 }
 
 type Diff struct {
@@ -27,6 +29,28 @@ type FileDelta struct {
 	Added   int
 	Deleted int
 	New     bool
+}
+
+func parseNumstat(record []byte) (FileDelta, error) {
+	parts := strings.SplitN(string(record), "\t", 3)
+	if len(parts) != 3 {
+		return FileDelta{}, fmt.Errorf("invalid git numstat record %q", record)
+	}
+	f := FileDelta{Path: parts[2]}
+	var err error
+	if parts[0] != "-" {
+		f.Added, err = strconv.Atoi(parts[0])
+		if err != nil {
+			return FileDelta{}, err
+		}
+	}
+	if parts[1] != "-" {
+		f.Deleted, err = strconv.Atoi(parts[1])
+		if err != nil {
+			return FileDelta{}, err
+		}
+	}
+	return f, nil
 }
 
 func runGit(dir string, args ...string) ([]byte, error) {
@@ -83,7 +107,40 @@ func TakeSnapshot(dir string) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
-	return Snapshot{Base: base, Untracked: paths}, nil
+	snap := Snapshot{Base: base, Untracked: paths, Fingerprints: make(map[string][32]byte)}
+	for _, path := range paths {
+		info, err := os.Lstat(filepath.Join(dir, path))
+		if err != nil {
+			return Snapshot{}, err
+		}
+		// Embedded repositories and special files were excluded by path before
+		// fingerprints existed. Do not traverse them or block on pipes/devices.
+		if !info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
+			continue
+		}
+		data, err := fileContent(filepath.Join(dir, path))
+		if err != nil {
+			return Snapshot{}, err
+		}
+		snap.Fingerprints[path] = sha256.Sum256(data)
+	}
+	return snap, nil
+}
+
+// Git stores a symlink's target text rather than the referenced content.
+func fileContent(path string) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		target, err := os.Readlink(path)
+		return []byte(target), err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("cannot read non-regular file %s", path)
+	}
+	return os.ReadFile(path)
 }
 
 func DiffSince(dir string, snap Snapshot) (Diff, error) {
@@ -98,33 +155,29 @@ func DiffSince(dir string, snap Snapshot) (Diff, error) {
 	}
 	existing := make(map[string]bool, len(snap.Untracked))
 	for _, path := range snap.Untracked {
-		existing[path] = true
+		fingerprint, recorded := snap.Fingerprints[path]
+		if !recorded {
+			existing[path] = true
+			continue
+		}
+		data, err := fileContent(filepath.Join(dir, path))
+		if err != nil && !os.IsNotExist(err) {
+			return Diff{}, err
+		}
+		existing[path] = err == nil && sha256.Sum256(data) == fingerprint
 	}
 	d := Diff{}
 	for _, record := range bytes.Split(out, []byte{0}) {
 		if len(record) == 0 {
 			continue
 		}
-		parts := strings.SplitN(string(record), "\t", 3)
-		if len(parts) != 3 {
-			return Diff{}, fmt.Errorf("invalid git numstat record %q", record)
+		f, err := parseNumstat(record)
+		if err != nil {
+			return Diff{}, err
 		}
-		f := FileDelta{Path: parts[2]}
-		// Pre-existing untracked files remain user-owned after git add, too.
+		// Unchanged user files remain excluded after git add, too.
 		if existing[f.Path] {
 			continue
-		}
-		if parts[0] != "-" {
-			f.Added, err = strconv.Atoi(parts[0])
-			if err != nil {
-				return Diff{}, err
-			}
-		}
-		if parts[1] != "-" {
-			f.Deleted, err = strconv.Atoi(parts[1])
-			if err != nil {
-				return Diff{}, err
-			}
 		}
 		d.Files = append(d.Files, f)
 	}
@@ -137,23 +190,9 @@ func DiffSince(dir string, snap Snapshot) (Diff, error) {
 			continue
 		}
 		fullPath := filepath.Join(dir, path)
-		info, err := os.Lstat(fullPath)
+		data, err := fileContent(fullPath)
 		if err != nil {
 			return Diff{}, err
-		}
-		var data []byte
-		if info.Mode()&os.ModeSymlink != 0 {
-			// Git stores the link target text, not the referenced file's contents.
-			target, linkErr := os.Readlink(fullPath)
-			if linkErr != nil {
-				return Diff{}, linkErr
-			}
-			data = []byte(target)
-		} else {
-			data, err = os.ReadFile(fullPath)
-			if err != nil {
-				return Diff{}, err
-			}
 		}
 		f := FileDelta{Path: path, New: true}
 		if !bytes.ContainsRune(data, 0) {

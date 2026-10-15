@@ -1188,7 +1188,7 @@ features:
     tasks:
       - id: p0-acp-client
         owner: codex-worker
-        status: assigned
+        status: in_progress
         reviewer: claude-session
         spec: .pact/tasks/p0-acp-client.md
         evidence: null

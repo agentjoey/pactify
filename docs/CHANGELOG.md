@@ -8,6 +8,19 @@
 
 ---
 
+## Unreleased
+
+2026-10-15～16 合入 main，**尚未发布**；当前发布版仍为 v0.12.0。M1 功能已合入，v0.13.0 挂起，Owner 选择继续内部自用。
+
+- **harness 路由与 M1**（#69–#91）：Claude Code 插件与 `pactify sub` 提供委派、后台 job、续接、取消、日志、worktree 隔离与 `sub doctor`；codex 成为默认，kimi 保持实验性且不开放只读。默认精简 callee 配置、隔离会话，补齐结果、实际模型及 token 核实，减少委派开销与用户会话污染。
+- **M2 harness 扩展**（#92–#94、#101–#104）：接入实验性的 agy（命令行后端、动态模型表、镜像 HOME）与 opencode（ACP、隔离 XDG、模型与成本核实）；修正 agy 终稿和模型列表失败处理、opencode export 管道问题。agy 大任务一次完成 1/10（见 [评估](agy-eval.md)）；opencode 评估待定。
+- **任务查看与续接**（#95–#99、#105）：共享 `sub status --json` 摘要、Claude Code `/jobs`、本地只读 `pactify sub panel`，展示活动、结果、日志和 diff；`--resume <job-id>` 可续接指定任务，版本变化不再覆盖真实失败原因。
+- **退役清理**（#97、#100、#106、#107、AJ-665）：删除 Go 云端与 web 托管模式，移除 gemini-cli（web 与 Go 两侧，已注册的 gemini-cli 座席会提示改用 agy）。云端文档归档至 `docs/archive/`，精简部署、运维与架构说明，同步三份入口文件。`cloud/` 及构建 / 发布 CI 保留，去向待定（AJ-664）；agy 的 Gemini 模型与 GEMINI.md 入口保留。
+
+**本次文档清理验证**：`go build ./...`、隔离用户目录与 `PACTIFY_HOME` 的 `go test ./...` 全仓通过；指定 bats 4/4 通过。全量 bats 140 项中 9 项因隔离环境缺少 Python `jsonschema` 失败，补齐临时依赖后复跑所在两个文件 10/10 通过，未改测试。三份入口区段逐字一致，托管块未变，四份归档内容逐字节保留；引用检查仍发现 `cloud/relay/src/pact.ts` 与 `cloud/wire/src/envelope.ts` 两处源码注释指向旧路径，受本任务「只改文档」约束暂未修改。
+
+---
+
 ## v0.12.0 — 2026-10-15 · 编排器方向的最后一个正式版本（转向前的回滚锚点）
 
 **为什么发这一版**：2026-10-15 Human Owner 拍板产品转向「harness 路由器」（`docs/specs/harness-subagents.md`），协议 / 账本 / 看板 / 云端降级冻结。本版把 v0.11.0 之后 `main` 上积累的 PR #48–#64 连同一次死代码清理正式发出，作为编排器方向的最后一个版本和回滚锚点：`go install github.com/agentjoey/pactify/cmd/pactify@v0.12.0`。

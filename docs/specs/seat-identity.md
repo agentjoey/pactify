@@ -1,5 +1,7 @@
 # Spec — Seat Identity（身份 = 工作副本属性，永不进追踪文件）
 
+> 2026-10 状态注记：下文 gemini-cli 接线与 E3 验证项为历史记录；该集成已退役（#106、#107），GEMINI.md 仍是 agy / antigravity 入口。
+
 Status: **draft** · Created 2026-07-22 · Owner: claude (orchestrator)
 Source: 2026-07-22 诊断复现——同仓两个 claude-code 座席（lead=orchestrator / reviewer）静默塌缩成 last-writer-wins。
 

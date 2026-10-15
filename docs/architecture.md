@@ -1,20 +1,13 @@
 # Pactify — Architecture
 
-> Last updated: **2026-10-15** | Status: **v0.12.0 已发布**——编排器方向的最后一个正式版本；产品已转向 harness 路由器（见 [`specs/harness-subagents.md`](specs/harness-subagents.md)），本文描述的编排架构进入冻结。完整历史见 [`CHANGELOG.md`](CHANGELOG.md)。
+> Last updated: **2026-10-16** | Status: **v0.12.0 已发布**；M1 已合入但未发布，v0.13.0 挂起、继续内部自用。历史与未发布变更见 [`CHANGELOG.md`](CHANGELOG.md)。
 >
-> **版本历史已迁出**——本行原先累积成一段 5KB 的单行 changelog，现全部移到 [`CHANGELOG.md`](CHANGELOG.md)（原文逐字保留）。本行今后只写「当前版 + 与架构有关的当前事实」。
->
-> **与本文档相关的当前事实（2026-08-29 实测，2026-10-15 更新）**：①**云端整层未运行**——`pactify-relay` / `pactify-relay-staging` 两个 fly app 均 0 machines，`origin/production` 停在 2026-07-04（落后 main 652 提交）；下文「通讯架构」「M3.4 relay 接口」描述的是**设计与已实现的代码**，不是当前运行中的部署。②**账本与 git 工作目录耦合**这条架构债仍在：「单一规范 ledger」已起草 spec（`specs/single-canonical-ledger.md`）并完成 WS-A/WS-B（flag 默认关），随 2026-10-15 的转向暂停。
+> 产品主线为 harness 路由器，当前支持 codex（默认）及实验性的 kimi、agy、opencode，见 [`specs/harness-subagents.md`](specs/harness-subagents.md)。下文保留的编排架构已冻结；单一规范账本暂停在 WS-B（flag 默认关）。
+> 云端 Go 与 web 部分已删除，`cloud/` 及 CI 保留，去向待定（AJ-664）；gemini-cli 已移除（#106、#107）。
 
 ## Overview
 
-Pactify = **多 agent 协同协议 + 薄 CLI + 可视化编排**，分三产品层：
-
-```
-Pact-Base   读 + 协议机制     免费开源
-Pact-Squad  写 + 可视化编排   主功能免费 + 部分付费
-Pact-Team   协作 + 云         付费商业化
-```
+Pactify 是 **harness 路由器**，在 Claude Code 中通过 slash 命令委派大任务；`pactify sub` 管理 job、结果与隔离工作区，`/jobs` 与 `pactify sub panel` 提供任务查看。pact 协议、账本与本地看板保留为可选治理模式，冻结新投入。
 
 ## 制品层（用户 repo）
 
@@ -28,59 +21,13 @@ CLAUDE.md / AGENTS.md / GEMINI.md  ← 各厂商入口，均 → .pact/
 docs/specs|plans|decisions/        ← 知识库
 ```
 
-## 通讯架构（地基，Phase 1 冻结）
+## 通讯架构
 
-**`log.jsonl` 既是审计事实源，也是 agent 之间的通讯总线。**
-
-```
-agents ──┬─ shell:  pactify checkpoint/accept   (任何 agent，零依赖)
-         └─ MCP:    tools + event subscription   (MCP 客户端)
-                          │
-                   log.jsonl  (append-only 事件总线)
-                          │
-                   pactify serve
-                     ├─ MCP server（事件订阅 + 工具暴露）
-                     ├─ fsnotify watch → SSE/WS → 本地 dashboard
-                     └─ (Phase 4) 云端 relay → Pact-Team
-```
-
-- **shell 写入与 MCP 调用产出同一种事件** → 一套 schema 服务所有入口
-- **本地零依赖**（文件 + 单 binary），**云端只是在上面加 relay**，协议不变
+已删除（2026-10，见 [CHANGELOG](CHANGELOG.md#unreleased)）。
 
 ### M3.4 relay 接口
 
-`pactify serve` 内置 best-effort 异步 relay，将每个项目的 log 事件 POST 到可配端点。挂载点在 `drainNew` 中（`hub.broadcast` 之后，旁路非阻塞）：
-
-```
-pactify serve
-  └─ fsnotify → watchLoop → drainNew
-       ├─ hub.broadcast(id, line)    ← SSE 订阅者
-       └─ relay.enqueue(id, line)    ← 远端 relay 端点（可选）
-```
-
-**语义：**
-- **best-effort**：relay 失败/超时/排队满 不阻塞 SSE，不影响 offset 推进，不回传错误到 watcher。
-- **异步队列**：有界 256 条，FIFO；满时丢弃最旧条目并递增 `dropped` 计数器。
-- **重试**：单条最多 4 次尝试（1 次初始 + 3 次退避重试：1s、2s、4s），全部失败递增 `dropped` 后静默丢弃。
-- **可中断**：`stop()` 在重试间隙检查，不会卡死 shutdown。
-
-**配置：**
-- CLI flag：`serve --relay-url <url> [--relay-token <token>]`
-- 环境变量：`PACT_RELAY_URL`、`PACT_RELAY_TOKEN`
-- 空 URL（默认）= relay 禁用，`newRelay("","")` 返回 nil，`enqueue` 是安全空操作
-
-**线格式（POST JSON）：**
-```json
-{
-  "project": "pactify",
-  "event": { "event_id": "...", "event_type": "...", ... }
-}
-```
-- `Content-Type: application/json`
-- token 非空时附带 `Authorization: Bearer <token>`
-- event 行非合法 JSON 时，原始文本被转义为 JSON string 后放入 envelope，不 panic
-
-**端点要求：** HTTPS 端点；2xx 视为成功，4xx/5xx 触发重试；10s 超时。
+已删除（2026-10，见 [CHANGELOG](CHANGELOG.md#unreleased)）。
 
 ### 事件 schema（草案，M1.1 定稿）
 
@@ -119,7 +66,7 @@ worker 不能自标 `accepted`（职责分离）。
 ### 驱动层（orchestrate driver — driver-modernization）
 `orchestrate` 把座席作为子进程「一棒」驱动。传输可选:
 - **CmdRunner**（默认）— headless 一次性 spawn（`claude -p`/`opencode run`…），解析 stdout；巡检 idle-timeout 兼看工作树变更(静默但在写不误杀)。
-- **AcpRunner**（opt-in,`--transport kind=acp`）— 对 vendor CLI 说 **Agent Client Protocol**（`internal/acp`,JSON-RPC/stdio）:`initialize→session/new→session/prompt→session/update`。给结构化事件流:usage（token）经 `session/update` 落 `internal/tokens`（**根治 TOK=0**）、`session/request_permission` 三档策略 auto/escalate/deny（escalate 写 escalation,与 OpenHands 无脑 auto-approve 相反）。kind→命令映射:kimi=`kimi acp`、claude/codex/gemini 经 npx bridge。`RoutedLocalRunner` 按 kind 选传输,空映射=全 cmd(零行为变化)。
+- **AcpRunner**（opt-in,`--transport kind=acp`）— 对 vendor CLI 说 **Agent Client Protocol**（`internal/acp`,JSON-RPC/stdio）:`initialize→session/new→session/prompt→session/update`。给结构化事件流:usage（token）经 `session/update` 落 `internal/tokens`（**根治 TOK=0**）、`session/request_permission` 三档策略 auto/escalate/deny（escalate 写 escalation,与 OpenHands 无脑 auto-approve 相反）。kind→命令映射:kimi=`kimi acp`、claude/codex 经 npx bridge。`RoutedLocalRunner` 按 kind 选传输,空映射=全 cmd(零行为变化)。
 - **会话续接**（AcpRunner）— `.pact/orchestrate/sessions.json`（lockx）记 (seat,task)→sessionID;重试时 server 支持 `loadSession` 则续接会话（保上下文、省 token）,失败回退新会话;accept/终态清理。
 - **知识注入** — briefing 尾部注入 `.pact/memory.md`(累积决策)+ role/keyword 匹配的 `.pact/skills/*.md`(4KB 预算);无文件时字节不变。
 - **可观测** — `internal/stats` per-seat `Accepted/Reworked`(纯 fold);`pactify doctor` per-vendor 预检(binary+auth+ACP 可用性)。
@@ -308,7 +255,7 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 源自 dogfood 头号发现 #9：协议把协调【内容】放进文件，但协调【时机】仍需人触发，人退化成调度器。`pactify orchestrate` 在产品层兑现"消灭人肉中继"。
 - **中心化串行驱动**（`internal/orchestrate`）：读 `.pact/log.jsonl` → `projection.Project` → `nextAction(纯函数)` → 在状态变迁 headless 拉起对应 agent → 重投影 → 循环，直到 feature shipped 或升级暂停。串行天然规避 F1 单工作树。
 - **nextAction 纯决策**（decide.go）：优先级 RunReviewer(awaiting_review) > RunOwner(assigned/changes_requested/**in_progress** + deps 全 accepted) > Merge(feature 全 accepted) > Done。in_progress 是可派态——`pactify join` 会把座席所有 assigned task 一次翻成 in_progress，未 checkpoint 的须重派（顺带给崩溃重试）。阈值不在此纯函数里（churning task 总有 action），由 loop 的 `tripped()` 在派发前执行。
-- **per-kind headless runner**（agent.Adapter.Runner）：opencode→`opencode run`、claude-code→`claude -p`、gemini-cli→`gemini -p`；GUI/desktop kind 无 runner → fail-closed。Runner 接口化（生产 exec 与测试 fake 共用）。座席→kind 经 `--seat-kind` 映射（kind 未持久化进协议态）。
+- **per-kind headless runner**（agent.Adapter.Runner）：opencode→`opencode run`、claude-code→`claude -p`；GUI/desktop kind 无 runner → fail-closed。Runner 接口化（生产 exec 与测试 fake 共用）。座席→kind 经 `--seat-kind` 映射（kind 未持久化进协议态）。
 - **硬测试门**（gate.go）：merge 前 orchestrate 独立复跑 feature 的验收命令（task 规格 `verify:` 行，缺则全量 `go build && go test` 回退），不过不 merge——给 LLM 评审垫确定性安全网（LLM accept ≠ 可 merge）。
 - **升级=暂停非终止**：返工/失败阈值或硬门失败 → 写 `.pact/orchestrate/escalation-*.md` + 通知 + 暂停；人修后重跑续行。agent 瞬时崩溃算软失败（重试至 MaxFails），不杀驱动；ctx 取消透传。
 - **测试**：纯函数单测 + 注入 fake Runner/cmdExec 的端到端集成（happy/返工/升级/硬门拦截/崩溃软失败/dry-run），不用真 LLM。
@@ -327,7 +274,7 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 
 **收尾交付步（`internal/finish`，#5）**：merge 到本地 main 后 push / 开 PR（`gh pr create`，gh 缺时降级打印手动命令）。CLI `pactify finish`。
 
-**session 清理（`internal/sessions`，#6）**：按 kind 声明 list/prune 命令的框架，gemini 已接，其余优雅 unsupported（no-op 报告，非 error）。CLI `sessions list/prune`。**（2026-06-15 升级见下「session 清理升级」。）**
+**session 清理（`internal/sessions`，#6）**：按 kind 声明 list/prune 命令的框架，不支持的 kind 优雅 unsupported（no-op 报告，非 error）。CLI `sessions list/prune`。**（2026-06-15 升级见下「session 清理升级」。）**
 
 **配方（`internal/recipe`，#11）**：命名任务图模板（add-tests/review-harden/spec-to-plan），`{{goal}}` 占位展开成 pact 任务 spec。CLI `recipe list/show`。把门槛从"手写任务图"降到"选配方"。
 
@@ -355,7 +302,7 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 - **模型下拉**：`agent.CandidateModels(kind)`（每 `RunnerProfile` 一份候选清单）经 config DTO 的 `candidate_models` 暴露；AgentConfig 的 model 字段升级为下拉（default · 候选 · custom…），无候选回退纯文本。
 - **统一 agent logo**（`web/src/lib/agentLogos.tsx`）：`kind → AgentLogo` 品牌渐变实色块，接进 Setup / Agents 引导条 / Ops AgentConfig 真卡片。
 
-**session 清理升级（`internal/sessions`，opencode-first，2026-06-15）**：从"按 kind 框架（gemini 仅 list）"升级为**任务 accept 后自动关闭该棒 session**。实测各 agent session CLI 后定 opencode 优先（唯一有干净 `session list` + `session delete <id>`，且常驻 daemon 最该清）。机制：runner 给 opencode `run` 打 `--title pact:<seat>`（不改输出格式）→ accept 后 `sessions.CleanupByTitle` list→匹配 title→按 id 删 owner+reviewer 的 session；门控在 `Options.SessionRun`（仅 `CleanupSessions` 开时注入真 exec，测试不 spawn）；CLI 默认开、`--keep-sessions` 关。gemini（按 index）/codex（archive）/kimi/claude（无 CLI）延后。
+**session 清理升级（`internal/sessions`，opencode-first，2026-06-15）**：从"按 kind 框架"升级为**任务 accept 后自动关闭该棒 session**。实测各 agent session CLI 后定 opencode 优先（唯一有干净 `session list` + `session delete <id>`，且常驻 daemon 最该清）。机制：runner 给 opencode `run` 打 `--title pact:<seat>`（不改输出格式）→ accept 后 `sessions.CleanupByTitle` list→匹配 title→按 id 删 owner+reviewer 的 session；门控在 `Options.SessionRun`（仅 `CleanupSessions` 开时注入真 exec，测试不 spawn）；CLI 默认开、`--keep-sessions` 关。gemini-cli 集成已退役；codex（archive）/kimi/claude（无 CLI）在当时延后。
 
 **dark product UI refresh（web/，本地 main 未发布，2026-06-19）**：dashboard 从浅色切到**深色**，照 `design_handoff_dark_product_ui` 设计稿把全部 6 屏重制。本质是 **token swap + 少量新 pattern**——`tokens.css` 的 `@theme` 改深色（背景/边框/文字/语义；role 三色回归 brand.md 一直定义的深色基底 `#ffd479/#8ab4ff/#6ee7a0`，≈70% 的 app 经 `var()` 自动迁移）+ `index.css` 中硬编码浅色值（`canvas-stage`/`skeleton`/`rgba(18,22,31,…)` hover/inset）逐一 re-tone。新 pattern：`ui/MetricStrip`（mono `RUN/TOK/×iter` 统计条，live 值蓝、估算斜体）；**Board** 全宽 5 列（Assigned/Working/Review/Accepted/Shipped）+ 上下文头条（feature 过滤 chip + 座席簇 + New task）+ 卡片统计条 + Review 列内联 Accept/Changes，去掉固定左 dock（座席并入头条），accepted+shipped 折叠到最近 6；**Canvas** 底部中央 NL 命令坞（目标 + 配方 chip + 并发段 + Run，接现有 dispatch）；**Live** 两栏 + 右侧事件流终端（`#07090d`，pact log 着色 + 座席在场）；**Setup** 旅程步进器 + 角色切换 pill + scope 交叉链；**Settings** scope 双栏（Project/Machine/Account）。早先的**蚂蚁运动语言**（in_progress 爬行 / awaiting 绕行 / changes 顿挫 + status-colored 脉冲 + dep 边行进蚁）保留。Canvas 合并门 = vitest + Playwright e2e 双绿（工艺规约见 CLAUDE.md）。
 

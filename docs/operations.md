@@ -1,19 +1,6 @@
 # Pactify — Operations
 
-> Last updated: **2026-08-29** | Status: **在用**（本文不是占位稿——`relay 配置与运维` 之后的
-> 每一节都对应当前代码里真实存在的命令与契约）。
->
-> **⚠️ 当前部署实况（2026-08-29 实测）**：**云端 relay 整层没有在运行**——`pactify-relay` 与
-> `pactify-relay-staging` 两个 fly app 都是 **0 machines**，`/health` 不可达；`origin/production`
-> 停在 2026-07-04（落后 `main` **652** 提交），`origin/staging` 落后 **224**。
-> 文档站 pactify.dev 与 dashboard orx.pactify.dev（Vercel）本身正常，但 dashboard 的 hosted 模式
-> 打到的是这个不存在的 relay。**当前唯一可用路径是 local 模式**（`pactify serve`，见下）。
->
-> **⚠️ 重新拉起 relay 时的硬约束**：`origin/production` 上 `cloud/wire` 的 `AgentKind` zod 枚举
-> **没有 `antigravity`**，而 relay 的 `cloud/relay/src/machines.ts:19` 走的是**会抛异常的**
-> `MachineInfo.parse`（那条路径没有 catch）。v0.11.0 起的二进制会广播 `antigravity` kind，
-> 所以**必须先把 relay 部署到 ≥ `main` 的版本，再让任何 v0.11.0+ 的客户端连上**；
-> 顺序反了，一台 agy 机器就能打掉整个账户的机器列表（`GET /v1/machines` 500）。
+> Last updated: **2026-10-16** | Status: 本地运维与可选治理模式；云端已退役。
 
 ## 日常开发流程
 
@@ -36,52 +23,15 @@ cat .agent/CURRENT.md          # 本地工作台的交接说明（gitignored）
 | task 状态无法转换 | 检查契约规则（worker 不能自标 accepted；只有 reviewer 能 accept，且必须先 `awaiting_review`） |
 | Board 上任务卡在 `changes_requested` / `in_progress`，但活其实已经完成 | 账本滞后于现实（agent 交付了没走完协议流转）。**当前只能回命令行**：以 **owner 身份** `pactify checkpoint <task> --evidence …`，再由 reviewer `pactify accept`。⚠️ 先确认没有并发 run 在跑、工作树干净——`Checkpoint` 走 `CommitAll`，会把别人的在途改动一并提交。已记 backlog `[UI-GATE]`。 |
 | launchd 拉起的 `serve` 立刻被杀 | `go build` 的 ad-hoc 签名不够，`codesign --force -s - ./pactify` 后重试（见「发版」节） |
-| dashboard hosted 模式空白 / 连不上 | 云端 relay 当前未运行（见顶部）。用 local 模式：`pactify serve` |
-
-## relay 配置与运维
-
-`pactify serve` 可将事件 POST 到远端端点，用于云端 relay / audit。不配置时 relay 完全禁用，零开销。
-
-### 启用 relay
-
-```bash
-# flag（优先级最高）
-pactify serve --relay-url https://relay.example.com/api/events --relay-token "$(security find-generic-password -s pactify-relay -w)"
-
-# 或仅环境变量
-export PACT_RELAY_URL=https://relay.example.com/api/events
-export PACT_RELAY_TOKEN=$(security find-generic-password -s pactify-relay -w)
-pactify serve
-```
-
-token 走 **env / Keychain**，不在命令行或配置文件中写入明文 token。
-
-### 监控
-
-- **dropped 计数**：`GET /api/projects` 响应中无直接暴露 relay dropped；运行时指标在 serve 进程日志中。dropped > 0 表示事件因队列满或端点不可达而丢失。
-- **健康**：relay 是异步 best-effort，单点失败不阻塞本地工作流。relay 挂掉时，本地 SSE / CLI / dashboard 不受影响。
-- **server 日志**：serve 进程 stdout 无 relay 内部日志（静默丢弃），检查远端端点日志确认送达。
-
-### 禁用 relay
-
-清空 URL 即可（默认状态）：
-
-```bash
-unset PACT_RELAY_URL PACT_RELAY_TOKEN
-pactify serve   # relay 禁用
-```
 
 ## 发版
 
-二进制走 goreleaser + `v*` tag；详见 [`release-process.md`](release-process.md) 与
-[`deployment.md`](deployment.md)，版本历史见 [`CHANGELOG.md`](CHANGELOG.md)。
+二进制走 goreleaser + `v*` tag（`.github/workflows/release.yml`）；安装与开发环境见
+[`deployment.md`](deployment.md)，版本历史见 [`CHANGELOG.md`](CHANGELOG.md)。当前发布版为 v0.12.0；v0.13.0 挂起，M1 功能仅内部自用。
 
 ```bash
-git tag v0.11.0 && git push origin v0.11.0      # 触发 .github/workflows/release.yml
+git tag vX.Y.Z && git push origin vX.Y.Z      # 仅在 Owner 决定发版后，替换为实际版本号
 ```
-
-云端（relay）走分支快进：`main` → `staging` → `production`。**见本文顶部的硬约束**——
-拉起 relay 时必须先部署 relay、后放二进制。
 
 **⚠️ 本地重建的二进制要自己签名**：`go build` 产出的 ad-hoc linker 签名不足以让 launchd 拉起，
 会被 `OS_REASON_CODESIGNING` 直接 SIGKILL。`install.sh:74-75` 的 `codesign -s - --force` + `xattr -c`
@@ -100,8 +50,8 @@ pactify orchestrate \
   --seat-kind w=opencode \
   --seat-kind orch=claude-code
 ```
-- **座席→kind**：`--seat-kind seat=kind`（可重复）。有 headless runner 的 kind：`opencode`/`claude-code`/`gemini-cli`/`kimi-cli`/`codex-cli`/`antigravity`（antigravity 走 `agy` CLI，2026-08-22 起可被驱动）。GUI/桌面 agent（`*-desktop`、`codex-app`）无法被驱动——那一棒换 CLI 座席或人工。
-- **task 规格 `verify:` 字段**：硬测试门与 reviewer 都用它跑验收，例 `verify: go test ./internal/serve/ -run Relay`。缺失则退化为**项目门**（见下）。**只放一行专用 `verify:` 指令，勿写成散文**（首条 `verify:` 行胜出；`>`/`-`/`#` 前缀的不计）。
+- **座席→kind**：`--seat-kind seat=kind`（可重复）。有 headless runner 的 kind：`opencode`/`claude-code`/`kimi-cli`/`codex-cli`/`antigravity`（antigravity 走 `agy` CLI，2026-08-22 起可被驱动）。GUI/桌面 agent（`*-desktop`、`codex-app`）无法被驱动——那一棒换 CLI 座席或人工。
+- **task 规格 `verify:` 字段**：硬测试门与 reviewer 都用它跑验收，例 `verify: go test ./internal/serve/`。缺失则退化为**项目门**（见下）。**只放一行专用 `verify:` 指令，勿写成散文**（首条 `verify:` 行胜出；`>`/`-`/`#` 前缀的不计）。
 - **项目硬门（`pactify config gate`）**：task 无 `verify:` 时的回退门按**项目**配置，优先级 task `verify:` > `config gate` > 按项目类型推断的默认。
   - 类型默认：`pnpm-lock.yaml`→`pnpm build && pnpm test`；`package.json`→`npm run build && npm test`；`Cargo.toml`→`cargo build && cargo test`；`go.mod`→`go build ./... && go test ./...`。
   - 显式设（build-first 例）：`pactify config gate "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"`（写入 ledger 的 `config_gate` 事件，后设覆盖先设）。
@@ -232,7 +182,3 @@ case: swapping agents will not fix wrong work, so the escalation instead offers
 ```bash
 pactify orchestrate --resume --reset-task <id>   # discards UNCOMMITTED work only
 ```
-
-**Known limitation.** Gemini's free (`oauth-personal`) tier silently downgrades
-to flash when it hits a quota instead of failing, so pactify cannot detect that
-case at all. Use an API-key tier when model determinism matters.

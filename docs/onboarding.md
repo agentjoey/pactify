@@ -1,6 +1,6 @@
 # Onboarding — 5 分钟把一个新项目接入 Pactify
 
-把任意 repo 接入 Pactify，让你已装的 agent（opencode / Claude / Gemini / Codex / Kimi …）
+把任意 repo 接入 Pactify，让你已装的 agent（opencode / Claude / agy / Codex / Kimi …）
 协同开发它。零外部服务——协调层就是你的 git + `.pact/` 文件。
 
 ## 前置：装 pactify（一次）

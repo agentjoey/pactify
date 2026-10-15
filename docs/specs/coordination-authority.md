@@ -1,5 +1,7 @@
 # Spec — Coordination Authority (项目寻址 + base 单写入车道)
 
+> 2026-10 状态注记：云端 / linx 共享 relay 已退役，Go 与 web 云端代码已删除；下文 dogfood 事故和本地协调契约保留为历史依据。
+
 Status: **draft** · Created 2026-06-23 · Owner: claude (orchestrator)
 Source: 两次 dogfood 事故(linx orchestrate 撞 OCRC relay 投递 + MCP 绑死在 OCRC)。
 

@@ -2,18 +2,19 @@
 
 **A portable, vendor-neutral protocol for multiple AI agents to collaborate in one git repo.**
 
-Any agent that can read files and run git — Claude, opencode, Gemini, Cursor, … — can play a role
+Any agent that can read files and run git — Claude, opencode, agy, Cursor, … — can play a role
 (orchestrator, worker, reviewer) and coordinate through plain files in `.pact/`. No SDK, no server,
 no external dependency. The repo is the single source of truth.
 
-> Status: **early**, actively developed. Latest release **v0.11.0** (2026-08-24) — see
+> Status: **early**, actively developed. Latest release **v0.12.0** (2026-10-15) — see
 > [`docs/CHANGELOG.md`](docs/CHANGELOG.md). Protocol **v1 is frozen**
 > (see [`docs/specs/pact-protocol.md`](docs/specs/pact-protocol.md)); a bash reference
 > implementation and the `pactify` Go CLI both drive it today.
 > Site: [pactify.dev](https://pactify.dev) · Part of the **Pact-Base** open core.
 >
-> The **hosted relay is not currently running** — `pactify serve` (local mode) is the
-> supported path; the dashboard's hosted mode is offline.
+> Pactify is moving to a **harness router** hosted by Claude Code. M1 is merged but
+> unreleased; v0.13.0 is on hold while the Owner continues internal use. The protocol
+> and local dashboard remain available as optional governance mode.
 
 ## Install
 
@@ -45,7 +46,7 @@ In your repo, run:
 pactify setup
 ```
 
-`setup` scaffolds `.pact/`, wires your agent (opencode / Claude / Gemini / Codex), and sets
+`setup` scaffolds `.pact/`, wires your agent (opencode / Claude / agy / Codex), and sets
 your seat. Then launch your agent — it joins via the pact MCP tools. Run `pactify doctor`
 anytime to verify install + wiring.
 
@@ -68,7 +69,8 @@ the plugin reminds you on session start — run the curl|sh installer above, the
 
 For harness delegation, install `/plugin install pactify@pactify` and use `/delegate`
 (or `/pactify:delegate`). `pactify sub run [harness]` defaults to **codex** when the
-harness is omitted; `/codex`, `/kimi`, `/agy` and `/opencode` select one explicitly. **agy and opencode are experimental (evaluation pending)**. **kimi is experimental**:
+harness is omitted; `/codex`, `/kimi`, `/agy` and `/opencode` select one explicitly. **agy and opencode are experimental**: agy completed 1/10 large tasks in one attempt
+([evaluation](docs/agy-eval.md)); opencode evaluation is pending. **kimi is experimental**:
 Phase 0 large tasks completed in one attempt 6/10, and read-only work did not converge.
 kimi results include an informational warning; `kimi --read-only` still exits 2.
 See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.

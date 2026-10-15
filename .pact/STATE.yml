@@ -1222,7 +1222,7 @@ features:
     tasks:
       - id: p0-plugin
         owner: codex-worker
-        status: assigned
+        status: in_progress
         reviewer: claude-session
         spec: .pact/tasks/p0-plugin.md
         evidence: null

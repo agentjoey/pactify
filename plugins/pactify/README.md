@@ -1,121 +1,123 @@
-# Pactify harness 插件
+# Pactify harness plugin
 
-在 Claude Code 中把大任务交给本机官方 codex / kimi CLI，完成后收回结果摘要并审查工作区改动。
-默认 harness 为 codex；kimi 为实验性 harness（Phase 0：大任务一次完成 6/10，只读不收敛）。
+Delegate large tasks from Claude Code to the official codex / kimi CLI installed locally, then review the result summary and workspace changes.
+The default harness is codex; kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged).
 
-## 安装
+## Installation
 
-在 Claude Code 中依次执行：
+Run these commands in Claude Code:
 
 ```text
 /plugin marketplace add agentjoey/pactify
 /plugin install pactify@pactify
 ```
 
-前提：`pactify` 在 PATH 上，且 `pactify sub --help` 可用；要调用的官方 codex / kimi CLI 已安装并登录。
-SessionStart hook 只检查 pactify 与 `sub` 命令是否可用，缺失时提示安装或升级，不阻断会话。
-插件不代理模型、不管理登录，也不读取或复制凭据。
+Prerequisites: `pactify` is on PATH and `pactify sub --help` works; the official codex / kimi CLI you want to call is installed and logged in.
+The SessionStart hook only checks that pactify and its `sub` command are available. It suggests installing or upgrading when needed without blocking the session.
+The plugin does not proxy models, manage logins, or read or copy credentials.
 
-## 使用
+## Usage
 
 ```text
-/delegate 为 src/cache/ 增加过期策略和回归测试，运行项目全量测试
-/codex 为 src/cache/ 增加过期策略和回归测试，只修改该目录，运行 npm test 全量测试
-/kimi 为 src/cache/ 增加过期策略和回归测试，允许写入，运行项目全量测试
+/delegate Add expiration and regression tests to src/cache/, then run the project's full test suite
+/codex Add expiration and regression tests to src/cache/, modify only that directory, and run the full npm test suite
+/kimi Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
 ```
 
-也可始终使用完整入口 `/pactify:delegate`、`/pactify:codex`、`/pactify:kimi`，避免与其他同名 skill 冲突。
-`/delegate` 使用默认 codex；`/codex`、`/kimi` 显式选择 harness。显式调用以上任一入口时一定外派，无论任务大小。
-适合涉及 3 个以上文件、需要探索和测试、或预计超过约 10 分钟的任务；小改动直接由 Claude 完成。
-自主判断时也不要外派依赖大量口头上下文、无法写成自足说明的任务，或需要与用户频繁交互的任务。
-显式调用仍一定外派，但 kimi 的只读限制不变，不得自行升级为写权限。
+Use `/pactify:delegate`, `/pactify:codex`, or `/pactify:kimi` to avoid conflicts with other skills of the same name.
+`/delegate` uses the default codex harness; `/codex` and `/kimi` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
+Delegation suits tasks involving 3 or more files, exploration and testing, or more than about 10 minutes of work. Claude can handle small edits directly.
+When choosing autonomously, avoid delegating tasks that depend on extensive conversation context that cannot fit in a self-contained brief, or require frequent user interaction.
+Explicit invocations still delegate, but kimi's read-only restriction remains: never raise permissions yourself.
 
-Claude 主线程先写完整 brief，固定包含：背景、编号目标、已知约束与特例、通用约束、验收命令。
-写清路径、范围、权限与已知例外，callee 无法推断当前对话中的约束；验收必须包含项目全量测试命令。
-要求改规则前检查调用方、特例及文档例外，每个行为改动先写回归测试并看到失败；不许为迁就新行为修改已有测试，
-只有 brief 明确判定旧行为错误才可改对应测试，并在最终回复点名。禁止提交及读取凭据；可选禁止派子代理、写报告文件。
-三份 skill 都内嵌同一份模板、完整示例及评审流程，共享标记区由 bats 检查逐字一致。
+The Claude main thread first writes a complete brief with Background, numbered goals, Known constraints and special cases, General constraints, and Acceptance commands.
+Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
+Require inspection of callers, special cases, and documented exceptions before changing rules, and a failing regression test before each behavior change. Do not change existing tests to accommodate new behavior unless the brief explicitly identifies the old behavior as wrong; name any such changes in the final reply.
+Forbid commits and credential access; optionally forbid subagents and report files.
+All three skills embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
 
-主线程调用 `pactify sub run [harness] --write --worktree --wait 0s --json`。
-省略 harness 时使用 codex，例如 `/delegate` 调用 `pactify sub run --write --worktree --wait 0s --json`。
-只读任务用 codex，改用 `--read-only`；kimi 仍拒绝只读任务（退出 2）。
-退出码 3 表示仍在执行，stdout 包含 `jobId`；主线程以 `run_in_background: true` 执行
-`pactify sub wait <jobId>`，同时设置 `timeout: 7200000`，完成后进入下面的评审流程。
-若后台 wait 因时限停止，先查 `pactify sub status` 再继续同一个 wait；不要重复启动任务。
-退出码 0 / 1 / 2 分别表示成功、失败、参数错误。
-可用 `pactify sub result <jobId>` 重新读取结果。
+The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
+Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
+For read-only tasks, use codex with `--read-only`; kimi still rejects read-only tasks (exit 2).
+Exit 3 means the job is still running and stdout contains `jobId`. The main thread runs
+`pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000`, then reviews the result as described below.
+If the background wait stops at its time limit, check `pactify sub status` and resume the same wait; do not start a duplicate job.
+Exit codes 0 / 1 / 2 mean success, failure, and invalid arguments.
+Retrieve the result again with `pactify sub result <jobId>`.
 
-如需指定模型，在任务中明确写出模型名；CLI 无法兑现时应拒绝执行并给出可选模型，不静默降级。
-返工时明确要求 `--resume --worktree`，保持原始 cwd 和 harness。
-愿意等待约 9 分钟以内的任务，也可交给 `pactify:codex` / `pactify:kimi` 转发 subagent：
-它使用 `model: haiku`、仅有 Bash 工具，只调用一次 Bash，原样返回 stdout；超时后由主线程继续 wait。
-callee 不提交代码，改动留给 host 审查。
+To select a model, name it explicitly in the task. If the CLI cannot honor it, execution must fail with the available models instead of silently falling back.
+For rework, explicitly request `--resume --worktree`, preserving the original cwd and harness.
+For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` forwarding subagent:
+it uses `model: haiku`, has only Bash, calls Bash once, and returns stdout verbatim. After a timeout, the main thread continues waiting.
+The callee leaves changes uncommitted for the host to review.
 
 ## Reviewing a delegation
 
-1. 读取摘要及首行警告，先看完整 diff 和新增文件。worktree 从原仓库 HEAD 创建，不带入原工作区未提交的改动。
-   从结果取得 `worktreePath`、`baseCommit`，运行 `git -C <worktreePath> diff <baseCommit> --` 及
-   `git -C <worktreePath> ls-files --others --exclude-standard`，并打开列出的新文件。
-2. 主线程亲自在 worktree 重跑所有验收命令，包括全量测试；Go 测试使用 `PACTIFY_HOME="$(mktemp -d)"`。
-   callee 自报通过不能代替主线程验收。
-3. 能在真实环境验证的，主线程亲自试用一次，观察真实用户流程、日志可读性和模型实际行为等相关结果。
-   记录做过的验证及无法验证的缺口，不把自动测试当成真机验证。
-4. 并发、权限、删数据等高风险改动另请独立评审；处理发现的问题后重跑验收。
-5. 评审通过 → `pactify sub apply <jobId>`，成功后 `pactify sub discard <jobId>` 清理 worktree。
-   apply 不提交；相关路径存在用户改动或冲突时整次拒绝，先查原因，不强行覆盖或盲目重试。
-   返工 → 不 apply、不 discard，用原始 `--cwd` 和同一 harness 执行 `sub run ... --resume --worktree`，
-   保持原权限、指定模型和 effort，在 stdin 提供返工说明，再按同一后台 wait 流程收回结果，重复步骤 1–4。
-   放弃 → 不 apply，直接 `pactify sub discard <jobId>`；运行中的 job 必须先 `pactify sub cancel <jobId>`。
+1. Read the summary and first-line warnings, then inspect the complete diff and new files. The worktree starts from the original repository HEAD without uncommitted source changes.
+   Read `worktreePath` and `baseCommit` from the result, run `git -C <worktreePath> diff <baseCommit> --` and
+   `git -C <worktreePath> ls-files --others --exclude-standard`, and open the listed new files.
+2. The main thread personally reruns all Acceptance commands in the worktree, including the full test suite. Use `PACTIFY_HOME="$(mktemp -d)"` for Go tests.
+   The callee's report does not replace host validation.
+3. Where possible, the main thread personally tries the real environment and observes the user flow, log readability, and actual model behavior as relevant.
+   Record checks performed and gaps; automated tests do not establish real-environment acceptance.
+4. Changes involving concurrency, permissions, or data deletion require independent review. Address findings and rerun acceptance checks.
+5. After review passes, run `pactify sub apply <jobId>`, then `pactify sub discard <jobId>` to clean up the worktree.
+   Apply leaves changes uncommitted and rejects the entire operation if affected paths have user changes or conflicts. Inspect the cause; do not force an overwrite or blindly retry.
+   For rework, do not apply or discard. Run `sub run ... --resume --worktree` with the original `--cwd` and harness,
+   preserving access, requested model, and effort. Provide the rework brief on stdin, use the same background wait flow, and repeat steps 1–4.
+   To abandon the task, skip apply and run `pactify sub discard <jobId>`. Cancel running jobs first with `pactify sub cancel <jobId>`.
 
-返工消息模板：
+Rework brief template:
 
 ```text
-在同一个 worktree 继续原任务，原范围与约束保持不变。
-评审发现：<文件/行号、实际与预期行为、复现步骤或失败输出>
-需要修改：<逐条修复要求及必须保留的约束>
-补充测试：<回归场景，先见失败；不弱化已有测试>
-重跑验收：<所有原验收命令，包含全量测试>
-最终回复贴出改动、命令输出及剩余缺口；不提交、不写报告文件。
+Continue the original task in the same worktree, preserving its scope and constraints.
+Review findings: <file/line, actual vs expected behavior, reproduction steps or failing output>
+Required changes: <individual fixes and constraints to preserve>
+Tests to add: <regression scenarios; observe failure first; do not weaken existing tests>
+Rerun acceptance: <all original acceptance commands, including the full test suite>
+Include changes, command output, and remaining gaps in the final reply; do not commit or write report files.
 ```
 
-`--resume` 按原始 cwd 与 harness 选最近有 session id 的已结束 worktree 会话，包括失败或取消的轮次；
-续接前核对目标会话，续接后核对仍是同一个 worktree 和 base commit，不在同一 worktree 并发开轮次。
-不带 `--worktree` 续接也会沿用原隔离；已 discard 或丢失的 worktree 不能续接。
-旧的非隔离会话仍须成功才能续接，不能中途加隔离，需去掉 `--resume` 新建 worktree 任务。
-apply / discard 可使用续接链上任一 job id，作用于共享 worktree；discard 会标记整条链。
+`--resume` selects the most recent completed worktree session with a session id for the original cwd and harness, including failed or canceled rounds.
+Check the target session before resuming and confirm the same worktree and base commit afterward. Do not run concurrent rounds in one worktree.
+Resuming without `--worktree` still preserves the original isolation. Discarded or missing worktrees cannot be resumed.
+Legacy sessions without isolation must have succeeded to resume. They cannot gain isolation midway; remove `--resume` to start a new worktree job.
+Apply / discard accept any job id in a resume chain and act on its shared worktree; discard marks the whole chain.
 
-## 结果摘要
+## Result summary
 
-- 首行：完成状态或模型、工具调用上限、空闲超时等警告。
-- kimi job 的首行包含实验性提示；提示保存在 `Result.Warnings` 中，不改变 job 状态。
-- Harness 与 CLI 版本：实际调用的工具及其版本。
-- 模型与权限：请求模型、实际模型及独立核实状态，`read-only` 或 `write`。
-- 用量：耗时、输入 / 输出 token、工具调用次数；token 用量不代表精确账单金额。
-- 改动：文件列表及增删行数，供 host 检查 diff。
-- 最终回复：最多 4096 字节；会话 id 与完整日志路径供追查。
+- First line: `✓ codex succeeded`, `✗ codex failed` (or `canceled`), or `⚠️` followed by warnings joined with `; `.
+- kimi jobs include the experimental warning on the first line. It is stored in `Result.Warnings` without changing job status.
+- `Harness` and `CLI`: the tool and version actually used.
+- `Model: <requested> → <actual> (unverified)`: requested and actual models; `(default)` when no model was requested. The unverified marker appears only without independent verification.
+- `Access`: `read-only` or `write`.
+- `Duration`, `Tokens: in N · out M`, optional `Cost` and `Quota`, and `Tool calls`: usage details; tokens do not establish an exact bill.
+- `Changes: N files · +A/-D`: files and line counts for host diff review. `Worktree` and `Base commit` identify isolated changes.
+- `Final reply`: at most 4096 bytes; `Session` and `Log` provide the session id and full log path for investigation.
+- Warnings include `Actual model does not match the requested model`, `Tool-call limit exceeded`, and `Idle timeout`.
 
-job 存在 `$PACTIFY_HOME/jobs/<jobId>/`，默认 `~/.pactify/jobs/<jobId>/`。
+Jobs are stored in `$PACTIFY_HOME/jobs/<jobId>/`, defaulting to `~/.pactify/jobs/<jobId>/`.
 
-**不留痕**：委派出去的会话在 job 结束时自动隐藏，不会出现在你自己用这些工具时的会话 / 项目列表里。每个接入的 harness 都必须声明隐藏方式（有测试强制）：
+**Session hiding**: delegated sessions are hidden when the job ends, so they do not appear in your own session / project lists. Every harness must declare its hiding mechanism, enforced by tests:
 
-| harness | 怎么隐藏 | 想看原始会话 |
+| Harness | Hiding mechanism | View the original session |
 |---|---|---|
-| codex | 结束时归档线程（Codex 桌面与手机端都不显示） | `codex unarchive <会话 id>` |
-| kimi | 结束时调用 kimi 自己的归档接口（与 kimi web 界面「归档」同一个调用：pactify 临时起一个只监听本机的 `kimi web --no-open`，用完即关），命令行、web 与 Remote Control 都不再显示；接口不可用时退回写会话文件里的归档字段（只对命令行列表生效，摘要首行会提示）；最后用 `kimi session list` 核对 | `kimi session list --archived --cwd <目录>`，或 kimi web 的「已归档会话」里恢复 |
+| codex | Archive the thread at completion (hidden in Codex desktop and mobile) | `codex unarchive <sessionId>` |
+| kimi | Call kimi's archive API at completion, as kimi web does: pactify briefly starts a localhost-only `kimi web --no-open`, then closes it. This hides the session from CLI, web, and Remote Control. If the API is unavailable, fall back to the archive field in the session file, which only hides the CLI entry and produces a first-line warning. Finally, verify with `kimi session list`. | `kimi session list --archived --cwd <directory>`, or restore it from archived sessions in kimi web |
 
-`--resume` 会先取消隐藏、续接，结束后再隐藏。会话 id 在摘要的「会话」一行。隐藏失败时摘要首行会提示（例如 kimi 自动更新后改了会话格式）。kimi 的 workspace 条目由它自己从会话记录派生，归档后仍会保留——与你在 kimi 里手动归档一个会话的效果相同。
+`--resume` unhides the session before continuing and hides it again afterward. The `Session` line contains its id. Hiding failures appear on the first line, for example if a kimi update changes its session format. kimi derives workspace entries from session records and keeps them after archiving, just as when you archive a session manually.
 
-## 权限档
+## Access modes
 
 | | codex | kimi |
 |---|---|---|
-| `--write` | 沙箱 workspace-write，**可联网**（能跑起本地服务的测试、能拉依赖） | kimi 默认模式（直接写，无沙箱） |
-| `--read-only` | 沙箱 read-only，不联网 | 第一版不提供 |
+| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) |
+| `--read-only` | read-only sandbox, no network | Not offered in the first release |
 
-## 已知限制
+## Known limitations
 
-- 第一版不提供 kimi 只读档（`sub run kimi --read-only` 退出 2）：Phase 0 实测 kimi 的 plan 模式在只读任务上不收敛。只读任务用 codex。
-- job 在启动阶段就失败时（例如请求的模型不可用），callee 可能已经建了会话但还没把 id 交回，这个会话不会被隐藏。
-- 每次委派在 callee 侧约有 2–5 万 token 固定开销，不适合零碎小任务。
-- 只有本机已安装、已登录的官方 CLI 可用。模型独立核实失败时，以摘要中的警告为准。
-- 自动测试不涵盖真实 Claude Code 安装与委派；发布验收还需要在 Claude Code 中完成冒烟。
+- kimi read-only access is not offered in the first release (`sub run kimi --read-only` exits 2): Phase 0 plan mode never converged on read-only tasks. Use codex instead.
+- If a job fails during startup, for example because the requested model is unavailable, the callee may have created a session without returning its id. That session will not be hidden.
+- Each delegation has about 20–50 thousand tokens of fixed callee overhead, making it unsuitable for small tasks.
+- Only locally installed, logged-in official CLIs are supported. Follow the summary warnings when independent model verification fails.
+- Automated tests do not cover installation and delegation in real Claude Code. Release acceptance still requires a Claude Code smoke test.

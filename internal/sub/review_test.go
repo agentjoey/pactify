@@ -66,7 +66,7 @@ func TestReviewRegisteredQueuedCancelFinishesBeforeClaim(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if saved.Status != StatusCanceled || !strings.Contains(saved.Error, "任务已取消") {
+			if saved.Status != StatusCanceled || !strings.Contains(saved.Error, "Task canceled") {
 				t.Fatalf("queued cancellation not finalized: %+v", saved)
 			}
 			result := readReviewResult(t, store, st.ID)
@@ -94,7 +94,7 @@ func TestReviewRecoverKeepsRegisteredQueuedCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := readReviewResult(t, store, st.ID)
-	if st.Status != StatusCanceled || result.Status != StatusCanceled || !strings.Contains(st.Error, "任务已取消") {
+	if st.Status != StatusCanceled || result.Status != StatusCanceled || !strings.Contains(st.Error, "Task canceled") {
 		t.Fatalf("canceled orphan became %s: %s; result=%s", st.Status, st.Error, result.Status)
 	}
 }
@@ -208,7 +208,7 @@ func TestReviewFallbackKeepsExperimentalWarning(t *testing.T) {
 				t.Fatal(err)
 			}
 			result := readReviewResult(t, store, st.ID)
-			want := "kimi 为实验性 harness（Phase 0：大任务一次完成 6/10，只读不收敛）"
+			want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)"
 			if len(result.Warnings) != 2 || result.Warnings[0] != want || result.Warnings[1] != st.Error || st.Error == want {
 				t.Fatalf("fallback warnings=%v state error=%q", result.Warnings, st.Error)
 			}

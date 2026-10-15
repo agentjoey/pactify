@@ -19,10 +19,10 @@ func TestSubDoctorCLI(t *testing.T) {
 		code int
 		want string
 	}{
-		{[]string{"fake"}, 0, "通过"},
-		{nil, 1, "未安装"},
-		{[]string{"codex"}, 1, "未安装"},
-		{[]string{"unknown"}, 2, "未知 harness"},
+		{[]string{"fake"}, 0, "PASS"},
+		{nil, 1, "not installed"},
+		{[]string{"codex"}, 1, "not installed"},
+		{[]string{"unknown"}, 2, "unknown harness"},
 		{[]string{"fake", "codex"}, 2, "at most 1"},
 		{[]string{"--unknown"}, 2, "unknown flag"},
 	} {

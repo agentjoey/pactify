@@ -166,13 +166,13 @@ func TestRunJobCLIVersionChange(t *testing.T) {
 	tests := []testCase{
 		{name: "first job", current: "2.2.0"},
 		{name: "unchanged", history: []previousJob{old}, current: "2.0.0"},
-		{name: "changed", history: []previousJob{old}, current: "2.2.0", want: "CLI 版本变化：2.0.0 → 2.2.0"},
+		{name: "changed", history: []previousJob{old}, current: "2.2.0", want: "CLI version changed: 2.0.0 → 2.2.0"},
 		{name: "unknown current", history: []previousJob{old}},
-		{name: "run still fails", history: []previousJob{old}, current: "2.2.0", failed: true, want: "CLI 版本变化：2.0.0 → 2.2.0"},
+		{name: "run still fails", history: []previousJob{old}, current: "2.2.0", failed: true, want: "CLI version changed: 2.0.0 → 2.2.0"},
 	}
 	for _, status := range []Status{StatusSucceeded, StatusFailed, StatusCanceled} {
 		latest := previousJob{id: "a-new", harness: "fake", version: "2.1.0", status: status, finished: 2}
-		tests = append(tests, testCase{name: "latest " + string(status), history: []previousJob{latest, old}, current: "2.2.0", want: "CLI 版本变化：2.1.0 → 2.2.0"})
+		tests = append(tests, testCase{name: "latest " + string(status), history: []previousJob{latest, old}, current: "2.2.0", want: "CLI version changed: 2.1.0 → 2.2.0"})
 	}
 	for _, skip := range []string{"empty version", "other harness", "queued", "running", "missing state", "corrupt state", "unreadable state", "missing result", "corrupt result", "unreadable result"} {
 		newer := previousJob{id: "a-new", harness: "fake", version: "ignored", status: StatusSucceeded, finished: 3}
@@ -186,7 +186,7 @@ func TestRunJobCLIVersionChange(t *testing.T) {
 		default:
 			newer.damage = skip
 		}
-		tests = append(tests, testCase{name: "skip " + skip, history: []previousJob{old, newer}, current: "2.2.0", want: "CLI 版本变化：2.0.0 → 2.2.0"})
+		tests = append(tests, testCase{name: "skip " + skip, history: []previousJob{old, newer}, current: "2.2.0", want: "CLI version changed: 2.0.0 → 2.2.0"})
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -256,7 +256,7 @@ func TestRunJobCLIVersionChange(t *testing.T) {
 					t.Fatalf("result=%+v", result)
 				}
 				if tc.want == "" {
-					if contains(result.Warnings, "CLI 版本变化：") {
+					if contains(result.Warnings, "CLI version changed: ") {
 						t.Fatalf("unexpected version warning: %v", result.Warnings)
 					}
 				} else if len(result.Warnings) == 0 || result.Warnings[0] != tc.want || !strings.HasPrefix(result.Markdown(), "⚠️ "+tc.want) {
@@ -318,7 +318,7 @@ func TestRunJobToolCallLimitInterrupts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !s.canceled.Load() || r.Status != StatusFailed || !strings.HasPrefix(r.Markdown(), "⚠️") || !contains(r.Warnings, "工具调用超限") {
+	if !s.canceled.Load() || r.Status != StatusFailed || !strings.HasPrefix(r.Markdown(), "⚠️") || !contains(r.Warnings, "Tool-call limit exceeded") {
 		t.Fatalf("result=%+v", r)
 	}
 }
@@ -344,7 +344,7 @@ func TestRunJobModelVerificationAndResume(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !r.ModelVerified || r.ModelActual != "actual" || r.InputTokens != 321 || r.OutputTokens != 12 || !contains(r.Warnings, "实际模型与请求不一致") || b.resumed != "old-thread" || b.gotOpts.Access != cockpit.AccessWrite {
+	if !r.ModelVerified || r.ModelActual != "actual" || r.InputTokens != 321 || r.OutputTokens != 12 || !contains(r.Warnings, "Actual model does not match the requested model") || b.resumed != "old-thread" || b.gotOpts.Access != cockpit.AccessWrite {
 		t.Fatalf("result=%+v backend=%+v", r, b)
 	}
 }
@@ -372,7 +372,7 @@ func TestRunJobIdleTimeoutAndCancel(t *testing.T) {
 			if r.Status != want || !s.canceled.Load() {
 				t.Fatalf("result=%+v", r)
 			}
-			if !cancelJob && !contains(r.Warnings, "空闲超时") {
+			if !cancelJob && !contains(r.Warnings, "Idle timeout") {
 				t.Fatalf("warnings=%v", r.Warnings)
 			}
 		})
@@ -455,7 +455,7 @@ func TestRunJobHidesSessionAndReportsArchiveFailure(t *testing.T) {
 	if !b.gotOpts.Hidden {
 		t.Fatal("sub jobs must start hidden sessions")
 	}
-	if r.Status != StatusSucceeded || !contains(r.Warnings, "归档") {
+	if r.Status != StatusSucceeded || !contains(r.Warnings, "archiving") {
 		t.Fatalf("status=%s warnings=%v", r.Status, r.Warnings)
 	}
 }

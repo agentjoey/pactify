@@ -52,7 +52,7 @@ func TestSubReviewWorkerPeer(t *testing.T) {
 		os.Exit(4)
 	}
 	result := sub.Result{JobID: st.ID, Status: sub.StatusCanceled, Harness: st.Request.Harness, Warnings: []string{"archive completed"}}
-	if err := store.Finish(st.ID, &result, "任务已取消", time.Now()); err != nil {
+	if err := store.Finish(st.ID, &result, "Task canceled", time.Now()); err != nil {
 		os.Exit(4)
 	}
 	os.Exit(0)
@@ -145,7 +145,7 @@ func TestReviewCancelQueuedRegisteredWorkerHasCancelReason(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Status != sub.StatusCanceled || !strings.Contains(st.Error, "任务已取消") {
+	if st.Status != sub.StatusCanceled || !strings.Contains(st.Error, "Task canceled") {
 		t.Fatalf("queued cancel has wrong outcome: %s %q", st.Status, st.Error)
 	}
 }

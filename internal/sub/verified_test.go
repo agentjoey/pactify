@@ -43,7 +43,7 @@ func TestRunJobUnverifiedVersion(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := "codex 9.9.9 尚未自检，建议先跑 pactify sub doctor"
+			want := "codex 9.9.9 has not been checked; run pactify sub doctor first"
 			if contains(r.Warnings, want) != tc.warn {
 				t.Fatalf("warnings=%v want warning=%v", r.Warnings, tc.warn)
 			}
@@ -68,7 +68,7 @@ func TestRunJobUnverifiedVersionKeepsRealError(t *testing.T) {
 	}
 	r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
 	st, _ := store.Load("j1")
-	if err != nil || !contains(r.Warnings, "尚未自检") || st.Error != "real failure" || st.Status != StatusFailed {
+	if err != nil || !contains(r.Warnings, "has not been checked") || st.Error != "real failure" || st.Status != StatusFailed {
 		t.Fatalf("result=%+v state=%+v err=%v", r, st, err)
 	}
 }

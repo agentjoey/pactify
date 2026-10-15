@@ -63,7 +63,7 @@ func TestSubRunDefaultAndExplicitCodex(t *testing.T) {
 		})
 	}
 	out, code := runCLI(t, bin, repo, "continue", "sub", "run", "--resume")
-	if code != 2 || !strings.Contains(out, "没有可续接的 codex 会话") {
+	if code != 2 || !strings.Contains(out, "no codex session to resume") {
 		t.Fatalf("default resume: code=%d out=%s", code, out)
 	}
 	for _, args := range [][]string{{"codex", "kimi"}, {"nope"}, {"fake", "codex"}} {
@@ -92,7 +92,7 @@ func TestSubFallbackKeepsExperimentalWarningAndFailure(t *testing.T) {
 	if err := json.Unmarshal(data, &r); err != nil {
 		t.Fatal(err)
 	}
-	want := "kimi 为实验性 harness（Phase 0：大任务一次完成 6/10，只读不收敛）"
+	want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)"
 	if r.Status != sub.StatusFailed || len(r.Warnings) != 2 || r.Warnings[0] != want || r.Warnings[1] != "worker panic" || !strings.HasPrefix(r.Markdown(), "⚠️ "+want) {
 		t.Fatalf("fallback result=%+v", r)
 	}

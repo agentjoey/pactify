@@ -51,10 +51,10 @@ var registry = map[string]Harness{
 	},
 	"kimi": {
 		Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
-		Experimental: "kimi 为实验性 harness（Phase 0：大任务一次完成 6/10，只读不收敛）",
+		Experimental: "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)",
 		// Phase 0 (2026-10-15): in plan mode kimi keeps trying to write a plan file and
 		// exit plan; all 3 read-only tasks hit the tool-call limit without findings.
-		NoReadOnly: "kimi 的只读档在第一版不开放：Phase 0 实测 3 个只读任务在 plan 模式下全部打满工具调用上限、没有交回结论。只读任务请用 codex --read-only；用户明确允许写入时可用 kimi --write",
+		NoReadOnly: "Read-only access is not offered for kimi in the first release: all 3 Phase 0 read-only tasks hit the tool-call limit in plan mode without returning a conclusion. Use codex --read-only for read-only tasks; use kimi --write only with explicit write permission",
 		Conceal:    concealKimi,
 		Verify: func(sid string, _ cockpit.SessionInfo) (string, int, int, bool) {
 			kimiHome, err := kimiHomeDir()
@@ -194,7 +194,7 @@ func concealKimi(c ConcealContext) error {
 		return err
 	}
 	if apiErr != nil {
-		return fmt.Errorf("已从 kimi 命令行的会话列表隐藏，但 kimi web / Remote Control 可能仍可见（官方归档接口失败：%v）", apiErr)
+		return fmt.Errorf("Hidden from the kimi CLI session list, but may still appear in kimi web / Remote Control (official archive API failed: %v)", apiErr)
 	}
 	return nil
 }
@@ -220,7 +220,7 @@ var kimiListHides = func(cwd, sessionID string) error {
 	}
 	for _, s := range sessions {
 		if s.ID == sessionID {
-			return fmt.Errorf("kimi session list 仍列出 %s：当前 kimi 版本可能改了会话格式", sessionID)
+			return fmt.Errorf("kimi session list still lists %s: this kimi version may have changed the session format", sessionID)
 		}
 	}
 	return nil

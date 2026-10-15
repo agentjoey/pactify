@@ -110,7 +110,7 @@ func TestSubStatusUsageIncludesJobsOutsideDisplayLimit(t *testing.T) {
 		t.Errorf("want 10 jobs + summary: %s", out)
 	}
 	summary := lines[len(lines)-1]
-	for _, want := range []string{"今天", "近 7 天", "codex 输入 120 / 输出 24", "kimi 输入 7 / 输出 3", "codex 额度: quota-00"} {
+	for _, want := range []string{"today", "last 7 days", "codex in 120 / out 24", "kimi in 7 / out 3", "codex quota: quota-00"} {
 		if !strings.Contains(summary, want) {
 			t.Errorf("summary missing %q: %s", want, summary)
 		}
@@ -119,7 +119,7 @@ func TestSubStatusUsageIncludesJobsOutsideDisplayLimit(t *testing.T) {
 		t.Errorf("stale quota: %s", summary)
 	}
 	out, _, _ = captureStatus(t, []string{"kimi"}, false)
-	if strings.Contains(out, "今天") {
+	if strings.Contains(out, "today") {
 		t.Errorf("single status gained summary: %s", out)
 	}
 }
@@ -131,7 +131,7 @@ func TestSubStatusEmptyList(t *testing.T) {
 		t.Fatalf("empty: %d %v %q", code, err, out)
 	}
 	out, code, err = captureStatus(t, nil, false)
-	if code != 0 || err != nil || !strings.Contains(out, "今天") || !strings.Contains(out, "近 7 天") {
+	if code != 0 || err != nil || !strings.Contains(out, "today") || !strings.Contains(out, "last 7 days") {
 		t.Fatalf("empty summary: %d %v %q", code, err, out)
 	}
 }
@@ -213,7 +213,7 @@ func TestSubStatusUsageCalendarWindowsAndLatestQuota(t *testing.T) {
 	if code != 0 || err != nil {
 		t.Fatalf("status: %d %v %s", code, err, out)
 	}
-	if !strings.Contains(out, "今天: codex 输入 1 / 输出 2") || !strings.Contains(out, "近 7 天: codex 输入 111 / 输出 222") || !strings.Contains(out, "codex 额度: latest") {
+	if !strings.Contains(out, "today: codex in 1 / out 2") || !strings.Contains(out, "last 7 days: codex in 111 / out 222") || !strings.Contains(out, "codex quota: latest") {
 		t.Fatalf("wrong windows/quota: %s", out)
 	}
 }

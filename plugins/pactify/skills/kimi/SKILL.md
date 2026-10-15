@@ -72,12 +72,12 @@ harness permission restrictions still apply.
    `pactify sub status`, then start the same wait again.
 
 3. When the background command completes, review before using or applying its changes:
-   - Read the summary and first-line warnings (model mismatch, tool-call limit, idle timeout).
+   - Read the summary and first-line warnings (`Actual model does not match the requested model`, `Tool-call limit exceeded`, `Idle timeout`).
      Retrieve it again with `pactify sub result <jobId>` if needed. Only claim independent model
      verification when the result confirms it; full logs stay at the reported path.
    - Inspect the complete diff first. Large tasks use a detached worktree based on the original HEAD;
      uncommitted source changes are not carried over. Read `worktreePath` and `baseCommit` from the
-     result JSON (or Worktree and base commit in the summary), then run:
+     result JSON (or `Worktree` and `Base commit` in the summary), then run:
 
          git -C <worktreePath> diff <baseCommit> --
          git -C <worktreePath> ls-files --others --exclude-standard

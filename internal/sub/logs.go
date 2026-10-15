@@ -56,7 +56,7 @@ func formatLogEvent(event logEvent) string {
 		}
 	case cockpit.EventUsage:
 		if event.Usage != nil {
-			text = fmt.Sprintf("输入 %d / 输出 %d", event.Usage.InputTokens, event.Usage.OutputTokens)
+			text = fmt.Sprintf("in %d / out %d", event.Usage.InputTokens, event.Usage.OutputTokens)
 		}
 	}
 	if text != "" {

@@ -59,7 +59,7 @@ func TestSubWorktreeCLI(t *testing.T) {
 		t.Fatalf("worker changed source: %v", err)
 	}
 	out, code := runCLI(t, bin, repo, "", "sub", "result", first.JobID)
-	if code != 0 || !strings.Contains(strings.SplitN(out, "\n", 2)[0], "原工作区有未提交改动，未带入 worktree") || !strings.Contains(out, wt) {
+	if code != 0 || !strings.Contains(strings.SplitN(out, "\n", 2)[0], "The original workspace has uncommitted changes; they were not included in the worktree") || !strings.Contains(out, wt) {
 		t.Fatalf("summary: %d %s", code, out)
 	}
 	// A second turn overwrites an untracked file from the first turn. Its full

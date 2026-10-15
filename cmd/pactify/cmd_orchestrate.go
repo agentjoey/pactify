@@ -55,7 +55,6 @@ func newOrchestrateCmd() *cobra.Command {
 	var dryRun bool
 	var seatKinds []string
 	var rosterKinds []string
-	var seatHosts []string
 	var transports []string
 	var asSeat string
 	var keepSessions bool
@@ -120,20 +119,6 @@ agents (*-desktop, codex-app) cannot be driven headlessly.`,
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
 
-			// --seat-host routes those seats' stints to other machines (M3
-			// distributed orchestrate): push → pact.stint rpc via the relay →
-			// poll origin for the checkpoint → merge back. Everything else is
-			// unchanged — a remote timeout is the same soft failure a local
-			// agent crash is.
-			hosts := map[string]string{}
-			for _, sh := range seatHosts {
-				parts := strings.SplitN(sh, "=", 2)
-				if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-					return fmt.Errorf("--seat-host must be seat=machineId, got %q", sh)
-				}
-				hosts[parts[0]] = parts[1]
-			}
-
 			// --transport kind=acp|cmd routes those kinds' stints over the Agent
 			// Client Protocol (a persistent stdio JSON-RPC session) instead of a
 			// one-shot headless command. Defaults are seeded from
@@ -146,23 +131,8 @@ agents (*-desktop, codex-app) cannot be driven headlessly.`,
 			idle := time.Duration(idleTimeoutMin) * time.Minute
 			local := orchestrate.NewRoutedLocalRunner(transportModes, idle)
 
-			runner := orchestrate.Runner(local)
-			if len(hosts) > 0 {
-				dispatch, closeDispatch, derr := newRelayStintDispatch(ctx)
-				if derr != nil {
-					return fmt.Errorf("--seat-host needs a relay session: %w", derr)
-				}
-				defer closeDispatch()
-				runner = &orchestrate.RemoteRunner{
-					Hosts:    hosts,
-					Local:    local,
-					Dispatch: dispatch,
-					Timeout:  time.Duration(runTimeoutMin) * time.Minute,
-				}
-			}
-
 			opts := orchestrate.Options{
-				Run:             runner,
+				Run:             local,
 				Dir:             dir,
 				Feature:         feature,
 				Th:              orchestrate.Thresholds{MaxRework: maxRework, MaxFails: maxFails, MaxIters: maxIters},
@@ -242,7 +212,6 @@ agents (*-desktop, codex-app) cannot be driven headlessly.`,
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the next action and the command it would exec, without launching any agent")
 	cmd.Flags().StringArrayVar(&seatKinds, "seat-kind", nil, "seat=kind for headless launch (repeatable), e.g. --seat-kind w=opencode --seat-kind orch=claude-code; an explicit kind here OVERRIDES the seat's role binding (with a warning)")
 	cmd.Flags().StringArrayVar(&rosterKinds, "roster-kind", nil, "seat=kind DERIVED from configuration by a spawner (repeatable; `pactify serve` fills this in). Lowest priority — a role binding and the live roster both outrank it, and it never overrides a role binding the way --seat-kind does")
-	cmd.Flags().StringArrayVar(&seatHosts, "seat-host", nil, "seat=machineId to run that seat's stints on another machine via the relay (repeatable; requires a cloud session + the project's git origin)")
 	cmd.Flags().StringArrayVar(&transports, "transport", nil, "kind=acp|cmd to drive that kind over the Agent Client Protocol instead of a headless command (repeatable), e.g. --transport kimi-cli=acp; default: opencode=acp (all others cmd); --transport opencode=cmd to revert")
 	cmd.Flags().StringVar(&asSeat, "as", "", "seat the driver acts as for its own merges (default $PACT_AGENT_ID)")
 	cmd.Flags().StringVar(&critic, "critic", "", "run this seat as a read-only pre-review critic (accepts seat=<seat> or <seat>); overrides `pactify config critic`; default off — the critic scores the diff but has no gating power")

@@ -17,11 +17,13 @@ func newServeCmd() *cobra.Command {
 	var addr string
 	var extra []string
 	var seat string
-	var relayURL string
-	var relayToken string
-	var remoteControl bool
 	cmd := &cobra.Command{Use: "serve", Short: "run the multi-project dashboard HTTP server",
 		RunE: func(c *cobra.Command, _ []string) error {
+			for _, name := range []string{"relay-url", "relay-token", "remote-control"} {
+				if c.Flags().Changed(name) {
+					fmt.Fprintf(c.ErrOrStderr(), "--%s is ignored: the cloud relay was removed; remove it from your launch config\n", name)
+				}
+			}
 			reg, err := registry.Load()
 			if err != nil {
 				return err
@@ -48,34 +50,25 @@ func newServeCmd() *cobra.Command {
 
 			srv := serve.New(projects)
 			srv.SetSeat(seat)
-			srv.SetRelay(relayURL, relayToken)
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
-			// Machine channel: when a relay session is configured, register this
-			// host (presence + agent kinds) so it's visible/selectable in the web
-			// app (M1). --remote-control ADDITIONALLY executes pact.* rpc from a
-			// remote control plane (U3), gated because it runs writes on local repos.
-			go srv.StartMachineChannel(ctx, remoteControl)
 			// Scheduled/recurring orchestrate: a minute-granularity ticker reads
 			// ~/.pactify/schedules.json and spawns orchestrate for due schedules
 			// (conflict guard skips a project already running).
 			go srv.StartScheduler(ctx)
-			if remoteControl {
-				fmt.Fprintln(c.OutOrStdout(), "pactify serve: remote control ENABLED (relay down-channel)")
-			}
-			if relayURL != "" {
-				fmt.Fprintf(c.OutOrStdout(), "pactify serve on http://%s (%d project(s)) relay → %s\n", addr, len(projects), relayURL)
-			} else {
-				fmt.Fprintf(c.OutOrStdout(), "pactify serve on http://%s (%d project(s))\n", addr, len(projects))
-			}
+			fmt.Fprintf(c.OutOrStdout(), "pactify serve on http://%s (%d project(s))\n", addr, len(projects))
 			return srv.Run(ctx, addr)
 		}}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:7777", "listen address")
 	cmd.Flags().StringArrayVar(&extra, "project", nil, "extra project path (repeatable, not persisted)")
 	cmd.Flags().StringVar(&seat, "seat", os.Getenv("PACT_AGENT_ID"), "acting seat for author (write) endpoints (default $PACT_AGENT_ID)")
-	cmd.Flags().StringVar(&relayURL, "relay-url", "", "best-effort relay POST endpoint")
-	cmd.Flags().StringVar(&relayToken, "relay-token", os.Getenv("PACT_RELAY_TOKEN"), "bearer token for relay endpoint (default $PACT_RELAY_TOKEN)")
-	cmd.Flags().BoolVar(&remoteControl, "remote-control", false, "enable the relay down-channel: execute pact commands sent from a remote control plane (U3)")
+	// Keep retired launchd arguments accepted for one compatibility release.
+	cmd.Flags().String("relay-url", "", "ignored: the cloud relay was removed")
+	cmd.Flags().String("relay-token", "", "ignored: the cloud relay was removed")
+	cmd.Flags().Bool("remote-control", false, "ignored: the cloud relay was removed")
+	for _, name := range []string{"relay-url", "relay-token", "remote-control"} {
+		_ = cmd.Flags().MarkHidden(name)
+	}
 	return cmd
 }
 

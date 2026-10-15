@@ -4,11 +4,9 @@ go 1.26.1
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/gorilla/websocket v1.5.3
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.53.0
 	golang.org/x/sys v0.46.0
 )
 

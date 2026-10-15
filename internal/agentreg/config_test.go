@@ -50,10 +50,10 @@ func TestConfigUnsetIsZero(t *testing.T) {
 func TestConfigSurvivesRoundtrip(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	r := &Registry{}
-	if err := r.Register("gemini-cli", "", "2026-06-14T00:00:00Z"); err != nil {
+	if err := r.Register("kimi-cli", "", "2026-06-14T00:00:00Z"); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.SetConfig("gemini-cli", "gemini-2.5-flash", nil, false); err != nil {
+	if err := r.SetConfig("kimi-cli", "kimi-test-model", nil, false); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.Save(); err != nil {
@@ -63,8 +63,8 @@ func TestConfigSurvivesRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m, _, _ := r2.Config("gemini-cli"); m != "gemini-2.5-flash" {
-		t.Errorf("after roundtrip model = %q, want gemini-2.5-flash", m)
+	if m, _, _ := r2.Config("kimi-cli"); m != "kimi-test-model" {
+		t.Errorf("after roundtrip model = %q, want kimi-test-model", m)
 	}
 }
 

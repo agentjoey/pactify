@@ -9,7 +9,7 @@ import (
 //
 // The child environment for an agent stint is built from the parent process env
 // (minus pactify/relay secrets). Vendor API keys pass through, so a third-party
-// agent — kimi (Moonshot), gemini (Google), codex (OpenAI) — inherited the user's
+// agent — kimi (Moonshot), agy (Google), codex (OpenAI) — inherited the user's
 // real ANTHROPIC_API_KEY (and every other sibling vendor's key) and could
 // exfiltrate it. A single-vendor agent must only see its OWN vendor's key.
 
@@ -33,10 +33,6 @@ func TestSEC_M11_CrossVendorStrip(t *testing.T) {
 		{"kimi-cli", []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS"}, []string{"MOONSHOT_API_KEY", "KIMI_API_KEY"}},
 		{"claude-code", []string{"OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS", "MOONSHOT_API_KEY", "KIMI_API_KEY"}, []string{"ANTHROPIC_API_KEY"}},
 		{"codex-cli", []string{"ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS", "MOONSHOT_API_KEY", "KIMI_API_KEY"}, []string{"OPENAI_API_KEY"}},
-		// gemini-cli owns Application Default Credentials: GOOGLE_APPLICATION_CREDENTIALS
-		// is a real alternate auth tier for it, so it must be INHERITED here (kept),
-		// unlike for every other kind.
-		{"gemini-cli", []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "MOONSHOT_API_KEY", "KIMI_API_KEY"}, []string{"GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS"}},
 		// antigravity (agy) authenticates via an OAuth token file, not any of
 		// these env vars (verified 2026-08-22 — see internal/agent/launch.go and
 		// internal/orchestrate/env.go comments), so it owns none of them: every

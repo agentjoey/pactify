@@ -350,14 +350,13 @@ func TestAcpRunnerStripsAnthropicKey(t *testing.T) {
 	}
 }
 
-// The ACP tier (kimi, gemini) invokes the native binary directly — NO npx.
+// The ACP tier (kimi, opencode) invokes the native binary directly — NO npx.
 func TestAcpCommandNativeBinariesForAcpTier(t *testing.T) {
 	cases := []struct {
 		kind, cmd string
 		args      []string
 	}{
 		{"kimi-cli", "kimi", []string{"acp"}},
-		{"gemini-cli", "gemini", []string{"--acp"}},
 		{"opencode", "opencode", []string{"acp"}},
 	}
 	for _, tc := range cases {
@@ -638,5 +637,16 @@ func TestAcpAuditRecordIgnoresToolCallUpdate(t *testing.T) {
 	_, ok := acpAuditRecord(lc, acp.SessionUpdate{SessionID: "s-4", Kind: "tool_call_update", Raw: raw}, time.Unix(1, 0).UTC())
 	if ok {
 		t.Fatal("expected tool_call_update to be ignored")
+	}
+}
+
+func TestRemovedGeminiAcpRunner(t *testing.T) {
+	r := AcpRunner{Spawn: func(context.Context, string, []string, []string, string) (acpConn, error) {
+		t.Fatal("removed ACP CLI spawned")
+		return nil, nil
+	}}
+	err := r.Run(context.Background(), LaunchContext{Kind: "gemini-cli"})
+	if err == nil || !strings.Contains(err.Error(), "gemini-cli has been removed; use antigravity (agy) instead") {
+		t.Fatalf("error = %v", err)
 	}
 }

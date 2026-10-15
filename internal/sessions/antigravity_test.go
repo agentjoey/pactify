@@ -96,7 +96,7 @@ func TestIsAntigravity(t *testing.T) {
 	if !IsAntigravity("antigravity") {
 		t.Error("antigravity should be recognised as the agy file-cleanup kind")
 	}
-	for _, k := range []string{"kimi-cli", "opencode", "gemini-cli", "claude-code", ""} {
+	for _, k := range []string{"kimi-cli", "opencode", "claude-code", ""} {
 		if IsAntigravity(k) {
 			t.Errorf("IsAntigravity(%q) = true, want false", k)
 		}

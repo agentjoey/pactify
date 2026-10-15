@@ -158,6 +158,9 @@ func teeStdout(capture io.Writer) io.Writer {
 // fails closed: no process is spawned and an actionable error is returned.
 func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	if _, known := agent.Get(lc.Kind); !known {
+		if err := agent.RemovedKindError(lc.Kind); err != nil {
+			return err
+		}
 		return fmt.Errorf("orchestrate: unknown agent kind %q — 改用 CLI 座席或人工那一棒", lc.Kind)
 	}
 	// Resolve the effective launch config: built-in profile overlaid with any
@@ -249,27 +252,9 @@ func (r CmdRunner) Run(ctx context.Context, lc LaunchContext) error {
 	}
 	env = append(env, gEnv...)
 
-	// gemini: a Keychain API key (pactify/gemini) switches gemini-cli to the
-	// API-key auth tier, which honors the -m model pin. The free oauth-personal
-	// tier silently falls back to flash on quota (FLASH_FALLBACK only mounts under
-	// oauth/compute-default creds), making the pin unreliable. Inert when no key is
-	// set — the seat keeps its current auth.
-	env = append(env, geminiEnv(eff.Command)...)
-
-	// gemini hooks (audit capture) only load from a TRUSTED workspace. The
-	// launch args use --skip-trust, which merely skips the trust dialog while
-	// still treating the folder as untrusted — project .gemini/settings.json
-	// hooks then register as "0 hook entries" and the audit BeforeTool hook
-	// never fires (verified live, gemini 0.49.0). GEMINI_CLI_TRUST_WORKSPACE is
-	// the documented headless trust grant; the driver already fully trusts the
-	// repo it is orchestrating.
-	if eff.Command == "gemini" {
-		env = append(env, "GEMINI_CLI_TRUST_WORKSPACE=true")
-	}
-
 	// Isolate a single-vendor agent from sibling vendors' credentials (M11): a
-	// kimi / gemini / codex worker must not inherit the user's ANTHROPIC key, etc.
-	// Each kind keeps its OWN key (gemini's is added just above); model-agnostic
+	// kimi / codex worker must not inherit the user's ANTHROPIC key, etc.
+	// Each kind keeps its OWN key; model-agnostic
 	// kinds (opencode, custom) are left untouched.
 	env = append(env, crossVendorStrip(eff.Kind)...)
 
@@ -605,26 +590,6 @@ func tagOpencodeSession(command, seatID string, args []string) []string {
 	}
 	tagged := []string{args[0], "--title", sessions.SessionTag(seatID)}
 	return append(tagged, args[1:]...)
-}
-
-// geminiKey is overridable in tests; production reads the Keychain (pactify/gemini).
-var geminiKey = func() (string, error) { return secret.Keychain("pactify", "gemini") }
-
-// geminiEnv returns GEMINI_API_KEY env for a gemini-cli seat when a Keychain key
-// is set (switching it to the API-key auth tier so the model pin holds); nil for
-// any other command or when no key is configured. Never errors — a missing key is
-// a no-op (the seat keeps its existing auth), unlike GLM where the token is
-// required once the seat is GLM.
-func geminiEnv(command string) []string {
-	if command != "gemini" {
-		return nil
-	}
-	if k, err := geminiKey(); err == nil {
-		if k = strings.TrimSpace(k); k != "" {
-			return []string{"GEMINI_API_KEY=" + k}
-		}
-	}
-	return nil
 }
 
 // glmEnv returns the Z.ai endpoint env (base URL + Keychain token) for a

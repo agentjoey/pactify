@@ -31,7 +31,7 @@ func TestApplyAutoJoinsProposedSeat(t *testing.T) {
 		Feature: "demo",
 		Branch:  "feat-demo",
 		// A brand-new seat the roster does not have yet.
-		Seats: []planner.PlanSeat{{ID: "gem", Kind: "gemini-cli", Roles: []string{"worker"}}},
+		Seats: []planner.PlanSeat{{ID: "gem", Kind: "kimi-cli", Roles: []string{"worker"}}},
 		Tasks: []planner.PlanTask{
 			{ID: "demo-t1", Owner: "gem", Reviewer: "claude", Spec: spec, Verify: "go test"},
 		},
@@ -61,8 +61,8 @@ func TestApplyAutoJoinsProposedSeat(t *testing.T) {
 	if !found {
 		t.Fatal("proposed seat gem not auto-joined onto the roster")
 	}
-	if kind != "gemini-cli" {
-		t.Fatalf("gem kind = %q, want %q", kind, "gemini-cli")
+	if kind != "kimi-cli" {
+		t.Fatalf("gem kind = %q, want %q", kind, "kimi-cli")
 	}
 }
 
@@ -86,7 +86,7 @@ func TestApplyAutoJoinIdempotent(t *testing.T) {
 	plan := planner.Plan{
 		Feature: "demo",
 		Branch:  "feat-demo",
-		Seats:   []planner.PlanSeat{{ID: "gem", Kind: "gemini-cli", Roles: []string{"worker"}}},
+		Seats:   []planner.PlanSeat{{ID: "gem", Kind: "kimi-cli", Roles: []string{"worker"}}},
 		Tasks: []planner.PlanTask{
 			{ID: "demo-t1", Owner: "gem", Reviewer: "claude", Spec: spec, Verify: "go test"},
 		},

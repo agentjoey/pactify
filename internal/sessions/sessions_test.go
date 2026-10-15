@@ -69,7 +69,7 @@ func TestSupported(t *testing.T) {
 		kind string
 		want bool
 	}{
-		{"gemini-cli", true},
+		{"gemini-cli", false},
 		{"opencode", true},
 		{"nope", false},
 	}
@@ -86,7 +86,7 @@ func TestCanPrune(t *testing.T) {
 		kind string
 		want bool
 	}{
-		{"gemini-cli", true}, // list + --delete-session by index → bulk prune
+		{"gemini-cli", false}, // removed kind
 		{"opencode", false},
 		{"nope", false},
 	}
@@ -125,13 +125,6 @@ func TestList(t *testing.T) {
 		wantMsg string
 	}{
 		{
-			name:    "gemini-cli lists with --list-sessions",
-			kind:    "gemini-cli",
-			fake:    &fakeRun{out: "session-1\nsession-2"},
-			wantOut: "session-1\nsession-2",
-			wantErr: false,
-		},
-		{
 			name:    "opencode lists with session list",
 			kind:    "opencode",
 			fake:    &fakeRun{out: "Session ID  Title\nses_1  pact:dev"},
@@ -165,19 +158,6 @@ func TestList(t *testing.T) {
 			if got != tt.wantOut {
 				t.Errorf("output = %q, want %q", got, tt.wantOut)
 			}
-			if tt.kind == "gemini-cli" {
-				if len(tt.fake.calls) != 1 {
-					t.Fatalf("expected 1 Run call, got %d", len(tt.fake.calls))
-				}
-				call := tt.fake.calls[0]
-				if call.name != "gemini" {
-					t.Errorf("Run name = %q, want %q", call.name, "gemini")
-				}
-				wantArgs := []string{"--list-sessions"}
-				if !equalSlice(call.args, wantArgs) {
-					t.Errorf("Run args = %v, want %v", call.args, wantArgs)
-				}
-			}
 			if tt.kind == "opencode" {
 				if len(tt.fake.calls) != 1 {
 					t.Fatalf("expected 1 Run call, got %d", len(tt.fake.calls))
@@ -197,37 +177,6 @@ func TestList(t *testing.T) {
 }
 
 func TestPrune(t *testing.T) {
-	t.Run("gemini-cli index-prunes from highest index down", func(t *testing.T) {
-		list := "Available sessions for this project (2):\n" +
-			"  1. foo (4 days ago) [uuid1]\n" +
-			"  2. bar (3 days ago) [uuid2]\n"
-		fake := &fakeRun{out: list}
-		m := Manager{Run: fake.Run}
-		out, skipped, err := m.Prune("gemini-cli")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if skipped {
-			t.Error("expected skipped=false (gemini has index-delete)")
-		}
-		// 1 list + 2 deletes; deletes go HIGH→LOW so indices don't shift mid-prune.
-		if len(fake.calls) != 3 {
-			t.Fatalf("expected 3 Run calls, got %d: %v", len(fake.calls), fake.calls)
-		}
-		if fake.calls[0].name != "gemini" || !equalSlice(fake.calls[0].args, []string{"--list-sessions"}) {
-			t.Errorf("call 0 should list: %q %v", fake.calls[0].name, fake.calls[0].args)
-		}
-		if !equalSlice(fake.calls[1].args, []string{"--delete-session", "2"}) {
-			t.Errorf("delete should start at highest index 2, got %v", fake.calls[1].args)
-		}
-		if !equalSlice(fake.calls[2].args, []string{"--delete-session", "1"}) {
-			t.Errorf("then index 1, got %v", fake.calls[2].args)
-		}
-		if !strings.Contains(out, "pruned 2") {
-			t.Errorf("output = %q, want 'pruned 2'", out)
-		}
-	})
-
 	t.Run("nope returns skipped", func(t *testing.T) {
 		fake := &fakeRun{}
 		m := Manager{Run: fake.Run}
@@ -261,29 +210,6 @@ func TestPrune(t *testing.T) {
 		}
 		if len(fake.calls) != 0 {
 			t.Errorf("expected no Run calls, got %d", len(fake.calls))
-		}
-	})
-
-	t.Run("list verify gemini-cli calls Run with correct args", func(t *testing.T) {
-		fake := &fakeRun{out: "session-abc"}
-		m := Manager{Run: fake.Run}
-		got, err := m.List("gemini-cli")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got != "session-abc" {
-			t.Errorf("output = %q, want %q", got, "session-abc")
-		}
-		if len(fake.calls) != 1 {
-			t.Fatalf("expected 1 Run call, got %d", len(fake.calls))
-		}
-		call := fake.calls[0]
-		if call.name != "gemini" {
-			t.Errorf("Run name = %q, want gemini", call.name)
-		}
-		wantArgs := []string{"--list-sessions"}
-		if !equalSlice(call.args, wantArgs) {
-			t.Errorf("Run args = %v, want %v", call.args, wantArgs)
 		}
 	})
 }
@@ -346,7 +272,7 @@ func TestCanCleanup(t *testing.T) {
 		t.Error("opencode has list+delete → CanCleanup should be true")
 	}
 	if CanCleanup("gemini-cli") {
-		t.Error("gemini-cli has no delete-by-id → CanCleanup should be false")
+		t.Error("gemini-cli was removed → CanCleanup should be false")
 	}
 	if CanCleanup("nope") {
 		t.Error("unknown kind → CanCleanup should be false")

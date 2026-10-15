@@ -81,7 +81,7 @@ func TestRelevantKinds_RosterKind(t *testing.T) {
 	if !got["codex-cli"] {
 		t.Fatalf("roster Seat.Kind must make the kind relevant: %v", got)
 	}
-	if got["gemini-cli"] || got["opencode"] {
+	if got["kimi-cli"] || got["opencode"] {
 		t.Fatalf("kinds the project never names must not be relevant: %v", got)
 	}
 }
@@ -90,10 +90,10 @@ func TestRelevantKinds_RosterKind(t *testing.T) {
 // heuristic the orchestrate driver uses), so it must count.
 func TestRelevantKinds_SeatNameHeuristic(t *testing.T) {
 	isolateHome(t)
-	dir := newPactProject(t, "gemini-worker:worker:AGENTS.md")
+	dir := newPactProject(t, "kimi-worker:worker:AGENTS.md")
 	got := RelevantKinds(dir)
-	if !got["gemini-cli"] {
-		t.Fatalf("seat named gemini-worker must make gemini-cli relevant: %v", got)
+	if !got["kimi-cli"] {
+		t.Fatalf("seat named kimi-worker must make kimi-cli relevant: %v", got)
 	}
 }
 
@@ -224,9 +224,9 @@ func TestRun_IrrelevantVendorFailureIsAdvisoryButStillShown(t *testing.T) {
 	emptyPath := t.TempDir()
 	checks := Run(dir, "w", filepath.Join(emptyPath, "pactify"), emptyPath, t.TempDir())
 
-	c := vendorCheck(t, checks, "cli gemini-cli: binary")
+	c := vendorCheck(t, checks, "cli kimi-cli: binary")
 	if c.OK {
-		t.Fatalf("gemini binary is absent from the fake PATH: %+v", c)
+		t.Fatalf("kimi binary is absent from the fake PATH: %+v", c)
 	}
 	if !c.Advisory {
 		t.Fatalf("a kind the project does NOT use must not gate the exit code: %+v", c)

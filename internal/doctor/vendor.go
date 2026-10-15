@@ -16,7 +16,6 @@ var acpKinds = map[string]bool{
 	"kimi-cli":    true,
 	"claude-code": true,
 	"codex-cli":   true,
-	"gemini-cli":  true,
 	"opencode":    true,
 }
 
@@ -28,7 +27,6 @@ var acpKinds = map[string]bool{
 // session file we don't model) — so the check stays green with an advisory note.
 type authProbe struct {
 	authRel     string
-	authAltRel  string // alternate credential path; either authRel or authAltRel may satisfy auth
 	isDir       bool
 	lenient     bool
 	installHint string
@@ -45,9 +43,6 @@ var vendorAuth = map[string]authProbe{
 	"codex-cli": {authRel: ".codex/auth.json",
 		installHint: "install codex (npm i -g @openai/codex)",
 		loginHint:   "run `codex login`"},
-	"gemini-cli": {authRel: ".gemini/oauth_creds.json", authAltRel: ".gemini/google_accounts.json",
-		installHint: "install gemini-cli (npm i -g @google/gemini-cli)",
-		loginHint:   "run `gemini` once to authenticate"},
 	"kimi-cli": {authRel: ".kimi", isDir: true, lenient: true,
 		installHint: "install the kimi CLI",
 		loginHint:   "run `kimi login`"},
@@ -58,9 +53,9 @@ var vendorAuth = map[string]authProbe{
 	// (see orchestrate/env.go, which strips all three) — but it is the only one
 	// pactify permits: an orchestrated agy stint has every vendor key blanked, so
 	// the OAuth file is load-bearing for exactly the runs doctor is preflighting.
-	// Hence lenient=false: an absent token is a real red, same as codex-cli/
-	// gemini-cli. Caveat this reports a false red for someone who drives agy by
-	// hand on an API key and never through pactify.
+	// Hence lenient=false: an absent token is a real red, same as codex-cli.
+	// Caveat this reports a false red for someone who drives agy by hand on an
+	// API key and never through pactify.
 	"antigravity": {authRel: ".gemini/antigravity-cli/antigravity-oauth-token",
 		installHint: "install the Antigravity CLI (agy) — see antigravity.google docs",
 		loginHint:   "run `agy` once and complete the OAuth login flow"},
@@ -104,7 +99,7 @@ func VendorChecksFor(home, pathEnv string, relevant map[string]bool) []Check {
 
 		var kindChecks []Check
 		kindChecks = append(kindChecks, vendorBinaryCheck(kind, rs.Command, pathEnv, probe))
-		if probe.authRel != "" || probe.authAltRel != "" {
+		if probe.authRel != "" {
 			kindChecks = append(kindChecks, vendorAuthCheck(kind, home, probe))
 		}
 		kindChecks = append(kindChecks, vendorTransportCheck(kind))
@@ -145,28 +140,12 @@ func vendorBinaryCheck(kind, command, pathEnv string, probe authProbe) Check {
 func vendorAuthCheck(kind, home string, probe authProbe) Check {
 	name := fmt.Sprintf("cli %s: auth", kind)
 
-	var candidates []string
-	if probe.authRel != "" {
-		candidates = append(candidates, probe.authRel)
-	}
-	if probe.authAltRel != "" {
-		candidates = append(candidates, probe.authAltRel)
-	}
-
-	var found string
-	for _, rel := range candidates {
-		target := filepath.Join(home, rel)
-		present := probe.isDir && isDir(target) || !probe.isDir && isNonEmptyFile(target)
-		if present {
-			found = target
-			break
-		}
-	}
-
-	if found != "" {
-		return Check{Name: name, OK: true, Detail: "credentials present at " + found}
-	}
 	target := filepath.Join(home, probe.authRel)
+	present := probe.isDir && isDir(target) || !probe.isDir && isNonEmptyFile(target)
+	if present {
+		return Check{Name: name, OK: true, Detail: "credentials present at " + target}
+	}
+
 	if probe.lenient {
 		// Absent but not fatal — keep green, surface an advisory in Detail.
 		return Check{Name: name, OK: true, Detail: fmt.Sprintf("no %s; %s", target, probe.loginHint)}

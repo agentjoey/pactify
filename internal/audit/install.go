@@ -73,11 +73,6 @@ func Install(kind, repoDir string) error {
 		return installAntigravity(antigravityHooksPath(repoDir))
 	case "claude-code":
 		return installClaudeStyle(kind, filepath.Join(repoDir, ".claude", "settings.json"), "PreToolUse")
-	case "gemini":
-		// gemini's hook schema mirrors claude's but names the event "BeforeTool"
-		// (authoritative: `gemini hooks migrate --from-claude` rewrites PreToolUse
-		// entries under hooks.BeforeTool; a PreToolUse entry loads as "0 hooks").
-		return installClaudeStyle(kind, filepath.Join(repoDir, ".gemini", "settings.json"), "BeforeTool")
 	case "opencode":
 		path := opencodePluginPath(repoDir)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -157,10 +152,10 @@ func Uninstall(kind, repoDir string) error {
 			return nil
 		}
 		return err
-	case "gemini":
-		return uninstallClaudeStyle(filepath.Join(repoDir, ".gemini", "settings.json"), "BeforeTool")
-	default:
+	case "claude-code":
 		return uninstallClaudeStyle(filepath.Join(repoDir, ".claude", "settings.json"), "PreToolUse")
+	default:
+		return fmt.Errorf("audit uninstall: unsupported kind %q", kind)
 	}
 }
 
@@ -176,11 +171,9 @@ type Status struct {
 // .agents/hooks.json.
 func Detect(repoDir string) []Status {
 	claudeInstalled := detectClaudeStyle(filepath.Join(repoDir, ".claude", "settings.json"), "PreToolUse")
-	geminiInstalled := detectClaudeStyle(filepath.Join(repoDir, ".gemini", "settings.json"), "BeforeTool")
 	_, ocErr := os.Stat(opencodePluginPath(repoDir))
 	return []Status{
 		{Kind: "claude-code", Installed: claudeInstalled},
-		{Kind: "gemini", Installed: geminiInstalled},
 		{Kind: "opencode", Installed: ocErr == nil},
 		{Kind: "antigravity", Installed: detectAntigravity(antigravityHooksPath(repoDir))},
 	}

@@ -42,7 +42,7 @@ type Invoke struct {
 // is how the agent's config invokes the pact MCP server. Args carries a
 // "{briefing}" placeholder that the caller replaces with the real prompt text.
 type RunnerSpec struct {
-	Command string   // "opencode" / "claude" / "gemini"
+	Command string   // "opencode" / "claude" / "agy"
 	Args    []string // e.g. ["run","{briefing}"] / ["-p","{briefing}"]
 }
 
@@ -116,7 +116,6 @@ const briefingToken = "{briefing}"
 var registry = map[string]spec{
 	"opencode":       {"opencode", "AGENTS.md", "opencode.json", Project, JSONOpencode, false, false, "opencode"},
 	"claude-code":    {"claude-code", "CLAUDE.md", ".mcp.json", Project, JSONMcpServers, false, true, "claude"},
-	"gemini-cli":     {"gemini-cli", "GEMINI.md", ".gemini/settings.json", Project, JSONMcpServers, false, false, "gemini"},
 	"codex-cli":      {"codex-cli", "AGENTS.md", ".codex/config.toml", Project, TOML, false, false, "codex"},
 	"kimi-cli":       {"kimi-cli", "AGENTS.md", "~/.kimi-code/mcp.json", Global, JSONMcpServers, false, false, "kimi"},
 	"cursor-cli":     {"cursor-cli", "AGENTS.md", ".cursor/mcp.json", Project, JSONMcpServers, false, false, "cursor-agent"},
@@ -136,6 +135,27 @@ var registry = map[string]spec{
 func Get(kind string) (Adapter, bool) {
 	s, ok := registry[kind]
 	return s, ok
+}
+
+// CheckKind validates a kind used by an action. Loading historical rosters stays
+// permissive; using a retired kind gives an actionable migration diagnostic.
+func CheckKind(kind string) error {
+	if err := RemovedKindError(kind); err != nil {
+		return err
+	}
+	if _, ok := Get(kind); !ok {
+		return fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
+	}
+	return nil
+}
+
+// RemovedKindError diagnoses retired kinds without rejecting other historical
+// or custom kinds in a permissively loaded registry or roster.
+func RemovedKindError(kind string) error {
+	if kind == "gemini-cli" {
+		return fmt.Errorf("gemini-cli has been removed; use antigravity (agy) instead")
+	}
+	return nil
 }
 
 // Kinds returns the supported kinds, sorted.
@@ -201,6 +221,9 @@ var builtinKinds = func() map[string]bool {
 // collides with a built-in is rejected, so a manifest can never shadow a verified
 // built-in. In-package, so it can build the unexported spec.
 func RegisterExternal(e External) error {
+	if err := RemovedKindError(e.Kind); err != nil {
+		return err
+	}
 	if builtinKinds[e.Kind] {
 		return fmt.Errorf("custom agent %q collides with a built-in kind (manifests are add-only)", e.Kind)
 	}

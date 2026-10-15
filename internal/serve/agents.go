@@ -2,7 +2,6 @@ package serve
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -67,7 +66,7 @@ func (s *Server) handleAgentRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	kind := r.PathValue("kind")
 	if _, ok := agent.Get(kind); !ok {
-		writeErr(w, http.StatusBadRequest, fmt.Sprintf("unknown agent kind %q (supported: %v)", kind, agent.Kinds()))
+		writeErr(w, http.StatusBadRequest, agent.CheckKind(kind).Error())
 		return
 	}
 	var req agentRegisterReq
@@ -100,7 +99,7 @@ func (s *Server) handleAgentUnregister(w http.ResponseWriter, r *http.Request) {
 	}
 	kind := r.PathValue("kind")
 	if _, ok := agent.Get(kind); !ok {
-		writeErr(w, http.StatusBadRequest, fmt.Sprintf("unknown agent kind %q (supported: %v)", kind, agent.Kinds()))
+		writeErr(w, http.StatusBadRequest, agent.CheckKind(kind).Error())
 		return
 	}
 	reg, err := agentreg.Load()
@@ -134,7 +133,11 @@ type agentConfigDTO struct {
 func (s *Server) handleAgentConfigGet(w http.ResponseWriter, r *http.Request) {
 	kind := r.PathValue("kind")
 	if _, ok := agent.Get(kind); !ok {
-		writeErr(w, http.StatusNotFound, "unknown kind")
+		if err := agent.RemovedKindError(kind); err != nil {
+			writeErr(w, http.StatusNotFound, err.Error())
+		} else {
+			writeErr(w, http.StatusNotFound, "unknown kind")
+		}
 		return
 	}
 	reg, err := agentreg.Load()
@@ -166,7 +169,11 @@ func (s *Server) handleAgentConfigSet(w http.ResponseWriter, r *http.Request) {
 	}
 	kind := r.PathValue("kind")
 	if _, ok := agent.Get(kind); !ok {
-		writeErr(w, http.StatusNotFound, "unknown kind")
+		if err := agent.RemovedKindError(kind); err != nil {
+			writeErr(w, http.StatusNotFound, err.Error())
+		} else {
+			writeErr(w, http.StatusNotFound, "unknown kind")
+		}
 		return
 	}
 	var req agentConfigReq

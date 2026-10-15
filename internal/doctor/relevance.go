@@ -30,7 +30,7 @@ import (
 //     only ever runs after an explicit `--approve-fallback`, so a cold one is
 //     not a broken setup today.
 //  4. Project wiring — an ATTRIBUTABLE pact wiring in this repo. Config wiring
-//     (opencode.json, .mcp.json, .gemini/settings.json) is kind-specific and
+//     (opencode.json, .mcp.json) is kind-specific and
 //     counts. Entry-file wiring counts only when the entry file belongs to one
 //     kind (CLAUDE.md → claude-code); a shared entry (AGENTS.md is the default
 //     for five kinds) proves nothing about any single one of them, and letting

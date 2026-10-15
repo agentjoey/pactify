@@ -15,7 +15,7 @@ import (
 )
 
 // versionProbeTimeout bounds a single `<cli> --version`. Measured on this
-// machine: claude 8ms, codex 138ms, gemini 572ms, kimi 402ms, opencode 207ms,
+// machine: claude 8ms, codex 138ms, kimi 402ms, opencode 207ms,
 // agy 304ms. 5s is far above the slowest yet still bounds a hung binary — a
 // settings panel must not wait on one wedged CLI.
 const versionProbeTimeout = 5 * time.Second
@@ -109,7 +109,11 @@ func (s *Server) handleAgentVersions(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleAgentTest(w http.ResponseWriter, r *http.Request) {
 	kind := r.PathValue("kind")
 	if _, ok := agent.Get(kind); !ok {
-		writeErr(w, http.StatusNotFound, "unknown agent kind "+kind)
+		if err := agent.RemovedKindError(kind); err != nil {
+			writeErr(w, http.StatusNotFound, err.Error())
+		} else {
+			writeErr(w, http.StatusNotFound, "unknown agent kind "+kind)
+		}
 		return
 	}
 

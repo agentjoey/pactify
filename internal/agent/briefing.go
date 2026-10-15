@@ -53,7 +53,7 @@ feature cannot merge until all its tasks are accepted.`
 func Render(kind, seatID, roles, repoAbs string) (entry, config string, err error) {
 	a, ok := Get(kind)
 	if !ok {
-		return "", "", fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
+		return "", "", CheckKind(kind)
 	}
 	if a.DefaultEntry() != "" {
 		// The rendered block carries the kind attribution WireAt would bake, so a
@@ -110,7 +110,7 @@ func Wire(kind, seatID, roles, repoAbs string) error {
 func WireAt(dir, kind, seatID, roles, repoAbs string) error {
 	a, ok := Get(kind)
 	if !ok {
-		return fmt.Errorf("unknown agent kind %q (supported: %v)", kind, Kinds())
+		return CheckKind(kind)
 	}
 	if entry := a.DefaultEntry(); entry != "" {
 		// Bake the briefing plus the kind attribution, UNIONed with whatever the

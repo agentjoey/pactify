@@ -87,7 +87,7 @@ func probeKind(kind string, dir string) WiringStatus {
 
 	// Entry probe: the kind's entry file in dir carries a managed block that
 	// claims THIS kind. Presence alone is not enough — entry files are shared
-	// (AGENTS.md by five kinds, GEMINI.md by two) and the block is kind-agnostic,
+	// (AGENTS.md by five kinds) and the block is kind-agnostic,
 	// so `agent add opencode` used to mark every co-tenant wired. An attributed
 	// block (pact:kinds line, written by WireAt) is authoritative; an older
 	// unattributed block falls back to legacyEntryCredits.

@@ -156,9 +156,9 @@ func TestPinnedIdentity_IgnoresExpansionTokenAndEmpty(t *testing.T) {
 	// The current de-identified form: an expansion token, not a literal.
 	os.WriteFile(filepath.Join(dir, ".mcp.json"),
 		[]byte(`{"mcpServers":{"pact":{"command":"pactify","args":["mcp"],"env":{"PACT_AGENT_ID":"${PACT_AGENT_ID:-}"}}}}`), 0o644)
-	// And a gemini config with no env key at all.
-	os.MkdirAll(filepath.Join(dir, ".gemini"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".gemini", "settings.json"),
+	// And a cursor config with no env key at all.
+	os.MkdirAll(filepath.Join(dir, ".cursor"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".cursor", "mcp.json"),
 		[]byte(`{"mcpServers":{"pact":{"command":"pactify","args":["mcp"],"env":{}}}}`), 0o644)
 	if got := PinnedIdentity(dir); len(got) != 0 {
 		t.Fatalf("expansion token / empty env must not be flagged, got %+v", got)

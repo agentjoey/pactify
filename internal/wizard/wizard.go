@@ -22,7 +22,7 @@ type Binding struct {
 }
 
 // seatID derives a stable, friendly seat id from a kind: the kind's first
-// dash-segment ("claude-code" → "claude", "gemini-cli" → "gemini", "opencode" →
+// dash-segment ("claude-code" → "claude", "kimi-cli" → "kimi", "opencode" →
 // "opencode"). Keeps seat ids short and recognizable.
 func seatID(kind string) string {
 	if i := strings.IndexByte(kind, '-'); i > 0 {

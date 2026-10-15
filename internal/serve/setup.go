@@ -105,6 +105,10 @@ func (s *Server) handleSetupApply(w http.ResponseWriter, r *http.Request) {
 
 	var specs []string
 	for _, seat := range req.Seats {
+		if err := agent.RemovedKindError(seat.Kind); err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		roles := strings.Join(seat.Roles, ",")
 		spec := seat.ID + ":" + roles + ":" + seat.Entry
 		if seat.Kind != "" {

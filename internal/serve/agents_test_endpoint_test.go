@@ -77,7 +77,7 @@ func TestAgentTestEndpointRejectsUnknownKind(t *testing.T) {
 }
 
 // Versions are probed by spawning `<cli> --version`, measured at 8ms–572ms per
-// CLI (gemini is the slow one). Sequentially that is ~2s for this machine's 8
+// CLI. Sequentially that is ~2s for this machine's
 // installed kinds, so the endpoint must probe in PARALLEL and must never be on
 // the critical path of rendering the list.
 func TestAgentVersionsEndpointProbesInParallel(t *testing.T) {

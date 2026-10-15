@@ -24,9 +24,9 @@ func newAuditCmd() *cobra.Command {
 }
 
 func newAuditInstallCmd() *cobra.Command {
-	var claudeCode, gemini, opencode, antigravity, detect bool
+	var claudeCode, opencode, antigravity, detect bool
 	c := &cobra.Command{
-		Use:   "install [--claude-code] [--gemini] [--opencode] [--antigravity] [--detect]",
+		Use:   "install [--claude-code] [--opencode] [--antigravity] [--detect]",
 		Short: "wire the audit PreToolUse hook into a client's project settings (.claude/settings.json)",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			dir, err := os.Getwd()
@@ -45,7 +45,7 @@ func newAuditInstallCmd() *cobra.Command {
 				return nil
 			}
 			did := false
-			for kind, on := range map[string]bool{"claude-code": claudeCode, "gemini": gemini, "opencode": opencode, "antigravity": antigravity} {
+			for kind, on := range map[string]bool{"claude-code": claudeCode, "opencode": opencode, "antigravity": antigravity} {
 				if !on {
 					continue
 				}
@@ -54,8 +54,6 @@ func newAuditInstallCmd() *cobra.Command {
 				}
 				target := ".claude/settings.json"
 				switch kind {
-				case "gemini":
-					target = ".gemini/settings.json"
 				case "opencode":
 					target = ".opencode/plugin/pact-audit.ts"
 				case "antigravity":
@@ -65,13 +63,12 @@ func newAuditInstallCmd() *cobra.Command {
 				did = true
 			}
 			if !did {
-				return fmt.Errorf("specify a client: --claude-code, --gemini, --opencode, and/or --antigravity (or --detect)")
+				return fmt.Errorf("specify a client: --claude-code, --opencode, and/or --antigravity (or --detect)")
 			}
 			return nil
 		},
 	}
 	c.Flags().BoolVar(&claudeCode, "claude-code", false, "install the hook for Claude Code")
-	c.Flags().BoolVar(&gemini, "gemini", false, "install the hook for Gemini")
 	c.Flags().BoolVar(&opencode, "opencode", false, "install the audit plugin for opencode (cmd-transport fallback — the ACP transport, now the default, audits without it)")
 	c.Flags().BoolVar(&antigravity, "antigravity", false, "install the hook for antigravity/agy (.agents/hooks.json)")
 	c.Flags().BoolVar(&detect, "detect", false, "show per-client install status instead of installing")
@@ -79,16 +76,16 @@ func newAuditInstallCmd() *cobra.Command {
 }
 
 func newAuditUninstallCmd() *cobra.Command {
-	var claudeCode, gemini, opencode, antigravity bool
+	var claudeCode, opencode, antigravity bool
 	c := &cobra.Command{
-		Use:   "uninstall [--claude-code] [--gemini] [--opencode] [--antigravity]",
+		Use:   "uninstall [--claude-code] [--opencode] [--antigravity]",
 		Short: "remove the audit PreToolUse hook from a client's project settings",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			dir, err := os.Getwd()
 			if err != nil {
 				return err
 			}
-			for kind, on := range map[string]bool{"claude-code": claudeCode, "gemini": gemini, "opencode": opencode, "antigravity": antigravity} {
+			for kind, on := range map[string]bool{"claude-code": claudeCode, "opencode": opencode, "antigravity": antigravity} {
 				if !on {
 					continue
 				}
@@ -101,7 +98,6 @@ func newAuditUninstallCmd() *cobra.Command {
 		},
 	}
 	c.Flags().BoolVar(&claudeCode, "claude-code", false, "uninstall the hook for Claude Code")
-	c.Flags().BoolVar(&gemini, "gemini", false, "uninstall the hook for Gemini")
 	c.Flags().BoolVar(&opencode, "opencode", false, "uninstall the hook for opencode")
 	c.Flags().BoolVar(&antigravity, "antigravity", false, "uninstall the hook for antigravity/agy")
 	return c
@@ -233,6 +229,6 @@ func newAuditHookCmd() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().StringVar(&kind, "kind", "", "client kind firing the hook (claude-code | gemini | opencode | antigravity)")
+	c.Flags().StringVar(&kind, "kind", "", "client kind firing the hook (claude-code | opencode | antigravity)")
 	return c
 }

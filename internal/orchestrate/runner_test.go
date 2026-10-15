@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/agent"
@@ -105,29 +106,6 @@ func TestRunnerStampsTaskAndProjectEnv(t *testing.T) {
 	// checkpoint can't land in a divergent ledger.
 	if !hasEnv(cap.env, "PACT_DIR=/repo/.pact") {
 		t.Fatalf("env missing PACT_DIR pin to the worktree: %v", cap.env)
-	}
-}
-
-func TestGeminiEnv(t *testing.T) {
-	orig := geminiKey
-	t.Cleanup(func() { geminiKey = orig })
-
-	// non-gemini command → never injects, key fn not consulted.
-	geminiKey = func() (string, error) { t.Fatal("geminiKey should not be called"); return "", nil }
-	if env := geminiEnv("claude"); env != nil {
-		t.Fatalf("non-gemini: env=%v, want nil", env)
-	}
-
-	// gemini seat with a Keychain key → GEMINI_API_KEY injected (trimmed).
-	geminiKey = func() (string, error) { return "  AIza-secret  ", nil }
-	if env := geminiEnv("gemini"); !hasEnv(env, "GEMINI_API_KEY=AIza-secret") {
-		t.Fatalf("gemini env = %v, want GEMINI_API_KEY", env)
-	}
-
-	// gemini seat with NO key → no-op (keeps existing auth), never errors.
-	geminiKey = func() (string, error) { return "", errors.New("not in Keychain") }
-	if env := geminiEnv("gemini"); env != nil {
-		t.Fatalf("gemini without key should be a no-op, got %v", env)
 	}
 }
 
@@ -622,5 +600,23 @@ func TestCmdRunner_EffortZeroChange(t *testing.T) {
 	}
 	if !reflect.DeepEqual(withEffort.args, withoutEffort.args) {
 		t.Fatalf("opencode args changed by effort: with=%v without=%v", withEffort.args, withoutEffort.args)
+	}
+}
+
+func TestRemovedGeminiRunner(t *testing.T) {
+	var cap runCapture
+	r := CmdRunner{Exec: fakeRunExec(&cap, nil)}
+	err := r.Run(context.Background(), LaunchContext{Kind: "gemini-cli", Seat: "old", RepoDir: t.TempDir()})
+	if err == nil || !strings.Contains(err.Error(), "gemini-cli has been removed; use antigravity (agy) instead") {
+		t.Errorf("error = %v", err)
+	}
+	if cap.called {
+		t.Error("removed CLI was spawned")
+	}
+	if _, _, ok := acpCommand("gemini-cli"); ok {
+		t.Error("removed ACP transport is available")
+	}
+	if got := crossVendorStrip("gemini-cli"); got != nil {
+		t.Errorf("removed vendor key ownership: %v", got)
 	}
 }

@@ -26,7 +26,7 @@ func filteredEnviron() []string {
 
 // allVendorAPIKeys is every third-party model-provider credential pactify may
 // carry in its environment. A dedicated single-vendor agent has no business
-// reading a sibling vendor's key — e.g. a kimi/gemini/codex stint inheriting the
+// reading a sibling vendor's key — e.g. a kimi/codex stint inheriting the
 // user's real ANTHROPIC_API_KEY (review finding M11) — so when launching one we
 // blank the keys that aren't its own. os/exec keeps the last value for a
 // duplicate key, so a trailing `KEY=` overrides the inherited one.
@@ -52,7 +52,6 @@ var allVendorAPIKeys = []string{
 var vendorOwnKeys = map[string][]string{
 	"claude-code": {"ANTHROPIC_API_KEY"},
 	"codex-cli":   {"OPENAI_API_KEY"},
-	"gemini-cli":  {"GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS"},
 	"kimi-cli":    {"MOONSHOT_API_KEY", "KIMI_API_KEY"},
 	// antigravity (agy) authenticates via an OAuth token FILE
 	// (~/.gemini/antigravity-cli/antigravity-oauth-token) by default — but
@@ -60,10 +59,10 @@ var vendorOwnKeys = map[string][]string{
 	// DOES contain GOOGLE_API_KEY/GEMINI_API_KEY/GOOGLE_APPLICATION_CREDENTIALS
 	// as alternate-auth fallback strings (agy warns if both GOOGLE_API_KEY and
 	// GEMINI_API_KEY are set). So agy CAN authenticate via those — but they are
-	// gemini-cli's credential, not agy's own, and `env -u <all of the above>
+	// API credentials, not agy's own OAuth token, and `env -u <all of the above>
 	// agy -p ...` still authenticates fine via the OAuth file alone. Treating
-	// them as antigravity's "own" keys would be wrong (that's what gemini-cli
-	// owns); the safe choice is the opposite — explicit empty slice (present in
+	// them as antigravity's "own" keys would bypass OAuth; the safe choice is
+	// the opposite — explicit empty slice (present in
 	// the map, owns nothing) so crossVendorStrip blanks every sibling vendor key,
 	// including GEMINI_API_KEY/GOOGLE_API_KEY, from agy's environment. This also
 	// prevents agy from silently falling back to a leaked/wrong-vendor key

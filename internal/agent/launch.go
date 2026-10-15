@@ -33,12 +33,12 @@ type RunnerProfile struct {
 	EffortArgs func(effort string) []string
 }
 
-// runnerProfiles holds the per-kind launch builders for the three verified
+// runnerProfiles holds the per-kind launch builders for the verified
 // headless kinds. Each builder's DEFAULT output (default model, blanket posture)
 // is byte-for-byte the historical hardcoded Runner() args — locked by
 // launch_test and agent_test. The variability that differs per CLI (flag syntax,
-// argument ordering — e.g. gemini requires the briefing to immediately follow
-// -p) lives inside each builder, where it can be read and tested in one place.
+// argument ordering) lives inside each builder, where it can be read and tested
+// in one place.
 var runnerProfiles = map[string]RunnerProfile{
 	// opencode has no permission concept (it runs tools directly); posture is
 	// ignored. -m pins the model.
@@ -78,23 +78,6 @@ var runnerProfiles = map[string]RunnerProfile{
 			return []string{"--effort", effort}
 		},
 	},
-	// gemini-cli: the briefing MUST immediately follow -p (else -p swallows the
-	// next flag). Blanket → --approval-mode yolo; scoped → --approval-mode default
-	// + --allowed-tools <csv>. --skip-trust trusts the workspace either way.
-	"gemini-cli": {
-		Command:      "gemini",
-		DefaultModel: "gemini-3.1-pro-preview",
-		Models:       []string{"gemini-3.1-pro-preview", "gemini-3-flash-preview"},
-		BuildArgs: func(model string, perm PermPosture, briefing string) []string {
-			args := []string{"-p", briefing, "-m", model}
-			if perm.Scoped {
-				args = append(args, "--approval-mode", "default", "--allowed-tools", strings.Join(perm.AllowedTools, ","))
-			} else {
-				args = append(args, "--approval-mode", "yolo")
-			}
-			return append(args, "--skip-trust")
-		},
-	},
 	// kimi-cli: -p runs one prompt non-interactively and ALREADY auto-approves
 	// every tool (verified on kimi-code 0.18: `kimi -p "<task>"` created a file
 	// unattended). kimi-code 0.18 actively REJECTS approval flags in -p mode
@@ -123,7 +106,7 @@ var runnerProfiles = map[string]RunnerProfile{
 	// worker/orchestrator can't advance pact/git state (confirmed codex 0.142.5;
 	// --add-dir .git does NOT override it). Full-access matches the full-trust
 	// posture the other blanket agents get (claude --dangerously-skip-permissions,
-	// gemini --approval-mode yolo). Scoped keeps workspace-write (explicit opt-in;
+	// agy --dangerously-skip-permissions). Scoped keeps workspace-write (explicit opt-in;
 	// note scoped codex cannot take the .git base lock, so it cannot merge). codex
 	// has no per-tool allowlist, so AllowedTools is not expressible. -m omitted
 	// when no model is pinned → codex uses its configured default.

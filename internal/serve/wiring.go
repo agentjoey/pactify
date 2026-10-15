@@ -60,7 +60,7 @@ func (s *Server) handleWire(w http.ResponseWriter, r *http.Request) {
 	kind := r.PathValue("kind")
 	a, ok := agent.Get(kind)
 	if !ok {
-		writeErr(w, http.StatusBadRequest, fmt.Sprintf("unknown agent kind %q (supported: %v)", kind, agent.Kinds()))
+		writeErr(w, http.StatusBadRequest, agent.CheckKind(kind).Error())
 		return
 	}
 	var req wireReq

@@ -762,3 +762,9 @@ func TestACPBackendOptionsReachSlowProcess(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 }
+
+func TestRemovedGeminiACP(t *testing.T) {
+	if _, _, err := acpCommandFor("gemini-cli"); err == nil || !strings.Contains(err.Error(), "gemini-cli has been removed; use antigravity (agy) instead") {
+		t.Errorf("error = %v", err)
+	}
+}

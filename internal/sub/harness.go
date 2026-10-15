@@ -30,12 +30,13 @@ type Harness struct {
 	Experimental string
 	// MinimalConfig is supported only after a native, process-local path has
 	// been verified. Unavailable harnesses retain user config and say why.
-	MinimalConfig      bool
-	Home               *harnessHome
-	LocalUsageBaseline func(string, string) (int64, error)
-	DoctorModel        string
-	DoctorReadOnly     func(Result) (bool, string)
-	Models             func(context.Context, cockpit.StartOpts) ([]string, error)
+	MinimalConfig        bool
+	Home                 *harnessHome
+	VerificationBaseline func(context.Context, VerificationInput) (int64, error)
+	LocalUsageBaseline   func(string, string) (int64, error)
+	DoctorModel          string
+	DoctorReadOnly       func(Result) (bool, string)
+	Models               func(context.Context, cockpit.StartOpts) ([]string, error)
 	// Every harness must keep delegated sessions out of the user's own session
 	// lists (TestEveryHarnessHidesItsSessions). HidesItself: the backend does it
 	// (codex archives the thread on Close via StartOpts.Hidden). Otherwise Conceal
@@ -46,13 +47,16 @@ type Harness struct {
 
 // VerificationInput bounds independent verification to this job's prompts.
 type VerificationInput struct {
+	Env        []string
+	Cwd        string
 	SessionID  string
 	Info       cockpit.SessionInfo
-	WireOffset int64
+	WireOffset int64 // Byte offset for kimi; exported message count for opencode.
 	Prompts    int
 }
 
 type Verification struct {
+	CostUSD      *float64
 	Model        string
 	InputTokens  int
 	OutputTokens int
@@ -82,6 +86,17 @@ var registry = map[string]Harness{
 			return Verification{Model: v.Info.Model, Verified: v.Info.Model != ""}
 		},
 	},
+	"opencode": {
+		Name: "opencode", Kind: "opencode", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("opencode") },
+		Version:      cliVersion("opencode", opencodeVendorStrip()...),
+		Experimental: "opencode is an experimental harness (evaluation pending)", MinimalConfig: true,
+		Home: opencodeHomes(), Models: cockpit.OpencodeModels, DoctorReadOnly: doctorOpencodeReadOnly,
+		Verify: verifyOpencode, VerificationBaseline: opencodeBaseline,
+		Conceal: func(ConcealContext) error {
+			return fmt.Errorf("opencode --with-user-config keeps sessions in the user's session list; use minimal config to hide delegated sessions")
+		},
+	},
+
 	"codex": {
 		DoctorModel: "gpt-6-luna",
 		Name:        "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),

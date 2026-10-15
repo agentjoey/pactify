@@ -161,27 +161,33 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		if h.Models != nil {
 			opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind)}
-			var modelHome *managedHome
+			var modelHomes []*managedHome
 			if h.Home != nil {
-				source, e := h.Home.Source()
+				_, _, env, layouts, e := prepareHarnessHomes(ctx, h.Home, "", nil, true)
+				modelHomes = layouts
+				opts.Env = append(opts.Env, env...)
 				if e != nil {
-					return reports, e
-				}
-				home, e := h.Home.Managed()
-				if e != nil {
-					return reports, e
-				}
-				modelHome = h.Home.Layout(home, source)
-				if e = modelHome.Prepare(ctx); e != nil {
+					for _, layout := range modelHomes {
+						layout.Cleanup()
+					}
 					abortProbe("Managed home", e.Error())
 					reports = append(reports, r)
 					continue
 				}
-				opts.Env = append(opts.Env, h.Home.Env+"="+home)
+			}
+			if h.Name == "opencode" {
+				opts.Env = append(opts.Env, opencodeVendorStrip()...)
+			}
+			if h.Name == "opencode" {
+				opts.MinimalConfig = true
+				opts.RepoDir = filepath.Join(root, h.Name, "models")
+				if e := os.MkdirAll(opts.RepoDir, 0700); e != nil {
+					return reports, e
+				}
 			}
 			models, e := h.Models(ctx, opts)
-			if modelHome != nil {
-				if warnings := modelHome.Cleanup(); len(warnings) > 0 {
+			for _, layout := range modelHomes {
+				if warnings := layout.Cleanup(); len(warnings) > 0 {
 					e = fmt.Errorf("model listing error=%v; %s", e, strings.Join(warnings, "; "))
 				}
 			}
@@ -191,6 +197,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				continue
 			}
 			model = cheapestDoctorModel(models)
+			if h.Name == "opencode" {
+				model = opencodeDoctorModel(models)
+			}
 		}
 		run := func(access, brief string) (Result, string, error) {
 			repo := filepath.Join(root, h.Name, access)

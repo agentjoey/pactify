@@ -347,8 +347,28 @@ PY
   run python3 - "$P/.claude-plugin/plugin.json" <<'PY'
 import json, sys
 description = json.load(open(sys.argv[1]))['description']
-for term in ('codex', 'kimi', 'agy', '/jobs'):
+for term in ('codex', 'kimi', 'agy', 'opencode', '/jobs'):
     assert term in description, term
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode plugin is experimental and shares the delegation contract" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+skill = (root / 'skills/opencode/SKILL.md').read_text()
+agent = (root / 'agents/opencode.md').read_text()
+reference = (root / 'skills/codex/SKILL.md').read_text()
+def shared(text):
+    return text.split('<!-- BEGIN SHARED-DELEGATION -->', 1)[1].split('<!-- END SHARED-DELEGATION -->', 1)[0]
+assert shared(skill) == shared(reference)
+for text in (skill, agent):
+    for term in ('experimental', 'evaluation pending', 'pactify sub run opencode', '--resume', '--worktree', '--read-only', 'shell', 'read tools'):
+        assert term in text, (term, text)
+assert 'model: haiku' in agent and 'tools: Bash' in agent
+for path in (root / 'README.md', root.parents[1] / 'README.md', root.parents[1] / 'docs/sub-doctor.md'):
+    assert 'opencode' in path.read_text()
 PY
   [ "$status" -eq 0 ]
 }

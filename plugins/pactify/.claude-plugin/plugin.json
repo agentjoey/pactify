@@ -1,6 +1,6 @@
 {
   "name": "pactify",
-  "description": "Delegate large coding tasks from Claude Code to coding agent harnesses (codex, kimi, agy), review results, and view job status with /jobs.",
+  "description": "Delegate large coding tasks from Claude Code to coding agent harnesses (codex, kimi, agy, opencode), review results, and view job status with /jobs.",
   "version": "0.1.0",
   "author": { "name": "agentjoey" },
   "homepage": "https://github.com/agentjoey/pactify",

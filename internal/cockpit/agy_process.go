@@ -63,7 +63,7 @@ func (p *agyProcess) interrupt(ctx context.Context, grace time.Duration) error {
 		}
 		<-p.done
 		// Even a prompt SIGINT exit may leave children in their own groups/sessions.
-		p.interruptErr = errors.Join(snapshotErr, terminateAgyDescendants(descendants, grace))
+		p.interruptErr = errors.Join(snapshotErr, procx.TerminateDescendants("agy", descendants, grace))
 	})
 	return p.interruptErr
 }
@@ -73,48 +73,4 @@ func (p *agyProcess) killParent() {
 	// A surviving child can retain a pipe after the CLI exits. Release Scan;
 	// Cmd.WaitDelay bounds stderr drain while we collect the known descendants.
 	_ = p.stdout.Close()
-}
-func terminateAgyDescendants(descendants []procx.Identity, grace time.Duration) error {
-	if len(descendants) == 0 {
-		return nil
-	}
-	var errs []error
-	for _, p := range descendants {
-		if err := p.Signal(syscall.SIGTERM, false); err != nil {
-			errs = append(errs, fmt.Errorf("terminate agy descendant %d: %w", p.PID, err))
-		}
-	}
-	remaining, err := waitAgyDescendants(descendants, grace)
-	errs = append(errs, err)
-	for _, p := range remaining {
-		if err := p.Signal(syscall.SIGKILL, false); err != nil {
-			errs = append(errs, fmt.Errorf("kill agy descendant %d: %w", p.PID, err))
-		}
-	}
-	remaining, err = waitAgyDescendants(remaining, grace)
-	errs = append(errs, err)
-	for _, p := range remaining {
-		errs = append(errs, fmt.Errorf("agy descendant %d is still alive after SIGKILL", p.PID))
-	}
-	return errors.Join(errs...)
-}
-func waitAgyDescendants(processes []procx.Identity, grace time.Duration) ([]procx.Identity, error) {
-	deadline := time.Now().Add(grace)
-	var errs []error
-	for {
-		remaining := make([]procx.Identity, 0, len(processes))
-		for _, p := range processes {
-			alive, err := p.Alive()
-			if err != nil {
-				errs = append(errs, fmt.Errorf("inspect agy descendant %d: %w", p.PID, err))
-			} else if alive {
-				remaining = append(remaining, p)
-			}
-		}
-		if len(remaining) == 0 || !time.Now().Before(deadline) {
-			return remaining, errors.Join(errs...)
-		}
-		processes = remaining
-		time.Sleep(10 * time.Millisecond)
-	}
 }

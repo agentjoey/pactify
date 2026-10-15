@@ -19,16 +19,18 @@ type homeLink struct {
 // managedHome inspects metadata only. Paths below symlinked ancestors are never
 // created or removed; RemoveAll removes leaf links without traversing them.
 type managedHome struct {
-	Name    string
-	Home    string
-	Source  string
-	Links   map[string]homeLink
-	Mirror  bool
-	Exclude []string
-	Remove  []string
+	Name               string
+	Home               string
+	Source             string
+	Links              map[string]homeLink
+	AllowMissingSource bool
+	Mirror             bool
+	Exclude            []string
+	Remove             []string
 }
 
 type harnessHome struct {
+	Additional   []*harnessHome
 	BeforeDoctor func() (func() error, error)
 	Env          string
 	Source       func() (string, error)
@@ -129,7 +131,9 @@ func (m *managedHome) links() (map[string]homeLink, error) {
 	if m.Mirror {
 		entries, err := os.ReadDir(m.Source)
 		if err != nil {
-			return nil, err
+			if !m.AllowMissingSource || !os.IsNotExist(err) {
+				return nil, err
+			}
 		}
 		for _, entry := range entries {
 			if !m.excluded(entry.Name()) {
@@ -186,7 +190,7 @@ func (m *managedHome) Prepare(ctx context.Context) (prepareErr error) {
 			}
 		}
 	}()
-	if _, err = filepath.EvalSymlinks(m.Source); err != nil {
+	if _, err = filepath.EvalSymlinks(m.Source); err != nil && !(m.AllowMissingSource && os.IsNotExist(err)) {
 		return fmt.Errorf("%s user home unavailable; run %s login first: %w", m.Name, m.Name, err)
 	}
 	links, err := m.links()
@@ -395,4 +399,54 @@ func (m *managedHome) cleanupEntries() []string {
 		warnings = append(warnings, warning)
 	}
 	return warnings
+}
+
+// directories keeps the primary home contract used by older job records.
+func (h *harnessHome) directories() []*harnessHome {
+	return append([]*harnessHome{h}, h.Additional...)
+}
+
+// prepareHarnessHomes is shared by model discovery and the job lifecycle.
+// Saved paths win on resume, even when the caller's XDG defaults have changed.
+func prepareHarnessHomes(ctx context.Context, h *harnessHome, primary string, saved map[string]string, minimal bool) (string, map[string]string, []string, []*managedHome, error) {
+	homes := map[string]string{}
+	var env []string
+	var layouts []*managedHome
+	for i, d := range h.directories() {
+		source, err := d.Source()
+		if err != nil {
+			return primary, homes, env, layouts, err
+		}
+		source, err = filepath.Abs(source)
+		if err != nil {
+			return primary, homes, env, layouts, err
+		}
+		home := saved[d.Env]
+		if i == 0 {
+			home = primary
+		}
+		if home == "" {
+			home = source
+			if minimal {
+				home, err = d.Managed()
+				if err != nil {
+					return primary, homes, env, layouts, err
+				}
+			}
+		}
+		if i == 0 {
+			primary = home
+		} else {
+			homes[d.Env] = home
+		}
+		if minimal {
+			layout := d.Layout(home, source)
+			layouts = append(layouts, layout)
+			if err = layout.Prepare(ctx); err != nil {
+				return primary, homes, env, layouts, err
+			}
+		}
+		env = append(env, d.Env+"="+home)
+	}
+	return primary, homes, env, layouts, nil
 }

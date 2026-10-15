@@ -23,6 +23,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/procx"
 )
@@ -90,9 +91,10 @@ type StopReason string
 // Usage is the token/cost accounting parsed from a session/update or prompt
 // response when it carries a usage field. Zero value = no usage reported.
 type Usage struct {
-	InputTokens  int
-	OutputTokens int
-	Cost         float64
+	CachedReadTokens int
+	InputTokens      int
+	OutputTokens     int
+	Cost             float64
 }
 
 // SessionUpdate is one session/update notification, surfaced to the OnSessionUpdate
@@ -156,9 +158,11 @@ type AuthMethod struct {
 // is safe for concurrent use: a single writer goroutine serializes outbound
 // frames (via writeCh) and a single reader goroutine dispatches inbound frames.
 type Client struct {
-	w       io.WriteCloser
-	closeFn func() error
-	cwd     string
+	w        io.WriteCloser
+	closeFn  func() error
+	cwd      string
+	process  *spawnedProcess
+	closeErr error
 
 	writeCh chan acpFrame
 	done    chan struct{}
@@ -215,6 +219,9 @@ func filteredEnviron() []string {
 	return out
 }
 
+// CommandEnv applies the same secret filtering as Spawn to auxiliary commands.
+func CommandEnv(overrides []string) []string { return append(filteredEnviron(), overrides...) }
+
 // Spawn starts command with args in dir, appends env onto the inherited
 // environment, and takes over the child's stdin/stdout for the JSON-RPC
 // connection. The child's stderr streams to the optional writer, defaulting to
@@ -222,20 +229,21 @@ func filteredEnviron() []string {
 // process exits its stdout closes and the client goes dead, failing all pending
 // and future calls.
 func Spawn(ctx context.Context, command string, args, env []string, dir string, stderr ...io.Writer) (*Client, error) {
-	cmd := exec.CommandContext(ctx, command, args...)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(command, args...)
 	cmd.Dir = dir
-	cmd.Env = append(filteredEnviron(), env...)
+	cmd.Env = CommandEnv(env)
 	cmd.Stderr = os.Stderr
 	if len(stderr) > 0 && stderr[0] != nil {
 		cmd.Stderr = stderr[0]
 	}
-	// Run the child in its own process group so teardown can reap the whole
-	// tree (ACP-1): most kinds launch via `npx`, which forks a node grandchild
-	// that would survive a plain Process.Kill as an orphaned live agent — still
-	// holding a vendor session and burning tokens. Same pattern as the cmd
-	// transport's idle-kill (orchestrate/runner_idle.go).
+	// Keep inherited-group tools together; detached tools are tracked separately.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { killGroup(cmd); return nil }
+	process := &spawnedProcess{cmd: cmd, reaped: make(chan struct{}), descendants: map[procx.Identity]struct{}{}}
+	cmd.WaitDelay = time.Second
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("acp: stdin pipe: %w", err)
@@ -244,43 +252,44 @@ func Spawn(ctx context.Context, command string, args, env []string, dir string, 
 	if err != nil {
 		return nil, fmt.Errorf("acp: stdout pipe: %w", err)
 	}
+	process.stdin, process.stdout = stdin, stdout
+	if err := ctx.Err(); err != nil {
+		_ = stdin.Close()
+		_ = stdout.Close()
+		return nil, err
+	}
 	if err := procx.Start(ctx, cmd); err != nil {
+		_ = stdin.Close()
+		_ = stdout.Close()
 		return nil, fmt.Errorf("acp: start %q: %w", command, err)
 	}
-	c := newClient(stdin, stdout, func() error {
-		_ = stdin.Close()
-		// Group-kill (if still running) unblocks Wait and reaps npx's
-		// grandchildren along with the direct child.
-		killGroup(cmd)
-		return nil
-	}, dir)
+	process.identity, process.identityErr = procx.Inspect(cmd.Process.Pid)
+	c := newClient(stdin, stdout, process.close, dir)
+	c.process = process
+
 	// Reap the process; its exit closes stdout, so the reader loop already
 	// terminates the client — this just ensures no zombie and covers the case
 	// where the process dies without closing stdout cleanly.
 	go func() {
 		werr := cmd.Wait()
+		close(process.reaped)
 		msg := "acp: agent process exited"
 		if werr != nil {
 			msg = fmt.Sprintf("acp: agent process exited: %v", werr)
 		}
 		c.terminate(errors.New(msg))
 	}()
+	// Install cancellation after launch registration and birth identity capture.
+	// A launcher may call Cmd.Wait on a registration error; an exec.Cmd.Cancel
+	// callback waiting for registration would deadlock with that Wait.
+	go func() {
+		select {
+		case <-ctx.Done():
+			c.terminate(ctx.Err())
+		case <-c.done:
+		}
+	}()
 	return c, nil
-}
-
-// killGroup terminates the agent process AND any subprocesses it spawned. The
-// child is started in its own process group (Setpgid), so killing the negative
-// pgid reaches reparented grandchildren. Falls back to a direct kill if the
-// pgid can't be resolved (already-reaped process).
-func killGroup(cmd *exec.Cmd) {
-	if cmd.Process == nil {
-		return
-	}
-	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil {
-		_ = syscall.Kill(-pgid, syscall.SIGKILL)
-		return
-	}
-	_ = cmd.Process.Kill()
 }
 
 // newClient builds a Client over an already-connected transport: w is the frame
@@ -421,6 +430,10 @@ func (c *Client) NewSessionDetailed(ctx context.Context, cwd string) (NewSession
 	if err != nil {
 		return NewSessionResult{}, err
 	}
+	return parseSessionResult(raw)
+}
+
+func parseSessionResult(raw json.RawMessage) (NewSessionResult, error) {
 	var wire struct {
 		SessionID     SessionID      `json:"sessionId"`
 		ConfigOptions []ConfigOption `json:"configOptions"`
@@ -463,6 +476,9 @@ func (c *Client) SetMode(ctx context.Context, sid SessionID, modeID string) erro
 // Cancel notifies the agent to cancel a session's ongoing turn. The agent does
 // not acknowledge this notification; Prompt reports when the turn actually ends.
 func (c *Client) Cancel(sid SessionID) error {
+	if c.process != nil {
+		c.process.beforeCancel()
+	}
 	return c.notify("session/cancel", map[string]any{"sessionId": sid})
 }
 
@@ -478,18 +494,26 @@ func (c *Client) notify(method string, params any) error {
 // context. It returns ErrNotSupported when the server did not advertise the
 // loadSession capability at initialize.
 func (c *Client) LoadSession(ctx context.Context, id SessionID) error {
+	_, err := c.loadSessionRaw(ctx, id)
+	return err
+}
+
+// LoadSessionDetailed also exposes settings advertised by session/load.
+func (c *Client) LoadSessionDetailed(ctx context.Context, id SessionID) (NewSessionResult, error) {
+	raw, err := c.loadSessionRaw(ctx, id)
+	if err != nil {
+		return NewSessionResult{}, err
+	}
+	return parseSessionResult(raw)
+}
+func (c *Client) loadSessionRaw(ctx context.Context, id SessionID) (json.RawMessage, error) {
 	c.mu.Lock()
 	supported := c.loadSession
 	c.mu.Unlock()
 	if !supported {
-		return ErrNotSupported
+		return nil, ErrNotSupported
 	}
-	_, err := c.call(ctx, "session/load", map[string]any{
-		"sessionId":  id,
-		"cwd":        c.cwd,
-		"mcpServers": []any{},
-	})
-	return err
+	return c.call(ctx, "session/load", map[string]any{"sessionId": id, "cwd": c.cwd, "mcpServers": []any{}})
 }
 
 // Prompt sends text as the user turn for session sid and blocks until the turn
@@ -519,8 +543,11 @@ func (c *Client) Prompt(ctx context.Context, sid SessionID, text string) (StopRe
 
 // Close tears down the connection and marks the client dead. Idempotent.
 func (c *Client) Close() error {
+	if c.process != nil {
+		c.process.waitForCancelCleanup()
+	}
 	c.terminate(errors.New("acp: client closed"))
-	return nil
+	return c.closeErr
 }
 
 // call sends a request and blocks for its response, the context's cancellation, or
@@ -776,7 +803,7 @@ func (c *Client) terminate(err error) {
 		c.mu.Unlock()
 		close(c.done)
 		if c.closeFn != nil {
-			_ = c.closeFn()
+			c.closeErr = c.closeFn()
 		}
 	})
 }
@@ -792,9 +819,10 @@ func parseUsage(raw json.RawMessage) *Usage {
 		return nil
 	}
 	u := &Usage{
-		InputTokens:  firstInt(m, "inputTokens", "input_tokens", "promptTokens", "prompt_tokens"),
-		OutputTokens: firstInt(m, "outputTokens", "output_tokens", "completionTokens", "completion_tokens"),
-		Cost:         firstFloat(m, "cost", "totalCost", "total_cost"),
+		InputTokens:      firstInt(m, "inputTokens", "input_tokens", "promptTokens", "prompt_tokens"),
+		OutputTokens:     firstInt(m, "outputTokens", "output_tokens", "completionTokens", "completion_tokens"),
+		CachedReadTokens: firstInt(m, "cachedReadTokens"),
+		Cost:             firstFloat(m, "cost", "totalCost", "total_cost"),
 	}
 	return u
 }

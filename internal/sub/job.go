@@ -36,23 +36,24 @@ type Request struct {
 }
 
 type State struct {
-	Repo            string           `json:"repo,omitempty"`
-	StartedAt       time.Time        `json:"startedAt,omitzero"`
-	ResumeOf        string           `json:"resumeOf,omitempty"`
-	HarnessHome     string           `json:"harnessHome,omitempty"`
-	ConfigMode      string           `json:"configMode,omitempty"`
-	ID              string           `json:"id"`
-	Status          Status           `json:"status"`
-	Request         Request          `json:"request"`
-	PID             int              `json:"pid,omitempty"`
-	Worker          *procx.Identity  `json:"worker,omitempty"`
-	Processes       []procx.Identity `json:"processes,omitempty"`
-	CancelRequested bool             `json:"cancelRequested,omitempty"`
-	CreatedAt       time.Time        `json:"createdAt"`
-	UpdatedAt       time.Time        `json:"updatedAt"`
-	FinishedAt      time.Time        `json:"finishedAt,omitempty"`
-	Error           string           `json:"error,omitempty"`
-	Worktree        *Worktree        `json:"worktree,omitempty"`
+	Repo            string            `json:"repo,omitempty"`
+	StartedAt       time.Time         `json:"startedAt,omitzero"`
+	ResumeOf        string            `json:"resumeOf,omitempty"`
+	HarnessHomes    map[string]string `json:"harnessHomes,omitempty"`
+	HarnessHome     string            `json:"harnessHome,omitempty"`
+	ConfigMode      string            `json:"configMode,omitempty"`
+	ID              string            `json:"id"`
+	Status          Status            `json:"status"`
+	Request         Request           `json:"request"`
+	PID             int               `json:"pid,omitempty"`
+	Worker          *procx.Identity   `json:"worker,omitempty"`
+	Processes       []procx.Identity  `json:"processes,omitempty"`
+	CancelRequested bool              `json:"cancelRequested,omitempty"`
+	CreatedAt       time.Time         `json:"createdAt"`
+	UpdatedAt       time.Time         `json:"updatedAt"`
+	FinishedAt      time.Time         `json:"finishedAt,omitempty"`
+	Error           string            `json:"error,omitempty"`
+	Worktree        *Worktree         `json:"worktree,omitempty"`
 }
 
 type Store struct{ Root string }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
 
 // NewCodexBackend returns a Backend that spawns a local `codex app-server`
@@ -45,6 +46,7 @@ type codexSession struct {
 	threadID string
 	info     SessionInfo
 	effort   string
+	hidden   bool // archive the thread on Close (StartOpts.Hidden)
 
 	events    chan Event
 	approvals chan ApprovalRequest
@@ -129,6 +131,7 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 		s.info = info
 	}
 	s.effort = opts.Effort
+	s.hidden = opts.Hidden
 
 	return s, nil
 }
@@ -149,11 +152,28 @@ func (s *codexSession) ThreadID() string { return s.threadID }
 
 func (s *codexSession) Info() SessionInfo { return s.info }
 
+// ErrArchive marks a failure to archive a Hidden session's thread on Close: the
+// session ended normally but stays visible in the user's thread list.
+var ErrArchive = errors.New("archive thread")
+
+// codexArchiveTimeout bounds the archive call in Close, so a wedged app-server
+// cannot hold up teardown.
+var codexArchiveTimeout = 5 * time.Second
+
 func (s *codexSession) Close() error {
 	s.closeOnce.Do(func() {
 		close(s.done)
 		if s.client != nil {
-			s.closeErr = s.client.Close()
+			var archiveErr error
+			if s.hidden && s.threadID != "" {
+				ctx, cancel := context.WithTimeout(context.Background(), codexArchiveTimeout)
+				_, err := s.client.rpc.call(ctx, "thread/archive", map[string]any{"threadId": s.threadID})
+				cancel()
+				if err != nil {
+					archiveErr = fmt.Errorf("codex: %w %s: %w", ErrArchive, s.threadID, err)
+				}
+			}
+			s.closeErr = errors.Join(archiveErr, s.client.Close())
 		}
 		s.dispatchMu.Lock()
 		s.closed = true
@@ -430,6 +450,12 @@ func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, erro
 
 // threadResume is a request (not a notification), so server failures propagate.
 func (c *codexClient) threadResumeOpts(ctx context.Context, threadID string, opts StartOpts) (SessionInfo, string, error) {
+	if opts.Hidden {
+		// codex refuses to resume an archived thread; a hidden job archived it on
+		// Close. A thread that is not archived makes this fail, which is fine:
+		// thread/resume reports any real problem.
+		_, _ = c.rpc.call(ctx, "thread/unarchive", map[string]any{"threadId": threadID})
+	}
 	params := codexStartParams(opts)
 	// Preserve the original resume frame when no cwd override was provided.
 	if opts.RepoDir == "" {

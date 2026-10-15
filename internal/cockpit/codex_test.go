@@ -1187,7 +1187,7 @@ func TestCodexDelegationProbe(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer log.Close()
-			sess, err := NewCodexBackend().Start(ctx, StartOpts{RepoDir: repo, Model: "gpt-6-luna", Access: tc.access, Stderr: log})
+			sess, err := NewCodexBackend().Start(ctx, StartOpts{RepoDir: repo, Model: "gpt-6-luna", Access: tc.access, Stderr: log, Hidden: true})
 			if err != nil {
 				t.Fatalf("Start: %v (stderr %s)", err, log.Name())
 			}
@@ -1377,5 +1377,88 @@ func TestCodexSessionOptionsReachProcess(t *testing.T) {
 				t.Fatalf("stderr = %q, %v", out, err)
 			}
 		})
+	}
+}
+
+// Delegated (Hidden) sessions must not pile up in the user's Codex thread list:
+// Close archives the thread before tearing down the app-server (Phase 0 left 28
+// visible "projects" in the Codex app, one per job worktree).
+func TestCodexHiddenSessionArchivesOnClose(t *testing.T) {
+	s := newFakeCodexServer(t)
+	var archived []string
+	var mu sync.Mutex
+	s.handle("thread/archive", func(m wireMessage) any {
+		var p struct {
+			ThreadID string `json:"threadId"`
+		}
+		_ = json.Unmarshal(m.Params, &p)
+		mu.Lock()
+		archived = append(archived, p.ThreadID)
+		mu.Unlock()
+		return map[string]any{}
+	})
+	sess := newCodexSessionWithClient(s.client, "th-1")
+	sess.hidden = true
+	if err := sess.Close(); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !reflect.DeepEqual(archived, []string{"th-1"}) {
+		t.Fatalf("archived = %v", archived)
+	}
+}
+
+// serve's cockpit sessions (Hidden unset) keep today's behavior: nothing archived.
+func TestCodexVisibleSessionIsNotArchived(t *testing.T) {
+	s := newFakeCodexServer(t)
+	sess := newCodexSessionWithClient(s.client, "th-1")
+	if err := sess.Close(); err != nil {
+		t.Fatal(err)
+	}
+	s.mu.Lock()
+	_, sent := s.seen["thread/archive"]
+	s.mu.Unlock()
+	if sent {
+		t.Fatal("a visible session must not be archived")
+	}
+}
+
+func TestCodexHiddenArchiveFailureIsReported(t *testing.T) {
+	s := newFakeCodexServer(t)
+	s.handleErr("thread/archive", -32600, "boom")
+	sess := newCodexSessionWithClient(s.client, "th-1")
+	sess.hidden = true
+	if err := sess.Close(); !errors.Is(err, ErrArchive) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+// Resuming a hidden job's thread must unarchive it first (codex refuses to resume
+// an archived session), and an unarchive error must not block the resume.
+func TestCodexHiddenResumeUnarchivesFirst(t *testing.T) {
+	s := newFakeCodexServer(t)
+	var order []string
+	var mu sync.Mutex
+	rec := func(name string, result any) func(wireMessage) any {
+		return func(wireMessage) any { mu.Lock(); order = append(order, name); mu.Unlock(); return result }
+	}
+	s.handle("thread/unarchive", rec("unarchive", map[string]any{}))
+	s.handle("thread/resume", rec("resume", map[string]any{"thread": map[string]any{"id": "old"}}))
+	if _, _, err := s.client.threadResumeOpts(context.Background(), "old", StartOpts{Hidden: true}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	got := append([]string(nil), order...)
+	mu.Unlock()
+	if !reflect.DeepEqual(got, []string{"unarchive", "resume"}) {
+		t.Fatalf("order = %v", got)
+	}
+
+	s2 := newFakeCodexServer(t)
+	s2.handleErr("thread/unarchive", -32600, "not archived")
+	s2.handle("thread/resume", func(wireMessage) any { return map[string]any{"thread": map[string]any{"id": "old"}} })
+	if _, _, err := s2.client.threadResumeOpts(context.Background(), "old", StartOpts{Hidden: true}); err != nil {
+		t.Fatalf("unarchive failure must not block resume: %v", err)
 	}
 }

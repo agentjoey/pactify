@@ -3,6 +3,7 @@ package sub
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -110,7 +111,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	defer file.Close()
 	log := &jobLog{w: file}
 	encoder := json.NewEncoder(log)
-	opts := cockpit.StartOpts{RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log}
+	opts := cockpit.StartOpts{RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
 	// Startup follows cancellation. Once started, Interrupt gets a grace period before Close.
 	sessionCtx, stopSession := context.WithCancel(context.WithoutCancel(ctx))
 	defer stopSession()
@@ -251,7 +252,11 @@ loop:
 	}
 	if !collector.TurnDone {
 		stopWork()
-		_ = sess.Close()
+	}
+	// Close now (the deferred Close is then a no-op) so a hidden session's
+	// archive failure can still reach the summary.
+	if err := sess.Close(); errors.Is(err, cockpit.ErrArchive) {
+		result.Warnings = append(result.Warnings, "会话归档失败，会留在 harness 自己的会话列表里："+err.Error())
 	}
 	info := cockpit.SessionInfo{}
 	if s, ok := sess.(cockpit.InfoSession); ok {

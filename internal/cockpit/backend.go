@@ -25,6 +25,10 @@ type StartOpts struct {
 	Access       Access
 	Env          []string  // 追加在继承环境之后；同名键以此为准
 	Stderr       io.Writer // nil → os.Stderr
+	// Hidden keeps a delegated session out of the user's own thread list: codex
+	// archives the thread when the session closes and unarchives it before a
+	// resume. Backends without such a list ignore it.
+	Hidden bool
 }
 
 // SessionInfo reports actual session parameters; empty fields were not reported.

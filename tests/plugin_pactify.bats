@@ -263,3 +263,92 @@ for term in ('file-only reviews', 'Every shell command', 'ends the turn', 'not a
 PY
   [ "$status" -eq 0 ]
 }
+
+@test "jobs skill exists with valid frontmatter" {
+  run python3 - "$P/skills/jobs/SKILL.md" <<'PY'
+import pathlib, re, sys
+text = pathlib.Path(sys.argv[1]).read_text()
+match = re.match(r'\A---\n(.*?)\n---\n', text, re.S)
+assert match, 'missing YAML frontmatter'
+fields = {}
+for line in match[1].splitlines():
+    key, value = line.split(':', 1)
+    assert key not in fields, key
+    fields[key] = value.strip()
+assert fields['name'] == 'jobs'
+# A plain single-line YAML scalar; reject syntax that needs quoting.
+assert re.fullmatch(r'[A-Za-z][A-Za-z0-9 ,()./-]+', fields['description'])
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "jobs is read-only and never executes lifecycle commands" {
+  skill="$P/skills/jobs/SKILL.md"
+  grep -q 'read-only' "$skill"
+  grep -q 'Never execute.*apply.*discard.*cancel' "$skill"
+  grep -q 'suggestions only' "$skill"
+  grep -q 'user or host' "$skill"
+}
+
+@test "jobs documents default all and single job invocations" {
+  skill="$P/skills/jobs/SKILL.md"
+  for invocation in '/jobs' '/pactify:jobs' '/jobs all' '/jobs <id>'; do
+    grep -Fq "$invocation" "$skill"
+  done
+  for command in 'pactify sub status --json' 'pactify sub status --all --json' 'pactify sub status <id> --json'; do
+    grep -Fq "$command" "$skill"
+  done
+}
+
+@test "jobs bounds list output and preserves summary field semantics" {
+  run python3 - "$P/skills/jobs/SKILL.md" <<'PY'
+import pathlib, sys
+text = pathlib.Path(sys.argv[1]).read_text()
+for term in ('10 rows', '20 rows', '30 lines', 'running', 'queued', 'Markdown table',
+             'Title / issue', 'Harness', 'Status', 'Repo / mode', 'Tokens', 'Activity / attention',
+             'activity.usagePartial', 'unknown', 'repo', 'runCwd', 'cwd', 'worktree.status',
+             'attention.kind', 'createdAt', 'before returning tool output', 'Never paste raw JSON',
+             'omitted', 'counts', 'No delegation jobs'):
+    assert term in text, term
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "jobs next steps require review and host acceptance before apply" {
+  run python3 - "$P/skills/jobs/SKILL.md" <<'PY'
+import pathlib, sys
+text = pathlib.Path(sys.argv[1]).read_text()
+for term in ('SHARED-DELEGATION', 'worktree_pending', 'failed', 'warnings', 'worktree.owner',
+             'complete diff', 'untracked files', 'personally rerun', 'full test suite',
+             'independent review', 'pactify sub apply <id>', 'pactify sub discard <id>',
+             'pactify sub cancel <id>', '--resume --worktree', 'original --cwd',
+             'most recent', 'same worktree', 'Do not start concurrent', 'discarded or missing'):
+    assert term in text, term
+assert text.index('complete diff') < text.index('pactify sub apply <id>')
+assert text.index('personally rerun') < text.index('pactify sub apply <id>')
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "jobs details include bounded result logs diff and resume links" {
+  skill="$P/skills/jobs/SKILL.md"
+  for term in 'pactify sub result <id>' 'pactify sub logs <id> --tail 20' 'changedFiles' 'addedLines' 'deletedLines' 'resumeOf' 'resumedBy' 'baseCommit' 'sessionId'; do
+    grep -Fq "$term" "$skill"
+  done
+  grep -q 'Do not recursively fetch' "$skill"
+}
+
+@test "READMEs and plugin description advertise jobs and all harnesses" {
+  for readme in "$P/README.md" "$REPO/README.md"; do
+    for term in '/jobs' '/pactify:jobs' '/jobs all' '/jobs <id>' 'read-only'; do
+      grep -Fq "$term" "$readme"
+    done
+  done
+  run python3 - "$P/.claude-plugin/plugin.json" <<'PY'
+import json, sys
+description = json.load(open(sys.argv[1]))['description']
+for term in ('codex', 'kimi', 'agy', '/jobs'):
+    assert term in description, term
+PY
+  [ "$status" -eq 0 ]
+}

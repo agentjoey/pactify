@@ -14,8 +14,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/agentjoey/pactify/internal/procx"
 )
 
 // NewCodexBackend returns a Backend that spawns a local `codex app-server`
@@ -94,7 +92,8 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 		cmd.Stderr = os.Stderr
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { killGroup(cmd); return nil }
+	group := &processGroup{}
+	cmd.Cancel = group.kill
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -104,13 +103,13 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 	if err != nil {
 		return nil, fmt.Errorf("codex: stdout pipe: %w", err)
 	}
-	if err := procx.Start(ctx, cmd); err != nil {
+	if err := group.start(ctx, cmd); err != nil {
 		return nil, fmt.Errorf("codex: start app-server: %w", err)
 	}
 
 	s.client = newCodexClient(stdin, stdout, func() error {
 		_ = stdin.Close()
-		killGroup(cmd)
+		_ = group.kill()
 		return nil
 	}, s.dispatchEvent, s.dispatchApproval)
 

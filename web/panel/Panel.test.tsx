@@ -110,26 +110,17 @@ describe("standalone panel", () => {
     expect(files).toHaveLength(2);
     expect(files[1].name).toContain("sp ace");
   });
-  it("opens SSE, appends lines, and closes on done and unmount", async () => {
-    const sources: {
-      onmessage: ((e: { data: string }) => void) | null;
-      onerror: (() => void) | null;
-      addEventListener: ReturnType<typeof vi.fn>;
-      close: ReturnType<typeof vi.fn>;
-    }[] = [];
-    class MockEventSource {
-      onmessage = null;
-      onerror = null;
-      addEventListener = vi.fn();
-      close = vi.fn();
-      constructor() {
-        sources.push(this);
-      }
-    }
-    vi.stubGlobal("EventSource", MockEventSource);
+  it("opens authenticated SSE with fetch, appends lines, and closes on done and unmount", async () => {
+    let controller: ReadableStreamDefaultController<Uint8Array>;
+    const cancelStream = vi.fn();
+    const body = new ReadableStream<Uint8Array>({
+      start(value) { controller = value; },
+      cancel: cancelStream,
+    });
+    sessionStorage.setItem("pactify-panel-session", "test-session");
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: string) => ({
+      vi.fn(async (input: string) => input.endsWith("/logs") ? new Response(body) : ({
         ok: true,
         json: async () =>
           input.endsWith("/diff")
@@ -165,17 +156,20 @@ describe("standalone panel", () => {
       screen.getByText("Job data stays on this device"),
     ).toBeInTheDocument();
     const { act } = await import("@testing-library/react");
-    act(() =>
-      sources[0].onmessage?.({ data: JSON.stringify("message live log") }),
-    );
+    await act(async () => {
+      controller!.enqueue(new TextEncoder().encode('data: "message live log"\n\n'));
+    });
     expect(screen.getByRole("log")).toHaveTextContent("message live log");
-    const done = sources[0].addEventListener.mock.calls.find(
-      (call) => call[0] === "done",
-    )?.[1];
-    act(() => done());
-    expect(sources[0].close).toHaveBeenCalled();
+    await act(async () => {
+      controller!.enqueue(new TextEncoder().encode('event: done\ndata: {}\n\n'));
+    });
+    expect(screen.getByText("Finished")).toBeInTheDocument();
+    expect(cancelStream).toHaveBeenCalled();
+    expect(vi.mocked(fetch).mock.calls.find(([path]) => String(path).endsWith("/logs"))?.[1]).toMatchObject({
+      credentials: "omit", headers: { Authorization: "Bearer test-session" },
+    });
     unmount();
-    expect(sources[0].close).toHaveBeenCalled();
+    sessionStorage.clear();
     window.location.hash = "";
     vi.unstubAllGlobals();
   });

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/agentjoey/pactify/internal/lockx"
 )
@@ -16,9 +17,11 @@ type homeLink struct {
 	Directory bool
 }
 
-// managedHome inspects metadata only. Paths below symlinked ancestors are never
-// created or removed; RemoveAll removes leaf links without traversing them.
+// managedHome inspects metadata only. os.Root confines mutations below Home;
+// RemoveAll removes leaf links without traversing them.
 type managedHome struct {
+	use *os.File // Shared lease retained by prepareHarnessHomes until Cleanup.
+
 	Name               string
 	Home               string
 	Source             string
@@ -174,17 +177,61 @@ func (m *managedHome) openRoot() (*os.Root, error) {
 	return root, nil
 }
 
-func (m *managedHome) Prepare(ctx context.Context) (prepareErr error) {
+func (m *managedHome) Prepare(ctx context.Context) error { return m.prepare(ctx, false) }
+
+// The mutation lock serializes setup/cleanup. The separate usage lock permits
+// concurrent jobs, but only an exclusive holder may remove existing entries.
+func (m *managedHome) usageLock() (*os.File, bool, error) {
+	if err := os.MkdirAll(filepath.Dir(m.Home), 0700); err != nil {
+		return nil, false, err
+	}
+	f, err := os.OpenFile(m.Home+".use.lock", os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return nil, false, err
+	}
+	err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	if err == nil {
+		return f, true, nil
+	}
+	if err != syscall.EWOULDBLOCK {
+		f.Close()
+		return nil, false, err
+	}
+	// All lock conversions happen under the mutation lock, so this cannot wait
+	// behind another setup/cleanup holding an exclusive usage lock.
+	if err = syscall.Flock(int(f.Fd()), syscall.LOCK_SH); err != nil {
+		f.Close()
+		return nil, false, err
+	}
+	return f, false, nil
+}
+func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr error) {
 	release, err := lockx.Acquire(ctx, m.Home+".lock")
 	if err != nil {
 		return err
 	}
 	defer release()
+	use, exclusive, err := m.usageLock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if prepareErr == nil && retain {
+			if err := syscall.Flock(int(use.Fd()), syscall.LOCK_SH); err != nil {
+				prepareErr = err
+				use.Close()
+				return
+			}
+			m.use = use
+		} else {
+			use.Close()
+		}
+	}()
 	if err = m.guard(); err != nil {
 		return err
 	}
 	defer func() {
-		if prepareErr != nil {
+		if prepareErr != nil && exclusive {
 			if warnings := m.cleanupEntries(); len(warnings) > 0 {
 				prepareErr = fmt.Errorf("%w; %s", prepareErr, strings.Join(warnings, "; "))
 			}
@@ -228,7 +275,7 @@ func (m *managedHome) Prepare(ctx context.Context) (prepareErr error) {
 	if err = root.Chmod(".", 0700); err != nil {
 		return err
 	}
-	if m.Mirror {
+	if m.Mirror && exclusive {
 		entries, err := os.ReadDir(m.Home)
 		if err != nil {
 			return err
@@ -254,6 +301,15 @@ func (m *managedHome) Prepare(ctx context.Context) (prepareErr error) {
 		if current, err := os.Readlink(path); err == nil && current == target {
 			continue
 		}
+		// A running harness may have replaced a link by atomic rename. Preserve
+		// that private copy until the last user releases its shared lease.
+		if !exclusive {
+			if _, e := root.Lstat(name); e == nil {
+				continue
+			} else if !os.IsNotExist(e) {
+				return e
+			}
+		}
 		if err = root.MkdirAll(filepath.Dir(name), 0700); err != nil {
 			return err
 		}
@@ -265,6 +321,9 @@ func (m *managedHome) Prepare(ctx context.Context) (prepareErr error) {
 		}
 	}
 	for _, name := range m.Remove {
+		if !exclusive {
+			continue
+		}
 		if _, err := m.path(name); err != nil {
 			return err
 		}
@@ -340,6 +399,18 @@ func (m *managedHome) Cleanup() []string {
 		return []string{fmt.Sprintf("%s home link check failed: %v", m.Name, err)}
 	}
 	defer release()
+	if m.use != nil {
+		m.use.Close()
+		m.use = nil
+	}
+	use, exclusive, err := m.usageLock()
+	if err != nil {
+		return []string{fmt.Sprintf("%s home link check failed: %v", m.Name, err)}
+	}
+	defer use.Close()
+	if !exclusive {
+		return nil
+	}
 	return m.cleanupEntries()
 }
 func (m *managedHome) cleanupEntries() []string {
@@ -442,7 +513,7 @@ func prepareHarnessHomes(ctx context.Context, h *harnessHome, primary string, sa
 		if minimal {
 			layout := d.Layout(home, source)
 			layouts = append(layouts, layout)
-			if err = layout.Prepare(ctx); err != nil {
+			if err = layout.prepare(ctx, true); err != nil {
 				return primary, homes, env, layouts, err
 			}
 		}

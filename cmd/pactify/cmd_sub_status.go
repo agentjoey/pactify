@@ -79,6 +79,9 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 				continue
 			}
 			st, err := store.Recover(entry.Name())
+			if os.IsNotExist(err) {
+				continue
+			}
 			if err != nil {
 				return 1, err
 			}

@@ -106,7 +106,9 @@ Pactify never reads or copies their contents; missing originals require `kimi lo
 The managed home has no `mcp.json`, and delegated sessions stay outside your own
 session list without starting `kimi web`. Links are repaired before each launch;
 if kimi replaces one with a file or directory, the job warns and deletes that
-private copy afterward. Keep the shared directory for resume. Kimi resume retains
+private copy when no other job is using the directory. Cleanup is deferred while
+another job holds a shared usage lock; the next exclusive setup or cleanup removes
+any stale credential copy. Keep the shared directory for resume. Kimi resume retains
 the recorded home and requires the original config mode; use `--with-user-config`
 for user-config sessions, or start fresh to switch modes. User-config kimi jobs
 use your home and the existing archive workflow. `sub doctor` verifies the default
@@ -126,10 +128,16 @@ The default `HOME=$PACTIFY_HOME/harness-homes/agy` (0700) mirrors top-level user
 entries with symlinks, excluding `.gemini`. Its private `.gemini/antigravity-cli`
 links only `antigravity-oauth-token` to the original; token contents are never read
 or copied by pactify. User sessions and integrations stay separate. Links refresh
-under a lock before launch; replaced copies are removed with a warning after exit.
+under a lock before launch; jobs hold a shared usage lock throughout their run.
+Stale entries and replaced copies are removed only when no other job is using the
+managed home, with a warning for private copies removed after exit.
 Resume keeps the recorded home. `--with-user-config` restores real HOME and warns
 that agy sessions are visible in the user's list (no archive API).
 Run `pactify sub doctor agy` for compatibility checks.
+
+Keep `$PACTIFY_HOME` and the ancestors of managed homes as real directories.
+Do not manually symlink them into user data: confinement starts at the managed
+home itself and does not protect data redirected by an ancestor symlink.
 
 ### Local job panel (read-only)
 
@@ -139,9 +147,11 @@ pactify sub panel --port 17100 --no-open # print the URL without opening it
 ```
 
 Open the printed `http://127.0.0.1:<port>/?token=…` URL. Each launch generates a
-new random token; the first browser visit exchanges it for an HttpOnly,
-SameSite=Strict session cookie and redirects to a URL without the token. All
-APIs require that cookie or `Authorization: Bearer <token>`. The server only
+one-time launch token; its first use returns an independent session token.
+Reuse of the launch URL returns 401. The frontend removes the launch token from
+the URL and keeps the session in `sessionStorage`, so refreshing the tab still
+works. APIs and the fetch-based log stream send `Authorization: Bearer <session>`;
+no authentication cookie is issued or accepted. The server only
 listens on `127.0.0.1`; Ctrl-C stops it. Job data comes from `$PACTIFY_HOME/jobs`
 (default `~/.pactify/jobs`).
 

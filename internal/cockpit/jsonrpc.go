@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/agentjoey/pactify/internal/procx"
 )
 
 // rpcConn is a generic JSON-RPC 2.0 connection over newline-delimited JSON.
@@ -300,13 +302,33 @@ func filteredEnviron() []string {
 	return out
 }
 
-func killGroup(cmd *exec.Cmd) {
-	if cmd.Process == nil {
-		return
+// processGroup binds cancellation and Close to the identity captured at spawn.
+// Cancel may run concurrently with Start, before Start has returned to its caller.
+type processGroup struct {
+	mu       sync.Mutex
+	identity procx.Identity
+}
+
+func (p *processGroup) start(ctx context.Context, cmd *exec.Cmd) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if err := procx.Start(ctx, cmd); err != nil {
+		return err
 	}
-	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil {
-		_ = syscall.Kill(-pgid, syscall.SIGKILL)
-		return
+	identity, err := procx.Inspect(cmd.Process.Pid)
+	if err != nil {
+		// Unknown identity is never authority to signal, even after a successful spawn.
+		go cmd.Wait()
+		return fmt.Errorf("inspect process identity: %w", err)
 	}
-	_ = cmd.Process.Kill()
+	p.identity = identity
+	return nil
+}
+func (p *processGroup) kill() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return killGroup(p.identity)
+}
+func killGroup(identity procx.Identity) error {
+	return identity.Signal(syscall.SIGKILL, true)
 }

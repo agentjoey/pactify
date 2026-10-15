@@ -82,10 +82,14 @@ func singleLogLine(text string) string {
 // logReader retains partial lines across EOF. A growing log is not a stream
 // whose EOF terminates a record; only newline commits a line while following.
 type logReader struct {
-	path    string
-	file    *os.File
-	reader  *bufio.Reader
-	pending string
+	path      string
+	file      *os.File
+	reader    *bufio.Reader
+	pending   []byte
+	window    int64
+	unlimited bool
+	discard   bool
+	truncated bool
 }
 
 func (r *logReader) close() {
@@ -104,16 +108,54 @@ func (r *logReader) drain(emit func(string) error) error {
 			return err
 		}
 		r.file, r.reader = file, bufio.NewReader(file)
-	}
-	for {
-		chunk, err := r.reader.ReadString('\n')
-		r.pending += chunk
-		if strings.HasSuffix(r.pending, "\n") {
-			line := strings.TrimSuffix(r.pending, "\n")
-			r.pending = ""
-			if err := emit(line); err != nil {
+		if r.window > 0 {
+			info, err := file.Stat()
+			if err != nil {
 				return err
 			}
+			if info.Size() > r.window {
+				if _, err := file.Seek(info.Size()-r.window-1, io.SeekStart); err != nil {
+					return err
+				}
+				// Read the byte before the window to distinguish a record boundary from
+				// a partial first record. Never render a fragment as a complete event.
+				b, err := r.reader.ReadByte()
+				if err != nil {
+					return err
+				}
+				r.discard = b != '\n'
+			}
+		}
+	}
+	for {
+		chunk, err := r.reader.ReadSlice('\n')
+		complete := len(chunk) > 0 && chunk[len(chunk)-1] == '\n'
+		if complete {
+			chunk = chunk[:len(chunk)-1]
+		}
+		if !r.discard && len(chunk) > 0 {
+			const maxLine = 64 << 10
+			if !r.unlimited && len(chunk) > maxLine-len(r.pending) {
+				chunk = chunk[:maxLine-len(r.pending)]
+				r.truncated = true
+			}
+			r.pending = append(r.pending, chunk...)
+		}
+		if complete {
+			if !r.discard {
+				line := string(r.pending)
+				if r.truncated {
+					line += "… [line truncated]"
+				}
+				if err := emit(line); err != nil {
+					return err
+				}
+			}
+			r.pending = r.pending[:0]
+			r.discard, r.truncated = false, false
+		}
+		if errors.Is(err, bufio.ErrBufferFull) {
+			continue
 		}
 		if errors.Is(err, io.EOF) {
 			return nil
@@ -138,7 +180,10 @@ func (s Store) Logs(ctx context.Context, id string, out io.Writer, options LogOp
 	if err != nil {
 		return err
 	}
-	reader := &logReader{path: s.LogPath(id)}
+	reader := &logReader{path: s.LogPath(id), unlimited: !options.Follow}
+	if options.Follow && options.Tail >= 0 {
+		reader.window = 1 << 20
+	}
 	defer reader.close()
 	emit := func(line string) error { _, err := fmt.Fprintln(out, line); return err }
 	renderer := &logRenderer{raw: options.Raw}
@@ -163,11 +208,11 @@ func (s Store) Logs(ctx context.Context, id string, out io.Writer, options LogOp
 	if err := reader.drain(acceptSnapshot); err != nil {
 		return err
 	}
-	if (!options.Follow || Terminal(initial.Status)) && reader.pending != "" {
-		if err := acceptSnapshot(reader.pending); err != nil {
+	if (!options.Follow || Terminal(initial.Status)) && len(reader.pending) > 0 {
+		if err := acceptSnapshot(string(reader.pending)); err != nil {
 			return err
 		}
-		reader.pending = ""
+		reader.pending = reader.pending[:0]
 	}
 	if !options.Follow || Terminal(initial.Status) {
 		if err := renderer.flush(snapshot); err != nil {
@@ -201,8 +246,8 @@ func (s Store) Logs(ctx context.Context, id string, out io.Writer, options LogOp
 		if Terminal(st.Status) {
 			// Terminal state is published after the writer closes; an unterminated
 			// stderr fragment is now final, rather than a partially written event.
-			if reader.pending != "" {
-				if err := accept(reader.pending); err != nil {
+			if len(reader.pending) > 0 {
+				if err := accept(string(reader.pending)); err != nil {
 					return err
 				}
 			}

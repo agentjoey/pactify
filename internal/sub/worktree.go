@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/agentjoey/pactify/internal/procx"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -293,7 +294,7 @@ func (s Store) worktreeIdle(w *Worktree) error {
 			return fmt.Errorf("job %s is still running; run pactify sub cancel %s first", st.ID, st.ID)
 		}
 		// Terminal output alone does not guarantee that every harness exited.
-		for _, p := range st.Processes {
+		for _, p := range append(append([]procx.Identity(nil), st.Processes...), st.Descendants...) {
 			alive, err := p.Alive()
 			if err != nil {
 				return err

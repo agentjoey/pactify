@@ -36,6 +36,9 @@ type Request struct {
 }
 
 type State struct {
+	Repo            string           `json:"repo,omitempty"`
+	StartedAt       time.Time        `json:"startedAt,omitzero"`
+	ResumeOf        string           `json:"resumeOf,omitempty"`
 	HarnessHome     string           `json:"harnessHome,omitempty"`
 	ConfigMode      string           `json:"configMode,omitempty"`
 	ID              string           `json:"id"`
@@ -99,6 +102,9 @@ func (s Store) Create(id string, req Request) (State, error) {
 	}
 	now := time.Now().UTC()
 	st := State{ID: id, Status: StatusQueued, Request: req, CreatedAt: now, UpdatedAt: now}
+	if req.Cwd != "" {
+		st.Repo, _ = repositoryRoot(req.Cwd)
+	}
 	h, _ := Lookup(req.Harness)
 	st.ConfigMode = h.configMode(req.WithUserConfig)
 	if err := s.Save(st); err != nil {

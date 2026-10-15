@@ -95,6 +95,8 @@ func newSubCmd() *cobra.Command {
 		return nil
 	}, Run: func(c *cobra.Command, a []string) { code, err := subStatus(c, a, statusJSON); subExit(c, code, err) }}
 	status.Flags().BoolVar(&statusJSON, "json", false, "Print JSON")
+	status.Flags().Bool("all", false, "Show all jobs instead of the 10 most recent")
+	status.Flags().String("repo", "", "Filter jobs by their original repository root")
 	var resultJSON bool
 	result := &cobra.Command{Use: "result <job>", Short: "Read a finished job's result", Args: subArgs(1), Run: func(c *cobra.Command, a []string) {
 		store, err := sub.DefaultStore()

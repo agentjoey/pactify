@@ -23,18 +23,38 @@ func subJobError(store sub.Store, id string, err error) (int, error) {
 	return 1, err
 }
 
-type subStatusRow struct {
-	sub.State
-	Duration string `json:"duration"`
+// Keep list jobId/cwd and the single-job State envelope for existing callers.
+type subStatusListRow struct {
+	sub.JobSummary
+	JobID  string `json:"jobId"`
+	Cwd    string `json:"cwd"`
+	RunCwd string `json:"runCwd"`
 }
 
-type subStatusListRow struct {
-	JobID      string     `json:"jobId"`
-	Status     sub.Status `json:"status"`
-	Harness    string     `json:"harness"`
-	Cwd        string     `json:"cwd"`
-	CreatedAt  time.Time  `json:"createdAt"`
-	FinishedAt *time.Time `json:"finishedAt,omitempty"`
+func subStatusSingle(st sub.State, summary sub.JobSummary) (map[string]json.RawMessage, error) {
+	data, err := json.Marshal(st)
+	if err != nil {
+		return nil, err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return nil, err
+	}
+	data, err = json.Marshal(summary)
+	if err != nil {
+		return nil, err
+	}
+	var extra map[string]json.RawMessage
+	if err := json.Unmarshal(data, &extra); err != nil {
+		return nil, err
+	}
+	for key, value := range extra {
+		fields[key] = value
+	}
+	// The shared model uses actual cwd; CLI compatibility exposes it as runCwd.
+	fields["cwd"], _ = json.Marshal(st.Request.Cwd)
+	fields["runCwd"], _ = json.Marshal(summary.Cwd)
+	return fields, nil
 }
 
 func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
@@ -72,33 +92,58 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 		})
 	}
 	now := time.Now()
+	peers := states
+	if len(ids) > 0 {
+		// Reverse links include every recorded child, even when only one job is shown.
+		peers = append([]sub.State(nil), states...)
+		entries, readErr := os.ReadDir(store.Root)
+		if readErr != nil {
+			return 1, readErr
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() || entry.Name() == ids[0] {
+				continue
+			}
+			if st, loadErr := store.Load(entry.Name()); loadErr == nil {
+				peers = append(peers, st)
+			}
+		}
+	}
+	repo, _ := c.Flags().GetString("repo")
+	if repo != "" {
+		target := sub.NormalizeRepo(repo)
+		filtered := make([]sub.State, 0, len(states))
+		for _, st := range states {
+			if root := sub.JobRepo(st); root != "" && sub.NormalizeRepo(root) == target {
+				filtered = append(filtered, st)
+			}
+		}
+		states = filtered
+		if len(ids) > 0 && len(states) == 0 {
+			return 2, fmt.Errorf("job %s does not belong to repository %q", ids[0], repo)
+		}
+	}
+	all, _ := c.Flags().GetBool("all")
 	visible := states
-	if len(visible) > 10 {
+	if !all && len(visible) > 10 {
 		visible = visible[:10]
 	}
-	rows := make([]subStatusRow, 0, len(visible))
+	rows := make([]subStatusListRow, 0, len(visible))
 	for _, st := range visible {
-		end := st.FinishedAt
-		if end.IsZero() {
-			end = now
-		}
-		rows = append(rows, subStatusRow{st, end.Sub(st.CreatedAt).Round(time.Second).String()})
+		summary := store.Summarize(st, peers, now)
+		rows = append(rows, subStatusListRow{JobSummary: summary, JobID: st.ID, Cwd: st.Request.Cwd, RunCwd: summary.Cwd})
 	}
 	if jsonOut {
 		if len(ids) > 0 {
-			return 0, subJSON(c, rows[0])
-		}
-		list := make([]subStatusListRow, 0, len(rows))
-		for _, row := range rows {
-			item := subStatusListRow{JobID: row.ID, Status: row.Status, Harness: row.Request.Harness, Cwd: row.Request.Cwd, CreatedAt: row.CreatedAt}
-			if !row.FinishedAt.IsZero() {
-				finished := row.FinishedAt
-				item.FinishedAt = &finished
+			single, err := subStatusSingle(visible[0], rows[0].JobSummary)
+			if err != nil {
+				return 1, err
 			}
-			list = append(list, item)
+			return 0, subJSON(c, single)
 		}
-		return 0, subJSON(c, list)
+		return 0, subJSON(c, rows)
 	}
+
 	summary := ""
 	if len(ids) == 0 {
 		summary, err = subUsageSummary(store, states, now)
@@ -107,7 +152,11 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 		}
 	}
 	for _, row := range rows {
-		if _, err := fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s  %s\n", row.ID, row.Status, row.Request.Harness, row.Duration); err != nil {
+		marker := ""
+		if len(row.Attention) > 0 {
+			marker = "  ⚠"
+		}
+		if _, err := fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s  %s  %s%s\n", row.ID, row.Status, row.Harness, row.Duration, row.Title, marker); err != nil {
 			return 1, err
 		}
 	}

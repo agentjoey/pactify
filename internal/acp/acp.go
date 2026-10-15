@@ -215,14 +215,18 @@ func filteredEnviron() []string {
 
 // Spawn starts command with args in dir, appends env onto the inherited
 // environment, and takes over the child's stdin/stdout for the JSON-RPC
-// connection. The child's stderr streams to the parent (so agent diagnostics stay
-// visible). The returned Client is live immediately; when the process exits its
-// stdout closes and the client goes dead, failing all pending and future calls.
-func Spawn(ctx context.Context, command string, args, env []string, dir string) (*Client, error) {
+// connection. The child's stderr streams to the optional writer, defaulting to
+// os.Stderr when omitted or nil. The returned Client is live immediately; when the
+// process exits its stdout closes and the client goes dead, failing all pending
+// and future calls.
+func Spawn(ctx context.Context, command string, args, env []string, dir string, stderr ...io.Writer) (*Client, error) {
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = dir
 	cmd.Env = append(filteredEnviron(), env...)
 	cmd.Stderr = os.Stderr
+	if len(stderr) > 0 && stderr[0] != nil {
+		cmd.Stderr = stderr[0]
+	}
 	// Run the child in its own process group so teardown can reap the whole
 	// tree (ACP-1): most kinds launch via `npx`, which forks a node grandchild
 	// that would survive a plain Process.Kill as an orphaned live agent — still

@@ -597,6 +597,46 @@ func TestACPBackendOptionsReachProcess(t *testing.T) {
 		})
 	}
 }
+func TestACPBackendStderrReachesWriter(t *testing.T) {
+	setupACPProcess(t)
+	for _, resume := range []bool{false, true} {
+		t.Run(fmt.Sprintf("resume=%v", resume), func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			stderr, err := os.CreateTemp(t.TempDir(), "stderr")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer stderr.Close()
+			opts := StartOpts{RepoDir: t.TempDir(), Env: []string{"COCKPIT_ACP_MARKER=stderr-capture"}, Stderr: stderr}
+			b := newACPBackend("kimi-cli")
+			var sess Session
+			if resume {
+				r, ok := b.(OptsResumer)
+				if !ok {
+					t.Fatal("ACP backend lacks ResumeWith")
+				}
+				sess, err = r.ResumeWith(ctx, "s1", opts)
+			} else {
+				sess, err = b.Start(ctx, opts)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer sess.Close()
+			// The helper writes stderr before answering initialize, so both
+			// session entry points must have captured it before returning.
+			got, err := os.ReadFile(stderr.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != "acp-stderr:stderr-capture\n" {
+				t.Fatalf("captured stderr = %q, want %q", got, "acp-stderr:stderr-capture\n")
+			}
+		})
+	}
+}
+
 func TestACPBackendDefaultPreservesRequests(t *testing.T) {
 	setupACPProcess(t)
 	for _, resume := range []bool{false, true} {

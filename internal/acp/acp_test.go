@@ -1,6 +1,7 @@
 package acp
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -13,6 +14,258 @@ import (
 	"testing"
 	"time"
 )
+
+const kimiNewSession = `{"sessionId":"sess-1",
+ "configOptions":[
+  {"type":"select","id":"model","name":"Model","category":"model","currentValue":"kimi-code/k3-256k",
+   "options":[{"value":"kimi-code/kimi-for-coding","name":"K2.8 Preview"},{"value":"kimi-code/k3-256k","name":"K3-256k"}]},
+  {"type":"select","id":"thinking","name":"Thinking","category":"thought_level","currentValue":"high",
+   "options":[{"value":"low","name":"Thinking Low"},{"value":"high","name":"Thinking High"}]}],
+ "modes":{"currentModeId":"default","availableModes":[{"id":"default","name":"Default"},{"id":"plan","name":"Plan","description":"Plan without changes"}]}}`
+
+func TestNewSessionDetailedParsesConfigAndModes(t *testing.T) {
+	fs := &configServer{onMethod: map[string]func(*fakeServer, json.RawMessage) any{
+		"session/new": func(_ *fakeServer, p json.RawMessage) any {
+			var got map[string]any
+			if err := json.Unmarshal(p, &got); err != nil {
+				t.Error(err)
+			}
+			if got["cwd"] != "/work/repo" || len(got) != 2 {
+				t.Errorf("session/new params = %s", p)
+			}
+			if servers, ok := got["mcpServers"].([]any); !ok || len(servers) != 0 {
+				t.Errorf("mcpServers = %#v, want empty array", got["mcpServers"])
+			}
+			return json.RawMessage(kimiNewSession)
+		},
+	}}
+	c := newConfigTestClient(t, fs)
+	if _, err := c.Initialize(ctx(t)); err != nil {
+		t.Fatal(err)
+	}
+	res, err := c.NewSessionDetailed(ctx(t), "/work/repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.SessionID != "sess-1" || c.cwd != "/work/repo" {
+		t.Fatalf("session = %+v, cwd = %q", res, c.cwd)
+	}
+	m, ok := FindConfig(res.ConfigOptions, "model")
+	if !ok || m.Name != "Model" || m.Type != "select" || m.CurrentValue != "kimi-code/k3-256k" || len(m.Options) != 2 || m.Options[0].Value != "kimi-code/kimi-for-coding" || m.Options[0].Name != "K2.8 Preview" {
+		t.Fatalf("model option = %+v", m)
+	}
+	if th, ok := FindConfig(res.ConfigOptions, "thought_level"); !ok || th.ID != "thinking" {
+		t.Fatalf("thought_level lookup by category failed: %+v", th)
+	}
+	if res.CurrentModeID != "default" || len(res.Modes) != 2 || res.Modes[1].ID != "plan" || res.Modes[1].Description != "Plan without changes" {
+		t.Fatalf("modes = %+v current=%q", res.Modes, res.CurrentModeID)
+	}
+}
+
+func TestNewSessionDetailedOptionalFields(t *testing.T) {
+	c := newConfigTestClient(t, &configServer{})
+	res, err := c.NewSessionDetailed(ctx(t), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.SessionID != "sess-1" || len(res.ConfigOptions) != 0 || len(res.Modes) != 0 || res.CurrentModeID != "" || c.cwd != "." {
+		t.Fatalf("session = %+v, cwd = %q", res, c.cwd)
+	}
+}
+
+func TestSetConfigOptionSendsIdsAndReturnsOptions(t *testing.T) {
+	var got map[string]any
+	fs := &configServer{onMethod: map[string]func(*fakeServer, json.RawMessage) any{
+		"session/set_config_option": func(_ *fakeServer, p json.RawMessage) any {
+			if err := json.Unmarshal(p, &got); err != nil {
+				t.Error(err)
+			}
+			return map[string]any{"configOptions": []any{map[string]any{"id": "model", "category": "model", "currentValue": "kimi-code/kimi-for-coding"}}}
+		},
+	}}
+	c := newConfigTestClient(t, fs)
+	opts, err := c.SetConfigOption(ctx(t), "sess-1", "model", "kimi-code/kimi-for-coding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 || got["sessionId"] != "sess-1" || got["configId"] != "model" || got["value"] != "kimi-code/kimi-for-coding" {
+		t.Fatalf("params = %v", got)
+	}
+	if len(opts) != 1 || opts[0].CurrentValue != "kimi-code/kimi-for-coding" {
+		t.Fatalf("opts = %+v", opts)
+	}
+}
+
+func TestSetModeAndCancel(t *testing.T) {
+	var got map[string]any
+	fs := &configServer{onMethod: map[string]func(*fakeServer, json.RawMessage) any{
+		"session/set_mode": func(_ *fakeServer, p json.RawMessage) any {
+			if err := json.Unmarshal(p, &got); err != nil {
+				t.Error(err)
+			}
+			return map[string]any{}
+		},
+	}}
+	c := newConfigTestClient(t, fs)
+	if err := c.SetMode(ctx(t), "sess-1", "plan"); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got["sessionId"] != "sess-1" || got["modeId"] != "plan" {
+		t.Fatalf("set_mode params = %v", got)
+	}
+	if err := c.Cancel("sess-1"); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, func() bool { return fs.sawNotification("session/cancel") })
+	fs.mu.Lock()
+	frame := fs.notifications[0]
+	fs.mu.Unlock()
+	var notification map[string]json.RawMessage
+	if err := json.Unmarshal(frame, &notification); err != nil {
+		t.Fatal(err)
+	}
+	if len(notification) != 3 || string(notification["jsonrpc"]) != `"2.0"` || string(notification["params"]) != `{"sessionId":"sess-1"}` {
+		t.Fatalf("cancel frame = %s, want JSON-RPC notification without id", frame)
+	}
+	if _, err := c.NewSession(ctx(t), "."); err != nil {
+		t.Fatalf("client unusable after cancel: %v", err)
+	}
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Cancel("sess-1"); err == nil {
+		t.Fatal("Cancel on closed client should fail")
+	}
+}
+
+func TestFindConfigPrefersIDOverCategory(t *testing.T) {
+	opts := []ConfigOption{{ID: "other", Category: "model"}, {ID: "model", Category: "custom"}}
+	if got, ok := FindConfig(opts, "model"); !ok || got.ID != "model" {
+		t.Fatalf("FindConfig = %+v, %v", got, ok)
+	}
+	if got, ok := FindConfig(opts, "missing"); ok || got.ID != "" {
+		t.Fatalf("missing FindConfig = %+v, %v", got, ok)
+	}
+	if _, ok := FindConfig(nil, "model"); ok {
+		t.Fatal("nil options matched")
+	}
+}
+
+func TestSessionConfigurationErrors(t *testing.T) {
+	operations := []struct {
+		method string
+		call   func(*Client) error
+	}{
+		{"session/new", func(c *Client) error { _, err := c.NewSessionDetailed(ctx(t), "."); return err }},
+		{"session/set_config_option", func(c *Client) error { _, err := c.SetConfigOption(ctx(t), "sess-1", "model", "bad"); return err }},
+		{"session/set_mode", func(c *Client) error { return c.SetMode(ctx(t), "sess-1", "bad") }},
+	}
+	for _, op := range operations {
+		t.Run(op.method, func(t *testing.T) {
+			fs := &configServer{onMethod: map[string]func(*fakeServer, json.RawMessage) any{
+				op.method: func(*fakeServer, json.RawMessage) any { return &rpcError{Code: -32602, Message: "unsupported value"} },
+			}}
+			err := op.call(newConfigTestClient(t, fs))
+			var rpcErr *rpcError
+			if !errors.As(err, &rpcErr) || rpcErr.Code != -32602 || rpcErr.Message != "unsupported value" {
+				t.Fatalf("error = %v, want original RPC error", err)
+			}
+		})
+		if op.method == "session/set_mode" {
+			continue // set_mode has no result fields to decode.
+		}
+		t.Run(op.method+"/malformed_result", func(t *testing.T) {
+			fs := &configServer{onMethod: map[string]func(*fakeServer, json.RawMessage) any{
+				op.method: func(*fakeServer, json.RawMessage) any { return "unexpected result type" },
+			}}
+			if err := op.call(newConfigTestClient(t, fs)); err == nil || !strings.Contains(err.Error(), op.method+" result:") {
+				t.Fatalf("error = %v, want contextual decode error", err)
+			}
+		})
+	}
+}
+
+// Extend the shared fake through composition to keep this task's changes in
+// acp_test.go; unhandled requests retain the existing server's behavior.
+type configServer struct {
+	fakeServer
+	onMethod      map[string]func(*fakeServer, json.RawMessage) any
+	notified      []string
+	notifications []json.RawMessage
+}
+
+func (fs *configServer) sawNotification(method string) bool {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	for _, m := range fs.notified {
+		if m == method {
+			return true
+		}
+	}
+	return false
+}
+
+func (fs *configServer) run() {
+	for {
+		line, err := fs.reqR.ReadBytes('\n')
+		if len(line) > 0 {
+			var m struct {
+				ID     *json.RawMessage `json:"id"`
+				Method string           `json:"method"`
+				Params json.RawMessage  `json:"params"`
+			}
+			if json.Unmarshal(line, &m) == nil {
+				switch {
+				case m.Method != "" && m.ID == nil:
+					fs.mu.Lock()
+					fs.notified = append(fs.notified, m.Method)
+					fs.notifications = append(fs.notifications, append(json.RawMessage(nil), line...))
+					fs.mu.Unlock()
+				case m.ID != nil && fs.onMethod[m.Method] != nil:
+					result := fs.onMethod[m.Method](&fs.fakeServer, m.Params)
+					if rpcErr, ok := result.(*rpcError); ok {
+						fs.replyErr(*m.ID, rpcErr.Code, rpcErr.Message)
+					} else {
+						fs.reply(*m.ID, result)
+					}
+				default:
+					fs.handle(line)
+				}
+			}
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
+func newConfigTestClient(t *testing.T, fs *configServer) *Client {
+	t.Helper()
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	fs.reqR, fs.respW = bufio.NewReader(inR), outW
+	fs.perms = map[int]chan json.RawMessage{}
+	go fs.run()
+	c := newClient(inW, outR, func() error {
+		_ = inW.Close()
+		_ = outW.Close()
+		return nil
+	}, ".")
+	t.Cleanup(func() { _ = c.Close() })
+	return c
+}
+
+func waitFor(t *testing.T, ready func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for !ready() {
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for notification")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
 
 func ctx(t *testing.T) context.Context {
 	t.Helper()

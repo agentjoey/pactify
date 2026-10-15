@@ -32,6 +32,8 @@ setup() {
     grep -q '^name: '"$h"'$' "$P/skills/$h/SKILL.md"
     grep -q 'run_in_background' "$P/skills/$h/SKILL.md"
     grep -q 'pactify sub wait' "$P/skills/$h/SKILL.md"
+    # An explicit /<harness> invocation must delegate regardless of task size (Phase 0 smoke, 2026-10-15).
+    grep -q 'invoked this skill explicitly' "$P/skills/$h/SKILL.md"
   done
 }
 

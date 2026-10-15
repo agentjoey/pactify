@@ -51,7 +51,11 @@ func (r Result) Markdown() string {
 		fmt.Fprintf(&b, "✗ %s %s\n", r.Harness, r.Status)
 	}
 	fmt.Fprintf(&b, "\nHarness: %s · CLI: %s\n", r.Harness, r.CLIVersion)
-	fmt.Fprintf(&b, "模型: %s → %s", r.ModelRequested, r.ModelActual)
+	requested := r.ModelRequested
+	if requested == "" {
+		requested = "（默认）"
+	}
+	fmt.Fprintf(&b, "模型: %s → %s", requested, r.ModelActual)
 	if !r.ModelVerified {
 		b.WriteString("（未经独立核实）")
 	}

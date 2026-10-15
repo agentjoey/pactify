@@ -68,3 +68,11 @@ func TestMarkdownIncludesMetadataAndLimitsFiles(t *testing.T) {
 		t.Fatalf("reply escaped its code fence:\n%s", md)
 	}
 }
+
+// No --model: the summary must say the harness default was used, not print an empty slot.
+func TestMarkdownNamesDefaultModelWhenNoneRequested(t *testing.T) {
+	r := Result{Status: StatusSucceeded, Harness: "codex", ModelActual: "gpt-6.1-sol", ModelVerified: true}
+	if md := r.Markdown(); !strings.Contains(md, "模型: （默认） → gpt-6.1-sol") {
+		t.Fatalf("model line:\n%s", md)
+	}
+}

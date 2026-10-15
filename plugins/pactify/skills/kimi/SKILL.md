@@ -5,9 +5,12 @@ description: Delegate a large coding task (multi-file change, investigation, or 
 
 # Delegate to kimi
 
-Use this only for **large** tasks: touching 3+ files, or needing exploration and test runs, or likely to take
-you more than ~10 minutes. Small edits: do them yourself — each delegation carries a fixed cost of tens of
-thousands of tokens on the callee side.
+**If the user invoked this skill explicitly (`/kimi` or `/pactify:kimi`), always delegate — whatever the task
+size. The user chose the harness; do not do the work yourself instead.**
+
+When you are deciding on your own whether to delegate, use kimi only for **large** tasks: touching 3+ files, or
+needing exploration and test runs, or likely to take you more than ~10 minutes. Small edits: do them yourself —
+each delegation carries a fixed cost of tens of thousands of tokens on the callee side.
 
 1. Write a self-contained brief. The callee starts cold and cannot see this conversation. Include:
    goal; relevant file paths; constraints (what must not change); acceptance criteria (exact commands to run);

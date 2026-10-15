@@ -36,6 +36,7 @@ type Request struct {
 }
 
 type State struct {
+	TempDirOwned    bool              `json:"tempDirOwned,omitempty"`
 	Repo            string            `json:"repo,omitempty"`
 	StartedAt       time.Time         `json:"startedAt,omitzero"`
 	ResumeOf        string            `json:"resumeOf,omitempty"`

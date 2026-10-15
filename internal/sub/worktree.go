@@ -474,6 +474,9 @@ func (s Store) DiscardWorktree(id string) error {
 			if err != nil || st.Worktree == nil || st.Worktree.Owner != w.Owner {
 				continue
 			}
+			if err := s.cleanupJobTemp(st.ID); err != nil {
+				return err
+			}
 			if err := s.WithState(context.Background(), st.ID, func(current *State) error {
 				current.Worktree.Discarded = true
 				current.UpdatedAt = time.Now().UTC()

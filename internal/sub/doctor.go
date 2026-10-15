@@ -60,6 +60,14 @@ func Doctor(ctx context.Context, store Store, names []string, out io.Writer) (bo
 		}
 		harnesses = append(harnesses, h)
 	}
+	if _, err := fmt.Fprintln(out, "Storage"); err != nil {
+		return false, err
+	}
+	for _, check := range doctorStorageChecks(store, nil) {
+		if _, err := fmt.Fprintf(out, "  %s %s: %s\n", check.Status, check.Name, check.Reason); err != nil {
+			return false, err
+		}
+	}
 	reports, err := runDoctor(ctx, store, harnesses, doctorDeps{})
 	passed := err == nil
 	for _, r := range reports {
@@ -212,7 +220,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			}
 			jobCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			defer cancel()
-			result, err := d.run(jobCtx, jobStore, id, h, WorkerConfig{ToolCallLimit: 40})
+			result, err := d.run(jobCtx, jobStore, id, h, WorkerConfig{ToolCallLimit: 40, CacheHome: filepath.Dir(store.Root)})
 			return result, repo, err
 		}
 		brief := "Run a shell command to create out.txt containing doctor-ok in the current directory. Do not just describe it. Return a short final reply."

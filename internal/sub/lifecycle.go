@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"syscall"
 	"time"
 
@@ -155,6 +156,14 @@ func (s Store) Finish(id string, result *Result, reason string, finished time.Ti
 			}
 			return json.Unmarshal(data, result)
 		}
+		if st.TempDirOwned {
+			if err := s.cleanupJobTemp(id); err != nil {
+				warning := "Job temp cleanup failed: " + err.Error()
+				if !slices.Contains(result.Warnings, warning) {
+					result.Warnings = append(result.Warnings, warning)
+				}
+			}
+		}
 		if st.CancelRequested {
 			result.Status = StatusCanceled
 		}
@@ -197,12 +206,12 @@ func (s Store) RequestCancel(id string) (st State, err error) {
 				}
 				if !alive {
 					// Cleanup still runs when publishing the failure itself fails.
-					e := errors.Join(s.fallbackLocked(current, StatusFailed, "job worker is absent or its process identity no longer matches"), current.KillHarnesses())
+					e := s.failStoppedWorkerLocked(current, "job worker is absent or its process identity no longer matches")
 					st = *current
 					return e
 				}
 			} else if current.Status == StatusRunning {
-				e := errors.Join(s.fallbackLocked(current, StatusFailed, "job worker has no verifiable process identity"), current.KillHarnesses())
+				e := s.failStoppedWorkerLocked(current, "job worker has no verifiable process identity")
 				st = *current
 				return e
 			}
@@ -243,7 +252,7 @@ func (s Store) Recover(id string) (st State, err error) {
 			}
 			pending := current.Status == StatusQueued && current.PID == 0 && current.Worker == nil && time.Since(pendingSince) < 5*time.Second
 			if !alive && !pending {
-				e := errors.Join(s.fallbackLocked(current, StatusFailed, "job worker is absent or its process identity no longer matches"), current.KillHarnesses())
+				e := s.failStoppedWorkerLocked(current, "job worker is absent or its process identity no longer matches")
 				st = *current
 				return e
 			}
@@ -252,6 +261,19 @@ func (s Store) Recover(id string) (st State, err error) {
 		return nil
 	})
 	return
+}
+
+// Stop registered harnesses before publishing fallback output and deleting their
+// temp files. Still publish a failure when process cleanup itself fails, but keep
+// the temp directory in that case so a surviving process cannot recreate it.
+func (s Store) failStoppedWorkerLocked(st *State, reason string) error {
+	killErr := st.KillHarnesses()
+	var cleanupErr error
+	if killErr == nil && st.TempDirOwned {
+		cleanupErr = s.cleanupJobTemp(st.ID)
+	}
+	finishErr := s.fallbackLocked(st, StatusFailed, reason)
+	return errors.Join(killErr, cleanupErr, finishErr)
 }
 
 // KillHarnesses reaps the independent groups registered before protocol startup.

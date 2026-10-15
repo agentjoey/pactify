@@ -47,7 +47,6 @@ beforeEach(() => {
     if (url === "/api/projects") return { ok: true, json: async () => [{ id: "demo", name: "demo", path: "/x", project: "demo", feature_count: 1, awaiting_count: 0 }] };
     if (url === "/api/registry") return { ok: true, json: async () => [] };
     if (url === "/api/agents") return { ok: true, json: async () => [] };
-    if (url.includes("/timeline")) return { ok: true, json: async () => ({ total: 0, events: [] }) };
     // SettingsModal mounts ops panels that read array-shaped endpoints.
     if (url.includes("/wiring") || url.includes("/seats")) return { ok: true, json: async () => [] };
     if (url.includes("/cockpit/status")) return { ok: true, json: async () => ({ capable: true, pending: [], threadId: "" }) };

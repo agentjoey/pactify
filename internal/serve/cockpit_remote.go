@@ -277,11 +277,6 @@ func (sc *serveCockpiter) emitSnapshot(key cockpit.SessionKey, cs *cockpit.Cockp
 	sc.emitMirrorEvent(key, cs, seq, "snapshot", "idle", body, 0, 0, 0)
 }
 
-func (sc *serveCockpiter) emitCockpitEvent(key cockpit.SessionKey, cs *cockpit.CockpitSession, e cockpit.Event, seq int64, tokensIn, tokensOut int, costMicros int64) {
-	state, eventKind := mapCockpitEvent(e)
-	sc.emitMirrorEvent(key, cs, seq, eventKind, state, e, tokensIn, tokensOut, costMicros)
-}
-
 func (sc *serveCockpiter) emitPendingDelta(key cockpit.SessionKey, cs *cockpit.CockpitSession, seq int64, lastPending *[]string) bool {
 	pending := cs.Pending()
 	ids := make([]string, len(pending))

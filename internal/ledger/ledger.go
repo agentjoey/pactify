@@ -42,9 +42,6 @@ func Dir(repoRoot string) string { return filepath.Join(repoRoot, dirName) }
 // Path returns repoRoot's append-only event log.
 func Path(repoRoot string) string { return filepath.Join(Dir(repoRoot), "log.jsonl") }
 
-// StatePath returns repoRoot's rendered STATE.yml projection.
-func StatePath(repoRoot string) string { return filepath.Join(Dir(repoRoot), "STATE.yml") }
-
 // Read returns every event in repoRoot's ledger. A missing log folds to an empty
 // slice with no error, matching event.ReadAll — an uninitialized project is not
 // an error condition for a reader.

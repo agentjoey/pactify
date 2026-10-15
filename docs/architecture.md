@@ -1,10 +1,10 @@
 # Pactify — Architecture
 
-> Last updated: **2026-08-29** | Status: **v0.11.0 已发布**（tag + CI 绿）。本次更新只改状态行与失效链接，架构内容未变。
+> Last updated: **2026-10-15** | Status: **v0.12.0 已发布**——编排器方向的最后一个正式版本；产品已转向 harness 路由器（见 [`specs/harness-subagents.md`](specs/harness-subagents.md)），本文描述的编排架构进入冻结。完整历史见 [`CHANGELOG.md`](CHANGELOG.md)。
 >
 > **版本历史已迁出**——本行原先累积成一段 5KB 的单行 changelog，现全部移到 [`CHANGELOG.md`](CHANGELOG.md)（原文逐字保留）。本行今后只写「当前版 + 与架构有关的当前事实」。
 >
-> **与本文档相关的当前事实（2026-08-29 实测）**：①**云端整层未运行**——`pactify-relay` / `pactify-relay-staging` 两个 fly app 均 0 machines，`origin/production` 停在 2026-07-04（落后 main 652 提交）；下文「通讯架构」「M3.4 relay 接口」描述的是**设计与已实现的代码**，不是当前运行中的部署。②**账本与 git 工作目录耦合**这条架构债仍在（v0.11.0 的 `[SANDBOX]` 只是定点修复），彻底解「单一规范 ledger」尚未起草 spec。
+> **与本文档相关的当前事实（2026-08-29 实测，2026-10-15 更新）**：①**云端整层未运行**——`pactify-relay` / `pactify-relay-staging` 两个 fly app 均 0 machines，`origin/production` 停在 2026-07-04（落后 main 652 提交）；下文「通讯架构」「M3.4 relay 接口」描述的是**设计与已实现的代码**，不是当前运行中的部署。②**账本与 git 工作目录耦合**这条架构债仍在：「单一规范 ledger」已起草 spec（`specs/single-canonical-ledger.md`）并完成 WS-A/WS-B（flag 默认关），随 2026-10-15 的转向暂停。
 
 ## Overview
 
@@ -217,17 +217,8 @@ changes** (this milestone writes no events):
   an amber outline (cycle-free graph reachability). The overlay is a canvas-toolbar toggle
   (default off, component-local) — derived edges merge into `deriveFlow` when on, never
   written back to the layout sidecar.
-- **Replay = prefix fold**: the projection is a pure fold, so historical state =
-  `Project(evs[:n])`. serve adds two read-only endpoints — `GET .../timeline`
-  (`{total, events:[{n, ts, type, actor, task?, feature?}]}`, a light index with no
-  payloads) and `GET .../state?at=N` (folds the first N events; `at=0`→empty, `N≥total`
-  clamps to the full/live shape, malformed `at`→400, absent `at`→unchanged). Both share the
-  existing read path (`event.ReadAll`); no mutex beyond today's `handleState`. The
-  **ReplayBar** scrubs `0..total`, fetching `state?at=N` per position; SSE snapshots are
-  ignored while scrubbing.
-- **Replay mode is read-only**: every author/ops mutation (dispatch, task editor, drag,
-  review verbs) is disabled or hidden while not live — the `replaying` flag short-circuits
-  the handlers; LIVE refetches the current state and resumes the SSE stream.
+- **Replay**: removed with the 2026-07 view consolidation; its leftover serve endpoints
+  (`GET .../timeline`, `state?at=N`) were deleted in v0.12.0.
 - **Live pulse**: each SSE-applied snapshot (live mode only) diffs the changed task(s) and
   pulses their node + wait edges once in the actor's role color (the site's cable-pulse
   brand idiom). Pure CSS keyframe, fully gated off under `prefers-reduced-motion`.

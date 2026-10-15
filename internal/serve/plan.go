@@ -173,7 +173,7 @@ func (s *Server) applyPlanManifest(id, dir, feature string) (int, int, error) {
 // rosterOf returns the project's seat ids for plan validation; an unreadable
 // state yields an empty roster (Validate then reports unknown-seat references).
 func rosterOf(dir string) []string {
-	st, err := ProjectStateAt(dir, -1)
+	st, err := ProjectState(dir)
 	if err != nil {
 		return nil
 	}

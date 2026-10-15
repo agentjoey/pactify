@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 import { Button } from "./Button";
 import { Input } from "./Input";
 import { Select } from "./Select";
@@ -7,8 +7,6 @@ import { Badge } from "./Badge";
 import { TierBadge } from "./TierBadge";
 import { Kbd } from "./Kbd";
 import { Modal } from "./Modal";
-import { Popover } from "./Popover";
-import { Tooltip } from "./Tooltip";
 import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
 import { Alert } from "./Alert";
@@ -267,99 +265,7 @@ describe("Modal", () => {
   });
 });
 
-describe("Popover", () => {
-  it("renders the panel when open and calls onClose on outside click", () => {
-    const onClose = vi.fn();
-    render(
-      <div>
-        <Popover open onClose={onClose} anchor={<button>anchor</button>}>
-          <div>menu</div>
-        </Popover>
-        <button>outside</button>
-      </div>,
-    );
-    expect(screen.getByText("menu")).toBeInTheDocument();
-    fireEvent.mouseDown(screen.getByText("outside"));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
 
-  it("does not call onClose on a click inside the panel", () => {
-    const onClose = vi.fn();
-    render(
-      <Popover open onClose={onClose} anchor={<button>anchor</button>}>
-        <div>menu</div>
-      </Popover>,
-    );
-    fireEvent.mouseDown(screen.getByText("menu"));
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it("closes on Esc", () => {
-    const onClose = vi.fn();
-    render(
-      <Popover open onClose={onClose} anchor={<button>anchor</button>}>
-        <div>menu</div>
-      </Popover>,
-    );
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("renders nothing when closed", () => {
-    render(
-      <Popover open={false} onClose={() => {}} anchor={<button>anchor</button>}>
-        <div>menu</div>
-      </Popover>,
-    );
-    expect(screen.queryByText("menu")).toBeNull();
-  });
-});
-
-describe("Tooltip", () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
-  it("shows the tip only after the 400ms hover delay", () => {
-    render(
-      <Tooltip label="explain">
-        <button>hover me</button>
-      </Tooltip>,
-    );
-    const trigger = screen.getByText("hover me");
-    fireEvent.mouseEnter(trigger);
-    // not yet
-    expect(screen.queryByText("explain")).toBeNull();
-    act(() => vi.advanceTimersByTime(399));
-    expect(screen.queryByText("explain")).toBeNull();
-    act(() => vi.advanceTimersByTime(1));
-    expect(screen.getByText("explain")).toBeInTheDocument();
-  });
-
-  it("cancels the pending show when the pointer leaves before the delay", () => {
-    render(
-      <Tooltip label="explain">
-        <button>hover me</button>
-      </Tooltip>,
-    );
-    const trigger = screen.getByText("hover me");
-    fireEvent.mouseEnter(trigger);
-    act(() => vi.advanceTimersByTime(200));
-    fireEvent.mouseLeave(trigger);
-    act(() => vi.advanceTimersByTime(400));
-    expect(screen.queryByText("explain")).toBeNull();
-  });
-
-  it("shows on focus after the delay too", () => {
-    render(
-      <Tooltip label="explain">
-        <button>hover me</button>
-      </Tooltip>,
-    );
-    fireEvent.focus(screen.getByText("hover me"));
-    act(() => vi.advanceTimersByTime(400));
-    expect(screen.getByText("explain")).toBeInTheDocument();
-  });
-});
 
 describe("EmptyState", () => {
   it("renders an icon slot, title and hint inside a dashed container", () => {

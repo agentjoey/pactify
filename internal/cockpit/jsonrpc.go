@@ -159,22 +159,6 @@ func (c *rpcConn) reply(id json.RawMessage, result any) error {
 	return c.write(b)
 }
 
-func (c *rpcConn) replyError(id json.RawMessage, code int, message string, data any) error {
-	b, err := json.Marshal(map[string]any{
-		"jsonrpc": "2.0",
-		"id":      id,
-		"error": map[string]any{
-			"code":    code,
-			"message": message,
-			"data":    data,
-		},
-	})
-	if err != nil {
-		return err
-	}
-	return c.write(b)
-}
-
 func (c *rpcConn) Close() error {
 	c.terminate(errors.New("rpc connection closed"))
 	return nil

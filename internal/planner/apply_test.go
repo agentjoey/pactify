@@ -58,7 +58,7 @@ func TestApplyValidPlan(t *testing.T) {
 	}
 	roster := []string{"alice", "bob", "claude"}
 
-	assigned, err := planner.Apply(dir, plan, roster)
+	assigned, err := planner.ApplyTx(dir, plan, roster, "claude")
 	if err != nil {
 		t.Fatalf("Apply: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestApplySpecMissing(t *testing.T) {
 	}
 	roster := []string{"alice", "claude"}
 
-	assigned, err := planner.Apply(dir, plan, roster)
+	assigned, err := planner.ApplyTx(dir, plan, roster, "claude")
 	if err == nil {
 		t.Fatal("expected error for missing spec file")
 	}
@@ -180,7 +180,7 @@ func TestApplyInvalidPlan(t *testing.T) {
 	}
 	roster := []string{"alice", "claude"}
 
-	assigned, err := planner.Apply(dir, plan, roster)
+	assigned, err := planner.ApplyTx(dir, plan, roster, "claude")
 	if err == nil {
 		t.Fatal("expected error for invalid plan (owner==reviewer)")
 	}

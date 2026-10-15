@@ -270,4 +270,3 @@ function LiveBadge({ live }: { live: boolean }) {
   );
 }
 
-export default Toolbar;

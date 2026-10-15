@@ -12,7 +12,7 @@ import { Badge } from "./Badge";
 // - Because color carries no signal, the badge's x position must be FIXED by
 //   the caller (a `w-[34px] shrink-0` slot as the row's first element) — that
 //   fixed column is what makes `L1 L1 L3 L1` scannable instead of line-by-line.
-export const TIER_TITLE: Record<string, string> = {
+const TIER_TITLE: Record<string, string> = {
   L0: "L0 — 便宜档：小改动、低风险",
   L1: "L1 — 默认档",
   L2: "L2 — 复杂档：多文件 / 跨模块",

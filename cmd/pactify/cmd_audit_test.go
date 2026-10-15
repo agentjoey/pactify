@@ -6,9 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/agentjoey/pactify/internal/audit"
 )
+
+func todayUTC() string { return time.Now().UTC().Format("2006-01-02") }
 
 func TestAuditHookAppendsAndExitsZero(t *testing.T) {
 	home := t.TempDir()

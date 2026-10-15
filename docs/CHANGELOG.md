@@ -8,6 +8,26 @@
 
 ---
 
+## v0.12.0 — 2026-10-15 · 编排器方向的最后一个正式版本（转向前的回滚锚点）
+
+**为什么发这一版**：2026-10-15 Human Owner 拍板产品转向「harness 路由器」（`docs/specs/harness-subagents.md`），协议 / 账本 / 看板 / 云端降级冻结。本版把 v0.11.0 之后 `main` 上积累的 PR #48–#64 连同一次死代码清理正式发出，作为编排器方向的最后一个版本和回滚锚点：`go install github.com/agentjoey/pactify/cmd/pactify@v0.12.0`。
+
+**自 v0.11.0 起合入的内容**：
+- **#48 `[FALLBACK-PAR]`** 并行 run 的 fallback 提案闭环；版本历史从 `CLAUDE.md` 拆出到本文件；CI 缓存与时间上限修复。
+- **#49** checkpoint 的 in-place run 守卫（`[UI-GATE]` 止血）+ ACP 丢弃 model pin 时的醒目警告 + codex 审批卡标题（`[CODEX-APPROVAL-NAME]`）。⚠️ 该守卫在生产里实际不生效，见下方遗留 `[RUNGUARD-DEAD]`。
+- **#50** cloud workspace 独立 CI job；**#51 / #52** 仓库公开前清理（误提交的 16MB 工具目录、被跟踪文件里的本机绝对路径）；**#53** 仓库公开（全历史 1476 个提交凭据审查零命中）。
+- **#54 WS-A** 账本读写路径收敛到 `internal/ledger`，顺带修掉一处读错项目的 bug；**#64 WS-B** 账本 ref 存储 + CAS，双写双读校验，flag 默认关、不改现网行为；**#60** 单一规范账本 spec 定稿。
+- **#55 `[ACP-MODEL]` opencode 根治**：`opencode acp` 无模型参数，改用 `OPENCODE_CONFIG_CONTENT` 注入（合并不覆盖），端到端验证实际 provider 随绑定切换；#56 状态回填。
+- **#57** 并行 merge 路径三处缺陷（升级会丢 / 失败无声 / 失败报成 shipped）；**#58** 评审动作跟随任务状态 + ReviewGate 证据区对比度达标；**#59** 审批决策词表的跨边界对账守卫。
+- **#61** Settings 的 agent 面板改版（两页合并为 Agents，加 Rescan / 收起展开 / 连通性 Test）；**#62** 删除已采纳的 mockup；**#63** Settings 外壳窄屏纵向堆叠。
+- **#66 发版前死代码清理**（deadcode / staticcheck U1000 / knip，含 `--production` 模式）：删除连测试都不可达的 12 个 Go 函数与 1 个类型；删除已被 `ApplyTx` 取代、把座席硬编码成 "claude" 的 `planner.Apply`（测试改为覆盖 `ApplyTx`）；删除回放视图（2026-07 已移除）残留的 `GET /timeline` 路由与 `?at=` 参数及其 bats 用例；删除只被自身测试引用、界面早已不挂载的 8 个前端模块（Setup、AgentRoster、Projects、PlanDock、RosterDock、Popover、Tooltip、timelineTicks）及若干无调用方的函数；只给测试用的 helper 挪进 `_test.go`。约 −2.5k 行，不改任何仍在使用的对外行为。刻意保留：测试替身、随云端退役整体删除的 `cloudauth` / `cloud/` / web identity、在建的 WS-B 代码。
+
+**跑过的门**（发版提交上，独立 clone 中执行，避免测试污染主副本）：`go build ./...` · `go test ./...` 除 `internal/cockpit/codexschema` 的 `TestSchemaDrift` 外全绿（本机 codex 0.162.1 新于随附 schema 0.144.4 才会红，CI 无 codex 时跳过；与本版改动无关）· `go test -race`（pact / orchestrate / serve）全绿 · bats 112/112（清理前 114，删掉的 2 个只测已删除的回放接口）· vitest 639/639（清理前 685，差额为随死代码删除的测试）· `tsc -b` · Playwright e2e 7/7 · 内嵌 dist 重建 · CI 全绿。
+
+**遗留（随降级冻结，证据链在 backlog）**：`[RUNGUARD-DEAD]` run 守卫解析 `updated_at` 用 RFC3339，而真实 run 写 `20060102-150405`，守卫永远看不到在跑的 run · `[UI-GATE]` Board 无补 checkpoint 入口，`CommitAll` 全树提交的归属问题未动 · `[ACP-MODEL]` kimi / gemini / claude / codex 走 ACP 时模型绑定仍只有警告 · 随附的 codex app-server schema 需刷新到当前版本（harness 路由 Phase 0 的前置）· 云端已退役不再部署。
+
+---
+
 ## v0.11.0 — 2026-08-24 · backlog 全量核实后的清理批次
 
 **v0.11.0**（2026-08-24）— backlog 全量核实后的清理批次（PR #47，14 个实质提交）。起点是对 `docs/backlog.md` 全部 113 个条目逐条**真实核实**（读代码/跑测试，非文本互证），据此排期实现；每条均过独立复核（新会话、不继承实现上下文），复核判 FAIL 的两处已定位修复。主线：**[SANDBOX] 默认沙箱可用**（tracked-`.pact` 仓里 seed 的账本是对 tracked 路径的未提交修改，checkout feature 分支必被 git 拒绝 → 此前只能退回有腐化风险的 `--in-place`；改为保账本的 checkout：快照→还原→checkout→union 回写，未 tracked 时逐字节走原路径）· **relay 广播 antigravity**（⚠️ 只改 Go 侧会造成线上事故：wire 枚举缺该值而 relay 走 throwing 的 `MachineInfo.parse`，一台 agy 机器能让整个账户机器列表 500；两侧同改 + conformance guard。**部署顺序硬约束：relay 必须先于二进制上线**）· **[KIND-2] `--seat-kind` 真的赢过 role binding**（并新增 `--roster-kind` 非显式渠道——独立复核揪出的跨进程回归：serve 派生的 kind 曾被当作显式覆盖，会让 role binding 对所有 dashboard/Dispatch/schedule/fallback 发起的 run 静默失效）· **[CODEX-MAP] codex cockpit 后端 7 条协议映射错误**（写下即错非漂移：MCP 工具调用从不产生事件、TOK 恒 0、`resume`/`interrupt` 发成通知从未生效、permissions 审批回复结构非法；真机抓包做 fixture）· **agy 审计接入**（`strings` 挖出原生 PreToolUse hook + 内嵌官方文档，机制与 gemini 血统完全不同）· **agy 会话清理**（无 CLI 且无法打标——`--project` 被接受但哪里都不落；改按 pactify 自己为 resume 记录的 `conversation_id` 做只删点名 id 的文件级清理，UUID 守卫承重：放宽后 id `..` 会 RemoveAll 整个数据目录）· **[CODEX-SCHEMA] 修好失效的预警**（本机恒红+CI 永远 skip，等于没有；新增不需装 codex 的 `TestSchemaContract` 常驻 CI + 周期拉最新版的 workflow，硬门=契约破坏、软信号=字节漂移）· **[DOCTOR] 退出码只由本项目用到的 kind 决定** · **[PROBE] 共享 entry 文件按 kind 精确归属**（并补掉 `pact.BakeEntry` 这条主路径）· **[REGISTER]/[REGISTRY-2] 自动注册跳过临时目录 + 未装机警告**。gate：go 全仓 + `-race` · bats · vitest · tsc · cloud workspace · CI 全绿。遗留（已记 backlog）：`[DIST-STALE]` main 上的 dist 本就陈旧（本机与 CI 各自重建产出同一新哈希，排除构建不确定性）· `[TEST-POLLUTION-2]` `acprunner_test.go` 写用户真实 audit 目录 · `[CODEX-APPROVAL-NAME]`/`[CODEX-DECISION-CANCEL]`。

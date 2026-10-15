@@ -408,9 +408,6 @@ func reviewerAllowed(tk *projection.Task, caller string) bool {
 	return tk.Reviewer == caller
 }
 
-// ValidateLog runs the v1 conformance checks against the cwd's log + STATE.
-func ValidateLog() error { return At(".").validateLog() }
-
 // validateLog runs the v1 conformance checks against the log + rendered STATE.
 func (p *Project) validateLog() error {
 	evs, err := event.ReadAll(paths.LogIn(p.dir))

@@ -133,23 +133,6 @@ func featureAction(f projection.Feature, h History, th Thresholds) (Action, bool
 	return Action{}, false
 }
 
-// nextActions returns one runnable action per feature that has work — the
-// parallel analogue of nextAction. Features are independent (separate
-// branches/worktrees) so the driver can run these concurrently; within a feature
-// the action follows featureAction's priority. Merges are included but the driver
-// serializes them onto the shared base branch. Threshold/escalation handling is
-// the driver's job (it owns History), applied per action before dispatch — just
-// like the serial loop's tripped() guard.
-func nextActions(st projection.State, h History, th Thresholds) []Action {
-	var acts []Action
-	for _, f := range st.Features {
-		if act, ok := featureAction(f, h, th); ok {
-			acts = append(acts, act)
-		}
-	}
-	return acts
-}
-
 // depsSatisfied reports whether every dependency of t is satisfied: a dep still
 // present in the SAME feature must be accepted. A dep id absent from f was
 // cancelled (deps are validated same-feature at assign) — it can never reach

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  boardColumns, allTasks, agentActivity, lastAction, findTask, canMergeFeature, COLUMNS,
+  allTasks, findTask, canMergeFeature,
   fmtDuration, fmtTokens, fmtCost, taskRuntimeMs, taskMetrics, designBoard,
   eventsByTask, statsByTask, taskTokens,
 } from "./derive";
@@ -17,18 +17,7 @@ const state: State = {
   awaiting_count: 1,
 };
 
-const events: PactEvent[] = [
-  { event_id: "1", ts: "t1", agent_id: "claude-opus", role: "orchestrator", event_type: "assign", task_id: "T1", feature: "F", payload: {} },
-  { event_id: "2", ts: "t2", agent_id: "opencode", role: "worker", event_type: "checkpoint", task_id: "T0", feature: "F", payload: { evidence: "PASS ok" } },
-];
-
 describe("derive", () => {
-  it("boardColumns groups tasks by status across features", () => {
-    const cols = boardColumns(state);
-    expect(cols["in_progress"].map((b) => b.task.id)).toEqual(["T1"]);
-    expect(cols["awaiting_review"].map((b) => b.task.id)).toEqual(["T0"]);
-    expect(COLUMNS).toContain("assigned");
-  });
   it("designBoard buckets into the 5 dark-handoff columns", () => {
     const cols = designBoard(state);
     expect(cols.working.map((b) => b.task.id)).toEqual(["T1"]);
@@ -48,14 +37,6 @@ describe("derive", () => {
   });
   it("allTasks flattens with feature id", () => {
     expect(allTasks(state).map((b) => b.task.id).sort()).toEqual(["T0", "T1"]);
-  });
-  it("agentActivity returns that agent's events newest-first", () => {
-    const a = agentActivity("opencode", events);
-    expect(a.map((e) => e.event_id)).toEqual(["2"]);
-  });
-  it("lastAction returns the most recent event for an agent", () => {
-    expect(lastAction("claude-opus", events)?.event_type).toBe("assign");
-    expect(lastAction("nobody", events)).toBeUndefined();
   });
   it("findTask locates a task + its feature", () => {
     expect(findTask(state, "T0")?.feature).toBe("F");

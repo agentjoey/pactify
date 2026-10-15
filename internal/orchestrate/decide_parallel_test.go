@@ -7,6 +7,18 @@ import (
 	"github.com/agentjoey/pactify/internal/projection"
 )
 
+// nextActions collects featureAction across every feature — the view the
+// parallel driver (parallel.go) builds one feature at a time.
+func nextActions(st projection.State, h History, th Thresholds) []Action {
+	var acts []Action
+	for _, f := range st.Features {
+		if act, ok := featureAction(f, h, th); ok {
+			acts = append(acts, act)
+		}
+	}
+	return acts
+}
+
 // nextActions returns one runnable action per feature that has work, so N
 // independent features yield N actions the driver can run concurrently (each in
 // its own worktree). Within a feature the priority matches nextAction

@@ -6,7 +6,6 @@ import type {
   WiringStatus,
   SeatInfo,
   WireResult,
-  Timeline,
   OrchestrateStatusResponse,
   ParallelStatusResponse,
   PlanReviewResponse,
@@ -129,15 +128,6 @@ export function fmtDuration(sec: number): string {
 
 // --- Replay (M3.3b) ---
 //
-// getTimeline reads the lightweight log index once on entering replay.
-// getStateAt folds the first `at` events into a state snapshot (at=0 → empty,
-// at≥total → clamps to full). Both are read-only; status-line errors on non-2xx.
-export const getTimeline = (id: string) =>
-  getJSON<Timeline>(`/api/projects/${id}/timeline`);
-
-export const getStateAt = (id: string, at: number) =>
-  getJSON<State>(`/api/projects/${id}/state?at=${at}`).then(normalizeState);
-
 export async function postTask(
   project: string,
   body: { id: string; spec_md: string },
@@ -161,8 +151,6 @@ export async function postVerb(
 export interface Worktree { branch: string; path: string; primary: boolean }
 export const getWorktrees = (project: string) =>
   getJSON<Worktree[]>(`/api/projects/${project}/worktrees`);
-
-export const getRegistry = () => getJSON<RegistryEntry[]>("/api/registry");
 
 export async function postRegister(
   path: string,
@@ -573,8 +561,6 @@ export async function pruneSessions(
 }
 
 // --- Custom-agent manifests (Phase D) ---
-export interface ManifestRow { kind: string; binary: string; drivable: boolean }
-export const listManifests = () => getJSON<ManifestRow[]>("/api/manifests");
 export const createManifest = async (toml: string): Promise<{ kind: string }> => {
   const r = await fetch("/api/manifests", {
     method: "POST",

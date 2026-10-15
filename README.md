@@ -73,6 +73,16 @@ Phase 0 large tasks completed in one attempt 6/10, and read-only work did not co
 kimi results include an informational warning; `kimi --read-only` still exits 2.
 See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.
 
+For rework, use `pactify sub run [harness] --resume <job-id> --worktree` to continue the
+reviewed job in its original worktree. `--resume=<job-id>` also works. An exact id takes
+priority; a unique prefix of the full id or its final random component is accepted.
+The selected job must be finished and have a session id; its worktree, if any, must still
+exist and not be discarded. An omitted harness is inherited from the job; an explicit harness must match. The new job records
+`resumeOf` as the selected job. Bare `--resume` keeps automatic selection for the current
+cwd and harness (latest successful workspace session, or latest completed worktree session
+with a session id). With multiple resumable candidates it lists ids, titles and completion
+times on stderr, names the selected job and suggests specifying the id.
+
 Use `/jobs` (or `/pactify:jobs`) in Claude Code to see the latest 10 delegation jobs,
 running jobs first, with activity, tokens and next-step suggestions. `/jobs all` shows a
 bounded overview of all jobs; `/jobs <id>` shows result excerpts, a log tail, diff statistics

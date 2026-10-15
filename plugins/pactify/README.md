@@ -48,7 +48,7 @@ Exit codes 0 / 1 / 2 mean success, failure, and invalid arguments.
 Retrieve the result again with `pactify sub result <jobId>`.
 
 To select a model, name it explicitly in the task. If the CLI cannot honor it, execution must fail with the available models instead of silently falling back.
-For rework, explicitly request `--resume --worktree`, preserving the original cwd and harness.
+For rework, explicitly request `--resume <job-id> --worktree`, preserving the original cwd and harness.
 For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` / `pactify:agy` / `pactify:opencode` forwarding subagent:
 it uses `model: haiku`, has only Bash, calls Bash once, and returns stdout verbatim. After a timeout, the main thread continues waiting.
 The callee leaves changes uncommitted for the host to review.
@@ -65,7 +65,7 @@ direct resume links. The namespaced forms also accept `all` or a job id.
 The jobs skill is read-only: it never applies, discards, cancels or resumes jobs.
 Suggestions follow the review workflow below: inspect the full diff and new files, personally
 rerun acceptance including the full test suite, then apply after approval. Rework uses the
-same worktree with `--resume --worktree` after confirming the selected session.
+same worktree with `--resume <job-id> --worktree` after confirming the selected session.
 Lists use `pactify sub status --json` (`--all` for all jobs); see the
 [summary field contract](../../docs/sub-status.md). JSON is projected locally before entering
 the conversation; list mode does not load individual results or logs.
@@ -82,7 +82,7 @@ the conversation; list mode does not load individual results or logs.
 4. Changes involving concurrency, permissions, or data deletion require independent review. Address findings and rerun acceptance checks.
 5. After review passes, run `pactify sub apply <jobId>`, then `pactify sub discard <jobId>` to clean up the worktree.
    Apply leaves changes uncommitted and rejects the entire operation if affected paths have user changes or conflicts. Inspect the cause; do not force an overwrite or blindly retry.
-   For rework, do not apply or discard. Run `sub run ... --resume --worktree` with the original `--cwd` and harness,
+   For rework, do not apply or discard. Run `sub run ... --resume <job-id> --worktree` with the original `--cwd` and harness,
    preserving access, requested model, and effort. Provide the rework brief on stdin, use the same background wait flow, and repeat steps 1–4.
    To abandon the task, skip apply and run `pactify sub discard <jobId>`. Cancel running jobs first with `pactify sub cancel <jobId>`.
 
@@ -97,10 +97,16 @@ Rerun acceptance: <all original acceptance commands, including the full test sui
 Include changes, command output, and remaining gaps in the final reply; do not commit or write report files.
 ```
 
-`--resume` selects the most recent completed worktree session with a session id for the original cwd and harness, including failed or canceled rounds.
+Use `pactify sub run [harness] --resume <job-id>` (or `--resume=<job-id>`) to continue a particular job.
+An exact id takes priority; a unique prefix of the full id or the final random component also works.
+An ambiguous prefix fails and lists all matching jobs. The job must be finished and have a session id.
+If the harness is omitted, it is inherited from the job; an explicit harness must match.
+The new job records `resumeOf` as the selected job and keeps its original working directory.
+Bare `--resume --worktree` selects the most recent completed worktree session with a session id for the original cwd and harness, including failed or canceled rounds.
+With multiple resumable candidates, stderr lists their ids, titles and completion times, names the selected job, and suggests `--resume <job-id>`.
 Check the target session before resuming and confirm the same worktree and base commit afterward. Do not run concurrent rounds in one worktree.
 Resuming without `--worktree` still preserves the original isolation. Discarded or missing worktrees cannot be resumed.
-Legacy sessions without isolation must have succeeded to resume. They cannot gain isolation midway; remove `--resume` to start a new worktree job.
+Automatic selection of legacy sessions without isolation requires success. They cannot gain isolation midway; remove `--resume` to start a new worktree job.
 Apply / discard accept any job id in a resume chain and act on its shared worktree; discard marks the whole chain.
 
 ## Result summary

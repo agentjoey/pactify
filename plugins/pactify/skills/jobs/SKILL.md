@@ -106,13 +106,15 @@ shares it, including turns outside the displayed list. Keep suggestions short an
   Apply conflicts require inspection, not forcing or blind retries. Pending is persisted
   metadata, not a fresh diff: older unrecorded applies may still show pending.
 - `failed`: “N jobs failed: inspect `pactify sub logs <id>` and the result; request rework
-  with `--resume --worktree` if eligible.” Resume is not `--resume <id>`: it selects the
-  most recent completed session for the original --cwd and harness. Confirm that it is
-  the intended session before suggesting a runnable command. Preserve access, config mode,
+  with `--resume <id> --worktree` if eligible.” Use the id of the reviewed job. The job must
+  be finished and have a session id; an explicit harness must match. Bare `--resume --worktree`
+  selects the most recent completed session for the original --cwd and harness and lists multiple
+  candidates on stderr. Prefer the explicit id so rework goes to the intended task.
+  Preserve access, config mode,
   requested model and effort; pass a self-contained rework brief on stdin and use the
   guide's main-thread run/wait flow. Keep the same worktree and base commit. Do not start concurrent
   turns in one worktree. A discarded or missing worktree cannot resume; legacy sessions
-  without a worktree require success and cannot gain isolation mid-session. Start fresh if needed.
+  without a worktree require success for automatic selection and cannot gain isolation mid-session. Start fresh if needed.
   After rework, repeat the complete review and host acceptance before apply.
 - `warnings`: “N jobs have warnings: inspect `pactify sub result <id>` before deciding.”
   Never claim independent model verification from `modelActual` alone.

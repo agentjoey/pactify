@@ -22,7 +22,7 @@ Read-only opencode can use read tools only: shell commands are denied, including
 Do not ask it to run tests; the host runs acceptance. A denial can leave an empty final reply and
 fail the job. Use codex `--read-only` for command-based investigations. Plan mode is not a sandbox.
 Models come from ACP's dynamic configOptions, with provider/model ids; preserve the requested model.
-Omit `--model` to keep opencode's default. Resume with `--resume --worktree` and the original cwd.
+Omit `--model` to keep opencode's default. Resume with `--resume <job-id> --worktree` and the original cwd.
 
 <!-- BEGIN SHARED-DELEGATION -->
 When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than
@@ -100,14 +100,20 @@ harness permission restrictions still apply.
      to remove the worktree. For rework, keep it and follow step 4. To abandon, discard without apply;
      a running job must first be canceled with `pactify sub cancel <jobId>`.
 
-4. To request rework, do not apply or discard. Pass `--resume --worktree` on the next `run` with the
-   original `--cwd` and harness, preserving access mode and any requested model/effort. Supply a new
-   brief on stdin and collect it with the same main-thread wait procedure in step 2.
+4. To request rework, do not apply or discard. Pass `--resume <job-id> --worktree` on the next `run`
+   with the id of the job being reviewed, the original `--cwd` and harness, preserving access mode,
+   config mode and any requested model/effort. Supply a new brief on stdin and collect it with the
+   same main-thread wait procedure in step 2. An exact id is safest; a unique prefix of the full id
+   or its final random component also works. An ambiguous prefix fails and lists every candidate.
    Resume continues in the same worktree with the same base commit; the summary shows the full change
    across all turns. Omitting `--worktree` on resume also preserves existing isolation.
-   It selects the most recent completed worktree session with a session id, including a failed or canceled
-   turn; legacy workspace sessions still require success. Confirm this is the intended session before
-   resuming, and check the returned worktree path/base commit. Do not start concurrent turns in one worktree.
+   Bare `--resume --worktree` still selects the most recent completed worktree session with a session
+   id, including a failed or canceled turn; automatic legacy workspace selection requires success.
+   With multiple resumable candidates it lists ids, titles and completion times on stderr and names
+   the selected job. Prefer specifying the job id to avoid continuing a different task.
+   The selected job must be finished and have a session id. Omitting the harness inherits that job's
+   harness; an explicit harness must match. Check the returned worktree path/base commit.
+   Do not start concurrent turns in one worktree.
    A discarded or missing worktree cannot resume. A legacy session cannot acquire isolation mid-session:
    start a fresh `--worktree` job instead. Apply and discard accept any job id in the resumed chain and
    affect its shared worktree; discard marks every turn as discarded.

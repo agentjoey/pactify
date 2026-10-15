@@ -15,6 +15,8 @@ type Collector struct {
 	TurnDone  bool
 	TurnErr   string
 	RateLimit json.RawMessage
+
+	threadTotals map[string]cockpit.Usage
 }
 
 func (c *Collector) Add(e cockpit.Event) {
@@ -36,19 +38,26 @@ func (c *Collector) Add(e cockpit.Event) {
 		if e.Usage != nil {
 			c.Usage = *e.Usage
 		}
-		// codex reports the last request as Usage; the job's cost is the thread total.
+		// codex reports the last request as Usage; the job's cost is the sum of each
+		// thread's running total (the main agent and any sub-agent threads).
 		var raw struct {
+			ThreadID   string `json:"threadId"`
 			TokenUsage struct {
-				Total *struct {
-					InputTokens  int `json:"inputTokens"`
-					OutputTokens int `json:"outputTokens"`
-					TotalTokens  int `json:"totalTokens"`
-				} `json:"total"`
+				Total *cockpit.Usage `json:"total"`
 			} `json:"tokenUsage"`
 		}
 		if json.Unmarshal(e.Raw, &raw) == nil && raw.TokenUsage.Total != nil {
-			t := raw.TokenUsage.Total
-			c.Usage.InputTokens, c.Usage.OutputTokens, c.Usage.TotalTokens = t.InputTokens, t.OutputTokens, t.TotalTokens
+			if c.threadTotals == nil {
+				c.threadTotals = map[string]cockpit.Usage{}
+			}
+			c.threadTotals[raw.ThreadID] = *raw.TokenUsage.Total
+			var sum cockpit.Usage
+			for _, u := range c.threadTotals {
+				sum.InputTokens += u.InputTokens
+				sum.OutputTokens += u.OutputTokens
+				sum.TotalTokens += u.TotalTokens
+			}
+			c.Usage = sum
 		}
 	case cockpit.EventState:
 		if e.State == cockpit.StateTurnCompleted || e.State == cockpit.StateTurnFailed {

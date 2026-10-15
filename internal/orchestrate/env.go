@@ -105,3 +105,7 @@ func crossVendorStrip(kind string) []string {
 	}
 	return out
 }
+
+// CrossVendorStrip returns trailing environment overrides that isolate kind
+// from other vendors' API keys. Unknown/model-agnostic kinds return nil.
+func CrossVendorStrip(kind string) []string { return crossVendorStrip(kind) }

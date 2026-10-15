@@ -1,4 +1,4 @@
-# Pactify — Agent Context (GEMINI.md：gemini-cli · antigravity/agy)
+# Pactify — Agent Context (GEMINI.md：antigravity/agy)
 
 ## ⭐ Session 启动（每次必执行）
 ```bash
@@ -7,29 +7,30 @@ cat .agent/CURRENT.md
 ```
 
 ## Project Overview
-多 agent 协同协议 + 薄 CLI。任何能读文件的 agent 均可参与；协议基于 git + repo，零外部依赖。  
-协议核心：`.pact/` 文件契约；CLI 是协议的标准实现；各厂商入口是薄封装。
+Pactify 是 **harness 路由器**：在 Claude Code 里用 slash 命令委派大任务给其他 coding agent harness。方案见 [`docs/specs/harness-subagents.md`](docs/specs/harness-subagents.md)，Phase 0 结论见 [`docs/phase0-report.md`](docs/phase0-report.md)。
+现有 pact 协议、账本与看板冻结新投入，保留为可选的「治理模式」。
 **Location:** ~/AgentWorks/Code_Claude/pactify
 **GitHub:**   agentjoey/pactify
-**Version:** **v0.12.0**（2026-10-15）——**编排器方向的最后一个正式版本**，也是转向前的回滚锚点（`go install github.com/agentjoey/pactify/cmd/pactify@v0.12.0` 可装回）。自 v0.11.0 起 PR #48–#66：fallback 并行闭环、checkpoint run 守卫、ACP 模型绑定（opencode 根治）、单一规范账本 WS-A/WS-B（flag 默认关）、Settings Agents 面板、仓库公开前清理，以及发版前的死代码清理（#66）。完整版本历史见 **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)**；开着的条目见 `docs/backlog.md`（gitignored）。
+**Version:** **v0.12.0**（2026-10-15，当前发布版；编排器方向的回滚锚点）。未发布变更与完整历史见 **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)**。
 
-**当前状况（2026-10-15 发版时实测，非文档互证）**
-- **⭐ 产品方向已转（2026-10-15 Human Owner 拍板，`[HARNESS-SUB]`）**：pactify 转为 **harness 路由器**——在 Claude Code 里一个 slash 命令就把其他 coding agent harness 当 subagent 拉起执行**大任务**（类比 claude-code-router，但路由 harness 不路由模型）。第一版**只做 Claude Code 作为 host**，callee 只做 **codex + kimi**；gemini-cli 已移出范围（由 agy 取代）。现有协议 / 账本 / 看板 / 云端**降级**：冻结新投入，协议保留为可选「治理模式」；云端退役不再恢复部署，单一规范账本暂停在 WS-B。方案见 [`docs/specs/harness-subagents.md`](docs/specs/harness-subagents.md)，Phase 0 实施计划见 [`docs/specs/harness-subagents-phase0-plan.md`](docs/specs/harness-subagents-phase0-plan.md)；进度在 Linear 项目 P-AJ-18 的 M0 里程碑。**Phase 0 已完成（2026-10-15）**：`pactify sub` 运行时 + Claude Code 插件 `pactify`（`/codex`、`/kimi`）已合入 main（PR #69–#71）；26 次真实委派里 codex 全部达标，kimi 的大任务一次完成率 6/10 未达标、只读档不收敛（第一版不开放 kimi 只读），详见 [`docs/phase0-report.md`](docs/phase0-report.md)；是否进 M1 待 Owner 拍板。上面几条里关于云端、`[UI-GATE]`、账本重构的内容**随降级冻结**，仅作背景。
-- **本地闭环**：`go build ./...` 绿；`go test ./...` 全绿（随附 codex schema 已于 2026-10-15 刷新到 0.162.1，PR #69）。`-race`（pact/orchestrate/serve）· bats · vitest 639/639 · tsc · Playwright e2e 7/7 均绿。
-- **云端已退役**：`pactify-relay` / `-staging` 两个 fly app 均 0 machines，`origin/production` 停在 2026-07-04。按转向决策**不再恢复部署**；`cloud/` 与 `internal/cloudauth` 等代码随后单独 PR 删除。（历史约束仅作背景：若将来重新拉起 relay，必须先部署 relay 再放二进制。）
-- **随降级冻结、未修的已知问题**：`[RUNGUARD-DEAD]` checkpoint 的 run 守卫因 `updated_at` 时间格式不符在生产里从不生效；`[UI-GATE]` Board 无补 checkpoint 入口、`CommitAll` 全树提交的归属问题。证据链在 backlog。
-- **`[ACP-MODEL]`**：opencode 已根治（`OPENCODE_CONFIG_CONTENT` 注入，#55）；kimi-cli / gemini-cli / claude-code / codex-cli 走 ACP 时模型绑定仍只得到警告。命令行传输下 6 种 kind 均能兑现 `-m`。
-- **仓库已公开**（2026-09-04，全历史凭据审查零命中；两个曾在对话里出现的 token 是否已轮换仍待人工确认）。
+**当前状况（2026-10-16，基于当前 checkout）**
+- **4 个 harness**：codex 为默认；kimi、agy、opencode 为实验性。agy 大任务一次完成 1/10，见 [`docs/agy-eval.md`](docs/agy-eval.md)；opencode 评估待定。
+- **M1 功能已合入、未发布**：v0.13.0 挂起，Owner 选择继续内部自用；已支持后台 job、续接、取消、日志、worktree 隔离与 `sub doctor`。
+- **任务查看**：Claude Code 新增 `/jobs`，CLI 新增本地只读面板 `pactify sub panel`；摘要契约见 [`docs/sub-status.md`](docs/sub-status.md)。
+- **云端与 gemini-cli 清理**：云端 Go 和 web 部分已删除；`cloud/` 及 CI 保留，去向待定（AJ-664）。gemini-cli 已移除（web #106、Go #107）。
+- **本地闭环**：当前有 37 个 `internal` 包；本次 `go build ./...` 与隔离 `PACTIFY_HOME` 的 `go test ./...` 通过，bats 结果见 CHANGELOG。
+- **治理模式冻结**：单一规范账本暂停在 WS-B（flag 默认关）；`[RUNGUARD-DEAD]` 与 `[UI-GATE]` 等既有问题不再排期。
+- **仓库已公开**（2026-09-04，全历史凭据审查零命中）；**两个曾在对话里出现的 token 是否已轮换，仍待人工确认。**
 
 **Technical docs:** [Architecture](docs/architecture.md) · [Deployment](docs/deployment.md) · [Operations](docs/operations.md)
 
 ## Tech Stack
 | Layer | Tech |
 |-------|------|
-| CLI | **Go** 单静态二进制（cobra），`cmd/pactify` + `internal/*` 37 包 |
+| CLI | **Go** 单静态二进制（cobra），`cmd/pactify` + 37 个 `internal` 包 |
 | Dashboard | Vite + React + Tailwind v4（`web/`），构建产物经 `go:embed` 打进 `internal/serve/dist`（git 跟踪） |
 | Protocol | Plain files (`.pact/`)：`log.jsonl` append-only 为源，`STATE.yml` 为投影 |
-| Cloud | fly.io relay（`cloud/relay`，Node + Prisma）+ Vercel 静态站；zod 线协议在 `cloud/wire` |
+| Cloud | Go / web 云端代码已删除；`cloud/` 目录及 CI 保留，去向待定（AJ-664） |
 | CI | GitHub Actions（`ci.yml` + `codex-schema.yml` + `release.yml`/goreleaser） |
 
 ## Key Implementation Details
@@ -41,12 +42,12 @@ cat .agent/CURRENT.md
 
 ## Dev Commands
 ```bash
-go build ./... && go test ./...          # Go 全仓（编译 + 37 包测试）
-go test -race ./internal/{pact,orchestrate,serve}/...
+go build ./... && PACTIFY_HOME="$(mktemp -d)" go test ./...  # Go 全仓（编译 + 测试；internal 37 包）
+PACTIFY_HOME="$(mktemp -d)" go test -race ./internal/{pact,orchestrate,serve}/...
 cd web && npx tsc --noEmit && npx vitest run   # 前端类型 + 单测
 cd web && npx playwright test            # e2e（会起 e2e/mock-server.mjs）
 bats tests/                              # CLI 端到端
-cd cloud && pnpm -r build                # 云端 workspace（wire/crypto/relay）
+cd cloud && pnpm -r build                # cloud/ 去向待定（AJ-664），目录及 CI 仍保留
 
 cd web && npm run build && go build -o pactify ./cmd/pactify   # 重建带 dist 的二进制
 codesign --force -s - ./pactify          # ⚠️ 给 launchd 跑之前必做（否则 OS_REASON_CODESIGNING SIGKILL）

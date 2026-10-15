@@ -1,5 +1,7 @@
 # Spec — Driver Modernization(驱动层现代化大包)
 
+> 2026-10 状态注记：gemini-cli 集成已退役（#106、#107）；下文相关适配与座席分工仅作历史记录，agy / antigravity 不受影响。
+
 > Status: APPROVED-FOR-BUILD · 2026-07-05
 > 来源:竞品分析(OpenHands/mco/Hive,Obsidian P027 research)→ backlog C 项 review。
 > 本包 = **C-1(ACP transport)+ C-20(session 续接)+ C-6(知识层)+ C-2(doctor 预检)+ C-12(可靠度统计)**。

@@ -188,7 +188,7 @@ canonical = 一个**不被 checkout 的孤儿分支** `pact-ledger`（§5.2 实�
 3. **并行模式的过渡**：`parallel.go` 今天**结构性依赖 tracked `.pact`**——
    worktree 的账本是从分支 checkout 出来的（全仓确认 `syncPact` 只被 sandbox 调用）。
    切 ref 之后 worktree 怎么拿账本，是 WS-C 的主要风险点。
-4. **hosted relay 的上行水位**：`serve/relay.go` 的上传水位以 **行号即 seq** 为前提
+4. **hosted relay 的上行水位（已退役，2026-10；相关 Go / web 代码已删除，以下仅作历史记录）**：`serve/relay.go` 的上传水位以 **行号即 seq** 为前提
    （`.pact/relay-uploaded.json`），账本换存储后这个语义是否还成立需要单独验证。
    （relay 整层当前 0 machines，见 `[CLOUD-DOWN]`——可以晚做，但不能忘。）
 

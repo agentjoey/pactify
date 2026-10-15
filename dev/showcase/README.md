@@ -1,5 +1,7 @@
 # showcase — dashboard seed project
 
+> Historical fixture: the gemini-cli integration is retired (2026-10); the demo seat id is retained.
+
 A hand-authored `.pact/log.jsonl` that projects to a rich state, so the dashboard
 (canvas node graph, office desks, ants, seat roster, kanban, replay timeline) has
 real data to display and review. **Dev/demo fixture only — not a real project.**

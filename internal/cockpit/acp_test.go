@@ -469,10 +469,20 @@ func TestACPCloseUnblocksDispatch(t *testing.T) {
 	}
 }
 
+// These peers re-exec the test binary (including race instrumentation). On a
+// low-core CI runner they compete with the other package binaries and git
+// subprocesses; a five-second end-to-end budget also charged that scheduling
+// delay to initialize/configure/prompt. Keep a bounded correctness-test budget
+// with headroom for startup, exercised by the six-second delayed peer below.
+const acpProcessTestTimeout = 30 * time.Second
+
 // TestACPProcessHelper is a stdio ACP peer, launched only by the process tests.
 func TestACPProcessHelper(t *testing.T) {
 	if os.Getenv("COCKPIT_ACP_HELPER") != "1" {
 		return
+	}
+	if os.Getenv("COCKPIT_ACP_SLOW_START") == "1" {
+		time.Sleep(6 * time.Second)
 	}
 	fmt.Fprintln(os.Stderr, "acp-stderr:"+os.Getenv("COCKPIT_ACP_MARKER"))
 	in := json.NewDecoder(os.Stdin)
@@ -548,7 +558,7 @@ func TestACPBackendOptionsReachProcess(t *testing.T) {
 	setupACPProcess(t)
 	for _, resume := range []bool{false, true} {
 		t.Run(fmt.Sprintf("resume=%v", resume), func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), acpProcessTestTimeout)
 			defer cancel()
 			opts := StartOpts{RepoDir: t.TempDir(), Env: []string{"COCKPIT_ACP_MARKER=override"}, Model: "kimi-code/kimi-for-coding", Effort: "low", Access: AccessReadOnly}
 			opts.RepoDir, _ = filepath.EvalSymlinks(opts.RepoDir)
@@ -601,7 +611,7 @@ func TestACPBackendStderrReachesWriter(t *testing.T) {
 	setupACPProcess(t)
 	for _, resume := range []bool{false, true} {
 		t.Run(fmt.Sprintf("resume=%v", resume), func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), acpProcessTestTimeout)
 			defer cancel()
 			stderr, err := os.CreateTemp(t.TempDir(), "stderr")
 			if err != nil {
@@ -641,7 +651,7 @@ func TestACPBackendDefaultPreservesRequests(t *testing.T) {
 	setupACPProcess(t)
 	for _, resume := range []bool{false, true} {
 		t.Run(fmt.Sprintf("resume=%v", resume), func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), acpProcessTestTimeout)
 			defer cancel()
 			b := newACPBackend("kimi-cli")
 			var sess Session
@@ -673,7 +683,7 @@ func TestACPBackendRejectsModelMismatch(t *testing.T) {
 	t.Setenv("COCKPIT_ACP_WRONG_MODEL", "1")
 	for _, resume := range []bool{false, true} {
 		t.Run(fmt.Sprintf("resume=%v", resume), func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), acpProcessTestTimeout)
 			defer cancel()
 			b := newACPBackend("kimi-cli")
 			opts := StartOpts{RepoDir: t.TempDir(), Model: "kimi-code/kimi-for-coding"}
@@ -722,5 +732,33 @@ func TestACPModelCannotChangeWhenSettingEffort(t *testing.T) {
 	_, err = applyACPResumeOpts(context.Background(), &modelChangingConfigurer{}, "s1", opts)
 	if !errors.Is(err, ErrModelUnavailable) {
 		t.Fatalf("resume err=%v", err)
+	}
+}
+
+// A busy runner can take longer than the old five-second budget to schedule a
+// re-executed test binary. Hold the actual peer before initialize to reproduce
+// that delay while still checking the full start/configure/prompt exchange.
+func TestACPBackendOptionsReachSlowProcess(t *testing.T) {
+	setupACPProcess(t)
+	t.Setenv("COCKPIT_ACP_SLOW_START", "1")
+	ctx, cancel := context.WithTimeout(context.Background(), acpProcessTestTimeout)
+	defer cancel()
+	sess, err := NewACPBackend("kimi-cli").Start(ctx, StartOpts{
+		RepoDir: t.TempDir(), Model: "kimi-code/kimi-for-coding", Effort: "low", Access: AccessReadOnly,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sess.Close()
+	if err := sess.Prompt(ctx, UserMessage{Text: "probe"}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case e := <-sess.Events():
+		if e.Kind != EventMessage || !strings.Contains(e.Text, "|kimi-code/kimi-for-coding|low|plan|") {
+			t.Fatalf("event=%+v", e)
+		}
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
 	}
 }

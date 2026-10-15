@@ -86,7 +86,7 @@ func TestLifecycleACPStartErrorIdentifiesCreatedSession(t *testing.T) {
 	setupACPProcess(t)
 	for _, resume := range []bool{false, true} {
 		t.Run(fmt.Sprintf("resume=%v", resume), func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), acpProcessTestTimeout)
 			defer cancel()
 			opts := StartOpts{RepoDir: t.TempDir(), Hidden: true, Model: "unavailable"}
 			b := NewACPBackend("kimi-cli")
@@ -176,7 +176,7 @@ func TestLifecycleCanceledCodexPromptNeverReachesWire(t *testing.T) {
 
 func TestLifecycleCanceledACPPromptNeverReachesWire(t *testing.T) {
 	setupACPProcess(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), acpProcessTestTimeout)
 	defer cancel()
 	sess, err := NewACPBackend("kimi-cli").Start(ctx, StartOpts{RepoDir: t.TempDir()})
 	if err != nil {

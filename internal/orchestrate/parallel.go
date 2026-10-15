@@ -284,12 +284,7 @@ const runtimeIgnoreMarker = ".pact/orchestrate/"
 // single-run (loop.run) and parallel (RunParallel via ensureUnionAttrs) paths
 // rely on it before writing any runtime file.
 func ensureRuntimeExcludedLocal(dir string) error {
-	excl, err := gitx.GitPath(dir, "info/exclude")
-	if err != nil {
-		return err
-	}
-	_, err = ensureFileContains(excl, runtimeIgnoreMarker, runtimeIgnoreMarker+"\n")
-	return err
+	return gitx.EnsureExcluded(dir, runtimeIgnoreMarker)
 }
 
 // ensureUnionAttrs makes the repo safe for concurrent feature merges. Two things:

@@ -1,13 +1,13 @@
 # Spec — Harness Subagents（把其他 coding agent harness 当 subagent 调用）
 
-> Status: **DRAFT** · 2026-10-15 起草。方向已由 Human Owner 拍板（§0），本文到「方案、验证与分期」为止，**不含实现**。
-> 现状描述为源码实读，标注 `文件:行号`（起草时 HEAD = `2950d17`）。标 **[待验证]** 的是起草时未实测的假设，
-> Phase 0 的任务就是把它们逐条变成实测结论。
+> Status: **DRAFT** · 2026-10-15 起草，同日完成 Phase 0 前实测（§10）。方向已由 Human Owner 拍板（§0），本文到「方案、验证与分期」为止，**不含实现**。
+> 现状描述为源码实读，标注 `文件:行号`（起草时 HEAD = `2950d17`）。仍标 **[待验证]** 的是尚未实测的假设；
+> 已实测的结论集中在 §10，正文相应处已改写。Phase 0 范围与路线图于 2026-10-15 按 D5–D7 改写（§6、§7、§11）。
 
 ## 0. 定位与已拍板的决策（2026-10-15）
 
 **一句话**：pactify 是 coding agent 的 **harness 路由器**——在 Claude Code 里一个 slash 命令，就把
-codex / opencode / gemini(agy) / kimi … 作为 subagent 拉起来执行一个任务，体验接近原厂 subagent，
+codex / opencode / agy（Antigravity CLI）/ kimi … 作为 subagent 拉起来执行一个任务，体验接近原厂 subagent，
 同时按任务在各家 harness 的能力与订阅额度之间做平衡。类比 `musistudio/claude-code-router`，
 但路由的是 **harness**，不是模型。
 
@@ -16,6 +16,10 @@ codex / opencode / gemini(agy) / kimi … 作为 subagent 拉起来执行一个�
 | D1 | 产品归属 | **就是 pactify**。不另起品牌、不拆仓库 |
 | D2 | 第一版 host | **只做 Claude Code** |
 | D3 | 现有协议 / 看板 / 云端 | **降级**：冻结新投入，变成可选的「治理模式」；具体删减见 §8 |
+| D4 | gemini-cli | **移出范围**（2026-10-15）：agy（Antigravity CLI）已取代 gemini-cli，Gemini 系模型经 agy 调用。编排器里现有的 gemini-cli 代码随降级冻结，不再验证 |
+| D5 | 第一版 callee | **codex + kimi**（2026-10-15）：一个保真度最高（模型可核实、权限干净、有额度事件），一个有已知风险（只读要靠 plan 模式且会循环、协议不回报 token），两者放在一起才能验证适配层能否兜住「不完美的 harness」 |
+| D6 | 产品定位 | **主打大任务委派**：固定开销（callee 启动 2–5 万 token + host 转发与读结果）只在大任务上划算；结果信封必须显示本次成本 |
+| D7 | 兼容适配 | **作为产品能力规划**（§11）：各家 CLI 会持续自动更新，适配不能靠一次性修代码，要有版本感知、动态模型表与自检 |
 
 **为什么第三方能做、而且只有第三方会做**：host 厂商不会让自家 harness 拉起竞品（商业上不允许）；
 callee 厂商会做「别人的 host 调我」（`openai/codex-plugin-cc` 34.2k★ 已做 Claude→Codex），
@@ -43,7 +47,7 @@ callee 厂商会做「别人的 host 调我」（`openai/codex-plugin-cc` 34.2k�
 - 不做 Claude Code 以外的 host（D2）。
 - 不做模型代理 / 鉴权转发（那是 CCR 的地盘，且有条款风险）。
 - 不做多 agent 编排、任务状态机、看板——这些属于降级后的「治理模式」（§8）。
-- 不在 callee 里中转审批到 host 的审批 UI（P1 只做「只读 / 可写」两档预设，§5.4）。
+- 不在 callee 里中转审批到 host 的审批 UI（M1 只做「只读 / 可写」两档预设，§5.4）。
 
 ## 3. 原则（实现不得违背）
 
@@ -53,6 +57,9 @@ callee 厂商会做「别人的 host 调我」（`openai/codex-plugin-cc` 34.2k�
 - **P-3 权限语义统一**：用户只面对 `--read-only` / `--write` 两档，由 pactify 映射到各 harness 的原生参数。
 - **P-4 结果有界**：回到 host 上下文的只有结果信封（§4.3），完整日志落盘给路径，不回灌整段过程。
 - **P-5 host 侧开销最小**：转发 subagent 用最便宜的模型（haiku），只做一次 Bash 调用，不读代码、不轮询。
+- **P-6 大任务优先**（D6）：skill 的描述与转发规则引导「多文件、需要探索或跑测试」的工作外派，小改动留给 host 自己做；
+  每次委派在信封里报告成本（token，能拿到时附美元），让用户看到「挪出去是否划算」。
+- **P-7 版本感知**（D7）：每个 job 记录 callee 的 CLI 版本；遇到未经自检的新版本时先跑自检再执行，自检不过就明说，不硬跑。
 
 ## 4. 架构
 
@@ -63,7 +70,7 @@ commands/ codex.md opencode.md … sub.md            pactify sub run|status|resu
           jobs.md（status/result/cancel）            ├─ job store   ~/.pactify/jobs/<id>/
 agents/   <harness>.md                              ├─ worker      detached 进程，持有 harness 会话
           (model: haiku, tools: Bash, 薄转发)        ├─ adapters    复用 internal/cockpit 的 Session
-hooks/    SessionStart：检查 pactify 是否可用          └─ router      ~/.pactify/router.json（P2）
+hooks/    SessionStart：检查 pactify 是否可用          └─ router      ~/.pactify/router.json（M2）
 skills/   brief 写法（如何把任务转写成自足的 brief）
 ```
 
@@ -88,20 +95,25 @@ pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模
 | `orchestrate.Runner` | 接口只返回 `error`（`internal/orchestrate/runner.go:81-83`），终稿从不提取；子进程 stdin/stdout 直连父进程（`runner_idle.go:108,121`） | 不用 |
 | `cockpit.Session` | 统一事件流含文本/终稿/工具/用量（`internal/cockpit/backend.go:61-70`），带审批流与 `ThreadID()` 续接（`:88-95`）；codex app-server / claude bridge / ACP 三类后端都已实现 | **采用** |
 
-需要补的（全是定点改动）：
+需要补的（全是定点改动，依据见 §10 实测）：
 
-- **codex 模型参数**：`StartOpts.Model` 字段已存在（`backend.go:12`），但 `threadStart` 只传 `cwd`
-  （`internal/cockpit/codex.go:283`）。补 `model` 与 sandbox / approvalPolicy 参数。
-- **ACP 模型参数**：opencode 复用 #55 的 `OPENCODE_CONFIG_CONTENT` 注入（`internal/orchestrate/acprunner.go:110-120`），
-  需要搬进 cockpit 的 ACP 路径（serve 从不传 model，`internal/serve/cockpit.go:159`）。
-- **实际模型回报**：从会话初始化事件里取后端实际使用的模型，与请求比对（P-2）。**[待验证]** 每个后端是否都回报。
-  codex 已有依据：vendored schema（`codexschema/CODEX_VERSION` = 0.144.4）里 `ThreadStartResponse` 含
-  `model` / `modelProvider` / `reasoningEffort` / `sandbox` / `approvalPolicy`；`ThreadStartParams` 可传
-  `model` / `sandbox` / `approvalPolicy` / `developerInstructions` / `ephemeral`；`TurnStartParams` 可传 `effort` 与
-  `outputSchema`（结构化终稿）。本机 codex 已是 0.162.1，Phase 0 需按当前版本复核。
-- **终稿文本**：`item/completed` 的 agentMessage 事件目前不带正文（`codex.go:560-561` 只发 `Final:true`），
-  终稿要由 delta 累加或从 raw item 中取。
-- **命令行模式兜底**：agy 等没有 server 协议的 kind 才走命令行，且必须改成输出进缓冲区、不碰父进程 stdio。
+- **codex**：`StartOpts.Model` 字段已存在（`backend.go:12`），但 `threadStart` 只传 `cwd`
+  （`internal/cockpit/codex.go:283`）。补 `model` / `sandbox` / `approvalPolicy=never`，每轮传 `effort`。
+  启动响应回报的 `model` / `modelProvider` 即实际模型（实测与请求一致）；其中 `reasoningEffort` 是**会话默认值**，
+  不反映每轮传入的 `effort`。随附 schema 需刷新到当前版本（0.144.4 → 0.162.1 相关字段只有新增、无删改）。
+- **终稿文本**：codex 0.162.1 的 `item/completed`（agentMessage）**已带 `text`**，现有代码（`codex.go:560-561`）没读它，
+  改为直接取；ACP 由 `agent_message_chunk` 累加；Claude 取 `result` 消息。
+- **ACP 模型参数**：opencode 与 kimi 的 `session/new` 都返回 `configOptions`，其中 `id=model` 的选项带当前值与可选列表；
+  `session/set_config_option`（以及 `session/set_model`）切换后，opencode 日志证实实际改跑所选模型。
+  **因此新方案在协议内设模型，不再需要 #55 的 `OPENCODE_CONFIG_CONTENT` 注入。** kimi 还有 `id=thinking`（推理强度）
+  与 `id=mode`（工作模式）两项。kimi 的 ACP 不回报 token 与实际模型，但本地会话记录
+  `~/.kimi-code/sessions/<工作目录>/<sessionId>/agents/main/wire.jsonl` 逐轮记有 `model` 与 `usage`，实测与协议内设定一致，
+  用它补齐核实与成本（路径经 `~/.kimi-code/session_index.jsonl` 按 sessionId 查）。
+- **命令行模式兜底**：只剩 agy 走命令行（无 ACP、无 server 协议），且必须改成输出进缓冲区、不碰父进程 stdio。
+  agy 的模型名表已过期（见 §10），需从 `agy models` 动态获取，不再写死。
+- **精简 callee 的启动配置**：实测每次委派的输入基线约 2–5 万 token，主要来自 callee 加载用户全部的 MCP 服务器与插件
+  （codex 启动了 17 个 MCP 服务器；claude 带了 359 个工具）。新方案应默认以最小配置启动 callee（ACP 会话已传
+  `mcpServers: []`；codex 经 `ThreadStartParams.config`、claude 经 `--strict-mcp-config` 一类参数，**[待验证]**）。
 
 ### 4.3 结果信封（回到 host 的唯一内容）
 
@@ -120,64 +132,88 @@ status · harness · model(请求 → 实际，不一致标红) · 权限档 · 
 
 callee 冷启动，没有 host 的对话上下文。第一版做法：转发 subagent 按 skill 把用户请求转写成
 **自足 brief**（目标、相关文件路径、约束、验收标准），callee 自己读 repo。
-不传会话记录全文（成本高、各 harness 无通用导入格式；codex 有官方导入器，可作为 P2 的 codex 专属增强）。
+不传会话记录全文（成本高、各 harness 无通用导入格式；codex 有官方导入器，可作为 M2 之后的 codex 专属增强）。
 **Phase 0 必须度量**：同一批任务，brief 质量是否足以让 callee 不需要回问就完成。
 
 ### 5.2 前台 / 后台与完成通知
 
 - 小任务：转发 subagent 前台 `pactify sub run … --wait 540s`，结果直接成为 subagent 的返回。
-- 大任务：`run` 立即返回 job id，主线程用 Bash `run_in_background` 跑 `pactify sub wait <job>`，
-  进程退出即触发 Claude Code 原生的后台完成通知。**[待验证]** 在插件命令 / subagent 的上下文里这条链路是否成立。
+- 大任务：`run` 立即返回 job id，**主线程**用 Bash `run_in_background` 跑 `pactify sub wait <job>`，
+  进程退出即触发 Claude Code 原生的后台完成通知。按官方文档：subagent 自己起的后台命令，完成通知只回到该 subagent，
+  前台 subagent 结束时它的后台命令也会停——所以「等结果」这一步必须放在主线程，或把转发 subagent 设为 `background: true`。
+- 补充（官方文档）：Bash 前台命令到达超时会被**转到后台继续跑**而不是被杀（`BASH_MAX_TIMEOUT_MS` 默认 10 分钟，可调）；
+  主线程的 MCP 工具调用超过 2 分钟也会自动转后台（`MCP_TOOL_TIMEOUT` 默认约 28 小时）。后者让「MCP 工具形态的 delegate」
+  也成为可行的备选，M4 时再比较两种形态。
 
 ### 5.3 隔离
 
 默认在**当前工作树**运行（与 codex-plugin-cc 一致，最符合「像原生 subagent」的直觉），但：
 - `--write` 且转后台时，**默认进 worktree**（`internal/gitx` 的 `AddWorktree` 已有），结果给 worktree 路径，
   由 host 决定合并还是丢弃——避开 host 与 callee 同时改同一棵树（`CommitAll` 同类问题）。
-- **[待验证]** Claude Code subagent 的 `isolation: worktree` 能否让转发 subagent 的 Bash 落在该 worktree；
-  若能，前台可写任务直接用原生隔离。
+- **已实测**：subagent 设 `isolation: worktree` 时，Bash 在 `.claude/worktrees/agent-<id>`（从当前 HEAD 新开分支）里执行；
+  没有改动时 worktree 自动清掉，有改动则保留。前台可写任务可直接用这个原生隔离。
 
 ### 5.4 权限映射（P-3）
 
-| 档位 | codex | opencode | gemini / agy | claude |
-|---|---|---|---|---|
-| `--read-only` | sandbox read-only | permission 全 deny 写 | approval-mode 默认 | permission-mode plan |
-| `--write` | sandbox workspace-write | permission allow edit/bash | yolo | acceptEdits |
+| 档位 | codex | opencode（ACP） | kimi（ACP） | agy（命令行） | claude（CLI / SDK） |
+|---|---|---|---|---|---|
+| `--read-only` | `sandbox: read-only` ✅ | 拒绝写类权限请求 ✅ | `session/set_mode plan` ✅⚠️ | `--mode plan` ✅ | `--allowedTools=Read,Grep,Glob` ✅ |
+| `--write` | `sandbox: workspace-write` ✅ | 批准权限请求 ✅ | 默认模式（直接写）✅ | `--mode accept-edits` ✅ | `--permission-mode acceptEdits` ✅ |
 
-**[待验证]** 每一格的确切参数名与当前版本行为；表格本身就是 P1 的兼容性测试清单。
+✅ = 2026-10-15 实测：只读档写文件被拦、可写档写成功。⚠️ kimi 的 plan 模式拦得住，但被拒后会反复申请退出、反复提问
+（一轮 32 次工具调用），需在 brief 里写明只读且对 `ExitPlanMode` 自动拒绝并附说明，同时设每轮调用上限。
+kimi 的默认模式名为「手动审批」，实测却**不发权限请求直接写**，所以只读不能靠拒绝请求实现。
+kimi 命令行 `-p` 一律自动批准，且 `--plan` 不能与 `-p` 同用——**kimi 的只读只能走 ACP**。
+claude 的 `--allowedTools` 是变长参数，后面紧跟提示词会被吞掉，必须写成 `--allowedTools=…` 或经 stdin 传提示词。
 
 ### 5.5 host 侧开销
 
 转发 subagent 用 haiku、只做一次 Bash；host 读回的只有信封。Phase 0 度量
 「host 额外 token / callee 完成的工作量」，确认挪走重活确实划算。
 
-## 6. Phase 0 — 一周验证（只做 codex + opencode 两个 harness、前台 + 后台）
+## 6. Phase 0 — 用 codex + kimi 验证「大任务委派」值不值得用（约 1.5 周）
 
-| 问题 | 通过标准 |
-|---|---|
-| Q1 brief 交接是否够用 | 10 个真实任务（取自本仓 backlog）中 ≥7 个 callee 一次完成、无需人工补上下文 |
-| Q2 host 开销是否划算 | 每次委派 host 侧额外 token 中位数 < 10k |
-| Q3 后台通知链路 | `run_in_background` + `sub wait` 在插件命令里能触发原生完成通知 |
-| Q4 隔离继承 | 实测 `isolation: worktree` 下 Bash 的 cwd |
-| Q5 模型兑现 | codex / opencode 请求的模型 = 实际模型（从事件中读出，非文档互证） |
+**范围**：codex（app-server）+ kimi（ACP），前台与后台两种形态，只读与可写两档。
+插件入口先用一个最小 skill（`/codex`、`/kimi`）+ 转发 subagent + `pactify sub run|wait|status|result`；
+结果信封、job 存储、版本记录按 §4 的最小形态实现，路由器、兼容自检的完整版不在 Phase 0。
 
-任一 Q1–Q3 不过 → 回到本 spec 修改方案，不进 P1。
+**任务集**：从本仓 backlog 与近期 PR 里挑 **10 个大任务**（判定：涉及 ≥3 个文件，或需要探索代码、跑测试才能完成；
+host 自己做预计 ≥10 分钟）。每个任务 codex、kimi 各跑一次，共 20 次委派；另挑 3 个只读任务（调研、评审类）给两家各跑一次。
 
-## 7. 分期
+| 编号 | 问题 | 通过标准 | 怎么测 |
+|---|---|---|---|
+| Q1 | 交接质量 | 每家 10 个大任务中 ≥7 个一次完成，无需人工补上下文 | 人工判定 + 跑任务自带的验收（测试 / 构建） |
+| Q2 | host 开销 | host 侧额外 token 中位数 < 1 万 / 次 | 主线程 + 转发 subagent 的 token 记录 |
+| Q3 | 后台通知 | 后台委派完成后，主线程收到原生完成通知并读回信封 | 至少 5 次后台委派全部到达 |
+| Q4 | 成本可见 | 20 次委派的信封里都有 token；codex 附额度事件 | 检查信封 |
+| Q5 | 模型兑现 | 请求的模型 = 实际模型，20 次全部一致 | codex 读启动响应；kimi 读本地会话记录（§10） |
+| K1 | kimi 只读 | 3 个只读任务里 plan 模式不出现循环（工具调用 ≤ 上限），且无文件改动 | brief 写明只读 + 对退出 plan 的请求自动拒绝并附说明 + 每轮调用上限 |
+| K2 | kimi 核实 | 每次委派都能从 `~/.kimi-code/sessions/…/wire.jsonl` 读出实际模型与 token | 按 ACP 返回的 sessionId 经 `session_index.jsonl` 定位 |
+| K3 | 版本漂移 | Phase 0 期间 CLI 自动更新后（本机 kimi 2.2.0 已在待装），自检能发现差异并给出明确提示 | 更新前后各跑一次 §10 的探测 |
 
-| 阶段 | 范围 | 量级 |
-|---|---|---|
-| P0 | §6 验证（codex、opencode） | ~1 周 |
-| P1 | + gemini/agy、kimi、claude；`sub doctor`；job 管理全套；权限映射兼容性测试进 CI（扩展现有 `codex-schema.yml` 的思路） | Go ~2–3k 行 + 插件 ~10 个 md，2–3 周 |
-| P2 | router：命令别名 → 默认 harness、按任务类型选路、额度/限流报错时的回退链（改造 `[FALLBACK-PAR]` 逻辑）、每次委派的成本与 token 统计 | ~1–1.5k 行，1–2 周 |
-| P3（可选） | 治理模式：`sub run --task T` 记入 pact 账本，callee = worker，host = reviewer | 视降级后协议的形态再定 |
+**停止线**：Q1 或 Q2 任一不达标 → 先改交接方式（skill 的转写规则、brief 模板），不加新 harness、不进 M1；
+K1 不达标 → kimi 第一版不开放只读档（写进文档），不影响 codex 推进。
+
+**产出**：一份 Phase 0 报告（每次委派的成本、耗时、是否一次完成、失败原因），作为 M1 的输入。
+
+## 7. 路线图
+
+| 里程碑 | 内容 | 退出条件 | 量级 |
+|---|---|---|---|
+| **M0 · Phase 0** | §6：codex + kimi 的最小可用链路与 10 个大任务实测 | §6 停止线全部通过 | ~1.5 周 |
+| **M1 · 首个可发布版本**（v0.13.0） | codex + kimi 正式支持：完整 job 管理（后台、续接、取消、日志）、结果信封含成本、只读/可写、worktree 隔离流程、`sub doctor` 自检 v1（§11）、插件 skill 打磨；README 与文档站切换到新定位 | 公开发布；本仓日常开发自用两周无阻塞问题 | ~2–3 周 |
+| **M2 · 扩展 harness + 路由 v1** | 接入 opencode（多提供方、美元成本）、agy（多模型系）、claude-code（GLM 等换提供方场景）；router v1：命令别名 → 默认 harness、按任务类型选路、额度/限流时的回退链（复用 `[FALLBACK-PAR]` 思路）、跨委派的成本汇总 | 5 个 harness 均通过 §11 自检；回退链有真实触发记录 | ~3 周 |
+| **M3 · 稳定性与精简** | §11 兼容层完整版（版本矩阵、协议 schema 漂移 CI、callee 最小配置启动）；删除退役代码：云端（`cloud/`、`internal/cloudauth` 等）、web 看板与 serve 的去留单独决定（§8，每项单独 PR、单独确认） | 二进制与仓库体积显著下降；CLI 自动更新后 24 小时内能发现不兼容 | ~2 周 |
+| **M4 · 可选扩展** | 治理模式：`sub run --task T` 记入 pact 账本，callee = worker、host = reviewer；第二个 host（Codex 作为调用方）；MCP 工具形态的 delegate（§5.2 备选） | 视 M1–M3 的使用数据再定 | — |
+
+**并行的维护线**：每个里程碑结束时跑一遍 §11 自检并更新「已验证版本」表；backlog 里随降级冻结的条目不排期。
 
 ## 8. 降级（D3）的具体含义
 
 | 资产 | 处理 | 何时 |
 |---|---|---|
-| 云端（`cloud/`、relay、fly app） | **退役**：不再部署，backlog 云端整节冻结；代码删除另行 PR | 立即冻结；删除待 P1 完成后单独决定 |
-| web 看板 + `serve`（~20.7k TS + 6.5k Go） | **冻结**：不再加功能，只保证能构建；`cockpit` 包从 serve 中独立出来供 `sub` 使用 | 立即冻结；简化 / 删除待 P1 完成后单独决定 |
+| 云端（`cloud/`、relay、fly app） | **退役**：不再部署，backlog 云端整节冻结；代码删除另行 PR | 立即冻结；删除在 M3，单独决定 |
+| web 看板 + `serve`（~20.7k TS + 6.5k Go） | **冻结**：不再加功能，只保证能构建；`cockpit` 包从 serve 中独立出来供 `sub` 使用 | 立即冻结；简化 / 删除在 M3，单独决定 |
 | pact 协议 + 账本 + `pact` 插件 | **保留为可选的治理模式**；不再作为产品主线叙事 | — |
 | 单一规范账本 spec | **暂停在 WS-B**（已合入、flag 默认关，不影响现网行为） | 立即 |
 | 绑在上述资产上的 backlog 条目（`[UI-GATE]`、`[CLOUD-DOWN]`、`[BACKLOG-LIST]`、`[RUNGUARD-DEAD]` 等） | 标记「随降级冻结」，不再排期 | 立即 |
@@ -186,7 +222,54 @@ callee 冷启动，没有 host 的对话上下文。第一版做法：转发 sub
 
 ## 9. 开放问题
 
-1. **命令命名**：插件命令会带命名空间（`/pactify:codex`）。**[待验证]** 无冲突时能否用 `/codex` 短形式；
-   若不能，是否把插件名取短（如 `sub` → `/sub:codex`）。
+1. **命令命名**（官方文档已答）：插件 `commands/` 下只能用 `/pactify:codex`；做成插件 **skill**（`skills/codex/SKILL.md`）
+   则在无冲突时可用短形式 `/codex`，`/pactify:codex` 始终可用。第一版用 skill。注意插件 subagent 会忽略
+   `permissionMode` / `mcpServers` / `hooks` 三个字段。
 2. **与官方 codex 插件共存**：用户同时装了 `codex-plugin-cc` 时，`/pactify:codex` 是否改为委托给它，还是各走各的。
-3. **README / 文档站叙事**何时切换到新定位——建议 P1 完成后。
+3. **README / 文档站叙事**切换到新定位——已排进 M1。
+
+## 10. Phase 0 前实测结果（2026-10-15）
+
+在临时目录的一次性 git 仓库中，用每家最便宜的模型档实测。gemini-cli 按 D4 不再验证。
+
+| 项目 | codex 0.162.1 | claude 2.1.300 | opencode 1.18.34 | kimi 2.0.0 | agy 1.2.15 |
+|---|---|---|---|---|---|
+| 调用通道 | app-server | CLI `-p`（SDK 同源） | `opencode acp` | `kimi acp` | CLI `-p --output-format json` |
+| 设模型 | `thread/start.model` ✅ | `--model` ✅ | `set_config_option` ✅ | `set_config_option` ✅ | `--model` ✅（未知名直接报错） |
+| 读出实际模型 | 启动响应 `model`/`modelProvider` ✅ | init 消息 `model` + `modelUsage` ✅ | `configOptions.currentValue`，日志证实一致 ✅ | 协议内只有配置值；本地会话记录 ✅ | 结果 JSON 无模型字段 ❌ |
+| 推理强度 | 每轮 `effort` | `--effort` | 随模型 | `id=thinking` 选项 | 模型名后缀 |
+| 最终回复 | `item/completed.text` ✅ | `result` ✅ | `agent_message_chunk` ✅ | `agent_message_chunk` ✅ | `response` ✅ |
+| token / 成本 | `thread/tokenUsage/updated`（含上下文窗口）+ `account/rateLimits/updated` | `usage` + `total_cost_usd` | `usage_update` 含**美元成本** | ACP 不回报；本地会话记录有逐轮 `usage` ✅ | `usage` ✅ |
+| 只读 / 可写 | 见 §5.4 ✅ | ✅ | ✅ | ✅⚠️ | ✅ |
+| 续接 | `thread/resume` | SDK resume | `loadSession` / `resume` | `loadSession` / `resume` | `--conversation <id>` |
+| 每次委派输入基线 | ~2 万 token（17 个 MCP 服务器） | ~4.8 万（含缓存，359 个工具） | ~1.9 万 | — | ~2 万 |
+
+**实测中发现的现有代码问题**（v0.12.0 已发布版本中存在，随降级冻结，记入 backlog）：
+
+- **agy 模型表过期**：`internal/agent/launch.go` 写死的 `gemini-3.7-flash-*` / `gemini-3.1-pro-*` 已不被识别，
+  当前为 `gemini-3.8-flash-{high,medium,low}`、`claude-opus-5-5-*`、`claude-sonnet-5-5-*`、`gpt-oss-120b-medium`。
+  ⇒ 编排器用默认模型拉起 agy 会直接失败。agy 还新增了 `--mode {accept-edits,auto,plan}` 与 `--sandbox`。
+- **kimi 2.0.0 配置迁移**：配置从 `~/.kimi/` 移到 `~/.kimi-code/config.toml`，默认模型变为 `kimi-code/k3-256k`；
+  `pactify doctor` 仍检查 `~/.kimi/`。`-p` 仍自动批准、`-m` 仍可用；新增 `--output-format stream-json`（含最终回复与会话 id，无模型与 token）。
+
+**补充（同日）**：kimi 本地会话记录证实——协议内切到 `kimi-for-coding` 的会话实际跑 `kimi-for-coding`，未切换的跑默认 `k3-256k`；
+plan 模式那次循环在记录里是 64 次模型调用。测试期间 kimi 已自行下载 2.2.0 待安装，CLI 版本漂移是常态（D7）。
+
+**仍待验证**：callee 最小配置启动的确切参数（codex `config`、claude `--strict-mcp-config`）；Claude SDK 桥读出 init 消息里的模型；
+Q1（brief 交接质量）与 Q2（host 开销）需要真实任务，属于 Phase 0 本身。
+
+## 11. 兼容适配层（D7 · 产品侧的日常维护）
+
+各家 CLI 会自动更新（实测期间 kimi 已自行下载 2.2.0），模型表、配置位置、参数、协议字段都会变。
+2026-10-15 一次批量更新后，5 个接入里有 3 处失配（agy 模型表、kimi 配置目录、codex 协议版本）。适配因此是产品能力，不是偶发修补：
+
+| 组成 | 做什么 | 首次落地 |
+|---|---|---|
+| **版本记录** | 每个 job 记录 callee 的 CLI 版本与协议版本；结果信封里显示 | M0 |
+| **动态模型表** | 不写死模型名：codex 用 `model/list`，ACP 用 `session/new` 的 `configOptions`，agy 用 `agy models`；用户指定的模型不在表内时拒绝执行并列出可选项 | M1 |
+| **`pactify sub doctor` 自检** | 把 §10 的探测做成命令：安装与登录、设模型并核实、只读被拦、可写成功、拿到最终回复与 token。只用最便宜的模型档、一次性临时仓库 | M1 |
+| **已验证版本表** | 每个 harness 记录「自检通过的版本」；运行时发现新版本 → 先自检（或提示用户跑），通过后写入表 | M1 |
+| **协议 schema 漂移 CI** | 沿用现有 `codex-schema.yml` 的做法，扩展到 ACP schema；只比对协议，不需要登录 | M3 |
+| **callee 最小配置启动** | 不继承用户全部 MCP 服务器与插件，压低固定开销（实测 2–5 万 token） | M3 |
+
+CI 里无法登录各家账号，所以「真跑一遍」的自检只在用户本机执行；CI 只守协议层面的漂移。

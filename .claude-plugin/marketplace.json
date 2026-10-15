@@ -6,6 +6,11 @@
       "name": "pact",
       "source": "./plugins/pact",
       "description": "Multi-agent coordination via the pact protocol (skill + MCP server)."
+    },
+    {
+      "name": "pactify",
+      "source": "./plugins/pactify",
+      "description": "Delegate large tasks to codex / kimi as subagents with verified model and cost."
     }
   ]
 }

@@ -1,0 +1,9 @@
+{
+  "name": "pactify",
+  "description": "Delegate large coding tasks from Claude Code to other coding agent harnesses (codex, kimi) as subagents, with verified model and cost.",
+  "version": "0.1.0",
+  "author": { "name": "agentjoey" },
+  "homepage": "https://github.com/agentjoey/pactify",
+  "repository": "https://github.com/agentjoey/pactify",
+  "license": "MIT"
+}

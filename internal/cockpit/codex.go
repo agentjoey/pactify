@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -426,7 +427,11 @@ func codexStartParams(opts StartOpts) map[string]any {
 		// Write mode may use the network (Owner decision 2026-10-15): delegated work
 		// must be able to run a project's full test suite, which often binds local
 		// ports, and fetch dependencies. Read-only keeps codex's default (no network).
-		p["config"] = map[string]any{"sandbox_workspace_write": map[string]any{"network_access": true}}
+		sandbox := map[string]any{"network_access": true}
+		if len(opts.WritableRoots) > 0 {
+			sandbox["writable_roots"] = opts.WritableRoots
+		}
+		p["config"] = map[string]any{"sandbox_workspace_write": sandbox}
 	}
 	return p
 }
@@ -455,36 +460,51 @@ func (c *codexClient) threadStartOpts(ctx context.Context, opts StartOpts) (Sess
 	return c.threadOpts(ctx, "thread/start", params, opts.Model)
 }
 
-// An empty MCP table merges with the user's table in codex 0.162.1; it does
-// not clear it. Read the effective names (including project config) and disable
-// each before creating a thread. Never write config or log the returned values.
+// Read effective configuration before merging cache roots or disabling MCP.
+// An empty MCP table merges with the user's table in codex 0.162.1; disable each
+// effective name instead. Never write config or log the returned values.
 func (c *codexClient) delegationParams(ctx context.Context, opts StartOpts) (map[string]any, error) {
 	params := codexStartParams(opts)
-	if !opts.MinimalConfig {
+	addRoots := opts.Access == AccessWrite && len(opts.WritableRoots) > 0
+	if !opts.MinimalConfig && !addRoots {
 		return params, nil
 	}
 	raw, err := c.rpc.call(ctx, "config/read", map[string]any{"cwd": opts.RepoDir, "includeLayers": false})
 	if err != nil {
-		return nil, fmt.Errorf("codex: minimal configuration: %w", err)
+		return nil, fmt.Errorf("codex: delegation configuration: %w", err)
 	}
 	var res struct {
 		Config struct {
-			Servers map[string]json.RawMessage `json:"mcp_servers"`
+			Servers        map[string]json.RawMessage `json:"mcp_servers"`
+			WorkspaceWrite struct {
+				WritableRoots []string `json:"writable_roots"`
+			} `json:"sandbox_workspace_write"`
 		} `json:"config"`
 	}
 	if err := json.Unmarshal(raw, &res); err != nil {
-		return nil, fmt.Errorf("codex: parse minimal configuration: %w", err)
-	}
-	servers := make(map[string]any, len(res.Config.Servers))
-	for name := range res.Config.Servers {
-		servers[name] = map[string]any{"enabled": false}
+		return nil, fmt.Errorf("codex: parse delegation configuration: %w", err)
 	}
 	config, _ := params["config"].(map[string]any)
 	if config == nil {
 		config = map[string]any{}
 	}
-	// Nested keys preserve literal server names containing dots or quotes.
-	config["mcp_servers"] = servers
+	if opts.MinimalConfig {
+		servers := make(map[string]any, len(res.Config.Servers))
+		for name := range res.Config.Servers {
+			servers[name] = map[string]any{"enabled": false}
+		}
+		// Nested keys preserve literal server names containing dots or quotes.
+		config["mcp_servers"] = servers
+	}
+	if addRoots {
+		roots := append([]string(nil), res.Config.WorkspaceWrite.WritableRoots...)
+		for _, path := range opts.WritableRoots {
+			if !slices.Contains(roots, path) {
+				roots = append(roots, path)
+			}
+		}
+		config["sandbox_workspace_write"].(map[string]any)["writable_roots"] = roots
+	}
 	params["config"] = config
 	return params, nil
 }

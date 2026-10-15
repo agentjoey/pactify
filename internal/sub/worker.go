@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -25,7 +26,8 @@ const (
 )
 
 type WorkerConfig struct {
-	ToolCallLimit   int // 0 disables the limit; CLI default is 40.
+	CacheHome       string // Optional shared cache home; doctor keeps job storage disposable.
+	ToolCallLimit   int    // 0 disables the limit; CLI default is 40.
 	IdleTimeout     time.Duration
 	KimiWireTimeout time.Duration // Default 10s to flush per-job wire usage before Close.
 	Now             func() time.Time
@@ -67,6 +69,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	result.describeWorktree(st)
 	unverifiedWarning, versionWarning := "", ""
+	var cacheWarnings []string
 	// Persist the result before the terminal state, so waiters never observe a partial result.
 	defer func() {
 		p := recover()
@@ -88,7 +91,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		} else {
 			for _, warning := range result.Warnings {
 				// These warnings describe harness readiness, not a job error.
-				if warning != h.Experimental && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
+				if !slices.Contains(cacheWarnings, warning) && warning != h.Experimental && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
 					reason = warning
 					break
 				}
@@ -141,6 +144,31 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	opts := cockpit.StartOpts{RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
 	opts.MinimalConfig = result.ConfigMode == "minimal"
 	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root))
+	cacheHome := cfg.CacheHome
+	if cacheHome == "" {
+		cacheHome = filepath.Dir(store.Root)
+	}
+	cacheWarnings, err = prepareJobCaches(cacheHome, h.Name == "codex", &opts)
+	result.Warnings = append(result.Warnings, cacheWarnings...)
+	if err != nil {
+		return fail(err)
+	}
+	if err := store.prepareJobTemp(ctx, id); err != nil {
+		return fail(err)
+	}
+	defer func() {
+		if err := store.cleanupJobTemp(id); err != nil {
+			result.Warnings = append(result.Warnings, "Job temp cleanup failed: "+err.Error())
+		}
+	}()
+	tmpDir, err := filepath.Abs(filepath.Join(store.Dir(id), "tmp"))
+	if err != nil {
+		return fail(err)
+	}
+	opts.Env = append(opts.Env, "TMPDIR="+tmpDir)
+	if h.Name == "codex" && opts.Access == cockpit.AccessWrite {
+		opts.WritableRoots = append(opts.WritableRoots, tmpDir)
+	}
 	harnessHome := st.HarnessHome
 
 	minimalHome := h.Home != nil && opts.MinimalConfig

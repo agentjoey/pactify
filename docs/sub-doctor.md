@@ -16,7 +16,7 @@ codex 的只读探测明确要求通过 shell 工具执行 `sh -c 'echo hi > out
 
 kimi 额外输出第七项 `Managed home`：检查共享目录及三个链接正确、探测 job 成功且记录的 home 是共享目录、探测 session id 不在用户 home 的 `session_index.jsonl` 中，并读取共享 home 对应的 `wire.jsonl`，确认没有 `mcp.tools_discovered` 事件。缺少会话或 wire 证据、索引不可读或损坏均不能通过。CLI 不可用时该项 SKIP。
 
-仓库和 job 均放在一次性临时目录；传给子进程的 `PACTIFY_HOME` 指向临时 home，不改变当前进程的环境。kimi 的 `KIMI_CODE_HOME` 仍指向调用者 `$PACTIFY_HOME` 下的长期共享目录，探测会话保留在那里；最小配置无需启动 `kimi web` 或归档。codex 继续走普通 job 的 `Hidden: true` 归档流程。正常结束、检查失败和可处理的取消之后都会移除临时仓库和 job；不要通过 `SIGKILL` 结束进程。
+仓库和 job 均放在一次性临时目录；传给子进程的 `PACTIFY_HOME` 指向临时 home，不改变当前进程的环境。构建缓存单独使用调用者 `$PACTIFY_HOME/cache`，不随探测销毁。kimi 的 `KIMI_CODE_HOME` 仍指向调用者 `$PACTIFY_HOME` 下的长期共享目录，探测会话保留在那里；最小配置无需启动 `kimi web` 或归档。codex 继续走普通 job 的 `Hidden: true` 归档流程。正常结束、检查失败和可处理的取消之后都会移除临时仓库和 job；不要通过 `SIGKILL` 结束进程。
 
 普通 kimi job 的 `--with-user-config` 使用用户 home 并沿用归档；doctor 始终探测 minimal config。job 记录实际 home，模型/token 核实和续接沿用它。kimi 续接必须保持原配置模式，旧 job 缺少 `configMode` 时仍按 user config 处理，需使用 `--with-user-config`；切换模式请新建会话。
 
@@ -34,6 +34,37 @@ kimi 额外输出第七项 `Managed home`：检查共享目录及三个链接正
 普通 job 在版本表缺失、损坏、缺少时间或版本不匹配时输出`has not been checked` 提示；它不改变任务状态，也不写入 `State.Error`。表中版本匹配且时间有效才免提示。表本身不证明当前登录、网络或模型服务仍然可用。
 
 退出码：全部适用检查通过为 0，有检查或基础设施失败为 1，未知 harness、多余参数或错误 flag 为 2。
+
+## 共享缓存与磁盘检查（AJ-675）
+
+codex、kimi、agy 和 opencode 的 job 默认共用以下目录；`PACTIFY_HOME` 未设置时使用 `~/.pactify`：
+
+| 子进程环境变量 | 默认目录 |
+|---|---|
+| `GOCACHE` | `$PACTIFY_HOME/cache/go-build` |
+| `GOMODCACHE` | `$PACTIFY_HOME/cache/go-mod` |
+| `npm_config_cache` | `$PACTIFY_HOME/cache/npm` |
+
+用户显式设置的非空变量优先保留，包括 `GOCACHE=off`；未设小写 `npm_config_cache` 时也保留大写 `NPM_CONFIG_CACHE` 的值。Codex 可写档会检查显式目录能否创建临时文件；能写则把该目录加入本次会话的 writable roots，不能写则改用共享缓存，并在结果 `Warnings` 中提示。检测文件立即删除，不修改已有缓存文件或 Go module 的只读权限。其他 harness 保留显式变量；Codex 只读档不增加 writable roots。配置只传给子进程和本次会话，用户全局配置与默认 Go 缓存内容不变。
+
+每个 job 单独使用 `TMPDIR=$PACTIFY_HOME/jobs/<id>/tmp`，在会话关闭后清理；孤儿恢复和取消兜底会先停止已登记的 harness，再清理。只有成功新建并在 job state 中记录归属的目录才会删除；预先存在但归属未知的目录不接管。`sub discard` 会在确认共用 worktree 的所有 job 均停止后，清理这些 job 留下的临时目录，不清理共享缓存或其他 job。临时目录内的符号链接不会导致递归删除链接目标。不要在 job 的专属 TMPDIR 中保存需要保留的文件。
+
+`sub doctor` 在各 harness 的检查前输出单独的 `Storage` 检查：`PACTIFY_HOME` 所在卷可用空间低于 5 GiB 时为 **WARN**，并报告共享缓存目录下普通文件的大小总和（不跟随内部符号链接）。空间或缓存大小无法读取也为 WARN；这些提示不导致 doctor 失败，不影响 harness 版本自检记录。home 或缓存尚不存在时，检查已有父目录所在卷并报告缓存为零，不创建 job。
+
+停止使用这些缓存的 job 和其他进程后，可删除共享缓存；先用 Go 清理含只读目录的 module cache，再删除其余缓存。后续 job 会重新创建并下载依赖：
+
+```sh
+GOMODCACHE="${PACTIFY_HOME:-$HOME/.pactify}/cache/go-mod" go clean -modcache
+rm -rf -- "${PACTIFY_HOME:-$HOME/.pactify}/cache"
+```
+
+只清理 Go 构建缓存时，明确指定 Pactify 的目录：
+
+```sh
+GOCACHE="${PACTIFY_HOME:-$HOME/.pactify}/cache/go-build" go clean -cache
+```
+
+用户自行指定的缓存不在上述清理范围。不会扫描或删除历史上任意命名的 `/private/tmp/pactify-*-go-cache`，因为无法可靠判断其归属。
 
 ## 兼容行为与依赖审查
 

@@ -149,3 +149,83 @@ assert sections[0] == sections[1] == sections[2], 'review and rework rules diffe
 PY
   [ "$status" -eq 0 ]
 }
+
+@test "all three skills embed the same complete delegation guide" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+blocks = []
+for name in ('delegate', 'codex', 'kimi'):
+    text = (root / 'skills' / name / 'SKILL.md').read_text()
+    start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->'
+    assert text.count(start) == text.count(end) == 1, name
+    block = text.split(start)[1].split(end)[0]
+    for term in ('1. Write', '2. Start', '3. When', '4. To', 'conversation context', 'frequent user interaction'):
+        assert term in block, (name, term)
+    blocks.append(block)
+assert blocks[0] == blocks[1] == blocks[2], 'shared delegation guides differ'
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "skills provide a complete brief example within 25 lines" {
+  run python3 - "$P" <<'PY'
+import pathlib, re, sys, textwrap
+root = pathlib.Path(sys.argv[1])
+for name in ('delegate', 'codex', 'kimi'):
+    text = (root / 'skills' / name / 'SKILL.md').read_text()
+    brief = text.split('1. Write', 1)[1].split('2. Start', 1)[0]
+    example = re.search(r'```text\n(.*?)\n *```', brief, re.S)
+    assert example, (name, 'missing complete example')
+    example = textwrap.dedent(example[1])
+    assert len(example.splitlines()) <= 25, name
+    headings = ('Background', 'Goals', 'Known constraints and special cases', 'General constraints', 'Acceptance commands')
+    assert all(heading + ':' in example for heading in headings), name
+    assert re.search(r'^1\. .+\n2\. .+', example, re.M), name
+    for term in ('src/cache/', 'Do not edit existing tests to fit the new behavior', 'cannot infer',
+                 '**full** test command', 'Do not spawn subagents or write report files',
+                 'PACTIFY_HOME="$(mktemp -d)" go test ./... -count=1'):
+        assert term in brief, (name, term)
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "skills require host validation before apply and give actionable rework instructions" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+for name in ('delegate', 'codex', 'kimi'):
+    text = (root / 'skills' / name / 'SKILL.md').read_text()
+    review = text.split('3. When', 1)[1].split('4. To', 1)[0]
+    gates = ('diff <baseCommit>', 'main thread must personally rerun', 'full test suite',
+             'real environment', 'independent reviewer', 'concurrency, permissions, or data deletion')
+    for term in gates:
+        assert term in review, (name, term)
+        assert review.index(term) < review.index('pactify sub apply <jobId>'), (name, term)
+    rework = text.split('4. To', 1)[1]
+    for term in ('--resume --worktree', 'same worktree', 'Review findings:', 'Required changes:',
+                 'Tests to add:', 'Rerun acceptance:', 'Repeat step 3', 'do not apply or discard'):
+        assert term in rework, (name, term)
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "forwarders preserve isolation and leave validation and rework decisions to the host" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+for name in ('codex', 'kimi'):
+    text = (root / 'agents' / (name + '.md')).read_text()
+    for term in ('--worktree', '--cwd', 'same worktree', 'full test', 'real environment',
+                 'independent review', 'apply', 'discard', 'Review findings', 'Tests to add'):
+        assert term in text, (name, term)
+readme = (root / 'README.md').read_text()
+review = readme.split('## Reviewing a delegation', 1)[1]
+for term in ('diff', '全量测试', '真实环境', '独立评审', '--resume --worktree', '同一个 worktree',
+             'pactify sub apply <jobId>', 'pactify sub discard <jobId>', '评审发现', '补充测试'):
+    assert term in review, term
+for term in ('背景', '编号目标', '已知约束与特例', '通用约束', '验收命令', '口头上下文', '频繁交互', 'timeout: 7200000'):
+    assert term in readme, term
+PY
+  [ "$status" -eq 0 ]
+}

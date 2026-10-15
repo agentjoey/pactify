@@ -281,6 +281,7 @@ func (s *agySession) run(ctx, turnCtx context.Context, process *agyProcess, stde
 	// that said something (AJ-650 eval, agy 1.3.5).
 	stepText, lastSpoke := map[int]string{}, -1
 	var turn Usage
+	var resultUsage *Usage
 	failure, final := "", ""
 	gotResult := false
 	gotModel := false
@@ -317,7 +318,7 @@ func (s *agySession) run(ctx, turnCtx context.Context, process *agyProcess, stde
 						lastSpoke = step.Index
 					}
 				}
-				if step.State == "DONE" && step.Usage != nil {
+				if step.Usage != nil {
 					steps[step.Index] = step.Usage.cockpit()
 					turn = Usage{}
 					for _, u := range steps {
@@ -357,7 +358,8 @@ func (s *agySession) run(ctx, turnCtx context.Context, process *agyProcess, stde
 				final = stepText[lastSpoke]
 			}
 			if wire.Result.Usage != nil {
-				turn = wire.Result.Usage.cockpit()
+				u := wire.Result.Usage.cockpit()
+				resultUsage = &u
 			}
 		}
 	}
@@ -387,6 +389,17 @@ func (s *agySession) run(ctx, turnCtx context.Context, process *agyProcess, stde
 	}
 	if ctx.Err() != nil || s.ctx.Err() != nil || turnCtx.Err() != nil {
 		failure = "interrupted"
+	}
+	if resultUsage != nil {
+		if failure == "" {
+			turn = *resultUsage
+		} else {
+			// An error result can contain empty or incomplete usage. Retain the
+			// known step totals without counting the result a second time.
+			turn.InputTokens = max(turn.InputTokens, resultUsage.InputTokens)
+			turn.OutputTokens = max(turn.OutputTokens, resultUsage.OutputTokens)
+			turn.TotalTokens = turn.InputTokens + turn.OutputTokens
+		}
 	}
 	s.totals = addAgyUsage(s.totals, turn)
 	usage(s.totals, nil)

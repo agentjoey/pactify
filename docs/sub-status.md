@@ -43,6 +43,7 @@ pactify sub status <id> --json                # 单个对象
 | `resumeOf` | string | `--resume` 创建时选中的直接来源 job id；未续接或未记录时为空 |
 | `resumedBy` | string array | `resumeOf` 指向本 job 的直接后继 id，按 id 排序；支持分叉，为空时 `[]` |
 | `inputTokens` / `outputTokens` | number | result 的最终 token 统计；尚无结果或未记录时为 0 |
+| `usagePartial` | bool，可省略 | 沿用 result 的标记；为 true 时只有已记录的用量，可能缺少末段，不能视为全 job 精确总量 |
 | `changedFiles` | number | result 中的改动文件数 |
 | `addedLines` / `deletedLines` | number | result 中的增删行数 |
 | `warningCount` | number | result 中的 warnings 条数 |
@@ -68,6 +69,8 @@ worktree 的 `applied` 是一次成功 apply 的持久化记录（空补丁的�
 | `inputTokens` / `outputTokens` | number，可省略 | 尾部窗口内最近的 usage；Codex 优先使用每个 thread 的 running total，再合计窗口内可见的 thread；没有 usage 时省略，已报告 0 时保留 0 |
 | `usagePartial` | bool，可省略 | 日志超过尾部窗口且存在 usage 时为 true，表示可能缺少窗口外 thread 的用量；不能把它当作全 job 精确总量 |
 
-每次最多读取 `log.jsonl` 最后 **256 KiB**，以打开后的文件大小为快照。被窗口截断的首条记录、没有换行提交的最后一条记录及损坏记录均忽略，不会整份扫描大日志。usage 可能不在窗口内，此时不虚构 token 数。最终精确用量以 result 的顶层 token 字段为准；Kimi 的独立用量验证通常只在 job 结束后进入 result。
+每次最多读取 `log.jsonl` 最后 **256 KiB**，以打开后的文件大小为快照。被窗口截断的首条记录、没有换行提交的最后一条记录及损坏记录均忽略，不会整份扫描大日志。usage 可能不在窗口内，此时不虚构 token 数。最终用量以 result 的顶层 token 字段为准，并结合顶层 `usagePartial` 判断是否可能不完整；Kimi 的独立用量验证通常只在 job 结束后进入 result。
+
+失败、取消、空闲超时或连接提前关闭时，保留已收到的用量，保守标记 `usagePartial: true`，并在 result 中警告 `Usage may be incomplete; only recorded usage is included`。用量独立核实失败也设置同一标记，不改变任务的成功状态。尚未启动就取消的 job 不因此标记 partial。worker 本身消失时，兜底结果从日志中的完整事件恢复用量；opencode 的日志成本是会话累计值，无法还原本 job 的 export 边界，因此不作为本 job 成本。
 
 State 沿用原子 rename 约定，status 沿用现有 Recover 和生命周期锁处理失联 worker。JSON 摘要遇到缺失或损坏的 result 仍显示 job，结果字段留空或为 0；人类输出中的全量用量汇总继续对损坏/缺失的终态 result 报错，不静默给出不完整汇总。旧 job 缺少新增元数据时正常输出。

@@ -16,7 +16,15 @@ import (
 func newGitRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	for _, a := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t.t"}, {"config", "user.name", "t"}} {
+	// These short-lived repositories must have no detached maintenance writing
+	// objects/maintenance.lock after a commit returns and TempDir cleanup starts.
+	for _, a := range [][]string{
+		{"init", "-q"},
+		{"config", "maintenance.auto", "false"},
+		{"config", "gc.auto", "0"},
+		{"config", "user.email", "t@t.t"},
+		{"config", "user.name", "t"},
+	} {
 		c := exec.Command("git", a...)
 		c.Dir = dir
 		if out, err := c.CombinedOutput(); err != nil {

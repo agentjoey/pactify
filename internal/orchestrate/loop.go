@@ -419,8 +419,15 @@ func (opts Options) run(ctx context.Context) error {
 	// driver stops heartbeating and is correctly retired.
 	if !opts.DryRun && statusHeartbeatInterval > 0 {
 		hbCtx, cancelHB := context.WithCancel(ctx)
-		defer cancelHB()
-		go heartbeatStatus(hbCtx, opts.runtimeDir(), statusHeartbeatInterval, func() string { return statusNow(opts.Now) })
+		hbDone := make(chan struct{})
+		go func() {
+			defer close(hbDone)
+			heartbeatStatus(hbCtx, opts.runtimeDir(), statusHeartbeatInterval, func() string { return statusNow(opts.Now) })
+		}()
+		defer func() {
+			cancelHB()
+			<-hbDone // callers may remove the worktree as soon as run returns
+		}()
 	}
 
 	// Reconstruct threshold history so a driver restart (crash, session limit,

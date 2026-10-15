@@ -55,8 +55,15 @@ func TestSEC_M17_HeartbeatRefreshesStaleStatus(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go heartbeatStatus(ctx, dir, 20*time.Millisecond, nil)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		heartbeatStatus(ctx, dir, 20*time.Millisecond, nil)
+	}()
+	defer func() {
+		cancel()
+		<-done // no heartbeat write may overlap TempDir cleanup
+	}()
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {

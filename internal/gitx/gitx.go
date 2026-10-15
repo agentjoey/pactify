@@ -62,16 +62,25 @@ func EnsureExcluded(dir, marker string) error {
 		return err
 	}
 	cur, err := os.ReadFile(excl)
-	switch {
-	case err == nil && strings.Contains(string(cur), marker):
+	if err == nil && strings.Contains(string(cur), marker) {
 		return nil
-	case err == nil:
-		return os.WriteFile(excl, append(cur, []byte("\n"+marker+"\n")...), 0o644)
-	case os.IsNotExist(err):
-		return os.WriteFile(excl, []byte(marker+"\n"), 0o644)
-	default:
+	}
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
+	// Worktrees share info/exclude. Append in one write: a read/replace would
+	// truncate it under concurrent readers and lose another writer's rules.
+	// Duplicate rules from simultaneous callers are harmless to git.
+	f, err := os.OpenFile(excl, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		return err
+	}
+	_, werr := f.WriteString("\n" + marker + "\n")
+	cerr := f.Close()
+	if werr != nil {
+		return werr
+	}
+	return cerr
 }
 
 // ValidBranchName reports whether name is a well-formed git branch name (per

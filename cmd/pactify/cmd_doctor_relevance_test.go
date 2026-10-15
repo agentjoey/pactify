@@ -121,7 +121,7 @@ func TestDoctorExit_UsedKindMissingStillFails(t *testing.T) {
 	}
 }
 
-// (2) The bug: the project does NOT use gemini-cli/codex-cli/antigravity; those
+// (2) The bug: the project does NOT use codex-cli/antigravity; those
 // binaries are missing; doctor must exit ZERO and still list them, marked.
 func TestDoctorExit_UnusedKindMissingDoesNotFail(t *testing.T) {
 	vendorPath := doctorSandbox(t, "w:worker:AGENTS.md:opencode")
@@ -131,7 +131,7 @@ func TestDoctorExit_UnusedKindMissingDoesNotFail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unused vendor CLIs must not fail doctor: %v\n%s", err, out)
 	}
-	for _, kind := range []string{"gemini-cli", "codex-cli", "antigravity"} {
+	for _, kind := range []string{"codex-cli", "antigravity"} {
 		line := findLine(t, out, "cli "+kind+": binary")
 		if !strings.HasPrefix(line, "!") {
 			t.Fatalf("unused failing vendor must carry the advisory mark, got %q", line)

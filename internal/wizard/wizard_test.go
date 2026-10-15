@@ -6,12 +6,12 @@ import (
 )
 
 func TestSuggest_ClaudeLeadsOthersWork(t *testing.T) {
-	got := Suggest([]string{"opencode", "claude-code", "gemini-cli"})
+	got := Suggest([]string{"opencode", "claude-code", "kimi-cli"})
 	// claude-code becomes the lead (orchestrator+reviewer); the rest are workers.
 	// Order is deterministic: lead first, then workers by kind.
 	want := []Binding{
 		{Seat: "claude", Kind: "claude-code", Roles: []string{"orchestrator", "reviewer"}, Drivable: true},
-		{Seat: "gemini", Kind: "gemini-cli", Roles: []string{"worker"}, Drivable: true},
+		{Seat: "kimi", Kind: "kimi-cli", Roles: []string{"worker"}, Drivable: true},
 		{Seat: "opencode", Kind: "opencode", Roles: []string{"worker"}, Drivable: true},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -20,14 +20,14 @@ func TestSuggest_ClaudeLeadsOthersWork(t *testing.T) {
 }
 
 func TestSuggest_NoClaudeFirstDrivableLeads(t *testing.T) {
-	got := Suggest([]string{"opencode", "gemini-cli"})
+	got := Suggest([]string{"opencode", "kimi-cli"})
 	if len(got) != 2 {
 		t.Fatalf("want 2 bindings, got %d", len(got))
 	}
-	// No claude → the first drivable kind (alphabetically gemini before opencode)
+	// No claude → the first drivable kind (alphabetically kimi before opencode)
 	// leads.
-	if got[0].Kind != "gemini-cli" || !reflect.DeepEqual(got[0].Roles, []string{"orchestrator", "reviewer"}) {
-		t.Errorf("lead = %+v, want gemini-cli orchestrator+reviewer", got[0])
+	if got[0].Kind != "kimi-cli" || !reflect.DeepEqual(got[0].Roles, []string{"orchestrator", "reviewer"}) {
+		t.Errorf("lead = %+v, want kimi-cli orchestrator+reviewer", got[0])
 	}
 	if got[1].Roles[0] != "worker" {
 		t.Errorf("second = %+v, want worker", got[1])

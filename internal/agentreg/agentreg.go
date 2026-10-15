@@ -59,6 +59,9 @@ func (r Registry) Save() error {
 }
 
 func (r *Registry) Register(kind, label, ts string) error {
+	if err := agent.RemovedKindError(kind); err != nil {
+		return err
+	}
 	if _, ok := agent.Get(kind); !ok {
 		return fmt.Errorf("agentreg: unknown kind %q", kind)
 	}
@@ -98,6 +101,9 @@ func (r Registry) Has(kind string) bool {
 func (r *Registry) SetConfig(kind, model string, allowedTools []string, restricted bool) error {
 	for i := range r.Agents {
 		if r.Agents[i].Kind == kind {
+			if err := agent.RemovedKindError(kind); err != nil {
+				return err
+			}
 			r.Agents[i].Model = model
 			r.Agents[i].AllowedTools = allowedTools
 			r.Agents[i].Restricted = restricted

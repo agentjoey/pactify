@@ -9,7 +9,7 @@ import (
 // Entry-file kind attribution.
 //
 // Several kinds share one entry file — AGENTS.md is the entry of opencode,
-// codex-cli, kimi-cli, cursor-cli and codex-app; GEMINI.md of gemini-cli and
+// codex-cli, kimi-cli, cursor-cli and codex-app. GEMINI.md belongs to
 // antigravity. The managed block pactify bakes there is deliberately
 // seat-agnostic AND kind-agnostic (briefing() names neither), so its mere
 // PRESENCE proves only that something pact-ish was wired into this file, not

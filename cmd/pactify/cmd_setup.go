@@ -58,7 +58,7 @@ func runSetup(in io.Reader, out io.Writer, cwd string, interactive bool) error {
 			// Fail closed before any writes, like the init command does.
 			ad, ok := agent.Get(kind)
 			if !ok {
-				return fmt.Errorf("unknown agent kind %q (supported: %v)", kind, agent.Kinds())
+				return agent.CheckKind(kind)
 			}
 			if ad.DefaultEntry() != "" {
 				entry = ad.DefaultEntry()
@@ -122,6 +122,9 @@ func runSetupYes(out io.Writer, cwd, project string) error {
 	}
 	var kinds []string
 	for _, a := range reg.Agents {
+		if err := agent.RemovedKindError(a.Kind); err != nil {
+			return err
+		}
 		kinds = append(kinds, a.Kind)
 	}
 	bindings := wizard.Suggest(kinds)
@@ -201,6 +204,9 @@ func newSetupSuggestCmd() *cobra.Command {
 			}
 			var kinds []string
 			for _, a := range reg.Agents {
+				if err := agent.RemovedKindError(a.Kind); err != nil {
+					return err
+				}
 				kinds = append(kinds, a.Kind)
 			}
 			bindings := wizard.Suggest(kinds)

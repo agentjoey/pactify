@@ -7,8 +7,8 @@ import (
 
 // The default (blanket-approve, default-model) output of each drivable kind's
 // launch profile MUST byte-for-byte equal the historical hardcoded Runner() args
-// — that contract is what TestRunnerCLIKinds locks, and what the gemini -p
-// ordering fix depends on. These tests pin the profile builders to that baseline.
+// — that contract is what TestRunnerCLIKinds locks. These tests pin the
+// profile builders to that baseline.
 func TestLaunchProfile_DefaultsMatchRunner(t *testing.T) {
 	cases := []struct {
 		kind string
@@ -17,7 +17,6 @@ func TestLaunchProfile_DefaultsMatchRunner(t *testing.T) {
 	}{
 		{"opencode", "opencode", []string{"run", "-m", "deepseek/deepseek-v4-pro", "{briefing}"}},
 		{"claude-code", "claude", []string{"-p", "--no-session-persistence", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}},
-		{"gemini-cli", "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}},
 		{"kimi-cli", "kimi", []string{"-p", "{briefing}", "-m", "kimi-code/kimi-for-coding"}},
 		{"codex-cli", "codex", []string{"exec", "--json", "--sandbox", "danger-full-access", "{briefing}"}},
 	}
@@ -37,33 +36,24 @@ func TestLaunchProfile_DefaultsMatchRunner(t *testing.T) {
 }
 
 // A model override replaces the default model in the rendered args, while the
-// rest of the arg structure (and crucially gemini's briefing-after-`-p` ordering)
-// is preserved.
+// rest of the arg structure is preserved.
 func TestLaunchProfile_ModelOverride(t *testing.T) {
-	p, _ := RunnerProfileFor("gemini-cli")
-	got := p.BuildArgs("gemini-2.5-flash", PermPosture{}, "do it")
-	want := []string{"-p", "do it", "-m", "gemini-2.5-flash", "--approval-mode", "yolo", "--skip-trust"}
+	p, _ := RunnerProfileFor("kimi-cli")
+	got := p.BuildArgs("custom-model", PermPosture{}, "do it")
+	want := []string{"-p", "do it", "-m", "custom-model"}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("gemini model override = %v, want %v", got, want)
+		t.Errorf("kimi model override = %v, want %v", got, want)
 	}
 }
 
 // Scoped posture swaps blanket auto-approve for an explicit allowed-tools list:
-// claude trades --dangerously-skip-permissions for --allowedTools; gemini trades
-// --approval-mode yolo for --approval-mode default + --allowed-tools.
+// claude trades --dangerously-skip-permissions for --allowedTools.
 func TestLaunchProfile_ScopedPosture(t *testing.T) {
 	pc, _ := RunnerProfileFor("claude-code")
 	gotC := pc.BuildArgs("claude-opus-4-8", PermPosture{Scoped: true, AllowedTools: []string{"Read", "Edit", "Bash"}}, "B")
 	wantC := []string{"-p", "--no-session-persistence", "--allowedTools", "Read,Edit,Bash", "--model", "claude-opus-4-8", "B"}
 	if !reflect.DeepEqual(gotC, wantC) {
 		t.Errorf("claude scoped = %v, want %v", gotC, wantC)
-	}
-
-	pg, _ := RunnerProfileFor("gemini-cli")
-	gotG := pg.BuildArgs("gemini-3.1-pro-preview", PermPosture{Scoped: true, AllowedTools: []string{"ReadFile", "Edit"}}, "B")
-	wantG := []string{"-p", "B", "-m", "gemini-3.1-pro-preview", "--approval-mode", "default", "--allowed-tools", "ReadFile,Edit", "--skip-trust"}
-	if !reflect.DeepEqual(gotG, wantG) {
-		t.Errorf("gemini scoped = %v, want %v", gotG, wantG)
 	}
 
 	// codex: blanket → danger-full-access (needs .git writes for pactify's base
@@ -102,7 +92,7 @@ func TestLaunchProfile_NonDrivable(t *testing.T) {
 // EffortArgs is an optional per-kind side channel (execution-tiering §4.5):
 // kinds that declare it render their CLI's reasoning-effort flag(s); kinds that
 // declare none must launch byte-for-byte unchanged. codex takes a -c config
-// override; claude takes --effort. opencode/gemini-cli/kimi-cli have no verified
+// override; claude takes --effort. opencode/kimi-cli have no verified
 // effort flag on their current builds, so they MUST stay nil.
 func TestLaunchProfile_EffortArgs(t *testing.T) {
 	px, _ := RunnerProfileFor("codex-cli")
@@ -132,7 +122,7 @@ func TestLaunchProfile_EffortArgs(t *testing.T) {
 	// --model <tier-suffixed> --effort <mismatched>` hard-errors, so effort must
 	// be routed through model choice instead — see the comment on its
 	// runnerProfiles entry.
-	for _, k := range []string{"opencode", "gemini-cli", "kimi-cli", "antigravity"} {
+	for _, k := range []string{"opencode", "kimi-cli", "antigravity"} {
 		if p, _ := RunnerProfileFor(k); p.EffortArgs != nil {
 			t.Errorf("%s: EffortArgs declared — an unverified/unsafe effort flag must stay nil", k)
 		}
@@ -170,7 +160,7 @@ func TestCandidateModels(t *testing.T) {
 		t.Errorf("claude-code candidates = %v, want %v", got, want)
 	}
 	// DefaultModel must appear in the curated list for kinds that pin one.
-	for _, k := range []string{"opencode", "claude-code", "gemini-cli", "kimi-cli", "antigravity"} {
+	for _, k := range []string{"opencode", "claude-code", "kimi-cli", "antigravity"} {
 		p, _ := RunnerProfileFor(k)
 		if p.DefaultModel == "" {
 			continue

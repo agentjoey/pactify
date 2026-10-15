@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/acp"
+	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/agentcfg"
 	"github.com/agentjoey/pactify/internal/audit"
 )
@@ -168,6 +169,9 @@ func recordAcpUsage(repoDir, _ /*seat*/, task string, u acp.Usage) {
 func (r AcpRunner) Run(ctx context.Context, lc LaunchContext) error {
 	command, args, ok := acpCommand(lc.Kind)
 	if !ok {
+		if err := agent.RemovedKindError(lc.Kind); err != nil {
+			return fmt.Errorf("orchestrate: %w", err)
+		}
 		return fmt.Errorf("orchestrate: kind %q has no ACP transport — route it over the command transport with --transport %s=cmd", lc.Kind, lc.Kind)
 	}
 
@@ -429,8 +433,8 @@ func autoSelectPermission(opts []acp.PermissionOption) (string, bool) {
 // binary invoked DIRECTLY (never `npx`), so exec.LookPath resolves it and a
 // missing binary fails loudly instead of hanging.
 //
-// Architecture: kimi + gemini + opencode ship native ACP in their installed
-// binary (`kimi acp` / `gemini --acp` / `opencode acp`). claude + codex are the
+// Architecture: kimi + opencode ship native ACP in their installed
+// binary (`kimi acp` / `opencode acp`). claude + codex are the
 // deep-integration tier (their SDKs, not ACP); their ACP path is the generic
 // bridge, run via the bridge's globally-installed bin (a shebang'd node script:
 // `claude-agent-acp` / `codex-acp`) — NOT `npx -y`, whose first-run download
@@ -443,11 +447,6 @@ func acpCommand(kind string) (command string, args []string, ok bool) {
 	switch kind {
 	case "kimi-cli":
 		return "kimi", []string{"acp"}, true
-	case "gemini-cli":
-		// Native ACP in the gemini binary — direct invocation, no npx cold-start
-		// / cache fragility. Consistent with how the cmd transport already runs
-		// gemini (Command "gemini").
-		return "gemini", []string{"--acp"}, true
 	case "opencode":
 		// Native ACP in the opencode binary. Model is inherited from opencode's
 		// global config (same pattern as kimi-cli); usage is parsed from the
@@ -490,8 +489,8 @@ func acpEnv(lc LaunchContext) []string {
 		"PACT_PROJECT=" + lc.Project,
 		"PACT_DIR=" + pactDir,
 	}
-	// Isolate a single-vendor agent from sibling vendors' credentials: a kimi /
-	// gemini / codex stint must not inherit the user's ANTHROPIC key (and so on).
+	// Isolate a single-vendor agent from sibling vendors' credentials: a
+	// kimi / codex stint must not inherit the user's ANTHROPIC key (and so on).
 	env = append(env, crossVendorStrip(lc.Kind)...)
 	if lc.Kind == "claude-code" {
 		// claude-code authenticates via interactive OAuth here, not the metered

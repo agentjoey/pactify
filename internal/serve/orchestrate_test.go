@@ -158,10 +158,9 @@ func TestOrchestrateRunningStaleGuard(t *testing.T) {
 }
 
 func TestInferKindFromName(t *testing.T) {
-	known := []string{"claude-code", "opencode", "gemini-cli", "kimi-cli"}
+	known := []string{"claude-code", "opencode", "kimi-cli"}
 	cases := map[string]string{
 		"opencode-worker": "opencode",
-		"gemini-worker":   "gemini-cli",
 		"kimi-worker":     "kimi-cli",
 		"claude":          "claude-code",
 		"weird-seat":      "",

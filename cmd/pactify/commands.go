@@ -32,7 +32,7 @@ func newRootCmd() *cobra.Command {
 				if s.Kind != "" && s.Kind != "shell" {
 					ad, ok := agent.Get(s.Kind)
 					if !ok {
-						return fmt.Errorf("unknown agent kind %q (supported: %v)", s.Kind, agent.Kinds())
+						return agent.CheckKind(s.Kind)
 					}
 					if ad.DefaultEntry() == "" {
 						return fmt.Errorf("kind %q has no project entry file; wire it with `pactify agent add %s` instead of init --seat", s.Kind, s.Kind)

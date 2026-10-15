@@ -72,6 +72,9 @@ func normalizeAntigravity(stdin []byte) (hookInput, bool) {
 // caller then no-ops, exit 0). Pure: (kind, bytes, env, now) → Record.
 func FromHook(kind string, stdin []byte, env Env, now time.Time) (Record, bool) {
 	var in hookInput
+	if kind == "gemini" || kind == "gemini-cli" {
+		return Record{}, false
+	}
 	if kind == "antigravity" {
 		var ok bool
 		if in, ok = normalizeAntigravity(stdin); !ok {

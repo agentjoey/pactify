@@ -7,7 +7,7 @@ import (
 
 func TestKindsSortedAndComplete(t *testing.T) {
 	got := strings.Join(Kinds(), ",")
-	want := "antigravity,claude-code,claude-desktop,codex-app,codex-cli,cursor-cli,gemini-cli,kimi-cli,opencode"
+	want := "antigravity,claude-code,claude-desktop,codex-app,codex-cli,cursor-cli,kimi-cli,opencode"
 	if got != want {
 		t.Fatalf("Kinds() = %q, want %q", got, want)
 	}
@@ -125,7 +125,6 @@ func TestRunnerCLIKinds(t *testing.T) {
 	}{
 		{"opencode", "opencode", []string{"run", "-m", "deepseek/deepseek-v4-pro", "{briefing}"}},
 		{"claude-code", "claude", []string{"-p", "--no-session-persistence", "--dangerously-skip-permissions", "--model", "claude-opus-4-8", "{briefing}"}},
-		{"gemini-cli", "gemini", []string{"-p", "{briefing}", "-m", "gemini-3.1-pro-preview", "--approval-mode", "yolo", "--skip-trust"}},
 		{"kimi-cli", "kimi", []string{"-p", "{briefing}", "-m", "kimi-code/kimi-for-coding"}},
 		{"codex-cli", "codex", []string{"exec", "--json", "--sandbox", "danger-full-access", "{briefing}"}},
 		{"antigravity", "agy", []string{"-p", "{briefing}", "--model", "gemini-3.7-flash-medium",

@@ -54,32 +54,38 @@ func TestWireOpencodeDoesNotWireItsAGENTSCoTenants(t *testing.T) {
 	})
 }
 
-// The same false positive on the other shared entry file: GEMINI.md is shared by
-// gemini-cli and antigravity.
-func TestWireGeminiCliDoesNotWireAntigravity(t *testing.T) {
+// A GEMINI.md block attributed to the removed kind must not credit agy.
+func TestRemovedGeminiEntryDoesNotWireAntigravity(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	dir := t.TempDir()
-	if err := WireAt(dir, "gemini-cli", "seat", "worker", dir); err != nil {
+	block := "<!-- pact:begin (managed) -->\n" + entryBody([]string{"gemini-cli"}) + "\n<!-- pact:end -->\n"
+	if err := os.WriteFile(filepath.Join(dir, "GEMINI.md"), []byte(block), 0644); err != nil {
 		t.Fatal(err)
 	}
-	assertWiring(t, dir, map[string]bool{"gemini-cli": true, "antigravity": false})
+	assertWiring(t, dir, map[string]bool{"antigravity": false})
 }
 
-// …and vice versa: wiring antigravity (machine-global config under a fake HOME)
-// must not make gemini-cli look wired.
-func TestWireAntigravityDoesNotWireGeminiCli(t *testing.T) {
+func TestWireAntigravityReportsWired(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	dir := t.TempDir()
 	if err := WireAt(dir, "antigravity", "seat", "worker", dir); err != nil {
 		t.Fatal(err)
 	}
-	assertWiring(t, dir, map[string]bool{"antigravity": true, "gemini-cli": false})
+	assertWiring(t, dir, map[string]bool{"antigravity": true})
+	b, err := os.ReadFile(filepath.Join(dir, "GEMINI.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds, attributed := entryKinds(string(b))
+	if !attributed || strings.Join(kinds, ",") != "antigravity" {
+		t.Fatalf("entry kinds = %v, attributed = %v", kinds, attributed)
+	}
 }
 
 // Regression guard: a config-writing kind that IS genuinely wired keeps
 // reporting wired — via its own config file, not via the shared entry.
 func TestWiredConfigKindsStillReportWired(t *testing.T) {
-	for _, k := range []string{"opencode", "claude-code", "gemini-cli", "cursor-cli", "kimi-cli", "claude-desktop"} {
+	for _, k := range []string{"opencode", "claude-code", "antigravity", "cursor-cli", "kimi-cli", "claude-desktop"} {
 		t.Run(k, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
 			dir := t.TempDir()
@@ -186,15 +192,15 @@ func TestLegacyBlockCreditsSoleTenantEntry(t *testing.T) {
 	assertWiring(t, dir, map[string]bool{"claude-code": true})
 }
 
-// GEMINI.md is shared by two config-writing kinds, so a legacy block there
-// credits neither — each is proved by the config `agent add` wrote for it.
-func TestLegacyBlockCreditsNeitherGeminiKind(t *testing.T) {
+// Antigravity is now the sole tenant of GEMINI.md, so the existing legacy
+// sole-tenant rule credits its unattributed managed block.
+func TestLegacyBlockCreditsAntigravitySoleTenant(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "GEMINI.md"), []byte(legacyEntryBlock), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	assertWiring(t, dir, map[string]bool{"gemini-cli": false, "antigravity": false})
+	assertWiring(t, dir, map[string]bool{"antigravity": true})
 }
 
 // Re-wiring over a legacy block upgrades it to an attributed one: the kind you

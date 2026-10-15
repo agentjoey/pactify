@@ -125,6 +125,9 @@ func newAgentCmd() *cobra.Command {
 		RunE: func(c *cobra.Command, args []string) error {
 			kind := args[0]
 			if _, ok := agent.Get(kind); !ok {
+				if err := agent.RemovedKindError(kind); err != nil {
+					return err
+				}
 				return fmt.Errorf("unknown agent kind %q — known kinds: %s", kind, strings.Join(agent.Kinds(), ", "))
 			}
 			// agent.Get is a static catalog lookup — it says the kind EXISTS, not

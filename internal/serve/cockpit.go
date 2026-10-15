@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/audit"
 	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/ledger"
@@ -73,7 +74,7 @@ func (s *Server) cockpitAudit(key cockpit.SessionKey, ev cockpit.AuditEvent) {
 // cockpit session. Kept in sync with backendForKey's supported kinds.
 func cockpitCapableKind(kind string) bool {
 	switch kind {
-	case "claude-code", "codex-cli", "kimi-cli", "gemini-cli", "opencode":
+	case "claude-code", "codex-cli", "kimi-cli", "opencode":
 		return true
 	default:
 		return false
@@ -91,18 +92,21 @@ func (s *Server) backendForKey(key cockpit.SessionKey) (cockpit.Backend, error) 
 	}
 
 	kind := s.seatKind(key.Project, key.Seat)
+	if err := agent.RemovedKindError(kind); err != nil {
+		return nil, err
+	}
 	if !cockpitCapableKind(kind) {
-		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/gemini-cli/opencode only)", key.Seat, kind)
+		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/opencode only)", key.Seat, kind)
 	}
 	switch kind {
 	case "claude-code":
 		return cockpit.NewClaudeBackend(), nil
 	case "codex-cli":
 		return cockpit.NewCodexBackend(), nil
-	case "kimi-cli", "gemini-cli", "opencode":
+	case "kimi-cli", "opencode":
 		return cockpit.NewACPBackend(kind), nil
 	default:
-		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/gemini-cli/opencode only)", key.Seat, kind)
+		return nil, fmt.Errorf("seat %q kind %q is not deep-integration (claude-code/codex-cli/kimi-cli/opencode only)", key.Seat, kind)
 	}
 }
 
@@ -487,6 +491,9 @@ func (s *Server) handleCockpitStatus(w http.ResponseWriter, r *http.Request) {
 		reason := ""
 		if !capable {
 			reason = fmt.Sprintf("seat %q has no deep-integration or ACP kind (kind=%q)", seat, kind)
+			if err := agent.RemovedKindError(kind); err != nil {
+				reason = err.Error()
+			}
 		}
 		resumable := capable && s.cockpit.StoredThread(key) != ""
 		writeJSON(w, http.StatusOK, cockpitStatusDTO{ThreadID: "", Capable: capable, Resumable: resumable, Reason: reason, Pending: []cockpitPendingItem{}})

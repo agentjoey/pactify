@@ -1,7 +1,10 @@
 package cockpit
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,8 +62,8 @@ func readJSONMap(t *testing.T, path string) map[string]any {
 	return m
 }
 
-// Archiving uses kimi's own flag (what `kimi session list` filters on, and what kimi
-// clears itself when the session is loaded again) and keeps every other field.
+// The file-level fallback writes what kimi's own archive writes (archived +
+// archivedAt) and keeps every other field.
 func TestArchiveKimiSessionSetsFlagAndPreservesFields(t *testing.T) {
 	home := kimiHomeFixture(t, map[string]struct {
 		ws, cwd  string
@@ -71,7 +74,7 @@ func TestArchiveKimiSessionSetsFlagAndPreservesFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := readJSONMap(t, filepath.Join(dir, "state.json"))
-	if st["archived"] != true || st["cwd"] != "/repo" || st["custom"].(map[string]any)["keep"] != "me" {
+	if st["archived"] != true || st["archivedAt"] == nil || st["cwd"] != "/repo" || st["custom"].(map[string]any)["keep"] != "me" {
 		t.Fatalf("state = %v", st)
 	}
 	if _, err := ArchiveKimiSession(home, "session_missing"); err == nil {
@@ -79,67 +82,48 @@ func TestArchiveKimiSessionSetsFlagAndPreservesFields(t *testing.T) {
 	}
 }
 
-// A workspace entry that the job itself created goes away once none of its sessions
-// is visible; a workspace the user already had is never touched.
-func TestPruneKimiWorkspaceOnlyRemovesWhatTheJobCreated(t *testing.T) {
-	jobStart := time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC)
-	repo := t.TempDir()
-	userRepo := t.TempDir()
-	busy := t.TempDir()
-	home := kimiHomeFixture(t,
-		map[string]struct {
-			ws, cwd  string
-			archived bool
-		}{
-			"session_job":   {"wd_new", repo, true},
-			"session_user":  {"wd_user", userRepo, true},
-			"session_busy1": {"wd_busy", busy, true},
-			"session_busy2": {"wd_busy", busy, false}, // still visible: keep the workspace
-		},
-		map[string]struct {
-			root    string
-			created time.Time
-		}{
-			"wd_new":  {repo, jobStart.Add(2 * time.Second)},
-			"wd_user": {userRepo, jobStart.Add(-48 * time.Hour)},
-			"wd_busy": {busy, jobStart.Add(time.Second)},
-		})
-	for _, tc := range []struct {
-		cwd  string
-		want bool
-	}{{repo, true}, {userRepo, false}, {busy, false}, {t.TempDir(), false}} {
-		removed, err := PruneKimiWorkspace(home, tc.cwd, jobStart)
-		if err != nil || removed != tc.want {
-			t.Fatalf("%s: removed=%v err=%v, want %v", tc.cwd, removed, err, tc.want)
-		}
+func TestParseKimiWebToken(t *testing.T) {
+	line := "  \x1b[1mToken:\x1b[0m    AbCdEf0123456789_-AbCdEf0123456789"
+	if got := parseKimiWebToken(line); got != "AbCdEf0123456789_-AbCdEf0123456789" {
+		t.Fatalf("token = %q", got)
 	}
-	ws := readJSONMap(t, filepath.Join(home, "workspaces.json"))["workspaces"].(map[string]any)
-	if _, ok := ws["wd_new"]; ok {
-		t.Fatal("job-created workspace still listed")
-	}
-	for _, k := range []string{"wd_user", "wd_busy"} {
-		if _, ok := ws[k]; !ok {
-			t.Fatalf("%s must be kept", k)
-		}
+	if parseKimiWebToken("  Local:    http://127.0.0.1:58991/#token=x") != "" {
+		t.Fatal("only the Token: line carries the token")
 	}
 }
 
-// macOS temp dirs appear as /var/... and /private/var/...; both spell the same workspace.
-func TestPruneKimiWorkspaceMatchesThroughSymlinks(t *testing.T) {
-	jobStart := time.Now().Add(-time.Minute)
-	repo := t.TempDir()
-	real, err := filepath.EvalSymlinks(repo)
-	if err != nil {
+// The archive call is the one kimi's own web UI makes: POST /api/v2/sessions:archive
+// with the bearer token, and every requested id must come back archived.
+func TestArchiveKimiSessionsHTTP(t *testing.T) {
+	var gotAuth string
+	var gotIDs []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v2/sessions:archive" {
+			http.NotFound(w, r)
+			return
+		}
+		gotAuth = r.Header.Get("Authorization")
+		var body struct {
+			IDs []string `json:"ids"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		gotIDs = body.IDs
+		ok := 0
+		for _, id := range body.IDs {
+			if id != "session_bad" {
+				ok++
+			}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"code": 0, "msg": "success", "data": map[string]any{"succeeded": ok, "failed": len(body.IDs) - ok}})
+	}))
+	defer srv.Close()
+	if err := archiveKimiSessionsHTTP(context.Background(), srv.URL, "tok", []string{"session_a"}); err != nil {
 		t.Fatal(err)
 	}
-	home := kimiHomeFixture(t, map[string]struct {
-		ws, cwd  string
-		archived bool
-	}{"session_job": {"wd_new", real, true}}, map[string]struct {
-		root    string
-		created time.Time
-	}{"wd_new": {real, time.Now()}})
-	if removed, err := PruneKimiWorkspace(home, repo, jobStart); err != nil || !removed {
-		t.Fatalf("removed=%v err=%v", removed, err)
+	if gotAuth != "Bearer tok" || len(gotIDs) != 1 || gotIDs[0] != "session_a" {
+		t.Fatalf("auth=%q ids=%v", gotAuth, gotIDs)
+	}
+	if err := archiveKimiSessionsHTTP(context.Background(), srv.URL, "tok", []string{"session_a", "session_bad"}); err == nil {
+		t.Fatal("a partially failed archive must be an error")
 	}
 }

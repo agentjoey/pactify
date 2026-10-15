@@ -53,9 +53,9 @@ job 存在 `$PACTIFY_HOME/jobs/<jobId>/`，默认 `~/.pactify/jobs/<jobId>/`。
 | harness | 怎么隐藏 | 想看原始会话 |
 |---|---|---|
 | codex | 结束时归档线程（Codex 桌面与手机端都不显示） | `codex unarchive <会话 id>` |
-| kimi | 结束时在会话的 `state.json` 置 kimi 自己的 `archived` 标记；若这个目录的 workspace 是本次 job 新建的，也一并移除；最后用 `kimi session list` 核对确实不显示 | `kimi session list --archived --cwd <目录>`，或 `kimi -S <会话 id>` 直接打开 |
+| kimi | 结束时调用 kimi 自己的归档接口（与 kimi web 界面「归档」同一个调用：pactify 临时起一个只监听本机的 `kimi web --no-open`，用完即关），命令行、web 与 Remote Control 都不再显示；接口不可用时退回写会话文件里的归档字段（只对命令行列表生效，摘要首行会提示）；最后用 `kimi session list` 核对 | `kimi session list --archived --cwd <目录>`，或 kimi web 的「已归档会话」里恢复 |
 
-`--resume` 会先取消隐藏、续接，结束后再隐藏。会话 id 在摘要的「会话」一行。隐藏失败时摘要首行会提示（例如 kimi 自动更新后改了会话格式）。
+`--resume` 会先取消隐藏、续接，结束后再隐藏。会话 id 在摘要的「会话」一行。隐藏失败时摘要首行会提示（例如 kimi 自动更新后改了会话格式）。kimi 的 workspace 条目由它自己从会话记录派生，归档后仍会保留——与你在 kimi 里手动归档一个会话的效果相同。
 
 ## 已知限制
 

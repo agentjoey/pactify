@@ -27,13 +27,13 @@ type Worktree struct {
 	Discarded    bool   `json:"discarded"`
 }
 
-const dirtyWorktreeWarning = "原工作区有未提交改动，未带入 worktree"
+const dirtyWorktreeWarning = "The original workspace has uncommitted changes; they were not included in the worktree"
 
 // NoSessionError is a request error, rather than a persistence/startup failure.
 type NoSessionError struct{ Harness string }
 
 func (e *NoSessionError) Error() string {
-	return fmt.Sprintf("该仓库还没有可续接的 %s 会话", e.Harness)
+	return fmt.Sprintf("This repository has no %s session to resume", e.Harness)
 }
 
 // CreateRun keeps the original cwd as the session lookup key. A worktree resume
@@ -53,7 +53,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 		req.Resume = session
 		if previous.Worktree == nil {
 			if isolated {
-				return State{}, fmt.Errorf("最近会话未使用 worktree；请去掉 --resume 创建隔离会话")
+				return State{}, fmt.Errorf("The latest session did not use a worktree; remove --resume to create an isolated session")
 			}
 			return s.Create(id, req)
 		}
@@ -64,7 +64,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 			}
 			root, err := repositoryRoot(w.Cwd)
 			if err != nil {
-				return fmt.Errorf("worktree 已不存在，无法 resume: %w", err)
+				return fmt.Errorf("worktree no longer exists; cannot resume: %w", err)
 			}
 			actual, err := filepath.EvalSymlinks(root)
 			if err != nil {
@@ -75,7 +75,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 				return err
 			}
 			if actual != expected {
-				return fmt.Errorf("worktree 路径已不再指向原隔离仓库")
+				return fmt.Errorf("worktree path no longer points to the original isolated repository")
 			}
 			created, err = s.Create(id, req)
 			if err != nil {
@@ -155,7 +155,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 
 func makeWorktreeCwd(w *Worktree, rel string) error {
 	if !filepath.IsLocal(rel) {
-		return fmt.Errorf("cwd 不在 worktree 内")
+		return fmt.Errorf("cwd is outside the worktree")
 	}
 	path := w.Path
 	for _, component := range strings.Split(rel, string(filepath.Separator)) {
@@ -170,7 +170,7 @@ func makeWorktreeCwd(w *Worktree, rel string) error {
 		// A dirty source may have replaced a HEAD symlink with a directory.
 		// Following that symlink here would run the callee outside isolation.
 		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("worktree cwd 包含 HEAD 中的 symlink: %s", path)
+			return fmt.Errorf("worktree cwd contains a symlink in HEAD: %s", path)
 		}
 	}
 	return os.MkdirAll(w.Cwd, 0700)
@@ -219,7 +219,7 @@ func (s Store) withWorktree(id string, f func(*State, *Worktree) error) error {
 		return err
 	}
 	if st.Worktree == nil {
-		return fmt.Errorf("job %s 未使用 worktree", id)
+		return fmt.Errorf("job %s did not use a worktree", id)
 	}
 	if err := validJobID(st.Worktree.Owner); err != nil {
 		return err
@@ -239,7 +239,7 @@ func (s Store) withWorktree(id string, f func(*State, *Worktree) error) error {
 		return err
 	}
 	if owner.Worktree == nil || owner.Worktree.Discarded {
-		return fmt.Errorf("worktree 已 discard，不能继续使用")
+		return fmt.Errorf("worktree has been discarded and cannot be reused")
 	}
 	return f(&st, owner.Worktree)
 }
@@ -262,7 +262,7 @@ func (s Store) worktreeIdle(w *Worktree) error {
 			return err
 		}
 		if !Terminal(st.Status) {
-			return fmt.Errorf("job %s 仍在运行；请先 pactify sub cancel %s", st.ID, st.ID)
+			return fmt.Errorf("job %s is still running; run pactify sub cancel %s first", st.ID, st.ID)
 		}
 		// Terminal output alone does not guarantee that every harness exited.
 		for _, p := range st.Processes {
@@ -271,7 +271,7 @@ func (s Store) worktreeIdle(w *Worktree) error {
 				return err
 			}
 			if alive {
-				return fmt.Errorf("job %s 的 harness 仍在运行；请先 pactify sub cancel %s", st.ID, st.ID)
+				return fmt.Errorf("the harness for job %s is still running; run pactify sub cancel %s first", st.ID, st.ID)
 			}
 		}
 	}
@@ -379,7 +379,7 @@ func (s Store) ApplyWorktree(id string) error {
 				}
 				args = append(args, w.BaseCommit, "--", string(path))
 				if _, err := runGit(w.OriginalRoot, args...); err != nil {
-					return fmt.Errorf("原工作区相关文件已改动 %q，未应用: %w", path, err)
+					return fmt.Errorf("affected file %q in the original workspace has changed; not applied: %w", path, err)
 				}
 			}
 		}
@@ -393,7 +393,7 @@ func (s Store) ApplyWorktree(id string) error {
 			cmd.Stdin = bytes.NewReader(change.patch)
 			out, err := cmd.CombinedOutput()
 			if err != nil {
-				return fmt.Errorf("apply 未成功: %w: %s", err, out)
+				return fmt.Errorf("apply failed: %w: %s", err, out)
 			}
 			return nil
 		}

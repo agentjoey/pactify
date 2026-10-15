@@ -36,9 +36,9 @@ func unverifiedVersionWarning(home string, h Harness, version string) string {
 		return ""
 	}
 	if version == "" {
-		version = "（版本未知）"
+		version = "(unknown version)"
 	}
-	return fmt.Sprintf("%s %s 尚未自检，建议先跑 pactify sub doctor", h.Name, version)
+	return fmt.Sprintf("%s %s has not been checked; run pactify sub doctor first", h.Name, version)
 }
 
 func recordVerifiedVersion(ctx context.Context, home, name, version string, now time.Time) error {

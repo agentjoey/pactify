@@ -104,9 +104,9 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 					}
 					switch fault {
 					case "conceal":
-						r.Warnings = []string{"会话隐藏失败：test"}
+						r.Warnings = []string{"Session hiding failed: test"}
 					case "archive":
-						r.Warnings = []string{"会话归档失败：test"}
+						r.Warnings = []string{"Session archiving failed: test"}
 					}
 					return r, nil
 				}
@@ -120,7 +120,7 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 				if len(reports[0].Checks) != 6 {
 					t.Fatalf("checks=%+v", reports[0].Checks)
 				}
-				if name == "kimi" && reports[0].Checks[3].Status != "跳过" {
+				if name == "kimi" && reports[0].Checks[3].Status != "SKIP" {
 					t.Fatalf("kimi readonly=%+v", reports[0].Checks[3])
 				}
 				if fault == "missing" || fault == "version" {
@@ -294,7 +294,7 @@ func TestDoctorReportsVersionTableWriteFailure(t *testing.T) {
 	}
 	var output strings.Builder
 	passed, err := Doctor(context.Background(), Store{Root: filepath.Join(home, "jobs")}, []string{"fake"}, &output)
-	if passed || err == nil || !strings.Contains(err.Error(), "已验证版本") {
+	if passed || err == nil || !strings.Contains(err.Error(), "verified version") {
 		t.Fatalf("passed=%t output=%s err=%v", passed, output.String(), err)
 	}
 	if _, err := os.Stat(filepath.Join(home, "jobs")); !os.IsNotExist(err) {

@@ -125,16 +125,16 @@ func newSubCmd() *cobra.Command {
 func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool) (int, error) {
 	h, ok := sub.Lookup(name)
 	if !ok {
-		return 2, fmt.Errorf("未知 harness %q；可用：%s", name, strings.Join(sub.Names(), ", "))
+		return 2, fmt.Errorf("unknown harness %q; available: %s", name, strings.Join(sub.Names(), ", "))
 	}
 	if readOnly && write {
-		return 2, fmt.Errorf("--read-only 与 --write 不能同时使用")
+		return 2, fmt.Errorf("--read-only and --write cannot be used together")
 	}
 	if readOnly && h.NoReadOnly != "" {
 		return 2, fmt.Errorf("%s", h.NoReadOnly)
 	}
 	if resume && fresh {
-		return 2, fmt.Errorf("--resume 与 --fresh 不能同时使用")
+		return 2, fmt.Errorf("--resume and --fresh cannot be used together")
 	}
 	if wait < 0 {
 		return 2, fmt.Errorf("--wait must not be negative")
@@ -159,7 +159,7 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 		return 2, err
 	}
 	if strings.TrimSpace(string(brief)) == "" {
-		return 2, fmt.Errorf("任务说明不能为空，请从 stdin 输入")
+		return 2, fmt.Errorf("task brief must not be empty; provide it on stdin")
 	}
 	store, err := sub.DefaultStore()
 	if err != nil {
@@ -236,7 +236,7 @@ func subPending(c *cobra.Command, id string, jsonOut bool) error {
 			Hint   string `json:"hint"`
 		}{id, "running", "pactify sub wait " + id})
 	}
-	_, err := fmt.Fprintf(c.OutOrStdout(), "%s 仍在运行；使用 pactify sub wait %s 查看结果\n", id, id)
+	_, err := fmt.Fprintf(c.OutOrStdout(), "%s is still running; use pactify sub wait %s to view the result\n", id, id)
 	return err
 }
 func subJSON(c *cobra.Command, value any) error {
@@ -338,16 +338,16 @@ func subCancel(c *cobra.Command, id string) (int, error) {
 			}
 			if st.CancelRequested {
 				st.Status = sub.StatusCanceled
-				st.Error = "任务已取消（worker 已退出）"
+				st.Error = "Task canceled (worker exited)"
 				if alive {
-					st.Error = "任务已取消（强制终止）"
+					st.Error = "Task canceled (force terminated)"
 				}
 			} else if !alive {
 				st.Status = sub.StatusFailed
 				st.Error = "job worker is absent or its process identity no longer matches"
 			} else {
 				st.Status = sub.StatusCanceled
-				st.Error = "任务已取消（强制终止）"
+				st.Error = "Task canceled (force terminated)"
 			}
 			if err = subSaveFallback(store, st); err != nil {
 				return 1, err

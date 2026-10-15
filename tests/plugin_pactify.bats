@@ -127,8 +127,8 @@ PY
 @test "README documents default delegation and experimental kimi" {
   grep -q '/delegate' "$P/README.md"
   grep -q '/pactify:delegate' "$P/README.md"
-  grep -q '默认.*codex' "$P/README.md"
-  grep -q 'kimi.*实验性' "$P/README.md"
+  grep -q 'default.*codex' "$P/README.md"
+  grep -q 'kimi.*experimental' "$P/README.md"
   grep -q '6/10' "$P/README.md"
 }
 
@@ -221,10 +221,10 @@ for name in ('codex', 'kimi'):
         assert term in text, (name, term)
 readme = (root / 'README.md').read_text()
 review = readme.split('## Reviewing a delegation', 1)[1]
-for term in ('diff', '全量测试', '真实环境', '独立评审', '--resume --worktree', '同一个 worktree',
-             'pactify sub apply <jobId>', 'pactify sub discard <jobId>', '评审发现', '补充测试'):
+for term in ('diff', 'full test suite', 'real environment', 'independent review', '--resume --worktree', 'same worktree',
+             'pactify sub apply <jobId>', 'pactify sub discard <jobId>', 'Review findings', 'Tests to add'):
     assert term in review, term
-for term in ('背景', '编号目标', '已知约束与特例', '通用约束', '验收命令', '口头上下文', '频繁交互', 'timeout: 7200000'):
+for term in ('Background', 'numbered goals', 'Known constraints and special cases', 'General constraints', 'Acceptance commands', 'conversation context', 'frequent user interaction', 'timeout: 7200000'):
     assert term in readme, term
 PY
   [ "$status" -eq 0 ]

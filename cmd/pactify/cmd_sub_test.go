@@ -108,7 +108,7 @@ func TestSubRunWaitTimesOutThenWaitCollects(t *testing.T) {
 		t.Fatalf("out.txt=%q err=%v", data, err)
 	}
 	out, code = runCLI(t, bin, repo, "", "sub", "result", id)
-	if code != 0 || !strings.HasPrefix(out, "✓ fake 完成") {
+	if code != 0 || !strings.HasPrefix(out, "✓ fake succeeded") {
 		t.Fatalf("result: %d %s", code, out)
 	}
 	out, code = runCLI(t, bin, repo, "", "sub", "status", "--json")

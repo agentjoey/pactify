@@ -49,35 +49,39 @@ func TruncateFinal(s string) (string, bool) {
 func (r Result) Markdown() string {
 	var b strings.Builder
 	if len(r.Warnings) > 0 {
-		fmt.Fprintf(&b, "⚠️ %s\n", strings.Join(r.Warnings, "；"))
+		fmt.Fprintf(&b, "⚠️ %s\n", strings.Join(r.Warnings, "; "))
 	} else if r.Status == StatusSucceeded {
-		fmt.Fprintf(&b, "✓ %s 完成\n", r.Harness)
+		fmt.Fprintf(&b, "✓ %s succeeded\n", r.Harness)
 	} else {
 		fmt.Fprintf(&b, "✗ %s %s\n", r.Harness, r.Status)
 	}
 	fmt.Fprintf(&b, "\nHarness: %s · CLI: %s\n", r.Harness, r.CLIVersion)
 	requested := r.ModelRequested
 	if requested == "" {
-		requested = "（默认）"
+		requested = "(default)"
 	}
-	fmt.Fprintf(&b, "模型: %s → %s", requested, r.ModelActual)
+	fmt.Fprintf(&b, "Model: %s → %s", requested, r.ModelActual)
 	if !r.ModelVerified {
-		b.WriteString("（未经独立核实）")
+		b.WriteString(" (unverified)")
 	}
-	fmt.Fprintf(&b, "\n权限: %s\n耗时: %s\nToken: 输入 %d · 输出 %d", r.Access, r.Duration, r.InputTokens, r.OutputTokens)
+	fmt.Fprintf(&b, "\nAccess: %s\nDuration: %s\nTokens: in %d · out %d", r.Access, r.Duration, r.InputTokens, r.OutputTokens)
 	if r.CostUSD != 0 {
-		fmt.Fprintf(&b, " · 成本 $%.6f", r.CostUSD)
+		fmt.Fprintf(&b, " · Cost $%.6f", r.CostUSD)
 	}
 	if r.RateLimit != "" {
-		fmt.Fprintf(&b, "\n额度: %s", r.RateLimit)
+		fmt.Fprintf(&b, "\nQuota: %s", r.RateLimit)
 	}
-	fmt.Fprintf(&b, "\n工具调用: %d\n改动: %d 个文件 · +%d/-%d\n", r.ToolCalls, len(r.Diff.Files), r.Diff.Added, r.Diff.Deleted)
+	files := "files"
+	if len(r.Diff.Files) == 1 {
+		files = "file"
+	}
+	fmt.Fprintf(&b, "\nTool calls: %d\nChanges: %d %s · +%d/-%d\n", r.ToolCalls, len(r.Diff.Files), files, r.Diff.Added, r.Diff.Deleted)
 	if r.WorktreePath != "" {
-		fmt.Fprintf(&b, "Worktree: %s\n基准 commit: %s\n", r.WorktreePath, r.BaseCommit)
+		fmt.Fprintf(&b, "Worktree: %s\nBase commit: %s\n", r.WorktreePath, r.BaseCommit)
 	}
 	for i, f := range r.Diff.Files {
 		if i == 20 {
-			fmt.Fprintf(&b, "…另 %d 个文件\n", len(r.Diff.Files)-20)
+			fmt.Fprintf(&b, "…more files: %d\n", len(r.Diff.Files)-20)
 			break
 		}
 		fmt.Fprintf(&b, "- %s (+%d/-%d)\n", f.Path, f.Added, f.Deleted)
@@ -87,11 +91,11 @@ func (r Result) Markdown() string {
 	for strings.Contains(r.FinalText, fence) {
 		fence += "`"
 	}
-	fmt.Fprintf(&b, "\n最终回复:\n%s\n%s\n%s\n", fence, r.FinalText, fence)
+	fmt.Fprintf(&b, "\nFinal reply:\n%s\n%s\n%s\n", fence, r.FinalText, fence)
 	if r.Truncated {
-		b.WriteString("（最终回复已截断）\n")
+		b.WriteString("(Final reply truncated)\n")
 	}
-	fmt.Fprintf(&b, "\n会话: %s\n日志: %s\n", r.SessionID, r.LogPath)
+	fmt.Fprintf(&b, "\nSession: %s\nLog: %s\n", r.SessionID, r.LogPath)
 	return b.String()
 }
 
@@ -103,7 +107,7 @@ type rateWindow struct {
 }
 
 // SummarizeRateLimit renders codex's rate-limit payload as one line, e.g.
-// "7 天窗口已用 10%，10-22 13:38 重置"; empty when there is none.
+// "7-day window: 10% used, resets 10-22 13:38"; empty when there is none.
 func SummarizeRateLimit(raw []byte) string {
 	var p struct {
 		RateLimits struct {
@@ -119,17 +123,17 @@ func SummarizeRateLimit(raw []byte) string {
 		if w == nil {
 			continue
 		}
-		window := fmt.Sprintf("%d 分钟", w.WindowDurationMins)
+		window := fmt.Sprintf("%d-minute", w.WindowDurationMins)
 		if w.WindowDurationMins%1440 == 0 {
-			window = fmt.Sprintf("%d 天", w.WindowDurationMins/1440)
+			window = fmt.Sprintf("%d-day", w.WindowDurationMins/1440)
 		} else if w.WindowDurationMins%60 == 0 {
-			window = fmt.Sprintf("%d 小时", w.WindowDurationMins/60)
+			window = fmt.Sprintf("%d-hour", w.WindowDurationMins/60)
 		}
-		part := fmt.Sprintf("%s窗口已用 %.0f%%", window, w.UsedPercent)
+		part := fmt.Sprintf("%s window: %.0f%% used", window, w.UsedPercent)
 		if w.ResetsAt > 0 {
-			part += "，" + time.Unix(w.ResetsAt, 0).Local().Format("01-02 15:04") + " 重置"
+			part += ", resets " + time.Unix(w.ResetsAt, 0).Local().Format("01-02 15:04")
 		}
 		parts = append(parts, part)
 	}
-	return strings.Join(parts, "；")
+	return strings.Join(parts, "; ")
 }

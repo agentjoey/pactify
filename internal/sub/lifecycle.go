@@ -44,7 +44,7 @@ func (s Store) claim(ctx context.Context, id string, now time.Time) (st State, e
 		}
 		if current.CancelRequested || ctx.Err() != nil {
 			current.CancelRequested = true
-			e := s.fallbackLocked(current, StatusCanceled, "任务已取消（尚未启动）")
+			e := s.fallbackLocked(current, StatusCanceled, "Task canceled (not yet started)")
 			st = *current
 			return errors.Join(context.Canceled, e)
 		}
@@ -128,7 +128,7 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 		if change, err := worktreeChanges(st.Worktree, false); err == nil {
 			result.Diff = change.diff
 		} else {
-			result.Warnings = append(result.Warnings, "worktree diff 统计失败："+err.Error())
+			result.Warnings = append(result.Warnings, "Failed to collect worktree diff stats: "+err.Error())
 			if result.Status == StatusSucceeded {
 				result.Status = StatusFailed
 				reason = err.Error()
@@ -162,9 +162,9 @@ func (s Store) Finish(id string, result *Result, reason string, finished time.Ti
 func (s Store) fallbackLocked(st *State, status Status, reason string) error {
 	if st.CancelRequested && status != StatusCanceled {
 		status = StatusCanceled
-		reason = "任务已取消（worker 已退出）"
+		reason = "Task canceled (worker exited)"
 		if st.Status == StatusQueued {
-			reason = "任务已取消（尚未启动）"
+			reason = "Task canceled (not yet started)"
 		}
 	}
 	r := Result{JobID: st.ID, Status: status, Harness: st.Request.Harness, Access: st.Request.Access, ModelRequested: st.Request.Model, LogPath: s.LogPath(st.ID), Warnings: []string{reason}}
@@ -196,7 +196,7 @@ func (s Store) RequestCancel(id string) (st State, err error) {
 			current.CancelRequested = true
 			current.UpdatedAt = time.Now().UTC()
 			if current.Status == StatusQueued && current.Worker == nil {
-				if e := s.fallbackLocked(current, StatusCanceled, "任务已取消（尚未启动）"); e != nil {
+				if e := s.fallbackLocked(current, StatusCanceled, "Task canceled (not yet started)"); e != nil {
 					return e
 				}
 			} else if e := s.Save(*current); e != nil {

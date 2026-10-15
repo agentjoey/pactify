@@ -69,15 +69,15 @@ func TestRunJobExperimentalWarningFromRegistry(t *testing.T) {
 				case "startup-failed":
 					wantError = "startup failed"
 				case "canceled":
-					wantError = "任务已取消"
+					wantError = "Task canceled"
 				}
 				state, err := store.Load("j1")
 				if err != nil || state.Status != wantStatus || state.Error != wantError {
 					t.Fatalf("state=%+v err=%v; want error %q", state, err, wantError)
 				}
-				want := "kimi 为实验性 harness（Phase 0：大任务一次完成 6/10，只读不收敛）"
+				want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)"
 				if name == "codex" {
-					if contains(r.Warnings, "实验性") {
+					if contains(r.Warnings, "experimental") {
 						t.Fatalf("codex warnings=%v", r.Warnings)
 					}
 				} else if len(r.Warnings) == 0 || r.Warnings[0] != want || !strings.HasPrefix(r.Markdown(), "⚠️ "+want) {

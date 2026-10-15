@@ -62,7 +62,7 @@ func TestSubLogsMessageBlocksAndRaw(t *testing.T) {
 {"kind":"usage","usage":{"inputTokens":1,"outputTokens":2}}
 {"kind":"message","text":"plete"}
 {"kind":"message","text":"complete","final":true}
-`, "usage 输入 1 / 输出 2\nmessage complete\n", nil},
+`, "usage in 1 / out 2\nmessage complete\n", nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store, st := statusFixture(t, tc.name, "codex", time.Now(), &sub.Result{Status: sub.StatusSucceeded})

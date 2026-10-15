@@ -17,7 +17,7 @@ func newSubDoctorCmd() *cobra.Command {
 		}
 		if len(args) == 1 {
 			if _, ok := sub.Lookup(args[0]); !ok {
-				subExit(c, 2, fmt.Errorf("未知 harness %q；可用：%s", args[0], strings.Join(sub.Names(), ", ")))
+				subExit(c, 2, fmt.Errorf("unknown harness %q; available: %s", args[0], strings.Join(sub.Names(), ", ")))
 			}
 		}
 		return nil

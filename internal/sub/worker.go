@@ -18,6 +18,11 @@ import (
 	"github.com/agentjoey/pactify/internal/procx"
 )
 
+const (
+	sessionHidingFailed    = "Session hiding failed"
+	sessionArchivingFailed = "Session archiving failed"
+)
+
 type WorkerConfig struct {
 	ToolCallLimit int // 0 disables the limit; CLI default is 40.
 	IdleTimeout   time.Duration
@@ -112,7 +117,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	if result.CLIVersion != "" {
 		if previous := store.lastCLIVersionFor(req.Harness); previous != "" && previous != result.CLIVersion {
-			result.Warnings = append(result.Warnings, fmt.Sprintf("CLI 版本变化：%s → %s", previous, result.CLIVersion))
+			result.Warnings = append(result.Warnings, fmt.Sprintf("CLI version changed: %s → %s", previous, result.CLIVersion))
 		}
 	}
 	unverifiedWarning = unverifiedVersionWarning(filepath.Dir(store.Root), h, result.CLIVersion)
@@ -151,7 +156,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			result.SessionID = identified.SessionID()
 			if h.Conceal != nil && result.SessionID != "" {
 				if e := h.Conceal(ConcealContext{SessionID: result.SessionID, Cwd: req.Cwd}); e != nil {
-					result.Warnings = append(result.Warnings, "会话隐藏失败，会留在 harness 自己的会话列表里："+e.Error())
+					result.Warnings = append(result.Warnings, sessionHidingFailed+"; it will remain in the harness session list: "+e.Error())
 				}
 			}
 		}
@@ -244,12 +249,12 @@ loop:
 		case <-cancelCh:
 			canceled = true
 			cancelCh = nil
-			interrupt("任务已取消")
+			interrupt("Task canceled")
 		case <-deadline:
 			graceExpired = true
 			break loop
 		case e := <-approvalErr:
-			interrupt("审批失败：" + e.Error())
+			interrupt("Approval failed: " + e.Error())
 		case e := <-promptErr:
 			promptErr = nil
 			if e != nil {
@@ -257,33 +262,33 @@ loop:
 			}
 		case event, ok := <-events:
 			if !ok {
-				result.Warnings = append(result.Warnings, "会话在回合结束前关闭")
+				result.Warnings = append(result.Warnings, "Session closed before the turn ended")
 				break loop
 			}
 			if e := encoder.Encode(event); e != nil {
-				interrupt("写日志失败：" + e.Error())
+				interrupt("Failed to write log: " + e.Error())
 			}
 			lastActivity = cfg.Now()
 			collector.Add(event)
 			if req.Access == "read-only" && cfg.ToolCallLimit > 0 && collector.ToolCalls > cfg.ToolCallLimit {
-				interrupt(fmt.Sprintf("工具调用超限（%d 次）", collector.ToolCalls))
+				interrupt(fmt.Sprintf("Tool-call limit exceeded (%d calls)", collector.ToolCalls))
 			}
 			if event.Kind == cockpit.EventState && event.State == cockpit.StateTurnFailed {
 				turnFailed = true
 				message := event.Err
 				if message == "" {
-					message = "回合失败"
+					message = "Turn failed"
 				}
 				result.Warnings = append(result.Warnings, message)
 			}
 		case <-ticker.C:
 			latest, e := store.Load(id)
 			if e != nil {
-				interrupt("读取 job 状态失败：" + e.Error())
+				interrupt("Failed to read job state: " + e.Error())
 			} else if latest.CancelRequested && !canceled {
 				canceled = true
 				stopWork()
-				interrupt("任务已取消")
+				interrupt("Task canceled")
 			}
 			current := gitx.TreeFingerprint(req.Cwd)
 			if current != fingerprint {
@@ -291,13 +296,13 @@ loop:
 				lastActivity = cfg.Now()
 			}
 			if cfg.Now().Sub(lastActivity) >= cfg.IdleTimeout {
-				interrupt("空闲超时")
+				interrupt("Idle timeout")
 			}
 		}
 	}
 	if ctx.Err() != nil {
 		canceled = true
-		interrupt("任务已取消")
+		interrupt("Task canceled")
 	}
 	// Prompt cancellation can generate a local terminal event before the remote
 	// turn ends. Let Interrupt reach the harness before teardown, within its grace.
@@ -313,7 +318,7 @@ loop:
 	// Close now (the deferred Close is then a no-op) so a hidden session's
 	// archive failure can still reach the summary.
 	if err := sess.Close(); errors.Is(err, cockpit.ErrArchive) {
-		result.Warnings = append(result.Warnings, "会话归档失败，会留在 harness 自己的会话列表里："+err.Error())
+		result.Warnings = append(result.Warnings, sessionArchivingFailed+"; it will remain in the harness session list: "+err.Error())
 	}
 	info := cockpit.SessionInfo{}
 	if s, ok := sess.(cockpit.InfoSession); ok {
@@ -338,11 +343,11 @@ loop:
 	}
 	if h.Conceal != nil {
 		if err := h.Conceal(ConcealContext{SessionID: sess.ThreadID(), Cwd: req.Cwd}); err != nil {
-			result.Warnings = append(result.Warnings, "会话隐藏失败，会留在 harness 自己的会话列表里："+err.Error())
+			result.Warnings = append(result.Warnings, sessionHidingFailed+"; it will remain in the harness session list: "+err.Error())
 		}
 	}
 	if req.Model != "" && result.ModelActual != "" && req.Model != result.ModelActual {
-		result.Warnings = append(result.Warnings, "实际模型与请求不一致")
+		result.Warnings = append(result.Warnings, "Actual model does not match the requested model")
 	}
 	result.FinalText, result.Truncated = TruncateFinal(collector.FinalText())
 	if st.Worktree == nil {

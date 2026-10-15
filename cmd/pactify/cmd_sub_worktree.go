@@ -26,9 +26,9 @@ func addSubWorktreeCommands(command, run *cobra.Command) {
 				return
 			}
 			if c.Name() == "apply" {
-				fmt.Fprintf(c.OutOrStdout(), "已应用到原工作区（未提交）；可以 pactify sub discard %s\n", args[0])
+				fmt.Fprintf(c.OutOrStdout(), "Applied to the original workspace (uncommitted); run pactify sub discard %s to clean up\n", args[0])
 			} else {
-				fmt.Fprintf(c.OutOrStdout(), "%s worktree 已丢弃\n", args[0])
+				fmt.Fprintf(c.OutOrStdout(), "%s worktree discarded\n", args[0])
 			}
 		}})
 	}

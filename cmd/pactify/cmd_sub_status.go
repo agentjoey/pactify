@@ -170,16 +170,16 @@ func subUsageSummary(store sub.Store, states []sub.State, now time.Time) (string
 		parts := make([]string, 0, len(names))
 		for _, name := range names {
 			total := totals[name]
-			parts = append(parts, fmt.Sprintf("%s 输入 %d / 输出 %d", name, total.input, total.output))
+			parts = append(parts, fmt.Sprintf("%s in %d / out %d", name, total.input, total.output))
 		}
 		if len(parts) == 0 {
-			return "无用量"
+			return "no usage"
 		}
-		return strings.Join(parts, "；")
+		return strings.Join(parts, "; ")
 	}
-	summary := "Token 今天: " + format(daily) + " · 近 7 天: " + format(weekly)
+	summary := "Tokens today: " + format(daily) + " · last 7 days: " + format(weekly)
 	if quota != "" {
-		summary += " · codex 额度: " + strings.Join(strings.Fields(quota), " ")
+		summary += " · codex quota: " + strings.Join(strings.Fields(quota), " ")
 	}
 	return summary, nil
 }

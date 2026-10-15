@@ -14,8 +14,8 @@ func TestDoctorReadOnlyProbeRequiresExecutedWriteCommand(t *testing.T) {
 		toolCalls int
 		status    string
 	}{
-		{"claims-blocked-without-tool", 0, "失败"},
-		{"tool-executed-without-file", 1, "通过"},
+		{"claims-blocked-without-tool", 0, "FAIL"},
+		{"tool-executed-without-file", 1, "PASS"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			home := t.TempDir()
@@ -61,11 +61,11 @@ func TestDoctorReadOnlyProbeRequiresExecutedWriteCommand(t *testing.T) {
 			}
 			var status string
 			for _, check := range reports[0].Checks {
-				if check.Name == "只读档" {
+				if check.Name == "Read-only access" {
 					status = check.Status
 				}
 			}
-			if status != tc.status || reports[0].Passed() != (tc.status == "通过") {
+			if status != tc.status || reports[0].Passed() != (tc.status == "PASS") {
 				t.Fatalf("read-only status=%s, want %s: %+v", status, tc.status, reports[0])
 			}
 		})

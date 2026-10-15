@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
+	"github.com/agentjoey/pactify/internal/orchestrate"
 )
 
 type DoctorCheck struct {
@@ -101,6 +102,18 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			r.Checks = append(r.Checks, DoctorCheck{name, status, reason})
 		}
 		skip := func(name, reason string) { r.Checks = append(r.Checks, DoctorCheck{name, "SKIP", reason}) }
+		abortProbe := func(name, reason string) {
+			add(name, false, reason)
+			for _, check := range []string{"Write access", "Model", "Read-only access", "Network", "Session hiding"} {
+				if check != name {
+					skip(check, "preflight failed; not run")
+				}
+			}
+			if h.Home != nil && name != "Managed home" {
+				skip("Managed home", "preflight failed; not run")
+			}
+		}
+
 		_, installErr := d.lookPath(h.Name)
 		if h.Name == "fake" && os.Getenv("PACTIFY_SUB_FAKE") == "1" {
 			installErr = nil
@@ -122,7 +135,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			for _, name := range []string{"Write access", "Model", "Read-only access", "Network", "Session hiding"} {
 				skip(name, "CLI unavailable; not run")
 			}
-			if h.Kind == "kimi-cli" {
+			if h.Home != nil {
 				skip("Managed home", "CLI unavailable; not run")
 			}
 			reports = append(reports, r)
@@ -132,8 +145,52 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		jobStore := Store{Root: filepath.Join(root, h.Name, "home", "jobs")}
 		network := h.Name == "codex"
 		model := "gpt-6-luna"
-		if h.Kind == "kimi-cli" {
-			model = "kimi-code/kimi-for-coding"
+		if h.DoctorModel != "" {
+			model = h.DoctorModel
+		}
+
+		var checkUserHome func() error
+		if h.Home != nil && h.Home.BeforeDoctor != nil {
+			var e error
+			checkUserHome, e = h.Home.BeforeDoctor()
+			if e != nil {
+				abortProbe("Managed home", e.Error())
+				reports = append(reports, r)
+				continue
+			}
+		}
+		if h.Models != nil {
+			opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind)}
+			var modelHome *managedHome
+			if h.Home != nil {
+				source, e := h.Home.Source()
+				if e != nil {
+					return reports, e
+				}
+				home, e := h.Home.Managed()
+				if e != nil {
+					return reports, e
+				}
+				modelHome = h.Home.Layout(home, source)
+				if e = modelHome.Prepare(ctx); e != nil {
+					abortProbe("Managed home", e.Error())
+					reports = append(reports, r)
+					continue
+				}
+				opts.Env = append(opts.Env, h.Home.Env+"="+home)
+			}
+			models, e := h.Models(ctx, opts)
+			if modelHome != nil {
+				if warnings := modelHome.Cleanup(); len(warnings) > 0 {
+					e = fmt.Errorf("model listing error=%v; %s", e, strings.Join(warnings, "; "))
+				}
+			}
+			if e != nil || len(models) == 0 {
+				abortProbe("Model", fmt.Sprintf("cannot list models: %v", e))
+				reports = append(reports, r)
+				continue
+			}
+			model = cheapestDoctorModel(models)
 		}
 		run := func(access, brief string) (Result, string, error) {
 			repo := filepath.Join(root, h.Name, access)
@@ -169,7 +226,13 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			results = append(results, readonly)
 			_, statErr := os.Lstat(filepath.Join(roRepo, "out.txt"))
 			ok := roErr == nil && readonly.Status == StatusSucceeded && readonly.CLIVersion == r.Version && readonly.ToolCalls > 0 && strings.TrimSpace(readonly.FinalText) != "" && os.IsNotExist(statErr) && len(readonly.Diff.Files) == 0
-			add("Read-only access", ok, fmt.Sprintf("status=%s, write target absent=%t, tool calls=%d%s", readonly.Status, os.IsNotExist(statErr), readonly.ToolCalls, doctorError(roErr)))
+			evidence := fmt.Sprintf("status=%s, write target absent=%t, tool calls=%d%s", readonly.Status, os.IsNotExist(statErr), readonly.ToolCalls, doctorError(roErr))
+			if h.DoctorReadOnly != nil {
+				accepted, reason := h.DoctorReadOnly(readonly)
+				ok = roErr == nil && readonly.CLIVersion == r.Version && os.IsNotExist(statErr) && len(readonly.Diff.Files) == 0 && accepted
+				evidence += "; " + reason
+			}
+			add("Read-only access", ok, evidence)
 			ranAll = ranAll && roErr == nil && readonly.Status == StatusSucceeded
 		}
 		if !network {
@@ -183,9 +246,14 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			valid := e == nil && json.Unmarshal(data, &evidence) == nil
 			add("Network", goodWrite && valid && evidence.Bind && evidence.External, fmt.Sprintf("local port bind=%t, external HTTPS=%t, valid evidence=%t", evidence.Bind, evidence.External, valid))
 		}
-		hidden := ranAll && (h.HidesItself || h.Conceal != nil)
+		hidingResults, hidingSucceeded := results, ranAll
+		if h.DoctorReadOnly != nil {
+			hidingResults = results[:1]
+			hidingSucceeded = goodWrite
+		}
+		hidden := hidingSucceeded && (h.HidesItself || h.Conceal != nil)
 		var warnings []string
-		for _, result := range results {
+		for _, result := range hidingResults {
 			for _, w := range result.Warnings {
 				if strings.Contains(w, sessionHidingFailed) || strings.Contains(w, sessionArchivingFailed) {
 					hidden = false
@@ -194,15 +262,22 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			}
 		}
 		reason := "All probe sessions were hidden through the normal job lifecycle; no hiding or archiving failures reported"
+		if h.DoctorReadOnly != nil {
+			reason = "Write probe session was hidden through the normal job lifecycle; no hiding or archiving failures reported"
+		}
 		if !hidden {
 			reason = "Cannot confirm session hiding"
 			if len(warnings) > 0 {
 				reason = strings.Join(warnings, "; ")
 			}
 		}
-		if h.Kind == "kimi-cli" {
-			homeErr := doctorKimiHome(jobStore, "write", writable, goodWrite)
-			homeReason := "Probe succeeded in the shared home with intact links, no entry in the user session index, and no mcp.tools_discovered event"
+		if h.Home != nil {
+			homeErr := h.Home.Doctor(jobStore, "write", writable, goodWrite)
+
+			if homeErr == nil && checkUserHome != nil {
+				homeErr = checkUserHome()
+			}
+			homeReason := "Probe succeeded in the shared minimal home with intact links and private sessions"
 			if homeErr != nil {
 				homeReason = homeErr.Error()
 				hidden = false
@@ -304,4 +379,16 @@ func doctorKimiHome(store Store, id string, result Result, succeeded bool) error
 		return fmt.Errorf("probe wire record contains mcp.tools_discovered")
 	}
 	return nil
+}
+
+// cheapestDoctorModel keeps doctor probes on the cheapest tier (spec §11) when a
+// harness lists effort tiers as "<model>-low/-medium/-high"; otherwise it keeps
+// the harness's own first (default) entry. Names stay dynamic, never hardcoded.
+func cheapestDoctorModel(models []string) string {
+	for _, m := range models {
+		if strings.HasSuffix(m, "-low") {
+			return m
+		}
+	}
+	return models[0]
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
+	"github.com/agentjoey/pactify/internal/orchestrate"
 )
 
 // DefaultHarness is used when the CLI's harness argument is omitted.
@@ -29,7 +30,12 @@ type Harness struct {
 	Experimental string
 	// MinimalConfig is supported only after a native, process-local path has
 	// been verified. Unavailable harnesses retain user config and say why.
-	MinimalConfig bool
+	MinimalConfig      bool
+	Home               *harnessHome
+	LocalUsageBaseline func(string, string) (int64, error)
+	DoctorModel        string
+	DoctorReadOnly     func(Result) (bool, string)
+	Models             func(context.Context, cockpit.StartOpts) ([]string, error)
 	// Every harness must keep delegated sessions out of the user's own session
 	// lists (TestEveryHarnessHidesItsSessions). HidesItself: the backend does it
 	// (codex archives the thread on Close via StartOpts.Hidden). Otherwise Conceal
@@ -62,8 +68,23 @@ type ConcealContext struct {
 }
 
 var registry = map[string]Harness{
+	"agy": {
+		Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: cliVersion("agy", orchestrate.CrossVendorStrip("antigravity")...),
+		Experimental: "agy is an experimental harness (evaluation pending)", MinimalConfig: true,
+		Home:   &harnessHome{Env: "HOME", Source: os.UserHomeDir, Managed: managedAgyHome, Layout: agyHome, Doctor: doctorAgyHome, BeforeDoctor: snapshotAgyUserIndex},
+		Models: cockpit.AgyModels, DoctorReadOnly: doctorAgyReadOnly,
+		// Default jobs hide sessions through the managed HOME. User config explicitly
+		// restores agy's session store; there is no supported archive API to hide it.
+		Conceal: func(ConcealContext) error {
+			return fmt.Errorf("agy --with-user-config keeps sessions in the user's session list; use minimal config to hide delegated sessions")
+		},
+		Verify: func(_ context.Context, v VerificationInput) Verification {
+			return Verification{Model: v.Info.Model, Verified: v.Info.Model != ""}
+		},
+	},
 	"codex": {
-		Name: "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
+		DoctorModel: "gpt-6-luna",
+		Name:        "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
 		HidesItself:   true,
 		MinimalConfig: true,
 		Verify: func(_ context.Context, v VerificationInput) Verification {
@@ -71,6 +92,8 @@ var registry = map[string]Harness{
 		},
 	},
 	"kimi": {
+		Home:               &harnessHome{Env: "KIMI_CODE_HOME", Source: kimiHomeDir, Managed: managedKimiHome, Layout: kimiHome, Doctor: doctorKimiHome},
+		LocalUsageBaseline: cockpit.KimiWireOffset, DoctorModel: "kimi-code/kimi-for-coding",
 		Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
 		Experimental:  "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)",
 		MinimalConfig: true,
@@ -115,11 +138,15 @@ func Names() []string {
 	sort.Strings(names)
 	return names
 }
-func cliVersion(bin string) func(context.Context) (string, error) {
+func cliVersion(bin string, env ...string) func(context.Context) (string, error) {
 	return func(ctx context.Context) (string, error) {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
-		out, err := exec.CommandContext(ctx, bin, "--version").Output()
+		cmd := exec.CommandContext(ctx, bin, "--version")
+		if len(env) > 0 {
+			cmd.Env = append(os.Environ(), env...)
+		}
+		out, err := cmd.Output()
 		if err != nil {
 			return "", err
 		}

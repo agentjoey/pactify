@@ -22,9 +22,6 @@ const TERMINAL = (
     <path d="M12.5 15.5H18" />
   </g>
 );
-const SPARKLE4 = (
-  <path d="M12 3.2c.5 4.2 1.6 5.3 5.8 5.8-4.2.5-5.3 1.6-5.8 5.8-.5-4.2-1.6-5.3-5.8-5.8 4.2-.5 5.3-1.6 5.8-5.8z" fill="currentColor" />
-);
 const KNOT = (
   <g stroke="currentColor" strokeWidth="1.5" fill="none">
     <ellipse cx="12" cy="12" rx="7" ry="3.1" />
@@ -60,7 +57,6 @@ const LOGOS: Record<string, LogoSpec> = {
   "claude-code": { accent: "#c2603f", glyph: SPARK },
   "claude-desktop": { accent: "#c2603f", glyph: SPARK },
   opencode: { accent: "#0f8a44", glyph: TERMINAL },
-  "gemini-cli": { accent: "#2563eb", glyph: SPARKLE4 },
   "codex-cli": { accent: "#0e8c6e", glyph: KNOT },
   "codex-app": { accent: "#0e8c6e", glyph: KNOT },
   "cursor-cli": { accent: "#0f7e86", glyph: CURSOR },
@@ -73,7 +69,6 @@ const LOGOS: Record<string, LogoSpec> = {
 function resolve(kind: string): LogoSpec {
   if (LOGOS[kind]) return LOGOS[kind];
   if (kind.startsWith("claude")) return LOGOS["claude-code"];
-  if (kind.startsWith("gemini")) return LOGOS["gemini-cli"];
   if (kind.startsWith("codex")) return LOGOS["codex-cli"];
   if (kind.startsWith("cursor")) return LOGOS["cursor-cli"];
   if (kind.startsWith("kimi")) return LOGOS["kimi-cli"];
@@ -84,7 +79,6 @@ export const AGENT_LOGO_KINDS = [
   "claude-code",
   "claude-desktop",
   "opencode",
-  "gemini-cli",
   "codex-cli",
   "codex-app",
   "cursor-cli",

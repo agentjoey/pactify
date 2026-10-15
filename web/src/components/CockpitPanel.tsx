@@ -42,7 +42,6 @@ const COCKPIT_CAPABLE_KINDS = new Set([
   "claude-code",
   "codex-cli",
   "kimi-cli",
-  "gemini-cli",
   "opencode",
 ]);
 

@@ -1,10 +1,11 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { CockpitPanel } from "./CockpitPanel";
 import { DataSourceProvider } from "../lib/datasource";
 import type { DataSource } from "../lib/datasource";
 import type { CockpitStatus, CockpitEvent } from "../lib/api";
 import type { Seat, State } from "../lib/types";
+import { AGENT_LOGO_KINDS } from "../lib/agentLogos";
 
 let lastSub: FakeSub | null = null;
 
@@ -121,6 +122,18 @@ afterEach(() => {
 });
 
 describe("CockpitPanel", () => {
+  it("only offers supported built-in kinds as cockpit sessions", async () => {
+    renderPanel(makeSource(), {
+      seat: "claude-code",
+      agents: AGENT_LOGO_KINDS.map((kind) => ({ id: kind, kind, roles: ["worker"] })),
+    });
+    const sessions = within(screen.getByTestId("cockpit-sessions"));
+    await waitFor(() => expect(sessions.getAllByRole("button")).toHaveLength(4));
+    for (const kind of ["claude-code", "codex-cli", "kimi-cli", "opencode"]) {
+      expect(sessions.getByRole("button", { name: new RegExp(kind) })).toBeInTheDocument();
+    }
+  });
+
   it("subscribes via cockpitSubscribe and unsubscribes on unmount", () => {
     const source = makeSource();
     const { unmount } = renderPanel(source);

@@ -8,7 +8,6 @@ import {
   Hammer,
   Sparkle,
   TerminalWindow,
-  Diamond,
   Code,
   Cursor,
   Robot,
@@ -48,7 +47,6 @@ const MAP: Record<string, Entry> = {
   // agent kinds (each a distinct hue)
   "kind-claude-code": { I: Sparkle, color: "var(--color-role-design-ink)" },
   "kind-opencode": { I: TerminalWindow, color: "var(--color-role-dev-ink)" },
-  "kind-gemini-cli": { I: Diamond, color: "var(--color-role-research)" },
   "kind-codex-cli": { I: Code, color: "var(--color-role-ops)" },
   "kind-cursor-cli": { I: Cursor, color: "var(--color-role-qa)" },
   "kind-agent": { I: Robot, color: "var(--color-text-2)" },

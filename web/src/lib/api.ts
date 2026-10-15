@@ -275,7 +275,7 @@ export const testAgent = (kind: string) =>
 
 /**
  * CLI versions, probed server-side in parallel. Separate from getAgents because
- * probing costs ~2s sequentially (gemini alone is 572ms) and the list must
+ * probing can be slow and the list must
  * render before versions arrive.
  */
 export const getAgentVersions = () =>

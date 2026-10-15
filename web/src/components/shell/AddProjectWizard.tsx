@@ -37,7 +37,7 @@ function basename(p: string): string {
 
 function entryFor(kind: string): string {
   if (kind.startsWith("claude")) return "CLAUDE.md";
-  if (kind.startsWith("gemini")) return "GEMINI.md";
+  if (kind === "antigravity") return "GEMINI.md";
   return "AGENTS.md";
 }
 

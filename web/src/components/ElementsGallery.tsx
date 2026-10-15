@@ -141,7 +141,7 @@ export function ElementsGallery() {
           </div>
           <div className="mt-3 flex items-center gap-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-3 py-2.5">
             <span className="text-[10.5px] uppercase tracking-[.5px] text-[var(--color-text-3)]">卡片内</span>
-            {["claude-code", "opencode", "gemini-cli", "kimi-cli", "codex-cli"].map((k) => (
+            {["claude-code", "opencode", "antigravity", "kimi-cli", "codex-cli"].map((k) => (
               <span key={k} className="inline-flex items-center gap-1.5">
                 <AgentLogo kind={k} size={22} />
                 <span className="mono text-[11px] font-medium text-[var(--color-text-1)]">{k}</span>
@@ -300,7 +300,7 @@ export function ElementsGallery() {
                 <Select defaultValue="claude-opus-4-8">
                   <option value="claude-opus-4-8">claude-opus-4-8</option>
                   <option value="deepseek-v4-pro">deepseek-v4-pro</option>
-                  <option value="gemini-3-pro">gemini-3-pro</option>
+                  <option value="kimi-code/kimi-for-coding">kimi-code/kimi-for-coding</option>
                 </Select>
               </ConfigSection>
               <ConfigSection label="Temperature">

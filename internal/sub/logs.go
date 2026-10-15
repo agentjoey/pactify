@@ -19,6 +19,8 @@ type LogOptions struct {
 	Tail   int
 	Follow bool
 	Raw    bool
+	// ReadOnly uses atomic state snapshots without recovering orphan workers.
+	ReadOnly bool
 }
 
 func logLine(line string) string {
@@ -122,13 +124,17 @@ func (r *logReader) drain(emit func(string) error) error {
 	}
 }
 
-// Logs recovers orphan jobs through the normal per-job lifecycle lock, without
-// holding that lock while writing output or waiting for a live worker.
+// Logs normally recovers orphan jobs through the per-job lifecycle lock, without
+// holding it while writing or waiting. ReadOnly uses atomic Load snapshots instead.
 func (s Store) Logs(ctx context.Context, id string, out io.Writer, options LogOptions) error {
 	if options.Tail < -1 {
 		return fmt.Errorf("tail must be -1 or nonnegative")
 	}
-	initial, err := s.Recover(id)
+	load := s.Recover
+	if options.ReadOnly {
+		load = s.Load
+	}
+	initial, err := load(id)
 	if err != nil {
 		return err
 	}
@@ -182,7 +188,7 @@ func (s Store) Logs(ctx context.Context, id string, out io.Writer, options LogOp
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		st, err := s.Recover(id)
+		st, err := load(id)
 		if err != nil {
 			return err
 		}

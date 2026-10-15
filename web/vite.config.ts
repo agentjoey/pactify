@@ -78,7 +78,7 @@ export default defineConfig({
     // e2e/ holds the Playwright acceptance suite, which has its own runner
     // (playwright.config.ts). Vitest's default glob would otherwise try to
     // execute those .spec.ts files and choke on Playwright's test API, so scope
-    // the unit suite to src/ (default node_modules/dist excludes still apply).
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // unit suites to src/ and the standalone panel/ (default excludes still apply).
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "panel/**/*.test.{ts,tsx}"],
   },
 });

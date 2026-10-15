@@ -119,6 +119,47 @@ Resume keeps the recorded home. `--with-user-config` restores real HOME and warn
 that agy sessions are visible in the user's list (no archive API).
 Run `pactify sub doctor agy` for compatibility checks.
 
+### Local job panel (read-only)
+
+```sh
+pactify sub panel                       # random loopback port; opens the browser
+pactify sub panel --port 17100 --no-open # print the URL without opening it
+```
+
+Open the printed `http://127.0.0.1:<port>/?token=…` URL. Each launch generates a
+new random token; the first browser visit exchanges it for an HttpOnly,
+SameSite=Strict session cookie and redirects to a URL without the token. All
+APIs require that cookie or `Authorization: Bearer <token>`. The server only
+listens on `127.0.0.1`; Ctrl-C stops it. Job data comes from `$PACTIFY_HOME/jobs`
+(default `~/.pactify/jobs`).
+
+Filter jobs by status, harness or repository; running jobs appear first and
+attention markers highlight pending worktrees, failures and warnings. Open a job
+for its brief, readable result, live logs, file-folded diff and resume links.
+The panel supports light/dark appearance and phone widths. It is read-only:
+run `pactify sub apply <job>`, `pactify sub discard <job>` or
+`pactify sub cancel <job>` in the CLI or Claude Code; the detail page provides
+copyable commands. Panel reads never recover orphan workers or change job state.
+Logs start with the last 100 readable lines, follow the job, then close when its
+recorded state becomes terminal. The page retains at most 1,000 log lines.
+
+Worktree diffs compare the current files (including untracked files) against the
+recorded base commit, without staging or modifying the repository. Patches are
+limited to 512 KiB with an explicit truncation notice. Non-worktree jobs retain
+only their recorded file change list; the current result format does not save a
+full patch. Missing/discarded worktrees fall back to the recorded list.
+
+The panel is separate from the frozen `pactify serve` dashboard. Its assets are
+checked into `internal/subpanel/dist`, so `go build ./...` needs no Node runtime.
+To rebuild and capture the final panel build:
+
+```sh
+cd web
+npm ci
+npm run build:panel
+node scripts/shots-panel.mjs # prints temporary paths: list/detail × light/dark × desktop/mobile
+```
+
 ## The idea in 30 seconds
 
 - **`.pact/log.jsonl`** is an append-only event log — the authoritative source of truth and the

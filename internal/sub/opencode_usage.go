@@ -18,9 +18,10 @@ type opencodeMessage struct {
 		ModelID    string  `json:"modelID"`
 		Cost       float64 `json:"cost"`
 		Tokens     *struct {
-			Input  int `json:"input"`
-			Output int `json:"output"`
-			Cache  struct {
+			Input     int `json:"input"`
+			Output    int `json:"output"`
+			Reasoning int `json:"reasoning"`
+			Cache     struct {
 				Read int `json:"read"`
 			} `json:"cache"`
 		} `json:"tokens"`
@@ -83,13 +84,12 @@ func verifyOpencode(ctx context.Context, v VerificationInput) Verification {
 			continue
 		}
 		cost += m.Info.Cost
-		if v.RecoverUsage {
-			if m.Info.Tokens == nil {
-				result.UsagePartial = true
-			} else {
-				result.InputTokens += m.Info.Tokens.Input + m.Info.Tokens.Cache.Read
-				result.OutputTokens += m.Info.Tokens.Output
-			}
+		if m.Info.Tokens == nil {
+			result.UsagePartial = true
+		} else {
+			result.UsageRecorded = true
+			result.InputTokens += m.Info.Tokens.Input + m.Info.Tokens.Cache.Read
+			result.OutputTokens += m.Info.Tokens.Output + m.Info.Tokens.Reasoning
 		}
 		if m.Info.ModelID != "" && m.Info.ProviderID != "" {
 			result.Model = m.Info.ProviderID + "/" + m.Info.ModelID

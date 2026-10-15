@@ -88,7 +88,7 @@ func TestHarnessUsageOnAbnormalExit(t *testing.T) {
 							t.Error(err)
 						}
 						if ending == "succeeded" {
-							// Successful prompts retain the established token source.
+							// The last prompt reply must not replace the job's export total.
 							s.events <- cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 333, OutputTokens: 8}}
 						}
 					case "kimi":
@@ -120,9 +120,6 @@ func TestHarnessUsageOnAbnormalExit(t *testing.T) {
 					wantStatus = StatusCanceled
 				} else if ending == "succeeded" {
 					wantStatus = StatusSucceeded
-					if name == "opencode" {
-						wantInput, wantOutput = 333, 8
-					}
 				}
 				if err != nil || r.Status != wantStatus || r.InputTokens != wantInput || r.OutputTokens != wantOutput {
 					t.Errorf("usage/status lost: %+v err=%v", r, err)

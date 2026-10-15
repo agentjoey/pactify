@@ -133,14 +133,15 @@ Session hiding 和 Managed home 使用可写探测的结果，不依赖只读探
 列表首项；同一档保留原列表顺序。这是低成本档位的名称启发式，不是价格保证，也不写死模型 id。
 普通 job 不指定模型时保留 opencode 默认值，指定模型经 `session/set_config_option` 设置并确认。
 
-输入 token = prompt 返回的 `inputTokens + cachedReadTokens`，输出取 `outputTokens`。
 `usage_update.cost` 是会话累计成本（[上游实现](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/opencode/src/acp/usage.ts)）。
 结束前用同一工作目录和环境执行 `opencode export <sid>`，独立读取 assistant 的 providerID/modelID；
-续接前记录导出消息边界，只累计本 job 新 assistant 消息的 cost，避免计入历史成本。
-导出失败、历史边界失效或没有新 assistant 时明确警告；不能核实的成本不冒充本轮费用。
-失败、取消或空闲超时仍在同一隔离环境下导出；按本 job 的消息边界累计 assistant 的
-`tokens.input + tokens.cache.read`、`tokens.output` 和 cost，并核实模型。成功路径的 token
-仍取 prompt 返回值。异常结束保留已记录用量并标记 `usagePartial`，提示可能缺少最后一段。
+成功、失败、取消或空闲超时均按本 job 新增 assistant 消息加总：输入为
+`tokens.input + tokens.cache.read`，输出为 `tokens.output + tokens.reasoning`，成本为 cost 之和。
+续接前记录导出消息边界，历史消息的 token 和 cost 均不计入本 job。
+导出失败、历史边界失效或没有新 assistant 时明确警告；没有可用的本 job token 记录时，
+退回 prompt 返回的 `inputTokens + cachedReadTokens`、`outputTokens`，并标记 `usagePartial`。
+部分 assistant 缺少 token 记录时保留 export 中已记录的合计并标记 partial；
+不能核实的成本不冒充本轮费用。异常结束也保守标记 `usagePartial`，提示可能缺少最后一段。
 
 可写档用 build 配合 `OPENCODE_CONFIG_CONTENT` 的 edit/bash/webfetch allow。
 只读档仍用 build，但注入 edit/webfetch deny、bash ask，并对所有权限请求选 reject_once；

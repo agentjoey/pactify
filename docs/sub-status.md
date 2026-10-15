@@ -73,6 +73,8 @@ worktree 的 `applied` 是一次成功 apply 的持久化记录（空补丁的�
 
 失败、取消、空闲超时或连接提前关闭时，保留已收到的用量，保守标记 `usagePartial: true`，并在 result 中警告 `Usage may be incomplete; only recorded usage is included`。用量独立核实失败也设置同一标记，不改变任务的成功状态。尚未启动就取消的 job 不因此标记 partial。worker 本身消失时，兜底结果从日志中的完整事件恢复用量；opencode 的日志成本是会话累计值，无法还原本 job 的 export 边界，因此不作为本 job 成本。
 
+opencode 正常或异常结束时均优先加总 export 中本 job 新增的 assistant 消息：输入为 `tokens.input + tokens.cache.read`，输出为 `tokens.output + tokens.reasoning`。续接基线之前的历史消息不计入；export 无法提供本 job token 记录时退回 prompt usage，并标记 `usagePartial`、附带警告。成本仍从同一边界内的 export 消息加总。
+
 State 沿用原子 rename 约定，status 沿用现有 Recover 和生命周期锁处理失联 worker。JSON 摘要遇到缺失或损坏的 result 仍显示 job，结果字段留空或为 0；人类输出中的全量用量汇总继续对损坏/缺失的终态 result 报错，不静默给出不完整汇总。旧 job 缺少新增元数据时正常输出。
 
 列表查询跳过尚未写入 `state.json` 的 job 目录（包含 `/jobs` 所用的

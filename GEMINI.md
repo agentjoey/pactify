@@ -7,8 +7,20 @@ cat .agent/CURRENT.md
 ```
 
 ## Project Overview
-多 agent 协同协议 + 薄 CLI。任何能读文件的 agent 均可参与；协议基于 git + repo，零外部依赖。  
-协议核心：`.pact/` 文件契约；CLI 是协议的标准实现；各厂商入口是薄封装。
+**Use other coding agents as subagents from Claude Code.**
+
+Delegate large tasks — multi-file changes, investigations, anything that needs test runs — from Claude Code to Codex (default) or Kimi (experimental). pactify runs them as background jobs, independently verifies the model that actually ran, reports tokens and quota, isolates the change in a git worktree for you to review, apply or discard, and leaves no trace in the agents' own session lists.
+
+Claude Code commands: `/delegate` (default: codex), `/codex`, `/kimi` (experimental; no read-only mode).
+CLI: `pactify sub run | wait | status | logs | result | cancel | apply | discard | doctor`.
+Run `pactify sub doctor` after installation: it makes real harness calls and records verified CLI versions.
+CLI isolation requires `--worktree`; the plugin uses it for large tasks. Resume rework with `--resume` in the same worktree.
+Session hiding means archiving from the agents' own lists; pactify keeps job logs and reports hiding or verification failures as warnings.
+
+**Governance mode (optional):** pact protocol, ledger, orchestrator and `pactify serve` dashboard are frozen; hosted relay is retired.
+See [Quickstart](README.md), [Architecture](docs/architecture.md), [Harness design](docs/specs/harness-subagents.md),
+[Phase 0 evidence](docs/phase0-report.md) and [Harness self-check](docs/sub-doctor.md).
+
 **Location:** ~/AgentWorks/Code_Claude/pactify
 **GitHub:**   agentjoey/pactify
 **Version:** **v0.12.0**（2026-10-15）——**编排器方向的最后一个正式版本**，也是转向前的回滚锚点（`go install github.com/agentjoey/pactify/cmd/pactify@v0.12.0` 可装回）。自 v0.11.0 起 PR #48–#66：fallback 并行闭环、checkpoint run 守卫、ACP 模型绑定（opencode 根治）、单一规范账本 WS-A/WS-B（flag 默认关）、Settings Agents 面板、仓库公开前清理，以及发版前的死代码清理（#66）。完整版本历史见 **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)**；开着的条目见 `docs/backlog.md`（gitignored）。

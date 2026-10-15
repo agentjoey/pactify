@@ -1,369 +1,166 @@
 # Pactify — Architecture
 
-> Last updated: **2026-10-15** | Status: **v0.12.0 已发布**——编排器方向的最后一个正式版本；产品已转向 harness 路由器（见 [`specs/harness-subagents.md`](specs/harness-subagents.md)），本文描述的编排架构进入冻结。完整历史见 [`CHANGELOG.md`](CHANGELOG.md)。
->
-> **版本历史已迁出**——本行原先累积成一段 5KB 的单行 changelog，现全部移到 [`CHANGELOG.md`](CHANGELOG.md)（原文逐字保留）。本行今后只写「当前版 + 与架构有关的当前事实」。
->
-> **与本文档相关的当前事实（2026-08-29 实测，2026-10-15 更新）**：①**云端整层未运行**——`pactify-relay` / `pactify-relay-staging` 两个 fly app 均 0 machines，`origin/production` 停在 2026-07-04（落后 main 652 提交）；下文「通讯架构」「M3.4 relay 接口」描述的是**设计与已实现的代码**，不是当前运行中的部署。②**账本与 git 工作目录耦合**这条架构债仍在：「单一规范 ledger」已起草 spec（`specs/single-canonical-ledger.md`）并完成 WS-A/WS-B（flag 默认关），随 2026-10-15 的转向暂停。
+> Status: harness routing is the active product direction; governance is frozen and hosted relay is retired. See [CHANGELOG](CHANGELOG.md).
 
 ## Overview
 
-Pactify = **多 agent 协同协议 + 薄 CLI + 可视化编排**，分三产品层：
+**Use other coding agents as subagents from Claude Code.**
 
-```
-Pact-Base   读 + 协议机制     免费开源
-Pact-Squad  写 + 可视化编排   主功能免费 + 部分付费
-Pact-Team   协作 + 云         付费商业化
-```
+Delegate large tasks — multi-file changes, investigations, anything that needs test runs — from Claude Code to Codex (default) or Kimi (experimental). pactify runs them as background jobs, independently verifies the model that actually ran, reports tokens and quota, isolates the change in a git worktree for you to review, apply or discard, and leaves no trace in the agents' own session lists.
 
-## 制品层（用户 repo）
+The host is Claude Code. The supported callees are codex (default) and kimi
+(experimental, without read-only mode). The runtime uses their installed local
+CLIs; it routes harness sessions rather than proxying model API requests.
+The [design](specs/harness-subagents.md) records decisions and future milestones;
+the structure below describes the current repository, not a claim that the next
+release has shipped.
 
-```
-.pact/
-  PROJECT.md      ← 章程（目标/技术栈/角色/约定）
-  STATE.yml       ← 结构化活状态（log.jsonl 的投影）
-  tasks/<id>.md   ← 单任务 spec+plan+验收项+交接日志
-  log.jsonl       ← append-only 事件流（事实源 + 通讯总线）
-CLAUDE.md / AGENTS.md / GEMINI.md  ← 各厂商入口，均 → .pact/
-docs/specs|plans|decisions/        ← 知识库
-```
+## Delegation path
 
-## 通讯架构（地基，Phase 1 冻结）
-
-**`log.jsonl` 既是审计事实源，也是 agent 之间的通讯总线。**
-
-```
-agents ──┬─ shell:  pactify checkpoint/accept   (任何 agent，零依赖)
-         └─ MCP:    tools + event subscription   (MCP 客户端)
-                          │
-                   log.jsonl  (append-only 事件总线)
-                          │
-                   pactify serve
-                     ├─ MCP server（事件订阅 + 工具暴露）
-                     ├─ fsnotify watch → SSE/WS → 本地 dashboard
-                     └─ (Phase 4) 云端 relay → Pact-Team
-```
-
-- **shell 写入与 MCP 调用产出同一种事件** → 一套 schema 服务所有入口
-- **本地零依赖**（文件 + 单 binary），**云端只是在上面加 relay**，协议不变
-
-### M3.4 relay 接口
-
-`pactify serve` 内置 best-effort 异步 relay，将每个项目的 log 事件 POST 到可配端点。挂载点在 `drainNew` 中（`hub.broadcast` 之后，旁路非阻塞）：
-
-```
-pactify serve
-  └─ fsnotify → watchLoop → drainNew
-       ├─ hub.broadcast(id, line)    ← SSE 订阅者
-       └─ relay.enqueue(id, line)    ← 远端 relay 端点（可选）
+```text
+Claude Code
+  /delegate (codex) · /codex · /kimi (experimental)
+          │ self-contained brief on stdin
+          ▼
+plugins/pactify/ ──► cmd/pactify: sub run --worktree
+                              │ detached worker + persisted job id
+                              ▼
+                       internal/sub
+                 job lifecycle · worktree · result
+                              │ cockpit.Backend / Session
+                 ┌────────────┴─────────────┐
+                 ▼                          ▼
+       internal/cockpit/codex.go   internal/cockpit/acp.go
+          codex app-server               kimi acp
+                 └────────────┬─────────────┘
+                              ▼
+                 events · usage · final reply
+                              │ independent model verification
+                              ▼
+                 result.json + Markdown summary
+                              │
+       sub wait / status / logs / result / cancel
+                              │ review actual diff + new files
+                    sub apply / discard
 ```
 
-**语义：**
-- **best-effort**：relay 失败/超时/排队满 不阻塞 SSE，不影响 offset 推进，不回传错误到 watcher。
-- **异步队列**：有界 256 条，FIFO；满时丢弃最旧条目并递增 `dropped` 计数器。
-- **重试**：单条最多 4 次尝试（1 次初始 + 3 次退避重试：1s、2s、4s），全部失败递增 `dropped` 后静默丢弃。
-- **可中断**：`stop()` 在重试间隙检查，不会卡死 shutdown。
+The Claude main thread writes the brief and runs `sub wait` as a background Bash
+command so completion returns to that thread. The plugin also provides forwarding
+subagents for a bounded foreground wait. The background worker owns the callee
+session; returning a pending job id does not end the worker.
 
-**配置：**
-- CLI flag：`serve --relay-url <url> [--relay-token <token>]`
-- 环境变量：`PACT_RELAY_URL`、`PACT_RELAY_TOKEN`
-- 空 URL（默认）= relay 禁用，`newRelay("","")` 返回 nil，`enqueue` 是安全空操作
+## Active components
 
-**线格式（POST JSON）：**
-```json
-{
-  "project": "pactify",
-  "event": { "event_id": "...", "event_type": "...", ... }
-}
-```
-- `Content-Type: application/json`
-- token 非空时附带 `Authorization: Bearer <token>`
-- event 行非合法 JSON 时，原始文本被转义为 JSON string 后放入 envelope，不 panic
-
-**端点要求：** HTTPS 端点；2xx 视为成功，4xx/5xx 触发重试；10s 超时。
-
-### 事件 schema（草案，M1.1 定稿）
-
-```jsonc
-{
-  "ts": "2026-06-09T09:00:00Z",
-  "agent_id": "claude-opus",
-  "role": "orchestrator",        // orchestrator | worker | reviewer | human
-  "event_type": "checkpoint",    // join | assign | checkpoint | accept | changes_requested | merge | ...
-  "task_id": "T1",
-  "feature": "BL-042",
-  "payload": { /* event-specific，evidence/diff-ref/reason 等 */ }
-}
-```
-
-设计约束：event_type 枚举要同时覆盖 shell CLI 命令语义和 MCP 工具语义；payload 自由扩展但顶层字段冻结。
-
-## 核心设计决策
-
-### log.jsonl 为源，STATE.yml 为投影
-多 agent 并发写 STATE.yml → git 冲突；append-only log 天然 merge 友好。写=追加 event；读=读 STATE；`pactify log` 从 log replay 重建 STATE。
-
-### 拉取式派发
-异构 agent 无法互相 ping → worker 启动时读 STATE（pull）。人是"启动按钮"。推送式 daemon = Phase 4。
-
-### 角色与职责分离
-| 角色 | 职责 |
+| Component | Responsibility |
 |---|---|
-| orchestrator | 拆 spec→tasks；派发；合并；维护章程 |
-| worker | 实现；checkpoint → awaiting_review + 写证据 |
-| reviewer | 验证 diff+证据 → accepted / changes_requested |
-| human | 启动按钮 + 最终权威 |
+| `plugins/pactify/` | Claude Code skills `/delegate`, `/codex`, `/kimi`, forwarding subagents and an installation check hook. Turns user intent into a brief and guides review, rework and apply/discard. |
+| `cmd/pactify/cmd_sub*.go` | CLI entry points for job execution, inspection, cancellation, review and self-check; detached worker launch and command exit codes. |
+| `internal/sub` | Harness registry, durable job state, lifecycle recovery/cancellation, event collection, result summaries, CLI version checks, model verification, session concealment and worktree review operations. |
+| `internal/cockpit` | Shared `Backend` / `Session` interfaces: start/resume, prompt, events, approvals, interrupt and close. The codex app-server and ACP backends supply the delegation runtime. Other existing backends do not imply additional supported `sub` harnesses. |
+| `internal/procx`, `internal/lockx` | Process identity and lifecycle locking used to coordinate workers, cancellation and shared worktrees. |
 
-worker 不能自标 `accepted`（职责分离）。
+`sub` uses the cockpit session abstraction, not `internal/orchestrate.Runner`.
+The existing dashboard also consumes cockpit events, but no dashboard, MCP server,
+seat registration or pact ledger is required to delegate a task.
 
-### 驱动层（orchestrate driver — driver-modernization）
-`orchestrate` 把座席作为子进程「一棒」驱动。传输可选:
-- **CmdRunner**（默认）— headless 一次性 spawn（`claude -p`/`opencode run`…），解析 stdout；巡检 idle-timeout 兼看工作树变更(静默但在写不误杀)。
-- **AcpRunner**（opt-in,`--transport kind=acp`）— 对 vendor CLI 说 **Agent Client Protocol**（`internal/acp`,JSON-RPC/stdio）:`initialize→session/new→session/prompt→session/update`。给结构化事件流:usage（token）经 `session/update` 落 `internal/tokens`（**根治 TOK=0**）、`session/request_permission` 三档策略 auto/escalate/deny（escalate 写 escalation,与 OpenHands 无脑 auto-approve 相反）。kind→命令映射:kimi=`kimi acp`、claude/codex/gemini 经 npx bridge。`RoutedLocalRunner` 按 kind 选传输,空映射=全 cmd(零行为变化)。
-- **会话续接**（AcpRunner）— `.pact/orchestrate/sessions.json`（lockx）记 (seat,task)→sessionID;重试时 server 支持 `loadSession` 则续接会话（保上下文、省 token）,失败回退新会话;accept/终态清理。
-- **知识注入** — briefing 尾部注入 `.pact/memory.md`(累积决策)+ role/keyword 匹配的 `.pact/skills/*.md`(4KB 预算);无文件时字节不变。
-- **可观测** — `internal/stats` per-seat `Accepted/Reworked`(纯 fold);`pactify doctor` per-vendor 预检(binary+auth+ACP 可用性)。
+### Backends and evidence
 
-### 评审深化 + 运行时（review-runtime — 包2）
-在「驱动一棒」外把评审与运行时做深(全部 opt-in,不带配置行为不变):
-- **fix-until-green 自修环** — worker checkpoint 后、评审前先跑 verify 门;红则**同 worker fix 轮**(默认 2 轮,不计 MaxFails),绿才进评审;board 显示「修复中 n/2」。省 reviewer 回合。
-- **quorum 多评审** — `assign --reviewers a,b,c --quorum N`;投影按「本次 checkpoint 后不同 reviewer 的 accept 数 ≥ N」判 accepted,任一 changes 清零重投;accept 门校验 caller∈reviewers。**单 reviewer 路径字节不变**;两不变量神圣(worker 仍不能自 accept)。
-- **critic 预评 / QA 门**(顺序:gate 绿 → QA → critic → reviewer)— critic 出 `CRITIC_SCORE` 注入 reviewer(无门控权,只提示);QA(`qa:` 行)真跑软件出 `QA_RESULT`,FAIL 走 fix 轮(共享轮次预算);两者失败都宽松放行。note 复用 `start` 事件类型,不加新类型。
-- **账本持久快照** — `.pact/state-snapshot.json`(offset+prefix-hash 校验,损坏静默全量 fold,`PACT_NO_SNAPSHOT=1` 逃生),冷启动增量 replay,**5k 账本 11.5x**;gitignored,非事实源。
-- **动态座席 / 定时** — `join --kind` + driver 每轮实时读 seat→kind(mid-run join 下轮可驱动)+ planner 可提议新座席(apply 自动 join);`pactify schedule`(`daily@HH:MM`/`every:Nh`,serve ticker,复用 spawnOrchestrate 冲突门)。
-- **已知 follow-up**:`pactify validate` 仍只从 `init` 事件推导座席 roster,`join` 动态加入的座席会被误判「不在 roster」——待专门修(改 golden 向量有风险,单列)。
-
-## CLI 命令集（Phase 1）
-
-```
-pactify init           # 生成 .pact/ 骨架
-pactify join           # worker 冷启动 + 追加 join 事件
-pactify status         # 打印 STATE.yml 现状
-pactify checkpoint <id># task → awaiting_review + 追加 log
-pactify accept <id>    # reviewer 用；task → accepted + 追加 log
-pactify merge <feat>   # 全任务 accepted → --no-ff 合并 + feature → shipped
-pactify log            # replay log.jsonl → 重建 STATE（投影验证）
-pactify validate       # 校验 .pact/ schema（防漂移）
-pactify serve          # MCP server + SSE dashboard
-```
-
-## 技术栈
-
-| 层 | 选型 | 理由 |
+| Harness | Transport and verification | Permissions and session lists |
 |---|---|---|
-| CLI | **Go** 单静态二进制 | 零 runtime 依赖，agent shell drop-in；启动 ~5ms |
-| 本地 dashboard | Vite + React SPA，`go:embed` | 静态嵌入 binary，与云端共享 React 组件 |
-| 云端 app（Team）| Next.js standalone | 与本地共享组件；**不绑 Vercel 专属特性**（可迁自托管）|
-| 设计系统 | Tailwind + shadcn/ui | 两端通用 |
-| 可视化 | React Flow（编排画布）+ 时间线 | Squad 编排画布 |
-| 实时 | 本地 SSE/WS · 云端 Supabase Realtime | 本地零依赖，云端复用 Supabase |
-| 后端（Phase 4）| Supabase | 可自托管，大规模商业化前可用 |
+| codex (default) | `codex app-server`; actual model from the server's session response; token usage and quota from protocol events. | `--write`: workspace-write with network; `--read-only`: read-only without network. Hidden threads are archived on close and unarchived for resume. |
+| kimi (experimental) | `kimi acp` through the ACP backend; model selection through protocol configuration, independently checked against kimi's local session record, which also supplies tokens. | Write mode uses kimi's native permissions, without a codex-style sandbox. Read-only is rejected. Concealment uses kimi's archive interface, falls back to archive fields with a warning, and checks the CLI session list. |
 
-## Open-core 边界
+The registry in `internal/sub/harness.go` owns the default, experimental warning,
+read-only exclusion and concealment policy. Model verification and hiding failures
+surface in the result's warnings. Sessions are hidden from normal lists, not
+erased: job logs and resume handles remain available. Startup failures without a
+session id may leave a session visible; kimi's archive fallback may hide it only
+from the CLI list, and kimi retains derived workspace entries.
 
-**ADR-001（决策记录留在本地工作台，未随公开仓库发布）**：守 Team。所有付费价值落在云端 relay 之上；log.jsonl 事件 schema 同时服务本地（免费）和云端（付费），零改动 agent 端。
+### Job persistence and lifecycle
 
-## Squad (Phase 3, M3.1+M3.2)
+Jobs live under `$PACTIFY_HOME/jobs/<job-id>/`, defaulting to
+`~/.pactify/jobs/<job-id>/`:
 
-The serve dashboard gains author powers — the same binary, `pactify serve --seat <id>`:
+```text
+state.json    request, status, timestamps, process identities and worktree metadata
+log.jsonl     collected backend events
+result.json   structured result, also rendered as Markdown
+worker.out    detached worker output
+wt/           isolated git worktree, when --worktree is used
+```
 
-- **Dir-aware engine**: `pact.At(dir).As(seat)` runs any verb against any registered
-  project from any cwd; package-level funcs remain `At(".")` wrappers (CLI/MCP unchanged).
-- **Author API** (localhost trust model): `POST /api/projects/{id}/tasks` (spec file),
-  `POST .../verbs/{assign,accept,changes,merge}` executed as the acting seat (must be in
-  the project roster; engine rules apply — the acting human cannot self-accept either),
-  engine errors returned verbatim as 422. Writes serialize per project (mutex).
-  `GET/PUT .../squad/layout` stores the canvas layout sidecar at `.pact/squad/layout.json`
-  (UI-only, outside the protocol).
-- **deps** (protocol v1 additive): optional `deps` on assign — validated (same feature,
-  exists, acyclic), enforced at join (a task with un-accepted deps cannot be joined).
-  Deps-free logs render byte-identical to the bash reference.
-- **Canvas** (web/, React Flow): task/seat/feature/draft nodes, role-colored per
-  docs/brand.md (orchestrator→product, reviewer→design, worker→dev), dep edges,
-  drag-to-dispatch onto seats, review accept/changes/merge from the rail, SSE-live
-  updates, layout persistence, awaiting-review pulse + stale indicators.
-  Build mode keeps drafts local until dispatch — the log stays protocol-pure.
+The lifecycle is `queued → running → succeeded | failed | canceled`. State
+mutations are locked; the result is published before the terminal state.
+Recovery detects absent or replaced workers using process identity. Cancellation
+covers registered harness processes, not just the foreground CLI.
+`run` and `wait` return pending status when their wait expires; the job continues.
 
-### Ops panel (M3.3a)
+`internal/sub/envelope.go` defines the review summary: status/warnings, harness
+and CLI version, requested/actual model and verification, access, duration,
+tokens, optional cost/quota, tool calls, diff statistics, worktree/base commit,
+final reply, session id and log path. The [README example](../README.md#what-comes-back)
+follows that renderer. Unknown or unavailable evidence is not a successful check.
 
-The serve binary also runs the squad's ops surface — managing which projects are
-served and how they are wired, without leaving the dashboard:
+### Worktree isolation and rework
 
-- **Registry endpoints** (`GET /api/registry`, `POST /api/registry {path}`,
-  `DELETE /api/registry/{name}`): add/remove projects at runtime (no server restart) —
-  add validates the path (absolute → exists → git repo → has `.pact/`, no implicit init)
-  and persists to the shared `~/.pactify` registry file so CLI and serve stay consistent;
-  remove stops the live watcher but never touches the on-disk `.pact/` files. The list
-  folds a content-aware status (validity, seat count, last-event ts) per project.
-- **Wiring probes** (`GET .../wiring`, `POST .../wiring/{kind}`): the probe is the single
-  source of truth shared with `pactify doctor` (`agent.ProbeWiring`) — each kind reports
-  `wired` from its config marker or entry managed-block; POST bakes the entry block and
-  merges the pact server (TOML kinds are doc-only, returning the snippet to copy).
-- **Join client provenance** (advisory): the seats endpoint (`GET .../seats`) folds the
-  roster with each seat's most recent join client+version — a CLI join stamps
-  `pactify-cli`, richer hosts stamp their own identity — and flags `clientChanged` when a
-  seat's last two joins name different clients. Provenance is advisory, never gating.
+The plugin uses `--worktree` for large tasks. The CLI requires the flag explicitly;
+without it, a fresh job runs in the supplied working directory. Isolation creates
+a detached worktree from the original `HEAD`, preserves the relative working
+directory and records its base commit and original repository. Uncommitted source
+changes are not copied in; a dirty source produces a warning.
 
-### Comms visualization (M3.3b) — Canvas 载体已移除（2026-07-07；pulseTargets 仍服务 Board 脉冲）
+`--resume` selects the latest completed isolated session with a session id for
+the same harness and original directory, including failed/canceled turns. It
+reuses the worktree and base, so diff statistics cover the cumulative change.
+Legacy sessions without worktrees require a successful turn and cannot gain
+isolation on resume. Missing or discarded worktrees cannot resume; concurrent
+turns in the same worktree are refused.
 
-The canvas gains a comms lens + replay scrubber — pure visualization, **zero protocol
-changes** (this milestone writes no events):
+Review includes committed, unstaged and untracked changes against the recorded
+base. `apply` checks affected original paths and patch applicability before
+writing, then applies without committing. `discard` removes that job's worktree;
+it does not revert an already applied change. Resume, apply and discard share a
+worktree lock across all turns, and require it to be idle. Discard marks every
+turn using that worktree as discarded. Rework should happen before apply/discard.
 
-- **Waits overlay** (`web/src/lib/comms.ts`, client-side): wait edges and seat markers are
-  derived from the existing `StateDTO` snapshot alone — no engine or new endpoint. Each
-  status maps to an edge/marker (`awaiting_review`→owner→reviewer, `changes_requested`→
-  reviewer→owner, unmet `deps`→task→dep, never-joined owner/reviewer→warning badge, an idle
-  joined seat→dimmed) with a reason chip; tasks transitively blocked through dep edges get
-  an amber outline (cycle-free graph reachability). The overlay is a canvas-toolbar toggle
-  (default off, component-local) — derived edges merge into `deriveFlow` when on, never
-  written back to the layout sidecar.
-- **Replay**: removed with the 2026-07 view consolidation; its leftover serve endpoints
-  (`GET .../timeline`, `state?at=N`) were deleted in v0.12.0.
-- **Live pulse**: each SSE-applied snapshot (live mode only) diffs the changed task(s) and
-  pulses their node + wait edges once in the actor's role color (the site's cable-pulse
-  brand idiom). Pure CSS keyframe, fully gated off under `prefers-reduced-motion`.
+### Compatibility checks
 
-### 视图收敛（2026-07-07，PR1/PR2）— dashboard 单视图化
+`pactify sub doctor` makes real calls in temporary repositories and job storage.
+It checks installation/version, write execution and usage, actual model,
+read-only behavior where supported, codex write networking and session hiding.
+Only a harness that passes all applicable checks updates
+`$PACTIFY_HOME/verified-versions.json`. A normal job warns when its CLI version
+has not been verified; the table does not prove current login or service health.
+See [sub doctor](sub-doctor.md) for probe details and limitations.
 
-三视图（Board/Canvas/Live）收敛为 **Board 单视图**。Canvas 整体删除（功能与 Dispatch
-面板重复——与 v0.7.2 删 Plan mode 同一逻辑；@xyflow/react 依赖、画布工艺规约、office-zoom
-flake、`squad/layout` 端点与 `.pact/squad/layout.json` sidecar 一并退役）。Live 的三件
-承重件迁入 Board，能力零损失：
+The [Phase 0 report](phase0-report.md) records 26 real delegations: codex completed
+9 of 10 large tasks in one attempt and returned findings for all 3 read-only
+tasks. Kimi missed the large-task and read-only criteria, explaining its
+experimental status and read-only exclusion. Median additional Claude context
+was about 3.3k tokens per delegation; that is not total callee usage.
 
-- **RunRail**（`web/src/components/board/RunRail.tsx`）：Board 顶部运行横幅——RunControl
-  聚合条（phase/修复中 n:m/iter/进度 + Resume/Ship）+ 每个 driver 触达 feature 一条 lane
-  （任务管道、可展开 AgentTerminal、gate 暂停时的**五动作 ReviewGate**）。driver 空闲或
-  hosted 源（无 status 方法）时渲染为空——board 保持干净。
-- **EventDrawer**（`board/EventDrawer.tsx`）：pact log 终端 = Board 底部折叠 ticker，
-  展开为着色事件流 + 座席在场脚注。
-- **RightRail 增 Output 段**：非终态任务内嵌 AgentTerminal（stream SSE, Last-Event-ID
-  续传）——这也是 Cockpit V1 只读探针的落点（铺位工程）。
+## Governance mode (optional, frozen)
 
-单视图 IA：View 类型/快捷键/Toolbar lens 段控/⌘K 视图项移除；`shots.mjs` 只拍 board；
-`live-gate-shot` 改造为 `board-gate-shot`。下方 Canvas P0 / comms visualization /
-Dashboard v2 的 Canvas-Office 段保留为历史记录。
+The protocol, ledger, orchestrator and local dashboard remain in the repository
+as optional governance tooling. New product investment is frozen. They are
+independent of the default harness-delegation path.
 
-### Dashboard v2 (Linear-grade re-skin + Office mode)
+| Retained component | Contract and status |
+|---|---|
+| `.pact/`, `internal/pact`, `internal/projection` | Protocol v1: `PROJECT.md` for roles/conventions, `tasks/` for task briefs, append-only `log.jsonl` as source of truth, `STATE.yml` as a regenerable projection. A worker cannot self-accept; all tasks must be accepted before feature merge. |
+| `internal/agent`, `internal/mcp`, `plugins/pact/` | Governance entry-file wiring, kind attribution, shell/MCP access and the separate pact plugin. Managed entry blocks remain distinct from the harness plugin. |
+| `internal/orchestrate` | Existing seat/task driver, command/ACP runners, worker/reviewer loops and verification gates. Frozen; not the engine behind `sub`. |
+| `internal/serve`, `web/` | Local `pactify serve` dashboard and APIs, with embedded Vite/React/Tailwind assets. Frozen; UI changes still require the repository's existing test gates. |
+| Single canonical ledger | Paused at WS-B, feature flag off by default; no new ledger rollout is implied. |
+| `cloud/`, hosted relay, `internal/cloudauth` | Retired and frozen; hosted relay is not deployed and will not be restored under this direction. Retained code is not an active service. Deletion is a separate decision. |
 
-The embedded dashboard was rebuilt to the locked design system (spec
-`docs/superpowers/specs/2026-06-11-dashboard-v2-polish-design.md`, six validated mockup
-boards in `docs/superpowers/mockups/dashboard-v2/`) — still **zero protocol changes**;
-the only sidecar growth is an additive `office` key in the opaque layout JSON:
+Governance communication remains shell/MCP → append-only log → projection;
+`serve` watches local events and streams updates to its dashboard. The retained
+relay code describes a retired implementation, not a current cloud product or
+a required part of delegation.
 
-- **Token foundation** (`web/src/tokens.css`, Tailwind v4 `@theme static`): a **dark**
-  4-layer background ramp (`#0a0e14` void → `#10151e` surface → `#171e2a` raised →
-  `#0c1119` inset), role + semantic tokens, self-hosted Inter + JetBrains Mono. Because
-  almost every component reads tokens via `var()`, swapping this `@theme` block migrates
-  the whole app light↔dark with no component edits; legacy `--role-*` vars are re-pointed
-  too. `ui/` primitives (Button/Modal/Popover/Badge/MetricStrip/…) are the sole control
-  source. (Earlier light-theme mockup: B·Indigo; the shipped theme is dark.)
-- **Ant colony avatars** (`web/src/components/ui/ants/`): one colony, eight castes
-  (queen=orchestrator, guard=reviewer, builder=worker + qa/pm/designer/research/ops by
-  roster-role keyword, fallback builder); seat individuality = deterministic pad-gradient
-  hash. Used across seats, desks, task-card chips, and the TopBar acting-seat avatar.
-- **Canvas dual mode — Office is the default landing**: Office renders one draggable
-  desk per joined seat (doing/inbox/waiting-on zones from `lib/office.ts`, a pure
-  derivation; status precedence busy>review_due>waiting>idle), wall-chart + shipped-tray
-  furniture, draft-dock drag-to-desk dispatch, and pulses-driven carrier-ant parcel
-  transit in viewport space. Plan mode keeps the feature/task frames with the ambient
-  stage, zoom HUD, minimap, ant-crawl dep/wait edges (cap 6, reduced-motion → static),
-  context menus, snap guides, and feature focus mode.
-- **Shell**: searchable project switcher, segmented views with 1/2/3 keys, ⌘K command
-  palette (cmdk; tasks/actions/navigation, observe-safe), `?` cheat sheet, observe badge,
-  dynamic title/favicon, task detail slide-over (spec/evidence/session timeline/verbs),
-  replay timeline with typed ticks + `?at=N` deep link, humanized engine errors on the
-  toast rail, first-load skeletons, and an empty-registry onboarding hero.
-
-### Canvas P0 (interaction-foundation rework, 2026-06-12, PR #20-#22) — 已随视图收敛移除（2026-07-07，历史记录）
-- **Position materialization** (`web/src/lib/canvas.ts`): layout sidecar **v2** is the
-  single source of truth for node positions — top-level nodes absolute, children
-  parent-relative (RF-native coords, zero conversion on drag-save). `deriveGraph`
-  produces identity/data/edges only; `placeNew` assigns a grid slot ONCE when a node
-  first appears (idempotent, orphan entries excluded from occupancy but preserved as
-  replay position memory); `mergeNodes` updates the RF node array by id, preserving
-  RF-written position/measured/selected/dragging and returning identical references
-  for unchanged nodes. Legacy v1 layouts (no `v` field) are dropped and re-materialized.
-  A `layoutLoaded` gate prevents materializing against another project's (or an empty)
-  layout during project switches. Desk positions follow the same model via the
-  additive `office` key.
-- **Connect UX**: Dify-style full-width 16px strip handles with center port marks
-  (visible to authors, hidden for observers), v12-correct connection classes
-  (`connectingfrom`/`valid`; the v11-era `.connecting` rules were dead), a stage-level
-  `connecting` state lifted from `useConnection`, and a custom bezier connection line.
-  All invalid-connection notices (committed target / cross-feature / cycle) surface
-  via `onConnectEnd` — `isValidConnection` blocks `onConnect` for invalid drops, so
-  notice branches there are unreachable defensive code.
-- **Engineering rules** (spec §5): production code never fabricates RF geometry
-  (`measured`/`handles` are SSR inputs + RF write-back fields); node arrays update
-  only via merge-by-id; positions have exactly two writers — `placeNew` on first
-  appearance and user drags.
-- **Acceptance gate**: Playwright e2e (`web/e2e/`, chromium) against a hermetic mock
-  server (real serve JSON shapes, SSE push hook, PUT capture). Seven regression specs
-  pin the four user-reported failures (drag isolation, connect + two negative cases,
-  office zoom, office authoring chain, drag-during-SSE stability). CI `e2e` job is a
-  required merge gate alongside vitest for canvas PRs; jsdom is no longer the
-  authority on interaction correctness.
-
-### orchestrate 驱动器（autonomous loop, 2026-06-13, #9）
-源自 dogfood 头号发现 #9：协议把协调【内容】放进文件，但协调【时机】仍需人触发，人退化成调度器。`pactify orchestrate` 在产品层兑现"消灭人肉中继"。
-- **中心化串行驱动**（`internal/orchestrate`）：读 `.pact/log.jsonl` → `projection.Project` → `nextAction(纯函数)` → 在状态变迁 headless 拉起对应 agent → 重投影 → 循环，直到 feature shipped 或升级暂停。串行天然规避 F1 单工作树。
-- **nextAction 纯决策**（decide.go）：优先级 RunReviewer(awaiting_review) > RunOwner(assigned/changes_requested/**in_progress** + deps 全 accepted) > Merge(feature 全 accepted) > Done。in_progress 是可派态——`pactify join` 会把座席所有 assigned task 一次翻成 in_progress，未 checkpoint 的须重派（顺带给崩溃重试）。阈值不在此纯函数里（churning task 总有 action），由 loop 的 `tripped()` 在派发前执行。
-- **per-kind headless runner**（agent.Adapter.Runner）：opencode→`opencode run`、claude-code→`claude -p`、gemini-cli→`gemini -p`；GUI/desktop kind 无 runner → fail-closed。Runner 接口化（生产 exec 与测试 fake 共用）。座席→kind 经 `--seat-kind` 映射（kind 未持久化进协议态）。
-- **硬测试门**（gate.go）：merge 前 orchestrate 独立复跑 feature 的验收命令（task 规格 `verify:` 行，缺则全量 `go build && go test` 回退），不过不 merge——给 LLM 评审垫确定性安全网（LLM accept ≠ 可 merge）。
-- **升级=暂停非终止**：返工/失败阈值或硬门失败 → 写 `.pact/orchestrate/escalation-*.md` + 通知 + 暂停；人修后重跑续行。agent 瞬时崩溃算软失败（重试至 MaxFails），不杀驱动；ctx 取消透传。
-- **测试**：纯函数单测 + 注入 fake Runner/cmdExec 的端到端集成（happy/返工/升级/硬门拦截/崩溃软失败/dry-run），不用真 LLM。
-
-### 8h 自主交付新增子系统（2026-06-14，12 功能）
-
-**per-agent 配置体系（`internal/agentcfg` + `agent/launch.go`）**：把硬编码的 model pin / 权限 flag / drivability 参数化。`RunnerProfile` 用 per-kind builder 闭包渲染 argv（默认输出 = 历史硬编码 args，保持契约）；`PermPosture`（blanket 自动批准 ↔ scoped allowlist）支持作用域权限；`agentcfg.Resolve(kind)` 把机器注册表的 per-agent override（model/权限）叠加到内置默认上。orchestrate runner 改走 `agentcfg.Resolve`。CLI `agent config <kind> --model/--allowed-tools/--restricted`；`agent scan` 显示 drivable/manual。
-
-**idle-timeout（`internal/orchestrate/runner_idle.go`）**：子进程 stdio tee 到 `idleTracker`，watchdog 在【无输出】N 分钟后杀进程（`errIdle` → 软失败 → 重试 worker）。比钝的总超时精准——既不过杀挂死、也不误杀合法慢任务。重试时 worker briefing 加"续接半成品"段（查 git status/diff 续或重做，worker 始终是干活的人）。
-
-**并行编排（`internal/orchestrate/parallel.go` + `gitx/worktree.go`，#3）**：feature 级并行——每 feature 在独立 git worktree 推进（`driveFeature`：owner/reviewer 循环，不 merge），最多 `MaxConcurrency` 个并发；merge 串行回 base。**关键约束/洞察**：
-- pact.Merge 内部 `git checkout base`，而 base 同一时刻只能一个 worktree 持有 → **主树 park 到一次性分支释放 base，各 worktree 在 mergeMu 锁下串行完成 merge**（复用 pact.Merge 不改协议引擎）。
-- **并行 merge 的 ledger 冲突**：两 feature 从同一 base 独立追加 log.jsonl/STATE.yml，第二个 merge 撞冲突。解法靠"StateProjection 从 log.jsonl 重算、STATE.yml 只是缓存"这一事实——`.gitattributes` 给 `.pact/log.jsonl` + `.pact/STATE.yml` 设 `merge=union`（log union=全部事件正确；STATE 变 garbage 但无所谓），`.pact/orchestrate/` 运行时文件入 .gitignore。
-- pact.Merge 把 merge 事件 append 到工作树但不 commit（串行流程读工作树即可）；并行流程 RemoveWorktree 会丢它 → merge 后须显式 commit merge 事件。
-- CLI `orchestrate --max-concurrency N`（=1 串行回退；与 --feature/--dry-run 互斥）。
-
-**收尾交付步（`internal/finish`，#5）**：merge 到本地 main 后 push / 开 PR（`gh pr create`，gh 缺时降级打印手动命令）。CLI `pactify finish`。
-
-**session 清理（`internal/sessions`，#6）**：按 kind 声明 list/prune 命令的框架，gemini 已接，其余优雅 unsupported（no-op 报告，非 error）。CLI `sessions list/prune`。**（2026-06-15 升级见下「session 清理升级」。）**
-
-**配方（`internal/recipe`，#11）**：命名任务图模板（add-tests/review-harden/spec-to-plan），`{{goal}}` 占位展开成 pact 任务 spec。CLI `recipe list/show`。把门槛从"手写任务图"降到"选配方"。
-
-**项目设置向导（`internal/wizard`，#1）**：从机器注册的 agents 建议项目座席 roster（claude 系 lead=orchestrator+reviewer，其余 worker），`Validate` 查角色覆盖。CLI `setup suggest`（打印 roster + gaps + 精确 apply 命令）；`GET /api/setup/suggest`。是"注册 agent → 能干活"的桥。
-
-**planner review（serve `plan.go` + web `PlanReview.tsx`，#7）**：`GET /api/projects/{id}/plan/{feature}` 读 plan manifest + 校验；Plan 视图（key 5）展示任务图（owner→reviewer/deps/verify）+ valid 徽章 + apply 提示。
-
-**UI polish（#12，部分）**：Spinner / Button-loading / Alert 原语 + 微交互（active-press / hover-lift / fade-rise，全 prefers-reduced-motion 兼容）+ RightRail 三动作 loading + Alert 错误。后续 UI 规划见 `docs/roadmap-next.md`。
-
-### 增量子系统（2026-06-14~16，v0.4.0）
-
-**成本 / 可观测 D1（`internal/stats` + `internal/diffstat` + `internal/tokens`）**：per-task / per-agent 的工时、代码量、token 统计，纯派生 + 真实数据。
-- `stats.Compute(events, now)` 从 log 时间戳算每任务/座席工作时长（pure derived）；`WithTaskLOC` 叠加代码量、`WithTokens` 叠加 token。
-- `diffstat.NumStat(repoDir, from, to, pathspec…)` 用 `git numstat` 算 added/deleted/files；`diffstat.Commits(repoDir, rev, grepFixed)` 按 commit subject 字面匹配找一个任务自己的 checkpoint commits；`IsRepoRoot` 守卫（仅当路径是自身 git root 才算 LOC，避免 monorepo 误算）。
-- **LOC 按任务精确归因（2026-06-19 修复）**：旧 `WithLOC` 对整条 feature 分支 `base..branch` 做一次 diff，导致同一分支上每个任务都显示相同的分支总量；改为 `WithTaskLOC`——对每个任务**自己的** checkpoint commits（subject `pact <task>:`，经 `diffstat.Commits` 找到）逐个 `sha~1..sha` numstat 求和，排除 `.pact` 簿记。每任务 LOC 各异，与 `WithTokens` 同形。
-- `tokens` 在 `.pact/orchestrate/tokens.json` 存 per-task token，`Parse(kind, output)` 解析各 agent 输出（claude `usage.input+output` 已验证；JSONL last-usage + 顶层 fallback）。
-- 经 `GET /api/projects/{id}/stats` 暴露；dashboard RightRail inspector + office「Cost」镜头展示（⏱ 时长 · +added/−deleted · ⛁ token）。
-
-**巡检 watchdog D2（`internal/orchestrate/runner_idle.go`）**：把钝的"无输出即杀"升级为**进度感知巡检**——`fsProgress(dir)`（有界 mtime 遍历，跳过 .git/node_modules，可注入）；仅当 `idleFor() >= idle 且 fsProgress() >= idle`（既无输出又无落盘）才杀，否则发"⟳ patrol: still working"通知。安静但在写盘的 agent 不被误杀。
-
-**GLM 端点可配（`internal/orchestrate/runner.go` + `internal/secret`）**：GLM 不是独立 kind，是 claude-code 指向 GLM 的 Anthropic 兼容端点（glm-* 模型时经 `glmEnv` 注入 `ANTHROPIC_BASE_URL` + Keychain token）。端点按计划可配：Keychain `pactify/glm-base-url` 有值用之（中国版 `open.bigmodel.cn`），否则全球默认 `api.z.ai`；解析永不报错（缺省回退）。token 存 Keychain `pactify/glm`。
-
-**Settings agent 管理（`internal/agent` + serve `agents.go` + web `ops/`）**：
-- **一键扫描 + 手动添加**（`AgentRoster.tsx`）：`GET /api/agents` 每次实时 `agent.Scan()` 重探安装情况；Scan 按钮重拉、一键 Register 已装未注册项；「Add manually」登记支持清单内未检测到的 kind（自定义 binary 路径延后）。
-- **模型下拉**：`agent.CandidateModels(kind)`（每 `RunnerProfile` 一份候选清单）经 config DTO 的 `candidate_models` 暴露；AgentConfig 的 model 字段升级为下拉（default · 候选 · custom…），无候选回退纯文本。
-- **统一 agent logo**（`web/src/lib/agentLogos.tsx`）：`kind → AgentLogo` 品牌渐变实色块，接进 Setup / Agents 引导条 / Ops AgentConfig 真卡片。
-
-**session 清理升级（`internal/sessions`，opencode-first，2026-06-15）**：从"按 kind 框架（gemini 仅 list）"升级为**任务 accept 后自动关闭该棒 session**。实测各 agent session CLI 后定 opencode 优先（唯一有干净 `session list` + `session delete <id>`，且常驻 daemon 最该清）。机制：runner 给 opencode `run` 打 `--title pact:<seat>`（不改输出格式）→ accept 后 `sessions.CleanupByTitle` list→匹配 title→按 id 删 owner+reviewer 的 session；门控在 `Options.SessionRun`（仅 `CleanupSessions` 开时注入真 exec，测试不 spawn）；CLI 默认开、`--keep-sessions` 关。gemini（按 index）/codex（archive）/kimi/claude（无 CLI）延后。
-
-**dark product UI refresh（web/，本地 main 未发布，2026-06-19）**：dashboard 从浅色切到**深色**，照 `design_handoff_dark_product_ui` 设计稿把全部 6 屏重制。本质是 **token swap + 少量新 pattern**——`tokens.css` 的 `@theme` 改深色（背景/边框/文字/语义；role 三色回归 brand.md 一直定义的深色基底 `#ffd479/#8ab4ff/#6ee7a0`，≈70% 的 app 经 `var()` 自动迁移）+ `index.css` 中硬编码浅色值（`canvas-stage`/`skeleton`/`rgba(18,22,31,…)` hover/inset）逐一 re-tone。新 pattern：`ui/MetricStrip`（mono `RUN/TOK/×iter` 统计条，live 值蓝、估算斜体）；**Board** 全宽 5 列（Assigned/Working/Review/Accepted/Shipped）+ 上下文头条（feature 过滤 chip + 座席簇 + New task）+ 卡片统计条 + Review 列内联 Accept/Changes，去掉固定左 dock（座席并入头条），accepted+shipped 折叠到最近 6；**Canvas** 底部中央 NL 命令坞（目标 + 配方 chip + 并发段 + Run，接现有 dispatch）；**Live** 两栏 + 右侧事件流终端（`#07090d`，pact log 着色 + 座席在场）；**Setup** 旅程步进器 + 角色切换 pill + scope 交叉链；**Settings** scope 双栏（Project/Machine/Account）。早先的**蚂蚁运动语言**（in_progress 爬行 / awaiting 绕行 / changes 顿挫 + status-colored 脉冲 + dep 边行进蚁）保留。Canvas 合并门 = vitest + Playwright e2e 双绿（工艺规约见 CLAUDE.md）。
-
-**pactify.dev 文档站外壳（`site/`，已上线生产）**：Astro 站新增 `DocsLayout`（左目录 `docsNav` + 右内容，scrollspy active），`/introduction` 重做为文档落地页，`/protocol`·`/onboarding` 共用同一外壳。
-
-**native audit layer（`internal/audit` + serve + web，spec `docs/superpowers/specs/2026-06-16-native-audit-layer-design.md`）**：本地优先的工具调用权限审计。
-- **捕获**：`pactify audit hook --kind <kind>` 读客户端 PreToolUse JSON（stdin）→ `FromHook` 归一（per-kind tool 映射 + 脱敏）→ 追加一行 JSONL 到 `~/.pactify/audit/<project>/<date>.jsonl`；log-only（恒 allow，永不阻断 agent）。治理(deny/ask)/预设是同一条缝上的 P2。
-- **归属**：orchestrate runner（`LaunchContext`）把 `PACT_AGENT_ID/PACT_TASK_ID/PACT_PROJECT` 注入 agent env，hook 读出 → 每条记录带座席/任务/项目。
-- **客户端接入**（实测）：claude-code 用命令式 PreToolUse hook（`.claude/settings.json`，`audit install --claude-code`）；opencode 无命令 hook → JS 插件 `.opencode/plugin/pact-audit.ts`（`tool.execute.before` → shell out hook，`audit install --opencode`，真 run 端到端验证）。
-- **读取**：CLI `audit log/summary/prune` + serve `GET /api/projects/{id}/audit` + dashboard RightRail 的 Audit 镜头（紧挨 D1 Cost）。
-- **门控**：`Options.SessionRun` 式注入，测试不 spawn CLI。脱敏：summary 短截断 + 掩 `Bearer/sk-/token` 等。
+- [Protocol specification](specs/pact-protocol.md) and [schemas](../schemas/)
+- [Governance onboarding](onboarding.md) and [operations](operations.md)
+- [Paused ledger design](specs/single-canonical-ledger.md)
+- [Changelog](CHANGELOG.md) for historical architecture and releases

@@ -200,15 +200,11 @@ func (c *rpcConn) writeContext(ctx context.Context, b []byte) error {
 	}
 	// The writer acknowledges its cancellation check before touching the pipe.
 	// Once accepted, a hidden prompt must retain the eventual turn/start response.
-	select {
-	case err := <-frame.accepted:
-		return err
-	case <-c.done:
-		c.mu.Lock()
-		err := c.deadErr
-		c.mu.Unlock()
-		return err
-	}
+	// Wait for the acknowledgement alone: writeLoop sends it right after taking the
+	// frame, so this cannot block. Selecting on c.done as well raced — when the
+	// peer closed the pipe right after reading the frame, select could pick done
+	// and report a delivered frame as failed ("connection closed: EOF").
+	return <-frame.accepted
 }
 
 func (c *rpcConn) writeLoop() {

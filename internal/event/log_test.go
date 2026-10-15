@@ -1,9 +1,15 @@
 package event
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
+
+// writeFile writes a whole file (test helper).
+func writeFile(path, content string) error {
+	return os.WriteFile(path, []byte(content), 0o644)
+}
 
 func TestAppendAddsEventIDAndTSAndReadAllRoundtrips(t *testing.T) {
 	log := filepath.Join(t.TempDir(), "log.jsonl")

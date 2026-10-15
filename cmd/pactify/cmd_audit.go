@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func todayUTC() string { return time.Now().UTC().Format("2006-01-02") }
-
 // newAuditCmd is the `pactify audit` group: the permission audit log — capture
 // (hook), query (log/summary), retention (prune), and client wiring (install).
 func newAuditCmd() *cobra.Command {

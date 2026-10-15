@@ -58,7 +58,7 @@ type PlanTask struct {
 
 // PlanSeat is an OPTIONAL new seat the planner proposes (spec §6 WS-K dynamic
 // seats): a seat not already on the roster that the plan needs as a task owner or
-// reviewer. Apply auto-registers each such seat with a `join` carrying its kind.
+// reviewer. ApplyTx auto-registers each such seat with a `join` carrying its kind.
 type PlanSeat struct {
 	ID    string   `json:"id"`
 	Kind  string   `json:"kind"`

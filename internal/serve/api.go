@@ -162,7 +162,6 @@ func (s *Server) Handler() http.Handler {
 	s.registerManifestRoutes(mux)
 	s.registerStatsRoutes(mux)
 	s.registerSeatsRoutes(mux)
-	s.registerTimelineRoutes(mux)
 	s.registerOrchestrateRoutes(mux)
 	s.registerCockpitRoutes(mux)
 	s.registerSetupRoutes(mux)
@@ -213,16 +212,6 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "unknown project")
 		return
 	}
-	// at param: ABSENT → full state (unchanged); present+valid → prefix fold of
-	// the first N events (clamped); present+malformed/negative → 400.
-	at, present, valid := parseAt(r)
-	if present && !valid {
-		writeErr(w, http.StatusBadRequest, "at must be a non-negative integer")
-		return
-	}
-	if !present {
-		at = -1 // all events
-	}
 	statePath := p.Path
 	wt := r.URL.Query().Get("wt")
 	if wt != "" {
@@ -235,12 +224,12 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	}
 	var dto StateDTO
 	var err error
-	if !present && wt == "" {
+	if wt == "" {
 		// Full fold of the primary path: the memoized hot path — the dashboard
 		// refetches this on every SSE event.
 		dto, _, err = s.projectStateFull(id, p.Path)
 	} else {
-		dto, err = ProjectStateAt(statePath, at)
+		dto, err = ProjectState(statePath)
 	}
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())

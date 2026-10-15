@@ -1081,12 +1081,6 @@ func Join(seatID, roles string) error { return At(".").Join(seatID, roles) }
 // declared agent kind (spec §6 WS-K); empty kind is identical to Join.
 func JoinKind(seatID, roles, kind string) error { return At(".").JoinKind(seatID, roles, kind) }
 
-// JoinWithClient registers the seat in the current working directory's repo with
-// caller-supplied client provenance (empty clientName → no client field).
-func JoinWithClient(seatID, roles, clientName, clientVersion string) error {
-	return At(".").JoinWithClient(seatID, roles, clientName, clientVersion)
-}
-
 // Assign records a task assignment in the current working directory's repo.
 func Assign(taskID, feature, branch, owner, reviewer, spec string, deps []string) error {
 	return At(".").Assign(taskID, feature, branch, owner, reviewer, spec, deps)
@@ -1160,9 +1154,6 @@ func (p *Project) BaseBranch() (string, error) {
 	b, _ := baseBranch(evs)
 	return b, nil
 }
-
-// BaseBranch returns the current repo's integration base branch.
-func BaseBranch() (string, error) { return At(".").BaseBranch() }
 
 // ConfigGate sets the project hard-gate command in the current working directory's repo.
 func ConfigGate(command string) error { return At(".").ConfigGate(command) }

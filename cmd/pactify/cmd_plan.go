@@ -226,7 +226,7 @@ func roleCatalog() []planner.RoleInfo {
 
 // rosterFromState turns the projected seats into planner SeatInfo (MVP: every
 // seat is Drivable=true; precise GUI detection is backlog) and the flat seat-id
-// roster Apply validates owners/reviewers against.
+// roster ApplyTx validates owners/reviewers against.
 func rosterFromState(st projection.State) ([]planner.SeatInfo, []string) {
 	seats := make([]planner.SeatInfo, 0, len(st.Agents))
 	roster := make([]string, 0, len(st.Agents))

@@ -84,7 +84,11 @@ func tailLog(lp string, n int) []string {
 
 // ProjectState reads a project's log and folds the whole log into a JSON DTO.
 func ProjectState(projectRoot string) (StateDTO, error) {
-	return ProjectStateAt(projectRoot, -1)
+	evs, err := ledger.Read(projectRoot)
+	if err != nil {
+		return StateDTO{}, err
+	}
+	return toDTO(projection.Project(evs)), nil
 }
 
 // stateMemo is one project's cached full-fold read: the folded DTO plus the
@@ -146,20 +150,6 @@ func (s *Server) dropStateMemo(id string) {
 	s.memoMu.Lock()
 	delete(s.stateMemos, id)
 	s.memoMu.Unlock()
-}
-
-// ProjectStateAt reads a project's log and folds the first `at` events into a
-// JSON DTO. `at` < 0 means "all events"; `at` >= len(evs) clamps to the full
-// log. `at` == 0 yields the empty-fold state.
-func ProjectStateAt(projectRoot string, at int) (StateDTO, error) {
-	evs, err := ledger.Read(projectRoot)
-	if err != nil {
-		return StateDTO{}, err
-	}
-	if at >= 0 && at < len(evs) {
-		evs = evs[:at]
-	}
-	return toDTO(projection.Project(evs)), nil
 }
 
 func toDTO(st projection.State) StateDTO {

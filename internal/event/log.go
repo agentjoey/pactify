@@ -84,11 +84,6 @@ func ParseAll(data []byte) ([]Event, error) {
 	return evs, err
 }
 
-func parse(r io.Reader) ([]Event, error) {
-	evs, _, err := parseWithStats(r)
-	return evs, err
-}
-
 func parseWithStats(r io.Reader) ([]Event, ParseStats, error) {
 	var evs []Event
 	var stats ParseStats
@@ -138,9 +133,4 @@ func parseWithStats(r io.Reader) ([]Event, ParseStats, error) {
 		}
 	}
 	return evs, stats, nil
-}
-
-// writeFile is a small test/helper for writing a whole file.
-func writeFile(path, content string) error {
-	return os.WriteFile(path, []byte(content), 0o644)
 }

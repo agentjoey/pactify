@@ -17,13 +17,6 @@ export interface PactEventDetail {
 export interface ProjectMeta { id: string; name: string; path: string; project: string; feature_count: number; awaiting_count: number; group?: string }
 export interface BoardTask { task: Task; feature: string }
 
-// --- Replay (M3.3b) ---
-//
-// One row of the timeline index (serve GET /timeline). n is 1-based position in
-// the log; task/feature are present only when the event carries them.
-export interface TimelineEvent { n: number; ts: string; type: string; actor: string; task?: string; feature?: string }
-export interface Timeline { total: number; events: TimelineEvent[] }
-
 // --- Ops view (M3.3a) ---
 
 // RegistryEntry is one registered project's identity + folded status. status.valid

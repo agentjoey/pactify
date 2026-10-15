@@ -52,10 +52,6 @@ type checkpointIn struct {
 	Task     string `json:"task"`
 	Evidence string `json:"evidence"`
 }
-type taskIn struct {
-	projectField
-	Task string `json:"task"`
-}
 type acceptIn struct {
 	projectField
 	Task     string `json:"task"`

@@ -131,7 +131,7 @@ export interface FallbackCardProps {
  * rather than acting on its own; it carries the same "human decision" framing
  * as ReviewGate, the other card that pauses for a person.
  */
-export function FallbackCard({
+function FallbackCard({
   project,
   proposal,
   canWrite,

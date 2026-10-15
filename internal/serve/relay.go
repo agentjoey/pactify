@@ -307,9 +307,6 @@ func (r *relay) stop() {
 	r.wmMu.Unlock()
 }
 
-func (r *relay) droppedCount() int64 { return atomic.LoadInt64(&r.dropped) }
-func (r *relay) queueLen() int       { return len(r.queue) }
-
 func (r *relay) run() {
 	defer close(r.done)
 	for msg := range r.queue {

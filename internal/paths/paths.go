@@ -21,11 +21,6 @@ func Dir() string {
 func Log() string   { return filepath.Join(Dir(), "log.jsonl") }
 func State() string { return filepath.Join(Dir(), "STATE.yml") }
 func Tasks() string { return filepath.Join(Dir(), "tasks") }
-func Bin() string   { return filepath.Join(Dir(), "bin") }
-
-// StateSnapshot is the persistent ledger snapshot cache (a projection of the log,
-// NOT the source of truth). It is never committed — see the runtime-ignore wiring.
-func StateSnapshot() string { return filepath.Join(Dir(), "state-snapshot.json") }
 
 // DirIn resolves the pact directory rooted at base. It preserves the PACT_DIR
 // override semantics of Dir(): if Dir() is absolute (e.g. PACT_DIR is an
@@ -40,20 +35,18 @@ func DirIn(base string) string {
 }
 
 // LogIn, StateIn, TasksIn, BinIn are the base-rooted analogues of Log/State/
-// Tasks/Bin, layered on DirIn so the PACT_DIR-absolute case is honoured.
+// Tasks, layered on DirIn so the PACT_DIR-absolute case is honoured.
 func LogIn(base string) string   { return filepath.Join(DirIn(base), "log.jsonl") }
 func StateIn(base string) string { return filepath.Join(DirIn(base), "STATE.yml") }
 func TasksIn(base string) string { return filepath.Join(DirIn(base), "tasks") }
 func BinIn(base string) string   { return filepath.Join(DirIn(base), "bin") }
 
-// StateSnapshotIn is the base-rooted analogue of StateSnapshot.
+// StateSnapshotIn is the persistent ledger snapshot cache (a projection of the
+// log, NOT the source of truth). It is never committed — see the runtime-ignore
+// wiring.
 func StateSnapshotIn(base string) string {
 	return filepath.Join(DirIn(base), "state-snapshot.json")
 }
-
-// AgentID returns PACT_AGENT_ID (may be ""). Env-only; prefer AgentIDIn, which
-// adds the untracked seat-file layer (spec seat-identity §3.1).
-func AgentID() string { return os.Getenv("PACT_AGENT_ID") }
 
 // Seat identity source, reported by AgentIDIn so `pactify seat` can explain where
 // the acting identity came from.

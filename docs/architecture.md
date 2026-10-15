@@ -217,17 +217,8 @@ changes** (this milestone writes no events):
   an amber outline (cycle-free graph reachability). The overlay is a canvas-toolbar toggle
   (default off, component-local) — derived edges merge into `deriveFlow` when on, never
   written back to the layout sidecar.
-- **Replay = prefix fold**: the projection is a pure fold, so historical state =
-  `Project(evs[:n])`. serve adds two read-only endpoints — `GET .../timeline`
-  (`{total, events:[{n, ts, type, actor, task?, feature?}]}`, a light index with no
-  payloads) and `GET .../state?at=N` (folds the first N events; `at=0`→empty, `N≥total`
-  clamps to the full/live shape, malformed `at`→400, absent `at`→unchanged). Both share the
-  existing read path (`event.ReadAll`); no mutex beyond today's `handleState`. The
-  **ReplayBar** scrubs `0..total`, fetching `state?at=N` per position; SSE snapshots are
-  ignored while scrubbing.
-- **Replay mode is read-only**: every author/ops mutation (dispatch, task editor, drag,
-  review verbs) is disabled or hidden while not live — the `replaying` flag short-circuits
-  the handlers; LIVE refetches the current state and resumes the SSE stream.
+- **Replay**: removed with the 2026-07 view consolidation; its leftover serve endpoints
+  (`GET .../timeline`, `state?at=N`) were deleted in v0.12.0.
 - **Live pulse**: each SSE-applied snapshot (live mode only) diffs the changed task(s) and
   pulses their node + wait edges once in the actor's role color (the site's cable-pulse
   brand idiom). Pure CSS keyframe, fully gated off under `prefers-reduced-motion`.

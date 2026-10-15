@@ -3,7 +3,7 @@
 // SLUG mirrors the protocol's client/seat slug grammar: lowercase alnum start,
 // then alnum or hyphen. Used to validate the seat id typed into the wire modal
 // before a POST (the server re-validates authoritatively).
-export const SLUG = /^[a-z0-9][a-z0-9-]*$/;
+const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 
 export const isSlug = (s: string): boolean => SLUG.test(s);
 

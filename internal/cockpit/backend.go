@@ -3,15 +3,51 @@ package cockpit
 import (
 	"context"
 	"encoding/json"
+	"io"
+)
+
+// Access selects explicit delegation permissions; the zero value preserves backend defaults.
+type Access string
+
+const (
+	AccessDefault  Access = ""
+	AccessReadOnly Access = "read-only"
+	AccessWrite    Access = "write"
 )
 
 // StartOpts 启动一个会话所需。
 type StartOpts struct {
 	RepoDir      string // agent 的 cwd = 仓库根
 	Seat         string // PACT_AGENT_ID
-	Model        string // 可空
+	Model        string // 非空时必须兑现，否则 Start 返回错误
 	SystemPrompt string // 可空
+	Effort       string // 可空；每轮推理 effort
+	Access       Access
+	Env          []string  // 追加在继承环境之后；同名键以此为准
+	Stderr       io.Writer // nil → os.Stderr
 }
+
+// SessionInfo reports actual session parameters; empty fields were not reported.
+type SessionInfo struct {
+	Model    string
+	Provider string
+	Effort   string
+	Access   string
+}
+
+// InfoSession is implemented by sessions that report actual runtime parameters.
+type InfoSession interface{ Info() SessionInfo }
+
+// OptsResumer can resume with explicit options; Resume uses zero-value options.
+type OptsResumer interface {
+	ResumeWith(ctx context.Context, threadID string, opts StartOpts) (Session, error)
+}
+
+// Terminal turn states.
+const (
+	StateTurnCompleted = "turn_completed"
+	StateTurnFailed    = "turn_failed"
+)
 
 // UserMessage 是用户发送给后端的文本消息。
 type UserMessage struct{ Text string }

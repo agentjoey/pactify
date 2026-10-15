@@ -51,69 +51,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 		if session == "" {
 			return State{}, &NoSessionError{Harness: req.Harness}
 		}
-		h, _ := Lookup(req.Harness)
-		if h.Home != nil {
-			if previous.EffectiveConfigMode() != h.configMode(req.WithUserConfig) {
-				return State{}, fmt.Errorf("%s resume requires the original config mode (%s); use the matching --with-user-config setting or start a fresh session", h.Name, previous.EffectiveConfigMode())
-			}
-		}
-		createResume := func() (State, error) {
-			st, err := s.Create(id, req)
-			if err != nil {
-				return st, err
-			}
-			err = s.WithState(context.Background(), id, func(current *State) error {
-				current.ResumeOf = previous.ID
-				if h.Home != nil {
-					current.HarnessHome = previous.HarnessHome
-					current.HarnessHomes = previous.HarnessHomes
-				}
-				st = *current
-				return s.Save(*current)
-			})
-			return st, err
-		}
-		req.Resume = session
-		if previous.Worktree == nil {
-			if isolated {
-				return State{}, fmt.Errorf("The latest session did not use a worktree; remove --resume to create an isolated session")
-			}
-			return createResume()
-		}
-		var created State
-		err = s.withWorktree(previous.ID, func(_ *State, w *Worktree) error {
-			if err := s.worktreeIdle(w); err != nil {
-				return err
-			}
-			root, err := repositoryRoot(w.Cwd)
-			if err != nil {
-				return fmt.Errorf("worktree no longer exists; cannot resume: %w", err)
-			}
-			actual, err := filepath.EvalSymlinks(root)
-			if err != nil {
-				return err
-			}
-			expected, err := filepath.EvalSymlinks(w.Path)
-			if err != nil {
-				return err
-			}
-			if actual != expected {
-				return fmt.Errorf("worktree path no longer points to the original isolated repository")
-			}
-			created, err = createResume()
-			if err != nil {
-				return err
-			}
-			err = s.WithState(context.Background(), id, func(st *State) error {
-				copy := *w
-				copy.Applied = false
-				st.Worktree = &copy
-				created = *st
-				return s.Save(*st)
-			})
-			return err
-		})
-		return created, err
+		return s.resumeRun(id, req, isolated, previous, session)
 	}
 	root, err := repositoryRoot(req.Cwd)
 	if err != nil {
@@ -175,6 +113,72 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 		}
 	}
 	return st, err
+}
+
+func (s Store) resumeRun(id string, req Request, isolated bool, previous State, session string) (State, error) {
+	h, _ := Lookup(req.Harness)
+	if h.Home != nil {
+		if previous.EffectiveConfigMode() != h.configMode(req.WithUserConfig) {
+			return State{}, fmt.Errorf("%s resume requires the original config mode (%s); use the matching --with-user-config setting or start a fresh session", h.Name, previous.EffectiveConfigMode())
+		}
+	}
+	createResume := func() (State, error) {
+		st, err := s.Create(id, req)
+		if err != nil {
+			return st, err
+		}
+		err = s.WithState(context.Background(), id, func(current *State) error {
+			current.ResumeOf = previous.ID
+			if h.Home != nil {
+				current.HarnessHome = previous.HarnessHome
+				current.HarnessHomes = previous.HarnessHomes
+			}
+			st = *current
+			return s.Save(*current)
+		})
+		return st, err
+	}
+	req.Resume = session
+	if previous.Worktree == nil {
+		if isolated {
+			return State{}, fmt.Errorf("The latest session did not use a worktree; remove --resume to create an isolated session")
+		}
+		return createResume()
+	}
+	var created State
+	err := s.withWorktree(previous.ID, func(_ *State, w *Worktree) error {
+		if err := s.worktreeIdle(w); err != nil {
+			return err
+		}
+		root, err := repositoryRoot(w.Cwd)
+		if err != nil {
+			return fmt.Errorf("worktree no longer exists; cannot resume: %w", err)
+		}
+		actual, err := filepath.EvalSymlinks(root)
+		if err != nil {
+			return err
+		}
+		expected, err := filepath.EvalSymlinks(w.Path)
+		if err != nil {
+			return err
+		}
+		if actual != expected {
+			return fmt.Errorf("worktree path no longer points to the original isolated repository")
+		}
+		created, err = createResume()
+		if err != nil {
+			return err
+		}
+		err = s.WithState(context.Background(), id, func(st *State) error {
+			copy := *w
+			copy.Applied = false
+			st.Worktree = &copy
+			created = *st
+			return s.Save(*st)
+		})
+		return err
+	})
+	return created, err
 }
 
 func makeWorktreeCwd(w *Worktree, rel string) error {

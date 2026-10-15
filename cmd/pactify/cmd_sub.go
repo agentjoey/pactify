@@ -45,19 +45,29 @@ func newSubCmd() *cobra.Command {
 	command := &cobra.Command{Use: "sub", Short: "Run a local coding harness as a background job", Args: subArgs(0), RunE: func(c *cobra.Command, _ []string) error { return c.Help() }}
 	command.SetFlagErrorFunc(func(c *cobra.Command, err error) error { subExit(c, 2, err); return nil })
 	var model, effort, cwd string
-	var readOnly, write, resume, fresh, jsonOut bool
+	var readOnly, write, fresh, jsonOut bool
+	var resume, runHarness string
 	var wait time.Duration
 	run := &cobra.Command{Use: "run [harness]", Short: "Read a task from stdin and start a background worker (default: " + sub.DefaultHarness + ")", Args: func(c *cobra.Command, args []string) error {
+		// pflag leaves a space-separated optional value in the positional args.
+		// Keep recognized harness names positional, including `--resume codex`.
+		if resume == subResumeLatest && len(args) > 0 {
+			if _, harness := sub.Lookup(args[0]); !harness {
+				resume, args = args[0], args[1:]
+			} else if len(args) > 1 {
+				resume, args = args[1], append(args[:1:1], args[2:]...)
+			}
+		}
 		if err := cobra.MaximumNArgs(1)(c, args); err != nil {
 			subExit(c, 2, err)
 		}
+		runHarness = ""
+		if len(args) > 0 {
+			runHarness = args[0]
+		}
 		return nil
 	}, Run: func(c *cobra.Command, args []string) {
-		name := sub.DefaultHarness
-		if len(args) > 0 {
-			name = args[0]
-		}
-		code, err := subRun(c, name, model, effort, cwd, readOnly, write, resume, fresh, wait, jsonOut)
+		code, err := subRun(c, runHarness, model, effort, cwd, readOnly, write, c.Flags().Changed("resume"), fresh, wait, jsonOut, resume)
 		subExit(c, code, err)
 	}}
 	run.Flags().StringVar(&model, "model", "", "Requested model (must be available)")
@@ -65,7 +75,8 @@ func newSubCmd() *cobra.Command {
 	run.Flags().StringVar(&cwd, "cwd", ".", "Working directory")
 	run.Flags().BoolVar(&readOnly, "read-only", false, "Deny all permission requests")
 	run.Flags().BoolVar(&write, "write", false, "Allow workspace writes (default)")
-	run.Flags().BoolVar(&resume, "resume", false, "Resume the last successful session in this repo")
+	run.Flags().StringVar(&resume, "resume", "", "Resume a job by id/unique prefix; omit the value for the latest session")
+	run.Flags().Lookup("resume").NoOptDefVal = subResumeLatest
 	run.Flags().BoolVar(&fresh, "fresh", false, "Start a fresh session (default)")
 	run.Flags().DurationVar(&wait, "wait", 540*time.Second, "How long to wait before returning the job id")
 	run.Flags().BoolVar(&jsonOut, "json", false, "Print JSON")
@@ -125,7 +136,30 @@ func newSubCmd() *cobra.Command {
 	addSubWorktreeCommands(command, run)
 	return command
 }
-func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool) (int, error) {
+
+// The slash keeps this implicit-value marker outside the valid job-id space.
+const subResumeLatest = "<latest/session>"
+
+func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool, resumeJob string) (int, error) {
+	if resume && fresh {
+		return 2, fmt.Errorf("--resume and --fresh cannot be used together")
+	}
+	store, err := sub.DefaultStore()
+	if err != nil {
+		return 1, err
+	}
+	if resume && resumeJob != subResumeLatest {
+		previous, err := store.ResolveResumeJob(resumeJob)
+		if err != nil {
+			return 2, err
+		}
+		if name == "" {
+			name = previous.Request.Harness
+		}
+	}
+	if name == "" {
+		name = sub.DefaultHarness
+	}
 	h, ok := sub.Lookup(name)
 	if !ok {
 		return 2, fmt.Errorf("unknown harness %q; available: %s", name, strings.Join(sub.Names(), ", "))
@@ -135,9 +169,6 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	}
 	if readOnly && h.NoReadOnly != "" {
 		return 2, fmt.Errorf("%s", h.NoReadOnly)
-	}
-	if resume && fresh {
-		return 2, fmt.Errorf("--resume and --fresh cannot be used together")
 	}
 	if wait < 0 {
 		return 2, fmt.Errorf("--wait must not be negative")
@@ -164,17 +195,13 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if strings.TrimSpace(string(brief)) == "" {
 		return 2, fmt.Errorf("task brief must not be empty; provide it on stdin")
 	}
-	store, err := sub.DefaultStore()
-	if err != nil {
-		return 1, err
-	}
 	req := sub.Request{Harness: name, Model: model, Effort: effort, Cwd: dir, Brief: string(brief), Access: "write"}
 	req.WithUserConfig, _ = c.Flags().GetBool("with-user-config")
 	if readOnly {
 		req.Access = "read-only"
 	}
 	id := sub.NewJobID(time.Now(), rand.Reader)
-	st, code, err := subCreateRun(c, store, id, req, resume)
+	st, code, err := subCreateRun(c, store, id, req, resume, resumeJob)
 	if err != nil {
 		return code, err
 	}

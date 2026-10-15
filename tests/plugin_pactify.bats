@@ -8,6 +8,31 @@ setup() {
   export KIMI_CODE_HOME="$BATS_TEST_TMPDIR/kimi-home"
 }
 
+@test "delegation guides recommend selecting the resume job explicitly" {
+  run python3 - "$P" "$REPO/README.md" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+blocks = []
+for path in (root / 'skills').glob('*/SKILL.md'):
+    text = path.read_text()
+    if '<!-- BEGIN SHARED-DELEGATION -->' in text:
+        block = text.split('<!-- BEGIN SHARED-DELEGATION -->')[1].split('<!-- END SHARED-DELEGATION -->')[0]
+        assert '--resume <job-id>' in block, path
+        blocks.append(block)
+assert len(blocks) == 5 and len(set(blocks)) == 1
+jobs = (root / 'skills/jobs/SKILL.md').read_text()
+assert '--resume <id>' in jobs
+assert 'Resume is not' not in jobs
+for path in (root / 'agents').glob('*.md'):
+    assert '--resume <job-id>' in path.read_text(), path
+for path in (root / 'README.md', pathlib.Path(sys.argv[2])):
+    text = path.read_text()
+    assert '--resume <job-id>' in text, path
+    assert 'prefix' in text, path
+PY
+  [ "$status" -eq 0 ]
+}
+
 @test "marketplace lists the pactify plugin" {
   run python3 -c "import json;d=json.load(open('$REPO/.claude-plugin/marketplace.json'));p=[p for p in d['plugins'] if p['name']=='pactify'];assert len(p)==1;assert p[0]['source']=='./plugins/pactify'"
   [ "$status" -eq 0 ]

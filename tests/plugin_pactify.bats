@@ -34,6 +34,8 @@ setup() {
     grep -q 'pactify sub wait' "$P/skills/$h/SKILL.md"
     # An explicit /<harness> invocation must delegate regardless of task size (Phase 0 smoke, 2026-10-15).
     grep -q 'invoked this skill explicitly' "$P/skills/$h/SKILL.md"
+    # The background wait must outlive the default ~10-minute background limit (Phase 0: 5 of 26 runs).
+    grep -q 'timeout: 7200000' "$P/skills/$h/SKILL.md"
   done
 }
 

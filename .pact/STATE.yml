@@ -1205,7 +1205,7 @@ features:
     tasks:
       - id: p0-sub-core
         owner: codex-worker
-        status: assigned
+        status: in_progress
         reviewer: claude-session
         spec: .pact/tasks/p0-sub-core.md
         evidence: null

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
@@ -60,7 +59,7 @@ func (e *RouterConfigError) Unwrap() error { return e.Err }
 var aliasName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*$`)
 
 func (s Store) LoadRouter() (*Router, error) {
-	path := filepath.Join(filepath.Dir(s.Root), "router.json")
+	path := s.RouterPath()
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -68,6 +67,11 @@ func (s Store) LoadRouter() (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ParseRouter(path, data)
+}
+
+// ParseRouter is the shared CLI and dashboard configuration validator.
+func ParseRouter(path string, data []byte) (*Router, error) {
 	fail := func(field string, err error) (*Router, error) {
 		return nil, &RouterConfigError{Path: path, Field: field, Err: err}
 	}

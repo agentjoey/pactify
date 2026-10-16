@@ -523,3 +523,119 @@
     gap: 6px;
   }
 }
+
+.panel-routing {
+  margin-bottom: 20px;
+}
+.panel-routing > summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.routing-actions, .routing-read-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+.routing-read-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 12px;
+}
+.routing-read-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.routing-read-row span, .routing-read-row time {
+  color: var(--color-text-2);
+}
+.routing-config, .routing-quotas {
+  margin-top: 18px;
+}
+.routing-config {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.routing-config > section {
+  min-width: 0;
+}
+.routing-editor {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.jobs-view .routing-editor h2 {
+  margin: 20px 0 10px;
+}
+.routing-entry, .routing-chain {
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-inset);
+}
+.routing-entry {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 10px;
+}
+.routing-entry > button {
+  justify-self: start;
+}
+.routing-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-2);
+}
+.routing-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 12px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-1);
+}
+.routing-field input:focus-visible {
+  outline: 2px solid var(--color-role-design);
+  outline-offset: 2px;
+}
+.routing-field-error {
+  color: var(--color-danger);
+  overflow-wrap: anywhere;
+}
+.routing-chain h3 {
+  margin: 0;
+  font-size: 12px;
+}
+.routing-route {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.routing-route > label {
+  flex: 1 1 140px;
+}
+.routing-confirm {
+  padding: 12px;
+  margin-top: 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+@media (max-width: 700px) {
+  .routing-config, .routing-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

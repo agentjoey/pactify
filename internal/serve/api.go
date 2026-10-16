@@ -119,6 +119,7 @@ func (s *Server) Handler() http.Handler {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		})
 	} else {
+		s.registerRouterWrites(mux, store)
 		mux.Handle("/api/sub/", http.StripPrefix("/api/sub", subpanel.ReadOnlyHandler(store)))
 	}
 	mux.HandleFunc("GET /api/projects", s.handleProjects)

@@ -9,9 +9,11 @@ const dist = fileURLToPath(
   new URL("../../internal/subpanel/dist/", import.meta.url),
 );
 export { panelJobs } from "./jobs-fixtures.mjs";
+import { createRouterAPI } from "./router-fixtures.mjs";
 import { serveJobsAPI } from "./jobs-fixtures.mjs";
 
 export async function startPanelMock(port = 0) {
+  const routerAPI = createRouterAPI();
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://127.0.0.1");
     if (req.method !== "GET") {
@@ -19,6 +21,7 @@ export async function startPanelMock(port = 0) {
       res.end();
       return;
     }
+    if (await routerAPI(req, res, url.pathname)) return;
     if (serveJobsAPI(req, res, url.pathname)) return;
     const path = resolve(
       dist,

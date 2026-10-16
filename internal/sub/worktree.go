@@ -38,6 +38,11 @@ func (e *NoSessionError) Error() string {
 	return fmt.Sprintf("This repository has no %s session to resume", e.Harness)
 }
 
+// ReadOnlyUnavailableError also rejects legacy read-only sessions on resume.
+type ReadOnlyUnavailableError struct{ Reason string }
+
+func (e *ReadOnlyUnavailableError) Error() string { return e.Reason }
+
 // CreateRun keeps the original cwd as the session lookup key. A worktree resume
 // automatically inherits isolation, even when --worktree is omitted.
 func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, error) {
@@ -118,6 +123,9 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 
 func (s Store) resumeRun(id string, req Request, isolated bool, previous State, session string) (State, error) {
 	h, _ := Lookup(req.Harness)
+	if h.NoReadOnly != "" && (req.Access == "read-only" || previous.Request.Access == "read-only") {
+		return State{}, &ReadOnlyUnavailableError{Reason: h.NoReadOnly}
+	}
 	if h.Home != nil {
 		if previous.EffectiveConfigMode() != h.configMode(req.WithUserConfig) {
 			return State{}, fmt.Errorf("%s resume requires the original config mode (%s); use the matching --with-user-config setting or start a fresh session", h.Name, previous.EffectiveConfigMode())

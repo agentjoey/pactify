@@ -41,11 +41,7 @@ func TestAgyProcessHelper(t *testing.T) {
 	if !has("--input-format") || !has("--output-format") || has("--sandbox") || has("SECRET-PROMPT") {
 		os.Exit(12)
 	}
-	if os.Getenv("PACTIFY_AGY_ACCESS") == "read-only" {
-		if !has("--mode=plan") {
-			os.Exit(13)
-		}
-	} else if !has("--dangerously-skip-permissions") {
+	if !has("--dangerously-skip-permissions") {
 		os.Exit(14)
 	}
 	scan := bufio.NewScanner(os.Stdin)
@@ -137,7 +133,7 @@ func agyFixture(t *testing.T, mode string, access Access) (Backend, StartOpts) {
 	b := &agyBackend{command: func(ctx context.Context, args ...string) *exec.Cmd {
 		return exec.CommandContext(ctx, exe, append([]string{"-test.run=^TestAgyProcessHelper$", "--"}, args...)...)
 	}, grace: 100 * time.Millisecond}
-	o := StartOpts{RepoDir: t.TempDir(), Model: "model-a", Effort: "low", Access: access, Env: []string{"HOME=" + t.TempDir(), "PACTIFY_AGY_HELPER=1", "PACTIFY_AGY_MODE=" + mode, "PACTIFY_AGY_ACCESS=" + string(access)}}
+	o := StartOpts{RepoDir: t.TempDir(), Model: "model-a", Effort: "low", Access: access, Env: []string{"HOME=" + t.TempDir(), "PACTIFY_AGY_HELPER=1", "PACTIFY_AGY_MODE=" + mode}}
 	return b, o
 }
 func agyTurn(t *testing.T, s Session) []Event {
@@ -161,7 +157,7 @@ func agyTurn(t *testing.T, s Session) []Event {
 	}
 }
 func TestAgyStreamResumeAndUsage(t *testing.T) {
-	for _, access := range []Access{AccessWrite, AccessReadOnly} {
+	for _, access := range []Access{AccessWrite} {
 		t.Run(string(access), func(t *testing.T) {
 			b, o := agyFixture(t, "", access)
 			s, err := b.Start(context.Background(), o)

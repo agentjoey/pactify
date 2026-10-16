@@ -118,7 +118,7 @@ pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模
   - 续接用 `--conversation <id>`；
   - 取消先发 SIGINT（进程立即退出，`result.status=ERROR`、原因 `interrupted`，子进程被清理），超过宽限期再 kill；
   - 模型从 `agy models` 动态获取，不再写死；不存在的模型会返回退出码 1 并列出可选项；
-  - 必须识别「工具被无头模式自动拒绝、但 `result.status` 仍为 SUCCESS」的情况：拒绝只出现在 stderr 的 `auto-denied`，以及空终稿。AJ-649 的实现判为失败；只读档下的拒绝同样判为失败，但错误说明只读档的限制（见 §5.4）；
+  - 必须识别「工具被无头模式自动拒绝、但 `result.status` 仍为 SUCCESS」的情况：拒绝只出现在 stderr 的 `auto-denied`，以及空终稿。AJ-649 的实现判为失败；AJ-683 起只读档在入口拒绝（见 §5.4）；
   - 取消时先快照 agy 的全部后代进程（agy 把工具命令放进独立的进程组或会话，按进程组 kill 无效），agy 退出后逐个结束仍存活的后代，并核对进程身份（AJ-649）。
 - **精简 callee 的启动配置**：实测每次委派的输入基线约 2–5 万 token，主要来自 callee 加载用户全部的 MCP 服务器与插件
   （codex 启动了 17 个 MCP 服务器；claude 带了 359 个工具）。新方案应默认以最小配置启动 callee（ACP 会话已传
@@ -166,13 +166,19 @@ callee 冷启动，没有 host 的对话上下文。第一版做法：转发 sub
 
 | 档位 | codex | opencode（ACP） | kimi（ACP） | agy（命令行） | claude（CLI / SDK） |
 |---|---|---|---|---|---|
-| `--read-only` | `sandbox: read-only` ✅ | build + permission 注入 edit/webfetch deny、bash ask，所有权限请求 reject_once；只用读工具，plan 模式不可靠 ✅ | `session/set_mode plan` ✅⚠️ | `--mode=plan`，不加 skip；靠无头权限自动拒绝保护，只能用自带文件工具，任何 shell 命令/写入都会被拒并结束本轮 | `--allowedTools=Read,Grep,Glob` ✅ |
+| `--read-only` | `sandbox: read-only` ✅ | 不开放（AJ-683）；入口退出 2，指向 `codex --read-only` | `session/set_mode plan` ✅⚠️ | 不开放（AJ-683）；入口退出 2，指向 `codex --read-only` | `--allowedTools=Read,Grep,Glob` ✅ |
 | `--write` | `sandbox: workspace-write` + 网络开放（`sandbox_workspace_write.network_access`，2026-10-15 Owner 拍板）✅ | build + permission edit/bash/webfetch allow ✅ | 默认模式（直接写）✅ | `--dangerously-skip-permissions` ✅（1.3.5：`--mode=accept-edits` 只放行写文件，shell 命令会被自动拒绝；`--mode=auto` 对本账号不可用） | `--permission-mode acceptEdits` ✅ |
 
-**agy 1.3.5 host 复核（AJ-649）**：保护来自无头模式下的自动拒绝，不来自 plan 模式本身。
-`--mode=plan` 加 `--dangerously-skip-permissions` 时，shell 写入会实际执行，因此只读档绝不能带 skip。
-只读档下任何 shell 命令（包括只读的 `git log`、`grep`）都会被拒绝并结束本轮，终稿为空；
-可完成的只读评审必须仅使用自带文件工具。需要命令的只读任务使用 codex `--read-only`。
+**agy（AJ-683，Owner 2026-10-16 拍板）**：保持实验性，关闭只读档，不再测。
+评估只读任务 0/3：无头模式下 shell 一被拒，本轮就结束，无法交出结论。
+与 kimi K1 一致：`sub run agy --read-only` 入口退出 2，旧只读 job 续接同样拒绝，
+doctor 的只读探测为 SKIP。只读任务使用 `codex --read-only`。
+历史实测中 `--mode=plan` 加 skip-permissions 可实际写入，plan 本身不是沙箱。
+
+**opencode（AJ-683，Owner 2026-10-16 拍板）**：保持实验性，关闭只读档。
+评估只读任务 0/3：模型调用 shell 被拒后本轮即结束，没有结论。
+与 kimi、agy 一致：入口退出 2，旧只读 job 的按 id、自动选择和 worktree 续接均拒绝，
+doctor 通过 `NoReadOnly` 标记 SKIP。只读任务使用 `codex --read-only`。
 
 ✅ = 2026-10-15 实测：只读档写文件被拦、可写档写成功。⚠️ kimi 的 plan 模式拦得住，但被拒后会反复申请退出、反复提问
 （一轮 32 次工具调用），需在 brief 里写明只读且对 `ExitPlanMode` 自动拒绝并附说明，同时设每轮调用上限。
@@ -252,6 +258,7 @@ K2 达标。K3 实测期间两家 CLI 都没有更新，未触发；版本变化
 ## 10. Phase 0 前实测结果（2026-10-15）
 
 在临时目录的一次性 git 仓库中，用每家最便宜的模型档实测。gemini-cli 按 D4 不再验证。
+以下为历史能力快照；当前 agy、opencode 只读档已关闭（AJ-683），权限映射以 §5.4 为准。
 
 | 项目 | codex 0.162.1 | claude 2.1.300 | opencode 1.18.34 | kimi 2.0.0 | agy 1.2.15 |
 |---|---|---|---|---|---|

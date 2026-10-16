@@ -263,7 +263,7 @@ text = (root / 'skills/agy/SKILL.md').read_text()
 original = (root / 'skills/kimi/SKILL.md').read_text()
 start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->'
 assert text.split(start)[1].split(end)[0] == original.split(start)[1].split(end)[0]
-for term in ('name: agy', 'experimental', 'evaluation pending', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
+for term in ('name: agy', 'experimental', '1/10', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
     assert term in text, term
 agent = (root / 'agents/agy.md').read_text()
 for term in ('model: haiku', 'tools: Bash', 'pactify sub run agy', '--read-only', '--write', '--resume', '--worktree', '--cwd'):
@@ -274,18 +274,18 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "agy documents file-only read-only access and the source of write protection" {
-  run python3 - "$P" <<'PY'
+@test "agy documents closed read-only access and codex fallback" {
+  run python3 - "$P" <<'PYTEST'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-skill = (root / 'skills/agy/SKILL.md').read_text().split('<!-- BEGIN SHARED-DELEGATION -->')[0]
-for term in ('file tools only', 'shell command', 'ends the turn', 'codex `--read-only`', 'skip-permissions', 'plan plus skip permits writes'):
+skill = (root / 'skills/agy/SKILL.md').read_text()
+for term in ('not offered for agy', 'codex', 'exits 2', 'Always pass `--write`'):
     assert term in skill, term
 readme = (root / 'README.md').read_text()
-assert '/agy Review src/cache/ with read-only access and run its tests' not in readme
-for term in ('file-only reviews', 'Every shell command', 'ends the turn', 'not a write sandbox'):
+assert '/agy Review src/cache/ with read-only access' not in readme
+for term in ('not offered for agy', 'exits 2', 'Doctor skips read-only access', 'stop testing'):
     assert term in readme, term
-PY
+PYTEST
   [ "$status" -eq 0 ]
 }
 
@@ -389,11 +389,50 @@ def shared(text):
     return text.split('<!-- BEGIN SHARED-DELEGATION -->', 1)[1].split('<!-- END SHARED-DELEGATION -->', 1)[0]
 assert shared(skill) == shared(reference)
 for text in (skill, agent):
-    for term in ('experimental', 'evaluation pending', 'pactify sub run opencode', '--resume', '--worktree', '--read-only', 'shell', 'read tools'):
+    for term in ('experimental', '6/10', 'pactify sub run opencode', '--resume', '--worktree', '--read-only', '--write', 'read-only'):
         assert term in text, (term, text)
 assert 'model: haiku' in agent and 'tools: Bash' in agent
 for path in (root / 'README.md', root.parents[1] / 'README.md', root.parents[1] / 'docs/sub-doctor.md'):
     assert 'opencode' in path.read_text()
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "agy read-only is closed like kimi K1 (AJ-683)" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+skill = (root / 'skills/agy/SKILL.md').read_text()
+assert 'Always pass `--write`' in skill
+assert 'not offered for agy' in skill
+assert 'codex' in skill and 'exits 2' in skill
+assert 'Use `--read-only` instead' not in skill
+agent = (root / 'agents/agy.md').read_text()
+assert 'Flags: always `--write`' in agent
+assert 'do not run anything' in agent
+for path in (root / 'README.md', root.parent.parent / 'README.md'):
+    text = path.read_text()
+    assert 'agy --read-only' in text and 'exits 2' in text
+    assert '/agy Review src/cache/ with read-only' not in text
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode read-only is closed like kimi and agy (AJ-683)" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+skill = (root / 'skills/opencode/SKILL.md').read_text()
+assert 'Always pass `--write`' in skill
+assert 'not offered for opencode' in skill and 'exits 2' in skill
+assert 'Use `--read-only` instead' not in skill
+agent = (root / 'agents/opencode.md').read_text()
+assert 'Flags: always `--write`' in agent
+assert 'do not run anything' in agent
+for path in (root / 'README.md', root.parents[1] / 'README.md'):
+    text = path.read_text()
+    assert 'opencode --read-only' in text and 'exits 2' in text
+    assert '/opencode Review src/cache/ using read tools only' not in text
 PY
   [ "$status" -eq 0 ]
 }

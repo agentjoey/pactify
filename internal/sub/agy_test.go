@@ -86,7 +86,7 @@ func TestAgyWorkerHomeAndResume(t *testing.T) {
 }
 
 func TestAgyDoctorEvidence(t *testing.T) {
-	for _, fault := range []string{"", "missing-db", "linked-db", "user-index", "link", "readonly-home", "models", "model-copy"} {
+	for _, fault := range []string{"", "missing-db", "linked-db", "user-index", "link", "models", "model-copy"} {
 		t.Run(fault, func(t *testing.T) {
 			t.Setenv("PACTIFY_HOME", t.TempDir())
 			source := fakeAgyUserHome(t)
@@ -140,15 +140,11 @@ func TestAgyDoctorEvidence(t *testing.T) {
 					if fault == "user-index" {
 						os.WriteFile(filepath.Join(source, ".gemini", "antigravity-cli", "conversation_summaries.db"), []byte("unexpected"), 0600)
 					}
-					if fault == "link" || (fault == "readonly-home" && b.gotOpts.Access == cockpit.AccessReadOnly) {
+					if fault == "link" {
 						os.Remove(filepath.Join(home, agyTokenPath))
 						os.Symlink("/missing", filepath.Join(home, agyTokenPath))
 					}
 					s.info.Model = b.gotOpts.Model
-					if b.gotOpts.Access == cockpit.AccessReadOnly {
-						s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: cockpit.AgyReadOnlyDenied}
-						return
-					}
 					s.events <- cockpit.Event{Kind: cockpit.EventTool, Tool: &cockpit.ToolEvent{Phase: "start"}}
 					s.events <- cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 200, OutputTokens: 7}}
 					s.events <- cockpit.Event{Kind: cockpit.EventMessage, Text: "done", Final: true}

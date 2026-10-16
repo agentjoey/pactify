@@ -271,11 +271,6 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				readError = ", error=same as above (Write access)"
 			}
 			evidence := fmt.Sprintf("status=%s, write target absent=%t, tool calls=%d%s", readonly.Status, os.IsNotExist(statErr), readonly.ToolCalls, readError)
-			if h.DoctorReadOnly != nil {
-				accepted, reason := h.DoctorReadOnly(readonly)
-				ok = roErr == nil && readonly.CLIVersion == r.Version && os.IsNotExist(statErr) && len(readonly.Diff.Files) == 0 && accepted
-				evidence += "; " + reason
-			}
 			add("Read-only access", ok, evidence)
 			ranAll = ranAll && roErr == nil && readonly.Status == StatusSucceeded
 		}
@@ -290,14 +285,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			valid := e == nil && json.Unmarshal(data, &evidence) == nil
 			add("Network", goodWrite && valid && evidence.Bind && evidence.External, fmt.Sprintf("local port bind=%t, external HTTPS=%t, valid evidence=%t", evidence.Bind, evidence.External, valid))
 		}
-		hidingResults, hidingSucceeded := results, ranAll
-		if h.DoctorReadOnly != nil {
-			hidingResults = results[:1]
-			hidingSucceeded = goodWrite
-		}
-		hidden := hidingSucceeded && (h.HidesItself || h.Conceal != nil)
+		hidden := ranAll && (h.HidesItself || h.Conceal != nil)
 		var warnings []string
-		for _, result := range hidingResults {
+		for _, result := range results {
 			for _, w := range result.Warnings {
 				if strings.Contains(w, sessionHidingFailed) || strings.Contains(w, sessionArchivingFailed) {
 					hidden = false
@@ -306,9 +296,6 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			}
 		}
 		reason := "All probe sessions were hidden through the normal job lifecycle; no hiding or archiving failures reported"
-		if h.DoctorReadOnly != nil {
-			reason = "Write probe session was hidden through the normal job lifecycle; no hiding or archiving failures reported"
-		}
 		if !hidden {
 			reason = "Cannot confirm session hiding"
 			if len(warnings) > 0 {

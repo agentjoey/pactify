@@ -119,10 +119,12 @@ this field are treated as user config.
 
 agy uses the CLI stream-json backend (Antigravity CLI 1.3.5). Prompts go through stdin;
 `agy models` supplies the allowed model ids and `init.model` verifies the actual model.
-Write access uses `--dangerously-skip-permissions`; read-only uses `--mode=plan` without skip.
-agy read-only reviews must use built-in file tools only: any shell command or write
-is auto-denied and ends the turn without a reply. Use codex `--read-only` for commands;
-plan mode alone does not block writes when skip-permissions is enabled.
+Write access uses `--dangerously-skip-permissions`.
+Read-only access is not offered (`pactify sub run agy --read-only` exits 2); old read-only jobs
+cannot resume. All 3 evaluation read-only tasks ended without findings after shell commands
+were auto-denied in headless mode. Use codex `--read-only` for read-only tasks; use agy
+`--write` only with explicit write permission. Doctor skips its read-only probe.
+Owner decided on 2026-10-16 to keep agy experimental, close read-only access and stop testing.
 Headless permission auto-denial fails the job even if agy reports SUCCESS.
 The default `HOME=$PACTIFY_HOME/harness-homes/agy` (0700) mirrors top-level user HOME
 entries with symlinks, excluding `.gemini`. Its private `.gemini/antigravity-cli`
@@ -183,14 +185,16 @@ node scripts/shots-panel.mjs # prints temporary paths: list/detail × light/dark
 ```
 
 opencode 1.19.0 uses ACP with dynamic provider/model ids. `/opencode` (or
-`/pactify:opencode`) selects this experimental harness; evaluation is pending.
+`/pactify:opencode`) selects this experimental harness (6/10 large tasks completed in one attempt).
 An omitted model keeps opencode's default; `opencode export <sessionId>` independently
 verifies the actual model in the same isolated environment. Input tokens include
 cached reads. Cost uses only this job's new assistant messages, including on resume.
 Write access sets `build` mode and process-local edit/bash/webfetch allow permissions.
-Read-only access sets edit/webfetch deny and bash ask, then rejects every permission
-request. It supports read tools only; shell commands cannot run, and a denial may
-leave an empty final reply. Plan mode alone does not enforce read-only access.
+Read-only access is not offered (`pactify sub run opencode --read-only` exits 2); old read-only jobs
+cannot resume, including in worktrees. All 3 evaluation read-only tasks ended without findings
+after shell requests were denied. Use codex `--read-only` for read-only tasks; use opencode
+`--write` only with explicit write permission. Doctor skips its read-only probe.
+Owner decided on 2026-10-16 to keep opencode experimental and close read-only access.
 
 Minimal configuration mirrors the user's XDG data and config directories under
 `$PACTIFY_HOME/harness-homes/opencode/{share,config}`, excluding `opencode` in both.

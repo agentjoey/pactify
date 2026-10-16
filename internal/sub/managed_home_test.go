@@ -101,7 +101,7 @@ func TestManagedHomeRejectsNestedSymlinkAndAliases(t *testing.T) {
 
 func TestAgyHarnessDeclaration(t *testing.T) {
 	h, ok := Lookup("agy")
-	if !ok || h.Kind != "antigravity" || h.Home == nil || h.configMode(false) != "minimal" || h.configMode(true) != "user" || h.Experimental == "" || h.NoReadOnly != "" {
+	if !ok || h.Kind != "antigravity" || h.Home == nil || h.configMode(false) != "minimal" || h.configMode(true) != "user" || h.Experimental == "" || h.NoReadOnly == "" {
 		t.Fatalf("agy declaration: %+v", h)
 	}
 }

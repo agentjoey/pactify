@@ -16,47 +16,6 @@ import (
 	"github.com/agentjoey/pactify/internal/procx"
 )
 
-func TestAgyReadOnlyDenialExplainsFileToolsOnly(t *testing.T) {
-	b, o := agyFixture(t, "denied", AccessReadOnly)
-	s, err := b.Start(context.Background(), o)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Close()
-	events := agyTurn(t, s)
-	last := events[len(events)-1]
-	if last.State != StateTurnFailed {
-		t.Fatal(last)
-	}
-	for _, term := range []string{"read-only", "shell commands", "writes", "ends the turn", "file tools", "--write", "codex --read-only"} {
-		if !strings.Contains(last.Err, term) {
-			t.Errorf("diagnostic missing %q: %s", term, last.Err)
-		}
-	}
-}
-
-func TestAgyReadOnlyNeverSkipsPermissions(t *testing.T) {
-	b, o := agyFixture(t, "", AccessReadOnly)
-	original := b.(*agyBackend).command
-	b.(*agyBackend).command = func(ctx context.Context, args ...string) *exec.Cmd {
-		for _, arg := range args {
-			if strings.HasPrefix(arg, "--dangerously-skip-permissions") {
-				t.Error("read-only launched with skip-permissions")
-			}
-		}
-		return original(ctx, args...)
-	}
-	s, err := b.Start(context.Background(), o)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Close()
-	events := agyTurn(t, s)
-	if events[len(events)-1].State != StateTurnCompleted {
-		t.Fatal(events[len(events)-1])
-	}
-}
-
 // The tool is deliberately in its own session, with no inherited output pipe.
 // Its parent exits promptly on SIGINT, so pipe/group cleanup cannot collect it.
 func TestAgyOrphanProcessHelper(t *testing.T) {

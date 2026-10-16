@@ -64,16 +64,10 @@ case " $* " in
     exit 1 ;;
 esac
 echo '{"event":"init","conversation_id":"probe","init":{"model":"chosen"}}'
-case " $* " in
-  *' --mode=plan '*)
-    echo 'jetski: no output produced — a tool required the "run_command" permission that headless mode cannot prompt for, so it was auto-denied' >&2
-    echo '{"event":"result","result":{"status":"SUCCESS","response":""}}' ;;
-  *)
-    echo doctor-ok > out.txt
-    mkdir -p "$HOME/.gemini/antigravity-cli"
-    echo fixture > "$HOME/.gemini/antigravity-cli/conversation_summaries.db"
-    echo '{"event":"result","result":{"status":"SUCCESS","response":"done","usage":{"input_tokens":1,"output_tokens":1}}}' ;;
-esac
+echo doctor-ok > out.txt
+mkdir -p "$HOME/.gemini/antigravity-cli"
+echo fixture > "$HOME/.gemini/antigravity-cli/conversation_summaries.db"
+echo '{"event":"result","result":{"status":"SUCCESS","response":"done","usage":{"input_tokens":1,"output_tokens":1}}}'
 `
 	if err := os.WriteFile(filepath.Join(agyBin, "agy"), []byte(script), 0700); err != nil {
 		t.Fatal(err)

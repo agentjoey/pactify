@@ -16,9 +16,8 @@ import (
 	"github.com/agentjoey/pactify/internal/procx"
 )
 
-// AgyReadOnlyDenied is generated only from the CLI's headless permission
-// diagnostic under read-only access, never from the model's final response.
-const AgyReadOnlyDenied = "agy read-only permission auto-denied: shell commands and writes are denied in headless mode, and a denial ends the turn without a usable final reply; read-only tasks must use built-in file tools only; to run commands, use --write or codex --read-only"
+// AgyNoReadOnly explains the disabled access mode at both routing and backend boundaries.
+const AgyNoReadOnly = "Read-only access is not offered for agy in the first release: all 3 evaluation read-only tasks ended without a conclusion after headless mode auto-denied shell commands. Use codex --read-only for read-only tasks; use agy --write only with explicit write permission"
 
 // agy runs one isolated CLI process per turn. No child stream inherits host stdio.
 type agyBackend struct {
@@ -65,6 +64,9 @@ func (b *agyBackend) Resume(ctx context.Context, id string) (Session, error) {
 func (b *agyBackend) ResumeWith(ctx context.Context, id string, o StartOpts) (Session, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
+	}
+	if o.Access == AccessReadOnly {
+		return nil, fmt.Errorf("%s", AgyNoReadOnly)
 	}
 	if o.Model != "" {
 		models, err := b.models(ctx, o)
@@ -146,10 +148,7 @@ func (s *agySession) Prompt(ctx context.Context, msg UserMessage) error {
 	if s.id != "" {
 		args = append(args, "--conversation", s.id)
 	}
-	switch s.opts.Access {
-	case AccessReadOnly:
-		args = append(args, "--mode=plan")
-	case AccessWrite:
+	if s.opts.Access == AccessWrite {
 		args = append(args, "--dangerously-skip-permissions")
 	}
 	// Official stdin wire format: https://www.agy.dev/docs/cli/headless/
@@ -372,9 +371,6 @@ func (s *agySession) run(ctx, turnCtx context.Context, process *agyProcess, stde
 	close(watched)
 	if stderr.denied {
 		failure = "agy headless permission auto-denied; task was not executed"
-		if s.opts.Access == AccessReadOnly {
-			failure = AgyReadOnlyDenied
-		}
 	} else if err != nil && failure == "" {
 		failure = "agy process: " + err.Error()
 	}

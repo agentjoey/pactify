@@ -17,7 +17,7 @@ pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3
 
 探测沿用 `sub run` 的默认配置策略：codex 以最小配置启动，关闭 MCP、插件、skills 和记忆；认证、provider、沙箱设置以及全局和仓库指令仍由原生 harness 加载。kimi 使用独立的 `KIMI_CODE_HOME=$PACTIFY_HOME/harness-homes/kimi`，目录权限 0700，不放 `mcp.json`。`config.toml`、`credentials/`、`device_id` 只用符号链接指向 pactify 进程的 `KIMI_CODE_HOME`（未设置时为 `~/.kimi-code`）；不读取或复制内容，缺少原文件时提示先 `kimi login`。每次启动修复链接，结束时若发现链接变成普通文件或目录，删除副本并在结果中警告；下次启动重建链接。共享目录长期保留以支持续接。普通 job 可用 `--with-user-config` 恢复全部用户集成；doctor 始终验证默认路径。
 
-codex 输出六项「PASS / FAIL / SKIP + reason」：安装及版本、可写档（文件、最终回复、token）、独立核实的实际模型、只读档、网络、不留痕。codex 只读档必须实际调用工具、正常结束且没有留下改动；kimi 沿用注册表的 `NoReadOnly` 原因跳过。网络仅检查 codex 可写档，需要脚本生成的本地绑定和 HTTPS 成功证据，单凭最终回复不能通过。所有执行结果的 CLI 版本也必须与探测开始时的版本一致。
+codex 输出六项「PASS / FAIL / SKIP + reason」：安装及版本、可写档（文件、最终回复、token）、独立核实的实际模型、只读档、网络、不留痕。codex 只读档必须实际调用工具、正常结束且没有留下改动；kimi、agy 和 opencode 沿用注册表的 `NoReadOnly` 原因跳过。网络仅检查 codex 可写档，需要脚本生成的本地绑定和 HTTPS 成功证据，单凭最终回复不能通过。所有执行结果的 CLI 版本也必须与探测开始时的版本一致。
 
 codex 的只读探测明确要求通过 shell 工具执行 `sh -c 'echo hi > out.txt'; echo EXIT=$?`，并原样报告 stdout、stderr 与退出码。写入由沙箱决定是否拦截；即使最终回复声称被拦，只要没有工具调用，仍判为失败。
 
@@ -82,7 +82,7 @@ GOCACHE="${PACTIFY_HOME:-$HOME/.pactify}/cache/go-build" go clean -cache
 - `internal/sub/harness.go` 的 `Experimental`、`NoReadOnly`、`HidesItself` / `Conceal` 均由注册表驱动；kimi 的实验性提示与自检提示共存。原有会话归档失败、隐藏失败警告继续暴露，并使 doctor 失败。
 - `Result.Markdown` / 持久化 JSON 继续消费 `Warnings`，不新增状态或更改结果格式。
 - `fake` 是 `PACTIFY_SUB_FAKE=1` 才可用的保留夹具，不代表实际安装的 CLI，因此不提示版本未自检，也不要求 PATH 上有 fake。补充其隐藏声明、工具调用与 token 事件，使 CLI 测试能走完整 doctor 流程；默认 harness 仍为 codex。
-- `docs/specs/harness-subagents.md` §11 与 Phase 0 计划的临时 home、会话隐藏和 kimi 只读例外继续适用。
+- `docs/specs/harness-subagents.md` §11 与 Phase 0 计划的临时 home、会话隐藏，以及 kimi、agy 和 opencode 的只读例外继续适用。
 
 ## 验证范围
 
@@ -97,17 +97,15 @@ GOCACHE="${PACTIFY_HOME:-$HOME/.pactify}/cache/go-build" go clean -cache
 模型列表和任务进程均过滤其他厂商的 API key，使用受管 HOME。
 实际模型取 `init.model`；输入 token 为 `input_tokens + cache_read_tokens`，总 token 按实际输入加输出计算，不用步骤用量重复累加最终结果。
 命令行后端遵循 [官方 stdin 协议](https://www.agy.dev/docs/cli/headless/)，每轮一个进程，通过 `--conversation` 续接。
-可写档用 `--dangerously-skip-permissions`，只读档用 `--mode=plan`，绝不加 `--dangerously-skip-permissions`，不使用 `--sandbox`。
-无头权限自动拒绝即使返回 SUCCESS，普通 job 仍判失败，因为本轮没有可用终稿。
-只读档只能使用自带文件工具；任何 shell 命令（包括 `git log`、`grep`）或写入都需要授权，
-会被自动拒绝并直接结束本轮。只读 brief 不应要求执行命令或测试；需要命令时使用 codex
-`--read-only`，或在获得可写授权后使用 agy `--write`。保护来自无头模式的自动拒绝，
-不是 plan 模式：plan 加 skip-permissions 时写入仍会执行。
+可写档用 `--dangerously-skip-permissions`，不使用 `--sandbox`。
+无头权限自动拒绝即使返回 SUCCESS，普通 job 仍判失败，因为要求的操作未执行。
 
-agy 的 doctor 继续要求实际尝试 shell 写入。只读检查仅在版本一致、目标 `out.txt` 不存在、
-工作区无改动，且后端明确报告只读权限拒绝时通过；不要求该探测 job 成功或给出终稿。
-普通失败、取消、只在终稿中声称被拒、空回复的成功均不能作为拒绝证据。
-Session hiding 和 Managed home 使用可写探测的结果，不依赖只读探测是否成功。
+**Owner 已拍板（2026-10-16）：agy 保持实验性，关闭只读档，不再测。**
+评估的 3 个只读任务均因 shell 被自动拒绝、本轮立即结束而交不出结论。
+`sub run agy --read-only` 以退出码 2 拒绝执行，并指向 `codex --read-only`；旧只读 job 的续接同样拒绝。
+doctor 与 kimi 一致，直接以注册表的 `NoReadOnly` 原因将 Read-only access 标为 SKIP，
+不启动只读 job，也不再将拒绝后结束本轮判为 PASS。
+Session hiding 和 Managed home 使用可写探测的结果。
 取消在 SIGINT 前记录全部后代进程（包括独立进程组/会话），主进程退出或宽限结束后，
 对仍存活的后代逐个先 SIGTERM 再 SIGKILL，每次核对出生身份；正常结束不处理后代。
 
@@ -131,8 +129,7 @@ Session hiding 和 Managed home 使用可写探测的结果，不依赖只读探
 ## opencode（AJ-652，实验性）
 
 `pactify sub doctor opencode` 输出七项：安装、可写、独立模型核实、只读、网络（SKIP）、
-会话隐藏、受管目录。opencode 是 experimental harness（evaluation pending），评估完成前
-优先使用默认 codex。适配版本为 1.19.0；本变更的自动测试全部使用假 opencode 和假 HOME/XDG。
+会话隐藏、受管目录。opencode 保持实验性（大任务一次完成 6/10），优先使用默认 codex。适配版本为 1.19.0；本变更的自动测试全部使用假 opencode 和假 HOME/XDG。
 下列 1.19.0 行为由 Owner 提供的 host 实测确认；完整真机 doctor 由 host 运行，通过后才写本机版本表。
 
 模型从 ACP `session/new.configOptions` 动态获取。默认优先选择 id 包含 `-free`（包括以它结尾）的模型：
@@ -155,10 +152,12 @@ Session hiding 和 Managed home 使用可写探测的结果，不依赖只读探
 不能核实的成本不冒充本轮费用。异常结束也保守标记 `usagePartial`，提示可能缺少最后一段。
 
 可写档用 build 配合 `OPENCODE_CONFIG_CONTENT` 的 edit/bash/webfetch allow。
-只读档仍用 build，但注入 edit/webfetch deny、bash ask，并对所有权限请求选 reject_once；
-plan 模式只是模型自觉，不构成只读保护。只读只能用读工具，不能运行任何 shell 命令。
-拒绝后终稿为空时 job 失败并说明限制。doctor 主动尝试 shell 写入，只在后端有真实拒绝证据、
-目标不存在且无其他 diff、版本一致时通过；不以模型终稿的声称为证据。
+**Owner 已拍板（2026-10-16）：opencode 保持实验性，关闭只读档。**
+只读评估 0/3：shell 请求被拒后本轮立即结束，没有结论。
+`sub run opencode --read-only` 以退出码 2 拒绝执行，并指向 `codex --read-only`；
+旧只读 job 的按 id、自动选择和 worktree 续接同样拒绝。
+doctor 复用注册表的 `NoReadOnly` 原因将 Read-only access 标为 SKIP，不启动只读 job；
+原有“拒绝算 PASS”的证据及无使用方的 `DoctorReadOnly` 回调已删除。
 
 两个镜像复用受管目录组件：`XDG_DATA_HOME=$PACTIFY_HOME/harness-homes/opencode/share`
 镜像原 `$XDG_DATA_HOME`（默认 `~/.local/share`）；`XDG_CONFIG_HOME=…/opencode/config`

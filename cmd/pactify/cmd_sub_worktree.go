@@ -57,7 +57,8 @@ func subCreateRun(c *cobra.Command, store sub.Store, id string, req sub.Request,
 	}
 	code := 1
 	var noSession *sub.NoSessionError
-	if errors.As(err, &noSession) {
+	var noReadOnly *sub.ReadOnlyUnavailableError
+	if errors.As(err, &noSession) || errors.As(err, &noReadOnly) {
 		code = 2
 	}
 	return st, code, err

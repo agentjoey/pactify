@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/orchestrate"
 )
 
@@ -114,16 +113,6 @@ func snapshotOpencodeUserData() (func() error, error) {
 		}
 		return nil
 	}, nil
-}
-func doctorOpencodeReadOnly(result Result) (bool, string) {
-	if result.Status == StatusFailed || result.Status == StatusSucceeded {
-		for _, w := range result.Warnings {
-			if w == cockpit.OpencodeReadOnlyDenied {
-				return true, "opencode denied the shell request without writing (expected read-only denial)"
-			}
-		}
-	}
-	return false, "no backend evidence of an opencode read-only permission denial"
 }
 
 // Prefer IDs containing -free, favoring flash/mini/lite/nano within that set.

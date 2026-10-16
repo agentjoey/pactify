@@ -1,12 +1,12 @@
 ---
 name: agy
-description: Experimental harness (evaluation pending). Delegate a large coding task, investigation or review to the agy harness and get back a verified result summary.
+description: Experimental harness — large tasks completed in one attempt 1/10; read-only work never converged. Delegate a large coding task, investigation or review to the agy harness and get back a verified result summary.
 ---
 
 # Delegate to agy (experimental)
 
-**agy is an experimental harness (evaluation pending).** Prefer the default codex harness
-(`/delegate` or `/codex`) until evaluation is complete.
+**agy is an experimental harness (large tasks completed in one attempt 1/10; read-only work never converged).**
+Prefer the default codex harness (`/delegate` or `/codex`).
 
 **If the user invoked this skill explicitly (`/agy` or `/pactify:agy`), always delegate — whatever
 the task size. The user chose the harness; do not do the work yourself instead.**
@@ -17,14 +17,7 @@ Launch command (step 2 below):
     ...complete brief from step 1...
     BRIEF
 
-Use `--read-only` instead of `--write` for investigations or reviews without write permission.
-Never raise permissions yourself. agy read-only tasks can use built-in file tools only:
-any shell command (even `git log` or `grep`) or write is auto-denied and ends the turn
-without a usable reply. Explicitly forbid shell commands in the brief; do not ask agy
-to run tests. The host runs acceptance commands. For command-based investigations,
-choose codex `--read-only`, or use agy `--write` only with the user's permission.
-Protection comes from headless permission denial, not plan mode itself: never add
-`--dangerously-skip-permissions` to read-only access; plan plus skip permits writes.
+Always pass `--write`; agy read-only tasks must go to codex. Never raise permissions yourself.
 Models come from `agy models`; preserve the requested model.
 
 <!-- BEGIN SHARED-DELEGATION -->
@@ -133,3 +126,9 @@ harness permission restrictions still apply.
 
    Repeat step 3 after every rework turn; apply only after all required checks and reviews pass.
 <!-- END SHARED-DELEGATION -->
+
+**Read-only tasks are not offered for agy in this version**: `pactify sub run agy --read-only` exits 2.
+All 3 evaluation read-only tasks ended without findings after headless mode auto-denied shell commands.
+Send read-only investigations and reviews to codex (`/codex`, `--read-only`). Only use agy with
+`--write` when the user has allowed changes; do not raise permissions on your own.
+Owner decided on 2026-10-16 to keep agy experimental, close read-only access and stop testing.

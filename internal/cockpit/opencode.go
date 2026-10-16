@@ -11,12 +11,15 @@ import (
 	"github.com/agentjoey/pactify/internal/acp"
 )
 
-// OpencodeReadOnlyDenied explains a real permission refusal without a final reply.
-const OpencodeReadOnlyDenied = "opencode read-only access cannot run shell commands; use read tools only"
+// OpencodeNoReadOnly explains the disabled access mode at both routing and backend boundaries.
+const OpencodeNoReadOnly = "Read-only access is not offered for opencode in the first release: all 3 evaluation read-only tasks ended without a conclusion after shell requests were denied. Use codex --read-only for read-only tasks; use opencode --write only with explicit write permission"
 
 // OpencodeEnv applies explicit sub permissions after any inherited process-local
 // config. A malformed config cannot be safely merged, so fail before spawning.
 func OpencodeEnv(opts StartOpts) ([]string, error) {
+	if opts.Access == AccessReadOnly {
+		return nil, fmt.Errorf("%s", OpencodeNoReadOnly)
+	}
 	env := append([]string(nil), opts.Env...)
 	if opts.Access != AccessDefault {
 		content := os.Getenv("OPENCODE_CONFIG_CONTENT")
@@ -32,9 +35,6 @@ func OpencodeEnv(opts StartOpts) ([]string, error) {
 			}
 		}
 		permission := map[string]string{"edit": "allow", "bash": "allow", "webfetch": "allow"}
-		if opts.Access == AccessReadOnly {
-			permission = map[string]string{"edit": "deny", "bash": "ask", "webfetch": "deny"}
-		}
 		config["permission"] = permission
 		raw, err := json.Marshal(config)
 		if err != nil {

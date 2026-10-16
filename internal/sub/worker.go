@@ -369,9 +369,6 @@ loop:
 			}
 			lastActivity = cfg.Now()
 			collector.Add(event)
-			if event.Kind == cockpit.EventSystem && event.State == "opencode_read_only_denied" {
-				result.Warnings = append(result.Warnings, cockpit.OpencodeReadOnlyDenied)
-			}
 			if req.Access == "read-only" && cfg.ToolCallLimit > 0 && collector.ToolCalls > cfg.ToolCallLimit {
 				interrupt(fmt.Sprintf("Tool-call limit exceeded (%d calls)", collector.ToolCalls))
 			}

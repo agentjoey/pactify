@@ -21,8 +21,8 @@ The plugin does not proxy models, manage logins, or read or copy credentials.
 ```text
 /delegate Add expiration and regression tests to src/cache/, then run the project's full test suite
 /codex Add expiration and regression tests to src/cache/, modify only that directory, and run the full npm test suite
-/opencode Review src/cache/ using read tools only; do not run shell commands
-/agy Review src/cache/ with read-only access using built-in file tools only; do not run shell commands
+/opencode Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
+/agy Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
 /kimi Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
 ```
 
@@ -30,7 +30,7 @@ Use `/pactify:delegate`, `/pactify:codex`, `/pactify:kimi`, `/pactify:agy`, or `
 `/delegate` uses the default codex harness; `/codex`, `/kimi`, `/agy` and `/opencode` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
 Delegation suits tasks involving 3 or more files, exploration and testing, or more than about 10 minutes of work. Claude can handle small edits directly.
 When choosing autonomously, avoid delegating tasks that depend on extensive conversation context that cannot fit in a self-contained brief, or require frequent user interaction.
-Explicit invocations still delegate, but kimi's read-only restriction remains: never raise permissions yourself.
+Explicit invocations still delegate, but kimi's, agy's and opencode's read-only restrictions remain: never raise permissions yourself.
 
 The Claude main thread first writes a complete brief with Background, numbered goals, Known constraints and special cases, General constraints, and Acceptance commands.
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
@@ -40,7 +40,7 @@ The five delegation skills (codex, kimi, agy, opencode, delegate) embed the same
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
-For read-only tasks needing commands, use codex `--read-only`. agy `--read-only` supports file-only reviews using built-in file tools; kimi still rejects read-only tasks (exit 2).
+Use codex `--read-only` for read-only tasks. `kimi --read-only`, `agy --read-only` and `opencode --read-only` are refused (each exits 2), including resume of an old read-only job.
 Exit 3 means the job is still running and stdout contains `jobId`. The main thread runs
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000`, then reviews the result as described below.
 If the background wait stops at its time limit, check `pactify sub status` and resume the same wait; do not start a duplicate job.
@@ -148,23 +148,19 @@ The result's Harness line reports `kimi (minimal config)` or `kimi (user config)
 
 ## agy (experimental)
 
-agy is an experimental harness (evaluation pending), adapted to Antigravity CLI 1.3.5.
+agy is an experimental harness (1/10 large tasks completed in one attempt), adapted to Antigravity CLI 1.3.5.
 The stream-json backend sends prompts on stdin, verifies `init.model`, and counts
 input tokens as `input_tokens + cache_read_tokens`. `agy models` provides the dynamic
 model ids; unsupported requested models fail with available choices. SIGINT cancels
 the CLI; a grace timeout escalates to kill and waits for exit. Headless auto-denials
 fail the job even when the CLI returns SUCCESS, because required work did not execute.
 
-Read-only agy tasks can use built-in file tools only. Every shell command, including
-`git log` and `grep`, requires command permission, is auto-denied in headless mode,
-and ends the turn without a usable final reply; writes are denied the same way.
-The job remains failed and explains this restriction. Do not request commands or
-tests in an agy read-only brief; the host runs acceptance. Choose codex `--read-only`
-for commands, or agy `--write` only with write permission. `--mode=plan` alone is
-not a write sandbox: plan plus `--dangerously-skip-permissions` permits writes.
-Read-only access must never include skip-permissions. Doctor deliberately attempts
-a shell write: denial plus an absent target and no diff passes its read-only check,
-even though that probe job failed. Session hiding and Managed home use the write probe.
+Read-only access is not offered for agy in this version (`pactify sub run agy --read-only` exits 2).
+All 3 evaluation read-only tasks ended without findings after headless mode auto-denied shell commands.
+Use codex `--read-only` for read-only tasks; use agy `--write` only with explicit write permission.
+Resume of an old read-only agy job is also refused. Doctor skips read-only access using the same
+reason; Session hiding and Managed home use the write probe. Owner decided on 2026-10-16 to keep
+agy experimental, close read-only access and stop testing.
 Cancellation snapshots all descendants before signaling agy, then sends surviving
 descendants SIGTERM and SIGKILL as needed, verifying birth identity before each signal.
 Normal completion leaves descendants alone.
@@ -184,7 +180,7 @@ normal minimal configuration, including directory permissions and link integrity
 | | codex | kimi | agy | opencode |
 |---|---|---|---|---|
 | `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + edit/bash/webfetch allow |
-| `--read-only` | read-only sandbox, no network | Not offered in the first release | `--mode=plan` without skip; built-in file tools only; shell commands/writes auto-deny and end the turn | build + edit/webfetch deny, bash ask; reject all requests; read tools only |
+| `--read-only` | read-only sandbox, no network | Not offered in the first release | Not offered; use codex `--read-only` | Not offered; use codex `--read-only` |
 
 ## Known limitations
 
@@ -196,7 +192,7 @@ normal minimal configuration, including directory permissions and link integrity
 
 ## opencode (experimental)
 
-opencode is an experimental harness (evaluation pending), adapted to 1.19.0 ACP.
+opencode is an experimental harness (6/10 large tasks completed in one attempt), adapted to 1.19.0 ACP.
 `/opencode` and `/pactify:opencode` use the same shared delegation guide and host
 review workflow. Requested models use dynamic `provider/model` ids; omitting the
 model preserves opencode's default. The actual model is independently checked with
@@ -204,10 +200,11 @@ model preserves opencode's default. The actual model is independently checked wi
 USD cost counts new assistant messages only, excluding previous rounds on resume.
 
 Write access selects build mode with process-local edit/bash/webfetch allow permissions.
-Read-only uses edit/webfetch deny, bash ask and rejects all permission requests.
-Only read tools are available; no shell command can run, even a read-only command.
-A denial with no final reply fails and explains the restriction. The host runs tests;
-use codex read-only for command-based investigations. Plan mode is not a sandbox.
+Read-only access is not offered for opencode in this version (`pactify sub run opencode --read-only` exits 2).
+All 3 evaluation read-only tasks ended without findings after shell requests were denied.
+Use codex `--read-only` for read-only tasks; use opencode `--write` only with explicit write permission.
+Resume of an old read-only job is also refused. Doctor skips read-only access using the same reason.
+Owner decided on 2026-10-16 to keep opencode experimental and close read-only access.
 
 Two persistent 0700 mirrors at `$PACTIFY_HOME/harness-homes/opencode/share` and
 `config` replace `XDG_DATA_HOME` and `XDG_CONFIG_HOME`. Each mirrors the user's

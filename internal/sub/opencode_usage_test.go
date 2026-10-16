@@ -182,8 +182,8 @@ func TestOpencodeIndependentVerificationAndResumeCost(t *testing.T) {
 	}
 }
 
-func TestOpencodeDoctorDynamicModelAndDenial(t *testing.T) {
-	for _, fault := range []string{"", "models", "missing-db", "linked-db", "user-index", "read-only-write", "no-denial", "copy", "config-copy"} {
+func TestOpencodeDoctorDynamicModelAndIsolation(t *testing.T) {
+	for _, fault := range []string{"", "models", "missing-db", "linked-db", "user-index", "copy", "config-copy"} {
 		t.Run(fault, func(t *testing.T) {
 			data, config := fakeOpencodeUserHome(t)
 			h, ok := Lookup("opencode")
@@ -241,14 +241,10 @@ func TestOpencodeDoctorDynamicModelAndDenial(t *testing.T) {
 							os.Remove(p)
 							os.Mkdir(p, 0700)
 						}
-						if id == "write" || fault == "read-only-write" {
+						if id == "write" {
 							os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600)
 						}
 						s.events <- cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 1}}
-						if id == "read-only" && fault != "no-denial" {
-							s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: "opencode read-only access cannot run shell commands; use read tools only"}
-							return
-						}
 						s.events <- cockpit.Event{Kind: cockpit.EventMessage, Text: "done", Final: true}
 						s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 					}

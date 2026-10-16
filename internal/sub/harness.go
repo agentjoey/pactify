@@ -35,7 +35,6 @@ type Harness struct {
 	VerificationBaseline func(context.Context, VerificationInput) (int64, error)
 	LocalUsageBaseline   func(string, string) (int64, error)
 	DoctorModel          string
-	DoctorReadOnly       func(Result) (bool, string)
 	Models               func(context.Context, cockpit.StartOpts) ([]string, error)
 	// Every harness must keep delegated sessions out of the user's own session
 	// lists (TestEveryHarnessHidesItsSessions). HidesItself: the backend does it
@@ -76,9 +75,9 @@ type ConcealContext struct {
 var registry = map[string]Harness{
 	"agy": {
 		Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: cliVersion("agy", orchestrate.CrossVendorStrip("antigravity")...),
-		Experimental: "agy is an experimental harness (evaluation pending)", MinimalConfig: true,
+		Experimental: "agy is an experimental harness (large tasks completed in one attempt 1/10; read-only work never converged)", MinimalConfig: true,
 		Home:   &harnessHome{Env: "HOME", Source: os.UserHomeDir, Managed: managedAgyHome, Layout: agyHome, Doctor: doctorAgyHome, BeforeDoctor: snapshotAgyUserIndex},
-		Models: cockpit.AgyModels, DoctorReadOnly: doctorAgyReadOnly,
+		Models: cockpit.AgyModels, NoReadOnly: cockpit.AgyNoReadOnly,
 		// Default jobs hide sessions through the managed HOME. User config explicitly
 		// restores agy's session store; there is no supported archive API to hide it.
 		Conceal: func(ConcealContext) error {
@@ -91,8 +90,8 @@ var registry = map[string]Harness{
 	"opencode": {
 		Name: "opencode", Kind: "opencode", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("opencode") },
 		Version:      cliVersion("opencode", opencodeVendorStrip()...),
-		Experimental: "opencode is an experimental harness (evaluation pending)", MinimalConfig: true,
-		Home: opencodeHomes(), Models: cockpit.OpencodeModels, DoctorReadOnly: doctorOpencodeReadOnly,
+		Experimental: "opencode is an experimental harness (large tasks completed in one attempt 6/10; read-only work never converged)", MinimalConfig: true,
+		Home: opencodeHomes(), Models: cockpit.OpencodeModels, NoReadOnly: cockpit.OpencodeNoReadOnly,
 		Verify: verifyOpencode, VerificationBaseline: opencodeBaseline,
 		Conceal: func(ConcealContext) error {
 			return fmt.Errorf("opencode --with-user-config keeps sessions in the user's session list; use minimal config to hide delegated sessions")

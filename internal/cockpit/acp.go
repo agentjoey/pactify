@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/agentjoey/pactify/internal/acp"
 	"github.com/agentjoey/pactify/internal/agent"
@@ -65,7 +64,7 @@ func (b *acpBackend) Start(ctx context.Context, opts StartOpts) (Session, error)
 		_ = client.Close()
 		return nil, &StartError{ID: string(res.SessionID), Err: fmt.Errorf("acp configure %q: %w", b.kind, err)}
 	}
-	sess := configuredACPSession(client, res.SessionID, b.kind, opts)
+	sess := configuredACPSession(client, res.SessionID, b.kind)
 	sess.info = info
 	return sess, nil
 }
@@ -117,7 +116,7 @@ func (b *acpBackend) ResumeWith(ctx context.Context, threadID string, opts Start
 		_ = client.Close()
 		return nil, &StartError{ID: threadID, Err: fmt.Errorf("acp configure resumed %q: %w", b.kind, err)}
 	}
-	sess := configuredACPSession(client, sid, b.kind, opts)
+	sess := configuredACPSession(client, sid, b.kind)
 	sess.info = info
 	return sess, nil
 }
@@ -152,22 +151,19 @@ type acpSession struct {
 	closed       bool
 	info         SessionInfo
 	opencode     bool
-	readOnly     bool
-	denied       atomic.Bool
 	accountingMu sync.Mutex
 	usage        Usage
-	hasReply     bool
 	promptFn     func(context.Context, string) (acp.StopReason, error)
 	cancelFn     func() error
 }
 
 func newACPSession(client *acp.Client, sid acp.SessionID) *acpSession {
-	return configuredACPSession(client, sid, "", StartOpts{})
+	return configuredACPSession(client, sid, "")
 }
-func configuredACPSession(client *acp.Client, sid acp.SessionID, kind string, opts StartOpts) *acpSession {
+func configuredACPSession(client *acp.Client, sid acp.SessionID, kind string) *acpSession {
 	s := &acpSession{
-		client:   client,
-		opencode: kind == "opencode", readOnly: opts.Access == AccessReadOnly,
+		client:    client,
+		opencode:  kind == "opencode",
 		sid:       sid,
 		events:    make(chan Event, 64),
 		approvals: make(chan ApprovalRequest, 16),
@@ -188,20 +184,6 @@ func configuredACPSession(client *acp.Client, sid acp.SessionID, kind string, op
 		})
 		handler := newPermissionHandler(s.approvals, s.done)
 		client.OnPermissionRequestFor(sid, func(req acp.PermissionRequest) acp.PermissionOutcome {
-			if s.opencode && s.readOnly {
-				// Text preceding the denied operation is a preamble, not a final reply.
-				s.accountingMu.Lock()
-				s.hasReply = false
-				s.accountingMu.Unlock()
-				s.denied.Store(true)
-				s.dispatchEvent(Event{Kind: EventSystem, State: "opencode_read_only_denied"})
-				for _, o := range req.Options {
-					if o.Kind == "reject_once" {
-						return acp.PermissionOutcome{OptionID: o.OptionID}
-					}
-				}
-				return MapDecisionToOutcome(DecisionDeny, req.Options)
-			}
 			s.dispatchMu.RLock()
 			defer s.dispatchMu.RUnlock()
 			if s.closed {
@@ -215,26 +197,13 @@ func configuredACPSession(client *acp.Client, sid acp.SessionID, kind string, op
 }
 
 func (s *acpSession) Prompt(ctx context.Context, msg UserMessage) error {
-	if s.opencode {
-		s.denied.Store(false)
-		s.accountingMu.Lock()
-		s.hasReply = false
-		s.accountingMu.Unlock()
-	}
 	stop, err := s.promptFn(ctx, msg.Text)
 	e := Event{Kind: EventState, State: StateTurnCompleted, Text: string(stop)}
 	if err != nil {
 		e = Event{Kind: EventState, State: StateTurnFailed, Err: err.Error()}
 	}
-	if s.opencode {
-		s.accountingMu.Lock()
-		if s.denied.Load() && !s.hasReply {
-			e = Event{Kind: EventState, State: StateTurnFailed, Err: OpencodeReadOnlyDenied}
-		}
-		s.accountingMu.Unlock()
-		if stop == "cancelled" {
-			e = Event{Kind: EventState, State: StateTurnFailed, Err: "opencode cancelled"}
-		}
+	if s.opencode && stop == "cancelled" {
+		e = Event{Kind: EventState, State: StateTurnFailed, Err: "opencode cancelled"}
 	}
 	s.dispatchEvent(e)
 	return err
@@ -582,12 +551,6 @@ func (s *acpSession) opencodeUpdate(u acp.SessionUpdate) {
 		usage := s.usage
 		s.dispatchEvent(Event{Kind: EventUsage, Usage: &usage, Raw: cloneRaw(u.Raw)})
 		return
-	}
-	if u.Kind == "tool_call" {
-		s.hasReply = false
-	}
-	if u.Kind == "agent_message_chunk" && strings.TrimSpace(parseACPMessageText(u.Raw)) != "" {
-		s.hasReply = true
 	}
 	if e, ok := MapACPUpdateToEvent(u); ok {
 		s.dispatchEvent(e)

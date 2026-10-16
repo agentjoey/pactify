@@ -65,30 +65,7 @@ func TestOpencodeProcessHelper(t *testing.T) {
 			if json.Unmarshal([]byte(os.Getenv("OPENCODE_CONFIG_CONTENT")), &config) != nil {
 				os.Exit(5)
 			}
-			if os.Getenv("COCKPIT_OPENCODE_PERMISSION") == "1" {
-				if os.Getenv("COCKPIT_OPENCODE_PREAMBLE") == "1" {
-					mustWriteJSON(os.Stdout, map[string]any{"jsonrpc": "2.0", "method": "session/update", "params": map[string]any{"sessionId": "sid", "update": map[string]any{"sessionUpdate": "agent_message_chunk", "content": map[string]string{"type": "text", "text": "I will run a shell command"}}}})
-				}
-				mustWriteJSON(os.Stdout, map[string]any{"jsonrpc": "2.0", "id": "permission-1", "method": "session/request_permission", "params": map[string]any{"sessionId": "sid", "toolCall": map[string]string{"toolCallId": "bash-1", "title": "shell write"}, "options": []map[string]string{{"optionId": "always", "kind": "reject_always"}, {"optionId": "once", "kind": "reject_once"}, {"optionId": "allow", "kind": "allow_once"}}}})
-				if !scan.Scan() {
-					os.Exit(6)
-				}
-				var response struct {
-					Result struct {
-						Outcome struct {
-							Outcome  string `json:"outcome"`
-							OptionID string `json:"optionId"`
-						} `json:"outcome"`
-					} `json:"result"`
-				}
-				if json.Unmarshal(scan.Bytes(), &response) != nil || response.Result.Outcome.OptionID != "once" {
-					os.Exit(7)
-				}
-			}
 			text := fmt.Sprintf("%v|%v|%v|%v|%s|%s|%s", options[0]["currentValue"], options[1]["currentValue"], options[2]["currentValue"], config["permission"], os.Getenv("OPENCODE_DISABLE_CLAUDE_CODE"), os.Getenv("OPENCODE_DISABLE_EXTERNAL_SKILLS"), os.Getenv("OPENCODE_PURE"))
-			if os.Getenv("COCKPIT_OPENCODE_PERMISSION") == "1" && os.Getenv("COCKPIT_OPENCODE_REPLY") != "1" {
-				text = ""
-			}
 
 			mustWriteJSON(os.Stdout, map[string]any{"jsonrpc": "2.0", "method": "session/update", "params": map[string]any{"sessionId": "sid", "update": map[string]any{"sessionUpdate": "agent_message_chunk", "content": map[string]string{"type": "text", "text": text}}}})
 			for _, cost := range []float64{0.2, 0.5} {
@@ -127,7 +104,7 @@ func TestOpencodeACPConfigurationUsageResume(t *testing.T) {
 	fakeOpencodeProcess(t)
 	t.Setenv("OPENCODE_CONFIG_CONTENT", `{"model":"keep/model","permission":{"*":"deny"},"other":true}`)
 	for _, resume := range []bool{false, true} {
-		for _, access := range []Access{AccessWrite, AccessReadOnly} {
+		for _, access := range []Access{AccessWrite} {
 			for _, model := range []string{"", "test/flash"} {
 				t.Run(fmt.Sprintf("%v/%s/%s", resume, access, model), func(t *testing.T) {
 					ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -166,9 +143,6 @@ func TestOpencodeACPConfigurationUsageResume(t *testing.T) {
 						wantModel = "test/default"
 					}
 					permission := "bash:allow edit:allow webfetch:allow"
-					if access == AccessReadOnly {
-						permission = "bash:ask edit:deny webfetch:deny"
-					}
 					if !strings.HasPrefix(text, wantModel+"|low|build|map["+permission+"]|1|1|1") {
 						t.Fatalf("configuration=%s", text)
 					}
@@ -184,38 +158,8 @@ func TestOpencodeACPConfigurationUsageResume(t *testing.T) {
 	}
 }
 
-func TestOpencodeReadOnlyDenialAndCancellation(t *testing.T) {
+func TestOpencodeCancellation(t *testing.T) {
 	fakeOpencodeProcess(t)
-	for _, reply := range []bool{false, true} {
-		t.Run(fmt.Sprint(reply), func(t *testing.T) {
-			t.Setenv("COCKPIT_OPENCODE_PERMISSION", "1")
-			if reply {
-				t.Setenv("COCKPIT_OPENCODE_REPLY", "1")
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			s, err := NewACPBackend("opencode").Start(ctx, StartOpts{RepoDir: t.TempDir(), Access: AccessReadOnly})
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer s.Close()
-			if err = s.Prompt(ctx, UserMessage{Text: "attempt shell"}); err != nil {
-				t.Fatal(err)
-			}
-			var denied bool
-			for e := range s.Events() {
-				if e.State == "opencode_read_only_denied" {
-					denied = true
-				}
-				if e.State == StateTurnCompleted || e.State == StateTurnFailed {
-					if !denied || (!reply && (e.State != StateTurnFailed || e.Err != OpencodeReadOnlyDenied)) || (reply && e.State != StateTurnCompleted) {
-						t.Fatalf("denied=%v terminal=%+v", denied, e)
-					}
-					break
-				}
-			}
-		})
-	}
 	t.Run("cancel", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -244,7 +188,7 @@ func TestOpencodeReadOnlyDenialAndCancellation(t *testing.T) {
 func TestOpencodeEnvMergeAndUserConfig(t *testing.T) {
 	t.Setenv("OPENCODE_CONFIG_CONTENT", `{"permission":{"*":"deny"},"model":"test/default","other":true}`)
 	for _, minimal := range []bool{true, false} {
-		env, err := OpencodeEnv(StartOpts{Access: AccessReadOnly, MinimalConfig: minimal, Env: []string{`OPENCODE_CONFIG_CONTENT={"plugin":[],"permission":{"edit":"allow"}}`}})
+		env, err := OpencodeEnv(StartOpts{Access: AccessWrite, MinimalConfig: minimal, Env: []string{`OPENCODE_CONFIG_CONTENT={"plugin":[],"permission":{"edit":"allow"}}`}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -254,7 +198,7 @@ func TestOpencodeEnvMergeAndUserConfig(t *testing.T) {
 				json.Unmarshal([]byte(v), &config)
 			}
 		}
-		if config["plugin"] == nil || config["permission"].(map[string]any)["edit"] != "deny" || config["other"] != nil {
+		if config["plugin"] == nil || config["permission"].(map[string]any)["edit"] != "allow" || config["other"] != nil {
 			t.Fatal(config)
 		}
 		if strings.Contains(strings.Join(env, "\n"), "OPENCODE_PURE=1") != minimal {
@@ -302,7 +246,7 @@ func TestOpencodeModeMustNotResetRequestedModel(t *testing.T) {
 }
 
 func TestOpencodeDoesNotDropFinalUsageBehindOutput(t *testing.T) {
-	s := configuredACPSession(nil, "sid", "opencode", StartOpts{})
+	s := configuredACPSession(nil, "sid", "opencode")
 	defer s.Close()
 	for i := 0; i < cap(s.events); i++ {
 		s.dispatchEvent(Event{Kind: EventMessage, Text: "chunk"})
@@ -329,30 +273,6 @@ func TestOpencodeDoesNotDropFinalUsageBehindOutput(t *testing.T) {
 			}
 		case <-timeout:
 			t.Fatal("final usage was dropped behind output")
-		}
-	}
-}
-
-func TestOpencodeDenialDoesNotMistakePreambleForFinal(t *testing.T) {
-	fakeOpencodeProcess(t)
-	t.Setenv("COCKPIT_OPENCODE_PERMISSION", "1")
-	t.Setenv("COCKPIT_OPENCODE_PREAMBLE", "1")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	s, err := NewACPBackend("opencode").Start(ctx, StartOpts{RepoDir: t.TempDir(), Access: AccessReadOnly})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer s.Close()
-	if err = s.Prompt(ctx, UserMessage{Text: "shell"}); err != nil {
-		t.Fatal(err)
-	}
-	for e := range s.Events() {
-		if e.State == StateTurnCompleted || e.State == StateTurnFailed {
-			if e.State != StateTurnFailed || e.Err != OpencodeReadOnlyDenied {
-				t.Fatalf("preamble mistaken for final: %+v", e)
-			}
-			break
 		}
 	}
 }

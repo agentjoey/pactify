@@ -2,7 +2,6 @@ package sub
 
 import (
 	"fmt"
-	"github.com/agentjoey/pactify/internal/cockpit"
 	"os"
 	"path/filepath"
 )
@@ -76,15 +75,4 @@ func snapshotAgyUserIndex() (func() error, error) {
 		}
 		return nil
 	}, nil
-}
-
-func doctorAgyReadOnly(result Result) (bool, string) {
-	if result.Status == StatusFailed {
-		for _, warning := range result.Warnings {
-			if warning == cockpit.AgyReadOnlyDenied {
-				return true, "agy denied the attempted shell write and ended the turn without a final reply (expected read-only denial)"
-			}
-		}
-	}
-	return false, "no backend evidence of an agy read-only permission denial"
 }

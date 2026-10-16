@@ -1,0 +1,70 @@
+name: harness drift
+
+on:
+  schedule:
+    - cron: "47 6 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "internal/acp/**"
+      - "internal/cockpit/**"
+      - ".github/workflows/harness-drift.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harness-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test offline drift checks
+        run: python3 -m unittest discover -s internal/cockpit/harnessdrift -p '*_test.py' -v
+      - name: Check consumed protocol and flags without installing CLIs
+        run: python3 internal/cockpit/harnessdrift/check.py --static
+
+  latest:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        harness: [kimi, agy]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      # Official installers: https://moonshotai.github.io/kimi-code/
+      # https://antigravity.google/docs/cli/install/
+      - name: Install latest CLI in disposable HOME
+        id: install
+        continue-on-error: true
+        env:
+          HARNESS: ${{ matrix.harness }}
+        run: |
+          export HOME="$RUNNER_TEMP/harness-install-$HARNESS"
+          mkdir -p "$HOME"
+          if [ "$HARNESS" = kimi ]; then
+            npm install --prefix "$HOME/package" @moonshot-ai/kimi-code@latest
+            echo "$HOME/package/node_modules/.bin" >> "$GITHUB_PATH"
+          else
+            curl --fail --silent --show-error --location --max-time 60 https://antigravity.google/cli/install.sh -o "$HOME/install.sh"
+            bash "$HOME/install.sh"
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+            echo "$HOME/.antigravity/bin" >> "$GITHUB_PATH"
+          fi
+      - name: Report unavailable installer
+        if: steps.install.outcome != 'success'
+        env:
+          HARNESS: ${{ matrix.harness }}
+        run: echo "SKIP $HARNESS live drift — latest CLI could not be installed on this runner; see installer log. Static checks still run." >> "$GITHUB_STEP_SUMMARY"
+      - name: Check latest CLI contract without authentication or inference
+        if: steps.install.outcome == 'success'
+        run: python3 internal/cockpit/harnessdrift/check.py --harness '${{ matrix.harness }}'

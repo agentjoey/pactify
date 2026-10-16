@@ -141,10 +141,7 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 				if len(reports) != 1 || reports[0].Passed() != (fault == "") {
 					t.Fatalf("fault=%s reports=%+v", fault, reports)
 				}
-				wantChecks := 6
-				if name == "kimi" {
-					wantChecks = 7
-				}
+				wantChecks := 10 // AJ-713 explicitly replaces the old 6/7-row contract.
 				if len(reports[0].Checks) != wantChecks {
 					t.Fatalf("checks=%+v", reports[0].Checks)
 				}

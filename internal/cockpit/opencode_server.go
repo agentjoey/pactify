@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/acp"
+	"github.com/agentjoey/pactify/internal/cockpit/golden"
 	"github.com/agentjoey/pactify/internal/procx"
 )
 
@@ -55,7 +56,11 @@ func startOpencodeServer(ctx context.Context, opts StartOpts) (*opencodeServer, 
 	}
 	s := &opencodeServer{password: hex.EncodeToString(secret), directory: opts.RepoDir, reaped: make(chan struct{}), done: make(chan struct{}), descendants: map[procx.Identity]struct{}{}}
 	transport := &http.Transport{Proxy: nil}
-	s.http = &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	var roundTrip http.RoundTripper = transport
+	if opts.Transcript != nil {
+		roundTrip = golden.Transport{Base: transport, Recorder: opts.Transcript}
+	}
+	s.http = &http.Client{Transport: roundTrip, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	s.cmd = exec.Command("opencode", "serve", "--hostname", "127.0.0.1", "--port", "0")
 	s.cmd.Dir = opts.RepoDir
 	s.cmd.Env = acp.CommandEnv(append(env, "OPENCODE_SERVER_USERNAME=opencode", "OPENCODE_SERVER_PASSWORD="+s.password))

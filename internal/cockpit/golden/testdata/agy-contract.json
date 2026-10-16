@@ -1,0 +1,9 @@
+{
+  "provenance": "Synthetic contract from AJ-711 tests and docs/harness-v2/probe-report.md A3; not a new live recording. Live agy goldens are deferred until host evaluation completes.",
+  "stdin": [{"event":"user","message":{"content":"contract"}}],
+  "stdout": [
+    {"event":"init","conversation_id":"contract","init":{"model":"gemini-3.8-flash-low"}},
+    {"event":"step_update","step_update":{"step_index":1,"step_type":"agent_response","text_delta":"OK","usage":{"input_tokens":1,"output_tokens":1}}},
+    {"event":"result","result":{"conversation_id":"contract","status":"SUCCESS","response":"OK"}}
+  ]
+}

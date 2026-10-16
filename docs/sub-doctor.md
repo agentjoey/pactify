@@ -177,3 +177,22 @@ SSE 非取消断流会带退避重连，最多五次，使用 `/session/status` 
 | 适配版本 | 证据与范围 |
 |---|---|
 | opencode 1.19.0 | AJ-710：HTTP/SSE 假进程回放，真机写、只读、续接、取消、doctor；原实现输出见 [aj710-report.md](harness-v2/aj710-report.md)，评审修复及最新验证见 [aj710-review-fixes.md](harness-v2/aj710-review-fixes.md) |
+
+## Uniform checks (AJ-713)
+
+All four harnesses now print the same ten ordered rows, including on preflight failure:
+Installed, Write access, Model, Read-only access, Read-only hook, Network, Sandbox,
+Failure classification, Session hiding, Managed home. This supersedes the six/seven/eight-row
+counts above. Existing probes and their failure conditions remain in place.
+
+Sandbox is a declaration: codex PASS (`sandboxed`); the other three WARN
+(`not sandboxed: writes are not confined by the OS`). Failure classification injects
+one known offline error at the production classifier boundary (typed server/connection
+errors, or agy's observed 503 diagnostic). It asserts `transient` without launching a CLI,
+reading login files, making a network request, or spending tokens. It is a classifier
+self-test, not a live provider health check. Network retains its separate live probe.
+
+Read-only hook is SKIP outside agy with an explicit reason. Kimi read-only remains SKIP
+because the CLI cannot enforce it. Codex Managed home reports its native per-process
+configuration isolation; it does not claim that codex uses a separate HOME directory.
+The verified-version table still updates only when all applicable checks pass.

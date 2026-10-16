@@ -3,6 +3,7 @@ package cockpit
 import (
 	"context"
 	"encoding/json"
+	"github.com/agentjoey/pactify/internal/cockpit/golden"
 	"io"
 )
 
@@ -17,6 +18,8 @@ const (
 
 // StartOpts 启动一个会话所需。
 type StartOpts struct {
+	// Transcript is opt-in sanitized protocol recording; normal jobs leave it nil.
+	Transcript          *golden.Recorder
 	ReadOnlyPolicy      bool   // Exercise the managed read-only hook with native write access (doctor).
 	CompletionFollowups *int   // agy: nil uses two completion followups; zero disables them.
 	RepoDir             string // agent 的 cwd = 仓库根

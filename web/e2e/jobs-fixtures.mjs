@@ -138,6 +138,8 @@ const send = (res, status, value) => {
   });
   res.end(JSON.stringify(value));
 };
+// A long model id checks that model pickers never widen the page.
+export const LONG_MODEL = "model/" + "long-name".repeat(15);
 export function createJobsAPI(writable = false) {
   let jobs = seedJobs(),
     next = 0;
@@ -158,7 +160,9 @@ export function createJobsAPI(writable = false) {
             items:
               i === 0
                 ? ["gpt-6.1-sol", "gpt-6-sol"]
-                : ["model-one", "model-two"],
+                : i === 3
+                  ? ["model-one", "model-two", LONG_MODEL]
+                  : ["model-one", "model-two"],
             error: "",
             fetchedAt: new Date().toISOString(),
           },

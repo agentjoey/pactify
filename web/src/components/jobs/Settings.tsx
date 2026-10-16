@@ -324,6 +324,15 @@ export function Settings({
           source={source}
           readOnly={readOnly}
           expanded
+          catalog={Object.fromEntries(
+            harnesses.map((h) => [
+              h.name,
+              {
+                models: h.models.error ? [] : h.models.items || [],
+                efforts: h.efforts || [],
+              },
+            ]),
+          )}
         />
       </section>
     </div>

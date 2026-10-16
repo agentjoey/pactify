@@ -9,30 +9,33 @@ import (
 )
 
 type Result struct {
-	ConfigMode     string   `json:"configMode"`
-	JobID          string   `json:"jobId"`
-	Status         Status   `json:"status"`
-	Harness        string   `json:"harness"`
-	CLIVersion     string   `json:"cliVersion"`
-	ModelRequested string   `json:"modelRequested,omitempty"`
-	ModelActual    string   `json:"modelActual,omitempty"`
-	ModelVerified  bool     `json:"modelVerified"`
-	Access         string   `json:"access"`
-	Duration       string   `json:"duration"`
-	InputTokens    int      `json:"inputTokens"`
-	OutputTokens   int      `json:"outputTokens"`
-	CostUSD        float64  `json:"costUSD,omitempty"`
-	UsagePartial   bool     `json:"usagePartial,omitempty"`
-	ToolCalls      int      `json:"toolCalls"`
-	Diff           Diff     `json:"diff"`
-	FinalText      string   `json:"finalText"`
-	Truncated      bool     `json:"truncated"`
-	SessionID      string   `json:"sessionId"`
-	LogPath        string   `json:"logPath"`
-	RateLimit      string   `json:"rateLimit,omitempty"`
-	Warnings       []string `json:"warnings,omitempty"`
-	WorktreePath   string   `json:"worktreePath,omitempty"`
-	BaseCommit     string   `json:"baseCommit,omitempty"`
+	failureMessage string     // Provider error used for quota memory; does not replace State.Error.
+	FailureClass   string     `json:"failureClass,omitempty"`
+	QuotaResetAt   *time.Time `json:"quotaResetAt,omitempty"`
+	ConfigMode     string     `json:"configMode"`
+	JobID          string     `json:"jobId"`
+	Status         Status     `json:"status"`
+	Harness        string     `json:"harness"`
+	CLIVersion     string     `json:"cliVersion"`
+	ModelRequested string     `json:"modelRequested,omitempty"`
+	ModelActual    string     `json:"modelActual,omitempty"`
+	ModelVerified  bool       `json:"modelVerified"`
+	Access         string     `json:"access"`
+	Duration       string     `json:"duration"`
+	InputTokens    int        `json:"inputTokens"`
+	OutputTokens   int        `json:"outputTokens"`
+	CostUSD        float64    `json:"costUSD,omitempty"`
+	UsagePartial   bool       `json:"usagePartial,omitempty"`
+	ToolCalls      int        `json:"toolCalls"`
+	Diff           Diff       `json:"diff"`
+	FinalText      string     `json:"finalText"`
+	Truncated      bool       `json:"truncated"`
+	SessionID      string     `json:"sessionId"`
+	LogPath        string     `json:"logPath"`
+	RateLimit      string     `json:"rateLimit,omitempty"`
+	Warnings       []string   `json:"warnings,omitempty"`
+	WorktreePath   string     `json:"worktreePath,omitempty"`
+	BaseCommit     string     `json:"baseCommit,omitempty"`
 }
 
 const partialUsageWarning = "Usage may be incomplete; only recorded usage is included"
@@ -64,7 +67,10 @@ func (r Result) Markdown() string {
 	} else if r.Status == StatusSucceeded {
 		fmt.Fprintf(&b, "✓ %s succeeded\n", r.Harness)
 	} else {
-		fmt.Fprintf(&b, "✗ %s %s\n", r.Harness, r.Status)
+		fmt.Fprintf(&b, "✗ %s %s\n", r.Harness, FailureStatus(r.Status, r.FailureClass, r.QuotaResetAt, time.Now()))
+	}
+	if len(r.Warnings) > 0 && r.FailureClass != "" {
+		fmt.Fprintf(&b, "%s\n", FailureStatus(r.Status, r.FailureClass, r.QuotaResetAt, time.Now()))
 	}
 	if r.ConfigMode == "" {
 		// Keep historical results' rendering; new jobs always record their mode.

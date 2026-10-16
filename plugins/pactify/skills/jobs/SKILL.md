@@ -23,6 +23,13 @@ If the user explicitly asks for a repository filter, add `--repo <path>` with a 
 Parse and filter JSON locally with an available JSON parser before returning tool output
 to the conversation. Select only the fields needed below, sort, cap rows and text, and
 return the compact projection. Never paste raw JSON or the full request/brief into context.
+Run `pactify sub quota --json` once in list mode (also for `/jobs all`). It returns
+currently exhausted routes independently of the displayed jobs and repository filter.
+Before the table show one line “当前额度耗尽的路线” (translate to the user’s language):
+list harness/model and reset time, or “无” for `[]`. A null `resetAt` means unknown reset;
+the memory expires 24 hours after `recordedAt`, not a confirmed provider reset.
+Report lookup errors instead of claiming no exhausted routes. Do not read quota.json directly.
+
 Do not fetch per-job results or logs in list mode. Preserve CLI errors when piping output;
 if status fails, report the error instead of presenting an empty list. Do not blindly retry.
 
@@ -36,6 +43,8 @@ Render a compact Markdown table with these six columns and at most 10 rows:
 - Sort `running` first, then `queued`, then terminal jobs with attention, then other jobs.
   Within each group use `createdAt` descending. This only sorts the returned latest 10;
   older running jobs may exist. Offer `/jobs all` for the complete set.
+- Status: append `failureClass` when present, with the remaining time until `quotaResetAt`
+  for quota failures. These fields are additive; historical jobs may omit them.
 - Repo / mode: shorten `repo` without hiding collisions, then `access` (`write` / `read-only`)
   and `worktree.status` (`pending` / `applied` / `discarded`), or `no worktree` when absent.
   If `repo` is empty, label `cwd` as the request directory rather than inventing a repo root.

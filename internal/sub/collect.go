@@ -11,13 +11,16 @@ import (
 )
 
 type Collector struct {
-	finalText string
-	chunks    strings.Builder
-	Usage     cockpit.Usage
-	ToolCalls int
-	TurnDone  bool
-	TurnErr   string
-	RateLimit json.RawMessage
+	finalText      string
+	chunks         strings.Builder
+	Usage          cockpit.Usage
+	ToolCalls      int
+	TurnDone       bool
+	TurnErr        string
+	RateLimit      json.RawMessage
+	FailureRaw     json.RawMessage
+	ErrorRaw       json.RawMessage
+	FailureMessage string
 
 	threadTotals map[string]cockpit.Usage
 }
@@ -48,6 +51,35 @@ func collectLoggedUsage(path string) Collector {
 }
 
 func (c *Collector) Add(e cockpit.Event) {
+	if e.Kind == cockpit.EventError && len(e.Raw) > 0 {
+		c.ErrorRaw = append(json.RawMessage(nil), e.Raw...)
+	}
+	if e.Kind == cockpit.EventError || (e.Kind == cockpit.EventState && e.State == cockpit.StateTurnFailed) {
+		if len(e.Raw) > 0 {
+			c.FailureRaw = append(json.RawMessage(nil), e.Raw...)
+		}
+		if e.Err != "" {
+			c.FailureMessage = e.Err
+		} else {
+			var p struct {
+				Error struct {
+					Message string `json:"message"`
+				} `json:"error"`
+				Turn struct {
+					Error struct {
+						Message string `json:"message"`
+					} `json:"error"`
+				} `json:"turn"`
+			}
+			if json.Unmarshal(e.Raw, &p) == nil {
+				if p.Turn.Error.Message != "" {
+					c.FailureMessage = p.Turn.Error.Message
+				} else if p.Error.Message != "" {
+					c.FailureMessage = p.Error.Message
+				}
+			}
+		}
+	}
 	switch e.Kind {
 	case cockpit.EventMessage:
 		if e.Final {

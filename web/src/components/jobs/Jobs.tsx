@@ -20,6 +20,8 @@ export interface Job {
   configMode: string;
   status: string;
   duration: string;
+  failureClass?: string;
+  quotaResetAt?: string;
   createdAt: string;
   inputTokens: number;
   outputTokens: number;
@@ -80,12 +82,15 @@ export function filterJobs(jobs: Job[], filters: Filters): Job[] {
 }
 function Status({ job }: { job: Job }) {
   return (
+    <>
     <Badge
       color={job.status === "failed" ? "danger" : job.status === "queued" ? "warn" : active(job) || job.status === "succeeded" ? "success" : "text-2"}
       className="panel-status"
     >
       {labels[job.status] || job.status}
     </Badge>
+    {(job.status === "failed" || job.status === "canceled") && job.failureClass && <Badge color="warn" className="panel-failure-class">{job.failureClass}</Badge>}
+    </>
   );
 }
 function Attention({ job }: { job: Job }) {

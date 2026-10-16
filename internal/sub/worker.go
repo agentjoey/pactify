@@ -106,6 +106,8 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}()
 	fail := func(err error) (Result, error) {
 		result.Warnings = append(result.Warnings, err.Error())
+		f := cockpit.FailureFromError(req.Harness, err, cfg.Now())
+		result.FailureClass, result.QuotaResetAt = f.Class, f.ResetAt
 		if ctx.Err() != nil {
 			result.Status = StatusCanceled
 		}
@@ -328,11 +330,18 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	graceExpired := false
 	canceled := false
 	turnFailed := false
+	promptFailed := false
 	interrupt := func(warning string) {
 		if interrupted {
 			return
 		}
 		interrupted = true
+		if warning == "Idle timeout" {
+			result.FailureClass, result.QuotaResetAt = "idle_timeout", nil
+		} else if warning != "Task canceled" {
+			f := cockpit.ClassifyFailure(req.Harness, warning, nil, cfg.Now())
+			result.FailureClass, result.QuotaResetAt = f.Class, f.ResetAt
+		}
 		result.Warnings = append(result.Warnings, warning)
 		grace = time.NewTimer(10 * time.Second)
 		deadline = grace.C
@@ -359,8 +368,12 @@ loop:
 			interrupt("Approval failed: " + e.Error())
 		case e := <-promptErr:
 			promptErr = nil
-			if e != nil {
+			if e != nil && !interrupted {
+				promptFailed = true
+				result.failureMessage = e.Error()
 				interrupt(e.Error())
+				f := cockpit.FailureFromError(req.Harness, e, cfg.Now())
+				result.FailureClass, result.QuotaResetAt = f.Class, f.ResetAt
 			}
 		case event, ok := <-events:
 			if !ok {
@@ -503,6 +516,25 @@ loop:
 		result.Status = StatusCanceled
 	} else if (err == nil || snap.EmptyTree) && collector.TurnDone && !turnFailed && !interrupted {
 		result.Status = StatusSucceeded
+	}
+	if result.Status == StatusFailed && (!interrupted || promptFailed) {
+		if !promptFailed {
+			result.failureMessage = collector.FailureMessage
+		}
+		raw := collector.FailureRaw
+		if req.Harness == "codex" {
+			q := cockpit.ClassifyFailure(req.Harness, "", collector.RateLimit, cfg.Now())
+			if q.Class == "quota" {
+				raw = collector.RateLimit
+			}
+		}
+		f := cockpit.ClassifyFailure(req.Harness, collector.FailureMessage, raw, cfg.Now())
+		if f.Class == "other" && len(collector.ErrorRaw) > 0 {
+			f = cockpit.ClassifyFailure(req.Harness, collector.FailureMessage, collector.ErrorRaw, cfg.Now())
+		}
+		if f.Class != "other" || result.FailureClass == "" {
+			result.FailureClass, result.QuotaResetAt = f.Class, f.ResetAt
+		}
 	}
 	return result, nil
 }

@@ -17,6 +17,8 @@ import (
 // JobSummary is the shared contract for status, /jobs and the local panel.
 // Empty metadata stays empty for historical jobs; it is never guessed from ids.
 type JobSummary struct {
+	FailureClass   string           `json:"failureClass,omitempty"`
+	QuotaResetAt   *time.Time       `json:"quotaResetAt,omitempty"`
 	ID             string           `json:"id"`
 	Title          string           `json:"title"`
 	Issue          string           `json:"issue"`
@@ -194,6 +196,9 @@ func (s Store) Summarize(st State, peers []State, now time.Time) JobSummary {
 		if json.Unmarshal(data, &parsed) == nil {
 			result = parsed
 		}
+	}
+	if st.Status == StatusFailed || st.Status == StatusCanceled {
+		row.FailureClass, row.QuotaResetAt = result.FailureClass, result.QuotaResetAt
 	}
 	row.ModelActual = result.ModelActual
 	row.InputTokens, row.OutputTokens = result.InputTokens, result.OutputTokens

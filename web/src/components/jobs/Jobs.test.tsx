@@ -130,3 +130,14 @@ it("keeps standalone theme selection", async () => {
  fireEvent.change(screen.getByLabelText("Theme"),{target:{value:"light"}});
  expect(document.documentElement.dataset.theme).toBe("light");
 });
+
+it("shows a failure class badge on failed cards and tolerates legacy jobs", async () => {
+ vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([
+  {...job, id:"quota", title:"Quota exhausted task", status:"failed", failureClass:"quota", activity:undefined},
+  {...job, id:"legacy", title:"Legacy failed task", status:"failed", activity:undefined},
+ ]))));
+ render(<Jobs />);
+ const link=await screen.findByRole("link",{name:"Quota exhausted task"});
+ expect(within(link.closest("article")!).getByText("quota", {exact:true})).toBeInTheDocument();
+ expect(screen.getByRole("link",{name:"Legacy failed task"})).toBeInTheDocument();
+});

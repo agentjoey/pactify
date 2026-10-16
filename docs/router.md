@@ -53,7 +53,7 @@ pactify sub router --json
 - 已有改动：保留失败结果，提示 `review the diff, then: pactify sub run <next> --worktree-from <job>`。先评审完整 diff 和未跟踪文件，再把完整任务说明通过 stdin 传入新会话。没有 worktree 的旧式工作区 job 不能使用此参数，需要评审后自行启动工作区任务。
 - 无可用后继：停在最后的失败结果，给出耗尽或访问档提示。
 
-旧 job 记录 `fallbackTo`，新 job 记录 `fallbackFrom`。`sub wait <第一个 jobId>` 和 `sub result <第一个 jobId>` 沿链读取最终 job；返回结果的 `jobId` 是最终 id。`sub cancel` 也沿链取消当前尝试。status、日志和历史保留每次尝试，不把失败伪装成成功。`/jobs`、status、Jobs 页显示两个方向的链接；`sub cost` 的 FALLBACKS 统计带 `fallbackFrom` 的 job。
+旧 job 记录 `fallbackTo`，新 job 记录 `fallbackFrom`。`sub wait <第一个 jobId>` 和 `sub result <第一个 jobId>` 沿链读取最终 job；返回结果的 `jobId` 是最终 id。`sub cancel` 也沿链取消当前尝试。status、日志和历史保留每次尝试，不把失败伪装成成功。`/jobs`、status 显示两个方向的链接；Jobs 看板将同链合并为一张卡片，详情抽屉可切换各轮；`sub cost` 的 FALLBACKS 统计带 `fallbackFrom` 的 job。
 
 ## 在原 worktree 开新会话
 
@@ -69,7 +69,7 @@ printf '%s\n' '已评审上次的 diff。保留已有实现，完成剩余验收
 
 ## Jobs 页管理路由（AJ-700）
 
-Jobs 列表上方的 **Routing** 可折叠区显示配置路径、别名、按 harness 分组的有序回退链、额度组和当前耗尽记录。展开后每 30 秒刷新；编辑期间保留原配置版本，避免自动刷新覆盖草稿。已知 resetAt 显示重置时间与倒计时；未知时间显示 `resets in unknown`，不把 24 小时记忆过期当作供应商重置。
+Jobs 的二级 **Routing** 页签显示配置路径、别名、按 harness 分组的有序回退链、额度组和当前耗尽记录。页签打开后每 30 秒刷新；编辑期间保留原配置版本，避免自动刷新覆盖草稿。已知 resetAt 显示重置时间与倒计时；未知时间显示 `resets in unknown`，不把 24 小时记忆过期当作供应商重置。
 
 dashboard 中点 **Edit** 可增删改别名、回退路线和额度组，回退路线支持上下调整顺序，组中的模型逐项编辑。**Save** 使用 CLI 相同的解析器与校验规则；422 在对应字段旁显示错误，409 显示 `Config changed elsewhere — reload to see the latest`，点 **Reload** 丢弃草稿并加载最新配置。**Cancel** 丢弃编辑。配置变更只影响后续任务。
 

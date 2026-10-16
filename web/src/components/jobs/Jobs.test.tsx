@@ -4,7 +4,7 @@ import { Jobs } from "./Jobs";
 import App from "../../App";
 
 const job = {
- id: "live", title: "AJ-689 Jobs view", issue: "AJ-689", harness: "codex",
+ id: "live", title: "AJ-689 Jobs view", harness: "codex",
  modelRequested: "default", repo: "/repo/" + "long-path".repeat(20), cwd: "/repo",
  access: "write", configMode: "minimal", status: "running", duration: "1m",
  createdAt: "2026-10-16T00:00:00Z", inputTokens: 12, outputTokens: 3,
@@ -21,7 +21,7 @@ function mockAPI() {
   if(path.endsWith("/logs")) return new Response(body);
   if(path.endsWith("/diff")) return new Response(JSON.stringify({patch:"diff --git a/a.go b/a.go\n+new line",files:[],note:"",truncated:true}));
   if(path.endsWith("/live")) return new Response(JSON.stringify({job,brief:"Implement Jobs",markdown:"Final reply: Complete"}));
-  return new Response(JSON.stringify([job, {...job,id:"done",title:"Completed task",status:"succeeded",activity:undefined}]));
+  return new Response(JSON.stringify([job, {...job,id:"done",title:"Completed task",harness:"kimi",status:"succeeded",activity:undefined}]));
  });
  vi.stubGlobal("fetch",fetcher);
  return {fetcher,stream,cancel};
@@ -34,8 +34,8 @@ it("lists job summaries, running first, using the dashboard API", async () => {
  expect(screen.getAllByText(/worktree · pending/)).toHaveLength(2);
  expect(screen.getByText("tool exec go test")).toBeInTheDocument();
  expect(fetcher).toHaveBeenCalledWith("/api/sub/jobs?all=1",expect.objectContaining({credentials:"same-origin"}));
- fireEvent.change(screen.getByLabelText("Status"),{target:{value:"failed"}});
- expect(screen.getByText("No jobs match these filters.")).toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText("Harness"),{target:{value:"kimi"}});
+ expect(screen.getByText("No running jobs")).toBeInTheDocument();
 });
 it("opens details, result, bounded logs with automatic follow, diff and closes the stream",async()=>{
  const {stream,cancel,fetcher}=mockAPI();
@@ -60,10 +60,10 @@ it("shows an honest empty state only after loading",async()=>{
  let resolve!: (value:Response)=>void;
  vi.stubGlobal("fetch",vi.fn(()=>new Promise<Response>(r=>{resolve=r;})));
  render(<Jobs />);
- expect(screen.queryByText("No jobs match these filters.")).not.toBeInTheDocument();
+ expect(screen.queryByText("No running jobs")).not.toBeInTheDocument();
  expect(screen.getByText("Loading jobs…")).toBeInTheDocument();
  await act(async()=>resolve(new Response("[]")));
- expect(await screen.findByText("No jobs match these filters.")).toBeInTheDocument();
+ expect(await screen.findByText("No running jobs")).toBeInTheDocument();
 });
 it("reports list errors and recovers on the next poll",async()=>{
  vi.useFakeTimers();
@@ -71,17 +71,17 @@ it("reports list errors and recovers on the next poll",async()=>{
  vi.stubGlobal("fetch",fetcher); render(<Jobs />);
  await act(async()=>{});
  expect(screen.getByRole("alert")).toHaveTextContent("503");
- expect(screen.queryByText("No jobs match these filters.")).not.toBeInTheDocument();
+ expect(screen.queryByText("No running jobs")).not.toBeInTheDocument();
  await act(async()=>{await vi.advanceTimersByTimeAsync(2000);});
  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
- expect(screen.getByText("No jobs match these filters.")).toBeInTheDocument();
+ expect(screen.getByText("No running jobs")).toBeInTheDocument();
 });
 it("handles separate detail, diff and stream errors",async()=>{
  history.replaceState(null,"","/#/jobs/missing");
  vi.stubGlobal("fetch",vi.fn(async(path:string)=>new Response(path.includes("?all")?"[]":"",{status:path.includes("?all")?200:404})));
  render(<Jobs />);
  expect(await screen.findByRole("alert")).toHaveTextContent("404");
- expect(screen.getByRole("link",{name:"← All jobs"})).toBeInTheDocument();
+ expect(screen.getByRole("link",{name:"Close job details"})).toBeInTheDocument();
 });
 it("supports the saved Jobs lens without registered pact projects",async()=>{
  localStorage.setItem("pactify:lens","jobs");
@@ -109,7 +109,7 @@ it("keeps the detail usable when result, diff and logs are unavailable", async (
   expect(screen.getAllByRole("alert").map((node) => node.textContent)).toEqual(expect.arrayContaining([
     "Result unavailable: invalid JSON", expect.stringContaining("503"),
   ]));
-  expect(screen.getByRole("heading", { name: "Resume chain" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Run timeline" })).toBeInTheDocument();
 });
 
 it("offers mobile view selection and the Jobs keyboard shortcut", async () => {
@@ -153,7 +153,7 @@ it("shows retry progress and completed retry counts", async () => {
  expect(screen.getByText("retries: 2")).toBeInTheDocument();
 });
 
-it("links both directions of quota fallback on cards and details", async () => {
+it("shows fallback navigation in the drawer while cards open the run chain", async () => {
   const routed = { ...job, fallbackFrom: "first", fallbackTo: "last" };
   vi.stubGlobal("fetch", vi.fn(async (path: string) => {
     if (path.endsWith("/logs")) return new Response("");
@@ -162,8 +162,8 @@ it("links both directions of quota fallback on cards and details", async () => {
     return new Response(JSON.stringify([routed]));
   }));
   const { unmount } = render(<Jobs />);
-  expect(await screen.findByRole("link", { name: "fallback from first" })).toHaveAttribute("href", "#/jobs/first");
-  expect(screen.getByRole("link", { name: "→ fallback to last" })).toHaveAttribute("href", "#/jobs/last");
+  expect(await screen.findByRole("link", { name: job.title })).toHaveAttribute("href", "#/jobs/live");
+  expect(screen.queryByRole("navigation", { name: "Fallback chain" })).not.toBeInTheDocument();
   unmount();
   history.replaceState(null, "", "/#/jobs/live");
   render(<Jobs />);

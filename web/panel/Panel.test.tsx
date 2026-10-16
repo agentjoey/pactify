@@ -7,7 +7,6 @@ const jobs: Job[] = [
   {
     id: "done",
     title: "Review changes",
-    issue: "AJ-659",
     harness: "kimi",
     modelRequested: "kimi-k2",
     repo: "/repo/b",
@@ -26,7 +25,6 @@ const jobs: Job[] = [
   {
     id: "live",
     title: "Build the panel",
-    issue: "",
     harness: "codex",
     modelRequested: "gpt-5",
     repo: "/repo/a",
@@ -71,12 +69,12 @@ describe("standalone panel", () => {
         .slice(0, 6)
         .map((option) => option.textContent),
     ).toEqual([
-      "All statuses",
-      "queued",
-      "running",
-      "succeeded",
-      "failed",
-      "canceled",
+      "All repositories",
+      "/repo/a",
+      "/repo/b",
+      "All harnesses",
+      "codex",
+      "kimi",
     ]);
     expect(screen.getByLabelText("Repository")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Harness"), {
@@ -144,7 +142,7 @@ describe("standalone panel", () => {
       "Result summary",
       "Live logs",
       "Diff",
-      "Resume chain",
+      "Run timeline",
       "CLI commands",
     ]) {
       expect(

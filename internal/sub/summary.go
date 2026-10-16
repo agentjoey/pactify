@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -27,7 +26,6 @@ type JobSummary struct {
 	QuotaResetAt   *time.Time       `json:"quotaResetAt,omitempty"`
 	ID             string           `json:"id"`
 	Title          string           `json:"title"`
-	Issue          string           `json:"issue"`
 	Harness        string           `json:"harness"`
 	ModelRequested string           `json:"modelRequested"`
 	ModelActual    string           `json:"modelActual"`
@@ -88,36 +86,23 @@ type Activity struct {
 	UsagePartial bool   `json:"usagePartial,omitempty"`
 }
 
-var briefIssue = regexp.MustCompile(`\b[A-Z]+-[0-9]+\b`)
-
-func briefSummary(brief string) (title, issue string) {
-	// Only the first ten physical lines are issue metadata, not the task body.
-	foundTitle := false
-	i := 0
+func briefSummary(brief string) string {
 	for line := range strings.SplitSeq(brief, "\n") {
-		if !foundTitle && strings.TrimSpace(line) != "" && !briefLabel.MatchString(strings.TrimSpace(line)) {
-			foundTitle = true
-			clean := strings.TrimSpace(line)
-			if strings.HasPrefix(clean, "#") {
-				clean = strings.TrimSpace(strings.TrimLeft(clean, "#"))
-				if end := strings.TrimRight(clean, "#"); len(end) < len(clean) && (end == "" || strings.HasSuffix(end, " ") || strings.HasSuffix(end, "\t")) {
-					clean = strings.TrimSpace(end)
-				}
+		clean := strings.TrimSpace(line)
+		if clean == "" {
+			continue
+		}
+		if strings.HasPrefix(clean, "#") {
+			clean = strings.TrimSpace(strings.TrimLeft(clean, "#"))
+			if end := strings.TrimRight(clean, "#"); len(end) < len(clean) && (end == "" || strings.HasSuffix(end, " ") || strings.HasSuffix(end, "\t")) {
+				clean = strings.TrimSpace(end)
 			}
-			// Strip emphasis markers but keep underscores inside identifiers
-			// such as KIMI_CODE_HOME.
-			clean = strings.Trim(strings.NewReplacer("**", "", "__", "", "`", "").Replace(clean), "*_ ")
-			title = truncateSummary(strings.Join(strings.Fields(clean), " "), 80)
 		}
-		if i < 10 && issue == "" {
-			issue = briefIssue.FindString(line)
-		}
-		if foundTitle && (issue != "" || i >= 9) {
-			break
-		}
-		i++
+		// Preserve underscores inside identifiers such as KIMI_CODE_HOME.
+		clean = strings.Trim(strings.NewReplacer("**", "", "__", "", "`", "").Replace(clean), "*_ ")
+		return truncateSummary(strings.Join(strings.Fields(clean), " "), 80)
 	}
-	return
+	return ""
 }
 
 func truncateSummary(text string, limit int) string {
@@ -166,8 +151,8 @@ func NormalizeRepo(path string) string {
 // come from Load/Recover (atomic replacement), and peers supply reverse links.
 // A missing or damaged result does not hide a job, matching JSON status history.
 func (s Store) Summarize(st State, peers []State, now time.Time) JobSummary {
-	title, issue := briefSummary(st.Request.Brief)
-	row := JobSummary{FallbackFrom: st.FallbackFrom, FallbackTo: st.FallbackTo, ID: st.ID, Title: title, Issue: issue, Harness: st.Request.Harness, ModelRequested: st.Request.Model, Access: st.Request.Access, ConfigMode: st.ConfigMode, Repo: JobRepo(st), Cwd: st.Request.Cwd, Status: st.Status, CreatedAt: st.CreatedAt, ResumeOf: st.ResumeOf, Attention: []Attention{}, ResumedBy: []string{}}
+	title := briefSummary(st.Request.Brief)
+	row := JobSummary{FallbackFrom: st.FallbackFrom, FallbackTo: st.FallbackTo, ID: st.ID, Title: title, Harness: st.Request.Harness, ModelRequested: st.Request.Model, Access: st.Request.Access, ConfigMode: st.ConfigMode, Repo: JobRepo(st), Cwd: st.Request.Cwd, Status: st.Status, CreatedAt: st.CreatedAt, ResumeOf: st.ResumeOf, Attention: []Attention{}, ResumedBy: []string{}}
 	end := st.FinishedAt
 	if end.IsZero() {
 		end = now
@@ -308,10 +293,6 @@ func (s Store) activity(id string) *Activity {
 	}
 	return a
 }
-
-// briefLabel matches a bare section label such as "Background:" or "背景：",
-// which says nothing about the task and is skipped when picking a title.
-var briefLabel = regexp.MustCompile(`^[#\s]*[\p{L}\p{N} ]{1,24}[:：]$`)
 
 // actionableWarnings counts warnings a person should act on. Informational
 // notes repeat on every job (experimental harness, version not yet checked by

@@ -16,6 +16,8 @@ pactify sub status <id> --json                # 单个对象
 
 ## JSON 兼容性
 
+AJ-701：删除 `issue` 字段及编号提取。标题只取 brief 第一条非空行（不再跳过 `Background:` 等段落标签），保留 Markdown 清理与 80 字符上限；使用 issue tracker 时可自行把编号写进标题。
+
 列表仍为对象数组，保留 `jobId`、`status`、`harness`、`cwd`、`createdAt`、可选 `finishedAt`，新增下面的摘要字段；`id` 与 `jobId` 相同。
 单个 job 仍为对象，保留完整 State 的既有字段（包括 `request`、`updatedAt`、`error`、进程信息、worktree 元数据）和 `duration`，新增摘要字段；它没有 `jobId` 别名。单个对象仍保留历史的零值 `finishedAt` 表示未结束；列表则省略未结束的 `finishedAt`。
 
@@ -27,7 +29,6 @@ pactify sub status <id> --json                # 单个对象
 | --- | --- | --- |
 | `id` | string | job id |
 | `title` | string | brief 第一条非空行，去掉 Markdown 标题符号、`*` / `_` 强调符号及反引号，压成单行；最多 80 个 Unicode 字符（含截断省略号） |
-| `issue` | string | brief 前 10 个物理行中首个符合 `[A-Z]+-[0-9]+` 的编号，带单词边界；没有则为空 |
 | `harness` | string | 请求的 harness |
 | `modelRequested` / `modelActual` | string | 请求模型 / result 记录的实际模型；未知为空 |
 | `access` | string | 请求的权限档 |

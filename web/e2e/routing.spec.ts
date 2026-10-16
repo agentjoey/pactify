@@ -8,7 +8,7 @@ for (const width of [1440, 375]) {
     await request.post("/__test/reset");
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/#/jobs");
-    await page.getByText("Routing", { exact: true }).click();
+    await page.getByRole("tab", { name: "Routing", exact: true }).click();
     await expect(page.getByText("@fast", { exact: true })).toBeVisible();
     const noOverflow = () =>
       page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
@@ -71,7 +71,7 @@ for (const width of [1440, 375]) {
       page.getByText("model-one, model-two", { exact: true }),
     ).toBeVisible();
     await page.reload();
-    await page.getByText("Routing", { exact: true }).click();
+    await page.getByRole("tab", { name: "Routing", exact: true }).click();
     await expect(page.getByText("@mobile-test", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Clear", exact: true }).click();
     const dialog = page.getByRole("dialog");
@@ -95,7 +95,7 @@ for (const width of [1440, 375]) {
 
 test("panel Routing is read-only", async ({ page }) => {
   await page.goto(`http://127.0.0.1:${process.env.PANEL_E2E_PORT || 4176}`);
-  await page.getByText("Routing", { exact: true }).click();
+  await page.getByRole("tab", { name: "Routing", exact: true }).click();
   await expect(page.getByText("@fast", { exact: true })).toBeVisible();
   await expect(
     page.getByText(

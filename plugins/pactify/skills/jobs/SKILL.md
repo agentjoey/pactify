@@ -35,10 +35,10 @@ if status fails, report the error instead of presenting an empty list. Do not bl
 
 Render a compact Markdown table with these six columns and at most 10 rows:
 
-| Title / issue | Harness | Status | Repo / mode | Tokens | Activity / attention |
+| Title | Harness | Status | Repo / mode | Tokens | Activity / attention |
 | --- | --- | --- | --- | --- | --- |
 
-- Title: prefer `issue`, otherwise `title`, otherwise `id`; include the full job id
+- Title: the brief's first line, otherwise the id; include the full job id
   alongside the label so the user can request details without resolving an abbreviation.
 - Sort `running` first, then `queued`, then terminal jobs with attention, then other jobs.
   Within each group use `createdAt` descending. This only sorts the returned latest 10;
@@ -85,7 +85,7 @@ Treat the argument as one literal job id; quote shell arguments and reject extra
 instead of evaluating them as shell code. `all` is the list selector.
 Run `pactify sub status <id> --json`. This returns one object with `id`, not the list's
 `jobId` alias. Project locally; do not expose its full `request`, environment or process data.
-Show title/issue and full id, harness, requested/actual model (unknown when absent), status,
+Show title and full id, harness, requested/actual model (unknown when absent), status,
 duration, repo, request `cwd`, `runCwd`, access, `configMode`, tokens, attention and activity.
 Include `worktree.path`, `worktree.baseCommit`, `worktree.status` when present.
 
@@ -144,7 +144,7 @@ shares it, including turns outside the displayed list. Keep suggestions short an
   apply for an already applied/discarded worktree just because a historical turn failed.
 - `discarded` does not mean the change was lost: the host may have committed it from the
   job worktree before discarding. Before suggesting a rerun, check whether the change already
-  landed (for example `git log --oneline --grep <issue id>` in the repo); only suggest a rerun
+  landed (for example `git log --oneline --grep <title keyword>` or `git log --oneline <branch>` in the repo); only suggest a rerun
   when it did not.
 
 Use actual full job ids in suggestions for displayed jobs. For omitted jobs give counts

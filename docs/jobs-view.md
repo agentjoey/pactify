@@ -1,12 +1,16 @@
 # Jobs view
 
-在 dashboard 顶部与 Dashboard / Board / Cockpit 并列的 **Jobs** 标签页查看委派任务；手机上从 **View** 下拉框选择 Jobs。视图选择沿用 dashboard 的 `pactify:lens` localStorage 设置，不依赖 `.pact` 项目注册。列表跨仓库展示，可按状态、harness、仓库筛选；running 在前，queued 随后，其余按创建时间倒序。
+在 dashboard 顶部与 Dashboard / Board / Cockpit 并列的 **Jobs** 标签页查看委派任务；手机上从 **View** 下拉框选择 Jobs。视图选择沿用 dashboard 的 `pactify:lens` localStorage 设置，不依赖 `.pact` 项目注册。看板跨仓库展示，按 harness、仓库筛选；每列按链上最新一轮的创建时间倒序，同时间按 id 倒序。
 
-列表展示标题 / issue、harness、状态、仓库、访问权限与 worktree、token、活动与待处理事项。打开任务可看 brief、结果摘要、自动跟随的可读日志、按文件折叠的 diff 和续接链。两种入口共用 dashboard 的设计 token、UI 组件和 Jobs 样式。dashboard 原本只有固定深色配色（`index.css` 的 `color-scheme: dark`），Settings 的 Appearance 目前是占位页；嵌入的 Jobs 跟随该配色，不显示独立页头或 Theme 选择框，也不读写全局主题。独立 panel 保留自己的 System / Light / Dark 选择，浅色覆盖只在 panel 入口加载。
+列表展示标题、harness、状态、仓库、访问权限与 worktree、token、活动与待处理事项。点击卡片在右侧抽屉查看 brief、结果摘要、自动跟随的可读日志、按文件折叠的 diff 和续接链。两种入口共用 dashboard 的设计 token、UI 组件和 Jobs 样式。dashboard 原本只有固定深色配色（`index.css` 的 `color-scheme: dark`），Settings 的 Appearance 目前是占位页；嵌入的 Jobs 跟随该配色，不显示独立页头或 Theme 选择框，也不读写全局主题。独立 panel 保留自己的 System / Light / Dark 选择，浅色覆盖只在 panel 入口加载。
 
-可直接打开 `https://pactify.agentjoey.ai/#/jobs` 或 `https://pactify.agentjoey.ai/#/jobs/<id>`，加载和 hashchange 都会优先进入 Jobs，并打开对应详情。切换到其他视图时清除 Jobs hash；从标签或手机 View 重新进入 Jobs 时生成 `#/jobs`，详情的 All jobs 链接也返回该地址。
+可直接打开 `https://pactify.agentjoey.ai/#/jobs` 或 `https://pactify.agentjoey.ai/#/jobs/<id>`，加载和 hashchange 都会优先进入 Jobs，并打开对应详情。切换到其他视图时清除 Jobs hash；从标签或手机 View 重新进入 Jobs 时生成 `#/jobs`，关闭详情抽屉后也返回该地址。
 
-列表上方的 **Routing** 可折叠区域展示配置路径、别名、按 harness 分组的回退链（保持顺序）、额度组与耗尽记录。dashboard 支持 **Edit / Save / Cancel**，回退路线可上下排序；模型逐项编辑，避免改变含逗号的模型名。422 错误在对应字段旁展示；409 提示 `Config changed elsewhere — reload to see the latest` 并提供 **Reload**，Reload 会丢弃草稿。Clear 使用页内确认，只清除本地耗尽记忆。panel 仅展示配置与状态，提示 `Edit routing from the dashboard or with pactify sub router.`，不提供编辑或 Clear 控件。展开时每 30 秒刷新，编辑期间保留草稿及原版本；重置倒计时仅使用已知 resetAt。手机布局按列堆叠。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
+二级 **Routing** 页签展示配置路径、别名、按 harness 分组的回退链（保持顺序）、额度组与耗尽记录。dashboard 支持 **Edit / Save / Cancel**，回退路线可上下排序；模型逐项编辑，避免改变含逗号的模型名。422 错误在对应字段旁展示；409 提示 `Config changed elsewhere — reload to see the latest` 并提供 **Reload**，Reload 会丢弃草稿。Clear 使用页内确认，只清除本地耗尽记忆。panel 仅展示配置与状态，提示 `Edit routing from the dashboard or with pactify sub router.`，不提供编辑或 Clear 控件。页签打开时每 30 秒刷新，编辑期间保留草稿及原版本；重置倒计时仅使用已知 resetAt。手机布局按列堆叠。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
+
+AJ-701：Jobs 采用 Board 的工具栏、`task-card` 与 `kb-ghost` 样式。Repository / Harness 筛选先按显式 resume/fallback 链合并，再保留任一轮匹配筛选的整链；不按相同标题或 session id 猜测关系。链首提供标题，最新一轮提供状态、模型、耗时与 token；`rework` 为手动 resume 链接数，不含同 job 的自动 retries。链时间线按链接因果排序，分叉以创建时间 / id 排序，环按同样顺序确定性断开，缺失 id 不创建虚构 job。
+
+列归属优先级：queued / running / retrying → RUNNING；终态有 attention → NEEDS ATTENTION；其余 succeeded → SUCCEEDED；其他终态 → FAILED / CANCELED。上游失败不会使已恢复的后继停留在 attention 列。列计数按链计，用量仍按独立 cost API 的各次 job 统计，放在底部。窄屏看板竖向堆叠，抽屉全屏；`#/jobs/<id>` 可直接打开某轮，关闭回到 `#/jobs`。Routing 独立页签沿用 AJ-700 的校验与保存行为，panel 中仍只读。
 
 ## 通过 pactify.agentjoey.ai 访问
 

@@ -1,5 +1,14 @@
 @import "../src/index.css";
 
+/* Vite's standalone root is panel/: include the shared Jobs and UI markup. */
+@source "../src/components/jobs";
+@source "../src/components/ui";
+
+#root { height: 100vh; }
+@supports (height: 100dvh) {
+  #root { height: 100dvh; }
+}
+
 /* Standalone panel only. Dashboard keeps its original dark palette. */
 :root[data-theme] {
   color-scheme: light dark;

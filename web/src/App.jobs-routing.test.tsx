@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import App from "./App";
 
 const jobs = ["first", "second"].map((id) => ({
-  id, title: `Job ${id}`, issue: "AJ-689", harness: "codex", status: "succeeded",
+  id, title: `Job ${id}`, harness: "codex", status: "succeeded",
   modelRequested: "default", repo: "/repo/" + "long-path".repeat(30), cwd: "/repo",
   access: "write", configMode: "minimal", duration: "1m", createdAt: "2026-10-16T00:00:00Z",
   inputTokens: 12, outputTokens: 3, attention: [], resumeOf: "", resumedBy: [],

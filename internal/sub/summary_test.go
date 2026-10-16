@@ -23,6 +23,20 @@ func summaryJSON(t *testing.T, s Store, st State, peers []State) map[string]any 
 	return out
 }
 
+func TestSummaryTitleWithoutIssueExtraction(t *testing.T) {
+	s := Store{Root: t.TempDir()}
+	for _, brief := range []string{"# Short title\nAJ-701 in body", "Background:\nA later line"} {
+		out := summaryJSON(t, s, State{Request: Request{Brief: brief}}, nil)
+		if _, exists := out["issue"]; exists {
+			t.Errorf("issue must not be emitted: %v", out)
+		}
+		want := strings.TrimPrefix(strings.Split(brief, "\n")[0], "# ")
+		if out["title"] != want {
+			t.Errorf("title=%q, want first line %q", out["title"], want)
+		}
+	}
+}
+
 func TestSummaryMetadataAndLegacy(t *testing.T) {
 	s := Store{Root: t.TempDir()}
 	root := repo(t)
@@ -41,7 +55,7 @@ func TestSummaryMetadataAndLegacy(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := summaryJSON(t, s, st, nil)
-	for key, want := range map[string]any{"id": "metadata", "title": "AJ-657 任务摘要", "issue": "AJ-657", "harness": "codex", "modelRequested": "requested", "modelActual": "actual", "access": "write", "repo": NormalizeRepo(root), "cwd": cwd, "duration": "3s", "inputTokens": float64(12), "outputTokens": float64(4), "changedFiles": float64(1), "addedLines": float64(5), "deletedLines": float64(2), "warningCount": float64(1), "sessionId": "session"} {
+	for key, want := range map[string]any{"id": "metadata", "title": "AJ-657 任务摘要", "harness": "codex", "modelRequested": "requested", "modelActual": "actual", "access": "write", "repo": NormalizeRepo(root), "cwd": cwd, "duration": "3s", "inputTokens": float64(12), "outputTokens": float64(4), "changedFiles": float64(1), "addedLines": float64(5), "deletedLines": float64(2), "warningCount": float64(1), "sessionId": "session"} {
 		if out[key] != want {
 			t.Errorf("%s=%v, want %v", key, out[key], want)
 		}
@@ -59,7 +73,7 @@ func TestSummaryMetadataAndLegacy(t *testing.T) {
 		t.Fatal(err)
 	}
 	out = summaryJSON(t, s, st, nil)
-	for _, key := range []string{"title", "issue", "repo", "configMode", "resumeOf", "sessionId"} {
+	for _, key := range []string{"title", "repo", "configMode", "resumeOf", "sessionId"} {
 		if out[key] != "" {
 			t.Errorf("legacy %s=%v", key, out[key])
 		}
@@ -71,15 +85,15 @@ func TestSummaryMetadataAndLegacy(t *testing.T) {
 
 func TestSummaryBriefBounds(t *testing.T) {
 	s := Store{}
-	cases := []struct{ brief, title, issue string }{
-		{" \n### **标题** `code`\nAJ-123", "标题 code", "AJ-123"},
-		{"\n\n", "", ""},
-		{"title\n1\n2\n3\n4\n5\n6\n7\n8\n9\nAJ-99", "title", ""},
-		{strings.Repeat("字", 100), strings.Repeat("字", 79) + "…", ""},
+	cases := []struct{ brief, title string }{
+		{" \n### **标题** `code`\nAJ-123", "标题 code"},
+		{"\n\n", ""},
+		{"title\n1\n2\n3\n4\n5\n6\n7\n8\n9\nAJ-99", "title"},
+		{strings.Repeat("字", 100), strings.Repeat("字", 79) + "…"},
 	}
 	for _, tc := range cases {
 		out := summaryJSON(t, s, State{Request: Request{Brief: tc.brief}}, nil)
-		if out["title"] != tc.title || out["issue"] != tc.issue || !utf8.ValidString(out["title"].(string)) {
+		if out["title"] != tc.title || !utf8.ValidString(out["title"].(string)) {
 			t.Errorf("brief: %v", out)
 		}
 	}
@@ -190,11 +204,11 @@ func TestSummaryPlainResumeAndStartedAt(t *testing.T) {
 }
 
 func TestSummaryBriefFirstNonemptyLine(t *testing.T) {
-	title, issue := briefSummary(strings.Repeat("\n", 12) + "# first\nsecond AJ-99")
-	if title != "first" || issue != "" {
-		t.Fatalf("title=%q issue=%q", title, issue)
+	title := briefSummary(strings.Repeat("\n", 12) + "# first\nsecond AJ-99")
+	if title != "first" {
+		t.Fatalf("title=%q", title)
 	}
-	title, _ = briefSummary("***\nsecond")
+	title = briefSummary("***\nsecond")
 	if title != "" {
 		t.Fatalf("first nonempty line changed: %q", title)
 	}
@@ -254,21 +268,21 @@ func TestSummaryApplyRealPatchAndFailure(t *testing.T) {
 }
 
 func TestSummaryMarkdownClosingHeading(t *testing.T) {
-	title, _ := briefSummary("## **task** `code` ##\nbody")
+	title := briefSummary("## **task** `code` ##\nbody")
 	if title != "task code" {
 		t.Fatalf("title=%q", title)
 	}
 }
 
-func TestBriefSummaryKeepsIdentifiersAndSkipsLabels(t *testing.T) {
-	title, issue := briefSummary("# AJ-643：kimi 改用 **独立** 目录（`KIMI_CODE_HOME`）\n")
-	if title != "AJ-643：kimi 改用 独立 目录（KIMI_CODE_HOME）" || issue != "AJ-643" {
-		t.Fatalf("title=%q issue=%q", title, issue)
+func TestBriefSummaryKeepsIdentifiersAndFirstLine(t *testing.T) {
+	title := briefSummary("# AJ-643：kimi 改用 **独立** 目录（`KIMI_CODE_HOME`）\n")
+	if title != "AJ-643：kimi 改用 独立 目录（KIMI_CODE_HOME）" {
+		t.Fatalf("title=%q", title)
 	}
-	if title, _ := briefSummary("Background:\n\nFix the stdin of orchestrate workers.\n"); title != "Fix the stdin of orchestrate workers." {
-		t.Fatalf("label not skipped: %q", title)
+	if title := briefSummary("Background:\n\nFix the stdin of orchestrate workers.\n"); title != "Background:" {
+		t.Fatalf("first line changed: %q", title)
 	}
-	if title, _ := briefSummary("## 背景\n背景：\n修复 stdin\n"); title != "背景" {
+	if title := briefSummary("## 背景\n背景：\n修复 stdin\n"); title != "背景" {
 		t.Fatalf("heading without colon is a real title: %q", title)
 	}
 }

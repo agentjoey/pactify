@@ -1,10 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { dashboardJobsSource, readJobLogs } from "./source";
 import type { JobsSource } from "./source";
 import { Routing } from "./Routing";
 import { UsageCard } from "./UsageCard";
+import { JOB_COLUMNS, jobColumn, mergeJobChains, type JobChain } from "./board";
+import { JobDrawer } from "./JobDrawer";
 import "./jobs.css";
 
 const SourceContext = createContext<JobsSource>(dashboardJobsSource);
@@ -12,7 +14,6 @@ const SourceContext = createContext<JobsSource>(dashboardJobsSource);
 export interface Job {
   id: string;
   title: string;
-  issue: string;
   harness: string;
   modelRequested: string;
   modelActual?: string;
@@ -28,6 +29,7 @@ export interface Job {
   failureClass?: string;
   quotaResetAt?: string;
   createdAt: string;
+  usagePartial?: boolean;
   inputTokens: number;
   outputTokens: number;
   attention: { kind: string; message: string }[];
@@ -69,7 +71,7 @@ const labels: Record<string, string> = {
   canceled: "canceled",
 };
 const active = (j: Job) =>
-  j.status === "running" ? 2 : j.status === "queued" ? 1 : 0;
+  j.status === "running" || j.status === "retrying" ? 2 : j.status === "queued" ? 1 : 0;
 const jobLink = (id: string) => `#/jobs/${encodeURIComponent(id)}`;
 
 export function filterJobs(jobs: Job[], filters: Filters): Job[] {
@@ -127,112 +129,79 @@ function Usage({ job }: { job: Job }) {
     </span>
   );
 }
-function Metadata({ job }: { job: Job }) {
+function Metadata({ job, showAccess = false }: { job: Job; showAccess?: boolean }) {
   return (
     <div className="panel-metadata">
       <span>{job.harness}</span>
       <span>{job.modelActual || job.modelRequested || "Default model"}</span>
+      {showAccess && <span>{job.access || "unknown access"}</span>}
       <span>{job.duration}</span>
       <Usage job={job} />
     </div>
   );
 }
-export function JobList({ jobs }: { jobs: Job[] }) {
-  const [filters, setFilters] = useState<Filters>({
-    status: "",
-    harness: "",
-    repo: "",
-  });
-  const rows = filterJobs(jobs, filters);
+export function JobCard({ chain, selected }: { chain: JobChain; selected?: string }) {
+  const job = chain.latest;
+  const color = JOB_COLUMNS.find(column => column.key === jobColumn(job))!.color;
+  const fallbackHarnesses = [...new Set(chain.runs.filter(run => run.fallbackFrom || chain.runs.some(parent => parent.fallbackTo === run.id)).map(run => run.harness))];
+  const failures = [...new Set(chain.runs.map(run => run.failureClass).filter(Boolean))];
   return (
-    <>
-      <div className="panel-filters">
-        <label>
-          Status
-          <select
-            aria-label="Status"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          >
-            <option value="">All statuses</option>
-            {Object.entries(labels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Harness
-          <select
-            aria-label="Harness"
-            value={filters.harness}
-            onChange={(e) =>
-              setFilters({ ...filters, harness: e.target.value })
-            }
-          >
-            <option value="">All harnesses</option>
-            {[...new Set(jobs.map((j) => j.harness))].sort().map((h) => (
-              <option key={h}>{h}</option>
-            ))}
-          </select>
-        </label>
-        <label className="panel-repo-filter">
-          Repository
-          <select
-            aria-label="Repository"
-            value={filters.repo}
-            onChange={(e) => setFilters({ ...filters, repo: e.target.value })}
-          >
-            <option value="">All repositories</option>
-            {[...new Set(jobs.map((j) => j.repo))]
-              .filter(Boolean)
-              .sort()
-              .map((repo) => (
-                <option key={repo}>{repo}</option>
-              ))}
-          </select>
-        </label>
-        <span className="panel-count">Jobs: {rows.length}</span>
+    <article className={`task-card panel-job ${active(job) ? "glow" : ""} ${chain.runs.some(run => run.id === selected) ? "selected" : ""}`} style={{"--st": color} as CSSProperties}>
+      <div className="panel-job-top"><Status job={job} /><span className="panel-mono">Run {job.id}</span></div>
+      <h2><a href={jobLink(job.id)}>{chain.root.title || chain.root.id}</a></h2>
+      <Metadata job={job} />
+      <div className="panel-tags">
+        {chain.runs.length > 1 && <Badge color="text-2">{chain.runs.length} runs</Badge>}
+        {chain.rework > 0 && <Badge color="text-2">rework {chain.rework}</Badge>}
+        {fallbackHarnesses.map(harness => <Badge key={harness} color="warn">fallback → {harness}</Badge>)}
+        {failures.filter(failure => failure !== job.failureClass || !["failed", "canceled"].includes(job.status)).map(failure => <Badge key={failure} color="warn">{failure}</Badge>)}
+        {job.worktree && <Badge color="text-2">worktree · {job.worktree.status}</Badge>}
+        {job.access === "read-only" && <Badge color="text-2">read-only</Badge>}
       </div>
-      <div className="panel-job-grid">
-        {rows.map((job) => (
-          <article
-            className={`panel-job ${active(job) ? "panel-job-active" : ""}`}
-            key={job.id}
-          >
-            <div className="panel-job-top">
-              <Status job={job} />
-              <span className="panel-mono">{job.issue || job.id}</span>
-            </div>
-            <h2>
-              <a href={jobLink(job.id)}>{job.title || job.issue || job.id}</a>
-            </h2>
-            <Metadata job={job} />
-            <FallbackLinks job={job} />
-            <div className="panel-repository" title={job.repo}>
-              {job.repo || "No repository recorded"}
-            </div>
-            <div className="panel-mode">
-              {job.worktree ? `worktree · ${job.worktree.status}` : "workspace"}{" "}
-              · {job.access || "unknown access"} · {job.configMode || "unknown"}{" "}
-              config
-            </div>
-            {job.activity && (
-              <p className="panel-activity">
-                <span className="panel-live-dot" />
-                {job.activity.summary || "Waiting for activity…"}
-              </p>
-            )}
-            <Attention job={job} />
-          </article>
-        ))}
-      </div>
-      {rows.length === 0 && (
-        <div className="panel-empty">No jobs match these filters.</div>
-      )}
-    </>
+      <p className="panel-repository" title={job.repo}>{job.repo || "No repository recorded"}</p>
+      {active(job) > 0 && <p className="panel-activity"><span className="panel-live-dot" />{job.activity?.summary || "Waiting for activity…"}</p>}
+      <Attention job={job} />
+    </article>
   );
+}
+
+export function JobList({ jobs, toolbar, showBoard = true, selected, loaded = true, children }: {
+  jobs: Job[]; toolbar?: ReactNode; showBoard?: boolean; selected?: string; loaded?: boolean; children?: ReactNode;
+}) {
+  const [filters, setFilters] = useState({harness: "", repo: ""});
+  // Merge before filtering so a harness switch never splits a run chain.
+  const chains = mergeJobChains(jobs).filter(chain => chain.runs.some(job =>
+    (!filters.harness || job.harness === filters.harness) && (!filters.repo || job.repo === filters.repo)));
+  return <>
+    <div className="jobs-toolbar flex items-center gap-[14px] border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-[18px] py-[11px]">
+      {([{key: "repo", label: "Repository", all: "All repositories"}, {key: "harness", label: "Harness", all: "All harnesses"}] as const).map(({key, label, all}) =>
+        <label key={key} className={`jobs-filter jobs-filter-${key}`}><span className="sr-only">{label}</span>
+          <select aria-label={label} value={filters[key]} onChange={e => setFilters({...filters, [key]: e.target.value})}>
+            <option value="">{all}</option>
+            {[...new Set(jobs.map(job => job[key]))].filter(Boolean).sort().map(value => <option key={value}>{value}</option>)}
+          </select>
+        </label>)}
+      {toolbar}
+    </div>
+    {showBoard && <div role={toolbar ? "tabpanel" : undefined} id={toolbar ? "jobs-tab-jobs" : undefined} aria-labelledby={toolbar ? "jobs-tab-button-jobs" : undefined}>
+    {loaded && <div className="jobs-board">
+      {JOB_COLUMNS.map(column => {
+        const rows = chains.filter(chain => jobColumn(chain.latest) === column.key);
+        return <section key={column.key} aria-label={column.label} className="jobs-column">
+          <div className="flex items-center gap-[8px] px-1 pb-3 pt-0.5">
+            <span className={`h-[7px] w-[7px] rounded-full ${column.key === "running" ? "shell-breath" : ""}`} style={{background: column.color}} />
+            <h2 className="text-[11px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-2)]">{column.label}</h2>
+            <span className="mono ml-auto rounded-full bg-white/5 px-[7px] py-px text-[10px] text-[var(--color-text-3)]" aria-label={`${column.label} count`}>{rows.length}</span>
+          </div>
+          <div className="flex flex-col gap-[11px]">
+            {rows.length ? rows.map(chain => <JobCard key={chain.root.id} chain={chain} selected={selected} />) : <div className="kb-ghost">{column.empty}</div>}
+          </div>
+        </section>;
+      })}
+    </div>}
+    {children}
+    </div>}
+  </>;
 }
 export function LogView({
   lines,
@@ -310,7 +279,7 @@ function CopyCommand({ command }: { command: string }) {
 function shellArg(value: string) {
   return "'" + value.replaceAll("'", "'\\''") + "'";
 }
-function JobDetail({ id, backHref }: { id: string; backHref: string }) {
+function JobDetail({ id, jobs }: { id: string; jobs: Job[] }) {
   const source = useContext(SourceContext);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [diff, setDiff] = useState<Diff | null>(null);
@@ -383,9 +352,6 @@ function JobDetail({ id, backHref }: { id: string; backHref: string }) {
   }, [id, source]);
   return (
     <>
-      <a className="panel-back" href={backHref}>
-        ← All jobs
-      </a>
       {error && (
         <p className="panel-error" role="alert">
           {error}
@@ -397,13 +363,23 @@ function JobDetail({ id, backHref }: { id: string; backHref: string }) {
           <div className="panel-detail-title">
             <div>
               <div className="panel-eyebrow">
-                {detail.job.issue || detail.job.id}
+                {detail.job.id}
               </div>
               <h1>{detail.job.title || id}</h1>
             </div>
             <Status job={detail.job} />
           </div>
-          <Metadata job={detail.job} />
+          <Metadata job={detail.job} showAccess />
+          <section className="panel-section">
+            <h2>Run timeline</h2>
+            <nav className="panel-timeline" aria-label="Run timeline">
+              {(mergeJobChains(jobs.some(job => job.id === id) ? jobs : [...jobs, detail.job]).find(chain => chain.runs.some(job => job.id === id))?.runs || [detail.job]).map(run =>
+                <a key={run.id} href={jobLink(run.id)} aria-current={run.id === id ? "step" : undefined}>
+                  {run.id} · {run.status} · {run.harness} · {run.duration}
+                </a>)}
+            </nav>
+            <FallbackLinks job={detail.job} />
+          </section>
           <p className="panel-repository">
             {detail.job.repo || "No repository recorded"}
           </p>
@@ -474,26 +450,6 @@ function JobDetail({ id, backHref }: { id: string; backHref: string }) {
             )}
           </section>
           <section className="panel-section">
-            <FallbackLinks job={detail.job} />
-            <h2>Resume chain</h2>
-            <nav className="panel-chain" aria-label="Resume chain">
-              {detail.job.resumeOf && (
-                <a href={jobLink(detail.job.resumeOf)}>
-                  ← {detail.job.resumeOf}
-                </a>
-              )}
-              <span>{id} (current)</span>
-              {detail.job.resumedBy.map((child) => (
-                <a key={child} href={jobLink(child)}>
-                  {child} →
-                </a>
-              ))}
-            </nav>
-            {!detail.job.resumeOf && detail.job.resumedBy.length === 0 && (
-              <p className="panel-caption">No resume links recorded.</p>
-            )}
-          </section>
-          <section className="panel-section">
             <h2>CLI commands</h2>
             <p className="panel-caption">
               Read-only: apply / discard / cancel must be run in the CLI or
@@ -555,7 +511,7 @@ function JobsContent({ standalone }: { standalone: boolean }) {
         setJobs(await getJSON<Job[]>(source, `${source.jobsPath}?all=1`, controller.signal));
         setLoaded(true);
         setError("");
-        setUpdated(new Date().toLocaleTimeString());
+        setUpdated(new Date().toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"}));
       } catch (e) {
         if (!controller.signal.aborted) setError((e as Error).message);
       } finally {
@@ -568,66 +524,48 @@ function JobsContent({ standalone }: { standalone: boolean }) {
       clearTimeout(timer);
     };
   }, [source]);
+  const [tab, setTab] = useState<"jobs" | "routing">("jobs");
+  // Any detail deep link selects Jobs, including hash changes from Routing.
+  useEffect(() => { if (id) setTab("jobs"); }, [id]);
   return (
     <div className="jobs-view" data-testid="view-jobs">
-      <div className="panel-shell">
+      <div className="panel-shell" inert={!!id} aria-hidden={id ? true : undefined}>
         {standalone && <StandaloneHeader />}
         <main>
-          <div className="panel-readonly">
-            <span className="panel-lock">◈</span>
-            <span>
-              Read-only: apply / discard / cancel must be run in the CLI or Claude
-              Code.
-            </span>
-            {standalone && <span className="panel-local">127.0.0.1 · LOCAL</span>}
-          </div>
-          {id ? (
-            <JobDetail key={id} id={id} backHref={standalone ? "#/" : "#/jobs"} />
-          ) : (
-            <>
-              <div className="panel-page-heading">
-                <div>
-                  <div className="panel-eyebrow">HARNESS WORKSPACE</div>
-                  <h1>Delegated jobs</h1>
-                  <p>Track job progress, results and changes.</p>
-                </div>
-                <span className="panel-updated">
-                  <span className="panel-live-dot" />
-                  {updated ? `Updated ${updated}` : "Connecting…"} · Refreshes
-                  every 2s
-                </span>
-              </div>
-              {source.routerPath && <Routing source={source} readOnly={standalone} />}
-              <div className="panel-stats">
-                <div>
-                  <span>All jobs</span>
-                  <strong>{jobs.length}</strong>
-                </div>
-                <div>
-                  <span>Running / queued</span>
-                  <strong>{jobs.filter(active).length}</strong>
-                </div>
-                <div>
-                  <span>Needs attention</span>
-                  <strong className="panel-stat-attention">
-                    {jobs.filter((j) => j.attention.length > 0).length}
-                  </strong>
-                </div>
-              </div>
-              {error && (
-                <p className="panel-error" role="alert">
-                  {error}
-                </p>
-              )}
-              {loaded ? <JobList jobs={jobs} /> : !error && <p className="panel-empty">Loading jobs…</p>}
-              {loaded && <UsageCard source={source} />}
-            </>
-          )}
+          <h1 className="sr-only">Delegated jobs</h1>
+          <JobList jobs={jobs} selected={id} loaded={loaded} showBoard={tab === "jobs"} toolbar={<>
+            <div role="tablist" aria-label="Jobs views" className="flex items-center gap-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] p-0.5">
+              {(["jobs", "routing"] as const).filter(value => value === "jobs" || source.routerPath).map(value =>
+                <button key={value} type="button" role="tab" aria-selected={tab === value} aria-controls={`jobs-tab-${value}`} id={`jobs-tab-button-${value}`} tabIndex={tab === value ? 0 : -1}
+                  onClick={() => setTab(value)} onKeyDown={event => {
+                    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) && source.routerPath) {
+                      event.preventDefault();
+                      const next = event.key === "Home" ? "jobs" : event.key === "End" ? "routing" : tab === "jobs" ? "routing" : "jobs";
+                      setTab(next); document.getElementById(`jobs-tab-button-${next}`)?.focus();
+                    }
+                  }} className="rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors"
+                  style={{color: tab === value ? "var(--color-text-1)" : "var(--color-text-3)", background: tab === value ? "rgba(255,255,255,0.09)" : "transparent"}}>
+                  {value === "jobs" ? "Jobs" : "Routing"}
+                </button>)}
+            </div>
+            <div className="jobs-toolbar-status">
+              <span className="panel-updated">{updated ? `Updated ${updated}` : "Connecting…"}</span>
+              <span className="jobs-readonly" title="Read-only: apply / discard / cancel must be run in the CLI or Claude Code.">Read-only</span>
+            </div>
+          </>}>
+            {error && <p className="panel-error" role="alert">{error}</p>}
+            {!loaded && !error && <p className="panel-empty">Loading jobs…</p>}
+            {loaded && <div className="jobs-usage"><UsageCard source={source} /></div>}
+          </JobList>
+          {tab === "routing" && source.routerPath && <div role="tabpanel" id="jobs-tab-routing" aria-labelledby="jobs-tab-button-routing">
+            <Routing source={source} readOnly={standalone} expanded />
+          </div>}
         </main>
         {standalone && <footer className="panel-footer">
           PACTIFY / LOCAL HARNESS JOBS<span>Job data stays on this device</span>
         </footer>}
       </div>
+      {id && <JobDrawer id={id} jobs={jobs}><JobDetail key={id} id={id} jobs={jobs} /></JobDrawer>}
     </div>
   );
 }

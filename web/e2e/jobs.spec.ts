@@ -6,6 +6,48 @@ async function openJobs(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "Delegated jobs", exact: true })).toBeVisible();
 }
 
+for (const width of [1440, 390]) {
+  test(`Jobs board merges chains, opens a drawer and switches runs at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({width, height: 900});
+    await openJobs(page);
+    const running = page.getByRole("region", {name: "RUNNING", exact: true});
+    const attention = page.getByRole("region", {name: "NEEDS ATTENTION", exact: true});
+    const succeeded = page.getByRole("region", {name: "SUCCEEDED", exact: true});
+    const failed = page.getByRole("region", {name: "FAILED / CANCELED", exact: true});
+    await expect(running.locator("article")).toHaveCount(1);
+    await expect(running.locator("article")).toContainText("2 runs");
+    await expect(running.locator("article")).toContainText("rework 1");
+    await expect(attention.locator("article")).toHaveCount(2);
+    await expect(failed.locator("article")).toContainText("Canceled experiment");
+    const fallback = succeeded.locator("article").filter({hasText: "Recover a quota-limited task"});
+    await expect(fallback).toContainText("fallback → opencode");
+    await expect(fallback).toContainText("2 runs");
+    await expect(page.getByRole("link", {name: "Fallback attempt", exact: true})).toHaveCount(0);
+    await running.getByRole("link", {name: "AJ-659 · Local read-only job panel"}).click();
+    const drawer = page.getByRole("dialog", {name: "Job details"});
+    await expect(drawer).toBeVisible();
+    await expect(page).toHaveURL(/#\/jobs\/job-review$/);
+    await drawer.getByRole("navigation", {name: "Run timeline"}).getByRole("link", {name: /^job-panel ·/}).click();
+    await expect(drawer.getByRole("heading", {name: "AJ-659 · Local read-only job panel", exact: true})).toBeVisible();
+    await expect(drawer.getByRole("log")).toContainText("message Tests passed.");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width === 390) {
+      const box = await drawer.boundingBox();
+      expect(box?.width).toBeCloseTo(390, 0);
+    }
+    await test.info().attach(`jobs-board-drawer-${width}px-final-build`, {body: await page.screenshot({fullPage: true}), contentType: "image/png"});
+    await drawer.getByRole("link", {name: "Close job details"}).click();
+    await expect(drawer).toHaveCount(0);
+    await expect(page).toHaveURL(/#\/jobs$/);
+    await fallback.getByRole("link", {name: "Recover a quota-limited task"}).click();
+    await expect(page).toHaveURL(/#\/jobs\/job-fallback$/);
+    await expect(drawer.getByRole("navigation", {name: "Run timeline"}).getByRole("link")).toHaveCount(2);
+    await page.keyboard.press("Escape");
+    await expect(drawer).toHaveCount(0);
+    await test.info().attach(`jobs-board-${width}px-final-build`, {body: await page.screenshot({fullPage: true}), contentType: "image/png"});
+  });
+}
+
 for (const width of [1440, 375]) {
   test(`Jobs usage shows totals, refreshes slowly and stays within the page at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -61,14 +103,15 @@ test("dashboard Jobs lens persists and shows all repositories, filters and detai
   await page.getByLabel("Harness", { exact: true }).selectOption("codex");
   await expect(page.getByRole("link", { name: "Evaluate resume for large tasks" })).toHaveCount(0);
   await page.getByRole("link", { name: "AJ-659 · Local read-only job panel" }).click();
+  await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
   await expect(page.getByRole("heading", { name: "Result summary" })).toBeVisible();
   await expect(page.getByRole("log")).toContainText("message Tests passed.");
   await expect(page.getByText("Finished", { exact: true })).toBeVisible();
   await page.locator("summary").filter({ hasText: "a/internal/subpanel/server.go" }).click();
   await expect(page.getByText("+func Listen(port int)")).toBeVisible();
-  await page.getByRole("navigation", { name: "Resume chain" }).getByRole("link", { name: "job-review →" }).click();
+  await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-review ·/ }).click();
   await expect(page.getByRole("heading", { name: "Panel acceptance and visual checks", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "← All jobs" }).click();
+  await page.getByRole("link", { name: "Close job details" }).click();
   await expect(page.getByRole("heading", { name: "Delegated jobs", exact: true })).toBeVisible();
 });
 
@@ -97,6 +140,7 @@ for (const theme of ["light", "dark"]) {
       body: Array.from({ length: 1100 }, (_, i) => `data: "message ${i}"\n\n`).join("") + "event: done\ndata: {}\n\n",
     }));
     await page.getByRole("link", { name: "AJ-659 · Local read-only job panel" }).click();
+    await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
     await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
     await expect(page.getByRole("log")).toContainText("message 1099");
     expect(await page.getByRole("log").evaluate((node) => Math.abs(node.scrollHeight - node.clientHeight - node.scrollTop) <= 1)).toBe(true);
@@ -109,7 +153,7 @@ test("Jobs works without registered pact projects and handles empty/error states
   await page.route("**/api/projects", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/sub/jobs?all=1", (route) => route.fulfill({ json: [] }));
   await openJobs(page);
-  await expect(page.getByText("No jobs match these filters.")).toBeVisible();
+  await expect(page.getByText("No running jobs")).toBeVisible();
   await page.unroute("**/api/sub/jobs?all=1");
   await page.route("**/api/sub/jobs?all=1", (route) => route.fulfill({ status: 503, body: "unavailable" }));
   await expect(page.getByRole("alert")).toContainText("503");
@@ -126,6 +170,7 @@ for (const theme of ["light", "dark"]) {
     await page.evaluate(() => document.fonts.ready);
     await test.info().attach(`jobs-list-${theme}-desktop`, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
     await page.getByRole("link", { name: "AJ-659 · Local read-only job panel" }).click();
+    await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
     await expect(page.getByText("Finished", { exact: true })).toBeVisible();
     await test.info().attach(`jobs-detail-${theme}-desktop`, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
   });
@@ -151,7 +196,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole("heading", { name: "Delegated jobs", exact: true })).toBeVisible();
     await assertJobsChrome();
     await page.goto("/#/jobs/job-panel");
-    await expect(page.getByRole("heading", { name: "AJ-659 · Local read-only job panel", exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "AJ-659 · Local read-only job panel", exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("log")).toContainText("message Tests passed.");
     await assertJobsChrome();
@@ -164,8 +209,8 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole("heading", { name: "Panel acceptance and visual checks", exact: true })).toBeVisible();
     await assertJobsChrome();
     await page.evaluate(() => { location.hash = "/jobs/job-panel"; });
-    await expect(page.getByRole("heading", { name: "AJ-659 · Local read-only job panel", exact: true })).toBeVisible();
-    await page.getByRole("link", { name: "← All jobs" }).click();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "AJ-659 · Local read-only job panel", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "Close job details" }).click();
     await expect(page).toHaveURL(/#\/jobs$/);
     await expect(page.getByRole("heading", { name: "Delegated jobs", exact: true })).toBeVisible();
     await assertJobsChrome();

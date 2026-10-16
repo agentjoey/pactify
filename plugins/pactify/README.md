@@ -70,6 +70,16 @@ Lists use `pactify sub status --json` (`--all` for all jobs); see the
 [summary field contract](../../docs/sub-status.md). JSON is projected locally before entering
 the conversation; list mode does not load individual results or logs.
 
+The dashboard also has a **Jobs** tab with the same summaries, details, live logs,
+diff and resume links as the local `pactify sub panel`. For the Owner's deployment,
+open `https://pactify.agentjoey.ai/#/jobs` and sign in through Cloudflare Access.
+Share `#/jobs/<id>` links to open a job directly. The Tunnel forwards to loopback-only serve at `127.0.0.1:17082`; serve does
+not provide login authentication. Alternatively, run `pactify sub panel` locally
+and open its printed one-time URL (or use `--port 17100 --no-open`). Both browser
+entries are read-only and share one Jobs UI; panel retains its independent Bearer
+authentication. See [Jobs view](../../docs/jobs-view.md) for deployment prerequisites,
+`PACTIFY_HOME`, limits and build commands.
+
 ## Reviewing a delegation
 
 1. Read the summary and first-line warnings, then inspect the complete diff and new files. The worktree starts from the original repository HEAD without uncommitted source changes.

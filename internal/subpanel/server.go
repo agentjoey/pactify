@@ -112,10 +112,7 @@ func (s *Server) exchange(token string) bool {
 }
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/jobs", s.jobs)
-	mux.HandleFunc("GET /api/jobs/{id}", s.detail)
-	mux.HandleFunc("GET /api/jobs/{id}/logs", s.logs)
-	mux.HandleFunc("GET /api/jobs/{id}/diff", s.diff)
+	api := http.StripPrefix("/api", ReadOnlyHandler(s.store))
 	root, _ := fs.Sub(assets, "dist")
 	mux.Handle("GET /", http.FileServer(http.FS(root)))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -145,13 +142,41 @@ func (s *Server) Handler() http.Handler {
 			_, _ = io.WriteString(w, strings.Replace(string(page), "</head>", `<meta name="pactify-session" content="`+s.token+`"></head>`, 1))
 			return
 		}
-		if strings.HasPrefix(r.URL.Path, "/api/") && !s.authenticated(r) {
-			http.Error(w, "unauthorized", 401)
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			if !s.authenticated(r) {
+				http.Error(w, "unauthorized", 401)
+				return
+			}
+			api.ServeHTTP(w, r)
 			return
 		}
 		mux.ServeHTTP(w, r)
 	})
 }
+
+// ReadOnlyHandler serves /jobs and its detail, logs and diff subresources.
+// The host owns authentication and must mount this behind its security boundary.
+// Reads use atomic snapshots and never recover workers or write job files.
+func ReadOnlyHandler(store sub.Store) http.Handler {
+	s := &Server{store: store}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /jobs", s.jobs)
+	mux.HandleFunc("GET /jobs/{id}", s.detail)
+	mux.HandleFunc("GET /jobs/{id}/logs", s.logs)
+	mux.HandleFunc("GET /jobs/{id}/diff", s.diff)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		// Go's GET patterns also accept HEAD; these APIs accept GET exclusively.
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, "read-only: GET required", http.StatusMethodNotAllowed)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
+}
+
 func jsonResponse(w http.ResponseWriter, value any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(value)

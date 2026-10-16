@@ -3,6 +3,7 @@ package sub
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,6 +18,9 @@ import (
 // JobSummary is the shared contract for status, /jobs and the local panel.
 // Empty metadata stays empty for historical jobs; it is never guessed from ids.
 type JobSummary struct {
+	RetryAttempt   int              `json:"retryAttempt,omitempty"`
+	RetryLimit     int              `json:"retryLimit,omitempty"`
+	RetryCount     int              `json:"retryCount,omitempty"`
 	FailureClass   string           `json:"failureClass,omitempty"`
 	QuotaResetAt   *time.Time       `json:"quotaResetAt,omitempty"`
 	ID             string           `json:"id"`
@@ -200,6 +204,11 @@ func (s Store) Summarize(st State, peers []State, now time.Time) JobSummary {
 	if st.Status == StatusFailed || st.Status == StatusCanceled {
 		row.FailureClass, row.QuotaResetAt = result.FailureClass, result.QuotaResetAt
 	}
+	row.RetryCount = len(result.Retries)
+	if st.Status == StatusRunning {
+		row.RetryAttempt, row.RetryLimit = st.RetryAttempt, st.RetryLimit
+		row.RetryCount = len(st.Retries)
+	}
 	row.ModelActual = result.ModelActual
 	row.InputTokens, row.OutputTokens = result.InputTokens, result.OutputTokens
 	row.UsagePartial = result.UsagePartial
@@ -267,6 +276,9 @@ func (s Store) activity(id string) *Activity {
 		if !ok {
 			continue
 		}
+		if event.Kind == cockpit.EventSystem {
+			collector.Add(event.Event)
+		}
 		if event.Kind == cockpit.EventUsage {
 			collector.Add(event.Event)
 			if event.Usage != nil || collector.threadTotals != nil {
@@ -317,4 +329,16 @@ func actionableWarnings(r Result) int {
 		}
 	}
 	return n
+}
+
+// StatusText keeps lifecycle status stable while displaying retry progress.
+func (r JobSummary) StatusText(now time.Time) string {
+	if r.Status == StatusRunning && r.RetryAttempt > 0 {
+		return fmt.Sprintf("retrying (%d/%d)", r.RetryAttempt, r.RetryLimit)
+	}
+	label := FailureStatus(r.Status, r.FailureClass, r.QuotaResetAt, now)
+	if Terminal(r.Status) && r.RetryCount > 0 {
+		label += fmt.Sprintf(" (retries: %d)", r.RetryCount)
+	}
+	return label
 }

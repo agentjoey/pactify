@@ -20,6 +20,9 @@ export interface Job {
   configMode: string;
   status: string;
   duration: string;
+  retryAttempt?: number;
+  retryLimit?: number;
+  retryCount?: number;
   failureClass?: string;
   quotaResetAt?: string;
   createdAt: string;
@@ -87,8 +90,9 @@ function Status({ job }: { job: Job }) {
       color={job.status === "failed" ? "danger" : job.status === "queued" ? "warn" : active(job) || job.status === "succeeded" ? "success" : "text-2"}
       className="panel-status"
     >
-      {labels[job.status] || job.status}
+      {job.status === "running" && job.retryAttempt ? `retrying (${job.retryAttempt}/${job.retryLimit})` : labels[job.status] || job.status}
     </Badge>
+    {!active(job) && !!job.retryCount && <Badge color="text-2">retries: {job.retryCount}</Badge>}
     {(job.status === "failed" || job.status === "canceled") && job.failureClass && <Badge color="warn" className="panel-failure-class">{job.failureClass}</Badge>}
     </>
   );

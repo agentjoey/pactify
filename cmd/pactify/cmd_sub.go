@@ -70,6 +70,7 @@ func newSubCmd() *cobra.Command {
 		code, err := subRun(c, runHarness, model, effort, cwd, readOnly, write, c.Flags().Changed("resume"), fresh, wait, jsonOut, resume)
 		subExit(c, code, err)
 	}}
+	run.Flags().Int("retries", sub.DefaultRetries, "Transient continuations (0 disables, maximum 5)")
 	run.Flags().StringVar(&model, "model", "", "Requested model (must be available)")
 	run.Flags().StringVar(&effort, "effort", "", "Reasoning effort")
 	run.Flags().StringVar(&cwd, "cwd", ".", "Working directory")
@@ -141,6 +142,13 @@ func newSubCmd() *cobra.Command {
 const subResumeLatest = "<latest/session>"
 
 func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool, resumeJob string) (int, error) {
+	retries := sub.DefaultRetries
+	if c.Flags().Lookup("retries") != nil {
+		retries, _ = c.Flags().GetInt("retries")
+	}
+	if retries < 0 || retries > sub.MaxRetries {
+		return 2, fmt.Errorf("--retries must be between 0 and %d", sub.MaxRetries)
+	}
 	if resume && fresh {
 		return 2, fmt.Errorf("--resume and --fresh cannot be used together")
 	}
@@ -196,6 +204,7 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 		return 2, fmt.Errorf("task brief must not be empty; provide it on stdin")
 	}
 	req := sub.Request{Harness: name, Model: model, Effort: effort, Cwd: dir, Brief: string(brief), Access: "write"}
+	req.Retries = &retries
 	req.WithUserConfig, _ = c.Flags().GetBool("with-user-config")
 	if readOnly {
 		req.Access = "read-only"

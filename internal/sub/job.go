@@ -25,6 +25,7 @@ const (
 )
 
 type Request struct {
+	Retries        *int   `json:"retries,omitempty"` // nil uses the default; zero disables retries.
 	WithUserConfig bool   `json:"withUserConfig"`
 	Harness        string `json:"harness"`
 	Model          string `json:"model,omitempty"`
@@ -36,6 +37,9 @@ type Request struct {
 }
 
 type State struct {
+	RetryAttempt         int               `json:"retryAttempt,omitempty"`
+	RetryLimit           int               `json:"retryLimit,omitempty"`
+	Retries              []Retry           `json:"retries,omitempty"`
 	Descendants          []procx.Identity  `json:"descendants,omitempty"`
 	ProcessTrackingError string            `json:"processTrackingError,omitempty"`
 	TempDirOwned         bool              `json:"tempDirOwned,omitempty"`

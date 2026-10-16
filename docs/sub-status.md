@@ -37,6 +37,8 @@ pactify sub status <id> --json                # 单个对象
 | `worktree` | object，可省略 | 保留既有 worktree 字段，并新增 `status`：`pending` / `applied` / `discarded`；非 worktree job 省略 |
 | `failureClass` | string，可省略 | 失败类别：`transient` / `quota` / `auth` / `model` / `idle_timeout` / `canceled` / `other`；新失败和取消 job 必填，成功及未结束 job 不写；旧 job 可缺失 |
 | `quotaResetAt` | RFC3339 string，可省略 | quota 的已知重置时间；无法解析时省略，其他类别不写 |
+| `retryAttempt` / `retryLimit` | number，可省略 | running job 正在等待或执行的续接序号 / 上限；有这些字段时显示 `retrying (n/N)`；底层 status 仍为 running |
+| `retryCount` | number，可省略 | 已发起的自动续接次数；终态显示续接次数，0 时省略；不计手动 resume |
 | `status` | string | `queued` / `running` / `succeeded` / `failed` / `canceled` |
 | `createdAt` | RFC3339 string | 创建时间 |
 | `startedAt` | RFC3339 string，可省略 | worker 领取 job、进入 running 的时间；旧 job 不从 `updatedAt` 猜测 |
@@ -128,3 +130,51 @@ CLI 对应只读接口 `pactify sub quota --json`，返回 QuotaRoute 数组，�
 `sub status` / `sub result` 显示如 `failed (quota, resets in 6d 23h)`；
 `/jobs` skill 通过独立 quota 查询展示当前耗尽路线，Jobs 卡片显示类别标签。
 历史 result 缺少分类时不回写或猜测，继续兼容显示。
+
+
+## 临时错误自动续接（AJ-693 / R2）
+
+`sub run --retries N` 接受 0–5，默认 2；0 关闭自动续接。Request 中保存
+`retries` 数值，旧请求未记录时采用默认值。仅在一轮失败经 R1 分类为 transient、
+job 尚未取消且会话仍可用时续接。quota、auth、model、idle_timeout、canceled、other
+不续接；成功回复中的错误关键词也不触发。首次等待 30 秒，第二次及后续均等待 120 秒。
+context 取消立即结束等待；没有收到信号时，每 100 ms 检查持久化取消标记。
+退避不触发 idle timeout，下一轮重新计算空闲时间。
+
+续接发送固定提示词：
+
+> The previous turn was interrupted by a transient backend error. Continue the task from where you left off; do not redo completed steps.
+
+同一个 job、session 对象、harness、模型和 effort 继续使用，不调用 Start/Resume 创建
+另一个会话，也不提前关闭或隐藏会话。各 adapter 的路径已从实现确认：
+
+| Harness | 同会话下一轮 |
+| --- | --- |
+| codex | 原 threadId 上再次 `turn/start`；最终 Close 才 archive |
+| kimi | 原 ACP sessionId 上再次 `session/prompt` |
+| agy | 下一轮进程传 `--conversation <id>`；未显式选模型时锁定首轮报告的模型 |
+| opencode | 原 ACP sessionId 上再次 `session/prompt` |
+
+四者都有续接接口。分类仍完全沿用 R1；目前 Kimi/opencode 的匹配表尚无 transient
+证据，因此未识别的后端错误仍归 other，不因支持同会话 prompt 就扩大重试范围。
+不支持续接的 adapter、或没有 session id 时，在 result.warnings 中记录
+`transient retry unsupported for <harness>`，保留原失败，不另开会话。
+
+退避和续接执行期间仍为 `status: running`；`retryAttempt` / `retryLimit` 表示正在尝试
+第几次续接，供 CLI、`/jobs` 与 Jobs 页显示 `retrying (n/N)`。`retryCount` 只计已发起
+的续接，取消在退避期间发生时不增加。result 新增：
+
+```json
+{"retries":[{"class":"transient","error":"UNAVAILABLE (code 503)","at":"2026-10-16T04:00:00Z"}]}
+```
+
+每个条目对应一次续接，error 是触发该次续接的上一轮错误，at 为发起时间。
+State 同时保存历史用于 worker 消失后的兜底结果；终态摘要的 retryCount 以 result 为准。
+终稿只取最后一轮回复；最后一轮失败时按该轮分类（次数耗尽仍为 transient），成功则清空
+failureClass。用户取消仍优先。先前的 transient 错误移入 retries，不遮盖最后一轮错误。
+
+多轮的 token / 成本按现有口径累计：Codex thread running totals、agy / opencode
+adapter 累计值不重复相加；Kimi prompt usage 在轮间累加。Kimi wire 和 opencode export
+仍只在最终结束时验证，基线覆盖当前 job 的所有 prompts，包含失败轮次。一次异常结束可能
+漏末段用量，即使续接成功也保守保留 usagePartial。`sub cost` 的 RETRIES 是有过续接的
+job 数，单个 job 续接多次也只计 1；手动 `--resume` 产生新 job，不计自动续接。

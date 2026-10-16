@@ -168,7 +168,7 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 		if len(row.Attention) > 0 {
 			marker = "  ⚠"
 		}
-		if _, err := fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s  %s  %s%s\n", row.ID, sub.FailureStatus(row.Status, row.FailureClass, row.QuotaResetAt, now), row.Harness, row.Duration, row.Title, marker); err != nil {
+		if _, err := fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s  %s  %s%s\n", row.ID, row.StatusText(now), row.Harness, row.Duration, row.Title, marker); err != nil {
 			return 1, err
 		}
 	}

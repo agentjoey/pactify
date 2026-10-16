@@ -22,6 +22,8 @@ type Collector struct {
 	ErrorRaw       json.RawMessage
 	FailureMessage string
 
+	usageBase    cockpit.Usage
+	perTurnUsage bool
 	threadTotals map[string]cockpit.Usage
 }
 
@@ -43,7 +45,7 @@ func collectLoggedUsage(path string) Collector {
 		return bufio.ScanLines(data, atEOF)
 	})
 	for scanner.Scan() {
-		if event, ok := parseLogEvent(scanner.Text()); ok && (event.Kind == cockpit.EventUsage || event.Kind == cockpit.EventTool) {
+		if event, ok := parseLogEvent(scanner.Text()); ok && (event.Kind == cockpit.EventUsage || event.Kind == cockpit.EventTool || event.Kind == cockpit.EventSystem) {
 			c.Add(event.Event)
 		}
 	}
@@ -51,6 +53,17 @@ func collectLoggedUsage(path string) Collector {
 }
 
 func (c *Collector) Add(e cockpit.Event) {
+	if e.Kind == cockpit.EventSystem && e.State == "transient_retry" {
+		c.finalText = ""
+		c.chunks.Reset()
+		c.TurnDone, c.TurnErr, c.FailureMessage = false, "", ""
+		c.FailureRaw, c.ErrorRaw = nil, nil
+		c.perTurnUsage = e.Text == "kimi"
+		if c.perTurnUsage {
+			c.usageBase = c.Usage
+		}
+		return
+	}
 	if e.Kind == cockpit.EventError && len(e.Raw) > 0 {
 		c.ErrorRaw = append(json.RawMessage(nil), e.Raw...)
 	}
@@ -97,6 +110,12 @@ func (c *Collector) Add(e cockpit.Event) {
 	case cockpit.EventUsage:
 		if e.Usage != nil {
 			c.Usage = *e.Usage
+			if c.perTurnUsage {
+				c.Usage.InputTokens += c.usageBase.InputTokens
+				c.Usage.OutputTokens += c.usageBase.OutputTokens
+				c.Usage.TotalTokens += c.usageBase.TotalTokens
+				c.Usage.CostUSD += c.usageBase.CostUSD
+			}
 		}
 		// codex reports the last request as Usage; the job's cost is the sum of each
 		// thread's running total (the main agent and any sub-agent threads).

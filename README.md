@@ -75,6 +75,16 @@ Phase 0 large tasks completed in one attempt 6/10, and read-only work did not co
 kimi results include an informational warning; `kimi --read-only` still exits 2.
 See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.
 
+Transient backend failures automatically continue in the same job and session, keeping
+its harness and model. `pactify sub run --retries N` allows 0–5 continuations (default 2;
+0 disables them). Backoff is 30 seconds for the first continuation and 120 seconds for
+each later one; cancellation also stops the backoff. Other failure classes are never
+retried. Status, `/jobs` and the Jobs page show `retrying (n/N)` during backoff and
+continuation, then the number of retries on completion. Results record retry history,
+combined usage and the last turn's reply and failure class; `sub cost` counts jobs with
+at least one retry. Missing session ids produce an unsupported warning instead of a
+fresh session. See the [retry contract](docs/sub-status.md#临时错误自动续接aj-693--r2).
+
 For rework, use `pactify sub run [harness] --resume <job-id> --worktree` to continue the
 reviewed job in its original worktree. `--resume=<job-id>` also works. An exact id takes
 priority; a unique prefix of the full id or its final random component is accepted.

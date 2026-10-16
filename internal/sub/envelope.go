@@ -8,7 +8,14 @@ import (
 	"unicode/utf8"
 )
 
+type Retry struct {
+	Class string    `json:"class"`
+	Error string    `json:"error"`
+	At    time.Time `json:"at"`
+}
+
 type Result struct {
+	Retries        []Retry    `json:"retries,omitempty"`
 	failureMessage string     // Provider error used for quota memory; does not replace State.Error.
 	FailureClass   string     `json:"failureClass,omitempty"`
 	QuotaResetAt   *time.Time `json:"quotaResetAt,omitempty"`
@@ -77,6 +84,9 @@ func (r Result) Markdown() string {
 		fmt.Fprintf(&b, "\nHarness: %s · CLI: %s\n", r.Harness, r.CLIVersion)
 	} else {
 		fmt.Fprintf(&b, "\nHarness: %s (%s config) · CLI: %s\n", r.Harness, r.ConfigMode, r.CLIVersion)
+	}
+	if len(r.Retries) > 0 {
+		fmt.Fprintf(&b, "Retries: %d\n", len(r.Retries))
 	}
 	requested := r.ModelRequested
 	if requested == "" {

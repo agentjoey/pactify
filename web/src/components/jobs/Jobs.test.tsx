@@ -141,3 +141,14 @@ it("shows a failure class badge on failed cards and tolerates legacy jobs", asyn
  expect(within(link.closest("article")!).getByText("quota", {exact:true})).toBeInTheDocument();
  expect(screen.getByRole("link",{name:"Legacy failed task"})).toBeInTheDocument();
 });
+
+
+it("shows retry progress and completed retry counts", async () => {
+ vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([
+  {...job, retryAttempt: 1, retryLimit: 2},
+  {...job, id: "retried", title: "Recovered task", status: "succeeded", activity: undefined, retryCount: 2},
+ ]))));
+ render(<Jobs />);
+ expect(await screen.findByText("retrying (1/2)")).toBeInTheDocument();
+ expect(screen.getByText("retries: 2")).toBeInTheDocument();
+});

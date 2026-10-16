@@ -61,7 +61,7 @@ CLI 生成的表头、提示、错误、帮助和成本标签统一使用英文�
 
 `usagePartialJobs` 单独统计 `usagePartial: true` 的 job，表格 `PARTIAL` 列显示数量；
 它们已记录的 token 和成本仍计入总量，不能把汇总理解为完整用量。
-`retries` / `fallbacks` 为 R2 / R3 预留，目前始终为 0；手动 `resumeOf` 不计入 retries。
+`retries` 统计 result.retries 非空的 job 数；同一 job 续接多次仍只计 1，手动 `resumeOf` 不计入 retries。`fallbacks` 仍为 R3 预留，目前始终为 0。
 
 ## JSON 结构
 

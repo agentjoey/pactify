@@ -115,14 +115,14 @@ func snapshotOpencodeUserData() (func() error, error) {
 	}, nil
 }
 
-// Prefer IDs containing -free, favoring flash/mini/lite/nano within that set.
+// Prefer IDs ending in -free, favoring flash/mini/lite/nano within that set.
 // Without free models, keep the original name-based tiers (not a price quote).
 // Preserve live-list order within each tier.
 func opencodeDoctorModel(models []string) string {
 	firstFree := ""
 	for _, m := range models {
 		name := strings.ToLower(m)
-		if !strings.Contains(name, "-free") {
+		if !strings.HasSuffix(name, "-free") {
 			continue
 		}
 		if firstFree == "" {

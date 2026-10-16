@@ -13,12 +13,15 @@ import (
 )
 
 // NewACPBackend returns a cockpit.Backend that drives an ACP-compatible agent.
-// Supported kinds are "kimi-cli" and "opencode".
+// Kimi uses ACP; opencode is routed to its v1 HTTP/SSE backend.
 func NewACPBackend(kind string) Backend {
 	return newACPBackend(kind)
 }
 
 func newACPBackend(kind string) Backend {
+	if kind == "opencode" {
+		return NewOpencodeBackend()
+	}
 	return &acpBackend{kind: kind}
 }
 
@@ -32,12 +35,6 @@ func (b *acpBackend) Start(ctx context.Context, opts StartOpts) (Session, error)
 		return nil, err
 	}
 
-	if b.kind == "opencode" {
-		opts.Env, err = OpencodeEnv(opts)
-		if err != nil {
-			return nil, err
-		}
-	}
 	client, err := acp.Spawn(ctx, cmd, args, opts.Env, opts.RepoDir, opts.Stderr)
 	if err != nil {
 		return nil, fmt.Errorf("acp spawn %q: %w", b.kind, err)
@@ -55,16 +52,12 @@ func (b *acpBackend) Start(ctx context.Context, opts StartOpts) (Session, error)
 	}
 
 	var info SessionInfo
-	if b.kind == "opencode" {
-		info, err = applyOpencodeOpts(ctx, client, res.SessionID, res, opts)
-	} else {
-		info, err = applyACPOpts(ctx, client, res.SessionID, res, opts)
-	}
+	info, err = applyACPOpts(ctx, client, res.SessionID, res, opts)
 	if err != nil {
 		_ = client.Close()
 		return nil, &StartError{ID: string(res.SessionID), Err: fmt.Errorf("acp configure %q: %w", b.kind, err)}
 	}
-	sess := configuredACPSession(client, res.SessionID, b.kind)
+	sess := newACPSession(client, res.SessionID)
 	sess.info = info
 	return sess, nil
 }
@@ -79,12 +72,6 @@ func (b *acpBackend) ResumeWith(ctx context.Context, threadID string, opts Start
 		return nil, err
 	}
 
-	if b.kind == "opencode" {
-		opts.Env, err = OpencodeEnv(opts)
-		if err != nil {
-			return nil, err
-		}
-	}
 	client, err := acp.Spawn(ctx, cmd, args, opts.Env, opts.RepoDir, opts.Stderr)
 	if err != nil {
 		return nil, fmt.Errorf("acp spawn %q: %w", b.kind, err)
@@ -97,26 +84,17 @@ func (b *acpBackend) ResumeWith(ctx context.Context, threadID string, opts Start
 
 	sid := acp.SessionID(threadID)
 	var info SessionInfo
-	if b.kind == "opencode" {
-		res, loadErr := client.LoadSessionDetailed(ctx, sid)
-		if loadErr != nil {
-			_ = client.Close()
-			return nil, fmt.Errorf("acp load session %q: %w", b.kind, loadErr)
-		}
-		info, err = applyOpencodeOpts(ctx, client, sid, res, opts)
-	} else {
-		if loadErr := client.LoadSession(ctx, sid); loadErr != nil {
-			_ = client.Close()
-			return nil, fmt.Errorf("acp load session %q: %w", b.kind, loadErr)
-		}
-		info, err = applyACPResumeOpts(ctx, client, sid, opts)
+	if loadErr := client.LoadSession(ctx, sid); loadErr != nil {
+		_ = client.Close()
+		return nil, fmt.Errorf("acp load session %q: %w", b.kind, loadErr)
 	}
+	info, err = applyACPResumeOpts(ctx, client, sid, opts)
 
 	if err != nil {
 		_ = client.Close()
 		return nil, &StartError{ID: threadID, Err: fmt.Errorf("acp configure resumed %q: %w", b.kind, err)}
 	}
-	sess := configuredACPSession(client, sid, b.kind)
+	sess := newACPSession(client, sid)
 	sess.info = info
 	return sess, nil
 }
@@ -129,8 +107,6 @@ func acpCommandFor(kind string) (command string, args []string, err error) {
 	switch kind {
 	case "kimi-cli":
 		return "kimi", []string{"acp"}, nil
-	case "opencode":
-		return "opencode", []string{"acp"}, nil
 	default:
 		return "", nil, fmt.Errorf("acp: unsupported kind %q", kind)
 	}
@@ -145,25 +121,21 @@ type acpSession struct {
 	approvals chan ApprovalRequest
 	done      chan struct{}
 
-	closeOnce    sync.Once
-	closeErr     error
-	dispatchMu   sync.RWMutex
-	closed       bool
-	info         SessionInfo
-	opencode     bool
-	accountingMu sync.Mutex
-	usage        Usage
-	promptFn     func(context.Context, string) (acp.StopReason, error)
-	cancelFn     func() error
+	closeOnce  sync.Once
+	closeErr   error
+	dispatchMu sync.RWMutex
+	closed     bool
+	info       SessionInfo
+	textMu     sync.Mutex
+	text       strings.Builder
+	promptFn   func(context.Context, string) (acp.StopReason, error)
+	cancelFn   func() error
 }
 
 func newACPSession(client *acp.Client, sid acp.SessionID) *acpSession {
-	return configuredACPSession(client, sid, "")
-}
-func configuredACPSession(client *acp.Client, sid acp.SessionID, kind string) *acpSession {
+
 	s := &acpSession{
 		client:    client,
-		opencode:  kind == "opencode",
 		sid:       sid,
 		events:    make(chan Event, 64),
 		approvals: make(chan ApprovalRequest, 16),
@@ -174,10 +146,6 @@ func configuredACPSession(client *acp.Client, sid acp.SessionID, kind string) *a
 		s.promptFn = func(ctx context.Context, text string) (acp.StopReason, error) { return client.Prompt(ctx, sid, text) }
 		s.cancelFn = func() error { return client.Cancel(sid) }
 		client.OnSessionUpdateFor(sid, func(u acp.SessionUpdate) {
-			if s.opencode {
-				s.opencodeUpdate(u)
-				return
-			}
 			if e, ok := MapACPUpdateToEvent(u); ok {
 				s.dispatchEvent(e)
 			}
@@ -197,17 +165,27 @@ func configuredACPSession(client *acp.Client, sid acp.SessionID, kind string) *a
 }
 
 func (s *acpSession) Prompt(ctx context.Context, msg UserMessage) error {
+	s.textMu.Lock()
+	s.text.Reset()
+	s.textMu.Unlock()
 	stop, err := s.promptFn(ctx, msg.Text)
 	e := Event{Kind: EventState, State: StateTurnCompleted, Text: string(stop)}
 	if err != nil {
 		e = Event{Kind: EventState, State: StateTurnFailed, Err: err.Error()}
 		var coded interface{ RPCCode() int }
 		if errors.As(err, &coded) {
-			e.Raw, _ = json.Marshal(map[string]any{"code": coded.RPCCode()})
+			e.Raw, _ = json.Marshal(map[string]any{"code": coded.RPCCode(), "data": rpcErrorData(err)})
 		}
 	}
-	if s.opencode && stop == "cancelled" {
-		e = Event{Kind: EventState, State: StateTurnFailed, Err: "opencode cancelled"}
+	if err == nil && stop != "end_turn" {
+		e = Event{Kind: EventState, State: StateTurnFailed, Err: "ACP stopped: " + string(stop)}
+		e.Raw, _ = json.Marshal(map[string]any{"stopReason": stop})
+	}
+	s.textMu.Lock()
+	text := s.text.String()
+	s.textMu.Unlock()
+	if text != "" {
+		e.Text, e.Final = text, true
 	}
 	s.dispatchEvent(e)
 	return err
@@ -240,16 +218,19 @@ func (s *acpSession) dispatchEvent(e Event) {
 	if s.closed {
 		return
 	}
-	if (s.opencode && e.Kind == EventUsage) || (e.Kind == EventState && (e.State == StateTurnCompleted || e.State == StateTurnFailed)) {
-		select {
-		case s.events <- e:
-		case <-s.done:
-		}
-		return
+	if e.Kind == EventTool && e.Tool != nil && e.Tool.Phase == "start" {
+		s.textMu.Lock()
+		s.text.Reset()
+		s.textMu.Unlock()
+	}
+	if e.Kind == EventMessage && !e.Final {
+		s.textMu.Lock()
+		s.text.WriteString(e.Text)
+		s.textMu.Unlock()
 	}
 	select {
 	case s.events <- e:
-	default:
+	case <-s.done:
 	}
 }
 
@@ -392,10 +373,7 @@ type acpConfigurer interface {
 
 // applyACPOpts applies only explicit overrides and reports confirmed session settings.
 func applyACPOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID, res acp.NewSessionResult, opts StartOpts) (SessionInfo, error) {
-	return applyACPOptsFor(ctx, c, sid, res, opts, "kimi")
-}
 
-func applyACPOptsFor(ctx context.Context, c acpConfigurer, sid acp.SessionID, res acp.NewSessionResult, opts StartOpts, harness string) (SessionInfo, error) {
 	info := SessionInfo{Access: res.CurrentModeID}
 	if m, ok := acp.FindConfig(res.ConfigOptions, "model"); ok {
 		info.Model = m.CurrentValue
@@ -409,15 +387,15 @@ func applyACPOptsFor(ctx context.Context, c acpConfigurer, sid acp.SessionID, re
 			return info, fmt.Errorf("%w (asked for %q); available models: none advertised", ErrModelUnsupported, opts.Model)
 		}
 		if !offers(m, opts.Model) {
-			return info, fmt.Errorf("%w: %q; available: %s", ErrModelUnavailable, opts.Model, modelChoices(harness, opts.Model, values(m)))
+			return info, fmt.Errorf("%w: %q; available: %s", ErrModelUnavailable, opts.Model, modelChoices("kimi", opts.Model, values(m)))
 		}
 		updated, err := c.SetConfigOption(ctx, sid, m.ID, opts.Model)
 		if err != nil {
-			return info, fmt.Errorf("set model %q: %w; available: %s", opts.Model, err, modelChoices(harness, opts.Model, values(m)))
+			return info, fmt.Errorf("set model %q: %w; available: %s", opts.Model, err, modelChoices("kimi", opts.Model, values(m)))
 		}
 		actual, ok := acp.FindConfig(updated, m.ID)
 		if !ok || actual.CurrentValue != opts.Model {
-			return info, fmt.Errorf("%w: asked for %q, reported %q; available: %s", ErrModelUnavailable, opts.Model, actual.CurrentValue, modelChoices(harness, opts.Model, values(m)))
+			return info, fmt.Errorf("%w: asked for %q, reported %q; available: %s", ErrModelUnavailable, opts.Model, actual.CurrentValue, modelChoices("kimi", opts.Model, values(m)))
 		}
 		info.Model = actual.CurrentValue
 		// Model selection can change the available thought levels.
@@ -450,7 +428,7 @@ func applyACPOptsFor(ctx context.Context, c acpConfigurer, sid acp.SessionID, re
 		if m, ok := acp.FindConfig(updated, "model"); ok {
 			info.Model = m.CurrentValue
 			if opts.Model != "" && info.Model != opts.Model {
-				return info, fmt.Errorf("%w: asked for %q, reported %q after setting effort; available: %s", ErrModelUnavailable, opts.Model, info.Model, modelChoices(harness, opts.Model, values(m)))
+				return info, fmt.Errorf("%w: asked for %q, reported %q after setting effort; available: %s", ErrModelUnavailable, opts.Model, info.Model, modelChoices("kimi", opts.Model, values(m)))
 			}
 		}
 	}
@@ -529,38 +507,6 @@ func applyACPResumeOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID,
 	return info, nil
 }
 
-// opencode emits cumulative session cost separately from per-prompt token usage.
-// Preserve cost across prompt replies and never interpret context-window used as tokens.
-func (s *acpSession) opencodeUpdate(u acp.SessionUpdate) {
-	s.accountingMu.Lock()
-	defer s.accountingMu.Unlock()
-	if u.Kind == "usage_update" {
-		var update struct {
-			Cost *struct {
-				Amount   float64 `json:"amount"`
-				Currency string  `json:"currency"`
-			} `json:"cost"`
-		}
-		if json.Unmarshal(u.Raw, &update) == nil && update.Cost != nil && update.Cost.Currency == "USD" {
-			s.usage.CostUSD = update.Cost.Amount
-		}
-		usage := s.usage
-		s.dispatchEvent(Event{Kind: EventUsage, Usage: &usage, Raw: cloneRaw(u.Raw)})
-		return
-	}
-	if u.Usage != nil {
-		s.usage.InputTokens += u.Usage.InputTokens + u.Usage.CachedReadTokens
-		s.usage.OutputTokens += u.Usage.OutputTokens
-		s.usage.TotalTokens = s.usage.InputTokens + s.usage.OutputTokens
-		usage := s.usage
-		s.dispatchEvent(Event{Kind: EventUsage, Usage: &usage, Raw: cloneRaw(u.Raw)})
-		return
-	}
-	if e, ok := MapACPUpdateToEvent(u); ok {
-		s.dispatchEvent(e)
-	}
-}
-
 // Kimi documents AUTH_REQUIRED (-32000):
 // https://github.com/MoonshotAI/kimi-cli/blob/main/docs/en/reference/kimi-acp.md
 var kimiFailureRules = []failureRule{
@@ -570,6 +516,17 @@ var kimiFailureRules = []failureRule{
 }
 
 func acpFailure(message string, raw json.RawMessage, rules []failureRule) Failure {
+	var stop struct {
+		StopReason string `json:"stopReason"`
+	}
+	if json.Unmarshal(raw, &stop) == nil {
+		switch stop.StopReason {
+		case "cancelled":
+			return Failure{Class: "canceled"}
+		case "refusal", "max_tokens", "max_turn_requests":
+			return Failure{Class: stop.StopReason}
+		}
+	}
 	var rpc struct {
 		Code int `json:"code"`
 	}

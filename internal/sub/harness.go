@@ -33,12 +33,11 @@ type Harness struct {
 	Experimental string
 	// MinimalConfig is supported only after a native, process-local path has
 	// been verified. Unavailable harnesses retain user config and say why.
-	MinimalConfig        bool
-	Home                 *harnessHome
-	VerificationBaseline func(context.Context, VerificationInput) (int64, error)
-	LocalUsageBaseline   func(string, string) (int64, error)
-	DoctorModel          string
-	Models               func(context.Context, cockpit.StartOpts) ([]string, error)
+	MinimalConfig      bool
+	Home               *harnessHome
+	LocalUsageBaseline func(string, string) (int64, error)
+	DoctorModel        string
+	Models             func(context.Context, cockpit.StartOpts) ([]string, error)
 	// ModelDetails shares Models discovery while retaining public selection metadata.
 	ModelDetails func(context.Context, cockpit.StartOpts) (cockpit.ModelDiscovery, error)
 	// Every harness must keep delegated sessions out of the user's own session
@@ -55,7 +54,7 @@ type VerificationInput struct {
 	Cwd        string
 	SessionID  string
 	Info       cockpit.SessionInfo
-	WireOffset int64 // Byte offset for kimi; exported message count for opencode.
+	WireOffset int64 // Byte offset for kimi.
 	Prompts    int
 }
 
@@ -93,11 +92,16 @@ var registry = map[string]Harness{
 		},
 	},
 	"opencode": {
-		TransientRetry: true, Name: "opencode", Kind: "opencode", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("opencode") },
+		TransientRetry: true, Name: "opencode", Kind: "opencode", Backend: cockpit.NewOpencodeBackend,
 		Version:      cliVersion("opencode", opencodeVendorStrip()...),
-		Experimental: "opencode is an experimental harness (large tasks completed in one attempt 6/10; read-only work never converged)", MinimalConfig: true,
-		Home: opencodeHomes(), Models: cockpit.OpencodeModels, NoReadOnly: cockpit.OpencodeNoReadOnly,
-		Verify: verifyOpencode, VerificationBaseline: opencodeBaseline,
+		Experimental: "opencode is an experimental harness (large tasks completed in one attempt 6/10)", MinimalConfig: true,
+		Home: opencodeHomes(), Models: cockpit.OpencodeModels,
+		Verify: func(_ context.Context, v VerificationInput) Verification {
+			if v.Info.Model == "" {
+				return Verification{UsagePartial: true, Warning: "Opencode did not report an assistant model; model could not be verified"}
+			}
+			return Verification{Model: v.Info.Model, Verified: true}
+		},
 		Conceal: func(ConcealContext) error {
 			return fmt.Errorf("opencode --with-user-config keeps sessions in the user's session list; use minimal config to hide delegated sessions")
 		},

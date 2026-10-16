@@ -43,7 +43,7 @@ func TestHarnessUsageOnAbnormalExit(t *testing.T) {
 				store, s, b := workerFixture(t, "write")
 				h, _ := Lookup(name)
 				h.Version, h.Conceal = nil, nil
-				var record, home string
+				var home string
 				switch name {
 				case "kimi":
 					fakeKimiUserHome(t)
@@ -53,11 +53,7 @@ func TestHarnessUsageOnAbnormalExit(t *testing.T) {
 					fakeAgyUserHome(t)
 				case "opencode":
 					fakeOpencodeUserHome(t)
-					root, _ := managedHarnessHome("opencode")
-					record = fakeOpencodeExport(t, filepath.Join(root, "share"), filepath.Join(root, "config"))
-					if err := os.WriteFile(record, []byte(`{"messages":[{"info":{"role":"assistant","tokens":{"input":9000},"cost":9}}]}`), 0600); err != nil {
-						t.Fatal(err)
-					}
+
 				}
 				st, _ := store.Load("j1")
 				st.Request.Harness, st.ConfigMode = name, "minimal"
@@ -83,14 +79,8 @@ func TestHarnessUsageOnAbnormalExit(t *testing.T) {
 				s.script = func(s *fakeSession) {
 					switch name {
 					case "opencode":
-						data := `{"messages":[{"info":{"role":"assistant","tokens":{"input":9000},"cost":9}},{"info":{"role":"user"}},{"info":{"role":"assistant","providerID":"test","modelID":"flash","tokens":{"input":20,"cache":{"read":100},"output":3},"cost":0.1}},{"info":{"role":"assistant","providerID":"test","modelID":"flash","tokens":{"input":3,"output":4},"cost":0.15}}]}`
-						if err := os.WriteFile(record, []byte(data), 0600); err != nil {
-							t.Error(err)
-						}
-						if ending == "succeeded" {
-							// The last prompt reply must not replace the job's export total.
-							s.events <- cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 333, OutputTokens: 8}}
-						}
+						s.info.Model = "test/flash"
+						s.events <- cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 123, OutputTokens: 7, CostUSD: .25}, Raw: json.RawMessage(`{"accounting":"job_delta"}`)}
 					case "kimi":
 						path := filepath.Join(home, "sessions", s.ThreadID(), "agents/main/wire.jsonl")
 						appendKimiUsageFixture(t, path, "{\"type\":\"llm.request\",\"model\":\"current-model\"}\n"+kimiCurrentUsage+"{\"type\":\"prompt.completed\"}\n")
@@ -125,7 +115,7 @@ func TestHarnessUsageOnAbnormalExit(t *testing.T) {
 					t.Errorf("usage/status lost: %+v err=%v", r, err)
 				}
 				if name == "opencode" && (r.CostUSD != 0.25 || !r.ModelVerified || r.ModelActual != "test/flash") {
-					t.Errorf("export recovery=%+v", r)
+					t.Errorf("session summary recovery=%+v", r)
 				}
 				if ending == "succeeded" {
 					if r.UsagePartial {

@@ -11,6 +11,8 @@ import (
 )
 
 type Collector struct {
+	JobUsageDelta  bool
+	UsagePartial   bool
 	finalText      string
 	chunks         strings.Builder
 	Usage          cockpit.Usage
@@ -53,6 +55,9 @@ func collectLoggedUsage(path string) Collector {
 }
 
 func (c *Collector) Add(e cockpit.Event) {
+	if e.Kind == cockpit.EventSystem && e.State == "usage_partial" {
+		c.UsagePartial = true
+	}
 	if e.Kind == cockpit.EventSystem && e.State == "transient_retry" {
 		c.finalText = ""
 		c.chunks.Reset()
@@ -108,6 +113,12 @@ func (c *Collector) Add(e cockpit.Event) {
 			c.chunks.Reset()
 		}
 	case cockpit.EventUsage:
+		var accounting struct {
+			Accounting string `json:"accounting"`
+		}
+		if json.Unmarshal(e.Raw, &accounting) == nil && accounting.Accounting == "job_delta" {
+			c.JobUsageDelta = true
+		}
 		if e.Usage != nil {
 			c.Usage = *e.Usage
 			if c.perTurnUsage {
@@ -139,6 +150,9 @@ func (c *Collector) Add(e cockpit.Event) {
 			c.Usage = sum
 		}
 	case cockpit.EventState:
+		if e.Final && e.Text != "" {
+			c.finalText = e.Text
+		}
 		if e.State == cockpit.StateTurnCompleted || e.State == cockpit.StateTurnFailed {
 			c.TurnDone = true
 		}

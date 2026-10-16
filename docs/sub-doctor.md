@@ -11,13 +11,13 @@ pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3
 
 `--model <id>`（AJ-681）仅允许与一个显式 harness 一起使用；没给 harness 或给了多个时退出 2。指定模型优先于 `Harness.DoctorModel` 和默认选模启发式，所有探测 job 均请求该模型。省略该 flag 时保留原有选模行为。
 
-显式模型直接经过 `sub run --model` 使用的 `RunJob` 和 harness 后端校验，不先做 doctor 的默认选模列表探测。无效、不受支持或未被后端确认的模型会输出可读原因并使自检退出 1。动态模型表失败也遵循对应后端的既有行为：agy 的列表仅作预检，列表不可用时继续交由 CLI 拒绝无效模型，并核对 `init.model`；opencode/kimi 必须通过 ACP 的可用模型及设置确认，codex 必须确认实际模型，失败时尝试列出可用模型。显式选择不改变实际模型的独立核实要求，也不改变 `verified-versions.json` 的格式或更新条件。
+显式模型直接经过 `sub run --model` 使用的 `RunJob` 和 harness 后端校验，不先做 doctor 的默认选模列表探测。无效、不受支持或未被后端确认的模型会输出可读原因并使自检退出 1。动态模型表失败也遵循对应后端的既有行为：agy 的列表仅作预检，列表不可用时继续交由 CLI 拒绝无效模型，并核对 `init.model`；kimi 必须通过 ACP 的可用模型及设置确认，opencode 使用 v1 provider 列表和 assistant 消息核实，codex 必须确认实际模型，失败时尝试列出可用模型。显式选择不改变实际模型的独立核实要求，也不改变 `verified-versions.json` 的格式或更新条件。
 
 模型报错中的可用候选最多显示 10 个：同 provider 前缀优先，再按模型名称的编辑距离由近到远排序；并列时保留原列表顺序。被截断时，末尾显示 `… and N more` 及完整列表入口：opencode 用 `opencode models`，agy 用 `agy models`，codex 用 `codex debug models`；kimi 启动 `kimi` 后进入 [`/model`](https://moonshotai.github.io/kimi-code/en/reference/slash-commands)。这项格式同时用于 `sub run`、新会话及续接的模型校验，不改变校验用的完整模型表。doctor 的只读探测如果返回与可写探测相同的错误，原因写为 `same as above (Write access)`；不同原因仍分别显示。
 
 探测沿用 `sub run` 的默认配置策略：codex 以最小配置启动，关闭 MCP、插件、skills 和记忆；认证、provider、沙箱设置以及全局和仓库指令仍由原生 harness 加载。kimi 使用独立的 `KIMI_CODE_HOME=$PACTIFY_HOME/harness-homes/kimi`，目录权限 0700，不放 `mcp.json`。`config.toml`、`credentials/`、`device_id` 只用符号链接指向 pactify 进程的 `KIMI_CODE_HOME`（未设置时为 `~/.kimi-code`）；不读取或复制内容，缺少原文件时提示先 `kimi login`。每次启动修复链接，结束时若发现链接变成普通文件或目录，删除副本并在结果中警告；下次启动重建链接。共享目录长期保留以支持续接。普通 job 可用 `--with-user-config` 恢复全部用户集成；doctor 始终验证默认路径。
 
-codex 输出六项「PASS / FAIL / SKIP + reason」：安装及版本、可写档（文件、最终回复、token）、独立核实的实际模型、只读档、网络、不留痕。codex 只读档必须实际调用工具、正常结束且没有留下改动；kimi、agy 和 opencode 沿用注册表的 `NoReadOnly` 原因跳过。网络仅检查 codex 可写档，需要脚本生成的本地绑定和 HTTPS 成功证据，单凭最终回复不能通过。所有执行结果的 CLI 版本也必须与探测开始时的版本一致。
+codex 输出六项「PASS / FAIL / SKIP + reason」：安装及版本、可写档（文件、最终回复、token）、独立核实的实际模型、只读档、网络、不留痕。codex 只读档必须实际调用工具、正常结束且没有留下改动；kimi、agy 沿用注册表的 `NoReadOnly` 原因跳过；opencode 用 plan 执行 `ls` 和 `echo x > probe.txt`，必须从工具错误确认写入被拒且文件不存在；仅模型口头拒绝不能 PASS。网络检查 codex 和 opencode 可写档，需要脚本生成的本地绑定和 HTTPS 成功证据，单凭最终回复不能通过。所有执行结果的 CLI 版本也必须与探测开始时的版本一致。
 
 codex 的只读探测明确要求通过 shell 工具执行 `sh -c 'echo hi > out.txt'; echo EXIT=$?`，并原样报告 stdout、stderr 与退出码。写入由沙箱决定是否拦截；即使最终回复声称被拦，只要没有工具调用，仍判为失败。
 
@@ -84,7 +84,7 @@ GOCACHE="${PACTIFY_HOME:-$HOME/.pactify}/cache/go-build" go clean -cache
 - `internal/sub/harness.go` 的 `Experimental`、`NoReadOnly`、`HidesItself` / `Conceal` 均由注册表驱动；kimi 的实验性提示与自检提示共存。原有会话归档失败、隐藏失败警告继续暴露，并使 doctor 失败。
 - `Result.Markdown` / 持久化 JSON 继续消费 `Warnings`，不新增状态或更改结果格式。
 - `fake` 是 `PACTIFY_SUB_FAKE=1` 才可用的保留夹具，不代表实际安装的 CLI，因此不提示版本未自检，也不要求 PATH 上有 fake。补充其隐藏声明、工具调用与 token 事件，使 CLI 测试能走完整 doctor 流程；默认 harness 仍为 codex。
-- `docs/specs/harness-subagents.md` §11 与 Phase 0 计划的临时 home、会话隐藏，以及 kimi、agy 和 opencode 的只读例外继续适用。
+- `docs/specs/harness-subagents.md` §11 与 Phase 0 计划的临时 home、会话隐藏，以及 kimi、agy 的只读例外继续适用。
 
 ## 验证范围
 
@@ -128,38 +128,22 @@ Session hiding 和 Managed home 使用可写探测的结果。
 | agy 1.3.5 | Owner 提供的 host 实测：权限、取消、动态模型、stream-json、续接、镜像 HOME 登录与会话隔离；本变更只使用假 HOME / 假 agy 自动测试，完整真机 doctor 由 host 执行后写入本机版本表 |
 
 
-## opencode（AJ-652，实验性）
+## opencode（AJ-710，实验性）
 
-`pactify sub doctor opencode` 输出七项：安装、可写、独立模型核实、只读、网络（SKIP）、
-会话隐藏、受管目录。opencode 保持实验性（大任务一次完成 6/10），优先使用默认 codex。适配版本为 1.19.0；本变更的自动测试全部使用假 opencode 和假 HOME/XDG。
-下列 1.19.0 行为由 Owner 提供的 host 实测确认；完整真机 doctor 由 host 运行，通过后才写本机版本表。
+`pactify sub doctor opencode` 输出七项：安装、可写、独立模型核实、只读、网络、会话隐藏、受管目录。
+适配 opencode 1.19.0 v1 HTTP/SSE，每个 job 启动独立 serve，随机 Basic Auth 密码；结束后回收进程树。
+只读使用 plan，允许 read/glob/grep/list 和精确的只读 bash 调用，危险字符/参数的 deny 规则排在 allow 之后；session 权限最后应用，覆盖用户规则和旧会话规则。所有权限请求一律拒绝。开始前保存包含 ignored/untracked 的 git status 和文件 mtime/size/mode 基线；新增、修改、删除均 failed(readonly_violation)，无法核验时 failed。
+网络与 codex 一样，必须执行 doctor-network.py 并读取其本地绑定和外部 HTTPS 证据。
+`sandboxed=false` 声明无 OS 沙箱，以上探测不等同于仓库外副作用隔离。
 
-模型从 ACP `session/new.configOptions` 动态获取。默认优先选择 id 包含 `-free`（包括以它结尾）的模型：
-先取其中第一个含 `flash` / `mini` / `lite` / `nano` 的模型；没有这些轻量名称时，取第一个 free 模型。
-例如列表同时包含 `opencode/deepseek-v4-flash` 和 `opencode/deepseek-v4.1-flash-free` 时，选择后者。
-没有 free 模型时保留原回退顺序：第一个含 `flash` 的模型、第一个含 `mini` / `lite` / `nano` / `haiku`
-的模型、第一个不含 `pro` 的模型，最后才退回列表首项。名称匹配不区分大小写；同一档保留 live 列表顺序。
-这是基于名称的选择规则，不是价格保证，也不写死模型 id。
-使用 `--model <provider/model>` 时跳过这套默认选择，由普通 job 的 ACP 后端校验并确认指定模型。
-普通 job 不指定模型时保留 opencode 默认值，指定模型经 `session/set_config_option` 设置并确认。
+模型来自 `GET /config/providers`。默认只把 id 以 `-free` 结尾的模型认作免费，再优先 flash/mini/lite/nano；
+无 free 时保持原有名称分档。cost=0 不能证明免费，minimax 订阅模型同样标 0。
+显式 `--model provider/model` 使用普通 job 的模型校验；默认普通 job 仍保留 opencode 的原生模型。
+实际模型取 assistant 的 providerID/modelID，token/cost 取 `GET /session/{id}` 会话汇总，
+减去每次 Start 的基线。输入包括 input/cache.read/cache.write，输出包括 output/reasoning；不再执行 export。
+父 session 汇总不包含子 session；递归按 parentID 收集子 session 并分别扣除续接基线，权限和工具事件也包含子 session。失败或缺失汇总时标记 usagePartial。续接保留受管 opencode.db，server 重启后仍可继续原会话。
 
-`usage_update.cost` 是会话累计成本（[上游实现](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/opencode/src/acp/usage.ts)）。
-结束前用同一工作目录和环境执行 `opencode export <sid>`，独立读取 assistant 的 providerID/modelID；
-成功、失败、取消或空闲超时均按本 job 新增 assistant 消息加总：输入为
-`tokens.input + tokens.cache.read`，输出为 `tokens.output + tokens.reasoning`，成本为 cost 之和。
-续接前记录导出消息边界，历史消息的 token 和 cost 均不计入本 job。
-导出失败、历史边界失效或没有新 assistant 时明确警告；没有可用的本 job token 记录时，
-退回 prompt 返回的 `inputTokens + cachedReadTokens`、`outputTokens`，并标记 `usagePartial`。
-部分 assistant 缺少 token 记录时保留 export 中已记录的合计并标记 partial；
-不能核实的成本不冒充本轮费用。异常结束也保守标记 `usagePartial`，提示可能缺少最后一段。
-
-可写档用 build 配合 `OPENCODE_CONFIG_CONTENT` 的 edit/bash/webfetch allow。
-**Owner 已拍板（2026-10-16）：opencode 保持实验性，关闭只读档。**
-只读评估 0/3：shell 请求被拒后本轮立即结束，没有结论。
-`sub run opencode --read-only` 以退出码 2 拒绝执行，并指向 `codex --read-only`；
-旧只读 job 的按 id、自动选择和 worktree 续接同样拒绝。
-doctor 复用注册表的 `NoReadOnly` 原因将 Read-only access 标为 SKIP，不启动只读 job；
-原有“拒绝算 PASS”的证据及无使用方的 `DoctorReadOnly` 回调已删除。
+SSE 非取消断流会带退避重连，最多五次，使用 `/session/status` 补查完成状态并以 `/message` 恢复最终回复；重连耗尽为 transient。Stop 只 abort 当前 turn，Close/任务结束负责回收 server。server 密码在事件、结果及 stderr 中脱敏为 `[redacted]`。
 
 两个镜像复用受管目录组件：`XDG_DATA_HOME=$PACTIFY_HOME/harness-homes/opencode/share`
 镜像原 `$XDG_DATA_HOME`（默认 `~/.local/share`）；`XDG_CONFIG_HOME=…/opencode/config`
@@ -167,14 +151,14 @@ doctor 复用注册表的 `NoReadOnly` 原因将 Read-only access 标为 SKIP，
 `opencode/auth.json`。不读取、打印或复制 auth 内容。其余 XDG 项保持链接，供 git 等工具使用。
 缺失的用户配置目录按空目录处理，不创建原目录。每次启动刷新镜像，结束时清理被替换的链接副本。
 最小配置另设 `OPENCODE_DISABLE_CLAUDE_CODE=1`、`OPENCODE_DISABLE_EXTERNAL_SKILLS=1`、
-`OPENCODE_PURE=1`，host 空任务总 token 实测 18,930 → 7,690。
+`OPENCODE_PURE=1`、`OPENCODE_DISABLE_AUTOUPDATE=1`，host 空任务总 token 实测 18,930 → 7,690。
 
 受管目录检查要求成功的可写探测、两个目录路径和权限、镜像链接、私有 opencode 目录与普通
 `opencode.db`，并比较用户 auth/db/WAL/SHM 的元数据确认未变；不读取凭据或用户数据库内容。
-已知厂商 key 在 sub 的运行、模型列表、版本与 export 进程中清空；公共 CrossVendorStrip 的
+已知厂商 key 在 sub 的运行、模型列表与版本进程中清空；公共 CrossVendorStrip 的
 多提供方例外保持原样。会话隐藏与受管目录使用可写探测证据。`--with-user-config` 不隔离，
 并警告会话进入用户列表；续接必须保持原配置模式和两个记录的目录。
 
 | 适配版本 | 证据与范围 |
 |---|---|
-| opencode 1.19.0 | Owner host 实测 ACP 配置、权限、token/cost、export、取消、续接、XDG 隔离和最小配置；本地自动测试为假进程，完整真机 doctor 待 host 执行 |
+| opencode 1.19.0 | AJ-710：HTTP/SSE 假进程回放，真机写、只读、续接、取消、doctor；原实现输出见 [aj710-report.md](harness-v2/aj710-report.md)，评审修复及最新验证见 [aj710-review-fixes.md](harness-v2/aj710-review-fixes.md) |

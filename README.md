@@ -219,17 +219,16 @@ npm run build:panel
 node scripts/shots-panel.mjs # prints temporary paths: list/detail × light/dark × desktop/mobile
 ```
 
-opencode 1.19.0 uses ACP with dynamic provider/model ids. `/opencode` (or
-`/pactify:opencode`) selects this experimental harness (6/10 large tasks completed in one attempt).
-An omitted model keeps opencode's default; `opencode export <sessionId>` independently
-verifies the actual model in the same isolated environment. Input tokens include
-cached reads. Cost uses only this job's new assistant messages, including on resume.
-Write access sets `build` mode and process-local edit/bash/webfetch allow permissions.
-Read-only access is not offered (`pactify sub run opencode --read-only` exits 2); old read-only jobs
-cannot resume, including in worktrees. All 3 evaluation read-only tasks ended without findings
-after shell requests were denied. Use codex `--read-only` for read-only tasks; use opencode
-`--write` only with explicit write permission. Doctor skips its read-only probe.
-Owner decided on 2026-10-16 to keep opencode experimental and close read-only access.
+opencode 1.19.0 uses a per-job `opencode serve` process with authenticated v1 HTTP/SSE.
+`/opencode` (or `/pactify:opencode`) selects this experimental harness
+(6/10 large tasks completed in one attempt). Dynamic model ids come from `/config/providers`;
+omitting the model keeps opencode's default. Assistant messages confirm the actual model.
+Tokens and cost come from the session summary, with the starting totals subtracted on resume.
+Input includes cache reads and writes; output includes reasoning tokens.
+Write access uses the build agent and answers permission requests with `once`.
+Read-only access uses the plan agent, denies permission requests, and fails with
+`readonly_violation` if repository files change. Doctor checks both profiles.
+Results report `sandboxed=false`: opencode has no OS sandbox. Use `--worktree` to isolate edits.
 
 Minimal configuration mirrors the user's XDG data and config directories under
 `$PACTIFY_HOME/harness-homes/opencode/{share,config}`, excluding `opencode` in both.

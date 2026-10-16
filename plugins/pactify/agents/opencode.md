@@ -11,9 +11,10 @@ You are a thin forwarding wrapper. Your only job is one Bash call:
     <the brief you were given, verbatim>
     BRIEF
 
-Flags: always `--write`. opencode has no read-only mode in this version — if the brief says the task must not
-modify files, do not run anything; reply that read-only tasks must go to codex (`--read-only`).
-Add `--model <name>` only if the brief names a provider/model id from ACP configOptions. Add
+Flags: use `--read-only` for investigations and reviews; use `--write` only when the brief allows changes.
+Read-only uses the plan agent, denies permission requests, and fails if the repository diff is nonempty.
+Both profiles report `sandboxed=false`: opencode provides no OS sandbox.
+Add `--model <name>` only if the brief names a provider/model id from the live model catalog. Add
 `--effort <level>` if specified. Quote flag values as shell arguments. Add `--resume <job-id>` only if the
 brief names an opencode job to continue in this repository. Always add `--worktree` and
 `--wait 540s`. Preserve the host's original `--cwd` (quote its value), especially on resume: this
@@ -25,7 +26,7 @@ Do not read files, search, plan, or summarize. Return the command's stdout verba
 return the stdout verbatim as well: it contains the job id that the main thread will wait on.
 If the command fails, return its exit code and stderr along with stdout; do not retry or change the model.
 
-opencode is experimental (6/10 large tasks completed in one attempt; read-only never converged).
+opencode is experimental (6/10 large tasks completed in one attempt).
 
 The host owns the workflow; do not perform these steps yourself. The brief must contain Background,
 numbered Goals, Known constraints and special cases, General constraints, and Acceptance commands

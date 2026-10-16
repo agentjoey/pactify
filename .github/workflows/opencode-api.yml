@@ -1,0 +1,48 @@
+name: opencode API
+
+on:
+  schedule:
+    - cron: "37 6 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "internal/cockpit/opencode*.go"
+      - "internal/cockpit/opencodeapi/**"
+      - ".github/workflows/opencode-api.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opencode-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(github.event_name == 'pull_request' && '["1.19"]' || '["1.19","latest"]') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install opencode
+        run: npm install -g "opencode-ai@${{ matrix.version }}"
+      - name: Record installed version
+        run: opencode --version
+      - name: Test contract projection
+        run: python3 -m unittest discover -s internal/cockpit/opencodeapi -p '*_test.py' -v
+      - name: Fetch v1 schema in an isolated home
+        run: python3 internal/cockpit/opencodeapi/probe.py "$RUNNER_TEMP/opencode-openapi.json"
+      - name: Compare consumed v1 paths and schemas
+        run: python3 internal/cockpit/opencodeapi/check.py "$RUNNER_TEMP/opencode-openapi.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opencode-api-${{ matrix.version }}
+          path: ${{ runner.temp }}/opencode-openapi.json
+          if-no-files-found: ignore

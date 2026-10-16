@@ -438,21 +438,21 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "opencode read-only is closed like kimi and agy (AJ-683)" {
+@test "opencode read-only uses plan and declares its sandbox boundary (AJ-710)" {
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 skill = (root / 'skills/opencode/SKILL.md').read_text()
-assert 'Always pass `--write`' in skill
-assert 'not offered for opencode' in skill and 'exits 2' in skill
-assert 'Use `--read-only` instead' not in skill
+assert 'Use `--read-only` instead' in skill
+assert 'readonly_violation' in skill and 'sandboxed=false' in skill
+assert 'Always pass `--write`' not in skill
 agent = (root / 'agents/opencode.md').read_text()
-assert 'Flags: always `--write`' in agent
-assert 'do not run anything' in agent
+assert 'use `--read-only`' in agent
+assert 'sandboxed=false' in agent and 'Flags: always `--write`' not in agent
 for path in (root / 'README.md', root.parents[1] / 'README.md'):
     text = path.read_text()
-    assert 'opencode --read-only' in text and 'exits 2' in text
-    assert '/opencode Review src/cache/ using read tools only' not in text
+    assert 'opencode serve' in text and 'sandboxed=false' in text
+    assert 'readonly_violation' in text
 PY
   [ "$status" -eq 0 ]
 }

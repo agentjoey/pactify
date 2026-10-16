@@ -238,16 +238,9 @@ func (s *codexSession) dispatchEvent(e Event) {
 	if s.closed {
 		return
 	}
-	if e.Kind == EventState && (e.State == StateTurnCompleted || e.State == StateTurnFailed) {
-		select {
-		case s.events <- e:
-		case <-s.done:
-		}
-		return
-	}
 	select {
 	case s.events <- e:
-	default:
+	case <-s.done:
 	}
 }
 

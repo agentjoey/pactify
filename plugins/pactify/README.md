@@ -32,7 +32,7 @@ Use `/pactify:delegate`, `/pactify:codex`, `/pactify:kimi`, `/pactify:agy`, or `
 `/delegate` uses the default codex harness; `/codex`, `/kimi`, `/agy` and `/opencode` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
 Delegation suits tasks involving 3 or more files, exploration and testing, or more than about 10 minutes of work. Claude can handle small edits directly.
 When choosing autonomously, avoid delegating tasks that depend on extensive conversation context that cannot fit in a self-contained brief, or require frequent user interaction.
-Explicit invocations still delegate, but kimi's, agy's and opencode's read-only restrictions remain: never raise permissions yourself.
+Explicit invocations still delegate, but kimi's and agy's read-only restrictions remain: never raise permissions yourself.
 
 The Claude main thread first writes a complete brief with Background, numbered goals, Known constraints and special cases, General constraints, and Acceptance commands.
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
@@ -42,7 +42,7 @@ The five delegation skills (codex, kimi, agy, opencode, delegate) embed the same
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
-Use codex `--read-only` for read-only tasks. `kimi --read-only`, `agy --read-only` and `opencode --read-only` are refused (each exits 2), including resume of an old read-only job.
+Use codex `--read-only` for read-only tasks. `kimi --read-only` and `agy --read-only` are refused (each exits 2), including resume of an old read-only job.
 Exit 3 means the job is still running and stdout contains `jobId`. The main thread runs
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000`, then reviews the result as described below.
 If the background wait stops at its time limit, check `pactify sub status` and resume the same wait; do not start a duplicate job.
@@ -205,19 +205,17 @@ normal minimal configuration, including directory permissions and link integrity
 
 ## opencode (experimental)
 
-opencode is an experimental harness (6/10 large tasks completed in one attempt), adapted to 1.19.0 ACP.
-`/opencode` and `/pactify:opencode` use the same shared delegation guide and host
-review workflow. Requested models use dynamic `provider/model` ids; omitting the
-model preserves opencode's default. The actual model is independently checked with
-`opencode export` under the job's exact environment. Input includes cached reads;
-USD cost counts new assistant messages only, excluding previous rounds on resume.
+opencode is an experimental harness (6/10 large tasks completed in one attempt), using
+1.19.0 v1 HTTP/SSE through a private authenticated `opencode serve` process per job.
+`/opencode` and `/pactify:opencode` use the shared delegation guide and host review workflow.
+Requested models use dynamic `provider/model` ids; omitting the model preserves opencode's default.
+Assistant messages confirm the actual model. Tokens and cost use the session summary;
+resumed jobs subtract the starting totals. Input includes cache reads and writes, and output includes reasoning.
 
-Write access selects build mode with process-local edit/bash/webfetch allow permissions.
-Read-only access is not offered for opencode in this version (`pactify sub run opencode --read-only` exits 2).
-All 3 evaluation read-only tasks ended without findings after shell requests were denied.
-Use codex `--read-only` for read-only tasks; use opencode `--write` only with explicit write permission.
-Resume of an old read-only job is also refused. Doctor skips read-only access using the same reason.
-Owner decided on 2026-10-16 to keep opencode experimental and close read-only access.
+Write access uses build and responds to permission requests with `once`.
+Use `--read-only` for reviews: plan handles read-only tools, every permission request is denied,
+and any repository diff fails as `readonly_violation`. Doctor probes both access profiles.
+Results report `sandboxed=false`: neither profile provides an OS sandbox. Use `--worktree`.
 
 Two persistent 0700 mirrors at `$PACTIFY_HOME/harness-homes/opencode/share` and
 `config` replace `XDG_DATA_HOME` and `XDG_CONFIG_HOME`. Each mirrors the user's

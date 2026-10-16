@@ -130,6 +130,16 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if req.Access != "write" && req.Access != "read-only" {
 		return fail(fmt.Errorf("invalid access %q", req.Access))
 	}
+	if req.Harness == "opencode" && req.Access == "read-only" {
+		baseline, captureErr := captureReadOnly(req.Cwd)
+		if captureErr != nil {
+			return fail(fmt.Errorf("Read-only verification unavailable: %w", captureErr))
+		}
+		if err := store.WithState(ctx, id, func(current *State) error { current.ReadOnlyBaseline = baseline; return store.Save(*current) }); err != nil {
+			return fail(err)
+		}
+	}
+
 	var snap Snapshot
 	if st.Worktree == nil {
 		if st.Baseline != nil {
@@ -138,7 +148,10 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			snap, err = TakeSnapshot(req.Cwd)
 		}
 		if err != nil {
-			if !snap.EmptyTree {
+			if !snap.EmptyTree || req.Harness == "opencode" && req.Access == "read-only" {
+				if req.Harness == "opencode" && req.Access == "read-only" {
+					err = fmt.Errorf("Read-only verification unavailable: cannot capture baseline: %w", err)
+				}
 				return fail(err)
 			}
 			result.Warnings = append(result.Warnings, "Changes unavailable: cannot capture baseline: "+err.Error())
@@ -312,13 +325,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			result.Warnings = append(result.Warnings, "Kimi wire baseline unavailable; tokens may be incomplete: "+baselineErr.Error())
 		}
 	}
-	if h.VerificationBaseline != nil && h.Verify != nil && req.Resume != "" {
-		wireOffset, err = h.VerificationBaseline(ctx, VerificationInput{SessionID: sess.ThreadID(), Env: opts.Env, Cwd: req.Cwd})
-		if err != nil {
-			wireOffset = -1
-			result.Warnings = append(result.Warnings, "opencode export baseline unavailable: "+err.Error())
-		}
-	}
+
 	var prompts atomic.Int32
 	startPrompt := func(text string) chan error {
 		ch := make(chan error, 1)
@@ -564,6 +571,10 @@ turns:
 	closeSession := func() {
 		if err := sess.Close(); errors.Is(err, cockpit.ErrArchive) {
 			result.Warnings = append(result.Warnings, sessionArchivingFailed+"; it will remain in the harness session list: "+err.Error())
+		} else if err != nil && h.Name == "opencode" {
+			result.Warnings = append(result.Warnings, "Session cleanup failed: "+err.Error())
+			result.fallbackBlocked = true
+			interrupted = true
 		}
 	}
 	// Codex archives on Close. Kimi must flush wire records before process teardown.
@@ -586,7 +597,7 @@ turns:
 	// An abnormal end may omit the last accounting update, even if earlier
 	// requests reported usage. Treat retained counters as a lower bound.
 	recoverUsage := turnFailed || interrupted || !collector.TurnDone
-	if recoverUsage {
+	if recoverUsage || collector.UsagePartial {
 		result.markUsagePartial()
 	}
 	if h.Verify != nil {
@@ -596,11 +607,7 @@ turns:
 			verifyCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), cfg.KimiWireTimeout)
 			defer cancel()
 		}
-		if h.VerificationBaseline != nil {
-			var cancel context.CancelFunc
-			verifyCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
-			defer cancel()
-		}
+
 		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
 		result.ModelVerified = verified.Verified
 		if verified.CostUSD != nil {
@@ -638,6 +645,9 @@ turns:
 	} // Worktree jobs publish the full final-tree diff in Finish, including failures.
 	if err != nil {
 		warning := err.Error()
+		if req.Harness == "opencode" && req.Access == "read-only" {
+			warning = "Read-only verification unavailable: " + warning
+		}
 		if snap.EmptyTree {
 			warning = "Changes unavailable or incomplete: " + warning
 		}
@@ -645,7 +655,7 @@ turns:
 	}
 	if canceled || ctx.Err() != nil {
 		result.Status = StatusCanceled
-	} else if (err == nil || snap.EmptyTree) && collector.TurnDone && !turnFailed && !interrupted {
+	} else if (err == nil || snap.EmptyTree && !(req.Harness == "opencode" && req.Access == "read-only")) && collector.TurnDone && !turnFailed && !interrupted {
 		result.Status = StatusSucceeded
 	}
 	if result.Status == StatusFailed && (!interrupted || promptFailed) {

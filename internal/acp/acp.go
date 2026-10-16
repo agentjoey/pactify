@@ -196,10 +196,36 @@ type rpcError struct {
 	Data    json.RawMessage `json:"data"`
 }
 
-func (e *rpcError) RPCCode() int { return e.Code }
+func (e *rpcError) RPCCode() int             { return e.Code }
+func (e *rpcError) RPCData() json.RawMessage { return cloneErrorData(e.Data) }
+
+func cloneErrorData(data json.RawMessage) json.RawMessage {
+	return append(json.RawMessage(nil), data...)
+}
 
 func (e *rpcError) Error() string {
-	return fmt.Sprintf("acp: rpc error %d: %s", e.Code, e.Message)
+	message := fmt.Sprintf("acp: rpc error %d: %s", e.Code, e.Message)
+	var data struct {
+		ErrorName   string `json:"errorName"`
+		Message     string `json:"message"`
+		StatusCode  int    `json:"statusCode"`
+		IsRetryable *bool  `json:"isRetryable"`
+	}
+	if json.Unmarshal(e.Data, &data) == nil {
+		if data.ErrorName != "" {
+			message += "; " + data.ErrorName
+		}
+		if data.Message != "" && data.Message != e.Message {
+			message += ": " + data.Message
+		}
+		if data.StatusCode != 0 {
+			message += fmt.Sprintf(" (statusCode=%d)", data.StatusCode)
+		}
+		if data.IsRetryable != nil {
+			message += fmt.Sprintf(" (isRetryable=%t)", *data.IsRetryable)
+		}
+	}
+	return message
 }
 
 // filteredEnviron returns the current process environment with pactify/relay
@@ -496,26 +522,14 @@ func (c *Client) notify(method string, params any) error {
 // context. It returns ErrNotSupported when the server did not advertise the
 // loadSession capability at initialize.
 func (c *Client) LoadSession(ctx context.Context, id SessionID) error {
-	_, err := c.loadSessionRaw(ctx, id)
-	return err
-}
-
-// LoadSessionDetailed also exposes settings advertised by session/load.
-func (c *Client) LoadSessionDetailed(ctx context.Context, id SessionID) (NewSessionResult, error) {
-	raw, err := c.loadSessionRaw(ctx, id)
-	if err != nil {
-		return NewSessionResult{}, err
-	}
-	return parseSessionResult(raw)
-}
-func (c *Client) loadSessionRaw(ctx context.Context, id SessionID) (json.RawMessage, error) {
 	c.mu.Lock()
 	supported := c.loadSession
 	c.mu.Unlock()
 	if !supported {
-		return nil, ErrNotSupported
+		return ErrNotSupported
 	}
-	return c.call(ctx, "session/load", map[string]any{"sessionId": id, "cwd": c.cwd, "mcpServers": []any{}})
+	_, err := c.call(ctx, "session/load", map[string]any{"sessionId": id, "cwd": c.cwd, "mcpServers": []any{}})
+	return err
 }
 
 // Prompt sends text as the user turn for session sid and blocks until the turn

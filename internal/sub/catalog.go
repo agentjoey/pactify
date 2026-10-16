@@ -19,6 +19,7 @@ type ModelCatalog struct {
 	FetchedAt time.Time `json:"fetchedAt"`
 }
 type HarnessInfo struct {
+	Sandboxed       bool           `json:"sandboxed"`
 	Name            string         `json:"name"`
 	Installed       bool           `json:"installed"`
 	Version         string         `json:"version"`
@@ -68,7 +69,7 @@ func (s Store) Harnesses(ctx context.Context, refresh bool) ([]HarnessInfo, erro
 	return rows, nil
 }
 func (c *harnessCatalog) harness(ctx context.Context, s Store, h Harness, defaults HarnessDefault, refresh bool) HarnessInfo {
-	row := HarnessInfo{Name: h.Name, Default: defaults, Efforts: h.Efforts(), Experimental: h.Experimental != "", ReadOnly: h.NoReadOnly == ""}
+	row := HarnessInfo{Sandboxed: h.Name == "codex", Name: h.Name, Default: defaults, Efforts: h.Efforts(), Experimental: h.Experimental != "", ReadOnly: h.NoReadOnly == ""}
 	row.VerifiedVersion = readVerifiedVersions(filepath.Join(filepath.Dir(s.Root), "verified-versions.json"))[h.Name].Version
 	_, err := c.lookupPath(h.Name)
 	row.Installed = err == nil
@@ -124,7 +125,7 @@ func (row HarnessInfo) withCatalog(cached harnessCatalogEntry) HarnessInfo {
 // discoverHarnessModels follows doctor's environment/home isolation but never
 // enters Doctor or Backend.Start/Prompt. Codex only lists models after its
 // handshake; kimi reads config metadata. AgyModels lists ids; OpencodeModels only
-// initializes ACP and reads session configuration, without sending a prompt.
+// starts serve and reads /config/providers, without sending a prompt.
 func discoverHarnessModels(ctx context.Context, h Harness) (catalog cockpit.ModelDiscovery, err error) {
 	opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind), MinimalConfig: true}
 	discover := func() (cockpit.ModelDiscovery, error) {

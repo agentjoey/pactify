@@ -36,7 +36,7 @@ AJ-701：删除 `issue` 字段及编号提取。标题只取 brief 第一条非�
 | `repo` | string | 原始仓库根目录；worktree job 取 `originalRoot`；普通 job 在创建时记录，旧 job 可从仍存在的请求目录解析 |
 | `cwd` / `runCwd` | string | CLI 中分别为原始请求目录 / 实际运行目录；普通 job 两者相同 |
 | `worktree` | object，可省略 | 保留既有 worktree 字段，并新增 `status`：`pending` / `applied` / `discarded`；非 worktree job 省略 |
-| `failureClass` | string，可省略 | 失败类别：`transient` / `quota` / `auth` / `model` / `idle_timeout` / `canceled` / `other`；新失败和取消 job 必填，成功及未结束 job 不写；旧 job 可缺失 |
+| `failureClass` | string，可省略 | 失败类别：`transient` / `quota` / `auth` / `model` / `idle_timeout` / `canceled` / `refusal` / `max_tokens` / `max_turn_requests` / `readonly_violation` / `other`；新失败和取消 job 必填，成功及未结束 job 不写；旧 job 可缺失 |
 | `quotaResetAt` | RFC3339 string，可省略 | quota 的已知重置时间；无法解析时省略，其他类别不写 |
 | `retryAttempt` / `retryLimit` | number，可省略 | running job 正在等待或执行的续接序号 / 上限；有这些字段时显示 `retrying (n/N)`；底层 status 仍为 running |
 | `retryCount` | number，可省略 | 已发起的自动续接次数；终态显示续接次数，0 时省略；不计手动 resume |
@@ -78,9 +78,9 @@ worktree 的 `applied` 是一次成功 apply 的持久化记录（空补丁的�
 
 每次最多读取 `log.jsonl` 最后 **256 KiB**，以打开后的文件大小为快照。被窗口截断的首条记录、没有换行提交的最后一条记录及损坏记录均忽略，不会整份扫描大日志。usage 可能不在窗口内，此时不虚构 token 数。最终用量以 result 的顶层 token 字段为准，并结合顶层 `usagePartial` 判断是否可能不完整；Kimi 的独立用量验证通常只在 job 结束后进入 result。
 
-失败、取消、空闲超时或连接提前关闭时，保留已收到的用量，保守标记 `usagePartial: true`，并在 result 中警告 `Usage may be incomplete; only recorded usage is included`。用量独立核实失败也设置同一标记，不改变任务的成功状态。尚未启动就取消的 job 不因此标记 partial。worker 本身消失时，兜底结果从日志中的完整事件恢复用量；opencode 的日志成本是会话累计值，无法还原本 job 的 export 边界，因此不作为本 job 成本。
+失败、取消、空闲超时或连接提前关闭时，保留已收到的用量，保守标记 `usagePartial: true`，并在 result 中警告 `Usage may be incomplete; only recorded usage is included`。用量独立核实失败也设置同一标记，不改变任务的成功状态。尚未启动就取消的 job 不因此标记 partial。worker 本身消失时，兜底结果从日志中的完整事件恢复用量；opencode serve 的 usage 事件带 `accounting: job_delta`，可恢复本轮成本；历史 ACP 日志没有此标记，其会话累计成本仍不作为本 job 成本。
 
-opencode 正常或异常结束时均优先加总 export 中本 job 新增的 assistant 消息：输入为 `tokens.input + tokens.cache.read`，输出为 `tokens.output + tokens.reasoning`。续接基线之前的历史消息不计入；export 无法提供本 job token 记录时退回 prompt usage，并标记 `usagePartial`、附带警告。成本仍从同一边界内的 export 消息加总。
+opencode 使用 v1 `GET /session/{id}` 的 tokens/cost 会话汇总，扣除本次 Start 时的基线：输入为 input + cache.read + cache.write，输出为 output + reasoning。自动重试共用启动基线，手动续接在 server 重启后重新取基线，不重复计算历史。`/message` 返回的单条用量不参与累计，也不再调用 `opencode export`。无法取得完整汇总时标记 `usagePartial`。
 
 State 沿用原子 rename 约定，status 沿用现有 Recover 和生命周期锁处理失联 worker。JSON 摘要遇到缺失或损坏的 result 仍显示 job，结果字段留空或为 0；人类输出中的全量用量汇总继续对损坏/缺失的终态 result 报错，不静默给出不完整汇总。旧 job 缺少新增元数据时正常输出。
 
@@ -102,7 +102,9 @@ worker 每 100 ms 将后代进程的 PID 和内核启动时间保存到 `state.j
 `result.json` 与摘要共用 `failureClass`、`quotaResetAt`。分类是新增元数据，
 State 的 `error` 原文和既有退出码保持不变。各 harness 的匹配表放在 cockpit adapter 旁；
 优先使用 Codex `rateLimits.primary/secondary.usedPercent >= 100`、`codexErrorInfo`、
-ACP 的 `AUTH_REQUIRED (-32000)` 等结构化证据，最后匹配错误文本。
+ACP 的 `AUTH_REQUIRED (-32000)`、opencode 的 `APIError.data` 等结构化证据，最后匹配错误文本。
+opencode 的 isRetryable=true 或 5xx 为 transient；429 带 balance/quota/credit/budget 等额度说明为 quota，其他 429 为 transient。
+SSE session.error 的配置/模型错误为 other，并保留可读错误。ACP 只有 end_turn 完成，cancelled/refusal/max_tokens/max_turn_requests 都失败并保留类别。
 `-32603` 只是通用 Internal Error，不能单独判为 transient；例如余额不足仍为 quota。
 用户取消优先于后端错误；空闲超时为 idle_timeout。read-only 拒绝、git 环境错误、
 进程被杀和没有取消记录的孤儿 job 仍为 other。不会对成功回复或任务正文匹配错误关键词。
@@ -154,9 +156,9 @@ context 取消立即结束等待；没有收到信号时，每 100 ms 检查持�
 | codex | 原 threadId 上再次 `turn/start`；最终 Close 才 archive |
 | kimi | 原 ACP sessionId 上再次 `session/prompt` |
 | agy | 下一轮进程传 `--conversation <id>`；未显式选模型时锁定首轮报告的模型 |
-| opencode | 原 ACP sessionId 上再次 `session/prompt` |
+| opencode | 原 v1 session id 上再次 `prompt_async`，手动续接保留受管数据库 |
 
-四者都有续接接口。分类仍完全沿用 R1；目前 Kimi/opencode 的匹配表尚无 transient
+四者都有续接接口。分类仍完全沿用 R1；目前 Kimi 的匹配表尚无 transient
 证据，因此未识别的后端错误仍归 other，不因支持同会话 prompt 就扩大重试范围。
 不支持续接的 adapter、或没有 session id 时，在 result.warnings 中记录
 `transient retry unsupported for <harness>`，保留原失败，不另开会话。
@@ -175,7 +177,13 @@ State 同时保存历史用于 worker 消失后的兜底结果；终态摘要的
 failureClass。用户取消仍优先。先前的 transient 错误移入 retries，不遮盖最后一轮错误。
 
 多轮的 token / 成本按现有口径累计：Codex thread running totals、agy / opencode
-adapter 累计值不重复相加；Kimi prompt usage 在轮间累加。Kimi wire 和 opencode export
+adapter 累计值不重复相加；Kimi prompt usage 在轮间累加。Kimi wire 和 opencode 会话汇总
 仍只在最终结束时验证，基线覆盖当前 job 的所有 prompts，包含失败轮次。一次异常结束可能
 漏末段用量，即使续接成功也保守保留 usagePartial。`sub cost` 的 RETRIES 是有过续接的
 job 数，单个 job 续接多次也只计 1；手动 `--resume` 产生新 job，不计自动续接。
+
+## 结果信封的沙箱字段（AJ-710）
+
+`result.json` 和 `pactify sub result --json` 总是包含布尔字段 `sandboxed`：codex 为 true，其他 harness 为 false。
+它声明 OS 沙箱能力，与请求的 access 独立。opencode 只读依赖 plan、permission 拒绝和最终 diff 检查，
+仓库外的副作用没有 OS 级限制。ACP 的累计终稿随终态事件的 `text` / `final` 发布，事件背压不会丢文本或工具计数。

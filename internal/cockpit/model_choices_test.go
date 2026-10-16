@@ -63,7 +63,7 @@ func TestModelErrorChoicesAcrossHarnesses(t *testing.T) {
 				hint := "run `" + harness + " models` to list all"
 				switch harness {
 				case "opencode":
-					_, err = applyOpencodeOpts(context.Background(), &fakeConfigurer{}, "sid", modelErrorSession(models), opts)
+					err = validateOpencodeModel(opts.Model, models)
 				case "kimi":
 					hint = "run `kimi` and enter `/model` to list all"
 					_, err = applyACPOpts(context.Background(), &fakeConfigurer{}, "sid", modelErrorSession(models), opts)

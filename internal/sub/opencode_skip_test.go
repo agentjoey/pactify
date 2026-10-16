@@ -4,11 +4,10 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
-func TestOpencodeDoctorSkipsReadOnly(t *testing.T) {
+func TestOpencodeDoctorRunsReadOnly(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	fakeOpencodeUserHome(t)
 	h, _ := Lookup("opencode")
@@ -23,13 +22,14 @@ func TestOpencodeDoctorSkipsReadOnly(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if st.Request.Access != "write" {
-				t.Error("doctor ran read-only probe")
+			if st.Request.Access == "write" {
+				if err := os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				os.WriteFile(store.LogPath(id), []byte(`{"kind":"tool","raw":{"part":{"tool":"bash","state":{"status":"error","input":{"command":"echo x > probe.txt"},"error":"Permission denied"}}}}`+"\n"), 0600)
 			}
-			if err := os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			return Result{Status: StatusSucceeded, CLIVersion: "test", ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
+			return Result{ToolCalls: 1, Status: StatusSucceeded, CLIVersion: "test", ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
 		},
 	})
 	if err != nil || len(reports) != 1 {
@@ -39,12 +39,12 @@ func TestOpencodeDoctorSkipsReadOnly(t *testing.T) {
 	for _, c := range reports[0].Checks {
 		if c.Name == "Read-only access" {
 			found = true
-			if c.Status != "SKIP" || h.NoReadOnly == "" || c.Reason != h.NoReadOnly || !strings.Contains(c.Reason, "codex --read-only") {
+			if c.Status != "PASS" || h.NoReadOnly != "" {
 				t.Errorf("check=%+v", c)
 			}
 		}
 	}
-	if !found || calls != 1 {
+	if !found || calls != 2 {
 		t.Fatalf("found=%t calls=%d", found, calls)
 	}
 }

@@ -36,7 +36,7 @@ func ClassifyFailure(harness, message string, raw json.RawMessage, now time.Time
 	case "kimi":
 		return acpFailure(message, raw, kimiFailureRules)
 	case "opencode":
-		return acpFailure(message, raw, opencodeFailureRules)
+		return opencodeFailure(message, raw)
 	default:
 		return Failure{Class: "other"}
 	}
@@ -50,10 +50,23 @@ func FailureFromError(harness string, err error, now time.Time) Failure {
 	if errors.Is(err, ErrModelUnavailable) || errors.Is(err, ErrModelUnsupported) {
 		return Failure{Class: "model"}
 	}
+	var httpError *opencodeHTTPError
+	if harness == "opencode" && errors.As(err, &httpError) {
+		raw, _ := json.Marshal(map[string]any{"name": "APIError", "data": map[string]any{"statusCode": httpError.status, "message": httpError.message}})
+		return opencodeFailure(err.Error(), raw)
+	}
 	var coded interface{ RPCCode() int }
 	var raw json.RawMessage
 	if errors.As(err, &coded) {
-		raw, _ = json.Marshal(map[string]any{"code": coded.RPCCode()})
+		raw, _ = json.Marshal(map[string]any{"code": coded.RPCCode(), "data": rpcErrorData(err)})
 	}
 	return ClassifyFailure(harness, err.Error(), raw, now)
+}
+
+func rpcErrorData(err error) json.RawMessage {
+	var data interface{ RPCData() json.RawMessage }
+	if errors.As(err, &data) {
+		return data.RPCData()
+	}
+	return nil
 }

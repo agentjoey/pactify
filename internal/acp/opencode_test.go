@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestLoadSessionDetailedRetainsAdvertisedSettings(t *testing.T) {
+func TestLoadSessionParameters(t *testing.T) {
 	server := &configServer{onMethod: map[string]func(*fakeServer, json.RawMessage) any{
 		"session/load": func(_ *fakeServer, raw json.RawMessage) any {
 			var params map[string]any
@@ -22,9 +22,8 @@ func TestLoadSessionDetailedRetainsAdvertisedSettings(t *testing.T) {
 	c.mu.Lock()
 	c.loadSession = true
 	c.mu.Unlock()
-	res, err := c.LoadSessionDetailed(ctx(t), "old-session")
-	if err != nil || len(res.ConfigOptions) != 3 {
-		t.Fatalf("res=%+v err=%v", res, err)
+	if err := c.LoadSession(ctx(t), "old-session"); err != nil {
+		t.Fatal(err)
 	}
 }
 

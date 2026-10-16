@@ -201,6 +201,10 @@ func (s *acpSession) Prompt(ctx context.Context, msg UserMessage) error {
 	e := Event{Kind: EventState, State: StateTurnCompleted, Text: string(stop)}
 	if err != nil {
 		e = Event{Kind: EventState, State: StateTurnFailed, Err: err.Error()}
+		var coded interface{ RPCCode() int }
+		if errors.As(err, &coded) {
+			e.Raw, _ = json.Marshal(map[string]any{"code": coded.RPCCode()})
+		}
 	}
 	if s.opencode && stop == "cancelled" {
 		e = Event{Kind: EventState, State: StateTurnFailed, Err: "opencode cancelled"}
@@ -555,4 +559,23 @@ func (s *acpSession) opencodeUpdate(u acp.SessionUpdate) {
 	if e, ok := MapACPUpdateToEvent(u); ok {
 		s.dispatchEvent(e)
 	}
+}
+
+// Kimi documents AUTH_REQUIRED (-32000):
+// https://github.com/MoonshotAI/kimi-cli/blob/main/docs/en/reference/kimi-acp.md
+var kimiFailureRules = []failureRule{
+	{"run kimi login first", "auth"},
+	{"acp: rpc error -32000:", "auth"},
+	{"requested model is not offered by this agent", "model"},
+}
+
+func acpFailure(message string, raw json.RawMessage, rules []failureRule) Failure {
+	var rpc struct {
+		Code int `json:"code"`
+	}
+	if json.Unmarshal(raw, &rpc) == nil && rpc.Code == -32000 {
+		return Failure{Class: "auth"}
+	}
+	// -32603 is generic Internal Error: its code alone does not prove transient.
+	return matchFailure(message, rules)
 }

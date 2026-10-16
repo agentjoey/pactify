@@ -35,6 +35,8 @@ pactify sub status <id> --json                # 单个对象
 | `repo` | string | 原始仓库根目录；worktree job 取 `originalRoot`；普通 job 在创建时记录，旧 job 可从仍存在的请求目录解析 |
 | `cwd` / `runCwd` | string | CLI 中分别为原始请求目录 / 实际运行目录；普通 job 两者相同 |
 | `worktree` | object，可省略 | 保留既有 worktree 字段，并新增 `status`：`pending` / `applied` / `discarded`；非 worktree job 省略 |
+| `failureClass` | string，可省略 | 失败类别：`transient` / `quota` / `auth` / `model` / `idle_timeout` / `canceled` / `other`；新失败和取消 job 必填，成功及未结束 job 不写；旧 job 可缺失 |
+| `quotaResetAt` | RFC3339 string，可省略 | quota 的已知重置时间；无法解析时省略，其他类别不写 |
 | `status` | string | `queued` / `running` / `succeeded` / `failed` / `canceled` |
 | `createdAt` | RFC3339 string | 创建时间 |
 | `startedAt` | RFC3339 string，可省略 | worker 领取 job、进入 running 的时间；旧 job 不从 `updatedAt` 猜测 |
@@ -91,3 +93,38 @@ worker 每 100 ms 将后代进程的 PID 和内核启动时间保存到 `state.j
 逐个校验身份后清理；确认已登记的进程退出后才删除 job TMPDIR。
 检查、持久化或终止失败时保留 TMPDIR。周期快照仍有采样间隙，不能保证记录到
 在两次采样间创建并立即脱离整个已知进程树的进程。
+
+## 失败分类与额度记忆（AJ-692 / R1）
+
+`result.json` 与摘要共用 `failureClass`、`quotaResetAt`。分类是新增元数据，
+State 的 `error` 原文和既有退出码保持不变。各 harness 的匹配表放在 cockpit adapter 旁；
+优先使用 Codex `rateLimits.primary/secondary.usedPercent >= 100`、`codexErrorInfo`、
+ACP 的 `AUTH_REQUIRED (-32000)` 等结构化证据，最后匹配错误文本。
+`-32603` 只是通用 Internal Error，不能单独判为 transient；例如余额不足仍为 quota。
+用户取消优先于后端错误；空闲超时为 idle_timeout。read-only 拒绝、git 环境错误、
+进程被杀和没有取消记录的孤儿 job 仍为 other。不会对成功回复或任务正文匹配错误关键词。
+
+认证依据：[Kimi ACP 文档](https://github.com/MoonshotAI/kimi-cli/blob/main/docs/en/reference/kimi-acp.md)
+确认未登录返回 -32000；Codex 的 unauthorized 来自仓库内固定协议 schema；
+agy 的过期登录提示来自[官方 CHANGELOG 1.3.3](https://github.com/google-antigravity/antigravity-cli/blob/main/CHANGELOG.md)，
+并覆盖本仓库 managed-home 明确要求 `run agy login first` 的错误。未知提示归为 other。
+
+额度记录位于 `$PACTIFY_HOME/quota.json`，JSON 对象的键为 `harness/model`，
+优先实际模型，其次请求模型；模型均未知时键仅为 `harness`。值包含
+`harness`、可选 `model`、`resetAt`（未知为 null）、`jobId`、`recordedAt`、`message`
+（原始错误的单行摘要，最多 512 个 Unicode 字符）。文件权限为 0600，写入持有独立
+`quota.json.lock` 文件锁，再用同目录临时文件 + rename 原子替换；同路线较旧的记录不覆盖较新的记录。
+
+**失效规则**：`now >= resetAt` 时忽略；无 resetAt 的条目在记录后 **24 小时**失效。
+这是本地缓存的有效期，不代表上游确认的额度重置。读取不修改磁盘，后续写入会清除过期记录。
+Codex 多个窗口耗尽时采用最晚重置时间；有耗尽窗口未报告时间时保守记录为未知。
+额度文件损坏时读取报错；写入失败保留原文件，并在 job result 中追加 warning，
+仍发布原始失败及分类，不改写 State.error。
+
+R3 使用 `Store.ExhaustedRoutes(now)` 读取全部有效路线（按键排序，空列表为 `[]`）。
+CLI 对应只读接口 `pactify sub quota --json`，返回 QuotaRoute 数组，不修改 status 的既有 JSON 形状。
+`sub status` 人类输出在存在耗尽路线时显示顶部额度行（不限于当前仓库或显示的 10 条 job），
+无耗尽路线时保留原输出；`sub quota` 人类输出可显式查询空状态。
+`sub status` / `sub result` 显示如 `failed (quota, resets in 6d 23h)`；
+`/jobs` skill 通过独立 quota 查询展示当前耗尽路线，Jobs 卡片显示类别标签。
+历史 result 缺少分类时不回写或猜测，继续兼容显示。

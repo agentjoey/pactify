@@ -1107,3 +1107,90 @@ func parseUsageFromParams(params json.RawMessage) *Usage {
 		TotalTokens:  last.TotalTokens,
 	}
 }
+
+var codexFailureRules = []failureRule{
+	{"task canceled", "canceled"},
+	{"usage limit", "quota"}, {"rate limit", "quota"},
+	{"unauthorized", "auth"},
+	{"requested model is not offered by this agent", "model"},
+}
+
+type codexFailureWindow struct {
+	UsedPercent float64 `json:"usedPercent"`
+	ResetsAt    int64   `json:"resetsAt"`
+	LegacyReset int64   `json:"resets_at"`
+}
+
+func codexFailure(message string, raw json.RawMessage, _ time.Time) Failure {
+	var p struct {
+		RateLimits struct {
+			Primary, Secondary *codexFailureWindow
+		} `json:"rateLimits"`
+		Error struct {
+			Info json.RawMessage `json:"codexErrorInfo"`
+		} `json:"error"`
+		Turn struct {
+			Error struct {
+				Info json.RawMessage `json:"codexErrorInfo"`
+			} `json:"error"`
+		} `json:"turn"`
+	}
+	if json.Unmarshal(raw, &p) == nil {
+		f := Failure{}
+		unknownReset := false
+		for _, w := range []*codexFailureWindow{p.RateLimits.Primary, p.RateLimits.Secondary} {
+			if w == nil || w.UsedPercent < 100 {
+				continue
+			}
+			f.Class = "quota"
+			reset := max(w.ResetsAt, w.LegacyReset)
+			if reset <= 0 {
+				unknownReset = true
+				continue
+			}
+			at := time.Unix(reset, 0).UTC()
+			if f.ResetAt == nil || at.After(*f.ResetAt) {
+				f.ResetAt = &at
+			}
+		}
+		if f.Class != "" {
+			if unknownReset {
+				f.ResetAt = nil
+			}
+			return f
+		}
+		info := p.Error.Info
+		if len(p.Turn.Error.Info) > 0 {
+			info = p.Turn.Error.Info
+		}
+		var kind string
+		if json.Unmarshal(info, &kind) == nil {
+			switch kind {
+			case "usageLimitExceeded", "rateLimitExceeded":
+				return Failure{Class: "quota"}
+			case "unauthorized":
+				return Failure{Class: "auth"}
+			case "internalServerError", "serverOverloaded", "flexUnavailable":
+				return Failure{Class: "transient"}
+			}
+		}
+		var variants map[string]struct {
+			HTTPStatusCode int `json:"httpStatusCode"`
+		}
+		if json.Unmarshal(info, &variants) == nil {
+			for kind, v := range variants {
+				switch {
+				case v.HTTPStatusCode == 401:
+					return Failure{Class: "auth"}
+				case v.HTTPStatusCode == 429:
+					return Failure{Class: "quota"}
+				case v.HTTPStatusCode >= 500 && v.HTTPStatusCode <= 599:
+					return Failure{Class: "transient"}
+				case kind == "responseStreamDisconnected" || kind == "responseStreamConnectionFailed":
+					return Failure{Class: "transient"}
+				}
+			}
+		}
+	}
+	return matchFailure(message, codexFailureRules)
+}

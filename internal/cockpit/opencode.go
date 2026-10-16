@@ -123,3 +123,10 @@ func (c opencodeConfigurer) SetConfigOption(ctx context.Context, sid acp.Session
 	}
 	return options, err
 }
+
+var opencodeFailureRules = []failureRule{
+	{"insufficient balance", "quota"},
+	{"acp: rpc error -32000:", "auth"},
+	{"requested model is not offered by this agent", "model"},
+	{"opencode cancelled", "canceled"},
+}

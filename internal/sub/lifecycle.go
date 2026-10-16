@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/lockx"
 	"github.com/agentjoey/pactify/internal/procx"
 )
@@ -135,6 +136,35 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 			if result.Status == StatusSucceeded {
 				result.Status = StatusFailed
 				reason = err.Error()
+			}
+		}
+	}
+	if result.Status == StatusSucceeded {
+		result.FailureClass, result.QuotaResetAt = "", nil
+	} else if Terminal(result.Status) {
+		switch {
+		case result.Status == StatusCanceled || st.CancelRequested:
+			result.FailureClass, result.QuotaResetAt = "canceled", nil
+		case reason == "Idle timeout":
+			result.FailureClass, result.QuotaResetAt = "idle_timeout", nil
+		case result.FailureClass == "" || result.FailureClass == "other":
+			f := cockpit.ClassifyFailure(st.Request.Harness, reason, nil, finished)
+			result.FailureClass, result.QuotaResetAt = f.Class, f.ResetAt
+		}
+		if result.FailureClass != "quota" {
+			result.QuotaResetAt = nil
+		}
+		if result.FailureClass == "quota" {
+			message := result.failureMessage
+			if message == "" {
+				message = reason
+			}
+			model := result.ModelActual
+			if model == "" {
+				model = st.Request.Model
+			}
+			if err := s.rememberQuota(QuotaRoute{Harness: st.Request.Harness, Model: model, ResetAt: result.QuotaResetAt, JobID: st.ID, RecordedAt: finished.UTC(), Message: message}); err != nil {
+				result.Warnings = append(result.Warnings, "Failed to record quota memory: "+err.Error())
 			}
 		}
 	}

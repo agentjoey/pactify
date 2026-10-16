@@ -147,6 +147,15 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 		return 0, subJSON(c, rows)
 	}
 
+	routes, err := store.ExhaustedRoutes(now)
+	if err != nil {
+		return 1, err
+	}
+	if len(routes) > 0 {
+		if _, err := fmt.Fprintln(c.OutOrStdout(), sub.FormatExhaustedRoutes(routes, now)); err != nil {
+			return 1, err
+		}
+	}
 	summary := ""
 	if len(ids) == 0 {
 		summary, err = subUsageSummary(store, states, now)
@@ -159,7 +168,7 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 		if len(row.Attention) > 0 {
 			marker = "  ⚠"
 		}
-		if _, err := fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s  %s  %s%s\n", row.ID, row.Status, row.Harness, row.Duration, row.Title, marker); err != nil {
+		if _, err := fmt.Fprintf(c.OutOrStdout(), "%s  %s  %s  %s  %s%s\n", row.ID, sub.FailureStatus(row.Status, row.FailureClass, row.QuotaResetAt, now), row.Harness, row.Duration, row.Title, marker); err != nil {
 			return 1, err
 		}
 	}

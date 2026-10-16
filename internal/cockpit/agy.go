@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -437,4 +438,31 @@ func (s *agySession) Close() error {
 		close(s.approvals)
 	})
 	return s.closeErr
+}
+
+// Observed headless failures; only confirmed login hints are treated as auth.
+// The managed-home login hint is emitted by sub/managed_home.go.
+var agyFailureRules = []failureRule{
+	{"individual quota reached", "quota"},
+	{"run agy login first", "auth"},
+	// Confirmed by the official CHANGELOG, version 1.3.3.
+	{"authentication expired. please log back in.", "auth"},
+	{"unavailable (code 503)", "transient"},
+	{": eof", "transient"},
+	{"the stream was interrupted. please continue", "transient"},
+}
+
+var agyResetDuration = regexp.MustCompile(`(?i)resets in ([0-9]+(?:h[0-9]+m(?:[0-9]+s)?|h(?:[0-9]+s)?|m(?:[0-9]+s)?|s))`)
+
+func agyFailure(message string, now time.Time) Failure {
+	f := matchFailure(message, agyFailureRules)
+	if f.Class == "quota" {
+		if m := agyResetDuration.FindStringSubmatch(message); len(m) > 1 {
+			if d, err := time.ParseDuration(m[1]); err == nil {
+				reset := now.Add(d).UTC()
+				f.ResetAt = &reset
+			}
+		}
+	}
+	return f
 }

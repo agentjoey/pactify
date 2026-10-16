@@ -196,6 +196,8 @@ type rpcError struct {
 	Data    json.RawMessage `json:"data"`
 }
 
+func (e *rpcError) RPCCode() int { return e.Code }
+
 func (e *rpcError) Error() string {
 	return fmt.Sprintf("acp: rpc error %d: %s", e.Code, e.Message)
 }

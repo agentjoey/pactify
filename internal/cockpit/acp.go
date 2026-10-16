@@ -419,6 +419,10 @@ type acpConfigurer interface {
 
 // applyACPOpts applies only explicit overrides and reports confirmed session settings.
 func applyACPOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID, res acp.NewSessionResult, opts StartOpts) (SessionInfo, error) {
+	return applyACPOptsFor(ctx, c, sid, res, opts, "kimi")
+}
+
+func applyACPOptsFor(ctx context.Context, c acpConfigurer, sid acp.SessionID, res acp.NewSessionResult, opts StartOpts, harness string) (SessionInfo, error) {
 	info := SessionInfo{Access: res.CurrentModeID}
 	if m, ok := acp.FindConfig(res.ConfigOptions, "model"); ok {
 		info.Model = m.CurrentValue
@@ -432,15 +436,15 @@ func applyACPOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID, res a
 			return info, fmt.Errorf("%w (asked for %q); available models: none advertised", ErrModelUnsupported, opts.Model)
 		}
 		if !offers(m, opts.Model) {
-			return info, fmt.Errorf("%w: %q; available: %s", ErrModelUnavailable, opts.Model, strings.Join(values(m), ", "))
+			return info, fmt.Errorf("%w: %q; available: %s", ErrModelUnavailable, opts.Model, modelChoices(harness, opts.Model, values(m)))
 		}
 		updated, err := c.SetConfigOption(ctx, sid, m.ID, opts.Model)
 		if err != nil {
-			return info, fmt.Errorf("set model %q: %w; available: %s", opts.Model, err, strings.Join(values(m), ", "))
+			return info, fmt.Errorf("set model %q: %w; available: %s", opts.Model, err, modelChoices(harness, opts.Model, values(m)))
 		}
 		actual, ok := acp.FindConfig(updated, m.ID)
 		if !ok || actual.CurrentValue != opts.Model {
-			return info, fmt.Errorf("%w: asked for %q, reported %q; available: %s", ErrModelUnavailable, opts.Model, actual.CurrentValue, strings.Join(values(m), ", "))
+			return info, fmt.Errorf("%w: asked for %q, reported %q; available: %s", ErrModelUnavailable, opts.Model, actual.CurrentValue, modelChoices(harness, opts.Model, values(m)))
 		}
 		info.Model = actual.CurrentValue
 		// Model selection can change the available thought levels.
@@ -473,7 +477,7 @@ func applyACPOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID, res a
 		if m, ok := acp.FindConfig(updated, "model"); ok {
 			info.Model = m.CurrentValue
 			if opts.Model != "" && info.Model != opts.Model {
-				return info, fmt.Errorf("%w: asked for %q, reported %q after setting effort; available: %s", ErrModelUnavailable, opts.Model, info.Model, strings.Join(values(m), ", "))
+				return info, fmt.Errorf("%w: asked for %q, reported %q after setting effort; available: %s", ErrModelUnavailable, opts.Model, info.Model, modelChoices(harness, opts.Model, values(m)))
 			}
 		}
 	}
@@ -523,14 +527,14 @@ func applyACPResumeOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID,
 		option, ok := acp.FindConfig(updated, setting.id)
 		if !ok || option.CurrentValue != setting.value {
 			if setting.id == "model" {
-				return info, fmt.Errorf("%w: asked for %q, reported %q; available: %s", ErrModelUnavailable, setting.value, option.CurrentValue, strings.Join(values(option), ", "))
+				return info, fmt.Errorf("%w: asked for %q, reported %q; available: %s", ErrModelUnavailable, setting.value, option.CurrentValue, modelChoices("kimi", setting.value, values(option)))
 			}
 			return info, fmt.Errorf("set %s: asked for %q, reported %q", setting.id, setting.value, option.CurrentValue)
 		}
 		if m, ok := acp.FindConfig(updated, "model"); ok {
 			info.Model = m.CurrentValue
 			if opts.Model != "" && info.Model != opts.Model {
-				return info, fmt.Errorf("%w: asked for %q, reported %q; available: %s", ErrModelUnavailable, opts.Model, info.Model, strings.Join(values(m), ", "))
+				return info, fmt.Errorf("%w: asked for %q, reported %q; available: %s", ErrModelUnavailable, opts.Model, info.Model, modelChoices("kimi", opts.Model, values(m)))
 			}
 		}
 		if setting.id == "thinking" {

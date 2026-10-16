@@ -57,7 +57,7 @@ func applyOpencodeOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID, 
 	}
 	modelOpts := opts
 	modelOpts.Access = AccessDefault
-	info, err := applyACPOpts(ctx, opencodeConfigurer{c}, sid, res, modelOpts)
+	info, err := applyACPOptsFor(ctx, opencodeConfigurer{c}, sid, res, modelOpts, "opencode")
 	if err != nil {
 		return info, err
 	}

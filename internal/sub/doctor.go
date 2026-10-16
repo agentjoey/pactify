@@ -27,6 +27,10 @@ type DoctorReport struct {
 	Checks  []DoctorCheck
 }
 
+type DoctorOptions struct {
+	Model string // Empty selects the harness's default doctor model.
+}
+
 func (r DoctorReport) Passed() bool {
 	if len(r.Checks) == 0 {
 		return false
@@ -44,11 +48,22 @@ type doctorDeps struct {
 	run        func(context.Context, Store, string, Harness, WorkerConfig) (Result, error)
 	now        func() time.Time
 	tempParent string
+	model      string
 }
 
 // Doctor uses disposable repositories and job storage; only the verified-version
 // table is written to the caller's home. No process-global environment is changed.
-func Doctor(ctx context.Context, store Store, names []string, out io.Writer) (bool, error) {
+func Doctor(ctx context.Context, store Store, names []string, out io.Writer, options ...DoctorOptions) (bool, error) {
+	var opts DoctorOptions
+	if len(options) > 1 {
+		return false, fmt.Errorf("expected at most one set of doctor options")
+	}
+	if len(options) == 1 {
+		opts = options[0]
+	}
+	if opts.Model != "" && len(names) != 1 {
+		return false, fmt.Errorf("--model requires exactly one harness")
+	}
 	if len(names) == 0 {
 		names = Names()
 	}
@@ -68,7 +83,7 @@ func Doctor(ctx context.Context, store Store, names []string, out io.Writer) (bo
 			return false, err
 		}
 	}
-	reports, err := runDoctor(ctx, store, harnesses, doctorDeps{})
+	reports, err := runDoctor(ctx, store, harnesses, doctorDeps{model: opts.Model})
 	passed := err == nil
 	for _, r := range reports {
 		if _, e := fmt.Fprintf(out, "%s %s\n", r.Harness, r.Version); e != nil {
@@ -156,6 +171,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		if h.DoctorModel != "" {
 			model = h.DoctorModel
 		}
+		if d.model != "" {
+			model = d.model
+		}
 
 		var checkUserHome func() error
 		if h.Home != nil && h.Home.BeforeDoctor != nil {
@@ -167,7 +185,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				continue
 			}
 		}
-		if h.Models != nil {
+		// Explicit models follow RunJob's backend validation, just like sub run.
+		// In particular, agy can proceed when its catalog pre-check is unavailable.
+		if d.model == "" && h.Models != nil {
 			opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind)}
 			var modelHomes []*managedHome
 			if h.Home != nil {
@@ -231,8 +251,11 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		goodWrite := writeErr == nil && writable.Status == StatusSucceeded && writable.CLIVersion == r.Version
 		info, fileErr := os.Lstat(filepath.Join(repo, "out.txt"))
 		wrote := fileErr == nil && info.Mode().IsRegular()
-		add("Write access", goodWrite && wrote && strings.TrimSpace(writable.FinalText) != "" && writable.InputTokens+writable.OutputTokens > 0,
-			fmt.Sprintf("status=%s, file=%t, final reply=%t, tokens=%d, version=%s%s", writable.Status, wrote, strings.TrimSpace(writable.FinalText) != "", writable.InputTokens+writable.OutputTokens, writable.CLIVersion, doctorError(writeErr)))
+		writeReason := fmt.Sprintf("status=%s, file=%t, final reply=%t, tokens=%d, version=%s%s", writable.Status, wrote, strings.TrimSpace(writable.FinalText) != "", writable.InputTokens+writable.OutputTokens, writable.CLIVersion, doctorError(writeErr))
+		if writeErr == nil && writable.Status != StatusSucceeded && len(writable.Warnings) > 0 {
+			writeReason += "; " + strings.Join(writable.Warnings, "; ")
+		}
+		add("Write access", goodWrite && wrote && strings.TrimSpace(writable.FinalText) != "" && writable.InputTokens+writable.OutputTokens > 0, writeReason)
 		add("Model", goodWrite && writable.ModelVerified && writable.ModelActual == model, fmt.Sprintf("requested=%s, actual=%s, independently verified=%t", model, writable.ModelActual, writable.ModelVerified))
 		results := []Result{writable}
 		ranAll := writeErr == nil && writable.Status == StatusSucceeded
@@ -243,7 +266,11 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			results = append(results, readonly)
 			_, statErr := os.Lstat(filepath.Join(roRepo, "out.txt"))
 			ok := roErr == nil && readonly.Status == StatusSucceeded && readonly.CLIVersion == r.Version && readonly.ToolCalls > 0 && strings.TrimSpace(readonly.FinalText) != "" && os.IsNotExist(statErr) && len(readonly.Diff.Files) == 0
-			evidence := fmt.Sprintf("status=%s, write target absent=%t, tool calls=%d%s", readonly.Status, os.IsNotExist(statErr), readonly.ToolCalls, doctorError(roErr))
+			readError := doctorError(roErr)
+			if roErr != nil && writeErr != nil && roErr.Error() == writeErr.Error() {
+				readError = ", error=same as above (Write access)"
+			}
+			evidence := fmt.Sprintf("status=%s, write target absent=%t, tool calls=%d%s", readonly.Status, os.IsNotExist(statErr), readonly.ToolCalls, readError)
 			if h.DoctorReadOnly != nil {
 				accepted, reason := h.DoctorReadOnly(readonly)
 				ok = roErr == nil && readonly.CLIVersion == r.Version && os.IsNotExist(statErr) && len(readonly.Diff.Files) == 0 && accepted

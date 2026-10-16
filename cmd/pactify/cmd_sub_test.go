@@ -25,7 +25,13 @@ func buildPactify(t *testing.T) string {
 }
 func gitRepoForCLI(t *testing.T) string {
 	t.Helper()
-	dir := t.TempDir()
+	// The CLI stores and looks up jobs by the symlink-resolved cwd; macOS
+	// temp dirs live under the /var -> /private/var symlink, so tests that
+	// seed the job store directly must use the same resolved path.
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, args := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}} {
 		c := exec.Command("git", args...)
 		c.Dir = dir

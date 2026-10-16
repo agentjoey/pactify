@@ -32,6 +32,7 @@
 // tests create them through the UI.
 
 import { createServer } from "node:http";
+import { serveJobsAPI } from "./jobs-fixtures.mjs";
 import { readFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join, normalize, extname } from "node:path";
@@ -161,6 +162,11 @@ async function serveStatic(req, res) {
 const server = createServer(async (req, res) => {
   const { method } = req;
   const url = (req.url || "/").split("?")[0];
+
+  if (url.startsWith("/api/sub/")) {
+    if (!serveJobsAPI(req, res, url.replace(/^\/api\/sub/, "/api"))) sendJSON(res, 404, { error: "not found" });
+    return;
+  }
 
   // --- test hooks ---
   if (url === "/__test/reset" && method === "POST") {

@@ -15,6 +15,7 @@ import { RunRail } from "./components/board/RunRail";
 import { EventDrawer } from "./components/board/EventDrawer";
 import { RightRail } from "./components/RightRail";
 import { CockpitPanel } from "./components/CockpitPanel";
+import { Jobs } from "./components/jobs/Jobs";
 import { Dashboard } from "./components/Dashboard";
 import { CommandK } from "./components/CommandK";
 import { NoProjects } from "./components/NoProjects";
@@ -29,16 +30,21 @@ import { useVisiblePoll } from "./lib/useVisiblePoll";
 
 const EMPTY: State = { project: "", agents: [], features: [], awaiting_count: 0 };
 type BoardMode = "board" | "flow";
-export type Lens = "dashboard" | "board" | "cockpit" | "settings";
+export type Lens = "dashboard" | "board" | "cockpit" | "jobs" | "settings";
 
 const LENS_STORAGE_KEY = "pactify:lens";
 const BOARD_MODE_STORAGE_KEY = "pactify:boardMode";
 const LAST_PROJECT_STORAGE_KEY = "pactify:lastProject";
 
+function isJobsHash(): boolean {
+  return location.hash.startsWith("#/jobs");
+}
+
 function readSavedLens(): Lens {
+  if (isJobsHash()) return "jobs";
   if (typeof localStorage === "undefined") return "board";
   const raw = localStorage.getItem(LENS_STORAGE_KEY);
-  if (raw === "dashboard" || raw === "board" || raw === "cockpit" || raw === "settings") return raw;
+  if (raw === "dashboard" || raw === "board" || raw === "cockpit" || raw === "jobs" || raw === "settings") return raw;
   return "board";
 }
 
@@ -65,7 +71,19 @@ export function AppContent() {
   const [selected, setSelected] = useState("");
   const [live, setLive] = useState(false);
   // IA v2 shell: lens-based routing. Settings is a peer view, not a modal.
-  const [lens, setLens] = useState<Lens>(() => readSavedLens());
+  const [lens, setLensState] = useState<Lens>(() => readSavedLens());
+  // Keep tab, mobile and keyboard navigation in sync with shareable Jobs URLs.
+  function setLens(next: Lens) {
+    const url = location.pathname + location.search;
+    if (next === "jobs" && !isJobsHash()) history.replaceState(null, "", url + "#/jobs");
+    if (next !== "jobs" && isJobsHash()) history.replaceState(null, "", url);
+    setLensState(next);
+  }
+  useEffect(() => {
+    const change = () => { if (isJobsHash()) setLensState("jobs"); };
+    window.addEventListener("hashchange", change);
+    return () => window.removeEventListener("hashchange", change);
+  }, []);
   const previousLens = useRef<Lens>(lens);
   const [settingsSeat] = useState<string | null>(null); // future: seat-gear deep link into Settings
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -458,7 +476,7 @@ export function AppContent() {
         onSelectWorktree={(name, branch) => { setCurrent(name); setCurrentWorktree(branch); }}
       />
       <div className="relative flex flex-1 overflow-hidden">
-        {projectsLoaded && projects.length === 0
+        {lens !== "jobs" && projectsLoaded && projects.length === 0
           ? <NoProjects onRegistered={refreshProjects} />
           : renderLens()}
       </div>
@@ -503,6 +521,8 @@ export function AppContent() {
 
   function renderLens() {
     switch (lens) {
+      case "jobs":
+        return <Jobs />;
       case "dashboard":
         return (
           <Dashboard

@@ -9,6 +9,8 @@ import (
 
 	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/registry"
+	"github.com/agentjoey/pactify/internal/sub"
+	"github.com/agentjoey/pactify/internal/subpanel"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -111,6 +113,14 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 // Handler returns the HTTP routes.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	store, err := sub.DefaultStore()
+	if err != nil {
+		mux.HandleFunc("/api/sub/", func(w http.ResponseWriter, _ *http.Request) {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		})
+	} else {
+		mux.Handle("/api/sub/", http.StripPrefix("/api/sub", subpanel.ReadOnlyHandler(store)))
+	}
 	mux.HandleFunc("GET /api/projects", s.handleProjects)
 	mux.HandleFunc("GET /api/projects/{id}/state", s.handleState)
 	mux.HandleFunc("GET /api/projects/{id}/worktrees", s.handleWorktrees)

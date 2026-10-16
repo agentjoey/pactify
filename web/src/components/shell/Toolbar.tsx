@@ -5,10 +5,10 @@ import type { Worktree } from "../../lib/api";
 import { ProjectMenu } from "./ProjectMenu";
 
 // Toolbar — shared product shell (ui2-shell). Left: wordmark (+ project selector in Cockpit).
-// Center: Dashboard | Board | Cockpit lens segments with Cockpit pending badge.
+// Center: Dashboard | Board | Cockpit | Jobs with Cockpit pending badge.
 // Right: ⌘K, live pill, dispatch (Cockpit lens only), Settings gear, user tile.
 
-const LENSES: Lens[] = ["dashboard", "board", "cockpit"];
+const LENSES: Lens[] = ["dashboard", "board", "cockpit", "jobs"];
 
 export function Toolbar({
   live,
@@ -61,6 +61,7 @@ export function Toolbar({
       if (e.key === "1") onLensChange("dashboard");
       if (e.key === "2") onLensChange("board");
       if (e.key === "3") onLensChange("cockpit");
+      if (e.key === "4") onLensChange("jobs");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -140,6 +141,18 @@ export function Toolbar({
         })}
       </div>
 
+      <select
+        className="sm:hidden min-w-0 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] p-1 text-xs"
+        aria-label="View"
+        value={lens}
+        onChange={(e) => onLensChange(e.target.value as Lens)}
+      >
+        {LENSES.map((l) => (
+          <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>
+        ))}
+        {lens === "settings" && <option value="settings">Settings</option>}
+      </select>
+
       {/* right: ⌘K · dispatch (cockpit lens) · live · settings · user tile */}
       <div className="flex shrink-0 items-center gap-2.5">
         <button
@@ -147,7 +160,7 @@ export function Toolbar({
           data-testid="cmdk-hint"
           aria-label="command palette"
           onClick={() => window.dispatchEvent(new CustomEvent("pactify:cmdk"))}
-          className="inline-flex items-center gap-1.5 rounded-md border border-[rgba(255,255,255,0.10)] bg-[var(--bg)] px-2 py-1 text-[11px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
+          className="hidden md:inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--bg)] px-2 py-1 text-[11px] text-[var(--color-text-3)] transition-colors hover:text-[var(--color-text-1)]"
         >
           ⌘K
         </button>

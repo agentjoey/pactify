@@ -141,7 +141,18 @@ Keep `$PACTIFY_HOME` and the ancestors of managed homes as real directories.
 Do not manually symlink them into user data: confinement starts at the managed
 home itself and does not protect data redirected by an ancestor symlink.
 
-### Local job panel (read-only)
+### Jobs view and local panel (read-only)
+
+Open **Jobs** alongside Dashboard / Board / Cockpit in the existing dashboard.
+For the Owner's deployment, log in through Cloudflare Access at
+`https://pactify.agentjoey.ai/#/jobs` (or `#/jobs/<id>` for a shared job link).
+Cloudflare Tunnel forwards to the
+loopback-only `pactify serve` at `127.0.0.1:17082`; Access protects the external
+entry. Serve's Origin guard is not login authentication. Keep serve on loopback,
+and keep Tunnel + Access protection enabled for external access. See
+[Jobs view and deployment prerequisites](docs/jobs-view.md).
+
+For a separate local browser session:
 
 ```sh
 pactify sub panel                       # random loopback port; opens the browser
@@ -160,7 +171,8 @@ listens on `127.0.0.1`; Ctrl-C stops it. Job data comes from `$PACTIFY_HOME/jobs
 Filter jobs by status, harness or repository; running jobs appear first and
 attention markers highlight pending worktrees, failures and warnings. Open a job
 for its brief, readable result, live logs, file-folded diff and resume links.
-The panel supports light/dark appearance and phone widths. It is read-only:
+The dashboard retains its fixed dark appearance; the standalone panel offers its
+own System / Light / Dark selector. Both support phone widths and are read-only:
 run `pactify sub apply <job>`, `pactify sub discard <job>` or
 `pactify sub cancel <job>` in the CLI or Claude Code; the detail page provides
 copyable commands. Panel reads never recover orphan workers or change job state.
@@ -173,13 +185,17 @@ limited to 512 KiB with an explicit truncation notice. Non-worktree jobs retain
 only their recorded file change list; the current result format does not save a
 full patch. Missing/discarded worktrees fall back to the recorded list.
 
-The panel is separate from the frozen `pactify serve` dashboard. Its assets are
-checked into `internal/subpanel/dist`, so `go build ./...` needs no Node runtime.
-To rebuild and capture the final panel build:
+The dashboard Jobs tab and local panel share the same components, styles and
+read-only API implementation. Serve mounts the API at `/api/sub/jobs`; the local
+panel keeps `/api/jobs` and its own Bearer authentication. Each reads `$PACTIFY_HOME/jobs`
+from its own process environment. Assets are checked
+into `internal/serve/dist` and `internal/subpanel/dist`, so `go build ./...` needs
+no Node runtime. To rebuild both entries and capture the final panel build:
 
 ```sh
 cd web
 npm ci
+npm run build
 npm run build:panel
 node scripts/shots-panel.mjs # prints temporary paths: list/detail × light/dark × desktop/mobile
 ```

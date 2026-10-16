@@ -13,7 +13,7 @@
 2026-10-15～16 合入 main，**尚未发布**；当前发布版仍为 v0.12.0。M1 功能已合入，v0.13.0 挂起，Owner 选择继续内部自用。
 
 - **harness 路由与 M1**（#69–#91）：Claude Code 插件与 `pactify sub` 提供委派、后台 job、续接、取消、日志、worktree 隔离与 `sub doctor`；codex 成为默认，kimi 保持实验性且不开放只读。默认精简 callee 配置、隔离会话，补齐结果、实际模型及 token 核实，减少委派开销与用户会话污染。
-- **M2 harness 扩展**（#92–#94、#101–#104）：接入实验性的 agy（命令行后端、动态模型表、镜像 HOME）与 opencode（ACP、隔离 XDG、模型与成本核实）；修正 agy 终稿和模型列表失败处理、opencode export 管道问题。agy 大任务一次完成 1/10（见 [评估](agy-eval.md)）；opencode 评估待定。
+- **M2 harness 扩展**（#92–#94、#101–#104、#109、#113）：接入实验性的 agy（命令行后端、动态模型表、镜像 HOME）与 opencode（ACP、隔离 XDG、模型与成本核实）；修正 agy 终稿和模型列表失败处理、opencode export 管道问题与用量统计。大任务一次完成：agy 1/10（见 [评估](agy-eval.md)），opencode + deepseek-flash 6/10（见 [评估](opencode-eval.md)）。
 - **任务查看与续接**（#95–#99、#105）：共享 `sub status --json` 摘要、Claude Code `/jobs`、本地只读 `pactify sub panel`，展示活动、结果、日志和 diff；`--resume <job-id>` 可续接指定任务，版本变化不再覆盖真实失败原因。
 - **退役清理**（#97、#100、#106、#107、AJ-664、AJ-665）：删除 Go 云端与 web 托管模式，移除 gemini-cli（web 与 Go 两侧，已注册的 gemini-cli 座席会提示改用 agy）。云端文档归档至 `docs/archive/`，精简部署、运维与架构说明，同步三份入口文件。Owner 决定 linx 整体退役，共享 workspace 及构建 / 发布 CI 已删除（AJ-664），Go DTO golden 迁至 `internal/serve/testdata/`，保留 `UPDATE_GOLDEN` 更新入口；agy 的 Gemini 模型与 GEMINI.md 入口保留。
 

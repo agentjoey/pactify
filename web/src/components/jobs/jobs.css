@@ -362,6 +362,38 @@
 .panel-detail-grid > .panel-section {
   margin-top: 0;
 }
+.panel-usage-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+.panel-usage-scroll:focus-visible {
+  outline: 2px solid var(--color-role-design);
+  outline-offset: 2px;
+}
+.panel-usage table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.panel-usage th, .panel-usage td {
+  padding: 10px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--color-border-subtle);
+  overflow-wrap: anywhere;
+}
+.panel-usage th:first-child {
+  text-align: left;
+}
+.panel-usage thead {
+  color: var(--color-text-3);
+}
+.panel-usage tfoot {
+  background: var(--color-bg-inset);
+  font-weight: 600;
+}
 .panel-section-heading {
   display: flex;
   align-items: center;

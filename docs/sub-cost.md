@@ -12,7 +12,8 @@ pactify sub cost --by day
 
 只读取与其他 `sub` 命令相同的 `$PACTIFY_HOME/jobs/*/{state,result}.json`；未设置
 `PACTIFY_HOME` 时使用 `~/.pactify/jobs`。不调用 Recover、不创建目录或锁、不恢复或
-修改 job，不读取日志、harness home 或凭据。Jobs 页汇总不在本命令的实现范围内。
+修改 job，不读取日志、harness home 或凭据。Jobs 页通过共用的只读 API 复用本汇总，
+HTTP 扩展字段与刷新行为见 [Jobs view](jobs-view.md#api-与边界)。CLI JSON 契约保持不变。
 
 ## 时间、分组与容错
 
@@ -126,7 +127,8 @@ CLI 生成的表头、提示、错误、帮助和成本标签统一使用英文�
 `rateLimit`，按 harness 排序。观测时间优先使用 State 的 `finishedAt`，没有时取
 `updatedAt`，再取 `createdAt`；同时间取字典序较大的 job id。忽略未来创建或未来观测
 时间。后来的空 `rateLimit` 不覆盖旧快照。保留来源 job 和时间，快照不代表实时查询，
-也不解析尚未合入的 R1 `quota.json`。
+CLI 汇总不读取 R1 的 `quota.json`；Jobs HTTP API 单独读取它来提供 `exhaustedRoutes`，
+不改变上述历史快照的含义。
 
 ## 与已有查询的关系
 

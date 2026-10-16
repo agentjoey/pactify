@@ -14,7 +14,7 @@ Pactify 是 **harness 路由器**：在 Claude Code 里用 slash 命令委派大
 **Version:** **v0.12.0**（2026-10-15，当前发布版；编排器方向的回滚锚点）。未发布变更与完整历史见 **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)**。
 
 **当前状况（2026-10-16，基于当前 checkout）**
-- **4 个 harness**：codex 为默认；kimi、agy、opencode 为实验性。agy 大任务一次完成 1/10，见 [`docs/agy-eval.md`](docs/agy-eval.md)；opencode 评估待定。
+- **4 个 harness**：codex 为默认；kimi、agy、opencode 为实验性。agy 大任务一次完成 1/10，见 [`docs/agy-eval.md`](docs/agy-eval.md)；opencode（deepseek-flash）一次完成 6/10，见 [`docs/opencode-eval.md`](docs/opencode-eval.md)。
 - **M1 功能已合入、未发布**：v0.13.0 挂起，Owner 选择继续内部自用；已支持后台 job、续接、取消、日志、worktree 隔离与 `sub doctor`。
 - **任务查看**：Claude Code 新增 `/jobs`，CLI 新增本地只读面板 `pactify sub panel`；摘要契约见 [`docs/sub-status.md`](docs/sub-status.md)。
 - **云端与 gemini-cli 清理**：云端 Go、web 与共享 workspace 及其构建 / 发布 CI 已删除（AJ-664）。gemini-cli 已移除（web #106、Go #107）。

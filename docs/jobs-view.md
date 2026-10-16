@@ -42,8 +42,13 @@ pactify sub panel --port 17100 --no-open
 | 详情 | `/api/sub/jobs/<id>` | `/api/jobs/<id>` |
 | SSE 日志 | `/api/sub/jobs/<id>/logs` | `/api/jobs/<id>/logs` |
 | diff | `/api/sub/jobs/<id>/diff` | `/api/jobs/<id>/diff` |
+| 用量汇总 | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
 
 全部 API 仅接受 GET，HEAD 也拒绝。不提供 apply、discard、cancel、resume 操作；请在 CLI 或 Claude Code 中执行。读取使用原子 state 快照，不恢复孤儿 worker、不创建锁文件、不改变任务状态。缺失 `state.json` 的残缺 job 目录会跳过；非法 job id 经 Store 校验拒绝。
+
+列表底部的 **Usage · last 7 days** 卡片独立每 30 秒刷新，跨仓库汇总最近 7 个本地日历日的终态 result，不随列表筛选变化。按 harness 显示 jobs（ok/failed）、input/output tokens 与美元 / subscription / unknown 成本，含合计与 partial 注记。失败时只显示 **Usage unavailable**，不影响任务列表。手机上的表格在卡片内部横向滚动。
+
+cost API 的 `since` / `by` 默认值和参数校验沿用 [`sub cost`](sub-cost.md)，非法参数返回 400，存储读取失败返回 500。HTTP 响应在 CLI report 字段之外增加 `exhaustedRoutes: QuotaRoute[]`，复用 `Store.ExhaustedRoutes` 只读加载 `$PACTIFY_HOME/quota.json` 并过滤过期记录；CLI JSON 契约不变。历史 `quotaSnapshots` 不用于推断路线耗尽或重置时间。没有已知重置时间时卡片显示 `resets in unknown`。
 
 日志从末尾 1 MiB 窗口内最多 100 条可读记录开始，半行缓冲最多 64 KiB，浏览器最多保留 1,000 行；任务进入终态后关闭流，离开详情时取消请求。断流 / 错误会显示状态，刷新可重新连接。完整日志使用 `pactify sub logs <id> --follow`。
 

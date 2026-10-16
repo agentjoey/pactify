@@ -6,6 +6,50 @@ async function openJobs(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "Delegated jobs", exact: true })).toBeVisible();
 }
 
+for (const width of [1440, 375]) {
+  test(`Jobs usage shows totals, refreshes slowly and stays within the page at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.clock.install();
+    const requests: string[] = [];
+    page.on("request", request => {
+      if (new URL(request.url()).pathname === "/api/sub/cost") requests.push(request.url());
+    });
+    await openJobs(page);
+    const card = page.getByRole("region", { name: "Usage · last 7 days", exact: true });
+    await expect(card.getByRole("row", { name: /codex/ })).toContainText("subscription");
+    await expect(card.getByRole("row", { name: /codex/ })).toContainText("12,345");
+    await expect(card.getByRole("row", { name: /opencode/ })).toContainText("$0.125000");
+    await expect(card.getByRole("row", { name: /custom/ })).toContainText("unknown");
+    await expect(card.getByRole("row", { name: /Total/ })).toContainText("4 (2 ok / 2 failed)");
+    await expect(card).toContainText("* includes 1 jobs with partial usage");
+    await expect(card).toContainText(/Exhausted: codex\/gpt-5 \(resets in \d+h \d+m\)/);
+    expect(requests).toHaveLength(1);
+    expect(new URL(requests[0]).searchParams.toString()).toBe("since=7d&by=harness");
+    await page.clock.fastForward(10000);
+    expect(requests).toHaveLength(1);
+    const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/sub/cost");
+    await page.clock.fastForward(21000);
+    await refreshed;
+    expect(requests).toHaveLength(2);
+    await card.scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const scroll = card.getByRole("region", { name: "Usage by harness" });
+    if (width < 640) {
+      expect(await scroll.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+      await scroll.evaluate(node => { node.scrollLeft = node.scrollWidth; });
+      expect(await scroll.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+    }
+    await test.info().attach(`jobs-usage-${width}px-final-build`, { body: await card.screenshot(), contentType: "image/png" });
+  });
+}
+
+test("Jobs list remains available when usage fails", async ({ page }) => {
+  await page.route("**/api/sub/cost?*", route => route.fulfill({ status: 503, body: "unavailable" }));
+  await openJobs(page);
+  await expect(page.getByText("Usage unavailable", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "AJ-659 · Local read-only job panel" })).toBeVisible();
+});
+
 test("dashboard Jobs lens persists and shows all repositories, filters and details", async ({ page }) => {
   await page.goto("/");
   await page.getByTestId("lens-jobs").click();

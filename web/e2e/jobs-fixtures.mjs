@@ -103,7 +103,7 @@ export const panelJobs = [
   },
 ];
 export function serveJobsAPI(req, res, pathname) {
-  if (pathname !== "/api/jobs" && !pathname.startsWith("/api/jobs/")) return false;
+  if (pathname !== "/api/cost" && pathname !== "/api/jobs" && !pathname.startsWith("/api/jobs/")) return false;
   if (req.method !== "GET") {
     res.writeHead(405, { Allow: "GET" });
     res.end();
@@ -113,6 +113,28 @@ export function serveJobsAPI(req, res, pathname) {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(value));
   };
+  if (pathname === "/api/cost") {
+    const now = new Date();
+    const since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+    const empty = {
+      jobs: 0, succeeded: 0, failed: 0, canceled: 0, retries: 0, fallbacks: 0,
+      inputTokens: 0, outputTokens: 0, costUSD: null, costReportedJobs: 0,
+      subscriptionJobs: 0, unpricedJobs: 0, usagePartialJobs: 0,
+    };
+    json({
+      since: since.toISOString(), until: now.toISOString(), by: "harness",
+      groups: [
+        { ...empty, key: "codex", jobs: 2, succeeded: 1, failed: 1, inputTokens: 12345, outputTokens: 2345, subscriptionJobs: 2, usagePartialJobs: 1 },
+        { ...empty, key: "custom", jobs: 1, failed: 1, inputTokens: 50, outputTokens: 10, unpricedJobs: 1 },
+        { ...empty, key: "opencode", jobs: 1, succeeded: 1, inputTokens: 2000, outputTokens: 300, costUSD: 0.125, costReportedJobs: 1 },
+      ],
+      total: { ...empty, jobs: 4, succeeded: 2, failed: 2, inputTokens: 14395, outputTokens: 2655, costUSD: 0.125, costReportedJobs: 1, subscriptionJobs: 2, unpricedJobs: 1, usagePartialJobs: 1 },
+      skipped: { missingResult: 0, invalidResult: 0, invalidState: 0 },
+      quotaSnapshots: [],
+      exhaustedRoutes: [{ harness: "codex", model: "gpt-5", resetAt: new Date(now.getTime() + 150 * 60000).toISOString(), recordedAt: now.toISOString(), jobId: "job-failed", message: "Quota exhausted" }],
+    });
+    return true;
+  }
   if (pathname === "/api/jobs") {
     json(panelJobs);
     return true;

@@ -3,6 +3,7 @@ import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { dashboardJobsSource, readJobLogs } from "./source";
 import type { JobsSource } from "./source";
+import { UsageCard } from "./UsageCard";
 import "./jobs.css";
 
 const SourceContext = createContext<JobsSource>(dashboardJobsSource);
@@ -617,6 +618,7 @@ function JobsContent({ standalone }: { standalone: boolean }) {
                 </p>
               )}
               {loaded ? <JobList jobs={jobs} /> : !error && <p className="panel-empty">Loading jobs…</p>}
+              {loaded && <UsageCard source={source} />}
             </>
           )}
         </main>

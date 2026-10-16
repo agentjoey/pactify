@@ -162,6 +162,7 @@ func ReadOnlyHandler(store sub.Store) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /cost", s.cost)
 	mux.HandleFunc("GET /router", s.router)
+	mux.HandleFunc("GET /harnesses", s.harnesses)
 	mux.HandleFunc("GET /jobs", s.jobs)
 	mux.HandleFunc("GET /jobs/{id}", s.detail)
 	mux.HandleFunc("GET /jobs/{id}/logs", s.logs)
@@ -194,26 +195,9 @@ func apiError(w http.ResponseWriter, err error) {
 // Load follows state's atomic rename convention. Unlike status CLI's Recover,
 // panel queries never create lock files, publish results or change job state.
 func (s *Server) states() ([]sub.State, error) {
-	entries, err := os.ReadDir(s.store.Root)
-	if os.IsNotExist(err) {
-		return []sub.State{}, nil
-	}
+	rows, err := s.store.States()
 	if err != nil {
 		return nil, err
-	}
-	rows := make([]sub.State, 0, len(entries))
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		st, err := s.store.Load(entry.Name())
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		rows = append(rows, st)
 	}
 	sort.Slice(rows, func(i, j int) bool {
 		if rows[i].CreatedAt.Equal(rows[j].CreatedAt) {
@@ -236,6 +220,7 @@ func (s *Server) jobs(w http.ResponseWriter, r *http.Request) {
 		target = sub.NormalizeRepo(repo)
 	}
 	now := time.Now()
+	index := s.store.NewSummaryIndex(states)
 	for _, st := range states {
 		if repo != "" {
 			root := sub.JobRepo(st)
@@ -243,7 +228,7 @@ func (s *Server) jobs(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 		}
-		rows = append(rows, s.store.Summarize(st, states, now))
+		rows = append(rows, index.Summarize(st, now))
 		if r.URL.Query().Get("all") != "1" && len(rows) == 10 {
 			break
 		}
@@ -282,7 +267,7 @@ func (s *Server) detail(w http.ResponseWriter, r *http.Request) {
 		apiError(w, err)
 		return
 	}
-	d := Detail{Job: s.store.Summarize(st, states, time.Now()), Brief: st.Request.Brief}
+	d := Detail{Job: s.store.NewSummaryIndex(states).Summarize(st, time.Now()), Brief: st.Request.Brief}
 	d.Result, err = s.result(st.ID)
 	if err == nil {
 		d.Markdown = d.Result.Markdown()

@@ -123,3 +123,16 @@ func (s Store) ResumeCandidates(harness, cwd string) ([]State, error) {
 	}
 	return candidates, nil
 }
+
+// LatestResumeJob exposes the CLI's existing latest-session selection without
+// creating a turn, so omitted model/effort can inherit that exact job's settings.
+func (s Store) LatestResumeJob(harness, cwd string) (State, error) {
+	previous, session, err := s.lastRunFor(harness, cwd)
+	if err != nil {
+		return State{}, err
+	}
+	if session == "" {
+		return State{}, &NoSessionError{Harness: harness}
+	}
+	return previous, nil
+}

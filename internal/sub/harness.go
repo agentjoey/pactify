@@ -19,6 +19,8 @@ import (
 const DefaultHarness = "codex"
 
 type Harness struct {
+	// EffortValues is a closed, static constraint when the harness defines one.
+	EffortValues   []string
 	TransientRetry bool // Prompt can send another turn on the same session.
 	Name           string
 	Kind           string
@@ -37,6 +39,8 @@ type Harness struct {
 	LocalUsageBaseline   func(string, string) (int64, error)
 	DoctorModel          string
 	Models               func(context.Context, cockpit.StartOpts) ([]string, error)
+	// ModelDetails shares Models discovery while retaining public selection metadata.
+	ModelDetails func(context.Context, cockpit.StartOpts) (cockpit.ModelDiscovery, error)
 	// Every harness must keep delegated sessions out of the user's own session
 	// lists (TestEveryHarnessHidesItsSessions). HidesItself: the backend does it
 	// (codex archives the thread on Close via StartOpts.Hidden). Otherwise Conceal
@@ -100,7 +104,8 @@ var registry = map[string]Harness{
 	},
 
 	"codex": {
-		DoctorModel:    "gpt-6-luna",
+		DoctorModel: "gpt-6-luna",
+		Models:      cockpit.CodexModels, ModelDetails: cockpit.CodexModelDetails,
 		TransientRetry: true, Name: "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
 		HidesItself:   true,
 		MinimalConfig: true,
@@ -111,6 +116,7 @@ var registry = map[string]Harness{
 	"kimi": {
 		Home:               &harnessHome{Env: "KIMI_CODE_HOME", Source: kimiHomeDir, Managed: managedKimiHome, Layout: kimiHome, Doctor: doctorKimiHome},
 		LocalUsageBaseline: cockpit.KimiWireOffset, DoctorModel: "kimi-code/kimi-for-coding",
+		Models: kimiModels, ModelDetails: kimiModelDetails,
 		TransientRetry: true, Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
 		Experimental:  "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)",
 		MinimalConfig: true,
@@ -324,3 +330,7 @@ func kimiListHidesInHome(home, cwd, sessionID string) error {
 	}
 	return nil
 }
+
+// Efforts lists static protocol constraints. ACP harnesses advertise model-specific
+// options at session setup, so an empty list delegates validation to the backend.
+func (h Harness) Efforts() []string { return append([]string{}, h.EffortValues...) }

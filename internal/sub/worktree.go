@@ -138,6 +138,18 @@ func (s Store) resumeRun(id string, req Request, isolated bool, previous State, 
 			return State{}, fmt.Errorf("%s resume requires the original config mode (%s); use the matching --with-user-config setting or start a fresh session", h.Name, previous.EffectiveConfigMode())
 		}
 	}
+	return s.withResumeLock(previous, func(index *SummaryIndex) (State, error) {
+		if req.StartedFrom == "dashboard" {
+			if err := index.CheckAction(previous, "resume"); err != nil {
+				return State{}, err
+			}
+		}
+		return s.resumeRunLocked(id, req, isolated, previous, session)
+	})
+}
+
+func (s Store) resumeRunLocked(id string, req Request, isolated bool, previous State, session string) (State, error) {
+	h, _ := Lookup(req.Harness)
 	createResume := func() (State, error) {
 		st, err := s.Create(id, req)
 		if err != nil {
@@ -269,7 +281,7 @@ func (s Store) withWorktree(id string, f func(*State, *Worktree) error) error {
 		return err
 	}
 	if st.Worktree == nil {
-		return fmt.Errorf("job %s did not use a worktree", id)
+		return actionConflict("job %s did not use a worktree", id)
 	}
 	if err := validJobID(st.Worktree.Owner); err != nil {
 		return err
@@ -289,11 +301,11 @@ func (s Store) withWorktree(id string, f func(*State, *Worktree) error) error {
 		return err
 	}
 	if owner.Worktree == nil || owner.Worktree.Discarded {
-		return fmt.Errorf("worktree has been discarded and cannot be reused")
+		return actionConflict("worktree has been discarded and cannot be reused")
 	}
 	holder := owner.Worktree.Holder
 	if holder != "" && holder != id {
-		return fmt.Errorf("worktree transferred to job %s; use that job id", holder)
+		return actionConflict("worktree transferred to job %s; use that job id", holder)
 	}
 	return f(&st, st.Worktree)
 }
@@ -316,7 +328,7 @@ func (s Store) worktreeIdle(w *Worktree) error {
 			return err
 		}
 		if !Terminal(st.Status) {
-			return fmt.Errorf("job %s is still running; run pactify sub cancel %s first", st.ID, st.ID)
+			return actionConflict("job %s is still running; run pactify sub cancel %s first", st.ID, st.ID)
 		}
 		// Terminal output alone does not guarantee that every harness exited.
 		for _, p := range append(append([]procx.Identity(nil), st.Processes...), st.Descendants...) {
@@ -325,7 +337,7 @@ func (s Store) worktreeIdle(w *Worktree) error {
 				return err
 			}
 			if alive {
-				return fmt.Errorf("the harness for job %s is still running; run pactify sub cancel %s first", st.ID, st.ID)
+				return actionConflict("the harness for job %s is still running; run pactify sub cancel %s first", st.ID, st.ID)
 			}
 		}
 	}
@@ -409,8 +421,11 @@ func worktreeChanges(w *Worktree, includePatch bool) (change worktreeChange, err
 }
 
 func (s Store) ApplyWorktree(id string) error {
-	return s.withWorktree(id, func(_ *State, w *Worktree) error {
+	return s.withWorktree(id, func(st *State, w *Worktree) error {
 		if err := s.worktreeIdle(w); err != nil {
+			return err
+		}
+		if err := s.CheckAction(*st, "apply"); err != nil {
 			return err
 		}
 		change, err := worktreeChanges(w, true)
@@ -433,7 +448,7 @@ func (s Store) ApplyWorktree(id string) error {
 				}
 				args = append(args, w.BaseCommit, "--", string(path))
 				if _, err := runGit(w.OriginalRoot, args...); err != nil {
-					return fmt.Errorf("affected file %q in the original workspace has changed; not applied: %w", path, err)
+					return actionConflict("affected file %q in the original workspace has changed; not applied: %v", path, err)
 				}
 			}
 		}
@@ -447,7 +462,7 @@ func (s Store) ApplyWorktree(id string) error {
 			cmd.Stdin = bytes.NewReader(change.patch)
 			out, err := cmd.CombinedOutput()
 			if err != nil {
-				return fmt.Errorf("apply failed: %w: %s", err, out)
+				return actionConflict("apply failed: %v: %s", err, out)
 			}
 			return nil
 		}
@@ -463,8 +478,11 @@ func (s Store) ApplyWorktree(id string) error {
 }
 
 func (s Store) DiscardWorktree(id string) error {
-	return s.withWorktree(id, func(_ *State, w *Worktree) error {
+	return s.withWorktree(id, func(st *State, w *Worktree) error {
 		if err := s.worktreeIdle(w); err != nil {
+			return err
+		}
+		if err := s.CheckAction(*st, "discard"); err != nil {
 			return err
 		}
 		entries, err := os.ReadDir(s.Root)

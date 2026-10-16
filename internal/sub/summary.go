@@ -2,12 +2,10 @@ package sub
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -17,6 +15,7 @@ import (
 // JobSummary is the shared contract for status, /jobs and the local panel.
 // Empty metadata stays empty for historical jobs; it is never guessed from ids.
 type JobSummary struct {
+	Actions        []string         `json:"actions"`
 	FallbackFrom   string           `json:"fallbackFrom,omitempty"`
 	FallbackTo     string           `json:"fallbackTo,omitempty"`
 	RetryAttempt   int              `json:"retryAttempt,omitempty"`
@@ -151,8 +150,31 @@ func NormalizeRepo(path string) string {
 // come from Load/Recover (atomic replacement), and peers supply reverse links.
 // A missing or damaged result does not hide a job, matching JSON status history.
 func (s Store) Summarize(st State, peers []State, now time.Time) JobSummary {
+	if peers == nil {
+		index, err := s.actionIndex(st)
+		if err == nil {
+			return index.Summarize(st, now)
+		}
+	}
+	rows := append([]State{}, peers...)
+	found := false
+	for i := range rows {
+		if rows[i].ID == st.ID {
+			rows[i] = st
+			found = true
+			break
+		}
+	}
+	if !found {
+		rows = append(rows, st)
+	}
+	return s.NewSummaryIndex(rows).Summarize(st, now)
+}
+
+func (index *SummaryIndex) Summarize(st State, now time.Time) JobSummary {
+	s := index.store
 	title := briefSummary(st.Request.Brief)
-	row := JobSummary{FallbackFrom: st.FallbackFrom, FallbackTo: st.FallbackTo, ID: st.ID, Title: title, Harness: st.Request.Harness, ModelRequested: st.Request.Model, Access: st.Request.Access, ConfigMode: st.ConfigMode, Repo: JobRepo(st), Cwd: st.Request.Cwd, Status: st.Status, CreatedAt: st.CreatedAt, ResumeOf: st.ResumeOf, Attention: []Attention{}, ResumedBy: []string{}}
+	row := JobSummary{Actions: index.Actions(st), FallbackFrom: st.FallbackFrom, FallbackTo: st.FallbackTo, ID: st.ID, Title: title, Harness: st.Request.Harness, ModelRequested: st.Request.Model, Access: st.Request.Access, ConfigMode: st.ConfigMode, Repo: JobRepo(st), Cwd: st.Request.Cwd, Status: st.Status, CreatedAt: st.CreatedAt, ResumeOf: st.ResumeOf, Attention: []Attention{}, ResumedBy: []string{}}
 	end := st.FinishedAt
 	if end.IsZero() {
 		end = now
@@ -175,19 +197,8 @@ func (s Store) Summarize(st State, peers []State, now time.Time) JobSummary {
 		row.Worktree = &w
 		row.Cwd = w.Cwd
 	}
-	for _, peer := range peers {
-		if peer.ResumeOf == st.ID && st.ID != "" {
-			row.ResumedBy = append(row.ResumedBy, peer.ID)
-		}
-	}
-	sort.Strings(row.ResumedBy)
-	var result Result
-	if data, err := os.ReadFile(s.ResultPath(st.ID)); err == nil {
-		var parsed Result
-		if json.Unmarshal(data, &parsed) == nil {
-			result = parsed
-		}
-	}
+	row.ResumedBy = append([]string{}, index.resumedBy[st.ID]...)
+	result := index.results[st.ID]
 	if st.Status == StatusFailed || st.Status == StatusCanceled {
 		row.FailureClass, row.QuotaResetAt = result.FailureClass, result.QuotaResetAt
 	}

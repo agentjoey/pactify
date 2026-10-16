@@ -14,14 +14,19 @@ import (
 )
 
 // FinalJob follows only fallback links. Status/list/history retain each attempt.
-func (s Store) FinalJob(id string) (State, error) {
+func (s Store) FinalJob(id string) (State, error) { return s.finalJob(id, s.Recover) }
+
+// FinalJobSnapshot follows fallback links without recovery or filesystem writes.
+func (s Store) FinalJobSnapshot(id string) (State, error) { return s.finalJob(id, s.Load) }
+
+func (s Store) finalJob(id string, load func(string) (State, error)) (State, error) {
 	seen := map[string]bool{}
 	for {
 		if seen[id] {
 			return State{}, fmt.Errorf("fallback cycle at job %s", id)
 		}
 		seen[id] = true
-		st, err := s.Recover(id)
+		st, err := load(id)
 		if err != nil {
 			return st, err
 		}

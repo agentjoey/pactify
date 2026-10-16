@@ -67,6 +67,14 @@ func formatSubRouter(path string, router *sub.Router, quotas []sub.QuotaRoute, n
 		out.WriteString("  (not configured; routing disabled)\n")
 		router = &sub.Router{}
 	}
+	out.WriteString("\nDefaults:\n")
+	if len(router.Defaults) == 0 {
+		out.WriteString("  (none)\n")
+	}
+	for _, name := range slices.Sorted(maps.Keys(router.Defaults)) {
+		d := router.Defaults[name]
+		fmt.Fprintf(&out, "  %s: model=%s effort=%s\n", name, d.Model, d.Effort)
+	}
 	out.WriteString("\nAliases:\n")
 	if len(router.Aliases) == 0 {
 		out.WriteString("  (none)\n")

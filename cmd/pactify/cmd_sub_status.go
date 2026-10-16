@@ -132,8 +132,9 @@ func subStatus(c *cobra.Command, ids []string, jsonOut bool) (int, error) {
 		visible = visible[:10]
 	}
 	rows := make([]subStatusListRow, 0, len(visible))
+	index := store.NewSummaryIndex(peers)
 	for _, st := range visible {
-		summary := store.Summarize(st, peers, now)
+		summary := index.Summarize(st, now)
 		rows = append(rows, subStatusListRow{JobSummary: summary, JobID: st.ID, Cwd: st.Request.Cwd, RunCwd: summary.Cwd})
 	}
 	if jsonOut {

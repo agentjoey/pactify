@@ -53,7 +53,11 @@ pactify sub panel --port 17100 --no-open
 | 清除耗尽记录 | `DELETE /api/sub/quota/<encoded-key>` | 不注册 |
 | 用量汇总 | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
 
-共享只读 API 仅接受 GET，HEAD 也拒绝。serve 额外注册路由配置的 PUT 与额度记录的 DELETE，经过现有 Origin guard；panel 保持所有 API 只读。不提供 apply、discard、cancel、resume 操作；请在 CLI 或 Claude Code 中执行。任务读取使用原子 state 快照，不恢复孤儿 worker、不创建锁文件、不改变任务状态。缺失 `state.json` 的残缺 job 目录会跳过；非法 job id 经 Store 校验拒绝。
+共享只读 API 仅接受 GET，HEAD 也拒绝。serve 额外注册路由配置的 PUT、额度记录的 DELETE，以及 `/api/sub/jobs/<id>/{cancel,resume,apply,discard}` 的 POST，经过现有 Origin guard；panel 保持所有 API 只读。写操作仅接受 JSON，请求体上限 64 KiB；状态冲突返回 409。按钮可用性以 summary 的 `actions` 为准：整条续接链没有 queued / running / retrying job 时，仅最新已结束且有 session 的 turn 可 resume。任务读取使用原子 state 快照和一次建立的索引，不恢复孤儿 worker、不创建锁文件、不改变任务状态。缺失 `state.json` 的残缺 job 目录会跳过；非法 job id 经 Store 校验拒绝。
+
+Dashboard resume inherits the serve process environment. In the launchd deployment, it runs in launchd's environment; variables exported only in your interactive shell, including API keys, are not inherited. Configure required variables in the service environment. Workers omit `PACTIFY_ALLOWED_ORIGINS` and `PACTIFY_LEDGER_REF`. The long-lived server reaps finished workers in the background.
+
+Dashboard resume is limited to 4 active jobs per store, including queued and retrying jobs. Further requests return HTTP 429 with `too many jobs started from the dashboard are still running (limit 4)`. CLI jobs do not count toward this limit. Completion, cancellation, or launch failure releases the slot. CLI and dashboard share the same session lock, so concurrent resume requests cannot start multiple turns in the same session, including jobs without a worktree.
 
 列表底部的 **Usage · last 7 days** 卡片独立每 30 秒刷新，跨仓库汇总最近 7 个本地日历日的终态 result，不随列表筛选变化。按 harness 显示 jobs（ok/failed）、input/output tokens 与美元 / subscription / unknown 成本，含合计与 partial 注记。失败时只显示 **Usage unavailable**，不影响任务列表。手机上的表格在卡片内部横向滚动。
 

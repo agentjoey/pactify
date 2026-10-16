@@ -42,11 +42,37 @@ func subCreateRun(c *cobra.Command, store sub.Store, id string, req sub.Request,
 		st, err := store.WorktreeFrom(id, req, from)
 		return st, 2, err
 	}
+	selector := resumeJob
+	if resume {
+		var previous sub.State
+		var err error
+		if resumeJob == subResumeLatest {
+			previous, err = store.LatestResumeJob(req.Harness, req.Cwd)
+		} else {
+			previous, err = store.ResolveResumeJob(resumeJob)
+		}
+		if err != nil {
+			return sub.State{}, 2, err
+		}
+		if !c.Flags().Changed("model") {
+			req.Model = previous.Request.Model
+		}
+		if !c.Flags().Changed("effort") {
+			req.Effort = previous.Request.Effort
+		}
+		selector = previous.ID
+	}
 	if resume && resumeJob != subResumeLatest {
-		st, err := store.ResumeRun(id, req, worktree, resumeJob)
+		st, err := store.ResumeRun(id, req, worktree, selector)
 		return st, 2, err
 	}
-	st, err := store.CreateRun(id, req, worktree, resume)
+	var st sub.State
+	var err error
+	if resume {
+		st, err = store.ResumeRun(id, req, worktree, selector)
+	} else {
+		st, err = store.CreateRun(id, req, worktree, false)
+	}
 	if err == nil && resume {
 		candidates, listErr := store.ResumeCandidates(req.Harness, req.Cwd)
 		if listErr != nil {
@@ -54,8 +80,13 @@ func subCreateRun(c *cobra.Command, store sub.Store, id string, req sub.Request,
 		}
 		if len(candidates) > 1 {
 			fmt.Fprintln(c.ErrOrStderr(), "Multiple resumable jobs:")
+			states, err := store.States()
+			if err != nil {
+				return st, 1, err
+			}
+			index := store.NewSummaryIndex(states)
 			for _, candidate := range candidates {
-				summary := store.Summarize(candidate, nil, time.Now())
+				summary := index.Summarize(candidate, time.Now())
 				fmt.Fprintf(c.ErrOrStderr(), "  %s\t%s\t%s\n", candidate.ID, summary.Title, candidate.FinishedAt.Format(time.RFC3339))
 			}
 			fmt.Fprintf(c.ErrOrStderr(), "Selected %s; use --resume <job-id> to select a different job.\n", st.ResumeOf)

@@ -187,7 +187,8 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		// Explicit models follow RunJob's backend validation, just like sub run.
 		// In particular, agy can proceed when its catalog pre-check is unavailable.
-		if d.model == "" && h.Models != nil {
+		// A fixed DoctorModel also remains authoritative when Settings supports discovery.
+		if d.model == "" && h.DoctorModel == "" && h.Models != nil {
 			opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind)}
 			var modelHomes []*managedHome
 			if h.Home != nil {

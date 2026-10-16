@@ -34,10 +34,16 @@ type QuotaGroup struct {
 	Harness string   `json:"harness"`
 	Models  []string `json:"models"`
 }
+type HarnessDefault struct {
+	Model  string `json:"model"`
+	Effort string `json:"effort"`
+}
+
 type Router struct {
-	Aliases     map[string]Route      `json:"aliases"`
-	Fallback    map[string][]string   `json:"fallback"`
-	QuotaGroups map[string]QuotaGroup `json:"quotaGroups"`
+	Defaults    map[string]HarnessDefault `json:"defaults"`
+	Aliases     map[string]Route          `json:"aliases"`
+	Fallback    map[string][]string       `json:"fallback"`
+	QuotaGroups map[string]QuotaGroup     `json:"quotaGroups"`
 }
 
 // Routing freezes the ordered remaining routes and group rules for a running job.
@@ -94,10 +100,10 @@ func ParseRouter(path string, data []byte) (*Router, error) {
 	if err := decode(data, &fields); err != nil {
 		return fail("config", err)
 	}
-	r := &Router{Aliases: map[string]Route{}, Fallback: map[string][]string{}, QuotaGroups: map[string]QuotaGroup{}}
+	r := &Router{Defaults: map[string]HarnessDefault{}, Aliases: map[string]Route{}, Fallback: map[string][]string{}, QuotaGroups: map[string]QuotaGroup{}}
 	for field, data := range fields {
 		var entries map[string]json.RawMessage
-		if field != "aliases" && field != "fallback" && field != "quotaGroups" {
+		if field != "aliases" && field != "fallback" && field != "quotaGroups" && field != "defaults" {
 			return fail(field, fmt.Errorf("unknown field"))
 		}
 		if err := decode(data, &entries); err != nil {
@@ -106,6 +112,19 @@ func ParseRouter(path string, data []byte) (*Router, error) {
 		for name, raw := range entries {
 			f := field + "." + name
 			switch field {
+			case "defaults":
+				h, ok := Lookup(name)
+				if !ok {
+					return fail(f, fmt.Errorf("unknown harness %q", name))
+				}
+				var defaults HarnessDefault
+				if err := decode(raw, &defaults); err != nil {
+					return fail(f, err)
+				}
+				if efforts := h.Efforts(); defaults.Effort != "" && len(efforts) > 0 && !slices.Contains(efforts, defaults.Effort) {
+					return fail(f+".effort", fmt.Errorf("unsupported effort %q; available: %s", defaults.Effort, strings.Join(efforts, ", ")))
+				}
+				r.Defaults[name] = defaults
 			case "aliases":
 				if !aliasName.MatchString(name) {
 					return fail(f, fmt.Errorf("invalid alias name (omit @)"))
@@ -160,7 +179,7 @@ func (r *Router) Resolve(name string) (Route, error) {
 	if strings.HasPrefix(name, "@") {
 		if r != nil {
 			if route, ok := r.Aliases[strings.TrimPrefix(name, "@")]; ok {
-				return route, nil
+				return r.withDefaults(route), nil
 			}
 		}
 		names := []string{}
@@ -175,7 +194,21 @@ func (r *Router) Resolve(name string) (Route, error) {
 	if _, ok := Lookup(name); !ok {
 		return Route{}, fmt.Errorf("unknown harness %q; available: %s", name, strings.Join(Names(), ", "))
 	}
-	return Route{Harness: name}, nil
+	return r.withDefaults(Route{Harness: name}), nil
+}
+
+// withDefaults fills omitted fields only; explicit CLI overrides are applied later.
+func (r *Router) withDefaults(route Route) Route {
+	if r != nil {
+		defaults := r.Defaults[route.Harness]
+		if route.Model == "" {
+			route.Model = defaults.Model
+		}
+		if route.Effort == "" {
+			route.Effort = defaults.Effort
+		}
+	}
+	return route
 }
 func (r *Router) Chain(first Route) []Route {
 	routes := []Route{first}

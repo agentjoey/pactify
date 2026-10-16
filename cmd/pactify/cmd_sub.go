@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
@@ -16,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/agentjoey/pactify/internal/procx"
 	"github.com/agentjoey/pactify/internal/sub"
 	"github.com/spf13/cobra"
 )
@@ -270,48 +267,7 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	}
 	return subWait(c, store, id, wait, jsonOut, true)
 }
-func subStartWorker(store sub.Store, id string) error {
-	binary, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	in, err := os.Open(os.DevNull)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.OpenFile(filepath.Join(store.Dir(id), "worker.out"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	cmd := exec.Command(binary, "sub", "__worker", id)
-	cmd.Stdin = in
-	cmd.Stdout = out
-	cmd.Stderr = out
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	return store.WithState(context.Background(), id, func(st *sub.State) error {
-		if subTerminal(st.Status) || st.CancelRequested {
-			return nil
-		}
-		if err := cmd.Start(); err != nil {
-			return err
-		}
-		identity, err := procx.Inspect(cmd.Process.Pid)
-		if err == nil {
-			st.PID = identity.PID
-			st.Worker = &identity
-			st.UpdatedAt = time.Now().UTC()
-			err = store.Save(*st)
-		}
-		if err != nil {
-			_ = cmd.Process.Kill()
-			_ = cmd.Wait()
-			return err
-		}
-		return cmd.Process.Release()
-	})
-}
+func subStartWorker(store sub.Store, id string) error { return store.StartWorker(id) }
 func subPending(c *cobra.Command, id string, jsonOut bool, configMode string) error {
 	if jsonOut {
 		return subJSON(c, struct {
@@ -387,81 +343,14 @@ func subCancel(c *cobra.Command, id string) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	final, err := store.FinalJob(id)
+	st, err := store.CancelJob(c.Context(), id)
 	if err != nil {
 		return subJobError(store, id, err)
 	}
-	id = final.ID
-	st, err := store.RequestCancel(id)
-	if err != nil {
-		return subJobError(store, id, err)
-	}
-	if st.Worker != nil && !subTerminal(st.Status) {
-		if err = st.Worker.Signal(syscall.SIGTERM, true); err != nil {
-			return 1, err
-		}
-	}
-	deadline := time.Now().Add(24 * time.Second)
-	for {
-		// Even a terminal worker can leave a wedged harness behind.
-		if subTerminal(st.Status) {
-			if err = st.KillHarnesses(); err != nil {
-				return 1, err
-			}
-			_, err = fmt.Fprintf(c.OutOrStdout(), "%s %s\n", id, st.Status)
-			return 0, err
-		}
-		alive := false
-		if st.Worker != nil {
-			alive, err = st.Worker.Alive()
-			if err != nil {
-				return 1, err
-			}
-		}
-		if !alive || time.Now().After(deadline) {
-			cleanupErr := st.KillHarnesses()
-			if st.Worker != nil {
-				cleanupErr = errors.Join(cleanupErr, st.Worker.Signal(syscall.SIGKILL, true))
-			}
-			if cleanupErr != nil {
-				return 1, cleanupErr
-			}
-			if st.CancelRequested {
-				st.Status = sub.StatusCanceled
-				st.Error = "Task canceled (worker exited)"
-				if alive {
-					st.Error = "Task canceled (force terminated)"
-				}
-			} else if !alive {
-				st.Status = sub.StatusFailed
-				st.Error = "job worker is absent or its process identity no longer matches"
-			} else {
-				st.Status = sub.StatusCanceled
-				st.Error = "Task canceled (force terminated)"
-			}
-			if err = subSaveFallback(store, st); err != nil {
-				return 1, err
-			}
-			return 0, nil
-		}
-		select {
-		case <-c.Context().Done():
-			return 1, c.Context().Err()
-		case <-time.After(100 * time.Millisecond):
-		}
-		st, err = store.Load(id)
-		if err != nil {
-			return 1, err
-		}
-	}
+	_, err = fmt.Fprintf(c.OutOrStdout(), "%s %s\n", st.ID, st.Status)
+	return 0, err
 }
-func subSaveFallback(store sub.Store, st sub.State) error {
-	result := sub.Result{JobID: st.ID, Status: st.Status, Harness: st.Request.Harness, Access: st.Request.Access, ModelRequested: st.Request.Model, LogPath: store.LogPath(st.ID), Warnings: []string{st.Error}}
-	if h, ok := sub.Lookup(st.Request.Harness); ok && h.Experimental != "" {
-		result.Warnings = append([]string{h.Experimental}, result.Warnings...)
-	}
-	return store.Finish(st.ID, &result, st.Error, time.Now())
-}
+func subSaveFallback(store sub.Store, st sub.State) error { return store.SaveFallback(st) }
 func subWorker(parent context.Context, id string) (code int, err error) {
 	store, err := sub.DefaultStore()
 	if err != nil {

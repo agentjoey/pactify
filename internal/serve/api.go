@@ -120,6 +120,7 @@ func (s *Server) Handler() http.Handler {
 		})
 	} else {
 		s.registerRouterWrites(mux, store)
+		s.registerJobWrites(mux, store, store.StartDashboardWorker)
 		mux.Handle("/api/sub/", http.StripPrefix("/api/sub", subpanel.ReadOnlyHandler(store)))
 	}
 	mux.HandleFunc("GET /api/projects", s.handleProjects)

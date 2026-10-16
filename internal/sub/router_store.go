@@ -35,7 +35,7 @@ type RouterSnapshot struct {
 func routerVersion(data []byte) string { return fmt.Sprintf("%x", sha256.Sum256(data)) }
 
 func (s Store) RouterSnapshot(now time.Time) (RouterSnapshot, error) {
-	out := RouterSnapshot{Path: s.RouterPath(), Config: &Router{Aliases: map[string]Route{}, Fallback: map[string][]string{}, QuotaGroups: map[string]QuotaGroup{}}, ExhaustedRoutes: []RouterQuota{}}
+	out := RouterSnapshot{Path: s.RouterPath(), Config: &Router{Defaults: map[string]HarnessDefault{}, Aliases: map[string]Route{}, Fallback: map[string][]string{}, QuotaGroups: map[string]QuotaGroup{}}, ExhaustedRoutes: []RouterQuota{}}
 	data, err := os.ReadFile(out.Path)
 	if err != nil && !os.IsNotExist(err) {
 		return out, err

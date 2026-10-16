@@ -25,6 +25,7 @@ const (
 )
 
 type Request struct {
+	StartedFrom    string `json:"startedFrom,omitempty"`
 	Retries        *int   `json:"retries,omitempty"` // nil uses the default; zero disables retries.
 	WithUserConfig bool   `json:"withUserConfig"`
 	Harness        string `json:"harness"`

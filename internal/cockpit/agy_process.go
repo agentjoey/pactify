@@ -2,6 +2,7 @@ package cockpit
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -21,6 +22,7 @@ import (
 // A turn owns its cancellation, including descendants that outlive the CLI.
 // Explicit Interrupt, the context watcher and Close share the same cleanup.
 type agyProcess struct {
+	observe       func(string, []byte)
 	cmd           *exec.Cmd
 	stdin         io.WriteCloser
 	lines         chan json.RawMessage
@@ -87,7 +89,8 @@ func (p *agyProcess) killParent() {
 }
 
 func (p *agyProcess) send(text string) error {
-	return json.NewEncoder(p.stdin).Encode(struct {
+	var frame bytes.Buffer
+	err := json.NewEncoder(&frame).Encode(struct {
 		Event   string `json:"event"`
 		Message struct {
 			Content string `json:"content"`
@@ -95,6 +98,14 @@ func (p *agyProcess) send(text string) error {
 	}{Event: "user", Message: struct {
 		Content string `json:"content"`
 	}{text}})
+	if err != nil {
+		return err
+	}
+	if p.observe != nil {
+		p.observe("stdin", frame.Bytes())
+	}
+	_, err = p.stdin.Write(frame.Bytes())
+	return err
 }
 func (p *agyProcess) read() {
 	defer close(p.lines)
@@ -103,6 +114,9 @@ func (p *agyProcess) read() {
 	scanner.Buffer(make([]byte, 65536), 16*1024*1024)
 	for scanner.Scan() {
 		line := append(json.RawMessage(nil), scanner.Bytes()...)
+		if p.observe != nil {
+			p.observe("stdout", line)
+		}
 		select {
 		case p.lines <- line:
 		case <-p.ctx.Done():

@@ -130,6 +130,46 @@ agy 没有 ACP，也没有可以程序化调用的服务模式（`remote-control
 
 两道门都过了，才去掉 `Experimental` 标签和 skill 里的横幅，并按规则升插件版本。
 
+### AJ-713 capability status (2026-10-17)
+
+✅ implemented with the linked evidence; ⚠️ upstream limitation; ❌ pending work.
+These are adapter capabilities, not promotion or route-quality results. Experimental labels
+are unchanged. The host owns promotion. Source paths are relative to this repository.
+
+| Capability | codex | opencode | kimi | agy |
+|---|---|---|---|---|
+| C1 Typed persistent session | ✅ [app-server](../../internal/cockpit/codex.go) | ✅ [serve](../../internal/cockpit/opencode_server.go) | ✅ [ACP](../../internal/cockpit/acp.go) | ✅ [stream-json](../../internal/cockpit/agy.go) |
+| C2 Lossless streaming | ✅ [TestHarnessBackpressureV2](../../internal/cockpit/harness_v2_test.go) | ✅ [blocking dispatch](../../internal/cockpit/opencode_serve.go) | ✅ [TestHarnessBackpressureV2](../../internal/cockpit/harness_v2_test.go) | ✅ [emit / process.read](../../internal/cockpit/agy_process.go) |
+| C3 Accurate final text | ✅ [codex tests](../../internal/cockpit/codex_test.go) | ✅ [TestGoldenReplay](../../internal/cockpit/golden_replay_test.go) | ✅ [TestACPFinalTextV2](../../internal/cockpit/harness_v2_test.go) | ✅ [TestAgyV2EmptyFailuresAndFollowups](../../internal/cockpit/agy_v2_test.go) |
+| C4 Resume | ✅ [thread resume](../../internal/cockpit/codex.go) | ✅ [opencode-resume.json](../../internal/cockpit/testdata/golden/opencode-resume.json) | ✅ [kimi-resume.json](../../internal/cockpit/testdata/golden/kimi-resume.json) | ✅ [conversation reuse](../../internal/cockpit/agy_v2_test.go) |
+| C5 Failure classification | ✅ [typed error info](../../internal/cockpit/codex.go) | ✅ [TestOpencodeFailureEvidenceV2](../../internal/cockpit/harness_v2_test.go) | ✅ [TestKimiP0FailureCodes](../../internal/cockpit/kimi_p0_test.go) | ✅ [TestAgyV2TransientTable](../../internal/cockpit/agy_v2_test.go) |
+| C6 Transient continuation | ✅ [retry tests](../../internal/sub/retry_test.go) | ✅ [TransientRetry / worker](../../internal/sub/harness.go) | ✅ [TestKimiP0WireFailureRetries](../../internal/sub/kimi_p0_test.go) | ✅ [TestAgyV2TransientContinuation](../../internal/cockpit/agy_v2_test.go) |
+| C7 Quota, resets, snapshots | ✅ [quota tests](../../internal/sub/quota_test.go) | ⚠️ [typed quota; no reset/snapshot API](../../internal/cockpit/opencode.go) | ⚠️ [wire quota; reset only when supplied, no snapshot API](../../internal/cockpit/kimi_failure.go) | ✅ [non-billable usage snapshots](../../internal/cockpit/agy_quota_test.go) |
+| C8 Per-turn usage | ✅ [token usage mapping](../../internal/cockpit/codex.go) | ✅ [session/child deltas](../../internal/cockpit/opencode_sessions.go) | ✅ [all-agent offsets, partial on missing wire](../../internal/sub/kimi_usage.go) | ✅ [TestAgyV2PersistentAndStepUsage](../../internal/cockpit/agy_v2_test.go) |
+| C9 Non-billable model / effort discovery | ✅ [model/list](../../internal/cockpit/codex_models.go) | ❌ [model discovery implemented; variant/effort list not exported](../../internal/cockpit/opencode.go) | ✅ [TestKimiP0ACPModelsNoPrompt](../../internal/sub/kimi_p0_test.go) | ✅ [model table + effort constraints](../../internal/sub/agy_v2_test.go) |
+| C10 Model fulfillment | ✅ [actual model checks](../../internal/cockpit/codex.go) | ✅ [assistant model](../../internal/cockpit/opencode_serve.go) | ✅ [wire request model](../../internal/cockpit/kimirecord.go) | ✅ [init.model validation](../../internal/cockpit/agy.go) |
+| C11 Cancel + process cleanup | ✅ [lifecycle tests](../../internal/cockpit/lifecycle_test.go) | ✅ [TestOpencodeServeAbortV2](../../internal/cockpit/opencode_serve_test.go) | ✅ [ACP process cleanup](../../internal/acp/process_test.go) | ✅ [descendant cleanup](../../internal/cockpit/agy_process.go) |
+| C12 Read-only | ✅ [OS sandbox](../../internal/cockpit/codex.go) | ⚠️ [native plan + baseline; no OS confinement](../../internal/sub/readonly.go) | ⚠️ [not offered; entry rejection](../../internal/sub/kimi_review_test.go) | ⚠️ [plan / hook / baseline; no OS confinement](../../internal/sub/readonly.go) |
+| C13 Write isolation | ✅ [workspace-write sandbox](../../internal/cockpit/codex.go) | ⚠️ [not sandboxed](../../internal/sub/doctor_alignment.go) | ⚠️ [not sandboxed](../../internal/sub/doctor_alignment.go) | ⚠️ [not sandboxed](../../internal/sub/doctor_alignment.go) |
+| C14 Managed config | ✅ [native config overrides](../../internal/cockpit/codex.go) | ✅ [private XDG homes](../../internal/sub/opencode_home.go) | ✅ [private KIMI_CODE_HOME](../../internal/sub/kimi_home.go) | ✅ [private HOME](../../internal/sub/agy_home.go) |
+| C15 Uniform doctor | ✅ [ten checks](../../internal/sub/doctor_alignment_test.go) | ✅ [ten checks](../../internal/sub/doctor_alignment_test.go) | ✅ [ten checks; read-only N/A](../../internal/sub/doctor_alignment_test.go) | ✅ [ten checks incl. hook](../../internal/sub/doctor_alignment_test.go) |
+| C16 Drift CI | ✅ [schema workflow](../../.github/workflows/codex-schema.yml) | ✅ [API workflow](../../.github/workflows/opencode-api.yml) | ✅ [help + unauthenticated initialize](../../.github/workflows/harness-drift.yml) | ✅ [help + fixture-derived constants](../../.github/workflows/harness-drift.yml) |
+| C17 Replay | ✅ [fake app-server](../../internal/cockpit/codex_test.go) | ✅ [five real goldens](../../internal/cockpit/golden_replay_test.go) | ✅ [four real goldens; no read-only upstream](../../internal/cockpit/golden_replay_test.go) | ❌ [synthetic contract only; live recording deferred to host evaluation](../../internal/cockpit/golden/testdata/agy-contract.json) |
+
+The golden suite compares normalized turn-event order, final text, usage, failure category,
+and session ID through the production adapters. Housekeeping notifications (session metadata,
+command menus and ACP usage notifications without usage data) are excluded from ordering;
+all raw frames remain in the transcript. Renaming `tokens` / wire `usage` to `tokenz` must
+produce an outcome mismatch (`TestGoldenDetectsRenamedTokens`).
+
+For C15, every harness prints the same ten rows. Explicit non-applicability is allowed:
+kimi read-only and non-agy read-only hooks remain SKIP with reasons. This clarifies the
+older blanket “no SKIP” wording above; applicable checks must still pass. Sandbox is a
+declaration, not an attempted escape. Failure classification injects a known offline
+protocol error at the production classifier boundary; it launches no CLI and cannot bill.
+The CI skips unavailable installations with a reason; such a skip is not a passed live drift
+check. C16 above records the implemented gate, not evidence that a future scheduled run passed.
+
 ## 5. 顺序
 
 1. **AJ-710**　opencode serve + 公共部分（G2、G3、G5、`sandboxed`）

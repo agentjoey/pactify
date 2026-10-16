@@ -35,7 +35,11 @@ func (b *acpBackend) Start(ctx context.Context, opts StartOpts) (Session, error)
 		return nil, err
 	}
 
-	client, err := acp.Spawn(ctx, cmd, args, opts.Env, opts.RepoDir, opts.Stderr)
+	var observe func(string, []byte)
+	if opts.Transcript != nil {
+		observe = opts.Transcript.Observe
+	}
+	client, err := acp.SpawnObserved(ctx, cmd, args, opts.Env, opts.RepoDir, observe, opts.Stderr)
 	if err != nil {
 		return nil, fmt.Errorf("acp spawn %q: %w", b.kind, err)
 	}
@@ -72,7 +76,11 @@ func (b *acpBackend) ResumeWith(ctx context.Context, threadID string, opts Start
 		return nil, err
 	}
 
-	client, err := acp.Spawn(ctx, cmd, args, opts.Env, opts.RepoDir, opts.Stderr)
+	var observe func(string, []byte)
+	if opts.Transcript != nil {
+		observe = opts.Transcript.Observe
+	}
+	client, err := acp.SpawnObserved(ctx, cmd, args, opts.Env, opts.RepoDir, observe, opts.Stderr)
 	if err != nil {
 		return nil, fmt.Errorf("acp spawn %q: %w", b.kind, err)
 	}

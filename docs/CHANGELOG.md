@@ -8,6 +8,13 @@
 
 ---
 
+## Unreleased — AJ-713 · consistency gates, part one
+
+- Add opt-in sanitized raw-protocol recording and adapter replay, with five real opencode and four real kimi transcripts, field-rename mutation checks, denied-write evidence, and sensitive-data scanning. Agy live recording remains deferred until host evaluation finishes.
+- Align all four doctors to ten rows, retaining live probes and explicit N/A reasons; add sandbox declarations and non-billable offline failure-classifier injection.
+- Add weekly/manual kimi/agy drift checks with offline-only PR checks, version-change doctor hints, and installation skip reasons. Keep Experimental labels and plugin 0.2.4 unchanged.
+- Add the C1–C17 evidence matrix. Validation output, user-directory metadata comparisons, and the three explicitly superseded doctor test contracts are recorded in the [AJ-713 report](harness-v2/aj713-report.md).
+
 ## Unreleased — AJ-712 · kimi P0
 
 - Read durable wire failures before retry/fallback classification; sum all agent usage with per-agent resume baselines; discover ACP models without a prompt, with warned offline fallback and shared catalog caching.

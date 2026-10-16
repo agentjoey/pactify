@@ -207,7 +207,11 @@ func (s *agySession) Prompt(ctx context.Context, msg UserMessage) error {
 		done := make(chan struct{})
 		turnCtx, stopTurn := context.WithCancel(context.Background())
 		identity, identityErr := procx.Inspect(cmd.Process.Pid)
-		process := &agyProcess{cmd: cmd, stdout: stdout, done: done, ctx: turnCtx, stop: stopTurn, identity: identity, identityErr: identityErr, interruptDone: make(chan struct{}), stdin: stdin, lines: make(chan json.RawMessage, 256), diagnostics: stderr}
+		var observe func(string, []byte)
+		if s.opts.Transcript != nil {
+			observe = s.opts.Transcript.Observe
+		}
+		process := &agyProcess{observe: observe, cmd: cmd, stdout: stdout, done: done, ctx: turnCtx, stop: stopTurn, identity: identity, identityErr: identityErr, interruptDone: make(chan struct{}), stdin: stdin, lines: make(chan json.RawMessage, 256), diagnostics: stderr}
 		s.process = process
 		s.runs.Add(1)
 		go func() { defer s.runs.Done(); process.read() }()

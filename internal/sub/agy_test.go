@@ -161,7 +161,7 @@ func TestAgyDoctorEvidence(t *testing.T) {
 			if err != nil || len(reports) != 1 || reports[0].Passed() != (fault == "") {
 				t.Fatalf("fault=%s reports=%+v err=%v", fault, reports, err)
 			}
-			if len(reports[0].Checks) != 8 {
+			if len(reports[0].Checks) != 10 {
 				t.Fatal(reports)
 			}
 			if fault == "model-copy" {

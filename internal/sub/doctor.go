@@ -168,7 +168,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			if h.Home != nil {
 				skip("Managed home", "CLI unavailable; not run")
 			}
-			reports = append(reports, r)
+			reports = append(reports, alignDoctorChecks(r))
 			continue
 		}
 		add("Installed", true, "CLI version "+r.Version)
@@ -191,7 +191,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			checkUserHome, e = h.Home.BeforeDoctor()
 			if e != nil {
 				abortProbe("Managed home", e.Error())
-				reports = append(reports, r)
+				reports = append(reports, alignDoctorChecks(r))
 				continue
 			}
 		}
@@ -210,7 +210,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 						layout.Cleanup()
 					}
 					abortProbe("Managed home", e.Error())
-					reports = append(reports, r)
+					reports = append(reports, alignDoctorChecks(r))
 					continue
 				}
 			}
@@ -232,7 +232,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			}
 			if e != nil || len(models) == 0 {
 				abortProbe("Model", fmt.Sprintf("cannot list models: %v", e))
-				reports = append(reports, r)
+				reports = append(reports, alignDoctorChecks(r))
 				continue
 			}
 			model = cheapestDoctorModel(models)
@@ -250,7 +250,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		if h.Name == "agy" && !strings.HasPrefix(model, "gemini-3.8-flash-") {
 			abortProbe("Model", "agy doctor requires an available gemini-3.8-flash-* model")
-			reports = append(reports, r)
+			reports = append(reports, alignDoctorChecks(r))
 			continue
 		}
 		run := func(access, brief string) (Result, string, error) {
@@ -396,6 +396,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		} else {
 			add("Session hiding", hidden, reason)
 		}
+		r = alignDoctorChecks(r)
 		if r.Passed() {
 			if err := recordVerifiedVersion(ctx, filepath.Dir(store.Root), h.Name, r.Version, d.now()); err != nil {
 				return append(reports, r), fmt.Errorf("save verified version for %s: %w", h.Name, err)

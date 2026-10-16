@@ -158,6 +158,7 @@ type AuthMethod struct {
 // is safe for concurrent use: a single writer goroutine serializes outbound
 // frames (via writeCh) and a single reader goroutine dispatches inbound frames.
 type Client struct {
+	observe  func(string, []byte)
 	w        io.WriteCloser
 	closeFn  func() error
 	cwd      string
@@ -257,6 +258,14 @@ func CommandEnv(overrides []string) []string { return append(filteredEnviron(), 
 // process exits its stdout closes and the client goes dead, failing all pending
 // and future calls.
 func Spawn(ctx context.Context, command string, args, env []string, dir string, stderr ...io.Writer) (*Client, error) {
+	return spawnObserved(ctx, command, args, env, dir, nil, stderr...)
+}
+
+// SpawnObserved observes complete protocol frames before dispatch; it never opens login files.
+func SpawnObserved(ctx context.Context, command string, args, env []string, dir string, observe func(string, []byte), stderr ...io.Writer) (*Client, error) {
+	return spawnObserved(ctx, command, args, env, dir, observe, stderr...)
+}
+func spawnObserved(ctx context.Context, command string, args, env []string, dir string, observe func(string, []byte), stderr ...io.Writer) (*Client, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -292,7 +301,7 @@ func Spawn(ctx context.Context, command string, args, env []string, dir string, 
 		return nil, fmt.Errorf("acp: start %q: %w", command, err)
 	}
 	process.identity, process.identityErr = procx.Inspect(cmd.Process.Pid)
-	c := newClient(stdin, stdout, process.close, dir)
+	c := newClient(stdin, stdout, process.close, dir, observe)
 	c.process = process
 
 	// Reap the process; its exit closes stdout, so the reader loop already
@@ -325,7 +334,7 @@ func Spawn(ctx context.Context, command string, args, env []string, dir string, 
 // transport down, and cwd is the default working directory (used by LoadSession).
 // It starts the reader and writer goroutines. This is the seam the tests inject a
 // pipe-backed fake server through, keeping Spawn's os/exec path out of the tests.
-func newClient(w io.WriteCloser, r io.Reader, closeFn func() error, cwd string) *Client {
+func newClient(w io.WriteCloser, r io.Reader, closeFn func() error, cwd string, observers ...func(string, []byte)) *Client {
 	c := &Client{
 		w:         w,
 		closeFn:   closeFn,
@@ -335,6 +344,9 @@ func newClient(w io.WriteCloser, r io.Reader, closeFn func() error, cwd string) 
 		pending:   map[int64]chan rpcResponse{},
 		perUpdate: map[SessionID]func(SessionUpdate){},
 		perPerm:   map[SessionID]func(PermissionRequest) PermissionOutcome{},
+	}
+	if len(observers) > 0 {
+		c.observe = observers[0]
 	}
 	go c.writeLoop()
 	go c.readLoop(r)
@@ -661,6 +673,9 @@ func (c *Client) writeLoop() {
 				continue
 			}
 			frame := append(b.data, '\n')
+			if c.observe != nil {
+				c.observe("stdin", frame)
+			}
 			if _, err := c.w.Write(frame); err != nil {
 				c.terminate(fmt.Errorf("acp: write: %w", err))
 				return
@@ -677,6 +692,9 @@ func (c *Client) readLoop(r io.Reader) {
 	for {
 		line, err := br.ReadBytes('\n')
 		if len(line) > 0 {
+			if c.observe != nil {
+				c.observe("stdout", line)
+			}
 			c.dispatch(line)
 		}
 		if err != nil {

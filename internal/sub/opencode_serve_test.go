@@ -150,7 +150,16 @@ func TestOpencodeDoctorNetworkV2(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, check := range reports[0].Checks {
-		if check.Status != "PASS" {
+		want := "PASS"
+		// AJ-713 adds explicit sandbox and N/A rows. This fixture deliberately
+		// removes h.Home above; its original live-probe assertions stay PASS.
+		switch check.Name {
+		case "Sandbox":
+			want = "WARN"
+		case "Read-only hook", "Managed home":
+			want = "SKIP"
+		}
+		if check.Status != want {
 			t.Errorf("check=%+v", check)
 		}
 	}

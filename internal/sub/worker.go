@@ -146,7 +146,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	encoder := json.NewEncoder(log)
 	opts := cockpit.StartOpts{RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
 	opts.MinimalConfig = result.ConfigMode == "minimal"
-	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root))
+	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root), "PACTIFY_JOB="+id)
 	cacheHome := cfg.CacheHome
 	if cacheHome == "" {
 		cacheHome = filepath.Dir(store.Root)

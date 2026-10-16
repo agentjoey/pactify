@@ -56,6 +56,8 @@ codex、kimi、agy 和 opencode 的 job 默认共用以下目录；`PACTIFY_HOME
 
 每个 job 单独使用 `TMPDIR=$PACTIFY_HOME/jobs/<id>/tmp`，在会话关闭后清理；孤儿恢复和取消兜底会先停止已登记的 harness，再清理。只有成功新建并在 job state 中记录归属的目录才会删除；预先存在但归属未知的目录不接管。`sub discard` 会在确认共用 worktree 的所有 job 均停止后，清理这些 job 留下的临时目录，不清理共享缓存或其他 job。临时目录内的符号链接不会导致递归删除链接目标。不要在 job 的专属 TMPDIR 中保存需要保留的文件。
 
+委派环境还包含 `PACTIFY_JOB=<job-id>`。正常结束、取消、孤儿恢复和 discard 会在清理已记录的后代之后，扫描当前用户的进程环境，补充清理父进程过快退出而漏采样的 detached 进程。匹配须为完整 job id，每次发送 TERM / KILL 前均校验 PID 和内核启动时间；扫描不进入 100ms 采样循环，TMPDIR 仍最后清理。读不到环境的进程跳过；macOS 的受保护系统程序（实测 `/bin/sh`、`/bin/sleep`）可能不向 `KERN_PROCARGS2` 暴露环境，主动移除标记的工具也无法通过这项补充扫描找到，仍依赖原有的后代记录。
+
 `sub doctor` 在各 harness 的检查前输出单独的 `Storage` 检查：`PACTIFY_HOME` 所在卷可用空间低于 5 GiB 时为 **WARN**，并报告共享缓存目录下普通文件的大小总和（不跟随内部符号链接）。空间或缓存大小无法读取也为 WARN；这些提示不导致 doctor 失败，不影响 harness 版本自检记录。home 或缓存尚不存在时，检查已有父目录所在卷并报告缓存为零，不创建 job。
 
 停止使用这些缓存的 job 和其他进程后，可删除共享缓存；先用 Go 清理含只读目录的 module cache，再删除其余缓存。后续 job 会重新创建并下载依赖：

@@ -18,6 +18,8 @@ import (
 // JobSummary is the shared contract for status, /jobs and the local panel.
 // Empty metadata stays empty for historical jobs; it is never guessed from ids.
 type JobSummary struct {
+	FallbackFrom   string           `json:"fallbackFrom,omitempty"`
+	FallbackTo     string           `json:"fallbackTo,omitempty"`
 	RetryAttempt   int              `json:"retryAttempt,omitempty"`
 	RetryLimit     int              `json:"retryLimit,omitempty"`
 	RetryCount     int              `json:"retryCount,omitempty"`
@@ -165,7 +167,7 @@ func NormalizeRepo(path string) string {
 // A missing or damaged result does not hide a job, matching JSON status history.
 func (s Store) Summarize(st State, peers []State, now time.Time) JobSummary {
 	title, issue := briefSummary(st.Request.Brief)
-	row := JobSummary{ID: st.ID, Title: title, Issue: issue, Harness: st.Request.Harness, ModelRequested: st.Request.Model, Access: st.Request.Access, ConfigMode: st.ConfigMode, Repo: JobRepo(st), Cwd: st.Request.Cwd, Status: st.Status, CreatedAt: st.CreatedAt, ResumeOf: st.ResumeOf, Attention: []Attention{}, ResumedBy: []string{}}
+	row := JobSummary{FallbackFrom: st.FallbackFrom, FallbackTo: st.FallbackTo, ID: st.ID, Title: title, Issue: issue, Harness: st.Request.Harness, ModelRequested: st.Request.Model, Access: st.Request.Access, ConfigMode: st.ConfigMode, Repo: JobRepo(st), Cwd: st.Request.Cwd, Status: st.Status, CreatedAt: st.CreatedAt, ResumeOf: st.ResumeOf, Attention: []Attention{}, ResumedBy: []string{}}
 	end := st.FinishedAt
 	if end.IsZero() {
 		end = now
@@ -333,10 +335,16 @@ func actionableWarnings(r Result) int {
 
 // StatusText keeps lifecycle status stable while displaying retry progress.
 func (r JobSummary) StatusText(now time.Time) string {
-	if r.Status == StatusRunning && r.RetryAttempt > 0 {
-		return fmt.Sprintf("retrying (%d/%d)", r.RetryAttempt, r.RetryLimit)
-	}
 	label := FailureStatus(r.Status, r.FailureClass, r.QuotaResetAt, now)
+	if r.Status == StatusRunning && r.RetryAttempt > 0 {
+		label = fmt.Sprintf("retrying (%d/%d)", r.RetryAttempt, r.RetryLimit)
+	}
+	if r.FallbackFrom != "" {
+		label += " · fallback from " + r.FallbackFrom
+	}
+	if r.FallbackTo != "" {
+		label += " · → fallback to " + r.FallbackTo
+	}
 	if Terminal(r.Status) && r.RetryCount > 0 {
 		label += fmt.Sprintf(" (retries: %d)", r.RetryCount)
 	}

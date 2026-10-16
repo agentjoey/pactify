@@ -125,6 +125,14 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 		return nil
 	}
 	result.ConfigMode = st.EffectiveConfigMode()
+	result.FallbackFrom, result.FallbackTo = st.FallbackFrom, st.FallbackTo
+	// Preserve routing evidence for every terminal path, including cancellation,
+	// launch failures and worker recovery, without duplicating worker warnings.
+	for _, warning := range st.RouteWarnings {
+		if !slices.Contains(result.Warnings, warning) {
+			result.Warnings = append(result.Warnings, warning)
+		}
+	}
 	if result.WorktreePath == "" {
 		result.describeWorktree(*st)
 	}
@@ -168,6 +176,9 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 			}
 		}
 	}
+	if err := s.quotaFallbackLocked(st, result, finished); err != nil {
+		result.Warnings = append(result.Warnings, "Automatic fallback failed: "+err.Error())
+	}
 	if err := atomicJSON(s.ResultPath(st.ID), result); err != nil {
 		return fmt.Errorf("write result: %w", err)
 	}
@@ -178,6 +189,15 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 	return s.Save(*st)
 }
 func (s Store) Finish(id string, result *Result, reason string, finished time.Time) error {
+	initial, err := s.Load(id)
+	if err != nil {
+		return err
+	}
+	release, err := s.worktreeLease(initial)
+	if err != nil {
+		return err
+	}
+	defer release()
 	return s.WithState(context.Background(), id, func(st *State) error {
 		if Terminal(st.Status) {
 			data, err := os.ReadFile(s.ResultPath(id))
@@ -191,6 +211,7 @@ func (s Store) Finish(id string, result *Result, reason string, finished time.Ti
 			cleanupErr = s.cleanupJobTemp(id)
 		}
 		if err := cleanupErr; err != nil {
+			result.fallbackBlocked = true
 			warning := "Job temp cleanup failed: " + err.Error()
 			if !slices.Contains(result.Warnings, warning) {
 				result.Warnings = append(result.Warnings, warning)

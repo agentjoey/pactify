@@ -95,6 +95,9 @@ type costResult struct {
 
 func (t *CostTotals) add(r costResult, harness string) {
 	t.Jobs++
+	if r.FallbackFrom != "" {
+		t.Fallbacks++
+	}
 	if len(r.Retries) > 0 {
 		t.Retries++
 	}

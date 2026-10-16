@@ -152,3 +152,21 @@ it("shows retry progress and completed retry counts", async () => {
  expect(await screen.findByText("retrying (1/2)")).toBeInTheDocument();
  expect(screen.getByText("retries: 2")).toBeInTheDocument();
 });
+
+it("links both directions of quota fallback on cards and details", async () => {
+  const routed = { ...job, fallbackFrom: "first", fallbackTo: "last" };
+  vi.stubGlobal("fetch", vi.fn(async (path: string) => {
+    if (path.endsWith("/logs")) return new Response("");
+    if (path.endsWith("/diff")) return new Response(JSON.stringify({ files: [] }));
+    if (path.endsWith("/live")) return new Response(JSON.stringify({ job: routed, brief: "Fallback brief", markdown: "" }));
+    return new Response(JSON.stringify([routed]));
+  }));
+  const { unmount } = render(<Jobs />);
+  expect(await screen.findByRole("link", { name: "fallback from first" })).toHaveAttribute("href", "#/jobs/first");
+  expect(screen.getByRole("link", { name: "→ fallback to last" })).toHaveAttribute("href", "#/jobs/last");
+  unmount();
+  history.replaceState(null, "", "/#/jobs/live");
+  render(<Jobs />);
+  expect(await screen.findByRole("link", { name: "fallback from first" })).toHaveAttribute("href", "#/jobs/first");
+  expect(screen.getByRole("link", { name: "→ fallback to last" })).toHaveAttribute("href", "#/jobs/last");
+});

@@ -277,3 +277,5 @@ The verbs (`pact_<verb>` in bash today, `pactify <verb>` in the Go CLI) are one 
 ## License
 
 [MIT](LICENSE) © 2026 Joey (agentjoey).
+
+路由别名、quotaGroups、额度回退及 `--worktree-from`：见 [Harness 路由](docs/router.md)。

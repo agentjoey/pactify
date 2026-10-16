@@ -46,6 +46,9 @@ Render a compact Markdown table with these six columns and at most 10 rows:
 - Status: for running jobs with `retryAttempt`, show `retrying (retryAttempt/retryLimit)`
   during backoff and continuation. For terminal jobs append `retries: retryCount` when nonzero.
   These are automatic turns in the same job, separate from manual `resumeOf` links.
+  Show `fallback from X` for `fallbackFrom` and `→ fallback to Y` for `fallbackTo`, retaining
+  their full job ids; each fallback is a separate attempt. Use the final holder (`worktree.holder`
+  when present) for worktree actions.
   Append `failureClass` when present, with the remaining time until `quotaResetAt`
   for quota failures. These fields are additive; historical jobs may omit them.
 - Repo / mode: shorten `repo` without hiding collisions, then `access` (`write` / `read-only`)
@@ -90,7 +93,9 @@ Show diff statistics from `changedFiles`, `addedLines`, `deletedLines` as `N fil
 These are recorded result statistics, not a fresh diff or proof of review; missing results
 leave zeroes that may be unrecorded. List `resumeOf` and all direct `resumedBy` links,
 including forks, with `sessionId` when present. Empty historical links mean unrecorded or
-none; never infer a chain from matching session ids. Do not recursively fetch the chain.
+none; never infer a chain from matching session ids. Also show direct `fallbackFrom` / `fallbackTo`
+links. `sub result <id>` follows fallback links and may return another job's final result;
+label that result with its own `jobId`. Do not recursively fetch the chain.
 
 For a terminal job retrieve `pactify sub result <id>` for its result summary (use `--json`
 and project `finalText`, `truncated`, `warnings`, `modelVerified` if that reduces output).

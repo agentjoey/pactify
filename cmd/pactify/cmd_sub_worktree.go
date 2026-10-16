@@ -10,6 +10,7 @@ import (
 )
 
 func addSubWorktreeCommands(command, run *cobra.Command) {
+	run.Flags().String("worktree-from", "", "Start a fresh session in a finished job's worktree")
 	run.Flags().Bool("worktree", false, "Run in a detached worktree based on HEAD (resume reuses it)")
 	for _, name := range []string{"apply", "discard"} {
 		command.AddCommand(&cobra.Command{Use: name + " <job>", Short: name + " a job's isolated worktree", Args: subArgs(1), Run: func(c *cobra.Command, args []string) {
@@ -36,6 +37,11 @@ func addSubWorktreeCommands(command, run *cobra.Command) {
 
 func subCreateRun(c *cobra.Command, store sub.Store, id string, req sub.Request, resume bool, resumeJob string) (sub.State, int, error) {
 	worktree, _ := c.Flags().GetBool("worktree")
+	from, _ := c.Flags().GetString("worktree-from")
+	if from != "" {
+		st, err := store.WorktreeFrom(id, req, from)
+		return st, 2, err
+	}
 	if resume && resumeJob != subResumeLatest {
 		st, err := store.ResumeRun(id, req, worktree, resumeJob)
 		return st, 2, err

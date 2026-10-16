@@ -381,7 +381,11 @@ func (st State) KillHarnesses() error {
 	}
 	// A short-lived parent can exit between tracking ticks. Its detached tools
 	// still carry the job marker even though no ancestry snapshot recorded them.
-	marked, err := procx.FindJobProcesses(st.ID)
+	marker := st.ProcessMarker
+	if marker == "" {
+		marker = st.ID
+	}
+	marked, err := procx.FindJobProcesses(marker)
 	cleanupErr = errors.Join(cleanupErr, err, procx.TerminateDescendants("job", marked, 200*time.Millisecond))
 	return cleanupErr
 }

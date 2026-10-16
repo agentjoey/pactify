@@ -12,6 +12,7 @@ import (
 
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/doctor"
+	"github.com/agentjoey/pactify/internal/sub"
 )
 
 // versionProbeTimeout bounds a single `<cli> --version`. Measured on this
@@ -44,6 +45,10 @@ func parseVersion(raw string) string {
 
 // probeVersion runs `<command> --version` and extracts the version.
 func probeVersion(ctx context.Context, command string) string {
+	if command == "agy" {
+		version, _ := sub.AgyVersion(ctx)
+		return parseVersion(version)
+	}
 	path, err := exec.LookPath(command)
 	if err != nil {
 		return ""

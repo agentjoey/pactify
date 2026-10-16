@@ -8,6 +8,18 @@
 
 ---
 
+## Unreleased — AJ-711 · agy v2
+
+- Review fixes: scope doctor process ownership to its disposable store, replace Python hooks with a compiled fail-closed policy, remove native prefix grants, refuse workspace hooks in read-only mode, and conservatively detect pending results.
+- Keep quota observations in a separate rollback-compatible ledger; cap opening probes at five seconds, publish terminal status before bounded closing probes, and keep snapshot failures out of job errors.
+- Add independent doctor hook evidence, flash-only doctor selection, bounded stdin cancellation, sticky model mismatch rejection, per-turn tool tracking, and user-config hook warnings. Validate with failing replay regressions and flash live diagnostics; full evidence and remaining browser-launch restriction are in docs/harness-v2/aj711-report.md.
+
+- One persistent stream-json process per job, explicit model selection on all CLI paths, conversation continuation/restart, step usage, classified empty results, and bounded completion followups.
+- Restore read-only plan access with exact commands, managed PreToolUse policy, and the shared fail-closed tracked/untracked/ignored baseline. Write jobs remain `sandboxed=false`; `--sandbox` is not used.
+- Collect structured `/usage` snapshots before/after jobs, retain quota reset times, and render agy buckets in Dashboard Quota. Rebuild both embedded dist bundles.
+- Add static effort constraints and agy doctor denial/network checks; correct the shared doctor retry access mode. Plugin version: 0.2.3.
+- Validation, superseded AJ-683 tests, isolation evidence, and outstanding live/browser gates: [AJ-711 report](harness-v2/aj711-report.md).
+
 ## Unreleased
 
 2026-10-15～16 合入 main，**尚未发布**；当前发布版仍为 v0.12.0。M1 功能已合入，v0.13.0 挂起，Owner 选择继续内部自用。

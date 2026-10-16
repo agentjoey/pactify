@@ -111,15 +111,13 @@ pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模
   与 `id=mode`（工作模式）两项。kimi 的 ACP 不回报 token 与实际模型，但本地会话记录
   `~/.kimi-code/sessions/<工作目录>/<sessionId>/agents/main/wire.jsonl` 逐轮记有 `model` 与 `usage`，实测与协议内设定一致，
   用它补齐核实与成本（路径经 `~/.kimi-code/session_index.jsonl` 按 sessionId 查）。
-- **命令行后端（agy）**：agy 没有 ACP，也没有 server 协议，只能走命令行。这是第一个非协议后端，须满足以下几点（AJ-648 实测，agy 1.3.5）：
-  - 子进程输出写进缓冲区，不碰父进程 stdio；
-  - 提示词经 stdin 传入（`--input-format stream-json --output-format stream-json`，不占命令行参数、不出现在进程列表里）；事件流中`init` 给出会话 id 与模型，`step_update` 给出文本增量、工具步骤和每步用量，`result` 给出状态、终稿与累计用量；**token 与会话 id 直接取自事件流**；
-  - 实际输入 token = `input_tokens + cache_read_tokens`；
-  - 续接用 `--conversation <id>`；
-  - 取消先发 SIGINT（进程立即退出，`result.status=ERROR`、原因 `interrupted`，子进程被清理），超过宽限期再 kill；
-  - 模型从 `agy models` 动态获取，不再写死；不存在的模型会返回退出码 1 并列出可选项；
-  - 必须识别「工具被无头模式自动拒绝、但 `result.status` 仍为 SUCCESS」的情况：拒绝只出现在 stderr 的 `auto-denied`，以及空终稿。AJ-649 的实现判为失败；AJ-683 起只读档在入口拒绝（见 §5.4）；
-  - 取消时先快照 agy 的全部后代进程（agy 把工具命令放进独立的进程组或会话，按进程组 kill 无效），agy 退出后逐个结束仍存活的后代，并核对进程身份（AJ-649）。
+- **agy v2 stream-json backend (AJ-711, Antigravity CLI 1.4.0)**: one persistent process per job, with `--input-format stream-json --output-format stream-json --model <model> --print-timeout 0s`. Each JSON-encoded user line runs one turn in the same conversation. Model selection uses router defaults or `gemini-3.8-flash-low`; discovery and `/usage` also always pin flash.
+  - Verify `init.model`; sum step usage (`input_tokens + cache_read_tokens`, output tokens), since result usage and turn counts are cumulative.
+  - Transient errors use AJ-693 backoff and continue in the same process. EOF restarts with `--conversation <id>`; explicit job resume uses that same handle.
+  - Empty answers, empty answers with denied actions, and print-timeout empty results fail with categories. ACTIVE tool steps and conservative unfinished-reply patterns trigger up to two extra turns asking for actual results (`--completion-followups`). At the limit, retain a non-empty reply with a warning; active tools are recalculated per turn.
+  - Read-only uses plan mode, an exact command allowlist enforced by the compiled managed hook, managed PreToolUse denial, and AJ-710's fail-closed tracked/untracked/ignored baseline. Write access has `sandboxed=false`, with no `--sandbox`; managed hooks reject `BypassSandbox`. Write `--with-user-config` reports `managed hooks are not installed with --with-user-config`; read-only rejects that opt-out. Read-only refuses `.agents`, `.agent`, and `_agents` workspace directories through the repository root. The baseline covers only the repository; the hook denies writes outside it.
+  - Non-billable `/usage` snapshots before and after jobs retain bucket ids, remaining fractions and reset times in quota-snapshots.json, result JSON, cost and Dashboard Quota. Quota failures retain ResetAt. Opening snapshots have a 5-second budget; terminal results publish before the bounded 10-second closing snapshot. Snapshot failures are warnings.
+  - Cancellation snapshots descendants before SIGINT, terminates survivors after grace, and checks process identity. Doctor requires real denied-write evidence (WARN when the model never attempts it), an independent write-mode read-only hook probe, and Network evidence. Probe process markers include the disposable store identity to prevent cross-store cleanup collisions.
 - **精简 callee 的启动配置**：实测每次委派的输入基线约 2–5 万 token，主要来自 callee 加载用户全部的 MCP 服务器与插件
   （codex 启动了 17 个 MCP 服务器；claude 带了 359 个工具）。新方案应默认以最小配置启动 callee（ACP 会话已传
   `mcpServers: []`；codex 经 `ThreadStartParams.config`、claude 经 `--strict-mcp-config` 一类参数，**[待验证]**）。
@@ -164,16 +162,13 @@ callee 冷启动，没有 host 的对话上下文。第一版做法：转发 sub
 
 ### 5.4 权限映射（P-3）
 
-| 档位 | codex | opencode（serve） | kimi（ACP） | agy（命令行） | claude（CLI / SDK） |
+| 档位 | codex | opencode（serve） | kimi（ACP） | agy (persistent stream-json) | claude（CLI / SDK） |
 |---|---|---|---|---|---|
-| `--read-only` | `sandbox: read-only` ✅ | `agent: plan` + 拒绝 permission；diff 非空记 readonly_violation（AJ-710） | `session/set_mode plan` ✅⚠️ | 不开放（AJ-683）；入口退出 2，指向 `codex --read-only` | `--allowedTools=Read,Grep,Glob` ✅ |
+| `--read-only` | `sandbox: read-only` ✅ | `agent: plan` + 拒绝 permission；diff 非空记 readonly_violation（AJ-710） | `session/set_mode plan` ✅⚠️ | `--mode plan` + exact allowlist + managed hooks + fail-closed baseline (AJ-711) | `--allowedTools=Read,Grep,Glob` ✅ |
 | `--write` | `sandbox: workspace-write` + 网络开放（`sandbox_workspace_write.network_access`，2026-10-15 Owner 拍板）✅ | build + permission 自动应答 once ✅ | 默认模式（直接写）✅ | `--dangerously-skip-permissions` ✅（1.3.5：`--mode=accept-edits` 只放行写文件，shell 命令会被自动拒绝；`--mode=auto` 对本账号不可用） | `--permission-mode acceptEdits` ✅ |
 
-**agy（AJ-683，Owner 2026-10-16 拍板）**：保持实验性，关闭只读档，不再测。
-评估只读任务 0/3：无头模式下 shell 一被拒，本轮就结束，无法交出结论。
-与 kimi K1 一致：`sub run agy --read-only` 入口退出 2，旧只读 job 续接同样拒绝，
-doctor 的只读探测为 SKIP。只读任务使用 `codex --read-only`。
-历史实测中 `--mode=plan` 加 skip-permissions 可实际写入，plan 本身不是沙箱。
+**agy (AJ-711)**: read-only access is restored in v2. The AJ-683 closure is superseded;
+agy remains experimental pending the separate host evaluation.
 
 **opencode（AJ-710，2026-10-16）**：恢复只读档，保持实验性。
 每个 Start 启动独立的 `opencode serve --hostname 127.0.0.1 --port 0`，随机密码、Basic Auth，
@@ -264,7 +259,7 @@ M2 剩余部分（router v1、跨委派成本汇总）的设计见 [`router-v1.m
 ## 10. Phase 0 前实测结果（2026-10-15）
 
 在临时目录的一次性 git 仓库中，用每家最便宜的模型档实测。gemini-cli 按 D4 不再验证。
-以下为历史能力快照；当前 agy 只读档已关闭（AJ-683），opencode 已恢复（AJ-710），权限映射以 §5.4 为准。
+以下为历史能力快照；agy read-only is restored (AJ-711), as is opencode (AJ-710)，权限映射以 §5.4 为准。
 
 | 项目 | codex 0.162.1 | claude 2.1.300 | opencode 1.18.34 | kimi 2.0.0 | agy 1.2.15 |
 |---|---|---|---|---|---|
@@ -311,3 +306,8 @@ Q1（brief 交接质量）与 Q2（host 开销）需要真实任务，属于 Pha
 **接入新 harness 时的约定**（M2 起，agy、opencode、claude-code 依次适用）：先实测独立配置目录能否同时做到三件事——保留登录、关闭用户集成、委派会话不进用户列表。三项都做到就优先采用它来满足「会话不留痕」和「最小配置启动」；做不到的（例如凭据在 macOS 钥匙串里、与配置目录绑定），再退回该 harness 自己的协议内覆盖项加归档，并把原因写进本表。实测结论与所用环境变量记入已验证版本表对应的 harness 条目。
 
 CI 里无法登录各家账号，所以「真跑一遍」的自检只在用户本机执行；CI 只守协议层面的漂移。
+
+For agy 1.4.0, an explicit effort must match the model's tier suffix. A live
+`--model gemini-3.8-flash-low --effort high` probe returned
+`--model gemini-3.8-flash-low conflicts with --effort=high` before inference.
+Use the matching tier or omit effort; pactify preserves the requested model.

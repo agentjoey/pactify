@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,6 +27,8 @@ const (
 )
 
 type WorkerConfig struct {
+	ProcessMarker   string                  // Doctor scopes its repeated probe IDs to a disposable store.
+	ReadOnlyPolicy  bool                    // Doctor exercises the hook independently of native plan mode.
 	RetryBackoff    func(int) time.Duration // 1-based attempt; nil uses 30s then 120s.
 	CacheHome       string                  // Optional shared cache home; doctor keeps job storage disposable.
 	ToolCallLimit   int                     // 0 disables the limit; CLI default is 40.
@@ -79,6 +82,32 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	result.describeWorktree(st)
 	unverifiedWarning, versionWarning := "", ""
 	var cacheWarnings []string
+	var closingSnapshot func()
+	resolveQuotaReset := func() {
+		if result.FailureClass != "quota" || result.QuotaResetAt != nil {
+			return
+		}
+		model := result.ModelActual
+		if model == "" {
+			model = req.Model
+		}
+		if model == "" {
+			model = cockpit.AgyDefaultModel
+		}
+		for i := len(result.QuotaSnapshots) - 1; i >= 0; i-- {
+			if reset := result.QuotaSnapshots[i].ResetForModel(model); reset != nil {
+				result.QuotaResetAt = reset
+				break
+			}
+		}
+	}
+	if h.Name == "agy" && result.ConfigMode == "user" {
+		result.Warnings = append(result.Warnings, "managed hooks are not installed with --with-user-config")
+	}
+	informational := func(w string) bool {
+		return strings.HasPrefix(w, "Quota snapshot unavailable:") || strings.HasPrefix(w, "Failed to record quota snapshot:") || strings.HasPrefix(w, "Completion followup limit reached") || w == "managed hooks are not installed with --with-user-config"
+	}
+
 	// Persist the result before the terminal state, so waiters never observe a partial result.
 	defer func() {
 		p := recover()
@@ -102,14 +131,38 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		} else {
 			for _, warning := range result.Warnings {
 				// These warnings describe harness readiness, not a job error.
-				if !slices.Contains(cacheWarnings, warning) && !slices.Contains(st.RouteWarnings, warning) && warning != h.Experimental && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
+				if !informational(warning) && !slices.Contains(cacheWarnings, warning) && !slices.Contains(st.RouteWarnings, warning) && warning != h.Experimental && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
 					reason = warning
 					break
 				}
 			}
 		}
+		resolveQuotaReset()
 		if e := store.Finish(id, &result, reason, finished); e != nil {
 			runErr = fmt.Errorf("save terminal output: %w", e)
+		}
+		if closingSnapshot != nil {
+			closingSnapshot()
+			// Publish only the new quota metadata; the terminal status/cause is immutable.
+			if e := store.WithState(context.Background(), id, func(current *State) error {
+				data, e := os.ReadFile(store.ResultPath(id))
+				if e != nil {
+					return e
+				}
+				var persisted Result
+				if e = json.Unmarshal(data, &persisted); e != nil {
+					return e
+				}
+				persisted.QuotaSnapshots, persisted.RateLimit, persisted.QuotaResetAt = result.QuotaSnapshots, result.RateLimit, result.QuotaResetAt
+				for _, warning := range result.Warnings {
+					if informational(warning) && !slices.Contains(persisted.Warnings, warning) {
+						persisted.Warnings = append(persisted.Warnings, warning)
+					}
+				}
+				return atomicJSON(store.ResultPath(id), persisted)
+			}); e != nil {
+				result.Warnings = append(result.Warnings, "Failed to record quota snapshot: "+e.Error())
+			}
 		}
 		if p != nil {
 			panic(p)
@@ -130,7 +183,12 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if req.Access != "write" && req.Access != "read-only" {
 		return fail(fmt.Errorf("invalid access %q", req.Access))
 	}
-	if req.Harness == "opencode" && req.Access == "read-only" {
+	if req.Harness == "agy" && (req.Access == "read-only" || cfg.ReadOnlyPolicy) {
+		if err := cockpit.AgyReadOnlyWorkspace(req.Cwd); err != nil {
+			return fail(err)
+		}
+	}
+	if requiresReadOnlyBaseline(req) {
 		baseline, captureErr := captureReadOnly(req.Cwd)
 		if captureErr != nil {
 			return fail(fmt.Errorf("Read-only verification unavailable: %w", captureErr))
@@ -148,8 +206,8 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			snap, err = TakeSnapshot(req.Cwd)
 		}
 		if err != nil {
-			if !snap.EmptyTree || req.Harness == "opencode" && req.Access == "read-only" {
-				if req.Harness == "opencode" && req.Access == "read-only" {
+			if !snap.EmptyTree || requiresReadOnlyBaseline(req) {
+				if requiresReadOnlyBaseline(req) {
 					err = fmt.Errorf("Read-only verification unavailable: cannot capture baseline: %w", err)
 				}
 				return fail(err)
@@ -182,9 +240,16 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	defer file.Close()
 	log := &jobLog{w: file}
 	encoder := json.NewEncoder(log)
-	opts := cockpit.StartOpts{RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
+	opts := cockpit.StartOpts{ReadOnlyPolicy: cfg.ReadOnlyPolicy, CompletionFollowups: req.CompletionFollowups, RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
 	opts.MinimalConfig = result.ConfigMode == "minimal"
-	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root), "PACTIFY_JOB="+id)
+	marker := id
+	if cfg.ProcessMarker != "" {
+		marker = cfg.ProcessMarker
+		if err := store.WithState(ctx, id, func(current *State) error { current.ProcessMarker = marker; return store.Save(*current) }); err != nil {
+			return fail(err)
+		}
+	}
+	opts.Env = append(opts.Env, "PACTIFY_HOME="+filepath.Dir(store.Root), "PACTIFY_JOB="+marker)
 	cacheHome := cfg.CacheHome
 	if cacheHome == "" {
 		cacheHome = filepath.Dir(store.Root)
@@ -261,6 +326,45 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	defer stopSession()
 	stopStartup := context.AfterFunc(ctx, stopSession)
 	backend := h.Backend()
+	if source, ok := backend.(interface {
+		Quota(context.Context, cockpit.StartOpts) (cockpit.QuotaObservation, error)
+	}); ok {
+		snapshotBudget := 5 * time.Second
+		snapshot := func(snapshotCtx context.Context) {
+			snapshotCtx, cancel := context.WithTimeout(snapshotCtx, snapshotBudget)
+			defer cancel()
+			q, e := source.Quota(snapshotCtx, opts)
+			if e != nil {
+				result.Warnings = append(result.Warnings, "Quota snapshot unavailable: "+e.Error())
+				return
+			}
+			result.QuotaSnapshots = append(result.QuotaSnapshots, q)
+			result.RateLimit = q.Summary()
+			if e = store.rememberQuotaSnapshot(id, h.Name, q); e != nil {
+				result.Warnings = append(result.Warnings, "Failed to record quota snapshot: "+e.Error())
+			}
+			if result.FailureClass == "quota" && result.QuotaResetAt == nil {
+				result.QuotaResetAt = q.ResetForModel(result.ModelActual)
+			}
+		}
+		snapshot(ctx)
+		closingSnapshot = func() {
+			// Publish the job first; allow the observed ~7s built-in command a
+			// separate bounded window without delaying status or cancellation.
+			snapshotBudget = 10 * time.Second
+			snapshot(context.WithoutCancel(ctx))
+			resolveQuotaReset()
+			if result.FailureClass == "quota" && result.QuotaResetAt != nil {
+				model := result.ModelActual
+				if model == "" {
+					model = req.Model
+				}
+				if e := store.rememberQuota(QuotaRoute{Harness: req.Harness, Model: model, JobID: id, RecordedAt: cfg.Now().UTC(), ResetAt: result.QuotaResetAt, Message: result.failureMessage}); e != nil {
+					result.Warnings = append(result.Warnings, "Failed to record quota snapshot: "+e.Error())
+				}
+			}
+		}
+	}
 	var sess cockpit.Session
 	if req.Resume != "" {
 		if b, ok := backend.(cockpit.OptsResumer); ok {
@@ -398,6 +502,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		}
 		lastActivity = cfg.Now()
 		collector.Add(event)
+		if event.Kind == cockpit.EventSystem && event.State == "warning" {
+			result.Warnings = append(result.Warnings, event.Text)
+		}
 		if req.Access == "read-only" && cfg.ToolCallLimit > 0 && collector.ToolCalls > cfg.ToolCallLimit {
 			interrupt(fmt.Sprintf("Tool-call limit exceeded (%d calls)", collector.ToolCalls))
 		}
@@ -593,7 +700,9 @@ turns:
 	result.OutputTokens = collector.Usage.OutputTokens
 	result.CostUSD = collector.Usage.CostUSD
 	result.ToolCalls = collector.ToolCalls
-	result.RateLimit = SummarizeRateLimit(collector.RateLimit)
+	if summary := SummarizeRateLimit(collector.RateLimit); summary != "" {
+		result.RateLimit = summary
+	}
 	// An abnormal end may omit the last accounting update, even if earlier
 	// requests reported usage. Treat retained counters as a lower bound.
 	recoverUsage := turnFailed || interrupted || !collector.TurnDone
@@ -645,7 +754,7 @@ turns:
 	} // Worktree jobs publish the full final-tree diff in Finish, including failures.
 	if err != nil {
 		warning := err.Error()
-		if req.Harness == "opencode" && req.Access == "read-only" {
+		if requiresReadOnlyBaseline(req) {
 			warning = "Read-only verification unavailable: " + warning
 		}
 		if snap.EmptyTree {
@@ -655,7 +764,7 @@ turns:
 	}
 	if canceled || ctx.Err() != nil {
 		result.Status = StatusCanceled
-	} else if (err == nil || snap.EmptyTree && !(req.Harness == "opencode" && req.Access == "read-only")) && collector.TurnDone && !turnFailed && !interrupted {
+	} else if (err == nil || snap.EmptyTree && !(requiresReadOnlyBaseline(req))) && collector.TurnDone && !turnFailed && !interrupted {
 		result.Status = StatusSucceeded
 	}
 	if result.Status == StatusFailed && (!interrupted || promptFailed) {

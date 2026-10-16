@@ -76,7 +76,7 @@ func captureReadOnly(dir string) (*ReadOnlySnapshot, error) {
 	return snap, err
 }
 func (s Store) verifyReadOnly(st *State, result *Result) (string, bool) {
-	if st.Request.Harness != "opencode" || st.Request.Access != "read-only" {
+	if !requiresReadOnlyBaseline(st.Request) {
 		return "", false
 	}
 	if len(result.Diff.Files) > 0 {
@@ -124,7 +124,7 @@ func (s Store) verifyReadOnly(st *State, result *Result) (string, bool) {
 }
 
 // A successful read tool alone cannot establish that writes are denied.
-func opencodeDoctorDeniedWrite(logPath string) bool {
+func doctorDeniedWrite(logPath, harness string) bool {
 	f, err := os.Open(logPath)
 	if err != nil {
 		return false
@@ -132,10 +132,26 @@ func opencodeDoctorDeniedWrite(logPath string) bool {
 	defer f.Close()
 	scan := bufio.NewScanner(f)
 	scan.Buffer(make([]byte, 65536), 16*1024*1024)
+	commands := map[int]string{}
 	for scan.Scan() {
 		var e struct {
 			Kind string `json:"kind"`
 			Raw  struct {
+				Step struct {
+					Index int    `json:"step_index"`
+					Type  string `json:"step_type"`
+					Name  string `json:"tool_name"`
+					State string `json:"state"`
+					Info  struct {
+						Parameters struct {
+							Command string `json:"CommandLine"`
+							Target  string `json:"TargetFile"`
+						} `json:"parameters"`
+						Error struct {
+							Message string `json:"message"`
+						} `json:"error"`
+					} `json:"tool_info"`
+				} `json:"step_update"`
 				Part struct {
 					Tool  string `json:"tool"`
 					State struct {
@@ -151,6 +167,23 @@ func opencodeDoctorDeniedWrite(logPath string) bool {
 		if json.Unmarshal(scan.Bytes(), &e) != nil {
 			continue
 		}
+		if harness == "agy" || harness == "agy-hook" {
+			step := e.Raw.Step
+			if harness == "agy-hook" {
+				if e.Kind == "tool" && step.Name == "write_to_file" && step.State == "ERROR" && strings.Contains(strings.ToLower(step.Info.Error.Message), "denied by pre-tool hook: pactify read-only policy") {
+					return true
+				}
+				continue
+			}
+			if step.Info.Parameters.Command != "" {
+				commands[step.Index] = step.Info.Parameters.Command
+			}
+			lower := strings.ToLower(step.Info.Error.Message)
+			if e.Kind == "tool" && step.Name == "run_command" && step.State == "ERROR" && commands[step.Index] == "echo x > probe.txt" && (strings.Contains(lower, "permission") || strings.Contains(lower, "denied")) {
+				return true
+			}
+			continue
+		}
 		p := e.Raw.Part
 		lower := strings.ToLower(p.State.Error)
 		if e.Kind == "tool" && p.Tool == "bash" && p.State.Input.Command == "echo x > probe.txt" && p.State.Status == "error" && (strings.Contains(lower, "permission") || strings.Contains(lower, "denied")) {
@@ -158,4 +191,8 @@ func opencodeDoctorDeniedWrite(logPath string) bool {
 		}
 	}
 	return false
+}
+
+func requiresReadOnlyBaseline(req Request) bool {
+	return (req.Harness == "opencode" || req.Harness == "agy") && req.Access == "read-only"
 }

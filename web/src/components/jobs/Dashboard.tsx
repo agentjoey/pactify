@@ -10,7 +10,7 @@ import {
   formatCost,
 } from "./statistics";
 import { TokenChart } from "./TokenChart";
-import { Quota } from "./Quota";
+import { Quota, type QuotaData } from "./Quota";
 interface Total {
   jobs: number;
   succeeded: number;
@@ -31,12 +31,7 @@ interface Cost {
     model?: string;
     resetAt: string | null;
   }[];
-  quotaSnapshots: {
-    harness: string;
-    jobId: string;
-    observedAt: string;
-    rateLimit: string;
-  }[];
+  quotaSnapshots: QuotaData["quotaSnapshots"];
 }
 export function Dashboard({
   source,

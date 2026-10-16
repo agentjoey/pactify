@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/lockx"
 )
 
@@ -54,7 +55,7 @@ func (s Store) readQuota(now time.Time) (map[string]QuotaRoute, error) {
 		entries = map[string]QuotaRoute{}
 	}
 	for key, q := range entries {
-		if !q.active(now) {
+		if strings.HasPrefix(key, "@snapshot/") || !q.active(now) {
 			delete(entries, key)
 		}
 	}
@@ -131,4 +132,56 @@ func FormatExhaustedRoutes(routes []QuotaRoute, now time.Time) string {
 		return "Exhausted routes: none"
 	}
 	return "Exhausted routes: " + strings.Join(parts, "; ")
+}
+
+// Snapshot observations are deliberately separate from the exhausted-route ledger:
+// older binaries interpret every quota.json entry as an exhausted route.
+func (s Store) rememberQuotaSnapshot(jobID, harness string, q cockpit.QuotaObservation) error {
+	path := filepath.Join(filepath.Dir(s.Root), "quota-snapshots.json")
+	release, err := lockx.Acquire(context.Background(), path+".lock")
+	if err != nil {
+		return err
+	}
+	defer release()
+	type observation struct {
+		Harness   string                     `json:"harness"`
+		JobID     string                     `json:"jobId"`
+		Snapshots []cockpit.QuotaObservation `json:"snapshots"`
+	}
+	entries := map[string]observation{}
+	data, err := os.ReadFile(path)
+	if err == nil {
+		if err = json.Unmarshal(data, &entries); err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	entry := entries[harness]
+	if n := len(entry.Snapshots); n > 0 && entry.Snapshots[n-1].ObservedAt.After(q.ObservedAt) {
+		return nil
+	}
+	if entry.JobID != jobID {
+		entry.Snapshots = nil
+	}
+	entry.Harness, entry.JobID = harness, jobID
+	entry.Snapshots = append(entry.Snapshots, q)
+	entries[harness] = entry
+	if err = atomicJSON(path, entries); err != nil {
+		return err
+	}
+	// Prune snapshot entries left by the unreleased AJ-711 implementation.
+	releaseQuota, err := lockx.Acquire(context.Background(), s.quotaPath()+".lock")
+	if err != nil {
+		return err
+	}
+	defer releaseQuota()
+	routes, err := s.readQuota(q.ObservedAt)
+	if err != nil {
+		return err
+	}
+	if _, err = os.Stat(s.quotaPath()); err == nil {
+		return atomicJSON(s.quotaPath(), routes)
+	}
+	return nil
 }

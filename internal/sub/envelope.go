@@ -3,6 +3,7 @@ package sub
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/agentjoey/pactify/internal/cockpit"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -15,38 +16,39 @@ type Retry struct {
 }
 
 type Result struct {
-	Sandboxed       bool       `json:"sandboxed"`
-	fallbackBlocked bool       // Teardown could not prove that the previous harness stopped.
-	FallbackFrom    string     `json:"fallbackFrom,omitempty"`
-	FallbackTo      string     `json:"fallbackTo,omitempty"`
-	Retries         []Retry    `json:"retries,omitempty"`
-	failureMessage  string     // Provider error used for quota memory; does not replace State.Error.
-	FailureClass    string     `json:"failureClass,omitempty"`
-	QuotaResetAt    *time.Time `json:"quotaResetAt,omitempty"`
-	ConfigMode      string     `json:"configMode"`
-	JobID           string     `json:"jobId"`
-	Status          Status     `json:"status"`
-	Harness         string     `json:"harness"`
-	CLIVersion      string     `json:"cliVersion"`
-	ModelRequested  string     `json:"modelRequested,omitempty"`
-	ModelActual     string     `json:"modelActual,omitempty"`
-	ModelVerified   bool       `json:"modelVerified"`
-	Access          string     `json:"access"`
-	Duration        string     `json:"duration"`
-	InputTokens     int        `json:"inputTokens"`
-	OutputTokens    int        `json:"outputTokens"`
-	CostUSD         float64    `json:"costUSD,omitempty"`
-	UsagePartial    bool       `json:"usagePartial,omitempty"`
-	ToolCalls       int        `json:"toolCalls"`
-	Diff            Diff       `json:"diff"`
-	FinalText       string     `json:"finalText"`
-	Truncated       bool       `json:"truncated"`
-	SessionID       string     `json:"sessionId"`
-	LogPath         string     `json:"logPath"`
-	RateLimit       string     `json:"rateLimit,omitempty"`
-	Warnings        []string   `json:"warnings,omitempty"`
-	WorktreePath    string     `json:"worktreePath,omitempty"`
-	BaseCommit      string     `json:"baseCommit,omitempty"`
+	QuotaSnapshots  []cockpit.QuotaObservation `json:"quotaSnapshots,omitempty"`
+	Sandboxed       bool                       `json:"sandboxed"`
+	fallbackBlocked bool                       // Teardown could not prove that the previous harness stopped.
+	FallbackFrom    string                     `json:"fallbackFrom,omitempty"`
+	FallbackTo      string                     `json:"fallbackTo,omitempty"`
+	Retries         []Retry                    `json:"retries,omitempty"`
+	failureMessage  string                     // Provider error used for quota memory; does not replace State.Error.
+	FailureClass    string                     `json:"failureClass,omitempty"`
+	QuotaResetAt    *time.Time                 `json:"quotaResetAt,omitempty"`
+	ConfigMode      string                     `json:"configMode"`
+	JobID           string                     `json:"jobId"`
+	Status          Status                     `json:"status"`
+	Harness         string                     `json:"harness"`
+	CLIVersion      string                     `json:"cliVersion"`
+	ModelRequested  string                     `json:"modelRequested,omitempty"`
+	ModelActual     string                     `json:"modelActual,omitempty"`
+	ModelVerified   bool                       `json:"modelVerified"`
+	Access          string                     `json:"access"`
+	Duration        string                     `json:"duration"`
+	InputTokens     int                        `json:"inputTokens"`
+	OutputTokens    int                        `json:"outputTokens"`
+	CostUSD         float64                    `json:"costUSD,omitempty"`
+	UsagePartial    bool                       `json:"usagePartial,omitempty"`
+	ToolCalls       int                        `json:"toolCalls"`
+	Diff            Diff                       `json:"diff"`
+	FinalText       string                     `json:"finalText"`
+	Truncated       bool                       `json:"truncated"`
+	SessionID       string                     `json:"sessionId"`
+	LogPath         string                     `json:"logPath"`
+	RateLimit       string                     `json:"rateLimit,omitempty"`
+	Warnings        []string                   `json:"warnings,omitempty"`
+	WorktreePath    string                     `json:"worktreePath,omitempty"`
+	BaseCommit      string                     `json:"baseCommit,omitempty"`
 }
 
 const partialUsageWarning = "Usage may be incomplete; only recorded usage is included"

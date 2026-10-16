@@ -25,16 +25,17 @@ const (
 )
 
 type Request struct {
-	StartedFrom    string `json:"startedFrom,omitempty"`
-	Retries        *int   `json:"retries,omitempty"` // nil uses the default; zero disables retries.
-	WithUserConfig bool   `json:"withUserConfig"`
-	Harness        string `json:"harness"`
-	Model          string `json:"model,omitempty"`
-	Effort         string `json:"effort,omitempty"`
-	Access         string `json:"access"`
-	Cwd            string `json:"cwd"`
-	Resume         string `json:"resume,omitempty"`
-	Brief          string `json:"brief"`
+	CompletionFollowups *int   `json:"completionFollowups,omitempty"`
+	StartedFrom         string `json:"startedFrom,omitempty"`
+	Retries             *int   `json:"retries,omitempty"` // nil uses the default; zero disables retries.
+	WithUserConfig      bool   `json:"withUserConfig"`
+	Harness             string `json:"harness"`
+	Model               string `json:"model,omitempty"`
+	Effort              string `json:"effort,omitempty"`
+	Access              string `json:"access"`
+	Cwd                 string `json:"cwd"`
+	Resume              string `json:"resume,omitempty"`
+	Brief               string `json:"brief"`
 }
 
 type State struct {
@@ -48,6 +49,7 @@ type State struct {
 	RetryLimit           int               `json:"retryLimit,omitempty"`
 	Retries              []Retry           `json:"retries,omitempty"`
 	Descendants          []procx.Identity  `json:"descendants,omitempty"`
+	ProcessMarker        string            `json:"processMarker,omitempty"`
 	ProcessTrackingError string            `json:"processTrackingError,omitempty"`
 	TempDirOwned         bool              `json:"tempDirOwned,omitempty"`
 	Repo                 string            `json:"repo,omitempty"`

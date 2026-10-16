@@ -127,15 +127,16 @@ Job records and JSON expose `configMode` (`minimal` or
 `user`); the result's Harness line shows the same mode. Existing jobs without
 this field are treated as user config.
 
-agy uses the CLI stream-json backend (Antigravity CLI 1.3.5). Prompts go through stdin;
-`agy models` supplies the allowed model ids and `init.model` verifies the actual model.
-Write access uses `--dangerously-skip-permissions`.
-Read-only access is not offered (`pactify sub run agy --read-only` exits 2); old read-only jobs
-cannot resume. All 3 evaluation read-only tasks ended without findings after shell commands
-were auto-denied in headless mode. Use codex `--read-only` for read-only tasks; use agy
-`--write` only with explicit write permission. Doctor skips its read-only probe.
-Owner decided on 2026-10-16 to keep agy experimental, close read-only access and stop testing.
-Headless permission auto-denial fails the job even if agy reports SUCCESS.
+agy v2 targets Antigravity CLI 1.4.0. Each job uses one persistent stream-json process
+and explicitly supplies `--model` (router default or `gemini-3.8-flash-low`). Step
+usage avoids cumulative-result double counting. Resume uses `--conversation`.
+`agy --read-only` uses plan mode, exact read commands, managed hooks, and a
+fail-closed baseline covering tracked, untracked, and ignored files. Write access
+uses `--dangerously-skip-permissions` and reports `sandboxed=false`. Managed hooks
+deny `BypassSandbox`. Empty answers fail; unfinished work gets up to two completion
+followups. Transient failures continue in the same conversation. Non-billable quota
+snapshots expose remaining fractions and reset times in `sub cost` and Dashboard.
+Doctor checks actual read-only denials and network evidence. agy remains experimental.
 The default `HOME=$PACTIFY_HOME/harness-homes/agy` (0700) mirrors top-level user HOME
 entries with symlinks, excluding `.gemini`. Its private `.gemini/antigravity-cli`
 links only `antigravity-oauth-token` to the original; token contents are never read

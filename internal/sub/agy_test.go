@@ -110,7 +110,7 @@ func TestAgyDoctorEvidence(t *testing.T) {
 				if fault == "models" {
 					return nil, fmt.Errorf("model table unavailable")
 				}
-				return []string{"model-a"}, nil
+				return []string{cockpit.AgyDefaultModel}, nil
 			}
 			h.Backend = func() cockpit.Backend {
 				s := &fakeSession{events: make(chan cockpit.Event, 8)}
@@ -122,10 +122,15 @@ func TestAgyDoctorEvidence(t *testing.T) {
 							home = v
 						}
 					}
-					if b.gotOpts.Access == cockpit.AccessWrite {
+					if b.gotOpts.ReadOnlyPolicy {
+						writeAgyHookDeniedDoctorLog(t, Store{Root: filepath.Join(filepath.Dir(b.gotOpts.RepoDir), "home", "jobs")}, "read-only-hook")
+					} else if b.gotOpts.Access == cockpit.AccessWrite {
 						if err := os.WriteFile(filepath.Join(b.gotOpts.RepoDir, "out.txt"), []byte("ok"), 0600); err != nil {
 							t.Error(err)
 						}
+						_ = os.WriteFile(filepath.Join(b.gotOpts.RepoDir, "doctor-network.json"), []byte(`{"bind":true,"external":true}`), 0600)
+					} else {
+						writeAgyDeniedDoctorLog(t, Store{Root: filepath.Join(filepath.Dir(b.gotOpts.RepoDir), "home", "jobs")}, "read-only")
 					}
 					db := filepath.Join(home, ".gemini", "antigravity-cli", "conversation_summaries.db")
 					if fault != "missing-db" {
@@ -156,7 +161,7 @@ func TestAgyDoctorEvidence(t *testing.T) {
 			if err != nil || len(reports) != 1 || reports[0].Passed() != (fault == "") {
 				t.Fatalf("fault=%s reports=%+v err=%v", fault, reports, err)
 			}
-			if len(reports[0].Checks) != 7 {
+			if len(reports[0].Checks) != 8 {
 				t.Fatal(reports)
 			}
 			if fault == "model-copy" {

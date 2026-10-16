@@ -134,7 +134,7 @@ func TestAgyFailedJobKeepsAllReportedSteps(t *testing.T) {
 	fakeAgyUserHome(t)
 	bin := t.TempDir()
 	script := `#!/bin/sh
-echo '{"event":"init","conversation_id":"failed-agy","init":{"model":"model-a"}}'
+echo '{"event":"init","conversation_id":"failed-agy","init":{"model":"gemini-3.8-flash-low"}}'
 echo '{"event":"step_update","step_update":{"step_index":0,"step_type":"agent_response","state":"DONE","usage":{"input_tokens":10,"cache_read_tokens":90,"output_tokens":3}}}'
 echo '{"event":"step_update","step_update":{"step_index":1,"step_type":"agent_response","state":"ACTIVE","usage":{"input_tokens":2,"cache_read_tokens":10,"output_tokens":1}}}'
 echo '{"event":"step_update","step_update":{"step_index":1,"step_type":"agent_response","state":"ERROR","usage":{"input_tokens":3,"cache_read_tokens":20,"output_tokens":4}}}'

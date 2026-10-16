@@ -167,7 +167,8 @@ func wrapGitErr(err error, out string) error {
 // never perturbs the fingerprint.)
 func TreeFingerprint(dir string) string {
 	head, _ := run(dir, "rev-parse", "HEAD")
-	status, _ := run(dir, "status", "--porcelain")
+	// A read probe must not run repo-local fsmonitor code or refresh the index.
+	status, _ := run(dir, "--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain")
 	return strings.TrimSpace(head) + "\n" + status
 }
 

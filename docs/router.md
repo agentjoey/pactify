@@ -99,7 +99,7 @@ PUT 仅接受 `application/json`（可带 charset），请求为 `{version, conf
 
 - codex 复用最小配置 app-server 启动与 initialize/initialized 握手，分页调用 `model/list` 后关闭进程；不创建或续接 thread，也不发送 prompt / turn，总超时上限 20 秒。
 - kimi 优先只读 `$PACTIFY_HOME/harness-homes/kimi/config.toml` 中链接进来的配置（job 子进程的 `KIMI_CODE_HOME`）。链接缺失时读取 serve / CLI 环境中 `KIMI_CODE_HOME/config.toml`，未设置则读取 `~/.kimi-code/config.toml`。使用已有 `go-toml/v2` 白名单解码，只保留 models 表的键名和 default_model；不读取 credentials/device_id，不解码 providers、oauth、key 等字段，不启动 kimi 会话。配置不可读、格式错误或模型表为空时返回英文原因；解析错误不带配置原文。接口不创建受管目录或自动准备认证链接。
-- agy 仅执行 `agy models`；opencode 启动隔离的 serve，只读取 v1 `/config/providers`，随后回收进程组。
+- agy 仅执行 `agy models --model gemini-3.8-flash-low`；opencode 启动隔离的 serve，只读取 v1 `/config/providers`，随后回收进程组。
 
 以上路径不执行 doctor 的计费探测。doctor 保留 codex/kimi 的固定探测模型，不因新增发现能力改选模型。installed 使用 LookPath，version 使用现有 Version，verifiedVersion 读取当前 PACTIFY_HOME 的 verified-versions.json。
 

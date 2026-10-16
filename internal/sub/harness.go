@@ -78,10 +78,10 @@ type ConcealContext struct {
 
 var registry = map[string]Harness{
 	"agy": {
-		TransientRetry: true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: cliVersion("agy", orchestrate.CrossVendorStrip("antigravity")...),
-		Experimental: "agy is an experimental harness (large tasks completed in one attempt 1/10; read-only work never converged)", MinimalConfig: true,
+		TransientRetry: true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: AgyVersion,
+		Experimental: "agy is an experimental harness (large tasks completed in one attempt 1/10; v2 read-only uses plan mode and a fail-closed baseline)", MinimalConfig: true,
 		Home:   &harnessHome{Env: "HOME", Source: os.UserHomeDir, Managed: managedAgyHome, Layout: agyHome, Doctor: doctorAgyHome, BeforeDoctor: snapshotAgyUserIndex},
-		Models: cockpit.AgyModels, NoReadOnly: cockpit.AgyNoReadOnly,
+		Models: cockpit.AgyModels, EffortValues: []string{"low", "medium", "high", "xhigh", "max"},
 		// Default jobs hide sessions through the managed HOME. User config explicitly
 		// restores agy's session store; there is no supported archive API to hide it.
 		Conceal: func(ConcealContext) error {
@@ -170,13 +170,40 @@ func Names() []string {
 	sort.Strings(names)
 	return names
 }
+
+// AgyVersion pins flash and isolates CLI discovery from the user's state.
+func AgyVersion(ctx context.Context) (string, error) {
+	return cliVersion("agy", orchestrate.CrossVendorStrip("antigravity")...)(ctx)
+}
+
 func cliVersion(bin string, env ...string) func(context.Context) (string, error) {
 	return func(ctx context.Context) (string, error) {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, bin, "--version")
+		args := []string{"--version"}
+		if bin == "agy" {
+			args = append(args, "--model", cockpit.AgyDefaultModel)
+		}
+		cmd := exec.CommandContext(ctx, bin, args...)
 		if len(env) > 0 {
 			cmd.Env = append(os.Environ(), env...)
+		}
+		if bin == "agy" {
+			// Version discovery needs no login and must not touch user state.
+			root, err := managedHarnessHome("agy-version")
+			if err != nil {
+				return "", err
+			}
+			if err = os.MkdirAll(root, 0700); err != nil {
+				return "", err
+			}
+			home, err := os.MkdirTemp(root, "probe-")
+			if err != nil {
+				return "", err
+			}
+			defer os.RemoveAll(home)
+			cmd.Env = append(os.Environ(), env...)
+			cmd.Env = append(cmd.Env, "HOME="+home)
 		}
 		out, err := cmd.Output()
 		if err != nil {

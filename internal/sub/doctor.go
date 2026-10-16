@@ -2,6 +2,7 @@ package sub
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -132,6 +133,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 					skip(check, "preflight failed; not run")
 				}
 			}
+			if h.Name == "agy" {
+				skip("Read-only hook", "preflight failed; not run")
+			}
 			if h.Home != nil && name != "Managed home" {
 				skip("Managed home", "preflight failed; not run")
 			}
@@ -158,6 +162,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			for _, name := range []string{"Write access", "Model", "Read-only access", "Network", "Session hiding"} {
 				skip(name, "CLI unavailable; not run")
 			}
+			if h.Name == "agy" {
+				skip("Read-only hook", "CLI unavailable; not run")
+			}
 			if h.Home != nil {
 				skip("Managed home", "CLI unavailable; not run")
 			}
@@ -166,8 +173,11 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		add("Installed", true, "CLI version "+r.Version)
 		jobStore := Store{Root: filepath.Join(root, h.Name, "home", "jobs")}
-		network := h.Name == "codex" || h.Name == "opencode"
+		network := h.Name == "codex" || h.Name == "opencode" || h.Name == "agy"
 		model := "gpt-6-luna"
+		if h.Name == "agy" {
+			model = cockpit.AgyDefaultModel
+		}
 		if h.DoctorModel != "" {
 			model = h.DoctorModel
 		}
@@ -187,8 +197,8 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		// Explicit models follow RunJob's backend validation, just like sub run.
 		// In particular, agy can proceed when its catalog pre-check is unavailable.
-		// A fixed DoctorModel also remains authoritative when Settings supports discovery.
-		if d.model == "" && h.DoctorModel == "" && h.Models != nil {
+		// Other harnesses retain fixed DoctorModel defaults; agy discovery is flash-only.
+		if d.model == "" && (h.DoctorModel == "" || h.Name == "agy") && h.Models != nil {
 			opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind)}
 			var modelHomes []*managedHome
 			if h.Home != nil {
@@ -226,9 +236,22 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				continue
 			}
 			model = cheapestDoctorModel(models)
+			if h.Name == "agy" {
+				model = ""
+				for _, m := range models {
+					if strings.HasPrefix(m, "gemini-3.8-flash-") && (model == "" || strings.HasSuffix(m, "-low")) {
+						model = m
+					}
+				}
+			}
 			if h.Name == "opencode" {
 				model = opencodeDoctorModel(models)
 			}
+		}
+		if h.Name == "agy" && !strings.HasPrefix(model, "gemini-3.8-flash-") {
+			abortProbe("Model", "agy doctor requires an available gemini-3.8-flash-* model")
+			reports = append(reports, r)
+			continue
 		}
 		run := func(access, brief string) (Result, string, error) {
 			repo := filepath.Join(root, h.Name, access)
@@ -236,12 +259,19 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				return Result{}, repo, err
 			}
 			id := access
-			if _, err := jobStore.Create(id, Request{Harness: h.Name, Model: model, Access: access, Cwd: repo, Brief: brief}); err != nil {
+			mode := access
+			if strings.HasPrefix(access, "read-only") && access != "read-only-hook" {
+				mode = "read-only"
+			}
+			if access == "read-only-hook" {
+				mode = "write"
+			}
+			if _, err := jobStore.Create(id, Request{Harness: h.Name, Model: model, Access: mode, Cwd: repo, Brief: brief}); err != nil {
 				return Result{}, repo, err
 			}
 			jobCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			defer cancel()
-			result, err := d.run(jobCtx, jobStore, id, h, WorkerConfig{ToolCallLimit: 40, CacheHome: filepath.Dir(store.Root)})
+			result, err := d.run(jobCtx, jobStore, id, h, WorkerConfig{ToolCallLimit: 40, CacheHome: filepath.Dir(store.Root), ProcessMarker: fmt.Sprintf("doctor-%x-%s", sha256.Sum256([]byte(jobStore.Root)), id), ReadOnlyPolicy: access == "read-only-hook"})
 			return result, repo, err
 		}
 		brief := "Run a shell command to create out.txt containing doctor-ok in the current directory. Do not just describe it. Return a short final reply."
@@ -264,16 +294,19 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			skip("Read-only access", h.NoReadOnly)
 		} else {
 			readonlyBrief := "Use your shell execution tool to execute this exact command once in the current directory, even if you expect the sandbox to deny the write:\n\n```sh\nsh -c 'echo hi > out.txt'; echo EXIT=$?\n```\n\nReport the command's stdout and stderr verbatim, including the EXIT line. Do not predict the result or claim a denial without invoking the tool. Do not request elevated permissions, retry, or seek a workaround; report the actual output and stop."
-			if h.Name == "opencode" {
+			if h.Name == "opencode" || h.Name == "agy" {
 				readonlyBrief = "This is an authorized read-only permission diagnostic in plan mode. Invoke the bash tool to run `ls` once. Then invoke the bash tool with exactly `echo x > probe.txt` once to verify that the permission policy denies it. You must actually invoke both tool calls; do not merely predict a denial. Report the tool result and stop. Do not retry, seek a workaround, or use another tool to write."
+			}
+			if h.Name == "agy" {
+				readonlyBrief = strings.ReplaceAll(readonlyBrief, "bash tool", "run_command tool")
 			}
 			target := "out.txt"
 			probe := func(id string) (Result, bool, error, error) {
 				readonly, roRepo, roErr := run(id, readonlyBrief)
 				denied := true
-				if h.Name == "opencode" {
+				if h.Name == "opencode" || h.Name == "agy" {
 					target = "probe.txt"
-					denied = opencodeDoctorDeniedWrite(jobStore.LogPath(id))
+					denied = doctorDeniedWrite(jobStore.LogPath(id), h.Name)
 				}
 				_, statErr := os.Lstat(filepath.Join(roRepo, target))
 				return readonly, denied, roErr, statErr
@@ -303,6 +336,20 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				add("Read-only access", denied && clean(), evidence)
 			}
 			ranAll = ranAll && roErr == nil && readonly.Status == StatusSucceeded
+		}
+		if h.Name == "agy" {
+			hookResult, hookRepo, hookErr := run("read-only-hook", "This is an authorized permission diagnostic. Use the write_to_file tool once to create hook-probe.txt in the current directory containing probe. You must invoke the tool, then report its actual rejection. Do not retry or use another tool. The managed hook should deny this write.")
+			results = append(results, hookResult)
+			_, statErr := os.Lstat(filepath.Join(hookRepo, "hook-probe.txt"))
+			denied := doctorDeniedWrite(jobStore.LogPath("read-only-hook"), "agy-hook")
+			clean := hookErr == nil && hookResult.Status == StatusSucceeded && os.IsNotExist(statErr) && len(hookResult.Diff.Files) == 0
+			reason := fmt.Sprintf("status=%s, hook denial verified=%t, write target absent=%t%s", hookResult.Status, denied, os.IsNotExist(statErr), doctorError(hookErr))
+			if clean && !denied {
+				r.Checks = append(r.Checks, DoctorCheck{"Read-only hook", "WARN", "inconclusive: no managed hook rejection observed; " + reason})
+			} else {
+				add("Read-only hook", clean && denied, reason)
+			}
+			ranAll = ranAll && clean
 		}
 		if !network {
 			skip("Network", "only codex write access checks local ports and external networking")

@@ -103,15 +103,58 @@ function Harness({
     </select>
   );
 }
+// Models and efforts each harness reports, from /api/sub/harnesses.
+export type HarnessCatalog = Record<
+  string,
+  { models: string[]; efforts: string[] }
+>;
+// A dropdown of the given choices; free text when the harness reported none.
+function Choice({
+  label,
+  value,
+  choices,
+  empty,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  choices: string[];
+  empty: string;
+  onChange: (value: string) => void;
+}) {
+  if (choices.length === 0)
+    return (
+      <input
+        aria-label={label}
+        placeholder={empty}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">{empty}</option>
+      {[...new Set([...(value ? [value] : []), ...choices])].map((c) => (
+        <option key={c}>{c}</option>
+      ))}
+    </select>
+  );
+}
 
 export function Routing({
   source,
   readOnly = false,
   expanded = false,
+  catalog = {},
 }: {
   source: JobsSource;
   readOnly?: boolean;
   expanded?: boolean;
+  catalog?: HarnessCatalog;
 }) {
   const [open, setOpen] = useState(expanded);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -397,7 +440,21 @@ export function Routing({
                           <Harness
                             label={`${prefix} harness`}
                             value={a.harness}
-                            onChange={(v) => update("harness", v)}
+                            onChange={(v) =>
+                              setDraft({
+                                ...draft,
+                                aliases: draft.aliases.map((row, j) =>
+                                  i === j
+                                    ? {
+                                        ...row,
+                                        harness: v,
+                                        model: "",
+                                        effort: "",
+                                      }
+                                    : row,
+                                ),
+                              })
+                            }
                           />
                         </Field>
                         <Field
@@ -405,10 +462,12 @@ export function Routing({
                           field={`aliases.${a.name}.model`}
                           errors={errors}
                         >
-                          <input
-                            aria-label={`${prefix} model`}
+                          <Choice
+                            label={`${prefix} model`}
                             value={a.model}
-                            onChange={(e) => update("model", e.target.value)}
+                            choices={catalog[a.harness]?.models || []}
+                            empty="Select a model"
+                            onChange={(v) => update("model", v)}
                           />
                         </Field>
                         <Field
@@ -416,10 +475,12 @@ export function Routing({
                           field={`aliases.${a.name}.effort`}
                           errors={errors}
                         >
-                          <input
-                            aria-label={`${prefix} effort`}
+                          <Choice
+                            label={`${prefix} effort`}
                             value={a.effort}
-                            onChange={(e) => update("effort", e.target.value)}
+                            choices={catalog[a.harness]?.efforts || []}
+                            empty="Harness default"
+                            onChange={(v) => update("effort", v)}
                           />
                         </Field>
                         <Button
@@ -573,14 +634,16 @@ export function Routing({
                                 field={`quotaGroups.${g.name}.models`}
                                 errors={errors}
                               >
-                                <input
-                                  aria-label={`${prefix} model ${m + 1}`}
+                                <Choice
+                                  label={`${prefix} model ${m + 1}`}
                                   value={model}
-                                  onChange={(e) =>
+                                  choices={catalog[g.harness]?.models || []}
+                                  empty="Select a model"
+                                  onChange={(v) =>
                                     update(
                                       "models",
                                       g.models.map((value, j) =>
-                                        m === j ? e.target.value : value,
+                                        m === j ? v : value,
                                       ),
                                     )
                                   }

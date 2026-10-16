@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { LONG_MODEL } from "./jobs-fixtures.mjs";
 
 for (const width of [1440, 375]) {
   test(`Routing edits and saves configuration at ${width}px from the final build`, async ({
@@ -20,8 +21,10 @@ for (const width of [1440, 375]) {
       .selectOption("opencode");
     await page
       .getByLabel("Alias 2 model", { exact: true })
-      .fill("model/" + "long-name".repeat(15));
-    await page.getByLabel("Alias 2 effort", { exact: true }).fill("low");
+      .selectOption(LONG_MODEL);
+    await page
+      .getByLabel("Alias 2 effort", { exact: true })
+      .selectOption("low");
     await page
       .getByRole("button", { name: "Add route to codex", exact: true })
       .click();
@@ -42,20 +45,18 @@ for (const width of [1440, 375]) {
       .selectOption("opencode");
     await page
       .getByLabel("Quota group 2 model 1", { exact: true })
-      .fill("model-one");
+      .selectOption("model-one");
     await page
       .getByRole("button", { name: "Add model to quota group 2", exact: true })
       .click();
     await page
       .getByLabel("Quota group 2 model 2", { exact: true })
-      .fill("model-two");
+      .selectOption("model-two");
     expect(await noOverflow()).toBe(true);
-    await test
-      .info()
-      .attach(`routing-edit-${width}px-final-build`, {
-        body: await page.screenshot({ fullPage: true }),
-        contentType: "image/png",
-      });
+    await test.info().attach(`routing-edit-${width}px-final-build`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    });
     const saved = page.waitForResponse(
       (r) =>
         r.url().endsWith("/api/sub/router") && r.request().method() === "PUT",
@@ -82,17 +83,17 @@ for (const width of [1440, 375]) {
       page.getByText("No exhausted routes.", { exact: true }),
     ).toBeVisible();
     expect(await noOverflow()).toBe(true);
-    await test
-      .info()
-      .attach(`routing-saved-${width}px-final-build`, {
-        body: await page.screenshot({ fullPage: true }),
-        contentType: "image/png",
-      });
+    await test.info().attach(`routing-saved-${width}px-final-build`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    });
   });
 }
 
 test("panel Routing is read-only", async ({ page }) => {
-  await page.goto(`http://127.0.0.1:${process.env.PANEL_E2E_PORT || 4176}/#/settings`);
+  await page.goto(
+    `http://127.0.0.1:${process.env.PANEL_E2E_PORT || 4176}/#/settings`,
+  );
   await expect(page.getByText("@fast", { exact: true })).toBeVisible();
   await expect(
     page.getByText(

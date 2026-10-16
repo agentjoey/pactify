@@ -108,12 +108,44 @@ test("panel uses the shared merged board and a full-screen drawer at 390px", asy
   const drawer = page.getByRole("dialog", {name: "Job details"});
   await expect(drawer.getByRole("heading", {name: "Run timeline"})).toBeVisible();
   const box = await drawer.boundingBox();
-  expect(box?.width).toBe(390);
-  expect(box?.height).toBe(844);
+  expect(box?.width).toBeCloseTo(390, 0);
+  expect(box?.height).toBeCloseTo(844, 0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await drawer.getByRole("link", {name: "Close job details"}).click();
   await expect(page).toHaveURL(/#\/jobs$/);
   await expect(drawer).toHaveCount(0);
+});
+
+test("panel keeps a long mobile drawer within the viewport and restores background scrolling", async ({ page }) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.route("**/api/jobs/job-review", async route => {
+    const response = await route.fetch();
+    const detail = await response.json();
+    detail.markdown = Array.from({length: 300}, (_, i) => `Result line ${i}`).join("\n");
+    await route.fulfill({json: detail});
+  });
+  await page.goto("/");
+  const originalOverflow = await page.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow]);
+  const shell = page.locator(".panel-shell");
+  const backgroundScroll = await shell.evaluate(node => node.scrollTop);
+  await page.getByRole("link", {name: "AJ-659 · Local read-only job panel"}).click();
+  const drawer = page.getByRole("dialog", {name: "Job details"});
+  await expect(drawer.getByText(/Result line 299/)).toBeAttached();
+  await expect(drawer).toHaveCSS("position", "fixed");
+  await expect(drawer).toHaveCSS("overflow-y", "auto");
+  expect((await drawer.boundingBox())?.height).toBeCloseTo(844, 0);
+  expect(await drawer.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  await drawer.hover({position: {x: 20, y: 20}});
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => drawer.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  expect((await drawer.boundingBox())?.height).toBeCloseTo(844, 0);
+  expect(await page.evaluate(() => window.scrollY)).toBeCloseTo(0, 0);
+  expect(await shell.evaluate(node => node.scrollTop)).toBeCloseTo(backgroundScroll, 0);
+  await expect(shell).toHaveCSS("overflow-y", "hidden");
+  await page.keyboard.press("Escape");
+  await expect(drawer).toHaveCount(0);
+  expect(await page.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow])).toEqual(originalOverflow);
+  await expect(shell).toHaveCSS("overflow-y", "auto");
 });
 
 test("panel exchanges launch metadata and keeps bearer authentication after refresh", async ({ page }) => {

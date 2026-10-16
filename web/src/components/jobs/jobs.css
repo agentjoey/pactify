@@ -68,6 +68,7 @@
   overscroll-behavior: contain;
   min-width: 0;
 }
+.panel-shell[inert] { overflow: hidden; }
 .panel-header {
   padding: 0 18px;
   min-height: 56px;
@@ -475,7 +476,8 @@
 .panel-job h2 a { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .panel-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .jobs-usage { padding: 0 18px; }
-.jobs-drawer { width: min(640px, calc(100% - 24px)); padding: 18px; overscroll-behavior: contain; animation: panel-slide-in var(--motion-layout) var(--motion-ease); }
+.jobs-scrim { position: absolute; inset: 0; }
+.jobs-drawer { position: absolute; top: 12px; right: 12px; bottom: 12px; display: flex; flex-direction: column; overflow-y: auto; width: min(640px, calc(100% - 24px)); padding: 18px; overscroll-behavior: contain; animation: panel-slide-in var(--motion-layout) var(--motion-ease); }
 .jobs-drawer-close { align-self: flex-end; font-size: 12px; margin-bottom: 12px; }
 .jobs-view .jobs-drawer h1 { font-size: 20px; }
 .panel-timeline { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font: 11px var(--font-mono); }
@@ -492,7 +494,12 @@
   .jobs-toolbar-status { width: 100%; }
   .jobs-board { grid-template-columns: minmax(0, 1fr); }
   .jobs-column { min-height: 0; }
-  .jobs-drawer { inset: 0; width: 100%; border: 0; border-radius: 0; padding: 16px; }
+  .jobs-scrim { position: fixed; }
+  .jobs-drawer { position: fixed; inset: 0; width: 100%; height: 100vh; border: 0; border-radius: 0; padding: 16px; }
+  /* Separate rules keep the vh fallback in the optimized panel build. */
+  @supports (height: 100dvh) {
+    .jobs-drawer { height: 100dvh; }
+  }
   .panel-section { padding: 14px; }
   .panel-footer { flex-direction: column; gap: 6px; }
 }

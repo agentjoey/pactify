@@ -12,6 +12,7 @@
 
 2026-10-15～16 合入 main，**尚未发布**；当前发布版仍为 v0.12.0。M1 功能已合入，v0.13.0 挂起，Owner 选择继续内部自用。
 
+- **修复 panel 手机抽屉高度**（AJ-701 / PR #130）：独立 panel 的 Tailwind 扫描原先遗漏共享 Jobs / UI 源码，最终 CSS 缺少定位、flex 和滚动工具类；显式补齐扫描，两种入口共用手机 `fixed`、视口高度和内部滚动规则，桌面保留右侧抽屉。打开抽屉时锁住背景，关闭恢复原 overflow；用 `@supports` 保留生产 CSS 的 `100vh` 兜底及 `100dvh`。仅将三处既有像素尺寸断言改为容差比较，新增长结果滚动 e2e、滚动锁定及独立构建 CSS 回归。验证：新增回归先红后绿；TypeScript、vitest 66 文件 / 629 项、两个前端 build、`go build ./...` 通过；Playwright 待宿主机以 `--retries 0 --repeat-each 5` 验证。
 - **Jobs 看板与运行链**（AJ-701）：dashboard / 本机 panel 共用 Board 风格的工具栏、四列看板与详情抽屉；按显式 resume / fallback 链合并卡片，保留逐轮日志、结果、diff 和深链接，窄屏堆叠看板并全屏显示抽屉。Routing 独立页签继续沿用原保存校验，panel 仍只读；用量置于底部。删除摘要 `issue` 字段与编号提取，标题只取 brief 第一条非空行；五份委派 skill 共享块补充标题约定。验证：新增回归先红后绿；指定四包 race、`go build ./...`、隔离 HOME / PACTIFY_HOME 的 Go 全量测试、TypeScript、vitest 64 文件 / 626 项、两个前端 build、bats 144/144 通过；更新 Jobs / panel / Routing e2e 并增加运行链、分列、抽屉与 390px 覆盖，Playwright 和最终 build 视觉验收待宿主机运行。
 - **harness 路由与 M1**（#69–#91）：Claude Code 插件与 `pactify sub` 提供委派、后台 job、续接、取消、日志、worktree 隔离与 `sub doctor`；codex 成为默认，kimi 保持实验性且不开放只读。默认精简 callee 配置、隔离会话，补齐结果、实际模型及 token 核实，减少委派开销与用户会话污染。
 - **M2 harness 扩展**（#92–#94、#101–#104、#109、#113）：接入实验性的 agy（命令行后端、动态模型表、镜像 HOME）与 opencode（ACP、隔离 XDG、模型与成本核实）；修正 agy 终稿和模型列表失败处理、opencode export 管道问题与用量统计。大任务一次完成：agy 1/10（见 [评估](agy-eval.md)），opencode + deepseek-flash 6/10（见 [评估](opencode-eval.md)）。

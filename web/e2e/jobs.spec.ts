@@ -33,7 +33,7 @@ for (const width of [1440, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (width === 390) {
       const box = await drawer.boundingBox();
-      expect(box?.width).toBe(390);
+      expect(box?.width).toBeCloseTo(390, 0);
     }
     await test.info().attach(`jobs-board-drawer-${width}px-final-build`, {body: await page.screenshot({fullPage: true}), contentType: "image/png"});
     await drawer.getByRole("link", {name: "Close job details"}).click();

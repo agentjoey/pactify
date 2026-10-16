@@ -12,6 +12,17 @@ export function JobDrawer({id, jobs, children}: {id: string; jobs: Job[]; childr
   latestId.current = id;
   rows.current = jobs;
   useEffect(() => {
+    const scrollLocks = [document.documentElement, document.body].map(element => {
+      // Preserve explicit longhands and !important as well as the shorthand.
+      const saved = Array.from(element.style)
+        .filter(name => ["overflow", "overflow-x", "overflow-y"].includes(name))
+        .map(name => ({name, value: element.style.getPropertyValue(name), priority: element.style.getPropertyPriority(name)}));
+      element.style.setProperty("overflow", "hidden", "important");
+      return () => {
+        element.style.removeProperty("overflow");
+        for (const {name, value, priority} of saved) element.style.setProperty(name, value, priority);
+      };
+    });
     opener.current = document.activeElement as HTMLElement | null;
     panel.current?.focus();
     function keydown(event: KeyboardEvent) {
@@ -32,6 +43,7 @@ export function JobDrawer({id, jobs, children}: {id: string; jobs: Job[]; childr
     window.addEventListener("keydown", keydown, true);
     return () => {
       window.removeEventListener("keydown", keydown, true);
+      for (const restore of scrollLocks) restore();
       const chain = mergeJobChains(rows.current).find(chain => chain.runs.some(job => job.id === latestId.current));
       const link = [...document.querySelectorAll<HTMLAnchorElement>(".panel-job h2 a")].find(link => link.hash === `#/jobs/${encodeURIComponent(chain?.latest.id || latestId.current)}`);
       if (opener.current?.isConnected && opener.current !== document.body) opener.current.focus();

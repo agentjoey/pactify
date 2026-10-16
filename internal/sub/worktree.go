@@ -456,6 +456,24 @@ func (s Store) DiscardWorktree(id string) error {
 		if err := s.worktreeIdle(w); err != nil {
 			return err
 		}
+		entries, err := os.ReadDir(s.Root)
+		if err != nil {
+			return err
+		}
+		var related []State
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			st, err := s.Load(entry.Name())
+			if err != nil || st.Worktree == nil || st.Worktree.Owner != w.Owner {
+				continue
+			}
+			if err := st.KillHarnesses(); err != nil {
+				return err
+			}
+			related = append(related, st)
+		}
 		// git also removes registrations for a worktree whose directory was
 		// deleted externally. Never prune other jobs' worktrees.
 		if _, err := runGit(w.OriginalRoot, "worktree", "remove", "--force", "--force", w.Path); err != nil {
@@ -477,18 +495,7 @@ func (s Store) DiscardWorktree(id string) error {
 				}
 			}
 		}
-		entries, err := os.ReadDir(s.Root)
-		if err != nil {
-			return err
-		}
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-			st, err := s.Load(entry.Name())
-			if err != nil || st.Worktree == nil || st.Worktree.Owner != w.Owner {
-				continue
-			}
+		for _, st := range related {
 			if err := s.cleanupJobTemp(st.ID); err != nil {
 				return err
 			}

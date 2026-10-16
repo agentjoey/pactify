@@ -28,11 +28,15 @@ func Inspect(pid int) (Identity, error) {
 // descendants directly rather than requiring permission to list every process.
 // Apple ABI: xnu/libsyscall/wrappers/libproc/libproc.c.
 func childPIDs(parent int) ([]int32, error) {
-	const procInfoCallListPIDs = 1
 	const procPPIDOnly = 6
+	return listPIDs(procPPIDOnly, parent)
+}
+
+func listPIDs(filter, value int) ([]int32, error) {
+	const procInfoCallListPIDs = 1
 	for capacity := 64; capacity <= 1<<20; capacity *= 2 {
 		pids := make([]int32, capacity)
-		size, _, errno := syscall.Syscall6(unix.SYS_PROC_INFO, procInfoCallListPIDs, procPPIDOnly, uintptr(parent), 0, uintptr(unsafe.Pointer(&pids[0])), uintptr(len(pids)*4))
+		size, _, errno := syscall.Syscall6(unix.SYS_PROC_INFO, procInfoCallListPIDs, uintptr(filter), uintptr(value), 0, uintptr(unsafe.Pointer(&pids[0])), uintptr(len(pids)*4))
 		runtime.KeepAlive(pids)
 		if errno != 0 {
 			return nil, errno
@@ -41,7 +45,7 @@ func childPIDs(parent int) ([]int32, error) {
 			return pids[:int(size)/4], nil
 		}
 	}
-	return nil, fmt.Errorf("too many child processes for %d", parent)
+	return nil, fmt.Errorf("too many processes for filter %d value %d", filter, value)
 }
 func processSnapshot(root Identity) ([]processEntry, error) {
 	queue := []Identity{root}

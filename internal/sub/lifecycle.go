@@ -156,16 +156,14 @@ func (s Store) Finish(id string, result *Result, reason string, finished time.Ti
 			}
 			return json.Unmarshal(data, result)
 		}
-		if st.TempDirOwned {
-			cleanupErr := st.KillHarnesses()
-			if cleanupErr == nil {
-				cleanupErr = s.cleanupJobTemp(id)
-			}
-			if err := cleanupErr; err != nil {
-				warning := "Job temp cleanup failed: " + err.Error()
-				if !slices.Contains(result.Warnings, warning) {
-					result.Warnings = append(result.Warnings, warning)
-				}
+		cleanupErr := st.KillHarnesses()
+		if cleanupErr == nil && st.TempDirOwned {
+			cleanupErr = s.cleanupJobTemp(id)
+		}
+		if err := cleanupErr; err != nil {
+			warning := "Job temp cleanup failed: " + err.Error()
+			if !slices.Contains(result.Warnings, warning) {
+				result.Warnings = append(result.Warnings, warning)
 			}
 		}
 		if st.CancelRequested {
@@ -308,6 +306,10 @@ func (st State) KillHarnesses() error {
 	if len(remaining) > 0 {
 		cleanupErr = errors.Join(cleanupErr, fmt.Errorf("%d harness processes still alive", len(remaining)))
 	}
+	// A short-lived parent can exit between tracking ticks. Its detached tools
+	// still carry the job marker even though no ancestry snapshot recorded them.
+	marked, err := procx.FindJobProcesses(st.ID)
+	cleanupErr = errors.Join(cleanupErr, err, procx.TerminateDescendants("job", marked, 200*time.Millisecond))
 	return cleanupErr
 }
 

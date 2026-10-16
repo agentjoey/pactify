@@ -12,6 +12,8 @@ Run these commands in Claude Code:
 /plugin install pactify@pactify
 ```
 
+To update: `/plugin marketplace update pactify`, then update the pactify plugin from `/plugin` (Installed → pactify → Update) and run `/reload-plugins` or start a new session. Claude Code caches a plugin by its `plugin.json` version, so every change to this plugin bumps that version (CI enforces it). If an older install still shows stale skills, reinstall with `/plugin uninstall pactify@pactify` and `/plugin install pactify@pactify`.
+
 Prerequisites: `pactify` is on PATH and `pactify sub --help` works; the official codex / kimi / agy / opencode CLI you want to call is installed and logged in.
 The SessionStart hook only checks that pactify and its `sub` command are available. It suggests installing or upgrading when needed without blocking the session.
 The plugin does not proxy models, manage logins, or read or copy credentials.

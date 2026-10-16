@@ -10,6 +10,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Claude Code caches an installed plugin by its version: a change under
+  # plugins/pactify/ that keeps the same version never reaches users who already
+  # installed it (/plugin update and /reload-plugins keep the old cache).
+  plugin-version:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: plugin changes bump plugin.json version
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          if git diff --quiet "$base"...HEAD -- plugins/pactify; then
+            echo "plugins/pactify unchanged"; exit 0
+          fi
+          old=$(git show "$base":plugins/pactify/.claude-plugin/plugin.json | jq -r .version)
+          new=$(jq -r .version plugins/pactify/.claude-plugin/plugin.json)
+          if [ "$old" = "$new" ]; then
+            echo "::error file=plugins/pactify/.claude-plugin/plugin.json::plugins/pactify changed but version is still $new; bump it so installed plugins update"
+            exit 1
+          fi
+          echo "plugin version $old -> $new"
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 25

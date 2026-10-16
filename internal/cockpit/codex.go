@@ -62,10 +62,11 @@ type codexSession struct {
 	closeErr  error
 }
 
-func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string) (*codexSession, error) {
+// newCodexAppServer performs only process startup and the initialize handshake.
+// Thread creation/resume belongs to newCodexSession, never catalog discovery.
+func newCodexAppServer(ctx context.Context, opts StartOpts) (*codexSession, error) {
 	s := &codexSession{
 		hidden:    opts.Hidden,
-		threadID:  resumeThreadID,
 		events:    make(chan Event, 64),
 		approvals: make(chan ApprovalRequest, 16),
 		done:      make(chan struct{}),
@@ -128,6 +129,15 @@ func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string)
 		return nil, fmt.Errorf("codex: initialized: %w", err)
 	}
 
+	return s, nil
+}
+
+func newCodexSession(ctx context.Context, opts StartOpts, resumeThreadID string) (*codexSession, error) {
+	s, err := newCodexAppServer(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	s.threadID = resumeThreadID
 	if resumeThreadID != "" {
 		info, id, err := s.client.threadResumeOpts(ctx, resumeThreadID, opts)
 		if id != "" {
@@ -529,42 +539,11 @@ func (c *codexClient) threadOpts(ctx context.Context, method string, params map[
 
 // Only explicit model failures query the catalog; default serve traffic is unchanged.
 func (c *codexClient) modelRequestError(ctx context.Context, requested string, cause error) error {
-	var models []string
-	cursor := ""
-	seen := map[string]bool{}
-	for {
-		params := map[string]any{}
-		if cursor != "" {
-			params["cursor"] = cursor
-		}
-		raw, err := c.rpc.call(ctx, "model/list", params)
-		if err != nil {
-			return fmt.Errorf("codex: requested model %q: %w; could not list available models: %v", requested, cause, err)
-		}
-		var page struct {
-			Data []struct {
-				Model string `json:"model"`
-			} `json:"data"`
-			NextCursor string `json:"nextCursor"`
-		}
-		if err := json.Unmarshal(raw, &page); err != nil {
-			return fmt.Errorf("codex: requested model %q: %w; could not parse available models: %v", requested, cause, err)
-		}
-		for _, m := range page.Data {
-			if m.Model != "" {
-				models = append(models, m.Model)
-			}
-		}
-		if page.NextCursor == "" {
-			break
-		}
-		if seen[page.NextCursor] {
-			return fmt.Errorf("codex: requested model %q: %w; model/list repeated cursor", requested, cause)
-		}
-		cursor = page.NextCursor
-		seen[cursor] = true
+	catalog, err := c.modelDetails(ctx)
+	if err != nil {
+		return fmt.Errorf("codex: requested model %q: %w; could not list available models: %v", requested, cause, err)
 	}
-	return fmt.Errorf("codex: requested model %q: %w; available models: %s", requested, cause, modelChoices("codex", requested, models))
+	return fmt.Errorf("codex: requested model %q: %w; available models: %s", requested, cause, modelChoices("codex", requested, catalog.Items))
 }
 
 func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, error) {

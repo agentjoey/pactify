@@ -50,8 +50,13 @@ func TestSubAPIReadOnlyAndDefaultStore(t *testing.T) {
 	}
 	for _, path := range []string{"/api/sub/jobs", "/api/sub/jobs/" + st.ID, "/api/sub/jobs/" + st.ID + "/logs", "/api/sub/jobs/" + st.ID + "/diff", "/api/sub/jobs/" + st.ID + "/cancel", "/api/sub/jobs/" + st.ID + "/resume", "/api/sub/jobs/" + st.ID + "/apply", "/api/sub/jobs/" + st.ID + "/discard"} {
 		for _, method := range []string{"HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE", "CONNECT"} {
-			if w := query(method, path); w.Code != http.StatusMethodNotAllowed {
-				t.Errorf("%s %s: %d", method, path, w.Code)
+			want := http.StatusMethodNotAllowed
+			// AJ-704 adds these serve-only POSTs; without JSON they reject 415.
+			if method == "POST" && (strings.HasSuffix(path, "/cancel") || strings.HasSuffix(path, "/resume") || strings.HasSuffix(path, "/apply") || strings.HasSuffix(path, "/discard")) {
+				want = http.StatusUnsupportedMediaType
+			}
+			if w := query(method, path); w.Code != want {
+				t.Errorf("%s %s: %d (want %d)", method, path, w.Code, want)
 			}
 		}
 	}

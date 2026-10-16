@@ -3,10 +3,12 @@ package sub
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,6 +16,7 @@ import (
 
 type Snapshot struct {
 	Base         string
+	EmptyTree    bool // Repository had no HEAD at startup; Base holds its tree.
 	Untracked    []string
 	Fingerprints map[string][32]byte
 }
@@ -84,6 +87,17 @@ func repositoryRoot(dir string) (string, error) {
 	return strings.TrimSuffix(string(out), "\n"), nil
 }
 
+// headCommit returns an empty string for an unborn repository. Callers first
+// resolve the repository root so a non-repository remains an error.
+func headCommit(dir string) (string, error) {
+	out, err := runGit(dir, "rev-parse", "--verify", "--quiet", "HEAD^{commit}")
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return "", nil
+	}
+	return strings.TrimSpace(string(out)), err
+}
+
 func TakeSnapshot(dir string) (Snapshot, error) {
 	// Snapshot and diff cover the repository, even when Cwd is a subdirectory.
 	root, err := repositoryRoot(dir)
@@ -91,6 +105,14 @@ func TakeSnapshot(dir string) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	dir = root
+	head, err := headCommit(dir)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	if head == "" {
+		base, excluded, err := temporaryTree(dir)
+		return Snapshot{Base: base, EmptyTree: true, Untracked: excluded}, err
+	}
 	out, err := runGit(dir, "stash", "create")
 	if err != nil {
 		return Snapshot{}, err
@@ -149,6 +171,9 @@ func DiffSince(dir string, snap Snapshot) (Diff, error) {
 		return Diff{}, err
 	}
 	dir = root
+	if snap.EmptyTree {
+		return diffSinceTree(dir, snap)
+	}
 	out, err := runGit(dir, "diff", "--numstat", "-z", "--no-renames", "--no-ext-diff", "--no-textconv", snap.Base, "--")
 	if err != nil {
 		return Diff{}, err
@@ -189,17 +214,9 @@ func DiffSince(dir string, snap Snapshot) (Diff, error) {
 		if existing[path] {
 			continue
 		}
-		fullPath := filepath.Join(dir, path)
-		data, err := fileContent(fullPath)
+		f, err := addedFile(dir, path)
 		if err != nil {
 			return Diff{}, err
-		}
-		f := FileDelta{Path: path, New: true}
-		if !bytes.ContainsRune(data, 0) {
-			f.Added = bytes.Count(data, []byte{'\n'})
-			if len(data) > 0 && data[len(data)-1] != '\n' {
-				f.Added++
-			}
 		}
 		d.Files = append(d.Files, f)
 	}
@@ -209,4 +226,124 @@ func DiffSince(dir string, snap Snapshot) (Diff, error) {
 		d.Deleted += f.Deleted
 	}
 	return d, nil
+}
+
+func addedFile(dir, path string) (FileDelta, error) {
+	data, err := fileContent(filepath.Join(dir, path))
+	if err != nil {
+		return FileDelta{}, err
+	}
+	f := FileDelta{Path: path, New: true}
+	if !bytes.ContainsRune(data, 0) {
+		f.Added = bytes.Count(data, []byte{'\n'})
+		if len(data) > 0 && data[len(data)-1] != '\n' {
+			f.Added++
+		}
+	}
+	return f, nil
+}
+
+// temporaryTree stages the working tree into a private copy of the user's
+// index. Copying preserves tracked ignored files; git add applies ignore rules
+// to other files. Preexisting embedded repositories remain excluded by path,
+// just as they are in snapshots of repositories with HEAD.
+func temporaryTree(dir string) (tree string, excluded []string, err error) {
+	tmp, err := os.MkdirTemp("", "pactify-sub-index-*")
+	if err != nil {
+		return "", nil, err
+	}
+	defer os.RemoveAll(tmp)
+	index := filepath.Join(tmp, "index")
+	indexPath, err := runGit(dir, "rev-parse", "--git-path", "index")
+	if err != nil {
+		return "", nil, err
+	}
+	source := strings.TrimSuffix(string(indexPath), "\n")
+	if !filepath.IsAbs(source) {
+		source = filepath.Join(dir, source)
+	}
+	data, err := os.ReadFile(source)
+	if err == nil {
+		if err := os.WriteFile(index, data, 0600); err != nil {
+			return "", nil, err
+		}
+	} else if !os.IsNotExist(err) {
+		return "", nil, err
+	}
+	paths, err := untracked(dir)
+	if err != nil {
+		return "", nil, err
+	}
+	args := []string{"add", "-A", "--", "."}
+	for _, path := range paths {
+		info, err := os.Lstat(filepath.Join(dir, path))
+		if err != nil {
+			return "", nil, err
+		}
+		if !info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
+			excluded = append(excluded, path)
+			args = append(args, ":(top,exclude,literal)"+strings.TrimSuffix(path, "/"))
+		}
+	}
+	run := func(args ...string) ([]byte, error) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_INDEX_FILE="+index)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		out, err := cmd.Output()
+		if err != nil {
+			return nil, fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
+		}
+		return out, nil
+	}
+	if _, err := run(args...); err != nil {
+		return "", nil, err
+	}
+	out, err := run("write-tree")
+	return strings.TrimSpace(string(out)), excluded, err
+}
+
+func diffSinceTree(dir string, snap Snapshot) (Diff, error) {
+	if snap.Base == "" {
+		return Diff{}, fmt.Errorf("baseline tree unavailable; changes cannot be attributed to this job")
+	}
+	current, excluded, err := temporaryTree(dir)
+	if err != nil {
+		return Diff{}, err
+	}
+	out, err := runGit(dir, "diff", "--numstat", "-z", "--no-renames", "--no-ext-diff", "--no-textconv", snap.Base, current, "--")
+	if err != nil {
+		return Diff{}, err
+	}
+	added, err := runGit(dir, "diff", "--name-only", "-z", "--no-renames", "--diff-filter=A", snap.Base, current, "--")
+	if err != nil {
+		return Diff{}, err
+	}
+	newPaths := make(map[string]bool)
+	for _, path := range bytes.Split(added, []byte{0}) {
+		newPaths[string(path)] = true
+	}
+	d := Diff{}
+	for _, record := range bytes.Split(out, []byte{0}) {
+		if len(record) == 0 {
+			continue
+		}
+		f, err := parseNumstat(record)
+		if err != nil {
+			return Diff{}, err
+		}
+		f.New = newPaths[f.Path]
+		d.Files = append(d.Files, f)
+		d.Added += f.Added
+		d.Deleted += f.Deleted
+	}
+	var failures []error
+	for _, path := range excluded {
+		if !slices.Contains(snap.Untracked, path) {
+			failures = append(failures, fmt.Errorf("cannot count non-regular path %q", path))
+		}
+	}
+	sort.Slice(d.Files, func(i, j int) bool { return d.Files[i].Path < d.Files[j].Path })
+	return d, errors.Join(failures...)
 }

@@ -185,6 +185,15 @@ limited to 512 KiB with an explicit truncation notice. Non-worktree jobs retain
 only their recorded file change list; the current result format does not save a
 full patch. Missing/discarded worktrees fall back to the recorded list.
 
+Repositories without a first commit support read-only and write jobs in the
+original workspace (subject to each harness's access restrictions). These jobs
+capture a baseline tree through a temporary index, respecting Git ignore rules
+and existing exclusions without committing or changing the user's index or
+workspace. Changes compare the final files against that baseline, so unchanged
+preexisting files are excluded. Temporary indexes are removed after use.
+Unavailable counts produce a warning without failing the job. `--worktree`
+requires a baseline commit and exits 2 before creating a job if none exists.
+
 The dashboard Jobs tab and local panel share the same components, styles and
 read-only API implementation. Serve mounts the API at `/api/sub/jobs`; the local
 panel keeps `/api/jobs` and its own Bearer authentication. Each reads `$PACTIFY_HOME/jobs`

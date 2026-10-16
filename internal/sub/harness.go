@@ -19,11 +19,12 @@ import (
 const DefaultHarness = "codex"
 
 type Harness struct {
-	Name    string
-	Kind    string
-	Backend func() cockpit.Backend
-	Version func(context.Context) (string, error)
-	Verify  func(context.Context, VerificationInput) Verification
+	TransientRetry bool // Prompt can send another turn on the same session.
+	Name           string
+	Kind           string
+	Backend        func() cockpit.Backend
+	Version        func(context.Context) (string, error)
+	Verify         func(context.Context, VerificationInput) Verification
 	// NoReadOnly, when set, is why this harness refuses --read-only jobs.
 	NoReadOnly string
 	// Experimental is an informational warning, independent of job status.
@@ -74,7 +75,7 @@ type ConcealContext struct {
 
 var registry = map[string]Harness{
 	"agy": {
-		Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: cliVersion("agy", orchestrate.CrossVendorStrip("antigravity")...),
+		TransientRetry: true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: cliVersion("agy", orchestrate.CrossVendorStrip("antigravity")...),
 		Experimental: "agy is an experimental harness (large tasks completed in one attempt 1/10; read-only work never converged)", MinimalConfig: true,
 		Home:   &harnessHome{Env: "HOME", Source: os.UserHomeDir, Managed: managedAgyHome, Layout: agyHome, Doctor: doctorAgyHome, BeforeDoctor: snapshotAgyUserIndex},
 		Models: cockpit.AgyModels, NoReadOnly: cockpit.AgyNoReadOnly,
@@ -88,7 +89,7 @@ var registry = map[string]Harness{
 		},
 	},
 	"opencode": {
-		Name: "opencode", Kind: "opencode", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("opencode") },
+		TransientRetry: true, Name: "opencode", Kind: "opencode", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("opencode") },
 		Version:      cliVersion("opencode", opencodeVendorStrip()...),
 		Experimental: "opencode is an experimental harness (large tasks completed in one attempt 6/10; read-only work never converged)", MinimalConfig: true,
 		Home: opencodeHomes(), Models: cockpit.OpencodeModels, NoReadOnly: cockpit.OpencodeNoReadOnly,
@@ -99,8 +100,8 @@ var registry = map[string]Harness{
 	},
 
 	"codex": {
-		DoctorModel: "gpt-6-luna",
-		Name:        "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
+		DoctorModel:    "gpt-6-luna",
+		TransientRetry: true, Name: "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
 		HidesItself:   true,
 		MinimalConfig: true,
 		Verify: func(_ context.Context, v VerificationInput) Verification {
@@ -110,7 +111,7 @@ var registry = map[string]Harness{
 	"kimi": {
 		Home:               &harnessHome{Env: "KIMI_CODE_HOME", Source: kimiHomeDir, Managed: managedKimiHome, Layout: kimiHome, Doctor: doctorKimiHome},
 		LocalUsageBaseline: cockpit.KimiWireOffset, DoctorModel: "kimi-code/kimi-for-coding",
-		Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
+		TransientRetry: true, Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
 		Experimental:  "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)",
 		MinimalConfig: true,
 		// Phase 0 (2026-10-15): in plan mode kimi keeps trying to write a plan file and

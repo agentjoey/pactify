@@ -43,7 +43,10 @@ Render a compact Markdown table with these six columns and at most 10 rows:
 - Sort `running` first, then `queued`, then terminal jobs with attention, then other jobs.
   Within each group use `createdAt` descending. This only sorts the returned latest 10;
   older running jobs may exist. Offer `/jobs all` for the complete set.
-- Status: append `failureClass` when present, with the remaining time until `quotaResetAt`
+- Status: for running jobs with `retryAttempt`, show `retrying (retryAttempt/retryLimit)`
+  during backoff and continuation. For terminal jobs append `retries: retryCount` when nonzero.
+  These are automatic turns in the same job, separate from manual `resumeOf` links.
+  Append `failureClass` when present, with the remaining time until `quotaResetAt`
   for quota failures. These fields are additive; historical jobs may omit them.
 - Repo / mode: shorten `repo` without hiding collisions, then `access` (`write` / `read-only`)
   and `worktree.status` (`pending` / `applied` / `discarded`), or `no worktree` when absent.

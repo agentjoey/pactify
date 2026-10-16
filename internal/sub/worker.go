@@ -26,8 +26,9 @@ const (
 )
 
 type WorkerConfig struct {
-	CacheHome       string // Optional shared cache home; doctor keeps job storage disposable.
-	ToolCallLimit   int    // 0 disables the limit; CLI default is 40.
+	RetryBackoff    func(int) time.Duration // 1-based attempt; nil uses 30s then 120s.
+	CacheHome       string                  // Optional shared cache home; doctor keeps job storage disposable.
+	ToolCallLimit   int                     // 0 disables the limit; CLI default is 40.
 	IdleTimeout     time.Duration
 	KimiWireTimeout time.Duration // Default 10s to flush per-job wire usage before Close.
 	Now             func() time.Time
@@ -59,6 +60,13 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 
 	req := st.Request
+	retryLimit := DefaultRetries
+	if req.Retries != nil {
+		retryLimit = *req.Retries
+	}
+	if cfg.RetryBackoff == nil {
+		cfg.RetryBackoff = retryBackoff
+	}
 	if st.Worktree != nil {
 		req.Cwd = st.Worktree.Cwd
 	}
@@ -88,6 +96,8 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		reason := ""
 		if runErr != nil {
 			reason = runErr.Error()
+		} else if len(result.Retries) > 0 && result.Status != StatusSucceeded && result.failureMessage != "" {
+			reason = result.failureMessage
 		} else {
 			for _, warning := range result.Warnings {
 				// These warnings describe harness readiness, not a job error.
@@ -112,6 +122,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			result.Status = StatusCanceled
 		}
 		return result, err
+	}
+	if retryLimit < 0 || retryLimit > MaxRetries {
+		return fail(fmt.Errorf("retries must be between 0 and %d", MaxRetries))
 	}
 	if req.Access != "write" && req.Access != "read-only" {
 		return fail(fmt.Errorf("invalid access %q", req.Access))
@@ -297,15 +310,19 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		}
 	}
 	var prompts atomic.Int32
-	promptErr := make(chan error, 1)
-	go func() {
-		if err := workCtx.Err(); err != nil {
-			promptErr <- err
-			return
-		}
-		prompts.Add(1)
-		promptErr <- sess.Prompt(workCtx, cockpit.UserMessage{Text: req.Brief})
-	}()
+	startPrompt := func(text string) chan error {
+		ch := make(chan error, 1)
+		go func() {
+			if err := workCtx.Err(); err != nil {
+				ch <- err
+				return
+			}
+			prompts.Add(1)
+			ch <- sess.Prompt(workCtx, cockpit.UserMessage{Text: text})
+		}()
+		return ch
+	}
+	promptErr := startPrompt(req.Brief)
 	var collector Collector
 	lastActivity := cfg.Now()
 	fingerprint := gitx.TreeFingerprint(req.Cwd)
@@ -336,6 +353,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			return
 		}
 		interrupted = true
+		if len(result.Retries) > 0 {
+			result.failureMessage = warning
+		}
 		if warning == "Idle timeout" {
 			result.FailureClass, result.QuotaResetAt = "idle_timeout", nil
 		} else if warning != "Task canceled" {
@@ -354,69 +374,170 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	cancelCh := ctx.Done()
 	events := sess.Events()
-loop:
-	for !collector.TurnDone {
-		select {
-		case <-cancelCh:
-			canceled = true
-			cancelCh = nil
-			interrupt("Task canceled")
-		case <-deadline:
-			graceExpired = true
-			break loop
-		case e := <-approvalErr:
-			interrupt("Approval failed: " + e.Error())
-		case e := <-promptErr:
-			promptErr = nil
-			if e != nil && !interrupted {
-				promptFailed = true
-				result.failureMessage = e.Error()
-				interrupt(e.Error())
-				f := cockpit.FailureFromError(req.Harness, e, cfg.Now())
-				result.FailureClass, result.QuotaResetAt = f.Class, f.ResetAt
+	sessionClosed := false
+	recordEvent := func(event cockpit.Event) {
+		if e := encoder.Encode(event); e != nil {
+			interrupt("Failed to write log: " + e.Error())
+		}
+		lastActivity = cfg.Now()
+		collector.Add(event)
+		if req.Access == "read-only" && cfg.ToolCallLimit > 0 && collector.ToolCalls > cfg.ToolCallLimit {
+			interrupt(fmt.Sprintf("Tool-call limit exceeded (%d calls)", collector.ToolCalls))
+		}
+		if event.Kind == cockpit.EventState && event.State == cockpit.StateTurnFailed {
+			turnFailed = true
+			message := event.Err
+			if message == "" {
+				message = "Turn failed"
 			}
-		case event, ok := <-events:
-			if !ok {
-				result.Warnings = append(result.Warnings, "Session closed before the turn ended")
-				break loop
-			}
-			if e := encoder.Encode(event); e != nil {
-				interrupt("Failed to write log: " + e.Error())
-			}
-			lastActivity = cfg.Now()
-			collector.Add(event)
-			if req.Access == "read-only" && cfg.ToolCallLimit > 0 && collector.ToolCalls > cfg.ToolCallLimit {
-				interrupt(fmt.Sprintf("Tool-call limit exceeded (%d calls)", collector.ToolCalls))
-			}
-			if event.Kind == cockpit.EventState && event.State == cockpit.StateTurnFailed {
-				turnFailed = true
-				message := event.Err
-				if message == "" {
-					message = "Turn failed"
-				}
-				result.Warnings = append(result.Warnings, message)
-			}
-		case <-ticker.C:
-			latest, e := store.Load(id)
-			if e != nil {
-				interrupt("Failed to read job state: " + e.Error())
-			} else if latest.CancelRequested && !canceled {
+			result.Warnings = append(result.Warnings, message)
+		}
+	}
+
+turns:
+	for {
+	loop:
+		for !collector.TurnDone || promptErr != nil {
+			select {
+			case <-cancelCh:
 				canceled = true
-				stopWork()
+				cancelCh = nil
 				interrupt("Task canceled")
-			}
-			current := gitx.TreeFingerprint(req.Cwd)
-			if current != fingerprint {
-				fingerprint = current
-				lastActivity = cfg.Now()
-			}
-			if cfg.Now().Sub(lastActivity) >= cfg.IdleTimeout {
-				interrupt("Idle timeout")
+			case <-deadline:
+				graceExpired = true
+				break loop
+			case e := <-approvalErr:
+				interrupt("Approval failed: " + e.Error())
+			case e := <-promptErr:
+				promptErr = nil
+				if e != nil && !interrupted {
+					promptFailed = true
+					result.failureMessage = e.Error()
+					f := cockpit.FailureFromError(req.Harness, e, cfg.Now())
+					// ACP publishes its terminal event before returning the RPC
+					// error. Drain it before deciding whether interruption is needed.
+				drain:
+					for {
+						select {
+						case event, ok := <-events:
+							if !ok {
+								sessionClosed = true
+								break drain
+							}
+							recordEvent(event)
+						default:
+							break drain
+						}
+					}
+					if !collector.TurnDone && f.Class != "transient" {
+						interrupt(e.Error())
+					} else if !collector.TurnDone {
+						recordEvent(cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: e.Error()})
+					} else if !slices.Contains(result.Warnings, e.Error()) {
+						result.Warnings = append(result.Warnings, e.Error())
+					}
+					result.FailureClass, result.QuotaResetAt = f.Class, f.ResetAt
+				}
+			case event, ok := <-events:
+				if !ok {
+					sessionClosed = true
+					result.Warnings = append(result.Warnings, "Session closed before the turn ended")
+					break loop
+				}
+				recordEvent(event)
+			case <-ticker.C:
+				latest, e := store.Load(id)
+				if e != nil {
+					interrupt("Failed to read job state: " + e.Error())
+				} else if latest.CancelRequested && !canceled {
+					canceled = true
+					stopWork()
+					interrupt("Task canceled")
+				}
+				current := gitx.TreeFingerprint(req.Cwd)
+				if current != fingerprint {
+					fingerprint = current
+					lastActivity = cfg.Now()
+				}
+				if cfg.Now().Sub(lastActivity) >= cfg.IdleTimeout {
+					interrupt("Idle timeout")
+				}
 			}
 		}
+		if turnFailed || promptFailed {
+			result.classifyTurnFailure(req.Harness, collector, cfg.Now(), promptFailed)
+		}
+		if result.FailureClass != "transient" || canceled || ctx.Err() != nil || interrupted || !collector.TurnDone || sessionClosed || graceExpired || len(result.Retries) >= retryLimit {
+			break turns
+		}
+		latest, stateErr := store.Load(id)
+		if stateErr != nil {
+			interrupt("Failed to read job state: " + stateErr.Error())
+			break turns
+		}
+		if latest.CancelRequested {
+			canceled = true
+			break turns
+		}
+		if !h.TransientRetry || sess.ThreadID() == "" {
+			result.Warnings = append(result.Warnings, "transient retry unsupported for "+req.Harness)
+			break turns
+		}
+		// A failed request may omit its final usage even if the continuation succeeds.
+		result.markUsagePartial()
+		attempt := len(result.Retries) + 1
+		if err := store.retryProgress(ctx, id, attempt, retryLimit, nil, cfg.Now()); err != nil {
+			if errors.Is(err, context.Canceled) {
+				canceled = true
+			} else {
+				interrupt(err.Error())
+			}
+			break turns
+		}
+		if err := store.waitRetry(ctx, id, cfg.RetryBackoff(attempt)); err != nil {
+			if errors.Is(err, context.Canceled) {
+				canceled = true
+			} else {
+				interrupt(err.Error())
+			}
+			break turns
+		}
+		retry := Retry{Class: "transient", Error: result.failureMessage, At: cfg.Now().UTC()}
+		if err := store.retryProgress(ctx, id, attempt, retryLimit, &retry, cfg.Now()); err != nil {
+			if errors.Is(err, context.Canceled) {
+				canceled = true
+			} else {
+				interrupt(err.Error())
+			}
+			break turns
+		}
+		result.Retries = append(result.Retries, retry)
+		// The prompt call and its terminal event have both finished. Reuse the
+		// live session; resetting turn-local output leaves cumulative usage intact.
+		turnFailed, promptFailed = false, false
+		// Prior errors belong to retry history, not the final turn's failure reason.
+		kept := result.Warnings[:0]
+		for _, warning := range result.Warnings {
+			if warning != collector.FailureMessage && warning != result.failureMessage {
+				kept = append(kept, warning)
+			}
+		}
+		result.Warnings = kept
+		result.FailureClass, result.QuotaResetAt, result.failureMessage = "", nil, ""
+		marker := cockpit.Event{Kind: cockpit.EventSystem, State: "transient_retry", Text: req.Harness}
+		if err := encoder.Encode(marker); err != nil {
+			interrupt("Failed to write log: " + err.Error())
+			break turns
+		}
+		collector.Add(marker)
+		lastActivity = cfg.Now()
+		promptErr = startPrompt(retryPrompt)
 	}
 	if ctx.Err() != nil {
 		canceled = true
+		interrupt("Task canceled")
+	}
+	if canceled {
 		interrupt("Task canceled")
 	}
 	// Prompt cancellation can generate a local terminal event before the remote
@@ -518,23 +639,7 @@ loop:
 		result.Status = StatusSucceeded
 	}
 	if result.Status == StatusFailed && (!interrupted || promptFailed) {
-		if !promptFailed {
-			result.failureMessage = collector.FailureMessage
-		}
-		raw := collector.FailureRaw
-		if req.Harness == "codex" {
-			q := cockpit.ClassifyFailure(req.Harness, "", collector.RateLimit, cfg.Now())
-			if q.Class == "quota" {
-				raw = collector.RateLimit
-			}
-		}
-		f := cockpit.ClassifyFailure(req.Harness, collector.FailureMessage, raw, cfg.Now())
-		if f.Class == "other" && len(collector.ErrorRaw) > 0 {
-			f = cockpit.ClassifyFailure(req.Harness, collector.FailureMessage, collector.ErrorRaw, cfg.Now())
-		}
-		if f.Class != "other" || result.FailureClass == "" {
-			result.FailureClass, result.QuotaResetAt = f.Class, f.ResetAt
-		}
+		result.classifyTurnFailure(req.Harness, collector, cfg.Now(), promptFailed)
 	}
 	return result, nil
 }

@@ -139,6 +139,11 @@ func (s *agySession) Prompt(ctx context.Context, msg UserMessage) error {
 			return fmt.Errorf("agy turn already running")
 		}
 	}
+	// Each agy turn starts a new process. Once its default model is known,
+	// explicitly retain it when continuing the learned conversation.
+	if s.opts.Model == "" && s.id != "" && s.info.Model != "" {
+		s.opts.Model = s.info.Model
+	}
 	args := []string{"--input-format", "stream-json", "--output-format", "stream-json", "--print-timeout", "0s"}
 	if s.opts.Model != "" {
 		args = append(args, "--model", s.opts.Model)

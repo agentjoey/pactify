@@ -95,6 +95,9 @@ type costResult struct {
 
 func (t *CostTotals) add(r costResult, harness string) {
 	t.Jobs++
+	if len(r.Retries) > 0 {
+		t.Retries++
+	}
 	switch r.Status {
 	case StatusSucceeded:
 		t.Succeeded++

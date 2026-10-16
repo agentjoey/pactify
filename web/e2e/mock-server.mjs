@@ -32,6 +32,7 @@
 // tests create them through the UI.
 
 import { createServer } from "node:http";
+import { createRouterAPI } from "./router-fixtures.mjs";
 import { serveJobsAPI } from "./jobs-fixtures.mjs";
 import { readFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -51,6 +52,7 @@ const DIST = join(__dirname, "..", "..", "internal", "serve", "dist");
 const PORT = Number(process.env.PORT || 4173);
 
 // --- mutable per-process state (reset via /__test/reset between tests) --------
+const routerAPI = createRouterAPI(true);
 let state = initialState();
 // The pending fallback proposals, if any. Armed by /__test/fallback. A LIST,
 // because a --max-concurrency > 1 run pauses each feature independently
@@ -81,6 +83,7 @@ let registry = makeRegistry();
 const fsTree = browseTree();
 
 function resetState() {
+  routerAPI.reset();
   state = initialState();
   registry = makeRegistry();
 }
@@ -164,6 +167,7 @@ const server = createServer(async (req, res) => {
   const url = (req.url || "/").split("?")[0];
 
   if (url.startsWith("/api/sub/")) {
+    if (await routerAPI(req, res, url.replace(/^\/api\/sub/, "/api"))) return;
     if (!serveJobsAPI(req, res, url.replace(/^\/api\/sub/, "/api"))) sendJSON(res, 404, { error: "not found" });
     return;
   }

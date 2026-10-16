@@ -3,12 +3,16 @@ export type JobsFetch = (path: string, signal: AbortSignal) => Promise<Response>
 export interface JobsSource {
   jobsPath: string;
   costPath: string;
+  routerPath?: string;
+  write?: (path: string, init: RequestInit) => Promise<Response>;
   fetch: JobsFetch;
 }
 
 export const dashboardJobsSource: JobsSource = {
   jobsPath: "/api/sub/jobs",
   costPath: "/api/sub/cost",
+  routerPath: "/api/sub/router",
+  write: (path, init) => fetch(path, { ...init, credentials: "same-origin" }),
   async fetch(path, signal) {
     const response = await fetch(path, { signal, credentials: "same-origin" });
     if (!response.ok) throw new Error(`Failed to load (${response.status}). Retrying shortly.`);

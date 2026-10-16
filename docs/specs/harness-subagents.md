@@ -242,7 +242,7 @@ M2 剩余部分（router v1、跨委派成本汇总）的设计见 [`router-v1.m
 | 资产 | 处理 | 何时 |
 |---|---|---|
 | 云端 | **已退役**：Go 云端（#97）、web 托管模式（#100）、共享 workspace 及构建 / 发布 CI（AJ-664）已删除；仓库外资源另行处理 | 仓库内清理已完成（2026-10-16） |
-| web 看板 + `serve`（~20.7k TS + 6.5k Go） | **冻结**：治理模式相关功能不再新增，只保证能构建；`cockpit` 包从 serve 中独立出来供 `sub` 使用。**例外（Owner 2026-10-16）**：dashboard 新增只读的 Jobs 页，用于查看委派任务，经 `pactify.agentjoey.ai`（Cloudflare Tunnel + Access）访问（AJ-689，见 [`jobs-view.md`](../jobs-view.md)） | 立即冻结；简化 / 删除在 M3，单独决定，届时需考虑 Jobs 页的去处 |
+| web 看板 + `serve`（~20.7k TS + 6.5k Go） | **冻结**：治理模式相关功能不再新增，只保证能构建；`cockpit` 包从 serve 中独立出来供 `sub` 使用。**例外（Owner 2026-10-16）**：dashboard 新增只读的 Jobs 页，用于查看委派任务，经 `pactify.agentjoey.ai`（Cloudflare Tunnel + Access）访问（AJ-689，见 [`jobs-view.md`](../jobs-view.md)）。含路由配置的写操作（AJ-700），仅 serve | 立即冻结；简化 / 删除在 M3，单独决定，届时需考虑 Jobs 页的去处 |
 | pact 协议 + 账本 + `pact` 插件 | **保留为可选的治理模式**；不再作为产品主线叙事 | — |
 | 单一规范账本 spec | **暂停在 WS-B**（已合入、flag 默认关，不影响现网行为） | 立即 |
 | 绑在上述资产上的 backlog 条目（`[UI-GATE]`、`[CLOUD-DOWN]`、`[BACKLOG-LIST]`、`[RUNGUARD-DEAD]` 等） | 标记「随降级冻结」，不再排期 | 立即 |

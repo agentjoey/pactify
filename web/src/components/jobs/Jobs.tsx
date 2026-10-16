@@ -3,6 +3,7 @@ import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { dashboardJobsSource, readJobLogs } from "./source";
 import type { JobsSource } from "./source";
+import { Routing } from "./Routing";
 import { UsageCard } from "./UsageCard";
 import "./jobs.css";
 
@@ -596,6 +597,7 @@ function JobsContent({ standalone }: { standalone: boolean }) {
                   every 2s
                 </span>
               </div>
+              {source.routerPath && <Routing source={source} readOnly={standalone} />}
               <div className="panel-stats">
                 <div>
                   <span>All jobs</span>

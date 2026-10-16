@@ -6,6 +6,8 @@
 
 可直接打开 `https://pactify.agentjoey.ai/#/jobs` 或 `https://pactify.agentjoey.ai/#/jobs/<id>`，加载和 hashchange 都会优先进入 Jobs，并打开对应详情。切换到其他视图时清除 Jobs hash；从标签或手机 View 重新进入 Jobs 时生成 `#/jobs`，详情的 All jobs 链接也返回该地址。
 
+列表上方的 **Routing** 可折叠区域展示配置路径、别名、按 harness 分组的回退链（保持顺序）、额度组与耗尽记录。dashboard 支持 **Edit / Save / Cancel**，回退路线可上下排序；模型逐项编辑，避免改变含逗号的模型名。422 错误在对应字段旁展示；409 提示 `Config changed elsewhere — reload to see the latest` 并提供 **Reload**，Reload 会丢弃草稿。Clear 使用页内确认，只清除本地耗尽记忆。panel 仅展示配置与状态，提示 `Edit routing from the dashboard or with pactify sub router.`，不提供编辑或 Clear 控件。展开时每 30 秒刷新，编辑期间保留草稿及原版本；重置倒计时仅使用已知 resetAt。手机布局按列堆叠。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
+
 ## 通过 pactify.agentjoey.ai 访问
 
 Owner 当前部署的访问路径：
@@ -17,7 +19,7 @@ Owner 当前部署的访问路径：
 
 打开 `https://pactify.agentjoey.ai`，完成 Access 登录，然后选择 **Jobs**。前提是 Tunnel 正在运行，且该域名的 Cloudflare Access 保护已启用。serve 自身没有登录认证；`internal/serve/security.go` 的 Origin 校验只保护浏览器写请求，不能替代 Access。
 
-此部署中 **serve 必须只监听本机 loopback**。启动参数应为 `pactify serve --addr 127.0.0.1:17082`，不要绑定 `0.0.0.0` 或局域网地址。CLI 的默认端口仍是 `127.0.0.1:7777`；`--addr` 是现有的可配置参数，本变更不调整它。其他 dashboard 写操作若经反向代理使用，需将完整 origin 加入 `PACTIFY_ALLOWED_ORIGINS`（例如 `https://pactify.agentjoey.ai`）；Jobs 只发 GET，不需要为它单独放宽 Origin。
+此部署中 **serve 必须只监听本机 loopback**。启动参数应为 `pactify serve --addr 127.0.0.1:17082`，不要绑定 `0.0.0.0` 或局域网地址。CLI 的默认端口仍是 `127.0.0.1:7777`；`--addr` 是现有的可配置参数，本变更不调整它。其他 dashboard 写操作若经反向代理使用，需将完整 origin 加入 `PACTIFY_ALLOWED_ORIGINS`（例如 `https://pactify.agentjoey.ai`）；Jobs 的 Routing 保存与 Clear 同样受此校验保护；经该域名编辑前需配置完整 origin。
 
 API 使用 serve 进程的 `PACTIFY_HOME`，与 `sub` 命令同样解析为 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。launchd 和 CLI 的环境变量若不同，会看到不同的任务。浏览器不会直接访问文件系统。
 
@@ -42,9 +44,12 @@ pactify sub panel --port 17100 --no-open
 | 详情 | `/api/sub/jobs/<id>` | `/api/jobs/<id>` |
 | SSE 日志 | `/api/sub/jobs/<id>/logs` | `/api/jobs/<id>/logs` |
 | diff | `/api/sub/jobs/<id>/diff` | `/api/jobs/<id>/diff` |
+| 路由配置（读取） | `/api/sub/router` | `/api/router` |
+| 路由配置（保存） | `PUT /api/sub/router` | 不注册 |
+| 清除耗尽记录 | `DELETE /api/sub/quota/<encoded-key>` | 不注册 |
 | 用量汇总 | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
 
-全部 API 仅接受 GET，HEAD 也拒绝。不提供 apply、discard、cancel、resume 操作；请在 CLI 或 Claude Code 中执行。读取使用原子 state 快照，不恢复孤儿 worker、不创建锁文件、不改变任务状态。缺失 `state.json` 的残缺 job 目录会跳过；非法 job id 经 Store 校验拒绝。
+共享只读 API 仅接受 GET，HEAD 也拒绝。serve 额外注册路由配置的 PUT 与额度记录的 DELETE，经过现有 Origin guard；panel 保持所有 API 只读。不提供 apply、discard、cancel、resume 操作；请在 CLI 或 Claude Code 中执行。任务读取使用原子 state 快照，不恢复孤儿 worker、不创建锁文件、不改变任务状态。缺失 `state.json` 的残缺 job 目录会跳过；非法 job id 经 Store 校验拒绝。
 
 列表底部的 **Usage · last 7 days** 卡片独立每 30 秒刷新，跨仓库汇总最近 7 个本地日历日的终态 result，不随列表筛选变化。按 harness 显示 jobs（ok/failed）、input/output tokens 与美元 / subscription / unknown 成本，含合计与 partial 注记。失败时只显示 **Usage unavailable**，不影响任务列表。手机上的表格在卡片内部横向滚动。
 
@@ -62,7 +67,7 @@ npx tsc --noEmit
 npx vitest run
 npm run build
 npm run build:panel
-npx playwright test e2e/jobs.spec.ts e2e/panel.spec.ts
+npx playwright test e2e/jobs.spec.ts e2e/panel.spec.ts e2e/routing.spec.ts
 node scripts/shots-panel.mjs
 ```
 

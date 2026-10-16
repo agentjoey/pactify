@@ -66,3 +66,21 @@ printf '%s\n' '已评审上次的 diff。保留已有实现，完成剩余验收
 
 新 job 接管现有 worktree，保留路径和原基线，不加载旧 harness 的 session 或 home。旧 id 再次启动、apply 或 discard 会提示当前持有者；后续请用新 id。内部 `worktree.owner` 继续作为共享锁和分组标识，`worktree.holder` 表示转移后的当前持有者。原有同会话 resume 链在未转移前保持原有语义。
 
+
+## Jobs 页管理路由（AJ-700）
+
+Jobs 列表上方的 **Routing** 可折叠区显示配置路径、别名、按 harness 分组的有序回退链、额度组和当前耗尽记录。展开后每 30 秒刷新；编辑期间保留原配置版本，避免自动刷新覆盖草稿。已知 resetAt 显示重置时间与倒计时；未知时间显示 `resets in unknown`，不把 24 小时记忆过期当作供应商重置。
+
+dashboard 中点 **Edit** 可增删改别名、回退路线和额度组，回退路线支持上下调整顺序，组中的模型逐项编辑。**Save** 使用 CLI 相同的解析器与校验规则；422 在对应字段旁显示错误，409 显示 `Config changed elsewhere — reload to see the latest`，点 **Reload** 丢弃草稿并加载最新配置。**Cancel** 丢弃编辑。配置变更只影响后续任务。
+
+耗尽记录旁的 **Clear** 需在页面内确认，仅删除本地 quota.json 中该 key 的记录，不会重置供应商额度。同组其他模型仍有耗尽记录时，组约束仍有效。panel 只读，不显示编辑或 Clear 控件；提示 `Edit routing from the dashboard or with pactify sub router.`。CLI 的 `sub router` 用于查看；也可直接编辑配置文件。
+
+| 操作 | serve | panel |
+| --- | --- | --- |
+| 读取 | `GET /api/sub/router` | `GET /api/router`（Bearer） |
+| 保存 | `PUT /api/sub/router` | 不注册 |
+| 清除额度 | `DELETE /api/sub/quota/{key}` | 不注册 |
+
+GET 返回 `{path, exists, config, version, exhaustedRoutes}`。缺失文件返回 `exists:false`、三个空配置对象；version 始终为文件原始内容的 SHA-256（缺失时为空字节的 SHA-256）。耗尽记录保留原有 QuotaRoute 字段并增加实际存储 `key`，过滤过期记录；模型路线 key 可为 `harness/model`，组 key 同样按原值删除。URL 中的 key 要用 `encodeURIComponent` 编码。
+
+PUT 仅接受 `application/json`（可带 charset），请求为 `{version, config}`，请求体上限 64 KiB；非 JSON 返回 415，超限返回 413，请求信封或 JSON 格式错误返回 400，配置错误返回 `422 {errors:[{field,message}]}`，版本冲突返回 409。只写 serve 进程的 `$PACTIFY_HOME/router.json`，不接受请求指定路径。版本比较和写入在 `router.json.lock` 下完成，复用 lockx；临时文件加 rename 原子替换，文件权限 0600。DELETE 与既有额度写入共用 `quota.json.lock`，原子更新；不存在的 key 也成功返回。两个写接口均经过 serve Origin 校验，经反向代理编辑时需按现有规则设置 `PACTIFY_ALLOWED_ORIGINS`。CLI 与 cost API 的既有 JSON 契约不变。

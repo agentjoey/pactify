@@ -29,12 +29,18 @@ const (
 // TestSEC_C2_CmdTransportDoesNotLeakRelaySecrets exercises the production execFn
 // (osExec — what NewCmdRunner wires) with the two crown-jewel secrets set in the
 // parent env, and asserts the spawned child does not receive them.
+// envProbe prints only the NAMES of the secret markers that reached the child
+// and whether PATH survived. Running plain `env` here put the whole process
+// environment (real API keys and tokens of whoever runs the suite) into the test
+// log whenever the package failed or ran with -v.
+const envProbe = `for v in ` + relaySecretMarker + ` ` + masterSecretMarker + `; do printenv "$v" >/dev/null && echo "$v"; done; [ -n "$PATH" ] && echo PATH=`
+
 func TestSEC_C2_CmdTransportDoesNotLeakRelaySecrets(t *testing.T) {
 	t.Setenv(relaySecretMarker, "relay-token-must-not-leak")
 	t.Setenv(masterSecretMarker, "aabbccddeeff-master-must-not-leak")
 
 	var out bytes.Buffer
-	if err := osExec(context.Background(), "sh", []string{"-c", "env"}, t.TempDir(), nil, &out); err != nil {
+	if err := osExec(context.Background(), "sh", []string{"-c", envProbe}, t.TempDir(), nil, &out); err != nil {
 		t.Fatalf("osExec(env): %v", err)
 	}
 	got := out.String()
@@ -63,7 +69,7 @@ func TestSEC_C2_VerifyGateDoesNotLeakRelaySecrets(t *testing.T) {
 	// 4th arg is the per-run env map (a parallel session added it); nil exercises
 	// the common gate path. The leak is independent of the map: shellExec bases
 	// cmd.Env on the unfiltered os.Environ() either way.
-	_, out, err := shellExec{}.Run(context.Background(), t.TempDir(), "env", nil)
+	_, out, err := shellExec{}.Run(context.Background(), t.TempDir(), envProbe, nil)
 	if err != nil {
 		t.Fatalf("shellExec(env): %v", err)
 	}

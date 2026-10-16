@@ -1,5 +1,7 @@
 # 委派任务摘要契约
 
+成本汇总使用独立的只读命令 `pactify sub cost`，JSON 与容错约定见 [sub-cost.md](sub-cost.md)。
+
 `internal/sub.JobSummary` 是 `/jobs`（AJ-658）和本地 panel（AJ-659）共用的数据层。
 `Store.Summarize(state, peers, now)` 接收通过 `Store.Load` / `Store.Recover` 原子读取的 State，读取该 job 的可选 result 和日志尾部；`peers` 应包含全部 job 的 State，以生成完整的反向续接关系。该方法不修改 job。
 

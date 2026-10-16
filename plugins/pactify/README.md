@@ -61,6 +61,7 @@ or attention. Running jobs appear first; pending matters are highlighted with ne
 `/jobs all` reads all jobs but shows at most 20 rows within about 30 lines, counting the rest.
 `/jobs <id>` shows one job's result excerpt, last 20 log lines, recorded diff statistics and
 direct resume links. The namespaced forms also accept `all` or a job id.
+Use `pactify sub cost` for token and cost totals by harness, model, repository or day, with recent quota snapshots; see the [cost contract](../../docs/sub-cost.md).
 
 The jobs skill is read-only: it never applies, discards, cancels or resumes jobs.
 Suggestions follow the review workflow below: inspect the full diff and new files, personally

@@ -208,7 +208,7 @@ func TestReviewFallbackKeepsExperimentalWarning(t *testing.T) {
 				t.Fatal(err)
 			}
 			result := readReviewResult(t, store, st.ID)
-			want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)"
+			want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only access is not offered)"
 			if len(result.Warnings) != 2 || result.Warnings[0] != want || result.Warnings[1] != st.Error || st.Error == want {
 				t.Fatalf("fallback warnings=%v state error=%q", result.Warnings, st.Error)
 			}

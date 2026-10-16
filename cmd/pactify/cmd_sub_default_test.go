@@ -92,7 +92,7 @@ func TestSubFallbackKeepsExperimentalWarningAndFailure(t *testing.T) {
 	if err := json.Unmarshal(data, &r); err != nil {
 		t.Fatal(err)
 	}
-	want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)"
+	want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only access is not offered)"
 	if r.Status != sub.StatusFailed || len(r.Warnings) != 2 || r.Warnings[0] != want || r.Warnings[1] != "worker panic" || !strings.HasPrefix(r.Markdown(), "⚠️ "+want) {
 		t.Fatalf("fallback result=%+v", r)
 	}

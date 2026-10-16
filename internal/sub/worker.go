@@ -188,6 +188,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			return fail(err)
 		}
 	}
+	if req.Access == "read-only" && h.NoReadOnly != "" {
+		return fail(errors.New(h.NoReadOnly))
+	}
 	if requiresReadOnlyBaseline(req) {
 		baseline, captureErr := captureReadOnly(req.Cwd)
 		if captureErr != nil {
@@ -421,10 +424,17 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		}
 	}()
 	wireOffset := int64(0)
+	var wireOffsets map[string]int64
+	var turnVerification *Verification
 	if h.LocalUsageBaseline != nil && h.Verify != nil && req.Resume != "" {
 		var baselineErr error
-		wireOffset, baselineErr = h.LocalUsageBaseline(harnessHome, sess.ThreadID())
+		if h.LocalUsageBaselines != nil {
+			wireOffsets, baselineErr = h.LocalUsageBaselines(harnessHome, sess.ThreadID())
+		} else {
+			wireOffset, baselineErr = h.LocalUsageBaseline(harnessHome, sess.ThreadID())
+		}
 		if baselineErr != nil {
+			wireOffsets = nil
 			wireOffset = -1 // Never count historical usage when the baseline is unknown.
 			result.Warnings = append(result.Warnings, "Kimi wire baseline unavailable; tokens may be incomplete: "+baselineErr.Error())
 		}
@@ -553,7 +563,7 @@ turns:
 							break drain
 						}
 					}
-					if !collector.TurnDone && f.Class != "transient" {
+					if !collector.TurnDone && f.Class != "transient" && !(h.Name == "kimi" && h.Verify != nil && h.LocalUsageBaseline != nil) {
 						interrupt(e.Error())
 					} else if !collector.TurnDone {
 						recordEvent(cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: e.Error()})
@@ -586,6 +596,19 @@ turns:
 				if cfg.Now().Sub(lastActivity) >= cfg.IdleTimeout {
 					interrupt("Idle timeout")
 				}
+			}
+		}
+		if h.Name == "kimi" && h.LocalUsageBaseline != nil && h.Verify != nil && !interrupted && !canceled {
+			verifyCtx, cancel := context.WithTimeout(ctx, cfg.KimiWireTimeout)
+			v := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: cockpit.SessionInfo{Home: harnessHome}, WireOffset: wireOffset, WireOffsets: wireOffsets, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
+			cancel()
+			turnVerification = &v
+			if v.WireError != nil {
+				turnFailed = true
+				wireMessage := v.WireError.Code + ": " + v.WireError.Message
+				wireRaw, _ := json.Marshal(map[string]any{"reason": v.WireReason, "error": v.WireError})
+				recordEvent(cockpit.Event{Kind: cockpit.EventSystem, State: "kimi_wire_failure", Err: wireMessage, Raw: wireRaw})
+				result.Warnings = append(result.Warnings, wireMessage)
 			}
 		}
 		if turnFailed || promptFailed {
@@ -655,6 +678,7 @@ turns:
 		}
 		collector.Add(marker)
 		lastActivity = cfg.Now()
+		turnVerification = nil // A canceled retry must recover its own final wire usage.
 		promptErr = startPrompt(retryPrompt)
 	}
 	if ctx.Err() != nil {
@@ -717,7 +741,12 @@ turns:
 			defer cancel()
 		}
 
-		verified := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
+		var verified Verification
+		if turnVerification != nil {
+			verified = *turnVerification
+		} else {
+			verified = h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: info, WireOffset: wireOffset, WireOffsets: wireOffsets, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
+		}
 		result.ModelVerified = verified.Verified
 		if verified.CostUSD != nil {
 			result.CostUSD = *verified.CostUSD

@@ -2,6 +2,7 @@ package sub
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
@@ -26,11 +27,14 @@ func (r *Result) classifyTurnFailure(harness string, c Collector, now time.Time,
 	if harness == "codex" && cockpit.ClassifyFailure(harness, "", c.RateLimit, now).Class == "quota" {
 		raw = c.RateLimit
 	}
+	if harness == "kimi" && len(c.WireRaw) > 0 {
+		raw, _ = json.Marshal(map[string]json.RawMessage{"acp": c.FailureRaw, "acpError": c.ErrorRaw, "wire": c.WireRaw})
+	}
 	f := cockpit.ClassifyFailure(harness, c.FailureMessage, raw, now)
-	if f.Class == "other" && len(c.ErrorRaw) > 0 {
+	if f.Class == "other" && len(c.ErrorRaw) > 0 && len(c.WireRaw) == 0 {
 		f = cockpit.ClassifyFailure(harness, c.FailureMessage, c.ErrorRaw, now)
 	}
-	if f.Class != "other" || r.FailureClass == "" {
+	if f.Class != "other" || r.FailureClass == "" || len(c.WireRaw) > 0 {
 		r.FailureClass, r.QuotaResetAt = f.Class, f.ResetAt
 	}
 }

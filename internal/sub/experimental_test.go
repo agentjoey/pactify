@@ -75,7 +75,7 @@ func TestRunJobExperimentalWarningFromRegistry(t *testing.T) {
 				if err != nil || state.Status != wantStatus || state.Error != wantError {
 					t.Fatalf("state=%+v err=%v; want error %q", state, err, wantError)
 				}
-				want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)"
+				want := "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only access is not offered)"
 				if name == "codex" {
 					if contains(r.Warnings, "experimental") {
 						t.Fatalf("codex warnings=%v", r.Warnings)

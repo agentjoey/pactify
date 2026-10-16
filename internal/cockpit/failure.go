@@ -34,7 +34,7 @@ func ClassifyFailure(harness, message string, raw json.RawMessage, now time.Time
 	case "agy":
 		return agyFailure(message, now)
 	case "kimi":
-		return acpFailure(message, raw, kimiFailureRules)
+		return kimiFailure(message, raw, now)
 	case "opencode":
 		return opencodeFailure(message, raw)
 	default:

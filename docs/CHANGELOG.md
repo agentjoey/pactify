@@ -8,6 +8,12 @@
 
 ---
 
+## Unreleased — AJ-712 · kimi P0
+
+- Read durable wire failures before retry/fallback classification; sum all agent usage with per-agent resume baselines; discover ACP models without a prompt, with warned offline fallback and shared catalog caching.
+- Keep kimi read-only disabled: shared Git state and absolute symlinks defeat the proposed isolation. Restore K1 refusals and doctor Read-only SKIP; retain Network evidence and `sandboxed=false`. Plugin version: 0.2.4.
+- Review fixes cover main-only usage completion, precise transient/quota/auth classification, retained ACP and wire evidence, prompt-error wire verification, and independent catalog locking/cleanup. Validation and host live evidence: [AJ-712 report](harness-v2/aj712-report.md).
+
 ## Unreleased — AJ-711 · agy v2
 
 - Review fixes: scope doctor process ownership to its disposable store, replace Python hooks with a compiled fail-closed policy, remove native prefix grants, refuse workspace hooks in read-only mode, and conservatively detect pending results.

@@ -10,6 +10,7 @@ interface Route {
   effort?: string;
 }
 interface Config {
+  defaults?: Record<string, { model?: string; effort?: string }>;
   aliases: Record<string, Route>;
   fallback: Record<string, string[]>;
   quotaGroups: Record<string, { harness: string; models: string[] }>;
@@ -198,6 +199,7 @@ export function Routing({
       return;
     }
     const config: Config = {
+      ...snapshot.config,
       aliases: Object.fromEntries(
         draft.aliases.map(({ name, ...route }) => [name, route]),
       ),
@@ -301,46 +303,57 @@ export function Routing({
               Config changed elsewhere — reload to see the latest
             </p>
           )}
-          <div className="routing-actions">
-            {(message || conflict) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={() => void reload()}
-              >
-                Reload
-              </Button>
-            )}
-            {snapshot && writable && !draft && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  editVersion.current = snapshot.version;
-                  setConfirmKey(null);
-                  setDraft(draftOf(snapshot.config));
-                  setMessage("");
-                }}
-              >
-                Edit
-              </Button>
-            )}
-            {draft && (
-              <>
-                <Button size="sm" disabled={busy} onClick={() => void save()}>
-                  Save
-                </Button>
+          <div className="routing-heading section-heading">
+            <div>
+              {expanded && <h2>Routing</h2>}
+              {snapshot && (
+                <p className="panel-caption routing-path">
+                  {snapshot.path}
+                  {!snapshot.exists && " · Not configured"}
+                </p>
+              )}
+            </div>
+            <div className="routing-actions">
+              {(message || conflict) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   disabled={busy}
-                  onClick={cancel}
+                  onClick={() => void reload()}
                 >
-                  Cancel
+                  Reload
                 </Button>
-              </>
-            )}
+              )}
+              {snapshot && writable && !draft && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    editVersion.current = snapshot.version;
+                    setConfirmKey(null);
+                    setDraft(draftOf(snapshot.config));
+                    setMessage("");
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
+              {draft && (
+                <>
+                  <Button size="sm" disabled={busy} onClick={() => void save()}>
+                    Save
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    onClick={cancel}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
           {!writable && (
             <p className="panel-caption">
@@ -351,10 +364,6 @@ export function Routing({
             !message && <p className="panel-caption">Loading routing…</p>
           ) : (
             <>
-              <p className="panel-caption routing-path">
-                {snapshot.path}
-                {!snapshot.exists && " · Not configured"}
-              </p>
               {draft ? (
                 <fieldset disabled={busy} className="routing-editor">
                   <h2>Aliases</h2>

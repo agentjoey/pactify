@@ -35,17 +35,19 @@ it("lists job summaries, running first, using the dashboard API", async () => {
  expect(screen.getByText("tool exec go test")).toBeInTheDocument();
  expect(fetcher).toHaveBeenCalledWith("/api/sub/jobs?all=1",expect.objectContaining({credentials:"same-origin"}));
  fireEvent.change(screen.getByLabelText("Harness"),{target:{value:"kimi"}});
- expect(screen.getByText("No running jobs")).toBeInTheDocument();
+ expect(screen.queryByRole("region",{name:"In progress"})).not.toBeInTheDocument();
 });
 it("opens details, result, bounded logs with automatic follow, diff and closes the stream",async()=>{
  const {stream,cancel,fetcher}=mockAPI();
  history.replaceState(null,"","/#/jobs/live");
  const {unmount}=render(<Jobs />);
- await screen.findByText("Implement Jobs");
+ await screen.findByText("Final reply: Complete");
  expect(screen.getByText("Final reply: Complete")).toBeInTheDocument();
+ fireEvent.click(screen.getByRole("tab", {name:"Diff"}));
  expect(await screen.findByText("Truncated")).toBeInTheDocument();
  fireEvent.click(screen.getByText("a/a.go b/a.go"));
  expect(screen.getByText(/\+new line/)).toBeInTheDocument();
+ fireEvent.click(screen.getByRole("tab", {name:"Logs"}));
  const log=screen.getByRole("log");
  Object.defineProperty(log,"scrollHeight",{value:420});
  await act(async()=> {stream.enqueue(new TextEncoder().encode(Array.from({length:1005},(_,i)=>`data: "message ${i}"\n\n`).join("")));});
@@ -60,10 +62,10 @@ it("shows an honest empty state only after loading",async()=>{
  let resolve!: (value:Response)=>void;
  vi.stubGlobal("fetch",vi.fn(()=>new Promise<Response>(r=>{resolve=r;})));
  render(<Jobs />);
- expect(screen.queryByText("No running jobs")).not.toBeInTheDocument();
+ expect(screen.queryByText("No delegation jobs yet")).not.toBeInTheDocument();
  expect(screen.getByText("Loading jobs…")).toBeInTheDocument();
  await act(async()=>resolve(new Response("[]")));
- expect(await screen.findByText("No running jobs")).toBeInTheDocument();
+ expect(await screen.findByText("No delegation jobs yet")).toBeInTheDocument();
 });
 it("reports list errors and recovers on the next poll",async()=>{
  vi.useFakeTimers();
@@ -71,10 +73,10 @@ it("reports list errors and recovers on the next poll",async()=>{
  vi.stubGlobal("fetch",fetcher); render(<Jobs />);
  await act(async()=>{});
  expect(screen.getByRole("alert")).toHaveTextContent("503");
- expect(screen.queryByText("No running jobs")).not.toBeInTheDocument();
+ expect(screen.queryByText("No delegation jobs yet")).not.toBeInTheDocument();
  await act(async()=>{await vi.advanceTimersByTimeAsync(2000);});
  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
- expect(screen.getByText("No running jobs")).toBeInTheDocument();
+ expect(screen.getByText("No delegation jobs yet")).toBeInTheDocument();
 });
 it("handles separate detail, diff and stream errors",async()=>{
  history.replaceState(null,"","/#/jobs/missing");
@@ -83,16 +85,11 @@ it("handles separate detail, diff and stream errors",async()=>{
  expect(await screen.findByRole("alert")).toHaveTextContent("404");
  expect(screen.getByRole("link",{name:"Close job details"})).toBeInTheDocument();
 });
-it("supports the saved Jobs lens without registered pact projects",async()=>{
- localStorage.setItem("pactify:lens","jobs");
- vi.stubGlobal("fetch",vi.fn(async(path:string)=>new Response(JSON.stringify(path.startsWith("/api/sub/")?[job]:[]))));
+it("opens Jobs without registered pact projects and navigates with hash links",async()=>{
+ vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify([job]))));
  render(<App />);
  expect(await screen.findByRole("link",{name:job.title})).toBeInTheDocument();
- expect(screen.getByTestId("lens-jobs")).toHaveAttribute("aria-pressed","true");
- fireEvent.click(screen.getByTestId("lens-dashboard"));
- fireEvent.click(screen.getByTestId("lens-jobs"));
- expect(localStorage.getItem("pactify:lens")).toBe("jobs");
- expect(within(screen.getByRole("group",{name:"lens"})).getByRole("button",{name:"Jobs"})).toBeInTheDocument();
+ expect(screen.getByRole("link",{name:"Jobs"})).toHaveAttribute("aria-current","page");
 });
 
 it("keeps the detail usable when result, diff and logs are unavailable", async () => {
@@ -104,31 +101,24 @@ it("keeps the detail usable when result, diff and logs are unavailable", async (
     return new Response(JSON.stringify([job]));
   }));
   render(<Jobs />);
-  await screen.findByText("Brief still available");
+  await screen.findByText("Result unavailable: invalid JSON");
+ fireEvent.click(screen.getByRole("tab", {name:"Logs"}));
   expect(await screen.findByText(/502/)).toBeInTheDocument();
-  expect(screen.getAllByRole("alert").map((node) => node.textContent)).toEqual(expect.arrayContaining([
-    "Result unavailable: invalid JSON", expect.stringContaining("503"),
-  ]));
+  fireEvent.click(screen.getByRole("tab", {name:"Diff"}));
+  expect(await screen.findByRole("alert")).toHaveTextContent("503");
+  fireEvent.click(screen.getByRole("tab", {name:"Brief"}));
+  expect(screen.getByText("Brief still available")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("tab", {name:"Summary"}));
   expect(screen.getByRole("heading", { name: "Run timeline" })).toBeInTheDocument();
 });
 
-it("offers mobile view selection and the Jobs keyboard shortcut", async () => {
+it("offers mobile page selection", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => new Response("[]")));
   render(<App />);
-  fireEvent.change(screen.getByLabelText("View", { exact: true }), { target: { value: "jobs" } });
-  await screen.findByTestId("view-jobs");
-  expect(localStorage.getItem("pactify:lens")).toBe("jobs");
-  fireEvent.click(screen.getByTestId("lens-dashboard"));
-  fireEvent.keyDown(document.body, { key: "4" });
-  await screen.findByTestId("view-jobs");
-});
-
-it("keeps standalone theme selection", async () => {
- vi.stubGlobal("fetch",vi.fn(async()=>new Response("[]")));
- render(<Jobs standalone />);
- await screen.findByRole("heading",{name:"Delegated jobs"});
- fireEvent.change(screen.getByLabelText("Theme"),{target:{value:"light"}});
- expect(document.documentElement.dataset.theme).toBe("light");
+  fireEvent.change(screen.getByLabelText("Page"), {target: {value: "settings"}});
+  await act(async () => {window.dispatchEvent(new HashChangeEvent('hashchange'));});
+  expect(location.hash).toBe("#/settings");
+  expect(screen.getByRole("heading", {name:"Settings"})).toBeInTheDocument();
 });
 
 it("shows a failure class badge on failed cards and tolerates legacy jobs", async () => {

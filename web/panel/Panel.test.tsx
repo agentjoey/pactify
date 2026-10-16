@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { JobList, LogView, Panel, filterJobs, splitDiff } from "./Panel";
 import type { Job } from "./Panel";
+
+afterEach(() => {history.replaceState(null, "", "/");});
 
 const jobs: Job[] = [
   {
@@ -69,14 +71,14 @@ describe("standalone panel", () => {
         .slice(0, 6)
         .map((option) => option.textContent),
     ).toEqual([
-      "All repositories",
-      "/repo/a",
-      "/repo/b",
+      "All projects",
+      "a",
+      "b",
       "All harnesses",
       "codex",
       "kimi",
     ]);
-    expect(screen.getByLabelText("Repository")).toBeInTheDocument();
+    expect(screen.getByLabelText("Project")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Harness"), {
       target: { value: "kimi" },
     });
@@ -85,7 +87,7 @@ describe("standalone panel", () => {
   });
   it("marks attention with readable messages and shows partial running usage", () => {
     render(<JobList jobs={jobs} />);
-    expect(screen.getByLabelText("Needs attention")).toHaveTextContent(
+    expect(screen.getByRole("region", {name:"Needs attention"})).toHaveTextContent(
       "Awaiting apply",
     );
     expect(screen.getByText(/99.*10.*partial/)).toBeInTheDocument();
@@ -135,24 +137,14 @@ describe("standalone panel", () => {
     );
     window.location.hash = "/jobs/live";
     const { unmount } = render(<Panel />);
+    await screen.findByText("Result summary");
+    fireEvent.click(screen.getByRole("tab", {name:"Brief"}));
     await screen.findByText("Build panel");
-    expect(screen.getByLabelText("Theme")).toBeInTheDocument();
-    for (const title of [
-      "Task brief",
-      "Result summary",
-      "Live logs",
-      "Diff",
-      "Run timeline",
-      "CLI commands",
-    ]) {
-      expect(
-        screen.getByRole("heading", { name: title }),
-      ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", {name:"Summary"}));
+    for (const title of ["Summary", "Logs", "Diff", "Brief"]) {
+      expect(screen.getByRole("tab", {name:title})).toBeInTheDocument();
     }
-    expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(4);
-    expect(
-      screen.getByText("Job data stays on this device"),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", {name:"Logs"}));
     const { act } = await import("@testing-library/react");
     await act(async () => {
       controller!.enqueue(new TextEncoder().encode('data: "message live log"\n\n'));

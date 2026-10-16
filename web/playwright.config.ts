@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Playwright acceptance gate for the canvas (spec §4). The mock server serves
+// Playwright acceptance gate for the Web v2 dashboard and read-only panel. The mock server serves
 // the built SPA from ../internal/serve/dist, so the caller MUST build first:
 //   npm run e2e        → npm run build && playwright test
 //   npm run e2e:test   → playwright test (dist assumed already built)
@@ -24,13 +24,13 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  // Separate servers keep the panel independent of the frozen dashboard mock.
+  // Separate servers exercise both final embedded builds with isolated mutable fixtures.
   webServer: [
     {
       command: "node e2e/mock-server.mjs",
       env: { PORT: String(PORT) },
       port: PORT,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 30_000,
     },
     {

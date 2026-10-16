@@ -19,9 +19,6 @@ export default defineConfig({
           ) {
             return "react-vendor";
           }
-          if (id.includes("node_modules/@xyflow/")) {
-            return "xyflow";
-          }
         },
       },
     },

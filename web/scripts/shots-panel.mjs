@@ -34,6 +34,7 @@ try {
           await page
             .getByRole("link", { name: "AJ-659 · Local read-only job panel" })
             .click();
+          await page.getByRole("tab", {name: "Logs", exact: true}).click();
           await page.getByText("Finished", { exact: true }).waitFor();
         }
         if (

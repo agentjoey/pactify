@@ -5,6 +5,7 @@ export function createRouterAPI(writable = false) {
   let config, data, quotas;
   function reset() {
     config = {
+      defaults: {codex: {model: "gpt-6.1-sol", effort: "high"}},
       aliases: { fast: { harness: "codex", model: "gpt-test", effort: "low" } },
       fallback: { codex: ["@fast", "kimi"] },
       quotaGroups: { shared: { harness: "agy", models: ["one", "two"] } },

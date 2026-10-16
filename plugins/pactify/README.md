@@ -218,3 +218,19 @@ the private database. The three flags `OPENCODE_DISABLE_CLAUDE_CODE=1`,
 `--with-user-config` restores both original XDG directories and integrations, with
 a warning that sessions remain visible. Resume preserves both recorded directories
 and requires the same config mode. `sub doctor opencode` verifies the default path.
+
+Doctor accepts `--model <id>` with exactly one explicit harness, for example
+`pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3`. The requested
+model overrides doctor defaults and name heuristics for every probe. It uses the
+same backend validation as `sub run --model`, including agy's fallback to CLI
+validation when its model-list pre-check fails. Invalid or unconfirmed models fail
+the check (exit 1); omitting the harness or supplying several is an argument error
+(exit 2). Omitting `--model` preserves default model selection. Verified-version
+records retain their existing format and require all applicable checks to pass.
+
+Model-error alternatives in both `sub run` and doctor show at most 10 ids, preferring
+the requested provider and then the closest model names. A truncated list includes
+the omitted count and a full-list hint: `opencode models`, `agy models`,
+`codex debug models`, or `/model` inside interactive `kimi`. When doctor's read-only
+probe returns the same error as its write probe, its reason says
+`same as above (Write access)` instead of repeating the alternatives.

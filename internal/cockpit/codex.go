@@ -564,7 +564,7 @@ func (c *codexClient) modelRequestError(ctx context.Context, requested string, c
 		cursor = page.NextCursor
 		seen[cursor] = true
 	}
-	return fmt.Errorf("codex: requested model %q: %w; available models: %s", requested, cause, strings.Join(models, ", "))
+	return fmt.Errorf("codex: requested model %q: %w; available models: %s", requested, cause, modelChoices("codex", requested, models))
 }
 
 func (c *codexClient) threadStart(ctx context.Context, cwd string) (string, error) {

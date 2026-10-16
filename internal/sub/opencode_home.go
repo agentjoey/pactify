@@ -126,9 +126,28 @@ func doctorOpencodeReadOnly(result Result) (bool, string) {
 	return false, "no backend evidence of an opencode read-only permission denial"
 }
 
-// Name-based tiers are a heuristic, not a price quote: flash, then mini/lite/
-// nano/haiku, then a non-pro model; preserve live-list order within a tier.
+// Prefer IDs containing -free, favoring flash/mini/lite/nano within that set.
+// Without free models, keep the original name-based tiers (not a price quote).
+// Preserve live-list order within each tier.
 func opencodeDoctorModel(models []string) string {
+	firstFree := ""
+	for _, m := range models {
+		name := strings.ToLower(m)
+		if !strings.Contains(name, "-free") {
+			continue
+		}
+		if firstFree == "" {
+			firstFree = m
+		}
+		for _, word := range []string{"flash", "mini", "lite", "nano"} {
+			if strings.Contains(name, word) {
+				return m
+			}
+		}
+	}
+	if firstFree != "" {
+		return firstFree
+	}
 	for _, tier := range [][]string{{"flash"}, {"mini", "lite", "nano", "haiku"}} {
 		for _, m := range models {
 			for _, word := range tier {

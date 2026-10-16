@@ -4,9 +4,16 @@
 pactify sub doctor          # 检查全部已注册 harness
 pactify sub doctor codex    # 只检查 codex
 pactify sub doctor kimi     # 只检查 kimi
+pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3
 ```
 
-这条命令会真实调用 harness，消耗 API token。codex 请求 `gpt-6-luna`，kimi 请求 `kimi-code/kimi-for-coding`；CLI 必须已经安装、完成登录，并能使用相应模型。codex 网络探测使用 `python3` 标准库，绑定 `127.0.0.1` 的随机端口并访问 `https://example.com`。缺少 Python 或外网不可达都会使网络检查失败。
+这条命令会真实调用 harness，消耗 API token。默认 codex 请求 `gpt-6-luna`，kimi 请求 `kimi-code/kimi-for-coding`；CLI 必须已经安装、完成登录，并能使用相应模型。codex 网络探测使用 `python3` 标准库，绑定 `127.0.0.1` 的随机端口并访问 `https://example.com`。缺少 Python 或外网不可达都会使网络检查失败。
+
+`--model <id>`（AJ-681）仅允许与一个显式 harness 一起使用；没给 harness 或给了多个时退出 2。指定模型优先于 `Harness.DoctorModel` 和默认选模启发式，所有探测 job 均请求该模型。省略该 flag 时保留原有选模行为。
+
+显式模型直接经过 `sub run --model` 使用的 `RunJob` 和 harness 后端校验，不先做 doctor 的默认选模列表探测。无效、不受支持或未被后端确认的模型会输出可读原因并使自检退出 1。动态模型表失败也遵循对应后端的既有行为：agy 的列表仅作预检，列表不可用时继续交由 CLI 拒绝无效模型，并核对 `init.model`；opencode/kimi 必须通过 ACP 的可用模型及设置确认，codex 必须确认实际模型，失败时尝试列出可用模型。显式选择不改变实际模型的独立核实要求，也不改变 `verified-versions.json` 的格式或更新条件。
+
+模型报错中的可用候选最多显示 10 个：同 provider 前缀优先，再按模型名称的编辑距离由近到远排序；并列时保留原列表顺序。被截断时，末尾显示 `… and N more` 及完整列表入口：opencode 用 `opencode models`，agy 用 `agy models`，codex 用 `codex debug models`；kimi 启动 `kimi` 后进入 [`/model`](https://moonshotai.github.io/kimi-code/en/reference/slash-commands)。这项格式同时用于 `sub run`、新会话及续接的模型校验，不改变校验用的完整模型表。doctor 的只读探测如果返回与可写探测相同的错误，原因写为 `same as above (Write access)`；不同原因仍分别显示。
 
 探测沿用 `sub run` 的默认配置策略：codex 以最小配置启动，关闭 MCP、插件、skills 和记忆；认证、provider、沙箱设置以及全局和仓库指令仍由原生 harness 加载。kimi 使用独立的 `KIMI_CODE_HOME=$PACTIFY_HOME/harness-homes/kimi`，目录权限 0700，不放 `mcp.json`。`config.toml`、`credentials/`、`device_id` 只用符号链接指向 pactify 进程的 `KIMI_CODE_HOME`（未设置时为 `~/.kimi-code`）；不读取或复制内容，缺少原文件时提示先 `kimi login`。每次启动修复链接，结束时若发现链接变成普通文件或目录，删除副本并在结果中警告；下次启动重建链接。共享目录长期保留以支持续接。普通 job 可用 `--with-user-config` 恢复全部用户集成；doctor 始终验证默认路径。
 
@@ -128,9 +135,13 @@ Session hiding 和 Managed home 使用可写探测的结果，不依赖只读探
 优先使用默认 codex。适配版本为 1.19.0；本变更的自动测试全部使用假 opencode 和假 HOME/XDG。
 下列 1.19.0 行为由 Owner 提供的 host 实测确认；完整真机 doctor 由 host 运行，通过后才写本机版本表。
 
-模型从 ACP `session/new.configOptions` 动态获取。按名称依次选第一个含 `flash` 的模型、
-第一个含 `mini` / `lite` / `nano` / `haiku` 的模型、第一个不含 `pro` 的模型，最后才退回
-列表首项；同一档保留原列表顺序。这是低成本档位的名称启发式，不是价格保证，也不写死模型 id。
+模型从 ACP `session/new.configOptions` 动态获取。默认优先选择 id 包含 `-free`（包括以它结尾）的模型：
+先取其中第一个含 `flash` / `mini` / `lite` / `nano` 的模型；没有这些轻量名称时，取第一个 free 模型。
+例如列表同时包含 `opencode/deepseek-v4-flash` 和 `opencode/deepseek-v4.1-flash-free` 时，选择后者。
+没有 free 模型时保留原回退顺序：第一个含 `flash` 的模型、第一个含 `mini` / `lite` / `nano` / `haiku`
+的模型、第一个不含 `pro` 的模型，最后才退回列表首项。名称匹配不区分大小写；同一档保留 live 列表顺序。
+这是基于名称的选择规则，不是价格保证，也不写死模型 id。
+使用 `--model <provider/model>` 时跳过这套默认选择，由普通 job 的 ACP 后端校验并确认指定模型。
 普通 job 不指定模型时保留 opencode 默认值，指定模型经 `session/set_config_option` 设置并确认。
 
 `usage_update.cost` 是会话累计成本（[上游实现](https://github.com/anomalyco/opencode/blob/v1.19.0/packages/opencode/src/acp/usage.ts)）。

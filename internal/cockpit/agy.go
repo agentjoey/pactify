@@ -82,7 +82,7 @@ func (b *agyBackend) ResumeWith(ctx context.Context, id string, o StartOpts) (Se
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("unknown agy model %q; available: %s", o.Model, strings.Join(models, ", "))
+			return nil, fmt.Errorf("unknown agy model %q; available: %s", o.Model, modelChoices("agy", o.Model, models))
 		}
 	}
 	ctx, cancel := context.WithCancel(ctx)

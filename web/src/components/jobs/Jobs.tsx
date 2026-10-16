@@ -1,606 +1,493 @@
-import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { dashboardJobsSource, readJobLogs } from "./source";
+import type { Job } from "./types";
 import type { JobsSource } from "./source";
-import { Routing } from "./Routing";
-import { UsageCard } from "./UsageCard";
-import { JOB_COLUMNS, jobColumn, mergeJobChains, type JobChain } from "./board";
+import { dashboardJobsSource } from "./source";
+import { mergeJobChains, type JobChain } from "./board";
+import {
+  completedDays,
+  formatDuration,
+  formatCost,
+  projectName,
+  sectionFor,
+  shortNumber,
+  tokens,
+} from "./statistics";
+import { jobsLink, useHash, useResource, validJobs } from "./data";
+import { JobActions } from "./JobActions";
 import { JobDrawer } from "./JobDrawer";
+import { JobDetail } from "./JobDetail";
 import "./jobs.css";
-
-const SourceContext = createContext<JobsSource>(dashboardJobsSource);
-
-export interface Job {
-  id: string;
-  title: string;
-  harness: string;
-  modelRequested: string;
-  modelActual?: string;
-  repo: string;
-  cwd: string;
-  access: string;
-  configMode: string;
-  status: string;
-  duration: string;
-  retryAttempt?: number;
-  retryLimit?: number;
-  retryCount?: number;
-  failureClass?: string;
-  quotaResetAt?: string;
-  createdAt: string;
-  usagePartial?: boolean;
-  inputTokens: number;
-  outputTokens: number;
-  attention: { kind: string; message: string }[];
-  activity?: {
-    summary: string;
-    inputTokens?: number;
-    outputTokens?: number;
-    usagePartial?: boolean;
-  };
-  worktree?: { path: string; baseCommit: string; status: string };
-  fallbackFrom?: string;
-  fallbackTo?: string;
-  resumeOf: string;
-  resumedBy: string[];
-}
-interface Detail {
-  job: Job;
-  brief: string;
-  markdown: string;
-  resultError?: string;
-  result?: { finalText: string; warnings?: string[] };
-}
-interface Diff {
-  patch: string;
-  files: { Path: string; Added: number; Deleted: number }[];
-  truncated?: boolean;
-  note: string;
-}
+export type { Job } from "./types";
+export { LogView, splitDiff } from "./logs";
 interface Filters {
   status: string;
   harness: string;
   repo: string;
+  search?: string;
 }
-const labels: Record<string, string> = {
-  queued: "queued",
-  running: "running",
-  succeeded: "succeeded",
-  failed: "failed",
-  canceled: "canceled",
-};
-const active = (j: Job) =>
-  j.status === "running" || j.status === "retrying" ? 2 : j.status === "queued" ? 1 : 0;
-const jobLink = (id: string) => `#/jobs/${encodeURIComponent(id)}`;
-
-export function filterJobs(jobs: Job[], filters: Filters): Job[] {
+// Retain the existing exact-status utility for API consumers; UI sections use sectionFor.
+export function filterJobs(jobs: Job[], filters: Filters) {
+  const priority = (j: Job) =>
+    ["running", "retrying"].includes(j.status)
+      ? 2
+      : j.status === "queued"
+        ? 1
+        : 0;
   return jobs
     .filter(
       (j) =>
         (!filters.status || j.status === filters.status) &&
         (!filters.harness || j.harness === filters.harness) &&
-        (!filters.repo || j.repo === filters.repo),
+        (!filters.repo || j.repo === filters.repo) &&
+        (!filters.search ||
+          j.title.toLowerCase().includes(filters.search.toLowerCase())),
     )
     .sort(
       (a, b) =>
-        active(b) - active(a) ||
+        priority(b) - priority(a) ||
         b.createdAt.localeCompare(a.createdAt) ||
         b.id.localeCompare(a.id),
     );
 }
-function Status({ job }: { job: Job }) {
-  return (
-    <>
-    <Badge
-      color={job.status === "failed" ? "danger" : job.status === "queued" ? "warn" : active(job) || job.status === "succeeded" ? "success" : "text-2"}
-      className="panel-status"
-    >
-      {job.status === "running" && job.retryAttempt ? `retrying (${job.retryAttempt}/${job.retryLimit})` : labels[job.status] || job.status}
-    </Badge>
-    {!active(job) && !!job.retryCount && <Badge color="text-2">retries: {job.retryCount}</Badge>}
-    {(job.status === "failed" || job.status === "canceled") && job.failureClass && <Badge color="warn" className="panel-failure-class">{job.failureClass}</Badge>}
-    </>
-  );
-}
-function FallbackLinks({ job }: { job: Job }) {
-  if (!job.fallbackFrom && !job.fallbackTo) return null;
-  return <nav className="panel-chain" aria-label="Fallback chain">
-    {job.fallbackFrom && <a href={jobLink(job.fallbackFrom)}>fallback from {job.fallbackFrom}</a>}
-    {job.fallbackTo && <a href={jobLink(job.fallbackTo)}>→ fallback to {job.fallbackTo}</a>}
-  </nav>;
-}
-function Attention({ job }: { job: Job }) {
-  return job.attention.length > 0 ? (
-    <div className="panel-attention" aria-label="Needs attention">
-      <strong>Needs attention</strong>
-      <span>{job.attention.map((a) => a.message).join(" · ")}</span>
-    </div>
-  ) : null;
-}
-function Usage({ job }: { job: Job }) {
-  const partial =
-    job.status === "running" && job.activity?.inputTokens !== undefined;
-  return (
-    <span>
-      {partial ? job.activity?.inputTokens : job.inputTokens} in /{" "}
-      {partial ? (job.activity?.outputTokens ?? 0) : job.outputTokens} out
-      {partial && job.activity?.usagePartial ? " · partial" : ""}
-    </span>
-  );
-}
-function Metadata({ job, showAccess = false }: { job: Job; showAccess?: boolean }) {
+export function JobMetadata({ job }: { job: Job }) {
+  const [now, setNow] = useState(Date.now);
+  const running = ["running", "retrying"].includes(job.status);
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [running]);
+  const usage = tokens(job);
   return (
     <div className="panel-metadata">
-      <span>{job.harness}</span>
-      <span>{job.modelActual || job.modelRequested || "Default model"}</span>
-      {showAccess && <span>{job.access || "unknown access"}</span>}
-      <span>{job.duration}</span>
-      <Usage job={job} />
+      <span title={job.repo}>{projectName(job.repo)}</span>
+      <span>
+        {running && Number.isFinite(Date.parse(job.createdAt))
+          ? formatDuration((now - Date.parse(job.createdAt)) / 1000)
+          : job.duration}
+      </span>
+      <span
+        title={`${usage.input.toLocaleString("en-US")} input / ${usage.output.toLocaleString("en-US")} output tokens`}
+      >
+        {shortNumber(usage.input)} in / {shortNumber(usage.output)} out
+        {(job.usagePartial || job.activity?.usagePartial) && " · partial"}
+      </span>
+      {job.costUSD != null && <span>{formatCost(job.costUSD)}</span>}
     </div>
   );
 }
-export function JobCard({ chain, selected }: { chain: JobChain; selected?: string }) {
+export function JobCard({
+  chain,
+  selected,
+  preview = false,
+  source = dashboardJobsSource,
+  readOnly = false,
+  onChanged = () => {},
+  notify = () => {},
+}: {
+  chain: JobChain;
+  selected?: string;
+  preview?: boolean;
+  source?: JobsSource;
+  readOnly?: boolean;
+  onChanged?: () => void;
+  notify?: (text: string) => void;
+}) {
   const job = chain.latest;
-  const color = JOB_COLUMNS.find(column => column.key === jobColumn(job))!.color;
-  const fallbackHarnesses = [...new Set(chain.runs.filter(run => run.fallbackFrom || chain.runs.some(parent => parent.fallbackTo === run.id)).map(run => run.harness))];
-  const failures = [...new Set(chain.runs.map(run => run.failureClass).filter(Boolean))];
+  const fallbacks = [
+    ...new Set(
+      chain.runs
+        .filter(
+          (run) =>
+            run.fallbackFrom ||
+            chain.runs.some((parent) => parent.fallbackTo === run.id),
+        )
+        .map((run) => run.harness),
+    ),
+  ];
+  const failures = [
+    ...new Set(chain.runs.map((run) => run.failureClass).filter(Boolean)),
+  ];
+  const open = () => {
+    location.hash = jobsLink(job.id);
+  };
   return (
-    <article className={`task-card panel-job ${active(job) ? "glow" : ""} ${chain.runs.some(run => run.id === selected) ? "selected" : ""}`} style={{"--st": color} as CSSProperties}>
-      <div className="panel-job-top"><Status job={job} /><span className="panel-mono">Run {job.id}</span></div>
-      <h2><a href={jobLink(job.id)}>{chain.root.title || chain.root.id}</a></h2>
-      <Metadata job={job} />
+    <article
+      inert={preview}
+      className={`task-card panel-job ${chain.runs.some((run) => run.id === selected) ? "selected" : ""}`}
+      onClick={(e) => {
+        if (
+          !(e.target as HTMLElement).closest(
+            'a,button,input,textarea,select,[role="dialog"]',
+          )
+        )
+          open();
+      }}
+    >
+      <div className="panel-job-top">
+        <Badge
+          color={
+            job.status === "failed"
+              ? "danger"
+              : ["running", "succeeded"].includes(job.status)
+                ? "success"
+                : "warn"
+          }
+        >
+          {job.status === "running" && job.retryAttempt
+            ? `retrying (${job.retryAttempt}/${job.retryLimit})`
+            : job.status}
+        </Badge>
+        <span className="harness-label">
+          {job.harness} ·{" "}
+          {job.modelActual || job.modelRequested || "Harness default"}
+        </span>
+      </div>
+      <h3>
+        <a href={jobsLink(job.id)}>{chain.root.title || chain.root.id}</a>
+      </h3>
+      <JobMetadata job={job} />
       <div className="panel-tags">
-        {chain.runs.length > 1 && <Badge color="text-2">{chain.runs.length} runs</Badge>}
-        {chain.rework > 0 && <Badge color="text-2">rework {chain.rework}</Badge>}
-        {fallbackHarnesses.map(harness => <Badge key={harness} color="warn">fallback → {harness}</Badge>)}
-        {failures.filter(failure => failure !== job.failureClass || !["failed", "canceled"].includes(job.status)).map(failure => <Badge key={failure} color="warn">{failure}</Badge>)}
-        {job.worktree && <Badge color="text-2">worktree · {job.worktree.status}</Badge>}
+        {!["running", "retrying", "queued"].includes(job.status) &&
+          !!job.retryCount && (
+            <Badge color="text-2">retries: {job.retryCount}</Badge>
+          )}
+        {chain.runs.length > 1 && (
+          <Badge color="text-2">{chain.runs.length} runs</Badge>
+        )}
+        {chain.rework > 0 && (
+          <Badge color="text-2">rework {chain.rework}</Badge>
+        )}
+        {fallbacks.map((h) => (
+          <Badge key={h} color="warn">
+            fallback → {h}
+          </Badge>
+        ))}
+        {failures.map((f) => (
+          <Badge key={f} color="warn">
+            {f}
+          </Badge>
+        ))}
+        {job.worktree && (
+          <Badge color="text-2">worktree · {job.worktree.status}</Badge>
+        )}
         {job.access === "read-only" && <Badge color="text-2">read-only</Badge>}
       </div>
-      <p className="panel-repository" title={job.repo}>{job.repo || "No repository recorded"}</p>
-      {active(job) > 0 && <p className="panel-activity"><span className="panel-live-dot" />{job.activity?.summary || "Waiting for activity…"}</p>}
-      <Attention job={job} />
+      {["running", "retrying"].includes(job.status) && (
+        <p className="panel-activity" title={job.activity?.summary}>
+          {job.activity?.summary || "Waiting for activity…"}
+        </p>
+      )}
+      {sectionFor(job) === "attention" && (
+        <p className="panel-attention" aria-label="Needs attention">
+          {job.attention.map((a) => a.message).join(" · ")}
+        </p>
+      )}
+      <div className="card-actions">
+        <JobActions
+          job={job}
+          source={source}
+          readOnly={readOnly}
+          onChanged={onChanged}
+          notify={notify}
+        />
+        {sectionFor(job) === "attention" && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              location.hash = jobsLink(job.id, "diff");
+            }}
+          >
+            Review
+          </Button>
+        )}
+      </div>
     </article>
   );
 }
-
-export function JobList({ jobs, toolbar, showBoard = true, selected, loaded = true, children }: {
-  jobs: Job[]; toolbar?: ReactNode; showBoard?: boolean; selected?: string; loaded?: boolean; children?: ReactNode;
-}) {
-  const [filters, setFilters] = useState({harness: "", repo: ""});
-  // Merge before filtering so a harness switch never splits a run chain.
-  const chains = mergeJobChains(jobs).filter(chain => chain.runs.some(job =>
-    (!filters.harness || job.harness === filters.harness) && (!filters.repo || job.repo === filters.repo)));
-  return <>
-    <div className="jobs-toolbar flex items-center gap-[14px] border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-inset)] px-[18px] py-[11px]">
-      {([{key: "repo", label: "Repository", all: "All repositories"}, {key: "harness", label: "Harness", all: "All harnesses"}] as const).map(({key, label, all}) =>
-        <label key={key} className={`jobs-filter jobs-filter-${key}`}><span className="sr-only">{label}</span>
-          <select aria-label={label} value={filters[key]} onChange={e => setFilters({...filters, [key]: e.target.value})}>
-            <option value="">{all}</option>
-            {[...new Set(jobs.map(job => job[key]))].filter(Boolean).sort().map(value => <option key={value}>{value}</option>)}
-          </select>
-        </label>)}
-      {toolbar}
-    </div>
-    {showBoard && <div role={toolbar ? "tabpanel" : undefined} id={toolbar ? "jobs-tab-jobs" : undefined} aria-labelledby={toolbar ? "jobs-tab-button-jobs" : undefined}>
-    {loaded && <div className="jobs-board">
-      {JOB_COLUMNS.map(column => {
-        const rows = chains.filter(chain => jobColumn(chain.latest) === column.key);
-        return <section key={column.key} aria-label={column.label} className="jobs-column">
-          <div className="flex items-center gap-[8px] px-1 pb-3 pt-0.5">
-            <span className={`h-[7px] w-[7px] rounded-full ${column.key === "running" ? "shell-breath" : ""}`} style={{background: column.color}} />
-            <h2 className="text-[11px] font-semibold uppercase tracking-[.5px] text-[var(--color-text-2)]">{column.label}</h2>
-            <span className="mono ml-auto rounded-full bg-white/5 px-[7px] py-px text-[10px] text-[var(--color-text-3)]" aria-label={`${column.label} count`}>{rows.length}</span>
-          </div>
-          <div className="flex flex-col gap-[11px]">
-            {rows.length ? rows.map(chain => <JobCard key={chain.root.id} chain={chain} selected={selected} />) : <div className="kb-ghost">{column.empty}</div>}
-          </div>
-        </section>;
-      })}
-    </div>}
-    {children}
-    </div>}
-  </>;
-}
-export function LogView({
-  lines,
-  status,
+export function JobList({
+  jobs,
+  selected,
+  loaded = true,
+  source,
+  readOnly,
+  onChanged,
+  notify,
+  children,
 }: {
-  lines: string[];
-  status: string;
+  jobs: Job[];
+  selected?: string;
+  loaded?: boolean;
+  source?: JobsSource;
+  readOnly?: boolean;
+  onChanged?: () => void;
+  notify?: (text: string) => void;
+  children?: ReactNode;
 }) {
-  const log = useRef<HTMLPreElement>(null);
-  useEffect(() => {
-    if (log.current) log.current.scrollTop = log.current.scrollHeight;
-  }, [lines]);
-  return (
-    <section className="panel-section">
-      <div className="panel-section-heading">
-        <h2>Live logs</h2>
-        <span>{status}</span>
-      </div>
-      <pre
-        ref={log}
-        className="panel-log"
-        role="log"
-        aria-label="Readable logs"
-        aria-live="off"
-      >
-        {lines.length ? lines.join("\n") : "Waiting for logs…"}
-      </pre>
-      <p className="panel-caption">
-        Starts within the last 1 MiB (up to 100 lines) and keeps up to 1,000 lines. Use the CLI
-        for the full log.
-      </p>
-    </section>
+  const hash = useHash();
+  const params = new URLSearchParams(hash.split("?")[1]);
+  const filters = {
+    repo: params.get("repo") || "",
+    harness: params.get("harness") || "",
+    status: params.get("status") || "",
+    search: params.get("search") || "",
+  };
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  function filter(key: string, value: string) {
+    const next = new URLSearchParams(location.hash.split("?")[1]);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    const nextHash = `${location.hash.split("?")[0] || "#/jobs"}${next.size ? "?" + next : ""}`;
+    history.replaceState(null, "", nextHash);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  }
+  const chains = mergeJobChains(jobs).filter(
+    (chain) =>
+      chain.runs.some(
+        (job) =>
+          (!filters.repo || job.repo === filters.repo) &&
+          (!filters.harness || job.harness === filters.harness),
+      ) &&
+      (!filters.search ||
+        chain.runs.some((job) =>
+          job.title.toLowerCase().includes(filters.search.toLowerCase()),
+        )) &&
+      (!filters.status ||
+        (filters.status === "failed"
+          ? chain.latest.status === "failed"
+          : sectionFor(chain.latest) === filters.status)),
   );
-}
-export function splitDiff(patch: string): { name: string; patch: string }[] {
-  return patch
-    .split(/(?=^diff --git )/m)
-    .filter(Boolean)
-    .map((part) => ({
-      name: part.split("\n")[0].replace(/^diff --git /, ""),
-      patch: part,
-    }));
-}
-async function getJSON<T>(
-  source: JobsSource,
-  path: string,
-  signal: AbortSignal,
-): Promise<T> {
-  const response = await source.fetch(path, signal);
-  return response.json() as Promise<T>;
-}
-function CopyCommand({ command }: { command: string }) {
-  const [message, setMessage] = useState("Copy");
-  return (
-    <div className="panel-command">
-      <code>{command}</code>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(command);
-            setMessage("Copied");
-          } catch {
-            setMessage("Select text to copy");
-          }
-        }}
-      >
-        {message}
-      </Button>
-    </div>
+  const card = (chain: JobChain, preview = false) => (
+    <JobCard
+      preview={preview}
+      key={chain.root.id}
+      chain={chain}
+      selected={selected}
+      source={source}
+      readOnly={readOnly}
+      onChanged={onChanged}
+      notify={notify}
+    />
   );
-}
-// Job ids from disk may contain shell syntax. Quote every command argument.
-function shellArg(value: string) {
-  return "'" + value.replaceAll("'", "'\\''") + "'";
-}
-function JobDetail({ id, jobs }: { id: string; jobs: Job[] }) {
-  const source = useContext(SourceContext);
-  const [detail, setDetail] = useState<Detail | null>(null);
-  const [diff, setDiff] = useState<Diff | null>(null);
-  const [error, setError] = useState("");
-  const [diffError, setDiffError] = useState("");
-  const [lines, setLines] = useState<string[]>([]);
-  const [logStatus, setLogStatus] = useState("Connecting");
-  useEffect(() => {
-    const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout>;
-    async function update() {
-      try {
-        setDetail(
-          await getJSON<Detail>(
-            source,
-            `${source.jobsPath}/${encodeURIComponent(id)}`,
-            controller.signal,
-          ),
-        );
-        setError("");
-      } catch (e) {
-        if (!controller.signal.aborted) setError(String((e as Error).message));
-      } finally {
-        if (!controller.signal.aborted) timer = setTimeout(update, 2000);
-      }
-    }
-    void update();
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [id, source]);
-  useEffect(() => {
-    const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout>;
-    async function update() {
-      try {
-        setDiff(
-          await getJSON<Diff>(
-            source,
-            `${source.jobsPath}/${encodeURIComponent(id)}/diff`,
-            controller.signal,
-          ),
-        );
-        setDiffError("");
-      } catch (e) {
-        if (!controller.signal.aborted) setDiffError((e as Error).message);
-      } finally {
-        if (!controller.signal.aborted) timer = setTimeout(update, 5000);
-      }
-    }
-    void update();
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [id, source]);
-  useEffect(() => {
-    const controller = new AbortController();
-    void readJobLogs(
-      source.fetch,
-      `${source.jobsPath}/${encodeURIComponent(id)}/logs`,
-      controller.signal,
-      (line) => setLines((current) => [...current, line].slice(-1000)),
-      setLogStatus,
-    ).catch((error: Error) => {
-      if (!controller.signal.aborted) setLogStatus(error.message);
-    });
-    return () => controller.abort();
-  }, [id, source]);
   return (
     <>
-      {error && (
-        <p className="panel-error" role="alert">
-          {error}
-        </p>
-      )}
-      {!detail && !error && <p className="panel-empty">Loading job…</p>}
-      {detail && (
-        <>
-          <div className="panel-detail-title">
-            <div>
-              <div className="panel-eyebrow">
-                {detail.job.id}
-              </div>
-              <h1>{detail.job.title || id}</h1>
-            </div>
-            <Status job={detail.job} />
-          </div>
-          <Metadata job={detail.job} showAccess />
-          <section className="panel-section">
-            <h2>Run timeline</h2>
-            <nav className="panel-timeline" aria-label="Run timeline">
-              {(mergeJobChains(jobs.some(job => job.id === id) ? jobs : [...jobs, detail.job]).find(chain => chain.runs.some(job => job.id === id))?.runs || [detail.job]).map(run =>
-                <a key={run.id} href={jobLink(run.id)} aria-current={run.id === id ? "step" : undefined}>
-                  {run.id} · {run.status} · {run.harness} · {run.duration}
-                </a>)}
-            </nav>
-            <FallbackLinks job={detail.job} />
-          </section>
-          <p className="panel-repository">
-            {detail.job.repo || "No repository recorded"}
-          </p>
-          <p className="panel-mode">
-            {detail.job.worktree
-              ? `worktree · ${detail.job.worktree.status}`
-              : "workspace"}{" "}
-            · {detail.job.access} · {detail.job.configMode || "unknown"} config
-          </p>
-          {detail.job.worktree && (
-            <p className="panel-caption">
-              Worktree: {detail.job.worktree.path}
-              <br />
-              Base: {detail.job.worktree.baseCommit}
-            </p>
-          )}
-          <Attention job={detail.job} />
-          <div className="panel-detail-grid">
-            <section className="panel-section">
-              <h2>Task brief</h2>
-              <pre>{detail.brief || "No brief recorded"}</pre>
-            </section>
-            <section className="panel-section">
-              <h2>Result summary</h2>
-              {detail.resultError && (
-                <p className="panel-error" role="alert">{detail.resultError}</p>
-              )}
-              <pre>
-                {detail.markdown ||
-                  (detail.job.status === "running" ||
-                  detail.job.status === "queued"
-                    ? "Job in progress. Results are not available yet."
-                    : "No results available.")}
-              </pre>
-            </section>
-          </div>
-          <LogView lines={lines} status={logStatus} />
-          <section className="panel-section">
-            <div className="panel-section-heading">
-              <h2>Diff</h2>
-              <span>{diff?.truncated ? "Truncated" : "Read-only preview"}</span>
-            </div>
-            {diffError && <p className="panel-error" role="alert">{diffError}</p>}
-            {diff?.note && <p className="panel-caption">{diff.note}</p>}
-            {diff?.patch ? (
-              splitDiff(diff.patch).map((file, i) => (
-                <details className="panel-diff" key={i}>
-                  <summary>{file.name}</summary>
-                  <pre>{file.patch}</pre>
-                </details>
-              ))
-            ) : diff?.files?.length ? (
-              diff.files.map((file) => (
-                <details className="panel-diff" key={file.Path}>
-                  <summary>
-                    {file.Path}{" "}
-                    <span>
-                      +{file.Added} / −{file.Deleted}
-                    </span>
-                  </summary>
-                  <p>This job recorded a change list without a full patch.</p>
-                </details>
-              ))
-            ) : (
-              <p className="panel-caption">
-                {diff ? "No changes to display." : "Loading diff…"}
-              </p>
-            )}
-          </section>
-          <section className="panel-section">
-            <h2>CLI commands</h2>
-            <p className="panel-caption">
-              Read-only: apply / discard / cancel must be run in the CLI or
-              Claude Code. Use apply / discard for worktree jobs and cancel for
-              running jobs.
-            </p>
-            {["apply", "discard", "cancel"].map((action) => (
-              <CopyCommand
-                key={action}
-                command={`pactify sub ${action} ${shellArg(id)}`}
-              />
+      <div className="jobs-toolbar">
+        <label title={filters.repo}>
+          Project
+          <select
+            aria-label="Project"
+            title={filters.repo}
+            value={filters.repo}
+            onChange={(e) => filter("repo", e.target.value)}
+          >
+            <option value="">All projects</option>
+            {[...new Set(jobs.map((j) => j.repo))]
+              .filter(Boolean)
+              .sort()
+              .map((repo) => (
+                <option key={repo} value={repo} title={repo}>
+                  {projectName(repo)}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label>
+          Harness
+          <select
+            aria-label="Harness"
+            value={filters.harness}
+            onChange={(e) => filter("harness", e.target.value)}
+          >
+            <option value="">All harnesses</option>
+            {[...new Set(jobs.map((j) => j.harness))].sort().map((h) => (
+              <option key={h}>{h}</option>
             ))}
-            <CopyCommand
-              command={`pactify sub logs ${shellArg(id)} --follow`}
-            />
-          </section>
-        </>
+          </select>
+        </label>
+        <label>
+          Status
+          <select
+            aria-label="Status"
+            value={filters.status}
+            onChange={(e) => filter("status", e.target.value)}
+          >
+            {[
+              ["", "All"],
+              ["progress", "In progress"],
+              ["queued", "Queued"],
+              ["attention", "Needs attention"],
+              ["completed", "Completed"],
+              ["failed", "Failed"],
+            ].map(([value, label]) => (
+              <option value={value} key={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="jobs-search">
+          <span className="sr-only">Search jobs</span>
+          <input
+            type="search"
+            placeholder="Search jobs"
+            value={filters.search}
+            onChange={(e) => filter("search", e.target.value)}
+          />
+        </label>
+      </div>
+      {loaded && (
+        <div className="jobs-sections">
+          {!chains.length && (
+            <p className="panel-empty">No delegation jobs yet</p>
+          )}
+          {(
+            [
+              ["progress", "In progress"],
+              ["queued", "Queued"],
+              ["attention", "Needs attention"],
+            ] as const
+          ).map(([key, label]) => {
+            const rows = chains.filter((c) => sectionFor(c.latest) === key);
+            return rows.length ? (
+              <section aria-label={label} key={key}>
+                <h2>
+                  {label}
+                  <span className="section-count">{rows.length}</span>
+                </h2>
+                <div className="job-grid">
+                  {rows.map((chain) => card(chain))}
+                </div>
+              </section>
+            ) : null;
+          })}
+          {!!chains.filter((c) => sectionFor(c.latest) === "completed")
+            .length && (
+            <section aria-label="Completed">
+              <h2>Completed</h2>
+              {completedDays(
+                chains.filter((c) => sectionFor(c.latest) === "completed"),
+              ).map(({ day, label, rows }) => (
+                <div key={day} className="completed-day">
+                  <div className="day-heading">
+                    <h3>
+                      {label} · {rows.length} completed
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-expanded={!!expanded[day]}
+                      aria-controls={`day-${day}`}
+                      onClick={() =>
+                        setExpanded({ ...expanded, [day]: !expanded[day] })
+                      }
+                    >
+                      {expanded[day] ? "Collapse" : "Show all"}
+                    </Button>
+                  </div>
+                  <div
+                    id={`day-${day}`}
+                    className={expanded[day] ? "job-grid" : "job-stack"}
+                  >
+                    {(expanded[day] ? rows : rows.slice(0, 3)).map(
+                      (chain, index) =>
+                        card(chain, !expanded[day] && index > 0),
+                    )}
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+        </div>
       )}
+      {children}
     </>
   );
 }
-function selectedJob() {
-  const prefix = "#/jobs/";
-  try {
-    return location.hash.startsWith(prefix)
-      ? decodeURIComponent(location.hash.slice(prefix.length))
-      : "";
-  } catch {
-    return "";
-  }
-}
-export function Jobs({ source = dashboardJobsSource, standalone = false }: {
+export function Jobs({
+  source = dashboardJobsSource,
+  standalone = false,
+  jobs: supplied,
+  refresh: suppliedRefresh,
+  loaded: suppliedLoaded,
+}: {
   source?: JobsSource;
   standalone?: boolean;
+  jobs?: Job[];
+  refresh?: () => void;
+  loaded?: boolean;
 }) {
-  return (
-    <SourceContext.Provider value={source}>
-      <JobsContent standalone={standalone} />
-    </SourceContext.Provider>
+  const resource = useResource<Job[]>(
+    source,
+    supplied ? undefined : `${source.jobsPath}?all=1`,
+    2000,
+    validJobs,
   );
-}
-function JobsContent({ standalone }: { standalone: boolean }) {
-  const source = useContext(SourceContext);
-  const [id, setId] = useState(selectedJob);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [error, setError] = useState("");
-  const [updated, setUpdated] = useState("");
-  const [loaded, setLoaded] = useState(false);
+  const jobs = supplied || (Array.isArray(resource.data) ? resource.data : []);
+  const hash = useHash();
+  const match = hash.split("?")[0].match(/^#\/jobs\/([^/]+)$/);
+  let id = "";
+  try {
+    id = match ? decodeURIComponent(match[1]) : "";
+  } catch {
+    /* Invalid encoded links show the list. */
+  }
+  const [toast, setToast] = useState("");
   useEffect(() => {
-    const change = () => setId(selectedJob());
-    window.addEventListener("hashchange", change);
-    return () => window.removeEventListener("hashchange", change);
-  }, []);
-  useEffect(() => {
-    const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout>;
-    async function update() {
-      try {
-        setJobs(await getJSON<Job[]>(source, `${source.jobsPath}?all=1`, controller.signal));
-        setLoaded(true);
-        setError("");
-        setUpdated(new Date().toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"}));
-      } catch (e) {
-        if (!controller.signal.aborted) setError((e as Error).message);
-      } finally {
-        if (!controller.signal.aborted) timer = setTimeout(update, 2000);
-      }
-    }
-    void update();
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [source]);
-  const [tab, setTab] = useState<"jobs" | "routing">("jobs");
-  // Any detail deep link selects Jobs, including hash changes from Routing.
-  useEffect(() => { if (id) setTab("jobs"); }, [id]);
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(""), 5000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  const changed = suppliedRefresh || resource.refresh;
   return (
-    <div className="jobs-view" data-testid="view-jobs">
-      <div className="panel-shell" inert={!!id} aria-hidden={id ? true : undefined}>
-        {standalone && <StandaloneHeader />}
-        <main>
-          <h1 className="sr-only">Delegated jobs</h1>
-          <JobList jobs={jobs} selected={id} loaded={loaded} showBoard={tab === "jobs"} toolbar={<>
-            <div role="tablist" aria-label="Jobs views" className="flex items-center gap-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-page)] p-0.5">
-              {(["jobs", "routing"] as const).filter(value => value === "jobs" || source.routerPath).map(value =>
-                <button key={value} type="button" role="tab" aria-selected={tab === value} aria-controls={`jobs-tab-${value}`} id={`jobs-tab-button-${value}`} tabIndex={tab === value ? 0 : -1}
-                  onClick={() => setTab(value)} onKeyDown={event => {
-                    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) && source.routerPath) {
-                      event.preventDefault();
-                      const next = event.key === "Home" ? "jobs" : event.key === "End" ? "routing" : tab === "jobs" ? "routing" : "jobs";
-                      setTab(next); document.getElementById(`jobs-tab-button-${next}`)?.focus();
-                    }
-                  }} className="rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors"
-                  style={{color: tab === value ? "var(--color-text-1)" : "var(--color-text-3)", background: tab === value ? "rgba(255,255,255,0.09)" : "transparent"}}>
-                  {value === "jobs" ? "Jobs" : "Routing"}
-                </button>)}
-            </div>
-            <div className="jobs-toolbar-status">
-              <span className="panel-updated">{updated ? `Updated ${updated}` : "Connecting…"}</span>
-              <span className="jobs-readonly" title="Read-only: apply / discard / cancel must be run in the CLI or Claude Code.">Read-only</span>
-            </div>
-          </>}>
-            {error && <p className="panel-error" role="alert">{error}</p>}
-            {!loaded && !error && <p className="panel-empty">Loading jobs…</p>}
-            {loaded && <div className="jobs-usage"><UsageCard source={source} /></div>}
-          </JobList>
-          {tab === "routing" && source.routerPath && <div role="tabpanel" id="jobs-tab-routing" aria-labelledby="jobs-tab-button-routing">
-            <Routing source={source} readOnly={standalone} expanded />
-          </div>}
-        </main>
-        {standalone && <footer className="panel-footer">
-          PACTIFY / LOCAL HARNESS JOBS<span>Job data stays on this device</span>
-        </footer>}
+    <div className="jobs-view">
+      <div inert={!!id}>
+        <JobList
+          jobs={jobs}
+          selected={id}
+          source={source}
+          readOnly={standalone}
+          onChanged={changed}
+          notify={setToast}
+          loaded={suppliedLoaded ?? !!resource.data}
+        />
+        {resource.error && (
+          <p role="alert" className="panel-error">
+            {resource.error}
+          </p>
+        )}
+        {!supplied && !resource.data && !resource.error && (
+          <p className="panel-empty">Loading jobs…</p>
+        )}
       </div>
-      {id && <JobDrawer id={id} jobs={jobs}><JobDetail key={id} id={id} jobs={jobs} /></JobDrawer>}
+      {id && (
+        <JobDrawer id={id} jobs={jobs}>
+          <JobDetail
+            key={id}
+            id={id}
+            jobs={jobs}
+            source={source}
+            readOnly={standalone}
+            onChanged={changed}
+            notify={setToast}
+            initialTab={
+              new URLSearchParams(hash.split("?")[1]).get("tab") || "summary"
+            }
+          />
+        </JobDrawer>
+      )}
+      {toast &&
+        createPortal(
+          <div className="v2-app v2-modal-host">
+            <div className="v2-toast" role="status">
+              {toast}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
-  );
-}
-
-function StandaloneHeader() {
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("pactify-jobs-theme") || "system",
-  );
-  useEffect(() => {
-    const previous = document.documentElement.dataset.theme;
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("pactify-jobs-theme", theme);
-    return () => {
-      if (previous === undefined) delete document.documentElement.dataset.theme;
-      else document.documentElement.dataset.theme = previous;
-    };
-  }, [theme]);
-  return (
-    <header className="panel-header">
-      <a href="#/" className="panel-brand">
-        <span className="panel-brand-mark">p</span>pactify{" "}
-        <span className="panel-brand-divider">/</span> <span>sub panel</span>
-      </a>
-      <label className="panel-theme">
-        Theme
-        <select
-          aria-label="Theme"
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
-        >
-          <option value="system">System</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </label>
-    </header>
   );
 }

@@ -9,7 +9,6 @@ import {
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Routing } from "./Routing";
-import { Jobs } from "./Jobs";
 import type { JobsSource } from "./source";
 
 const snapshot = {
@@ -193,23 +192,6 @@ it("can remove entries, cancel changes and prevents duplicate names from overwri
   expect(screen.getByText("@fast → kimi")).toBeInTheDocument();
   expect(screen.getByText("one, two")).toBeInTheDocument();
 });
-it("integrates Routing in the Jobs list and keeps panel controls read-only", async () => {
-  const source: JobsSource = {
-    jobsPath: "/jobs",
-    costPath: "/cost",
-    routerPath: "/router",
-    fetch: async (path) =>
-      new Response(JSON.stringify(path === "/router" ? snapshot : [])),
-  };
-  history.replaceState(null, "", "/");
-  render(<Jobs source={source} standalone />);
-  fireEvent.click(screen.getByText("Routing", { exact: true }));
-  await screen.findByText("@fast");
-  expect(
-    screen.queryByRole("button", { name: "Edit" }),
-  ).not.toBeInTheDocument();
-});
-
 it("preserves model names containing commas and lets quota models be added and removed", async () => {
   const read = vi.fn(
     async () =>

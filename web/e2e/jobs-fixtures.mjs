@@ -1,182 +1,318 @@
-// One set of job API fixtures for the dashboard and standalone panel.
+// Mutable, hermetic job API shared by dashboard and read-only panel fixtures.
 const base = {
   harness: "codex",
-  modelRequested: "gpt-5.4",
-  modelActual: "gpt-5.4",
+  modelRequested: "gpt-6.1-sol",
+  modelActual: "gpt-6.1-sol",
   repo: "/workspace/pactify",
   cwd: "/workspace/pactify",
   access: "write",
   configMode: "minimal",
   status: "succeeded",
   duration: "3m42s",
-  createdAt: "2026-10-16T01:00:00Z",
   inputTokens: 12480,
   outputTokens: 3260,
   attention: [],
   resumeOf: "",
   resumedBy: [],
+  actions: ["resume"],
 };
-export const panelJobs = [
-  {
-    ...base,
-    id: "job-panel",
-    title: "AJ-659 · Local read-only job panel",
-    status: "succeeded",
-    duration: "2m18s",
-    inputTokens: 8420,
-    outputTokens: 1870,
-    usagePartial: true,
-    attention: [{kind: "worktree_pending", message: "Worktree is awaiting apply or discard"}],
-    worktree: {
-      path: "/tmp/pactify/jobs/job-panel/wt",
-      baseCommit: "97e9d6bf2143",
-      status: "pending",
+export function seedJobs() {
+  const now = Date.now();
+  const ago = (minutes) => new Date(now - minutes * 60000).toISOString();
+  // Clone each job separately: cloning the whole array would preserve aliases from base.
+  return [
+    {
+      ...base,
+      id: "job-panel",
+      title: "AJ-659 · Local read-only job panel",
+      createdAt: ago(30),
+      finishedAt: ago(20),
+      resumedBy: ["job-review"],
+      actions: [],
     },
-    resumedBy: ["job-review"],
-  },
-  {
-    ...base,
-    id: "job-summary",
-    title: "AJ-657 · Shared job summary model",
-    attention: [
-      {
-        kind: "worktree_pending",
-        message: "Worktree is awaiting apply or discard",
+    {
+      ...base,
+      id: "job-review",
+      title: "Panel acceptance and visual checks",
+      status: "running",
+      createdAt: ago(5),
+      startedAt: ago(5),
+      resumeOf: "job-panel",
+      actions: ["cancel"],
+      activity: {
+        summary: "tool exec go test ./internal/subpanel/...",
+        inputTokens: 8420,
+        outputTokens: 1870,
+        usagePartial: true,
       },
-    ],
-    worktree: {
-      path: "/tmp/pactify/jobs/job-summary/wt",
-      baseCommit: "97e9d6bf2143",
-      status: "pending",
     },
-  },
-  {
-    ...base,
-    id: "job-kimi",
-    title: "Evaluate resume for large tasks",
-    harness: "kimi",
-    modelActual: "kimi-k2.5",
-    modelRequested: "kimi-k2.5",
-    repo: "/workspace/harness-eval",
-    duration: "5m09s",
-    inputTokens: 26340,
-    outputTokens: 4120,
-    createdAt: "2026-10-16T00:50:00Z",
-  },
-  {
-    ...base,
-    id: "job-review",
-    title: "Panel acceptance and visual checks",
-    status: "running",
-    activity: {summary: "tool exec go test ./internal/subpanel/...", inputTokens: 8420, outputTokens: 1870, usagePartial: true},
-    worktree: {path: "/tmp/pactify/jobs/job-panel/wt", baseCommit: "97e9d6bf2143", status: "pending"},
-    resumeOf: "job-panel",
-    duration: "12s",
-    inputTokens: 0,
-    outputTokens: 0,
-    createdAt: "2026-10-16T01:10:00Z",
-  },
-  {
-    ...base,
-    id: "job-failed",
-    title: "Fix CLI exit code edge cases",
-    status: "failed",
-    duration: "48s",
-    createdAt: "2026-10-15T23:00:00Z",
-    attention: [{ kind: "failed", message: "Job failed" }],
-    inputTokens: 2160,
-    outputTokens: 360,
-  },
-  {
-    ...base,
-    id: "job-config",
-    title: "Isolate harness config and sessions",
-    repo: "/workspace/harness-eval",
-    access: "read-only",
-    createdAt: "2026-10-15T22:00:00Z",
-    duration: "1m56s",
-  },
-  {
-    ...base, id: "job-quota", title: "Recover a quota-limited task", status: "failed",
-    failureClass: "quota", attention: [{kind: "failed", message: "Job failed"}],
-    fallbackTo: "job-fallback", createdAt: "2026-10-15T21:00:00Z",
-  },
-  {
-    ...base, id: "job-fallback", title: "Fallback attempt", harness: "opencode",
-    modelRequested: "deepseek-flash", modelActual: "deepseek-flash", fallbackFrom: "job-quota",
-    createdAt: "2026-10-15T21:01:00Z",
-  },
-  {
-    ...base, id: "job-canceled", title: "Canceled experiment", status: "canceled",
-    createdAt: "2026-10-15T20:00:00Z",
-  },
-];
-export function serveJobsAPI(req, res, pathname) {
-  if (pathname !== "/api/cost" && pathname !== "/api/jobs" && !pathname.startsWith("/api/jobs/")) return false;
-  if (req.method !== "GET") {
-    res.writeHead(405, { Allow: "GET" });
-    res.end();
-    return true;
-  }
-  const json = (value) => {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(value));
-  };
-  if (pathname === "/api/cost") {
-    const now = new Date();
-    const since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-    const empty = {
-      jobs: 0, succeeded: 0, failed: 0, canceled: 0, retries: 0, fallbacks: 0,
-      inputTokens: 0, outputTokens: 0, costUSD: null, costReportedJobs: 0,
-      subscriptionJobs: 0, unpricedJobs: 0, usagePartialJobs: 0,
-    };
-    json({
-      since: since.toISOString(), until: now.toISOString(), by: "harness",
-      groups: [
-        { ...empty, key: "codex", jobs: 2, succeeded: 1, failed: 1, inputTokens: 12345, outputTokens: 2345, subscriptionJobs: 2, usagePartialJobs: 1 },
-        { ...empty, key: "custom", jobs: 1, failed: 1, inputTokens: 50, outputTokens: 10, unpricedJobs: 1 },
-        { ...empty, key: "opencode", jobs: 1, succeeded: 1, inputTokens: 2000, outputTokens: 300, costUSD: 0.125, costReportedJobs: 1 },
+    {
+      ...base,
+      id: "job-summary",
+      title: "AJ-657 · Shared job summary model",
+      createdAt: ago(60),
+      finishedAt: ago(50),
+      attention: [
+        {
+          kind: "worktree_pending",
+          message: "Worktree is awaiting apply or discard",
+        },
       ],
-      total: { ...empty, jobs: 4, succeeded: 2, failed: 2, inputTokens: 14395, outputTokens: 2655, costUSD: 0.125, costReportedJobs: 1, subscriptionJobs: 2, unpricedJobs: 1, usagePartialJobs: 1 },
-      skipped: { missingResult: 0, invalidResult: 0, invalidState: 0 },
-      quotaSnapshots: [],
-      exhaustedRoutes: [{ harness: "codex", model: "gpt-5", resetAt: new Date(now.getTime() + 150 * 60000).toISOString(), recordedAt: now.toISOString(), jobId: "job-failed", message: "Quota exhausted" }],
-    });
-    return true;
-  }
-  if (pathname === "/api/jobs") {
-    json(panelJobs);
-    return true;
-  }
-  const match = pathname.match(
-    /^\/api\/jobs\/([^/]+)(?:\/(logs|diff))?$/,
-  );
-  if (match) {
-    const job = panelJobs.find(
-      (job) => job.id === decodeURIComponent(match[1]),
-    );
-    if (!job) {
-      res.writeHead(404);
-      res.end();
+      worktree: {
+        path: "/tmp/pactify/jobs/job-summary/wt",
+        baseCommit: "97e9d6bf2143",
+        status: "pending",
+      },
+      actions: ["resume", "apply", "discard"],
+    },
+    {
+      ...base,
+      id: "job-failed",
+      title: "Fix CLI exit code edge cases",
+      status: "failed",
+      createdAt: ago(70),
+      finishedAt: ago(65),
+      failureClass: "harness",
+      attention: [{ kind: "failed", message: "Job failed" }],
+    },
+    {
+      ...base,
+      id: "job-queued",
+      title: "Queued implementation",
+      status: "queued",
+      createdAt: ago(1),
+      actions: ["cancel"],
+    },
+    {
+      ...base,
+      id: "job-kimi",
+      title: "Evaluate resume for large tasks",
+      harness: "kimi",
+      modelRequested: "kimi-k2.5",
+      modelActual: "kimi-k2.5",
+      repo: "/workspace/harness-eval",
+      createdAt: ago(120),
+      finishedAt: new Date(now).toISOString(),
+    },
+    ...Array.from({ length: 5 }, (_, i) => ({
+      ...base,
+      id: `job-done-${i}`,
+      title: `Completed task ${i}`,
+      createdAt: ago(130 + i),
+      finishedAt: new Date(now).toISOString(),
+    })),
+    {
+      ...base,
+      id: "job-quota",
+      title: "Recover a quota-limited task",
+      status: "failed",
+      failureClass: "quota",
+      fallbackTo: "job-fallback",
+      createdAt: ago(1600),
+      finishedAt: ago(1595),
+      actions: [],
+    },
+    {
+      ...base,
+      id: "job-fallback",
+      title: "Fallback attempt",
+      harness: "opencode",
+      modelRequested: "deepseek-flash",
+      modelActual: "deepseek-flash",
+      fallbackFrom: "job-quota",
+      createdAt: ago(1590),
+      finishedAt: ago(1585),
+    },
+  ].map((job) => structuredClone(job));
+}
+export const panelJobs = seedJobs();
+const quotaReset = (hours) => {
+  const date = new Date(Date.now() + hours * 3600000);
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+const send = (res, status, value) => {
+  res.writeHead(status, {
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store",
+  });
+  res.end(JSON.stringify(value));
+};
+export function createJobsAPI(writable = false) {
+  let jobs = seedJobs(),
+    next = 0;
+  const handler = async (req, res, path) => {
+    if (!/^\/api\/(jobs(?:\/|$)|cost$|harnesses$)/.test(path)) return false;
+    const url = new URL(req.url, "http://localhost");
+    if (req.method === "GET" && path === "/api/harnesses") {
+      send(res, 200, {
+        harnesses: ["codex", "kimi", "agy", "opencode"].map((name, i) => ({
+          name,
+          installed: i !== 2,
+          version: "1.0",
+          verifiedVersion: i === 0 ? "0.9" : "1.0",
+          experimental: i > 0,
+          readOnly: i < 2,
+          default: {},
+          models: {
+            items:
+              i === 0
+                ? ["gpt-6.1-sol", "gpt-6-sol"]
+                : ["model-one", "model-two"],
+            error: "",
+            fetchedAt: new Date().toISOString(),
+          },
+          efforts: ["low", "medium", "high"],
+        })),
+      });
       return true;
     }
-    if (match[2] === "logs") {
+    if (req.method === "GET" && path === "/api/cost") {
+      const groups = [...new Set(jobs.map((j) => j.harness))].map((key) => {
+        const rows = jobs.filter((j) => j.harness === key);
+        return {
+          key,
+          jobs: rows.length,
+          succeeded: rows.filter((j) => j.status === "succeeded").length,
+          failed: rows.filter((j) => j.status === "failed").length,
+          inputTokens: rows.reduce((n, j) => n + j.inputTokens, 0),
+          outputTokens: rows.reduce((n, j) => n + j.outputTokens, 0),
+          costUSD: key === "opencode" ? 0.125 : null,
+          subscriptionJobs: key === "opencode" ? 0 : rows.length,
+          unpricedJobs: 0,
+          usagePartialJobs: 1,
+        };
+      });
+      send(res, 200, {
+        by: url.searchParams.get("by") || "harness",
+        since: new Date(Date.now() - 7 * 86400000).toISOString(),
+        until: new Date().toISOString(),
+        groups,
+        total: groups.reduce(
+          (total, group) => {
+            for (const key of [
+              "jobs",
+              "succeeded",
+              "failed",
+              "inputTokens",
+              "outputTokens",
+              "subscriptionJobs",
+              "unpricedJobs",
+              "usagePartialJobs",
+            ])
+              total[key] = (total[key] || 0) + group[key];
+            if (group.costUSD != null)
+              total.costUSD = (total.costUSD || 0) + group.costUSD;
+            return total;
+          },
+          { costUSD: null },
+        ),
+        quotaSnapshots: [
+          {
+            harness: "codex",
+            jobId: "job-panel",
+            observedAt: new Date().toISOString(),
+            rateLimit: `5-hour window: 20% used, resets ${quotaReset(2)}; 7-day window: 35% used, resets ${quotaReset(120)}`,
+          },
+        ],
+        exhaustedRoutes: [
+          {
+            key: "codex/gpt-test",
+            harness: "codex",
+            model: "gpt-test",
+            resetAt: new Date(Date.now() + 7200000).toISOString(),
+          },
+        ],
+      });
+      return true;
+    }
+    if (req.method === "GET" && path === "/api/jobs") {
+      send(res, 200, jobs);
+      return true;
+    }
+    const match = path.match(
+      /^\/api\/jobs\/([^/]+)(?:\/(logs|diff|cancel|resume|apply|discard))?$/,
+    );
+    const job =
+      match && jobs.find((j) => j.id === decodeURIComponent(match[1]));
+    if (!job) {
+      send(res, 404, { error: "Job not found" });
+      return true;
+    }
+    const action = match[2];
+    if (
+      req.method === "POST" &&
+      writable &&
+      ["cancel", "resume", "apply", "discard"].includes(action)
+    ) {
+      if (!job.actions.includes(action)) {
+        send(res, 409, { error: "Action unavailable" });
+        return true;
+      }
+      if (action === "resume") {
+        let text = "";
+        for await (const chunk of req) text += chunk;
+        let body;
+        try {
+          body = JSON.parse(text);
+        } catch {
+          send(res, 400, { error: "Invalid JSON" });
+          return true;
+        }
+        if (!body.brief?.trim()) {
+          send(res, 400, { error: "Instructions required" });
+          return true;
+        }
+        const child = {
+          ...structuredClone(job),
+          id: `job-resumed-${++next}`,
+          title: body.brief.split("\n")[0],
+          status: "queued",
+          createdAt: new Date().toISOString(),
+          finishedAt: undefined,
+          attention: [],
+          worktree: undefined,
+          resumeOf: job.id,
+          resumedBy: [],
+          actions: ["cancel"],
+          inputTokens: 0,
+          outputTokens: 0,
+          activity: undefined,
+        };
+        job.resumedBy.push(child.id);
+        job.actions = [];
+        jobs.push(child);
+        send(res, 200, { jobId: child.id });
+      } else {
+        if (action === "cancel") {
+          job.status = "canceled";
+          job.finishedAt = new Date().toISOString();
+          job.actions = ["resume"];
+        } else {
+          job.worktree.status = action === "apply" ? "applied" : "discarded";
+          job.attention = [];
+          job.actions = action === "apply" ? ["discard"] : [];
+        }
+        send(res, 200, { ok: true });
+      }
+      return true;
+    }
+    if (req.method !== "GET") {
+      send(res, 405, { error: "Read-only" });
+      return true;
+    }
+    if (action === "logs") {
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-store",
       });
-      res.write(
-        `data: ${JSON.stringify("tool exec go test ./internal/subpanel/...")}\n\n`,
+      res.end(
+        'data: "tool exec go test ./internal/subpanel/..."\n\ndata: "message Tests passed."\n\nevent: done\ndata: {}\n\n',
       );
-      const timer = setTimeout(() => {
-        res.write(`data: ${JSON.stringify("message Tests passed.")}\n\n`);
-        res.end("event: done\ndata: {}\n\n");
-      }, 120);
-      req.on("close", () => clearTimeout(timer));
       return true;
     }
-    if (match[2] === "diff") {
-      json({
+    if (action === "diff") {
+      send(res, 200, {
         patch:
           "diff --git a/internal/subpanel/server.go b/internal/subpanel/server.go\n--- a/internal/subpanel/server.go\n+++ b/internal/subpanel/server.go\n@@ -0,0 +1 @@\n+func Listen(port int)\n",
         files: [],
@@ -185,17 +321,21 @@ export function serveJobsAPI(req, res, pathname) {
       });
       return true;
     }
-    json({
+    send(res, 200, {
       job,
-      brief:
-        "# AJ-659: Local job panel\n\nA standalone read-only panel for job summaries, results, logs and diffs.\n\nAcceptance criteria\n- Listen only on 127.0.0.1; protect APIs with a temporary token\n- Reuse JobSummary and link resumed jobs\n- Support dark mode and mobile widths",
-      result: { finalText: "Completed the standalone read-only job panel." },
+      brief: `# ${job.title}\n\nImplement and verify the task.`,
       markdown:
-        "✓ codex succeeded\n\nHarness: codex (minimal config)\nModel: gpt-5.4 → gpt-5.4\nTokens: in 12480 · out 3260\nChanges: 6 files · +218/−12\n\nFinal reply:\nCompleted the standalone read-only job panel.\nBackend APIs, live logs and diff checks passed.",
+        "Completed the standalone read-only job panel.\nBackend APIs, live logs and diff checks passed.",
+      result: {
+        finalText: "Completed the task.",
+        warnings: job.id === "job-failed" ? ["Review failed checks"] : [],
+      },
     });
     return true;
-  }
-  res.writeHead(404);
-  res.end();
-  return true;
+  };
+  handler.reset = () => {
+    jobs = seedJobs();
+    next = 0;
+  };
+  return handler;
 }

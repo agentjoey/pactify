@@ -1,166 +1,87 @@
 import { test, expect } from "@playwright/test";
-
 test.use({ baseURL: `http://127.0.0.1:${process.env.PANEL_E2E_PORT || 4176}` });
-
-test("panel list → detail → live readable logs and resume chain", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Delegated jobs", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Needs attention").first()).toContainText(
-    "Worktree",
-  );
-  await page.getByLabel("Harness", { exact: true }).selectOption("codex");
-  await expect(
-    page.getByRole("link", { name: "Evaluate resume for large tasks" }),
-  ).toHaveCount(0);
-  await page
-    .getByRole("link", { name: "AJ-659 · Local read-only job panel" })
-    .click();
-    await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
-  await expect(page.getByRole("heading", { name: "Task brief" })).toBeVisible();
-  await expect(page.getByRole("log")).toContainText(
-    "tool exec go test ./internal/subpanel/...",
-  );
-  await expect(page.getByText("Finished", { exact: true })).toBeVisible();
-  await expect(page.getByRole("log")).toContainText("message Tests passed.");
-  await page
-    .getByText("a/internal/subpanel/server.go b/internal/subpanel/server.go", {
-      exact: true,
-    })
-    .click();
-  await expect(page.getByText("+func Listen(port int)")).toBeVisible();
-  await expect(
-    page.getByText("pactify sub apply 'job-panel'", { exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("navigation", { name: "Run timeline" })
-    .getByRole("link", { name: /^job-review ·/ })
-    .click();
-  await expect(
-    page.getByRole("heading", {
-      name: "Panel acceptance and visual checks",
-      exact: true,
-    }),
-  ).toBeVisible();
-});
-
-for (const theme of ["light", "dark"]) {
-  test(`panel ${theme} mobile layout has no horizontal overflow`, async ({
+for (const width of [1440, 390])
+  test(`panel shares three pages and hides all writes at ${width}px`, async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto("/");
-    await page.getByLabel("Theme", { exact: true }).selectOption(theme);
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/#/jobs");
     await expect(
-      page.getByRole("link", { name: "AJ-659 · Local read-only job panel" }),
+      page.getByRole("heading", { name: "Jobs", exact: true }),
     ).toBeVisible();
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth,
-      ),
-    ).toBe(true);
+    await expect(
+      page.getByRole("button", { name: /^(Cancel|Resume|Apply|Discard)$/ }),
+    ).toHaveCount(0);
     await page
-      .getByRole("link", { name: "AJ-659 · Local read-only job panel" })
+      .getByRole("region", { name: "In progress", exact: true })
+      .getByRole("link")
       .click();
-    await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
-    await expect(page.getByRole("log")).toContainText("message Tests passed.");
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth,
-      ),
-    ).toBe(true);
+    const modal = page.getByRole("dialog", { name: "Job details" });
+    await modal.getByRole("tab", { name: "Logs", exact: true }).click();
+    await expect(modal.getByRole("log")).toContainText("message Tests passed.");
+    await expect(
+      modal.getByRole("button", { name: /^(Cancel|Resume|Apply|Discard)$/ }),
+    ).toHaveCount(0);
+    if (width === 390) {
+      const box = await modal.boundingBox();
+      expect(Math.abs(box!.width - 390)).toBeLessThanOrEqual(1);
+      expect(Math.abs(box!.height - 844)).toBeLessThanOrEqual(1);
+    }
+    await page.keyboard.press("Escape");
+    await expect(modal).toHaveCount(0);
+    for (const route of ["dashboard", "settings"]) {
+      await page.goto("/#/" + route);
+      if (route === "dashboard")
+        await expect(
+          page.getByRole("img", { name: "Token usage · last 14 days" }),
+        ).toBeVisible();
+      else {
+        await expect(
+          page.getByText("Edit settings from the dashboard or the CLI.", {
+            exact: true,
+          }),
+        ).toBeVisible();
+        await expect(page.getByText("@fast", { exact: true })).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: /Save|Edit|Clear|Refresh models/ }),
+        ).toHaveCount(0);
+        // Only the mobile page selector remains; harness settings are data.
+        await expect(
+          page.locator(".settings-content select, .settings-content input"),
+        ).toHaveCount(0);
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - innerWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await test
+        .info()
+        .attach(`panel-${route}-${width}-final-build`, {
+          body: await page.screenshot({ fullPage: true }),
+          contentType: "image/png",
+        });
+    }
   });
-}
-
-test("panel mobile wraps long titles and repository paths", async ({
+test("panel exchanges launch metadata and keeps bearer authentication after refresh", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  const title = "LongUnbrokenTaskTitle".repeat(6);
-  await page.route("**/api/jobs/job-review", async (route) => {
-    const response = await route.fetch();
-    const detail = await response.json();
-    detail.job.title = title;
-    detail.job.repo = "/workspace/" + "repository".repeat(18);
-    await route.fulfill({ json: detail });
-  });
-  await page.goto("/#/jobs/job-review");
-  await expect(
-    page.getByRole("heading", { name: title, exact: true }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-});
-
-test("panel uses the shared merged board and a full-screen drawer at 390px", async ({ page }) => {
-  await page.setViewportSize({width: 390, height: 844});
-  await page.goto("/");
-  const running = page.getByRole("region", {name: "RUNNING", exact: true});
-  await expect(running.locator("article")).toHaveCount(1);
-  await expect(running.locator("article")).toContainText("2 runs");
-  await running.getByRole("link").click();
-  const drawer = page.getByRole("dialog", {name: "Job details"});
-  await expect(drawer.getByRole("heading", {name: "Run timeline"})).toBeVisible();
-  const box = await drawer.boundingBox();
-  expect(box?.width).toBeCloseTo(390, 0);
-  expect(box?.height).toBeCloseTo(844, 0);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await drawer.getByRole("link", {name: "Close job details"}).click();
-  await expect(page).toHaveURL(/#\/jobs$/);
-  await expect(drawer).toHaveCount(0);
-});
-
-test("panel keeps a long mobile drawer within the viewport and restores background scrolling", async ({ page }) => {
-  await page.setViewportSize({width: 390, height: 844});
-  await page.route("**/api/jobs/job-review", async route => {
-    const response = await route.fetch();
-    const detail = await response.json();
-    detail.markdown = Array.from({length: 300}, (_, i) => `Result line ${i}`).join("\n");
-    await route.fulfill({json: detail});
-  });
-  await page.goto("/");
-  const originalOverflow = await page.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow]);
-  const shell = page.locator(".panel-shell");
-  const backgroundScroll = await shell.evaluate(node => node.scrollTop);
-  await page.getByRole("link", {name: "AJ-659 · Local read-only job panel"}).click();
-  const drawer = page.getByRole("dialog", {name: "Job details"});
-  await expect(drawer.getByText(/Result line 299/)).toBeAttached();
-  await expect(drawer).toHaveCSS("position", "fixed");
-  await expect(drawer).toHaveCSS("overflow-y", "auto");
-  expect((await drawer.boundingBox())?.height).toBeCloseTo(844, 0);
-  expect(await drawer.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
-  await drawer.hover({position: {x: 20, y: 20}});
-  await page.mouse.wheel(0, 500);
-  await expect.poll(() => drawer.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
-  expect((await drawer.boundingBox())?.height).toBeCloseTo(844, 0);
-  expect(await page.evaluate(() => window.scrollY)).toBeCloseTo(0, 0);
-  expect(await shell.evaluate(node => node.scrollTop)).toBeCloseTo(backgroundScroll, 0);
-  await expect(shell).toHaveCSS("overflow-y", "hidden");
-  await page.keyboard.press("Escape");
-  await expect(drawer).toHaveCount(0);
-  expect(await page.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow])).toEqual(originalOverflow);
-  await expect(shell).toHaveCSS("overflow-y", "auto");
-});
-
-test("panel exchanges launch metadata and keeps bearer authentication after refresh", async ({ page }) => {
   await page.route("**/?token=one-time-launch", async (route) => {
     const response = await route.fetch();
-    const html = (await response.text()).replace(
-      "</head>",
-      '<meta name="pactify-session" content="tab-session"></head>',
-    );
-    await route.fulfill({ response, body: html });
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace(
+        "</head>",
+        '<meta name="pactify-session" content="tab-session"></head>',
+      ),
+    });
   });
-  const authorizedJobs = () => page.waitForRequest((request) =>
-    request.url().includes("/api/jobs?all=1") &&
-    request.headers().authorization === "Bearer tab-session",
-  );
+  const authorizedJobs = () =>
+    page.waitForRequest(
+      (r) =>
+        r.url().includes("/api/jobs?all=1") &&
+        r.headers().authorization === "Bearer tab-session",
+    );
   let jobs = authorizedJobs();
   await page.goto("/?token=one-time-launch");
   await jobs;
@@ -168,12 +89,64 @@ test("panel exchanges launch metadata and keeps bearer authentication after refr
   jobs = authorizedJobs();
   await page.reload();
   await jobs;
-  const logs = page.waitForRequest((request) =>
-    request.url().endsWith("/api/jobs/job-panel/logs") &&
-    request.headers().authorization === "Bearer tab-session",
+  await page
+    .getByRole("region", { name: "In progress", exact: true })
+    .getByRole("link")
+    .click();
+  const logs = page.waitForRequest(
+    (r) =>
+      r.url().endsWith("/api/jobs/job-review/logs") &&
+      r.headers().authorization === "Bearer tab-session",
   );
-  await page.getByRole("link", { name: "AJ-659 · Local read-only job panel" }).click();
-  await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
+  await page.getByRole("tab", { name: "Logs", exact: true }).click();
   await logs;
   await expect(page.getByRole("log")).toContainText("message Tests passed.");
+});
+test("panel wraps long content and restores background scrolling", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const title = "LongUnbrokenTaskTitle".repeat(6);
+  await page.route("**/api/jobs/job-review", async (route) => {
+    const response = await route.fetch();
+    const detail = await response.json();
+    detail.job.title = title;
+    detail.job.repo = "/workspace/" + "repository".repeat(18);
+    detail.markdown = Array.from(
+      { length: 300 },
+      (_, i) => `Result line ${i}`,
+    ).join("\n");
+    await route.fulfill({ json: detail });
+  });
+  await page.goto("/");
+  const overflow = await page.evaluate(() => [
+    document.documentElement.style.overflow,
+    document.body.style.overflow,
+  ]);
+  await page
+    .getByRole("region", { name: "In progress", exact: true })
+    .getByRole("link")
+    .click();
+  const modal = page.getByRole("dialog", { name: "Job details" });
+  await expect(
+    modal.getByRole("heading", { name: title, exact: true }),
+  ).toBeVisible();
+  await expect(modal.getByText(/Result line 299/)).toBeAttached();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - innerWidth,
+    ),
+  ).toBeLessThanOrEqual(1);
+  await modal.evaluate((node) => {
+    node.scrollTop = 500;
+  });
+  expect(await modal.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await expect(modal).toHaveCount(0);
+  expect(
+    await page.evaluate(() => [
+      document.documentElement.style.overflow,
+      document.body.style.overflow,
+    ]),
+  ).toEqual(overflow);
 });

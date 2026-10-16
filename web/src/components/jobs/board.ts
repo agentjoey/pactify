@@ -1,19 +1,5 @@
 import type { Job } from "./Jobs";
 
-export type JobColumn = "running" | "attention" | "succeeded" | "failed";
-export const JOB_COLUMNS: {key: JobColumn; label: string; empty: string; color: string}[] = [
-  {key: "running", label: "RUNNING", empty: "No running jobs", color: "var(--color-role-design)"},
-  {key: "attention", label: "NEEDS ATTENTION", empty: "Nothing needs attention", color: "var(--color-warn)"},
-  {key: "succeeded", label: "SUCCEEDED", empty: "No succeeded jobs", color: "var(--color-success)"},
-  {key: "failed", label: "FAILED / CANCELED", empty: "No failed jobs", color: "var(--color-danger)"},
-];
-
-export function jobColumn(job: Job): JobColumn {
-  if (["queued", "running", "retrying"].includes(job.status)) return "running";
-  if (job.attention.length) return "attention";
-  return job.status === "succeeded" ? "succeeded" : "failed";
-}
-
 export interface JobChain {
   root: Job;
   latest: Job;

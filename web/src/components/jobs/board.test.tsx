@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Jobs, JobList, type Job } from "./Jobs";
-import { jobColumn, mergeJobChains } from "./board";
+import { mergeJobChains } from "./board";
 
 const job = (id: string, extra: Partial<Job> = {}): Job => ({
   id, title: `Title ${id}`, harness: "codex", modelRequested: "model", repo: "/repo",
@@ -10,15 +10,6 @@ const job = (id: string, extra: Partial<Job> = {}): Job => ({
   attention: [], resumeOf: "", resumedBy: [], ...extra,
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); history.replaceState(null, "", "/"); });
-
-it("assigns each job to one column with active status before attention", () => {
-  for (const status of ["queued", "running", "retrying"])
-    expect(jobColumn(job("a", { status, attention: [{kind: "failed", message: "old"}] }))).toBe("running");
-  expect(jobColumn(job("a", {attention: [{kind: "worktree_pending", message: "Apply"}]}))).toBe("attention");
-  expect(jobColumn(job("a", {status: "failed", attention: [{kind: "failed", message: "Failed"}]}))).toBe("attention");
-  expect(jobColumn(job("a"))).toBe("succeeded");
-  for (const status of ["failed", "canceled"]) expect(jobColumn(job("a", { status }))).toBe("failed");
-});
 
 it("keeps a single run and merges repeated resumes in causal order, independent of input order", () => {
   const a = job("a", {resumedBy: ["b"]});
@@ -56,16 +47,10 @@ it("renders one TaskCard-style card per chain using latest status and whole-chai
   expect(card).toHaveClass("task-card");
   for (const text of ["3 runs", "rework 1", "fallback → opencode", "quota", "read-only", "Latest activity"])
     expect(within(card).getByText(text)).toBeInTheDocument();
-  expect(within(screen.getByRole("region", {name: "RUNNING"})).getByRole("link", {name: "First title"})).toHaveAttribute("href", "#/jobs/ccc");
+  expect(within(screen.getByRole("region", {name: "In progress"})).getByRole("link", {name: "First title"})).toHaveAttribute("href", "#/jobs/ccc");
   fireEvent.change(screen.getByLabelText("Harness"), {target: {value: "codex"}});
   expect(screen.getAllByRole("article")).toHaveLength(1);
   expect(screen.getByText("3 runs")).toBeInTheDocument();
-});
-
-it("renders the four Board empty states", () => {
-  render(<JobList jobs={[]} />);
-  for (const text of ["No running jobs", "Nothing needs attention", "No succeeded jobs", "No failed jobs"])
-    expect(screen.getByText(text)).toHaveClass("kb-ghost");
 });
 
 it("opens a deep-linked drawer over the board, switches runs, resets logs, closes and restores focus", async () => {
@@ -79,33 +64,23 @@ it("opens a deep-linked drawer over the board, switches runs, resets logs, close
   history.replaceState(null, "", "/#/jobs/bb");
   render(<Jobs />);
   const drawer = await screen.findByRole("dialog", {name: "Job details"});
+  await within(drawer).findByRole("heading", {name: "Title bb"});
+  fireEvent.click(within(drawer).getByRole("tab", {name: "Brief"}));
   await within(drawer).findByText("Brief bb");
-  expect(within(drawer).getByText("write", {exact: true})).toBeInTheDocument();
+  fireEvent.click(within(drawer).getByRole("tab", {name: "Summary"}));
+  expect(within(drawer).getByText("write · minimal config", {exact: true})).toBeInTheDocument();
   expect(screen.getAllByRole("article", {hidden: true})).toHaveLength(1);
   expect(within(drawer).getByRole("link", {name: /a · succeeded · codex · 1m/})).toHaveAttribute("href", "#/jobs/a");
   await act(async () => { location.hash = "/jobs/a"; window.dispatchEvent(new HashChangeEvent("hashchange")); });
+  await within(drawer).findByRole("heading", {name: "Title a"});
+  fireEvent.click(within(drawer).getByRole("tab", {name: "Brief"}));
   await within(drawer).findByText("Brief a");
+  fireEvent.click(within(drawer).getByRole("tab", {name: "Logs"}));
+  await within(drawer).findByText("logs a");
   expect(within(drawer).getByRole("log")).not.toHaveTextContent("logs bb");
   fireEvent.keyDown(document, {key: "Escape"});
   await act(async () => { window.dispatchEvent(new HashChangeEvent("hashchange")); });
   expect(location.hash).toBe("#/jobs");
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByRole("link", {name: "Title a"})).toHaveFocus();
-});
-
-it("puts Routing in a separate tab and keeps standalone routing read-only", async () => {
-  const fetcher = vi.fn(async (path: string) => new Response(JSON.stringify(path.includes("router") ? {
-    config: {aliases: {fast: {harness: "codex"}}, fallback: {}, quotaGroups: {}}, exhaustedRoutes: [], version: "1",
-  } : [])));
-  const source = {jobsPath: "/jobs", costPath: "/cost", routerPath: "/router", fetch: fetcher, write: vi.fn()};
-  render(<Jobs source={source} standalone />);
-  expect(screen.queryByText("@fast")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("tab", {name: "Routing"}));
-  await screen.findByText("@fast");
-  expect(screen.queryByRole("region", {name: "RUNNING"})).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", {name: "Edit"})).not.toBeInTheDocument();
-  expect(screen.getByRole("tab", {name: "Routing"})).toHaveAttribute("aria-selected", "true");
-  fireEvent.click(screen.getByRole("tab", {name: "Jobs"}));
-  await screen.findByRole("region", {name: "RUNNING"});
-  expect(within(screen.getByRole("tabpanel")).getByRole("region", {name: "RUNNING"})).toBeInTheDocument();
 });

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { JobsSource } from "./source";
 
+import { formatCost } from "./statistics";
+
 interface Totals {
   jobs: number;
   succeeded: number;
@@ -21,7 +23,7 @@ const number = new Intl.NumberFormat("en-US");
 
 function cost(total: Totals) {
   const parts: string[] = [];
-  if (total.costUSD !== null) parts.push(`$${total.costUSD.toFixed(6)}`);
+  if (total.costUSD != null) parts.push(formatCost(total.costUSD));
   if (total.subscriptionJobs > 0) parts.push("subscription");
   if (total.unpricedJobs > 0) parts.push("unknown");
   return parts.join(" + ") || "—";

@@ -1,8 +1,6 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { UsageCard } from "./UsageCard";
-import { Jobs } from "./Jobs";
-import { Panel } from "../../../panel/Panel";
 import { dashboardJobsSource } from "./source";
 
 const totals = {
@@ -47,19 +45,19 @@ it("renders harness jobs, formatted tokens, dollar, subscription and unknown cos
   expect(codex).toHaveTextContent("12,345");
   expect(codex).toHaveTextContent("2,345");
   expect(codex).toHaveTextContent("subscription");
-  expect(within(card).getByRole("row", { name: /opencode/ })).toHaveTextContent("$0.125000");
+  expect(within(card).getByRole("row", { name: /opencode/ })).toHaveTextContent("$0.13");
   expect(within(card).getByRole("row", { name: /custom/ })).toHaveTextContent("unknown");
   const total = within(card).getByRole("row", { name: /Total/ });
   expect(total).toHaveTextContent("6 (3 ok / 3 failed)");
   expect(total).toHaveTextContent("37,035");
-  expect(total).toHaveTextContent("$0.125000 + subscription + unknown");
+  expect(total).toHaveTextContent("$0.13 + subscription + unknown");
   expect(card).toHaveTextContent("* includes 3 jobs with partial usage");
   expect(card).toHaveTextContent("Exhausted: codex/gpt-5 (resets in 2h 30m)");
   expect(card).toHaveTextContent("Exhausted: agy (resets in unknown)");
 });
-it("keeps explicit zero dollars, empty totals, and omits absent partial/quota notes", async () => {
+it("formats explicit zero as sub-cent, keeps empty totals, and omits absent partial/quota notes", async () => {
   await show({ ...report, groups: [{ ...report.groups[1], costUSD: 0 }], total: { ...report.total, usagePartialJobs: 0 }, exhaustedRoutes: [] });
-  expect(screen.getByRole("row", { name: /opencode/ })).toHaveTextContent("$0.000000");
+  expect(screen.getByRole("row", { name: /opencode/ })).toHaveTextContent("<$0.01");
   expect(screen.queryByText(/includes .*partial/)).not.toBeInTheDocument();
   expect(screen.queryByText(/Exhausted:/)).not.toBeInTheDocument();
   cleanup();
@@ -82,24 +80,6 @@ it("polls every 30 seconds, retries failures, and aborts on unmount", async () =
   expect(signal?.aborted).toBe(true);
   await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
   expect(fetcher).toHaveBeenCalledTimes(3);
-});
-it("shows Usage unavailable without hiding the Jobs list on an API error", async () => {
-  vi.stubGlobal("fetch", vi.fn(async (path: string) => path.includes("/cost")
-    ? new Response("failed", { status: 500 })
-    : new Response(JSON.stringify([{ id: "job", title: "Visible job", harness: "codex", status: "succeeded", createdAt: report.until, attention: [], resumedBy: [] }]))));
-  render(<Jobs />);
-  await act(async () => {});
-  expect(screen.getByRole("link", { name: "Visible job" })).toBeInTheDocument();
-  expect(screen.getByText("Usage unavailable")).toBeInTheDocument();
-});
-it("uses authenticated panel cost routing as well as the dashboard source", async () => {
-  sessionStorage.setItem("pactify-panel-session", "fixture-session");
-  const fetcher = vi.fn(async (path: string) => new Response(JSON.stringify(path.includes("/cost") ? report : [])));
-  vi.stubGlobal("fetch", fetcher);
-  render(<Panel />);
-  await act(async () => {});
-  expect(screen.getByRole("row", { name: /codex/ })).toHaveTextContent("subscription");
-  expect(fetcher).toHaveBeenCalledWith("/api/cost?since=7d&by=harness", expect.objectContaining({ credentials: "omit", headers: { Authorization: "Bearer fixture-session" } }));
 });
 it("shows a loading state and handles malformed responses as unavailable", async () => {
   let resolve!: (response: Response) => void;

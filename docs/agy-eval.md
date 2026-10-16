@@ -3,6 +3,8 @@
 > M2 里程碑（Linear P-AJ-18 · AJ-650）。方法照搬 [`phase0-report.md`](phase0-report.md)，结果可以和 codex、kimi 的首轮直接对比。
 > 实测 2026-10-16 · 基线 `88df743`（与 Phase 0 相同）· agy 1.3.5，评估途中自动升级到 1.3.6 · 模型 `gemini-3.8-flash-high`（agy 列表里最强的 Gemini 档）· pactify main `182afa9`（含 AJ-649）· host：Claude Code headless，模型 haiku，经插件 `/pactify:agy` 委派
 
+> AJ-711 supersedes the read-only closure below with the v2 plan policy and fail-closed baseline. The evaluation results remain historical; reevaluation is outside AJ-711.
+
 ## 结论
 
 | 指标 | codex（Phase 0） | kimi（Phase 0） | **agy** |

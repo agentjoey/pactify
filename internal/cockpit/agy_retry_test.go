@@ -22,15 +22,19 @@ func TestAgyContinuationPinsDefaultModel(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sess.Close()
-	agyTurn(t, sess)
-	agyTurn(t, sess)
-	if len(calls) != 2 {
+	for i := 0; i < 2; i++ {
+		ev := agyTurn(t, sess)
+		if ev[len(ev)-1].State != StateTurnCompleted {
+			t.Fatal(ev)
+		}
+	}
+	if len(calls) != 1 {
 		t.Fatalf("calls=%v", calls)
 	}
-	for flag, want := range map[string]string{"--conversation": "session-a", "--model": "model-a", "--effort": "low"} {
-		i := slices.Index(calls[1], flag)
-		if i < 0 || i+1 >= len(calls[1]) || calls[1][i+1] != want {
-			t.Errorf("continuation lost %s=%s: %v", flag, want, calls[1])
+	for flag, want := range map[string]string{"--model": AgyDefaultModel, "--effort": "low"} {
+		i := slices.Index(calls[0], flag)
+		if i < 0 || i+1 >= len(calls[0]) || calls[0][i+1] != want {
+			t.Errorf("continuation lost %s=%s: %v", flag, want, calls[0])
 		}
 	}
 }

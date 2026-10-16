@@ -10,10 +10,12 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/sub"
 	"github.com/spf13/cobra"
 )
@@ -67,6 +69,7 @@ func newSubCmd() *cobra.Command {
 		code, err := subRun(c, runHarness, model, effort, cwd, readOnly, write, c.Flags().Changed("resume"), fresh, wait, jsonOut, resume)
 		subExit(c, code, err)
 	}}
+	run.Flags().Int("completion-followups", 2, "Agy completion followups (0 disables, maximum 5)")
 	run.Flags().Int("retries", sub.DefaultRetries, "Transient continuations (0 disables, maximum 5)")
 	run.Flags().StringVar(&model, "model", "", "Requested model (must be available)")
 	run.Flags().StringVar(&effort, "effort", "", "Reasoning effort")
@@ -130,7 +133,10 @@ func newSubCmd() *cobra.Command {
 	result.Flags().BoolVar(&resultJSON, "json", false, "Print JSON")
 	cancel := &cobra.Command{Use: "cancel <job>", Short: "Cancel a worker and its agent", Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subCancel(c, a[0]); subExit(c, code, err) }}
 	worker := &cobra.Command{Use: "__worker <job>", Hidden: true, Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subWorker(c.Context(), a[0]); subExit(c, code, err) }}
-	command.AddCommand(run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd(), newSubPanelCmd(), newSubCostCmd(), newSubQuotaCmd(), newSubRouterCmd())
+	hook := &cobra.Command{Use: "agy-hook", Hidden: true, Args: subArgs(0), Run: func(c *cobra.Command, _ []string) {
+		cockpit.RunAgyHook(c.Context(), c.InOrStdin(), c.OutOrStdout(), os.Getenv("PACTIFY_AGY_READ_ONLY"))
+	}}
+	command.AddCommand(hook, run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd(), newSubPanelCmd(), newSubCostCmd(), newSubQuotaCmd(), newSubRouterCmd())
 	addSubWorktreeCommands(command, run)
 	return command
 }
@@ -188,6 +194,10 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if !ok {
 		return 2, fmt.Errorf("unknown harness %q; available: %s", name, strings.Join(sub.Names(), ", "))
 	}
+
+	if effort != "" && len(h.Efforts()) > 0 && !slices.Contains(h.Efforts(), effort) {
+		return 2, fmt.Errorf("unsupported effort %q; available: %s", effort, strings.Join(h.Efforts(), ", "))
+	}
 	if readOnly && write {
 		return 2, fmt.Errorf("--read-only and --write cannot be used together")
 	}
@@ -221,6 +231,13 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	}
 	req := sub.Request{Harness: name, Model: model, Effort: effort, Cwd: dir, Brief: string(brief), Access: "write"}
 	req.Retries = &retries
+	if c.Flags().Lookup("completion-followups") != nil {
+		n, _ := c.Flags().GetInt("completion-followups")
+		if n < 0 || n > 5 {
+			return 2, fmt.Errorf("--completion-followups must be between 0 and 5")
+		}
+		req.CompletionFollowups = &n
+	}
 	req.WithUserConfig, _ = c.Flags().GetBool("with-user-config")
 	if readOnly {
 		req.Access = "read-only"

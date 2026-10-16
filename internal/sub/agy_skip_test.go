@@ -4,11 +4,10 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
-func TestAgyDoctorSkipsReadOnly(t *testing.T) {
+func TestAgyDoctorRunsReadOnly(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	fakeAgyUserHome(t)
 	h, _ := Lookup("agy")
@@ -24,12 +23,11 @@ func TestAgyDoctorSkipsReadOnly(t *testing.T) {
 				t.Fatal(err)
 			}
 			if st.Request.Access != "write" {
-				t.Error("doctor ran read-only probe")
-			}
-			if err := os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600); err != nil {
+				writeAgyDeniedDoctorLog(t, store, id)
+			} else if err := os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			return Result{Status: StatusSucceeded, CLIVersion: "test", ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
+			return Result{ToolCalls: 1, Status: StatusSucceeded, CLIVersion: "test", ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
 		},
 	})
 	if err != nil || len(reports) != 1 {
@@ -39,12 +37,12 @@ func TestAgyDoctorSkipsReadOnly(t *testing.T) {
 	for _, c := range reports[0].Checks {
 		if c.Name == "Read-only access" {
 			found = true
-			if c.Status != "SKIP" || h.NoReadOnly == "" || c.Reason != h.NoReadOnly || !strings.Contains(c.Reason, "codex --read-only") {
+			if c.Status != "PASS" || h.NoReadOnly != "" {
 				t.Errorf("check=%+v", c)
 			}
 		}
 	}
-	if !found || calls != 1 {
+	if !found || calls != 3 {
 		t.Fatalf("found=%t calls=%d", found, calls)
 	}
 }

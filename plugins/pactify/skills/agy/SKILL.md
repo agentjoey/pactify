@@ -1,11 +1,11 @@
 ---
 name: agy
-description: Experimental harness — large tasks completed in one attempt 1/10; read-only work never converged. Delegate a large coding task, investigation or review to the agy harness and get back a verified result summary.
+description: Experimental harness — large tasks completed in one attempt 1/10; v2 read-only uses plan mode and a fail-closed baseline. Delegate a large coding task, investigation or review to the agy harness and get back a verified result summary.
 ---
 
 # Delegate to agy (experimental)
 
-**agy is an experimental harness (large tasks completed in one attempt 1/10; read-only work never converged).**
+**agy is an experimental harness (large tasks completed in one attempt 1/10; v2 read-only uses plan mode and a fail-closed baseline).**
 Prefer the default codex harness (`/delegate` or `/codex`).
 
 **If the user invoked this skill explicitly (`/agy` or `/pactify:agy`), always delegate — whatever
@@ -17,8 +17,8 @@ Launch command (step 2 below):
     ...complete brief from step 1...
     BRIEF
 
-Always pass `--write`; agy read-only tasks must go to codex. Never raise permissions yourself.
-Models come from `agy models`; preserve the requested model.
+Use `--read-only` for investigations and reviews. Use `--write` only with explicit permission to change files. Never raise permissions yourself.
+Models come from `agy models --model gemini-3.8-flash-low`; preserve the requested model. Pactify always supplies a model, defaulting to router settings or flash-low.
 
 <!-- BEGIN SHARED-DELEGATION -->
 When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than
@@ -139,8 +139,25 @@ assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
    Repeat step 3 after every rework turn; apply only after all required checks and reviews pass.
 <!-- END SHARED-DELEGATION -->
 
-**Read-only tasks are not offered for agy in this version**: `pactify sub run agy --read-only` exits 2.
-All 3 evaluation read-only tasks ended without findings after headless mode auto-denied shell commands.
-Send read-only investigations and reviews to codex (`/codex`, `--read-only`). Only use agy with
-`--write` when the user has allowed changes; do not raise permissions on your own.
-Owner decided on 2026-10-16 to keep agy experimental, close read-only access and stop testing.
+Read-only access uses `--mode plan`, exact read-only shell commands, and a managed
+PreToolUse hook that denies writes. Tracked, untracked, and ignored files are checked
+against a fail-closed baseline. Write access uses `--dangerously-skip-permissions`;
+`sandboxed=false` because agy has no OS write sandbox here. With managed config, the hook rejects
+`BypassSandbox` requests. Keep the experimental label until the separate evaluation.
+
+Each job keeps one persistent stream-json process and conversation across turns.
+Transient failures continue that conversation, restarting with `--conversation` after
+an exit. Empty replies and print timeouts fail. Unfinished replies receive up to two
+completion followups (`--completion-followups`). Quota snapshots before and after the
+job are non-billable and appear in `sub cost` and Dashboard Quota.
+
+Write access supports `--with-user-config` and reports the warning:
+`managed hooks are not installed with --with-user-config`. This opt-out uses the
+user's integrations; read-only access requires managed config. In managed mode,
+missing or invalid hook access settings deny writes. Read-only access refuses
+repositories containing workspace hooks directories (`.agents`, `.agent`, `_agents`).
+The file baseline covers the repository; writes outside it are denied by the hook.
+
+Agy 1.4.0 requires effort to match the model's tier suffix: for example,
+`gemini-3.8-flash-low --effort high` fails before inference. Use a matching
+model/effort pair or omit `--effort`; never silently switch the requested model.

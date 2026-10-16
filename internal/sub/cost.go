@@ -3,6 +3,7 @@ package sub
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/agentjoey/pactify/internal/cockpit"
 	"os"
 	"sort"
 	"strconv"
@@ -39,10 +40,11 @@ type CostSkipped struct {
 }
 
 type QuotaSnapshot struct {
-	Harness    string    `json:"harness"`
-	JobID      string    `json:"jobId"`
-	ObservedAt time.Time `json:"observedAt"`
-	RateLimit  string    `json:"rateLimit"`
+	Buckets    []cockpit.QuotaBucket `json:"buckets,omitempty"`
+	Harness    string                `json:"harness"`
+	JobID      string                `json:"jobId"`
+	ObservedAt time.Time             `json:"observedAt"`
+	RateLimit  string                `json:"rateLimit"`
 }
 
 // CostReport is the stable, read-only cost contract documented in sub-cost.md.
@@ -180,10 +182,17 @@ func (s Store) CostReport(since time.Time, by string, now time.Time) (CostReport
 		if observed.IsZero() {
 			observed = st.CreatedAt
 		}
+		if n := len(result.QuotaSnapshots); n > 0 && !result.QuotaSnapshots[n-1].ObservedAt.IsZero() {
+			observed = result.QuotaSnapshots[n-1].ObservedAt
+		}
 		if result.RateLimit != "" && !observed.After(now) && !st.CreatedAt.After(now) {
 			previous, found := quotas[harness]
 			if !found || observed.After(previous.ObservedAt) || (observed.Equal(previous.ObservedAt) && st.ID > previous.JobID) {
-				quotas[harness] = QuotaSnapshot{Harness: harness, JobID: st.ID, ObservedAt: observed, RateLimit: result.RateLimit}
+				snapshot := QuotaSnapshot{Harness: harness, JobID: st.ID, ObservedAt: observed, RateLimit: result.RateLimit}
+				if n := len(result.QuotaSnapshots); n > 0 {
+					snapshot.Buckets = result.QuotaSnapshots[n-1].Buckets
+				}
+				quotas[harness] = snapshot
 			}
 		}
 		if !inWindow {

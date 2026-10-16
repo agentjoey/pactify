@@ -20,7 +20,10 @@ func TestDoctorModelOverride(t *testing.T) {
 				home := t.TempDir()
 				t.Setenv("PACTIFY_HOME", home)
 				t.Setenv("PACTIFY_SUB_FAKE", "1")
-				const model = "minimax-coding-plan/MiniMax-M3"
+				model := "minimax-coding-plan/MiniMax-M3"
+				if name == "agy" {
+					model = cockpit.AgyDefaultModel
+				}
 				// Replace external operations; preserve both default-selection inputs
 				// so an explicit model must beat DoctorModel and live-list heuristics.
 				h := Harness{Name: name, DoctorModel: "preset", HidesItself: true,
@@ -46,12 +49,15 @@ func TestDoctorModelOverride(t *testing.T) {
 						if st.Request.Model != model {
 							t.Errorf("%s probe model=%q, want %q", st.Request.Access, st.Request.Model, model)
 						}
-						if st.Request.Access == "write" {
+						if st.Request.Access == "write" && id != "read-only-hook" {
 							for file, content := range map[string]string{"out.txt": "ok", "doctor-network.json": `{"bind":true,"external":true}`} {
 								if err := os.WriteFile(filepath.Join(st.Request.Cwd, file), []byte(content), 0600); err != nil {
 									t.Fatal(err)
 								}
 							}
+						}
+						if name == "agy" && st.Request.Access == "read-only" {
+							writeAgyDeniedDoctorLog(t, s, id)
 						}
 						if name == "opencode" && st.Request.Access == "read-only" {
 							writeDeniedDoctorLog(t, s, id)
@@ -59,7 +65,7 @@ func TestDoctorModelOverride(t *testing.T) {
 						return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: st.Request.Model, ModelVerified: true, FinalText: "done", InputTokens: 1, ToolCalls: 1}, nil
 					},
 				})
-				if err != nil || len(reports) != 1 || !reports[0].Passed() || calls != 2 {
+				if err != nil || len(reports) != 1 || !reports[0].Passed() || calls != map[bool]int{true: 3, false: 2}[name == "agy"] {
 					t.Fatalf("reports=%+v calls=%d err=%v", reports, calls, err)
 				}
 				table := readVerifiedVersions(filepath.Join(home, "verified-versions.json"))

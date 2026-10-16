@@ -32,7 +32,7 @@ Use `/pactify:delegate`, `/pactify:codex`, `/pactify:kimi`, `/pactify:agy`, or `
 `/delegate` uses the default codex harness; `/codex`, `/kimi`, `/agy` and `/opencode` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
 Delegation suits tasks involving 3 or more files, exploration and testing, or more than about 10 minutes of work. Claude can handle small edits directly.
 When choosing autonomously, avoid delegating tasks that depend on extensive conversation context that cannot fit in a self-contained brief, or require frequent user interaction.
-Explicit invocations still delegate, but kimi's and agy's read-only restrictions remain: never raise permissions yourself.
+Explicit invocations still delegate, but kimi's read-only restriction remains: never raise permissions yourself.
 
 The Claude main thread first writes a complete brief with Background, numbered goals, Known constraints and special cases, General constraints, and Acceptance commands.
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
@@ -42,7 +42,7 @@ The five delegation skills (codex, kimi, agy, opencode, delegate) embed the same
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
-Use codex `--read-only` for read-only tasks. `kimi --read-only` and `agy --read-only` are refused (each exits 2), including resume of an old read-only job.
+Use codex, opencode, or agy `--read-only` for read-only tasks. `kimi --read-only` is refused (exits 2), including resume of an old read-only job.
 Exit 3 means the job is still running and stdout contains `jobId`. The main thread runs
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000`, then reviews the result as described below.
 If the background wait stops at its time limit, check `pactify sub status` and resume the same wait; do not start a duplicate job.
@@ -161,19 +161,21 @@ The result's Harness line reports `kimi (minimal config)` or `kimi (user config)
 
 ## agy (experimental)
 
-agy is an experimental harness (1/10 large tasks completed in one attempt), adapted to Antigravity CLI 1.3.5.
-The stream-json backend sends prompts on stdin, verifies `init.model`, and counts
-input tokens as `input_tokens + cache_read_tokens`. `agy models` provides the dynamic
-model ids; unsupported requested models fail with available choices. SIGINT cancels
-the CLI; a grace timeout escalates to kill and waits for exit. Headless auto-denials
-fail the job even when the CLI returns SUCCESS, because required work did not execute.
+agy remains experimental (1/10 large tasks completed in one attempt in the previous evaluation).
+The v2 adapter targets Antigravity CLI 1.4.0, with one persistent stream-json process
+per job. Every call explicitly supplies a model, defaulting to router settings or
+`gemini-3.8-flash-low`. Tokens come from step usage; result totals are cumulative.
 
-Read-only access is not offered for agy in this version (`pactify sub run agy --read-only` exits 2).
-All 3 evaluation read-only tasks ended without findings after headless mode auto-denied shell commands.
-Use codex `--read-only` for read-only tasks; use agy `--write` only with explicit write permission.
-Resume of an old read-only agy job is also refused. Doctor skips read-only access using the same
-reason; Session hiding and Managed home use the write probe. Owner decided on 2026-10-16 to keep
-agy experimental, close read-only access and stop testing.
+Read-only access uses `--mode plan`, an exact command allowlist, and managed
+PreToolUse hooks that deny writing tools and shell composition. A fail-closed
+baseline covers tracked, untracked, and ignored files. Write jobs report
+`sandboxed=false`; `--sandbox` is not used. Managed hooks reject `BypassSandbox`.
+Doctor checks denied-write evidence (WARN if no write was attempted) and Network.
+Empty results, empty denied results, and print timeouts fail. Incomplete replies get
+up to two followups (`--completion-followups`), in the same process. Transient errors
+reuse the conversation; process exits restart with `--conversation`. Non-billable
+`/usage` snapshots before and after each job expose bucket fractions and reset times
+in quota.json, result JSON, `sub cost`, and Dashboard Quota.
 Cancellation snapshots all descendants before signaling agy, then sends surviving
 descendants SIGTERM and SIGKILL as needed, verifying birth identity before each signal.
 Normal completion leaves descendants alone.
@@ -193,7 +195,7 @@ normal minimal configuration, including directory permissions and link integrity
 | | codex | kimi | agy | opencode |
 |---|---|---|---|---|
 | `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + edit/bash/webfetch allow |
-| `--read-only` | read-only sandbox, no network | Not offered in the first release | Not offered; use codex `--read-only` | Not offered; use codex `--read-only` |
+| `--read-only` | read-only sandbox, no network | Not offered in the first release | plan + exact commands + managed hooks + fail-closed baseline | Not offered; use codex `--read-only` |
 
 ## Known limitations
 
@@ -238,7 +240,7 @@ records retain their existing format and require all applicable checks to pass.
 
 Model-error alternatives in both `sub run` and doctor show at most 10 ids, preferring
 the requested provider and then the closest model names. A truncated list includes
-the omitted count and a full-list hint: `opencode models`, `agy models`,
+the omitted count and a full-list hint: `opencode models`, `agy models --model gemini-3.8-flash-low`,
 `codex debug models`, or `/model` inside interactive `kimi`. When doctor's read-only
 probe returns the same error as its write probe, its reason says
 `same as above (Write access)` instead of repeating the alternatives.

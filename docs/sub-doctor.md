@@ -13,11 +13,11 @@ pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3
 
 显式模型直接经过 `sub run --model` 使用的 `RunJob` 和 harness 后端校验，不先做 doctor 的默认选模列表探测。无效、不受支持或未被后端确认的模型会输出可读原因并使自检退出 1。动态模型表失败也遵循对应后端的既有行为：agy 的列表仅作预检，列表不可用时继续交由 CLI 拒绝无效模型，并核对 `init.model`；kimi 必须通过 ACP 的可用模型及设置确认，opencode 使用 v1 provider 列表和 assistant 消息核实，codex 必须确认实际模型，失败时尝试列出可用模型。显式选择不改变实际模型的独立核实要求，也不改变 `verified-versions.json` 的格式或更新条件。
 
-模型报错中的可用候选最多显示 10 个：同 provider 前缀优先，再按模型名称的编辑距离由近到远排序；并列时保留原列表顺序。被截断时，末尾显示 `… and N more` 及完整列表入口：opencode 用 `opencode models`，agy 用 `agy models`，codex 用 `codex debug models`；kimi 启动 `kimi` 后进入 [`/model`](https://moonshotai.github.io/kimi-code/en/reference/slash-commands)。这项格式同时用于 `sub run`、新会话及续接的模型校验，不改变校验用的完整模型表。doctor 的只读探测如果返回与可写探测相同的错误，原因写为 `same as above (Write access)`；不同原因仍分别显示。
+模型报错中的可用候选最多显示 10 个：同 provider 前缀优先，再按模型名称的编辑距离由近到远排序；并列时保留原列表顺序。被截断时，末尾显示 `… and N more` 及完整列表入口：opencode 用 `opencode models`，agy 用 `agy models --model gemini-3.8-flash-low`，codex 用 `codex debug models`；kimi 启动 `kimi` 后进入 [`/model`](https://moonshotai.github.io/kimi-code/en/reference/slash-commands)。这项格式同时用于 `sub run`、新会话及续接的模型校验，不改变校验用的完整模型表。doctor 的只读探测如果返回与可写探测相同的错误，原因写为 `same as above (Write access)`；不同原因仍分别显示。
 
 探测沿用 `sub run` 的默认配置策略：codex 以最小配置启动，关闭 MCP、插件、skills 和记忆；认证、provider、沙箱设置以及全局和仓库指令仍由原生 harness 加载。kimi 使用独立的 `KIMI_CODE_HOME=$PACTIFY_HOME/harness-homes/kimi`，目录权限 0700，不放 `mcp.json`。`config.toml`、`credentials/`、`device_id` 只用符号链接指向 pactify 进程的 `KIMI_CODE_HOME`（未设置时为 `~/.kimi-code`）；不读取或复制内容，缺少原文件时提示先 `kimi login`。每次启动修复链接，结束时若发现链接变成普通文件或目录，删除副本并在结果中警告；下次启动重建链接。共享目录长期保留以支持续接。普通 job 可用 `--with-user-config` 恢复全部用户集成；doctor 始终验证默认路径。
 
-codex 输出六项「PASS / FAIL / SKIP + reason」：安装及版本、可写档（文件、最终回复、token）、独立核实的实际模型、只读档、网络、不留痕。codex 只读档必须实际调用工具、正常结束且没有留下改动；kimi、agy 沿用注册表的 `NoReadOnly` 原因跳过；opencode 用 plan 执行 `ls` 和 `echo x > probe.txt`，必须从工具错误确认写入被拒且文件不存在；仅模型口头拒绝不能 PASS。网络检查 codex 和 opencode 可写档，需要脚本生成的本地绑定和 HTTPS 成功证据，单凭最终回复不能通过。所有执行结果的 CLI 版本也必须与探测开始时的版本一致。
+codex 输出六项「PASS / FAIL / SKIP + reason」：安装及版本、可写档（文件、最终回复、token）、独立核实的实际模型、只读档、网络、不留痕。codex 只读档必须实际调用工具、正常结束且没有留下改动；kimi follows the registry `NoReadOnly` exception; agy and opencode 用 plan 执行 `ls` 和 `echo x > probe.txt`，必须从工具错误确认写入被拒且文件不存在；仅模型口头拒绝不能 PASS。Network checks cover codex, agy and opencode write jobs，需要脚本生成的本地绑定和 HTTPS 成功证据，单凭最终回复不能通过。所有执行结果的 CLI 版本也必须与探测开始时的版本一致。
 
 codex 的只读探测明确要求通过 shell 工具执行 `sh -c 'echo hi > out.txt'; echo EXIT=$?`，并原样报告 stdout、stderr 与退出码。写入由沙箱决定是否拦截；即使最终回复声称被拦，只要没有工具调用，仍判为失败。
 
@@ -92,24 +92,39 @@ GOCACHE="${PACTIFY_HOME:-$HOME/.pactify}/cache/go-build" go clean -cache
 
 未执行真实 codex/kimi 会话，因此上述测试不能作为当前厂商 CLI、模型、登录或实际外网的验收结论。
 
-## agy（AJ-649）
+## agy v2 (AJ-711, 1.4.0)
 
-`pactify sub doctor agy` 沿用七项检查：安装、可写、实际模型、只读、网络（SKIP）、会话隐藏、受管目录。
-从 `agy models` 的动态表选择第一个模型作为探测模型；列表没有价格信息，因此不宣称它是最便宜的模型。
-模型列表和任务进程均过滤其他厂商的 API key，使用受管 HOME。
-实际模型取 `init.model`；输入 token 为 `input_tokens + cache_read_tokens`，总 token 按实际输入加输出计算，不用步骤用量重复累加最终结果。
-命令行后端遵循 [官方 stdin 协议](https://www.agy.dev/docs/cli/headless/)，每轮一个进程，通过 `--conversation` 续接。
-可写档用 `--dangerously-skip-permissions`，不使用 `--sandbox`。
-无头权限自动拒绝即使返回 SUCCESS，普通 job 仍判失败，因为要求的操作未执行。
+`pactify sub doctor agy --model gemini-3.8-flash-low` runs eight checks:
+Installed, Write access, Model, Read-only access, Read-only hook, Network, Session hiding, and Managed home.
+Discovery and version probes explicitly supply flash-low. The model table remains dynamic;
+only available `gemini-3.8-flash-*` models can run doctor probes. An explicit non-flash model or a catalog without flash fails preflight.
 
-**Owner 已拍板（2026-10-16）：agy 保持实验性，关闭只读档，不再测。**
-评估的 3 个只读任务均因 shell 被自动拒绝、本轮立即结束而交不出结论。
-`sub run agy --read-only` 以退出码 2 拒绝执行，并指向 `codex --read-only`；旧只读 job 的续接同样拒绝。
-doctor 与 kimi 一致，直接以注册表的 `NoReadOnly` 原因将 Read-only access 标为 SKIP，
-不启动只读 job，也不再将拒绝后结束本轮判为 PASS。
-Session hiding 和 Managed home 使用可写探测的结果。
-取消在 SIGINT 前记录全部后代进程（包括独立进程组/会话），主进程退出或宽限结束后，
-对仍存活的后代逐个先 SIGTERM 再 SIGKILL，每次核对出生身份；正常结束不处理后代。
+A job owns one persistent stream-json process. Turns share a conversation; process restarts
+and job resume retain `--conversation`. Step usage includes cached inputs and avoids
+cumulative-result double counting. Write mode uses `--dangerously-skip-permissions` and
+reports `sandboxed=false`; no `--sandbox` is used. With managed config, hooks deny `BypassSandbox`. Write `--with-user-config` warns
+`managed hooks are not installed with --with-user-config`; read-only rejects it.
+Read-only refuses workspace hooks directories (`.agents`, `.agent`, `_agents`).
+Only repository files are covered by the baseline; external writes rely on the hook.
+
+Read-only is restored, superseding AJ-683. Plan mode, exact read commands, a managed
+write-denial hook, and the shared fail-closed filesystem baseline cover tracked, untracked,
+and ignored files. Doctor requests a real `echo x > probe.txt` tool invocation and checks
+the denied-tool event plus file absence. It retries once and reports WARN if the model
+never attempts the write. The separate Read-only hook probe uses native write access
+with the read-only hook environment and requires a `Pactify read-only policy` rejection.
+Probe process markers include the disposable store identity; jobs named `write` in
+other stores cannot interrupt doctor cleanup. Network requires script-generated local bind and HTTPS evidence.
+
+Empty replies, denied empty replies, and print-timeout empty replies fail. Explicit pending
+replies or ACTIVE tools get up to two completion followups in the same process. At the limit, retain a non-empty answer
+with a warning. Each turn recalculates active tools. Non-billable
+`/usage` snapshots before and after jobs record remaining fractions and reset times. Actual
+quota failures retain ResetAt. Observations live in `quota-snapshots.json`, keeping
+`quota.json` compatible with older binaries. An opening snapshot has a 5-second
+budget. Terminal status publishes before a bounded 10-second closing snapshot;
+failures remain warnings and never become the job error. The harness remains experimental pending separate evaluation.
+Cancellation retains the existing descendant identity checks and cleanup.
 
 默认 `HOME=$PACTIFY_HOME/harness-homes/agy`（0700）。真实 HOME 顶层项逐一链接，唯独排除 `.gemini`；
 受管 `.gemini/antigravity-cli/antigravity-oauth-token` 只链接到原文件，不读取或复制凭据。
@@ -125,7 +140,7 @@ Session hiding 和 Managed home 使用可写探测的结果。
 
 | 适配版本 | 证据与范围 |
 |---|---|
-| agy 1.3.5 | Owner 提供的 host 实测：权限、取消、动态模型、stream-json、续接、镜像 HOME 登录与会话隔离；本变更只使用假 HOME / 假 agy 自动测试，完整真机 doctor 由 host 执行后写入本机版本表 |
+| agy 1.4.0 | Protocol target confirmed by the isolated probe report. AJ-711 replay tests cover v2; the local verified-version record is written only after real doctor checks pass. Live acceptance evidence is tracked in [AJ-711 report](harness-v2/aj711-report.md). |
 
 
 ## opencode（AJ-710，实验性）

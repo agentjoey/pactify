@@ -27,7 +27,7 @@ func TestFailureRegression(t *testing.T) {
 		{"codex", "Task canceled", "canceled"},
 		{"agy", "agy models: signal: killed", "other"},
 		{"codex", "job worker is absent or its process identity no longer matches", "other"},
-		{"agy", cockpit.AgyNoReadOnly, "other"},
+		{"agy", "Read-only access was not offered for agy in the first release", "other"},
 		{"codex", "git rev-parse HEAD: fatal: not a git repository", "other"},
 		{"agy", "Authentication expired. Please log back in.", "auth"},
 		{"agy", "agy token unavailable; run agy login first: missing", "auth"},

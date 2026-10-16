@@ -9,7 +9,9 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -45,6 +47,7 @@ func TestAgyProcessHelper(t *testing.T) {
 		os.Exit(14)
 	}
 	scan := bufio.NewScanner(os.Stdin)
+nextInput:
 	if !scan.Scan() {
 		os.Exit(15)
 	}
@@ -59,7 +62,23 @@ func TestAgyProcessHelper(t *testing.T) {
 	}
 	mode := os.Getenv("PACTIFY_AGY_MODE")
 	if mode != "no-init" {
-		fmt.Println(`{"event":"init","conversation_id":"session-a","init":{"model":"model-a"}}`)
+		model := "model-a"
+		for i, arg := range args {
+			if arg == "--model" && i+1 < len(args) {
+				model = args[i+1]
+			}
+		}
+		fmt.Printf("{\"event\":\"init\",\"conversation_id\":\"session-a\",\"init\":{\"model\":%q}}\n", model)
+	}
+	if mode == "eof-orphan" {
+		child := exec.Command("sleep", "60")
+		child.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		if child.Start() != nil {
+			os.Exit(25)
+		}
+		_ = os.WriteFile(os.Getenv("AGY_EOF_CHILD"), []byte(strconv.Itoa(child.Process.Pid)), 0600)
+		scan.Scan() // EOF exits immediately, orphaning the detached protected child.
+		os.Exit(0)
 	}
 	if mode == "descendant" {
 		signal.Ignore(os.Interrupt)
@@ -120,6 +139,9 @@ func TestAgyProcessHelper(t *testing.T) {
 		os.Exit(1)
 	default:
 		fmt.Println(`{"event":"result","result":{"conversation_id":"session-a","status":"SUCCESS","response":"answer","usage":{"input_tokens":20,"cache_read_tokens":180,"output_tokens":7,"thinking_tokens":4,"total_tokens":27}}}`)
+	}
+	if mode == "" || mode == "resume" || mode == "narration" || mode == "models-fail" {
+		goto nextInput
 	}
 	os.Exit(0)
 }
@@ -185,7 +207,7 @@ func TestAgyStreamResumeAndUsage(t *testing.T) {
 					final = e.Text
 				}
 			}
-			if starts != 1 || ends != 1 || usage.InputTokens != 200 || usage.OutputTokens != 7 || usage.TotalTokens != 207 || final != "answer" || events[len(events)-1].State != StateTurnCompleted || s.ThreadID() != "session-a" || s.(InfoSession).Info().Model != "model-a" {
+			if starts != 1 || ends != 1 || usage.InputTokens != 100 || usage.OutputTokens != 3 || usage.TotalTokens != 103 || final != "answer" || events[len(events)-1].State != StateTurnCompleted || s.ThreadID() != "session-a" || s.(InfoSession).Info().Model != "model-a" {
 				t.Fatalf("events=%+v usage=%+v id=%s", events, usage, s.ThreadID())
 			}
 			// The second prompt and an explicit resume both use the learned conversation id.

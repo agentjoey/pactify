@@ -321,6 +321,8 @@ it("calculates chain KPIs and fourteen calendar days without dropping separate-r
     }),
     makeJob("b", {
       createdAt: now.toISOString(),
+      // A running job has no finish time; the fixture default is the wall clock.
+      finishedAt: undefined,
       status: "running",
       resumeOf: "a",
       activity: { summary: "", inputTokens: 50, outputTokens: 5 },

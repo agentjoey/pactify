@@ -1,12 +1,15 @@
 package cockpit
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -19,6 +22,11 @@ import (
 // Explicit Interrupt, the context watcher and Close share the same cleanup.
 type agyProcess struct {
 	cmd           *exec.Cmd
+	stdin         io.WriteCloser
+	lines         chan json.RawMessage
+	ctx           context.Context
+	err           error
+	diagnostics   *agyDiagnostics
 	stdout        io.ReadCloser
 	done          chan struct{}
 	stop          context.CancelFunc
@@ -38,9 +46,11 @@ func (p *agyProcess) interrupt(ctx context.Context, grace time.Duration) error {
 			return
 		default:
 		}
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Fprintf(p.diagnostics, "pactify interrupt requested at %s:%d\n", file, line)
 		p.cancelling.Store(true)
 		p.stop()
-		// Snapshot before SIGINT: agy may exit immediately and reparent its tools.
+		// Snapshot before EOF or SIGINT: agy may exit immediately and reparent its tools.
 		var descendants []procx.Identity
 		var snapshotErr error
 		if p.identityErr != nil {
@@ -51,6 +61,7 @@ func (p *agyProcess) interrupt(ctx context.Context, grace time.Duration) error {
 		if snapshotErr != nil {
 			snapshotErr = fmt.Errorf("snapshot agy descendants before cancellation: %w", snapshotErr)
 		}
+		_ = p.stdin.Close()
 		_ = p.cmd.Process.Signal(os.Interrupt)
 		timer := time.NewTimer(grace)
 		defer timer.Stop()
@@ -73,4 +84,32 @@ func (p *agyProcess) killParent() {
 	// A surviving child can retain a pipe after the CLI exits. Release Scan;
 	// Cmd.WaitDelay bounds stderr drain while we collect the known descendants.
 	_ = p.stdout.Close()
+}
+
+func (p *agyProcess) send(text string) error {
+	return json.NewEncoder(p.stdin).Encode(struct {
+		Event   string `json:"event"`
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+	}{Event: "user", Message: struct {
+		Content string `json:"content"`
+	}{text}})
+}
+func (p *agyProcess) read() {
+	defer close(p.lines)
+	defer close(p.done)
+	scanner := bufio.NewScanner(p.stdout)
+	scanner.Buffer(make([]byte, 65536), 16*1024*1024)
+	for scanner.Scan() {
+		line := append(json.RawMessage(nil), scanner.Bytes()...)
+		select {
+		case p.lines <- line:
+		case <-p.ctx.Done():
+		}
+	}
+	scanErr := scanner.Err()
+	p.err = errors.Join(scanErr, p.cmd.Wait())
+	_ = p.stdout.Close()
+	_ = p.stdin.Close()
 }

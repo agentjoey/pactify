@@ -17,15 +17,17 @@ const (
 
 // StartOpts 启动一个会话所需。
 type StartOpts struct {
-	RepoDir       string // agent 的 cwd = 仓库根
-	Seat          string // PACT_AGENT_ID
-	Model         string // 非空时必须兑现，否则 Start 返回错误
-	SystemPrompt  string // 可空
-	Effort        string // 可空；每轮推理 effort
-	Access        Access
-	WritableRoots []string  // Additional cache directories for workspace-write; ignored for read-only/default.
-	Env           []string  // 追加在继承环境之后；同名键以此为准
-	Stderr        io.Writer // nil → os.Stderr
+	ReadOnlyPolicy      bool   // Exercise the managed read-only hook with native write access (doctor).
+	CompletionFollowups *int   // agy: nil uses two completion followups; zero disables them.
+	RepoDir             string // agent 的 cwd = 仓库根
+	Seat                string // PACT_AGENT_ID
+	Model               string // 非空时必须兑现，否则 Start 返回错误
+	SystemPrompt        string // 可空
+	Effort              string // 可空；每轮推理 effort
+	Access              Access
+	WritableRoots       []string  // Additional cache directories for workspace-write; ignored for read-only/default.
+	Env                 []string  // 追加在继承环境之后；同名键以此为准
+	Stderr              io.Writer // nil → os.Stderr
 	// Hidden keeps a delegated session out of the user's own thread list: codex
 	// archives the thread when the session closes and unarchives it before a
 	// resume. Backends without such a list ignore it.

@@ -57,7 +57,10 @@ func parseNumstat(record []byte) (FileDelta, error) {
 }
 
 func runGit(dir string, args ...string) ([]byte, error) {
-	cmd := exec.Command("git", args...)
+	// Host snapshots and baselines must not execute repo-local fsmonitor code.
+	// Keep normal Git hooks intact for explicit write/worktree operations.
+	safeArgs := append([]string{"-c", "core.fsmonitor=false"}, args...)
+	cmd := exec.Command("git", safeArgs...)
 	cmd.Dir = dir
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -286,7 +289,10 @@ func temporaryTree(dir string) (tree string, excluded []string, err error) {
 		}
 	}
 	run := func(args ...string) ([]byte, error) {
-		cmd := exec.Command("git", args...)
+		// Host snapshots and baselines must not execute repo-local fsmonitor code.
+		// Keep normal Git hooks intact for explicit write/worktree operations.
+		safeArgs := append([]string{"-c", "core.fsmonitor=false"}, args...)
+		cmd := exec.Command("git", safeArgs...)
 		cmd.Dir = dir
 		cmd.Env = append(os.Environ(), "GIT_INDEX_FILE="+index)
 		var stderr bytes.Buffer

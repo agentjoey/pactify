@@ -274,16 +274,16 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "agy documents closed read-only access and codex fallback" {
+@test "agy documents restored read-only access and persistent protocol" {
   run python3 - "$P" <<'PYTEST'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 skill = (root / 'skills/agy/SKILL.md').read_text()
-for term in ('not offered for agy', 'codex', 'exits 2', 'Always pass `--write`'):
+for term in ('--read-only', '--mode plan', 'PreToolUse', 'sandboxed=false', 'BypassSandbox', '--completion-followups'):
     assert term in skill, term
+assert 'Always pass `--write`' not in skill
 readme = (root / 'README.md').read_text()
-assert '/agy Review src/cache/ with read-only access' not in readme
-for term in ('not offered for agy', 'exits 2', 'Doctor skips read-only access', 'stop testing'):
+for term in ('1.4.0', 'persistent stream-json', 'ignored files', 'quota.json', 'Network'):
     assert term in readme, term
 PYTEST
   [ "$status" -eq 0 ]
@@ -418,22 +418,20 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "agy read-only is closed like kimi K1 (AJ-683)" {
+@test "agy read-only restored after AJ-683 with explicit write permission" {
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 skill = (root / 'skills/agy/SKILL.md').read_text()
-assert 'Always pass `--write`' in skill
-assert 'not offered for agy' in skill
-assert 'codex' in skill and 'exits 2' in skill
-assert 'Use `--read-only` instead' not in skill
+assert 'Use `--read-only`' in skill
+assert 'Use `--write` only with explicit permission' in skill
 agent = (root / 'agents/agy.md').read_text()
-assert 'Flags: always `--write`' in agent
-assert 'do not run anything' in agent
+assert 'use `--read-only`' in agent
+assert 'Flags: always `--write`' not in agent
 for path in (root / 'README.md', root.parent.parent / 'README.md'):
     text = path.read_text()
-    assert 'agy --read-only' in text and 'exits 2' in text
-    assert '/agy Review src/cache/ with read-only' not in text
+    assert 'agy --read-only' in text or 'Read-only access uses `--mode plan`' in text
+    assert 'close read-only access and stop testing' not in text
 PY
   [ "$status" -eq 0 ]
 }
@@ -453,6 +451,19 @@ for path in (root / 'README.md', root.parents[1] / 'README.md'):
     text = path.read_text()
     assert 'opencode serve' in text and 'sandboxed=false' in text
     assert 'readonly_violation' in text
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "agy documents managed hook opt-out and bumps plugin version (AJ-711 review)" {
+  run python3 - "$P" <<'PY'
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+assert tuple(map(int, json.loads((root / '.claude-plugin/plugin.json').read_text())['version'].split('.'))) >= (0, 2, 3)
+for path in (root / 'agents/agy.md', root / 'skills/agy/SKILL.md'):
+    text = path.read_text()
+    assert 'managed hooks are not installed with --with-user-config' in text
+    assert 'workspace hooks' in text
 PY
   [ "$status" -eq 0 ]
 }

@@ -71,8 +71,9 @@ For harness delegation, install `/plugin install pactify@pactify` and use `/dele
 (or `/pactify:delegate`). `pactify sub run [harness]` defaults to **codex** when the
 harness is omitted; `/codex`, `/kimi`, `/agy` and `/opencode` select one explicitly. **agy and opencode are experimental**: agy completed 1/10 large tasks in one attempt
 ([evaluation](docs/agy-eval.md)); opencode evaluation is pending. **kimi is experimental**:
-Phase 0 large tasks completed in one attempt 6/10, and read-only work did not converge.
-kimi results include an informational warning; `kimi --read-only` still exits 2.
+Phase 0 large tasks completed in one attempt 6/10. Kimi results include an informational warning.
+Kimi does not offer read-only access: it cannot enforce it. Use codex, opencode or agy with `--read-only`.
+Kimi jobs report `sandboxed=false`.
 See the [harness plugin README](plugins/pactify/README.md) for usage and review rules.
 
 Transient backend failures automatically continue in the same job and session, keeping

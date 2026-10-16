@@ -90,7 +90,7 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 								t.Fatal(err)
 							}
 						}
-						if name == "codex" && fault != "network-missing" {
+						if fault != "network-missing" {
 							data, _ := json.Marshal(map[string]bool{"bind": fault != "network-bind", "external": fault != "network-external"})
 							if err := os.WriteFile(filepath.Join(req.Cwd, "doctor-network.json"), data, 0600); err != nil {
 								t.Fatal(err)

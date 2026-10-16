@@ -102,7 +102,7 @@ access_token="DO_NOT_EXPOSE_SECRET"
 				t.Fatal(err)
 			}
 			h, _ := Lookup("kimi")
-			got, err := discoverHarnessModels(t.Context(), h)
+			got, err := discoverHarnessModelsIn(t.Context(), h, home)
 			if err != nil || !reflect.DeepEqual(got.Items, []string{"provider/local"}) || got.DefaultModel != "provider/local" {
 				t.Fatal(got, err)
 			}

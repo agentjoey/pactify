@@ -1,7 +1,7 @@
 # Pactify harness plugin
 
 Delegate large tasks from Claude Code to the official codex / kimi / agy / opencode CLI installed locally, then review the result summary and workspace changes.
-The default harness is codex; kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged).
+The default harness is codex; kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only access is not offered).
 
 ## Installation
 

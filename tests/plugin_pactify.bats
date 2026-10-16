@@ -143,7 +143,7 @@ text = pathlib.Path(sys.argv[1]).read_text()
 frontmatter, body = text.split('---')[1:3]
 description = next(line for line in frontmatter.splitlines() if line.startswith('description:'))
 for part in (description, body):
-    for term in ('experimental', '6/10', 'read-only', 'never converged'):
+    for term in ('experimental', '6/10', 'read-only', 'not offered'):
         assert term in part.lower(), (term, part)
 PY
   [ "$status" -eq 0 ]

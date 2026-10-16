@@ -33,11 +33,12 @@ type Harness struct {
 	Experimental string
 	// MinimalConfig is supported only after a native, process-local path has
 	// been verified. Unavailable harnesses retain user config and say why.
-	MinimalConfig      bool
-	Home               *harnessHome
-	LocalUsageBaseline func(string, string) (int64, error)
-	DoctorModel        string
-	Models             func(context.Context, cockpit.StartOpts) ([]string, error)
+	MinimalConfig       bool
+	Home                *harnessHome
+	LocalUsageBaseline  func(string, string) (int64, error)
+	LocalUsageBaselines func(string, string) (map[string]int64, error)
+	DoctorModel         string
+	Models              func(context.Context, cockpit.StartOpts) ([]string, error)
 	// ModelDetails shares Models discovery while retaining public selection metadata.
 	ModelDetails func(context.Context, cockpit.StartOpts) (cockpit.ModelDiscovery, error)
 	// Every harness must keep delegated sessions out of the user's own session
@@ -50,15 +51,18 @@ type Harness struct {
 
 // VerificationInput bounds independent verification to this job's prompts.
 type VerificationInput struct {
-	Env        []string
-	Cwd        string
-	SessionID  string
-	Info       cockpit.SessionInfo
-	WireOffset int64 // Byte offset for kimi.
-	Prompts    int
+	Env         []string
+	Cwd         string
+	SessionID   string
+	Info        cockpit.SessionInfo
+	WireOffset  int64 // Legacy main-agent offset.
+	WireOffsets map[string]int64
+	Prompts     int
 }
 
 type Verification struct {
+	WireError     *cockpit.KimiWireError
+	WireReason    string
 	CostUSD       *float64
 	Model         string
 	InputTokens   int
@@ -118,17 +122,15 @@ var registry = map[string]Harness{
 		},
 	},
 	"kimi": {
+		NoReadOnly:         "kimi does not offer read-only access: it cannot enforce it. Use codex, opencode or agy with --read-only.",
 		Home:               &harnessHome{Env: "KIMI_CODE_HOME", Source: kimiHomeDir, Managed: managedKimiHome, Layout: kimiHome, Doctor: doctorKimiHome},
-		LocalUsageBaseline: cockpit.KimiWireOffset, DoctorModel: "kimi-code/kimi-for-coding",
+		LocalUsageBaseline: cockpit.KimiWireOffset, LocalUsageBaselines: cockpit.KimiWireOffsets, DoctorModel: "kimi-code/kimi-for-coding",
 		Models: kimiModels, ModelDetails: kimiModelDetails,
 		TransientRetry: true, Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
-		Experimental:  "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only work never converged)",
+		Experimental:  "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only access is not offered)",
 		MinimalConfig: true,
-		// Phase 0 (2026-10-15): in plan mode kimi keeps trying to write a plan file and
-		// exit plan; all 3 read-only tasks hit the tool-call limit without findings.
-		NoReadOnly: "Read-only access is not offered for kimi in the first release: all 3 Phase 0 read-only tasks hit the tool-call limit in plan mode without returning a conclusion. Use codex --read-only for read-only tasks; use kimi --write only with explicit write permission",
-		Conceal:    concealKimi,
-		Verify:     verifyKimiUsage,
+		Conceal:       concealKimi,
+		Verify:        verifyKimiUsage,
 	},
 }
 

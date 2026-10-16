@@ -22,6 +22,7 @@ type Collector struct {
 	RateLimit      json.RawMessage
 	FailureRaw     json.RawMessage
 	ErrorRaw       json.RawMessage
+	WireRaw        json.RawMessage
 	FailureMessage string
 
 	usageBase    cockpit.Usage
@@ -55,6 +56,12 @@ func collectLoggedUsage(path string) Collector {
 }
 
 func (c *Collector) Add(e cockpit.Event) {
+	if e.Kind == cockpit.EventSystem && e.State == "kimi_wire_failure" {
+		c.WireRaw = append(json.RawMessage(nil), e.Raw...)
+		if c.FailureMessage == "" {
+			c.FailureMessage = e.Err
+		}
+	}
 	if e.Kind == cockpit.EventSystem && e.State == "usage_partial" {
 		c.UsagePartial = true
 	}
@@ -62,7 +69,7 @@ func (c *Collector) Add(e cockpit.Event) {
 		c.finalText = ""
 		c.chunks.Reset()
 		c.TurnDone, c.TurnErr, c.FailureMessage = false, "", ""
-		c.FailureRaw, c.ErrorRaw = nil, nil
+		c.FailureRaw, c.ErrorRaw, c.WireRaw = nil, nil, nil
 		c.perTurnUsage = e.Text == "kimi"
 		if c.perTurnUsage {
 			c.usageBase = c.Usage

@@ -1,12 +1,12 @@
 ---
 name: kimi
-description: Experimental harness — Phase 0 large tasks completed in one attempt 6/10; read-only work never converged. Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly.
+description: Experimental harness — Phase 0 large tasks completed in one attempt 6/10; read-only access is not offered. Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly.
 ---
 
 # Delegate to kimi (experimental)
 
 **kimi is an experimental harness**: Phase 0 large tasks completed in one attempt 6/10;
-read-only work never converged. Prefer the default codex harness (`/delegate` or `/codex`).
+read-only access is not offered. Prefer the default codex harness (`/delegate` or `/codex`).
 The result summary reports this warning without changing the job status.
 
 **If the user invoked this skill explicitly (`/kimi` or `/pactify:kimi`), always delegate — whatever the task
@@ -145,6 +145,6 @@ with access/model/effort flags from the brief, and returns stdout verbatim. If i
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.
 
 **Read-only tasks are not offered for kimi in this version**: `pactify sub run kimi --read-only` exits 2.
-In Phase 0 kimi's plan mode never converged on read-only work (3 of 3 hit the tool-call limit with no
-findings). Send read-only investigations and reviews to codex (`/codex`, `--read-only`). Only use kimi with
-`--write` when the user has allowed changes; do not raise permissions on your own.
+Kimi cannot enforce read-only access. Send read-only investigations and reviews to codex, opencode or
+agy with `--read-only`. Only use kimi with `--write` when the user has allowed changes; do not raise
+permissions on your own. Kimi jobs report `sandboxed=false`.

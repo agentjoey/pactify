@@ -173,7 +173,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		add("Installed", true, "CLI version "+r.Version)
 		jobStore := Store{Root: filepath.Join(root, h.Name, "home", "jobs")}
-		network := h.Name == "codex" || h.Name == "opencode" || h.Name == "agy"
+		network := h.Name == "codex" || h.Name == "opencode" || h.Name == "agy" || h.Name == "kimi"
 		model := "gpt-6-luna"
 		if h.Name == "agy" {
 			model = cockpit.AgyDefaultModel

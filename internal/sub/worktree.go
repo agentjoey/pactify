@@ -31,6 +31,9 @@ type Worktree struct {
 
 const dirtyWorktreeWarning = "The original workspace has uncommitted changes; they were not included in the worktree"
 
+// ErrWorktreeNeedsCommit rejects isolation before any job is persisted.
+var ErrWorktreeNeedsCommit = errors.New("--worktree needs a base commit; commit once first (the repository has no commits yet)")
+
 // NoSessionError is a request error, rather than a persistence/startup failure.
 type NoSessionError struct{ Harness string }
 
@@ -63,9 +66,12 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 	if err != nil {
 		return State{}, err
 	}
-	base, err := runGit(root, "rev-parse", "HEAD")
+	base, err := headCommit(root)
 	if err != nil {
 		return State{}, err
+	}
+	if base == "" {
+		return State{}, ErrWorktreeNeedsCommit
 	}
 	dirty, err := runGit(root, "status", "--porcelain", "-z", "--untracked-files=all")
 	if err != nil {
@@ -91,7 +97,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 	if err != nil {
 		return State{}, err
 	}
-	w := &Worktree{Path: path, Cwd: filepath.Join(path, rel), OriginalRoot: root, BaseCommit: strings.TrimSpace(string(base)), Owner: id, SourceDirty: len(dirty) > 0}
+	w := &Worktree{Path: path, Cwd: filepath.Join(path, rel), OriginalRoot: root, BaseCommit: base, Owner: id, SourceDirty: len(dirty) > 0}
 	// Hold the lifecycle lock through checkout: Recover must not declare a slow
 	// preparation dead or publish a terminal result while git is still writing.
 	err = s.WithState(context.Background(), id, func(current *State) error {

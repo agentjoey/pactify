@@ -118,7 +118,10 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if st.Worktree == nil {
 		snap, err = TakeSnapshot(req.Cwd)
 		if err != nil {
-			return fail(err)
+			if !snap.EmptyTree {
+				return fail(err)
+			}
+			result.Warnings = append(result.Warnings, "Changes unavailable: cannot capture baseline: "+err.Error())
 		}
 	}
 	if h.Version != nil {
@@ -490,11 +493,15 @@ loop:
 		result.Diff, err = DiffSince(req.Cwd, snap)
 	} // Worktree jobs publish the full final-tree diff in Finish, including failures.
 	if err != nil {
-		result.Warnings = append(result.Warnings, err.Error())
+		warning := err.Error()
+		if snap.EmptyTree {
+			warning = "Changes unavailable or incomplete: " + warning
+		}
+		result.Warnings = append(result.Warnings, warning)
 	}
 	if canceled || ctx.Err() != nil {
 		result.Status = StatusCanceled
-	} else if err == nil && collector.TurnDone && !turnFailed && !interrupted {
+	} else if (err == nil || snap.EmptyTree) && collector.TurnDone && !turnFailed && !interrupted {
 		result.Status = StatusSucceeded
 	}
 	return result, nil

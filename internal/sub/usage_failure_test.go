@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -241,5 +242,39 @@ func TestUsagePartialAfterIndependentVerificationFailure(t *testing.T) {
 			}
 			assertPartialUsage(t, store, r)
 		})
+	}
+}
+
+// An agy that exits without reading stdin makes the prompt write fail with a
+// broken pipe. A prompt larger than the pipe buffer makes that deterministic;
+// the job must still report the process's own result and steps.
+func TestAgyUnreadPromptKeepsReportedResult(t *testing.T) {
+	store, _, _ := workerFixture(t, "write")
+	fakeAgyUserHome(t)
+	bin := t.TempDir()
+	script := `#!/bin/sh
+echo '{"event":"init","conversation_id":"unread-agy","init":{"model":"gemini-3.8-flash-low"}}'
+echo '{"event":"step_update","step_update":{"step_index":0,"step_type":"agent_response","state":"ERROR","usage":{"input_tokens":5,"output_tokens":2}}}'
+echo '{"event":"result","result":{"status":"ERROR","error":"provider error","usage":{"input_tokens":0,"output_tokens":0}}}'
+exit 1
+`
+	if err := os.WriteFile(filepath.Join(bin, "agy"), []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	h, _ := Lookup("agy")
+	h.Version = nil
+	st, _ := store.Load("j1")
+	st.Request.Harness, st.ConfigMode = "agy", "minimal"
+	st.Request.Brief = strings.Repeat("x", 512*1024)
+	if err := store.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
+	if err != nil || r.Status != StatusFailed || r.InputTokens != 5 || r.OutputTokens != 2 {
+		t.Fatalf("reported steps lost: %+v err=%v", r, err)
+	}
+	if msg := r.failureMessage; !strings.Contains(msg, "provider error") || strings.Contains(msg, "broken pipe") {
+		t.Fatalf("failure = %q, want the harness's own error", msg)
 	}
 }

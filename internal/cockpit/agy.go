@@ -323,9 +323,10 @@ nextTurn:
 	failure, final := "", ""
 	gotResult, gotModel := false, s.Info().Model != ""
 	process.diagnostics.reset()
-	if err := process.send(prompt); err != nil {
-		failure = "agy stream interrupted: " + err.Error()
-	}
+	// A process that exits before reading stdin (a startup crash) fails the
+	// write with a broken pipe; keep draining its output so its own result,
+	// steps and usage are reported instead of the pipe error.
+	sendErr := process.send(prompt)
 readLoop:
 	for failure == "" {
 		var raw json.RawMessage
@@ -451,6 +452,9 @@ readLoop:
 	}
 	if !gotResult && failure == "" {
 		failure = "agy stream interrupted: EOF without a result"
+		if sendErr != nil {
+			failure = "agy stream interrupted: " + sendErr.Error()
+		}
 	}
 	if !gotModel && failure == "" {
 		failure = "agy did not report init.model"

@@ -106,7 +106,7 @@ type Usage struct {
 type Event struct {
 	Kind  EventKind       `json:"kind"`
 	Text  string          `json:"text,omitempty"`  // message: 增量/终稿文本
-	Final bool            `json:"final,omitempty"` // message: 是否终稿
+	Final bool            `json:"final,omitempty"` // message or terminal state: 是否终稿
 	Tool  *ToolEvent      `json:"tool,omitempty"`  // Kind==EventTool
 	Usage *Usage          `json:"usage,omitempty"` // Kind==EventUsage
 	State string          `json:"state,omitempty"` // Kind==EventState: "turn_started"|"turn_completed"|"turn_failed" 等

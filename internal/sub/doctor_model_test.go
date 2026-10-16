@@ -53,6 +53,9 @@ func TestDoctorModelOverride(t *testing.T) {
 								}
 							}
 						}
+						if name == "opencode" && st.Request.Access == "read-only" {
+							writeDeniedDoctorLog(t, s, id)
+						}
 						return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: st.Request.Model, ModelVerified: true, FinalText: "done", InputTokens: 1, ToolCalls: 1}, nil
 					},
 				})

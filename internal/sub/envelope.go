@@ -15,6 +15,7 @@ type Retry struct {
 }
 
 type Result struct {
+	Sandboxed       bool       `json:"sandboxed"`
 	fallbackBlocked bool       // Teardown could not prove that the previous harness stopped.
 	FallbackFrom    string     `json:"fallbackFrom,omitempty"`
 	FallbackTo      string     `json:"fallbackTo,omitempty"`

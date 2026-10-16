@@ -1,33 +1,36 @@
 package cockpit
 
 import (
-	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 )
 
-func TestOpencodeReadOnlyRefusedBeforeSpawn(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("PATH", "/nonexistent")
-	t.Setenv("OPENCODE_CONFIG_CONTENT", "not-json")
-	opts := StartOpts{Access: AccessReadOnly, Model: "test/model"}
-	for _, resume := range []bool{false, true} {
-		b := NewACPBackend("opencode")
-		var s Session
-		var err error
-		if resume {
-			s, err = b.(OptsResumer).ResumeWith(context.Background(), "existing", opts)
-		} else {
-			s, err = b.Start(context.Background(), opts)
-		}
-		if s != nil {
-			s.Close()
-		}
-		if err == nil || !strings.Contains(err.Error(), "Read-only access is not offered for opencode") || !strings.Contains(err.Error(), "codex --read-only") {
-			t.Fatalf("resume=%t session=%v err=%v", resume, s, err)
+// AJ-710 explicitly restores the read-only profile disabled in AJ-683.
+func TestOpencodeReadOnlyPolicy(t *testing.T) {
+	env, err := OpencodeEnv(StartOpts{Access: AccessReadOnly, MinimalConfig: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]any
+	for _, entry := range env {
+		if value, ok := strings.CutPrefix(entry, "OPENCODE_CONFIG_CONTENT="); ok {
+			if err := json.Unmarshal([]byte(value), &config); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
-	if _, err := OpencodeEnv(opts); err == nil || !strings.Contains(err.Error(), "codex --read-only") {
-		t.Fatalf("read-only env accepted: %v", err)
+	permission := config["permission"].(map[string]any)
+	if permission["edit"] != "deny" || permission["write"] != "deny" {
+		t.Fatal(permission)
+	}
+	for _, tool := range []string{"read", "glob", "grep", "list"} {
+		if permission[tool] != "allow" {
+			t.Errorf("read-only tool %s would require a denied permission", tool)
+		}
+	}
+	bash := permission["bash"].(map[string]any)
+	if bash["*"] != "deny" || bash["ls"] != "allow" || bash["git diff"] != "allow" || bash["git diff *"] != nil {
+		t.Fatal(bash)
 	}
 }

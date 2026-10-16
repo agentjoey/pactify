@@ -1,11 +1,11 @@
 ---
 name: opencode
-description: Experimental harness — large tasks completed in one attempt 6/10; read-only work never converged. Delegate a large coding task, investigation or review to opencode through ACP and get a verified result summary.
+description: Experimental harness — large tasks completed in one attempt 6/10. Delegate a large coding task, investigation or review to opencode through an authenticated local HTTP/SSE server and get a verified result summary.
 ---
 
 # Delegate to opencode (experimental)
 
-**opencode is an experimental harness (large tasks completed in one attempt 6/10; read-only work never converged).**
+**opencode is an experimental harness (large tasks completed in one attempt 6/10).**
 Prefer the default codex harness (`/delegate` or `/codex`).
 
 **If the user invoked this skill explicitly (`/opencode` or `/pactify:opencode`), always delegate —
@@ -17,8 +17,8 @@ Launch command (step 2 below):
     ...complete brief from step 1...
     BRIEF
 
-Always pass `--write`; opencode read-only tasks must go to codex. Never raise permissions yourself.
-Models come from ACP's dynamic configOptions, with provider/model ids; preserve the requested model.
+Use `--read-only` instead for investigations and reviews. Use `--write` only when the user allows changes. Never raise permissions yourself.
+Models come from the live v1 `/config/providers` catalog, with provider/model ids; preserve the requested model.
 Omit `--model` to keep opencode's default. Resume with `--resume <job-id> --worktree` and the original cwd.
 
 <!-- BEGIN SHARED-DELEGATION -->
@@ -140,8 +140,7 @@ assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
    Repeat step 3 after every rework turn; apply only after all required checks and reviews pass.
 <!-- END SHARED-DELEGATION -->
 
-**Read-only tasks are not offered for opencode in this version**: `pactify sub run opencode --read-only` exits 2.
-All 3 evaluation read-only tasks ended without findings after shell requests were denied.
-Send read-only investigations and reviews to codex (`/codex`, `--read-only`). Only use opencode with
-`--write` when the user has allowed changes; do not raise permissions on your own.
-Owner decided on 2026-10-16 to keep opencode experimental and close read-only access.
+**Read-only access** uses `agent: "plan"`, denies every permission request, and fails with
+`readonly_violation` if the final repository diff is nonempty. Doctor runs a read-only probe.
+Both profiles report `sandboxed=false`: opencode has no OS sandbox, so repository checks do not
+restrict effects outside the repository. Keep `--worktree` for delegated tasks.

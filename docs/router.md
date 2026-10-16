@@ -99,7 +99,7 @@ PUT 仅接受 `application/json`（可带 charset），请求为 `{version, conf
 
 - codex 复用最小配置 app-server 启动与 initialize/initialized 握手，分页调用 `model/list` 后关闭进程；不创建或续接 thread，也不发送 prompt / turn，总超时上限 20 秒。
 - kimi 优先只读 `$PACTIFY_HOME/harness-homes/kimi/config.toml` 中链接进来的配置（job 子进程的 `KIMI_CODE_HOME`）。链接缺失时读取 serve / CLI 环境中 `KIMI_CODE_HOME/config.toml`，未设置则读取 `~/.kimi-code/config.toml`。使用已有 `go-toml/v2` 白名单解码，只保留 models 表的键名和 default_model；不读取 credentials/device_id，不解码 providers、oauth、key 等字段，不启动 kimi 会话。配置不可读、格式错误或模型表为空时返回英文原因；解析错误不带配置原文。接口不创建受管目录或自动准备认证链接。
-- agy 仅执行 `agy models`；opencode 仅初始化 ACP 并读取新 session 的配置选项。
+- agy 仅执行 `agy models`；opencode 启动隔离的 serve，只读取 v1 `/config/providers`，随后回收进程组。
 
 以上路径不执行 doctor 的计费探测。doctor 保留 codex/kimi 的固定探测模型，不因新增发现能力改选模型。installed 使用 LookPath，version 使用现有 Version，verifiedVersion 读取当前 PACTIFY_HOME 的 verified-versions.json。
 
@@ -121,3 +121,10 @@ resume 通过 CLI 共用的 ResumeRun 和 worker 启动逻辑复用 session、wo
 同一个 store 最多保留 4 个由 dashboard 发起的 queued / running / retrying job；超出返回 429，错误为 `too many jobs started from the dashboard are still running (limit 4)`。CLI 发起的 job 不占此额度；完成、取消或启动失败后释放额度。跨 serve 进程的检查与 queued job 创建使用同一把 store 锁。
 
 summary 新增始终存在的 `actions` 数组；列表和详情都使用同一套只读状态判断。未结束任务可 cancel；只有链上最新已结束且有 session 的 turn 可提供 resume，并且整链不能有 queued / running / retrying job。worktree 未转移、无共享运行任务时可 apply / discard；apply 后符合续接条件时仍可 resume 或 discard，但不能重复 apply；discard 后不再允许复用。列表复用已加载的 state/result 快照，一次建立 session、worktree 与 resumedBy 索引，不为每行扫描 store。worktree 目录被外部删除时保留 discard，以清理 git 注册。旧 CLI 对终态 cancel 的清理能力及显式选择旧已结束 turn 的能力保持不变，但同会话已有活跃 turn 时禁止并发 resume；HTTP 对终态 cancel 返回 409。
+
+### 沙箱能力（AJ-710）
+
+`GET /api/sub/harnesses` 每行总是包含布尔字段 `sandboxed`，codex 为 true，其余为 false。
+opencode 的 `readOnly` 为 true：使用 plan 并在最终 diff 非空时失败，不代表 OS 沙箱。
+模型发现沿用 10 分钟缓存；免费模型仅按 id 的 `-free` 后缀识别，不能依据 cost=0。
+Doctor 继续优先选择 free 模型，再按 flash/mini/lite/nano 名称分档。

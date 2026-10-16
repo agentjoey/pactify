@@ -166,7 +166,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		add("Installed", true, "CLI version "+r.Version)
 		jobStore := Store{Root: filepath.Join(root, h.Name, "home", "jobs")}
-		network := h.Name == "codex"
+		network := h.Name == "codex" || h.Name == "opencode"
 		model := "gpt-6-luna"
 		if h.DoctorModel != "" {
 			model = h.DoctorModel
@@ -263,16 +263,45 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		if h.NoReadOnly != "" {
 			skip("Read-only access", h.NoReadOnly)
 		} else {
-			readonly, roRepo, roErr := run("read-only", "Use your shell execution tool to execute this exact command once in the current directory, even if you expect the sandbox to deny the write:\n\n```sh\nsh -c 'echo hi > out.txt'; echo EXIT=$?\n```\n\nReport the command's stdout and stderr verbatim, including the EXIT line. Do not predict the result or claim a denial without invoking the tool. Do not request elevated permissions, retry, or seek a workaround; report the actual output and stop.")
+			readonlyBrief := "Use your shell execution tool to execute this exact command once in the current directory, even if you expect the sandbox to deny the write:\n\n```sh\nsh -c 'echo hi > out.txt'; echo EXIT=$?\n```\n\nReport the command's stdout and stderr verbatim, including the EXIT line. Do not predict the result or claim a denial without invoking the tool. Do not request elevated permissions, retry, or seek a workaround; report the actual output and stop."
+			if h.Name == "opencode" {
+				readonlyBrief = "This is an authorized read-only permission diagnostic in plan mode. Invoke the bash tool to run `ls` once. Then invoke the bash tool with exactly `echo x > probe.txt` once to verify that the permission policy denies it. You must actually invoke both tool calls; do not merely predict a denial. Report the tool result and stop. Do not retry, seek a workaround, or use another tool to write."
+			}
+			target := "out.txt"
+			probe := func(id string) (Result, bool, error, error) {
+				readonly, roRepo, roErr := run(id, readonlyBrief)
+				denied := true
+				if h.Name == "opencode" {
+					target = "probe.txt"
+					denied = opencodeDoctorDeniedWrite(jobStore.LogPath(id))
+				}
+				_, statErr := os.Lstat(filepath.Join(roRepo, target))
+				return readonly, denied, roErr, statErr
+			}
+			readonly, denied, roErr, statErr := probe("read-only")
+			// The model may decline to attempt the write at all; that proves
+			// nothing about the permission layer. Ask once more before
+			// reporting it as inconclusive.
+			attempts := 1
+			clean := func() bool {
+				return roErr == nil && readonly.Status == StatusSucceeded && readonly.CLIVersion == r.Version && readonly.ToolCalls > 0 && strings.TrimSpace(readonly.FinalText) != "" && os.IsNotExist(statErr) && len(readonly.Diff.Files) == 0
+			}
+			if !denied && clean() {
+				results = append(results, readonly)
+				readonly, denied, roErr, statErr = probe("read-only-2")
+				attempts++
+			}
 			results = append(results, readonly)
-			_, statErr := os.Lstat(filepath.Join(roRepo, "out.txt"))
-			ok := roErr == nil && readonly.Status == StatusSucceeded && readonly.CLIVersion == r.Version && readonly.ToolCalls > 0 && strings.TrimSpace(readonly.FinalText) != "" && os.IsNotExist(statErr) && len(readonly.Diff.Files) == 0
 			readError := doctorError(roErr)
 			if roErr != nil && writeErr != nil && roErr.Error() == writeErr.Error() {
 				readError = ", error=same as above (Write access)"
 			}
-			evidence := fmt.Sprintf("status=%s, write target absent=%t, tool calls=%d%s", readonly.Status, os.IsNotExist(statErr), readonly.ToolCalls, readError)
-			add("Read-only access", ok, evidence)
+			evidence := fmt.Sprintf("status=%s, write target absent=%t, denied write verified=%t, tool calls=%d, attempts=%d%s", readonly.Status, os.IsNotExist(statErr), denied, readonly.ToolCalls, attempts, readError)
+			if !denied && clean() {
+				r.Checks = append(r.Checks, DoctorCheck{"Read-only access", "WARN", "inconclusive: the model did not attempt the denied write; nothing was written; " + evidence})
+			} else {
+				add("Read-only access", denied && clean(), evidence)
+			}
 			ranAll = ranAll && roErr == nil && readonly.Status == StatusSucceeded
 		}
 		if !network {

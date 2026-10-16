@@ -105,7 +105,7 @@ pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模
   不反映每轮传入的 `effort`。随附 schema 需刷新到当前版本（0.144.4 → 0.162.1 相关字段只有新增、无删改）。
 - **终稿文本**：codex 0.162.1 的 `item/completed`（agentMessage）**已带 `text`**，现有代码（`codex.go:560-561`）没读它，
   改为直接取；ACP 由 `agent_message_chunk` 累加；Claude 取 `result` 消息。
-- **ACP 模型参数**：opencode 与 kimi 的 `session/new` 都返回 `configOptions`，其中 `id=model` 的选项带当前值与可选列表；
+- **ACP 模型参数（历史验证）**：opencode 与 kimi 的 `session/new` 都返回 `configOptions`，其中 `id=model` 的选项带当前值与可选列表；
   `session/set_config_option`（以及 `session/set_model`）切换后，opencode 日志证实实际改跑所选模型。
   **因此新方案在协议内设模型，不再需要 #55 的 `OPENCODE_CONFIG_CONTENT` 注入。** kimi 还有 `id=thinking`（推理强度）
   与 `id=mode`（工作模式）两项。kimi 的 ACP 不回报 token 与实际模型，但本地会话记录
@@ -164,10 +164,10 @@ callee 冷启动，没有 host 的对话上下文。第一版做法：转发 sub
 
 ### 5.4 权限映射（P-3）
 
-| 档位 | codex | opencode（ACP） | kimi（ACP） | agy（命令行） | claude（CLI / SDK） |
+| 档位 | codex | opencode（serve） | kimi（ACP） | agy（命令行） | claude（CLI / SDK） |
 |---|---|---|---|---|---|
-| `--read-only` | `sandbox: read-only` ✅ | 不开放（AJ-683）；入口退出 2，指向 `codex --read-only` | `session/set_mode plan` ✅⚠️ | 不开放（AJ-683）；入口退出 2，指向 `codex --read-only` | `--allowedTools=Read,Grep,Glob` ✅ |
-| `--write` | `sandbox: workspace-write` + 网络开放（`sandbox_workspace_write.network_access`，2026-10-15 Owner 拍板）✅ | build + permission edit/bash/webfetch allow ✅ | 默认模式（直接写）✅ | `--dangerously-skip-permissions` ✅（1.3.5：`--mode=accept-edits` 只放行写文件，shell 命令会被自动拒绝；`--mode=auto` 对本账号不可用） | `--permission-mode acceptEdits` ✅ |
+| `--read-only` | `sandbox: read-only` ✅ | `agent: plan` + 拒绝 permission；diff 非空记 readonly_violation（AJ-710） | `session/set_mode plan` ✅⚠️ | 不开放（AJ-683）；入口退出 2，指向 `codex --read-only` | `--allowedTools=Read,Grep,Glob` ✅ |
+| `--write` | `sandbox: workspace-write` + 网络开放（`sandbox_workspace_write.network_access`，2026-10-15 Owner 拍板）✅ | build + permission 自动应答 once ✅ | 默认模式（直接写）✅ | `--dangerously-skip-permissions` ✅（1.3.5：`--mode=accept-edits` 只放行写文件，shell 命令会被自动拒绝；`--mode=auto` 对本账号不可用） | `--permission-mode acceptEdits` ✅ |
 
 **agy（AJ-683，Owner 2026-10-16 拍板）**：保持实验性，关闭只读档，不再测。
 评估只读任务 0/3：无头模式下 shell 一被拒，本轮就结束，无法交出结论。
@@ -175,10 +175,14 @@ callee 冷启动，没有 host 的对话上下文。第一版做法：转发 sub
 doctor 的只读探测为 SKIP。只读任务使用 `codex --read-only`。
 历史实测中 `--mode=plan` 加 skip-permissions 可实际写入，plan 本身不是沙箱。
 
-**opencode（AJ-683，Owner 2026-10-16 拍板）**：保持实验性，关闭只读档。
-评估只读任务 0/3：模型调用 shell 被拒后本轮即结束，没有结论。
-与 kimi、agy 一致：入口退出 2，旧只读 job 的按 id、自动选择和 worktree 续接均拒绝，
-doctor 通过 `NoReadOnly` 标记 SKIP。只读任务使用 `codex --read-only`。
+**opencode（AJ-710，2026-10-16）**：恢复只读档，保持实验性。
+每个 Start 启动独立的 `opencode serve --hostname 127.0.0.1 --port 0`，随机密码、Basic Auth，
+仅用 v1 HTTP/SSE；续接保留受管 XDG 数据库。只读使用 plan，用 session 有序权限覆盖用户规则，危险 bash 一律拒绝；结束时对比包含 ignored/untracked 的文件基线，任意新增、修改、删除均记
+`failed(readonly_violation)`，无法核验则 failed。写档使用 build，主/子 session permission 自动应答 once。
+SSE 断流最多退避重连五次，耗尽归 transient；消息和用量分别从最终消息列表及父/子会话汇总恢复。Stop 只 abort 当前 turn，job 结束回收 server 进程组。
+两档均无 OS 沙箱，结果和 harnesses 接口标 `sandboxed=false`；只有 codex 为 true。
+模型列表取 `/config/providers`，用量和成本取 `GET /session/{id}` 会话汇总并扣除启动基线，不再跑 export。
+取消先调用 v1 `/abort`，随后回收进程组及已跟踪的子进程。
 
 ✅ = 2026-10-15 实测：只读档写文件被拦、可写档写成功。⚠️ kimi 的 plan 模式拦得住，但被拒后会反复申请退出、反复提问
 （一轮 32 次工具调用），需在 brief 里写明只读且对 `ExitPlanMode` 自动拒绝并附说明，同时设每轮调用上限。
@@ -260,11 +264,11 @@ M2 剩余部分（router v1、跨委派成本汇总）的设计见 [`router-v1.m
 ## 10. Phase 0 前实测结果（2026-10-15）
 
 在临时目录的一次性 git 仓库中，用每家最便宜的模型档实测。gemini-cli 按 D4 不再验证。
-以下为历史能力快照；当前 agy、opencode 只读档已关闭（AJ-683），权限映射以 §5.4 为准。
+以下为历史能力快照；当前 agy 只读档已关闭（AJ-683），opencode 已恢复（AJ-710），权限映射以 §5.4 为准。
 
 | 项目 | codex 0.162.1 | claude 2.1.300 | opencode 1.18.34 | kimi 2.0.0 | agy 1.2.15 |
 |---|---|---|---|---|---|
-| 调用通道 | app-server | CLI `-p`（SDK 同源） | `opencode acp` | `kimi acp` | CLI `-p --output-format json` |
+| 调用通道 | app-server | CLI `-p`（SDK 同源） | `opencode serve`（v1 HTTP/SSE，AJ-710） | `kimi acp` | CLI `-p --output-format json` |
 | 设模型 | `thread/start.model` ✅ | `--model` ✅ | `set_config_option` ✅ | `set_config_option` ✅ | `--model` ✅（未知名直接报错） |
 | 读出实际模型 | 启动响应 `model`/`modelProvider` ✅ | init 消息 `model` + `modelUsage` ✅ | `configOptions.currentValue`，日志证实一致 ✅ | 协议内只有配置值；本地会话记录 ✅ | 结果 JSON 无模型字段 ❌ |
 | 推理强度 | 每轮 `effort` | `--effort` | 随模型 | `id=thinking` 选项 | 模型名后缀 |

@@ -134,6 +134,7 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 	if Terminal(st.Status) {
 		return nil
 	}
+	result.Sandboxed = st.Request.Harness == "codex"
 	result.ConfigMode = st.EffectiveConfigMode()
 	result.FallbackFrom, result.FallbackTo = st.FallbackFrom, st.FallbackTo
 	// Preserve routing evidence for every terminal path, including cancellation,
@@ -157,10 +158,21 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 			}
 		}
 	}
+	if verification, violation := s.verifyReadOnly(st, result); verification != "" {
+		result.Status = StatusFailed
+		result.FailureClass, result.QuotaResetAt = "other", nil
+		if violation {
+			result.FailureClass = "readonly_violation"
+		}
+		reason = verification
+		result.Warnings = append(result.Warnings, verification)
+	}
+
 	if result.Status == StatusSucceeded {
 		result.FailureClass, result.QuotaResetAt = "", nil
 	} else if Terminal(result.Status) {
 		switch {
+		case result.FailureClass == "readonly_violation":
 		case result.Status == StatusCanceled || st.CancelRequested:
 			result.FailureClass, result.QuotaResetAt = "canceled", nil
 		case reason == "Idle timeout":
@@ -245,8 +257,8 @@ func (s Store) fallbackLocked(st *State, status Status, reason string) error {
 	if st.Status == StatusRunning {
 		c := collectLoggedUsage(r.LogPath)
 		r.InputTokens, r.OutputTokens, r.CostUSD = c.Usage.InputTokens, c.Usage.OutputTokens, c.Usage.CostUSD
-		if st.Request.Harness == "opencode" {
-			// usage_update carries session cost, including jobs before a resume.
+		if st.Request.Harness == "opencode" && !c.JobUsageDelta {
+			// Legacy ACP usage_update carries session cost, including jobs before a resume.
 			// The lost worker's export baseline cannot be reconstructed from logs.
 			r.CostUSD = 0
 		}

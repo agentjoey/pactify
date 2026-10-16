@@ -14,8 +14,8 @@ func TestOpencodeDoctorModelFreePreference(t *testing.T) {
 		{"lite-free", []string{"zen/large-free", "zen/lite-free"}, "zen/lite-free"},
 		{"nano-free", []string{"zen/large-free", "zen/nano-free"}, "zen/nano-free"},
 		{"other-free-keeps-live-order", []string{"paid/flash", "zen/pro-free", "zen/haiku-free"}, "zen/pro-free"},
-		{"free-in-name", []string{"paid/flash", "zen/model-free-preview"}, "zen/model-free-preview"},
-		{"case-insensitive", []string{"paid/flash", "zen/large-free", "ZEN/FLASH-FREE-PREVIEW"}, "ZEN/FLASH-FREE-PREVIEW"},
+		{"free-in-name", []string{"paid/flash", "zen/model-free-preview"}, "paid/flash"},
+		{"case-insensitive", []string{"paid/flash", "zen/large-free", "ZEN/FLASH-FREE-PREVIEW"}, "zen/large-free"},
 		// IDs supplied by the Owner's host review; no live listing or API call.
 		{"host-list-fragment", []string{"opencode/deepseek-v4-flash", "minimax-coding-plan/MiniMax-M3", "opencode/deepseek-v4.1-flash-free"}, "opencode/deepseek-v4.1-flash-free"},
 	} {

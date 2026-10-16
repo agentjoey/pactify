@@ -195,15 +195,8 @@ func TestACPSessionCloseIdempotent(t *testing.T) {
 }
 
 func TestAcpCommandForOpencode(t *testing.T) {
-	cmd, args, err := acpCommandFor("opencode")
-	if err != nil {
-		t.Fatalf("acpCommandFor(opencode): %v", err)
-	}
-	if cmd != "opencode" {
-		t.Fatalf("command = %q, want opencode", cmd)
-	}
-	if !reflect.DeepEqual(args, []string{"acp"}) {
-		t.Fatalf("args = %v, want [acp]", args)
+	if _, _, err := acpCommandFor("opencode"); err == nil {
+		t.Fatal("opencode must use serve")
 	}
 }
 

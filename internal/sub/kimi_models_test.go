@@ -15,6 +15,10 @@ import (
 func TestKimiModelDiscoveryAllowlist(t *testing.T) {
 	source := t.TempDir()
 	home := t.TempDir()
+	// The missing-config case below must not fall back to the developer's own
+	// ~/.kimi-code/config.toml.
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("KIMI_CODE_HOME", t.TempDir())
 	config := filepath.Join(source, "config.toml")
 	data := `default_model = "provider/model-b"
 [models."provider/model-b"]

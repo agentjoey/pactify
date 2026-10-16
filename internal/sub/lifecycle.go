@@ -71,6 +71,10 @@ func (s Store) claim(ctx context.Context, id string, now time.Time) (st State, e
 	return
 }
 
+// inspectHarness is procx.Inspect; tests replace it to simulate a harness
+// that exits before it is registered.
+var inspectHarness = procx.Inspect
+
 // StartProcess holds the lifecycle lock across spawn and durable registration.
 // Cancellation cannot slip between checking the job and starting its harness.
 func (s Store) StartProcess(ctx context.Context, id string, cmd *exec.Cmd) error {
@@ -84,7 +88,13 @@ func (s Store) StartProcess(ctx context.Context, id string, cmd *exec.Cmd) error
 		if err := cmd.Start(); err != nil {
 			return err
 		}
-		identity, err := procx.Inspect(cmd.Process.Pid)
+		identity, err := inspectHarness(cmd.Process.Pid)
+		if errors.Is(err, syscall.ESRCH) {
+			// The harness already exited (a zombie or gone): there is nothing
+			// to track or signal, and failing here would hide the harness's own
+			// error behind "register harness process". Let the run report it.
+			return nil
+		}
 		if err == nil {
 			st.Processes = append(st.Processes, identity)
 			err = s.Save(*st)

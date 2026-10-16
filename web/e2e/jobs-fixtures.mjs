@@ -1,6 +1,5 @@
 // One set of job API fixtures for the dashboard and standalone panel.
 const base = {
-  issue: "",
   harness: "codex",
   modelRequested: "gpt-5.4",
   modelActual: "gpt-5.4",
@@ -22,17 +21,12 @@ export const panelJobs = [
     ...base,
     id: "job-panel",
     title: "AJ-659 · Local read-only job panel",
-    issue: "AJ-659",
-    status: "running",
+    status: "succeeded",
     duration: "2m18s",
-    inputTokens: 0,
-    outputTokens: 0,
-    activity: {
-      summary: "tool exec go test ./internal/subpanel/...",
-      inputTokens: 8420,
-      outputTokens: 1870,
-      usagePartial: true,
-    },
+    inputTokens: 8420,
+    outputTokens: 1870,
+    usagePartial: true,
+    attention: [{kind: "worktree_pending", message: "Worktree is awaiting apply or discard"}],
     worktree: {
       path: "/tmp/pactify/jobs/job-panel/wt",
       baseCommit: "97e9d6bf2143",
@@ -44,7 +38,6 @@ export const panelJobs = [
     ...base,
     id: "job-summary",
     title: "AJ-657 · Shared job summary model",
-    issue: "AJ-657",
     attention: [
       {
         kind: "worktree_pending",
@@ -74,7 +67,9 @@ export const panelJobs = [
     ...base,
     id: "job-review",
     title: "Panel acceptance and visual checks",
-    status: "queued",
+    status: "running",
+    activity: {summary: "tool exec go test ./internal/subpanel/...", inputTokens: 8420, outputTokens: 1870, usagePartial: true},
+    worktree: {path: "/tmp/pactify/jobs/job-panel/wt", baseCommit: "97e9d6bf2143", status: "pending"},
     resumeOf: "job-panel",
     duration: "12s",
     inputTokens: 0,
@@ -100,6 +95,20 @@ export const panelJobs = [
     access: "read-only",
     createdAt: "2026-10-15T22:00:00Z",
     duration: "1m56s",
+  },
+  {
+    ...base, id: "job-quota", title: "Recover a quota-limited task", status: "failed",
+    failureClass: "quota", attention: [{kind: "failed", message: "Job failed"}],
+    fallbackTo: "job-fallback", createdAt: "2026-10-15T21:00:00Z",
+  },
+  {
+    ...base, id: "job-fallback", title: "Fallback attempt", harness: "opencode",
+    modelRequested: "deepseek-flash", modelActual: "deepseek-flash", fallbackFrom: "job-quota",
+    createdAt: "2026-10-15T21:01:00Z",
+  },
+  {
+    ...base, id: "job-canceled", title: "Canceled experiment", status: "canceled",
+    createdAt: "2026-10-15T20:00:00Z",
   },
 ];
 export function serveJobsAPI(req, res, pathname) {

@@ -19,6 +19,7 @@ test("panel list → detail → live readable logs and resume chain", async ({
   await page
     .getByRole("link", { name: "AJ-659 · Local read-only job panel" })
     .click();
+    await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
   await expect(page.getByRole("heading", { name: "Task brief" })).toBeVisible();
   await expect(page.getByRole("log")).toContainText(
     "tool exec go test ./internal/subpanel/...",
@@ -35,8 +36,8 @@ test("panel list → detail → live readable logs and resume chain", async ({
     page.getByText("pactify sub apply 'job-panel'", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("navigation", { name: "Resume chain" })
-    .getByRole("link", { name: "job-review →" })
+    .getByRole("navigation", { name: "Run timeline" })
+    .getByRole("link", { name: /^job-review ·/ })
     .click();
   await expect(
     page.getByRole("heading", {
@@ -64,6 +65,7 @@ for (const theme of ["light", "dark"]) {
     await page
       .getByRole("link", { name: "AJ-659 · Local read-only job panel" })
       .click();
+    await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
     await expect(page.getByRole("log")).toContainText("message Tests passed.");
     expect(
       await page.evaluate(
@@ -96,6 +98,24 @@ test("panel mobile wraps long titles and repository paths", async ({
   ).toBe(true);
 });
 
+test("panel uses the shared merged board and a full-screen drawer at 390px", async ({ page }) => {
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/");
+  const running = page.getByRole("region", {name: "RUNNING", exact: true});
+  await expect(running.locator("article")).toHaveCount(1);
+  await expect(running.locator("article")).toContainText("2 runs");
+  await running.getByRole("link").click();
+  const drawer = page.getByRole("dialog", {name: "Job details"});
+  await expect(drawer.getByRole("heading", {name: "Run timeline"})).toBeVisible();
+  const box = await drawer.boundingBox();
+  expect(box?.width).toBe(390);
+  expect(box?.height).toBe(844);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await drawer.getByRole("link", {name: "Close job details"}).click();
+  await expect(page).toHaveURL(/#\/jobs$/);
+  await expect(drawer).toHaveCount(0);
+});
+
 test("panel exchanges launch metadata and keeps bearer authentication after refresh", async ({ page }) => {
   await page.route("**/?token=one-time-launch", async (route) => {
     const response = await route.fetch();
@@ -121,6 +141,7 @@ test("panel exchanges launch metadata and keeps bearer authentication after refr
     request.headers().authorization === "Bearer tab-session",
   );
   await page.getByRole("link", { name: "AJ-659 · Local read-only job panel" }).click();
+  await page.getByRole("navigation", { name: "Run timeline" }).getByRole("link", { name: /^job-panel ·/ }).click();
   await logs;
   await expect(page.getByRole("log")).toContainText("message Tests passed.");
 });

@@ -106,11 +106,13 @@ function Harness({
 export function Routing({
   source,
   readOnly = false,
+  expanded = false,
 }: {
   source: JobsSource;
   readOnly?: boolean;
+  expanded?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(expanded);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [errors, setErrors] = useState<FieldError[]>([]);
@@ -274,6 +276,7 @@ export function Routing({
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
       <summary
+        hidden={expanded}
         onClick={(e) => {
           e.preventDefault();
           setOpen(!open);

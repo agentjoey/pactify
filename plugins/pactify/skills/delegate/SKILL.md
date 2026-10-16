@@ -33,7 +33,8 @@ Aliases are configured in `$PACTIFY_HOME/router.json`; inspect `pactify sub rout
 assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
 
 1. Write a self-contained brief using the five sections below. The callee starts cold and cannot see
-   this conversation. Include relevant paths, scope, access mode, numbered goals and exact acceptance
+   this conversation. Write a short title on the first line; if the user uses an issue tracker,
+   its identifier can be included in the title. Include relevant paths, scope, access mode, numbered goals and exact acceptance
    commands. Known constraints and special cases must be written down: the callee cannot infer them.
    Before changing a rule, require checking callers, special cases and documented exceptions, and
    reporting those dependencies in the final reply.
@@ -46,6 +47,7 @@ assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
    Use this complete example as a template, replacing its paths, constraints and commands for the project:
 
    ```text
+   Fix concurrent cache refresh ordering
    Background:
    src/cache/ expires entries on read; concurrent refreshes can serve stale data.
    Goals:

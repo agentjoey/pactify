@@ -330,11 +330,31 @@ PY
 import pathlib, sys
 text = pathlib.Path(sys.argv[1]).read_text()
 for term in ('10 rows', '20 rows', '30 lines', 'running', 'queued', 'Markdown table',
-             'Title / issue', 'Harness', 'Status', 'Repo / mode', 'Tokens', 'Activity / attention',
+             'Title', 'Harness', 'Status', 'Repo / mode', 'Tokens', 'Activity / attention',
              'activity.usagePartial', 'unknown', 'repo', 'runCwd', 'cwd', 'worktree.status',
              'attention.kind', 'createdAt', 'before returning tool output', 'Never paste raw JSON',
              'omitted', 'counts', 'No delegation jobs'):
     assert term in text, term
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "all delegation skills share the short title instruction and jobs uses titles without extraction" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+blocks = []
+for name in ('delegate', 'codex', 'kimi', 'agy', 'opencode'):
+    text = (root / 'skills' / name / 'SKILL.md').read_text()
+    block = text.split('<!-- BEGIN SHARED-DELEGATION -->')[1].split('<!-- END SHARED-DELEGATION -->')[0]
+    assert 'Write a short title on the first line' in block, name
+    assert 'issue tracker' in block, name
+    blocks.append(block)
+assert len(set(blocks)) == 1, 'shared delegation guides differ'
+jobs = (root / 'skills/jobs/SKILL.md').read_text()
+assert "Title: the brief's first line, otherwise the id" in jobs
+assert 'Title / issue' not in jobs and 'prefer `issue`' not in jobs
+assert '--grep <issue id>' not in jobs
 PY
   [ "$status" -eq 0 ]
 }

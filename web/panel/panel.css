@@ -1,5 +1,7 @@
 @import "../src/index.css";
 
+#root { height: 100dvh; }
+
 /* Standalone panel only. Dashboard keeps its original dark palette. */
 :root[data-theme] {
   color-scheme: light dark;

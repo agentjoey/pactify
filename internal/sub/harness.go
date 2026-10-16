@@ -138,6 +138,11 @@ func (s State) EffectiveConfigMode() string {
 }
 
 func Lookup(name string) (Harness, bool) {
+	if name == "codex" && os.Getenv("PACTIFY_SUB_FAKE") == "1" && os.Getenv("PACTIFY_SUB_FAKE_CODEX") == "1" {
+		h := fakeHarness()
+		h.Name = "codex"
+		return h, true
+	}
 	if name == "fake" && os.Getenv("PACTIFY_SUB_FAKE") == "1" {
 		return fakeHarness(), true
 	}
@@ -212,6 +217,10 @@ func (s *fixtureSession) Prompt(context.Context, cockpit.UserMessage) error {
 			s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: "interrupted"}
 			return
 		case <-timer.C:
+		}
+		if s.opts.Model == "fixture-quota" {
+			s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: "usage limit"}
+			return
 		}
 		if s.opts.Access == cockpit.AccessWrite {
 			if err := os.WriteFile(filepath.Join(s.opts.RepoDir, "out.txt"), []byte("hi\n"), 0600); err != nil {

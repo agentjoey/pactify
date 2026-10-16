@@ -72,6 +72,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	result = Result{JobID: id, Harness: req.Harness, ModelRequested: req.Model, Access: req.Access, Status: StatusFailed, LogPath: store.LogPath(id)}
 	result.ConfigMode = st.EffectiveConfigMode()
+	result.Warnings = append(result.Warnings, st.RouteWarnings...)
 	if h.Experimental != "" {
 		result.Warnings = append(result.Warnings, h.Experimental)
 	}
@@ -101,7 +102,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		} else {
 			for _, warning := range result.Warnings {
 				// These warnings describe harness readiness, not a job error.
-				if !slices.Contains(cacheWarnings, warning) && warning != h.Experimental && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
+				if !slices.Contains(cacheWarnings, warning) && !slices.Contains(st.RouteWarnings, warning) && warning != h.Experimental && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
 					reason = warning
 					break
 				}
@@ -131,12 +132,21 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	var snap Snapshot
 	if st.Worktree == nil {
-		snap, err = TakeSnapshot(req.Cwd)
+		if st.Baseline != nil {
+			snap = *st.Baseline
+		} else {
+			snap, err = TakeSnapshot(req.Cwd)
+		}
 		if err != nil {
 			if !snap.EmptyTree {
 				return fail(err)
 			}
 			result.Warnings = append(result.Warnings, "Changes unavailable: cannot capture baseline: "+err.Error())
+		}
+	}
+	if snap.Base != "" && err == nil && st.Baseline == nil && st.Routing != nil {
+		if e := store.WithState(ctx, id, func(current *State) error { current.Baseline = &snap; return store.Save(*current) }); e != nil {
+			return fail(e)
 		}
 	}
 	if h.Version != nil {

@@ -19,6 +19,7 @@ import (
 // Worktree is shared by every turn of a resumed session. Owner names the first
 // job, whose worktree.lock serializes resume, apply and discard across turns.
 type Worktree struct {
+	Holder       string `json:"holder,omitempty"` // Current session owner after a cross-harness transfer; Owner stays the shared lock key.
 	Applied      bool   `json:"applied,omitempty"`
 	Path         string `json:"path"`
 	BaseCommit   string `json:"baseCommit"`
@@ -187,10 +188,16 @@ func (s Store) resumeRun(id string, req Request, isolated bool, previous State, 
 		err = s.WithState(context.Background(), id, func(st *State) error {
 			copy := *w
 			copy.Applied = false
+			if copy.Holder != "" {
+				copy.Holder = id
+			}
 			st.Worktree = &copy
 			created = *st
 			return s.Save(*st)
 		})
+		if err == nil && w.Holder != "" {
+			err = s.transferHolder(w, id)
+		}
 		return err
 	})
 	return created, err
@@ -284,7 +291,11 @@ func (s Store) withWorktree(id string, f func(*State, *Worktree) error) error {
 	if owner.Worktree == nil || owner.Worktree.Discarded {
 		return fmt.Errorf("worktree has been discarded and cannot be reused")
 	}
-	return f(&st, owner.Worktree)
+	holder := owner.Worktree.Holder
+	if holder != "" && holder != id {
+		return fmt.Errorf("worktree transferred to job %s; use that job id", holder)
+	}
+	return f(&st, st.Worktree)
 }
 
 func (s Store) worktreeIdle(w *Worktree) error {

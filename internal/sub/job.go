@@ -37,6 +37,11 @@ type Request struct {
 }
 
 type State struct {
+	Routing              *Routing          `json:"routing,omitempty"`
+	Baseline             *Snapshot         `json:"baseline,omitempty"`
+	RouteWarnings        []string          `json:"routeWarnings,omitempty"`
+	FallbackFrom         string            `json:"fallbackFrom,omitempty"`
+	FallbackTo           string            `json:"fallbackTo,omitempty"`
 	RetryAttempt         int               `json:"retryAttempt,omitempty"`
 	RetryLimit           int               `json:"retryLimit,omitempty"`
 	Retries              []Retry           `json:"retries,omitempty"`

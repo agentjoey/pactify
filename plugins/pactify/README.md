@@ -242,3 +242,5 @@ the omitted count and a full-list hint: `opencode models`, `agy models`,
 `codex debug models`, or `/model` inside interactive `kimi`. When doctor's read-only
 probe returns the same error as its write probe, its reason says
 `same as above (Write access)` instead of repeating the alternatives.
+
+路由别名、quotaGroups、额度回退及 `--worktree-from`：见 [Harness 路由](../../docs/router.md)。

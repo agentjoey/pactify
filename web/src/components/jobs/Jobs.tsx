@@ -36,6 +36,8 @@ export interface Job {
     usagePartial?: boolean;
   };
   worktree?: { path: string; baseCommit: string; status: string };
+  fallbackFrom?: string;
+  fallbackTo?: string;
   resumeOf: string;
   resumedBy: string[];
 }
@@ -96,6 +98,13 @@ function Status({ job }: { job: Job }) {
     {(job.status === "failed" || job.status === "canceled") && job.failureClass && <Badge color="warn" className="panel-failure-class">{job.failureClass}</Badge>}
     </>
   );
+}
+function FallbackLinks({ job }: { job: Job }) {
+  if (!job.fallbackFrom && !job.fallbackTo) return null;
+  return <nav className="panel-chain" aria-label="Fallback chain">
+    {job.fallbackFrom && <a href={jobLink(job.fallbackFrom)}>fallback from {job.fallbackFrom}</a>}
+    {job.fallbackTo && <a href={jobLink(job.fallbackTo)}>→ fallback to {job.fallbackTo}</a>}
+  </nav>;
 }
 function Attention({ job }: { job: Job }) {
   return job.attention.length > 0 ? (
@@ -198,6 +207,7 @@ export function JobList({ jobs }: { jobs: Job[] }) {
               <a href={jobLink(job.id)}>{job.title || job.issue || job.id}</a>
             </h2>
             <Metadata job={job} />
+            <FallbackLinks job={job} />
             <div className="panel-repository" title={job.repo}>
               {job.repo || "No repository recorded"}
             </div>
@@ -462,6 +472,7 @@ function JobDetail({ id, backHref }: { id: string; backHref: string }) {
             )}
           </section>
           <section className="panel-section">
+            <FallbackLinks job={detail.job} />
             <h2>Resume chain</h2>
             <nav className="panel-chain" aria-label="Resume chain">
               {detail.job.resumeOf && (

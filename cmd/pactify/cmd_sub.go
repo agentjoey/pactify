@@ -52,7 +52,7 @@ func newSubCmd() *cobra.Command {
 		// pflag leaves a space-separated optional value in the positional args.
 		// Keep recognized harness names positional, including `--resume codex`.
 		if resume == subResumeLatest && len(args) > 0 {
-			if _, harness := sub.Lookup(args[0]); !harness {
+			if _, harness := sub.Lookup(args[0]); !harness && !strings.HasPrefix(args[0], "@") {
 				resume, args = args[0], args[1:]
 			} else if len(args) > 1 {
 				resume, args = args[1], append(args[:1:1], args[2:]...)
@@ -116,7 +116,7 @@ func newSubCmd() *cobra.Command {
 			subExit(c, 1, err)
 			return
 		}
-		st, err := store.Recover(a[0])
+		st, err := store.FinalJob(a[0])
 		if err != nil {
 			code, err := subJobError(store, a[0], err)
 			subExit(c, code, err)
@@ -133,7 +133,7 @@ func newSubCmd() *cobra.Command {
 	result.Flags().BoolVar(&resultJSON, "json", false, "Print JSON")
 	cancel := &cobra.Command{Use: "cancel <job>", Short: "Cancel a worker and its agent", Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subCancel(c, a[0]); subExit(c, code, err) }}
 	worker := &cobra.Command{Use: "__worker <job>", Hidden: true, Args: subArgs(1), Run: func(c *cobra.Command, a []string) { code, err := subWorker(c.Context(), a[0]); subExit(c, code, err) }}
-	command.AddCommand(run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd(), newSubPanelCmd(), newSubCostCmd(), newSubQuotaCmd())
+	command.AddCommand(run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd(), newSubPanelCmd(), newSubCostCmd(), newSubQuotaCmd(), newSubRouterCmd())
 	addSubWorktreeCommands(command, run)
 	return command
 }
@@ -148,6 +148,10 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	}
 	if retries < 0 || retries > sub.MaxRetries {
 		return 2, fmt.Errorf("--retries must be between 0 and %d", sub.MaxRetries)
+	}
+	from, _ := c.Flags().GetString("worktree-from")
+	if from != "" && resume {
+		return 2, fmt.Errorf("--worktree-from and --resume cannot be used together")
 	}
 	if resume && fresh {
 		return 2, fmt.Errorf("--resume and --fresh cannot be used together")
@@ -168,6 +172,21 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if name == "" {
 		name = sub.DefaultHarness
 	}
+	router, err := store.LoadRouter()
+	if err != nil {
+		return subRouterError(err)
+	}
+	route, err := router.Resolve(name)
+	if err != nil {
+		return 2, err
+	}
+	if model != "" || c.Flags().Changed("model") {
+		route.Model = model
+	}
+	if effort != "" || c.Flags().Changed("effort") {
+		route.Effort = effort
+	}
+	name, model, effort = route.Harness, route.Model, route.Effort
 	h, ok := sub.Lookup(name)
 	if !ok {
 		return 2, fmt.Errorf("unknown harness %q; available: %s", name, strings.Join(sub.Names(), ", "))
@@ -209,10 +228,35 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if readOnly {
 		req.Access = "read-only"
 	}
+	var routing *sub.Routing
+	var routeWarnings []string
+	if router != nil && !resume {
+		quotas, e := store.ExhaustedRoutes(time.Now())
+		if e != nil {
+			return 1, e
+		}
+		selected, remaining, warnings, e := router.Select(router.Chain(route), quotas, req.Access, time.Now())
+		if e != nil {
+			return 2, e
+		}
+		req.Harness, req.Model, req.Effort = selected.Harness, selected.Model, selected.Effort
+		routing = &sub.Routing{Remaining: remaining, QuotaGroups: router.QuotaGroups}
+		routeWarnings = warnings
+	}
 	id := sub.NewJobID(time.Now(), rand.Reader)
 	st, code, err := subCreateRun(c, store, id, req, resume, resumeJob)
 	if err != nil {
 		return code, err
+	}
+	if routing != nil {
+		st.Routing = routing
+		st.RouteWarnings = routeWarnings
+		if err = store.Save(st); err != nil {
+			return 1, err
+		}
+		for _, warning := range routeWarnings {
+			fmt.Fprintln(c.ErrOrStderr(), warning)
+		}
 	}
 	if err = subStartWorker(store, id); err != nil {
 		st.Status = sub.StatusFailed
@@ -296,7 +340,7 @@ func subWait(c *cobra.Command, store sub.Store, id string, timeout time.Duration
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
-		st, err := store.Recover(id)
+		st, err := store.FinalJob(id)
 		if err != nil {
 			return subJobError(store, id, err)
 		}
@@ -343,6 +387,11 @@ func subCancel(c *cobra.Command, id string) (int, error) {
 	if err != nil {
 		return 1, err
 	}
+	final, err := store.FinalJob(id)
+	if err != nil {
+		return subJobError(store, id, err)
+	}
+	id = final.ID
 	st, err := store.RequestCancel(id)
 	if err != nil {
 		return subJobError(store, id, err)
@@ -437,26 +486,32 @@ func subWorker(parent context.Context, id string) (code int, err error) {
 			}
 		}
 	}()
-	st, err := store.Load(id)
-	if err != nil {
-		return 1, err
-	}
-	h, ok := sub.Lookup(st.Request.Harness)
-	if !ok {
-		st.Status = sub.StatusFailed
-		st.Error = "unknown harness " + st.Request.Harness
-		st.UpdatedAt = time.Now().UTC()
-		st.FinishedAt = st.UpdatedAt
-		return 2, subSaveFallback(store, st)
-	}
 	ctx, stop := signal.NotifyContext(parent, syscall.SIGTERM, os.Interrupt)
 	defer stop()
-	result, err := sub.RunJob(ctx, store, id, h, sub.WorkerConfig{ToolCallLimit: 40})
-	if err != nil {
-		return 1, err
+	for {
+		st, err := store.Load(id)
+		if err != nil {
+			return 1, err
+		}
+		h, ok := sub.Lookup(st.Request.Harness)
+		if !ok {
+			st.Status = sub.StatusFailed
+			st.Error = "unknown harness " + st.Request.Harness
+			st.UpdatedAt = time.Now().UTC()
+			st.FinishedAt = st.UpdatedAt
+			return 2, subSaveFallback(store, st)
+		}
+		result, err := sub.RunJob(ctx, store, id, h, sub.WorkerConfig{ToolCallLimit: 40})
+		if result.FallbackTo != "" {
+			id = result.FallbackTo
+			continue
+		}
+		if err != nil {
+			return 1, err
+		}
+		if result.Status != sub.StatusSucceeded {
+			return 1, nil
+		}
+		return 0, nil
 	}
-	if result.Status != sub.StatusSucceeded {
-		return 1, nil
-	}
-	return 0, nil
 }

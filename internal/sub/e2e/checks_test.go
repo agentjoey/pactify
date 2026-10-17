@@ -83,6 +83,23 @@ func TestLongToolKimiInputStreamingIsNotOutput(t *testing.T) {
 	}
 }
 
+// Real kimi 2.2.0 shape (testdata/golden/kimi-write.json): tool_call carries
+// only the title; the arguments arrive as in-progress JSON text.
+func TestLongToolKimiStreamedArgumentsAreCommandEvidence(t *testing.T) {
+	start := []byte(`{"kind":"tool","tool":{"phase":"start","name":"Bash"},"raw":{"sessionUpdate":"tool_call","status":"pending","title":"Bash"}}`)
+	args := []byte(`{"kind":"tool","raw":{"sessionUpdate":"tool_call_update","status":"in_progress","content":[{"type":"content","content":{"type":"text","text":"{\"command\":\"sleep 240 && echo E2E_LONG_DONE\""}}]}}`)
+	output := []byte(`{"kind":"tool","raw":{"sessionUpdate":"tool_call_update","status":"completed","content":[{"type":"content","content":{"type":"text","text":"E2E_LONG_DONE\n"}}]}}`)
+	if err := longToolEvidence([][]byte{start, args, output}, "4m14s"); err != nil {
+		t.Fatal(err)
+	}
+	if err := longToolEvidence([][]byte{start, output}, "4m14s"); err == nil {
+		t.Fatal("output without any command evidence accepted")
+	}
+	if err := longToolEvidence([][]byte{start, args}, "4m14s"); err == nil {
+		t.Fatal("streamed arguments accepted as output")
+	}
+}
+
 func TestHostSecureStorageAndAuthPreflightFake(t *testing.T) {
 	for _, platform := range []string{"darwin", "linux"} {
 		t.Run(platform, func(t *testing.T) {

@@ -153,9 +153,12 @@ func longToolEvidence(rows [][]byte, duration string) error {
 		command = command || strings.Contains(event.Raw.Item.Command, "sleep 240") || strings.Contains(event.Raw.Part.State.Input.Command, "sleep 240") || strings.Contains(event.Raw.Step.Info.Parameters.Command, "sleep 240") || event.Tool.Phase == "start" && strings.Contains(event.Tool.Text, "sleep 240")
 		command = command || event.Raw.SessionUpdate == "tool_call" && strings.Contains(event.Raw.Input.Command, "sleep 240")
 		output = output || strings.Contains(event.Raw.Item.Output, "E2E_LONG_DONE") || strings.Contains(event.Raw.Part.State.Output, "E2E_LONG_DONE") || strings.Contains(string(event.Raw.Step.Info.Output), "E2E_LONG_DONE") || (event.Tool.Phase == "output" || event.Tool.Phase == "end") && strings.Contains(event.Tool.Text, "E2E_LONG_DONE")
-		if event.Raw.SessionUpdate == "tool_call_update" && event.Raw.Status == "completed" {
+		if event.Raw.SessionUpdate == "tool_call_update" {
 			for _, part := range event.Raw.Content {
-				output = output || part.Content.Type == "text" && strings.Contains(part.Content.Text, "E2E_LONG_DONE")
+				text := part.Content.Type == "text"
+				// Kimi 2.2.0 streams tool arguments as in-progress text, not rawInput.
+				command = command || text && event.Raw.Status == "in_progress" && strings.Contains(part.Content.Text, `"command":"sleep 240`)
+				output = output || text && event.Raw.Status == "completed" && strings.Contains(part.Content.Text, "E2E_LONG_DONE")
 			}
 		}
 	}

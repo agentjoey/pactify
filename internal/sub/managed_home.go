@@ -2,25 +2,33 @@ package sub
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"syscall"
 
+	"github.com/agentjoey/pactify/internal/credentiallinks"
 	"github.com/agentjoey/pactify/internal/lockx"
 )
 
 type homeLink struct {
-	Target    string
-	Directory bool
+	Target          string
+	Directory       bool
+	Credential      bool
+	CreateDirectory bool
 }
 
-// managedHome inspects metadata only. os.Root confines mutations below Home;
-// RemoveAll removes leaf links without traversing them.
+// managedHome inspects metadata only. os.Root confines local mutations;
+// refreshed login files leave Home only by rename to their source or quarantine.
 type managedHome struct {
-	use *os.File // Shared lease retained by prepareHarnessHomes until Cleanup.
+	use             *os.File // Shared lease retained by prepareHarnessHomes until Cleanup.
+	sources         map[string]credentiallinks.Stamp
+	pendingWarnings []string
+	QuarantineDir   string
 
 	Name               string
 	Home               string
@@ -179,6 +187,46 @@ func (m *managedHome) openRoot() (*os.Root, error) {
 
 func (m *managedHome) Prepare(ctx context.Context) error { return m.prepare(ctx, false) }
 
+// Persist metadata across processes and shared leases; never store file contents.
+func (m *managedHome) loadSources() error {
+	m.sources = map[string]credentiallinks.Stamp{}
+	f, err := os.OpenFile(m.Home+".sources.json", os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("invalid managed source metadata")
+	}
+	return json.NewDecoder(io.LimitReader(f, 1<<20)).Decode(&m.sources)
+}
+func (m *managedHome) saveSources() error {
+	b, err := json.Marshal(m.sources)
+	if err != nil {
+		return err
+	}
+	f, err := os.CreateTemp(filepath.Dir(m.Home), ".source-metadata-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	_, err = f.Write(b)
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return err
+	}
+	return os.Rename(f.Name(), m.Home+".sources.json")
+}
+
 // The mutation lock serializes setup/cleanup. The separate usage lock permits
 // concurrent jobs, but only an exclusive holder may remove existing entries.
 func (m *managedHome) usageLock() (*os.File, bool, error) {
@@ -230,6 +278,9 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 	if err = m.guard(); err != nil {
 		return err
 	}
+	if err = m.loadSources(); err != nil {
+		return err
+	}
 	defer func() {
 		if prepareErr != nil && exclusive {
 			if warnings := m.cleanupEntries(); len(warnings) > 0 {
@@ -254,6 +305,11 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 		if m.Mirror {
 			if _, explicit := m.Links[name]; !explicit {
 				continue
+			}
+		}
+		if link.CreateDirectory {
+			if err := os.Mkdir(link.Target, 0700); err != nil && !os.IsExist(err) {
+				return fmt.Errorf("cannot create shared refresh lock directory %s: %w", link.Target, err)
 			}
 		}
 		info, err := os.Stat(link.Target)
@@ -299,6 +355,15 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 		}
 		target := links[name].Target
 		if current, err := os.Readlink(path); err == nil && current == target {
+			if exclusive && links[name].Credential && !links[name].Directory {
+				if _, explicit := m.Links[name]; explicit {
+					stamp, e := credentiallinks.Inspect(target)
+					if e != nil {
+						return e
+					}
+					m.sources[name] = stamp
+				}
+			}
 			continue
 		}
 		// A running harness may have replaced a link by atomic rename. Preserve
@@ -312,6 +377,32 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 		}
 		if err = root.MkdirAll(filepath.Dir(name), 0700); err != nil {
 			return err
+		}
+		if link, explicit := m.Links[name]; explicit && link.Credential {
+			if info, e := root.Lstat(name); e == nil && info.Mode()&os.ModeSymlink == 0 {
+				// A previous process may have exited before cleanup. Do not let
+				// setup discard its refreshed token or silently hide a conflict.
+				var location string
+				var e error
+				if !link.Directory && info.Mode().IsRegular() {
+					location, e = credentiallinks.Restore(path, target, m.sources[name], m.QuarantineDir)
+				} else {
+					location, e = credentiallinks.Quarantine(path, m.QuarantineDir)
+				}
+				if e != nil {
+					return credentiallinks.Retained(path, e)
+				}
+				if location != "" {
+					m.pendingWarnings = append(m.pendingWarnings, fmt.Sprintf("%s %s private copy quarantined at %s; source was not overwritten", m.Name, name, location))
+				}
+			}
+			if !link.Directory {
+				stamp, e := credentiallinks.Inspect(target)
+				if e != nil {
+					return e
+				}
+				m.sources[name] = stamp
+			}
 		}
 		if err = root.RemoveAll(name); err != nil {
 			return err
@@ -331,7 +422,7 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 			return err
 		}
 	}
-	return nil
+	return m.saveSources()
 }
 func (m *managedHome) Check() error {
 	if err := m.guard(); err != nil {
@@ -411,6 +502,9 @@ func (m *managedHome) Cleanup() []string {
 	if !exclusive {
 		return nil
 	}
+	if err := m.loadSources(); err != nil {
+		return []string{fmt.Sprintf("%s source metadata unavailable: %v; private refreshes retained", m.Name, err)}
+	}
 	return m.cleanupEntries()
 }
 func (m *managedHome) cleanupEntries() []string {
@@ -440,7 +534,8 @@ func (m *managedHome) cleanupEntries() []string {
 			}
 		}
 	}
-	var warnings []string
+	warnings := append([]string(nil), m.pendingWarnings...)
+	m.pendingWarnings = nil
 	for _, name := range sortedHomeLinks(names) {
 		path, err := m.path(name)
 		if err != nil {
@@ -458,11 +553,30 @@ func (m *managedHome) cleanupEntries() []string {
 		if info.Mode()&os.ModeSymlink != 0 {
 			continue
 		}
-		warning := fmt.Sprintf("%s replaced the %s symlink with a private copy; removed it to avoid retaining credentials (the link will be rebuilt on next launch)", m.Name, name)
-		if _, explicit := m.Links[name]; !explicit {
-			// A mirrored HOME entry: the session created or atomically rewrote a
-			// top-level file in its private HOME. It is not a credential copy.
-			warning = fmt.Sprintf("the %s session wrote %s in its private HOME; removed it (such changes do not reach your HOME)", m.Name, name)
+		if link, explicit := m.Links[name]; explicit && link.Credential && !link.Directory && info.Mode().IsRegular() {
+			location, err := credentiallinks.Restore(path, link.Target, m.sources[name], m.QuarantineDir)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("%s private %v", m.Name, credentiallinks.Retained(path, err)))
+			} else if location != "" {
+				warnings = append(warnings, fmt.Sprintf("%s %s credential refresh quarantined at %s; source was not overwritten (source changed or original permissions could not be restored)", m.Name, name, location))
+			} else {
+				warnings = append(warnings, fmt.Sprintf("Credential refresh returned to source: %s", link.Target))
+			}
+			continue
+		}
+		if link, explicit := m.Links[name]; explicit && link.Credential {
+			location, err := credentiallinks.Quarantine(path, m.QuarantineDir)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("%s private copy retained at %s; %v", m.Name, path, credentiallinks.Retained(path, err)))
+			} else {
+				warnings = append(warnings, fmt.Sprintf("%s %s unexpected private copy quarantined at %s", m.Name, name, location))
+			}
+			continue
+		}
+		// Private configuration and noncredential mirrored HOME writes are discarded.
+		warning := fmt.Sprintf("the %s session wrote %s in its private HOME; removed it (such changes do not reach your HOME)", m.Name, name)
+		if link, explicit := m.Links[name]; explicit && !link.Directory {
+			warning = fmt.Sprintf("Private configuration rewrite discarded: %s %s (user configuration unchanged)", m.Name, name)
 		}
 		if err = root.RemoveAll(name); err != nil {
 			warning = fmt.Sprintf("%s: could not remove %s from the private HOME: %v", m.Name, name, err)
@@ -479,7 +593,7 @@ func (h *harnessHome) directories() []*harnessHome {
 
 // prepareHarnessHomes is shared by model discovery and the job lifecycle.
 // Saved paths win on resume, even when the caller's XDG defaults have changed.
-func prepareHarnessHomes(ctx context.Context, h *harnessHome, primary string, saved map[string]string, minimal bool) (string, map[string]string, []string, []*managedHome, error) {
+func prepareHarnessHomes(ctx context.Context, h *harnessHome, primary string, saved map[string]string, minimal bool, quarantine string) (string, map[string]string, []string, []*managedHome, error) {
 	homes := map[string]string{}
 	var env []string
 	var layouts []*managedHome
@@ -512,6 +626,9 @@ func prepareHarnessHomes(ctx context.Context, h *harnessHome, primary string, sa
 		}
 		if minimal {
 			layout := d.Layout(home, source)
+			if layout.QuarantineDir == "" {
+				layout.QuarantineDir = quarantine
+			}
 			layouts = append(layouts, layout)
 			if err = layout.prepare(ctx, true); err != nil {
 				return primary, homes, env, layouts, err

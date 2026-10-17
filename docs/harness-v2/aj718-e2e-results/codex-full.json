@@ -1,0 +1,134 @@
+{
+  "commit": "53a9d0266512b7296dde8dbd5ab543e1bf262eb8",
+  "harness": "codex",
+  "model": "",
+  "results": [
+    {
+      "jobs": [
+        "20261017-133037-484627"
+      ],
+      "reason": "checks failed: file e2e.txt missing or incorrect (read error=open /private/tmp/TestHarnessE2Ewrite_worktree503430181/001/pactify/jobs/20261017-133037-484627/wt/e2e.txt: no such file or directory); file existing.txt missing or incorrect (read error=<nil>); file e2e.txt missing or incorrect (read error=open /private/tmp/TestHarnessE2Ewrite_worktree503430181/001/repo/e2e.txt: no such file or directory); file existing.txt missing or incorrect (read error=<nil>); isolated changes, apply and discard verified",
+      "scenario": "write_worktree",
+      "seconds": 14.767511875,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133052-931cc1"
+      ],
+      "reason": "checks failed: actual denied tool evidence: shell=false file=false; verbal refusal is insufficient; unchanged repository; actual denied shell=false file=false; opencode plan diagnostic prompt override when applicable",
+      "scenario": "readonly_denied",
+      "seconds": 10.641554084,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133102-a542a4"
+      ],
+      "reason": "checks failed: required separate reads not evidenced: 0 tool calls; 60-file answer incorrect; 60 separate reads and answer checked; toolCalls=0",
+      "scenario": "readonly_long",
+      "seconds": 13.812208958,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133116-f0458e",
+        "20261017-133127-7d7d38"
+      ],
+      "reason": "checks failed: file first.txt missing or incorrect (read error=open /private/tmp/TestHarnessE2Eresume748660516/001/pactify/jobs/20261017-133116-f0458e/wt/first.txt: no such file or directory); file second.txt missing or incorrect (read error=open /private/tmp/TestHarnessE2Eresume748660516/001/pactify/jobs/20261017-133116-f0458e/wt/second.txt: no such file or directory); sessionId, shared worktree, remembered random word and both files verified",
+      "scenario": "resume",
+      "seconds": 21.248252959,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133137-3a7304"
+      ],
+      "reason": "checks failed: sleep process did not start within 90s; cannot test cancellation;",
+      "scenario": "cancel",
+      "seconds": 9.991397917,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133147-87525d"
+      ],
+      "reason": "checks failed: job finished before required sleep; missing long tool output; no actual long command in tool records; 240s tool completed; retries=0; warnings=codex 0.162.1 has not been checked; run pactify sub doctor first",
+      "scenario": "long_tool",
+      "seconds": 11.921520083,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133159-9ac9b2"
+      ],
+      "reason": "checks failed: file large.done missing or incorrect (read error=open /private/tmp/TestHarnessE2Elarge_output2953753199/001/pactify/jobs/20261017-133159-9ac9b2/wt/large.done: no such file or directory); large-output command not evidenced; 5MB tool command evidenced; final reply present; finalText truncated=false; warnings=codex 0.162.1 has not been checked; run pactify sub doctor first",
+      "scenario": "large_output",
+      "seconds": 11.083024958,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133210-0a7f79",
+        "20261017-133211-9e4e75",
+        "20261017-133211-b1333f"
+      ],
+      "reason": "checks failed: file same.txt missing or incorrect (read error=open /private/tmp/TestHarnessE2Eparallel2528516503/001/pactify/jobs/20261017-133210-0a7f79/wt/same.txt: no such file or directory); file same.txt missing or incorrect (read error=open /private/tmp/TestHarnessE2Eparallel2528516503/001/pactify/jobs/20261017-133211-9e4e75/wt/same.txt: no such file or directory); file same.txt missing or incorrect (read error=open /private/tmp/TestHarnessE2Eparallel2528516503/001/pactify/jobs/20261017-133211-b1333f/wt/same.txt: no such file or directory); three concurrent jobs; unique worktrees and independent same.txt contents",
+      "scenario": "parallel",
+      "seconds": 16.243635875,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133227-1f6d3b",
+        "20261017-133235-769692"
+      ],
+      "reason": "actual model=gpt-6.1-sol; modelVerified=true (adapter semantics only); invalid model class=model",
+      "scenario": "model",
+      "seconds": 13.968538125,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-133241-40ba2c",
+        "20261017-133307-d01126"
+      ],
+      "reason": "unauthenticated auth failure and missing executable checked; quota exhaustion N/A: covered by golden replay",
+      "scenario": "failure_surface",
+      "seconds": 27.26803425,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-133308-de8233"
+      ],
+      "reason": "checks failed: file records.txt missing or incorrect (read error=open /private/tmp/TestHarnessE2Erecords248707872/001/pactify/jobs/20261017-133308-de8233/wt/records.txt: no such file or directory); status/result/logs/cost cross-check; input=43955 output=122 usagePartial=false; cost has no duration/worktree fields",
+      "scenario": "records",
+      "seconds": 11.883663042,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133320-1d4881"
+      ],
+      "reason": "repository instruction marker observed",
+      "scenario": "instructions",
+      "seconds": 9.870343792,
+      "status": "PASS"
+    },
+    {
+      "reason": "checks failed: host: exit status 1 Not logged in · Please run /login ; host produced no pactify job; direct host write does not qualify;",
+      "scenario": "host_path",
+      "seconds": 1.291976583,
+      "status": "FAIL"
+    },
+    {
+      "reason": "checks failed: ; metadata changes=9; credential refresh paths=[] (metadata only)",
+      "scenario": "user_dirs_clean",
+      "seconds": 0.594072458,
+      "status": "FAIL"
+    }
+  ],
+  "started": "2026-10-17T05:30:36.147539Z",
+  "version": "codex-cli 0.162.1"
+}

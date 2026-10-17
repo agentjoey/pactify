@@ -202,12 +202,14 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind)}
 			var modelHomes []*managedHome
 			if h.Home != nil {
-				_, _, env, layouts, e := prepareHarnessHomes(ctx, h.Home, "", nil, true)
+				_, _, env, layouts, e := prepareHarnessHomes(ctx, h.Home, "", nil, true, filepath.Join(filepath.Dir(store.Root), "credential-quarantine"))
 				modelHomes = layouts
 				opts.Env = append(opts.Env, env...)
 				if e != nil {
 					for _, layout := range modelHomes {
-						layout.Cleanup()
+						if warnings := layout.Cleanup(); len(warnings) > 0 {
+							e = fmt.Errorf("%w; %s", e, strings.Join(warnings, "; "))
+						}
 					}
 					abortProbe("Managed home", e.Error())
 					reports = append(reports, alignDoctorChecks(r))

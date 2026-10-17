@@ -463,6 +463,27 @@ func TestCodexTurnFailureIsNotReportedTwice(t *testing.T) {
 	}
 }
 
+func TestCodexRetryNotificationIsNotTerminalError(t *testing.T) {
+	c, events := newCodexRecordingClient()
+	c.handleNotification("error", json.RawMessage(`{"error":{"message":"Reconnecting... 1/5 (rate limit reached)"},"willRetry":true}`))
+	c.handleNotification("turn/completed", json.RawMessage(`{"turn":{"status":"failed","error":{"message":"tool sandbox crashed"}}}`))
+	found := false
+	for _, event := range *events {
+		if event.Kind == EventError && strings.Contains(event.Err, "rate limit") {
+			t.Error("retry notification became authoritative error")
+		}
+		if event.Kind == EventState && event.State == StateTurnFailed {
+			found = true
+			if event.Err != "" {
+				t.Errorf("turn failure must retain the legacy generic error contract: %q", event.Err)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("missing terminal failure")
+	}
+}
+
 // TestCodexThreadResumeIsARequest pins thread/resume as a ClientRequest: it must
 // be sent with an id and its ThreadResumeResponse must be read back. Sent as a
 // notification it gets no answer, so a failed resume looks like a success.

@@ -117,7 +117,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		result.Warnings = append(result.Warnings, "managed hooks are not installed with --with-user-config")
 	}
 	informational := func(w string) bool {
-		return strings.HasPrefix(w, "Quota snapshot unavailable:") || strings.HasPrefix(w, "Failed to record quota snapshot:") || strings.HasPrefix(w, "Completion followup limit reached") || w == "managed hooks are not installed with --with-user-config"
+		return strings.HasPrefix(w, "Quota snapshot unavailable:") || strings.HasPrefix(w, "Failed to record quota snapshot:") || strings.HasPrefix(w, "Completion followup limit reached") || w == "managed hooks are not installed with --with-user-config" || w == "Opencode truncated tool output" || strings.HasPrefix(w, "Credential refresh returned to source:") || strings.HasPrefix(w, "Private configuration rewrite discarded:")
 	}
 
 	// Persist the result before the terminal state, so waiters never observe a partial result.
@@ -319,7 +319,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if h.Home != nil {
 		var env []string
 		var homes map[string]string
-		harnessHome, homes, env, layouts, err = prepareHarnessHomes(ctx, h.Home, harnessHome, st.HarnessHomes, minimalHome)
+		harnessHome, homes, env, layouts, err = prepareHarnessHomes(ctx, h.Home, harnessHome, st.HarnessHomes, minimalHome, filepath.Join(filepath.Dir(store.Root), "credential-quarantine"))
 
 		if err != nil {
 			return fail(err)
@@ -577,6 +577,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		if event.Kind == cockpit.EventState && event.State == cockpit.StateTurnFailed {
 			turnFailed = true
 			message := event.Err
+			if message == "" {
+				message = collector.ErrorMessage
+			}
 			if message == "" {
 				message = "Turn failed"
 			}

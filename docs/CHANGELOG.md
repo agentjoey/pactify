@@ -8,6 +8,13 @@
 
 ---
 
+## Unreleased — AJ-718 · end-to-end harness integration suite
+
+- Promotion gate 2 is now an end-to-end integration suite plus three endurance tasks that judge only integration signals; one-attempt completion of large tasks is reported per harness + model as a capability reference (Owner confirmed 2026-10-17). See [harness-v2.md §4](specs/harness-v2.md).
+- Add the opt-in `harness_e2e` suite (`internal/sub/e2e`): 14 scenarios driven through the real `pactify sub` CLI in private homes, from worktree write/apply/discard and resume to cancel, a 4-minute tool, 5 MB output, parallel jobs, model fulfillment, failure surfaces, record consistency, AGENTS.md pickup, untouched user directories and the Claude Code plugin host path. Live run outside the sandbox: codex 11 / opencode 12 / agy 13 of 14 pass; the only shared failure is the read-only 40-call cap, which cuts off a 60-file read on all three. Kimi waits for the Owner to log in again. Results in [aj718-e2e-report.md](harness-v2/aj718-e2e-report.md).
+- Fix defects the suite found: codex and agy invalid models and opencode missing login / kimi invalid grant were classified `other`; successful git stderr kept refreshing the idle watchdog; opencode native tool truncation never reached warnings (now an informational warning that does not replace the job error); codex `willRetry` notifications no longer become the terminal error or a quota class.
+- Credential refresh: per-file credential links lost rotated refresh tokens, because kimi rewrites its credentials atomically and rotates the refresh token. This invalidated the Owner's kimi login after the AJ-713 recording and the first suite run. Managed homes now restore a refreshed private credential over the user's file when the source is unchanged (keeping its permissions), and otherwise move it to `~/.pactify/credential-quarantine` with a warning; they never delete it. Configuration rewrites are still discarded. Kimi shares its `credentials` and `oauth` directories, so pactify and an interactive kimi use the same refresh lock. The AJ-713 recording guide is corrected. The remaining check-then-rename window is tracked in [backlog.md](backlog.md).
+
 ## Unreleased — agy · Sonnet 5.5 comparison
 
 - Ran agy with `claude-sonnet-5-5-high` on the same Phase 0 tasks to tell model gaps from harness gaps: 7 of the 9 tasks it finished were complete in one attempt (T09 minor, T07 incomplete), against 3 of the same 9 for gemini-3.8-flash-high, with 9/9 jobs succeeded and passed acceptance, no gofmt misses, and about 4x less time per task. The gap is model-side. T05 and the read-only tasks wait for the 3p weekly quota reset. Results in [agy-eval.md](agy-eval.md); the experimental notices are unchanged.

@@ -20,6 +20,9 @@ func fakeKimiUserHome(t *testing.T) string {
 			t.Fatal(err)
 		}
 	}
+	if err := os.MkdirAll(filepath.Join(home, "oauth"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Mkdir(filepath.Join(home, "credentials"), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -47,6 +50,15 @@ func kimiJobFixture(t *testing.T, user bool) (Store, *fakeSession, *fakeBackend,
 		t.Fatal(err)
 	}
 	h, _ := Lookup("kimi")
+	declaration := *h.Home
+	layout := declaration.Layout
+	quarantine := filepath.Join(t.TempDir(), "quarantine")
+	declaration.Layout = func(home, source string) *managedHome {
+		m := layout(home, source)
+		m.QuarantineDir = quarantine
+		return m
+	}
+	h.Home = &declaration
 	h.Version, h.Conceal = nil, nil
 	h.Backend = func() cockpit.Backend { return backend }
 	sess.script = func(s *fakeSession) {
@@ -91,7 +103,7 @@ func assertKimiLinks(t *testing.T, home, userHome string) {
 	if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
 		t.Fatalf("managed home must be a 0700 directory: %v %v", info, err)
 	}
-	for _, name := range []string{"config.toml", "credentials", "device_id"} {
+	for _, name := range []string{"config.toml", "credentials", "device_id", "oauth"} {
 		path := filepath.Join(home, name)
 		info, err := os.Lstat(path)
 		if err != nil || info.Mode()&os.ModeSymlink == 0 {
@@ -164,7 +176,7 @@ func TestKimiManagedHomeMissingSource(t *testing.T) {
 	}
 }
 
-func TestKimiManagedHomeRepairsLinksAndRemovesCopies(t *testing.T) {
+func TestKimiManagedHomeRepairsLinksAndPreservesCopies(t *testing.T) {
 	for _, outcome := range []string{"succeeded", "failed", "startup-failed", "canceled", "panic"} {
 		for _, directory := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/dir=%v", outcome, directory), func(t *testing.T) {
@@ -175,6 +187,9 @@ func TestKimiManagedHomeRepairsLinksAndRemovesCopies(t *testing.T) {
 				if err := os.Symlink("/wrong-target", filepath.Join(home, "config.toml")); err != nil {
 					t.Fatal(err)
 				}
+				if err := os.MkdirAll(filepath.Join(home, "oauth"), 0700); err != nil {
+					t.Fatal(err)
+				}
 				if err := os.Mkdir(filepath.Join(home, "credentials"), 0700); err != nil {
 					t.Fatal(err)
 				}
@@ -183,7 +198,7 @@ func TestKimiManagedHomeRepairsLinksAndRemovesCopies(t *testing.T) {
 				replace := func() {
 					assertKimiLinks(t, home, userHome)
 					writeKimiJobRecord(t, home, s.ThreadID(), "")
-					for _, name := range []string{"config.toml", "credentials", "device_id"} {
+					for _, name := range []string{"config.toml", "credentials", "device_id", "oauth"} {
 						path := filepath.Join(home, name)
 						if err := os.Remove(path); err != nil {
 							t.Fatal(err)
@@ -241,7 +256,7 @@ func TestKimiManagedHomeRepairsLinksAndRemovesCopies(t *testing.T) {
 				if err := json.Unmarshal(data, &r); err != nil {
 					t.Fatal(err)
 				}
-				for _, name := range []string{"config.toml", "credentials", "device_id"} {
+				for _, name := range []string{"config.toml", "credentials", "device_id", "oauth"} {
 					if _, err := os.Lstat(filepath.Join(home, name)); !os.IsNotExist(err) {
 						t.Errorf("copy remains at %s: %v", name, err)
 					}
@@ -423,7 +438,7 @@ func TestKimiDoctorChecksManagedHomeEvidence(t *testing.T) {
 	}
 }
 
-func TestKimiSetupFailureRemovesExistingCopies(t *testing.T) {
+func TestKimiSetupFailureQuarantinesExistingCopies(t *testing.T) {
 	for _, missing := range []string{"device_id", "user-home"} {
 		t.Run(missing, func(t *testing.T) {
 			store, _, _, h, userHome, home := kimiJobFixture(t, false)
@@ -478,7 +493,7 @@ func TestKimiManagedHomeRejectsUnsafeLocations(t *testing.T) {
 			if err == nil || b.gotOpts.RepoDir != "" {
 				t.Fatalf("unsafe source accepted: %v", err)
 			}
-			for _, name := range []string{"config.toml", "credentials", "device_id"} {
+			for _, name := range []string{"config.toml", "credentials", "device_id", "oauth"} {
 				if _, err := os.Lstat(filepath.Join(source, name)); err != nil {
 					t.Errorf("source damaged: %v", err)
 				}
@@ -524,7 +539,7 @@ func TestKimiCleanupNeverFollowsReplacedHome(t *testing.T) {
 	if !contains(r.Warnings, "home") {
 		t.Errorf("missing unsafe home warning: %v", r.Warnings)
 	}
-	for _, name := range []string{"config.toml", "credentials", "device_id"} {
+	for _, name := range []string{"config.toml", "credentials", "device_id", "oauth"} {
 		if _, err := os.Lstat(filepath.Join(userHome, name)); err != nil {
 			t.Errorf("cleanup followed replaced home and removed source %s: %v", name, err)
 		}

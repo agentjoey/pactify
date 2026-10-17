@@ -23,6 +23,7 @@ func TestManagedMirrorRefreshAndCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := agyHome(home, source)
+	m.QuarantineDir = filepath.Join(t.TempDir(), "quarantine")
 	if err := m.Prepare(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -79,6 +80,7 @@ func TestManagedHomeRejectsNestedSymlinkAndAliases(t *testing.T) {
 				t.Fatal(err)
 			}
 			m := agyHome(home, source)
+			m.QuarantineDir = filepath.Join(t.TempDir(), "quarantine")
 			switch fault {
 			case "root":
 				os.Remove(home)
@@ -122,6 +124,7 @@ func TestManagedMirrorCleanupReportsPrivateHomeWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := agyHome(home, source)
+	m.QuarantineDir = filepath.Join(t.TempDir(), "quarantine")
 	if err := m.Prepare(context.Background()); err != nil {
 		t.Fatal(err)
 	}

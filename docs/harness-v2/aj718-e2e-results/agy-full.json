@@ -1,0 +1,285 @@
+{
+  "commit": "53a9d0266512b7296dde8dbd5ab543e1bf262eb8",
+  "harness": "agy",
+  "model": "gemini-3.8-flash",
+  "quotaAfter": {
+    "command": {
+      "data": {
+        "description": "Within each group, models share a weekly limit and a 5-hour limit. Quota is consumed proportionally to the cost of the tokens. Thus, limits will last longer with shorter tasks or using more cost-effective models. The 5-hour limit smooths out aggregate demand to fairly distribute global capacity across all users, while your weekly limit is tied directly to your individual tier.",
+        "groups": [
+          {
+            "buckets": [
+              {
+                "description": "You have used some of your weekly limit, it will fully refresh in 6 days, 16 hours.",
+                "id": "gemini-weekly",
+                "name": "Weekly Limit Remaining",
+                "remaining_fraction": 0.9018458127975464,
+                "reset_time": "2026-10-23T21:59:45Z",
+                "window": "weekly"
+              },
+              {
+                "description": "You have used some of your 5-hour limit, it will fully refresh in 4 hours, 49 minutes.",
+                "id": "gemini-5h",
+                "name": "Five Hour Limit Remaining",
+                "remaining_fraction": 0.9635301828384399,
+                "reset_time": "2026-10-17T10:49:11Z",
+                "window": "5h"
+              }
+            ],
+            "description": "Models within this group: Gemini Flash, Gemini Pro",
+            "name": "Gemini Models"
+          },
+          {
+            "buckets": [
+              {
+                "description": "You have used some of your weekly limit, it will fully refresh in 6 days, 18 hours.",
+                "id": "3p-weekly",
+                "name": "Weekly Limit Remaining",
+                "remaining_fraction": 0.05577639862895012,
+                "reset_time": "2026-10-24T00:06:57Z",
+                "window": "weekly"
+              },
+              {
+                "description": "You have used some of your 5-hour limit, it will fully refresh in 4 hours, 7 minutes.",
+                "id": "3p-5h",
+                "name": "Five Hour Limit Remaining",
+                "remaining_fraction": 0.11426480114459991,
+                "reset_time": "2026-10-17T10:06:57Z",
+                "window": "5h"
+              }
+            ],
+            "description": "Models within this group: Claude Opus, Claude Sonnet, GPT-OSS",
+            "name": "Claude and GPT models"
+          },
+          {
+            "buckets": [
+              {
+                "id": "gemini-argon-wtu-weekly",
+                "name": "Gemini 4 Argon Weekly Limit",
+                "remaining_fraction": 1,
+                "reset_time": "2026-10-24T05:59:36Z",
+                "window": "weekly"
+              }
+            ],
+            "description": "For paid Pro plans, Argon quota is separate. Higher Argon quota (included as part of the larger Gemini quota bucket) is available on Ultra plans.",
+            "name": "Gemini 4 Argon"
+          }
+        ]
+      },
+      "name": "usage"
+    },
+    "conversation_id": "",
+    "duration_seconds": 0,
+    "num_turns": 0,
+    "response": "Gemini Models\tWeekly Limit Remaining\t90%\t2026-10-23T21:59:45Z\nGemini Models\tFive Hour Limit Remaining\t96%\t2026-10-17T10:49:11Z\nClaude and GPT models\tWeekly Limit Remaining\t6%\t2026-10-24T00:06:57Z\nClaude and GPT models\tFive Hour Limit Remaining\t11%\t2026-10-17T10:06:57Z\nGemini 4 Argon\tGemini 4 Argon Weekly Limit\t100%\t2026-10-24T05:59:36Z\n",
+    "status": "SUCCESS",
+    "usage": {
+      "cache_read_tokens": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "thinking_tokens": 0,
+      "total_tokens": 0
+    }
+  },
+  "quotaBefore": {
+    "command": {
+      "data": {
+        "description": "Within each group, models share a weekly limit and a 5-hour limit. Quota is consumed proportionally to the cost of the tokens. Thus, limits will last longer with shorter tasks or using more cost-effective models. The 5-hour limit smooths out aggregate demand to fairly distribute global capacity across all users, while your weekly limit is tied directly to your individual tier.",
+        "groups": [
+          {
+            "buckets": [
+              {
+                "description": "You have used some of your weekly limit, it will fully refresh in 6 days, 16 hours.",
+                "id": "gemini-weekly",
+                "name": "Weekly Limit Remaining",
+                "remaining_fraction": 0.9232771992683411,
+                "reset_time": "2026-10-23T21:59:45Z",
+                "window": "weekly"
+              },
+              {
+                "id": "gemini-5h",
+                "name": "Five Hour Limit Remaining",
+                "remaining_fraction": 1,
+                "reset_time": "2026-10-17T10:49:01Z",
+                "window": "5h"
+              }
+            ],
+            "description": "Models within this group: Gemini Flash, Gemini Pro",
+            "name": "Gemini Models"
+          },
+          {
+            "buckets": [
+              {
+                "description": "You have used some of your weekly limit, it will fully refresh in 6 days, 18 hours.",
+                "id": "3p-weekly",
+                "name": "Weekly Limit Remaining",
+                "remaining_fraction": 0.05577639862895012,
+                "reset_time": "2026-10-24T00:06:57Z",
+                "window": "weekly"
+              },
+              {
+                "description": "You have used some of your 5-hour limit, it will fully refresh in 4 hours, 17 minutes.",
+                "id": "3p-5h",
+                "name": "Five Hour Limit Remaining",
+                "remaining_fraction": 0.11426480114459991,
+                "reset_time": "2026-10-17T10:06:57Z",
+                "window": "5h"
+              }
+            ],
+            "description": "Models within this group: Claude Opus, Claude Sonnet, GPT-OSS",
+            "name": "Claude and GPT models"
+          },
+          {
+            "buckets": [
+              {
+                "id": "gemini-argon-wtu-weekly",
+                "name": "Gemini 4 Argon Weekly Limit",
+                "remaining_fraction": 1,
+                "reset_time": "2026-10-24T05:49:01Z",
+                "window": "weekly"
+              }
+            ],
+            "description": "For paid Pro plans, Argon quota is separate. Higher Argon quota (included as part of the larger Gemini quota bucket) is available on Ultra plans.",
+            "name": "Gemini 4 Argon"
+          }
+        ]
+      },
+      "name": "usage"
+    },
+    "conversation_id": "",
+    "duration_seconds": 0,
+    "num_turns": 0,
+    "response": "Gemini Models\tWeekly Limit Remaining\t92%\t2026-10-23T21:59:45Z\nGemini Models\tFive Hour Limit Remaining\t100%\t2026-10-17T10:49:01Z\nClaude and GPT models\tWeekly Limit Remaining\t6%\t2026-10-24T00:06:57Z\nClaude and GPT models\tFive Hour Limit Remaining\t11%\t2026-10-17T10:06:57Z\nGemini 4 Argon\tGemini 4 Argon Weekly Limit\t100%\t2026-10-24T05:49:01Z\n",
+    "status": "SUCCESS",
+    "usage": {
+      "cache_read_tokens": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "thinking_tokens": 0,
+      "total_tokens": 0
+    }
+  },
+  "results": [
+    {
+      "jobs": [
+        "20261017-134845-56ea2e"
+      ],
+      "reason": "isolated changes, apply and discard verified",
+      "scenario": "write_worktree",
+      "seconds": 19.891908667,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-134905-2276ab"
+      ],
+      "reason": "unchanged repository; actual denied shell=true file=true; opencode plan diagnostic prompt override when applicable",
+      "scenario": "readonly_denied",
+      "seconds": 22.0547665,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-134927-061c47"
+      ],
+      "reason": "checks failed: 60-read job status=failed toolCalls=41 warnings=agy is an experimental harness (large tasks completed in one attempt 3/10; v2 read-only uses plan mode and a fail-closed baseline); agy 1.4.0 has not been checked; run pactify sub doctor first; Tool-call limit exceeded (41 calls); interrupted; Usage may be incomplete; only recorded usage is included (CLI read-only tool-call cap remains 40);",
+      "scenario": "readonly_long",
+      "seconds": 157.781227583,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-135204-8d8865",
+        "20261017-135219-7f93e5"
+      ],
+      "reason": "sessionId, shared worktree, remembered random word and both files verified",
+      "scenario": "resume",
+      "seconds": 29.473684667,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-135234-6fe05f"
+      ],
+      "reason": "running sleep observed; canceled; 4 process identities stopped",
+      "scenario": "cancel",
+      "seconds": 25.070052042,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-135259-298917"
+      ],
+      "reason": "240s tool completed; retries=0; warnings=agy is an experimental harness (large tasks completed in one attempt 3/10; v2 read-only uses plan mode and a fail-closed baseline); agy 1.4.0 has not been checked; run pactify sub doctor first",
+      "scenario": "long_tool",
+      "seconds": 258.140193375,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-135717-400541"
+      ],
+      "reason": "5MB tool command evidenced; final reply present; finalText truncated=false; warnings=agy is an experimental harness (large tasks completed in one attempt 3/10; v2 read-only uses plan mode and a fail-closed baseline); agy 1.4.0 has not been checked; run pactify sub doctor first",
+      "scenario": "large_output",
+      "seconds": 20.045356292,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-135737-ec680a",
+        "20261017-135737-3c5808",
+        "20261017-135738-42e24d"
+      ],
+      "reason": "three concurrent jobs; unique worktrees and independent same.txt contents",
+      "scenario": "parallel",
+      "seconds": 18.331647208,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-135755-e64400",
+        "20261017-135809-017c09"
+      ],
+      "reason": "checks failed: nonexistent model status=failed class=other retries=0; actual model=gemini-3.8-flash; modelVerified=true (adapter semantics only); invalid model class=other",
+      "scenario": "model",
+      "seconds": 21.250729292,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-135817-77000d",
+        "20261017-135818-406728"
+      ],
+      "reason": "unauthenticated auth failure and missing executable checked; quota exhaustion N/A: covered by golden replay",
+      "scenario": "failure_surface",
+      "seconds": 13.17184975,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-135830-9c30a0"
+      ],
+      "reason": "status/result/logs/cost cross-check; input=78574 output=949 usagePartial=false; cost has no duration/worktree fields",
+      "scenario": "records",
+      "seconds": 27.325812875,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-135857-570a4c"
+      ],
+      "reason": "repository instruction marker observed; GEMINI.md also supplied for agy",
+      "scenario": "instructions",
+      "seconds": 14.864574625,
+      "status": "PASS"
+    },
+    {
+      "reason": "metadata changes=0; credential refresh paths=[] (metadata only)",
+      "scenario": "user_dirs_clean",
+      "seconds": 0.749443417,
+      "status": "PASS"
+    }
+  ],
+  "started": "2026-10-17T05:48:30.900495Z",
+  "version": "1.4.0"
+}

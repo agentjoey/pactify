@@ -6,6 +6,8 @@
 
 > 基线 `88df743` · opencode 1.19.0，经 `opencode serve` 接入（AJ-710）· 模型 `minimax-coding-plan/MiniMax-M3`（Owner 指定）· pactify main `42ae3e0` · host 为 Claude Code headless（haiku），经插件 `/pactify:opencode` 原样转交任务说明 · 3 个任务并行 · 验收命令事后串行重跑 · 两名独立评审逐题读 diff，并在各自的副本里跑全量测试。
 
+> 按 2026-10-17 调整后的转正门槛（AJ-718），下面的大任务完成率只作为「opencode + 模型」的能力参考，不再决定转正。转正看端到端集成套件：opencode 14 项通过 12 项，失败的是只读调用上限，以及 plan 模式下模型不去尝试写入；见 [AJ-718 报告](harness-v2/aj718-e2e-report.md)。
+
 ### 结论
 
 | 指标 | codex（Phase 0） | kimi（Phase 0） | agy v2 | opencode v1（deepseek-flash） | **opencode v2（MiniMax-M3）** |

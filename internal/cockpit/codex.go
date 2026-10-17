@@ -888,11 +888,11 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 		// turn.status == "failed" with turn.error populated.
 		c.setTurnID("")
 		if jsonStringAt(params, "turn", "status") == "failed" {
-			c.dispatchEvent(Event{Kind: EventState, State: StateTurnFailed, Raw: raw})
 			summary := jsonStringAt(params, "turn", "error", "message")
 			if summary == "" {
 				summary = "codex: turn failed"
 			}
+			c.dispatchEvent(Event{Kind: EventState, State: StateTurnFailed, Raw: raw})
 			// The `error` notification usually reported this already.
 			if c.noteErr(summary) {
 				c.dispatchEvent(Event{Kind: EventError, Err: summary, Raw: raw})
@@ -908,6 +908,14 @@ func (c *codexClient) handleNotification(method string, params json.RawMessage) 
 		summary := jsonStringAt(params, "error", "message")
 		if summary == "" {
 			summary = jsonStringAt(params, "message")
+		}
+		var notice struct {
+			WillRetry bool `json:"willRetry"`
+		}
+		_ = json.Unmarshal(raw, &notice)
+		if notice.WillRetry {
+			c.dispatchEvent(Event{Kind: EventSystem, State: "codex_retry", Text: summary, Raw: raw})
+			return
 		}
 		if c.noteErr(summary) {
 			c.dispatchEvent(Event{Kind: EventError, Err: summary, Raw: raw})
@@ -1085,6 +1093,7 @@ var codexFailureRules = []failureRule{
 	{"usage limit", "quota"}, {"rate limit", "quota"},
 	{"unauthorized", "auth"},
 	{"requested model is not offered by this agent", "model"},
+	{"model is not supported when using codex with a chatgpt account", "model"},
 }
 
 type codexFailureWindow struct {

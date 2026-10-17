@@ -27,12 +27,14 @@ func TestFailureRegression(t *testing.T) {
 		{"agy", "Idle timeout", "idle_timeout"},
 		{"codex", "Task canceled", "canceled"},
 		{"agy", "agy models: signal: killed", "other"},
+		{"agy", `invalid model selection (--model "e2e-nonexistent-model-718" --effort ""): model e2e-nonexistent-model-718 is not recognized as a known model or custom model in settings`, "model"},
 		{"codex", "job worker is absent or its process identity no longer matches", "other"},
 		{"agy", "Read-only access was not offered for agy in the first release", "other"},
 		{"codex", "git rev-parse HEAD: fatal: not a git repository", "other"},
 		{"agy", "Authentication expired. Please log back in.", "auth"},
 		{"agy", "agy token unavailable; run agy login first: missing", "auth"},
 		{"kimi", "acp: rpc error -32000: Authentication required", "auth"},
+		{"kimi", "internal: The provided authorization grant is invalid", "auth"},
 	} {
 		t.Run(tc.h+"/"+tc.msg, func(t *testing.T) {
 			s := Store{Root: filepath.Join(t.TempDir(), "jobs")}
@@ -83,6 +85,47 @@ func TestSuccessfulJobOmitsFailure(t *testing.T) {
 	data, _ := os.ReadFile(s.ResultPath("ok"))
 	if strings.Contains(string(data), "failureClass") || strings.Contains(string(data), "quotaResetAt") {
 		t.Fatal(string(data))
+	}
+}
+
+func TestWorkerTruncationWarningDoesNotBecomeError(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		t.Run(fmt.Sprint(fail), func(t *testing.T) {
+			store, session, backend := workerFixture(t, "write")
+			if err := store.WithState(context.Background(), "j1", func(st *State) error { st.Request.Harness = "opencode"; return store.Save(*st) }); err != nil {
+				t.Fatal(err)
+			}
+			session.script = func(s *fakeSession) {
+				s.events <- cockpit.Event{Kind: cockpit.EventSystem, State: "warning", Text: "Opencode truncated tool output"}
+				if fail {
+					s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: "Insufficient Balance"}
+				} else {
+					s.events <- cockpit.Event{Kind: cockpit.EventMessage, Text: "done", Final: true}
+					s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
+				}
+			}
+			r, err := RunJob(context.Background(), store, "j1", newFakeHarness(backend), WorkerConfig{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			st, err := store.Load("j1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := ""
+			if fail {
+				want = "Insufficient Balance"
+			}
+			if st.Error != want {
+				t.Errorf("error=%q want %q", st.Error, want)
+			}
+			if fail && r.FailureClass != "quota" {
+				t.Errorf("failure class=%s", r.FailureClass)
+			}
+			if !strings.Contains(strings.Join(r.Warnings, ";"), "Opencode truncated tool output") {
+				t.Error("truncation warning lost")
+			}
+		})
 	}
 }
 
@@ -397,5 +440,79 @@ func TestWorkerPromptFailureUsesQuotaSnapshot(t *testing.T) {
 	r, err := RunJob(context.Background(), store, "j1", Harness{Backend: func() cockpit.Backend { return b }}, WorkerConfig{})
 	if err != nil || r.FailureClass != "quota" {
 		t.Fatalf("result=%+v err=%v", r, err)
+	}
+}
+
+// AJ-718: codex can start a thread with an unknown model, then reject the
+// account/model combination at turn time using a provider error message.
+func TestCodexUnsupportedSubscriptionModelFailure(t *testing.T) {
+	message := `{"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The 'e2e-nonexistent-model-718' model is not supported when using Codex with a ChatGPT account."}}`
+	store, sess, backend := workerFixture(t, "write")
+	st, err := store.Load("j1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Request.Harness = "codex"
+	if err = store.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	h, _ := Lookup("codex")
+	h.Version = nil
+	h.Conceal = nil
+	h.Backend = func() cockpit.Backend { return backend }
+	sess.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventError, Err: message}
+		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Raw: json.RawMessage(`{"turn":{"status":"failed"}}`)}
+	}
+	r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Status != StatusFailed || r.FailureClass != "model" || len(r.Retries) != 0 {
+		t.Fatalf("status=%s class=%s retries=%v", r.Status, r.FailureClass, r.Retries)
+	}
+	st, err = store.Load("j1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(st.Error, "model is not supported") {
+		t.Fatalf("provider error replaced with generic terminal message: %q", st.Error)
+	}
+}
+
+func TestManagedMissingLoginFailureIsAuth(t *testing.T) {
+	for _, name := range []string{"opencode", "kimi"} {
+		t.Run(name, func(t *testing.T) {
+			store, _, backend := workerFixture(t, "write")
+			t.Setenv("XDG_DATA_HOME", t.TempDir())
+			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+			t.Setenv("KIMI_CODE_HOME", t.TempDir())
+			st, err := store.Load("j1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			st.Request.Harness = name
+			st.ConfigMode = "minimal"
+			if err = store.Save(st); err != nil {
+				t.Fatal(err)
+			}
+			h, _ := Lookup(name)
+			h.Version = nil
+			h.Backend = func() cockpit.Backend { return backend }
+			r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
+			if err == nil {
+				t.Fatal("expected a missing-login startup error")
+			}
+			if r.Status != StatusFailed || r.FailureClass != "auth" {
+				t.Fatalf("missing login: status=%s class=%s warnings=%v", r.Status, r.FailureClass, r.Warnings)
+			}
+			st, err = store.Load("j1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(st.Error, "login first") {
+				t.Fatalf("missing actionable login hint: %q", st.Error)
+			}
+		})
 	}
 }

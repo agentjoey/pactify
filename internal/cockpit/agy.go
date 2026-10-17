@@ -562,6 +562,7 @@ func (s *agySession) Close() error {
 // Observed headless failures; only confirmed login hints are treated as auth.
 // The managed-home login hint is emitted by sub/managed_home.go.
 var agyFailureRules = []failureRule{
+	{"invalid model selection", "model"},
 	{"model_mismatch", "model_mismatch"},
 	{"individual quota reached", "quota"},
 	{"run agy login first", "auth"},

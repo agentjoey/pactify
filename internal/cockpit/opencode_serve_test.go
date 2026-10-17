@@ -15,7 +15,7 @@ import (
 
 func TestOpencodeServePeer(t *testing.T) { testenv.OpencodeServePeer(t) }
 func TestOpencodeServeV2(t *testing.T) {
-	for _, scenario := range []string{"permission", "readonly", "quota", "unknown", "unknown-no-id", "transient"} {
+	for _, scenario := range []string{"permission", "readonly", "quota", "unknown", "unknown-no-id", "transient", "truncated", "opaque-metadata"} {
 		t.Run(scenario, func(t *testing.T) {
 			data := testenv.InstallOpencodeServe(t)
 			t.Setenv("COCKPIT_OC_SCENARIO", scenario)
@@ -45,11 +45,19 @@ func TestOpencodeServeV2(t *testing.T) {
 			var usage Usage
 			var text string
 			var terminal Event
+			clippingWarnings := 0
+			bashEnds := 0
 			permission := false
 		loop:
 			for {
 				select {
 				case e := <-s.Events():
+					if e.Kind == EventTool && e.Tool != nil && e.Tool.Name == "bash" && e.Tool.Phase == "end" {
+						bashEnds++
+					}
+					if e.Kind == EventSystem && e.State == "warning" && strings.Contains(strings.ToLower(e.Text), "truncated") {
+						clippingWarnings++
+					}
 					if e.Usage != nil {
 						usage = *e.Usage
 					}
@@ -101,6 +109,12 @@ func TestOpencodeServeV2(t *testing.T) {
 			}
 			if (scenario == "unknown" || scenario == "unknown-no-id") && !strings.Contains(terminal.Err, "Model not found") {
 				t.Error(terminal.Err)
+			}
+			if scenario == "opaque-metadata" && bashEnds != 1 {
+				t.Errorf("opaque metadata discarded tool events: %d bash ends", bashEnds)
+			}
+			if scenario == "truncated" && clippingWarnings != 1 || scenario != "truncated" && clippingWarnings != 0 {
+				t.Errorf("clipping warnings=%d scenario=%s", clippingWarnings, scenario)
 			}
 			if scenario == "permission" || scenario == "readonly" {
 				b, err := os.ReadFile(filepath.Join(data, "reply"))

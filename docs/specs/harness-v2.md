@@ -115,7 +115,7 @@ agy 没有 ACP，也没有可以程序化调用的服务模式（`remote-control
   - 子代理的用量是否计入总数；
   - Read-only profile 的 id 是什么。
 
-## 4. 转正门槛（草案，按 §2 逐项对照）
+## 4. 转正门槛（按 §2 逐项对照）
 
 两道门：
 
@@ -126,7 +126,7 @@ agy 没有 ACP，也没有可以程序化调用的服务模式（`remote-control
    - `sub doctor` 的检查项和 codex 一样多，没有 SKIP。
 
    做不到的项必须是上游限制，并在结果和 skill 文案中注明（例如 `sandboxed=false`）。
-2. **路线质量**（按 harness + 模型评）：10 个大任务至少 7/10 一次完成；有只读能力的，3 个只读任务要 3/3 收敛。达标的路线写进 router 的默认值。
+2. **端到端集成**（2026-10-17 Owner 确认）：端到端集成套件（AJ-718）对该 harness 全部通过，不适用项须为上游限制并注明；外加 3 个耐力大任务，只看集成信号（job 无错误、截断或超时误判，diff 落地，验收命令可运行），不再评 complete / minor。大任务一次完成率作为「harness + 模型」的能力参考单独标注，不作为转正条件。套件用法见 [`internal/sub/e2e/README.md`](../../internal/sub/e2e/README.md)，本轮实跑见 [AJ-718 报告](../harness-v2/aj718-e2e-report.md)。
 
 两道门都过了，才去掉 `Experimental` 标签和 skill 里的横幅，并按规则升插件版本。
 

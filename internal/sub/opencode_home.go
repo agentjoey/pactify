@@ -34,7 +34,7 @@ func opencodeManaged(name string) func() (string, error) {
 	}
 }
 func opencodeData(home, source string) *managedHome {
-	return &managedHome{Name: "opencode", Home: home, Source: source, Mirror: true, Exclude: []string{"opencode"}, Links: map[string]homeLink{"opencode/auth.json": {Target: filepath.Join(source, "opencode/auth.json")}}}
+	return &managedHome{Name: "opencode", Home: home, Source: source, Mirror: true, Exclude: []string{"opencode"}, Links: map[string]homeLink{"opencode/auth.json": {Target: filepath.Join(source, "opencode/auth.json"), Credential: true}}}
 }
 func opencodeConfig(home, source string) *managedHome {
 	return &managedHome{Name: "opencode", Home: home, Source: source, Mirror: true, AllowMissingSource: true, Exclude: []string{"opencode"}}

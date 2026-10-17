@@ -1,0 +1,134 @@
+{
+  "commit": "53a9d0266512b7296dde8dbd5ab543e1bf262eb8",
+  "harness": "opencode",
+  "model": "minimax-coding-plan/MiniMax-M3",
+  "results": [
+    {
+      "jobs": [
+        "20261017-133633-282b40"
+      ],
+      "reason": "isolated changes, apply and discard verified",
+      "scenario": "write_worktree",
+      "seconds": 20.507554125,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-133653-19377f"
+      ],
+      "reason": "checks failed: actual denied tool evidence: shell=false file=false; verbal refusal is insufficient; unchanged repository; actual denied shell=false file=false; opencode plan diagnostic prompt override when applicable",
+      "scenario": "readonly_denied",
+      "seconds": 10.671511458,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133704-d640fd"
+      ],
+      "reason": "checks failed: 60-read job status=failed toolCalls=41 warnings=opencode is an experimental harness (large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3); opencode 1.19.0 has not been checked; run pactify sub doctor first; Tool-call limit exceeded (41 calls); Aborted; Usage may be incomplete; only recorded usage is included (CLI read-only tool-call cap remains 40);",
+      "scenario": "readonly_long",
+      "seconds": 125.593758041,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133910-cabf32",
+        "20261017-133921-5727ed"
+      ],
+      "reason": "checks failed: resumed reply forgot word; file first.txt missing or incorrect (read error=<nil>); file second.txt missing or incorrect (read error=<nil>); sessionId, shared worktree, remembered random word and both files verified",
+      "scenario": "resume",
+      "seconds": 21.183317917,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-133931-07e582"
+      ],
+      "reason": "checks failed: sleep process did not start within 90s; cannot test cancellation;",
+      "scenario": "cancel",
+      "seconds": 91.788588417,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-134104-d93d31"
+      ],
+      "reason": "240s tool completed; retries=0; warnings=opencode is an experimental harness (large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3); opencode 1.19.0 has not been checked; run pactify sub doctor first",
+      "scenario": "long_tool",
+      "seconds": 252.329761917,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-134516-c38edf"
+      ],
+      "reason": "5MB tool command evidenced; final reply present; finalText truncated=false; warnings=opencode is an experimental harness (large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3); opencode 1.19.0 has not been checked; run pactify sub doctor first",
+      "scenario": "large_output",
+      "seconds": 10.588369208,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-134527-87bca5",
+        "20261017-134527-86db9b",
+        "20261017-134528-3e0ae4"
+      ],
+      "reason": "checks failed: file same.txt missing or incorrect (read error=<nil>); three concurrent jobs; unique worktrees and independent same.txt contents",
+      "scenario": "parallel",
+      "seconds": 14.654457792,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-134542-d7026e",
+        "20261017-134551-e0b94e"
+      ],
+      "reason": "actual model=minimax-coding-plan/MiniMax-M3; modelVerified=true (adapter semantics only); invalid model class=model",
+      "scenario": "model",
+      "seconds": 11.397992833,
+      "status": "PASS"
+    },
+    {
+      "jobs": [
+        "20261017-134553-5f088e",
+        "20261017-134555-a3926a"
+      ],
+      "reason": "checks failed: unauthenticated status=failed class=other; unauthenticated auth failure and missing executable checked; quota exhaustion N/A: covered by golden replay",
+      "scenario": "failure_surface",
+      "seconds": 2.774310875,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-134556-d4800c"
+      ],
+      "reason": "checks failed: file e2e.txt missing or incorrect (read error=<nil>); file existing.txt missing or incorrect (read error=<nil>); status/result/logs/cost cross-check; input=40669 output=347 usagePartial=false; cost has no duration/worktree fields",
+      "scenario": "records",
+      "seconds": 19.627690292,
+      "status": "FAIL"
+    },
+    {
+      "jobs": [
+        "20261017-134616-97d2e5"
+      ],
+      "reason": "repository instruction marker observed",
+      "scenario": "instructions",
+      "seconds": 13.168379959,
+      "status": "PASS"
+    },
+    {
+      "reason": "checks failed: host: exit status 1 Not logged in · Please run /login ; host produced no pactify job; direct host write does not qualify;",
+      "scenario": "host_path",
+      "seconds": 1.471801333,
+      "status": "FAIL"
+    },
+    {
+      "reason": "metadata changes=0; credential refresh paths=[] (metadata only)",
+      "scenario": "user_dirs_clean",
+      "seconds": 0.630202,
+      "status": "PASS"
+    }
+  ],
+  "started": "2026-10-17T05:36:30.557562Z",
+  "version": "1.19.0"
+}

@@ -10,7 +10,7 @@ const agyTokenPath = ".gemini/antigravity-cli/antigravity-oauth-token"
 
 func managedAgyHome() (string, error) { return managedHarnessHome("agy") }
 func agyHome(home, source string) *managedHome {
-	return &managedHome{Name: "agy", Home: home, Source: source, Mirror: true, Exclude: []string{".gemini"}, Links: map[string]homeLink{agyTokenPath: {Target: filepath.Join(source, agyTokenPath)}}}
+	return &managedHome{Name: "agy", Home: home, Source: source, Mirror: true, Exclude: []string{".gemini"}, Links: map[string]homeLink{agyTokenPath: {Target: filepath.Join(source, agyTokenPath), Credential: true}}}
 }
 func doctorAgyHome(store Store, id string, result Result, succeeded bool) error {
 	if !succeeded || result.SessionID == "" {

@@ -1,0 +1,24 @@
+{
+  "commit": "53a9d0266512b7296dde8dbd5ab543e1bf262eb8",
+  "harness": "opencode",
+  "model": "minimax-coding-plan/MiniMax-M3",
+  "results": [
+    {
+      "jobs": [
+        "20261017-142226-6904ba"
+      ],
+      "reason": "5MB tool command evidenced; final reply present; finalText truncated=false; native truncation flag observed=true; warnings=opencode is an experimental harness (large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3); opencode 1.19.0 has not been checked; run pactify sub doctor first; Opencode truncated tool output",
+      "scenario": "large_output",
+      "seconds": 18.1553415,
+      "status": "PASS"
+    },
+    {
+      "reason": "metadata changes=0; credential refresh paths=[] (metadata only)",
+      "scenario": "user_dirs_clean",
+      "seconds": 0.47489175,
+      "status": "PASS"
+    }
+  ],
+  "started": "2026-10-17T06:22:20.115671Z",
+  "version": "1.19.0"
+}

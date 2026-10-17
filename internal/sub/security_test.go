@@ -19,7 +19,7 @@ func TestSecurityManagedHomeConcurrentUsers(t *testing.T) {
 	}}
 	prepare := func() *managedHome {
 		t.Helper()
-		_, _, _, layouts, err := prepareHarnessHomes(context.Background(), h, "", nil, true)
+		_, _, _, layouts, err := prepareHarnessHomes(context.Background(), h, "", nil, true, "")
 		if err != nil {
 			t.Fatal(err)
 		}

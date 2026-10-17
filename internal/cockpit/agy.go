@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -322,7 +323,7 @@ nextTurn:
 	activeTools := map[int]bool{}
 	started, ended := map[int]bool{}, map[int]bool{}
 	steps := map[int]Usage{}
-	stepText, lastSpoke := map[int]string{}, -1
+	stepText, lastSpoke, lastWork := map[int]string{}, -1, -1
 	var turn Usage
 	failure, final := "", ""
 	var terminalRaw json.RawMessage
@@ -394,6 +395,9 @@ readLoop:
 				}
 			}
 			if step.Type == "tool" {
+				if !agyWaitTools[step.Name] && step.Index > lastWork {
+					lastWork = step.Index
+				}
 				if step.State == "ACTIVE" {
 					activeTools[step.Index] = true
 				} else {
@@ -494,6 +498,9 @@ readLoop:
 			goto nextTurn
 		}
 		emit(Event{Kind: EventSystem, State: "warning", Text: "Completion followup limit reached; the last non-empty answer was retained"})
+	}
+	if lastSpoke >= 0 && final == stepText[lastSpoke] {
+		final = agyReport(stepText, lastSpoke, lastWork)
 	}
 	if final != "" {
 		emit(Event{Kind: EventMessage, Text: final, Final: true})
@@ -596,6 +603,40 @@ func agyFailure(message string, now time.Time) Failure {
 var agyStartedWork = regexp.MustCompile(`(?i)\b(?:started|launched|running|pending|background)\b|已启动|正在运行`)
 var agyMissingResult = regexp.MustCompile(`(?i)\b(?:no (?:results?|output) yet|still running|not (?:finished|completed)|(?:check|inspect|review) (?:the )?(?:results?|output) later|(?:once|when) (?:it|they|the tests?|the command) (?:finishes?|completes?))\b|完成后再查看|稍后再看`)
 var agyActualResult = regexp.MustCompile(`(?i)\b(?:all \d*\s*tests? pass|tests? (?:passed|pass|failed)|done[.!]|results? below|no longer an issue|follow-up pr|after you push)\b|所有测试通过|如需要`)
+
+// agyWaitTools only poll or wait for background work; they change nothing and
+// produce no result of their own.
+var agyWaitTools = map[string]bool{"manage_task": true, "schedule": true}
+
+// agyReport returns the answer to deliver for a turn. agy can wake the model
+// after it has reported, through a background-task notification or a timer the
+// model scheduled, and the reply to that wake-up is often a short
+// acknowledgement. The longest answer since the last working tool step is kept,
+// followed by every later answer, so the acknowledgement does not replace the
+// report.
+func agyReport(stepText map[int]string, lastSpoke, lastWork int) string {
+	var answers []int
+	for i, text := range stepText {
+		if i > lastWork && i <= lastSpoke && strings.TrimSpace(text) != "" {
+			answers = append(answers, i)
+		}
+	}
+	sort.Ints(answers)
+	best := len(answers) - 1
+	for k, i := range answers {
+		if len(strings.TrimSpace(stepText[i])) > len(strings.TrimSpace(stepText[answers[best]])) {
+			best = k
+		}
+	}
+	if best < 0 || answers[best] == lastSpoke {
+		return stepText[lastSpoke]
+	}
+	parts := make([]string, 0, len(answers)-best)
+	for _, i := range answers[best:] {
+		parts = append(parts, strings.TrimSpace(stepText[i]))
+	}
+	return strings.Join(parts, "\n\n") + "\n"
+}
 
 func agyNeedsCompletion(text string) bool {
 	text = strings.TrimSpace(text)

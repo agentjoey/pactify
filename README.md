@@ -70,7 +70,7 @@ the plugin reminds you on session start — run the curl|sh installer above, the
 For harness delegation, install `/plugin install pactify@pactify` and use `/delegate`
 (or `/pactify:delegate`). `pactify sub run [harness]` defaults to **codex** when the
 harness is omitted; `/codex`, `/kimi`, `/agy` and `/opencode` select one explicitly. **agy and opencode are experimental**: agy completed 3/10 large tasks in one attempt in the v2 re-evaluation
-([evaluation](docs/agy-eval.md)); opencode evaluation is pending. **kimi is experimental**:
+([evaluation](docs/agy-eval.md)); opencode completed 6/10 with deepseek-flash and 4/10 with MiniMax-M3 ([evaluation](docs/opencode-eval.md)). **kimi is experimental**:
 Phase 0 large tasks completed in one attempt 6/10. Kimi results include an informational warning.
 Kimi does not offer read-only access: it cannot enforce it. Use codex, opencode or agy with `--read-only`.
 Kimi jobs report `sandboxed=false`.

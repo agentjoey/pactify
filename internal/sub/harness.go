@@ -98,7 +98,7 @@ var registry = map[string]Harness{
 	"opencode": {
 		TransientRetry: true, Name: "opencode", Kind: "opencode", Backend: cockpit.NewOpencodeBackend,
 		Version:      cliVersion("opencode", opencodeVendorStrip()...),
-		Experimental: "opencode is an experimental harness (large tasks completed in one attempt 6/10)", MinimalConfig: true,
+		Experimental: "opencode is an experimental harness (large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3)", MinimalConfig: true,
 		Home: opencodeHomes(), Models: cockpit.OpencodeModels,
 		Verify: func(_ context.Context, v VerificationInput) Verification {
 			if v.Info.Model == "" {

@@ -25,11 +25,13 @@ func parseLogEvent(line string) (logEvent, bool) {
 // collector is scoped to one block: Final replaces its chunks, and tool start
 // ends the ACP block before Collector resets those chunks.
 type logRenderer struct {
-	raw      bool
-	message  Collector
-	head     logEvent
-	tools    map[string]*logTool
-	lastTool string
+	raw        bool
+	structured bool
+	collector  Collector
+	message    Collector
+	head       logEvent
+	tools      map[string]*logTool
+	lastTool   string
 }
 
 type logTool struct {
@@ -38,6 +40,9 @@ type logTool struct {
 }
 
 func (r *logRenderer) flushMessage(emit func(string) error) error {
+	if r.structured {
+		return nil
+	}
 	text := r.message.FinalText()
 	event := r.head
 	r.message = Collector{}
@@ -50,6 +55,9 @@ func (r *logRenderer) flushMessage(emit func(string) error) error {
 }
 
 func (r *logRenderer) add(line string, emit func(string) error) error {
+	if r.structured {
+		return r.project(line, emit)
+	}
 	if r.raw {
 		return emit(logLine(line))
 	}

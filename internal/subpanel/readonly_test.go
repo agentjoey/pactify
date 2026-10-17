@@ -16,7 +16,7 @@ func TestReadOnlyHandlerCanMountWithoutPanelAuthentication(t *testing.T) {
 	_, store := fixture(t)
 	mux := http.NewServeMux()
 	mux.Handle("/custom/", http.StripPrefix("/custom", ReadOnlyHandler(store)))
-	for _, resource := range []string{"jobs", "jobs/job-00", "jobs/job-00/logs", "jobs/job-00/diff"} {
+	for _, resource := range []string{"jobs", "jobs/job-00", "jobs/job-00/logs", "jobs/job-00/events", "jobs/job-00/diff"} {
 		for _, method := range []string{"GET", "HEAD", "POST", "PATCH", "PUT", "DELETE", "OPTIONS", "TRACE", "CONNECT"} {
 			r := httptest.NewRequest("GET", "/custom/"+resource, nil)
 			r.Method = method

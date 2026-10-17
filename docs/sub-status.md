@@ -30,6 +30,7 @@ AJ-701：删除 `issue` 字段及编号提取。标题只取 brief 第一条非�
 | `id` | string | job id |
 | `title` | string | brief 第一条非空行，去掉 Markdown 标题符号、`*` / `_` 强调符号及反引号，压成单行；最多 80 个 Unicode 字符（含截断省略号） |
 | `harness` | string | 请求的 harness |
+| `effort` | string，可省略 | State 中记录的请求 effort；未知时不从 router 当前配置反推 |
 | `modelRequested` / `modelActual` | string | 请求模型 / result 记录的实际模型；未知为空 |
 | `access` | string | 请求的权限档 |
 | `configMode` | string | State 记录的配置模式；旧 job 未记录时为空 |
@@ -50,6 +51,7 @@ AJ-701：删除 `issue` 字段及编号提取。标题只取 brief 第一条非�
 | `resumeOf` | string | `--resume` 创建时选中的直接来源 job id；未续接或未记录时为空 |
 | `resumedBy` | string array | `resumeOf` 指向本 job 的直接后继 id，按 id 排序；支持分叉，为空时 `[]` |
 | `inputTokens` / `outputTokens` | number | result 的最终 token 统计；尚无结果或未记录时为 0 |
+| `costUSD` | number，可省略 | result 中已知的正美元价格；旧信封默认 0 无法区分未知与免费，因此省略 |
 | `usagePartial` | bool，可省略 | 沿用 result 的标记；为 true 时只有已记录的用量，可能缺少末段，不能视为全 job 精确总量 |
 | `changedFiles` | number | result 中的改动文件数 |
 | `addedLines` / `deletedLines` | number | result 中的增删行数 |
@@ -187,3 +189,30 @@ job 数，单个 job 续接多次也只计 1；手动 `--resume` 产生新 job�
 `result.json` 和 `pactify sub result --json` 总是包含布尔字段 `sandboxed`：codex 为 true，其他 harness 为 false。
 它声明 OS 沙箱能力，与请求的 access 独立。opencode 只读依赖 plan、permission 拒绝和最终 diff 检查，
 仓库外的副作用没有 OS 级限制。ACP 的累计终稿随终态事件的 `text` / `final` 发布，事件背压不会丢文本或工具计数。
+
+
+## Live 事件流（AJ-706）
+
+Dashboard 的 `GET /api/sub/jobs/{id}/events` 与本地只读 panel 的
+`GET /api/jobs/{id}/events` 复用 `Store.Logs` 的读取、跟随和取消逻辑。
+原 `/logs` 仍返回可读字符串，`/events` 的 SSE `data` 返回结构化 JSON 对象；
+终止与读取失败仍使用 `done` / `log-error`。两个入口均只读，沿用各自的认证边界。
+
+初始读取限最后 1 MiB、最多 100 个已识别事件；跟随时单条物理记录限 64 KiB。
+破损、被窗口截断、未提交的跟随行及未知事件不渲染。
+结构化输出不传 `raw`，仅投影已知工具身份/类型/阶段、累计 usage、diff 计数和额度摘要；
+保留 adapter 写日志前的脱敏，并对显示文本中的常见凭据赋值补充遮盖。
+Codex 用每个 thread 的 running total，Kimi 自动续接沿用 Collector 的逐轮累加口径；
+opencode 只有带 `accounting: job_delta` 的已知价格才进入事件 `costUSD`。
+无价格时不把 Usage 的默认零值当成免费。
+
+Live 仅在 Dashboard 或详情 Live 页签挂载时打开事件流，全局最多 4 条；
+其余 job 显示现有两秒 summary 轮询的数字，等待空闲连接。
+页面隐藏、切换页面或关闭详情时取消流，重新显示页面时重新读取有界尾部，重置观测计数。
+工具 calls、工具节点和 session log 仅代表当前连接观测窗口；最终 token/diff 以 summary 为准。
+没有运行中的 job 时静态展示最近运行的记录尾部，不模拟时序或概率，也不推测内部子 agent。
+动画按事件触发，`prefers-reduced-motion` 下禁用。
+
+验收使用 `web/e2e/live.spec.ts`；最终嵌入构建截图可运行
+`cd web && node scripts/shots-live.mjs`，默认输出 `artifacts/live/`（仓库根目录），
+覆盖 Dashboard、详情、panel 和手机宽度。浏览器无法启动时不会生成替代截图。

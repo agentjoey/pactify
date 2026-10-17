@@ -7,6 +7,7 @@ import { mergeJobChains } from "./board";
 import { JobMetadata } from "./Jobs";
 import { JobActions } from "./JobActions";
 import { LogView, splitDiff } from "./logs";
+import { LiveTree } from "./LivePanel";
 interface Detail {
   job: Job;
   brief: string;
@@ -20,7 +21,7 @@ interface Diff {
   truncated?: boolean;
   note: string;
 }
-const tabs = ["Summary", "Logs", "Diff", "Brief"];
+const tabs = ["Summary", "Live", "Logs", "Diff", "Brief"];
 export function JobDetail({
   id,
   jobs,
@@ -107,8 +108,12 @@ export function JobDetail({
                     e.key === "Home"
                       ? tabs[0]
                       : e.key === "End"
-                        ? tabs[3]
-                        : tabs[(index + (e.key === "ArrowRight" ? 1 : 3)) % 4];
+                        ? tabs[tabs.length - 1]
+                        : tabs[
+                            (index +
+                              (e.key === "ArrowRight" ? 1 : tabs.length - 1)) %
+                              tabs.length
+                          ];
                   setTab(next);
                   document.getElementById(`detail-tab-${next}`)?.focus();
                 }}
@@ -214,6 +219,13 @@ export function JobDetail({
                   </p>
                 </section>
               </>
+            )}
+            {tab === "Live" && (
+              <LiveTree
+                source={source}
+                jobs={[...jobs.filter((j) => j.id !== id), data.job]}
+                id={id}
+              />
             )}
             {tab === "Logs" && <LogView lines={lines} status={logStatus} />}
             {tab === "Diff" && (

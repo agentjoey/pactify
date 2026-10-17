@@ -44,18 +44,18 @@ func TestSummaryMetadataAndLegacy(t *testing.T) {
 	if err := os.Mkdir(cwd, 0700); err != nil {
 		t.Fatal(err)
 	}
-	st, err := s.Create("metadata", Request{Harness: "codex", Model: "requested", Access: "write", Cwd: cwd, Brief: "\n # **AJ-657** `任务摘要`\nfollow up AJ-658"})
+	st, err := s.Create("metadata", Request{Harness: "codex", Model: "requested", Effort: "high", Access: "write", Cwd: cwd, Brief: "\n # **AJ-657** `任务摘要`\nfollow up AJ-658"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	st.Status = StatusFailed
 	st.FinishedAt = st.CreatedAt.Add(3 * time.Second)
-	result := Result{ModelActual: "actual", InputTokens: 12, OutputTokens: 4, SessionID: "session", Warnings: []string{"warning"}, Diff: Diff{Files: []FileDelta{{Path: "a"}}, Added: 5, Deleted: 2}}
+	result := Result{ModelActual: "actual", CostUSD: 0.125, InputTokens: 12, OutputTokens: 4, SessionID: "session", Warnings: []string{"warning"}, Diff: Diff{Files: []FileDelta{{Path: "a"}}, Added: 5, Deleted: 2}}
 	if err := atomicJSON(s.ResultPath(st.ID), result); err != nil {
 		t.Fatal(err)
 	}
 	out := summaryJSON(t, s, st, nil)
-	for key, want := range map[string]any{"id": "metadata", "title": "AJ-657 任务摘要", "harness": "codex", "modelRequested": "requested", "modelActual": "actual", "access": "write", "repo": NormalizeRepo(root), "cwd": cwd, "duration": "3s", "inputTokens": float64(12), "outputTokens": float64(4), "changedFiles": float64(1), "addedLines": float64(5), "deletedLines": float64(2), "warningCount": float64(1), "sessionId": "session"} {
+	for key, want := range map[string]any{"id": "metadata", "title": "AJ-657 任务摘要", "harness": "codex", "modelRequested": "requested", "modelActual": "actual", "effort": "high", "costUSD": 0.125, "access": "write", "repo": NormalizeRepo(root), "cwd": cwd, "duration": "3s", "inputTokens": float64(12), "outputTokens": float64(4), "changedFiles": float64(1), "addedLines": float64(5), "deletedLines": float64(2), "warningCount": float64(1), "sessionId": "session"} {
 		if out[key] != want {
 			t.Errorf("%s=%v, want %v", key, out[key], want)
 		}
@@ -77,6 +77,9 @@ func TestSummaryMetadataAndLegacy(t *testing.T) {
 		if out[key] != "" {
 			t.Errorf("legacy %s=%v", key, out[key])
 		}
+	}
+	if _, ok := out["costUSD"]; ok {
+		t.Errorf("unknown cost invented: %v", out)
 	}
 	if _, ok := out["startedAt"]; ok {
 		t.Errorf("legacy startedAt invented: %v", out)

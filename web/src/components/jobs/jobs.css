@@ -469,6 +469,11 @@
   padding: 24px;
   overscroll-behavior: contain;
 }
+/* The drawer owns scrolling; its content must keep its intrinsic height.
+   Shrinking the tab grid lets Live content overflow into the sticky footer. */
+.jobs-drawer > * {
+  flex-shrink: 0;
+}
 .jobs-drawer-close {
   align-self: end;
   color: var(--color-text-3);

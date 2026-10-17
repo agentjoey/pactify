@@ -1,0 +1,268 @@
+.live-panel {
+  font-family: var(--font-mono);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.live-panel .panel-section-heading {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.live-panel .panel-section-heading > span {
+  color: var(--color-text-2);
+  font-size: 11px;
+}
+.live-trunk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 22px 0 0;
+}
+.live-node {
+  background: var(--color-bg-inset);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12px;
+}
+.live-host {
+  text-align: center;
+  color: var(--color-role-design);
+}
+.live-connector {
+  height: 24px;
+  border-left: 1px solid var(--color-border-strong);
+}
+.live-router {
+  width: min(100%, 560px);
+  border-color: var(--color-role-design);
+}
+.live-router > span {
+  color: var(--color-text-2);
+}
+.live-router .live-exhausted {
+  color: var(--color-status-danger, #f87171);
+}
+.live-jobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 24px;
+  padding-top: 30px;
+  position: relative;
+}
+.live-branch {
+  min-width: 0;
+  position: relative;
+}
+.live-branch::before {
+  content: "";
+  position: absolute;
+  height: 30px;
+  border-left: 1px solid var(--color-border-strong);
+  left: 50%;
+  top: -30px;
+}
+.live-harness[data-phase="running"] {
+  border-color: var(--color-role-dev);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-role-dev) 9%, transparent);
+}
+.live-harness[data-phase="failed"] {
+  border-color: var(--color-status-danger, #f87171);
+}
+.live-node-heading,
+.live-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.live-node-heading strong {
+  font-size: 15px;
+}
+.live-phase {
+  text-transform: uppercase;
+  font-size: 10px;
+  color: var(--color-role-dev);
+}
+.live-harness small {
+  color: var(--color-text-2);
+  font-size: 10px;
+}
+.live-harness meter,
+.live-harness progress {
+  width: 100%;
+  height: 7px;
+  accent-color: var(--color-role-design);
+}
+.live-quota {
+  font-size: 11px;
+}
+.live-quota progress {
+  display: block;
+  margin-top: 6px;
+}
+.live-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+.live-tool-link {
+  position: relative;
+  padding-top: 28px;
+  min-width: 0;
+}
+.live-tool-link::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 28px;
+  border-left: 1px solid var(--color-border-strong);
+}
+.live-tool {
+  font-size: 11px;
+  padding: 10px;
+  text-align: center;
+}
+.live-tool[data-active="true"] {
+  border-color: var(--color-role-dev);
+}
+.live-pulse {
+  position: absolute;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 7px;
+  background: var(--color-role-dev);
+  border-radius: 4px;
+  box-shadow: 0 0 10px var(--color-role-dev);
+  animation: live-travel 0.8s ease-out both;
+}
+@keyframes live-travel {
+  from {
+    top: 0;
+    opacity: 1;
+  }
+  to {
+    top: 24px;
+    opacity: 0;
+  }
+}
+.live-session-heading {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-2);
+  font-size: 11px;
+  font-weight: 500;
+}
+.live-session {
+  max-height: 145px;
+  overflow-y: auto;
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--color-text-2);
+}
+.live-session > div {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+  padding: 4px 0;
+}
+.live-session > div.no-time {
+  grid-template-columns: auto 1fr;
+}
+.live-session time {
+  color: var(--color-text-3);
+}
+.live-session b {
+  color: var(--color-role-design);
+}
+.live-session span {
+  min-width: 0;
+  white-space: pre-wrap;
+}
+.live-relations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+.live-relation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 10px;
+  color: var(--color-text-2);
+  gap: 8px;
+}
+.live-relation svg {
+  width: 80px;
+  height: 24px;
+}
+.live-relation path,
+.live-retry path {
+  fill: none;
+  stroke: var(--color-role-design);
+  stroke-width: 1.5;
+}
+.live-fallback path {
+  stroke-dasharray: 4 4;
+}
+.live-retry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.live-retry svg {
+  width: 28px;
+  height: 28px;
+}
+@media (max-width: 600px) {
+  .live-jobs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .live-tools {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 18px;
+  }
+  .live-session > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+  .live-node {
+    padding: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-panel *,
+  .live-panel *::before,
+  .live-panel *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .live-pulse {
+    display: none;
+  }
+}
+
+/* Shared bus connects Router to each observed job branch. */
+.live-jobs::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--color-border-strong);
+}
+.live-relations + .live-jobs {
+  margin-top: 20px;
+}
+.live-relation > span {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  background: var(--color-bg-inset);
+  padding: 6px 8px;
+}

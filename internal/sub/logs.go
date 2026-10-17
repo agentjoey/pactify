@@ -19,6 +19,8 @@ type LogOptions struct {
 	Tail   int
 	Follow bool
 	Raw    bool
+	// Structured emits safe JSON projections, never raw harness payloads.
+	Structured bool
 	// ReadOnly uses atomic state snapshots without recovering orphan workers.
 	ReadOnly bool
 }
@@ -186,7 +188,7 @@ func (s Store) Logs(ctx context.Context, id string, out io.Writer, options LogOp
 	}
 	defer reader.close()
 	emit := func(line string) error { _, err := fmt.Fprintln(out, line); return err }
-	renderer := &logRenderer{raw: options.Raw}
+	renderer := &logRenderer{raw: options.Raw, structured: options.Structured}
 	var tail []string
 	next := 0
 	snapshot := emit

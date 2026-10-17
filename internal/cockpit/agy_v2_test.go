@@ -94,7 +94,21 @@ func TestAgyV2Helper(t *testing.T) {
 		if mode == "active" && round == 2 {
 			emit(map[string]any{"event": "step_update", "step_update": map[string]any{"step_index": 10, "step_type": "tool", "state": "DONE", "tool_name": "run_command"}})
 		}
-		if response != "" && mode != "result-only" {
+		if mode == "timer" {
+			// The report (step 5) is followed by a reply to a timer the model
+			// scheduled; the wake-up itself (steps 4 and 6) is not streamed.
+			step := func(i int, typ, name, text string) {
+				emit(map[string]any{"event": "step_update", "step_update": map[string]any{"step_index": i, "step_type": typ, "state": "DONE", "tool_name": name, "text_delta": text}})
+			}
+			step(1, "tool", "run_command", "")
+			step(2, "agent_response", "", "Waiting for the notification.")
+			step(3, "tool", "manage_task", "")
+			step(5, "agent_response", "", "The fix is in and both acceptance commands pass.\n\n- go test ./... passed")
+			response = "That was only the timer; nothing new."
+			step(7, "agent_response", "", response)
+			result["response"] = response
+		}
+		if response != "" && mode != "result-only" && mode != "timer" {
 			emit(map[string]any{"event": "step_update", "step_update": map[string]any{"step_index": round*10 + 1, "step_type": "agent_response", "state": "DONE", "text_delta": response, "usage": map[string]int{"input_tokens": 10, "output_tokens": 2}}})
 		}
 		result["status"], result["error"], result["response"] = status, failure, response
@@ -172,6 +186,35 @@ func TestAgyV2EmptyFailuresAndFollowups(t *testing.T) {
 		})
 	}
 }
+func TestAgyV2ReportSurvivesTimerReply(t *testing.T) {
+	b, o := agyV2Fixture(t, "timer")
+	s, err := b.Start(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	var final string
+	for _, e := range agyTurn(t, s) {
+		if e.Final {
+			final = e.Text
+		}
+	}
+	want := "The fix is in and both acceptance commands pass.\n\n- go test ./... passed\n\nThat was only the timer; nothing new.\n"
+	if final != want {
+		t.Fatalf("final = %q, want %q", final, want)
+	}
+}
+
+func TestAgyReportKeepsLastAnswerWhenItIsTheReport(t *testing.T) {
+	text := map[int]string{2: "Waiting.", 4: "Short wait note.", 6: "The full report with results.\n"}
+	if got := agyReport(text, 6, 3); got != text[6] {
+		t.Fatalf("got %q", got)
+	}
+	if got := agyReport(map[int]string{1: "A long earlier answer before the work."}, 1, 3); got != "A long earlier answer before the work." {
+		t.Fatalf("answer before the last working step changed: %q", got)
+	}
+}
+
 func TestAgyV2TransientContinuation(t *testing.T) {
 	for _, mode := range []string{"transient", "restart"} {
 		t.Run(mode, func(t *testing.T) {

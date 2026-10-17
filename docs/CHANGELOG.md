@@ -8,6 +8,10 @@
 
 ---
 
+## Unreleased — agy final report survives timer wake-ups
+
+- agy can wake the model again after it has reported, through a background-task notification or a timer the model scheduled. The reply to that wake-up ("That was just the timer…") used to replace the report as the job's final text: 3 of 10 jobs in the agy + Sonnet 5.5 evaluation lost their report this way (T07, T09, T10). The final text is now the longest answer since the last working tool step, followed by any later answers; `manage_task` and `schedule` count as waiting, not work. Completion followup detection still reads only the last answer. Regression `TestAgyV2ReportSurvivesTimerReply` fails on the old parser; replaying the real T07, T09 and T10 streams recovers their reports, and T03 is unchanged.
+
 ## Unreleased — Harness v2 · opencode evaluation (MiniMax-M3)
 
 - Evaluated opencode v2 (`opencode serve`) on the Phase 0 tasks with `minimax-coding-plan/MiniMax-M3`: 4/10 large tasks complete in one attempt, 10/10 jobs succeeded and passed acceptance, no new full-suite failures; read-only 1/3, as R1 and R3 were cut off by the 40-call cap. opencode stays experimental. Results in [opencode-eval.md](opencode-eval.md); notices now cite both models (plugin 0.2.6).

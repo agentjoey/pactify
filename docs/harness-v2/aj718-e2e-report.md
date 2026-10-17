@@ -8,31 +8,36 @@
 
 | # | Scenario | codex | opencode | agy | kimi |
 |---|---|---|---|---|---|
-| 1 | `write_worktree` | PASS | PASS | PASS | 待 Owner 重新登录 |
-| 2 | `readonly_denied` | **部分**：文件写入被沙箱拒绝有证据，仓库不变；shell 写入也被拦下（模型答复中的工具输出为 `operation not permitted`），但 codex 上游没有为这次调用发出任何条目，pactify 拿不到证据 | **FAIL（模型未尝试）**：plan 模式的系统提醒让 MiniMax-M3 直接口头拒绝，没有发出工具调用；deny 规则本身由 AJ-713 的 `opencode-readonly` golden 证明 | PASS（shell 和文件工具都有被拒记录） | 待重跑（N/A，需实测退出码 2） |
-| 3 | `readonly_long` | **FAIL**：第 41 次调用被只读上限截断 | **FAIL**：同上 | **FAIL**：同上 | 待重跑（N/A） |
-| 4 | `resume` | PASS | PASS | PASS | 待重跑 |
-| 5 | `cancel` | PASS（9 个进程身份全部退出） | PASS（5 个） | PASS（4 个） | 待重跑 |
-| 6 | `long_tool` | PASS | PASS | PASS | 待重跑 |
-| 7 | `large_output` | PASS | PASS（原生截断标志已进入 warnings） | PASS | 待重跑 |
-| 8 | `parallel` | PASS | PASS | PASS | 待重跑 |
-| 9 | `model` | PASS | PASS | PASS | 待重跑 |
-| 10 | `failure_surface` | PASS | PASS | PASS | 待重跑 |
-| 11 | `records` | PASS | PASS | PASS | 待重跑 |
-| 12 | `instructions` | PASS | PASS | PASS | 待重跑 |
-| 13 | `user_dirs_clean` | **不确定**：`~/.codex` 下 Codex 应用的全局状态和日志数据库有变化；套件给 codex 用的是私有 `CODEX_HOME`，同一时段用户的其他 codex 会话也在写这个目录，无法归因于测试 | PASS | PASS（agy 刷新了一次登录令牌，正确写回用户目录，没有进入隔离区） | 待重跑 |
-| 14 | `host_path` | PASS | PASS | PASS | 待重跑 |
+| 1 | `write_worktree` | PASS | PASS | PASS | PASS |
+| 2 | `readonly_denied` | **部分**：文件写入被沙箱拒绝有证据，仓库不变；shell 写入也被拦下（模型答复中的工具输出为 `operation not permitted`），但 codex 上游没有为这次调用发出任何条目，pactify 拿不到证据 | **FAIL（模型未尝试）**：plan 模式的系统提醒让 MiniMax-M3 直接口头拒绝，没有发出工具调用；deny 规则本身由 AJ-713 的 `opencode-readonly` golden 证明 | PASS（shell 和文件工具都有被拒记录） | N/A：kimi ACP 不能强制只读，CLI 以退出码 2 明确拒绝 |
+| 3 | `readonly_long` | **FAIL**：第 41 次调用被只读上限截断 | **FAIL**：同上 | **FAIL**：同上 | N/A：同上 |
+| 4 | `resume` | PASS | PASS | PASS | PASS |
+| 5 | `cancel` | PASS（9 个进程身份全部退出） | PASS（5 个） | PASS（4 个） | PASS（5 个） |
+| 6 | `long_tool` | PASS | PASS | PASS | PASS（首轮 FAIL 为套件证据解析缺口，修正后重跑通过，见下） |
+| 7 | `large_output` | PASS | PASS（原生截断标志已进入 warnings） | PASS | PASS |
+| 8 | `parallel` | PASS | PASS | PASS | PASS |
+| 9 | `model` | PASS | PASS | PASS | PASS |
+| 10 | `failure_surface` | PASS | PASS | PASS | PASS |
+| 11 | `records` | PASS | PASS | PASS | PASS（首轮 FAIL 为套件判定缺口，修正后重跑通过，见下） |
+| 12 | `instructions` | PASS | PASS | PASS | PASS |
+| 13 | `user_dirs_clean` | **不确定**：`~/.codex` 下 Codex 应用的全局状态和日志数据库有变化；套件给 codex 用的是私有 `CODEX_HOME`，同一时段用户的其他 codex 会话也在写这个目录，无法归因于测试 | PASS | PASS（agy 刷新了一次登录令牌，正确写回用户目录，没有进入隔离区） | PASS（kimi 刷新了登录令牌，按目录链接正确写回用户目录，没有进入隔离区） |
+| 14 | `host_path` | PASS | PASS | PASS | PASS |
 
 | Harness | PASS | FAIL | 其他 |
 |---|---:|---:|---|
 | codex | 11 | 1（只读上限） | `readonly_denied` 部分（上游不发条目）、`user_dirs_clean` 不确定 |
 | opencode | 12 | 2（只读上限；模型未尝试写入） | — |
 | agy | 13 | 1（只读上限） | — |
-| kimi | — | — | 用户登录已失效（见「凭据刷新缺陷」），待 Owner 执行 `kimi login` 后重跑 |
+| kimi | 12 | 0 | `readonly_denied`、`readonly_long` 为 N/A（kimi 不提供只读，CLI 明确拒绝） |
 
 ### 结论
 
-- **集成机制在三家上都成立。** 写入与 worktree、续接、取消与进程清理、4 分钟长工具、5 MB 大输出、三路并发、模型兑现、失败分类、记录一致性、AGENTS.md、经 Claude Code 插件的 host 路径：codex、opencode、agy 全部通过。
+> **kimi 补跑（2026-10-18 00:02–00:16，Owner 重新登录后）**：kimi 2.2.0，模型 `kimi-code/k3-256k`，同样使用持久的 `PACTIFY_HOME=~/.pactify-e2e/kimi` 和 `PACTIFY_E2E_HOST=1`。首轮 10 PASS、2 N/A、2 FAIL。两项 FAIL 都是套件自己的判定缺口，pactify 本身没有问题。修正套件后单独重跑 `long_tool,records,user_dirs_clean`，全部通过，最终 12 PASS、2 N/A：
+> - `long_tool`：kimi 2.2.0 的 `tool_call` 只带标题，命令参数以 in-progress 文本出现在 `tool_call_update` 里，结构化证据解析没有读这部分。通用的工具记录检查已经找到了 `sleep 240`。回归测试为 `TestLongToolKimiStreamedArgumentsAreCommandEvidence`。
+> - `records`：kimi 的用量在回合结束后从本地 `wire.jsonl` 读取，事件日志里本来就没有 usage 行。套件原来把这种情况当成"用量捏造为零"。现在对有本地用量记录的 harness 改为要求结果里有真实 token。
+> - kimi 在测试期间刷新了一次登录令牌，按目录链接写回了用户目录，没有进入隔离区，之后登录仍然有效。原始汇总见 `aj718-e2e-results/host-kimi*.json`。
+
+- **集成机制在四家上都成立。** 写入与 worktree、续接、取消与进程清理、4 分钟长工具、5 MB 大输出、三路并发、模型兑现、失败分类、记录一致性、AGENTS.md、经 Claude Code 插件的 host 路径：codex、opencode、agy、kimi 全部通过（kimi 不提供只读，两项只读场景为 N/A）。
 - **唯一共同的失败是只读调用上限。** 三家读 60 个文件都在第 41 次调用时被截断，codex 也不例外。这是 pactify 自己的限制（`cmd/pactify/cmd_sub.go` 的 `ToolCallLimit: 40`），调整方案待 Owner 决定。
 - **codex 上游的可观测性缺口。** codex 0.162.1 的 app-server 对模型使用的统一执行工具（输出带 `chunk_id`、`wall_time_seconds`）不发任何 item。host 直接驱动 app-server 复现过：一次被沙箱拒绝的 shell 写入前后，只有两条 agentMessage。后果：这类调用不进 job 日志，也不计入工具调用次数，codex 的只读上限对它们不生效。写入仍由 OS 沙箱拦截，所以不是安全问题。
 - **opencode 的只读拒写判不出集成好坏。** opencode 的只读靠 plan agent 加 deny 规则；plan 模式的提醒让模型根本不去尝试写入。deny 规则生效由 AJ-713 的 golden 回放证明。建议这一项对 opencode 以 golden 为准，不再要求实跑中出现被拒的调用。

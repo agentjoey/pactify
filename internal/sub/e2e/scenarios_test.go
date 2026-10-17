@@ -392,7 +392,10 @@ func records(f *fixture) string {
 			}
 		}
 	}
-	if !usageSeen && !r.UsagePartial {
+	// Kimi usage is read from its local wire records after the turn, so the
+	// event log has no usage rows; the result must still carry real tokens.
+	h, _ := sub.Lookup(f.s.harness)
+	if !usageSeen && !r.UsagePartial && (h.LocalUsageBaseline == nil || r.InputTokens == 0) {
 		f.error("missing logged usage must be marked partial, not fabricated zero")
 	}
 	if f.s.harness == "codex" && len(threadTotals) > 0 {

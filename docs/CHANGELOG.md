@@ -8,6 +8,10 @@
 
 ---
 
+## Unreleased — agy · Sonnet 5.5 comparison
+
+- Ran agy with `claude-sonnet-5-5-high` on the same Phase 0 tasks to tell model gaps from harness gaps: 7 of the 9 tasks it finished were complete in one attempt (T09 minor, T07 incomplete), against 3 of the same 9 for gemini-3.8-flash-high, with 9/9 jobs succeeded and passed acceptance, no gofmt misses, and about 4x less time per task. The gap is model-side. T05 and the read-only tasks wait for the 3p weekly quota reset. Results in [agy-eval.md](agy-eval.md); the experimental notices are unchanged.
+
 ## Unreleased — Linux process snapshot ignores processes exiting mid-read
 
 - On Linux, a process that exits while its `/proc/<pid>/stat` is being read fails the read with ESRCH wrapped in a `*PathError`. The process snapshot compared the error with `==`, so the vanished process failed the whole snapshot and `Close` returned `read /proc/<pid>/stat: no such process` (CI flake in `TestReviewReadonlySessionOverridesUserConfig`). It now uses `errors.Is`, like `Identity.Alive`. Regression: `TestSnapshotSkipsProcessExitingDuringRead` (Linux only).

@@ -8,6 +8,10 @@
 
 ---
 
+## Unreleased — Linux process snapshot ignores processes exiting mid-read
+
+- On Linux, a process that exits while its `/proc/<pid>/stat` is being read fails the read with ESRCH wrapped in a `*PathError`. The process snapshot compared the error with `==`, so the vanished process failed the whole snapshot and `Close` returned `read /proc/<pid>/stat: no such process` (CI flake in `TestReviewReadonlySessionOverridesUserConfig`). It now uses `errors.Is`, like `Identity.Alive`. Regression: `TestSnapshotSkipsProcessExitingDuringRead` (Linux only).
+
 ## Unreleased — agy final report survives timer wake-ups
 
 - agy can wake the model again after it has reported, through a background-task notification or a timer the model scheduled. The reply to that wake-up ("That was just the timer…") used to replace the report as the job's final text: 3 of 10 jobs in the agy + Sonnet 5.5 evaluation lost their report this way (T07, T09, T10). The final text is now the longest answer since the last working tool step, followed by any later answers; `manage_task` and `schedule` count as waiting, not work. Completion followup detection still reads only the last answer. Regression `TestAgyV2ReportSurvivesTimerReply` fails on the old parser; replaying the real T07, T09 and T10 streams recovers their reports, and T03 is unchanged.

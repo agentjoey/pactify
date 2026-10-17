@@ -8,6 +8,12 @@
 
 ---
 
+## Unreleased — AJ-719 · harness update process; opencode 2.x fails fast
+
+- opencode 2.0 ships as a new npm package, `@opencode/cli`, and replaces every v1 server route and the `serve` startup line that pactify drives. Measured on 2.0.32 in an isolated home: the deployed pactify waited 30 s per probe and failed with `opencode serve startup timed out`. Pactify now rejects opencode ≥ 2 before starting any harness process, in jobs, `sub doctor` and model discovery, with a message that names the fallback. The local CLI (1.19.0) is unaffected, and `opencode-ai@latest` is still 1.19.3. See [opencode-2-impact.md](harness-v2/opencode-2-impact.md); whether to build a v2 adapter is an open Owner decision.
+- Add a weekly release watch (`internal/cockpit/harnessdrift/releases.py`, the `releases` job in `harness-drift.yml`). It reads registry and installer metadata for every official channel, successor packages included, and fails the scheduled run only for an untriaged new major line, a deprecated channel or an unparseable version. Registry outages are skipped. The process from detection to response is in [harness-updates.md](harness-updates.md).
+- Gates: `go build ./...`, `go vet ./...`, `go test ./...`, bats, the drift unit tests and the static drift check; the doctor before/after comparison was run against the real 2.0.32 binary.
+
 ## Unreleased — AJ-718 · end-to-end harness integration suite
 
 - Promotion gate 2 is now an end-to-end integration suite plus three endurance tasks that judge only integration signals; one-attempt completion of large tasks is reported per harness + model as a capability reference (Owner confirmed 2026-10-17). See [harness-v2.md §4](specs/harness-v2.md).

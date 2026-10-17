@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -26,7 +27,10 @@ type Harness struct {
 	Kind           string
 	Backend        func() cockpit.Backend
 	Version        func(context.Context) (string, error)
-	Verify         func(context.Context, VerificationInput) Verification
+	// Supported rejects installed CLI versions whose contract the adapter
+	// does not drive, before any harness process is started.
+	Supported func(version string) error
+	Verify    func(context.Context, VerificationInput) Verification
 	// NoReadOnly, when set, is why this harness refuses --read-only jobs.
 	NoReadOnly string
 	// Experimental is an informational warning, independent of job status.
@@ -97,7 +101,7 @@ var registry = map[string]Harness{
 	},
 	"opencode": {
 		TransientRetry: true, Name: "opencode", Kind: "opencode", Backend: cockpit.NewOpencodeBackend,
-		Version:      cliVersion("opencode", opencodeVendorStrip()...),
+		Version: cliVersion("opencode", opencodeVendorStrip()...), Supported: opencodeSupported,
 		Experimental: "opencode is an experimental harness (large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3)", MinimalConfig: true,
 		Home: opencodeHomes(), Models: cockpit.OpencodeModels,
 		Verify: func(_ context.Context, v VerificationInput) Verification {
@@ -218,6 +222,25 @@ func cliVersion(bin string, env ...string) func(context.Context) (string, error)
 		}
 		return fields[len(fields)-1], nil
 	}
+}
+
+// unsupported reports a known-incompatible installed version; an unknown
+// version is left to the adapter and the unverified-version warning.
+func (h Harness) unsupported(version string) error {
+	if h.Supported == nil || version == "" {
+		return nil
+	}
+	return h.Supported(version)
+}
+
+// opencode 2.x replaced every v1 server route and the serve banner this
+// adapter drives (docs/harness-v2/opencode-2-impact.md).
+func opencodeSupported(version string) error {
+	major, _, _ := strings.Cut(strings.TrimPrefix(version, "v"), ".")
+	if n, err := strconv.Atoi(major); err == nil && n >= 2 {
+		return fmt.Errorf("opencode %s is not supported yet: pactify drives the opencode 1.x server API; reinstall opencode 1.x (for example npm install -g opencode-ai@1)", version)
+	}
+	return nil
 }
 
 // The opt-in fixture exercises the detached CLI lifecycle without an installed agent.

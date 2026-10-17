@@ -153,6 +153,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				if installErr == nil && strings.TrimSpace(r.Version) == "" {
 					installErr = fmt.Errorf("version is empty")
 				}
+				if installErr == nil {
+					installErr = h.unsupported(r.Version)
+				}
 			}
 		} else {
 			installErr = fmt.Errorf("not installed (PATH): %w", installErr)

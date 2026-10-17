@@ -28,6 +28,17 @@ jobs:
       - name: Check consumed protocol and flags without installing CLIs
         run: python3 internal/cockpit/harnessdrift/check.py --static
 
+  # Fails only on an untriaged new major line or a deprecated channel, so a
+  # red scheduled run is the alert. Triage: docs/harness-updates.md.
+  releases:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare release channels with contract baselines
+        run: python3 internal/cockpit/harnessdrift/releases.py
+
   latest:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

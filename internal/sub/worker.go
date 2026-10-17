@@ -250,6 +250,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			result.Warnings = append(result.Warnings, versionWarning)
 		}
 	}
+	if err := h.unsupported(result.CLIVersion); err != nil {
+		return fail(err)
+	}
 	unverifiedWarning = unverifiedVersionWarning(filepath.Dir(store.Root), h, result.CLIVersion)
 	if unverifiedWarning != "" {
 		result.Warnings = append(result.Warnings, unverifiedWarning)

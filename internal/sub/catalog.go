@@ -104,6 +104,8 @@ func (c *harnessCatalog) harness(ctx context.Context, s Store, h Harness, defaul
 	switch {
 	case !row.Installed:
 		next.Models.Error = "harness is not installed"
+	case h.unsupported(row.Version) != nil:
+		next.Models.Error = h.unsupported(row.Version).Error()
 	case h.Models == nil:
 		next.Models.Items = []string{}
 		next.Efforts, next.DefaultModel = nil, ""

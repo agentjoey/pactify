@@ -154,7 +154,7 @@ func (s *Server) Handler() http.Handler {
 	})
 }
 
-// ReadOnlyHandler serves /router, /cost, /jobs and its detail, logs and diff subresources.
+// ReadOnlyHandler serves /router, /cost, /jobs and its detail, logs, events and diff subresources.
 // The host owns authentication and must mount this behind its security boundary.
 // Reads use atomic snapshots and never recover workers or write job files.
 func ReadOnlyHandler(store sub.Store) http.Handler {
@@ -166,6 +166,7 @@ func ReadOnlyHandler(store sub.Store) http.Handler {
 	mux.HandleFunc("GET /jobs", s.jobs)
 	mux.HandleFunc("GET /jobs/{id}", s.detail)
 	mux.HandleFunc("GET /jobs/{id}/logs", s.logs)
+	mux.HandleFunc("GET /jobs/{id}/events", s.events)
 	mux.HandleFunc("GET /jobs/{id}/diff", s.diff)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
@@ -277,12 +278,18 @@ func (s *Server) detail(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, d)
 }
 
-type eventWriter struct{ w http.ResponseWriter }
+type eventWriter struct {
+	w          http.ResponseWriter
+	structured bool
+}
 
 func (e eventWriter) Write(data []byte) (int, error) {
-	// Logs emits one formatted line per write. JSON encoding keeps all text inside
-	// one SSE data frame, including arbitrary Unicode and control characters.
+	// Logs emits one rendered record per write. Readable text is JSON encoded;
+	// structured records are already safe JSON projections from Store.Logs.
 	encoded, _ := json.Marshal(strings.TrimSuffix(string(data), "\n"))
+	if e.structured {
+		encoded = []byte(strings.TrimSpace(string(data)))
+	}
 	if _, err := fmt.Fprintf(e.w, "data: %s\n\n", encoded); err != nil {
 		return 0, err
 	}
@@ -291,7 +298,9 @@ func (e eventWriter) Write(data []byte) (int, error) {
 	}
 	return len(data), nil
 }
-func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
+func (s *Server) logs(w http.ResponseWriter, r *http.Request)   { s.streamLogs(w, r, false) }
+func (s *Server) events(w http.ResponseWriter, r *http.Request) { s.streamLogs(w, r, true) }
+func (s *Server) streamLogs(w http.ResponseWriter, r *http.Request, structured bool) {
 	st, err := s.load(r)
 	if err != nil {
 		apiError(w, err)
@@ -300,7 +309,7 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("X-Accel-Buffering", "no")
 	_ = http.NewResponseController(w).Flush()
-	err = s.store.Logs(r.Context(), st.ID, eventWriter{w}, sub.LogOptions{Tail: 100, Follow: true, ReadOnly: true})
+	err = s.store.Logs(r.Context(), st.ID, eventWriter{w, structured}, sub.LogOptions{Tail: 100, Follow: true, ReadOnly: true, Structured: structured})
 	if r.Context().Err() != nil {
 		return
 	}

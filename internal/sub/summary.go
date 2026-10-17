@@ -26,6 +26,7 @@ type JobSummary struct {
 	ID             string           `json:"id"`
 	Title          string           `json:"title"`
 	Harness        string           `json:"harness"`
+	Effort         string           `json:"effort,omitempty"`
 	ModelRequested string           `json:"modelRequested"`
 	ModelActual    string           `json:"modelActual"`
 	Access         string           `json:"access"`
@@ -42,6 +43,7 @@ type JobSummary struct {
 	Activity       *Activity        `json:"activity,omitempty"`
 	ResumeOf       string           `json:"resumeOf"`
 	ResumedBy      []string         `json:"resumedBy"`
+	CostUSD        *float64         `json:"costUSD,omitempty"`
 	InputTokens    int              `json:"inputTokens"`
 	OutputTokens   int              `json:"outputTokens"`
 	UsagePartial   bool             `json:"usagePartial,omitempty"`
@@ -174,7 +176,8 @@ func (s Store) Summarize(st State, peers []State, now time.Time) JobSummary {
 func (index *SummaryIndex) Summarize(st State, now time.Time) JobSummary {
 	s := index.store
 	title := briefSummary(st.Request.Brief)
-	row := JobSummary{Actions: index.Actions(st), FallbackFrom: st.FallbackFrom, FallbackTo: st.FallbackTo, ID: st.ID, Title: title, Harness: st.Request.Harness, ModelRequested: st.Request.Model, Access: st.Request.Access, ConfigMode: st.ConfigMode, Repo: JobRepo(st), Cwd: st.Request.Cwd, Status: st.Status, CreatedAt: st.CreatedAt, ResumeOf: st.ResumeOf, Attention: []Attention{}, ResumedBy: []string{}}
+	row := JobSummary{Actions: index.Actions(st), FallbackFrom: st.FallbackFrom, FallbackTo: st.FallbackTo, ID: st.ID, Title: title, Harness: st.Request.Harness, ModelRequested: st.Request.Model,
+		Effort: st.Request.Effort, Access: st.Request.Access, ConfigMode: st.ConfigMode, Repo: JobRepo(st), Cwd: st.Request.Cwd, Status: st.Status, CreatedAt: st.CreatedAt, ResumeOf: st.ResumeOf, Attention: []Attention{}, ResumedBy: []string{}}
 	end := st.FinishedAt
 	if end.IsZero() {
 		end = now
@@ -209,6 +212,10 @@ func (index *SummaryIndex) Summarize(st State, now time.Time) JobSummary {
 	}
 	row.ModelActual = result.ModelActual
 	row.InputTokens, row.OutputTokens = result.InputTokens, result.OutputTokens
+	if result.CostUSD > 0 {
+		cost := result.CostUSD
+		row.CostUSD = &cost
+	}
 	row.UsagePartial = result.UsagePartial
 	row.ChangedFiles, row.AddedLines, row.DeletedLines = len(result.Diff.Files), result.Diff.Added, result.Diff.Deleted
 	row.WarningCount, row.SessionID = len(result.Warnings), result.SessionID

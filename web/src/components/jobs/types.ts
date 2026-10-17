@@ -1,5 +1,9 @@
 export interface Job {
   actions?: string[];
+  effort?: string;
+  changedFiles?: number;
+  addedLines?: number;
+  deletedLines?: number;
   startedAt?: string;
   finishedAt?: string;
   costUSD?: number | null;

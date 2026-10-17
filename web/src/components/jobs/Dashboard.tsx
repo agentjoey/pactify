@@ -11,6 +11,7 @@ import {
 } from "./statistics";
 import { TokenChart } from "./TokenChart";
 import { Quota, type QuotaData } from "./Quota";
+import { LiveTree } from "./LivePanel";
 interface Total {
   jobs: number;
   succeeded: number;
@@ -63,6 +64,7 @@ export function Dashboard({
   const unavailable = !!cost.error || (!!cost.data && !report);
   return (
     <div className="dashboard-content">
+      <LiveTree source={source} jobs={jobs} unavailable={jobsUnavailable} />
       <div className="kpi-grid">
         {(
           [

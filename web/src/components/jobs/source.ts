@@ -1,4 +1,7 @@
-export type JobsFetch = (path: string, signal: AbortSignal) => Promise<Response>;
+export type JobsFetch = (
+  path: string,
+  signal: AbortSignal,
+) => Promise<Response>;
 
 export interface JobsSource {
   jobsPath: string;
@@ -17,24 +20,27 @@ export const dashboardJobsSource: JobsSource = {
   write: (path, init) => fetch(path, { ...init, credentials: "same-origin" }),
   async fetch(path, signal) {
     const response = await fetch(path, { signal, credentials: "same-origin" });
-    if (!response.ok) throw new Error(`Failed to load (${response.status}). Retrying shortly.`);
+    if (!response.ok)
+      throw new Error(`Failed to load (${response.status}). Retrying shortly.`);
     return response;
   },
 };
 
 // fetch supports Authorization and aborting the body, unlike EventSource.
 // Do not reconnect automatically: that would replay the initial tail.
-export async function readJobLogs(
+export async function readJobStream(
   fetcher: JobsFetch,
   path: string,
   signal: AbortSignal,
-  line: (text: string) => void,
+  line: (value: unknown) => void,
   status: (text: string) => void,
 ) {
   const response = await fetcher(path, signal);
   if (!response.body) throw new Error("Log stream unavailable");
   const reader = response.body.getReader();
-  const abort = () => { void reader.cancel(); };
+  const abort = () => {
+    void reader.cancel();
+  };
   signal.addEventListener("abort", abort, { once: true });
   if (signal.aborted) abort();
   const decoder = new TextDecoder();
@@ -55,16 +61,25 @@ export async function readJobLogs(
           if (field.startsWith("event:")) event = field.slice(6).trim();
           if (field.startsWith("data:")) data.push(field.slice(5).trimStart());
         }
-        if (event === "done") { status("Finished"); return; }
-        if (event === "log-error") { status("Failed to read logs. Reload to retry."); return; }
+        if (event === "done") {
+          status("Finished");
+          return;
+        }
+        if (event === "log-error") {
+          status("Failed to read logs. Reload to retry.");
+          return;
+        }
         if (event === "message" && data.length) {
           try {
             const text: unknown = JSON.parse(data.join("\n"));
-            if (typeof text === "string") line(text);
-          } catch { status("Could not parse log entry"); }
+            line(text);
+          } catch {
+            status("Could not parse log entry");
+          }
         }
       }
-      if (pending.length > 1 << 20) throw new Error("Log entry exceeds stream limit");
+      if (pending.length > 1 << 20)
+        throw new Error("Log entry exceeds stream limit");
     }
     if (!signal.aborted) status("Connection lost. Reload to retry.");
   } finally {
@@ -72,4 +87,22 @@ export async function readJobLogs(
     await reader.cancel();
     reader.releaseLock();
   }
+}
+
+export function readJobLogs(
+  fetcher: JobsFetch,
+  path: string,
+  signal: AbortSignal,
+  line: (text: string) => void,
+  status: (text: string) => void,
+) {
+  return readJobStream(
+    fetcher,
+    path,
+    signal,
+    (value) => {
+      if (typeof value === "string") line(value);
+    },
+    status,
+  );
 }

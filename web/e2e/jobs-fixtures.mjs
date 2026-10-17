@@ -1,5 +1,6 @@
 // Mutable, hermetic job API shared by dashboard and read-only panel fixtures.
 const base = {
+  effort: "high",
   harness: "codex",
   modelRequested: "gpt-6.1-sol",
   modelActual: "gpt-6.1-sol",
@@ -235,7 +236,7 @@ export function createJobsAPI(writable = false) {
       return true;
     }
     const match = path.match(
-      /^\/api\/jobs\/([^/]+)(?:\/(logs|diff|cancel|resume|apply|discard))?$/,
+      /^\/api\/jobs\/([^/]+)(?:\/(logs|events|diff|cancel|resume|apply|discard))?$/,
     );
     const job =
       match && jobs.find((j) => j.id === decodeURIComponent(match[1]));
@@ -303,6 +304,93 @@ export function createJobsAPI(writable = false) {
     }
     if (req.method !== "GET") {
       send(res, 405, { error: "Read-only" });
+      return true;
+    }
+    if (action === "events") {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-store",
+      });
+      // Real log.jsonl events carry no timestamp; keep fixtures faithful.
+      const events = [
+        { kind: "state", state: "turn_started" },
+        {
+          kind: "message",
+          text: "Inspecting the existing panel and tests.",
+          final: true,
+        },
+        {
+          kind: "tool",
+          tool: {
+            id: "/read",
+            phase: "start",
+            name: "rg --files web/src",
+            type: "shell",
+          },
+        },
+        {
+          kind: "tool",
+          tool: {
+            id: "/read",
+            phase: "end",
+            name: "rg --files web/src",
+            type: "shell",
+          },
+        },
+        {
+          kind: "tool",
+          tool: {
+            id: "/edit",
+            phase: "start",
+            name: "apply_patch",
+            type: "edit",
+          },
+        },
+        {
+          kind: "tool",
+          tool: {
+            id: "/edit",
+            phase: "end",
+            name: "apply_patch",
+            type: "edit",
+          },
+        },
+        { kind: "diff", diff: { files: 3, added: 42, deleted: 8 } },
+        {
+          kind: "usage",
+          usage: { inputTokens: 8420, outputTokens: 1870 },
+        },
+        {
+          kind: "system",
+          state: "rate_limits",
+          rateLimit: "7-day window: 35% used",
+        },
+        {
+          kind: "tool",
+          tool: {
+            id: "/test",
+            phase: "start",
+            name: "go test ./internal/subpanel/...",
+            type: "shell",
+          },
+        },
+        {
+          kind: "message",
+          text: "Running the panel acceptance checks.",
+          final: true,
+        },
+      ];
+      if (job.status !== "running")
+        events.push({
+          kind: "state",
+          state: job.status === "succeeded" ? "turn_completed" : "turn_failed",
+        });
+      for (const event of events)
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      if (job.status === "running") {
+        const heartbeat = setInterval(() => res.write(": heartbeat\n\n"), 1000);
+        res.on("close", () => clearInterval(heartbeat));
+      } else res.end("event: done\ndata: {}\n\n");
       return true;
     }
     if (action === "logs") {

@@ -8,6 +8,14 @@
 
 ---
 
+## Unreleased — AJ-706 · event-driven Live agent tree
+
+- Add a Live view above the Dashboard metrics and as a tab in job details, shared with the read-only `pactify sub panel`. The tree shows the host, the router's aliases, fallbacks and exhausted routes, each observed job (harness · model · effort, duration, tokens, calls, diff, quota), tool categories and a session log; resume and fallback links and retry loops are drawn from recorded relations. Nothing is inferred: no probabilities, no invented sub-agents, and rows without a timestamp (real `log.jsonl` events carry none) show no time.
+- Add a read-only `/jobs/{id}/events` SSE on the existing shared handler and `Store.Logs` reader. It keeps the 1 MiB initial window, the 100-event tail and cancellation, and forwards only structured projections: no raw payloads, and credential assignments and flags are masked in display text. Job summaries gain the recorded effort and a known positive cost.
+- Events are batched per animation frame, and Live streams are capped at four across the page, with summary polling for the rest. Streams close on unmount or when the page is hidden. Reduced motion disables pulses, and mobile stacks tools vertically.
+- The detail drawer keeps the intrinsic height of its children, so long Live content scrolls inside the drawer instead of overlapping the action footer; four Playwright geometry regressions (web and panel at 1440×1100 and 375×812) fail when the fix is removed.
+- Gates: TypeScript; 165 Vitest tests; both embedded builds; Go build, vet and the serve, subpanel and sub suites. Playwright ran 26/26 outside the sandbox with `--retries 0`. Screenshots were checked against mocks and against a real running codex job through the panel.
+
 ## Unreleased — AJ-719 · harness update process; opencode 2.x fails fast
 
 - opencode 2.0 ships as a new npm package, `@opencode/cli`, and replaces every v1 server route and the `serve` startup line that pactify drives. Measured on 2.0.32 in an isolated home: the deployed pactify waited 30 s per probe and failed with `opencode serve startup timed out`. Pactify now rejects opencode ≥ 2 before starting any harness process, in jobs, `sub doctor` and model discovery, with a message that names the fallback. The local CLI (1.19.0) is unaffected, and `opencode-ai@latest` is still 1.19.3. See [opencode-2-impact.md](harness-v2/opencode-2-impact.md); whether to build a v2 adapter is an open Owner decision.

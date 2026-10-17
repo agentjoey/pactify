@@ -207,7 +207,7 @@ normal minimal configuration, including directory permissions and link integrity
 
 ## opencode (experimental)
 
-opencode is an experimental harness (6/10 large tasks completed in one attempt), using
+opencode is an experimental harness (6/10 large tasks completed in one attempt with deepseek-flash, 4/10 with MiniMax-M3), using
 1.19.0 v1 HTTP/SSE through a private authenticated `opencode serve` process per job.
 `/opencode` and `/pactify:opencode` use the shared delegation guide and host review workflow.
 Requested models use dynamic `provider/model` ids; omitting the model preserves opencode's default.

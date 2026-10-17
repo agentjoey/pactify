@@ -107,5 +107,5 @@ Gemini 4 Argon 重跑的只读任务同样 0/3；整轮重跑因个人额度耗�
 ## 数据与复现
 
 - 任务说明、运行和验收脚本、逐题日志：Phase 0 评估目录（`briefs/`、`run-agy.sh`、`accept-agy.sh`）。
-- 每题的 job：`agy-home/jobs/<id>`（含 worktree、`log.jsonl`、`result.json`）。
-- v2 复测：`run-agy3.sh`、`driver-agy3.sh`、`accept-agy3.sh`（第三轮，job 在 `agy-home3/jobs`）；`run-agy5.sh`、`driver-agy5.sh`、`accept-agy5.sh`（子集重跑，job 在 `agy-home4/jobs`；评估专用二进制把只读调用上限从 40 改为 120，未提交到代码）。
+- 每题的 job 原在 `agy-home/jobs/<id>` 下（worktree、`log.jsonl`、`result.json`），已于 2026-10-17 清理磁盘时删除；逐题日志和评审结论仍保留。
+- v2 复测：`run-agy3.sh`、`driver-agy3.sh`、`accept-agy3.sh`（第三轮；job 目录已于 2026-10-17 清理，逐题日志在 `logs-v2/`，评审结论在 `verdicts-agy3-*.txt`）；`run-agy5.sh`、`driver-agy5.sh`、`accept-agy5.sh`（子集重跑，job 在 `agy-home4/jobs`；评估专用二进制把只读调用上限从 40 改为 120，未提交到代码）。

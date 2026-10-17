@@ -1,11 +1,11 @@
 ---
 name: opencode
-description: Experimental harness — large tasks completed in one attempt 6/10. Delegate a large coding task, investigation or review to opencode through an authenticated local HTTP/SSE server and get a verified result summary.
+description: Experimental harness — large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3. Delegate a large coding task, investigation or review to opencode through an authenticated local HTTP/SSE server and get a verified result summary.
 ---
 
 # Delegate to opencode (experimental)
 
-**opencode is an experimental harness (large tasks completed in one attempt 6/10).**
+**opencode is an experimental harness (large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3).**
 Prefer the default codex harness (`/delegate` or `/codex`).
 
 **If the user invoked this skill explicitly (`/opencode` or `/pactify:opencode`), always delegate —

@@ -8,6 +8,11 @@
 
 ---
 
+## Unreleased — Harness v2 · opencode evaluation (MiniMax-M3)
+
+- Evaluated opencode v2 (`opencode serve`) on the Phase 0 tasks with `minimax-coding-plan/MiniMax-M3`: 4/10 large tasks complete in one attempt, 10/10 jobs succeeded and passed acceptance, no new full-suite failures; read-only 1/3, as R1 and R3 were cut off by the 40-call cap. opencode stays experimental. Results in [opencode-eval.md](opencode-eval.md); notices now cite both models (plugin 0.2.6).
+- Eval reports note that the v1 job directories were removed during the 2026-10-17 disk cleanup; per-task logs and verdicts remain.
+
 ## Unreleased — AJ-711 · agy v2 re-evaluation
 
 - Re-evaluated agy v2 on the Phase 0 tasks (gemini-3.8-flash-high): large tasks 3/10 complete in one attempt (v1: 1/10), so agy stays experimental; read-only converged 3/3 with usable conclusions when the read-only tool-call cap was raised to 120 in an eval-only build, 2/3 under the default cap of 40. Results in [agy-eval.md](agy-eval.md); the experimental notices now cite 3/10 (plugin 0.2.5).

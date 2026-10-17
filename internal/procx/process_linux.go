@@ -1,6 +1,7 @@
 package procx
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -52,10 +53,8 @@ func processSnapshot(_ Identity) ([]processEntry, error) {
 			continue
 		}
 		p, e := readLinuxProcess(pid)
-		// Processes can exit during the snapshot. Inaccessible processes cannot be
-		// signaled by this user; skip them just as vanished/zombie processes.
 		if e != nil {
-			if os.IsNotExist(e) || e == syscall.ESRCH || os.IsPermission(e) {
+			if skippableSnapshotError(e) {
 				continue
 			}
 			return nil, e
@@ -63,4 +62,13 @@ func processSnapshot(_ Identity) ([]processEntry, error) {
 		result = append(result, p)
 	}
 	return result, nil
+}
+
+// skippableSnapshotError reports whether a process can be left out of a
+// snapshot. Processes can exit during the snapshot: reading the stat file of a
+// process that is exiting fails with ESRCH wrapped in a *PathError.
+// Inaccessible processes cannot be signaled by this user; skip them just as
+// vanished/zombie processes.
+func skippableSnapshotError(err error) bool {
+	return os.IsNotExist(err) || errors.Is(err, syscall.ESRCH) || os.IsPermission(err)
 }

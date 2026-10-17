@@ -263,7 +263,7 @@ text = (root / 'skills/agy/SKILL.md').read_text()
 original = (root / 'skills/kimi/SKILL.md').read_text()
 start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->'
 assert text.split(start)[1].split(end)[0] == original.split(start)[1].split(end)[0]
-for term in ('name: agy', 'experimental', '1/10', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
+for term in ('name: agy', 'experimental', '3/10', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
     assert term in text, term
 agent = (root / 'agents/agy.md').read_text()
 for term in ('model: haiku', 'tools: Bash', 'pactify sub run agy', '--read-only', '--write', '--resume', '--worktree', '--cwd'):

@@ -27,14 +27,15 @@ const (
 )
 
 type WorkerConfig struct {
-	ProcessMarker   string                  // Doctor scopes its repeated probe IDs to a disposable store.
-	ReadOnlyPolicy  bool                    // Doctor exercises the hook independently of native plan mode.
-	RetryBackoff    func(int) time.Duration // 1-based attempt; nil uses 30s then 120s.
-	CacheHome       string                  // Optional shared cache home; doctor keeps job storage disposable.
-	ToolCallLimit   int                     // 0 disables the limit; CLI default is 40.
-	IdleTimeout     time.Duration
-	KimiWireTimeout time.Duration // Default 10s to flush per-job wire usage before Close.
-	Now             func() time.Time
+	ProcessMarker         string                  // Doctor scopes its repeated probe IDs to a disposable store.
+	ReadOnlyPolicy        bool                    // Doctor exercises the hook independently of native plan mode.
+	RetryBackoff          func(int) time.Duration // 1-based attempt; nil uses 30s then 120s.
+	CacheHome             string                  // Optional shared cache home; doctor keeps job storage disposable.
+	ToolCallLimit         int                     // 0 disables the limit; CLI default is 40.
+	IdleTimeout           time.Duration
+	ActiveToolIdleTimeout time.Duration // Default 30m; configurable through PACTIFY_SUB_ACTIVE_TOOL_IDLE_TIMEOUT.
+	KimiWireTimeout       time.Duration // Default 10s to flush per-job wire usage before Close.
+	Now                   func() time.Time
 }
 
 // Serialize backend stderr with event records in the shared log.
@@ -52,6 +53,16 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	if cfg.IdleTimeout <= 0 {
 		cfg.IdleTimeout = 10 * time.Minute
+	}
+	var activeIdleConfigErr error
+	if cfg.ActiveToolIdleTimeout <= 0 {
+		cfg.ActiveToolIdleTimeout = 30 * time.Minute
+		if value := os.Getenv("PACTIFY_SUB_ACTIVE_TOOL_IDLE_TIMEOUT"); value != "" {
+			cfg.ActiveToolIdleTimeout, activeIdleConfigErr = time.ParseDuration(value)
+			if activeIdleConfigErr != nil || cfg.ActiveToolIdleTimeout <= 0 {
+				activeIdleConfigErr = fmt.Errorf("PACTIFY_SUB_ACTIVE_TOOL_IDLE_TIMEOUT must be a positive duration")
+			}
+		}
 	}
 	if cfg.KimiWireTimeout <= 0 {
 		cfg.KimiWireTimeout = 10 * time.Second
@@ -83,6 +94,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	unverifiedWarning, versionWarning := "", ""
 	var cacheWarnings []string
 	var closingSnapshot func()
+	var openingSnapshot func(bool)
 	resolveQuotaReset := func() {
 		if result.FailureClass != "quota" || result.QuotaResetAt != nil {
 			return
@@ -137,6 +149,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 				}
 			}
 		}
+		if openingSnapshot != nil {
+			openingSnapshot(false)
+		}
 		resolveQuotaReset()
 		if e := store.Finish(id, &result, reason, finished); e != nil {
 			runErr = fmt.Errorf("save terminal output: %w", e)
@@ -176,6 +191,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 			result.Status = StatusCanceled
 		}
 		return result, err
+	}
+	if activeIdleConfigErr != nil {
+		return fail(activeIdleConfigErr)
 	}
 	if retryLimit < 0 || retryLimit > MaxRetries {
 		return fail(fmt.Errorf("retries must be between 0 and %d", MaxRetries))
@@ -332,11 +350,18 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if source, ok := backend.(interface {
 		Quota(context.Context, cockpit.StartOpts) (cockpit.QuotaObservation, error)
 	}); ok {
-		snapshotBudget := 5 * time.Second
-		snapshot := func(snapshotCtx context.Context) {
-			snapshotCtx, cancel := context.WithTimeout(snapshotCtx, snapshotBudget)
+		type observation struct {
+			q   cockpit.QuotaObservation
+			err error
+		}
+		collect := func(snapshotCtx context.Context) observation {
+			snapshotCtx, cancel := context.WithTimeout(snapshotCtx, 20*time.Second)
 			defer cancel()
 			q, e := source.Quota(snapshotCtx, opts)
+			return observation{q, e}
+		}
+		apply := func(o observation) {
+			q, e := o.q, o.err
 			if e != nil {
 				result.Warnings = append(result.Warnings, "Quota snapshot unavailable: "+e.Error())
 				return
@@ -350,12 +375,31 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 				result.QuotaResetAt = q.ResetForModel(result.ModelActual)
 			}
 		}
-		snapshot(ctx)
+		opening := make(chan observation, 1)
+		go func() { opening <- collect(ctx) }()
+		openingSnapshot = func(wait bool) {
+			if opening == nil {
+				return
+			}
+			if wait {
+				apply(<-opening)
+				opening = nil
+				return
+			}
+			select {
+			case o := <-opening:
+				apply(o)
+				opening = nil
+			default:
+			}
+		}
 		closingSnapshot = func() {
 			// Publish the job first; allow the observed ~7s built-in command a
 			// separate bounded window without delaying status or cancellation.
-			snapshotBudget = 10 * time.Second
-			snapshot(context.WithoutCancel(ctx))
+			closingCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 20*time.Second)
+			defer cancel()
+			openingSnapshot(true)
+			apply(collect(closingCtx))
 			resolveQuotaReset()
 			if result.FailureClass == "quota" && result.QuotaResetAt != nil {
 				model := result.ModelActual
@@ -506,12 +550,24 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	cancelCh := ctx.Done()
 	events := sess.Events()
 	sessionClosed := false
+	activeTools := 0
 	recordEvent := func(event cockpit.Event) {
 		if e := encoder.Encode(event); e != nil {
 			interrupt("Failed to write log: " + e.Error())
 		}
 		lastActivity = cfg.Now()
 		collector.Add(event)
+		if event.Kind == cockpit.EventTool && event.Tool != nil {
+			switch event.Tool.Phase {
+			case "start":
+				activeTools++
+			case "end":
+				activeTools = max(0, activeTools-1)
+			}
+		}
+		if event.Kind == cockpit.EventState && (event.State == cockpit.StateTurnCompleted || event.State == cockpit.StateTurnFailed) {
+			activeTools = 0
+		}
 		if event.Kind == cockpit.EventSystem && event.State == "warning" {
 			result.Warnings = append(result.Warnings, event.Text)
 		}
@@ -593,7 +649,11 @@ turns:
 					fingerprint = current
 					lastActivity = cfg.Now()
 				}
-				if cfg.Now().Sub(lastActivity) >= cfg.IdleTimeout {
+				idleBudget := cfg.IdleTimeout
+				if activeTools > 0 {
+					idleBudget = cfg.ActiveToolIdleTimeout
+				}
+				if cfg.Now().Sub(lastActivity) >= idleBudget {
 					interrupt("Idle timeout")
 				}
 			}

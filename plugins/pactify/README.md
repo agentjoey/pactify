@@ -161,7 +161,7 @@ The result's Harness line reports `kimi (minimal config)` or `kimi (user config)
 
 ## agy (experimental)
 
-agy remains experimental (1/10 large tasks completed in one attempt in the previous evaluation).
+agy remains experimental (3/10 large tasks completed in one attempt in the v2 re-evaluation).
 The v2 adapter targets Antigravity CLI 1.4.0, with one persistent stream-json process
 per job. Every call explicitly supplies a model, defaulting to router settings or
 `gemini-3.8-flash-low`. Tokens come from step usage; result totals are cumulative.

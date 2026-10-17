@@ -164,7 +164,12 @@ func TestKimiReviewDiscoveryCleanupAndStderr(t *testing.T) {
 	os.WriteFile(filepath.Join(source, "config.toml"), []byte("[models.offline]\n"), 0600)
 	bin := t.TempDir()
 	script := `#!/usr/bin/env python3
-import json,sys
+import json,sys,os
+home=os.environ["KIMI_CODE_HOME"]
+assert os.path.islink(os.path.join(home,"credentials"))
+assert os.path.islink(os.path.join(home,"oauth"))
+with open(os.path.join(home,"config.toml.tmp"),"w") as f: f.write("fake refreshed config")
+os.replace(os.path.join(home,"config.toml.tmp"),os.path.join(home,"config.toml"))
 sys.stderr.write('private diagnostic sentinel\n');sys.stderr.flush()
 for line in sys.stdin:
  q=json.loads(line)
@@ -184,6 +189,10 @@ for line in sys.stdin:
 	})
 	if err != nil || len(got.Items) != 1 || got.Items[0] != "live" || !strings.Contains(got.Warning, "cleanup") {
 		t.Errorf("lost successful catalog: %+v %v", got, err)
+	}
+	data, readErr := os.ReadFile(filepath.Join(source, "config.toml")) // Synthetic file only.
+	if readErr != nil || string(data) != "[models.offline]\n" {
+		t.Fatal("model discovery overwrote the user configuration", readErr)
 	}
 	if stderr.Len() != 0 {
 		t.Errorf("discovery leaked stderr: %q", stderr.String())

@@ -63,7 +63,7 @@ func kimiFailure(message string, raw json.RawMessage, now time.Time) Failure {
 	if kimiServerError.MatchString(lower) {
 		return Failure{Class: "transient"}
 	}
-	if kimiAuthError.MatchString(lower) {
+	if kimiAuthError.MatchString(lower) || strings.Contains(lower, "provided authorization grant is invalid") {
 		return Failure{Class: "auth"}
 	}
 	for _, word := range []string{"quota", "insufficient balance", "credit balance", "usage limit", "weekly limit", "daily limit", "subscription limit", "insufficient credits"} {

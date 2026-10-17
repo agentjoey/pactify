@@ -1,0 +1,24 @@
+{
+  "commit": "53a9d0266512b7296dde8dbd5ab543e1bf262eb8",
+  "harness": "opencode",
+  "model": "minimax-coding-plan/MiniMax-M3",
+  "results": [
+    {
+      "jobs": [
+        "20261017-141143-458e40"
+      ],
+      "reason": "OS sleep identity observed; canceled; 6 process identities stopped",
+      "scenario": "cancel",
+      "seconds": 10.420646125,
+      "status": "PASS"
+    },
+    {
+      "reason": "metadata changes=0; credential refresh paths=[] (metadata only)",
+      "scenario": "user_dirs_clean",
+      "seconds": 0.389352375,
+      "status": "PASS"
+    }
+  ],
+  "started": "2026-10-17T06:11:40.768452Z",
+  "version": "1.19.0"
+}

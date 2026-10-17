@@ -154,7 +154,7 @@ func discoverHarnessModelsIn(ctx context.Context, h Harness, storeHome string) (
 	// Kimi owns a disposable discovery home and can fall back without login.
 	if h.Name == "kimi" {
 		home := filepath.Join(storeHome, "harness-homes", "kimi")
-		opts.Env = append(opts.Env, "KIMI_CODE_HOME="+home)
+		opts.Env = append(opts.Env, "KIMI_CODE_HOME="+home, "PACTIFY_HOME="+storeHome)
 		return discover()
 	}
 	dir, err := os.MkdirTemp("", "pactify-models-*")
@@ -164,7 +164,7 @@ func discoverHarnessModelsIn(ctx context.Context, h Harness, storeHome string) (
 	defer os.RemoveAll(dir)
 	opts.RepoDir = dir
 	if h.Home != nil {
-		_, _, env, layouts, e := prepareHarnessHomes(ctx, h.Home, "", nil, true)
+		_, _, env, layouts, e := prepareHarnessHomes(ctx, h.Home, "", nil, true, filepath.Join(storeHome, "credential-quarantine"))
 		defer func() {
 			for _, layout := range layouts {
 				if warnings := layout.Cleanup(); len(warnings) > 0 {

@@ -73,8 +73,9 @@ type opencodePart struct {
 	Text      string `json:"text"`
 	Tool      string `json:"tool"`
 	State     struct {
-		Status string `json:"status"`
-		Output string `json:"output"`
+		Status   string          `json:"status"`
+		Output   string          `json:"output"`
+		Metadata json.RawMessage `json:"metadata,omitempty"`
 	} `json:"state"`
 }
 type opencodeMessage struct {
@@ -305,6 +306,19 @@ func (s *opencodeSession) Prompt(ctx context.Context, msg UserMessage) error {
 	textParts := map[string]bool{}
 	var order []string
 	tools := map[string]bool{}
+
+	warnedTruncation := false
+	noteTruncation := func(part opencodePart) {
+		// Tool metadata is an open extension bag. An unknown flag type must
+		// not discard the tool event or alter its lifecycle.
+		var metadata struct {
+			Truncated bool `json:"truncated"`
+		}
+		if part.Type == "tool" && !warnedTruncation && json.Unmarshal(part.State.Metadata, &metadata) == nil && metadata.Truncated {
+			warnedTruncation = true
+			s.dispatch(Event{Kind: EventSystem, State: "warning", Text: "Opencode truncated tool output"})
+		}
+	}
 	permissions := map[string]bool{}
 	var streamErr error
 	reconnects := 0
@@ -444,6 +458,7 @@ func (s *opencodeSession) Prompt(ctx context.Context, msg UserMessage) error {
 				parts[p.Part.ID] = p.Part.Text
 			}
 			if p.Part.Type == "tool" {
+				noteTruncation(p.Part)
 				if !tools[p.Part.ID] {
 					tools[p.Part.ID] = true
 					s.dispatch(Event{Kind: EventTool, Tool: &ToolEvent{Phase: "start", Name: p.Part.Tool}, Raw: event.Properties})
@@ -490,6 +505,7 @@ finishedStream:
 			}
 			var text strings.Builder
 			for _, part := range m.Parts {
+				noteTruncation(part)
 				if part.Type == "text" {
 					text.WriteString(part.Text)
 				}

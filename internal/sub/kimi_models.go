@@ -69,13 +69,29 @@ func kimiACPModelsWithCleanup(ctx context.Context, opts cockpit.StartOpts, remov
 	if err != nil {
 		return out, err
 	}
+	var layout *managedHome
 	defer func() {
+		if layout != nil {
+			out.Warning = strings.TrimSpace(strings.Join(append([]string{out.Warning}, layout.Cleanup()...), " "))
+			for name := range layout.Links {
+				if info, e := os.Lstat(filepath.Join(layout.Home, name)); e == nil && info.Mode()&os.ModeSymlink == 0 {
+					out.Warning = strings.TrimSpace(out.Warning + " Kimi model discovery private refresh retained at " + dir)
+					return
+				}
+			}
+		}
 		if cleanupErr := remove(dir); cleanupErr != nil {
 			out.Warning = strings.TrimSpace(out.Warning + " Kimi model discovery cleanup failed: " + cleanupErr.Error())
 		}
 	}()
 	home := filepath.Join(dir, "home")
-	if err := prepareKimiHome(ctx, home, source); err != nil {
+	layout = kimiHome(home, source)
+	for _, entry := range opts.Env {
+		if value, ok := strings.CutPrefix(entry, "PACTIFY_HOME="); ok && value != "" {
+			layout.QuarantineDir = filepath.Join(value, "credential-quarantine")
+		}
+	}
+	if err := layout.Prepare(ctx); err != nil {
 		return out, err
 	}
 	cwd := filepath.Join(dir, "workspace")

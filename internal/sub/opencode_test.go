@@ -111,7 +111,7 @@ func TestOpencodeMissingConfigDirectory(t *testing.T) {
 	config := filepath.Join(t.TempDir(), "not-created")
 	t.Setenv("XDG_CONFIG_HOME", config)
 	h, _ := Lookup("opencode")
-	_, _, _, layouts, err := prepareHarnessHomes(context.Background(), h.Home, "", nil, true)
+	_, _, _, layouts, err := prepareHarnessHomes(context.Background(), h.Home, "", nil, true, "")
 	defer func() {
 		for _, m := range layouts {
 			m.Cleanup()
@@ -149,7 +149,7 @@ func TestOpencodeXDGDefaultsAndUnreadableLogin(t *testing.T) {
 		t.Fatal(err)
 	}
 	h, _ := Lookup("opencode")
-	_, _, _, layouts, err := prepareHarnessHomes(context.Background(), h.Home, "", nil, true)
+	_, _, _, layouts, err := prepareHarnessHomes(context.Background(), h.Home, "", nil, true, "")
 	defer func() {
 		for _, m := range layouts {
 			m.Cleanup()

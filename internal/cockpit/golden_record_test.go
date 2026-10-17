@@ -18,6 +18,7 @@ import (
 
 	"github.com/agentjoey/pactify/internal/acp"
 	"github.com/agentjoey/pactify/internal/cockpit/golden"
+	"github.com/agentjoey/pactify/internal/credentiallinks"
 )
 
 // Explicit opt-in: this is never invoked by ordinary tests. HOME and each
@@ -63,6 +64,50 @@ func TestRecordGolden(t *testing.T) {
 	}
 	if harness == "kimi" && golden.ManagedDirectory(root, home) != nil {
 		t.Fatal("KIMI_CODE_HOME must be explicitly managed")
+	}
+	if harness == "kimi" {
+		for _, name := range []string{"credentials", "oauth"} {
+			path := filepath.Join(home, name)
+			if _, err := os.Readlink(path); err != nil {
+				t.Fatalf("Kimi %s must link the entire shared directory; per-file credential links are unsafe", name)
+			}
+			if info, err := os.Stat(path); err != nil || !info.IsDir() {
+				t.Fatalf("Kimi shared %s directory unavailable", name)
+			}
+		}
+	} else {
+		path := filepath.Join(os.Getenv("XDG_DATA_HOME"), "opencode", "auth.json")
+		target, err := os.Readlink(path)
+		if err != nil {
+			t.Fatal("Opencode auth.json must be a managed login link")
+		}
+		source := target
+		if !filepath.IsAbs(source) {
+			source = filepath.Join(filepath.Dir(path), source)
+		}
+		before, err := credentiallinks.Inspect(source)
+		if err != nil {
+			t.Fatal("Opencode login source metadata unavailable")
+		}
+		t.Cleanup(func() {
+			if current, err := os.Readlink(path); err == nil && current == target {
+				return
+			}
+			if info, err := os.Lstat(path); err == nil && info.Mode().IsRegular() {
+				location, err := credentiallinks.Restore(path, source, before, "")
+				if err != nil {
+					t.Errorf("Credential refresh retained at %s; do not delete the recording root: %v", path, err)
+				} else if location != "" {
+					t.Errorf("Credential refresh conflict quarantined at %s; source was not overwritten", location)
+				} else {
+					t.Log("Credential refresh returned to the unchanged source using rename")
+				}
+				return
+			}
+			if err := credentiallinks.VerifyFileLink(path, target, ""); err != nil {
+				t.Error(err)
+			}
+		})
 	}
 	tr := golden.Transcript{Harness: harness, Scenario: scenario}
 	cmd := exec.Command(harness, "--version")

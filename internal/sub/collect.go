@@ -24,6 +24,7 @@ type Collector struct {
 	ErrorRaw       json.RawMessage
 	WireRaw        json.RawMessage
 	FailureMessage string
+	ErrorMessage   string
 
 	usageBase    cockpit.Usage
 	perTurnUsage bool
@@ -70,11 +71,15 @@ func (c *Collector) Add(e cockpit.Event) {
 		c.chunks.Reset()
 		c.TurnDone, c.TurnErr, c.FailureMessage = false, "", ""
 		c.FailureRaw, c.ErrorRaw, c.WireRaw = nil, nil, nil
+		c.ErrorMessage = ""
 		c.perTurnUsage = e.Text == "kimi"
 		if c.perTurnUsage {
 			c.usageBase = c.Usage
 		}
 		return
+	}
+	if e.Kind == cockpit.EventError {
+		c.ErrorMessage = e.Err
 	}
 	if e.Kind == cockpit.EventError && len(e.Raw) > 0 {
 		c.ErrorRaw = append(json.RawMessage(nil), e.Raw...)

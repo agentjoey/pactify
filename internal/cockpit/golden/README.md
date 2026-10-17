@@ -34,12 +34,31 @@ opencode or kimi; ordinary builds do not include this test.
 
 Prepare a private `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`, and
 `KIMI_CODE_HOME` below the root. Use the managed-link mechanism for authentication:
-link opencode's `auth.json`; link kimi's `config.toml`, `device_id`, and credential
-files. Do not read or copy their contents. A private kimi `credentials/` directory
-with links for its files lets the CLI atomically refresh into the managed directory
-when the user's directory is read-only. The CLI may replace such a link with a
-private refreshed credential; remove that private file after recording without
-opening it. Never copy refreshed tokens into the repository.
+link opencode's `auth.json`; link kimi's `config.toml` and `device_id`, and link
+its **entire `credentials/` and `oauth/` directories**. Create the source `oauth/`
+directory as 0700 if it does not yet exist; kimi normally creates it lazily. The latter shares refresh
+locks with interactive kimi sessions. Never link individual kimi credential files:
+atomic rename would replace the link and strand a rotated refresh token inside
+the disposable home, invalidating the user's retained login when it is deleted.
+Do not read, print or copy credential contents.
+
+Production managed homes record source inode/size/mtime and canonical path at
+prepare for explicitly marked credential file links. Configuration links, such
+as kimi config.toml and device_id, never write back private rewrites. If a CLI
+atomically replaces a credential file link, cleanup renames the
+private file back to an unchanged source, first restoring the source's original
+permissions on the private file. A chmod failure quarantines it instead. If the source also changed (or its
+baseline is unavailable), cleanup instead renames the private file into an owned
+0700 persistent quarantine at `$PACTIFY_HOME/credential-quarantine/refresh-*/credential`
+(default `~/.pactify/credential-quarantine`)
+and emits a warning. Neither case reads credential contents or deletes a refreshed token.
+Do not use shared /tmp storage for quarantine: cleanup or reboot can erase it.
+Rename failure retains the private file and reports its location; do not remove
+the recording root until preservation succeeds. The recorder applies the same source-metadata write-back/conflict-quarantine
+policy to opencode's file link and reports any preservation failure. E2E fixtures
+use a stricter policy: every replaced file link fails loudly and is quarantined
+outside the fixture root for Owner review. Never remove a private
+replacement as credential cleanup, and never put refreshed tokens in the repo.
 
 Take metadata-only snapshots of `~/.config/opencode`, `~/.local/share/opencode`,
 and `~/.kimi-code` before and after. Compare inode, mode, size, modification time,
@@ -78,3 +97,14 @@ Run all replay and redaction checks under a fresh isolated home:
 ```sh
 PACTIFY_HOME="$(mktemp -d)" go test ./internal/cockpit/... -run 'TestGolden|TestRedact|TestScanner|TestRecorder|TestManagedDirectory' -count=1
 ```
+
+If preservation fails, stop recording and interactive sessions before recovery.
+Keep the reported private file and recording root. Fix quarantine ownership,
+0700 directory permissions or same-volume rename availability, then retry. The
+Owner can alternatively rename the retained file into a private persistent
+quarantine on the same volume, or restore it to the correct source by rename
+with the source's original mode after resolving concurrent refreshes. Never
+blindly replace a source that also changed. No credential contents need be read,
+printed or copied. The remaining metadata-check/rename race with interactive agy
+refresh is tracked in docs/backlog.md; exchange syscalls alone do not provide a
+simple portable compare-and-replace contract.

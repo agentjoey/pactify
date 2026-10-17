@@ -2,6 +2,7 @@
 package gitx
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,7 +13,14 @@ import (
 func run(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
+	// Successful stderr is diagnostic, not repository state. Changing xcrun
+	// cache warnings must not keep refreshing the worker idle watchdog.
+	var diagnostics bytes.Buffer
+	cmd.Stderr = &diagnostics
+	out, err := cmd.Output()
+	if err != nil {
+		out = append(out, diagnostics.Bytes()...)
+	}
 	return strings.TrimRight(string(out), "\n"), err
 }
 
@@ -166,9 +174,15 @@ func wrapGitErr(err error, out string) error {
 // invisible on both sides, so runtime noise routed through .git/info/exclude
 // never perturbs the fingerprint.)
 func TreeFingerprint(dir string) string {
-	head, _ := run(dir, "rev-parse", "HEAD")
+	head, err := run(dir, "rev-parse", "HEAD")
+	if err != nil {
+		head = ""
+	}
 	// A read probe must not run repo-local fsmonitor code or refresh the index.
-	status, _ := run(dir, "--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain")
+	status, err := run(dir, "--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain")
+	if err != nil {
+		status = ""
+	}
 	return strings.TrimSpace(head) + "\n" + status
 }
 

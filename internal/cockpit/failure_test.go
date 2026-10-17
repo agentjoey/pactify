@@ -31,6 +31,7 @@ func TestStructuredFailuresTakePrecedence(t *testing.T) {
 		{"codex", `{"rateLimits":{"primary":{"usedPercent":100,"resets_at":2000000000}}}`, "opaque", "quota", 2000000000},
 		{"codex", `{"rateLimits":{"primary":{"usedPercent":100},"secondary":{"usedPercent":100,"resetsAt":2000000000}}}`, "opaque", "quota", 0},
 		{"kimi", `{"code":-32000}`, "Insufficient Balance", "auth", 0},
+		{"kimi", `{"error":{"code":"internal","message":"The provided authorization grant is invalid"}}`, "opaque", "auth", 0},
 		{"opencode", `{"code":-32603}`, "Internal error: Insufficient Balance", "quota", 0},
 		{"opencode", `{"code":-32603}`, "Internal error", "other", 0},
 		{"agy", ``, "Individual quota reached. Resets in nonsense", "quota", 0},

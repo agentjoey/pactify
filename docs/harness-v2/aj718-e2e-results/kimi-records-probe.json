@@ -1,0 +1,24 @@
+{
+  "commit": "53a9d0266512b7296dde8dbd5ab543e1bf262eb8",
+  "harness": "kimi",
+  "model": "",
+  "results": [
+    {
+      "jobs": [
+        "20261017-140116-22bae6"
+      ],
+      "reason": "checks failed: job 20261017-140116-22bae6 status=failed class=other warnings=kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only access is not offered); kimi 2.2.0 has not been checked; run pactify sub doctor first; internal: The provided authorization grant is invalid; Usage may be incomplete; only recorded usage is included;",
+      "scenario": "records",
+      "seconds": 4.179617792,
+      "status": "FAIL"
+    },
+    {
+      "reason": "metadata changes=0; credential refresh paths=[] (metadata only)",
+      "scenario": "user_dirs_clean",
+      "seconds": 0.425769833,
+      "status": "PASS"
+    }
+  ],
+  "started": "2026-10-17T06:01:14.272496Z",
+  "version": "2.2.0"
+}

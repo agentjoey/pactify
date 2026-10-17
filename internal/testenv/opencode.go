@@ -62,6 +62,16 @@ func OpencodeServePeer(t *testing.T) {
 			emit("session.error", map[string]any{"error": map[string]any{"name": "UnknownError", "data": map[string]string{"message": "Model not found: nope/x"}}})
 		} else {
 			emit("message.updated", map[string]any{"info": info()})
+
+			if scenario == "opaque-metadata" {
+				emit("message.part.updated", map[string]any{"part": map[string]any{"id": "opaque-1", "sessionID": "sid", "type": "tool", "tool": "bash", "state": map[string]any{"status": "completed", "output": "done", "metadata": map[string]string{"truncated": "vendor-specific"}}}})
+			}
+			if scenario == "truncated" {
+				// Repeated completed frames must not duplicate the warning.
+				for i := 0; i < 2; i++ {
+					emit("message.part.updated", map[string]any{"part": map[string]any{"id": "clipped-1", "sessionID": "sid", "type": "tool", "tool": "bash", "state": map[string]any{"status": "completed", "output": "partial output", "metadata": map[string]bool{"truncated": true}}}})
+				}
+			}
 			emit("message.part.updated", map[string]any{"part": map[string]any{"id": "tool-1", "sessionID": "sid", "type": "tool", "tool": "edit", "state": map[string]string{"status": "completed"}}})
 			emit("message.part.updated", map[string]any{"part": map[string]any{"id": "text-1", "sessionID": "sid", "messageID": fmt.Sprintf("msg-%d", count), "type": "text", "text": "DONE"}})
 		}

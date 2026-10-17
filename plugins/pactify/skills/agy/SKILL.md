@@ -1,11 +1,11 @@
 ---
 name: agy
-description: Experimental harness — large tasks completed in one attempt 1/10; v2 read-only uses plan mode and a fail-closed baseline. Delegate a large coding task, investigation or review to the agy harness and get back a verified result summary.
+description: Experimental harness — large tasks completed in one attempt 3/10; v2 read-only uses plan mode and a fail-closed baseline. Delegate a large coding task, investigation or review to the agy harness and get back a verified result summary.
 ---
 
 # Delegate to agy (experimental)
 
-**agy is an experimental harness (large tasks completed in one attempt 1/10; v2 read-only uses plan mode and a fail-closed baseline).**
+**agy is an experimental harness (large tasks completed in one attempt 3/10; v2 read-only uses plan mode and a fail-closed baseline).**
 Prefer the default codex harness (`/delegate` or `/codex`).
 
 **If the user invoked this skill explicitly (`/agy` or `/pactify:agy`), always delegate — whatever

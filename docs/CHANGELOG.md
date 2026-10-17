@@ -8,6 +8,26 @@
 
 ---
 
+## Unreleased — AJ-711 · agy v2 re-evaluation
+
+- Re-evaluated agy v2 on the Phase 0 tasks (gemini-3.8-flash-high): large tasks 3/10 complete in one attempt (v1: 1/10), so agy stays experimental; read-only converged 3/3 with usable conclusions when the read-only tool-call cap was raised to 120 in an eval-only build, 2/3 under the default cap of 40. Results in [agy-eval.md](agy-eval.md); the experimental notices now cite 3/10 (plugin 0.2.5).
+- Classify agy transport failures before an HTTP status (`request failed: Post …`, e.g. `use of closed network connection` after a long tool run) as transient, so the existing same-session retry resumes them instead of failing a finished turn.
+- Refuse git `--git-dir`/`--work-tree` anywhere in agy read-only commands after an independent re-review of the allowlist found no bypass; residual risks are recorded in the [allowlist report](harness-v2/aj711-policy-allowlist.md).
+
+## Unreleased — AJ-711 read-only allowlist review
+
+- Replace agy grep/rg option and find predicate denylists with explicit allowlists; remove tree and go list/vet, restrict go env to queries, and reject Git repository redirection/no-index, file magic compilation/custom magic and wc file-list indirection.
+- Execute every approved command from quoted argv so shell glob/brace/tilde expansion cannot change validated arguments. Document literal-glob behavior and recursive-search alternatives; native program prefixes follow the same hook list. Opencode remains unchanged.
+- Fix the async quota probe inheriting a harness marker and deleted job temp; a real seven-second fake /usage process now verifies both snapshots survive terminal cleanup and private temps are removed.
+- Add regressions for all confirmed bypasses, reviewed scope/expansion risks and R1/R3 commands. Superseded prior positive assertions and fresh live/gate evidence are recorded in the [allowlist report](harness-v2/aj711-policy-allowlist.md).
+
+## Unreleased — AJ-711 flash reevaluation follow-up
+
+- Replace agy's exact read-command list with shell-words parsing and program-specific argument checks; align native prefix permissions while leaving opencode's static policy unchanged.
+- Collect the opening quota snapshot concurrently with startup, allow 20 seconds, and supplement terminal results within a 20-second closing budget. Retry terminal malformed-call diagnostics through AJ-693 in the same conversation and retain raw terminal evidence.
+- Use a configurable 30-minute idle limit while tools are active; preserve the ordinary 10-minute event/tree-change watchdog and cancellation behavior across adapters.
+- Regressions were run failing before implementation. Required commands, dependency audit, superseded deadline assertion, flash live probes and user-directory comparisons are recorded in the [follow-up report](harness-v2/aj711-flash-followup.md). Plugin files and version remain unchanged.
+
 ## Unreleased — AJ-713 · consistency gates, part one
 
 - Add opt-in sanitized raw-protocol recording and adapter replay, with five real opencode and four real kimi transcripts, field-rename mutation checks, denied-write evidence, and sensitive-data scanning. Agy live recording remains deferred until host evaluation finishes.

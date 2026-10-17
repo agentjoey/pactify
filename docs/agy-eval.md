@@ -1,11 +1,62 @@
-# agy 大任务评估（AJ-650，与 Phase 0 同等规模）
+# agy 大任务评估（与 Phase 0 同等规模）
+
+> 方法照搬 [`phase0-report.md`](phase0-report.md)，结果可以和 codex、kimi 的首轮直接对比。v2 复测在前，v1 评估作为历史保留在后。
+
+## v2 复测（AJ-711，2026-10-17）
+
+> 基线 `88df743`（同 Phase 0）· agy 1.4.0 · 模型 `gemini-3.8-flash-high` · 方法同 Phase 0：host 为 Claude Code headless（haiku），经插件 `/pactify:agy` 原样转交任务说明；任务串行，带额度保护；验收命令事后串行重跑；独立评审逐题读 diff 或核对只读结论。
+> 下文「v1 评估」一节为历史结果，只读档关闭的决定已被 v2 的 plan 模式加白名单策略取代。
+
+### 结论
+
+| 指标 | codex（Phase 0） | kimi（Phase 0） | agy v1 | **agy v2 第三轮** | **agy v2 子集重跑** |
+|---|---|---|---|---|---|
+| 一次完成（大任务） | 9/10 | 6/10 | 1/10 | **3/10** | T02、T07 判定不变（minor / incomplete） |
+| 小问题 | 0 | 2 | 5 | 5 | — |
+| 不完整 / 失败 | 1 | 2 | 4 | 2 不完整（T05、T07） | — |
+| 验收命令通过 | — | — | — | 10/10 | 2/2 |
+| 只读收敛（3 个） | 3/3 | 0/3 | 0/3 | 1/3（R1、R3 被旧白名单误拒） | **3/3**（只读调用上限临时调到 120） |
+| 只读结论质量 | — | — | — | R2 minor | **R1 complete、R2 minor、R3 complete** |
+| 模型兑现 | 26/26 | — | 13/13 | 13/13 | 5/5 |
+
+- **大任务未达转正门槛（≥7/10）**，agy 保持实验性。v2 适配器已把 v1 的主要失败（后端中断、空闲超时、空答复）消化掉，第三轮 13 个 job 里只有 T02（空闲超时）和 T07（终态误判）在 pactify 侧失败，两者都已修复并在子集重跑中成功。剩余差距在模型侧：不跑 gofmt（T02、T03、T08、T10）、不查改动函数的调用方（T05 漏掉 `internal/agent/agent.go:121`，T07 拒绝了保留的 `human` 评审人，全量测试新增 6 个失败）。
+- **只读档可用，但取决于调用上限。** 默认上限 40 次时，R2（39 次）、R3（38 次）能完成，R1（105 次）会被截断；R1 要求列出整个仓库的 vendor 映射，agy 每读一个文件算一次调用。三题都没有改动文件。是否按 harness 调整上限，待 Owner 决定。
+
+### 逐题结果
+
+| 题 | 第三轮 | 子集重跑 | 要点 |
+|---|---|---|---|
+| T01 | complete | — | 两处 spawn 都不再继承 stdin；回归测试在基线上失败 |
+| T02 | minor（空闲超时，无报告） | **minor**（成功，141 次调用，19 分钟） | 门禁改在临时 worktree 里按特性分支运行，回归测试在基线上失败；3 个文件未跑 gofmt；临时 worktree 建在仓库根目录；`parallel.go` 的改动无测试 |
+| T03 | minor | — | 3 个目标都达成；2 个测试文件未跑 gofmt |
+| T04 | complete | — | 所有会解析 home 的测试包都已隔离 |
+| T05 | incomplete | — | 漏掉 `internal/agent/agent.go:121` 的 kimi MCP 路径 |
+| T06 | complete | — | 用真实 git 冲突测试，时序稳定 |
+| T07 | incomplete | **incomplete**（成功，94 次调用） | 两轮都拒绝保留的 `human` 评审人；全量测试新增 6 个失败（serve、planner、orchestrate），agy 只跑了 brief 列出的 3 个包 |
+| T08 | minor | — | 测试文件未跑 gofmt；`status <id> --json` 输出结构变了 |
+| T09 | minor | — | 成功的 job 也带上了非空 `State.Error` |
+| T10 | minor | — | 修复正确；2 个测试文件未跑 gofmt |
+| R1 | 失败（读命令被拒） | **complete**（105 次调用） | 抽查 18 条有 16 条准确；找出 audit 用 `gemini`、doctor 查 `~/.kimi` 等真实不一致 |
+| R2 | minor | **minor**（39 次调用） | 13 条引用 12 条准确；8 个发现里 6 个成立，头号「取消后 harness 进程泄漏」不成立 |
+| R3 | 失败（读命令被拒） | **complete**（38 次调用） | 14 条全部准确；指出 `--in-place` 时心跳文件让空闲看门狗永不触发 |
+
+成本（第三轮大任务中位数）：每题约 15.5 分钟，输入 927 万 token（含缓存），输出 6 万。全轮用掉 Gemini 周额度约 10%。
+
+### 评估中发现并修复的 pactify 缺陷（本 PR）
+
+- **只读白名单过严**（第三轮 R1、R3 的读命令被拒）→ 改为按程序校验参数的白名单；对抗评审又找出 3 个绕过，已在同一改动里堵上，见 [allowlist 报告](harness-v2/aj711-policy-allowlist.md)。
+- **`/usage` 额度快照 5 秒超时**（实际约需 7 秒）→ 与启动并发采集，给 20 秒。
+- **格式错误的工具调用被当成终止** → 在同一会话里续接。
+- **长测试期间被空闲超时误杀**（第三轮 T02）→ 有工具在运行时空闲上限放宽到 30 分钟。
+- **网络层错误不重试**（子集重跑首轮 T02、T07 都在写完总结后遇到 `use of closed network connection`）→ 请求在拿到 HTTP 状态前失败一律算暂时性错误，走已有的同会话续接。
+
+## v1 评估（AJ-650，2026-10-16，历史）
 
 > M2 里程碑（Linear P-AJ-18 · AJ-650）。方法照搬 [`phase0-report.md`](phase0-report.md)，结果可以和 codex、kimi 的首轮直接对比。
 > 实测 2026-10-16 · 基线 `88df743`（与 Phase 0 相同）· agy 1.3.5，评估途中自动升级到 1.3.6 · 模型 `gemini-3.8-flash-high`（agy 列表里最强的 Gemini 档）· pactify main `182afa9`（含 AJ-649）· host：Claude Code headless，模型 haiku，经插件 `/pactify:agy` 委派
 
-> AJ-711 supersedes the read-only closure below with the v2 plan policy and fail-closed baseline. The evaluation results remain historical; reevaluation is outside AJ-711.
 
-## 结论
+### 结论
 
 | 指标 | codex（Phase 0） | kimi（Phase 0） | **agy** |
 |---|---|---|---|
@@ -22,7 +73,7 @@
 按 kimi K1 的先例处理：`sub run agy --read-only` 以退出码 2 拒绝执行，并指向 `codex --read-only`；旧只读 job 的续接同样拒绝，doctor 的只读探测为 SKIP。
 Gemini 4 Argon 重跑的只读任务同样 0/3；整轮重跑因个人额度耗尽未完成。
 
-## 逐题结果
+### 逐题结果
 
 | 题 | 首轮 | 判定 | 要点 |
 |---|---|---|---|
@@ -39,7 +90,7 @@ Gemini 4 Argon 重跑的只读任务同样 0/3；整轮重跑因个人额度耗�
 
 判定口径与 Phase 0 相同：先跑任务自带的验收命令（评估全部跑完后统一串行执行，避免负载干扰），再由独立评审对照任务说明逐个读 diff，只有 complete 记作一次完成。验收命令通过不等于完成：T03、T05 的现有测试在改动不完整时照样能过。
 
-## 观察到的行为
+### 观察到的行为
 
 - **后端可靠性是最大问题。** 10 个大任务里 3 个被 Gemini 后端打断（EOF、503、stream 中断），4 次续接里又有 2 次因同样原因失败。
 - **会在后台启动命令后结束本轮。** T10 的最后一句话是「已启动测试，完成后再查看」，T04 首轮也是这样之后陷入空闲。在 brief 里写明「前台运行并等待完成」后有所缓解（续接时 T04 完成了）。
@@ -47,7 +98,7 @@ Gemini 4 Argon 重跑的只读任务同样 0/3；整轮重跑因个人额度耗�
 - **成本**：中位数每题约 22.8 分钟，输入 744 万 token（含缓存），输出 6.7 万。host 侧（haiku 转发）每次约 $0.015。
 - **评估期间 agy 自动升级到 1.3.6**，pactify 的版本漂移检测随即给出警告。这在真实环境里验证了 Phase 0 时没能触发的 K3。
 
-## 评估中发现并已修复的 pactify 缺陷
+### 评估中发现并已修复的 pactify 缺陷
 
 - **AJ-661**（#94）：agy 的终稿把过程中的旁白也拼了进去，改为取最后一个回复步骤。
 - **AJ-670**（#99）：「CLI version changed」被记成 job 的失败原因，掩盖了真实原因。
@@ -57,3 +108,4 @@ Gemini 4 Argon 重跑的只读任务同样 0/3；整轮重跑因个人额度耗�
 
 - 任务说明、运行和验收脚本、逐题日志：Phase 0 评估目录（`briefs/`、`run-agy.sh`、`accept-agy.sh`）。
 - 每题的 job：`agy-home/jobs/<id>`（含 worktree、`log.jsonl`、`result.json`）。
+- v2 复测：`run-agy3.sh`、`driver-agy3.sh`、`accept-agy3.sh`（第三轮，job 在 `agy-home3/jobs`）；`run-agy5.sh`、`driver-agy5.sh`、`accept-agy5.sh`（子集重跑，job 在 `agy-home4/jobs`；评估专用二进制把只读调用上限从 40 改为 120，未提交到代码）。

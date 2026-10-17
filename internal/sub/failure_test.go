@@ -20,6 +20,7 @@ func TestFailureRegression(t *testing.T) {
 		{"agy", "Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 166h58m25s.", "quota"},
 		{"agy", "API error (attempt 1): UNAVAILABLE (code 503): The service is currently unavailable.", "transient"},
 		{"agy", `API error (attempt 1): request failed: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse": EOF`, "transient"},
+		{"agy", `API error (attempt 1): request failed: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse": write tcp 10.0.0.2:55862->172.217.112.4:443: use of closed network connection`, "transient"},
 		{"agy", "The stream was interrupted. Please continue the task you were working on.", "transient"},
 		{"opencode", "acp: rpc error -32603: Internal error: Insufficient Balance (request_id: …)", "quota"},
 		{"opencode", "acp configure \"opencode\": requested model is not offered by this agent: …", "model"},

@@ -106,8 +106,10 @@ reports `sandboxed=false`; no `--sandbox` is used. With managed config, hooks de
 `managed hooks are not installed with --with-user-config`; read-only rejects it.
 Read-only refuses workspace hooks directories (`.agents`, `.agent`, `_agents`).
 Only repository files are covered by the baseline; external writes rely on the hook.
+Read-only means no writes and no helper execution; it does not confine reads to the workspace
+(approved read commands and agy's native read tools can read any path the user can).
 
-Read-only is restored, superseding AJ-683. Plan mode, exact read commands, a managed
+Read-only is restored, superseding AJ-683. Plan mode, argument-checked read commands, a managed
 write-denial hook, and the shared fail-closed filesystem baseline cover tracked, untracked,
 and ignored files. Doctor requests a real `echo x > probe.txt` tool invocation and checks
 the denied-tool event plus file absence. It retries once and reports WARN if the model
@@ -121,9 +123,34 @@ replies or ACTIVE tools get up to two completion followups in the same process. 
 with a warning. Each turn recalculates active tools. Non-billable
 `/usage` snapshots before and after jobs record remaining fractions and reset times. Actual
 quota failures retain ResetAt. Observations live in `quota-snapshots.json`, keeping
-`quota.json` compatible with older binaries. An opening snapshot has a 5-second
-budget. Terminal status publishes before a bounded 10-second closing snapshot;
+`quota.json` compatible with older binaries. The opening snapshot runs concurrently with harness startup with a 20-second
+budget. Quota built-ins own a private temporary directory and do not inherit the
+harness process marker, so job cleanup cannot terminate them or remove their temp.
+Terminal status publishes before quota supplementation with a 20-second closing budget;
 failures remain warnings and never become the job error. The harness remains experimental pending separate evaluation.
+Read commands are shell-words parsed without expansion; shell composition and redirection
+are denied. Grep/rg options and find predicates use explicit allowlists: unknown
+options are denied. Tree, go list/vet, Git repository redirection and diff --no-index
+are denied; go env accepts only variable-name queries. File magic compilation/custom
+magic and wc --files0-from are denied. Native settings grant `command(program)`
+prefixes for exactly the hook's program list. Opencode retains its separate exact patterns.
+Every approved argv token is shell-quoted before execution, including non-Git tools.
+Globs, braces and tilde are literal arguments: `grep x internal/sub/*.go` no longer
+expands files in the shell. Prefer `grep -rn x internal/sub` or
+`rg -n -g '*.go' x internal/sub` (rg interprets the glob itself). Quoted find
+parentheses and name patterns remain available. The explicitly allowed utility
+arguments, including du --files0-from, stat --printf, device reads and tail -f,
+retain their read/hang risks; quoting prevents shell expansion and redirection.
+A terminal malformed-function-call diagnostic is transient and uses the existing bounded
+same-session continuation; an intermediate diagnostic does not end a turn. Terminal events
+retain the raw agy result for diagnosis.
+
+The shared job worker resets idle time on protocol events or working-tree changes.
+Without active tools the limit remains 10 minutes; while tools run it defaults to 30 minutes.
+Set `PACTIFY_SUB_ACTIVE_TOOL_IDLE_TIMEOUT=45m` (a positive Go duration) to override the active
+limit, or set `WorkerConfig.ActiveToolIdleTimeout` for an embedded caller. Tool end events restore
+the ordinary limit, overlapping tools keep the active limit until all have ended, and terminal
+turn events clear active tracking before a retry. Codex uses the same start/end event semantics.
 Cancellation retains the existing descendant identity checks and cleanup.
 
 默认 `HOME=$PACTIFY_HOME/harness-homes/agy`（0700）。真实 HOME 顶层项逐一链接，唯独排除 `.gemini`；

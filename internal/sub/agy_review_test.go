@@ -44,8 +44,8 @@ type reviewQuotaBackend struct {
 
 func (b *reviewQuotaBackend) Quota(ctx context.Context, _ cockpit.StartOpts) (cockpit.QuotaObservation, error) {
 	if b.calls.Add(1) == 1 {
-		if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > 5100*time.Millisecond {
-			b.t.Error("opening snapshot lacks 5s deadline")
+		if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) < 19*time.Second || time.Until(deadline) > 20*time.Second {
+			b.t.Error("opening snapshot lacks 20s deadline")
 		}
 		return cockpit.QuotaObservation{}, errors.New("probe failure")
 	}

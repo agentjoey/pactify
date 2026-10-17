@@ -48,8 +48,7 @@ func AgyReadOnlyWorkspace(workspace string) error {
 	return nil
 }
 
-// Agy uses prefix permissions natively. The hook narrows these to the exact
-// command list shared with opencode and rejects shell composition altogether.
+// Agy uses prefix permissions natively. The hook checks allowed arguments and rejects shell composition altogether.
 func AgyEnv(o StartOpts) ([]string, error) {
 	env := append([]string{}, o.Env...)
 	readOnly := "0"
@@ -129,7 +128,11 @@ func AgyEnv(o StartOpts) ([]string, error) {
 	if err = write(".gemini/config/hooks.json", hooks); err != nil {
 		return nil, err
 	}
-	settings, _ := json.Marshal(map[string]any{"permissions": map[string]any{"allow": []string{}}})
+	allow := make([]string, 0, len(agyReadPrograms))
+	for _, program := range agyReadPrograms {
+		allow = append(allow, "command("+program+")")
+	}
+	settings, _ := json.Marshal(map[string]any{"permissions": map[string]any{"allow": allow}})
 	if err = write(".gemini/antigravity-cli/settings.json", settings); err != nil {
 		return nil, err
 	}
@@ -196,18 +199,15 @@ func RunAgyHook(ctx context.Context, in io.Reader, out io.Writer, access string)
 	name := p.Call.Name
 	if name == "run_command" {
 		command := p.Call.Args.Command
-		if !slices.Contains(opencodeReadonlyCommands, command) {
-			result["reason"] = "Pactify read-only policy: command is not an exact allowed read command"
+		args, allowed := agyReadCommand(command)
+		if !allowed {
+			result["reason"] = "Pactify read-only policy: command or arguments are not allowed for read-only access"
 			return
 		}
-		result = map[string]any{"decision": "auto_approve"}
-		// Git's local helpers are executable code. Disable them even for exact reads.
-		if strings.HasPrefix(command, "git ") {
-			safe := "git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null " + strings.TrimPrefix(command, "git ")
-			if strings.HasPrefix(command, "git diff") || strings.HasPrefix(command, "git show") {
-				safe += " --no-ext-diff --no-textconv"
-			}
-			result["overwrite"] = map[string]string{"CommandLine": safe}
+		result = map[string]any{"decision": "auto_approve", "overwrite": map[string]string{"CommandLine": agyQuoteArgs(args)}}
+		// Git's local helpers are executable code, even for read commands.
+		if args[0] == "git" {
+			result["overwrite"] = map[string]string{"CommandLine": agySafeGit(args)}
 		}
 		return
 	}

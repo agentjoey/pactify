@@ -325,6 +325,7 @@ nextTurn:
 	stepText, lastSpoke := map[int]string{}, -1
 	var turn Usage
 	failure, final := "", ""
+	var terminalRaw json.RawMessage
 	gotResult, gotModel := false, s.Info().Model != ""
 	process.diagnostics.reset()
 	// A process that exits before reading stdin (a startup crash) fails the
@@ -408,6 +409,7 @@ readLoop:
 				}
 			}
 		case "result":
+			terminalRaw = raw
 			gotResult = true
 			if wire.Result.ID != "" {
 				s.mu.Lock()
@@ -510,7 +512,7 @@ readLoop:
 	if failure != "" {
 		state = StateTurnFailed
 	}
-	s.emit(Event{Kind: EventState, State: state, Err: failure})
+	s.emit(Event{Kind: EventState, State: state, Err: failure, Raw: terminalRaw})
 }
 
 func (s *agySession) Interrupt(ctx context.Context) error {
@@ -559,7 +561,11 @@ var agyFailureRules = []failureRule{
 	// Confirmed by the official CHANGELOG, version 1.3.3.
 	{"authentication expired. please log back in.", "auth"},
 	{"unavailable (code 503)", "transient"},
+	{"your previous response contained an improperly formatted function call: malformed function call:", "transient"},
 	{": eof", "transient"},
+	// Transport failure before any HTTP status, e.g. a reused connection that
+	// went stale while a long tool ran (use of closed network connection).
+	{"request failed: post ", "transient"},
 	{"stream interrupted", "transient"},
 	{"permission_denied", "permission"},
 	{"empty_answer", "empty_answer"},

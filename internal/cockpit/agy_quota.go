@@ -45,12 +45,21 @@ func (q QuotaObservation) ResetForModel(model string) *time.Time {
 
 // Quota never submits a model prompt: /usage is an agy built-in command.
 func (b *agyBackend) Quota(ctx context.Context, o StartOpts) (QuotaObservation, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
+	tmp, err := os.MkdirTemp("", "pactify-agy-quota-")
+	if err != nil {
+		return QuotaObservation{}, fmt.Errorf("agy /usage temporary directory: %w", err)
+	}
+	defer os.RemoveAll(tmp)
 	cmd := b.command(ctx, "-p", "/usage", "--model", AgyDefaultModel, "--output-format", "json")
 	cmd.WaitDelay = time.Second
 	cmd.Dir = o.RepoDir
-	cmd.Env = append(os.Environ(), o.Env...)
+	// The asynchronous built-in probe has its own bounded context. It must not
+	// inherit the harness marker: Finish cleans that marker before supplementing
+	// pending quota observations and would otherwise terminate the opening probe.
+	// Its temp directory must also survive removal of the completed job's temp.
+	cmd.Env = append(append(os.Environ(), o.Env...), "PACTIFY_JOB=", "TMPDIR="+tmp)
 	out, err := cmd.Output()
 	if err != nil {
 		return QuotaObservation{}, fmt.Errorf("agy /usage: %w", err)

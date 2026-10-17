@@ -83,7 +83,7 @@ type ConcealContext struct {
 var registry = map[string]Harness{
 	"agy": {
 		TransientRetry: true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: AgyVersion,
-		Experimental: "agy is an experimental harness (large tasks completed in one attempt 1/10; v2 read-only uses plan mode and a fail-closed baseline)", MinimalConfig: true,
+		Experimental: "agy is an experimental harness (large tasks completed in one attempt 3/10; v2 read-only uses plan mode and a fail-closed baseline)", MinimalConfig: true,
 		Home:   &harnessHome{Env: "HOME", Source: os.UserHomeDir, Managed: managedAgyHome, Layout: agyHome, Doctor: doctorAgyHome, BeforeDoctor: snapshotAgyUserIndex},
 		Models: cockpit.AgyModels, EffortValues: []string{"low", "medium", "high", "xhigh", "max"},
 		// Default jobs hide sessions through the managed HOME. User config explicitly

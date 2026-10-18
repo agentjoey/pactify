@@ -244,3 +244,27 @@ func denialMessage(text string) bool {
 	}
 	return false
 }
+
+func toolRunningEvidence(rows [][]byte, opencode2 bool) bool {
+	for _, row := range rows {
+		var event struct {
+			Kind  string `json:"kind"`
+			State string `json:"state"`
+			Tool  struct {
+				Phase string `json:"phase"`
+			} `json:"tool"`
+		}
+		if json.Unmarshal(row, &event) != nil {
+			continue
+		}
+		if event.Kind == "tool" && event.Tool.Phase == "start" {
+			return true
+		}
+		// v2 may publish shell.created before tool.called. The adapter has
+		// already filtered it to this job's root/descendant sessions.
+		if opencode2 && event.Kind == "system" && event.State == "shell.created" {
+			return true
+		}
+	}
+	return false
+}

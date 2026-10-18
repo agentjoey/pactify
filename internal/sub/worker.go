@@ -117,7 +117,10 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		result.Warnings = append(result.Warnings, "managed hooks are not installed with --with-user-config")
 	}
 	informational := func(w string) bool {
-		return strings.HasPrefix(w, "Quota snapshot unavailable:") || strings.HasPrefix(w, "Failed to record quota snapshot:") || strings.HasPrefix(w, "Completion followup limit reached") || w == "managed hooks are not installed with --with-user-config" || w == "Opencode truncated tool output" || strings.HasPrefix(w, "Credential refresh returned to source:") || strings.HasPrefix(w, "Private configuration rewrite discarded:")
+		if w == opencodeResumeUnknownWarning {
+			return true
+		}
+		return strings.HasPrefix(w, "Quota snapshot unavailable:") || strings.HasPrefix(w, "Failed to record quota snapshot:") || strings.HasPrefix(w, "Completion followup limit reached") || w == "managed hooks are not installed with --with-user-config" || w == "Opencode truncated tool output" || w == "Opencode background child session is still active" || strings.HasPrefix(w, "Credential refresh returned to source:") || strings.HasPrefix(w, "Private configuration rewrite discarded:")
 	}
 
 	// Persist the result before the terminal state, so waiters never observe a partial result.
@@ -242,7 +245,11 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		}
 	}
 	if h.Version != nil {
-		result.CLIVersion, _ = h.Version(ctx)
+		var versionErr error
+		result.CLIVersion, versionErr = h.Version(ctx)
+		if h.Name == "opencode" && versionErr != nil {
+			return fail(fmt.Errorf("cannot determine opencode CLI version: %w", versionErr))
+		}
 	}
 	if result.CLIVersion != "" {
 		if previous := store.lastCLIVersionFor(req.Harness); previous != "" && previous != result.CLIVersion {
@@ -253,6 +260,15 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if err := h.unsupported(result.CLIVersion); err != nil {
 		return fail(err)
 	}
+	if h.Name == "opencode" {
+		if err := store.checkOpencodeResume(st, result.CLIVersion); err != nil {
+			return fail(err)
+		}
+		if warning := store.opencodeResumeWarning(st, result.CLIVersion); warning != "" {
+			result.Warnings = append(result.Warnings, warning)
+		}
+	}
+	h = h.forVersion(result.CLIVersion)
 	unverifiedWarning = unverifiedVersionWarning(filepath.Dir(store.Root), h, result.CLIVersion)
 	if unverifiedWarning != "" {
 		result.Warnings = append(result.Warnings, unverifiedWarning)
@@ -316,6 +332,11 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if h.Name == "codex" && opts.Access == cockpit.AccessWrite {
 		opts.WritableRoots = append(opts.WritableRoots, tmpDir)
 	}
+	if h.Name == "opencode" && opencodeMajor(result.CLIVersion) == 2 {
+		if err := checkOpencode2SavedHomes(st); err != nil {
+			return fail(err)
+		}
+	}
 	harnessHome := st.HarnessHome
 
 	minimalHome := h.Home != nil && opts.MinimalConfig
@@ -338,7 +359,11 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	}
 	if h.Name == "opencode" {
 		opts.Env = append(opts.Env, opencodeVendorStrip()...)
-		opts.Env, err = cockpit.OpencodeEnv(opts)
+		if opencodeMajor(result.CLIVersion) == 2 {
+			opts.Env, err = cockpit.Opencode2Env(opts)
+		} else {
+			opts.Env, err = cockpit.OpencodeEnv(opts)
+		}
 		if err != nil {
 			return fail(err)
 		}
@@ -864,6 +889,9 @@ turns:
 	}
 	if result.Status == StatusFailed && (!interrupted || promptFailed) {
 		result.classifyTurnFailure(req.Harness, collector, cfg.Now(), promptFailed)
+	}
+	if req.Harness == "opencode" && result.FailureClass == "canceled" {
+		result.Status = StatusCanceled
 	}
 	return result, nil
 }

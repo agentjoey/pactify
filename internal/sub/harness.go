@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -20,6 +19,8 @@ import (
 const DefaultHarness = "codex"
 
 type Harness struct {
+	// Opencode2 identifies the backend chosen by ForVersion; callers must not parse versions again.
+	Opencode2 bool
 	// EffortValues is a closed, static constraint when the harness defines one.
 	EffortValues   []string
 	TransientRetry bool // Prompt can send another turn on the same session.
@@ -163,6 +164,9 @@ func Lookup(name string) (Harness, bool) {
 		return fakeHarness(), true
 	}
 	h, ok := registry[name]
+	if ok && name == "opencode" {
+		h.Version = onceVersion(h.Version)
+	}
 	return h, ok
 }
 func Names() []string {
@@ -194,9 +198,9 @@ func cliVersion(bin string, env ...string) func(context.Context) (string, error)
 		if len(env) > 0 {
 			cmd.Env = append(os.Environ(), env...)
 		}
-		if bin == "agy" {
+		if bin == "agy" || bin == "opencode" {
 			// Version discovery needs no login and must not touch user state.
-			root, err := managedHarnessHome("agy-version")
+			root, err := managedHarnessHome(bin + "-version")
 			if err != nil {
 				return "", err
 			}
@@ -210,6 +214,11 @@ func cliVersion(bin string, env ...string) func(context.Context) (string, error)
 			defer os.RemoveAll(home)
 			cmd.Env = append(os.Environ(), env...)
 			cmd.Env = append(cmd.Env, "HOME="+home)
+			if bin == "opencode" {
+				for _, key := range []string{"XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"} {
+					cmd.Env = append(cmd.Env, key+"="+filepath.Join(home, key))
+				}
+			}
 		}
 		out, err := cmd.Output()
 		if err != nil {
@@ -233,12 +242,9 @@ func (h Harness) unsupported(version string) error {
 	return h.Supported(version)
 }
 
-// opencode 2.x replaced every v1 server route and the serve banner this
-// adapter drives (docs/harness-v2/opencode-2-impact.md).
 func opencodeSupported(version string) error {
-	major, _, _ := strings.Cut(strings.TrimPrefix(version, "v"), ".")
-	if n, err := strconv.Atoi(major); err == nil && n >= 2 {
-		return fmt.Errorf("opencode %s is not supported yet: pactify drives the opencode 1.x server API; reinstall opencode 1.x (for example npm install -g opencode-ai@1)", version)
+	if opencodeMajor(version) >= 3 {
+		return fmt.Errorf("opencode %s is not supported yet: pactify supports opencode 1.x and 2.x; reinstall a supported version (for example npm install -g opencode-ai@1)", version)
 	}
 	return nil
 }

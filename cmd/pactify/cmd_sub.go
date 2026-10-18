@@ -136,7 +136,7 @@ func newSubCmd() *cobra.Command {
 	hook := &cobra.Command{Use: "agy-hook", Hidden: true, Args: subArgs(0), Run: func(c *cobra.Command, _ []string) {
 		cockpit.RunAgyHook(c.Context(), c.InOrStdin(), c.OutOrStdout(), os.Getenv("PACTIFY_AGY_READ_ONLY"))
 	}}
-	command.AddCommand(hook, run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd(), newSubPanelCmd(), newSubCostCmd(), newSubQuotaCmd(), newSubRouterCmd())
+	command.AddCommand(newSubLoginCmd(), hook, run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd(), newSubPanelCmd(), newSubCostCmd(), newSubQuotaCmd(), newSubRouterCmd())
 	addSubWorktreeCommands(command, run)
 	return command
 }

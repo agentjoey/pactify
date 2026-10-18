@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -54,10 +55,17 @@ func writeWorktree(f *fixture) string {
 func readonlyDenied(f *fixture) string {
 	before, e := metadata([]string{f.repo}, true)
 	must(f.t, e)
-	if f.s.harness == "opencode" {
+	if f.s.harness == "opencode" && !f.s.adapter.Opencode2 {
 		f.env = append(f.env, `OPENCODE_CONFIG_CONTENT={"agent":{"plan":{"prompt":"You are a permission diagnostic agent. Actually invoke the requested shell write and file write once each. Observe the actual denial. Never predict or simulate it. Do not retry or work around policy. Finish with E2E_DENIED_DONE."}}}`)
 	}
-	r := f.run("Authorized read-only permission diagnostic: actually attempt the shell command `echo x > denied-shell.txt` once, then attempt to create denied-tool.txt containing x using your dedicated file write/edit tool once. Both writes must be denied. Do not simulate calls or merely explain the policy. Report actual tool errors and finish with E2E_DENIED_DONE.", "--read-only")
+	prompt := "Read existing.txt using the read tool. Do not create denied-shell.txt or denied-tool.txt. Explain briefly that writing tools are unavailable. Do not seek a workaround. Finish with E2E_DENIED_DONE."
+	var r sub.Result
+	if f.s.adapter.Opencode2 {
+		r = f.run(prompt, "--read-only")
+	} else {
+		r = f.run("Authorized read-only permission diagnostic: actually attempt the shell command `echo x > denied-shell.txt` once, then attempt to create denied-tool.txt containing x using your dedicated file write/edit tool once. Both writes must be denied. Do not simulate calls or merely explain the policy. Report actual tool errors and finish with E2E_DENIED_DONE.", "--read-only")
+	}
+
 	f.success(r)
 	after, e := metadata([]string{f.repo}, true)
 	must(f.t, e)
@@ -69,6 +77,10 @@ func readonlyDenied(f *fixture) string {
 		if _, e := os.Lstat(filepath.Join(f.repo, n)); !os.IsNotExist(e) {
 			f.errorf("write escaped: %s", n)
 		}
+	}
+	if f.s.adapter.Opencode2 {
+		f.verifyV2Readonly(r, "denied-shell.txt", "denied-tool.txt")
+		return "write tools removed from readonly session and confirmed by permission evaluation; targets absent; job succeeded"
 	}
 	shell, file := deniedWrites(f.s.harness, append(f.rawLogs(r.JobID), f.stderrLines(r.JobID)...))
 	if !shell || !file {
@@ -86,6 +98,9 @@ func readonlyLong(f *fixture) string {
 	f.git("add", ".")
 	f.git("commit", "-qm", "read fixtures")
 	r := f.run("Read part-01.txt through part-60.txt in order. Each has a numbered random string. Use exactly one separate tool invocation per file; do not batch files, use loops, scripts, glob reads or parallel tool calls. Return E2E_TOKENS= followed by all 60 random strings concatenated in numeric order without spaces. Do not change files.", "--read-only")
+	if f.s.adapter.Opencode2 {
+		f.verifyV2Readonly(r, "denied-shell.txt", "denied-tool.txt")
+	}
 	if r.Status != sub.StatusSucceeded {
 		f.fatalf("60-read job status=%s toolCalls=%d warnings=%s (CLI read-only tool-call cap remains 40)", r.Status, r.ToolCalls, safe([]byte(strings.Join(r.Warnings, "; "))))
 	}
@@ -97,7 +112,11 @@ func readonlyLong(f *fixture) string {
 		f.error("60-file answer incorrect")
 	}
 	f.clean()
-	return fmt.Sprintf("60 separate reads and answer checked; toolCalls=%d", r.ToolCalls)
+	evidence := ""
+	if f.s.adapter.Opencode2 {
+		evidence = "; write tools removed and shell/edit/external_directory deny confirmed; targets absent"
+	}
+	return fmt.Sprintf("60 separate reads and answer checked; toolCalls=%d%s", r.ToolCalls, evidence)
 }
 func resume(f *fixture) string {
 	word := randomWord()
@@ -278,7 +297,8 @@ func modelCheck(f *fixture) string {
 }
 func failureSurface(f *fixture) string {
 	unauth := f.s.newFixture(f.t, false)
-	// Force a credential-dependent provider: opencode free endpoints need no login.
+	// Free v2 models need no login, so the probe asks for a provider the
+	// unauthenticated fixture has not connected; preflight rejects it as auth.
 	model := f.s.model
 	if f.s.harness == "opencode" {
 		model = "minimax-coding-plan/MiniMax-M3"
@@ -289,14 +309,15 @@ func failureSurface(f *fixture) string {
 	}
 	f.related = append(f.related, unauth)
 	r := unauth.run("Reply E2E_AUTH_PROBE.", flags...)
-
+	// v2 also reaches auth: the private home has no login for this provider.
 	if r.Status != sub.StatusFailed || r.FailureClass != "auth" {
 		unauth.diagnose()
-		f.errorf("unauthenticated status=%s class=%s", r.Status, r.FailureClass)
+		f.errorf("failure preflight status=%s class=%s", r.Status, r.FailureClass)
 	}
 	st := unauth.state(r.JobID)
-	if !strings.Contains(strings.ToLower(st.Error+strings.Join(r.Warnings, " ")), "login") && !strings.Contains(strings.ToLower(st.Error+strings.Join(r.Warnings, " ")), "auth") {
-		f.error("authentication error lacks actionable explanation")
+	explanation := strings.ToLower(st.Error + strings.Join(r.Warnings, " "))
+	if !strings.Contains(explanation, "login") && !strings.Contains(explanation, "auth") {
+		f.error("failure lacks actionable authentication or model explanation")
 	}
 	missing := f.s.newFixture(f.t, true)
 	f.related = append(f.related, missing)
@@ -484,14 +505,7 @@ func hostPath(f *fixture) string {
 	}
 	return "Claude haiku plugin command, callee job, byte-exact payload and host summary checked"
 }
-func envValue(env []string, key string) string {
-	for _, v := range env {
-		if strings.HasPrefix(v, key+"=") {
-			return strings.TrimPrefix(v, key+"=")
-		}
-	}
-	return ""
-}
+
 func (f *fixture) rawLogs(id string) [][]byte {
 	// CLI --raw renders individual events as readable lines, not JSON. Inspect
 	// the job-owned log record for assertions; all lifecycle actions use CLI.
@@ -532,18 +546,7 @@ func (f *fixture) toolContains(id, text string) bool {
 }
 
 func (f *fixture) toolStarted(id string) bool {
-	for _, row := range f.rawLogs(id) {
-		var event struct {
-			Kind string `json:"kind"`
-			Tool struct {
-				Phase string `json:"phase"`
-			} `json:"tool"`
-		}
-		if json.Unmarshal(row, &event) == nil && event.Kind == "tool" && event.Tool.Phase == "start" {
-			return true
-		}
-	}
-	return false
+	return toolRunningEvidence(f.rawLogs(id), f.s.adapter.Opencode2)
 }
 
 // This is only an observed upstream flag, not a claim that unflagged tool
@@ -581,4 +584,16 @@ func nativeTruncationFlag(rows [][]byte) bool {
 		}
 	}
 	return false
+}
+
+func (f *fixture) verifyV2Readonly(result sub.Result, targets ...string) {
+	for _, target := range targets {
+		if _, err := os.Lstat(filepath.Join(f.repo, target)); !os.IsNotExist(err) {
+			f.errorf("readonly write target exists or cannot be inspected: %s", target)
+		}
+	}
+	store := sub.Store{Root: filepath.Join(envValue(f.env, "PACTIFY_HOME"), "jobs")}
+	if err := store.CheckOpencode2Readonly(context.Background(), result.JobID, result, f.env); err != nil {
+		f.errorf("readonly permission evaluation failed: %v", err)
+	}
 }

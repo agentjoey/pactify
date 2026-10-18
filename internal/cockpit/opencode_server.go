@@ -41,6 +41,8 @@ type opencodeServer struct {
 	closeErr                 error
 	done                     chan struct{}
 	stderr                   *secretWriter
+	v2                       bool
+	stdin                    io.WriteCloser
 }
 
 var opencodeListenURL = regexp.MustCompile(`http://127\.0\.0\.1:([0-9]+)`)
@@ -144,6 +146,9 @@ func (s *opencodeServer) close() error {
 		close(s.done)
 		s.snapshot()
 		signalErr := s.identity.Signal(syscall.SIGTERM, true)
+		if s.stdin != nil {
+			_ = s.stdin.Close()
+		}
 		waitErr := s.waitReaped(250 * time.Millisecond)
 		if waitErr != nil {
 			killErr := s.identity.Signal(syscall.SIGKILL, true)
@@ -182,10 +187,16 @@ func (s *opencodeServer) request(ctx context.Context, method, path string, body 
 		}
 		reader = bytes.NewReader(b)
 	}
-	endpoint := s.url + path + "?" + url.Values{"directory": {s.directory}}.Encode()
+	endpoint := s.url + path
+	if !s.v2 {
+		endpoint += "?" + url.Values{"directory": {s.directory}}.Encode()
+	}
 	req, err := http.NewRequestWithContext(ctx, method, endpoint, reader)
 	if err != nil {
 		return nil, err
+	}
+	if s.v2 {
+		req.Header.Set("x-opencode-directory", url.PathEscape(s.directory))
 	}
 	req.SetBasicAuth("opencode", s.password)
 	if body != nil {
@@ -198,6 +209,15 @@ func (s *opencodeServer) request(ctx context.Context, method, path string, body 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		defer res.Body.Close()
 		b, _ := io.ReadAll(io.LimitReader(res.Body, 16384))
+		if s.v2 {
+			var detail struct {
+				Tag     string `json:"_tag"`
+				Message string `json:"message"`
+			}
+			if json.Unmarshal(b, &detail) == nil && detail.Tag != "" {
+				b = []byte(detail.Tag + ": " + detail.Message)
+			}
+		}
 		return nil, &opencodeHTTPError{status: res.StatusCode, message: s.redact(fmt.Sprintf("opencode %s %s: HTTP %d: %s", method, path, res.StatusCode, strings.TrimSpace(string(b))))}
 	}
 	return res, nil

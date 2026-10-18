@@ -15,15 +15,6 @@ import (
 	"github.com/agentjoey/pactify/internal/credentiallinks"
 )
 
-func setenv(env []string, key, value string) []string {
-	out := []string{}
-	for _, v := range env {
-		if !strings.HasPrefix(v, key+"=") {
-			out = append(out, v)
-		}
-	}
-	return append(out, key+"="+value)
-}
 func (s *suite) newFixture(t *testing.T, auth bool) *fixture {
 	root, err := os.MkdirTemp("", "pactify-e2e-")
 	must(t, err)
@@ -45,19 +36,8 @@ func (s *suite) newFixture(t *testing.T, auth bool) *fixture {
 			s.owner.Error(err)
 		}
 	})
-	// Allow only process/runtime variables. Do not inherit API keys, proxy auth,
-	// harness config overrides, nested-session markers or the caller's home dirs.
-	for _, k := range []string{"PATH", "LANG", "LC_ALL", "TERM", "SHELL", "USER", "LOGNAME", "SYSTEMROOT", "SSL_CERT_FILE", "SSL_CERT_DIR"} {
-		if v := os.Getenv(k); v != "" {
-			f.env = append(f.env, k+"="+v)
-		}
-	}
-	for k, rel := range map[string]string{"HOME": "home", "PACTIFY_HOME": "pactify", "XDG_CONFIG_HOME": "config", "XDG_DATA_HOME": "share", "XDG_CACHE_HOME": "cache", "XDG_STATE_HOME": "state", "CODEX_HOME": "home/.codex", "KIMI_CODE_HOME": "kimi", "TMPDIR": "tmp"} {
-		p := filepath.Join(root, rel)
-		must(t, os.MkdirAll(p, 0700))
-		f.env = setenv(f.env, k, p)
-	}
-	f.env = append(f.env, "KIMI_CODE_NO_AUTO_UPDATE=1", "CHOKIDAR_USEPOLLING=1", "OPENCODE_DISABLE_AUTOUPDATE=true")
+	f.env, err = isolatedFixtureEnv(root, os.Environ())
+	must(t, err)
 	if auth {
 		f.credentials = map[string]string{}
 		link := func(src, rel string) {
@@ -80,6 +60,10 @@ func (s *suite) newFixture(t *testing.T, auth bool) *fixture {
 		case "codex":
 			link(filepath.Join(s.user, ".codex/auth.json"), "home/.codex/auth.json")
 		case "opencode":
+			// v2 never inherits a user login; each fixture's jobs own a private DB.
+			if s.adapter.Opencode2 {
+				break
+			}
 			link(filepath.Join(s.user, ".local/share/opencode/auth.json"), "share/opencode/auth.json")
 		case "agy":
 			link(filepath.Join(s.user, ".gemini/antigravity-cli/antigravity-oauth-token"), "home/.gemini/antigravity-cli/antigravity-oauth-token")
@@ -257,6 +241,9 @@ func (f *fixture) quota() (json.RawMessage, error) {
 }
 
 func (s *suite) userRoots() []string {
+	if s.adapter.Opencode2 {
+		return opencodeUserRoots(s.user, os.Environ())
+	}
 	names := map[string][]string{"codex": {".codex"}, "opencode": {".config/opencode", ".local/share/opencode"}, "kimi": {".kimi-code"}, "agy": {".gemini"}}[s.harness]
 	roots := []string{}
 	for _, n := range names {

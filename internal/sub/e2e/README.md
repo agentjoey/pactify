@@ -6,7 +6,7 @@ ordinary tests that use synthetic records and fake executables only. Run from a 
 committed, merged or pushed. All job lifecycle operations use a pactify binary
 built from the current source, through subprocess CLI commands. Assertions read
 CLI JSON, job-owned log records, files and process identities; they do not call
-adapter or worker business functions.
+adapter or worker inference functions. Opencode v2 uses the product metadata-only model discovery and own-session permission evaluation helpers.
 
 ```sh
 export TMPDIR=/private/tmp # or another writable temporary directory
@@ -50,16 +50,16 @@ host probe, so `user_dirs_clean` executes last. Unknown scenario names fail.
 
 Codex and kimi use their subscription defaults; explicit kimi overrides must
 stay under `kimi-code/*`. Agy is restricted to
-`gemini-3.8-flash`. Opencode launches a private `opencode serve` and reads the live v1
+`gemini-3.8-flash`. Opencode 1.x launches a private `opencode serve` and reads the live v1
 `/config/providers` catalog without a prompt (the sole upstream metadata HTTP
 request outside the pactify CLI), selects an `opencode/*-free` model (preferring flash), and validates
 explicit overrides against that catalog: only `opencode/*-free` or
-`minimax-coding-plan/MiniMax-M3` are allowed. The unauthenticated opencode probe
+`minimax-coding-plan/MiniMax-M3` are allowed. The unauthenticated opencode 1.x probe
 uses the latter, because a free endpoint does not require authentication. No
 DeepSeek paid provider or other paid API channel is configured by the suite.
 
 Authentication uses metadata and managed symlinks only: codex `auth.json`,
-opencode `auth.json`, agy's OAuth login file, kimi `config.toml` and `device_id`,
+opencode 1.x `auth.json`, agy's OAuth login file, kimi `config.toml` and `device_id`,
 and kimi's **entire `credentials/` and `oauth/` directories**. Directory links
 preserve atomic refreshes and share kimi's interactive refresh lock. Kimi creates
 `oauth/` lazily; when absent, prepare creates the shared source directory as 0700
@@ -170,3 +170,32 @@ or renaming it to an owned 0700 persistent quarantine on the retained file's
 volume. Do not blindly overwrite a source that also refreshed. If neither is
 possible, keep the complete fixture and its reported path for recovery. No
 credential contents need to be opened, printed or copied for these steps.
+
+Opencode 2.x uses the product's cached version probe and backend selector. Each
+fixture has a private persistent v2 home under its own PACTIFY_HOME; no user
+login file or database is linked. Discovery uses the selected product /api/model
+metadata API. The default remains an available opencode/*-free model. The four
+real user XDG roots and user opencode.db are compared by metadata only, without
+credential-refresh exemptions.
+
+The v2 readonly checks require job success, absent write targets, and deny
+results for shell/edit/external_directory evaluated on that job's own session.
+Write tools are removed before model execution, so attempted-write events are
+not required. readonly_long still demands 60 separate reads and a correct
+answer; the 40-call limit is unchanged and any limit failure remains a FAIL.
+The v2 failure surface uses an unavailable provider/model preflight (auth or
+model classification), since free endpoints require no login.
+
+```sh
+PATH=<v2-bin-dir>:$PATH PACTIFY_HOME=~/.pactify-e2e/opencode2 \
+PACTIFY_E2E_HARNESS=opencode PACTIFY_E2E_HOST=1 \
+go test -tags harness_e2e ./internal/sub/e2e -run '^TestHarnessE2E$' \
+  -count=1 -v -timeout 120m
+```
+
+Offline tagged fixture checks (no model calls):
+
+```sh
+PACTIFY_HOME="$(mktemp -d /private/tmp/aj720.XXXXXX)" \
+go test -tags harness_e2e ./internal/sub/e2e -run '^TestOpencode2' -count=1
+```

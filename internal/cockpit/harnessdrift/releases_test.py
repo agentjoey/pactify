@@ -17,7 +17,7 @@ def registry(versions):
     return fetch
 
 
-BASE = {'codex': '0.162.1', 'kimi': '2.2.0', 'opencode': '1.19.0', 'agy': '1.4.0'}
+BASE = {'codex': '0.162.1', 'kimi': '2.2.0', 'opencode': '1.19.0', 'opencode2': '2.0.32', 'agy': '1.4.0'}
 CURRENT = {'@openai/codex': '0.163.0', '@moonshot-ai/kimi-code': '2.2.0', 'opencode-ai': '1.19.3',
            '@opencode/cli': '2.0.32', 'linux_amd64.json': '1.4.0'}
 
@@ -29,7 +29,7 @@ class ReleaseWatchTests(unittest.TestCase):
     def test_current_channels_do_not_alert(self):
         levels = self.levels(CURRENT)
         self.assertNotIn('alert', levels.values())
-        self.assertEqual(levels[('opencode', '@opencode/cli')], 'tracked')
+        self.assertEqual(levels[('opencode', '@opencode/cli')], 'ok')
         self.assertEqual(levels[('codex', '@openai/codex')], 'update')
         self.assertEqual(levels[('kimi', '@moonshot-ai/kimi-code')], 'ok')
 
@@ -57,8 +57,9 @@ class ReleaseWatchTests(unittest.TestCase):
 
     def test_repo_baselines_cover_every_channel(self):
         table = releases.baselines()
-        for harness in releases.CHANNELS:
-            self.assertIsNotNone(releases.major(table[harness]), harness)
+        for channels in releases.CHANNELS.values():
+            for _, _, key in channels:
+                self.assertIsNotNone(releases.major(table[key]), key)
 
 
 if __name__ == '__main__':

@@ -8,6 +8,16 @@
 
 ---
 
+## Unreleased — AJ-720 · opencode 2.x backend
+
+- **One `opencode` harness, two backends**: the installed major version (one cached probe) selects the existing 1.x backend or the new 2.x backend; ≥ 3 still fails fast. Resuming across majors is refused using the previous job's recorded CLI version (both majors use `ses_` ids). 1.x behaviour, tests and goldens are unchanged.
+- **2.x backend**: a private `serve --stdio` server per job (stdin lease, random `OPENCODE_PASSWORD`, redaction, process-tree cleanup), native session, model/variant, permission, event and history APIs, the first terminal of the prompt's own busy period, recursive child-session usage, typed failures (auth/quota/transient/model), reconnect without replay, and cancellation that also stops running tool processes. SSE heartbeats keep a long silent tool alive; repository `AGENTS.md` is honoured.
+- **Private login (Owner, 2026-10-18)**: 2.x jobs use pactify's own persistent home (`harness-homes/opencode2`, all four XDG roots); credentials and sessions live in its `opencode.db`, never the user's. `pactify sub login opencode` runs `opencode auth login --standalone` there with project config disabled. Unavailable models suggest the login only for a connectable provider with no connection.
+- **Read-only**: 2.x read-only sessions expose only `read`, `glob` and `grep`. opencode 2.x does not permission-check shell statements without a command word (`packages/core/src/tool/plugin/shell.ts`), so the shell tool is removed instead of allow-listed; the host reproduced the bypass on 2.0.32 and confirmed the fix. 1.19 has the same upstream pattern (`packages/opencode/src/tool/shell.ts:282`); 1.x rules are unchanged here and tracked separately.
+- **Concurrency**: only startup holds an exclusive lease on the private home (bootstrap races with "database is locked" on an empty DB); running jobs share it. Host check: three jobs on a fresh home all succeeded concurrently.
+- **Drift and evidence**: v2 OpenAPI projection, non-billable permission probe (13 cases on the real binary), v2 CI matrix, separate release baselines per channel, five real free-model goldens (write, readonly, resume, cancel with a running `sleep`, failure) replayed offline, and v2 support in the AJ-718 suite.
+- **Live results (host, 2.0.32, `opencode/deepseek-v4.1-flash-free`)**: `sub doctor opencode` all PASS (only the informational "not sandboxed" warning every non-codex harness gets); AJ-718 e2e **13/14**. The only failure is `readonly_long` at the shared 40-call cap. 1.x scored 12/14.
+- **Gates**: `go build ./...`, gofmt, `go vet ./...` (plus `harness_e2e` and `record` tags), isolated `go test ./...`, Opencode2 race tests, both Python suites, static drift, bats 145/0.
 ## Unreleased — AJ-706 · event-driven Live agent tree
 
 - Add a Live view above the Dashboard metrics and as a tab in job details, shared with the read-only `pactify sub panel`. The tree shows the host, the router's aliases, fallbacks and exhausted routes, each observed job (harness · model · effort, duration, tokens, calls, diff, quota), tool categories and a session log; resume and fallback links and retry loops are drawn from recorded relations. Nothing is inferred: no probabilities, no invented sub-agents, and rows without a timestamp (real `log.jsonl` events carry none) show no time.

@@ -8,6 +8,12 @@
 
 ---
 
+## Unreleased — AJ-724 · delegation path no longer depends on the orchestrator or governance packages
+
+- **Why**: `internal/sub` pulled in orchestrate, audit, sessions, agent, pact, ledger and projection for two calls only, so the frozen orchestrator could not be removed on its own.
+- **What**: the cross-vendor API-key isolation table and `Strip` moved to a new dependency-free `internal/vendorenv` (orchestrate keeps a thin wrapper; the M11 table test moved with it, the ACP wiring test stays in orchestrate). `cockpit`'s ACP command mapping keeps the gemini-cli removal message inline instead of importing `agent`. `sub`, `subpanel` and `cockpit` now depend only on `acp`, `credentiallinks`, `gitx`, `lockx`, `procx` and `vendorenv`; `TestDelegationPathAvoidsFrozenPackages` pins that.
+- **Gates**: `go build ./...`, `go vet ./...`, isolated `go test ./...`; the new dependency test fails when the old `agent` import is restored.
+
 ## Unreleased — AJ-721 · read-only tool-call limit 40 → 200
 
 - **Why**: in the AJ-718 end-to-end suite every harness with read-only support (codex, opencode 1.x/2.x, agy) failed `readonly_long` at call 41 — a 60-file read is an ordinary review, so 40 was too tight. Owner decision 2026-10-18.

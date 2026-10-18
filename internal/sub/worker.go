@@ -17,8 +17,8 @@ import (
 
 	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/gitx"
-	"github.com/agentjoey/pactify/internal/orchestrate"
 	"github.com/agentjoey/pactify/internal/procx"
+	"github.com/agentjoey/pactify/internal/vendorenv"
 )
 
 const (
@@ -284,7 +284,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	defer file.Close()
 	log := &jobLog{w: file}
 	encoder := json.NewEncoder(log)
-	opts := cockpit.StartOpts{ReadOnlyPolicy: cfg.ReadOnlyPolicy, CompletionFollowups: req.CompletionFollowups, RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: orchestrate.CrossVendorStrip(h.Kind), Stderr: log, Hidden: true}
+	opts := cockpit.StartOpts{ReadOnlyPolicy: cfg.ReadOnlyPolicy, CompletionFollowups: req.CompletionFollowups, RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: vendorenv.Strip(h.Kind), Stderr: log, Hidden: true}
 	opts.MinimalConfig = result.ConfigMode == "minimal"
 	marker := id
 	if cfg.ProcessMarker != "" {

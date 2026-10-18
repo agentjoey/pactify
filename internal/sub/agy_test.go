@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
-	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/vendorenv"
 )
 
 func fakeAgyUserHome(t *testing.T) string {
@@ -51,7 +51,7 @@ func TestAgyWorkerHomeAndResume(t *testing.T) {
 				if !contains(b.gotOpts.Env, "HOME="+want) {
 					t.Error("wrong child HOME", b.gotOpts.Env)
 				}
-				for _, entry := range orchestrate.CrossVendorStrip("antigravity") {
+				for _, entry := range vendorenv.Strip("antigravity") {
 					if !contains(b.gotOpts.Env, entry) {
 						t.Error("missing vendor key override", strings.SplitN(entry, "=", 2)[0])
 					}
@@ -97,7 +97,7 @@ func TestAgyDoctorEvidence(t *testing.T) {
 				if !contains(o.Env, "HOME="+home) {
 					t.Error("model listing used user HOME")
 				}
-				for _, entry := range orchestrate.CrossVendorStrip("antigravity") {
+				for _, entry := range vendorenv.Strip("antigravity") {
 					if !contains(o.Env, entry) {
 						t.Error("model listing inherited vendor API key", strings.SplitN(entry, "=", 2)[0])
 					}
@@ -199,7 +199,7 @@ func TestAgyVersionDoesNotInheritVendorKeys(t *testing.T) {
 	fakeAgyUserHome(t)
 	bin := t.TempDir()
 	script := "#!/bin/sh\n"
-	for _, entry := range orchestrate.CrossVendorStrip("antigravity") {
+	for _, entry := range vendorenv.Strip("antigravity") {
 		key, _, _ := strings.Cut(entry, "=")
 		t.Setenv(key, "fixture-value")
 		script += "[ -z \"$" + key + "\" ] || exit 23\n"

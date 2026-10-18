@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
-	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/vendorenv"
 )
 
 type DoctorCheck struct {
@@ -203,7 +203,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		// In particular, agy can proceed when its catalog pre-check is unavailable.
 		// Other harnesses retain fixed DoctorModel defaults; agy discovery is flash-only.
 		if d.model == "" && (h.DoctorModel == "" || h.Name == "agy") && h.Models != nil {
-			opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind)}
+			opts := cockpit.StartOpts{Env: vendorenv.Strip(h.Kind)}
 			var modelHomes []*managedHome
 			if h.Home != nil {
 				_, _, env, layouts, e := prepareHarnessHomes(ctx, h.Home, "", nil, true, filepath.Join(filepath.Dir(store.Root), "credential-quarantine"))

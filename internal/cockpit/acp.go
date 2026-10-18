@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/agentjoey/pactify/internal/acp"
-	"github.com/agentjoey/pactify/internal/agent"
 )
 
 // NewACPBackend returns a cockpit.Backend that drives an ACP-compatible agent.
@@ -109,12 +108,11 @@ func (b *acpBackend) ResumeWith(ctx context.Context, threadID string, opts Start
 
 // acpCommandFor maps a cockpit seat kind to its native ACP command.
 func acpCommandFor(kind string) (command string, args []string, err error) {
-	if err := agent.RemovedKindError(kind); err != nil {
-		return "", nil, err
-	}
 	switch kind {
 	case "kimi-cli":
 		return "kimi", []string{"acp"}, nil
+	case "gemini-cli":
+		return "", nil, errors.New("gemini-cli has been removed; use antigravity (agy) instead")
 	default:
 		return "", nil, fmt.Errorf("acp: unsupported kind %q", kind)
 	}

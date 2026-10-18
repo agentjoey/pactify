@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
-	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/vendorenv"
 )
 
 func fakeOpencodeUserHome(t *testing.T) (string, string) {
@@ -78,7 +78,7 @@ func TestOpencodeManagedDirectoriesAndPolicy(t *testing.T) {
 							t.Errorf("missing %s", k)
 						}
 					}
-					for _, entry := range orchestrate.CrossVendorStrip("opencode") {
+					for _, entry := range vendorenv.Strip("opencode") {
 						if !contains(b.gotOpts.Env, entry) {
 							t.Error("missing vendor strip")
 						}

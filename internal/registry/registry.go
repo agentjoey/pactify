@@ -233,9 +233,8 @@ func (r *Registry) Rename(oldName, newName string) error {
 	return nil
 }
 
-// EnsureRegistered idempotently registers path for serve to watch (spec:
-// auto-register so an agent-started project is visible on the dashboard without
-// a manual `pactify register`). If the ABSOLUTE path is already registered under
+// EnsureRegistered idempotently registers path so an agent-started project is
+// addressable through the MCP `projects` tool without a manual `pactify register`. If the ABSOLUTE path is already registered under
 // any name, it is a no-op returning the existing name and added=false. A brand-
 // new path is registered under its basename slug (added=true). A different path
 // whose basename collides with an existing name returns the Add error — the

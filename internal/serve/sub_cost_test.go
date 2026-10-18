@@ -22,7 +22,7 @@ func TestSubCostAPI(t *testing.T) {
 	if err := os.WriteFile(store.ResultPath(st.ID), []byte(`{"status":"succeeded","inputTokens":1234,"usagePartial":true}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	h := New(nil).Handler()
+	h := New().Handler()
 	for _, tc := range []struct {
 		method, query string
 		status        int

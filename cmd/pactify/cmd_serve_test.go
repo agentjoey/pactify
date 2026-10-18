@@ -15,16 +15,10 @@ import (
 
 func TestServeRetiredFlagsHidden(t *testing.T) {
 	cmd := newServeCmd()
-	for _, name := range []string{"relay-url", "relay-token", "remote-control"} {
+	for _, name := range []string{"relay-url", "relay-token", "remote-control", "seat", "project"} {
 		flag := cmd.Flags().Lookup(name)
 		if flag == nil || !flag.Hidden {
 			t.Errorf("--%s must remain accepted but hidden", name)
-		}
-	}
-	// launchd passes --seat; it and --project still drive scheduled orchestrate runs.
-	for _, name := range []string{"seat", "project"} {
-		if flag := cmd.Flags().Lookup(name); flag == nil || flag.Hidden {
-			t.Errorf("--%s must stay a visible scheduler flag", name)
 		}
 	}
 }
@@ -42,15 +36,15 @@ func TestCloudAccountCommandRemoved(t *testing.T) {
 func TestServeRetiredFlagsIgnored(t *testing.T) {
 	bin := buildBinary(t)
 	for _, tc := range []struct {
-		name     string
-		args     []string
-		warn     []string
-		projects string
+		name string
+		args []string
+		warn []string
 	}{
 		{name: "unset"},
-		{name: "seat", args: []string{"--seat", "claude"}},
-		{name: "project", args: []string{"--project", "/nonexistent/one", "--project", "/nonexistent/two"}, projects: "(2 project(s))"},
-		{name: "plist", args: []string{"--seat=claude", "--project=/nonexistent"}, projects: "(1 project(s))"},
+		{name: "seat", args: []string{"--seat", "claude"}, warn: []string{"seat"}},
+		{name: "project", args: []string{"--project", "/nonexistent/one", "--project", "/nonexistent/two"}, warn: []string{"project"}},
+		{name: "compat", args: []string{"--seat", "x", "--project", "y"}, warn: []string{"seat", "project"}},
+		{name: "plist", args: []string{"--seat=claude", "--project=/nonexistent"}, warn: []string{"seat", "project"}},
 		{name: "url", args: []string{"--relay-url", "http://127.0.0.1:1"}, warn: []string{"relay-url"}},
 		{name: "token", args: []string{"--relay-token", "test-secret"}, warn: []string{"relay-token"}},
 		{name: "control", args: []string{"--remote-control"}, warn: []string{"remote-control"}},
@@ -118,24 +112,21 @@ func TestServeRetiredFlagsIgnored(t *testing.T) {
 			if !ready {
 				t.Fatalf("serve never became ready: %s", output)
 			}
-			projects := tc.projects
-			if projects == "" {
-				projects = "(0 project(s))"
+			if !strings.Contains(stdout.String(), "pactify serve on http://"+addr) {
+				t.Errorf("missing listening line: %s", stdout.String())
 			}
-			if !strings.Contains(stdout.String(), projects) {
-				t.Errorf("want %s: %s", projects, stdout.String())
-			}
-			if strings.Contains(string(output), "--seat is ignored") || strings.Contains(string(output), "--project is ignored") {
-				t.Errorf("scheduler flags must not be reported as ignored: %s", output)
-			}
-			for _, name := range []string{"relay-url", "relay-token", "remote-control"} {
+			for _, name := range []string{"relay-url", "relay-token", "remote-control", "seat", "project"} {
 				want := 0
 				for _, flagged := range tc.warn {
 					if flagged == name {
 						want = 1
 					}
 				}
-				warning := "--" + name + " is ignored: the cloud relay was removed; remove it from your launch config"
+				removed := "cloud relay"
+				if name == "seat" || name == "project" {
+					removed = "orchestrator"
+				}
+				warning := "--" + name + " is ignored: the " + removed + " was removed; remove it from your launch config"
 				if got := strings.Count(string(output), warning); got != want {
 					t.Errorf("warning for --%s: got %d, want %d; stderr: %s", name, got, want, output)
 				}

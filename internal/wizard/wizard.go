@@ -13,7 +13,7 @@ import (
 )
 
 // Binding proposes one project seat: a seat id, the agent kind behind it, the
-// roles it should hold, and whether orchestrate can drive it headlessly.
+// roles it should hold, and whether the agent supports headless launch.
 type Binding struct {
 	Seat     string
 	Kind     string
@@ -39,7 +39,7 @@ func isLeadKind(kind string) bool { return strings.HasPrefix(kind, "claude") }
 // (orchestrator+reviewer) is the first claude-family kind, or — failing that —
 // the first kind in sorted order; every other kind is a worker. Output is sorted
 // deterministically with the lead first, then workers by kind. Drivable reflects
-// whether orchestrate can launch the kind headlessly (#8).
+// whether the kind supports headless launch (#8).
 func Suggest(kinds []string) []Binding {
 	if len(kinds) == 0 {
 		return nil
@@ -94,7 +94,7 @@ func Validate(bindings []Binding) []string {
 	}
 	var warns []string
 	if !hasOrch {
-		warns = append(warns, "no orchestrator seat — orchestrate needs one to drive merges")
+		warns = append(warns, "no orchestrator seat — pact requires one to assign tasks and merge")
 	}
 	if !hasReviewer {
 		warns = append(warns, "no reviewer seat — tasks can't be accepted (only a reviewer accepts)")

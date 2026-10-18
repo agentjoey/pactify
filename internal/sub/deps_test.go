@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-// The delegation path must not depend on the frozen orchestrator or the
-// governance-mode packages (AJ-724), so either can be removed on its own.
+// The delegation path must not depend on the frozen governance-mode
+// packages (AJ-724), so they can be removed independently.
 // Imports are read with go/parser (non-test files, all build tags) so the
 // check stays cheap and spawns no go command.
 func TestDelegationPathAvoidsFrozenPackages(t *testing.T) {
@@ -20,7 +20,7 @@ func TestDelegationPathAvoidsFrozenPackages(t *testing.T) {
 		t.Fatal(err)
 	}
 	frozen := map[string]bool{}
-	for _, p := range []string{"orchestrate", "audit", "sessions", "agent", "agentcfg", "agentreg", "roles", "pact", "ledger", "projection", "event", "planner", "schedule", "runguard"} {
+	for _, p := range []string{"agent", "agentreg", "pact", "ledger", "projection", "event"} {
 		frozen[module+"internal/"+p] = true
 	}
 	seen := map[string]bool{}

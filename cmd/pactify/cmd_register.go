@@ -9,7 +9,7 @@ import (
 
 func newRegisterCmd() *cobra.Command {
 	var name string
-	reg := &cobra.Command{Use: "register <path>", Args: cobra.ExactArgs(1), Short: "register a .pact/ project for serve",
+	reg := &cobra.Command{Use: "register <path>", Args: cobra.ExactArgs(1), Short: "register a .pact/ project for the MCP projects tool",
 		RunE: func(_ *cobra.Command, a []string) error {
 			r, err := registry.Load()
 			if err != nil {

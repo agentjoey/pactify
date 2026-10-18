@@ -17,9 +17,9 @@ import (
 
 func TestAgyArgumentPolicy(t *testing.T) {
 	allowed := []string{
-		"git --no-pager log -n 1", "git log -n 1", "git log --oneline -n 5", "git ls-files internal/orchestrate", `git grep -l "codex-cli"`,
+		"git --no-pager log -n 1", "git log -n 1", "git log --oneline -n 5", "git ls-files internal/sub", `git grep -l "codex-cli"`,
 		"ls cmd/pactify", "ls -la internal/sub", "cat .agent/CURRENT.md", `grep -rn "patrol" internal/`,
-		`grep "package sub" internal/sub/*.go`, "find internal/orchestrate -type f", "go doc",
+		`grep "package sub" internal/sub/*.go`, "find internal/sub -type f", "go doc",
 		"head -n 3 README.md", "tail -n 5 README.md", "wc -l README.md", "stat README.md", "file README.md", "pwd", "du -sh internal",
 		"egrep foo README.md", "fgrep foo README.md", "rg --files internal", "find . -name '*.go'", "git branch", "git branch --list -a -r -v",
 		"git status --short", "git show HEAD", "git diff --stat", "git ls-tree HEAD", "git blame README.md", "git rev-parse HEAD", "git describe", "git shortlog", "git cat-file -p HEAD", "git for-each-ref",

@@ -20,7 +20,7 @@ func TestServeHarnesses(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, "verified-versions.json"), []byte(`{"codex":{"version":"0.162.0"}}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	h := New(nil).Handler()
+	h := New().Handler()
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/api/sub/harnesses?refresh=1", nil))
 	var body struct {
@@ -70,7 +70,7 @@ func TestHarnessesDiscoveryCacheAPI(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(bins, "agy"), []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
-	h := New(nil).Handler()
+	h := New().Handler()
 	get := func(query string) string {
 		t.Helper()
 		w := httptest.NewRecorder()

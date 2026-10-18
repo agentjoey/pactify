@@ -1,6 +1,6 @@
 // Package vendorenv isolates a single-vendor agent from sibling vendors' API
 // keys. It has no dependencies so both the delegation path (sub, cockpit) and
-// the frozen orchestrator can share one table.
+// vendor launch code can share one table.
 package vendorenv
 
 // APIKeys is every third-party model-provider credential pactify may

@@ -40,7 +40,7 @@ func TestJobActionAPI(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	t.Setenv("PACTIFY_SUB_FAKE", "1")
 	store, _ := sub.DefaultStore()
-	server := New(nil)
+	server := New()
 	started := ""
 	mux := http.NewServeMux()
 	server.registerJobWrites(mux, store, func(id string) error { started = id; return nil })
@@ -154,7 +154,7 @@ func TestJobActionAPI(t *testing.T) {
 func TestJobActionRequestGuards(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "")
-	h := New(nil).Handler()
+	h := New().Handler()
 	for _, action := range []string{"cancel", "resume", "apply", "discard"} {
 		for _, tc := range []struct {
 			body, ct, origin string
@@ -187,7 +187,7 @@ func TestResumeLaunchFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	mux := http.NewServeMux()
-	server := New(nil)
+	server := New()
 	child := ""
 	server.registerJobWrites(mux, store, func(id string) error { child = id; return errors.New("cannot launch worker") })
 	w := actionRequest(mux, st.ID, "resume", `{"brief":"more"}`, "application/json", "")

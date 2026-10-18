@@ -38,12 +38,11 @@ pactify serve --addr 127.0.0.1:17082
 serve 只提供 `/api/sub`（Jobs、Dashboard、Settings、Live，含 job events SSE）和嵌入静态资源。
 AJ-723 已删除旧治理 API；治理命令继续使用 CLI/MCP。CSRF Origin guard 保留，
 反向代理域名通过 `PACTIFY_ALLOWED_ORIGINS` 配置；GET 不要求额外 header。
-`--seat`、`--project` 只用于定时编排的座席和额外项目。
-`--relay-url`、`--relay-token`、`--remote-control` 也继续兼容为空操作。
+`--seat`、可重复的 `--project` 与 `--relay-url`、`--relay-token`、`--remote-control`
+均为隐藏的空操作兼容参数。旧 launchd plist 可继续启动 serve。
 
-定时任务仍由 serve 的 `StartScheduler` 每分钟读取并启动 orchestrate，使用启动时的项目注册表
-（另含当前目录的 `.pact` 项目）及 `PACT_AGENT_ID`；不再运行项目文件 watcher。
-更新注册表后需重启 serve 才能被 scheduler 使用。
+AJ-735 已删除 scheduler 和 orchestrator 及其 CLI 命令；回滚锚点为 tag `v0.12.0`。
+serve 不再读取定时任务或发现治理项目。
 
 ## pactify.dev (Astro site on Vercel)
 

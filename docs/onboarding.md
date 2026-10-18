@@ -37,29 +37,24 @@ server 接进 agent 配置。非交互环境用 `pactify setup suggest` 看建�
 Dashboard 现用于 harness jobs（Jobs、Dashboard、Settings、Live），不再提供治理模式的
 Setup 页面或 setup API（AJ-723）；项目初始化使用上面的 CLI。
 
-## Step 3 — 规划任务
+## Step 3 — 派发、评审与合并
+
+旧的 `plan`、`orchestrate`、`finish` 等编排命令已在 AJ-735 删除；需要回滚时使用 tag `v0.12.0`。
+可选 pact 模式由人或 agent 显式执行任务流，每一步使用对应座席身份：
 
 ```bash
-pactify plan "把登录加上双因子认证"   # planner agent 把一句话拆成任务图
-# 生成 .pact/plan-<feature>.json + 各 task spec；默认停下等你 review
-pactify plan apply <feature>          # 确认后落地为 assign
+# Coordinator
+pactify assign T1 --feature F --branch feat/x --owner w --reviewer rev --spec .pact/tasks/T1.md
+# Worker w: join, implement, then submit
+pactify join w --roles worker --task T1
+pactify checkpoint T1 --evidence "tests passed"
+# Reviewer rev: inspect and verify, then accept
+pactify accept T1 --evidence "review and tests passed"
+# Coordinator: merge after all tasks are accepted
+pactify merge F
 ```
 
-## Step 4 — 跑
-
-```bash
-pactify orchestrate --feature <feature> \
-  --seat-kind <worker-seat>=opencode --seat-kind <reviewer-seat>=claude-code
-# 自驱：worker 干活 → reviewer 独立重跑验收命令 → accept → 全 accept 后 merge
-```
-
-暂停（escalation）后修复原因，再用 `pactify orchestrate --resume` 续跑；旧 dashboard 编排 API 已删除。
-
-## Step 5 — 交付
-
-```bash
-pactify finish --pr      # push + 开 PR
-```
+harness 委派使用 `pactify sub`，见 [README](../README.md#claude-code-one-click)。
 
 ---
 
@@ -78,14 +73,14 @@ pactify finish --pr      # push + 开 PR
 **两条铁律**（协议保证职责分离）：① worker 不能自接受（只有该 task 的 reviewer 能 accept，且需先 checkpoint）；
 ② feature 的所有 task 都 accepted 才能 merge。所以 `owner ≠ reviewer`。
 
-> 注：roster 在 `init` 时一次定下，没有 add-seat 动词——规划项目时把座席想全。
+> 可用 `pactify seat add` 增补座席；需要具有 orchestrator 协议角色的身份。
 
 ---
 
 ## 部署 dashboard（含公网）
 
 `pactify serve` 提供 `/api/sub` 和静态资源，旧治理 API 已删除。`--seat`、`--project`
-只用于定时编排。
+是隐藏的空操作兼容参数（AJ-735）。
 
 ```bash
 pactify serve --addr 127.0.0.1:7777
@@ -93,4 +88,4 @@ pactify serve --addr 127.0.0.1:7777
 
 浏览器写请求受 CSRF Origin guard 保护；反向代理域名需配置 `PACTIFY_ALLOWED_ORIGINS`。
 公网访问仍需在反向代理（例如 Cloudflare Access）认证本人；Origin guard 不是登录认证。
-定时编排仍保留，座席取 `--seat`（默认 `PACT_AGENT_ID`）。
+定时编排已删除；旧版行为见 tag `v0.12.0`。

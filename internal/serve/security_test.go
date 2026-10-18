@@ -37,7 +37,7 @@ func routerExists(t *testing.T) bool {
 func TestWriteGuardBlocksCrossOriginBrowserWrites(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "")
-	s := New(nil)
+	s := New()
 
 	for _, origin := range []string{
 		"https://evil.example.com", // classic CSRF
@@ -60,7 +60,7 @@ func TestWriteGuardBlocksCrossOriginBrowserWrites(t *testing.T) {
 
 func TestWriteGuardAllowsOwnDashboardAndCLI(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
-	s := New(nil)
+	s := New()
 
 	for _, origin := range []string{"", "http://127.0.0.1:7777", "http://localhost:5199", "http://[::1]:7777"} {
 		t.Run(origin, func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestWriteGuardAllowlistEnv(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "https://pact.example.com, https://other.example.com/")
 
-	s := New(nil)
+	s := New()
 	for _, origin := range []string{"https://pact.example.com", "https://other.example.com"} {
 		t.Run(origin, func(t *testing.T) {
 			t.Setenv("PACTIFY_HOME", t.TempDir())
@@ -99,7 +99,7 @@ func TestWriteGuardAllowlistEnv(t *testing.T) {
 // prevents a cross-site page from reading responses.
 func TestWriteGuardIgnoresReads(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
-	s := New(nil)
+	s := New()
 	r := httptest.NewRequest("GET", "/api/sub/jobs", nil)
 	r.Header.Set("Origin", "https://evil.example.com")
 	w := httptest.NewRecorder()

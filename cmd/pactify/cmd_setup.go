@@ -167,7 +167,7 @@ func runSetupYes(out io.Writer, cwd, project string) error {
 		}
 	}
 	fmt.Fprintf(out, "Set your seat for shell verbs:\n  export PACT_AGENT_ID=%s\n", lead)
-	fmt.Fprintf(out, "Next: `pactify run \"<goal>\" --feature <id>` to go from a sentence to shipped.\n")
+	fmt.Fprintf(out, "Next: assign tasks with `pactify assign`, then launch the worker and reviewer.\n")
 	return nil
 }
 

@@ -34,18 +34,6 @@ func TestRemovedGeminiCommands(t *testing.T) {
 	}
 }
 
-func TestRemovedGeminiAuditFlags(t *testing.T) {
-	for _, action := range []string{"install", "uninstall"} {
-		cmd := newAuditCmd()
-		cmd.SetArgs([]string{action, "--gemini"})
-		cmd.SetOut(&bytes.Buffer{})
-		cmd.SetErr(&bytes.Buffer{})
-		if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "unknown flag: --gemini") {
-			t.Errorf("%s error = %v", action, err)
-		}
-	}
-}
-
 func TestRemovedGeminiSetupRegistry(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", t.TempDir())
@@ -73,5 +61,44 @@ func TestRemovedGeminiSetupRegistry(t *testing.T) {
 				t.Errorf("setup wrote .pact before validating removed kind: %v", err)
 			}
 		})
+	}
+}
+
+func TestOrchestratorCommandsRemoved(t *testing.T) {
+	for _, name := range []string{"orchestrate", "plan", "run", "schedule", "audit", "sessions", "recipe", "finish", "role"} {
+		t.Run(name, func(t *testing.T) {
+			cmd := newRootCmd()
+			cmd.SetArgs([]string{name})
+			cmd.SetOut(&bytes.Buffer{})
+			cmd.SetErr(&bytes.Buffer{})
+			if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "unknown command") {
+				t.Fatalf("retired command must be rejected, got %v", err)
+			}
+		})
+	}
+	for _, tc := range []struct {
+		path    []string
+		removed string
+	}{
+		{[]string{"agent"}, "config"},
+		{[]string{"config"}, "gate"},
+		{[]string{"config"}, "critic"},
+	} {
+		cmd, _, err := newRootCmd().Find(tc.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, child := range cmd.Commands() {
+			if child.Name() == tc.removed {
+				t.Errorf("retired subcommand remains: %v %s", tc.path, tc.removed)
+			}
+		}
+	}
+	cp, _, err := newRootCmd().Find([]string{"checkpoint"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cp.Flags().Lookup("force") != nil {
+		t.Fatal("retired checkpoint force flag remains")
 	}
 }

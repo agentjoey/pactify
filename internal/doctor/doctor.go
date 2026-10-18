@@ -85,7 +85,7 @@ func checkAgentWiring(cwd string) Check {
 // checkPinnedIdentity warns when a project config still hard-codes a seat id in
 // the pact server's env (legacy pre-seat-identity wiring). A pinned identity
 // blocks a second same-kind seat (last-writer-wins collision) and overrides an
-// orchestrate-injected identity; re-wiring drops it (spec seat-identity §3.4).
+// runtime seat identity; re-wiring drops it (spec seat-identity §3.4).
 func checkPinnedIdentity(cwd string) Check {
 	pinned := agent.PinnedIdentity(cwd)
 	if len(pinned) == 0 {

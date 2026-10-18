@@ -24,15 +24,13 @@ cat .agent/CURRENT.md          # 本地工作台的交接说明（gitignored）
 | Board 上任务卡在 `changes_requested` / `in_progress`，但活其实已经完成 | 账本滞后于现实（agent 交付了没走完协议流转）。**当前只能回命令行**：以 **owner 身份** `pactify checkpoint <task> --evidence …`，再由 reviewer `pactify accept`。⚠️ 先确认没有并发 run 在跑、工作树干净——`Checkpoint` 走 `CommitAll`，会把别人的在途改动一并提交。已记 backlog `[UI-GATE]`。 |
 | launchd 拉起的 `serve` 立刻被杀 | `go build` 的 ad-hoc 签名不够，`codesign --force -s - ./pactify` 后重试（见「发版」节） |
 
-## serve API 与定时任务
+## serve API
 
 AJ-723 后，serve 只挂载 `/api/sub` 和静态资源，保留 job events SSE 与 CSRF 写保护。
 旧项目、编排、cockpit、registry、agent、plan、setup 等 HTTP API 已删除；治理操作改用 CLI/MCP。
-`--seat`、`--project` 现在只用于定时编排。
-
-`StartScheduler` 保留 schedule → orchestrate：启动时读取注册表并发现当前目录的 `.pact` 项目，
-每分钟检查到期任务，跳过已运行的项目。scheduler 的座席取 `--seat`（默认 `PACT_AGENT_ID`），
-`--project` 追加额外项目。项目 watcher 已删除，注册表变更需重启 serve。
+AJ-735 已删除 scheduler 和 orchestrator。`--seat` 与可重复的 `--project` 为隐藏的空操作
+兼容参数，与旧 relay 参数一样在显式传入时提示忽略，现有 launchd plist 可继续启动。
+旧编排器的回滚锚点为 tag `v0.12.0`。
 
 本地读取无需额外 header：`curl http://127.0.0.1:17082/api/sub/jobs`。
 浏览器写请求仍检查 Origin，反向代理需设置 `PACTIFY_ALLOWED_ORIGINS`。
@@ -54,26 +52,9 @@ git tag vX.Y.Z && git push origin vX.Y.Z      # 仅在 Owner 决定发版后，�
 go build -o pactify ./cmd/pactify && codesign --force -s - ./pactify
 ```
 
-## orchestrate 自主驱动（pactify orchestrate）
-写好任务图（assign 各 task + owner/reviewer/deps + 每个 task 规格里加一行机器可读 `verify: <命令>`），然后让 orchestrate 跑到底：
+## 可选 pact 协议流程
 
-```bash
-# 在 repo 根（含 .pact/）运行；为每个参与座席指定 headless runner kind
-pactify orchestrate \
-  --seat-kind w=opencode \
-  --seat-kind orch=claude-code
-```
-- **座席→kind**：`--seat-kind seat=kind`（可重复）。有 headless runner 的 kind：`opencode`/`claude-code`/`kimi-cli`/`codex-cli`/`antigravity`（antigravity 走 `agy` CLI，2026-08-22 起可被驱动）。GUI/桌面 agent（`*-desktop`、`codex-app`）无法被驱动——那一棒换 CLI 座席或人工。
-- **task 规格 `verify:` 字段**：硬测试门与 reviewer 都用它跑验收，例 `verify: go test ./internal/serve/`。缺失则退化为**项目门**（见下）。**只放一行专用 `verify:` 指令，勿写成散文**（首条 `verify:` 行胜出；`>`/`-`/`#` 前缀的不计）。
-- **项目硬门（`pactify config gate`）**：task 无 `verify:` 时的回退门按**项目**配置，优先级 task `verify:` > `config gate` > 按项目类型推断的默认。
-  - 类型默认：`pnpm-lock.yaml`→`pnpm build && pnpm test`；`package.json`→`npm run build && npm test`；`Cargo.toml`→`cargo build && cargo test`；`go.mod`→`go build ./... && go test ./...`。
-  - 显式设（build-first 例）：`pactify config gate "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"`（写入 ledger 的 `config_gate` 事件，后设覆盖先设）。
-- **flags**：`--feature <id>`（只跑某 feature）、`--dry-run`（只打印下一动作不拉 agent）、`--max-rework`(3)/`--max-fails`(2)/`--max-iters`(50)。
-- **卡住升级**：返工/失败超阈值或硬门失败 → orchestrate 暂停，写 `.pact/orchestrate/escalation-<ts>.md`（含 task/原因/evidence/建议）并通知。人工修复（改实现/改规格/修协议）后**重跑同一命令即续行**（状态已前进；`--resume` 是文档性同义）。
-- **secrets**：runner 不在命令行传 token；agent 自身凭据由其自身配置/Keychain 管。
-
-## 半自动模式（不跑 orchestrate）
-全自动不是唯一路径。verbs 本身就支持人/agent 手动走完整条链，orchestrator 只在最后单独合并:
+人或 agent 使用 CLI/MCP 显式派发、提交评审、接受和合并；命令使用对应座席身份：
 
 ```bash
 # orchestrator: 派活
@@ -88,7 +69,7 @@ pactify accept T1
 pactify merge F            # 默认只本地合
 pactify merge F --push     # 或合并后顺手推 origin
 ```
-谁来当 worker/reviewer 无所谓——任何能读文件、能跑 `pactify`(或 pact MCP)的 agent 都行。orchestrate 只是把这套循环自动化，不是前提。
+谁来当 worker/reviewer 无所谓——任何能读文件、能跑 `pactify`(或 pact MCP)的 agent 都行。旧的自动编排命令已删除。
 
 ## base 写入契约（spec coordination-authority P3）
 保证「main 只被 orchestrator 显式 merge 写」:
@@ -99,99 +80,9 @@ pactify merge F --push     # 或合并后顺手推 origin
 - **`merge` fetch-aware、不分叉**:有 `origin` 时,merge 前先 `git fetch origin <base>` → 本地 base ff 到 `origin/<base>`(分叉则报错)→ feature rebase 到其上(不干净则报错并 abort)→ 再合。无远端的纯本地项目走原路径。
 - **`merge` 默认不 push**:本地合完由你决定何时 `git push`,或 `pactify merge --push` 一并推。origin/main 何时前进完全在 orchestrator 手里。
 
-## Roles and fallback
+## 已删除的编排功能
 
-A **role** is a named (agent, model) profile; a **seat** binds to a role. Roles
-live in `~/.pactify/roles.json` (machine-level, `PACTIFY_HOME`-aware) because
-they reference locally installed agents — they are advisory guidance for task
-assignment, not protocol state.
-
-```bash
-pactify role set frontend --kind claude-code --model claude-opus-4-8 --fallback frontend-cheap
-pactify role set frontend-cheap --kind kimi-cli
-pactify role bind w2 frontend
-pactify role list
-```
-
-At launch a seat resolves in this order: `--seat-kind` override → an approved
-fallback (this run only) → the seat's role binding → the roster kind → a
-spawner's `--roster-kind` hint. Two seats of the same kind can therefore run
-different models.
-
-`--seat-kind` is an OPERATOR flag and is the only one that outranks a role
-binding (it drops the profile's model pin and warns — see `[KIND-2]`).
-`--roster-kind` is the machine-facing twin `pactify serve` writes when it starts
-a run: the kinds it derives from the ledger (init events → roster → seat-name
-heuristic) are configuration, not intent, so they go on their own channel and
-lose to everything above. Don't type it by hand; typing `--seat-kind` when you
-mean "use the configured kind" is what silently unbinds a role.
-
-**Recommended profiles — antigravity (`agy`).** Given `gemini-3.7-flash`'s
-current capability, antigravity suits lightweight work — frontend, test, ops,
-docs — not planner/orchestrator or architecture-class tasks (those stay on
-stronger roster kinds). This is a role/kind binding, not a tier default: tier
-is about task complexity, role is about who's suited for it; the two stay
-orthogonal. Nothing below is built in — `roles.Load()` reads exactly one file,
-`roles.Path()` (`$PACTIFY_HOME/roles.json` when `PACTIFY_HOME` is set, else
-`~/.pactify/roles.json`), and treats a missing file as an empty config, so a
-fresh machine behaves exactly as before until you opt in with these commands (or
-the equivalent hand-edited JSON):
-
-```bash
-pactify role set frontend --kind antigravity --model gemini-3.7-flash-medium
-pactify role set test     --kind antigravity --model gemini-3.7-flash-medium
-pactify role set ops      --kind antigravity --model gemini-3.7-flash-low
-pactify role set docs     --kind antigravity --model gemini-3.7-flash-low
-pactify role bind <seat> frontend   # etc. — binding is what actually routes work
-```
-
-Equivalent `roles.json` fragment (`$PACTIFY_HOME/roles.json`, default
-`~/.pactify/roles.json`):
-
-```json
-{
-  "profiles": {
-    "frontend": {"kind": "antigravity", "model": "gemini-3.7-flash-medium"},
-    "test":     {"kind": "antigravity", "model": "gemini-3.7-flash-medium"},
-    "ops":      {"kind": "antigravity", "model": "gemini-3.7-flash-low"},
-    "docs":     {"kind": "antigravity", "model": "gemini-3.7-flash-low"}
-  }
-}
-```
-
-Do **not** set `--fallback` on these profiles, and leave the profile's `effort`
-field unset. (`pactify role set` takes only `--kind`, `--model` and
-`--fallback` — there is no `--effort` flag; `Profile.Effort` is reachable only
-by hand-editing `roles.json`.) `agy`'s tier is fully encoded in the model
-name's `-medium`/`-low` suffix; antigravity's
-`RunnerProfile.EffortArgs` is `nil` because `agy --model <tier> --effort
-<mismatched-tier>` hard-errors (exit 1, `status:ERROR`, "conflicts with" — see
-the antigravity kind registration). Leaving `Profile.Effort` empty means
-`agentcfg.ResolveSeat` never has an explicit per-seat effort to inject for
-this kind, so it can't reconstruct that conflicting flag pair.
-
-**Fallback.** When a stint fails having produced *nothing* (quota exhausted,
-auth expired, a missing binary — "env-class"), the driver proposes the seat's
-next fallback role, writes `.pact/orchestrate/fallback/<scope>.json` beside the
-escalation, and pauses. `scope` is the feature id (one file per concurrently
-driven feature under `--max-concurrency > 1`) or `all` for an unfiltered serial
-run. Approve a proposal by naming its **task**:
-
-```bash
-pactify orchestrate --resume --approve-fallback <task-id>   # repeatable
-```
-
-The escalation record prints the exact command. Naming a task that has no
-pending proposal is an error and the run does not start — otherwise you would
-believe the agent was swapped while the run burns another budget cycle on the
-same configuration. Under `--max-concurrency > 1` the approval applies **only to
-the feature whose proposal you named**, even when another feature shares that
-seat.
-
-The approval applies to the current run only — tomorrow's quota may have reset.
-A failure where the agent *did* deliver work ("logic-class") is not a fallback
-case: swapping agents will not fix wrong work, so the escalation instead offers
-
-```bash
-pactify orchestrate --resume --reset-task <id>   # discards UNCOMMITTED work only
-```
+AJ-735 删除 `orchestrate`、`plan`、`run`、`schedule`、`audit`（含 SARIF）、`sessions`、
+`recipe`、`finish`、`role`，以及 `agent config`、`config gate/critic`、`checkpoint --force`。
+role profile、fallback 审批和编排 session 清理随之删除。历史实现见 tag `v0.12.0`；
+`pactify join --roles` 等 pact 协议角色继续保留。harness 委派和续接使用 `pactify sub`。

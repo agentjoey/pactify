@@ -1,5 +1,7 @@
 # Spec — Seat Identity（身份 = 工作副本属性，永不进追踪文件）
 
+> AJ-735: orchestrator launch examples below are historical; the driver and its CLI commands were removed. Tag `v0.12.0` is the rollback anchor. The pact seat identity rules remain available.
+
 > 2026-10 状态注记：下文 gemini-cli 接线与 E3 验证项为历史记录；该集成已退役（#106、#107），GEMINI.md 仍是 agy / antigravity 入口。
 
 Status: **draft** · Created 2026-07-22 · Owner: claude (orchestrator)

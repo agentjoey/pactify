@@ -233,13 +233,12 @@ func (r *Registry) Rename(oldName, newName string) error {
 	return nil
 }
 
-// EnsureRegistered idempotently registers path for serve to watch (spec:
-// auto-register so an agent-started project is visible on the dashboard without
-// a manual `pactify register`). If the ABSOLUTE path is already registered under
+// EnsureRegistered idempotently registers path so an agent-started project is
+// addressable through the MCP `projects` tool without a manual `pactify register`. If the ABSOLUTE path is already registered under
 // any name, it is a no-op returning the existing name and added=false. A brand-
 // new path is registered under its basename slug (added=true). A different path
 // whose basename collides with an existing name returns the Add error — the
-// caller (init/orchestrate) warns rather than failing, since registration is a
+// caller (init) warns rather than failing, since registration is a
 // convenience, not a prerequisite for the protocol.
 //
 // A path under a system temp root is REFUSED with ErrTempPath. Auto-registration
@@ -250,7 +249,7 @@ func (r *Registry) Rename(oldName, newName string) error {
 // such an entry after the fact; this stops it being created. The guard is scoped
 // to the AUTOMATIC path only: `pactify register <path>` calls Add directly and
 // still accepts a temp path, because typing the command is a deliberate act,
-// whereas auto-registration is a side effect of `init`/`orchestrate` that the
+// whereas auto-registration is a side effect of `init` that the
 // user never asked for.
 func EnsureRegistered(path string) (name string, added bool, err error) {
 	abs, err := filepath.Abs(path)

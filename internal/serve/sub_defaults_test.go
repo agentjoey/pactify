@@ -11,7 +11,7 @@ import (
 
 func TestRouterDefaultsPUT(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
-	h := New(nil).Handler()
+	h := New().Handler()
 	version := fmt.Sprintf("%x", sha256.Sum256(nil))
 	for _, tc := range []struct {
 		config string

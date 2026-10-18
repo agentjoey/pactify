@@ -53,8 +53,8 @@ func TestSetupYesInitsAndWiresFromRoster(t *testing.T) {
 	if !strings.Contains(s, "Initialized .pact/") || !strings.Contains(s, "seat(s)") {
 		t.Fatalf("setup --yes should report init + seat count:\n%s", s)
 	}
-	if !strings.Contains(s, "pactify run") {
-		t.Fatalf("setup --yes should point at the run command next:\n%s", s)
+	if !strings.Contains(s, "pactify assign") {
+		t.Fatalf("setup --yes should point at task assignment next:\n%s", s)
 	}
 	// Project name defaults to the repo dir basename.
 	if !strings.Contains(s, filepath.Base(dir)) {

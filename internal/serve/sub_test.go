@@ -32,7 +32,7 @@ func TestSubAPIReadOnlyAndDefaultStore(t *testing.T) {
 	if err := os.WriteFile(store.LogPath(st.ID), []byte("old-outside-window\n"+strings.Repeat("x", (1<<20)+128)+"\nmessage after oversized line\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	h := New(nil).Handler()
+	h := New().Handler()
 	query := func(method, path string) *httptest.ResponseRecorder {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "http://pactify.agentjoey.ai"+path, nil)
@@ -95,7 +95,7 @@ func TestSubAPIReadOnlyAndDefaultStore(t *testing.T) {
 
 func TestSubAPIEmptyAndErrors(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
-	h := New(nil).Handler()
+	h := New().Handler()
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/api/sub/jobs", nil))
 	if w.Code != 200 || strings.TrimSpace(w.Body.String()) != "[]" {

@@ -27,8 +27,7 @@ func TestSEC_M11_CrossVendorStrip(t *testing.T) {
 		{"claude-code", []string{"OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS", "MOONSHOT_API_KEY", "KIMI_API_KEY"}, []string{"ANTHROPIC_API_KEY"}},
 		{"codex-cli", []string{"ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS", "MOONSHOT_API_KEY", "KIMI_API_KEY"}, []string{"OPENAI_API_KEY"}},
 		// antigravity (agy) authenticates via an OAuth token file, not any of
-		// these env vars (verified 2026-08-22 — see internal/agent/launch.go and
-		// the historical launch environment comments), so it owns none of them: every
+		// these env vars (verified 2026-08-22), so it owns none of them: every
 		// vendor key gets blanked, none are "kept". GOOGLE_APPLICATION_CREDENTIALS
 		// included: `strings $(which agy)` carries it as an alternate-auth fallback,
 		// so leaving it would let agy silently authenticate as whatever service

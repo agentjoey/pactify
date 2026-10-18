@@ -77,7 +77,7 @@ main() {
 
   echo "✅ pactify installed to $bindir/pactify"
   case ":$PATH:" in *":$bindir:"*) ;; *) echo "⚠️  $bindir is not on your PATH — add it, e.g.: export PATH=\"$bindir:\$PATH\"" ;; esac
-  echo "Next: run \`pactify setup\` in your repo to get started."
+  echo "Next: run \`pactify sub --help\` in your repo to get started."
 }
 
 main

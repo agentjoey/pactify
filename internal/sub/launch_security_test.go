@@ -16,7 +16,7 @@ func TestDashboardWorkerProcessHelper(t *testing.T) {
 		return
 	}
 	values := map[string]string{}
-	for _, key := range []string{"PACTIFY_ALLOWED_ORIGINS", "PACTIFY_LEDGER_REF", "AJ704_WORKER_KEPT"} {
+	for _, key := range []string{"PACTIFY_ALLOWED_ORIGINS", "AJ704_WORKER_KEPT"} {
 		values[key] = os.Getenv(key)
 	}
 	data, _ := json.Marshal(values)
@@ -37,7 +37,6 @@ func TestDashboardWorkerReapedAndEnvironmentFiltered(t *testing.T) {
 			t.Setenv("AJ704_WORKER_ENV_FILE", path)
 			t.Setenv("AJ704_WORKER_KEPT", "kept")
 			t.Setenv("PACTIFY_ALLOWED_ORIGINS", "https://dashboard.example")
-			t.Setenv("PACTIFY_LEDGER_REF", "1")
 			exe, err := os.Executable()
 			if err != nil {
 				t.Fatal(err)
@@ -72,7 +71,7 @@ func TestDashboardWorkerReapedAndEnvironmentFiltered(t *testing.T) {
 				t.Fatal(values)
 			}
 			if dashboard {
-				if values["PACTIFY_ALLOWED_ORIGINS"] != "" || values["PACTIFY_LEDGER_REF"] != "" {
+				if values["PACTIFY_ALLOWED_ORIGINS"] != "" {
 					t.Fatal("serve-only environment leaked", values)
 				}
 				for syscall.Kill(pid, 0) == nil {
@@ -81,7 +80,7 @@ func TestDashboardWorkerReapedAndEnvironmentFiltered(t *testing.T) {
 					}
 					time.Sleep(10 * time.Millisecond)
 				}
-			} else if values["PACTIFY_ALLOWED_ORIGINS"] != "https://dashboard.example" || values["PACTIFY_LEDGER_REF"] != "1" {
+			} else if values["PACTIFY_ALLOWED_ORIGINS"] != "https://dashboard.example" {
 				t.Fatal("CLI environment changed", values)
 			}
 		})

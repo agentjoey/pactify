@@ -1,104 +1,32 @@
 package main
 
 import (
-	"bytes"
-	"os"
-	"path/filepath"
+	"io"
 	"strings"
 	"testing"
 )
 
-func TestRemovedGeminiCommands(t *testing.T) {
-	cwd, _ := os.Getwd()
-	if err := os.Chdir(t.TempDir()); err != nil {
-		t.Fatal(err)
+func TestRootCommands(t *testing.T) {
+	root := newRootCmd()
+	var names []string
+	for _, cmd := range root.Commands() {
+		names = append(names, cmd.Name())
 	}
-	t.Cleanup(func() { os.Chdir(cwd) })
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("PACTIFY_HOME", t.TempDir())
-	for _, args := range [][]string{
-		{"init", "--project", "removed", "--seat", "w:worker:GEMINI.md:gemini-cli"},
-		{"agent", "register", "gemini-cli"},
-		{"agent", "add", "gemini-cli", "--id", "w", "--roles", "worker", "--print"},
-	} {
-		t.Run(strings.Join(args, " "), func(t *testing.T) {
-			cmd := newRootCmd()
-			cmd.SetArgs(args)
-			cmd.SetOut(&bytes.Buffer{})
-			cmd.SetErr(&bytes.Buffer{})
-			err := cmd.Execute()
-			if err == nil || !strings.Contains(err.Error(), "gemini-cli has been removed; use antigravity (agy) instead") {
-				t.Fatalf("error = %v", err)
-			}
-		})
+	if got := strings.Join(names, ","); got != "serve,sub,version" {
+		t.Fatalf("root commands = %s", got)
 	}
 }
 
-func TestRemovedGeminiSetupRegistry(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("PACTIFY_HOME", home)
-	if err := os.WriteFile(filepath.Join(home, "agents.json"), []byte(`{"agents":[{"kind":"gemini-cli"}]}`), 0600); err != nil {
-		t.Fatal(err)
-	}
-	for _, args := range [][]string{{"suggest"}, {"--yes"}} {
-		t.Run(strings.Join(args, " "), func(t *testing.T) {
-			cwd, _ := os.Getwd()
-			dir := t.TempDir()
-			if err := os.Chdir(dir); err != nil {
-				t.Fatal(err)
-			}
-			t.Cleanup(func() { os.Chdir(cwd) })
-			cmd := newSetupCmd()
-			cmd.SetArgs(args)
-			cmd.SetOut(&bytes.Buffer{})
-			cmd.SetErr(&bytes.Buffer{})
-			err := cmd.Execute()
-			if err == nil || !strings.Contains(err.Error(), "gemini-cli has been removed; use antigravity (agy) instead") {
-				t.Errorf("error = %v", err)
-			}
-			if _, err := os.Stat(filepath.Join(dir, ".pact")); !os.IsNotExist(err) {
-				t.Errorf("setup wrote .pact before validating removed kind: %v", err)
-			}
-		})
-	}
-}
-
-func TestOrchestratorCommandsRemoved(t *testing.T) {
-	for _, name := range []string{"orchestrate", "plan", "run", "schedule", "audit", "sessions", "recipe", "finish", "role"} {
+func TestRetiredCommandsRejected(t *testing.T) {
+	for _, name := range strings.Fields("init join assign checkpoint accept changes merge cancel withdraw config status log validate seat agent doctor mcp register unregister list setup orchestrate plan run schedule audit sessions recipe finish role account") {
 		t.Run(name, func(t *testing.T) {
 			cmd := newRootCmd()
 			cmd.SetArgs([]string{name})
-			cmd.SetOut(&bytes.Buffer{})
-			cmd.SetErr(&bytes.Buffer{})
+			cmd.SetOut(io.Discard)
+			cmd.SetErr(io.Discard)
 			if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "unknown command") {
 				t.Fatalf("retired command must be rejected, got %v", err)
 			}
 		})
-	}
-	for _, tc := range []struct {
-		path    []string
-		removed string
-	}{
-		{[]string{"agent"}, "config"},
-		{[]string{"config"}, "gate"},
-		{[]string{"config"}, "critic"},
-	} {
-		cmd, _, err := newRootCmd().Find(tc.path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, child := range cmd.Commands() {
-			if child.Name() == tc.removed {
-				t.Errorf("retired subcommand remains: %v %s", tc.path, tc.removed)
-			}
-		}
-	}
-	cp, _, err := newRootCmd().Find([]string{"checkpoint"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cp.Flags().Lookup("force") != nil {
-		t.Fatal("retired checkpoint force flag remains")
 	}
 }

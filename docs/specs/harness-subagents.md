@@ -273,14 +273,6 @@ M2 剩余部分（router v1、跨委派成本汇总）的设计见 [`router-v1.m
 | 续接 | `thread/resume` | SDK resume | `loadSession` / `resume` | `loadSession` / `resume` | `--conversation <id>` |
 | 每次委派输入基线 | ~2 万 token（17 个 MCP 服务器） | ~4.8 万（含缓存，359 个工具） | ~1.9 万 | — | ~2 万 |
 
-**实测中发现的现有代码问题**（v0.12.0 已发布版本中存在，随降级冻结，记入 backlog）：
-
-- **agy 模型表过期**：`internal/agent/launch.go` 写死的 `gemini-3.7-flash-*` / `gemini-3.1-pro-*` 已不被识别，
-  当前为 `gemini-3.8-flash-{high,medium,low}`、`claude-opus-5-5-*`、`claude-sonnet-5-5-*`、`gpt-oss-120b-medium`。
-  ⇒ 编排器用默认模型拉起 agy 会直接失败。agy 还新增了 `--mode {accept-edits,auto,plan}` 与 `--sandbox`。
-- **kimi 2.0.0 配置迁移**：配置从 `~/.kimi/` 移到 `~/.kimi-code/config.toml`，默认模型变为 `kimi-code/k3-256k`；
-  `pactify doctor` 仍检查 `~/.kimi/`。`-p` 仍自动批准、`-m` 仍可用；新增 `--output-format stream-json`（含最终回复与会话 id，无模型与 token）。
-
 **补充（同日）**：kimi 本地会话记录证实——协议内切到 `kimi-for-coding` 的会话实际跑 `kimi-for-coding`，未切换的跑默认 `k3-256k`；
 plan 模式那次循环在记录里是 64 次模型调用。测试期间 kimi 已自行下载 2.2.0 待安装，CLI 版本漂移是常态（D7）。
 

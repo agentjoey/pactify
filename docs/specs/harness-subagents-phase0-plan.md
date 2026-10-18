@@ -1,8 +1,6 @@
 # Phase 0（harness subagents）实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
->
-> **本计划的实际执行方式（Owner 2026-10-15 指定）**：开发由 **codex 经 pactify 编排器**完成（座席 `codex-worker`），Claude 会话担任 orchestrator 与 reviewer（座席 `claude-session`）。下文「执行协议」一节定义这套流程；Task 1–7 的正文会被逐字拷进 `.pact/tasks/*.md` 交给 codex，Task 8 由 Claude 会话亲自执行。
+> Historical implementation plan. The governance execution workflow was removed in AJ-744; see tag `v0.12.0`.
 
 **Goal:** 做出「在 Claude Code 里用 `/codex`、`/kimi` 把大任务委派给 codex / kimi，并拿回核实过模型与成本的结果摘要」的最小可用链路，再用 10 个真实大任务验证它值不值得做下去。
 
@@ -34,92 +32,6 @@
 3. **工作区原本就有未提交改动**：期望 diffstat 只算 callee 本次带来的改动，不把用户原有改动算进去。→ Task 5 测试。
 4. **kimi 在 plan 模式下反复申请退出、反复提问**（实测 32 次工具调用）：期望超过上限即中断，结果摘要首行标明「工具调用超限」，且无文件改动。→ Task 6 测试（假后端模拟）。
 5. **前台 `run` 进程被杀或超时返回后**：期望后台 worker 仍跑完，`wait` / `result` 能拿到完整结果。→ Task 6 测试。
-
----
-
-## 执行协议（Claude 会话负责，codex 不需要读）
-
-### 一、为什么这样搭
-
-- **独立 clone**：主副本里有 Owner 未提交的改动；`cmd/pactify` 的测试与 pact 账本自动提交都可能写进所在仓库。全部工作放在独立 clone `~/AgentWorks/Code_Claude/pactify-p0`，主副本不动。
-- **集成分支**：pact 编排器在任务全部验收后会把 feature 合并进「基线分支」。把基线设为 `p0-integration`，每个 feature 合并后由 Claude 开 `p0-integration → main` 的 PR、等 CI 绿再合，保持仓库的 PR + CI 惯例。
-- **评审座席不绑 agent**：本机 `~/.pactify/roles.json` 把 `claude` 座席绑在 `codex-focused-reviewer`（codex-cli）上，用它当评审会拉起一个 codex 来评审。所以新建座席 `claude-session`（orchestrator + reviewer，不声明 kind、不绑角色）。编排器遇到「评审座席就是编排器自己且没有 kind」时会暂停并提示人工完成（`internal/orchestrate/loop.go` 约 500 行），这就是 Claude 会话的评审闸口。
-
-### 二、预备步骤（Claude 会话执行，一次性）
-
-- [ ] **P1 · AJ-612**：在主副本把 spec 定稿与本计划单独开 docs PR（只含 `docs/specs/harness-subagents.md`、`docs/specs/harness-subagents-phase0-plan.md`，以及三份 entry 文件「当前状况」里方向那一条的同步修改；**不得**带上 entry 文件末尾 Owner 未提交的 SHARED-ENGINEERING 块）。CI 绿后合入，Linear AJ-612 置 Done。
-- [ ] **P2 · 建 clone 与集成分支**：
-```bash
-cd ~/AgentWorks/Code_Claude
-git clone git@github.com:agentjoey/pactify.git pactify-p0
-cd pactify-p0
-git checkout -b p0-integration origin/main
-git push -u origin p0-integration
-```
-- [ ] **P3 · 构建驱动用的 pactify**（用 clone 里的 main 版本，放到会话 scratchpad 的 bin，不覆盖用户 PATH 上的版本）：
-```bash
-go build -o "$SCRATCH/bin/pactify" ./cmd/pactify
-export PATH="$SCRATCH/bin:$PATH"
-pactify version
-```
-- [ ] **P4 · 座席与基线**（在 clone 根目录）：
-```bash
-PACT_AGENT_ID=claude pactify config base-branch p0-integration
-PACT_AGENT_ID=claude-session pactify join claude-session --roles orchestrator,reviewer
-PACT_AGENT_ID=codex-worker  pactify join codex-worker  --roles worker --kind codex-cli
-pactify status | sed -n '1,20p'
-```
-  预期：名册里出现 `claude-session`（无 kind）与 `codex-worker`（kind codex-cli）；`base_branch` 为 `p0-integration`。随后 `git push origin p0-integration`（账本提交随集成分支走）。
-- [ ] **P5 · codex 工作模型**（Owner 2026-10-15 指定 **GPT-6.1-Sol High**）：新建角色 `p0-codex-worker`（kind `codex-cli`，model `gpt-6.1-sol`，effort `high`）并把座席 `codex-worker` 绑上去。`pactify role set` 没有 effort 参数，effort 直接写进 `~/.pactify/roles.json` 的该 profile（`internal/roles.Profile.Effort`，显式 effort 优先于任务分级）；改前备份。驱动时**不传** `--seat-kind codex-worker=...`：显式 seat-kind 会压过角色绑定，导致模型与 effort 不生效。
-- [ ] **P6 · 门禁命令**：不设项目级 gate，每个任务用自己的 `verify:` 行（见各任务末尾）。
-
-### 三、每个 feature 的循环
-
-本计划共 4 个 feature，按顺序执行：`p0-codex`（Task 1–2）→ `p0-kimi`（Task 3–4）→ `p0-sub`（Task 5–6）→ `p0-plugin`（Task 7）。
-
-1. **写任务 spec**：把对应 Task 的正文（从「Files」到「验收命令」）拷进 `.pact/tasks/p0-<task>.md`，顶部加一段固定的「worker 须知」（见下），末尾保留 `verify:` 行。
-2. **分派**（以 `p0-codex` 为例）：
-```bash
-export PACT_AGENT_ID=claude-session
-pactify assign p0-schema --feature p0-codex --branch feat/p0-codex \
-  --owner codex-worker --reviewer claude-session --spec .pact/tasks/p0-schema.md
-pactify assign p0-codex-backend --feature p0-codex --branch feat/p0-codex \
-  --owner codex-worker --reviewer claude-session --spec .pact/tasks/p0-codex-backend.md \
-  --deps p0-schema
-git push origin p0-integration
-```
-3. **驱动**：
-```bash
-PACT_AGENT_ID=claude-session pactify orchestrate --feature p0-codex --as claude-session \
-  --run-timeout 60 --idle-timeout 10 --no-register
-```
-  编排器默认在隔离 worktree 里拉起 codex；codex 完成后自行 checkpoint，任务进入 `awaiting_review`，编排器因评审座席无 kind 而暂停。
-4. **评审**（Claude 会话）：读 feature 分支相对集成分支的 diff 与 checkpoint evidence，按下方「评审清单」逐条核对，自己在 clone 里跑一遍 `verify:` 命令。
-   - 通过：`pactify accept <task> --evidence "<自己跑出的验收输出摘要>"`
-   - 不通过：`pactify changes <task> --reason "<具体到文件和行为的修改要求>"`，然后重跑第 3 步。
-5. **合并与 PR**：feature 内全部任务 accepted 后再跑第 3 步，编排器执行 verify 硬门并把 feature 合进 `p0-integration`。随后：
-```bash
-git push origin p0-integration
-gh pr create --base main --head p0-integration --title "phase0: <feature 摘要>" --body "<含 Linear issue 编号与验收证据>"
-```
-  CI 绿后合入 main，Linear 对应 issue 置 Done；再 `git pull` 让集成分支跟上 main。
-6. **升级处理**：编排器因返工超限或硬门失败而暂停时，读 `.pact/orchestrate/` 下的记录；能靠更清楚的修改要求解决的就 `changes`，属于计划本身有误的就先改本计划与任务 spec，再 `--resume`。
-
-**worker 须知**（每个任务 spec 顶部固定附上）：
-```
-- 只改「Files」列出的文件；需要改别的文件时，在 checkpoint evidence 里说明原因。
-- 跑任何 Go 测试都带 PACTIFY_HOME="$(mktemp -d)"；不要运行 `go test ./...` 以外会触碰真实 home 的命令。
-- 不要提交 `.pact/` 以外的生成物；不要改 CLAUDE.md / AGENTS.md / GEMINI.md。
-- 完成后用 pact checkpoint 提交，evidence 写：verify 命令的完整输出摘要 + 新增测试名列表。
-- 不确定的设计点按本 spec 的「Interfaces」执行；与 spec 冲突时以 spec 为准并在 evidence 里写明。
-```
-
-**评审清单**（Claude 会话每次评审逐条核对）：
-- `verify:` 命令自己重跑一遍为绿；新增测试确实覆盖了「Steps」里列出的每个用例，且测试先失败后通过的顺序在提交历史或 evidence 里可见。
-- `AccessDefault` 路径（serve）零行为变化：`internal/serve` 与 `internal/cockpit` 原有测试全绿，`-race` 绿。
-- 只动了「Files」里的文件；没有顺手重构、没有新增依赖。
-- 错误信息给出用户能照着做的下一步（例如可选模型列表），没有吞错。
-- Review Focus 里归属本任务的那一条测试存在且断言正确。
 
 ---
 

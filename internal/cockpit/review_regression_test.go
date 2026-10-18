@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -42,8 +41,11 @@ func TestReviewACPFinalAfterTool(t *testing.T) {
 	}
 }
 
-func TestReviewReadonlyOrderedBash(t *testing.T) {
-	env, err := OpencodeEnv(StartOpts{Access: AccessReadOnly, Env: []string{`OPENCODE_CONFIG_CONTENT={"agent":{"plan":{"permission":{"*":"allow","bash":"allow"}}}}`}})
+// AJ-734: read-only denies bash outright even when the user's config allows
+// it, and every command, including formerly allowed ones and the old bypass
+// shapes, ends in deny under the session rules (evaluated last in 1.19).
+func TestReviewReadonlyBashDenied(t *testing.T) {
+	env, err := OpencodeEnv(StartOpts{Access: AccessReadOnly, Env: []string{`OPENCODE_CONFIG_CONTENT={"permission":{"*":"allow","bash":"allow"}}`}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,57 +56,21 @@ func TestReviewReadonlyOrderedBash(t *testing.T) {
 		}
 	}
 	var cfg struct {
-		Permission struct {
-			Bash json.RawMessage `json:"bash"`
-		} `json:"permission"`
+		Permission map[string]any `json:"permission"`
 	}
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
 		t.Fatal(err)
 	}
-	dec := json.NewDecoder(strings.NewReader(string(cfg.Permission.Bash)))
-	_, _ = dec.Token()
-	type rule struct{ pattern, action string }
-	var rules []rule
-	for dec.More() {
-		key, _ := dec.Token()
-		var a string
-		_ = dec.Decode(&a)
-		rules = append(rules, rule{key.(string), a})
+	if cfg.Permission["bash"] != "deny" || cfg.Permission["*"] != "deny" {
+		t.Fatalf("read-only config permission = %v", cfg.Permission)
 	}
-	allows := false
-	for _, r := range rules {
-		if r.action == "allow" {
-			allows = true
+	for _, cmd := range []string{"ls", "git status", "git diff", "cat README.md > x.txt", "find . -delete", "rg --pre evil x", "git diff --output=.env", "ls; touch x", "ls | sh", "ls $(touch x)", "ls `touch x`", "> x"} {
+		if action := opencodeLastAction(opencodeReadonlyPermissions(), "bash", cmd); action != "deny" {
+			t.Errorf("read-only bash %q: %s", cmd, action)
 		}
-		if allows && strings.Contains(r.pattern, ">") {
-			break
-		}
-	}
-	for _, cmd := range []string{"cat README.md > x.txt", "find . -delete", "find . -exec rm {} +", "rg --pre evil x", "git diff --output=.env", "ls; touch x", "ls | sh", "ls $(touch x)", "ls `touch x`", "ls & touch x"} {
-		action := "ask"
-		for _, r := range rules {
-			if ok, _ := path.Match(r.pattern, cmd); ok {
-				action = r.action
-			}
-		}
-		if action != "deny" {
-			t.Errorf("unsafe command %q: %s", cmd, action)
-		}
-	}
-	// Verify encoded order, not the decoded Go map. Denials must follow allows.
-	lastAllow, firstDeny := -1, -1
-	for i, r := range rules {
-		if r.action == "allow" {
-			lastAllow = i
-		}
-		if strings.Contains(r.pattern, ">") && r.action == "deny" {
-			firstDeny = i
-		}
-	}
-	if lastAllow < 0 || firstDeny <= lastAllow {
-		t.Errorf("deny order: last allow=%d metachar deny=%d; %s", lastAllow, firstDeny, cfg.Permission.Bash)
 	}
 }
+
 func TestReviewFailureClassification(t *testing.T) {
 	for _, tc := range []struct{ raw, want string }{
 		{`{"name":"APIError","data":{"statusCode":401,"isRetryable":true}}`, "auth"},

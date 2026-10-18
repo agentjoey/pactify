@@ -140,7 +140,8 @@ assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
    Repeat step 3 after every rework turn; apply only after all required checks and reviews pass.
 <!-- END SHARED-DELEGATION -->
 
-**Read-only access** uses `agent: "plan"`, denies every permission request, and fails with
-`readonly_violation` if the final repository diff is nonempty. Doctor runs a read-only probe.
+**Read-only access** uses `agent: "plan"` with only read/glob/grep/list (no shell), denies every
+permission request, and fails with `readonly_violation` if the final repository diff is nonempty.
+Doctor runs a read-only probe and reads the session's permission rules back.
 Both profiles report `sandboxed=false`: opencode has no OS sandbox, so repository checks do not
 restrict effects outside the repository. Keep `--worktree` for delegated tasks.

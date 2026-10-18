@@ -17,7 +17,7 @@ pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3
 
 探测沿用 `sub run` 的默认配置策略：codex 以最小配置启动，关闭 MCP、插件、skills 和记忆；认证、provider、沙箱设置以及全局和仓库指令仍由原生 harness 加载。kimi 使用独立的 `KIMI_CODE_HOME=$PACTIFY_HOME/harness-homes/kimi`，目录权限 0700，不放 `mcp.json`。`config.toml`、`credentials/`、`device_id` 只用符号链接指向 pactify 进程的 `KIMI_CODE_HOME`（未设置时为 `~/.kimi-code`）；不读取或复制内容，缺少原文件时提示先 `kimi login`。每次启动修复链接，结束时若发现链接变成普通文件或目录，删除副本并在结果中警告；下次启动重建链接。共享目录长期保留以支持续接。普通 job 可用 `--with-user-config` 恢复全部用户集成；doctor 始终验证默认路径。
 
-codex 输出六项「PASS / FAIL / SKIP + reason」：安装及版本、可写档（文件、最终回复、token）、独立核实的实际模型、只读档、网络、不留痕。codex 只读档必须实际调用工具、正常结束且没有留下改动；kimi 的 Read-only access 为 SKIP，因为它无法强制只读； agy and opencode 用 plan 执行 `ls` 和 `echo x > probe.txt`，必须从工具错误确认写入被拒且文件不存在；仅模型口头拒绝不能 PASS。Network checks cover codex, kimi, agy and opencode write jobs，需要脚本生成的本地绑定和 HTTPS 成功证据，单凭最终回复不能通过。所有执行结果的 CLI 版本也必须与探测开始时的版本一致。
+codex 输出六项「PASS / FAIL / SKIP + reason」：安装及版本、可写档（文件、最终回复、token）、独立核实的实际模型、只读档、网络、不留痕。codex 只读档必须实际调用工具、正常结束且没有留下改动；kimi 的 Read-only access 为 SKIP，因为它无法强制只读； agy 用 plan 执行 `ls` 和 `echo x > probe.txt`，必须从工具错误确认写入被拒且文件不存在；仅模型口头拒绝不能 PASS。opencode（1.x 和 2.x）的只读会话里没有写入和 shell 工具，模型无从尝试写入，因此改为在 job 结束后读回该会话自己的权限规则，确认 shell、edit、external_directory 都是 deny，并确认文件不存在。Network checks cover codex, kimi, agy and opencode write jobs，需要脚本生成的本地绑定和 HTTPS 成功证据，单凭最终回复不能通过。所有执行结果的 CLI 版本也必须与探测开始时的版本一致。
 
 codex 的只读探测明确要求通过 shell 工具执行 `sh -c 'echo hi > out.txt'; echo EXIT=$?`，并原样报告 stdout、stderr 与退出码。写入由沙箱决定是否拦截；即使最终回复声称被拦，只要没有工具调用，仍判为失败。
 
@@ -174,7 +174,7 @@ Cancellation retains the existing descendant identity checks and cleanup.
 
 `pactify sub doctor opencode` 输出七项：安装、可写、独立模型核实、只读、网络、会话隐藏、受管目录。
 适配 opencode 1.19.0 v1 HTTP/SSE，每个 job 启动独立 serve，随机 Basic Auth 密码；结束后回收进程树。
-只读使用 plan，允许 read/glob/grep/list 和精确的只读 bash 调用，危险字符/参数的 deny 规则排在 allow 之后；session 权限最后应用，覆盖用户规则和旧会话规则。所有权限请求一律拒绝。开始前保存包含 ignored/untracked 的 git status 和文件 mtime/size/mode 基线；新增、修改、删除均 failed(readonly_violation)，无法核验时 failed。
+只读使用 plan，只允许 read/glob/grep/list；bash 整体 deny（AJ-734 起，与 2.x 一致），opencode 会把 bash 工具从工具列表中移除。session 权限最后应用，覆盖用户规则和旧会话规则。所有权限请求一律拒绝。doctor 在探测结束后重新打开该会话，读回它的权限规则并按最后匹配求值。开始前保存包含 ignored/untracked 的 git status 和文件 mtime/size/mode 基线；新增、修改、删除均 failed(readonly_violation)，无法核验时 failed。
 网络与 codex 一样，必须执行 doctor-network.py 并读取其本地绑定和外部 HTTPS 证据。
 `sandboxed=false` 声明无 OS 沙箱，以上探测不等同于仓库外副作用隔离。
 

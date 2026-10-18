@@ -8,6 +8,14 @@
 
 ---
 
+## Unreleased — AJ-734 · opencode 1.x read-only denies the shell
+
+- opencode 1.x read-only now denies `bash` outright, in both the config (`"bash": "deny"`) and the session rules (`*` deny, read/glob/grep/list allow, `bash *` deny). The 15 exact-command allows, the dangerous-pattern denies and `orderedBashPolicy` are gone. This matches the 2.x policy since AJ-720: an exact-command whitelist depends on opencode's shell parsing, and 2.x already skips the permission check for commands it cannot parse. Write mode is unchanged.
+- opencode removes a wholly denied tool from the model's toolset. A live 1.19.3 read-only job (MiniMax-M3) listed only `read`, `glob` and `grep`, read the file and left the repository unchanged. The doctor's old probe asked the model to run `echo x > probe.txt` through bash, so it could only report "inconclusive". For opencode (1.x and 2.x), doctor now reopens the probe session after the job and evaluates its own permission rules: bash/shell, edit and external_directory must be deny, and the write target must be absent. `Store.CheckOpencode2Readonly` became `Store.CheckOpencodeReadonly` and dispatches on the recorded CLI version; the new `cockpit.CheckOpencodeReadonly` reads `GET /session/{id}` and applies opencode's last-match wildcard rules. The denied-write log parser is now agy-only.
+- Tests: exact session-rule and config assertions; the old ordered-whitelist regression now checks that every command, including the former allows and bypass shapes, is denied under a permissive user config; a fake-server read-back test where a write session (`bash ask`) is rejected; last-match wildcard cases; doctor tests now inject the policy check. Mutations (re-allowing `ls`; ignoring the deny result; dropping the doctor's policy gate) each fail the new tests.
+- Docs: `docs/sub-doctor.md`, plugin README (the access table still said opencode read-only was not offered) and the opencode skill. Plugin 0.2.8.
+- Gates (host): `go build ./...`, `go vet ./...` (default and `record,harness_e2e`), isolated `go test ./...`, bats; real `pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3` on 1.19.3: Read-only access PASS ("shell/edit/external_directory deny=true"), all other checks PASS/expected WARN/SKIP.
+
 ## Unreleased — AJ-723 · remove the legacy serve API
 
 - Remove the unused governance HTTP routes (projects/state/worktrees/events, orchestrate/fallback approval, cockpit, registry/author verbs, agents/sessions, plan/setup, filesystem browsing, wiring/seats, stats, recipes, manifests and audit). Web v2 consumes `/api/sub`; unknown API routes now return 404 instead of the SPA index.

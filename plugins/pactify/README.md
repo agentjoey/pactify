@@ -195,7 +195,7 @@ normal minimal configuration, including directory permissions and link integrity
 | | codex | kimi | agy | opencode |
 |---|---|---|---|---|
 | `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + edit/bash/webfetch allow |
-| `--read-only` | read-only sandbox, no network | Not offered in the first release | plan + exact commands + managed hooks + fail-closed baseline | Not offered; use codex `--read-only` |
+| `--read-only` | read-only sandbox, no network | Not offered in the first release | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline |
 
 ## Known limitations
 
@@ -215,8 +215,8 @@ Assistant messages confirm the actual model. Tokens and cost use the session sum
 resumed jobs subtract the starting totals. Input includes cache reads and writes, and output includes reasoning.
 
 Write access uses build and responds to permission requests with `once`.
-Use `--read-only` for reviews: plan handles read-only tools, every permission request is denied,
-and any repository diff fails as `readonly_violation`. Doctor probes both access profiles.
+Use `--read-only` for reviews: plan exposes only read/glob/grep/list (no shell), every permission
+request is denied, and any repository diff fails as `readonly_violation`. Doctor probes both access profiles.
 Results report `sandboxed=false`: neither profile provides an OS sandbox. Use `--worktree`.
 
 Two persistent 0700 mirrors at `$PACTIFY_HOME/harness-homes/opencode/share` and

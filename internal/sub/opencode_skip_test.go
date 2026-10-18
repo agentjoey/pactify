@@ -26,11 +26,10 @@ func TestOpencodeDoctorRunsReadOnly(t *testing.T) {
 				if err := os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600); err != nil {
 					t.Fatal(err)
 				}
-			} else {
-				os.WriteFile(store.LogPath(id), []byte(`{"kind":"tool","raw":{"part":{"tool":"bash","state":{"status":"error","input":{"command":"echo x > probe.txt"},"error":"Permission denied"}}}}`+"\n"), 0600)
 			}
 			return Result{ToolCalls: 1, Status: StatusSucceeded, CLIVersion: "test", ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
 		},
+		readonlyCheck: func(context.Context, Store, string, Result) error { return nil },
 	})
 	if err != nil || len(reports) != 1 {
 		t.Fatalf("reports=%+v err=%v", reports, err)

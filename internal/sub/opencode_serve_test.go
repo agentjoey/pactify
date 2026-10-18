@@ -138,14 +138,9 @@ func TestOpencodeDoctorNetworkV2(t *testing.T) {
 			}
 			os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600)
 			os.WriteFile(filepath.Join(st.Request.Cwd, "doctor-network.json"), []byte(`{"bind":true,"external":true}`), 0600)
-		} else {
-			if !strings.Contains(st.Request.Brief, "echo x > probe.txt") {
-				t.Error("missing denied write probe")
-			}
-			os.WriteFile(store.LogPath(id), []byte(`{"kind":"tool","raw":{"part":{"tool":"bash","state":{"status":"error","input":{"command":"echo x > probe.txt"},"error":"Permission denied"}}}}`+"\n"), 0600)
 		}
 		return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: st.Request.Model, ModelVerified: true, InputTokens: 1, ToolCalls: 1, FinalText: "done"}, nil
-	}})
+	}, readonlyCheck: func(context.Context, Store, string, Result) error { return nil }})
 	if err != nil {
 		t.Fatal(err)
 	}

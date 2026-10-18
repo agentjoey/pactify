@@ -2,6 +2,7 @@ package cockpit
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -29,8 +30,15 @@ func TestOpencodeReadOnlyPolicy(t *testing.T) {
 			t.Errorf("read-only tool %s would require a denied permission", tool)
 		}
 	}
-	bash := permission["bash"].(map[string]any)
-	if bash["*"] != "deny" || bash["ls"] != "allow" || bash["git diff"] != "allow" || bash["git diff *"] != nil {
-		t.Fatal(bash)
+	if permission["bash"] != "deny" {
+		t.Fatalf("read-only bash = %#v, want deny", permission["bash"])
+	}
+}
+
+// AJ-734: the session rules deny bash entirely; no command is allowed back.
+func TestOpencodeReadOnlySessionRules(t *testing.T) {
+	want := []opencodePermission{{"*", "*", "deny"}, {"read", "*", "allow"}, {"glob", "*", "allow"}, {"grep", "*", "allow"}, {"list", "*", "allow"}, {"bash", "*", "deny"}}
+	if got := opencodeReadonlyPermissions(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("read-only session rules = %v, want %v", got, want)
 	}
 }

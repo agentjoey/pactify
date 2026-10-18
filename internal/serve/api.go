@@ -2,104 +2,31 @@ package serve
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
-	"sync"
-	"time"
+	"os"
 
-	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/registry"
 	"github.com/agentjoey/pactify/internal/sub"
 	"github.com/agentjoey/pactify/internal/subpanel"
-	"github.com/fsnotify/fsnotify"
 )
 
-// sseHeartbeat is the interval between SSE keep-alive comment frames. It must sit
-// comfortably under the idle timeout of any reverse proxy in front of serve
-// (Cloudflare Tunnel cuts idle streams around 100s), so a quiet project's live
-// connection is not dropped.
-const sseHeartbeat = 25 * time.Second
-
-// eventBackfill caps how many trailing log.jsonl events a new SSE subscriber is
-// replayed on connect — enough to populate the Live event stream with recent
-// history, matching the client's render window.
-const eventBackfill = 200
-
-// Server holds the watched projects and the SSE hub.
+// Server serves the harness dashboard. Project roots are used only by the scheduler.
 type Server struct {
-	// pmu guards the project registry maps + watcher bookkeeping (projects,
-	// order, offsets, watchPaths). The HTTP handlers read these concurrently
-	// with runtime AddProject/RemoveProject and the fsnotify watchLoop, so all
-	// access goes through pmu (RWMutex: handlers RLock, mutations Lock). It was
-	// lock-free when projects were fixed at New(); runtime registry dynamics
-	// (O2) make the maps mutable, hence the lock.
-	pmu        sync.RWMutex
-	projects   map[string]registry.Project // by name (id)
-	order      []string                    // stable display order
-	offsets    map[string]int64            // id -> bytes consumed from log.jsonl
-	watchPaths map[string]string           // id -> watched log.jsonl path
-
-	hub     *hub
-	watcher *fsnotify.Watcher
-
-	// memoMu guards stateMemos, the per-project full-fold state cache used by
-	// the hot read paths (GET /state without at/wt, GET /api/projects, registry
-	// list, seats). Freshness is stat-based (log size+mtime), so writers that
-	// bypass fsnotify still invalidate on the next read. Separate from pmu:
-	// memo fills happen after a log read and must not block registry lookups.
-	memoMu     sync.Mutex
-	stateMemos map[string]stateMemo
-
-	seat string // acting seat for author writes ("" = none configured)
-
-	// mu serializes author writes per project: authoring verbs append to the
-	// same log.jsonl, so concurrent assigns must not interleave. muGuard
-	// guards lazy creation of the per-project mutexes.
-	muGuard sync.Mutex
-	mu      map[string]*sync.Mutex
-
-	// cockpit hosts the live agent-backend sessions for the cockpit HTTP endpoints.
-	// It is created lazily by ensureCockpit; tests may inject a pre-built Manager.
-	cockpit *cockpit.Manager
-
+	projects        map[string]registry.Project
+	seat            string
 	execOrchestrate func(dir string, args, env []string) error
-	finishRunner    func(dir, name string, args ...string) (string, error)
-	gitDiffFn       func(dir string, staged bool) (string, error)
-	runPlanner      func(dir string, args, env []string) error
 }
 
-// SetSeat configures the acting seat used for author (write) endpoints.
+// SetSeat sets the acting seat for scheduled orchestrate runs.
 func (s *Server) SetSeat(seat string) { s.seat = seat }
 
-// projectMu returns the lazily-created mutex serializing author writes for id.
-func (s *Server) projectMu(id string) *sync.Mutex {
-	s.muGuard.Lock()
-	defer s.muGuard.Unlock()
-	if s.mu == nil {
-		s.mu = map[string]*sync.Mutex{}
-	}
-	m, ok := s.mu[id]
-	if !ok {
-		m = &sync.Mutex{}
-		s.mu[id] = m
-	}
-	return m
-}
-
-// New builds a Server over the given projects.
+// New builds a Server with the scheduler's registered projects.
 func New(projects []registry.Project) *Server {
-	s := &Server{
-		projects:   map[string]registry.Project{},
-		offsets:    map[string]int64{},
-		watchPaths: map[string]string{},
-		hub:        newHub(),
-	}
+	s := &Server{projects: map[string]registry.Project{}, seat: os.Getenv("PACT_AGENT_ID")}
 	for _, p := range projects {
-		if _, ok := s.projects[p.Name]; ok {
-			continue
+		if _, exists := s.projects[p.Name]; !exists {
+			s.projects[p.Name] = p
 		}
-		s.projects[p.Name] = p
-		s.order = append(s.order, p.Name)
 	}
 	return s
 }
@@ -108,6 +35,10 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func writeErr(w http.ResponseWriter, code int, msg string) {
+	writeJSON(w, code, map[string]string{"error": msg})
 }
 
 // Handler returns the HTTP routes.
@@ -123,158 +54,10 @@ func (s *Server) Handler() http.Handler {
 		s.registerJobWrites(mux, store, store.StartDashboardWorker)
 		mux.Handle("/api/sub/", http.StripPrefix("/api/sub", subpanel.ReadOnlyHandler(store)))
 	}
-	mux.HandleFunc("GET /api/projects", s.handleProjects)
-	mux.HandleFunc("GET /api/projects/{id}/state", s.handleState)
-	mux.HandleFunc("GET /api/projects/{id}/worktrees", s.handleWorktrees)
-	mux.HandleFunc("GET /api/projects/{id}/events", s.handleEvents)
-	mux.HandleFunc("GET /api/projects/{id}/events/log", s.handleEventsLog)
-	mux.HandleFunc("GET /api/projects/{id}/orchestrate/stream/{task}", s.handleAgentStream)
-	s.registerRegistryRoutes(mux)
-	s.registerAuthorRoutes(mux)
-	s.registerWiringRoutes(mux)
-	s.registerAgentRoutes(mux)
-	s.registerSessionRoutes(mux)
-	s.registerAuditRoutes(mux)
-	s.registerManifestRoutes(mux)
-	s.registerStatsRoutes(mux)
-	s.registerSeatsRoutes(mux)
-	s.registerOrchestrateRoutes(mux)
-	s.registerCockpitRoutes(mux)
-	s.registerSetupRoutes(mux)
-	s.registerRecipeRoutes(mux)
-	s.registerPlanRoutes(mux)
-	s.registerFsBrowseRoutes(mux)
+	// Unknown API routes must not fall through to the SPA index.
+	mux.Handle("/api/", http.NotFoundHandler())
 	mux.Handle("/", dashboardHandler())
 	// SEC-1: every mutating route above goes through the browser-CSRF guard —
 	// register new routes inside this mux so they inherit it.
 	return writeGuard(mux)
-}
-
-func (s *Server) handleProjects(w http.ResponseWriter, _ *http.Request) {
-	type item struct {
-		ID            string `json:"id"`
-		Name          string `json:"name"`
-		Path          string `json:"path"`
-		Project       string `json:"project"`
-		FeatureCount  int    `json:"feature_count"`
-		AwaitingCount int    `json:"awaiting_count"`
-		// Missing marks a registration whose path no longer holds a pact project.
-		// Without it a dead entry is byte-identical to a healthy empty one in this
-		// response (both feature_count 0), so the UI cannot tell the user why the
-		// board is blank. omitempty keeps healthy projects' payloads unchanged.
-		Missing bool `json:"missing,omitempty"`
-	}
-	s.pmu.RLock()
-	projs := make([]registry.Project, 0, len(s.order))
-	for _, id := range s.order {
-		projs = append(projs, s.projects[id])
-	}
-	s.pmu.RUnlock()
-	out := []item{}
-	for _, p := range projs {
-		dto, _, _ := s.projectStateFull(p.Name, p.Path)
-		out = append(out, item{ID: p.Name, Name: p.Name, Path: p.Path, Project: dto.Project,
-			FeatureCount: len(dto.Features), AwaitingCount: dto.AwaitingCount, Missing: registry.Missing(p.Path)})
-	}
-	writeJSON(w, http.StatusOK, out)
-}
-
-func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	s.pmu.RLock()
-	p, ok := s.projects[id]
-	s.pmu.RUnlock()
-	if !ok {
-		writeErr(w, http.StatusNotFound, "unknown project")
-		return
-	}
-	statePath := p.Path
-	wt := r.URL.Query().Get("wt")
-	if wt != "" {
-		wp, ok := resolveWorktreePath(p.Path, wt)
-		if !ok {
-			writeErr(w, http.StatusBadRequest, "unknown worktree: "+wt)
-			return
-		}
-		statePath = wp
-	}
-	var dto StateDTO
-	var err error
-	if wt == "" {
-		// Full fold of the primary path: the memoized hot path — the dashboard
-		// refetches this on every SSE event.
-		dto, _, err = s.projectStateFull(id, p.Path)
-	} else {
-		dto, err = ProjectState(statePath)
-	}
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, dto)
-}
-
-func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	s.pmu.RLock()
-	p, known := s.projects[id]
-	s.pmu.RUnlock()
-	if !known {
-		http.Error(w, "unknown project", http.StatusNotFound)
-		return
-	}
-	fl, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-		return
-	}
-	// Subscribe BEFORE flushing headers so events appended the instant the client
-	// sees the response are buffered on the channel, not dropped (avoids a race).
-	ch := s.hub.subscribe(id)
-	defer s.hub.unsubscribe(id, ch)
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	// Tell reverse proxies (nginx and friends) not to buffer this response.
-	w.Header().Set("X-Accel-Buffering", "no")
-	w.WriteHeader(http.StatusOK)
-	// Emit an initial frame and flush it immediately. A proxy that buffers the
-	// response until the first body byte (Cloudflare Tunnel does this) would
-	// otherwise hold the 200 back until the first real event — so EventSource never
-	// fires onopen and the dashboard shows "offline" on a quiet project. The retry
-	// directive also sets the client's reconnect backoff.
-	_, _ = io.WriteString(w, "retry: 3000\n: ok\n\n")
-	fl.Flush()
-
-	// Backfill: replay the tail of log.jsonl so a client opening Live on an
-	// already-active project sees recent history immediately — the hub only
-	// carries events appended after subscribe. Lines are replayed verbatim in the
-	// same frame shape; the client dedupes by event_id against any live event that
-	// raced in between subscribe and this read.
-	for _, line := range tailLog(logPath(p.Path), eventBackfill) {
-		_, _ = w.Write([]byte("event: pact\ndata: " + line + "\n\n"))
-	}
-	fl.Flush()
-
-	// Heartbeat keeps the stream non-idle so a proxy doesn't drop it (and re-flushes
-	// periodically). Comment frames (": ...") are ignored by EventSource.
-	hb := time.NewTicker(sseHeartbeat)
-	defer hb.Stop()
-
-	for {
-		select {
-		case line, ok := <-ch:
-			if !ok {
-				return
-			}
-			_, _ = w.Write([]byte("event: pact\ndata: " + line + "\n\n"))
-			fl.Flush()
-		case <-hb.C:
-			_, _ = io.WriteString(w, ": ping\n\n")
-			fl.Flush()
-		case <-r.Context().Done():
-			return
-		}
-	}
 }

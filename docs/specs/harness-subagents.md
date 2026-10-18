@@ -31,7 +31,7 @@ callee 厂商会做「别人的 host 调我」（`openai/codex-plugin-cc` 34.2k�
 
 ```
 （Claude Code 会话中）
-> /pactify:codex 把 internal/stats 的 per-task LOC 归因改成按 commit SHA 计算，补回归测试
+> /pactify:codex 检查 internal/sub 的 job diff 归因，修复问题并补回归测试
   ⎿ codex · gpt-5.x · workspace-write · 4m12s · 38k tok
     改了 3 个文件（+84 −21）· 测试已跑 ✅
     [codex 的终稿摘要……]
@@ -95,7 +95,7 @@ pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模
 | 选项 | 现状 | 结论 |
 |---|---|---|
 | `orchestrate.Runner` | 接口只返回 `error`（`internal/orchestrate/runner.go:81-83`），终稿从不提取；子进程 stdin/stdout 直连父进程（`runner_idle.go:108,121`） | 不用 |
-| `cockpit.Session` | 统一事件流含文本/终稿/工具/用量（`internal/cockpit/backend.go:61-70`），带审批流与 `ThreadID()` 续接（`:88-95`）；codex app-server / claude bridge / ACP 三类后端都已实现 | **采用** |
+| `cockpit.Session` | 统一事件流含文本/终稿/工具/用量（`internal/cockpit/backend.go:61-70`），带审批流与 `ThreadID()` 续接（`:88-95`）；当前后端包括 codex app-server、opencode HTTP/SSE、kimi ACP 与 agy；Claude bridge 已随 AJ-723 删除 | **采用** |
 
 需要补的（全是定点改动，依据见 §10 实测）：
 
@@ -126,7 +126,7 @@ pactify sub doctor            # 哪些 harness 装了 / 登录了 / 能兑现模
 
 ```
 status · harness · model(请求 → 实际，不一致标红) · 权限档 · 耗时 · tokens
-改动：N 个文件（+a −b）+ diffstat 前 20 行（internal/diffstat 已有）
+改动：N 个文件（+a −b）+ job diff 摘要前 20 行（由 sub 的 git diff 读取）
 终稿：callee 最后一条消息，截断到 ~4 KB
 续接：session/thread id · 完整日志路径
 ```
@@ -241,7 +241,7 @@ M2 剩余部分（router v1、跨委派成本汇总）的设计见 [`router-v1.m
 | 资产 | 处理 | 何时 |
 |---|---|---|
 | 云端 | **已退役**：Go 云端（#97）、web 托管模式（#100）、共享 workspace 及构建 / 发布 CI（AJ-664）已删除；仓库外资源另行处理 | 仓库内清理已完成（2026-10-16） |
-| web 看板 + `serve`（~20.7k TS + 6.5k Go） | **冻结**：治理模式相关功能不再新增，只保证能构建；`cockpit` 包从 serve 中独立出来供 `sub` 使用。**例外（Owner 2026-10-16）**：dashboard 新增只读的 Jobs 页，用于查看委派任务，经 `pactify.agentjoey.ai`（Cloudflare Tunnel + Access）访问（AJ-689，见 [`jobs-view.md`](../jobs-view.md)）。含路由配置的写操作（AJ-700），仅 serve | 立即冻结；简化 / 删除在 M3，单独决定，届时需考虑 Jobs 页的去处 |
+| web 看板 + `serve`（~20.7k TS + 6.5k Go） | **冻结**：治理模式相关功能不再新增，只保证能构建；`cockpit` 包从 serve 中独立出来供 `sub` 使用。**例外（Owner 2026-10-16）**：dashboard 新增只读的 Jobs 页，用于查看委派任务，经 `pactify.agentjoey.ai`（Cloudflare Tunnel + Access）访问（AJ-689，见 [`jobs-view.md`](../jobs-view.md)）。含路由配置的写操作（AJ-700），仅 serve。**AJ-723：legacy serve API 已删除，serve 现在只提供 `/api/sub` 和静态资源；定时 scheduler 保留。** | 立即冻结；简化 / 删除在 M3，单独决定，届时需考虑 Jobs 页的去处 |
 | pact 协议 + 账本 + `pact` 插件 | **保留为可选的治理模式**；不再作为产品主线叙事 | — |
 | 单一规范账本 spec | **暂停在 WS-B**（已合入、flag 默认关，不影响现网行为） | 立即 |
 | 绑在上述资产上的 backlog 条目（`[UI-GATE]`、`[CLOUD-DOWN]`、`[BACKLOG-LIST]`、`[RUNGUARD-DEAD]` 等） | 标记「随降级冻结」，不再排期 | 立即 |

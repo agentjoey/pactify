@@ -36,7 +36,7 @@
 | A12 | 残留的防御性代码（**建议保留**）：`internal/acp/acp.go:209`、`internal/cockpit/jsonrpc.go:294`、`internal/orchestrate/env.go:18` 过滤 `PACT_RELAY_TOKEN` 和 `PACTIFY_*` 环境变量；`internal/orchestrate/sec_c2_env_leak_test.go` | 防止 relay token 泄漏给子进程 | — | 不用改。`PACTIFY_*` 前缀过滤仍然有用，`PACT_RELAY_TOKEN` 这个字面量可以以后顺手删 | — |
 | A13 | 本机和 repo 运行时残留（不在 git 里）：`.pact/relay-uploaded.json`（被 `.git/info/exclude:25` 排除，由 `relay.go:445` 写入）；`~/.config/pactify/{session.json,machine-id}`；`~/.config/linx/master-secret`（**linx 的，不能删**）；launchd plist 的旧备份 `com.pactify.serve.plist.pre-relay.bak` | — | — | 由 Owner 手动清理 | — |
 
-**不属于云端、要保留的：** `bridge/claude-host/`（本地 Claude Agent SDK 桥，由 `internal/cockpit/claude.go` 和 doctor `--setup-bridge` 使用）；`internal/serve/cockpit.go`（本地深度集成 cockpit）；`internal/gitx` 的 remote 系列函数；以及 `internal/pact/merge_empty_test.go:14-38`、`sec_m9_merge_recovery_test.go:54`、`orchestrate/parallel.go:280`、`loop_test.go:420`、`schedule/*_test.go` 里出现的 “linx”。这些地方的 linx 是“一个使用 pact 协议的项目 / 历史 bug 来源”，不是共享架构。
+**2026-10-16 的结论，已由 AJ-723 更新：** 本地 Claude Agent SDK 桥、Claude cockpit 后端、serve cockpit API 和 doctor 的 bridge 安装参数均已删除，sub harness 无依赖。仍保留：`internal/gitx` 的 remote 系列函数；以及 `internal/pact/merge_empty_test.go:14-38`、`sec_m9_merge_recovery_test.go:54`、`orchestrate/parallel.go:280`、`loop_test.go:420`、`schedule/*_test.go` 里出现的 “linx”。这些地方的 linx 是“一个使用 pact 协议的项目 / 历史 bug 来源”，不是共享架构。
 
 ---
 

@@ -1,6 +1,6 @@
 # Pactify — Operations
 
-> Last updated: **2026-10-16** | Status: 本地运维与可选治理模式；云端已退役。
+> Last updated: **2026-10-18** | Status: 本地运维与可选治理模式；云端已退役。
 
 ## 日常开发流程
 
@@ -23,6 +23,19 @@ cat .agent/CURRENT.md          # 本地工作台的交接说明（gitignored）
 | task 状态无法转换 | 检查契约规则（worker 不能自标 accepted；只有 reviewer 能 accept，且必须先 `awaiting_review`） |
 | Board 上任务卡在 `changes_requested` / `in_progress`，但活其实已经完成 | 账本滞后于现实（agent 交付了没走完协议流转）。**当前只能回命令行**：以 **owner 身份** `pactify checkpoint <task> --evidence …`，再由 reviewer `pactify accept`。⚠️ 先确认没有并发 run 在跑、工作树干净——`Checkpoint` 走 `CommitAll`，会把别人的在途改动一并提交。已记 backlog `[UI-GATE]`。 |
 | launchd 拉起的 `serve` 立刻被杀 | `go build` 的 ad-hoc 签名不够，`codesign --force -s - ./pactify` 后重试（见「发版」节） |
+
+## serve API 与定时任务
+
+AJ-723 后，serve 只挂载 `/api/sub` 和静态资源，保留 job events SSE 与 CSRF 写保护。
+旧项目、编排、cockpit、registry、agent、plan、setup 等 HTTP API 已删除；治理操作改用 CLI/MCP。
+`--seat`、`--project` 现在只用于定时编排。
+
+`StartScheduler` 保留 schedule → orchestrate：启动时读取注册表并发现当前目录的 `.pact` 项目，
+每分钟检查到期任务，跳过已运行的项目。scheduler 的座席取 `--seat`（默认 `PACT_AGENT_ID`），
+`--project` 追加额外项目。项目 watcher 已删除，注册表变更需重启 serve。
+
+本地读取无需额外 header：`curl http://127.0.0.1:17082/api/sub/jobs`。
+浏览器写请求仍检查 Origin，反向代理需设置 `PACTIFY_ALLOWED_ORIGINS`。
 
 ## 发版
 

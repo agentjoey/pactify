@@ -1,6 +1,6 @@
 # Pactify — Deployment
 
-> Last updated: 2026-10-16 | Status: 本地安装与开发；官网独立维护
+> Last updated: 2026-10-18 | Status: 本地安装与开发；官网独立维护
 
 ## 安装
 
@@ -28,6 +28,22 @@ npm run dev
 
 Vite proxy 连接 `PACTIFY_SERVE_URL`（默认 `http://127.0.0.1:17082`）指向的本地 `pactify serve`。
 本地重建的二进制交给 launchd 前需 `codesign --force -s - ./pactify`；详见 [operations.md](operations.md)。
+
+## 本地 serve
+
+```bash
+pactify serve --addr 127.0.0.1:17082
+```
+
+serve 只提供 `/api/sub`（Jobs、Dashboard、Settings、Live，含 job events SSE）和嵌入静态资源。
+AJ-723 已删除旧治理 API；治理命令继续使用 CLI/MCP。CSRF Origin guard 保留，
+反向代理域名通过 `PACTIFY_ALLOWED_ORIGINS` 配置；GET 不要求额外 header。
+`--seat`、`--project` 只用于定时编排的座席和额外项目。
+`--relay-url`、`--relay-token`、`--remote-control` 也继续兼容为空操作。
+
+定时任务仍由 serve 的 `StartScheduler` 每分钟读取并启动 orchestrate，使用启动时的项目注册表
+（另含当前目录的 `.pact` 项目）及 `PACT_AGENT_ID`；不再运行项目文件 watcher。
+更新注册表后需重启 serve 才能被 scheduler 使用。
 
 ## pactify.dev (Astro site on Vercel)
 

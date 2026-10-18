@@ -1,6 +1,6 @@
 # Pactify — Architecture
 
-> Last updated: **2026-10-16** | Status: **v0.12.0 已发布**；M1 已合入但未发布，v0.13.0 挂起、继续内部自用。历史与未发布变更见 [`CHANGELOG.md`](CHANGELOG.md)。
+> Last updated: **2026-10-18** | Status: **v0.12.0 已发布**；M1 已合入但未发布，v0.13.0 挂起、继续内部自用。历史与未发布变更见 [`CHANGELOG.md`](CHANGELOG.md)。
 >
 > 产品主线为 harness 路由器，当前支持 codex（默认）及实验性的 kimi、agy、opencode，见 [`specs/harness-subagents.md`](specs/harness-subagents.md)。下文保留的编排架构已冻结；单一规范账本暂停在 WS-B（flag 默认关）。
 > AJ-710：opencode 委派改用每 job 独立的 authenticated serve（v1 HTTP/SSE），会话汇总用量、持久化数据库续接和进程树清理；详见 [harness-subagents.md](specs/harness-subagents.md)。
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Pactify 是 **harness 路由器**，在 Claude Code 中通过 slash 命令委派大任务；`pactify sub` 管理 job、结果与隔离工作区，`/jobs` 与 `pactify sub panel` 提供任务查看。pact 协议、账本与本地看板保留为可选治理模式，冻结新投入。
+Pactify 是 **harness 路由器**，在 Claude Code 中通过 slash 命令委派大任务；`pactify sub` 管理 job、结果与隔离工作区，`/jobs` 与 `pactify sub panel` 提供任务查看。pact 协议与账本保留为可选治理模式，冻结新投入；本地看板现服务 harness jobs，旧 serve 治理 API 已由 AJ-723 删除。
 
 ## 制品层（用户 repo）
 
@@ -70,7 +70,7 @@ worker 不能自标 `accepted`（职责分离）。
 - **AcpRunner**（opt-in,`--transport kind=acp`）— 对 vendor CLI 说 **Agent Client Protocol**（`internal/acp`,JSON-RPC/stdio）:`initialize→session/new→session/prompt→session/update`。给结构化事件流:usage（token）经 `session/update` 落 `internal/tokens`（**根治 TOK=0**）、`session/request_permission` 三档策略 auto/escalate/deny（escalate 写 escalation,与 OpenHands 无脑 auto-approve 相反）。kind→命令映射:kimi=`kimi acp`、claude/codex 经 npx bridge。`RoutedLocalRunner` 按 kind 选传输,空映射=全 cmd(零行为变化)。
 - **会话续接**（AcpRunner）— `.pact/orchestrate/sessions.json`（lockx）记 (seat,task)→sessionID;重试时 server 支持 `loadSession` 则续接会话（保上下文、省 token）,失败回退新会话;accept/终态清理。
 - **知识注入** — briefing 尾部注入 `.pact/memory.md`(累积决策)+ role/keyword 匹配的 `.pact/skills/*.md`(4KB 预算);无文件时字节不变。
-- **可观测** — `internal/stats` per-seat `Accepted/Reworked`(纯 fold);`pactify doctor` per-vendor 预检(binary+auth+ACP 可用性)。
+- **可观测** — 当前 dashboard 使用 sub job 用量与成本；旧 per-seat stats API 及其计算包已在 AJ-723 删除。`pactify doctor` 保留 per-vendor 预检(binary+auth+ACP 可用性)。
 
 ### 评审深化 + 运行时（review-runtime — 包2）
 在「驱动一棒」外把评审与运行时做深(全部 opt-in,不带配置行为不变):
@@ -78,7 +78,7 @@ worker 不能自标 `accepted`（职责分离）。
 - **quorum 多评审** — `assign --reviewers a,b,c --quorum N`;投影按「本次 checkpoint 后不同 reviewer 的 accept 数 ≥ N」判 accepted,任一 changes 清零重投;accept 门校验 caller∈reviewers。**单 reviewer 路径字节不变**;两不变量神圣(worker 仍不能自 accept)。
 - **critic 预评 / QA 门**(顺序:gate 绿 → QA → critic → reviewer)— critic 出 `CRITIC_SCORE` 注入 reviewer(无门控权,只提示);QA(`qa:` 行)真跑软件出 `QA_RESULT`,FAIL 走 fix 轮(共享轮次预算);两者失败都宽松放行。note 复用 `start` 事件类型,不加新类型。
 - **账本持久快照** — `.pact/state-snapshot.json`(offset+prefix-hash 校验,损坏静默全量 fold,`PACT_NO_SNAPSHOT=1` 逃生),冷启动增量 replay,**5k 账本 11.5x**;gitignored,非事实源。
-- **动态座席 / 定时** — `join --kind` + driver 每轮实时读 seat→kind(mid-run join 下轮可驱动)+ planner 可提议新座席(apply 自动 join);`pactify schedule`(`daily@HH:MM`/`every:Nh`,serve ticker,复用 spawnOrchestrate 冲突门)。
+- **动态座席 / 定时** — `join --kind` + driver 每轮实时读 seat→kind(mid-run join 下轮可驱动)+ planner 可提议新座席(apply 自动 join);`pactify schedule`(`daily@HH:MM`/`every:Nh`,serve ticker,复用 scheduler 的运行冲突门)。
 - **已知 follow-up**:`pactify validate` 仍只从 `init` 事件推导座席 roster,`join` 动态加入的座席会被误判「不在 roster」——待专门修(改 golden 向量有风险,单列)。
 
 ## CLI 命令集（Phase 1）
@@ -92,7 +92,7 @@ pactify accept <id>    # reviewer 用；task → accepted + 追加 log
 pactify merge <feat>   # 全任务 accepted → --no-ff 合并 + feature → shipped
 pactify log            # replay log.jsonl → 重建 STATE（投影验证）
 pactify validate       # 校验 .pact/ schema（防漂移）
-pactify serve          # MCP server + SSE dashboard
+pactify serve          # /api/sub + 静态 dashboard；另保留定时 scheduler
 ```
 
 ## 技术栈
@@ -113,44 +113,16 @@ pactify serve          # MCP server + SSE dashboard
 
 ## Squad (Phase 3, M3.1+M3.2)
 
-The serve dashboard gains author powers — the same binary, `pactify serve --seat <id>`:
+AJ-723 已删除旧 serve 治理 API 及项目 watcher。serve 现在只提供 `/api/sub`
+（Jobs、Dashboard、Settings、Live，含 `jobs/{id}/events` SSE）和嵌入静态资源，保留 CSRF
+Origin guard；未知 `/api/*` 返回 404。治理动词、项目注册、接线、座席和规划继续走 CLI/MCP。
 
-- **Dir-aware engine**: `pact.At(dir).As(seat)` runs any verb against any registered
-  project from any cwd; package-level funcs remain `At(".")` wrappers (CLI/MCP unchanged).
-- **Author API** (localhost trust model): `POST /api/projects/{id}/tasks` (spec file),
-  `POST .../verbs/{assign,accept,changes,merge}` executed as the acting seat (must be in
-  the project roster; engine rules apply — the acting human cannot self-accept either),
-  engine errors returned verbatim as 422. Writes serialize per project (mutex).
-  `GET/PUT .../squad/layout` stores the canvas layout sidecar at `.pact/squad/layout.json`
-  (UI-only, outside the protocol).
-- **deps** (protocol v1 additive): optional `deps` on assign — validated (same feature,
-  exists, acyclic), enforced at join (a task with un-accepted deps cannot be joined).
-  Deps-free logs render byte-identical to the bash reference.
-- **Canvas** (web/, React Flow): task/seat/feature/draft nodes, role-colored per
-  docs/brand.md (orchestrator→product, reviewer→design, worker→dev), dep edges,
-  drag-to-dispatch onto seats, review accept/changes/merge from the rail, SSE-live
-  updates, layout persistence, awaiting-review pulse + stale indicators.
-  Build mode keeps drafts local until dispatch — the log stays protocol-pure.
+`internal/serve/scheduler.go` 保留 `StartScheduler` 的 schedule → orchestrate 最小链路：
+启动时的项目注册表、当前目录和 `--project` 发现、`--seat`（默认 `PACT_AGENT_ID`）座席、派生 roster kinds、串行运行冲突门、
+子进程日志和回收。注册表变更需重启 serve。
 
-### Ops panel (M3.3a)
-
-The serve binary also runs the squad's ops surface — managing which projects are
-served and how they are wired, without leaving the dashboard:
-
-- **Registry endpoints** (`GET /api/registry`, `POST /api/registry {path}`,
-  `DELETE /api/registry/{name}`): add/remove projects at runtime (no server restart) —
-  add validates the path (absolute → exists → git repo → has `.pact/`, no implicit init)
-  and persists to the shared `~/.pactify` registry file so CLI and serve stay consistent;
-  remove stops the live watcher but never touches the on-disk `.pact/` files. The list
-  folds a content-aware status (validity, seat count, last-event ts) per project.
-- **Wiring probes** (`GET .../wiring`, `POST .../wiring/{kind}`): the probe is the single
-  source of truth shared with `pactify doctor` (`agent.ProbeWiring`) — each kind reports
-  `wired` from its config marker or entry managed-block; POST bakes the entry block and
-  merges the pact server (TOML kinds are doc-only, returning the snippet to copy).
-- **Join client provenance** (advisory): the seats endpoint (`GET .../seats`) folds the
-  roster with each seat's most recent join client+version — a CLI join stamps
-  `pactify-cli`, richer hosts stamp their own identity — and flags `clientChanged` when a
-  seat's last two joins name different clients. Provenance is advisory, never gating.
+协议引擎的 `pact.At(dir).As(seat)`、任务依赖校验仍保留；下面的 UI 里程碑是历史记录，
+相关治理界面和 serve API 已退役，不代表当前 dashboard 的能力。
 
 ### Comms visualization (M3.3b) — Canvas 载体已移除（2026-07-07；pulseTargets 仍服务 Board 脉冲）
 
@@ -279,29 +251,24 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 
 **配方（`internal/recipe`，#11）**：命名任务图模板（add-tests/review-harden/spec-to-plan），`{{goal}}` 占位展开成 pact 任务 spec。CLI `recipe list/show`。把门槛从"手写任务图"降到"选配方"。
 
-**项目设置向导（`internal/wizard`，#1）**：从机器注册的 agents 建议项目座席 roster（claude 系 lead=orchestrator+reviewer，其余 worker），`Validate` 查角色覆盖。CLI `setup suggest`（打印 roster + gaps + 精确 apply 命令）；`GET /api/setup/suggest`。是"注册 agent → 能干活"的桥。
+**项目设置向导（`internal/wizard`，#1）**：从机器注册的 agents 建议项目座席 roster，`Validate` 查角色覆盖。CLI `setup suggest` 保留；serve setup API 已在 AJ-723 删除。
 
-**planner review（serve `plan.go` + web `PlanReview.tsx`，#7）**：`GET /api/projects/{id}/plan/{feature}` 读 plan manifest + 校验；Plan 视图（key 5）展示任务图（owner→reviewer/deps/verify）+ valid 徽章 + apply 提示。
+**planner review（#7）**：治理规划与 apply 使用 CLI `pactify plan` / `pactify plan apply`；serve plan API 和旧 Plan 视图已退役。
 
 **UI polish（#12，部分）**：Spinner / Button-loading / Alert 原语 + 微交互（active-press / hover-lift / fade-rise，全 prefers-reduced-motion 兼容）+ RightRail 三动作 loading + Alert 错误。后续 UI 规划见 `docs/roadmap-next.md`。
 
 ### 增量子系统（2026-06-14~16，v0.4.0）
 
-**成本 / 可观测 D1（`internal/stats` + `internal/diffstat` + `internal/tokens`）**：per-task / per-agent 的工时、代码量、token 统计，纯派生 + 真实数据。
-- `stats.Compute(events, now)` 从 log 时间戳算每任务/座席工作时长（pure derived）；`WithTaskLOC` 叠加代码量、`WithTokens` 叠加 token。
-- `diffstat.NumStat(repoDir, from, to, pathspec…)` 用 `git numstat` 算 added/deleted/files；`diffstat.Commits(repoDir, rev, grepFixed)` 按 commit subject 字面匹配找一个任务自己的 checkpoint commits；`IsRepoRoot` 守卫（仅当路径是自身 git root 才算 LOC，避免 monorepo 误算）。
-- **LOC 按任务精确归因（2026-06-19 修复）**：旧 `WithLOC` 对整条 feature 分支 `base..branch` 做一次 diff，导致同一分支上每个任务都显示相同的分支总量；改为 `WithTaskLOC`——对每个任务**自己的** checkpoint commits（subject `pact <task>:`，经 `diffstat.Commits` 找到）逐个 `sha~1..sha` numstat 求和，排除 `.pact` 簿记。每任务 LOC 各异，与 `WithTokens` 同形。
-- `tokens` 在 `.pact/orchestrate/tokens.json` 存 per-task token，`Parse(kind, output)` 解析各 agent 输出（claude `usage.input+output` 已验证；JSONL last-usage + 顶层 fallback）。
-- 经 `GET /api/projects/{id}/stats` 暴露；dashboard RightRail inspector + office「Cost」镜头展示（⏱ 时长 · +added/−deleted · ⛁ token）。
+**成本 / 可观测**：AJ-723 删除仅由旧 serve stats API 使用的 `internal/stats` 与
+`internal/diffstat`。当前 dashboard 用 `/api/sub/cost` 和 job summary 展示 harness 成本与用量；
+编排器仍使用 `internal/tokens` 记录 token。
 
 **巡检 watchdog D2（`internal/orchestrate/runner_idle.go`）**：把钝的"无输出即杀"升级为**进度感知巡检**——`fsProgress(dir)`（有界 mtime 遍历，跳过 .git/node_modules，可注入）；仅当 `idleFor() >= idle 且 fsProgress() >= idle`（既无输出又无落盘）才杀，否则发"⟳ patrol: still working"通知。安静但在写盘的 agent 不被误杀。
 
 **GLM 端点可配（`internal/orchestrate/runner.go` + `internal/secret`）**：GLM 不是独立 kind，是 claude-code 指向 GLM 的 Anthropic 兼容端点（glm-* 模型时经 `glmEnv` 注入 `ANTHROPIC_BASE_URL` + Keychain token）。端点按计划可配：Keychain `pactify/glm-base-url` 有值用之（中国版 `open.bigmodel.cn`），否则全球默认 `api.z.ai`；解析永不报错（缺省回退）。token 存 Keychain `pactify/glm`。
 
-**Settings agent 管理（`internal/agent` + serve `agents.go` + web `ops/`）**：
-- **一键扫描 + 手动添加**（`AgentRoster.tsx`）：`GET /api/agents` 每次实时 `agent.Scan()` 重探安装情况；Scan 按钮重拉、一键 Register 已装未注册项；「Add manually」登记支持清单内未检测到的 kind（自定义 binary 路径延后）。
-- **模型下拉**：`agent.CandidateModels(kind)`（每 `RunnerProfile` 一份候选清单）经 config DTO 的 `candidate_models` 暴露；AgentConfig 的 model 字段升级为下拉（default · 候选 · custom…），无候选回退纯文本。
-- **统一 agent logo**（`web/src/lib/agentLogos.tsx`）：`kind → AgentLogo` 品牌渐变实色块，接进 Setup / Agents 引导条 / Ops AgentConfig 真卡片。
+**Settings**：当前 dashboard 通过 `/api/sub/router`、`/api/sub/harnesses` 与 quota 写接口
+管理 harness 路由；旧 agent 扫描、注册、配置 API 已删除，治理 agent 管理继续使用 CLI。
 
 **session 清理升级（`internal/sessions`，opencode-first，2026-06-15）**：从"按 kind 框架"升级为**任务 accept 后自动关闭该棒 session**。实测各 agent session CLI 后定 opencode 优先（唯一有干净 `session list` + `session delete <id>`，且常驻 daemon 最该清）。机制：runner 给 opencode `run` 打 `--title pact:<seat>`（不改输出格式）→ accept 后 `sessions.CleanupByTitle` list→匹配 title→按 id 删 owner+reviewer 的 session；门控在 `Options.SessionRun`（仅 `CleanupSessions` 开时注入真 exec，测试不 spawn）；CLI 默认开、`--keep-sessions` 关。gemini-cli 集成已退役；codex（archive）/kimi/claude（无 CLI）在当时延后。
 
@@ -309,9 +276,9 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 
 **pactify.dev 文档站外壳（`site/`，已上线生产）**：Astro 站新增 `DocsLayout`（左目录 `docsNav` + 右内容，scrollspy active），`/introduction` 重做为文档落地页，`/protocol`·`/onboarding` 共用同一外壳。
 
-**native audit layer（`internal/audit` + serve + web，spec `docs/superpowers/specs/2026-06-16-native-audit-layer-design.md`）**：本地优先的工具调用权限审计。
+**native audit layer（`internal/audit`，spec `docs/superpowers/specs/2026-06-16-native-audit-layer-design.md`）**：本地优先的工具调用权限审计。
 - **捕获**：`pactify audit hook --kind <kind>` 读客户端 PreToolUse JSON（stdin）→ `FromHook` 归一（per-kind tool 映射 + 脱敏）→ 追加一行 JSONL 到 `~/.pactify/audit/<project>/<date>.jsonl`；log-only（恒 allow，永不阻断 agent）。治理(deny/ask)/预设是同一条缝上的 P2。
 - **归属**：orchestrate runner（`LaunchContext`）把 `PACT_AGENT_ID/PACT_TASK_ID/PACT_PROJECT` 注入 agent env，hook 读出 → 每条记录带座席/任务/项目。
 - **客户端接入**（实测）：claude-code 用命令式 PreToolUse hook（`.claude/settings.json`，`audit install --claude-code`）；opencode 无命令 hook → JS 插件 `.opencode/plugin/pact-audit.ts`（`tool.execute.before` → shell out hook，`audit install --opencode`，真 run 端到端验证）。
-- **读取**：CLI `audit log/summary/prune` + serve `GET /api/projects/{id}/audit` + dashboard RightRail 的 Audit 镜头（紧挨 D1 Cost）。
+- **读取**：CLI `audit log/summary/prune`；serve audit API 与旧 RightRail Audit 镜头已退役。
 - **门控**：`Options.SessionRun` 式注入，测试不 spawn CLI。脱敏：summary 短截断 + 掩 `Bearer/sk-/token` 等。

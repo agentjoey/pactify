@@ -1,91 +1,48 @@
 package serve
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/agentjoey/pactify/internal/registry"
 )
 
-func seedProject(t *testing.T, root, project string) {
-	t.Helper()
-	pact := filepath.Join(root, ".pact")
-	os.MkdirAll(pact, 0o755)
-	line := `{"event_id":"1","ts":"2026-01-01T00:00:00Z","agent_id":"claude-opus","role":"orchestrator","event_type":"init","task_id":"","feature":"","payload":{"project":"` + project + `","protocol_version":1,"seats":[{"id":"claude-opus","roles":["orchestrator"],"entry":"CLAUDE.md"}],"base_branch":"main"}}` + "\n"
-	os.WriteFile(filepath.Join(pact, "log.jsonl"), []byte(line), 0o644)
-}
-
-func TestAPIProjectsAndState(t *testing.T) {
-	root := t.TempDir()
-	seedProject(t, root, "pactify")
-	srv := New([]registry.Project{{Name: "pactify", Path: root}})
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
-
-	resp, _ := http.Get(ts.URL + "/api/projects")
-	var projects []map[string]any
-	json.NewDecoder(resp.Body).Decode(&projects)
-	resp.Body.Close()
-	if len(projects) != 1 || projects[0]["name"] != "pactify" {
-		t.Fatalf("projects: %+v", projects)
-	}
-
-	resp, _ = http.Get(ts.URL + "/api/projects/pactify/state")
-	var st StateDTO
-	json.NewDecoder(resp.Body).Decode(&st)
-	resp.Body.Close()
-	if st.Project != "pactify" {
-		t.Fatalf("state: %+v", st)
-	}
-
-	resp, _ = http.Get(ts.URL + "/api/projects/nope/state")
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("want 404 got %d", resp.StatusCode)
-	}
-	resp.Body.Close()
-}
-
-func TestAPIProjectsMissing(t *testing.T) {
-	rootHealth := t.TempDir()
-	seedProject(t, rootHealth, "healthy")
-	
-	rootMissing := filepath.Join(t.TempDir(), "missing-dir") // does not exist
-
-	srv := New([]registry.Project{
-		{Name: "healthy", Path: rootHealth},
-		{Name: "broken", Path: rootMissing},
-	})
-	ts := httptest.NewServer(srv.Handler())
-	defer ts.Close()
-
-	resp, _ := http.Get(ts.URL + "/api/projects")
-	var projects []map[string]any
-	json.NewDecoder(resp.Body).Decode(&projects)
-	resp.Body.Close()
-
-	if len(projects) != 2 {
-		t.Fatalf("expected 2 projects, got %d", len(projects))
-	}
-
-	var healthyProj, brokenProj map[string]any
-	for _, p := range projects {
-		if p["name"] == "healthy" {
-			healthyProj = p
-		}
-		if p["name"] == "broken" {
-			brokenProj = p
-		}
-	}
-
-	if _, ok := healthyProj["missing"]; ok {
-		t.Errorf("expected healthy project NOT to have 'missing' key, but got %v", healthyProj["missing"])
-	}
-
-	if missingVal, ok := brokenProj["missing"]; !ok || missingVal != true {
-		t.Errorf("expected broken project to have 'missing': true, got ok=%v, val=%v", ok, missingVal)
+func TestLegacyAPIRemoved(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	h := New(nil).Handler()
+	for _, route := range []string{
+		"GET /api/projects", "GET /api/projects/p/state", "GET /api/projects/p/worktrees",
+		"GET /api/projects/p/events", "GET /api/projects/p/events/log",
+		"GET /api/projects/p/orchestrate/status", "GET /api/projects/p/orchestrate/parallel",
+		"POST /api/projects/p/orchestrate/run", "POST /api/projects/p/orchestrate/resume",
+		"POST /api/projects/p/orchestrate/ship", "GET /api/projects/p/orchestrate/diff",
+		"GET /api/projects/p/orchestrate/stream/t", "GET /api/projects/p/fallback-proposal",
+		"POST /api/projects/p/fallback-proposal/approve",
+		"POST /api/projects/p/cockpit/prompt", "GET /api/projects/p/cockpit/stream",
+		"POST /api/projects/p/cockpit/permission", "POST /api/projects/p/cockpit/cancel",
+		"GET /api/projects/p/cockpit/status", "POST /api/projects/p/cockpit/resume",
+		"GET /api/registry", "POST /api/registry", "PUT /api/registry/p", "DELETE /api/registry/p",
+		"GET /api/acting-seat", "POST /api/projects/p/tasks",
+		"POST /api/projects/p/verbs/assign", "POST /api/projects/p/verbs/accept",
+		"POST /api/projects/p/verbs/changes", "POST /api/projects/p/verbs/merge",
+		"GET /api/agents", "GET /api/agents/versions", "POST /api/agents/codex-cli/register",
+		"POST /api/agents/codex-cli/test", "GET /api/agents/codex-cli/config", "POST /api/agents/codex-cli/config",
+		"GET /api/agents/codex-cli/sessions", "POST /api/agents/codex-cli/sessions/prune",
+		"GET /api/projects/p/plan/generate/status", "POST /api/projects/p/plan/generate",
+		"GET /api/projects/p/plan/f", "POST /api/projects/p/plan/f/apply",
+		"GET /api/setup/suggest", "POST /api/setup/apply", "GET /api/fs/browse",
+		"GET /api/projects/p/wiring", "POST /api/projects/p/wiring/codex-cli", "GET /api/projects/p/seats",
+		"GET /api/projects/p/stats", "GET /api/recipes", "POST /api/recipes/r/expand",
+		"GET /api/manifests", "POST /api/manifests", "DELETE /api/manifests/codex-cli", "GET /api/projects/p/audit",
+		"GET /api/projects/p/plan/..%2f..%2fsecret", // former SEC-M3 file-read path
+	} {
+		t.Run(route, func(t *testing.T) {
+			method, path, _ := strings.Cut(route, " ")
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest(method, path, nil))
+			if w.Code != http.StatusNotFound {
+				t.Fatalf("removed route returned %d: %s", w.Code, w.Body)
+			}
+		})
 	}
 }

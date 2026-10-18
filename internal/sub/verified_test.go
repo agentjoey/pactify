@@ -34,6 +34,7 @@ func TestRunJobUnverifiedVersion(t *testing.T) {
 				}
 			}
 			s.script = func(s *fakeSession) {
+				s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 				s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 			}
 			h := newFakeHarness(b)

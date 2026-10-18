@@ -75,8 +75,9 @@ func TestAgyReviewQuotaWarningsAndPublication(t *testing.T) {
 				err := ""
 				if failed {
 					state = cockpit.StateTurnFailed
-					err = "agy empty_answer: actual failure"
+					err = "agy permission_denied: actual failure"
 				}
+				s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 				s.events <- cockpit.Event{Kind: cockpit.EventState, State: state, Err: err}
 			}
 			done := make(chan Result, 1)

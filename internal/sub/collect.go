@@ -66,7 +66,7 @@ func (c *Collector) Add(e cockpit.Event) {
 	if e.Kind == cockpit.EventSystem && e.State == "usage_partial" {
 		c.UsagePartial = true
 	}
-	if e.Kind == cockpit.EventSystem && e.State == "transient_retry" {
+	if e.Kind == cockpit.EventSystem && (e.State == "transient_retry" || e.State == "empty_reply_followup") {
 		c.finalText = ""
 		c.chunks.Reset()
 		c.TurnDone, c.TurnErr, c.FailureMessage = false, "", ""

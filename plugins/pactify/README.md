@@ -49,6 +49,13 @@ If the background wait stops at its time limit, check `pactify sub status` and r
 Exit codes 0 / 1 / 2 mean success, failure, and invalid arguments.
 Retrieve the result again with `pactify sub result <jobId>`.
 
+An empty normal reply gets exactly one same-session follow-up, independently of `--retries`.
+If the result warns `empty final reply` (after one follow-up, or when the session ended first), a read-only task is not done:
+check `pactify sub logs <id>`, then `--resume <id>` with a short brief asking for the result;
+if still empty, rerun with another harness or model. For write tasks, review the full diff and
+rerun acceptance as usual; get the handoff via `--resume <id>`, or write it from the diff and
+your own checks. Resume preserves the original harness, cwd, access mode and worktree.
+
 To select a model, name it explicitly in the task. If the CLI cannot honor it, execution must fail with the available models instead of silently falling back.
 For rework, explicitly request `--resume <job-id> --worktree`, preserving the original cwd and harness.
 For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` / `pactify:agy` / `pactify:opencode` forwarding subagent:

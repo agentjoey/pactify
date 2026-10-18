@@ -284,6 +284,7 @@ func TestRunJobApprovals(t *testing.T) {
 			s.script = func(s *fakeSession) {
 				s.approvals <- cockpit.ApprovalRequest{Kind: "permission", ToolName: "ExitPlanMode", Respond: func(d cockpit.Decision) error {
 					decided <- d
+					s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 					s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 					return nil
 				}}
@@ -490,6 +491,7 @@ func TestRunJobIgnoresNonArchiveCloseErrors(t *testing.T) {
 	store, s, b := workerFixture(t, "write")
 	s.closeErr = fmt.Errorf("signal: terminated")
 	s.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	r, err := RunJob(context.Background(), store, "j1", newFakeHarness(b), WorkerConfig{})

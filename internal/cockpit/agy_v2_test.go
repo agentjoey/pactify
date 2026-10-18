@@ -156,7 +156,7 @@ func TestAgyV2PersistentAndStepUsage(t *testing.T) {
 		t.Fatalf("cumulative result usage counted: %+v", usage)
 	}
 }
-func TestAgyV2EmptyFailuresAndFollowups(t *testing.T) {
+func TestAgyV2EmptyTurnsAndCompletionFollowups(t *testing.T) {
 	for _, mode := range []string{"empty", "denied", "timeout", "append", "active"} {
 		t.Run(mode, func(t *testing.T) {
 			b, o := agyV2Fixture(t, mode)
@@ -180,8 +180,23 @@ func TestAgyV2EmptyFailuresAndFollowups(t *testing.T) {
 				if !found {
 					t.Fatalf("missing followup: %+v", ev)
 				}
-			} else if last.State != StateTurnFailed || ClassifyFailure("agy", last.Err, last.Raw, time.Now()).Class == "other" {
-				t.Fatalf("unclassified empty result: %+v", last)
+			} else if mode == "empty" {
+				if last.State != StateTurnCompleted || last.Err != "" {
+					t.Fatalf("normal empty turn failed: %+v", last)
+				}
+				for _, e := range ev {
+					if e.Kind == EventError || e.Final && strings.TrimSpace(e.Text) != "" {
+						t.Fatalf("unexpected empty-turn output: %+v", e)
+					}
+				}
+			} else {
+				wantClass := "permission"
+				if mode == "timeout" {
+					wantClass = "timeout"
+				}
+				if last.State != StateTurnFailed || ClassifyFailure("agy", last.Err, last.Raw, time.Now()).Class != wantClass {
+					t.Fatalf("empty result: %+v, want %s", last, wantClass)
+				}
 			}
 		})
 	}

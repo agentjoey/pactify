@@ -77,6 +77,7 @@ func TestJobUnwritableExplicitCacheFallsBack(t *testing.T) {
 		t.Setenv(key, filepath.Join(blocked, "cache"))
 	}
 	session.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	h := newFakeHarness(backend)

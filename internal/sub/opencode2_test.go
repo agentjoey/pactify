@@ -221,6 +221,7 @@ func TestOpencode2BackgroundWarningStaysInformational(t *testing.T) {
 				if failed {
 					s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: "Quota exhausted", Raw: json.RawMessage(`{"type":"provider.quota","message":"Quota exhausted"}`)}
 				} else {
+					s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 					s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 				}
 			}

@@ -87,6 +87,12 @@ assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
    - Read the summary and first-line warnings (`Actual model does not match the requested model`, `Tool-call limit exceeded`, `Idle timeout`).
      Retrieve it again with `pactify sub result <jobId>` if needed. Only claim independent model
      verification when the result confirms it; full logs stay at the reported path.
+   - If the result warns `empty final reply` (after one follow-up, or when the session ended first), handle it by access mode:
+     For read-only, the task is not done: check `pactify sub logs <id>`, then use `--resume <id>`
+     with a short brief asking for the result. If it is still empty, rerun with another harness or model.
+     For write, review the full diff and rerun acceptance as usual; get the handoff via `--resume <id>`,
+     or write it from the diff and your own checks. Preserve the original harness, cwd and access mode
+     when resuming, and keep `--worktree` for a worktree job.
    - Inspect the complete diff first. Large tasks use a detached worktree based on the original HEAD;
      uncommitted source changes are not carried over. Read `worktreePath` and `baseCommit` from the
      result JSON (or `Worktree` and `Base commit` in the summary), then run:

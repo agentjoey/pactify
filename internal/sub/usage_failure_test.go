@@ -100,6 +100,7 @@ func TestHarnessUsageOnAbnormalExit(t *testing.T) {
 					case "closed":
 						close(s.events)
 					case "succeeded":
+						s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 						s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 					}
 				}

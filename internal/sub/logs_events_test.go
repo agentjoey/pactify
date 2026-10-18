@@ -86,6 +86,7 @@ func TestStructuredUsageUsesCollectorAccounting(t *testing.T) {
 	}{
 		{"codex", []string{`{"kind":"usage","raw":{"threadId":"main","tokenUsage":{"total":{"inputTokens":100,"outputTokens":2}}}}`, `{"kind":"usage","raw":{"threadId":"other","tokenUsage":{"total":{"inputTokens":50,"outputTokens":3}}}}`}, `"inputTokens":150,"outputTokens":5`, false},
 		{"kimi retry", []string{`{"kind":"usage","usage":{"inputTokens":10,"outputTokens":2}}`, `{"kind":"system","state":"transient_retry","text":"kimi"}`, `{"kind":"usage","usage":{"inputTokens":4,"outputTokens":1}}`}, `"inputTokens":14,"outputTokens":3`, false},
+		{"kimi empty reply followup", []string{`{"kind":"usage","usage":{"inputTokens":10,"outputTokens":2}}`, `{"kind":"system","state":"empty_reply_followup","text":"kimi"}`, `{"kind":"usage","usage":{"inputTokens":4,"outputTokens":1}}`}, `"inputTokens":14,"outputTokens":3`, false},
 		{"opencode job delta", []string{`{"kind":"usage","usage":{"inputTokens":5,"outputTokens":2,"costUSD":0.25},"raw":{"accounting":"job_delta"}}`}, `"costUSD":0.25`, true},
 		{"historical session cost", []string{`{"kind":"usage","usage":{"inputTokens":5,"outputTokens":2,"costUSD":2.5}}`}, `"inputTokens":5,"outputTokens":2`, false},
 	} {

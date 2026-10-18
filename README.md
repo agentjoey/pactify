@@ -11,18 +11,17 @@ AJ-744; tag `v0.12.0` remains the rollback anchor. See [CHANGELOG](docs/CHANGELO
 
 ## Install
 
-The installer downloads a published binary for macOS or Linux:
+The router is merged on `main` but not yet released. Until v0.13.0 is published,
+the installer and `go install …@latest` both install **v0.12.0**, which predates the
+router and has no `pactify sub`. Install from `main` instead (Go version in `go.mod`):
 
 ```sh
-curl -fsSL https://pactify.dev/install.sh | sh
+go install github.com/agentjoey/pactify/cmd/pactify@main
+pactify sub --help
 ```
 
-To build the current router (Go version in `go.mod`):
-
-```sh
-go build -o pactify ./cmd/pactify
-./pactify --help
-```
+Or build from a checkout: `go build -o pactify ./cmd/pactify`. After a release,
+`curl -fsSL https://pactify.dev/install.sh | sh` installs the published binary.
 
 Install and authenticate the harness CLI you intend to use. Check its integration
 with `pactify sub doctor <harness>`; see [doctor](docs/sub-doctor.md).
@@ -42,8 +41,8 @@ Use `/delegate` (or `/pactify:delegate`) for default codex delegation, or select
 ## CLI basics
 
 ```sh
-pactify sub run --read-only --wait 0s "Inspect the repository and report findings"
-pactify sub run codex --write --worktree --wait 0s "Implement the requested change"
+echo "Inspect the repository and report findings" | pactify sub run --read-only --wait 0s
+pactify sub run codex --write --worktree --wait 0s < brief.md   # the task brief is read from stdin
 pactify sub status --all
 pactify sub wait <job-id>
 pactify sub result <job-id>

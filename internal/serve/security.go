@@ -14,7 +14,7 @@ import (
 // user's browser from firing a CSRF POST at 127.0.0.1: cross-origin "simple
 // requests" (e.g. Content-Type: text/plain, which json.Decoder happily parses)
 // skip the CORS preflight entirely, and endpoints like
-// POST /api/projects/{id}/orchestrate/run execute code. DNS rebinding makes the
+// POST /api/sub/jobs/{id}/resume launch a worker. DNS rebinding makes the
 // page itself same-origin with the attacker's hostname, bypassing any
 // "localhost-only" assumption.
 //

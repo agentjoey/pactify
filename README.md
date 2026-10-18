@@ -52,8 +52,9 @@ anytime to verify install + wiring.
 
 **New to Pactify?** [`docs/onboarding.md`](docs/onboarding.md) walks a fresh project from zero
 to shipped in 5 minutes (register agents → setup → plan → run → ship), with seat definitions and
-dashboard deployment. Running the dashboard? `pactify serve` needs `--seat <id>` for write
-endpoints (assign / orchestrate / ship); without it they fail closed (read-only still works).
+dashboard deployment. `pactify serve` now serves only `/api/sub` and embedded static
+assets; governance commands remain available through CLI/MCP. `--seat` and
+`--project` now only configure scheduled orchestrate runs (AJ-723).
 
 ## Claude Code (one-click)
 

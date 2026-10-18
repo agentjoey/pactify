@@ -17,13 +17,14 @@ func newServeCmd() *cobra.Command {
 	var addr string
 	var extra []string
 	var seat string
-	cmd := &cobra.Command{Use: "serve", Short: "run the multi-project dashboard HTTP server",
+	cmd := &cobra.Command{Use: "serve", Short: "run the harness dashboard HTTP server",
 		RunE: func(c *cobra.Command, _ []string) error {
 			for _, name := range []string{"relay-url", "relay-token", "remote-control"} {
 				if c.Flags().Changed(name) {
 					fmt.Fprintf(c.ErrOrStderr(), "--%s is ignored: the cloud relay was removed; remove it from your launch config\n", name)
 				}
 			}
+			// Project discovery remains only for scheduled orchestrate runs.
 			reg, err := registry.Load()
 			if err != nil {
 				return err
@@ -60,8 +61,8 @@ func newServeCmd() *cobra.Command {
 			return srv.Run(ctx, addr)
 		}}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:7777", "listen address")
-	cmd.Flags().StringArrayVar(&extra, "project", nil, "extra project path (repeatable, not persisted)")
-	cmd.Flags().StringVar(&seat, "seat", os.Getenv("PACT_AGENT_ID"), "acting seat for author (write) endpoints (default $PACT_AGENT_ID)")
+	cmd.Flags().StringArrayVar(&extra, "project", nil, "extra project path for scheduled orchestrate runs (repeatable, not persisted)")
+	cmd.Flags().StringVar(&seat, "seat", os.Getenv("PACT_AGENT_ID"), "acting seat for scheduled orchestrate runs (default $PACT_AGENT_ID)")
 	// Keep retired launchd arguments accepted for one compatibility release.
 	cmd.Flags().String("relay-url", "", "ignored: the cloud relay was removed")
 	cmd.Flags().String("relay-token", "", "ignored: the cloud relay was removed")

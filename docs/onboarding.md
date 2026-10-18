@@ -16,7 +16,7 @@ pactify doctor                                    # 自检安装 + agent 探测
 
 ```bash
 pactify agent scan        # 探测已装 agent
-pactify agent register opencode   # 注册（或在 dashboard Settings 一键 Register）
+pactify agent register opencode   # 注册
 pactify agent register claude-code
 ```
 
@@ -34,23 +34,15 @@ pactify setup            # 引导：建议座席 + 角色，确认后 init + wir
 `setup` 会 scaffold `.pact/`、给每个座席烤 entry 文件（`AGENTS.md`/`CLAUDE.md`）、把 pact MCP
 server 接进 agent 配置。非交互环境用 `pactify setup suggest` 看建议，再手动 `init` + `agent add`。
 
-**B. Dashboard 一键（serve 起来后）**
-
-```bash
-pactify serve --seat <你的座席>      # 起 dashboard（--seat 见 §部署）
-```
-
-打开 dashboard → **Setup** 视图 → 填项目路径 → 确认建议的座席/角色 → **Apply**，
-一键完成 init + wire（后端 `POST /api/setup/apply`）。TOML 类 agent 会提示需手工补的配置片段。
-
-> Setup apply 只针对**全新项目**（无 `.pact`）。已有项目用 `pactify agent add` 给座席加 agent。
+Dashboard 现用于 harness jobs（Jobs、Dashboard、Settings、Live），不再提供治理模式的
+Setup 页面或 setup API（AJ-723）；项目初始化使用上面的 CLI。
 
 ## Step 3 — 规划任务
 
 ```bash
 pactify plan "把登录加上双因子认证"   # planner agent 把一句话拆成任务图
 # 生成 .pact/plan-<feature>.json + 各 task spec；默认停下等你 review
-pactify plan apply <feature>          # 确认后落地为 assign（或 dashboard Plan 视图 Apply）
+pactify plan apply <feature>          # 确认后落地为 assign
 ```
 
 ## Step 4 — 跑
@@ -61,12 +53,12 @@ pactify orchestrate --feature <feature> \
 # 自驱：worker 干活 → reviewer 独立重跑验收命令 → accept → 全 accept 后 merge
 ```
 
-或 dashboard **Live** 视图 **Run** 按钮启动；暂停（escalation）时可**看 diff** + **Resume** 续跑。
+暂停（escalation）后修复原因，再用 `pactify orchestrate --resume` 续跑；旧 dashboard 编排 API 已删除。
 
 ## Step 5 — 交付
 
 ```bash
-pactify finish --pr      # push + 开 PR（或 dashboard Ship 按钮）
+pactify finish --pr      # push + 开 PR
 ```
 
 ---
@@ -92,15 +84,13 @@ pactify finish --pr      # push + 开 PR（或 dashboard Ship 按钮）
 
 ## 部署 dashboard（含公网）
 
-`pactify serve` 的**有副作用写端点**（assign/accept/orchestrate run/ship/setup apply…）需要一个
-acting seat 授权。本地起 serve 务必带 `--seat`：
+`pactify serve` 提供 `/api/sub` 和静态资源，旧治理 API 已删除。`--seat`、`--project`
+只用于定时编排。
 
 ```bash
-pactify serve --addr 127.0.0.1:7777 --seat claude
+pactify serve --addr 127.0.0.1:7777
 ```
 
-未配 `--seat` 时写端点 fail-closed（422），只读 dashboard 仍可用。
-
-**公网暴露**（可选）：用 Cloudflare Tunnel 把 serve 映射到域名，并**在 Cloudflare Access 加 OTP/邮箱
-policy 认证本人**——Access 认证「是谁」，acting seat 授权「以哪个座席写」，两层即足够（无需额外确认弹窗）。
-本机部署参考 `~/.pactify/cloudflare-tunnel-pactify.md`。
+浏览器写请求受 CSRF Origin guard 保护；反向代理域名需配置 `PACTIFY_ALLOWED_ORIGINS`。
+公网访问仍需在反向代理（例如 Cloudflare Access）认证本人；Origin guard 不是登录认证。
+定时编排仍保留，座席取 `--seat`（默认 `PACT_AGENT_ID`）。

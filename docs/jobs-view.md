@@ -27,7 +27,7 @@ Owner 部署的访问路径：
 
 此部署中 serve 必须只监听 loopback：`pactify serve --addr 127.0.0.1:17082`。CLI 默认仍为 `127.0.0.1:7777`。经反向代理编辑 Settings、Routing 或执行 Jobs 操作前，将完整 origin 加入 `PACTIFY_ALLOWED_ORIGINS`，例如 `https://pactify.agentjoey.ai`。
 
-API 使用 serve 进程的 `PACTIFY_HOME`，与 CLI 一样读取 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。launchd 与交互式 shell 的环境不同，会影响任务目录和 resume 所需配置；shell 中导出的变量不会自动进入服务。worker 不继承 `PACTIFY_ALLOWED_ORIGINS` 和 `PACTIFY_LEDGER_REF`。服务在后台回收已结束的 worker。
+API 使用 serve 进程的 `PACTIFY_HOME`，与 CLI 一样读取 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。launchd 与交互式 shell 的环境不同，会影响任务目录和 resume 所需配置；shell 中导出的变量不会自动进入服务。worker 不继承 `PACTIFY_ALLOWED_ORIGINS`。服务在后台回收已结束的 worker。
 
 ## 本机 sub panel
 

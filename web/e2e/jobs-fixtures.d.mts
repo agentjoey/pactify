@@ -1,7 +1,6 @@
 import type { Job } from "../src/components/jobs/types";
 
 export function seedJobs(): Job[];
-export const panelJobs: Job[];
 interface FixtureRequest extends AsyncIterable<string | Uint8Array> {
   url?: string;
   method?: string;

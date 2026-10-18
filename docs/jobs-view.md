@@ -1,31 +1,33 @@
 # Jobs view
 
-在 dashboard 顶部与 Dashboard / Board / Cockpit 并列的 **Jobs** 标签页查看委派任务；手机上从 **View** 下拉框选择 Jobs。视图选择沿用 dashboard 的 `pactify:lens` localStorage 设置，不依赖 `.pact` 项目注册。看板跨仓库展示，按 harness、仓库筛选；每列按链上最新一轮的创建时间倒序，同时间按 id 倒序。
+Web v2 的主导航是 **Dashboard / Jobs / Settings**，窄屏使用 **Page** 下拉框。默认进入 Jobs，路由与筛选由 hash 决定。**Live** 位于 Dashboard 顶部和任务详情的 Live 页签中，不是独立主导航。`pactify serve` 与只读 `pactify sub panel` 共享页面；都使用固定深色配色。
 
-列表展示标题、harness、状态、仓库、访问权限与 worktree、token、活动与待处理事项。点击卡片在右侧抽屉查看 brief、结果摘要、自动跟随的可读日志、按文件折叠的 diff 和续接链。两种入口共用 dashboard 的设计 token、UI 组件和 Jobs 样式。dashboard 原本只有固定深色配色（`index.css` 的 `color-scheme: dark`），Settings 的 Appearance 目前是占位页；嵌入的 Jobs 跟随该配色，不显示独立页头或 Theme 选择框，也不读写全局主题。独立 panel 保留自己的 System / Light / Dark 选择，浅色覆盖只在 panel 入口加载。
+Jobs 跨仓库展示委派任务，支持 Project、Harness、Status 与标题搜索；筛选写入 URL query。列表先按显式 resume/fallback 链合并，再保留任一轮匹配仓库、harness 或标题的整链，不按相同标题或 session id 猜测关系。链首提供标题，最新一轮提供状态、模型、耗时与 token；卡片还显示成本、worktree、retry、fallback 与 failure class。`rework` 只计手动 resume 链接，不含自动 retries。链时间线按因果排序，分叉、环和缺失链接按现有确定性规则处理。
 
-可直接打开 `https://pactify.agentjoey.ai/#/jobs` 或 `https://pactify.agentjoey.ai/#/jobs/<id>`，加载和 hashchange 都会优先进入 Jobs，并打开对应详情。切换到其他视图时清除 Jobs hash；从标签或手机 View 重新进入 Jobs 时生成 `#/jobs`，关闭详情抽屉后也返回该地址。
+任务分为 **In progress / Queued / Needs attention / Completed**：running/retrying 优先进入 In progress，queued 单列；终态有 attention 进入 Needs attention，其余终态进入 Completed。Completed 按本地完成日期分组，默认折叠为卡片堆叠，可 Show all。列表每 2 秒刷新；窄屏卡片堆叠，详情抽屉全屏。
 
-二级 **Routing** 页签展示配置路径、别名、按 harness 分组的回退链（保持顺序）、额度组与耗尽记录。dashboard 支持 **Edit / Save / Cancel**，回退路线可上下排序；模型逐项编辑，避免改变含逗号的模型名。422 错误在对应字段旁展示；409 提示 `Config changed elsewhere — reload to see the latest` 并提供 **Reload**，Reload 会丢弃草稿。Clear 使用页内确认，只清除本地耗尽记忆。panel 仅展示配置与状态，提示 `Edit routing from the dashboard or with pactify sub router.`，不提供编辑或 Clear 控件。页签打开时每 30 秒刷新，编辑期间保留草稿及原版本；重置倒计时仅使用已知 resetAt。手机布局按列堆叠。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
+直接打开 `#/jobs` 或 `#/jobs/<id>`；抽屉按所选轮次显示 brief、结果、Live、可读日志、按文件折叠的 diff 和续接链，关闭返回列表并保留筛选。serve 中可按 summary 的 `actions` 执行 cancel、resume、apply、discard；panel 不显示写操作。整条续接链没有 queued/running/retrying job 时，仅最新已结束且有 session 的 turn 可 resume。
 
-AJ-701：Jobs 采用 Board 的工具栏、`task-card` 与 `kb-ghost` 样式。Repository / Harness 筛选先按显式 resume/fallback 链合并，再保留任一轮匹配筛选的整链；不按相同标题或 session id 猜测关系。链首提供标题，最新一轮提供状态、模型、耗时与 token；`rework` 为手动 resume 链接数，不含同 job 的自动 retries。链时间线按链接因果排序，分叉以创建时间 / id 排序，环按同样顺序确定性断开，缺失 id 不创建虚构 job。
+**Dashboard** 展示 Live agent tree、任务指标、最近 7 个本地日历日的 token 趋势、按 harness 的 jobs / success rate / duration / tokens / cost，以及 quota。用量与额度来自独立 cost API，每 30 秒刷新，不随 Jobs 筛选变化。美元、subscription、unknown 与 partial 分开标示；失败显示不可用状态。没有已知 resetAt 时不推断额度重置时间。
 
-列归属优先级：queued / running / retrying → RUNNING；终态有 attention → NEEDS ATTENTION；其余 succeeded → SUCCEEDED；其他终态 → FAILED / CANCELED。上游失败不会使已恢复的后继停留在 attention 列。列计数按链计，用量仍按独立 cost API 的各次 job 统计，放在底部。窄屏看板竖向堆叠，抽屉全屏；`#/jobs/<id>` 可直接打开某轮，关闭回到 `#/jobs`。Routing 独立页签沿用 AJ-700 的校验与保存行为，panel 中仍只读。
+Live 使用记录中的 harness、模型、effort、调用、diff、quota、resume/fallback 与 retry 关系，不推测未观察到的 agent。结构化 events 经脱敏后显示，原始载荷不会传入树；无时间戳的记录不显示时间。事件按 animation frame 批处理，同页最多四条事件流，其余依赖摘要刷新；页面隐藏或卸载时关闭流。
+
+**Settings** 展示四个 harness 的安装状态、版本、实验标记、read-only 能力、模型列表和默认 model/effort；serve 可保存默认值、刷新模型。Routing 位于 Settings 内，展示配置路径、别名、有序回退链、额度组与耗尽记录，支持 Edit / Save / Cancel、回退排序及 Clear 的页内确认。panel 的 Settings / Routing 只读。422 在字段旁显示，409 提示配置已在别处更改，Reload 丢弃草稿。Routing 每 30 秒刷新，编辑期间保留草稿及原版本。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
 
 ## 通过 pactify.agentjoey.ai 访问
 
-Owner 当前部署的访问路径：
+Owner 部署的访问路径：
 
 ```text
 浏览器 → Cloudflare Access 登录 → Cloudflare Tunnel（本机 cloudflared）
        → http://localhost:17082 → launchd 托管的 pactify serve
 ```
 
-打开 `https://pactify.agentjoey.ai`，完成 Access 登录，然后选择 **Jobs**。前提是 Tunnel 正在运行，且该域名的 Cloudflare Access 保护已启用。serve 自身没有登录认证；`internal/serve/security.go` 的 Origin 校验只保护浏览器写请求，不能替代 Access。
+打开 `https://pactify.agentjoey.ai/#/jobs`，完成 Access 登录。前提是 Tunnel 与该域名的 Access 保护已启用。serve 自身没有登录认证，Origin 校验仅保护浏览器写请求，不能替代 Access。
 
-此部署中 **serve 必须只监听本机 loopback**。启动参数应为 `pactify serve --addr 127.0.0.1:17082`，不要绑定 `0.0.0.0` 或局域网地址。CLI 的默认端口仍是 `127.0.0.1:7777`；`--addr` 是现有的可配置参数，本变更不调整它。其他 dashboard 写操作若经反向代理使用，需将完整 origin 加入 `PACTIFY_ALLOWED_ORIGINS`（例如 `https://pactify.agentjoey.ai`）；Jobs 的 Routing 保存与 Clear 同样受此校验保护；经该域名编辑前需配置完整 origin。
+此部署中 serve 必须只监听 loopback：`pactify serve --addr 127.0.0.1:17082`。CLI 默认仍为 `127.0.0.1:7777`。经反向代理编辑 Settings、Routing 或执行 Jobs 操作前，将完整 origin 加入 `PACTIFY_ALLOWED_ORIGINS`，例如 `https://pactify.agentjoey.ai`。
 
-API 使用 serve 进程的 `PACTIFY_HOME`，与 `sub` 命令同样解析为 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。launchd 和 CLI 的环境变量若不同，会看到不同的任务。浏览器不会直接访问文件系统。
+API 使用 serve 进程的 `PACTIFY_HOME`，与 CLI 一样读取 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。launchd 与交互式 shell 的环境不同，会影响任务目录和 resume 所需配置；shell 中导出的变量不会自动进入服务。worker 不继承 `PACTIFY_ALLOWED_ORIGINS` 和 `PACTIFY_LEDGER_REF`。服务在后台回收已结束的 worker。
 
 ## 本机 sub panel
 
@@ -34,38 +36,33 @@ pactify sub panel
 pactify sub panel --port 17100 --no-open
 ```
 
-默认选择随机 loopback 端口并打开浏览器；`--no-open` 只打印 URL。只能监听 `127.0.0.1`，Ctrl-C 退出。首次打开 `http://127.0.0.1:<port>/?token=…` 会消耗一次性 launch token，并交换为独立 session token；再次使用原始 launch URL 返回 401。
+默认选择随机 loopback 端口并打开浏览器；`--no-open` 只打印 URL，只能监听 `127.0.0.1`，Ctrl-C 退出。首次访问 `http://127.0.0.1:<port>/?token=…` 消耗一次性 launch token，换取独立 session token；重用原 URL 返回 401。
 
-前端移除 URL 中的 token，将 session 保留在当前标签页的 `sessionStorage`，刷新仍可用。API 与 fetch 日志流使用 `Authorization: Bearer <session>`；不使用认证 cookie。重启 panel 后需使用新 URL。panel 的认证与 serve 的宿主安全模型互相独立。
+前端移除 URL 中的 token，将 session 保留在当前标签页的 `sessionStorage`。API 与 fetch 日志流使用 `Authorization: Bearer <session>`，不使用认证 cookie；重启 panel 后需使用新 URL。panel 认证与 serve 的宿主安全模型独立。
 
 ## API 与边界
 
-两种宿主挂载同一个 `subpanel.ReadOnlyHandler`，不复制处理逻辑：
+两种宿主挂载同一个 `subpanel.ReadOnlyHandler`：
 
-| 功能 | dashboard | 本机 panel |
+| 功能 | serve | 本机 panel |
 | --- | --- | --- |
-| 列表 | `/api/sub/jobs?all=1` | `/api/jobs?all=1` |
-| 详情 | `/api/sub/jobs/<id>` | `/api/jobs/<id>` |
-| SSE 日志 | `/api/sub/jobs/<id>/logs` | `/api/jobs/<id>/logs` |
+| 列表 / 详情 | `/api/sub/jobs?all=1`、`/api/sub/jobs/<id>` | `/api/jobs?all=1`、`/api/jobs/<id>` |
+| SSE 日志 / 事件 | `/api/sub/jobs/<id>/{logs,events}` | `/api/jobs/<id>/{logs,events}` |
 | diff | `/api/sub/jobs/<id>/diff` | `/api/jobs/<id>/diff` |
-| 路由配置（读取） | `/api/sub/router` | `/api/router` |
-| 路由配置（保存） | `PUT /api/sub/router` | 不注册 |
-| 清除耗尽记录 | `DELETE /api/sub/quota/<encoded-key>` | 不注册 |
+| harness 状态 / 模型 | `/api/sub/harnesses`（`?refresh=1` 刷新） | `/api/harnesses` |
+| 路由配置 | `GET /api/sub/router` | `GET /api/router` |
 | 用量汇总 | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
+| 保存路由 / 默认值 | `PUT /api/sub/router` | 不注册 |
+| 清除耗尽记录 | `DELETE /api/sub/quota/<encoded-key>` | 不注册 |
+| 任务操作 | `POST /api/sub/jobs/<id>/{cancel,resume,apply,discard}` | 不注册 |
 
-共享只读 API 仅接受 GET，HEAD 也拒绝。serve 额外注册路由配置的 PUT、额度记录的 DELETE，以及 `/api/sub/jobs/<id>/{cancel,resume,apply,discard}` 的 POST，经过现有 Origin guard；panel 保持所有 API 只读。写操作仅接受 JSON，请求体上限 64 KiB；状态冲突返回 409。按钮可用性以 summary 的 `actions` 为准：整条续接链没有 queued / running / retrying job 时，仅最新已结束且有 session 的 turn 可 resume。任务读取使用原子 state 快照和一次建立的索引，不恢复孤儿 worker、不创建锁文件、不改变任务状态。缺失 `state.json` 的残缺 job 目录会跳过；非法 job id 经 Store 校验拒绝。
+共享只读 API 仅接受 GET，HEAD 也拒绝。serve 的写操作经过 Origin guard，仅接受 JSON，请求体上限 64 KiB，状态冲突返回 409。Dashboard resume 每 store 最多四个活跃 job（含 queued/retrying），超限返回 429；CLI 不占此额度。结束、取消或启动失败释放名额。CLI 与 dashboard 共用 session lock。
 
-Dashboard resume inherits the serve process environment. In the launchd deployment, it runs in launchd's environment; variables exported only in your interactive shell, including API keys, are not inherited. Configure required variables in the service environment. Workers omit `PACTIFY_ALLOWED_ORIGINS` and `PACTIFY_LEDGER_REF`. The long-lived server reaps finished workers in the background.
+任务读取使用原子 state 快照和单次索引，不恢复孤儿 worker、不创建锁文件、不修改任务状态。缺失 `state.json` 的目录会跳过，非法 job id 被拒绝。cost API 的参数及错误沿用 [`sub cost`](sub-cost.md)，额外返回过滤过期记录后的 `exhaustedRoutes`，不根据历史 `quotaSnapshots` 推断耗尽或重置时间。
 
-Dashboard resume is limited to 4 active jobs per store, including queued and retrying jobs. Further requests return HTTP 429 with `too many jobs started from the dashboard are still running (limit 4)`. CLI jobs do not count toward this limit. Completion, cancellation, or launch failure releases the slot. CLI and dashboard share the same session lock, so concurrent resume requests cannot start multiple turns in the same session, including jobs without a worktree.
+日志从末尾 1 MiB 窗口内最多 100 条可读记录开始，半行缓冲最多 64 KiB，浏览器最多保留 1,000 行；终态关闭流，离开详情取消请求，断流 / 错误显示状态。完整日志使用 `pactify sub logs <id> --follow`。
 
-列表底部的 **Usage · last 7 days** 卡片独立每 30 秒刷新，跨仓库汇总最近 7 个本地日历日的终态 result，不随列表筛选变化。按 harness 显示 jobs（ok/failed）、input/output tokens 与美元 / subscription / unknown 成本，含合计与 partial 注记。失败时只显示 **Usage unavailable**，不影响任务列表。手机上的表格在卡片内部横向滚动。
-
-cost API 的 `since` / `by` 默认值和参数校验沿用 [`sub cost`](sub-cost.md)，非法参数返回 400，存储读取失败返回 500。HTTP 响应在 CLI report 字段之外增加 `exhaustedRoutes: QuotaRoute[]`，复用 `Store.ExhaustedRoutes` 只读加载 `$PACTIFY_HOME/quota.json` 并过滤过期记录；CLI JSON 契约不变。历史 `quotaSnapshots` 不用于推断路线耗尽或重置时间。没有已知重置时间时卡片显示 `resets in unknown`。
-
-日志从末尾 1 MiB 窗口内最多 100 条可读记录开始，半行缓冲最多 64 KiB，浏览器最多保留 1,000 行；任务进入终态后关闭流，离开详情时取消请求。断流 / 错误会显示状态，刷新可重新连接。完整日志使用 `pactify sub logs <id> --follow`。
-
-worktree diff 相对记录的 base commit，包含未跟踪文件，不 staging、不修改 Git index。上限为 512 KiB / 10 秒；截断会显示提示。无 worktree、已 discard 或无法读取时展示记录的变更清单 / 提示，当前结果格式不保存完整 patch。结果文件的既有读取上限为 4 MiB。
+worktree diff 相对记录的 base commit，包含未跟踪文件，不 staging、不修改 Git index；上限为 512 KiB / 10 秒，截断显示提示。无 worktree、已 discard 或无法读取时展示已有变更清单 / 提示，result 不保存完整 patch；结果文件读取上限为 4 MiB。
 
 ## 构建与验证
 
@@ -75,10 +72,12 @@ npx tsc --noEmit
 npx vitest run
 npm run build
 npm run build:panel
-npx playwright test e2e/jobs.spec.ts e2e/panel.spec.ts e2e/routing.spec.ts
+npx playwright test --retries 0
+node scripts/shots.mjs
+node scripts/shots-live.mjs
 node scripts/shots-panel.mjs
 ```
 
-仅重建 dist 不会更新正在运行的 launchd 服务。宿主机完成验收后，还需在仓库根目录重新编译带 embed 资源的二进制（`go build -o pactify ./cmd/pactify`），在 macOS 上执行 `codesign --force -s - ./pactify`，再按现有部署配置替换并重启 serve；见 [部署](deployment.md) 与 [运维](operations.md)。
+`build` 与 `build:panel` 分别生成 Git 跟踪的 `internal/serve/dist` 与 `internal/subpanel/dist`；`npm run e2e` 依次构建两份再运行 Playwright。测试与截图脚本使用独立 mock 服务最终 embedded dist，不依赖常驻 daemon。
 
-两个构建分别生成受 Git 跟踪的 `internal/serve/dist` 与 `internal/subpanel/dist`，均需随源码更新。CI 会重建并检查 drift。Jobs e2e 使用 mock-server 直接服务最终 serve dist，并在测试产物中附上桌面 / 手机列表与详情截图；不同系统配色偏好下，dashboard 都保持原有深色，另有 390px 深链接用例；panel 截图脚本用独立 mock 端口服务最终 panel dist，不依赖常驻 daemon。宿主机还需检查截图效果与外部 Tunnel + Access 的实际访问。
+重建 dist 不会更新 launchd 服务。host 完成验收后需重新编译 embed 二进制（`go build -o pactify ./cmd/pactify`）、在 macOS 上 `codesign --force -s - ./pactify`，再按现有配置替换并重启 serve；见 [部署](deployment.md) 与 [运维](operations.md)。host 还需检查截图和外部 Tunnel + Access 的实际访问。

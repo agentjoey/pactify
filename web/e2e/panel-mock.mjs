@@ -1,6 +1,5 @@
 import { pathToFileURL } from "node:url";
 import { startMock } from "./mock-server.mjs";
-export { panelJobs } from "./jobs-fixtures.mjs";
 export const startPanelMock = (port) => startMock(port, true);
 if (
   process.argv[1] &&

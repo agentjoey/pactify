@@ -10,7 +10,7 @@
     {
       "name": "pactify",
       "source": "./plugins/pactify",
-      "description": "Delegate large tasks to codex / kimi as subagents with verified model and cost."
+      "description": "Delegate large coding tasks from Claude Code to coding agent harnesses (codex, kimi, agy, opencode), review results, and view job status with /jobs."
     }
   ]
 }

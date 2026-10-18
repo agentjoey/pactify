@@ -28,7 +28,7 @@ func TestJobActions(t *testing.T) {
 	if err := s.CheckAction(st, "cancel"); err == nil {
 		t.Fatal("terminal cancel allowed")
 	}
-	next, err := s.ResumeJob(st.ID, "new brief")
+	next, err := s.ResumeRun("next", st.Request, false, st.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,33 +55,6 @@ func TestJobActions(t *testing.T) {
 	st, _ = s.Load(st.ID)
 	if got := s.Actions(st); len(got) != 0 {
 		t.Fatal(got)
-	}
-}
-
-func TestResumeJobInheritsRequest(t *testing.T) {
-	t.Setenv("PACTIFY_SUB_FAKE", "1")
-	s := Store{Root: t.TempDir()}
-	retries := 0
-	req := Request{Harness: "fake", Model: "chosen", Effort: "high", Access: "read-only", Cwd: repo(t), WithUserConfig: true, Retries: &retries}
-	st, err := s.Create("old", req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	finishWorktree(t, s, st.ID, StatusSucceeded)
-	if _, err := s.ResumeJob(st.ID, " \n "); err == nil {
-		t.Fatal("empty brief allowed")
-	}
-	marker := filepath.Join(t.TempDir(), "executed")
-	brief := "$(touch " + marker + "); `touch " + marker + "` & > " + marker
-	next, err := s.ResumeJob(st.ID, brief)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if next.Request.Brief != brief || next.Request.Model != req.Model || next.Request.Effort != req.Effort || next.Request.Access != req.Access || !next.Request.WithUserConfig || *next.Request.Retries != 0 || next.Request.Resume != "session-old" {
-		t.Fatal(next)
-	}
-	if _, err := os.Stat(marker); !os.IsNotExist(err) {
-		t.Fatal("brief executed", err)
 	}
 }
 

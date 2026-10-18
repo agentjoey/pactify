@@ -8,6 +8,13 @@
 
 ---
 
+## Unreleased — AJ-722 · dead code and stale artifacts
+
+- Remove 17 obsolete screenshot scripts, the gallery entry and its exclusive UI/icon helpers, test-only components and their tests, unused styles/exports, Phosphor, and Vite template assets. Web v2 now has one shared Dashboard / Jobs / Settings shell with embedded Live.
+- Remove unreachable `gitx.Merge`, `Store.FinalJobSnapshot`, `Store.LastSessionFor`, `Store.ResumeJob` and `prepareKimiHome`, confirmed by reference searches and deadcode with `record,harness_e2e,agye2e,acpsmoke`. Keep `Store.Actions` and `Store.Summarize` for now: serve tests still call them. Keep the live-tree/statistics helpers private because production still calls them. Doctor and worktree action tests now call the underlying active APIs.
+- Delete showcase seeds, tracked Python bytecode and the obsolete release hook; ignore Python caches, drop the Rust ignore rule, align four-harness plugin copy and bump the plugin to 0.2.7. Refresh Jobs, frontend, archive and screenshot documentation.
+- **Gates (host)**: `go build ./...`, `go vet ./...` (default and `record,harness_e2e`), isolated `go test ./...` all pass; `npm install` leaves the edited lock unchanged; `tsc --noEmit`, vitest 120/120, both dists rebuilt, Playwright 26/26 with `--retries 0`, `shots.mjs` screenshots from the final build checked; bats 145/0. The entry files (CLAUDE.md / AGENTS.md / GEMINI.md) still name the removed `live-gate-shot.mjs` / `shot-dispatch-review.mjs`; they are updated separately because they carry uncommitted Owner edits.
+
 ## Unreleased — opencode permission replies outlive the event stream (AJ-720 follow-up)
 
 - **Why**: CI intermittently failed `TestOpencode2Flows/permission` and `TestOpencodeServeWorkerV2/permission` with `Approval failed … context canceled`. Both opencode backends sent the permission reply with the event-stream context captured when the request arrived; approvers answer asynchronously, so a stream that had ended or reconnected cancelled the reply and the job failed.

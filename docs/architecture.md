@@ -188,7 +188,7 @@ flake、`squad/layout` 端点与 `.pact/squad/layout.json` sidecar 一并退役�
   续传）——这也是 Cockpit V1 只读探针的落点（铺位工程）。
 
 单视图 IA：View 类型/快捷键/Toolbar lens 段控/⌘K 视图项移除；`shots.mjs` 只拍 board；
-`live-gate-shot` 改造为 `board-gate-shot`。下方 Canvas P0 / comms visualization /
+当时的 Board 视觉门脚本已在 AJ-722 删除，当前截图使用 `shots.mjs`、`shots-live.mjs` 与 `shots-panel.mjs`。下方 Canvas P0 / comms visualization /
 Dashboard v2 的 Canvas-Office 段保留为历史记录。
 
 ### Dashboard v2 (Linear-grade re-skin + Office mode)

@@ -208,9 +208,6 @@
   stroke: var(--color-role-design);
   stroke-width: 1.5;
 }
-.live-fallback path {
-  stroke-dasharray: 4 4;
-}
 .live-retry {
   display: flex;
   align-items: center;

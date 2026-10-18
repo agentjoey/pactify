@@ -155,7 +155,7 @@ home itself and does not protect data redirected by an ancestor symlink.
 
 ### Jobs view and local panel (read-only)
 
-Open **Jobs** alongside Dashboard / Board / Cockpit in the existing dashboard.
+Open **Jobs** alongside Dashboard / Settings; Live appears on Dashboard and in job details.
 For the Owner's deployment, log in through Cloudflare Access at
 `https://pactify.agentjoey.ai/#/jobs` (or `#/jobs/<id>` for a shared job link).
 Cloudflare Tunnel forwards to the

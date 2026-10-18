@@ -174,43 +174,6 @@ func (s Store) Save(st State) error {
 	return os.Rename(tmp.Name(), filepath.Join(s.Dir(st.ID), "state.json"))
 }
 
-func (s Store) LastSessionFor(harness, cwd string) (string, error) {
-	entries, err := os.ReadDir(s.Root)
-	if os.IsNotExist(err) {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	var latest State
-	var sessionID string
-	found := false
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		st, err := s.Load(entry.Name())
-		if err != nil {
-			continue
-		}
-		if st.Request.Harness != harness || st.Request.Cwd != cwd || st.Status != StatusSucceeded || (found && !st.FinishedAt.After(latest.FinishedAt)) {
-			continue
-		}
-		data, err := os.ReadFile(s.ResultPath(st.ID))
-		if err != nil {
-			continue
-		}
-		var result struct {
-			SessionID string `json:"sessionId"`
-		}
-		if err := json.Unmarshal(data, &result); err != nil {
-			continue
-		}
-		latest, sessionID, found = st, result.SessionID, true
-	}
-	return sessionID, nil
-}
-
 // lastCLIVersionFor is best-effort history across repositories and terminal statuses.
 func (s Store) lastCLIVersionFor(harness string) string {
 	entries, err := os.ReadDir(s.Root)

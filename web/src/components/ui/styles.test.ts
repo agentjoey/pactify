@@ -1,13 +1,11 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
-it("preserves shared modal, spinner, status and skeleton motion after removing governance styles", () => {
+it("preserves shared modal and spinner motion after removing unused styles", () => {
   const css = readFileSync("src/index.css", "utf8");
   for (const selector of [
     ".ui-modal-overlay",
     ".ui-modal-panel",
     ".spinner-spin",
-    ".status-pill-dot-live",
-    ".skeleton::after",
     ".hover-lift",
     ".press",
   ])

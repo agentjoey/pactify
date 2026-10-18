@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/vendorenv"
 )
 
 func TestJobIDFormat(t *testing.T) {
@@ -191,9 +191,9 @@ func TestStoreRejectsDuplicateAndUnsafeIDs(t *testing.T) {
 	}
 }
 
-func TestCrossVendorStripExport(t *testing.T) {
+func TestVendorEnvStripForSubKinds(t *testing.T) {
 	for _, tc := range []struct{ kind, own string }{{"codex-cli", "OPENAI_API_KEY="}, {"kimi-cli", "KIMI_API_KEY="}} {
-		got := orchestrate.CrossVendorStrip(tc.kind)
+		got := vendorenv.Strip(tc.kind)
 		if len(got) == 0 {
 			t.Fatalf("no isolation for %s", tc.kind)
 		}
@@ -210,7 +210,7 @@ func TestCrossVendorStripExport(t *testing.T) {
 			t.Fatalf("sibling key not stripped: %v", got)
 		}
 	}
-	if got := orchestrate.CrossVendorStrip("custom"); got != nil {
+	if got := vendorenv.Strip("custom"); got != nil {
 		t.Fatalf("unknown kind: %v", got)
 	}
 }

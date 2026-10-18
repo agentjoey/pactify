@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
-	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/vendorenv"
 )
 
 type ModelCatalog struct {
@@ -155,7 +155,7 @@ func (row HarnessInfo) withCatalog(cached harnessCatalogEntry) HarnessInfo {
 // handshake; kimi reads ACP session options in a disposable home. AgyModels lists ids; OpencodeModels only
 // starts serve and reads /config/providers, without sending a prompt.
 func discoverHarnessModelsIn(ctx context.Context, h Harness, storeHome string) (catalog cockpit.ModelDiscovery, err error) {
-	opts := cockpit.StartOpts{Env: orchestrate.CrossVendorStrip(h.Kind), MinimalConfig: true}
+	opts := cockpit.StartOpts{Env: vendorenv.Strip(h.Kind), MinimalConfig: true}
 	discover := func() (cockpit.ModelDiscovery, error) {
 		if h.ModelDetails != nil {
 			return h.ModelDetails(ctx, opts)

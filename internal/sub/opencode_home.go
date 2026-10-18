@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/vendorenv"
 )
 
 func opencodeVendorStrip() []string {
 	// Opencode normally supports all providers. Sub authenticates through its
 	// linked auth.json instead of inheriting sibling harness API credentials.
-	return orchestrate.CrossVendorStrip("antigravity")
+	return vendorenv.Strip("antigravity")
 }
 
 func opencodeSource(env, fallback string) (string, error) {

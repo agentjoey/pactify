@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/cockpit"
-	"github.com/agentjoey/pactify/internal/orchestrate"
+	"github.com/agentjoey/pactify/internal/vendorenv"
 )
 
 // DefaultHarness is used when the CLI's harness argument is omitted.
@@ -183,7 +183,7 @@ func Names() []string {
 
 // AgyVersion pins flash and isolates CLI discovery from the user's state.
 func AgyVersion(ctx context.Context) (string, error) {
-	return cliVersion("agy", orchestrate.CrossVendorStrip("antigravity")...)(ctx)
+	return cliVersion("agy", vendorenv.Strip("antigravity")...)(ctx)
 }
 
 func cliVersion(bin string, env ...string) func(context.Context) (string, error) {

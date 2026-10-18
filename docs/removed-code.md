@@ -21,11 +21,26 @@
 
 ## 2026-10-18
 
-当天按"清理已经不符合 pactify 产品方向的代码"和"清理编排器代码"共合入 5 个 PR，约删 4.8 万行。之后：
+当天按"清理已经不符合 pactify 产品方向的代码"、"清理编排器代码"和"整体退役治理模式"共合入 6 个删除类 PR，约删 8 万行。之后：
 
+- pactify 只剩 harness 路由器：CLI 只有 `serve`、`sub`、`version`；
 - main 只剩一个前端（`/api/sub` 驱动的 Dashboard、Jobs、Settings）；
-- 编排器整体移除；
-- `internal` 顶层包从 37 个减到 23 个。
+- 编排器和治理模式（pact 协议、账本、MCP、agent 接线）整体移除；
+- `internal` 顶层包从 37 个减到 11 个。
+
+### PR #163 · AJ-744 · 治理模式
+
+- **合并提交**：`ab52423`（找回用 `ab52423^1`；整套也可从 tag `v0.12.0` 恢复）。
+- **规模**：383 个文件，+339 / −31,600（含移入 `docs/archive/` 的 10 份文档）。
+- **删除内容**
+  - 12 个包：`internal/pact`、`ledger`、`event`、`projection`、`mcp`、`agent`、`agentreg`、`agentmanifest`、`registry`、`wizard`、`doctor`、`paths`。
+  - CLI 命令：`init`、`join`、`assign`、`checkpoint`、`accept`、`changes`、`merge`、`cancel`、`withdraw`、`config`、`status`、`log`、`validate`、`seat`、`agent`、`setup`、`doctor`、`mcp`、`register`、`unregister`、`list`。
+  - serve 的 vendor 预检和全部隐藏兼容参数（`--relay-url`、`--relay-token`、`--remote-control`、`--seat`、`--project`）。
+  - 仓库文件：`.pact/`（本仓库自己的协议账本和任务记录）、`schemas/`（pact 事件 / 座席 / 任务 schema）、`.mcp.json`、`opencode.json`、`.gitattributes`、`.claude/skills/pact/`、`plugins/pact/` 及 marketplace 条目；`gitx` 中只给协议用的分支 / 合并 / 推送辅助函数；对应的 Go 测试和 bats（bats 从 136 个减到 39 个）。
+  - 入口文件里的 pact protocol 段和 `pact:kinds` 行。
+- **移到 `docs/archive/`**：pact-protocol、seat-identity、coordination-authority、single-canonical-ledger、review-runtime-deepening、driver-modernization、execution-tiering、onboarding、agent-onboarding、plugin-publishing。
+- **原因**：编排器删除后，治理模式只剩手动协作，本仓库也不再使用（开发走 Notion、Linear、`pactify sub`）。Owner 于 2026-10-18 推翻了 10-15"保留为可选治理模式"的决定。
+- **本机配套**（不在 git 里）：launchd plist 去掉 `--seat claude` 和 `PACTIFY_LEDGER_REF`（备份 `com.pactify.serve.plist.bak-20261018-*`）；主副本残留的本地 `.pact/` 运行数据移到 `~/.pactify/archive/pact-local-20261018/`。
 
 ### PR #158 · AJ-735 · 编排器
 

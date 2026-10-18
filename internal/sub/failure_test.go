@@ -481,12 +481,21 @@ func TestCodexUnsupportedSubscriptionModelFailure(t *testing.T) {
 }
 
 func TestManagedMissingLoginFailureIsAuth(t *testing.T) {
+	// The home path is quoted in the error; a 429 in it once made this
+	// transient about 1% of the time via random TempDir names (AJ-739).
+	home := func(t *testing.T) string {
+		dir := filepath.Join(t.TempDir(), "home-1429")
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
 	for _, name := range []string{"opencode", "kimi"} {
 		t.Run(name, func(t *testing.T) {
 			store, _, backend := workerFixture(t, "write")
-			t.Setenv("XDG_DATA_HOME", t.TempDir())
-			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-			t.Setenv("KIMI_CODE_HOME", t.TempDir())
+			t.Setenv("XDG_DATA_HOME", home(t))
+			t.Setenv("XDG_CONFIG_HOME", home(t))
+			t.Setenv("KIMI_CODE_HOME", home(t))
 			st, err := store.Load("j1")
 			if err != nil {
 				t.Fatal(err)

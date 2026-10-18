@@ -9,6 +9,11 @@ import (
 
 var kimiResetTime = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})`)
 var kimiServerError = regexp.MustCompile(`(?i)\b(?:(?:http(?:/\d(?:\.\d)?)?|status(?:\s+code)?|code)\s*[:=]?\s*(?:5\d\d|5xx)\b|503\s+service\s+unavailable\b)`)
+
+// 429 counts only as an HTTP status, never as digits inside a path or id: a
+// missing-login error quotes its home path, and a path containing 429 must stay
+// auth (AJ-739).
+var kimiRateLimited = regexp.MustCompile(`(?i)\b(?:(?:http(?:/\d(?:\.\d)?)?|status(?:\s+code)?|code|error)\s*[:=]?\s*429|429\s+(?:too\s+many\s+requests|resource_exhausted))\b|rate[_ ]limit|too many requests`)
 var kimiAuthError = regexp.MustCompile(`(?i)\b(?:auth|unauthorized|authentication|auth_error|auth_required|401|403)\b|invalid api key`)
 
 func kimiFailure(message string, raw json.RawMessage, now time.Time) Failure {
@@ -82,10 +87,8 @@ func kimiFailure(message string, raw json.RawMessage, now time.Time) Failure {
 			return Failure{Class: "refusal"}
 		}
 	}
-	for _, word := range []string{"rate_limit", "rate limit", "429"} {
-		if strings.Contains(lower, word) {
-			return Failure{Class: "transient"}
-		}
+	if kimiRateLimited.MatchString(lower) {
+		return Failure{Class: "transient"}
 	}
 	return acpFailure(message, raw, kimiFailureRules)
 }

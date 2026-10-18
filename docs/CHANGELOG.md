@@ -8,6 +8,11 @@
 
 ---
 
+## Unreleased — AJ-739 · kimi matches 429 only as a status code
+
+- The kimi failure classifier used to treat any "429" substring as rate limiting (transient). A missing-login error quotes its home path, so a path containing 429 (for example a random `t.TempDir()`) turned an auth failure into a retried transient. That caused about 1% of CI runs to fail in `TestManagedMissingLoginFailureIsAuth/kimi`. 429 now matches only in status context (`HTTP 429`, `status code: 429`, `code=429`, `error 429`, `429 Too Many Requests`, `429 RESOURCE_EXHAUSTED`), like the existing 5xx rule; `rate limit` / `rate_limit` / `too many requests` still match.
+- Tests: new classifier cases (status forms stay transient; a login error with `…1429…` in its path stays auth; a plain path with 4290 stays other). `TestManagedMissingLoginFailureIsAuth` now always uses a home path containing 1429, so the old flake reproduces deterministically. Reverting to substring matching fails both tests.
+
 ## Unreleased — AJ-735 · remove the orchestrator
 
 - Remove `internal/orchestrate`, `planner`, `schedule`, `audit`, `sarif`, `sessions`, `tokens`, `secret`, `recipe`, `finish`, `runguard`, `agentcfg` and `roles`, plus their exclusive tests and fixtures. Pactify's product direction is the harness router; tag **`v0.12.0` remains the rollback anchor**. There are now **23 top-level internal packages**, measured with `go list ./internal/... | sed 's#.*/internal/##' | cut -d/ -f1 | sort -u | wc -l`.

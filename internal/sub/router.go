@@ -300,11 +300,21 @@ func quotaFallbackWarning(from, to Route, resetAt *time.Time, now time.Time) str
 	return warning
 }
 
+// routeAllows reports whether a route's harness offers the requested access.
+// Read-only excludes only harnesses that refuse it (kimi) and unknown ones.
+func routeAllows(route Route, access string) bool {
+	if access != "read-only" {
+		return true
+	}
+	h, ok := Lookup(route.Harness)
+	return ok && h.NoReadOnly == ""
+}
+
 func (r *Router) Select(routes []Route, quotas []QuotaRoute, access string, now time.Time) (Route, []Route, []string, error) {
 	var earliest time.Time
 	var warnings []string
 	for i, route := range routes {
-		if access == "read-only" && route.Harness != "codex" {
+		if !routeAllows(route, access) {
 			continue
 		}
 		exhausted, reset := r.exhausted(route, quotas, now)
@@ -314,7 +324,7 @@ func (r *Router) Select(routes []Route, quotas []QuotaRoute, access string, now 
 			}
 			remaining := []Route{}
 			for _, next := range routes[i+1:] {
-				if access != "read-only" || next.Harness == "codex" {
+				if routeAllows(next, access) {
 					remaining = append(remaining, next)
 				}
 			}

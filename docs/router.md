@@ -42,7 +42,7 @@ pactify sub router --json
 3. 每条路线依次检查 `quota.json` 中的 harness+model、整个 harness、所属 quotaGroup。只要有一项尚未重置，就跳过该路线。CLI 的 model/effort 覆盖只作用于首选路线；回退路线使用自身别名与 defaults 设置。
 4. quotaGroup 中任意 model 耗尽，整个组都耗尽，避免在共用额度的模型档位间反复失败。组限定在同一个 harness 内；过期记录不起作用。无重置时间的额度记录按 R1 的 24 小时失效规则处理。
 5. 全部耗尽则退出 2，显示最早可恢复的时间，不创建 job。一个路线同时受多个耗尽条件约束时，要等所有条件重置。
-6. 只读任务仅保留 codex 路线；显式指定不支持只读的 harness 仍报原来的访问档错误。
+6. 只读任务跳过不支持只读的 harness（目前只有 kimi）和未知 harness，主路线与回退链都一样；codex、agy、opencode 保留（AJ-740，此前仅保留 codex）。显式指定不支持只读的 harness 仍报原来的访问档错误。
 
 改选时输出和最终 result.warnings 会保留`quota exhausted for X; using Y`，已知重置时间时附加 `(resets in 6d 18h)`。`sub router` 默认按 Config path、Defaults、Aliases、Fallback、Quota groups、Exhausted routes 分段展示；已知重置时间同时显示倒计时和 UTC 时间，未知时标明记忆过期时间。`--json` 保持原有字段，并提供展开后的 `resolvedFallback` 列表。运行中的 job 保存剩余路线与 quotaGroups；修改配置只影响后续启动。
 

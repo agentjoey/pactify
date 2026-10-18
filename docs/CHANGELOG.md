@@ -8,6 +8,10 @@
 
 ---
 
+## Unreleased — AJ-740 · router read-only keeps every harness that supports it
+
+- With a router config present, `--read-only` used to keep only codex routes, so even `pactify sub run opencode --read-only` failed with `no routes support read-only access`. That rule dated from when codex was the only read-only harness (AJ-694). `Router.Select` now skips only harnesses that refuse read-only (`NoReadOnly`, currently kimi) and unknown harnesses, for both the chosen route and the remaining fallback chain.
+- Tests: read-only agy is chosen and its chain keeps opencode and codex while skipping kimi; read-only opencode is chosen after kimi; kimi/unknown-only chains are still refused. Restoring the codex-only rule fails the test. Live with the real router config: `sub run opencode --read-only` (MiniMax-M3, 1.19.3) succeeds with no changes, where the previous binary refused it.
 ## Unreleased — AJ-739 · kimi matches 429 only as a status code
 
 - The kimi failure classifier used to treat any "429" substring as rate limiting (transient). A missing-login error quotes its home path, so a path containing 429 (for example a random `t.TempDir()`) turned an auth failure into a retried transient. That caused about 1% of CI runs to fail in `TestManagedMissingLoginFailureIsAuth/kimi`. 429 now matches only in status context (`HTTP 429`, `status code: 429`, `code=429`, `error 429`, `429 Too Many Requests`, `429 RESOURCE_EXHAUSTED`), like the existing 5xx rule; `rate limit` / `rate_limit` / `too many requests` still match.

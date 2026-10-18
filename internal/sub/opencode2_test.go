@@ -54,9 +54,6 @@ func TestOpencode2VersionSelectionAndWorker(t *testing.T) {
 			if err := doctorOpencode2Home(store, "v2", result, true); err != nil {
 				t.Fatal(err)
 			}
-			if access == "read-only" && !doctorDeniedWrite(store.LogPath("v2"), "opencode") {
-				t.Fatal("v2 denied-write evidence not recognized")
-			}
 			if _, err := os.Lstat(filepath.Join(st.HarnessHome, "opencode/auth.json")); !os.IsNotExist(err) {
 				t.Fatal("v2 must not link auth.json")
 			}

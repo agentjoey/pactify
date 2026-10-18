@@ -123,7 +123,14 @@ func OpencodeServePeer(t *testing.T) {
 				http.Error(w, "missing session", 404)
 				return
 			}
-			json.NewEncoder(w).Encode(map[string]any{"id": "sid", "tokens": map[string]any{"input": count * 20, "output": count * 3, "reasoning": count * 7, "cache": map[string]int{"read": count * 100, "write": count * 2}}, "cost": float64(count) * .25})
+			// Session rules as last sent (the real server appends PATCHed rules).
+			var sent struct {
+				Permission json.RawMessage `json:"permission"`
+			}
+			if b, err := os.ReadFile(filepath.Join(data, "permissions.json")); err == nil {
+				_ = json.Unmarshal(b, &sent)
+			}
+			json.NewEncoder(w).Encode(map[string]any{"id": "sid", "permission": sent.Permission, "tokens": map[string]any{"input": count * 20, "output": count * 3, "reasoning": count * 7, "cache": map[string]int{"read": count * 100, "write": count * 2}}, "cost": float64(count) * .25})
 		case "GET /session/sid/message":
 			mu.Lock()
 			defer mu.Unlock()

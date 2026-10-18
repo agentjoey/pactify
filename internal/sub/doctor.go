@@ -45,11 +45,13 @@ func (r DoctorReport) Passed() bool {
 }
 
 type doctorDeps struct {
-	lookPath   func(string) (string, error)
-	run        func(context.Context, Store, string, Harness, WorkerConfig) (Result, error)
-	now        func() time.Time
-	tempParent string
-	model      string
+	lookPath func(string) (string, error)
+	run      func(context.Context, Store, string, Harness, WorkerConfig) (Result, error)
+	// readonlyCheck reads an opencode probe session's permission policy back.
+	readonlyCheck func(context.Context, Store, string, Result) error
+	now           func() time.Time
+	tempParent    string
+	model         string
 }
 
 // Doctor uses disposable repositories and job storage; only the verified-version
@@ -109,6 +111,11 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 	}
 	if d.now == nil {
 		d.now = time.Now
+	}
+	if d.readonlyCheck == nil {
+		d.readonlyCheck = func(ctx context.Context, store Store, id string, result Result) error {
+			return store.CheckOpencodeReadonly(ctx, id, result, nil)
+		}
 	}
 	root, err := os.MkdirTemp(d.tempParent, "pactify-sub-doctor-*")
 	if err != nil {
@@ -298,12 +305,14 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		ranAll := writeErr == nil && writable.Status == StatusSucceeded
 		if h.NoReadOnly != "" {
 			skip("Read-only access", h.NoReadOnly)
-		} else if h.Opencode2 {
-			// In v2 the write tools are removed before the model sees them. No
-			// attempted-write event or tool-call count is required as evidence.
+		} else if h.Name == "opencode" {
+			// Read-only removes the write and shell tools before the model sees
+			// them (2.x since AJ-720, 1.x since AJ-734), so the model cannot
+			// attempt a denied write. Evidence is the session's own permission
+			// policy, read back after the job; no tool-call count is required.
 			readonly, roRepo, roErr := run("read-only", "This is a read-only diagnostic. Do not create probe.txt or seek a workaround. Explain briefly that writing tools are unavailable, then finish.")
 			_, statErr := os.Lstat(filepath.Join(roRepo, "probe.txt"))
-			permissionErr := jobStore.CheckOpencode2Readonly(ctx, "read-only", readonly, nil)
+			permissionErr := d.readonlyCheck(ctx, jobStore, "read-only", readonly)
 			good := roErr == nil && readonly.Status == StatusSucceeded && os.IsNotExist(statErr) && permissionErr == nil
 			reason := fmt.Sprintf("write tools removed from readonly session and confirmed by permission evaluation; status=%s, write target absent=%t, shell/edit/external_directory deny=%t%s", readonly.Status, os.IsNotExist(statErr), permissionErr == nil, doctorError(roErr))
 			if permissionErr != nil {
@@ -314,17 +323,14 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			ranAll = ranAll && good
 		} else {
 			readonlyBrief := "Use your shell execution tool to execute this exact command once in the current directory, even if you expect the sandbox to deny the write:\n\n```sh\nsh -c 'echo hi > out.txt'; echo EXIT=$?\n```\n\nReport the command's stdout and stderr verbatim, including the EXIT line. Do not predict the result or claim a denial without invoking the tool. Do not request elevated permissions, retry, or seek a workaround; report the actual output and stop."
-			if h.Name == "opencode" || h.Name == "agy" {
-				readonlyBrief = "This is an authorized read-only permission diagnostic in plan mode. Invoke the bash tool to run `ls` once. Then invoke the bash tool with exactly `echo x > probe.txt` once to verify that the permission policy denies it. You must actually invoke both tool calls; do not merely predict a denial. Report the tool result and stop. Do not retry, seek a workaround, or use another tool to write."
-			}
 			if h.Name == "agy" {
-				readonlyBrief = strings.ReplaceAll(readonlyBrief, "bash tool", "run_command tool")
+				readonlyBrief = "This is an authorized read-only permission diagnostic in plan mode. Invoke the run_command tool to run `ls` once. Then invoke the run_command tool with exactly `echo x > probe.txt` once to verify that the permission policy denies it. You must actually invoke both tool calls; do not merely predict a denial. Report the tool result and stop. Do not retry, seek a workaround, or use another tool to write."
 			}
 			target := "out.txt"
 			probe := func(id string) (Result, bool, error, error) {
 				readonly, roRepo, roErr := run(id, readonlyBrief)
 				denied := true
-				if h.Name == "opencode" || h.Name == "agy" {
+				if h.Name == "agy" {
 					target = "probe.txt"
 					denied = doctorDeniedWrite(jobStore.LogPath(id), h.Name)
 				}

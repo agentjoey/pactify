@@ -28,7 +28,7 @@ func OpencodeEnv(opts StartOpts) ([]string, error) {
 		}
 		permission := map[string]any{"edit": "allow", "bash": "allow", "webfetch": "allow"}
 		if opts.Access == AccessReadOnly {
-			permission = map[string]any{"*": "deny", "edit": "deny", "write": "deny", "read": "allow", "glob": "allow", "grep": "allow", "list": "allow", "bash": orderedBashPolicy()}
+			permission = map[string]any{"*": "deny", "edit": "deny", "write": "deny", "read": "allow", "glob": "allow", "grep": "allow", "list": "allow", "bash": "deny"}
 			config["experimental"] = map[string]any{"continue_loop_on_deny": true}
 		}
 		config["permission"] = permission

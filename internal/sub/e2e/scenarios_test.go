@@ -593,7 +593,7 @@ func (f *fixture) verifyV2Readonly(result sub.Result, targets ...string) {
 		}
 	}
 	store := sub.Store{Root: filepath.Join(envValue(f.env, "PACTIFY_HOME"), "jobs")}
-	if err := store.CheckOpencode2Readonly(context.Background(), result.JobID, result, f.env); err != nil {
+	if err := store.CheckOpencodeReadonly(context.Background(), result.JobID, result, f.env); err != nil {
 		f.errorf("readonly permission evaluation failed: %v", err)
 	}
 }

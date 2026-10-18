@@ -37,6 +37,12 @@ func TestOpencodeDoctorDynamicModelAndIsolation(t *testing.T) {
 			}
 			reports, err := runDoctor(context.Background(), Store{Root: filepath.Join(os.Getenv("PACTIFY_HOME"), "jobs")}, []Harness{h}, doctorDeps{
 				lookPath: func(string) (string, error) { return "fake", nil },
+				readonlyCheck: func(_ context.Context, store Store, id string, _ Result) error {
+					if st, err := store.Load(id); err != nil || st.Request.Access != "read-only" {
+						t.Errorf("policy check on %s: access=%q err=%v", id, st.Request.Access, err)
+					}
+					return nil
+				},
 				run: func(ctx context.Context, store Store, id string, h Harness, _ WorkerConfig) (Result, error) {
 					st, _ := store.Load(id)
 					if st.Request.Model != "test/flash-fast" {
@@ -75,9 +81,6 @@ func TestOpencodeDoctorDynamicModelAndIsolation(t *testing.T) {
 							os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600)
 						}
 						s.events <- cockpit.Event{Kind: cockpit.EventTool, Tool: &cockpit.ToolEvent{Phase: "start"}}
-						if id == "read-only" {
-							s.events <- cockpit.Event{Kind: cockpit.EventTool, Tool: &cockpit.ToolEvent{Phase: "end", Name: "bash"}, Raw: deniedDoctorRaw}
-						}
 						s.events <- cockpit.Event{Kind: cockpit.EventUsage, Usage: &cockpit.Usage{InputTokens: 1}}
 						s.events <- cockpit.Event{Kind: cockpit.EventMessage, Text: "done", Final: true}
 						s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}

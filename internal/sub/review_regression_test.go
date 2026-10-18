@@ -3,6 +3,7 @@ package sub
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/agentjoey/pactify/internal/cockpit"
 	"github.com/agentjoey/pactify/internal/testenv"
 	"os"
@@ -65,19 +66,20 @@ func TestReviewReadonlyLostWorker(t *testing.T) {
 		t.Fatalf("warnings=%v", r.Warnings)
 	}
 }
-func TestReviewDoctorRequiresDeniedWrite(t *testing.T) {
-	denial := `{"kind":"tool","tool":{"phase":"end","name":"bash"},"raw":{"part":{"type":"tool","tool":"bash","state":{"status":"error","input":{"command":"echo x > probe.txt"},"error":"Permission denied"}}}}` + "\n"
+
+// AJ-734: opencode read-only removes the shell tool, so doctor cannot ask the
+// model to attempt a denied write. PASS rests on the session's own policy
+// (read back after the job) plus an absent write target; one probe only.
+func TestReviewDoctorOpencodeReadonlyPolicy(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		denyOn  map[string]bool // read-only probe ids whose log shows the denied write
-		writeOn string          // read-only probe id that writes probe.txt
-		want    string
-		probes  int
+		name      string
+		policyErr error
+		write     bool
+		want      string
 	}{
-		{"denied", map[string]bool{"read-only": true}, "", "PASS", 1},
-		{"denied on retry", map[string]bool{"read-only-2": true}, "", "PASS", 2},
-		{"never attempted", nil, "", "WARN", 2},
-		{"written", nil, "read-only", "FAIL", 1},
+		{"policy denies", nil, false, "PASS"},
+		{"policy allows", errors.New(`opencode readonly bash permission is "ask"; expected deny`), false, "FAIL"},
+		{"written", nil, true, "FAIL"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("PACTIFY_HOME", t.TempDir())
@@ -85,7 +87,7 @@ func TestReviewDoctorRequiresDeniedWrite(t *testing.T) {
 			h.Home = nil
 			h.Models = nil
 			h.Version = func(context.Context) (string, error) { return "test", nil }
-			probes := 0
+			probes, checked := 0, 0
 			reports, err := runDoctor(context.Background(), Store{Root: filepath.Join(t.TempDir(), "jobs")}, []Harness{h}, doctorDeps{lookPath: func(string) (string, error) { return "fake", nil }, run: func(_ context.Context, store Store, id string, _ Harness, _ WorkerConfig) (Result, error) {
 				st, _ := store.Load(id)
 				if id == "write" {
@@ -93,17 +95,20 @@ func TestReviewDoctorRequiresDeniedWrite(t *testing.T) {
 					os.WriteFile(filepath.Join(st.Request.Cwd, "doctor-network.json"), []byte(`{"bind":true,"external":true}`), 0600)
 				} else {
 					probes++
-					if !strings.Contains(st.Request.Brief, "echo x > probe.txt") {
-						t.Error("doctor does not request a real write attempt")
+					if strings.Contains(st.Request.Brief, "echo x > probe.txt") {
+						t.Error("doctor asks for a shell write the read-only session cannot attempt")
 					}
-					if tc.denyOn[id] {
-						os.WriteFile(store.LogPath(id), []byte(denial), 0600)
-					}
-					if tc.writeOn == id {
+					if tc.write {
 						os.WriteFile(filepath.Join(st.Request.Cwd, "probe.txt"), []byte("x"), 0600)
 					}
 				}
-				return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: st.Request.Model, ModelVerified: true, InputTokens: 1, ToolCalls: 1, FinalText: "done"}, nil
+				return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: st.Request.Model, ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
+			}, readonlyCheck: func(_ context.Context, _ Store, id string, _ Result) error {
+				checked++
+				if id != "read-only" {
+					t.Errorf("policy checked on %s", id)
+				}
+				return tc.policyErr
 			}})
 			if err != nil {
 				t.Fatal(err)
@@ -113,22 +118,13 @@ func TestReviewDoctorRequiresDeniedWrite(t *testing.T) {
 					t.Errorf("check=%+v, want %s", c, tc.want)
 				}
 			}
-			if probes != tc.probes {
-				t.Errorf("read-only probes=%d, want %d", probes, tc.probes)
+			if probes != 1 || checked != 1 {
+				t.Errorf("read-only probes=%d policy checks=%d, want 1 and 1", probes, checked)
 			}
 		})
 	}
 }
 
-var deniedDoctorRaw = json.RawMessage(`{"part":{"tool":"bash","state":{"status":"error","input":{"command":"echo x > probe.txt"},"error":"Permission denied"}}}`)
-
-func writeDeniedDoctorLog(t *testing.T, store Store, id string) {
-	t.Helper()
-	raw, _ := json.Marshal(map[string]any{"kind": "tool", "raw": deniedDoctorRaw})
-	if err := os.WriteFile(store.LogPath(id), append(raw, '\n'), 0600); err != nil {
-		t.Fatal(err)
-	}
-}
 func TestReviewReadonlyUnbornBaselineUnavailable(t *testing.T) {
 	store, sess, backend := workerFixture(t, "read-only")
 	st, _ := store.Load("j1")

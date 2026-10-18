@@ -392,7 +392,7 @@ func (s *opencodeSession) Prompt(ctx context.Context, msg UserMessage) error {
 						permissions[request.ID] = true
 						raw, _ := json.Marshal(request)
 						s.dispatch(Event{Kind: EventSystem, State: "permission.asked", Raw: raw})
-						s.permission(streamCtx, request.ID, request.Permission, raw)
+						s.permission(request.ID, request.Permission, raw)
 					}
 				}
 				break
@@ -484,7 +484,7 @@ func (s *opencodeSession) Prompt(ctx context.Context, msg UserMessage) error {
 			if !permissions[p.ID] {
 				permissions[p.ID] = true
 				s.dispatch(Event{Kind: EventSystem, State: event.Type, Raw: event.Properties})
-				s.permission(streamCtx, p.ID, p.Permission, event.Properties)
+				s.permission(p.ID, p.Permission, event.Properties)
 			}
 		default:
 			s.dispatch(Event{Kind: EventSystem, State: event.Type, Raw: event.Properties})
@@ -560,7 +560,18 @@ func (s *opencodeSession) failPrompt(err error) error {
 	s.dispatch(e)
 	return err
 }
-func (s *opencodeSession) permission(ctx context.Context, id, name string, raw json.RawMessage) {
+
+// replyContext bounds a permission reply by the session, not by the event
+// stream that saw the request: approvers answer asynchronously, after that
+// stream may have ended or reconnected. The server call adds its own timeout.
+func (s *opencodeSession) replyContext() context.Context {
+	if s.lifeCtx == nil {
+		return context.Background()
+	}
+	return s.lifeCtx
+}
+
+func (s *opencodeSession) permission(id, name string, raw json.RawMessage) {
 	var once sync.Once
 	respond := func(d Decision) (err error) {
 		once.Do(func() {
@@ -568,7 +579,7 @@ func (s *opencodeSession) permission(ctx context.Context, id, name string, raw j
 			if s.opts.Access != AccessReadOnly && (d == DecisionAllow || d == DecisionAllowForSession) {
 				reply = "once"
 			}
-			err = s.server.call(ctx, "POST", "/permission/"+url.PathEscape(id)+"/reply", map[string]string{"reply": reply}, nil)
+			err = s.server.call(s.replyContext(), "POST", "/permission/"+url.PathEscape(id)+"/reply", map[string]string{"reply": reply}, nil)
 			raw, _ := json.Marshal(map[string]string{"id": id, "reply": reply})
 			s.dispatch(Event{Kind: EventSystem, State: "permission.replied", Raw: raw})
 			if err != nil {

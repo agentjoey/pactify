@@ -106,7 +106,7 @@ func (s *opencode2Session) Prompt(ctx context.Context, msg UserMessage) error {
 		if !pending[id] {
 			pending[id] = true
 			s.dispatch(Event{Kind: EventSystem, State: "permission.asked", Raw: raw})
-			s.permission2(streamCtx, sid, id, action, raw)
+			s.permission2(sid, id, action, raw)
 		}
 	}
 	for {

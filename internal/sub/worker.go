@@ -26,12 +26,16 @@ const (
 	sessionArchivingFailed = "Session archiving failed"
 )
 
+// DefaultReadOnlyToolCallLimit bounds runaway read-only jobs. It is sized for
+// real reviews that read a few hundred files; 40 cut off a 60-file read (AJ-718).
+const DefaultReadOnlyToolCallLimit = 200
+
 type WorkerConfig struct {
 	ProcessMarker         string                  // Doctor scopes its repeated probe IDs to a disposable store.
 	ReadOnlyPolicy        bool                    // Doctor exercises the hook independently of native plan mode.
 	RetryBackoff          func(int) time.Duration // 1-based attempt; nil uses 30s then 120s.
 	CacheHome             string                  // Optional shared cache home; doctor keeps job storage disposable.
-	ToolCallLimit         int                     // 0 disables the limit; CLI default is 40.
+	ToolCallLimit         int                     // 0 disables the limit; CLI and doctor use DefaultReadOnlyToolCallLimit.
 	IdleTimeout           time.Duration
 	ActiveToolIdleTimeout time.Duration // Default 30m; configurable through PACTIFY_SUB_ACTIVE_TOOL_IDLE_TIMEOUT.
 	KimiWireTimeout       time.Duration // Default 10s to flush per-job wire usage before Close.

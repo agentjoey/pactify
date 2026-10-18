@@ -277,7 +277,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			}
 			jobCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			defer cancel()
-			result, err := d.run(jobCtx, jobStore, id, h, WorkerConfig{ToolCallLimit: 40, CacheHome: filepath.Dir(store.Root), ProcessMarker: fmt.Sprintf("doctor-%x-%s", sha256.Sum256([]byte(jobStore.Root)), id), ReadOnlyPolicy: access == "read-only-hook"})
+			result, err := d.run(jobCtx, jobStore, id, h, WorkerConfig{ToolCallLimit: DefaultReadOnlyToolCallLimit, CacheHome: filepath.Dir(store.Root), ProcessMarker: fmt.Sprintf("doctor-%x-%s", sha256.Sum256([]byte(jobStore.Root)), id), ReadOnlyPolicy: access == "read-only-hook"})
 			return result, repo, err
 		}
 		brief := "Run a shell command to create out.txt containing doctor-ok in the current directory. Do not just describe it. Return a short final reply."

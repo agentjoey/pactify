@@ -30,6 +30,8 @@ const (
 // real reviews that read a few hundred files; 40 cut off a 60-file read (AJ-718).
 const DefaultReadOnlyToolCallLimit = 200
 
+const emptyReplyFollowupPrompt = "You ended without a written answer. Reply now with your result: what you found or changed and which checks you ran. Do not start new work."
+
 type WorkerConfig struct {
 	ProcessMarker         string                  // Doctor scopes its repeated probe IDs to a disposable store.
 	ReadOnlyPolicy        bool                    // Doctor exercises the hook independently of native plan mode.
@@ -693,6 +695,21 @@ turns:
 				}
 			}
 		}
+		// Consume queued tail events and observe a closed stream before continuing
+		// a completed turn in the same session.
+	drainTail:
+		for collector.TurnDone && !sessionClosed {
+			select {
+			case event, ok := <-events:
+				if !ok {
+					sessionClosed = true
+					break drainTail
+				}
+				recordEvent(event)
+			default:
+				break drainTail
+			}
+		}
 		if h.Name == "kimi" && h.LocalUsageBaseline != nil && h.Verify != nil && !interrupted && !canceled {
 			verifyCtx, cancel := context.WithTimeout(ctx, cfg.KimiWireTimeout)
 			v := h.Verify(verifyCtx, VerificationInput{SessionID: sess.ThreadID(), Info: cockpit.SessionInfo{Home: harnessHome}, WireOffset: wireOffset, WireOffsets: wireOffsets, Prompts: int(prompts.Load()), Env: opts.Env, Cwd: req.Cwd})
@@ -708,6 +725,37 @@ turns:
 		}
 		if turnFailed || promptFailed {
 			result.classifyTurnFailure(req.Harness, collector, cfg.Now(), promptFailed)
+		}
+		if collector.TurnDone && !turnFailed && !promptFailed && result.FailureClass == "" && !canceled && ctx.Err() == nil && !interrupted && !graceExpired && strings.TrimSpace(collector.FinalText()) == "" {
+			if result.EmptyReplyFollowups == 0 && !sessionClosed {
+				latest, stateErr := store.Load(id)
+				if stateErr != nil {
+					interrupt("Failed to read job state: " + stateErr.Error())
+					break turns
+				}
+				if latest.CancelRequested {
+					canceled = true
+					break turns
+				}
+				marker := cockpit.Event{Kind: cockpit.EventSystem, State: "empty_reply_followup", Text: req.Harness}
+				if err := encoder.Encode(marker); err != nil {
+					interrupt("Failed to write log: " + err.Error())
+					break turns
+				}
+				// Use the retry reset to retain cumulative usage and tool counts.
+				collector.Add(marker)
+				lastActivity = cfg.Now()
+				turnVerification = nil
+				result.EmptyReplyFollowups++
+				promptErr = startPrompt(emptyReplyFollowupPrompt)
+				continue turns
+			}
+			// A closed session cannot be asked again; still never succeed silently.
+			if result.EmptyReplyFollowups > 0 {
+				result.Warnings = append(result.Warnings, fmt.Sprintf("empty final reply after one follow-up: the harness ended without a text answer. Check pactify sub logs %s, or resume to ask for the result.", id))
+			} else {
+				result.Warnings = append(result.Warnings, fmt.Sprintf("empty final reply: the session ended before a follow-up could be sent. Check pactify sub logs %s, or resume to ask for the result.", id))
+			}
 		}
 		if result.FailureClass != "transient" || canceled || ctx.Err() != nil || interrupted || !collector.TurnDone || sessionClosed || graceExpired || len(result.Retries) >= retryLimit {
 			break turns

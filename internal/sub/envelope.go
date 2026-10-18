@@ -49,6 +49,8 @@ type Result struct {
 	Warnings        []string                   `json:"warnings,omitempty"`
 	WorktreePath    string                     `json:"worktreePath,omitempty"`
 	BaseCommit      string                     `json:"baseCommit,omitempty"`
+
+	EmptyReplyFollowups int `json:"emptyReplyFollowups,omitempty"`
 }
 
 const partialUsageWarning = "Usage may be incomplete; only recorded usage is included"

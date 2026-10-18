@@ -58,6 +58,7 @@ func TestAgySevenSecondOpeningQuotaDoesNotBlockPrompt(t *testing.T) {
 	prompted := make(chan struct{})
 	s.script = func(s *fakeSession) {
 		close(prompted)
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	done := make(chan Result, 1)

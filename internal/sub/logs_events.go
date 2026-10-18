@@ -151,7 +151,7 @@ func (r *logRenderer) project(line string, emit func(string) error) error {
 			v.CostUSD = &c
 		}
 	case cockpit.EventSystem:
-		if e.State == "transient_retry" {
+		if e.State == "transient_retry" || e.State == "empty_reply_followup" {
 			r.collector.Add(e.Event)
 			return nil
 		}

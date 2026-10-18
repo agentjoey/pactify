@@ -62,6 +62,7 @@ func kimiJobFixture(t *testing.T, user bool) (Store, *fakeSession, *fakeBackend,
 	h.Version, h.Conceal = nil, nil
 	h.Backend = func() cockpit.Backend { return backend }
 	sess.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	return store, sess, backend, h, userHome, home
@@ -139,6 +140,7 @@ func TestKimiManagedHomeLifecycle(t *testing.T) {
 				writeKimiJobRecord(t, home, s.ThreadID(), "")
 				// A conflicting record in user home must never supply model/token evidence.
 				writeKimiJobRecord(t, userHome, s.ThreadID(), `{"type":"llm.request","model":"wrong"}`+"\n")
+				s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 				s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 			}
 			r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
@@ -238,6 +240,7 @@ func TestKimiManagedHomeRepairsLinksAndPreservesCopies(t *testing.T) {
 					if outcome == "failed" {
 						state = cockpit.StateTurnFailed
 					}
+					s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 					s.events <- cockpit.Event{Kind: cockpit.EventState, State: state}
 				}
 				func() {
@@ -288,6 +291,7 @@ func TestKimiWithUserConfigKeepsHomeAndConceal(t *testing.T) {
 			t.Error("user home not explicit in child environment")
 		}
 		writeKimiJobRecord(t, userHome, s.ThreadID(), "")
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
@@ -411,6 +415,7 @@ func TestKimiDoctorChecksManagedHomeEvidence(t *testing.T) {
 					if fault == "failed-job" {
 						state = cockpit.StateTurnFailed
 					}
+					s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 					s.events <- cockpit.Event{Kind: cockpit.EventState, State: state}
 				}
 				return b
@@ -530,6 +535,7 @@ func TestKimiCleanupNeverFollowsReplacedHome(t *testing.T) {
 		if err := os.Symlink(userHome, home); err != nil {
 			t.Error(err)
 		}
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
@@ -562,6 +568,7 @@ func TestKimiManagedHomeSharedAcrossJobs(t *testing.T) {
 				t.Error(err)
 			}
 		}
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	if r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{}); err != nil || r.Status != StatusSucceeded {
@@ -600,6 +607,7 @@ func TestKimiManagedHomeUsesDefaultUserHome(t *testing.T) {
 			t.Error("wrong default managed home")
 		}
 		writeKimiJobRecord(t, expected, s.ThreadID(), "")
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})

@@ -27,6 +27,7 @@ func TestEveryHarnessHidesItsSessions(t *testing.T) {
 func TestRunJobConcealsTheSessionAfterTheJob(t *testing.T) {
 	store, s, b := workerFixture(t, "write")
 	s.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	var got ConcealContext

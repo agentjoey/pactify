@@ -19,6 +19,7 @@ func TestKimiP0WireFailureRetries(t *testing.T) {
 				n++
 				end := "{\"type\":\"turn.ended\",\"reason\":\"failed\",\"error\":{\"code\":\"provider.connection_error\",\"message\":\"connection failed\"}}\n"
 				if n > 1 {
+					s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 					end = "{\"type\":\"turn.ended\",\"reason\":\"completed\"}\n"
 				}
 				writeKimiJobRecord(t, home, s.ThreadID(), end)
@@ -145,6 +146,7 @@ for line in sys.stdin:
    events=[{'type':'llm.request','model':'fake/model'},{'type':'usage.record','usageScope':'turn','usage':{'inputOther':10,'output':2}},{'type':'turn.ended','reason':'completed' if n>1 else 'failed'}]
    if n==1:events[-1]['error']={'code':'provider.connection_error','message':'Connection error.'}
    for e in events:f.write(json.dumps(e)+'\n')
+  if n>1:print(json.dumps({'jsonrpc':'2.0','method':'session/update','params':{'sessionId':'fake-acp','update':{'sessionUpdate':'agent_message_chunk','content':{'type':'text','text':'Actual result'}}}}),flush=True)
   r={'stopReason':'end_turn'}
  else:sys.exit(8)
  print(json.dumps({'jsonrpc':'2.0','id':q['id'],'result':r}),flush=True)

@@ -44,6 +44,7 @@ func TestKimiUsageWaitsForWireBeforeClose(t *testing.T) {
 				if err := os.WriteFile(path, []byte("{\"type\":\"turn.prompt\"}\n{\"type\":\"llm.request\",\"model\":\"current-model\"}\n"), 0600); err != nil {
 					t.Error(err)
 				}
+				s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 				s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 				time.Sleep(60 * time.Millisecond)
 				if s.closed.Load() {
@@ -80,6 +81,7 @@ func TestKimiUsageResumeCountsOnlyCurrentJob(t *testing.T) {
 	path := filepath.Join(home, "sessions", s.ThreadID(), "agents", "main", "wire.jsonl")
 	s.script = func(s *fakeSession) {
 		appendKimiUsageFixture(t, path, "{\"type\":\"turn.prompt\"}\n{\"type\":\"llm.request\",\"model\":\"resumed-model\"}\n"+kimiCurrentUsage+"{\"type\":\"prompt.completed\"}\n")
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{})
@@ -96,6 +98,7 @@ func TestKimiUsageIncompleteWireWarns(t *testing.T) {
 		if err := os.WriteFile(path, []byte("{\"type\":\"turn.prompt\"}\n{\"type\":\"llm.request\",\"model\":\"partial-model\"}\n"), 0600); err != nil {
 			t.Error(err)
 		}
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	started := time.Now()
@@ -127,6 +130,7 @@ func TestKimiUsageBadBaselineWarnsWithoutFailingWorktree(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "Actual result"}
 		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
 	}
 	r, err := RunJob(context.Background(), store, "isolated", h, WorkerConfig{KimiWireTimeout: 100 * time.Millisecond})

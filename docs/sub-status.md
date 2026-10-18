@@ -184,6 +184,41 @@ adapter 累计值不重复相加；Kimi prompt usage 在轮间累加。Kimi wire
 漏末段用量，即使续接成功也保守保留 usagePartial。`sub cost` 的 RETRIES 是有过续接的
 job 数，单个 job 续接多次也只计 1；手动 `--resume` 产生新 job，不计自动续接。
 
+## 空回复补问（AJ-748）
+
+所有 harness（codex、kimi、agy、opencode）正常结束一轮、且最终文本经 `strings.TrimSpace`
+仍为空时，worker 在同一 live session 内恰好补问一次：
+
+> You ended without a written answer. Reply now with your result: what you found or changed and which checks you ran. Do not start new work.
+
+插入点是轮次失败分类之后、transient retry 判断之前。只有 turn done、无失败类别、无 prompt/turn
+错误、未取消/中断/超时或 grace expired、session 未关闭时才补问。补问前排空已排队的轮次尾部事件以识别已关闭的 stream，并再次检查持久化取消请求。
+补问独立于 `--retries`，不占重试次数，`--retries 0` 仍生效；补问后若 transient retry 再次产生空回复，
+不会二次补问。补问轮失败沿用正常失败处理。只读策略、累计 tool-call limit、idle/total timeout 继续生效。
+
+`result.json` / `pactify sub result --json` 新增可选数字 `emptyReplyFollowups`：
+未补问时省略，补问后为 1；不加入 status 摘要的 `retryCount`。日志记录 system 事件
+`state: "empty_reply_followup"`，`text` 为 harness 名。轮内输出按 transient retry 的方式清空，
+用量与 tool calls 累计保留，Live 日志也沿用相同用量口径。
+
+补问得到文本时正常成功，只记录次数，不因此警告。补问正常结束仍为空时依然 `succeeded`，
+并在 `Result.Warnings` 中追加下列原文（`<id>` 替换为实际 job id）：
+
+> empty final reply after one follow-up: the harness ended without a text answer. Check pactify sub logs <id>, or resume to ask for the result.
+
+若会话在空回复的那一轮后已关闭、无法补问，同样判 `succeeded` 并追加：
+
+> empty final reply: the session ended before a follow-up could be sent. Check pactify sub logs <id>, or resume to ask for the result.
+
+两条警告都需要处理，不属于 informational 过滤项；`sub status` 的 `attention.kind` 包含 `warnings`。
+只读任务此时尚未交付：先查看 `pactify sub logs <id>`，再通过 `--resume <id>` 用简短 brief 索取结果；
+仍为空则换 harness 或 model 重跑。写任务照常审查完整 diff 并自行重跑验收，通过 `--resume <id>`
+取得交接说明，或根据 diff 与自己的检查补写。续接时保留原 harness、cwd、权限及 worktree。
+
+agy 正常空回复不再生成 `empty_answer` 失败；无内容的 `print_timeout` 仍为 `timeout`。
+agy 独立的 `CompletionFollowups`（默认 2 次，等待运行中的命令并报告实际结果）保持原行为，
+与 worker 的这一次空回复补问分开计数。
+
 ## 结果信封的沙箱字段（AJ-710）
 
 `result.json` 和 `pactify sub result --json` 总是包含布尔字段 `sandboxed`：codex 为 true，其他 harness 为 false。

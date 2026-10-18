@@ -481,12 +481,8 @@ readLoop:
 	if fatal != "" {
 		failure = fatal
 	}
-	if failure == "" && strings.TrimSpace(final) == "" {
-		if timedOut {
-			failure = "agy print_timeout: print timeout returned no content"
-		} else {
-			failure = "agy empty_answer: no final content"
-		}
+	if failure == "" && timedOut && strings.TrimSpace(final) == "" {
+		failure = "agy print_timeout: print timeout returned no content"
 	}
 	s.totals = addAgyUsage(s.totals, turn)
 	u := s.totals
@@ -576,7 +572,6 @@ var agyFailureRules = []failureRule{
 	{"request failed: post ", "transient"},
 	{"stream interrupted", "transient"},
 	{"permission_denied", "permission"},
-	{"empty_answer", "empty_answer"},
 	{"print_timeout", "timeout"},
 	{"incomplete_answer", "incomplete"},
 	{"the stream was interrupted. please continue", "transient"},

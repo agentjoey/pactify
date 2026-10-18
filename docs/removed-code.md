@@ -21,7 +21,32 @@
 
 ## 2026-10-18
 
-当天按"清理已经不符合 pactify 产品方向的代码"共合入 3 个 PR，约删 1.8 万行。之后 main 只剩一个前端（`/api/sub` 驱动的 Dashboard、Jobs、Settings），`internal` 顶层包从 37 个减到 35 个。
+当天按"清理已经不符合 pactify 产品方向的代码"和"清理编排器代码"共合入 5 个 PR，约删 4.8 万行。之后：
+
+- main 只剩一个前端（`/api/sub` 驱动的 Dashboard、Jobs、Settings）；
+- 编排器整体移除；
+- `internal` 顶层包从 37 个减到 23 个。
+
+### PR #158 · AJ-735 · 编排器
+
+- **合并提交**：`adf7db4`（找回用 `adf7db4^1`；整套编排器也可从 tag `v0.12.0` 恢复）。
+- **规模**：218 个文件，+330 / −30,313。
+- **删除内容**
+  - 13 个包：`internal/orchestrate`、`planner`、`schedule`、`audit`、`sarif`、`sessions`、`tokens`、`secret`、`recipe`、`finish`、`runguard`、`agentcfg`、`roles`。
+  - CLI 命令：`orchestrate`、`plan`、`run`、`schedule`、`audit`（含 SARIF）、`sessions`、`recipe`、`finish`、`role`、`agent config`、`config gate`、`config critic`、`checkpoint --force`（对应 `cmd/pactify/cmd_{orchestrate,plan,run,schedule,audit,audit_sarif,sessions,recipe,finish,role}.go`）。
+  - CLI 和 MCP checkpoint 上的 run guard（编排进行中拒绝 checkpoint）。
+  - serve 的定时任务（`internal/serve/scheduler.go`）及项目发现；`tests/role_fallback.bats`。
+- **原因**：产品方向是 harness 路由器，编排器自 2026-10-15 冻结。AJ-722/723/724 之后委派路径已不依赖它。
+- **保留**
+  - pact 协议、账本、投影、MCP server、agent 接线和项目注册表。
+  - pact 写 `start`、`escalate`、`config_gate`、`config_critic` 事件的函数作为协议面保留，但 CLI 已无调用方；投影照常折叠旧日志里的这些事件。
+  - `serve --seat`、`--project` 变成隐藏的空操作参数，启动时提示已忽略。
+
+### PR #157 · AJ-734 · opencode 1.x 只读的 bash 白名单
+
+- **合并提交**：`d3f37fc`（找回用 `d3f37fc^1`）。
+- **删除内容**：1.x 只读的 15 条精确命令 allow、危险字符 deny 模式和 `orderedBashPolicy`（`internal/cockpit/opencode_permissions.go`）；doctor 里解析 opencode "被拒写入"日志的分支。只读改为整体禁用 bash。
+- **原因**：白名单依赖 opencode 的 shell 解析，2.x 已出现解析不出命令就跳过权限检查的绕过（AJ-720 B1）。
 
 ### PR #154 · AJ-723 · serve 里的旧治理 API
 

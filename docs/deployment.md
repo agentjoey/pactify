@@ -5,14 +5,14 @@
 ## 安装
 
 ```bash
-# macOS / Linux
-curl -fsSL https://pactify.dev/install.sh | sh
+# v0.13.0 发布前：从 main 安装（路由器只在 main 上）
+go install github.com/agentjoey/pactify/cmd/pactify@main
 
-# 或用 Go 安装
-go install github.com/agentjoey/pactify/cmd/pactify@latest
+# 发布后：macOS / Linux 安装发布版
+curl -fsSL https://pactify.dev/install.sh | sh
 ```
 
-当前发布版为 v0.12.0。harness 路由器功能已合入 main、尚未发布；内部自用请从本 repo 构建。
+当前发布版为 v0.12.0，早于路由器，没有 `pactify sub`。安装脚本和 `go install …@latest` 目前都会装到它，所以 v0.13.0 发布前请用 `@main` 或从本 repo 构建。
 治理模式已退役（AJ-744）；历史实现见 tag `v0.12.0`。
 
 ## 开发环境（本 repo）

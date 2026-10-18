@@ -2,7 +2,7 @@
 
 > Last updated: **2026-10-18** | Status: **v0.12.0 已发布**；M1 已合入但未发布，v0.13.0 挂起、继续内部自用。历史与未发布变更见 [`CHANGELOG.md`](CHANGELOG.md)。
 >
-> 产品主线为 harness 路由器，当前支持 codex（默认）及实验性的 kimi、agy、opencode，见 [`specs/harness-subagents.md`](specs/harness-subagents.md)。下文保留的编排架构已冻结；单一规范账本暂停在 WS-B（flag 默认关）。
+> 产品主线为 harness 路由器，当前支持 codex（默认）及实验性的 kimi、agy、opencode，见 [`specs/harness-subagents.md`](specs/harness-subagents.md)。旧编排器已由 AJ-735 删除，回滚锚点为 tag `v0.12.0`；单一规范账本暂停在 WS-B（flag 默认关）。
 > AJ-710：opencode 委派改用每 job 独立的 authenticated serve（v1 HTTP/SSE），会话汇总用量、持久化数据库续接和进程树清理；详见 [harness-subagents.md](specs/harness-subagents.md)。
 > 云端 Go、web 与共享 workspace 及其构建 / 发布 CI 已删除（AJ-664）；gemini-cli 已移除（#106、#107）。
 
@@ -64,22 +64,11 @@ docs/specs|plans|decisions/        ← 知识库
 
 worker 不能自标 `accepted`（职责分离）。
 
-### 驱动层（orchestrate driver — driver-modernization）
-`orchestrate` 把座席作为子进程「一棒」驱动。传输可选:
-- **CmdRunner**（默认）— headless 一次性 spawn（`claude -p`/`opencode run`…），解析 stdout；巡检 idle-timeout 兼看工作树变更(静默但在写不误杀)。
-- **AcpRunner**（opt-in,`--transport kind=acp`）— 对 vendor CLI 说 **Agent Client Protocol**（`internal/acp`,JSON-RPC/stdio）:`initialize→session/new→session/prompt→session/update`。给结构化事件流:usage（token）经 `session/update` 落 `internal/tokens`（**根治 TOK=0**）、`session/request_permission` 三档策略 auto/escalate/deny（escalate 写 escalation,与 OpenHands 无脑 auto-approve 相反）。kind→命令映射:kimi=`kimi acp`、claude/codex 经 npx bridge。`RoutedLocalRunner` 按 kind 选传输,空映射=全 cmd(零行为变化)。
-- **会话续接**（AcpRunner）— `.pact/orchestrate/sessions.json`（lockx）记 (seat,task)→sessionID;重试时 server 支持 `loadSession` 则续接会话（保上下文、省 token）,失败回退新会话;accept/终态清理。
-- **知识注入** — briefing 尾部注入 `.pact/memory.md`(累积决策)+ role/keyword 匹配的 `.pact/skills/*.md`(4KB 预算);无文件时字节不变。
-- **可观测** — 当前 dashboard 使用 sub job 用量与成本；旧 per-seat stats API 及其计算包已在 AJ-723 删除。`pactify doctor` 保留 per-vendor 预检(binary+auth+ACP 可用性)。
+### 编排驱动已删除（AJ-735）
 
-### 评审深化 + 运行时（review-runtime — 包2）
-在「驱动一棒」外把评审与运行时做深(全部 opt-in,不带配置行为不变):
-- **fix-until-green 自修环** — worker checkpoint 后、评审前先跑 verify 门;红则**同 worker fix 轮**(默认 2 轮,不计 MaxFails),绿才进评审;board 显示「修复中 n/2」。省 reviewer 回合。
-- **quorum 多评审** — `assign --reviewers a,b,c --quorum N`;投影按「本次 checkpoint 后不同 reviewer 的 accept 数 ≥ N」判 accepted,任一 changes 清零重投;accept 门校验 caller∈reviewers。**单 reviewer 路径字节不变**;两不变量神圣(worker 仍不能自 accept)。
-- **critic 预评 / QA 门**(顺序:gate 绿 → QA → critic → reviewer)— critic 出 `CRITIC_SCORE` 注入 reviewer(无门控权,只提示);QA(`qa:` 行)真跑软件出 `QA_RESULT`,FAIL 走 fix 轮(共享轮次预算);两者失败都宽松放行。note 复用 `start` 事件类型,不加新类型。
-- **账本持久快照** — `.pact/state-snapshot.json`(offset+prefix-hash 校验,损坏静默全量 fold,`PACT_NO_SNAPSHOT=1` 逃生),冷启动增量 replay,**5k 账本 11.5x**;gitignored,非事实源。
-- **动态座席 / 定时** — `join --kind` + driver 每轮实时读 seat→kind(mid-run join 下轮可驱动)+ planner 可提议新座席(apply 自动 join);`pactify schedule`(`daily@HH:MM`/`every:Nh`,serve ticker,复用 scheduler 的运行冲突门)。
-- **已知 follow-up**:`pactify validate` 仍只从 `init` 事件推导座席 roster,`join` 动态加入的座席会被误判「不在 roster」——待专门修(改 golden 向量有风险,单列)。
+`orchestrate`、planner、scheduler、audit/SARIF、session tallies、tokens、secret、recipe、finish、
+运行锁及 role profiles/headless config 已删除。相关 CLI 命令也已移除，历史实现见 tag `v0.12.0`。
+`internal/acp` 继续服务 harness；pact 的 quorum、动态座席和账本快照保持原行为。
 
 ## CLI 命令集（Phase 1）
 
@@ -92,7 +81,7 @@ pactify accept <id>    # reviewer 用；task → accepted + 追加 log
 pactify merge <feat>   # 全任务 accepted → --no-ff 合并 + feature → shipped
 pactify log            # replay log.jsonl → 重建 STATE（投影验证）
 pactify validate       # 校验 .pact/ schema（防漂移）
-pactify serve          # /api/sub + 静态 dashboard；另保留定时 scheduler
+pactify serve          # /api/sub + 静态 dashboard；无定时 scheduler
 ```
 
 ## 技术栈
@@ -115,11 +104,10 @@ pactify serve          # /api/sub + 静态 dashboard；另保留定时 scheduler
 
 AJ-723 已删除旧 serve 治理 API 及项目 watcher。serve 现在只提供 `/api/sub`
 （Jobs、Dashboard、Settings、Live，含 `jobs/{id}/events` SSE）和嵌入静态资源，保留 CSRF
-Origin guard；未知 `/api/*` 返回 404。治理动词、项目注册、接线、座席和规划继续走 CLI/MCP。
+Origin guard；未知 `/api/*` 返回 404。pact 协议动词、项目注册、接线和座席管理继续走 CLI/MCP。
 
-`internal/serve/scheduler.go` 保留 `StartScheduler` 的 schedule → orchestrate 最小链路：
-启动时的项目注册表、当前目录和 `--project` 发现、`--seat`（默认 `PACT_AGENT_ID`）座席、派生 roster kinds、串行运行冲突门、
-子进程日志和回收。注册表变更需重启 serve。
+AJ-735 删除 scheduler 及启动时的治理项目发现。`--seat`、可重复的 `--project` 保留为
+隐藏空操作参数，兼容已有 launchd 配置；serve 只处理 harness jobs 和静态资源。
 
 协议引擎的 `pact.At(dir).As(seat)`、任务依赖校验仍保留；下面的 UI 里程碑是历史记录，
 相关治理界面和 serve API 已退役，不代表当前 dashboard 的能力。
@@ -224,7 +212,7 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
   required merge gate alongside vitest for canvas PRs; jsdom is no longer the
   authority on interaction correctness.
 
-### orchestrate 驱动器（autonomous loop, 2026-06-13, #9）
+### orchestrate 驱动器（历史；AJ-735 已删除，回滚锚点 v0.12.0）
 源自 dogfood 头号发现 #9：协议把协调【内容】放进文件，但协调【时机】仍需人触发，人退化成调度器。`pactify orchestrate` 在产品层兑现"消灭人肉中继"。
 - **中心化串行驱动**（`internal/orchestrate`）：读 `.pact/log.jsonl` → `projection.Project` → `nextAction(纯函数)` → 在状态变迁 headless 拉起对应 agent → 重投影 → 循环，直到 feature shipped 或升级暂停。串行天然规避 F1 单工作树。
 - **nextAction 纯决策**（decide.go）：优先级 RunReviewer(awaiting_review) > RunOwner(assigned/changes_requested/**in_progress** + deps 全 accepted) > Merge(feature 全 accepted) > Done。in_progress 是可派态——`pactify join` 会把座席所有 assigned task 一次翻成 in_progress，未 checkpoint 的须重派（顺带给崩溃重试）。阈值不在此纯函数里（churning task 总有 action），由 loop 的 `tripped()` 在派发前执行。
@@ -233,7 +221,9 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 - **升级=暂停非终止**：返工/失败阈值或硬门失败 → 写 `.pact/orchestrate/escalation-*.md` + 通知 + 暂停；人修后重跑续行。agent 瞬时崩溃算软失败（重试至 MaxFails），不杀驱动；ctx 取消透传。
 - **测试**：纯函数单测 + 注入 fake Runner/cmdExec 的端到端集成（happy/返工/升级/硬门拦截/崩溃软失败/dry-run），不用真 LLM。
 
-### 8h 自主交付新增子系统（2026-06-14，12 功能）
+### 8h 自主交付新增子系统（历史，2026-06-14）
+
+以下编排功能及 CLI 已由 AJ-735 删除，历史实现见 tag `v0.12.0`；wizard 和 agent 注册表仍保留。
 
 **per-agent 配置体系（`internal/agentcfg` + `agent/launch.go`）**：把硬编码的 model pin / 权限 flag / drivability 参数化。`RunnerProfile` 用 per-kind builder 闭包渲染 argv（默认输出 = 历史硬编码 args，保持契约）；`PermPosture`（blanket 自动批准 ↔ scoped allowlist）支持作用域权限；`agentcfg.Resolve(kind)` 把机器注册表的 per-agent override（model/权限）叠加到内置默认上。orchestrate runner 改走 `agentcfg.Resolve`。CLI `agent config <kind> --model/--allowed-tools/--restricted`；`agent scan` 显示 drivable/manual。
 
@@ -257,7 +247,9 @@ the only sidecar growth is an additive `office` key in the opaque layout JSON:
 
 **UI polish（#12，部分）**：Spinner / Button-loading / Alert 原语 + 微交互（active-press / hover-lift / fade-rise，全 prefers-reduced-motion 兼容）+ RightRail 三动作 loading + Alert 错误。后续 UI 规划见 `docs/roadmap-next.md`。
 
-### 增量子系统（2026-06-14~16，v0.4.0）
+### 增量子系统（历史，2026-06-14~16，v0.4.0）
+
+以下 watchdog、GLM secret、tokens、session 清理、native audit 及对应命令已由 AJ-735 删除；历史实现见 tag `v0.12.0`。
 
 **成本 / 可观测**：AJ-723 删除仅由旧 serve stats API 使用的 `internal/stats` 与
 `internal/diffstat`。当前 dashboard 用 `/api/sub/cost` 和 job summary 展示 harness 成本与用量；

@@ -76,7 +76,7 @@ func (s spec) Config() ConfigTarget {
 // Invocation builds the pact MCP server entry for this kind's config. It carries
 // NO pinned per-seat identity (spec seat-identity §3.2): pinning PACT_AGENT_ID
 // here made two same-kind seats collide (last-writer-wins) and also let a stale
-// config value override an orchestrate-injected identity. The acting seat is
+// config value override a runtime seat identity. The acting seat is
 // resolved at runtime (env > .pact/seat). For hosts that document ${VAR}
 // expansion (claude-code), we pass the launching env's PACT_AGENT_ID through
 // explicitly so env-based identity survives even if the host doesn't blanket-
@@ -99,8 +99,7 @@ func (s spec) Invocation(seatID, repoAbs string) Invoke {
 // no verified headless runner. It delegates to the kind's RunnerProfile (single
 // source of truth for launch argv) rendered with the default model and the
 // default blanket permission posture, preserving the historical Args contract.
-// agentcfg.Resolve is the parametric path used by orchestrate (model/posture
-// overrides); Runner() is the zero-config default kept for back-compat callers.
+// Runner() is the zero-config default kept for back-compat callers.
 func (s spec) Runner() (RunnerSpec, bool) {
 	p, ok := RunnerProfileFor(s.kind)
 	if !ok {
@@ -110,7 +109,7 @@ func (s spec) Runner() (RunnerSpec, bool) {
 }
 
 // briefingToken is the placeholder Runner() emits in its default Args (callers
-// substitute the real prompt). agentcfg/orchestrate render the briefing directly.
+// substitute the real prompt).
 const briefingToken = "{briefing}"
 
 var registry = map[string]spec{

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/agentjoey/pactify/internal/event"
-	"github.com/agentjoey/pactify/internal/ledger"
 	"github.com/agentjoey/pactify/internal/gitx"
+	"github.com/agentjoey/pactify/internal/ledger"
 	"github.com/agentjoey/pactify/internal/lockx"
 	"github.com/agentjoey/pactify/internal/paths"
 	"github.com/agentjoey/pactify/internal/projection"
@@ -60,9 +60,8 @@ func (p *Project) ResolveSeat() (id, source string, err error) {
 }
 
 // StateProjection returns the current projected state for the repo (exported
-// wrapper around the internal projection used by the orchestrate driver and serve's
-// cold start). It reads through the persistent ledger snapshot: on a valid snapshot
-// it folds only the bytes appended since the snapshot was written, else it full-
+// wrapper around the internal projection). It reads through the persistent ledger
+// snapshot: on a valid snapshot it folds only the bytes appended since the snapshot was written, else it full-
 // folds. The result is identical to a full replay either way (the snapshot is a
 // pure cache); PACT_NO_SNAPSHOT=1 bypasses it.
 func (p *Project) StateProjection() (projection.State, error) {
@@ -78,8 +77,8 @@ func (p *Project) state() (projection.State, []event.Event, error) {
 }
 
 // withLedgerLock serializes a mutating verb's read→check→append critical section
-// against every other pact process writing the same ledger (CLI, MCP host,
-// orchestrate driver). Without it two concurrent verbs both read the same state,
+// against every other pact process writing the same ledger (CLI or MCP host).
+// Without it two concurrent verbs both read the same state,
 // both pass their rule check, and both append — e.g. two Assigns for one task id
 // both clear checkAssign's uniqueness check and the projection silently keeps the
 // later definition (TOCTOU). The lock file lives in the git dir GitPath resolves
@@ -286,9 +285,8 @@ func (p *Project) initLocked(project string, seatSpecs []string) error {
 // AddSeat appends a new seat to the roster after init — fixing the "roster frozen
 // at init" rigidity (the protocol has no remove-seat yet; YAGNI). Only an acting
 // seat with the orchestrator role may add one, and the seat id must be unique. The
-// seat's kind is recorded so the roster carries it (init seats now do too — this
-// lets orchestrate infer --seat-kind from the roster). It does NOT bake the entry
-// file: wiring stays a separate step (pactify agent add), matching init/wire split.
+// seat's kind is recorded in the roster, as it is for init seats. It does NOT
+// bake the entry file: wiring stays a separate step (pactify agent add), matching init/wire split.
 func (p *Project) AddSeat(spec string) error {
 	return p.withLedgerLock(func() error { return p.addSeatLocked(spec) })
 }
@@ -328,8 +326,7 @@ func (p *Project) Join(seatID, roles string) error {
 
 // JoinKind is Join plus a declared agent kind (spec §6 WS-K dynamic seats): the
 // join event carries `kind`, which the projection records onto Agents[].Kind so a
-// seat can DECLARE how it is driven at cold-start (and orchestrate resolves it from
-// the live roster). An empty kind is byte-identical to Join.
+// seat can declare its agent kind at cold-start. An empty kind is byte-identical to Join.
 func (p *Project) JoinKind(seatID, roles, kind string) error {
 	return p.JoinWithClientKind(seatID, roles, "pactify-cli", ClientVersion, kind)
 }
@@ -387,7 +384,7 @@ func (p *Project) joinWithClientLocked(seatID, roles, clientName, clientVersion,
 		switch source {
 		case "actor":
 			// The actor source is only reachable from an in-process Go caller that
-			// built the handle with .As() (planner/orchestrate/MCP) — `pactify join`
+			// built the handle with .As() (MCP or another caller) — `pactify join`
 			// has no --as flag, so naming one here would send a CLI user looking for
 			// something that does not exist.
 			fix = fmt.Sprintf("construct the handle as pact.At(dir).As(%q)", seatID)
@@ -855,7 +852,7 @@ func initBaseBranch(evs []event.Event) string {
 
 // Start records that the task's owner has been launched — the task-scoped
 // "working" fact the projection lifts to in_progress. It exists for the
-// orchestrate driver: a worker's own cold-start `join` (seat-scoped) is
+// former orchestrate driver: a worker's own cold-start `join` (seat-scoped) is
 // worker-reported and headless agents often skip it, leaving the board stuck on
 // `assigned` while the owner works. Only an `assigned` task can start; anything
 // further along already has a stronger status the start must not disturb.
@@ -1159,7 +1156,7 @@ func (p *Project) BaseBranch() (string, error) {
 func ConfigGate(command string) error { return At(".").ConfigGate(command) }
 
 // ConfigGate records a config_gate event setting the hard-gate command the
-// orchestrate driver runs before every merge for tasks that declare no per-task
+// former orchestrate driver ran before every merge for tasks that declared no per-task
 // `verify:` line. A later config_gate overrides an earlier one. Append-only.
 func (p *Project) ConfigGate(command string) error {
 	return p.withLedgerLock(func() error { return p.configGateLocked(command) })
@@ -1173,7 +1170,7 @@ func (p *Project) configGateLocked(command string) error {
 	if strings.TrimSpace(command) == "" {
 		return fmt.Errorf("config gate: command is required")
 	}
-	// The gate command guards every merge; only an orchestrator seat may set it.
+	// Only an orchestrator seat may set this legacy configuration.
 	st, _, err := p.state()
 	if err != nil {
 		return err
@@ -1188,7 +1185,7 @@ func (p *Project) configGateLocked(command string) error {
 }
 
 // GateConfig returns the project's configured hard-gate command (the latest
-// `config gate` setting) and whether one was set. orchestrate uses it ahead of a
+// config_gate event) and whether one was set. The former orchestrator used it ahead of a
 // project-type-inferred default. A log read failure is returned as an error,
 // DISTINCT from "no gate configured" (a missing log reads as absent, not error):
 // the consumer is the pre-merge safety gate, and swallowing a transient I/O error
@@ -1219,8 +1216,8 @@ func (p *Project) GateConfig() (string, bool, error) {
 // directory's repo.
 func ConfigCritic(seat string) error { return At(".").ConfigCritic(seat) }
 
-// ConfigCritic records a config_critic event naming the seat the orchestrate
-// driver runs as a read-only pre-review critic (spec review-runtime-deepening §3
+// ConfigCritic records a legacy config_critic event naming the seat the former
+// orchestrator ran as a read-only pre-review critic (spec review-runtime-deepening §3
 // WS-H): after a task's verify gate is green and before its reviewer, the critic
 // scores the diff vs the spec. The score has NO gating power — it only steers the
 // reviewer's attention. Mirrors ConfigGate: a later config_critic overrides an
@@ -1251,7 +1248,7 @@ func (p *Project) configCriticLocked(seat string) error {
 }
 
 // CriticConfig returns the project's configured critic seat (the latest
-// `config critic` setting) and whether one was set. orchestrate reads it to
+// config_critic event) and whether one was set. The former orchestrator read it to
 // decide whether to run a pre-review critic stint. Mirrors GateConfig: absent is
 // distinct from an unreadable log (a missing log reads as absent, not error).
 func (p *Project) CriticConfig() (string, bool, error) {
@@ -1309,7 +1306,7 @@ func (p *Project) noteLocked(taskID string, payload map[string]any) error {
 
 // Escalate records a task-level escalate event. It does not change the task
 // state machine (the projection ignores escalate events); it is an
-// observability-only ledger write emitted by the orchestrate driver when a task
+// observability-only ledger write historically emitted by the orchestrate driver when a task
 // cannot converge and needs human intervention. The payload carries the human
 // reason and the seat that triggered the escalation.
 func (p *Project) Escalate(taskID, feature, reason, seat string) error {

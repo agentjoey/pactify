@@ -17,7 +17,7 @@ func TestRouterAPI(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("PACTIFY_HOME", home)
 	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "")
-	h := New(nil).Handler()
+	h := New().Handler()
 	call := func(method, path, body, contentType, origin string) *httptest.ResponseRecorder {
 		t.Helper()
 		r := httptest.NewRequest(method, path, strings.NewReader(body))

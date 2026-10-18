@@ -22,8 +22,8 @@ type Permission struct {
 //	{model}      → model, OR dropped (with a directly-preceding lone -m/--model)
 //	             when model == "" (cleared/default model runs without an empty -m)
 //	{permission} → the blanket OR scoped fragment (spliced; {tools} comma-joined)
-//	{seat}       → left literal (the orchestrate runner substitutes lc.Seat at exec)
-//	{repoDir}    → left literal (the orchestrate runner substitutes lc.RepoDir at exec)
+//	{seat}       → left literal (the launch caller substitutes the seat at exec)
+//	{repoDir}    → left literal (the launch caller substitutes the repository path at exec)
 func RenderArgs(tmpl []string, perm Permission, posture agent.PermPosture, model, briefing string) []string {
 	out := make([]string, 0, len(tmpl)+len(perm.Blanket)+len(perm.Scoped))
 	for _, tok := range tmpl {

@@ -15,20 +15,19 @@ type PermPosture struct {
 // RunnerProfile is the parametric headless-launch profile for a drivable kind. It
 // separates the launch concern (model + permission posture + briefing → argv)
 // from the MCP-wiring metadata held by spec. BuildArgs renders the full argument
-// list; pass the literal "{briefing}" placeholder (orchestrate substitutes it
-// later) or the real prompt text directly.
+// list; pass the literal "{briefing}" placeholder for the caller to substitute
+// later, or pass the real prompt text directly.
 type RunnerProfile struct {
 	Command      string
 	DefaultModel string
 	// Models is the curated list of known/recommended model IDs for this kind,
-	// surfaced as the agent-config model dropdown (the UI always keeps a
-	// "custom…" escape hatch, so this need not be exhaustive). DefaultModel,
+	// retained as agent catalog metadata. DefaultModel,
 	// when non-empty, is expected to appear in the list.
 	Models    []string
 	BuildArgs func(model string, perm PermPosture, briefing string) []string
 	// EffortArgs renders this CLI's reasoning-effort flag(s). nil means the kind
 	// has no effort control — its launch stays byte-for-byte unchanged. It is a
-	// pure side channel: agentcfg appends EffortArgs(effort) AFTER BuildArgs, so
+	// pure side channel: callers append EffortArgs(effort) AFTER BuildArgs, so
 	// BuildArgs' default output (locked by launch_test/agent_test) is untouched.
 	EffortArgs func(effort string) []string
 }
@@ -98,7 +97,7 @@ var runnerProfiles = map[string]RunnerProfile{
 			return []string{"-p", briefing, "-m", model}
 		},
 	},
-	// codex-cli: `codex exec` is headless. Blanket (the orchestrate default) maps
+	// codex-cli: `codex exec` is headless. Blanket (the legacy default) maps
 	// to --sandbox danger-full-access — codex's workspace-write sandbox
 	// specifically protects `.git/` (it permits `git` commands but blocks direct
 	// writes into .git/), which blocks pactify's base merge lock
@@ -142,7 +141,7 @@ var runnerProfiles = map[string]RunnerProfile{
 	// because it pins the workspace explicitly rather than depending on cwd
 	// semantics that another caller could change; it is NOT evidence that the
 	// scratch failure mode is guarded against. The runner substitutes {repoDir}
-	// at exec (see orchestrate/runner.go).
+	// at exec.
 	// --print-timeout defaults to 5m (agy --help), too
 	// short for a typical pactify stint, so it's raised to 30m; not raising it
 	// manifests as a clean exit with no checkpoint. --dangerously-skip-permissions
@@ -202,7 +201,7 @@ func CandidateModels(kind string) []string {
 
 // Drivable reports whether a kind can be launched headlessly (#8): true iff it
 // has a runner profile. Surfaced in scan/registry so users see which agents
-// orchestrate can drive autonomously vs which need a human/escalation hand-off.
+// support headless launch vs which need a manual hand-off.
 func Drivable(kind string) bool {
 	_, ok := runnerProfiles[kind]
 	return ok

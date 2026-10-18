@@ -32,7 +32,7 @@ func TestConcurrentPlainResumeAPI(t *testing.T) {
 	store, _ := sub.DefaultStore()
 	parent := resumableAPIJob(t, store, "parent", actionRepo(t))
 	mux := http.NewServeMux()
-	server := New(nil)
+	server := New()
 	var starts atomic.Int32
 	server.registerJobWrites(mux, store, func(string) error { starts.Add(1); return nil })
 	start := make(chan struct{})
@@ -105,7 +105,7 @@ func TestDashboardConcurrentJobLimit(t *testing.T) {
 		}
 	}
 	mux := http.NewServeMux()
-	server := New(nil)
+	server := New()
 	var started atomic.Int32
 	server.registerJobWrites(mux, store, func(string) error { started.Add(1); return nil })
 	responses := make(chan *httptest.ResponseRecorder, 8)
@@ -161,7 +161,7 @@ func TestDashboardLaunchFailuresDoNotConsumeCapacity(t *testing.T) {
 	t.Setenv("PACTIFY_SUB_FAKE", "1")
 	store, _ := sub.DefaultStore()
 	cwd := actionRepo(t)
-	server := New(nil)
+	server := New()
 	mux := http.NewServeMux()
 	server.registerJobWrites(mux, store, func(string) error { return fmt.Errorf("cannot start worker") })
 	for i := 0; i < 6; i++ {

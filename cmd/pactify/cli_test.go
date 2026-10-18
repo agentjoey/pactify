@@ -28,7 +28,7 @@ func repoRoot(t *testing.T) string {
 func TestCLIHelpAndFullFlow(t *testing.T) {
 	bin := buildBinary(t)
 	dir := t.TempDir()
-	// Isolate the registry: init/orchestrate now auto-register, and tests must
+	// Isolate the registry: init auto-registers, and tests must
 	// not touch the developer's real ~/.pactify/projects.json.
 	home := t.TempDir()
 	run := func(env []string, args ...string) (string, error) {
@@ -209,204 +209,10 @@ func TestAgentScanRegisterUnregister(t *testing.T) {
 	}
 }
 
-// TestCLIOrchestrateHelpAndDryRun smoke-tests the orchestrate command: --help
-// surfaces the flags, and --dry-run on an inited project exits cleanly without
-// launching any agent.
-func TestCLIOrchestrateHelpAndDryRun(t *testing.T) {
-	bin := buildBinary(t)
-	dir := t.TempDir()
-	// Isolate the registry: init/orchestrate now auto-register, and tests must
-	// not touch the developer's real ~/.pactify/projects.json.
-	home := t.TempDir()
-	run := func(env []string, args ...string) (string, error) {
-		c := exec.Command(bin, args...)
-		c.Dir = dir
-		c.Env = append(append(os.Environ(), "PACTIFY_HOME="+home), env...)
-		out, err := c.CombinedOutput()
-		return string(out), err
-	}
-	for _, a := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t.t"}, {"config", "user.name", "t"}} {
-		c := exec.Command("git", a...)
-		c.Dir = dir
-		if out, err := c.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v %s", a, err, out)
-		}
-	}
-	if err := os.WriteFile(filepath.Join(dir, "base.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	for _, a := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "base"}} {
-		c := exec.Command("git", a...)
-		c.Dir = dir
-		if out, err := c.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v %s", a, err, out)
-		}
-	}
-
-	help, err := run(nil, "orchestrate", "--help")
-	if err != nil {
-		t.Fatalf("orchestrate --help: %v %s", err, help)
-	}
-	for _, flag := range []string{"--feature", "--resume", "--max-rework", "--max-iters", "--dry-run", "--seat-kind", "--roster-kind"} {
-		if !strings.Contains(help, flag) {
-			t.Fatalf("orchestrate --help missing %s:\n%s", flag, help)
-		}
-	}
-
-	env := []string{"PACT_AGENT_ID=orch"}
-	if out, err := run(env, "init", "--project", "p", "--seat", "orch:orchestrator,reviewer:CLAUDE.md", "--seat", "w:worker:AGENTS.md"); err != nil {
-		t.Fatalf("init: %v %s", err, out)
-	}
-	if err := os.MkdirAll(filepath.Join(dir, ".pact", "tasks"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, ".pact", "tasks", "t1.md"), []byte("# t1\n\nverify: true\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if out, err := run(env, "assign", "t1", "--feature", "f1", "--branch", "feat-f1", "--owner", "w", "--reviewer", "orch", "--spec", ".pact/tasks/t1.md"); err != nil {
-		t.Fatalf("assign: %v %s", err, out)
-	}
-
-	out, err := run(env, "orchestrate", "--dry-run", "--seat-kind", "w=opencode", "--seat-kind", "orch=claude-code")
-	if err != nil {
-		t.Fatalf("orchestrate --dry-run: %v %s", err, out)
-	}
-	// The spawner-facing channel parses the same way (this is the argv `pactify
-	// serve` actually writes; a rename or a parse change here breaks every
-	// dashboard-started run).
-	out, err = run(env, "orchestrate", "--dry-run", "--roster-kind", "w=opencode", "--roster-kind", "orch=claude-code")
-	if err != nil {
-		t.Fatalf("orchestrate --dry-run --roster-kind: %v %s", err, out)
-	}
-	if out, err := run(env, "orchestrate", "--dry-run", "--roster-kind", "bogus"); err == nil {
-		t.Fatalf("--roster-kind bogus should be rejected, got %q", out)
-	}
-}
-
-// TestCLIPlanApply smoke-tests the plan command: --help surfaces the planner
-// flags, `plan apply --help` carries --run, and `plan apply <feature>` over a
-// committed plan manifest + spec assigns its tasks. The smoke exercises only the
-// apply path — launching a real planner agent needs a live LLM and is covered by
-// integration acceptance, not this unit smoke.
-func TestCLIPlanApply(t *testing.T) {
-	bin := buildBinary(t)
-	dir := t.TempDir()
-	// Isolate the registry: init/orchestrate now auto-register, and tests must
-	// not touch the developer's real ~/.pactify/projects.json.
-	home := t.TempDir()
-	run := func(env []string, args ...string) (string, error) {
-		c := exec.Command(bin, args...)
-		c.Dir = dir
-		c.Env = append(append(os.Environ(), "PACTIFY_HOME="+home), env...)
-		out, err := c.CombinedOutput()
-		return string(out), err
-	}
-
-	planHelp, err := run(nil, "plan", "--help")
-	if err != nil {
-		t.Fatalf("plan --help: %v %s", err, planHelp)
-	}
-	for _, flag := range []string{"--feature", "--auto", "--run", "--planner-kind"} {
-		if !strings.Contains(planHelp, flag) {
-			t.Fatalf("plan --help missing %s:\n%s", flag, planHelp)
-		}
-	}
-
-	applyHelp, err := run(nil, "plan", "apply", "--help")
-	if err != nil {
-		t.Fatalf("plan apply --help: %v %s", err, applyHelp)
-	}
-	if !strings.Contains(applyHelp, "--run") {
-		t.Fatalf("plan apply --help missing --run:\n%s", applyHelp)
-	}
-
-	for _, a := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t.t"}, {"config", "user.name", "t"}} {
-		c := exec.Command("git", a...)
-		c.Dir = dir
-		if out, err := c.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v %s", a, err, out)
-		}
-	}
-	if err := os.WriteFile(filepath.Join(dir, "base.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	for _, a := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "base"}} {
-		c := exec.Command("git", a...)
-		c.Dir = dir
-		if out, err := c.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v %s", a, err, out)
-		}
-	}
-
-	env := []string{"PACT_AGENT_ID=claude"}
-	if out, err := run(env, "init", "--project", "p", "--seat", "claude:orchestrator,reviewer:CLAUDE.md", "--seat", "w:worker:AGENTS.md"); err != nil {
-		t.Fatalf("init: %v %s", err, out)
-	}
-	if err := os.MkdirAll(filepath.Join(dir, ".pact", "tasks"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, ".pact", "tasks", "f1-t1.md"), []byte("# t1\n\nverify: true\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	planJSON := `{
-  "feature": "f1",
-  "branch": "feat-f1",
-  "tasks": [
-    {"id": "t1", "owner": "w", "reviewer": "claude", "spec": ".pact/tasks/f1-t1.md", "verify": "true", "deps": []}
-  ]
-}`
-	if err := os.WriteFile(filepath.Join(dir, ".pact", "plan-f1.json"), []byte(planJSON), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	if out, err := run(env, "plan", "apply", "f1"); err != nil {
-		t.Fatalf("plan apply f1: %v %s", err, out)
-	}
-
-	st, err := run(env, "status")
-	if err != nil {
-		t.Fatalf("status: %v %s", err, st)
-	}
-	if !strings.Contains(st, "id: t1") || !strings.Contains(st, "status: assigned") {
-		t.Fatalf("plan apply did not assign t1:\n%s", st)
-	}
-}
-
-func TestCLIRoleSetBindList(t *testing.T) {
-	bin := buildBinary(t)
-	dir := t.TempDir()
-	home := t.TempDir()
-	run := func(args ...string) (string, error) {
-		c := exec.Command(bin, args...)
-		c.Dir = dir
-		c.Env = append(os.Environ(), "PACTIFY_HOME="+home)
-		out, err := c.CombinedOutput()
-		return string(out), err
-	}
-
-	if out, err := run("role", "set", "frontend", "--kind", "claude-code", "--model", "claude-opus-4-8"); err != nil {
-		t.Fatalf("role set: %v %s", err, out)
-	}
-	if out, err := run("role", "bind", "w2", "frontend"); err != nil {
-		t.Fatalf("role bind: %v %s", err, out)
-	}
-	out, err := run("role", "list")
-	if err != nil {
-		t.Fatalf("role list: %v %s", err, out)
-	}
-	if !strings.Contains(out, "frontend") || !strings.Contains(out, "claude-code") || !strings.Contains(out, "w2") {
-		t.Fatalf("role list must show the profile and the binding:\n%s", out)
-	}
-	// Binding to an undefined role fails loudly.
-	if out, err := run("role", "bind", "w3", "nope"); err == nil {
-		t.Fatalf("binding an unknown role must fail: %s", out)
-	}
-}
-
 func TestListMissing(t *testing.T) {
 	bin := buildBinary(t)
 	home := t.TempDir()
-	
+
 	// register a healthy project
 	healthyDir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(healthyDir, ".pact"), 0o755); err != nil {
@@ -429,7 +235,7 @@ func TestListMissing(t *testing.T) {
 	run("register", missingDir, "--name", "broken")
 
 	out := run("list")
-	
+
 	lines := strings.Split(strings.TrimSpace(out), "\n")
 	foundHealthy := false
 	foundBroken := false

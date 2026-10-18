@@ -50,9 +50,8 @@ var vendorAuth = map[string]authProbe{
 	// antigravity (binary agy) authenticates via an OAuth token FILE. It is not
 	// the ONLY path agy accepts — GOOGLE_API_KEY/GEMINI_API_KEY/
 	// GOOGLE_APPLICATION_CREDENTIALS are alternate tiers baked into the binary
-	// (see orchestrate/env.go, which strips all three) — but it is the only one
-	// pactify permits: an orchestrated agy stint has every vendor key blanked, so
-	// the OAuth file is load-bearing for exactly the runs doctor is preflighting.
+	// (see vendorenv) — but Pactify harness jobs clear vendor API keys, so
+	// doctor checks the OAuth file used by those jobs.
 	// Hence lenient=false: an absent token is a real red, same as codex-cli.
 	// Caveat this reports a false red for someone who drives agy by hand on an
 	// API key and never through pactify.

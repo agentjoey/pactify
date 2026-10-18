@@ -135,8 +135,7 @@ type PinnedSeat struct {
 // env pins a LITERAL PACT_AGENT_ID (spec seat-identity §3.4). An empty value or
 // an expansion token (${...}) is the de-identified form and is not flagged. This
 // backs `pactify doctor`'s "re-wire to drop the pinned identity" warning: a
-// pinned seat blocks multiple same-kind seats and overrides orchestrate's
-// injected identity.
+// pinned seat blocks multiple same-kind seats and overrides the runtime identity.
 func PinnedIdentity(dir string) []PinnedSeat {
 	var out []PinnedSeat
 	for _, k := range Kinds() {
@@ -173,10 +172,8 @@ func PinnedIdentity(dir string) []PinnedSeat {
 // against known. It returns the kind if it is an exact match or the unique kind
 // that has the base as a prefix; "" when there is no match or it is ambiguous.
 //
-// This is a HEURISTIC, and the orchestrate driver's last resort for a seat that
-// never recorded a kind (serve/orchestrate.go seatKindsFromFold). It lives here
-// so `pactify doctor` scopes its vendor preflight to the same kinds the driver
-// would actually launch — two copies would drift into two different answers.
+// This heuristic lets `pactify doctor` scope vendor checks for seats that
+// never recorded a kind.
 func InferKindFrom(seat string, known []string) string {
 	base := seat
 	for _, sfx := range []string{"-worker", "-reviewer", "-orchestrator"} {

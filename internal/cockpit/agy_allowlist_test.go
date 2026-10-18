@@ -61,8 +61,8 @@ func TestAgyArgumentAllowlistAttacks(t *testing.T) {
 
 func TestAgyArgumentAllowlistReads(t *testing.T) {
 	commands := []string{
-		"git log -n 1", "git log --oneline -n 5", "git ls-files internal/orchestrate", `git grep -l "codex-cli"`,
-		"ls cmd/pactify", "ls -la internal/sub", "cat .agent/CURRENT.md", `grep -rn "patrol" internal/`, `grep "package sub" internal/sub/*.go`, "find internal/orchestrate -type f", "go doc",
+		"git log -n 1", "git log --oneline -n 5", "git ls-files internal/sub", `git grep -l "codex-cli"`,
+		"ls cmd/pactify", "ls -la internal/sub", "cat .agent/CURRENT.md", `grep -rn "patrol" internal/`, `grep "package sub" internal/sub/*.go`, "find internal/sub -type f", "go doc",
 		"grep -RniLl c .", "grep -cwxEFvHhosq -e x .", "grep -A3 -B 2 -C1 x .", "grep --include=*.go --exclude=x --exclude-dir=.git --color=never x .",
 		"egrep -rn -e x internal", "fgrep -li x internal", "grep -e --pre file", "grep -- -literal file",
 		"rg -nilcwF -e x -g '*.go' -t go -T txt --hidden --no-ignore -A3 -B 2 -C1 -S -s -u .", "rg --files --json --glob=*.go --type=go", "rg -- -literal .",

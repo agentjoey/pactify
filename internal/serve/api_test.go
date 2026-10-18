@@ -9,7 +9,7 @@ import (
 
 func TestLegacyAPIRemoved(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
-	h := New(nil).Handler()
+	h := New().Handler()
 	for _, route := range []string{
 		"GET /api/projects", "GET /api/projects/p/state", "GET /api/projects/p/worktrees",
 		"GET /api/projects/p/events", "GET /api/projects/p/events/log",

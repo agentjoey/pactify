@@ -9,9 +9,9 @@ import (
 
 // autoRegister idempotently registers dir so serve/dashboard see the project
 // without a manual `pactify register` (spec: agent-started projects — an agent
-// that inits or orchestrates should appear on the dashboard by default). It is
+// that initializes should appear on the dashboard by default). It is
 // best-effort: a name conflict or write error is WARNED, never fatal, because
-// registration is a convenience and must not block init/orchestrate. noRegister
+// registration is a convenience and must not block init. noRegister
 // opts out entirely.
 func autoRegister(w io.Writer, dir string, noRegister bool) {
 	if noRegister {

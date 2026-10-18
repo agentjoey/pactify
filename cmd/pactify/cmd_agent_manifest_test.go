@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -11,7 +12,7 @@ func TestAgentManifestValidate(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "m.toml")
 	os.WriteFile(f, []byte("kind=\"myx\"\nbinary=\"myx\"\n[runner]\nargs=[\"run\",\"{briefing}\"]\n"), 0o644)
 	out := runManifest(t, "validate", f)
-	if !contains(out, "OK") {
+	if !strings.Contains(out, "OK") {
 		t.Fatalf("validate should print OK: %s", out)
 	}
 

@@ -38,7 +38,7 @@ func At(dir string) *Project {
 
 // Dir returns the repo root this handle is rooted at, after the PACT_DIR
 // resolution in At. Callers that need to inspect repo state outside the engine
-// (the checkpoint run-guard reads .pact/orchestrate/) must use this rather than
+// must use this rather than
 // the process cwd, or they inspect a different repo than the verb writes to.
 func (p *Project) Dir() string { return p.dir }
 

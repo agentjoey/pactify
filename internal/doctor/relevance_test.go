@@ -1,7 +1,6 @@
 package doctor
 
 import (
-	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,8 +10,7 @@ import (
 	"github.com/agentjoey/pactify/internal/pact"
 )
 
-// isolateHome points PACTIFY_HOME at a scratch dir so roles.Load() never reads
-// the developer's real ~/.pactify/roles.json.
+// isolateHome keeps machine-level Pactify state inside the test directory.
 func isolateHome(t *testing.T) string {
 	t.Helper()
 	h := t.TempDir()
@@ -57,23 +55,6 @@ func newPactProject(t *testing.T, seatSpecs ...string) string {
 	return cwd
 }
 
-// writeRoles drops a machine-level roles.json under PACTIFY_HOME binding seat to
-// a profile of the given kind.
-func writeRoles(t *testing.T, home, seat, role, kind string) {
-	t.Helper()
-	cfg := map[string]any{
-		"profiles": map[string]any{role: map[string]any{"kind": kind}},
-		"bindings": map[string]any{seat: role},
-	}
-	b, err := json.Marshal(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(home, "roles.json"), b, 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestRelevantKinds_RosterKind(t *testing.T) {
 	isolateHome(t)
 	dir := newPactProject(t, "w:worker:AGENTS.md:codex-cli")
@@ -86,38 +67,13 @@ func TestRelevantKinds_RosterKind(t *testing.T) {
 	}
 }
 
-// A seat with no recorded kind still routes to a vendor CLI by name (the same
-// heuristic the orchestrate driver uses), so it must count.
+// A seat with no recorded kind still identifies a vendor CLI by name.
 func TestRelevantKinds_SeatNameHeuristic(t *testing.T) {
 	isolateHome(t)
 	dir := newPactProject(t, "kimi-worker:worker:AGENTS.md")
 	got := RelevantKinds(dir)
 	if !got["kimi-cli"] {
 		t.Fatalf("seat named kimi-worker must make kimi-cli relevant: %v", got)
-	}
-}
-
-// A machine-level role binding overrides the roster kind for a seat, so the
-// bound profile's kind is what actually gets launched.
-func TestRelevantKinds_RoleBinding(t *testing.T) {
-	home := isolateHome(t)
-	dir := newPactProject(t, "w:worker:AGENTS.md")
-	writeRoles(t, home, "w", "impl", "kimi-cli")
-	got := RelevantKinds(dir)
-	if !got["kimi-cli"] {
-		t.Fatalf("role binding kind must be relevant: %v", got)
-	}
-}
-
-// A role bound to a seat that is NOT in this project's roster is another
-// project's business and must not leak in.
-func TestRelevantKinds_RoleBindingForForeignSeatIgnored(t *testing.T) {
-	home := isolateHome(t)
-	dir := newPactProject(t, "w:worker:AGENTS.md:opencode")
-	writeRoles(t, home, "somebody-elses-seat", "impl", "codex-cli")
-	got := RelevantKinds(dir)
-	if got["codex-cli"] {
-		t.Fatalf("binding for a foreign seat must not make codex-cli relevant: %v", got)
 	}
 }
 

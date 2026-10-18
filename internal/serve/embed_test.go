@@ -6,12 +6,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/agentjoey/pactify/internal/registry"
 )
 
 func TestServesEmbeddedDashboard(t *testing.T) {
-	srv := New([]registry.Project{{Name: "demo", Path: t.TempDir()}})
+	srv := New()
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 

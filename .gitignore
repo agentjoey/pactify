@@ -10,8 +10,6 @@ web/node_modules/
 # Python
 __pycache__/
 *.pyc
-# Session state
-data/
 # Secrets
 .env
 *.key

@@ -8,7 +8,6 @@ import (
 	"github.com/agentjoey/pactify/internal/agent"
 	"github.com/agentjoey/pactify/internal/gitx"
 	"github.com/agentjoey/pactify/internal/pact"
-	"github.com/agentjoey/pactify/internal/runguard"
 	"github.com/spf13/cobra"
 )
 
@@ -74,7 +73,7 @@ func newRootCmd() *cobra.Command {
 			return pact.At(".").JoinWithClientKindTask(a[0], joinRoles, "pactify-cli", pact.ClientVersion, joinKind, joinTask)
 		}}
 	joinCmd.Flags().StringVar(&joinRoles, "roles", "", "comma-separated roles")
-	joinCmd.Flags().StringVar(&joinKind, "kind", "", "declared agent kind recorded on the roster (orchestrate resolves seat→kind from it; dynamic seats)")
+	joinCmd.Flags().StringVar(&joinKind, "kind", "", "declared agent kind recorded on the roster")
 	joinCmd.Flags().StringVar(&joinTask, "task", "", "target task id: lift exactly this task (refused with a task-specific error when unknown, not owned, or dep-blocked)")
 
 	var feature, branch, owner, reviewer, spec string
@@ -112,25 +111,11 @@ func newRootCmd() *cobra.Command {
 	assignCmd.Flags().StringSliceVar(&deps, "deps", nil, "comma-separated dep task ids (same feature)")
 
 	var evidence string
-	var cpForce bool
 	cpCmd := &cobra.Command{Use: "checkpoint <task>", Args: cobra.ExactArgs(1), Short: "submit for review",
 		RunE: func(_ *cobra.Command, a []string) error {
-			proj := pact.At(".")
-			// Checkpoint commits the whole worktree, so a manual checkpoint taken
-			// while a driver is mid-stint on another task commits that task's
-			// half-written files under this one (real incident: an m4 worker's
-			// file landed in an m3 checkpoint, skewing per-task LOC). A run's own
-			// task is exempt — the briefing tells every worker to end with
-			// `pactify checkpoint <task>`.
-			if !cpForce {
-				if blocked := runguard.CheckpointBlocked(proj.Dir(), a[0]); blocked != "" {
-					return fmt.Errorf("%s\nwait for it to finish, or re-run with --force if you are sure the tree is yours", blocked)
-				}
-			}
-			return proj.Checkpoint(a[0], evidence)
+			return pact.At(".").Checkpoint(a[0], evidence)
 		}}
 	cpCmd.Flags().StringVar(&evidence, "evidence", "", "evidence text")
-	cpCmd.Flags().BoolVar(&cpForce, "force", false, "checkpoint even while another orchestrate run is in flight (commits the whole worktree)")
 
 	var acceptEvidence string
 	acceptCmd := &cobra.Command{Use: "accept <task>", Args: cobra.ExactArgs(1), Short: "reviewer accepts",
@@ -148,8 +133,7 @@ func newRootCmd() *cobra.Command {
 			if err := pact.Merge(a[0]); err != nil {
 				return err
 			}
-			// Default: local merge only — origin advances only when the orchestrator
-			// decides (spec coordination-authority P3-4). --push opts into pushing the
+			// Default: local merge only. --push opts into pushing the
 			// base branch (HEAD after a merge) to origin as part of this command.
 			if mergePush {
 				dir, err := os.Getwd()
@@ -181,31 +165,6 @@ func newRootCmd() *cobra.Command {
 	configCmd.AddCommand(&cobra.Command{Use: "base-branch <branch>", Args: cobra.ExactArgs(1),
 		Short: "set the integration base branch (corrects an init that captured a feature branch)",
 		RunE:  func(_ *cobra.Command, a []string) error { return pact.ConfigBaseBranch(a[0]) }})
-	configCmd.AddCommand(&cobra.Command{Use: "gate <command>", Args: cobra.ExactArgs(1),
-		Short: "set the hard-gate command orchestrate runs before every merge (default: inferred from project type — pnpm/npm/cargo/go)",
-		Long: `Set the project's hard test gate — the command orchestrate runs independently
-before merging a feature whose tasks declare no per-task ` + "`verify:`" + ` line.
-
-Without this, the gate defaults to one inferred from the project type:
-  pnpm-lock.yaml → pnpm build && pnpm test
-  package.json   → npm run build && npm test
-  Cargo.toml     → cargo build && cargo test
-  go.mod         → go build ./... && go test ./...
-
-Example (build-first JS gate):
-  pactify config gate "pnpm build && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test"`,
-		RunE: func(_ *cobra.Command, a []string) error { return pact.ConfigGate(a[0]) }})
-	configCmd.AddCommand(&cobra.Command{Use: "critic <seat>", Args: cobra.ExactArgs(1),
-		Short: "set the seat orchestrate runs as a read-only pre-review critic (default: off)",
-		Long: `Set the project's pre-review critic seat — the seat orchestrate runs read-only
-AFTER a task's verify gate is green and BEFORE its reviewer. The critic scores the
-diff vs the spec (a trailing CRITIC_SCORE: 0.0-1.0 line); the score is injected
-into the reviewer's briefing to steer attention.
-
-The score has NO gating power: a low score never auto-bounces a task (that is the
-verify gate's job). Off by default — set this (or pass orchestrate --critic) to
-enable. Override per-run with: pactify orchestrate --critic seat=<seat>`,
-		RunE: func(_ *cobra.Command, a []string) error { return pact.ConfigCritic(a[0]) }})
 
 	statusCmd := &cobra.Command{Use: "status", Short: "print STATE.yml",
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -250,7 +209,7 @@ enable. Override per-run with: pactify orchestrate --critic seat=<seat>`,
 		}}
 	seatAddCmd.Flags().StringVar(&seatRoles, "roles", "", "comma-separated roles (orchestrator/reviewer/worker)")
 	seatAddCmd.Flags().StringVar(&seatEntry, "entry", "AGENTS.md", "entry file for the seat's agent")
-	seatAddCmd.Flags().StringVar(&seatKind, "kind", "", "agent kind (wiring + orchestrate seat-kind inference)")
+	seatAddCmd.Flags().StringVar(&seatKind, "kind", "", "agent kind for wiring and roster identity")
 	seatUseCmd := &cobra.Command{Use: "use <id>", Args: cobra.ExactArgs(1), Short: "bind this working copy's default seat",
 		Long: "Write this checkout's default seat id to the untracked .pact/seat file\n" +
 			"(excluded from git). The identity chain falls back to it when\n" +
@@ -276,6 +235,6 @@ enable. Override per-run with: pactify orchestrate --critic seat=<seat>`,
 	seatCmd.AddCommand(seatAddCmd, seatUseCmd)
 
 	root.AddCommand(initCmd, joinCmd, assignCmd, cpCmd, acceptCmd, changesCmd, mergeCmd, cancelCmd, withdrawCmd, configCmd, statusCmd, logCmd, validateCmd, seatCmd,
-		newRoleCmd(), newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newRunCmd(), newOrchestrateCmd(), newPlanCmd(), newFinishCmd(), newSessionsCmd(), newRecipeCmd(), newAuditCmd(), newScheduleCmd(), newSubCmd())
+		newRegisterCmd(), newUnregisterCmd(), newListCmd(), newServeCmd(), newMCPCmd(), newAgentCmd(), newVersionCmd(), newDoctorCmd(), newSetupCmd(), newSubCmd())
 	return root
 }

@@ -1,5 +1,7 @@
 # Spec — Review & Runtime Deepening(评审深化 + 运行时增强,包2)
 
+> AJ-735: orchestrator runtime, critic/QA automation and related CLI commands were removed. This spec records the historical design; tag `v0.12.0` is the rollback anchor. Pact quorum and ledger behavior remain available.
+
 > Status: APPROVED-FOR-BUILD · 2026-07-05
 > 前置:包1 `docs/specs/driver-modernization.md`(ACP/知识层/doctor/统计)已合并。
 > 本包 = **第2梯队(C-24 自修环 + C-3 quorum 评审 + C-23 critic 预评 + C-25 QA 门)+ 第3梯队剩余(C-4 账本快照 + C-19 动态座席 + C-21 定时 run)**。

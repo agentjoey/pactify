@@ -4,9 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/agentjoey/pactify/internal/pact"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -46,37 +44,13 @@ func callTool(t *testing.T, cs *sdk.ClientSession, name string, args map[string]
 	return parseResult(t, res)
 }
 
-// The MCP tool is the path an agent (and a human driving one) takes, so it
-// needs the same guard as the CLI: checkpoint commits the whole worktree.
-func TestCheckpointToolRefusedWhileAnotherTaskIsBeingDriven(t *testing.T) {
+// Runtime files left by the removed orchestrator cannot block pact checkpoints.
+func TestCheckpointToolIgnoresLegacyRunStatus(t *testing.T) {
 	dir := newRepo(t)
 	assignT1(t, dir)
-	writeStatusJSON(t, dir, `{"feature":"m4","task":"m4-s11","seat":"kimi-worker","done":false,"escalated":false,"updated_at":"`+time.Now().UTC().Format(time.RFC3339)+`"}`)
-
+	writeStatusJSON(t, dir, `{"task":"another-task","done":false,"escalated":false,"updated_at":"2099-01-01T00:00:00Z"}`)
 	env := callTool(t, connect(t), "checkpoint", map[string]any{"task": "t1", "evidence": "ok"})
-
-	if env.OK {
-		t.Fatalf("checkpoint tool must refuse while another task is driven, got ok: %s", env.Data)
-	}
-	if !strings.Contains(env.Error, "m4-s11") {
-		t.Errorf("error must name the running task, got: %s", env.Error)
-	}
-	log, _ := os.ReadFile(filepath.Join(dir, ".pact", "log.jsonl"))
-	if strings.Contains(string(log), `"checkpoint"`) {
-		t.Errorf("refused checkpoint must not reach the ledger:\n%s", log)
-	}
-}
-
-// The worker's own task must stay open — the briefing tells workers to
-// checkpoint through exactly this tool.
-func TestCheckpointToolAllowsTheDrivenTask(t *testing.T) {
-	dir := newRepo(t)
-	assignT1(t, dir)
-	writeStatusJSON(t, dir, `{"feature":"f","task":"t1","seat":"opencode","done":false,"escalated":false,"updated_at":"`+time.Now().UTC().Format(time.RFC3339)+`"}`)
-
-	env := callTool(t, connect(t), "checkpoint", map[string]any{"task": "t1", "evidence": "ok"})
-
 	if !env.OK {
-		t.Fatalf("worker checkpoint of the driven task must pass, got error: %s", env.Error)
+		t.Fatalf("legacy status must not block checkpoint: %s", env.Error)
 	}
 }

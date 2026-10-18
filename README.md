@@ -14,7 +14,8 @@ no external dependency. The repo is the single source of truth.
 >
 > Pactify is moving to a **harness router** hosted by Claude Code. M1 is merged but
 > unreleased; v0.13.0 is on hold while the Owner continues internal use. The protocol
-> and local dashboard remain available as optional governance mode.
+> remains available as optional governance mode; the local dashboard serves harness jobs.
+> AJ-735 removes the old orchestrator and its CLI commands; tag `v0.12.0` is the rollback anchor.
 
 ## Install
 
@@ -51,10 +52,10 @@ your seat. Then launch your agent — it joins via the pact MCP tools. Run `pact
 anytime to verify install + wiring.
 
 **New to Pactify?** [`docs/onboarding.md`](docs/onboarding.md) walks a fresh project from zero
-to shipped in 5 minutes (register agents → setup → plan → run → ship), with seat definitions and
+through the optional pact workflow (register agents → setup → assign → checkpoint → review → merge), with seat definitions and
 dashboard deployment. `pactify serve` now serves only `/api/sub` and embedded static
 assets; governance commands remain available through CLI/MCP. `--seat` and
-`--project` now only configure scheduled orchestrate runs (AJ-723).
+`--project` are hidden no-op compatibility flags; the scheduler was removed (AJ-735).
 
 ## Claude Code (one-click)
 

@@ -231,8 +231,8 @@ func (f *Folder) apply(evs []event.Event) {
 			}
 		case "join":
 			// Dynamic-seat roster write (spec §6 WS-K): a join may carry `kind` (and
-			// roles) so a seat can DECLARE/refresh how it is driven, and a planner-
-			// proposed seat can enter the roster without an init/add-seat. Record it:
+			// roles) so a seat can declare its kind, and a new seat
+			// can enter the roster without an init/add-seat. Record it:
 			// refresh an existing seat's kind (roles only when it had none, so an init
 			// seat's roles are never clobbered), or append a brand-new roster seat.
 			// A kind-free join by an existing roster seat mutates nothing here, keeping
@@ -260,7 +260,7 @@ func (f *Folder) apply(evs []event.Event) {
 			// Join itself checks out (engine JoinWithClient). Flipping every
 			// assigned task the seat owns corrupted the board: dep-blocked and
 			// never-started tasks showed in_progress, and the join gate lost its
-			// startable set. Task-scoped `start` covers the orchestrate path.
+			// startable set. Task-scoped `start` records an explicit task launch.
 			// A TARGETED join (payload `task`, engine JoinTask) lifts exactly the
 			// named task instead — and nothing when that task isn't liftable, so
 			// replay of arbitrary logs stays deterministic.
@@ -297,7 +297,7 @@ func (f *Folder) apply(evs []event.Event) {
 				}
 			}
 		case "start":
-			// Task-scoped "working" fact recorded by the orchestrate driver when it
+			// Task-scoped "working" fact historically recorded by the orchestrate driver when it
 			// launches the task's owner (join is seat-scoped and worker-reported,
 			// which headless workers skip). Only lifts a task out of `assigned` —
 			// never rewinds checkpoint/review outcomes.

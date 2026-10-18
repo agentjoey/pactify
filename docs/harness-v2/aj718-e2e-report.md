@@ -50,7 +50,7 @@ opencode 2.0.32，模型 `opencode/deepseek-v4.1-flash-free`，持久的 `PACTIF
 > - kimi 在测试期间刷新了一次登录令牌，按目录链接写回了用户目录，没有进入隔离区，之后登录仍然有效。原始汇总见 `aj718-e2e-results/host-kimi*.json`。
 
 - **集成机制在四家上都成立。** 写入与 worktree、续接、取消与进程清理、4 分钟长工具、5 MB 大输出、三路并发、模型兑现、失败分类、记录一致性、AGENTS.md、经 Claude Code 插件的 host 路径：codex、opencode、agy、kimi 全部通过（kimi 不提供只读，两项只读场景为 N/A）。
-- **唯一共同的失败是只读调用上限。** 三家读 60 个文件都在第 41 次调用时被截断，codex 也不例外。这是 pactify 自己的限制（`cmd/pactify/cmd_sub.go` 的 `ToolCallLimit: 40`），调整方案待 Owner 决定。
+- **唯一共同的失败是只读调用上限。** 三家读 60 个文件都在第 41 次调用时被截断，codex 也不例外。这是 pactify 自己的限制（当时 `cmd/pactify/cmd_sub.go` 的 `ToolCallLimit: 40`）。**Owner 2026-10-18 决定提高到 200（AJ-721）**，本节结果仍按 40 记录，未重跑。
 - **codex 上游的可观测性缺口。** codex 0.162.1 的 app-server 对模型使用的统一执行工具（输出带 `chunk_id`、`wall_time_seconds`）不发任何 item。host 直接驱动 app-server 复现过：一次被沙箱拒绝的 shell 写入前后，只有两条 agentMessage。后果：这类调用不进 job 日志，也不计入工具调用次数，codex 的只读上限对它们不生效。写入仍由 OS 沙箱拦截，所以不是安全问题。
 - **opencode 的只读拒写判不出集成好坏。** opencode 的只读靠 plan agent 加 deny 规则；plan 模式的提醒让模型根本不去尝试写入。deny 规则生效由 AJ-713 的 golden 回放证明。建议这一项对 opencode 以 golden 为准，不再要求实跑中出现被拒的调用。
 

@@ -8,6 +8,12 @@
 
 ---
 
+## Unreleased — AJ-721 · read-only tool-call limit 40 → 200
+
+- **Why**: in the AJ-718 end-to-end suite every harness with read-only support (codex, opencode 1.x/2.x, agy) failed `readonly_long` at call 41 — a 60-file read is an ordinary review, so 40 was too tight. Owner decision 2026-10-18.
+- **What**: `sub.DefaultReadOnlyToolCallLimit = 200` replaces the hard-coded 40 in `sub run` and `sub doctor`. The limit still applies only to read-only jobs; `0` still disables it.
+- **Gates**: new `TestRunJobDefaultToolCallLimitAllowsSixtyFileRead` (fails with the old value), `go build ./...`, `go vet ./...`, isolated `go test ./...`.
+
 ## Unreleased — AJ-720 · opencode 2.x backend
 
 - **One `opencode` harness, two backends**: the installed major version (one cached probe) selects the existing 1.x backend or the new 2.x backend; ≥ 3 still fails fast. Resuming across majors is refused using the previous job's recorded CLI version (both majors use `ses_` ids). 1.x behaviour, tests and goldens are unchanged.

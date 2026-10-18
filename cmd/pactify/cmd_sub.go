@@ -407,7 +407,7 @@ func subWorker(parent context.Context, id string) (code int, err error) {
 			st.FinishedAt = st.UpdatedAt
 			return 2, subSaveFallback(store, st)
 		}
-		result, err := sub.RunJob(ctx, store, id, h, sub.WorkerConfig{ToolCallLimit: 40})
+		result, err := sub.RunJob(ctx, store, id, h, sub.WorkerConfig{ToolCallLimit: sub.DefaultReadOnlyToolCallLimit})
 		if result.FallbackTo != "" {
 			id = result.FallbackTo
 			continue

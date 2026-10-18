@@ -327,6 +327,24 @@ func TestRunJobToolCallLimitInterrupts(t *testing.T) {
 		t.Fatalf("result=%+v", r)
 	}
 }
+func TestRunJobDefaultToolCallLimitAllowsSixtyFileRead(t *testing.T) {
+	store, s, b := workerFixture(t, "read-only")
+	s.script = func(s *fakeSession) {
+		for i := 0; i < 61; i++ {
+			s.events <- cockpit.Event{Kind: cockpit.EventTool, Tool: &cockpit.ToolEvent{Phase: "start", Name: "read"}}
+			s.events <- cockpit.Event{Kind: cockpit.EventTool, Tool: &cockpit.ToolEvent{Phase: "end", Name: "read"}}
+		}
+		s.events <- cockpit.Event{Kind: cockpit.EventMessage, Final: true, Text: "done"}
+		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
+	}
+	r, err := RunJob(context.Background(), store, "j1", newFakeHarness(b), WorkerConfig{ToolCallLimit: DefaultReadOnlyToolCallLimit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.canceled.Load() || r.Status != StatusSucceeded || contains(r.Warnings, "Tool-call limit exceeded") {
+		t.Fatalf("result=%+v", r)
+	}
+}
 func TestRunJobModelVerificationAndResume(t *testing.T) {
 	store, s, b := workerFixture(t, "write")
 	st, _ := store.Load("j1")

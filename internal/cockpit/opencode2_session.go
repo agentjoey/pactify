@@ -178,7 +178,7 @@ func (s *opencode2Session) Interrupt(ctx context.Context) error {
 	s.server.mu.Unlock()
 	return errors.Join(err, procx.TerminateDescendants("opencode tools", children, 250*time.Millisecond))
 }
-func (s *opencode2Session) permission2(ctx context.Context, sid, id, name string, raw json.RawMessage) {
+func (s *opencode2Session) permission2(sid, id, name string, raw json.RawMessage) {
 	var once sync.Once
 	var replyErr error
 	respond := func(d Decision) error {
@@ -187,7 +187,7 @@ func (s *opencode2Session) permission2(ctx context.Context, sid, id, name string
 			if s.opts.Access != AccessReadOnly && (d == DecisionAllow || d == DecisionAllowForSession) {
 				body = map[string]string{"decision": "once"}
 			}
-			replyErr = s.server.call2(ctx, "POST", "/api/session/"+url.PathEscape(sid)+"/permission/"+url.PathEscape(id)+"/reply", body, nil)
+			replyErr = s.server.call2(s.replyContext(), "POST", "/api/session/"+url.PathEscape(sid)+"/permission/"+url.PathEscape(id)+"/reply", body, nil)
 			b, _ := json.Marshal(body)
 			s.dispatch(Event{Kind: EventSystem, State: "permission.replied", Raw: b})
 			if replyErr != nil {

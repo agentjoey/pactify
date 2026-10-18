@@ -8,6 +8,12 @@
 
 ---
 
+## Unreleased — opencode permission replies outlive the event stream (AJ-720 follow-up)
+
+- **Why**: CI intermittently failed `TestOpencode2Flows/permission` and `TestOpencodeServeWorkerV2/permission` with `Approval failed … context canceled`. Both opencode backends sent the permission reply with the event-stream context captured when the request arrived; approvers answer asynchronously, so a stream that had ended or reconnected cancelled the reply and the job failed.
+- **What**: replies (1.x and 2.x) now use the session's lifetime context; the server call keeps its own 15-second timeout, and a reply after `Close` still fails.
+- **Gates**: new `TestOpencodePermissionReplyOutlivesStream` (fails if the reply ignores the session lifetime); `go build ./...`, `go vet ./...`, isolated cockpit and sub tests, `-race -count=3` on the opencode cockpit tests.
+
 ## Unreleased — AJ-724 · delegation path no longer depends on the orchestrator or governance packages
 
 - **Why**: `internal/sub` pulled in orchestrate, audit, sessions, agent, pact, ledger and projection for two calls only, so the frozen orchestrator could not be removed on its own.

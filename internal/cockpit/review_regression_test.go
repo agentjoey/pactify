@@ -465,3 +465,36 @@ func TestReviewPromptHTTPError(t *testing.T) {
 		}
 	}
 }
+
+// Approvers answer asynchronously, after the event stream that carried the
+// request may have ended; the reply is bounded by the session instead.
+func TestOpencodePermissionReplyOutlivesStream(t *testing.T) {
+	replies := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/permission/") && strings.HasSuffix(r.URL.Path, "/reply") {
+			b, _ := io.ReadAll(r.Body)
+			replies <- string(b)
+			w.Write([]byte("true"))
+			return
+		}
+		http.Error(w, "unexpected "+r.URL.Path, 404)
+	}))
+	t.Cleanup(srv.Close)
+	life, stop := context.WithCancel(context.Background())
+	t.Cleanup(stop)
+	s := &opencodeSession{server: &opencodeServer{url: srv.URL, password: "p", http: srv.Client()}, id: "sid", opts: StartOpts{Access: AccessWrite}, events: make(chan Event, 64), approvals: make(chan ApprovalRequest, 16), done: life.Done(), lifeCtx: life, stop: stop}
+	s.permission("per-1", "bash", json.RawMessage(`{"command":"git status"}`))
+	a := <-s.Approvals()
+	if err := a.Respond(DecisionAllow); err != nil {
+		t.Fatalf("late reply failed: %v", err)
+	}
+	if got := <-replies; !strings.Contains(got, `"once"`) {
+		t.Fatalf("reply body = %s", got)
+	}
+	s.permission("per-2", "bash", nil)
+	late := <-s.Approvals()
+	stop()
+	if err := late.Respond(DecisionAllow); err == nil {
+		t.Fatal("reply after Close must fail instead of reaching opencode")
+	}
+}

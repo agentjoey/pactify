@@ -1,8 +1,4 @@
-// Package lockx provides a cross-process advisory file lock (flock(2)). pact uses
-// it to serialize writes to a repo's base branch: every `pactify merge` acquires
-// the same lock before its checkout→merge→commit critical section, so concurrent
-// merges (different processes, or different git worktrees sharing one .git)
-// queue instead of racing — the base-integration lane of spec coordination-authority P1.
+// Package lockx provides a cross-process advisory file lock (flock(2)) for job state.
 package lockx
 
 import (
@@ -18,7 +14,7 @@ import (
 // that unlocks and closes the handle. The lock is held by the OS against the file,
 // so independent processes — and worktrees pointing at the same lock file —
 // serialize on it. flock is advisory: it only excludes other flock holders, which
-// is exactly the set of pactify merges.
+// must use the same locking convention.
 func Acquire(ctx context.Context, path string) (func(), error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, err

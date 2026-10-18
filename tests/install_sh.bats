@@ -22,6 +22,7 @@ REPO="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
   bindir="$BATS_TEST_TMPDIR/bin"; mkdir -p "$bindir"
   run env PACTIFY_DOWNLOAD_BASE="file://$base" PACTIFY_BINDIR="$bindir" sh "$REPO/install.sh"
   [ "$status" -eq 0 ]
+  [[ "$output" == *'pactify sub --help'* ]]
   [ -x "$bindir/pactify" ]
   run "$bindir/pactify"
   [ "$output" = "fake-pactify" ]

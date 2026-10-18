@@ -1,20 +1,38 @@
 #!/usr/bin/env bats
-load helpers
 
-@test "help lists all verbs and the two rules" {
-  setup_pact_repo
-  run pact_help
-  [ "$status" -eq 0 ]
-  for v in pact_init pact_assign pact_join pact_checkpoint pact_accept pact_merge pact_status; do
-    [[ "$output" == *"$v"* ]]
-  done
-  [[ "$output" == *"cannot self-accept"* ]]
-  [[ "$output" == *"all its tasks are accepted"* ]]
+REPO="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+
+setup_file() {
+  export PACTIFY_HELP_BIN="$BATS_FILE_TMPDIR/pactify"
+  (cd "$REPO" && go build -o "$PACTIFY_HELP_BIN" ./cmd/pactify)
 }
 
-@test "pact.sh --help works when executed directly" {
-  setup_pact_repo
-  run bash .pact/bin/pact.sh --help
+@test "help lists only router commands" {
+  run "$PACTIFY_HELP_BIN" --help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"pact protocol"* ]]
+  commands="$(printf '%s\n' "$output" | sed -n '/^Available Commands:/,/^Flags:/p' | awk '/^  [a-z]/ {print $1}')"
+  [ "$commands" = "completion
+help
+serve
+sub
+version" ]
+}
+
+@test "retired join command and serve seat flag are rejected" {
+  run "$PACTIFY_HELP_BIN" join
+  [ "$status" -ne 0 ]
+  [[ "$output" == *'unknown command "join"'* ]]
+  run "$PACTIFY_HELP_BIN" serve --seat x
+  [ "$status" -ne 0 ]
+  [[ "$output" == *'unknown flag: --seat'* ]]
+}
+
+@test "version and sub help work" {
+  run "$PACTIFY_HELP_BIN" --version
+  [ "$status" -eq 0 ]
+  [[ "$output" == pactify* ]]
+  run "$PACTIFY_HELP_BIN" sub --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *run* ]]
+  [[ "$output" == *doctor* ]]
 }

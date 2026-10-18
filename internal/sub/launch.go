@@ -16,7 +16,7 @@ import (
 func (store Store) StartWorker(id string) error { return store.startWorker(id, false) }
 
 // StartDashboardWorker reaps children in the long-lived server and strips
-// variables that configure serve or the frozen ref-ledger mirror.
+// variables that configure serve.
 func (store Store) StartDashboardWorker(id string) error { return store.startWorker(id, true) }
 
 func (store Store) startWorker(id string, dashboard bool) error {
@@ -42,7 +42,7 @@ func (store Store) startWorkerCommand(id string, cmd *exec.Cmd, dashboard bool) 
 		cmd.Env = []string{}
 		for _, entry := range os.Environ() {
 			key, _, _ := strings.Cut(entry, "=")
-			if key != "PACTIFY_ALLOWED_ORIGINS" && key != "PACTIFY_LEDGER_REF" {
+			if key != "PACTIFY_ALLOWED_ORIGINS" {
 				cmd.Env = append(cmd.Env, entry)
 			}
 		}

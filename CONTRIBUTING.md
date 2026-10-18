@@ -37,26 +37,18 @@ git checkout main && git pull
 
 With `enforce_admins: false` in the branch protection below, the maintainer **may commit trivial
 docs/chore changes directly to `main`** (e.g. README/spec touch-ups, status-board updates).
-Anything that changes behaviour or `.pact/bin/pact.sh` / `schemas/` goes through a PR.
+Anything that changes behaviour goes through a PR.
 
 CI (GitHub Actions) runs go vet/test/build + bats + web tests on every push & PR — see
 *Branch protection (maintainer)* below for the gate.
-
-## Two different "feature branches" — don't confuse them
-
-- **Repo git branches** (`feat/*` above) organise changes to *this codebase*.
-- The **`.pact/` protocol's** own feature branches/`STATE.yml` describe *multi-agent task execution*
-  inside a repo that uses Pactify. During Pactify's own development the protocol dogfood runs in a
-  separate scratch repo, so the two never collide here.
 
 ## Tests
 
 ```bash
 bats tests/        # full suite — must be green before any PR merges
 ```
-New behaviour requires tests (TDD). Schema/protocol changes must keep `tests/schemas.bats` and
-`tests/protocol_v1.bats` green and, if they change the contract, bump `protocol_version` per the
-compatibility rules in `docs/specs/pact-protocol.md`.
+New behaviour requires focused regression coverage. Run Go checks with an isolated
+`PACTIFY_HOME`; see [AGENTS.md](AGENTS.md) for the full development commands.
 
 ## Branch protection (maintainer)
 

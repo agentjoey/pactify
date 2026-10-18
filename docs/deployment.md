@@ -13,7 +13,7 @@ go install github.com/agentjoey/pactify/cmd/pactify@latest
 ```
 
 当前发布版为 v0.12.0。harness 路由器功能已合入 main、尚未发布；内部自用请从本 repo 构建。
-可选治理模式的项目接入见 [onboarding.md](onboarding.md)。
+治理模式已退役（AJ-744）；历史实现见 tag `v0.12.0`。
 
 ## 开发环境（本 repo）
 
@@ -36,13 +36,11 @@ pactify serve --addr 127.0.0.1:17082
 ```
 
 serve 只提供 `/api/sub`（Jobs、Dashboard、Settings、Live，含 job events SSE）和嵌入静态资源。
-AJ-723 已删除旧治理 API；治理命令继续使用 CLI/MCP。CSRF Origin guard 保留，
-反向代理域名通过 `PACTIFY_ALLOWED_ORIGINS` 配置；GET 不要求额外 header。
-`--seat`、可重复的 `--project` 与 `--relay-url`、`--relay-token`、`--remote-control`
-均为隐藏的空操作兼容参数。旧 launchd plist 可继续启动 serve。
-
-AJ-735 已删除 scheduler 和 orchestrator 及其 CLI 命令；回滚锚点为 tag `v0.12.0`。
-serve 不再读取定时任务或发现治理项目。
+浏览器写请求受 CSRF Origin guard 保护；反向代理域名通过
+`PACTIFY_ALLOWED_ORIGINS` 配置。GET 不要求额外 header。保持 loopback 监听，
+公网入口使用 Cloudflare Tunnel + Access 认证；见 [jobs-view.md](jobs-view.md)。
+launchd plist 只传 `serve --addr 127.0.0.1:17082`；旧 `--seat`、`--project` 和 relay
+兼容参数已删除。serve 不发现治理项目，也不运行定时编排。
 
 ## pactify.dev (Astro site on Vercel)
 
@@ -52,23 +50,7 @@ monorepo's `site/` on 2026-07-03 so the product repo and the website deploy inde
 push here no longer triggers a pactify.dev rebuild (that was the whole point of the old
 `site/vercel.json` `ignoreCommand`, now retired along with `site/`).
 
-The three canonical files the site renders — `install.sh`, `docs/specs/pact-protocol.md`,
-`docs/agent-onboarding.md` — are the source of truth **here**; the website repo vendors copies
-into its `vendor/` via `scripts/sync-from-pactify.mjs`. When you change any of them, refresh the
-website's vendor and commit it there:
-
-```bash
-# in a pactify-website checkout
-node scripts/sync-from-pactify.mjs                 # from a local ../pactify checkout
-node scripts/sync-from-pactify.mjs --ref v1.0.0    # or pin a released pactify ref (GitHub)
-git add vendor && git commit -m "chore: sync vendored docs from pactify@<ref>"
-```
-
-Post-deploy verification:
-```bash
-curl -fsSL https://pactify.dev/install.sh | head -2     # shebang + comment
-curl -s https://pactify.dev/protocol | grep -c "Pact Protocol v1"
-```
-
-Constraint: the site is fully static — no Vercel-exclusive features — so it can move to
-any static host (Phase 6 China GTM) by re-pointing DNS.
+The website is maintained separately. `install.sh` remains the release installer
+source here; governance protocol and onboarding documents moved to `docs/archive/`
+in AJ-744 and no longer describe the current product. Website changes and vendor
+refreshes are made in the website repository.

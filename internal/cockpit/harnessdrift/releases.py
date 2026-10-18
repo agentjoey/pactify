@@ -15,16 +15,14 @@ AGY_MANIFEST = 'https://antigravity-cli-auto-updater-974169037036.us-central1.ru
 # Every channel an official installer can deliver, including successor
 # packages: opencode 2.x ships as @opencode/cli while opencode-ai stays on 1.x.
 CHANNELS = {
-    'codex': [('npm', '@openai/codex')],
-    'kimi': [('npm', '@moonshot-ai/kimi-code')],
-    'opencode': [('npm', 'opencode-ai'), ('npm', '@opencode/cli')],
-    'agy': [('manifest', AGY_MANIFEST)],
+    'codex': [('npm', '@openai/codex', 'codex')],
+    'kimi': [('npm', '@moonshot-ai/kimi-code', 'kimi')],
+    'opencode': [('npm', 'opencode-ai', 'opencode'), ('npm', '@opencode/cli', 'opencode2')],
+    'agy': [('manifest', AGY_MANIFEST, 'agy')],
 }
 # Major lines already triaged. A tracked line is reported, not alerted; remove
 # the entry once the adapter supports that line and the baseline moves.
-TRACKED = {
-    ('opencode', 2): 'AJ-719: not supported; pactify fails fast. v2 adapter awaits an Owner decision.',
-}
+TRACKED = {}
 
 
 def baselines():
@@ -76,14 +74,14 @@ def watch(fetch=fetch_json, table=None):
     table = table or baselines()
     rows = []
     for harness, channels in CHANNELS.items():
-        for kind, source in channels:
+        for kind, source, baseline_key in channels:
             name = source if kind == 'npm' else 'installer manifest'
             try:
                 version, deprecated = latest(kind, source, fetch)
             except Exception as err:  # Registry outages must not page anyone.
                 rows.append((harness, name, 'skip', f'unavailable: {type(err).__name__}: {err}'))
                 continue
-            rows.append((harness, name) + classify(harness, table[harness], version, deprecated))
+            rows.append((harness, name) + classify(harness, table[baseline_key], version, deprecated))
     return rows
 
 

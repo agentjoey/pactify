@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/agentjoey/pactify/internal/cockpit"
 	"io"
 	"net/http"
 	"os/exec"
@@ -15,12 +16,26 @@ import (
 	"time"
 )
 
-// Discovery is the only upstream HTTP request outside the built pactify CLI:
-// GET metadata, never a session/prompt. Use the same live v1 provider boundary
-// as AJ-713, without calling the internal adapter's business functions.
+// Discovery never sends a prompt: v1 retains its live provider fixture, while
+// v2 uses the selected product discovery API and the fixture's private home.
 func liveOpencodeModels(f *fixture) (map[string]bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	if f.s.adapter.Opencode2 {
+		env, err := opencodeFixtureEnv(f.s.adapter, f.env)
+		if err != nil {
+			return nil, err
+		}
+		models, err := f.s.adapter.Models(ctx, cockpit.StartOpts{Env: env, RepoDir: f.repo, MinimalConfig: true})
+		if err != nil {
+			return nil, err
+		}
+		available := map[string]bool{}
+		for _, model := range models {
+			available[model] = true
+		}
+		return available, nil
+	}
 	password := randomWord() + randomWord() + randomWord()
 	env := setenv(f.env, "OPENCODE_SERVER_PASSWORD", password)
 	env = append(env, "OPENCODE_SERVER_USERNAME=opencode", "OPENCODE_PURE=1", "OPENCODE_DISABLE_AUTOUPDATE=1", "OPENCODE_DISABLE_CLAUDE_CODE=1", "OPENCODE_DISABLE_EXTERNAL_SKILLS=1")

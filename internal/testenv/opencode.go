@@ -237,7 +237,7 @@ func InstallOpencodeServe(t *testing.T) string {
 		t.Fatal(err)
 	}
 	bin := t.TempDir()
-	script := "#!/bin/sh\n[ \"$*\" = 'serve --hostname 127.0.0.1 --port 0' ] || exit 42\nexec '" + strings.ReplaceAll(exe, "'", "'\"'\"'") + "' -test.run='^TestOpencodeServePeer$'\n"
+	script := "#!/bin/sh\nif [ \"$1\" = --version ]; then echo 1.19.0; exit 0; fi\n[ \"$*\" = 'serve --hostname 127.0.0.1 --port 0' ] || exit 42\nexec '" + strings.ReplaceAll(exe, "'", "'\"'\"'") + "' -test.run='^TestOpencodeServePeer$'\n"
 	if err := os.WriteFile(filepath.Join(bin, "opencode"), []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}

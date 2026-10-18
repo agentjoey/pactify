@@ -57,6 +57,9 @@ func OpencodeModels(ctx context.Context, opts StartOpts) ([]string, error) {
 }
 
 func opencodeFailure(message string, raw json.RawMessage) Failure {
+	if f, ok := opencode2Failure(raw); ok {
+		return f
+	}
 	var e struct {
 		Name string `json:"name"`
 		Data struct {
@@ -91,5 +94,5 @@ func opencodeFailure(message string, raw json.RawMessage) Failure {
 	if json.Unmarshal(raw, &stop) == nil && stop.Reason != "" {
 		return acpFailure(message, raw, nil)
 	}
-	return matchFailure(message, []failureRule{{"run opencode login first", "auth"}, {"insufficient balance", "quota"}, {"requested model is not offered by this agent", "model"}})
+	return matchFailure(message, []failureRule{{"opencode 2.x has no pactify login", "auth"}, {"run opencode login first", "auth"}, {"insufficient balance", "quota"}, {"requested model is not offered by this agent", "model"}})
 }

@@ -174,6 +174,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			reports = append(reports, alignDoctorChecks(r))
 			continue
 		}
+		h = h.forVersion(r.Version)
 		add("Installed", true, "CLI version "+r.Version)
 		jobStore := Store{Root: filepath.Join(root, h.Name, "home", "jobs")}
 		network := h.Name == "codex" || h.Name == "opencode" || h.Name == "agy" || h.Name == "kimi"
@@ -297,6 +298,20 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		ranAll := writeErr == nil && writable.Status == StatusSucceeded
 		if h.NoReadOnly != "" {
 			skip("Read-only access", h.NoReadOnly)
+		} else if h.Opencode2 {
+			// In v2 the write tools are removed before the model sees them. No
+			// attempted-write event or tool-call count is required as evidence.
+			readonly, roRepo, roErr := run("read-only", "This is a read-only diagnostic. Do not create probe.txt or seek a workaround. Explain briefly that writing tools are unavailable, then finish.")
+			_, statErr := os.Lstat(filepath.Join(roRepo, "probe.txt"))
+			permissionErr := jobStore.CheckOpencode2Readonly(ctx, "read-only", readonly, nil)
+			good := roErr == nil && readonly.Status == StatusSucceeded && os.IsNotExist(statErr) && permissionErr == nil
+			reason := fmt.Sprintf("write tools removed from readonly session and confirmed by permission evaluation; status=%s, write target absent=%t, shell/edit/external_directory deny=%t%s", readonly.Status, os.IsNotExist(statErr), permissionErr == nil, doctorError(roErr))
+			if permissionErr != nil {
+				reason += "; " + permissionErr.Error()
+			}
+			add("Read-only access", good, reason)
+			results = append(results, readonly)
+			ranAll = ranAll && good
 		} else {
 			readonlyBrief := "Use your shell execution tool to execute this exact command once in the current directory, even if you expect the sandbox to deny the write:\n\n```sh\nsh -c 'echo hi > out.txt'; echo EXIT=$?\n```\n\nReport the command's stdout and stderr verbatim, including the EXIT line. Do not predict the result or claim a denial without invoking the tool. Do not request elevated permissions, retry, or seek a workaround; report the actual output and stop."
 			if h.Name == "opencode" || h.Name == "agy" {
@@ -391,6 +406,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				homeErr = checkUserHome()
 			}
 			homeReason := "Probe succeeded in the shared minimal home with intact links and private sessions"
+			if h.Name == "opencode" && opencodeMajor(r.Version) == 2 {
+				homeReason = "Probe succeeded in pactify's private v2 database; credentials and sessions are isolated from the user's lists"
+			}
 			if homeErr != nil {
 				homeReason = homeErr.Error()
 				hidden = false

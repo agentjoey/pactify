@@ -85,6 +85,7 @@ type opencodeMessage struct {
 type opencodeEvent struct {
 	Type       string          `json:"type"`
 	Properties json.RawMessage `json:"properties"`
+	Data       json.RawMessage `json:"data,omitempty"`
 }
 
 type opencodeSession struct {
@@ -159,6 +160,10 @@ func newOpencodeSession(ctx context.Context, opts StartOpts, id string) (*openco
 		return fail(fmt.Errorf("opencode returned an empty session id"))
 	}
 	if err := server.call(ctx, "GET", s.path(), nil, &s.base); err != nil {
+		var httpError *opencodeHTTPError
+		if id != "" && errors.As(err, &httpError) && httpError.status == 404 {
+			err = fmt.Errorf("opencode 1.x session not found; sessions cannot be resumed across opencode major versions: %w", err)
+		}
 		return fail(err)
 	}
 	if s.base.Tokens == nil {

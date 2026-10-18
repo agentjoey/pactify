@@ -196,6 +196,17 @@ All session events are in `packages/schema/src/session-event.ts`. `SessionError.
 | forms | `form.created` / `form.replied` / `form.cancelled` | `{form: Form.Info}` / `{id, sessionID, answer}` / `{id, sessionID}` (question tool uses forms) | `schema/src/form.ts:173-175` |
 | legacy | `session.status`, `session.idle` | in the public schema but **never published by v2 core** (no publisher found) | `schema/src/session-status-event.ts:35-51` |
 
+Additional events **observed in real 2.0.32 recordings by the host** (2026-10-18):
+
+| Event | Adapter handling / known shape |
+| --- | --- |
+| `permission.rejected` | Tolerated as an informational owned-session event; not a terminal execution event. |
+| `shell.created` | `{info:{id, command, pid?, metadata:{sessionID?}, ...}}`; correlate via `info.metadata.sessionID`. Actual 2.0.32 recordings omit pid despite its optional schema field. Recording cancellation waits for this spawn event, snapshots live private-server descendants and verifies exit after interrupting. `schema/src/shell.ts:38-58`. |
+| `shell.exited` | `{id, exit?, status}`; correlate with the preceding owned `shell.created`. `schema/src/shell.ts:59`. |
+| `integration.updated`, `provider.updated`, `model.updated` | Tolerated global inventory updates; ignored by job-local event filtering. They do not prove prompt completion. |
+
+Readonly safety correction (AJ-720 B1): shell resource evaluation alone does not prove shell execution safety. Redirect-only statements can produce an empty command list (`core/src/shell/parse.ts:173-198`), bypassing `permission.assert` (`core/src/tool/plugin/shell.ts:140-148`). The adapter therefore removes readonly shell entirely using a final wildcard deny (`core/src/tool.ts:231,292-295`); it retains read/glob/grep only. No inference-free session-tool inventory API was identified in the inspected protocol groups. In the subsequent 2.0.32 live check, the host confirmed the model saw only glob/grep/read and redirect-only `> marker.tmp` created no file.
+
 Removed v1 events used by pactify: `message.updated`, `message.part.updated`, `message.part.delta`,
 `session.error` — not in the v2 manifest (not found in `schema/src`).
 

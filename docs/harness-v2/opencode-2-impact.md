@@ -1,5 +1,9 @@
 # opencode 2.0 对 pactify 接入的影响（2026-10-17，AJ-719）
 
+> **现状（2026-10-18，AJ-720）**：pactify 已经支持 opencode 2.x，并会按本机安装的大版本选择 1.x 或 2.x 后端。2.x 使用 pactify 自己的私有 home 和登录（`pactify sub login opencode`）。实跑结果：`sub doctor` 全部 PASS，AJ-718 端到端 13/14。下文是当时的影响评估，保留作记录。
+
+> **当前状态（AJ-720，2026-10-18）：正在加入与 1.x 并存的 2.x 后端。** 以下 AJ-719 结论是改造前的历史记录，不代表本次 worktree 的实现。版本选择、私有登录库、并发租约、验证结果与 host 录制步骤见 [AJ-720 implementation](aj720-opencode2.md)。1.x 后端继续保留，≥ 3 快速失败。
+
 > 方法：把 `@opencode/cli@2.0.32` 装到临时目录里。所有探测都在隔离的 `HOME` 和 `XDG_*` 目录下运行，不登录、不发推理请求，凭据只用合成的测试值。本机的 opencode 1.19.0 没有改动。
 > 流程见 [`../harness-updates.md`](../harness-updates.md)。
 

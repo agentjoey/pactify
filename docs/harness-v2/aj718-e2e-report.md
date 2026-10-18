@@ -2,6 +2,18 @@
 
 日期：2026-10-17。**有效结果是下面「沙箱外实跑」一节**：由 host 在两轮返工、独立复审通过后，于沙箱外完成。后面各节是 codex 首轮（在外层沙箱内）和两轮返工的历史记录，只作为过程留档。
 
+## opencode 2.x（AJ-720，host，2026-10-18）
+
+opencode 2.0.32，模型 `opencode/deepseek-v4.1-flash-free`，持久的 `PACTIFY_HOME=~/.pactify-e2e/opencode2`，`PACTIFY_E2E_HOST=1`。**13/14 PASS**：唯一的失败是 `readonly_long`，在第 41 次调用时被 40 次的只读上限截断，与其他各家相同。1.x 是 12/14。
+- **完整首轮**：10 PASS。
+- **失败的 3 项**：都在定位原因并修复后重跑通过。
+  - `long_tool`：SSE 心跳没有重置不活动计时；
+  - `instructions`：`OPENCODE_DISABLE_PROJECT_CONFIG` 连带关掉了 AGENTS.md；
+  - `user_dirs_clean`：监测范围过宽，用户自己常驻的 opencode 1.19 server 会刷新 cache 和 state 目录。
+- **调整后重跑**：`model` 和 `failure_surface` 的判定口径收紧后也重跑通过。
+- **`readonly_denied` 在 2.x 上 PASS**：只读会话里写入工具被移除，并经权限求值确认。
+- 原始汇总：`aj718-e2e-results/host-opencode2*.json`。细节见 [`aj720-opencode2.md`](aj720-opencode2.md)。
+
 ## 沙箱外实跑（host，2026-10-17 15:52–16:18，有效结果）
 
 > 源码：AJ-718 worktree（基线 `53a9d02`，加两轮返工和 host 的两处套件修正，见下）· 每家使用持久的 `PACTIFY_HOME=~/.pactify-e2e/<harness>`，被替换的凭据隔离区因此不会落入临时目录 · `PACTIFY_E2E_HOST=1` · 模型：codex 用默认（实际 `gpt-6.1-sol`），opencode 用 `minimax-coding-plan/MiniMax-M3`，agy 用 `gemini-3.8-flash`，host 用 Claude Code haiku · 原始汇总见 `aj718-e2e-results/host-*.json`。

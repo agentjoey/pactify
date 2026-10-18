@@ -16,7 +16,7 @@
 |---|---|---|---|
 | codex | npm `@openai/codex` | `internal/cockpit/codexschema/CODEX_VERSION` | `codex-schema.yml`：在 latest 上核对 schema 字段 |
 | kimi | npm `@moonshot-ai/kimi-code` | `internal/cockpit/harnessdrift/versions.json` | `harness-drift.yml`：latest 的参数和 ACP 握手 |
-| opencode | npm `opencode-ai`（1.x）、`@opencode/cli`（2.x） | `versions.json` 加 `opencode-api.yml` 的固定版本 `1.19` | `opencode-api.yml`：1.19 与 latest 的 v1 OpenAPI |
+| opencode | npm `opencode-ai`（1.x）、`@opencode/cli`（2.x） | `versions.json` 的 `opencode=1.19.0`、`opencode2=2.0.32` | `opencode-api.yml`：两个渠道分别检查固定版和 latest 的 v1/v2 OpenAPI；PR 检查两个固定版 |
 | agy | 安装器 manifest（`install.sh` 从这里取版本） | `versions.json` | `harness-drift.yml`：latest 的参数和事件名 |
 
 本机的状态另外记在 `~/.pactify/verified-versions.json`，由 `pactify sub doctor` 在全部检查通过后写入。job 遇到下面两种情况会在结果里给出 warning：

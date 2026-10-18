@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/agentjoey/pactify/internal/cockpit"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -133,10 +134,21 @@ func doctorDeniedWrite(logPath, harness string) bool {
 	scan := bufio.NewScanner(f)
 	scan.Buffer(make([]byte, 65536), 16*1024*1024)
 	commands := map[int]string{}
+	oc2Commands := map[string]string{}
 	for scan.Scan() {
 		var e struct {
-			Kind string `json:"kind"`
+			Kind string             `json:"kind"`
+			Tool *cockpit.ToolEvent `json:"tool"`
 			Raw  struct {
+				AssistantMessageID string `json:"assistantMessageID"`
+				ID                 string `json:"id"`
+				Name               string `json:"name"`
+				Input              struct {
+					Command string `json:"command"`
+				} `json:"input"`
+				Error struct {
+					Message string `json:"message"`
+				} `json:"error"`
 				Step struct {
 					Index int    `json:"step_index"`
 					Type  string `json:"step_type"`
@@ -183,6 +195,22 @@ func doctorDeniedWrite(logPath, harness string) bool {
 				return true
 			}
 			continue
+		}
+		if harness == "opencode" && e.Kind == "tool" {
+			key := e.Raw.AssistantMessageID + "/" + e.Raw.ID
+			name := e.Raw.Name
+			if name == "" && e.Tool != nil {
+				name = e.Tool.Name
+			}
+			if name == "shell" && e.Raw.Input.Command != "" {
+				oc2Commands[key] = e.Raw.Input.Command
+			}
+			if e.Tool != nil && e.Tool.Name == "shell" && e.Tool.Phase == "end" && oc2Commands[key] == "echo x > probe.txt" {
+				lower := strings.ToLower(e.Raw.Error.Message)
+				if strings.Contains(lower, "permission") || strings.Contains(lower, "denied") {
+					return true
+				}
+			}
 		}
 		p := e.Raw.Part
 		lower := strings.ToLower(p.State.Error)

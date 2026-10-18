@@ -33,6 +33,7 @@ type HarnessInfo struct {
 }
 
 type harnessCatalogEntry struct {
+	Version      string
 	Models       ModelCatalog
 	Efforts      []string
 	DefaultModel string
@@ -75,9 +76,11 @@ func (c *harnessCatalog) harness(ctx context.Context, s Store, h Harness, defaul
 	row.VerifiedVersion = readVerifiedVersions(filepath.Join(filepath.Dir(s.Root), "verified-versions.json"))[h.Name].Version
 	_, err := c.lookupPath(h.Name)
 	row.Installed = err == nil
+	var versionErr error
 	if row.Installed && h.Version != nil {
-		row.Version, _ = h.Version(ctx)
+		row.Version, versionErr = h.Version(ctx)
 	}
+	h = h.forVersion(row.Version)
 	// Serialize only this store/harness; external discovery never holds c.mu.
 	key := s.Root + "\x00" + h.Name
 	c.mu.Lock()
@@ -95,15 +98,22 @@ func (c *harnessCatalog) harness(ctx context.Context, s Store, h Harness, defaul
 	c.mu.Lock()
 	cached, ok := c.entries[key]
 	c.mu.Unlock()
+	if h.Name == "opencode" && (versionErr != nil || cached.Version != row.Version) {
+		ok = false
+		cached = harnessCatalogEntry{}
+	}
 	now := c.now().UTC()
 	if ok && !refresh && now.Sub(cached.Models.FetchedAt) < 10*time.Minute && row.Installed {
 		return row.withCatalog(cached)
 	}
 	next := cached
+	next.Version = row.Version
 	next.Models = ModelCatalog{Items: append([]string{}, cached.Models.Items...), FetchedAt: now}
 	switch {
 	case !row.Installed:
 		next.Models.Error = "harness is not installed"
+	case h.Name == "opencode" && versionErr != nil:
+		next.Models.Error = "cannot determine opencode CLI version: " + versionErr.Error()
 	case h.unsupported(row.Version) != nil:
 		next.Models.Error = h.unsupported(row.Version).Error()
 	case h.Models == nil:

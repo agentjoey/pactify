@@ -42,6 +42,7 @@ type suite struct {
 	owner                             *testing.T
 	bin, source, harness, model, user string
 	quarantine                        string
+	adapter                           sub.Harness
 	report                            report
 }
 type fixture struct {
@@ -72,6 +73,16 @@ func TestHarnessE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &suite{owner: t, source: source, harness: h, user: user, model: os.Getenv("PACTIFY_E2E_MODEL")}
+	harness, _ := sub.Lookup(h)
+	s.adapter = harness
+	version := ""
+	if h == "opencode" {
+		// Resolve the protocol before choosing credential links or user roots.
+		s.adapter, version, err = fixtureHarness(context.Background(), harness)
+		if err != nil {
+			t.Fatal("harness selection: ", err)
+		}
+	}
 	quarantine, err := credentiallinks.QuarantineDir()
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +99,7 @@ func TestHarnessE2E(t *testing.T) {
 		t.Fatalf("build: %v %s", err, safe(out))
 	}
 	commit, _ := command(time.Second*10, nil, source, "", "git", "rev-parse", "HEAD")
-	s.report = report{Harness: h, Started: time.Now().UTC(), Commit: strings.TrimSpace(string(commit))}
+	s.report = report{Version: version, Harness: h, Started: time.Now().UTC(), Commit: strings.TrimSpace(string(commit))}
 	before, err := metadata(s.userRoots(), false)
 	if err != nil {
 		t.Fatal(err)
@@ -106,10 +117,13 @@ func TestHarnessE2E(t *testing.T) {
 		}
 	}()
 	setup := s.newFixture(t, true)
-	version, err := command(15*time.Second, setup.env, setup.repo, "", h, "--version")
-	s.report.Version = strings.TrimSpace(safe(version))
-	if err != nil {
-		t.Logf("version unavailable: %v", err)
+	if h != "opencode" {
+		// Other harnesses retain their original isolated fixture version command.
+		version, err := command(15*time.Second, setup.env, setup.repo, "", h, "--version")
+		s.report.Version = strings.TrimSpace(safe(version))
+		if err != nil {
+			t.Logf("version unavailable: %v", err)
+		}
 	}
 	setupErr := s.selectModel(setup)
 	s.report.Model = s.model
@@ -254,7 +268,11 @@ func TestHarnessE2E(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
-		changes, refresh := compareMetadata(before, after, h)
+		metadataHarness := h
+		if s.adapter.Opencode2 {
+			metadataHarness = "opencode2"
+		} // No user DB or credential refresh is expected in v2.
+		changes, refresh := compareMetadata(before, after, metadataHarness)
 		if len(changes) > 0 {
 			f.errorf("user directory metadata changed: %s", safe([]byte(strings.Join(changes, ", "))))
 		}

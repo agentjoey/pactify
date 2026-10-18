@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/agentjoey/pactify/internal/procx"
 	"io"
 	"net"
 	"net/http"
@@ -29,6 +30,9 @@ type goldenOutcome struct {
 
 func goldenRun(ctx context.Context, tr golden.Transcript, opts StartOpts, wireHome string, offsets map[string]int64) (goldenOutcome, error) {
 	backend := NewOpencodeBackend()
+	if tr.Harness == "opencode2" {
+		backend = NewOpencode2Backend()
+	}
 	if tr.Harness == "kimi" {
 		backend = NewACPBackend("kimi-cli")
 	}
@@ -44,6 +48,13 @@ func goldenRun(ctx context.Context, tr golden.Transcript, opts StartOpts, wireHo
 	}
 	if tr.Scenario == "failure" && tr.Harness == "opencode" {
 		s.(*opencodeSession).opts.Model = "opencode/pactify-nonexistent-model"
+	}
+	if tr.Scenario == "failure" && tr.Harness == "opencode2" {
+		v2 := s.(*opencode2Session)
+		if err := v2.server.call2(ctx, "POST", v2.path()+"/model", map[string]any{"model": map[string]string{"providerID": "opencode", "id": "pactify-nonexistent-model"}}, nil); err != nil {
+			s.Close()
+			return goldenOutcome{}, err
+		}
 	}
 	defer s.Close()
 	result := goldenOutcome{SessionID: s.ThreadID()}
@@ -64,7 +75,7 @@ func goldenRun(ctx context.Context, tr golden.Transcript, opts StartOpts, wireHo
 	for !c.TurnDone {
 		select {
 		case <-timer.C:
-			if tr.Scenario == "cancel" {
+			if tr.Scenario == "cancel" && tr.Harness != "opencode2" {
 				if err = s.Interrupt(ctx); err != nil {
 					return result, err
 				}
@@ -73,6 +84,43 @@ func goldenRun(ctx context.Context, tr golden.Transcript, opts StartOpts, wireHo
 		case e, ok := <-s.Events():
 			if !ok {
 				return result, fmt.Errorf("session closed before terminal event")
+			}
+			recordingCancel := opts.Transcript != nil && os.Getenv("PACTIFY_RECORD_HOME") != ""
+			runningSleep := e.Tool != nil && e.Tool.Phase == "start" && strings.Contains(e.Tool.Text, "sleep")
+			var shell struct {
+				Info struct {
+					PID     int    `json:"pid"`
+					Command string `json:"command"`
+				} `json:"info"`
+			}
+			if e.State == "shell.created" && json.Unmarshal(e.Raw, &shell) == nil && strings.Contains(shell.Info.Command, "sleep") {
+				runningSleep = true
+			}
+			// A real recording waits for the spawn event; tool.called alone can
+			// precede spawn. 2.0.32's shell.created carries no pid, so the running
+			// tree is taken from the server's live descendants at that point.
+			if recordingCancel && e.State != "shell.created" {
+				runningSleep = false
+			}
+			if tr.Harness == "opencode2" && tr.Scenario == "cancel" && !interrupted && runningSleep {
+				var sleepers []procx.Identity
+				if recordingCancel {
+					var err error
+					sleepers, err = recordedOpencode2Sleep(s.(*opencode2Session).server.identity, shell.Info.PID)
+					if err != nil {
+						return result, err
+					}
+				}
+				if err := s.Interrupt(ctx); err != nil {
+					return result, err
+				}
+				interrupted = true
+				if len(sleepers) > 0 {
+					alive, err := procx.WaitDescendants("recorded sleep", sleepers, 3*time.Second)
+					if err != nil || len(alive) > 0 {
+						return result, fmt.Errorf("recorded sleep did not exit after interrupt: %v (%v)", alive, err)
+					}
+				}
 			}
 			c.Add(e)
 			signature := string(e.Kind)
@@ -103,7 +151,11 @@ func goldenRun(ctx context.Context, tr golden.Transcript, opts StartOpts, wireHo
 	result.Text = c.FinalText()
 	result.Usage = c.Usage
 	if c.TurnErr != "" {
-		result.Failure = ClassifyFailure(tr.Harness, c.FailureMessage, c.FailureRaw, time.Now()).Class
+		harness := tr.Harness
+		if harness == "opencode2" {
+			harness = "opencode"
+		}
+		result.Failure = ClassifyFailure(harness, c.FailureMessage, c.FailureRaw, time.Now()).Class
 	}
 	if tr.Harness == "kimi" && wireHome != "" {
 		// Read only private session wire files; never open config or credentials.
@@ -222,7 +274,11 @@ func replayGolden(t *testing.T, tr golden.Transcript) error {
 	if err := os.WriteFile(fixture, b, 0600); err != nil {
 		return err
 	}
-	bin := filepath.Join(dir, tr.Harness)
+	binary := tr.Harness
+	if binary == "opencode2" {
+		binary = "opencode"
+	}
+	bin := filepath.Join(dir, binary)
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -234,6 +290,11 @@ func replayGolden(t *testing.T, tr golden.Transcript) error {
 	t.Setenv("GOLDEN_PEER_FILE", fixture)
 	t.Setenv("GOLDEN_APPROVAL_ACK", filepath.Join(dir, "approval-ack"))
 	t.Setenv("PACTIFY_HOME", t.TempDir())
+	if tr.Harness == "opencode2" {
+		for _, key := range []string{"HOME", "XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"} {
+			t.Setenv(key, t.TempDir())
+		}
+	}
 	opts := StartOpts{RepoDir: dir, Model: tr.Model, Access: AccessWrite, MinimalConfig: true, Stderr: io.Discard}
 	if tr.Scenario == "readonly" {
 		opts.Access = AccessReadOnly
@@ -289,7 +350,7 @@ func TestGoldenPeer(t *testing.T) {
 	if err != nil {
 		os.Exit(2)
 	}
-	if tr.Harness == "opencode" {
+	if tr.Harness == "opencode" || tr.Harness == "opencode2" {
 		goldenHTTPPeer(tr)
 		os.Exit(0)
 	}
@@ -331,6 +392,20 @@ func TestGoldenPeer(t *testing.T) {
 }
 
 func goldenHTTPPeer(tr golden.Transcript) {
+	v2 := tr.Harness == "opencode2"
+	oldPrompt, newPrompt := "", ""
+	if v2 {
+		for _, f := range tr.Frames {
+			if f.Method == "POST" && strings.HasSuffix(f.Path, "/prompt") {
+				var body struct {
+					ID string `json:"id"`
+				}
+				json.Unmarshal([]byte(f.Request), &body)
+				oldPrompt = body.ID
+				break
+			}
+		}
+	}
 	queues := map[string][]golden.Frame{}
 	for _, f := range tr.Frames {
 		if f.Channel == "http" {
@@ -347,7 +422,11 @@ func goldenHTTPPeer(tr golden.Transcript) {
 	if err != nil {
 		os.Exit(7)
 	}
-	fmt.Println("opencode server listening on http://" + listener.Addr().String())
+	if v2 {
+		fmt.Printf("{\"url\":\"http://%s\"}\n", listener.Addr())
+	} else {
+		fmt.Println("opencode server listening on http://" + listener.Addr().String())
+	}
 	http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.Method + " " + r.URL.Path
 		mu.Lock()
@@ -362,7 +441,7 @@ func goldenHTTPPeer(tr golden.Transcript) {
 			http.Error(w, "unrecorded request: "+key, 500)
 			return
 		}
-		if r.URL.Path == "/event" {
+		if r.URL.Path == "/event" || r.URL.Path == "/api/event" {
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.WriteHeader(f.Status)
 			w.(http.Flusher).Flush()
@@ -374,8 +453,11 @@ func goldenHTTPPeer(tr golden.Transcript) {
 			case <-r.Context().Done():
 				return
 			}
+			if v2 {
+				rest = strings.ReplaceAll(rest, oldPrompt, newPrompt)
+			}
 			for _, block := range strings.Split(rest, "\n\n") {
-				if tr.Scenario == "cancel" && strings.Contains(block, `"name":"MessageAbortedError"`) {
+				if tr.Scenario == "cancel" && (strings.Contains(block, `"name":"MessageAbortedError"`) || strings.Contains(block, `"type":"session.execution.interrupted"`)) {
 					select {
 					case <-abort:
 					case <-r.Context().Done():
@@ -401,13 +483,23 @@ func goldenHTTPPeer(tr golden.Transcript) {
 			<-r.Context().Done()
 			return
 		}
-		if strings.HasSuffix(r.URL.Path, "/abort") {
+		if strings.HasSuffix(r.URL.Path, "/abort") || strings.HasSuffix(r.URL.Path, "/interrupt") {
 			abortOnce.Do(func() { close(abort) })
 		}
-		if strings.HasSuffix(r.URL.Path, "/prompt_async") {
+		if strings.HasSuffix(r.URL.Path, "/prompt_async") || strings.HasSuffix(r.URL.Path, "/prompt") {
+			if v2 {
+				var body struct {
+					ID string `json:"id"`
+				}
+				json.NewDecoder(r.Body).Decode(&body)
+				newPrompt = body.ID
+			}
 			once.Do(func() { close(prompt) })
 		}
 		w.WriteHeader(f.Status)
+		if v2 && oldPrompt != "" {
+			f.Data = strings.ReplaceAll(f.Data, oldPrompt, newPrompt)
+		}
 		io.WriteString(w, f.Data)
 	}))
 }
@@ -498,4 +590,53 @@ func goldenDeniedWrite(frames []golden.Frame) bool {
 		}
 	}
 	return false
+}
+
+// Bind shell.created's sleep command to the server's actual process tree. No
+// process environments or credential values are inspected.
+func recordedOpencode2Sleep(root procx.Identity, pid int) ([]procx.Identity, error) {
+	if pid == 0 {
+		// Only the sleep tool runs in this scenario, so every live descendant
+		// of the private server belongs to it.
+		for deadline := time.Now().Add(2 * time.Second); ; time.Sleep(50 * time.Millisecond) {
+			children, err := procx.Descendants(root)
+			if err != nil {
+				return nil, err
+			}
+			var alive []procx.Identity
+			for _, child := range children {
+				if ok, err := child.Alive(); err == nil && ok {
+					alive = append(alive, child)
+				}
+			}
+			if len(alive) > 0 {
+				return alive, nil
+			}
+			if time.Now().After(deadline) {
+				return nil, fmt.Errorf("cancel recording requires a running sleep descendant before interrupt")
+			}
+		}
+	}
+	children, err := procx.Descendants(root)
+	if err != nil {
+		return nil, err
+	}
+	for _, child := range children {
+		if child.PID != pid {
+			continue
+		}
+		alive, err := child.Alive()
+		if err != nil {
+			return nil, err
+		}
+		if !alive {
+			return nil, fmt.Errorf("sleep shell already exited before interrupt")
+		}
+		children, err := procx.Descendants(child)
+		if err != nil {
+			return nil, err
+		}
+		return append(children, child), nil
+	}
+	return nil, fmt.Errorf("cancel recording requires a running sleep descendant before interrupt")
 }

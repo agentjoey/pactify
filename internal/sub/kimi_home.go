@@ -1,9 +1,6 @@
 package sub
 
-import (
-	"context"
-	"path/filepath"
-)
+import "path/filepath"
 
 var kimiLinkedNames = []string{"config.toml", "credentials", "device_id", "oauth"}
 
@@ -16,9 +13,5 @@ func kimiHome(home, source string) *managedHome {
 	return &managedHome{Name: "kimi", Home: home, Source: source, Links: links, Remove: []string{"mcp.json"}}
 }
 
-// Compatibility helpers keep the existing kimi tests and callers unchanged.
+// checkKimiLinks verifies the managed home used by doctor.
 func checkKimiLinks(home, source string) error { return kimiHome(home, source).Check() }
-
-func prepareKimiHome(ctx context.Context, home, source string) error {
-	return kimiHome(home, source).Prepare(ctx)
-}

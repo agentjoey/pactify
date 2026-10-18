@@ -75,60 +75,6 @@ button:disabled {
   }
 }
 
-/* fade-rise: the standard entrance for cards/rows/panels appearing in a list —
-   a short fade + 4px rise so newly-arriving content reads as "arrived" rather
-   than popping. Apply `.fade-rise` to the element. Suppressed under
-   reduced-motion. */
-@media (prefers-reduced-motion: no-preference) {
-  .fade-rise {
-    animation: fade-rise var(--motion-layout, 200ms) var(--motion-ease);
-  }
-}
-@keyframes fade-rise {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* view-enter: the whole-panel entrance played when a dashboard view mounts
-   (switching tabs remounts the panel component, so the animation fires on every
-   view change). A slightly larger fade+rise than a single card, so a tab switch
-   reads as a deliberate transition rather than an instant swap. reduced-motion
-   safe. */
-@media (prefers-reduced-motion: no-preference) {
-  .view-enter {
-    animation: view-enter var(--motion-layout, 200ms) var(--motion-ease);
-  }
-}
-@keyframes view-enter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* stagger-N: list items that share a fade-rise but cascade in. The component
-   sets `style={{ animationDelay }}` per index; these just provide a capped,
-   reduced-motion-safe ceiling so a long list doesn't drip forever. The cascade
-   is what makes a freshly-rendered list feel alive instead of popping at once. */
-@media (prefers-reduced-motion: reduce) {
-  .fade-rise {
-    animation: none !important;
-  }
-  .view-enter {
-    animation: none !important;
-  }
-}
-
 /* press: a tactile active-scale for clickable non-button surfaces (cards, rows,
    chips) so a tap visibly registers. Buttons already do this via Button. */
 .press {
@@ -137,25 +83,6 @@ button:disabled {
 @media (prefers-reduced-motion: no-preference) {
   .press:active {
     transform: scale(0.985);
-  }
-}
-
-/* status-pill-dot-live: a gentle breathing dot for "in flight" states
-   (working / escalated). reduced-motion → static dot. */
-@media (prefers-reduced-motion: no-preference) {
-  .status-pill-dot-live {
-    animation: status-pill-breath 1.6s ease-in-out infinite;
-  }
-}
-@keyframes status-pill-breath {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.45;
-    transform: scale(0.82);
   }
 }
 
@@ -171,39 +98,5 @@ button:disabled {
   .hover-lift:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-raised);
-  }
-}
-
-/* First-load skeletons (T15): a gray block with a left→right shimmer sweep.
-   prefers-reduced-motion → the sweep is dropped and the block sits static. */
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  /* a clearly visible light-gray block on a white surface (the old surface-70%
-     value was nearly invisible on #fff). */
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-}
-.skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  /* a brighter band sweeping across the gray base reads as the shimmer. */
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
-}
-@media (prefers-reduced-motion: no-preference) {
-  .skeleton::after {
-    animation: skeleton-sweep 1.4s ease-in-out infinite;
-  }
-}
-@keyframes skeleton-sweep {
-  100% {
-    transform: translateX(100%);
   }
 }

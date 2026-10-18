@@ -26,7 +26,7 @@ const text = (v: unknown) => (typeof v === "string" ? v : "");
 const count = (v: unknown): v is number =>
   typeof v === "number" && Number.isFinite(v) && v >= 0;
 
-export function toolKind(
+function toolKind(
   name: string,
   detail: string,
   explicit: string,

@@ -117,12 +117,6 @@ func (index *SummaryIndex) CheckAction(st State, action string) error {
 	return nil
 }
 
-// ResumeJob preserves all original request settings. The new brief is persisted
-// as data by ResumeRun; worker argv contains only its generated job id.
-func (s Store) ResumeJob(selector, brief string) (State, error) {
-	return s.resumeJob(selector, brief, false)
-}
-
 func (s Store) resumeJob(selector, brief string, dashboard bool) (State, error) {
 	if strings.TrimSpace(brief) == "" {
 		return State{}, fmt.Errorf("task brief must not be empty")

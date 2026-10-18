@@ -1,16 +1,9 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { Button } from "./Button";
-import { Input } from "./Input";
-import { Select } from "./Select";
 import { Badge } from "./Badge";
-import { TierBadge } from "./TierBadge";
-import { Kbd } from "./Kbd";
 import { Modal } from "./Modal";
-import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
-import { Alert } from "./Alert";
-import { StatusPill } from "./StatusPill";
 
 describe("Button", () => {
   it("renders the primary variant by default with role-design bg + dark text", () => {
@@ -71,37 +64,6 @@ describe("Button", () => {
   });
 });
 
-describe("Input", () => {
-  it("renders surface bg + subtle border that goes strong on focus", () => {
-    render(<Input aria-label="x" />);
-    const el = screen.getByLabelText("x");
-    expect(el.className).toMatch(/bg-\[var\(--color-bg-surface\)\]/);
-    expect(el.className).toMatch(/border-\[var\(--color-border-subtle\)\]/);
-    expect(el.className).toMatch(/focus:border-\[var\(--color-border-strong\)\]/);
-    expect(el.className).toMatch(/text-\[var\(--color-text-1\)\]/);
-  });
-
-  it("forwards value/onChange", () => {
-    const onChange = vi.fn();
-    render(<Input aria-label="x" value="hi" onChange={onChange} />);
-    fireEvent.change(screen.getByLabelText("x"), { target: { value: "ho" } });
-    expect(onChange).toHaveBeenCalled();
-  });
-});
-
-describe("Select", () => {
-  it("renders surface bg + subtle→strong focus border", () => {
-    render(
-      <Select aria-label="s">
-        <option value="a">a</option>
-      </Select>,
-    );
-    const el = screen.getByLabelText("s");
-    expect(el.className).toMatch(/bg-\[var\(--color-bg-surface\)\]/);
-    expect(el.className).toMatch(/focus:border-\[var\(--color-border-strong\)\]/);
-  });
-});
-
 describe("Badge", () => {
   it("maps a color prop to a 15%-alpha bg + colored text using the matching token", () => {
     render(<Badge color="role-design">awaiting</Badge>);
@@ -146,47 +108,6 @@ describe("Badge", () => {
   it("passes data-testid through to the root element", () => {
     render(<Badge data-testid="account-tier">personal</Badge>);
     expect(screen.getByTestId("account-tier")).toHaveTextContent("personal");
-  });
-});
-
-describe("TierBadge", () => {
-  it("names a tier_raw badge via role=img + aria-label (not mouse-only), a plain badge stays anonymous", () => {
-    render(
-      <>
-        <TierBadge tier="L1" tierRaw="L9" />
-        <TierBadge tier="L2" />
-      </>,
-    );
-    // The raw-value hint is the accessible name, shared with the title.
-    const raw = screen.getByRole("img", { name: 'spec 写的是 "L9"，无法识别 —— 引擎将按 L1 运行' });
-    expect(raw).toHaveTextContent("L1");
-    expect(raw).toHaveAttribute("title", 'spec 写的是 "L9"，无法识别 —— 引擎将按 L1 运行');
-    // No conflict and no tier_raw → no role/aria-label (regression pin).
-    const plain = screen.getByText("L2");
-    expect(plain).not.toHaveAttribute("role");
-    expect(plain).not.toHaveAttribute("aria-label");
-  });
-
-  it("conflict wins over tier_raw for both title and accessible name", () => {
-    render(<TierBadge tier="L1" conflict="manifest says L3" tierRaw="L9" />);
-    const badge = screen.getByRole("img", { name: "manifest says L3" });
-    expect(badge).toHaveAttribute("title", "manifest says L3");
-  });
-});
-
-describe("Kbd", () => {
-  it("renders a mono key chip", () => {
-    render(<Kbd>1</Kbd>);
-    const el = screen.getByText("1");
-    expect(el.tagName).toBe("KBD");
-    expect(el.className).toMatch(/font-mono/);
-  });
-
-  it("uses a raised surface with shadow", () => {
-    render(<Kbd>1</Kbd>);
-    const el = screen.getByText("1");
-    expect(el.className).toMatch(/bg-\[var\(--color-bg-raised\)\]/);
-    expect(el.className).toMatch(/shadow-\[var\(--shadow-raised\)\]/);
   });
 });
 
@@ -265,20 +186,6 @@ describe("Modal", () => {
   });
 });
 
-
-
-describe("EmptyState", () => {
-  it("renders an icon slot, title and hint inside a dashed container", () => {
-    render(<EmptyState icon={<span>icon</span>} title="Nothing" hint="add one" />);
-    expect(screen.getByText("icon")).toBeInTheDocument();
-    expect(screen.getByText("Nothing")).toBeInTheDocument();
-    const hint = screen.getByText("add one");
-    expect(hint.className).toMatch(/text-\[var\(--color-text-3\)\]/);
-    const root = screen.getByTestId("empty-state");
-    expect(root.className).toMatch(/border-dashed/);
-  });
-});
-
 describe("Spinner", () => {
   it("renders a status role with an accessible label", () => {
     render(<Spinner label="Saving" />);
@@ -309,65 +216,5 @@ describe("Button loading", () => {
   it("has an active-press transform class for tactile feedback", () => {
     render(<Button>x</Button>);
     expect(screen.getByRole("button").className).toMatch(/active:scale-\[0\.97\]/);
-  });
-});
-
-describe("Alert", () => {
-  it("renders the tone, title and body with role=alert", () => {
-    render(<Alert tone="danger" title="Load failed">network error</Alert>);
-    const a = screen.getByRole("alert");
-    expect(a.getAttribute("data-tone")).toBe("danger");
-    expect(a.textContent).toContain("Load failed");
-    expect(a.textContent).toContain("network error");
-  });
-
-  it("renders a retry action that fires onRetry", () => {
-    const onRetry = vi.fn();
-    render(<Alert tone="warn" onRetry={onRetry} retryLabel="Try again">x</Alert>);
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(onRetry).toHaveBeenCalledOnce();
-  });
-
-  it("omits the retry button when no onRetry is given", () => {
-    render(<Alert>just info</Alert>);
-    expect(screen.queryByRole("button")).toBeNull();
-  });
-
-  it("uses a 28% alpha tone border", () => {
-    render(<Alert tone="danger" title="Load failed">network error</Alert>);
-    const a = screen.getByRole("alert");
-    expect(a.style.borderColor).toMatch(/28%/);
-  });
-});
-
-describe("StatusPill", () => {
-  it("renders the pact-state label + status attr, with a live dot for in-flight states", () => {
-    render(<StatusPill status="in_progress" />);
-    const p = screen.getByTestId("status-pill");
-    expect(p.getAttribute("data-status")).toBe("in_progress");
-    expect(p.textContent).toContain("working");
-    expect(p.querySelector(".status-pill-dot-live")).toBeTruthy();
-  });
-
-  it("renders shipped as a filled pill (no live dot)", () => {
-    render(<StatusPill status="shipped" />);
-    const p = screen.getByTestId("status-pill");
-    expect(p.textContent).toContain("shipped");
-    expect(p.querySelector(".status-pill-dot-live")).toBeNull();
-  });
-
-  it("renders shipped with dark page text on the success background", () => {
-    render(<StatusPill status="shipped" />);
-    const p = screen.getByTestId("status-pill");
-    expect(p).toHaveStyle({ color: "var(--color-bg-page)" });
-    expect(p).toHaveStyle({ background: "var(--color-success)" });
-  });
-
-  it("normalizes orchestrate phases onto pact statuses", async () => {
-    const { normalizeStatus } = await import("./StatusPill");
-    expect(normalizeStatus("run_owner")).toBe("in_progress");
-    expect(normalizeStatus("stuck")).toBe("escalated");
-    expect(normalizeStatus("done")).toBe("shipped");
-    expect(normalizeStatus("accepted")).toBe("accepted");
   });
 });

@@ -40,7 +40,7 @@ export function formatDuration(seconds: number) {
       ? `${Math.floor(seconds / 60)}m ${seconds % 60}s`
       : `${seconds}s`;
 }
-export function dayKey(value: string | Date) {
+function dayKey(value: string | Date) {
   const date = new Date(value);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }

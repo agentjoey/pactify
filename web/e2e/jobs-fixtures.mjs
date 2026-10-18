@@ -126,7 +126,6 @@ export function seedJobs() {
     },
   ].map((job) => structuredClone(job));
 }
-export const panelJobs = seedJobs();
 const quotaReset = (hours) => {
   const date = new Date(Date.now() + hours * 3600000);
   const pad = (value) => String(value).padStart(2, "0");

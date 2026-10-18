@@ -74,7 +74,7 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						if err := prepareKimiHome(ctx, managed, source); err != nil {
+						if err := kimiHome(managed, source).Prepare(ctx); err != nil {
 							t.Fatal(err)
 						}
 						st.HarnessHome = managed

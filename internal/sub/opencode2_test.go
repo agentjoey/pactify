@@ -202,6 +202,16 @@ func TestOpencodeCatalogInvalidatesAcrossVersions(t *testing.T) {
 	if len(first.Models.Items) != 1 || first.Models.Items[0] != "opencode/v1-only" {
 		t.Fatalf("first=%+v", first)
 	}
+	// A CLI upgrade changes the executable fingerprint; an unchanged executable
+	// intentionally reuses its cached version until an explicit refresh.
+	path, err := catalog.lookupPath("opencode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated := time.Now().Add(time.Hour)
+	if err := os.Chtimes(path, updated, updated); err != nil {
+		t.Fatal(err)
+	}
 	h.Version = func(context.Context) (string, error) { return "v2.0.32", nil }
 	second := catalog.harness(context.Background(), store, h, HarnessDefault{}, false)
 	if second.Models.Error != "" || len(second.Models.Items) != 1 || second.Models.Items[0] != "opencode/test-free" {

@@ -209,12 +209,12 @@ func TestAgyReviewHookTimeoutDenies(t *testing.T) {
 	}
 }
 
-func TestAgyReviewModelHintIsPinned(t *testing.T) {
+func TestAgyReviewModelHintPlainCommand(t *testing.T) {
 	models := make([]string, 12)
 	for i := range models {
 		models[i] = "gemini-3.8-flash-low"
 	}
-	if hint := modelChoices("agy", "bad", models); !strings.Contains(hint, "agy models --model gemini-3.8-flash-low") {
+	if hint := modelChoices("agy", "bad", models); !strings.Contains(hint, "agy models") {
 		t.Fatal(hint)
 	}
 }
@@ -239,10 +239,10 @@ func TestAgyReviewWorkspaceHooksThroughSymlink(t *testing.T) {
 	}
 }
 
-func TestAgyReviewCatalogErrorsPinModel(t *testing.T) {
+func TestAgyReviewCatalogErrorsNamePlainCommand(t *testing.T) {
 	b := &agyBackend{command: func(ctx context.Context, args ...string) *exec.Cmd { return exec.CommandContext(ctx, "false") }}
 	_, e := b.models(context.Background(), StartOpts{})
-	if e == nil || !strings.Contains(e.Error(), "agy models --model "+AgyDefaultModel) {
+	if e == nil || !strings.Contains(e.Error(), "agy models:") {
 		t.Fatalf("unqualified command in error: %v", e)
 	}
 }

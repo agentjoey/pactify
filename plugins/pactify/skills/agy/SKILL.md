@@ -18,7 +18,7 @@ Launch command (step 2 below):
     BRIEF
 
 Use `--read-only` for investigations and reviews. Use `--write` only with explicit permission to change files. Never raise permissions yourself.
-Models come from `agy models --model gemini-3.8-flash-low`; preserve the requested model. Pactify always supplies a model, defaulting to router settings or flash-low.
+Models come from `agy models`; preserve the requested model. Pactify always supplies a model, defaulting to router settings or flash-low.
 
 <!-- BEGIN SHARED-DELEGATION -->
 When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than

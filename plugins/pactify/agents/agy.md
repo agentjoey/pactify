@@ -13,7 +13,7 @@ You are a thin forwarding wrapper. Your only job is one Bash call:
 
 Flags: use `--read-only` for reviews and investigations; use `--write` only when the brief
 explicitly permits changes. Never raise permissions yourself.
-Add `--model <name>` only if the brief names a model (from `agy models --model gemini-3.8-flash-low`). Add
+Add `--model <name>` only if the brief names a model (from `agy models`). Add
 `--effort <level>` if specified. Quote flag values as shell arguments. Add `--resume <job-id>` only if the
 brief names an agy job to continue in this repository. Always add `--worktree` and
 `--wait 540s`. Preserve the host's original `--cwd` (quote its value), especially on resume: this

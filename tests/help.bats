@@ -35,4 +35,5 @@ version" ]
   [ "$status" -eq 0 ]
   [[ "$output" == *run* ]]
   [[ "$output" == *doctor* ]]
+  [[ "$output" == *dismiss* ]]
 }

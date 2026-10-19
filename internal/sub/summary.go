@@ -38,6 +38,7 @@ type JobSummary struct {
 	CreatedAt      time.Time        `json:"createdAt"`
 	StartedAt      *time.Time       `json:"startedAt,omitempty"`
 	FinishedAt     *time.Time       `json:"finishedAt,omitempty"`
+	DismissedAt    time.Time        `json:"dismissedAt,omitzero"`
 	Duration       string           `json:"duration"`
 	Attention      []Attention      `json:"attention"`
 	Activity       *Activity        `json:"activity,omitempty"`
@@ -185,6 +186,7 @@ func (index *SummaryIndex) Summarize(st State, now time.Time) JobSummary {
 		row.FinishedAt = &end
 	}
 	row.Duration = end.Sub(st.CreatedAt).Round(time.Second).String()
+	row.DismissedAt = st.DismissedAt
 	if !st.StartedAt.IsZero() {
 		started := st.StartedAt
 		row.StartedAt = &started
@@ -220,13 +222,14 @@ func (index *SummaryIndex) Summarize(st State, now time.Time) JobSummary {
 	row.ChangedFiles, row.AddedLines, row.DeletedLines = len(result.Diff.Files), result.Diff.Added, result.Diff.Deleted
 	row.WarningCount, row.SessionID = len(result.Warnings), result.SessionID
 	if Terminal(st.Status) {
+		acknowledged := !st.DismissedAt.IsZero() || (row.Worktree != nil && (row.Worktree.Status == WorktreeApplied || row.Worktree.Status == WorktreeDiscarded))
 		if row.Worktree != nil && row.Worktree.Status == WorktreePending {
 			row.Attention = append(row.Attention, Attention{AttentionWorktreePending, "Worktree is awaiting apply or discard"})
 		}
-		if st.Status == StatusFailed {
+		if !acknowledged && st.Status == StatusFailed {
 			row.Attention = append(row.Attention, Attention{AttentionFailed, "Job failed"})
 		}
-		if actionableWarnings(result) > 0 {
+		if !acknowledged && actionableWarnings(result) > 0 {
 			row.Attention = append(row.Attention, Attention{AttentionWarnings, "Result contains warnings"})
 		}
 	}
@@ -314,8 +317,8 @@ func (s Store) activity(id string) *Activity {
 
 // actionableWarnings counts warnings a person should act on. Informational
 // notes repeat on every job (experimental harness, version not yet checked by
-// doctor, uncommitted changes left out of a worktree) and would otherwise mark
-// nearly every row for attention.
+// doctor, CLI version changes, partial usage, uncommitted changes left out of a
+// worktree) and would otherwise mark nearly every row for attention.
 func actionableWarnings(r Result) int {
 	experimental := ""
 	if h, ok := Lookup(r.Harness); ok {
@@ -324,6 +327,7 @@ func actionableWarnings(r Result) int {
 	n := 0
 	for _, w := range r.Warnings {
 		switch {
+		case w == partialUsageWarning, strings.HasPrefix(w, "CLI version changed: "):
 		case w == experimental && w != "", w == dirtyWorktreeWarning, strings.HasSuffix(w, "has not been checked; run pactify sub doctor first"):
 		default:
 			n++

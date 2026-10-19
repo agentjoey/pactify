@@ -301,3 +301,79 @@ func TestActionableWarningsIgnoresInformationalNotes(t *testing.T) {
 		t.Fatalf("actionable warning not counted: %d", n)
 	}
 }
+
+func TestSummaryInformationalWarnings(t *testing.T) {
+	s := Store{Root: t.TempDir()}
+	st, err := s.Create("informational", Request{Harness: "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Status = StatusSucceeded
+	r := Result{Warnings: []string{partialUsageWarning, "CLI version changed: 1.0 → 1.1"}}
+	for _, actionable := range []bool{false, true} {
+		if actionable {
+			r.Warnings = append(r.Warnings, "empty final reply after one follow-up: the harness ended without a text answer. Check pactify sub logs informational, or resume to ask for the result.")
+		}
+		if err := atomicJSON(s.ResultPath(st.ID), r); err != nil {
+			t.Fatal(err)
+		}
+		row := s.Summarize(st, nil, time.Now())
+		if row.WarningCount != len(r.Warnings) || (len(row.Attention) > 0) != actionable {
+			t.Fatalf("actionable=%v: %+v", actionable, row)
+		}
+		if actionable && (len(row.Attention) != 1 || row.Attention[0].Kind != AttentionWarnings) {
+			t.Fatalf("empty reply must remain actionable: %v", row.Attention)
+		}
+	}
+}
+
+func TestSummaryAcknowledgesSharedWorktree(t *testing.T) {
+	for _, action := range []string{"apply", "discard"} {
+		t.Run(action, func(t *testing.T) {
+			s, first := worktreeFixture(t)
+			finish := func(id string) {
+				t.Helper()
+				r := Result{JobID: id, Status: StatusFailed, SessionID: "session", FailureClass: "other", Warnings: []string{"review this"}}
+				if err := s.Finish(id, &r, "failed", time.Now()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			finish(first.ID)
+			next, err := s.CreateRun("resumed", first.Request, false, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			finish(next.ID)
+			write(t, first.Worktree.Path, "a.txt", "changed\n")
+			for _, id := range []string{first.ID, next.ID} {
+				st, err := s.Load(id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if row := s.Summarize(st, nil, time.Now()); len(row.Attention) != 3 || row.Worktree.Status != WorktreePending {
+					t.Fatalf("pending %s: %+v", id, row)
+				}
+			}
+			want := WorktreeApplied
+			if action == "apply" {
+				err = s.ApplyWorktree(next.ID)
+			} else {
+				want = WorktreeDiscarded
+				err = s.DiscardWorktree(next.ID)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, id := range []string{first.ID, next.ID} {
+				st, err := s.Load(id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				row := s.Summarize(st, nil, time.Now())
+				if len(row.Attention) != 0 || row.Status != StatusFailed || row.FailureClass != "other" || row.WarningCount != 1 || row.Worktree.Status != want || !row.DismissedAt.IsZero() {
+					t.Fatalf("acknowledged %s: %+v", id, row)
+				}
+			}
+		})
+	}
+}

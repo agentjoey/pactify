@@ -68,6 +68,7 @@ type State struct {
 	CreatedAt            time.Time         `json:"createdAt"`
 	UpdatedAt            time.Time         `json:"updatedAt"`
 	FinishedAt           time.Time         `json:"finishedAt,omitempty"`
+	DismissedAt          time.Time         `json:"dismissedAt,omitzero"`
 	Error                string            `json:"error,omitempty"`
 	Worktree             *Worktree         `json:"worktree,omitempty"`
 }

@@ -7,7 +7,7 @@ description: View delegation jobs from Claude Code with compact status tables, j
 
 Invoke with `/jobs` or `/pactify:jobs`; both accept `all` or one job id.
 Respond in the user's language, translating table headings, empty messages and suggestions.
-This skill is read-only. Never execute apply, discard, cancel, or start/resume a job.
+This skill is read-only. Never execute apply, discard, cancel, dismiss, or start/resume a job.
 Lifecycle commands below are suggestions only; the user or host decides separately under
 the SHARED-DELEGATION guide embedded in the delegate / codex / kimi / agy skills.
 Do not delegate this lookup or read harness homes, credentials, or raw job files.
@@ -135,8 +135,12 @@ shares it, including turns outside the displayed list. Keep suggestions short an
   turns in one worktree. A discarded or missing worktree cannot resume; legacy sessions
   without a worktree require success for automatic selection and cannot gain isolation mid-session. Start fresh if needed.
   After rework, repeat the complete review and host acceptance before apply.
+  After the host has reviewed and nothing more is needed, suggest `pactify sub dismiss <id>`
+  to clear attention; apply or discard also clears it. A pending worktree must be applied or discarded first.
 - `warnings`: “N jobs have warnings: inspect `pactify sub result <id>` before deciding.”
   Never claim independent model verification from `modelActual` alone.
+  After the host has reviewed and nothing more is needed, suggest `pactify sub dismiss <id>`
+  to clear attention; apply or discard also clears it. A pending worktree must be applied or discarded first.
 - Running/queued with no attention: suggest checking `/jobs <id>` later. If abandonment
   is requested separately, suggest `pactify sub cancel <id>` before discard; do not execute it.
 - No pending matters: say no action is indicated by the recorded attention. An applied

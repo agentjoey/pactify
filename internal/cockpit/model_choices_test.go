@@ -83,7 +83,7 @@ func TestModelErrorChoicesAcrossHarnesses(t *testing.T) {
 						t.Fatalf("lost underlying cause: %v", err)
 					}
 				case "agy":
-					hint = "run `agy models --model gemini-3.8-flash-low` to list all"
+					hint = "run `agy models` to list all"
 					// Replace only `agy models`, without invoking a vendor CLI.
 					b := &agyBackend{command: func(ctx context.Context, _ ...string) *exec.Cmd {
 						return exec.CommandContext(ctx, "printf", strings.Join(models, "\tModel\n")+"\tModel\n")

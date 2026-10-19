@@ -96,11 +96,11 @@ func TestHarnessesDiscoveryCacheAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := get("?refresh=1")
-	if count() != 3 || !strings.Contains(body, "agy models --model gemini-3.8-flash-low:") || !strings.Contains(body, "model-one") {
+	if count() != 4 || !strings.Contains(body, "agy models:") || !strings.Contains(body, "model-one") {
 		t.Fatal(count(), body)
 	}
 	get("")
-	if count() != 3 {
+	if count() != 4 {
 		t.Fatal("failure was not cached")
 	}
 }

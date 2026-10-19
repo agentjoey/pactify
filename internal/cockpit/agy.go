@@ -19,6 +19,8 @@ import (
 
 const AgyDefaultModel = "gemini-3.8-flash-low"
 
+var agyModelsANSI = regexp.MustCompile(`\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\))`)
+
 // agy keeps one stream-json process alive across job turns.
 type agyBackend struct {
 	command func(context.Context, ...string) *exec.Cmd
@@ -34,24 +36,42 @@ func AgyModels(ctx context.Context, opts StartOpts) ([]string, error) {
 	return NewAgyBackend().(*agyBackend).models(ctx, opts)
 }
 func (b *agyBackend) models(ctx context.Context, o StartOpts) ([]string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	cmd := b.command(ctx, "models", "--model", AgyDefaultModel)
-	cmd.Env = append(os.Environ(), o.Env...)
-	cmd.Dir = o.RepoDir
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("agy models --model %s: %w", AgyDefaultModel, err)
+	// Each CLI generation gets 15 seconds; the fallback keeps the total at 30.
+	run := func(args ...string) ([]byte, error) {
+		attempt, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		cmd := b.command(attempt, args...)
+		cmd.Env = append(os.Environ(), o.Env...)
+		cmd.Dir = o.RepoDir
+		return cmd.Output()
+	}
+	out, plainErr := run("models")
+	if plainErr != nil {
+		var legacyErr error
+		out, legacyErr = run("models", "--model", AgyDefaultModel)
+		if legacyErr != nil {
+			detail := ""
+			if exit, ok := plainErr.(*exec.ExitError); ok {
+				stderr := []rune(strings.TrimSpace(agyModelsANSI.ReplaceAllString(string(exit.Stderr), "")))
+				if len(stderr) > 200 {
+					stderr = append(stderr[:197], '.', '.', '.')
+				}
+				if len(stderr) > 0 {
+					detail = ": " + string(stderr)
+				}
+			}
+			return nil, fmt.Errorf("agy models: %w%s (legacy fallback also failed)", plainErr, detail)
+		}
 	}
 	var models []string
-	for _, line := range strings.Split(string(out), "\n") {
+	for _, line := range strings.FieldsFunc(agyModelsANSI.ReplaceAllString(string(out), ""), func(r rune) bool { return r == '\n' || r == '\r' }) {
 		id, _, ok := strings.Cut(strings.TrimSpace(line), "\t")
 		if ok && id != "" {
 			models = append(models, id)
 		}
 	}
 	if len(models) == 0 {
-		return nil, fmt.Errorf("agy models --model %s returned no model ids", AgyDefaultModel)
+		return nil, fmt.Errorf("agy models returned no model ids")
 	}
 	return models, nil
 }

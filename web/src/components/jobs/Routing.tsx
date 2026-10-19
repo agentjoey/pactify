@@ -114,14 +114,22 @@ function Choice({
   value,
   choices,
   empty,
+  loading = false,
   onChange,
 }: {
   label: string;
   value: string;
   choices: string[];
   empty: string;
+  loading?: boolean;
   onChange: (value: string) => void;
 }) {
+  if (loading)
+    return (
+      <select aria-label={label} disabled value="">
+        <option value="">Loading models…</option>
+      </select>
+    );
   if (choices.length === 0)
     return (
       <input
@@ -150,11 +158,13 @@ export function Routing({
   readOnly = false,
   expanded = false,
   catalog = {},
+  modelsLoading = false,
 }: {
   source: JobsSource;
   readOnly?: boolean;
   expanded?: boolean;
   catalog?: HarnessCatalog;
+  modelsLoading?: boolean;
 }) {
   const [open, setOpen] = useState(expanded);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -466,6 +476,7 @@ export function Routing({
                             label={`${prefix} model`}
                             value={a.model}
                             choices={catalog[a.harness]?.models || []}
+                            loading={modelsLoading && !catalog[a.harness]}
                             empty="Select a model"
                             onChange={(v) => update("model", v)}
                           />
@@ -638,6 +649,7 @@ export function Routing({
                                   label={`${prefix} model ${m + 1}`}
                                   value={model}
                                   choices={catalog[g.harness]?.models || []}
+                                  loading={modelsLoading && !catalog[g.harness]}
                                   empty="Select a model"
                                   onChange={(v) =>
                                     update(

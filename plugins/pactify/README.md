@@ -248,7 +248,7 @@ records retain their existing format and require all applicable checks to pass.
 
 Model-error alternatives in both `sub run` and doctor show at most 10 ids, preferring
 the requested provider and then the closest model names. A truncated list includes
-the omitted count and a full-list hint: `opencode models`, `agy models --model gemini-3.8-flash-low`,
+the omitted count and a full-list hint: `opencode models`, `agy models`,
 `codex debug models`, or `/model` inside interactive `kimi`. When doctor's read-only
 probe returns the same error as its write probe, its reason says
 `same as above (Write access)` instead of repeating the alternatives.

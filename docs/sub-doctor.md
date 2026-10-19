@@ -13,7 +13,7 @@ pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3
 
 显式模型直接经过 `sub run --model` 使用的 `RunJob` 和 harness 后端校验，不先做 doctor 的默认选模列表探测。无效、不受支持或未被后端确认的模型会输出可读原因并使自检退出 1。动态模型表失败也遵循对应后端的既有行为：agy 的列表仅作预检，列表不可用时继续交由 CLI 拒绝无效模型，并核对 `init.model`；kimi 必须通过 ACP 的可用模型及设置确认，opencode 使用 v1 provider 列表和 assistant 消息核实，codex 必须确认实际模型，失败时尝试列出可用模型。显式选择不改变实际模型的独立核实要求，也不改变 `verified-versions.json` 的格式或更新条件。
 
-模型报错中的可用候选最多显示 10 个：同 provider 前缀优先，再按模型名称的编辑距离由近到远排序；并列时保留原列表顺序。被截断时，末尾显示 `… and N more` 及完整列表入口：opencode 用 `opencode models`，agy 用 `agy models --model gemini-3.8-flash-low`，codex 用 `codex debug models`；kimi 启动 `kimi` 后进入 [`/model`](https://moonshotai.github.io/kimi-code/en/reference/slash-commands)。这项格式同时用于 `sub run`、新会话及续接的模型校验，不改变校验用的完整模型表。doctor 的只读探测如果返回与可写探测相同的错误，原因写为 `same as above (Write access)`；不同原因仍分别显示。
+模型报错中的可用候选最多显示 10 个：同 provider 前缀优先，再按模型名称的编辑距离由近到远排序；并列时保留原列表顺序。被截断时，末尾显示 `… and N more` 及完整列表入口：opencode 用 `opencode models`，agy 用 `agy models`，codex 用 `codex debug models`；kimi 启动 `kimi` 后进入 [`/model`](https://moonshotai.github.io/kimi-code/en/reference/slash-commands)。这项格式同时用于 `sub run`、新会话及续接的模型校验，不改变校验用的完整模型表。doctor 的只读探测如果返回与可写探测相同的错误，原因写为 `same as above (Write access)`；不同原因仍分别显示。
 
 探测沿用 `sub run` 的默认配置策略：codex 以最小配置启动，关闭 MCP、插件、skills 和记忆；认证、provider、沙箱设置以及全局和仓库指令仍由原生 harness 加载。kimi 使用独立的 `KIMI_CODE_HOME=$PACTIFY_HOME/harness-homes/kimi`，目录权限 0700，不放 `mcp.json`。`config.toml`、`credentials/`、`device_id` 只用符号链接指向 pactify 进程的 `KIMI_CODE_HOME`（未设置时为 `~/.kimi-code`）；不读取或复制内容，缺少原文件时提示先 `kimi login`。每次启动修复链接，结束时若发现链接变成普通文件或目录，删除副本并在结果中警告；下次启动重建链接。共享目录长期保留以支持续接。普通 job 可用 `--with-user-config` 恢复全部用户集成；doctor 始终验证默认路径。
 

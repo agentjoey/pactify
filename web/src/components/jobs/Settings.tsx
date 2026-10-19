@@ -10,6 +10,7 @@ interface Default {
 interface Harness {
   name: string;
   installed: boolean;
+  stale?: boolean;
   version: string;
   verifiedVersion: string;
   experimental: boolean;
@@ -39,6 +40,9 @@ export function Settings({
   readOnly?: boolean;
 }) {
   const [harnesses, setHarnesses] = useState<Harness[]>([]);
+  const [harnessLoading, setHarnessLoading] = useState(true);
+  const [harnessError, setHarnessError] = useState("");
+  const [routingKey, setRoutingKey] = useState(0);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [defaults, setDefaults] = useState<Record<string, Default>>({});
   const [error, setError] = useState("");
@@ -51,23 +55,41 @@ export function Settings({
     source.harnessesPath || source.jobsPath.replace(/\/jobs$/, "/harnesses");
   const load = useCallback(
     async (signal: AbortSignal) => {
-      const [h, r] = await Promise.all([
-        source.fetch(harnessesPath, signal).then((r) => r.json()),
-        source.fetch(source.routerPath!, signal).then((r) => r.json()),
+      await Promise.all([
+        (async () => {
+          try {
+            const response = await source.fetch(harnessesPath, signal);
+            if (!response.ok) throw Error(await responseError(response));
+            const h = await response.json();
+            if (!Array.isArray(h.harnesses)) throw Error("Harnesses unavailable");
+            if (!signal.aborted) {
+              setHarnesses(h.harnesses);
+              setHarnessError("");
+            }
+          } catch (e) {
+            if (!signal.aborted) setHarnessError((e as Error).message);
+          } finally {
+            if (!signal.aborted) setHarnessLoading(false);
+          }
+        })(),
+        (async () => {
+          try {
+            const response = await source.fetch(source.routerPath!, signal);
+            if (!response.ok) throw Error(await responseError(response));
+            const r = await response.json();
+            if (!r.config || typeof r.version !== "string")
+              throw Error("Defaults unavailable");
+            if (signal.aborted) return;
+            setSnapshot(r);
+            setDefaults(structuredClone(r.config.defaults || {}));
+            setError("");
+            setErrors([]);
+            setConflict(false);
+          } catch (e) {
+            if (!signal.aborted) setError((e as Error).message);
+          }
+        })(),
       ]);
-      if (signal.aborted) return;
-      if (
-        !Array.isArray(h.harnesses) ||
-        !r.config ||
-        typeof r.version !== "string"
-      )
-        throw Error("Harnesses unavailable");
-      setHarnesses(h.harnesses);
-      setSnapshot(r);
-      setDefaults(structuredClone(r.config.defaults || {}));
-      setError("");
-      setErrors([]);
-      setConflict(false);
     },
     [source, harnessesPath],
   );
@@ -80,18 +102,20 @@ export function Settings({
   }, [load]);
   async function refreshModels() {
     setBusy(true);
-    setError("");
+    setHarnessError("");
     try {
       const response = await source.fetch(
         harnessesPath + "?refresh=1",
         new AbortController().signal,
       );
+      if (!response.ok) throw Error(await responseError(response));
       const next = await response.json();
       if (!Array.isArray(next.harnesses)) throw Error("Harnesses unavailable");
       setHarnesses(next.harnesses);
     } catch (e) {
-      setError((e as Error).message);
+      setHarnessError((e as Error).message);
     } finally {
+      setHarnessLoading(false);
       setBusy(false);
     }
   }
@@ -132,6 +156,7 @@ export function Settings({
       }
       if (!response.ok) throw Error(await responseError(response));
       await load(new AbortController().signal);
+      setRoutingKey((key) => key + 1);
       setNotice("Defaults saved");
     } catch (e) {
       setError((e as Error).message);
@@ -180,12 +205,15 @@ export function Settings({
             Config changed elsewhere — reload to see the latest
           </p>
         )}
-        {writable && (conflict || error) && (
+        {writable && (conflict || error || harnessError) && (
           <Button variant="ghost" disabled={busy} onClick={() => void reload()}>
             Reload defaults
           </Button>
         )}
-        {!snapshot && !error && <p>Loading harnesses…</p>}
+        {harnessLoading && <p>Loading harnesses…</p>}
+        {harnessError && (
+          <p role="alert" className="panel-error">{harnessError}</p>
+        )}
         <div className="harness-grid">
           {harnesses.map((h) => (
             <article
@@ -225,7 +253,7 @@ export function Settings({
                   )}
                   <label className="routing-field">
                     Default model
-                    {h.models.error ? (
+                    {!(h.models.items || []).length ? (
                       <input
                         aria-label={`${h.name} Default model`}
                         placeholder="Harness default"
@@ -290,6 +318,7 @@ export function Settings({
                   >
                     Refresh models
                   </Button>
+                  {h.stale && <span className="panel-caption"> cached</span>}
                 </fieldset>
               ) : (
                 <>
@@ -320,15 +349,16 @@ export function Settings({
       </section>
       <section aria-label="Routing">
         <Routing
-          key={snapshot?.version || "initial"}
+          key={routingKey}
           source={source}
           readOnly={readOnly}
           expanded
+          modelsLoading={harnessLoading}
           catalog={Object.fromEntries(
             harnesses.map((h) => [
               h.name,
               {
-                models: h.models.error ? [] : h.models.items || [],
+                models: h.models.items || [],
                 efforts: h.efforts || [],
               },
             ]),

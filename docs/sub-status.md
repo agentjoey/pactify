@@ -45,6 +45,7 @@ AJ-701：删除 `issue` 字段及编号提取。标题只取 brief 第一条非�
 | `createdAt` | RFC3339 string | 创建时间 |
 | `startedAt` | RFC3339 string，可省略 | worker 领取 job、进入 running 的时间；旧 job 不从 `updatedAt` 猜测 |
 | `finishedAt` | RFC3339 string，可省略 | 结束时间（单个对象的历史零值例外见上文） |
+| `dismissedAt` | RFC3339 string，可省略 | 首次 `pactify sub dismiss <id>` 确认已处理的时间；未 dismiss 时省略 |
 | `duration` | string | 从创建到结束或查询时刻的耗时，包含排队时间，四舍五入到秒；保持旧语义，如 `3s`、`1m2s` |
 | `attention` | array | `{kind, message}` 列表；无需处理时为 `[]`；只有终态 job 会产生条目 |
 | `activity` | object，可省略 | 仅 running job 存在，详见下文 |
@@ -63,8 +64,24 @@ AJ-701：删除 `issue` 字段及编号提取。标题只取 brief 第一条非�
 | kind | 条件 |
 | --- | --- |
 | `worktree_pending` | job 已结束，worktree 尚未记录 apply 或 discard |
-| `failed` | job 状态为 failed |
-| `warnings` | result 包含至少一条 warning |
+| `failed` | job 状态为 failed，且尚未确认处理 |
+| `warnings` | result 包含至少一条需要处理的 warning，且尚未确认处理 |
+
+终态 job 的 `dismissedAt` 非零，或 worktree 状态为 `applied` / `discarded`，即视为已确认处理，
+不再产生 `failed` / `warnings` attention。`worktree_pending` 的规则不变。
+apply 和 discard 会标记共享 worktree 的已有各轮，因此这些轮次的失败和警告也会清除 attention；
+新续接轮次仍按自己的 pending 状态处理。`status`、`failureClass`、`warningCount` 等字段保持原值。
+
+审查完毕且无需继续处理时，运行 `pactify sub dismiss <id>` 清除失败和警告的 attention，
+包括没有 worktree 的只读 job。该命令只接受一个完整 job id，要求 job 已结束，且 worktree 已 apply 或 discard
+（没有 worktree 也可）。重复执行成功，保留首次时间。它只在生命周期锁内更新 State，不删除或改写 result、日志及续接关系；
+与 apply/discard 一样不提供 `--json`。
+
+Informational warnings 不产生 `warnings` attention：harness 的 Experimental 提示、`dirtyWorktreeWarning`、
+以 `has not been checked; run pactify sub doctor first` 结尾的提示，以及
+`Usage may be incomplete; only recorded usage is included`（`partialUsageWarning`）和以
+`CLI version changed: ` 开头的提示。它们仍保留在 result、`pactify sub result` 输出及 `warningCount` 中。
+其他警告仍需要处理，包括 AJ-748 的空回复警告。
 
 worktree 的 `applied` 是一次成功 apply 的持久化记录（空补丁的成功 apply 也算）。成功 apply 为共享该 worktree 的已有 job 记录标记；新续接 job 的标记重置为 pending。discard 后状态优先显示 discarded。查询不会根据当前仓库内容猜测是否 apply，也不会把目录消失当作 discard。版本升级前未记录的 apply 无法还原，显示 pending。这里只记录元数据，原有 apply 冲突检测、补丁操作和 discard 行为保持原样。
 

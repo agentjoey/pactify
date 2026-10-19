@@ -33,6 +33,18 @@ func addSubWorktreeCommands(command, run *cobra.Command) {
 			}
 		}})
 	}
+	command.AddCommand(&cobra.Command{Use: "dismiss <job>", Short: "Acknowledge a finished job's failure and warnings", Args: subArgs(1), Run: func(c *cobra.Command, args []string) {
+		store, err := sub.DefaultStore()
+		if err == nil {
+			err = store.Dismiss(c.Context(), args[0])
+		}
+		if err != nil {
+			code, err := subJobError(store, args[0], err)
+			subExit(c, code, err)
+			return
+		}
+		fmt.Fprintf(c.OutOrStdout(), "dismissed %s\n", args[0])
+	}})
 }
 
 func subCreateRun(c *cobra.Command, store sub.Store, id string, req sub.Request, resume bool, resumeJob string) (sub.State, int, error) {

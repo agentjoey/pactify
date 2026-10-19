@@ -72,7 +72,8 @@ or attention. Running jobs appear first; pending matters are highlighted with ne
 direct resume links. The namespaced forms also accept `all` or a job id.
 Use `pactify sub cost` for token and cost totals by harness, model, repository or day, with recent quota snapshots; see the [cost contract](../../docs/sub-cost.md).
 
-The jobs skill is read-only: it never applies, discards, cancels or resumes jobs.
+The jobs skill is read-only: it never applies, discards, cancels, dismisses or resumes jobs.
+After host review, `pactify sub dismiss <id>` clears handled failure/warning attention; apply and discard also clear it, and pending worktrees must be handled first.
 Suggestions follow the review workflow below: inspect the full diff and new files, personally
 rerun acceptance including the full test suite, then apply after approval. Rework uses the
 same worktree with `--resume <job-id> --worktree` after confirming the selected session.

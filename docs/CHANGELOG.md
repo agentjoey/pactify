@@ -8,6 +8,16 @@
 
 ---
 
+## Unreleased — AJ-766 · dismiss handled jobs; informational warnings stop raising attention
+
+- Add `pactify sub dismiss <id>` to acknowledge a terminal job under the existing state lock. Reject queued/running jobs and pending worktrees with actionable errors; repeated dismiss preserves the first `dismissedAt`. Keep results, logs and resume links. Like apply/discard, the command has no `--json` flag.
+- Expose optional `dismissedAt` in State and summary JSON. Terminal jobs acknowledged by dismiss or the existing applied/discarded worktree status no longer produce `failed` / `warnings` attention. Apply/discard cover every existing turn sharing a worktree. Keep lifecycle status, failure class, warning count and pending-worktree attention unchanged, so handled historical failures stop crowding out current work.
+- Treat partial-usage and `CLI version changed: ` warnings as informational for attention only; retain their result output/counts and keep other warnings, including AJ-748 empty replies, actionable. Document the contract and read-only `/jobs` suggestions; bump plugin **0.2.9 → 0.2.10**. Web sources/types and both embedded dists are unchanged: consumers already use `attention`.
+- Focused tests passed: `TestDismissFailedReadOnlyJob`, `TestDismissGuards`, `TestSummaryInformationalWarnings`, `TestSummaryAcknowledgesSharedWorktree` (apply/discard, including resumed turns), and `TestSubDismissCLI` (actual binary, isolated home, retained result, unknown id and argument counts).
+- Mutation verification passed: disabling the informational filter fails `TestSummaryInformationalWarnings`; disabling acknowledgement fails `TestDismissFailedReadOnlyJob` and both shared-worktree subcases; disabling the pending-worktree guard fails `TestDismissGuards/pending`. All three test commands exit 1 as expected. Copy-aside backups restore original files byte-for-byte; no stash.
+- Gates passed: `go build ./...`; `go vet ./...`; `go vet -tags record,harness_e2e ./...`; `go mod tidy -diff` (empty); changed-Go `gofmt -l` (empty); `git diff --check`; full isolated `PACTIFY_HOME="$(mktemp -d /private/tmp/aj766-home.XXXXXX)" go test ./...` (**14 packages pass**, two have no test files). No unrelated Go test flake appeared, so no flaky-only Go rerun was needed.
+- Bats: final **39/39 pass** with an isolated home and a temporary PATH wrapper routing only bare `mktemp -d` to writable `/private/tmp`; installer code/tests are unchanged. Initial run: **38/39 pass**; the unchanged installer test also fails alone because macOS bare `mktemp -d` selects a sandbox-blocked `/var/folders` directory.
+
 ## Unreleased — AJ-748 · one follow-up for an empty final reply
 
 - A normal turn with no written answer now gets exactly one follow-up in the same live session, for every harness. This avoids silently presenting an empty read-only deliverable or write handoff as complete. The follow-up runs after failure classification and before the transient-retry gate, independently of `--retries` (including 0); cancellation, interruption, timeouts, closed sessions and failed turns do not trigger it. Existing access policy, cumulative tool-call limits and timeouts still apply.

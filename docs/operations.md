@@ -35,9 +35,9 @@ are in [jobs-view.md](jobs-view.md).
 
 ## Release and launchd
 
-The published release is v0.12.0; router M1 is merged but unreleased and v0.13.0
-is on hold. Release artifacts use GoReleaser and the `v*` tag workflow in
-`.github/workflows/release.yml`. Release only after the Owner decides to do so.
+The published release is v0.13.0, the first router release. Release artifacts
+use GoReleaser and the `v*` tag workflow in `.github/workflows/release.yml`.
+Release only after the Owner decides to do so.
 See [deployment.md](deployment.md) and [CHANGELOG.md](CHANGELOG.md).
 
 A locally built macOS binary needs signing before launchd runs it:

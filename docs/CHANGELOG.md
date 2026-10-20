@@ -8,21 +8,36 @@
 
 ---
 
-## Unreleased — AJ-610 · plain `go test` cannot touch the real `~/.pactify`
+## v0.13.0 — 2026-10-20 · 首个 harness 路由器版本
+
+**为什么发这一版**：2026-10-15 产品转向「harness 路由器」后，M1、M2、Harness v2 和退役清理都已合入 `main`，但发布版仍是没有 `pactify sub` 的 v0.12.0，`go install …@latest` 与 `install.sh` 装到的都是旧编排器。Owner 2026-10-20 决定先发 v0.13.0，再按正式对外发布（官网、Agensi 上架）另行准备。
+
+**本版内容**（明细见下方各小节，原为 Unreleased）：
+- **路由与委派**：Claude Code 插件（`/delegate`、`/codex`、`/kimi`、`/agy`、`/opencode`、`/jobs`）与 `pactify sub`：后台 job、续接、取消、日志、worktree 隔离、quota fallback、`@alias` 路由、`sub doctor`、本机只读面板 `sub panel`。codex 为默认；kimi、agy、opencode 为实验性。
+- **Harness v2**：agy v2、opencode 1.x/2.x 并存（AJ-720）、kimi P0、端到端集成套件（AJ-718）、harness 版本监测流程（AJ-719）、只读档整理（AJ-734、AJ-740）。
+- **Web v2**：只剩 Dashboard / Jobs / Settings，Live agent tree（AJ-706），数据只来自 `/api/sub`。
+- **退役**：云端与 linx 共享架构（AJ-664）、gemini-cli、旧 serve API（AJ-723）、编排器（AJ-735）、治理模式（AJ-744）。CLI 只保留 `serve`、`sub`、`version`；回滚锚点为 tag `v0.12.0`，找回方法见 [`removed-code.md`](removed-code.md)。
+- **近期修复**：空答复只追问一次（AJ-748）、已处理 job 可隐藏（AJ-766）、Settings 加载与 agy 1.4 模型发现（AJ-769）、cwd 大小写不同的 worktree job（AJ-770）、`go test` 不再触碰真实 `~/.pactify`（AJ-610）。
+
+**跑过的门**（发版提交 `a8bf27a` + 本节文档改动，独立 worktree 中执行）：`go build ./...`、`go vet ./...`、gofmt、`go mod tidy -diff` · `PACTIFY_HOME` 隔离的 `go test ./... -count=1` 16 个包全绿 · `go test -race`（serve、sub）全绿 · `goreleaser check` 与 snapshot 构建 · web `tsc --noEmit`、vitest 19 文件 / 126 项、`npm run build` 与 `build:panel` 重建后嵌入 dist 与仓库一致、Playwright `--retries 0` 26/26 · bats 39/39（临时 venv 补 `jsonschema`）· CI 全绿。live harness 套件沿用 AJ-718 / AJ-720 的实跑结果，本版未重跑（agy 周额度约 10-23 重置）。
+
+**安装**：`curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh` 或 `go install github.com/agentjoey/pactify/cmd/pactify@latest`。pactify.dev 仍是旧版官网，随正式对外发布一起更新。
+
+### AJ-610 · plain `go test` cannot touch the real `~/.pactify`
 
 - `PACTIFY_HOME` now has one meaning everywhere: the store root (`~/.pactify` when unset) holding `jobs/`, `harness-homes/`, catalogs and `credential-quarantine/`. The conflicting readers named in the issue (registry, agentcfg, the old `security_test.go` and `acprunner_test.go`) were deleted with the governance packages, so no semantic change was needed.
 - Add `testenv.Isolate`, called from a `TestMain` in every test package that links `internal/sub` or `internal/credentiallinks` (`cmd/pactify`, `serve`, `sub`, `sub/e2e`, `subpanel`, `credentiallinks`). With `PACTIFY_HOME` unset — or set to the real user store — tests get a fresh path under the temp directory, removed afterwards. An explicit `PACTIFY_HOME` is kept, so live e2e and golden recording keep their persistent homes. The path is named but not created: helper subprocesses re-run `TestMain` with a scrubbed environment and exit inside the test, which left 13 empty directories in the first version.
 - Tests: `TestIsolatePactifyHome` (unset, explicit, real store, real store spelled with `..` and a trailing slash) and `TestDefaultStoreIsIsolated` in `sub`, which fails when that package's `TestMain` is removed.
 - Evidence: `go test -count=1 ./...` with `PACTIFY_HOME` unset and `HOME` pointed at an empty directory passes, and no `.pactify` appears in that `HOME`.
 
-## Unreleased — AJ-770 · worktree jobs accept a cwd spelled in a different case
+### AJ-770 · worktree jobs accept a cwd spelled in a different case
 
 - `sub run --worktree` failed with `cwd is outside the worktree` when the cwd was spelled differently from git's root on a case-insensitive macOS volume (e.g. `$PWD=~/agentworks/...` while the repository is `~/AgentWorks/...`). `filepath.Rel` compared the two spellings as strings, produced `../../agentworks/...`, and the job was created before the check rejected it, leaving a failed job behind.
 - The cwd's repository-relative path now comes from `git rev-parse --show-prefix` run in the cwd, so git's own path resolution decides; the locality check now runs before the job is created. The symlink-in-HEAD check stays after checkout, where it needs the worktree.
 - Regression: `TestWorktreeCwdSpelledInDifferentCase` (upper-cased cwd with a nested non-ASCII directory; skipped on case-sensitive filesystems) fails on the old code with `cwd is outside the worktree` and passes now. CLI check with the fake harness from a lower-cased `$PWD`: the old binary fails, the new one succeeds with the isolated cwd `wt/Sub` and diff path `Sub/out.txt`.
 - Not changed: `--resume` still matches the previous job by the exact cwd string, so resuming from a differently spelled cwd finds no session (recorded in Notion Inbox).
 
-## Unreleased — AJ-769 · Settings loads fast; agy 1.4 model discovery
+### AJ-769 · Settings loads fast; agy 1.4 model discovery
 
 - Discover agy models with plain `agy models` first (agy 1.4 removed the model flag), then try `agy models --model gemini-3.8-flash-low` for older CLIs. Allow **15 seconds per attempt, 30 seconds total** so the measured 8.5-second listing fits without sacrificing legacy compatibility. Parse tab-separated stdout through ANSI/carriage-return cleanup; errors name the plain command and retain up to 200 characters of its trimmed stderr. Update full-list hints, doctor/plugin documentation and plugin **0.2.10 → 0.2.11**.
 - Query harness rows concurrently while preserving `Names()` order. Cache versions by resolved executable path, file size and modification time; explicit refresh reruns version discovery. Preserve opencode's changed/failed-version catalog invalidation. Lazily load and atomically persist models, warnings, efforts, native defaults, versions, errors and `fetchedAt` in **`filepath.Join(filepath.Dir(store.Root), "harness-catalog.json")`**. Corrupt/unreadable caches are ignored; failed writes leave the memory cache usable.
@@ -36,7 +51,7 @@
 - Browser gates are **blocked by the sandbox**, not passed: `npx playwright test --retries 0` reports **26/26 startup failures**, and `SHOT_OUT=/private/tmp/aj769-shots node web/scripts/shots.mjs settings` fails before loading a page. Chromium's macOS `bootstrap_check_in ... MachPortRendezvousServer` is denied (1100). **No screenshots were produced or inspected**; desktop/mobile visual and browser interaction acceptance remain unverified and must run in an environment allowing Chromium to start. Final embedded assets were built successfully; no browser-launch policy or test was weakened.
 - Delivery blocker: `git add` cannot create the shared worktree metadata file `/Users/xtation/AgentWorks/Code_Claude/pactify/.git/worktrees/wt/index.lock` outside the writable sandbox. The initial detached checkout was attached to `fix/aj769-settings-catalog`, but **changes remain uncommitted**; no push was attempted. No filesystem restriction was bypassed.
 
-## Unreleased — AJ-766 · dismiss handled jobs; informational warnings stop raising attention
+### AJ-766 · dismiss handled jobs; informational warnings stop raising attention
 
 - Add `pactify sub dismiss <id>` to acknowledge a terminal job under the existing state lock. Reject queued/running jobs and pending worktrees with actionable errors; repeated dismiss preserves the first `dismissedAt`. Keep results, logs and resume links. Like apply/discard, the command has no `--json` flag.
 - Expose optional `dismissedAt` in State and summary JSON. Terminal jobs acknowledged by dismiss or the existing applied/discarded worktree status no longer produce `failed` / `warnings` attention. Apply/discard cover every existing turn sharing a worktree. Keep lifecycle status, failure class, warning count and pending-worktree attention unchanged, so handled historical failures stop crowding out current work.
@@ -46,7 +61,7 @@
 - Gates passed: `go build ./...`; `go vet ./...`; `go vet -tags record,harness_e2e ./...`; `go mod tidy -diff` (empty); changed-Go `gofmt -l` (empty); `git diff --check`; full isolated `PACTIFY_HOME="$(mktemp -d /private/tmp/aj766-home.XXXXXX)" go test ./...` (**14 packages pass**, two have no test files). No unrelated Go test flake appeared, so no flaky-only Go rerun was needed.
 - Bats: final **39/39 pass** with an isolated home and a temporary PATH wrapper routing only bare `mktemp -d` to writable `/private/tmp`; installer code/tests are unchanged. Initial run: **38/39 pass**; the unchanged installer test also fails alone because macOS bare `mktemp -d` selects a sandbox-blocked `/var/folders` directory.
 
-## Unreleased — AJ-748 · one follow-up for an empty final reply
+### AJ-748 · one follow-up for an empty final reply
 
 - A normal turn with no written answer now gets exactly one follow-up in the same live session, for every harness. This avoids silently presenting an empty read-only deliverable or write handoff as complete. The follow-up runs after failure classification and before the transient-retry gate, independently of `--retries` (including 0); cancellation, interruption, timeouts, closed sessions and failed turns do not trigger it. Existing access policy, cumulative tool-call limits and timeouts still apply.
 - Record `emptyReplyFollowups: 1` in the result and an `empty_reply_followup` system log marker. Reuse the retry collector reset, preserving usage and tool counts, including Kimi usage in structured Live logs. A written follow-up succeeds without an empty-reply warning; a second normal empty reply succeeds with the specified actionable warning and status attention `warnings`. Follow-up failures use normal failure/retry handling; later retries cannot cause another empty-reply follow-up.
@@ -57,7 +72,7 @@
 - Initial checks: focused tests exposed readiness warnings in the new fixture and were corrected. The first full Go suite failed in `TestAgySevenSecondOpeningQuotaDoesNotBlockPrompt` because its formerly empty success fixture closed a channel twice; verbose package diagnostics were interrupted when further stale success fixtures were identified. Corrected the fixtures; acceptance assertions remain unchanged.
 - Environment: the worktree started clean at detached HEAD; `git pull` could not select a branch and `.agent/CURRENT.md` was absent. Bare macOS `mktemp -d` was sandbox-blocked; stopped the initial test launches and used a temporary wrapper placing isolated homes under writable `/private/tmp` for subsequent Go/Bats checks. Staging/commit is blocked: `git add` cannot create the index lock under the main checkout’s `.git/worktrees/wt` (`Operation not permitted`), outside the sandbox writable roots; approval escalation is unavailable. Changes remain in this worktree for the host to commit. No credential files, real harnesses or API quota were used; no push.
 
-## Unreleased — AJ-744 · retire governance mode
+### AJ-744 · retire governance mode
 
 - Retire `internal/pact`, `ledger`, `event`, `projection`, `mcp`, `agent`, `agentreg`, `agentmanifest`, `registry`, `wizard`, `doctor` and `paths`, including tests and fixtures. Pactify is now only a harness router: the Owner reversed the 2026-10-15 decision to retain optional governance mode. Tag **`v0.12.0` remains the rollback anchor**. There are **11 top-level internal packages**, measured with `go list ./internal/... | sed 's#.*/internal/##' | cut -d/ -f1 | sort -u | wc -l`.
 - Keep only root commands `serve`, `sub`, `version` (plus Cobra help/completion). Remove governance init/join/assign/checkpoint/accept/changes/merge/cancel/withdraw/config/status/log/validate/seat, agent management, project registration/listing, setup, top-level doctor and MCP. Remove serve vendor preflight and the hidden `--relay-url`, `--relay-token`, `--remote-control`, `--seat`, `--project` compatibility flags; launchd should pass only `serve --addr 127.0.0.1:17082`.
@@ -68,16 +83,16 @@
 - Full isolated `PACTIFY_HOME="$(mktemp -d)" go test ./...`: **PASS** (14 packages pass; two have no test files). The first run caught a missing `os/exec` import in a retained Git test helper; corrected, the affected package passes alone, and the final full rerun passes. Web typecheck/Vitest were not run because `web/node_modules` is absent. `deadcode` is unavailable; vet and reference searches were used. No real harness/API requests were run.
 - Workspace limitation: `git pull` and `git mv` could not write the worktree Git metadata outside the sandbox. Documents were moved in the writable checkout, preserving content after the archive notice. The checkout started detached and `.agent/CURRENT.md` was absent. A later `git add` and commit succeeded; all ten archived documents are recorded as renames.
 
-## Unreleased — AJ-740 · router read-only keeps every harness that supports it
+### AJ-740 · router read-only keeps every harness that supports it
 
 - With a router config present, `--read-only` used to keep only codex routes, so even `pactify sub run opencode --read-only` failed with `no routes support read-only access`. That rule dated from when codex was the only read-only harness (AJ-694). `Router.Select` now skips only harnesses that refuse read-only (`NoReadOnly`, currently kimi) and unknown harnesses, for both the chosen route and the remaining fallback chain.
 - Tests: read-only agy is chosen and its chain keeps opencode and codex while skipping kimi; read-only opencode is chosen after kimi; kimi/unknown-only chains are still refused. Restoring the codex-only rule fails the test. Live with the real router config: `sub run opencode --read-only` (MiniMax-M3, 1.19.3) succeeds with no changes, where the previous binary refused it.
-## Unreleased — AJ-739 · kimi matches 429 only as a status code
+### AJ-739 · kimi matches 429 only as a status code
 
 - The kimi failure classifier used to treat any "429" substring as rate limiting (transient). A missing-login error quotes its home path, so a path containing 429 (for example a random `t.TempDir()`) turned an auth failure into a retried transient. That caused about 1% of CI runs to fail in `TestManagedMissingLoginFailureIsAuth/kimi`. 429 now matches only in status context (`HTTP 429`, `status code: 429`, `code=429`, `error 429`, `429 Too Many Requests`, `429 RESOURCE_EXHAUSTED`), like the existing 5xx rule; `rate limit` / `rate_limit` / `too many requests` still match.
 - Tests: new classifier cases (status forms stay transient; a login error with `…1429…` in its path stays auth; a plain path with 4290 stays other). `TestManagedMissingLoginFailureIsAuth` now always uses a home path containing 1429, so the old flake reproduces deterministically. Reverting to substring matching fails both tests.
 
-## Unreleased — AJ-735 · remove the orchestrator
+### AJ-735 · remove the orchestrator
 
 - Remove `internal/orchestrate`, `planner`, `schedule`, `audit`, `sarif`, `sessions`, `tokens`, `secret`, `recipe`, `finish`, `runguard`, `agentcfg` and `roles`, plus their exclusive tests and fixtures. Pactify's product direction is the harness router; tag **`v0.12.0` remains the rollback anchor**. There are now **23 top-level internal packages**, measured with `go list ./internal/... | sed 's#.*/internal/##' | cut -d/ -f1 | sort -u | wc -l`.
 - Remove CLI commands `orchestrate`, `plan`, `run`, `schedule`, `audit` (including SARIF), `sessions`, `recipe`, `finish`, `role`, and orchestrator-only `agent config`, `config gate/critic` and `checkpoint --force`. Remove effective launch config from `agent scan`, role-binding diagnostics from doctor, and the CLI/MCP checkpoint run guard. Legacy run status files no longer block checkpoints; regression tests cover both paths. Pact protocol roles, including `join --roles`, remain intact.
@@ -85,7 +100,7 @@
 - `go mod tidy` succeeds without module changes. Reviewed workflows, `.goreleaser.yaml` and ignore rules; retain applicable CI/release jobs and remove the unused session `data/` ignore entry. Preserve pact/agent registry APIs and stored-data compatibility; `agentcfg` and `roles` have no remaining non-orchestrator users. `deadcode` is unavailable; reference searches and vet cover removal leftovers.
 - Validation completed so far: `go build ./...`, `go vet ./...`, `go vet -tags record,harness_e2e ./...`, `go mod tidy -diff` (also offline with `GOPROXY=off GOFLAGS=-mod=mod`), changed-file `gofmt -l`, `git diff --check`, and the required removed-package Go reference search all pass. Focused CLI/MCP/doctor regression tests pass. Built-binary smoke passes for `serve --help`, `serve --addr 127.0.0.1:0 --seat claude --project /tmp` (clean SIGINT shutdown), and rejection of `orchestrate` as an unknown command.
 - Bats: **136/136 pass** with isolated `HOME`/`PACTIFY_HOME`, temporary `jsonschema` dependencies via `PYTHONPATH`, and a temporary `mktemp` wrapper routing bare `mktemp -d` to writable `/private/tmp`. Initial runs failed only because `jsonschema` was absent and macOS's default temp directory is sandbox-blocked; installer cases also pass alone with the wrapper. No installer or schema test changes. The final isolated full Go suite (`go test -json ./...`) passes: 26 packages pass and two contain no tests. The initial runs caught a deleted test helper and an incorrect compatibility-warning expectation; both are fixed, the focused regression rerun passes, and the final complete rerun has no failures.
-## Unreleased — AJ-734 · opencode 1.x read-only denies the shell
+### AJ-734 · opencode 1.x read-only denies the shell
 
 - opencode 1.x read-only now denies `bash` outright, in both the config (`"bash": "deny"`) and the session rules (`*` deny, read/glob/grep/list allow, `bash *` deny). The 15 exact-command allows, the dangerous-pattern denies and `orderedBashPolicy` are gone. This matches the 2.x policy since AJ-720: an exact-command whitelist depends on opencode's shell parsing, and 2.x already skips the permission check for commands it cannot parse. Write mode is unchanged.
 - opencode removes a wholly denied tool from the model's toolset. A live 1.19.3 read-only job (MiniMax-M3) listed only `read`, `glob` and `grep`, read the file and left the repository unchanged. The doctor's old probe asked the model to run `echo x > probe.txt` through bash, so it could only report "inconclusive". For opencode (1.x and 2.x), doctor now reopens the probe session after the job and evaluates its own permission rules: bash/shell, edit and external_directory must be deny, and the write target must be absent. `Store.CheckOpencode2Readonly` became `Store.CheckOpencodeReadonly` and dispatches on the recorded CLI version; the new `cockpit.CheckOpencodeReadonly` reads `GET /session/{id}` and applies opencode's last-match wildcard rules. The denied-write log parser is now agy-only.
@@ -93,7 +108,7 @@
 - Docs: `docs/sub-doctor.md`, plugin README (the access table still said opencode read-only was not offered) and the opencode skill. Plugin 0.2.8.
 - Gates (host): `go build ./...`, `go vet ./...` (default and `record,harness_e2e`), isolated `go test ./...`, bats; real `pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3` on 1.19.3: Read-only access PASS ("shell/edit/external_directory deny=true"), all other checks PASS/expected WARN/SKIP.
 
-## Unreleased — AJ-723 · remove the legacy serve API
+### AJ-723 · remove the legacy serve API
 
 - Remove the unused governance HTTP routes (projects/state/worktrees/events, orchestrate/fallback approval, cockpit, registry/author verbs, agents/sessions, plan/setup, filesystem browsing, wiring/seats, stats, recipes, manifests and audit). Web v2 consumes `/api/sub`; unknown API routes now return 404 instead of the SPA index.
 - Delete the route-only handlers, watchers, SSE hub, DTOs, fixtures (including the former cloud TypeScript goldens), tests and three legacy serve Bats suites. Remove `internal/stats`, `internal/diffstat`, the unused cockpit Manager, Claude backend/SDK bridge and doctor's `--setup-bridge` flag/checks. Keep the fake backend/session because retained cockpit tests use them. There are now **35 top-level internal packages** (down from 37; `go list ./internal/...` lists 39 including nested packages).
@@ -104,32 +119,32 @@
 - Real-server smoke passed with isolated homes and `--seat claude`: `/api/sub/jobs` returned 200 without additional headers, removed `/api/projects` returned 404, and SIGINT shut the server down cleanly. Startup tests cover repeatable `--project` (it adds scheduler projects) and assert neither flag is reported as ignored.
 - **Host re-verification**: isolated `go test ./...` passes except `TestSubAgyReadOnlyRestored`, which timed out under load in the full run and passes alone 2/2; race tests pass; bats **139/139** with Python `jsonschema` available. A serve built from this branch with the plist arguments (`--seat claude`), real job data and a copied router served Dashboard, Jobs and Settings with no console errors; `/api/sub/{jobs,harnesses,router,cost}` 200, `/api/{projects,registry,agents}` 404.
 
-## Unreleased — AJ-722 · dead code and stale artifacts
+### AJ-722 · dead code and stale artifacts
 
 - Remove 17 obsolete screenshot scripts, the gallery entry and its exclusive UI/icon helpers, test-only components and their tests, unused styles/exports, Phosphor, and Vite template assets. Web v2 now has one shared Dashboard / Jobs / Settings shell with embedded Live.
 - Remove unreachable `gitx.Merge`, `Store.FinalJobSnapshot`, `Store.LastSessionFor`, `Store.ResumeJob` and `prepareKimiHome`, confirmed by reference searches and deadcode with `record,harness_e2e,agye2e,acpsmoke`. Keep `Store.Actions` and `Store.Summarize` for now: serve tests still call them. Keep the live-tree/statistics helpers private because production still calls them. Doctor and worktree action tests now call the underlying active APIs.
 - Delete showcase seeds, tracked Python bytecode and the obsolete release hook; ignore Python caches, drop the Rust ignore rule, align four-harness plugin copy and bump the plugin to 0.2.7. Refresh Jobs, frontend, archive and screenshot documentation.
 - **Gates (host)**: `go build ./...`, `go vet ./...` (default and `record,harness_e2e`), isolated `go test ./...` all pass; `npm install` leaves the edited lock unchanged; `tsc --noEmit`, vitest 120/120, both dists rebuilt, Playwright 26/26 with `--retries 0`, `shots.mjs` screenshots from the final build checked; bats 145/0. The entry files (CLAUDE.md / AGENTS.md / GEMINI.md) still name the removed `live-gate-shot.mjs` / `shot-dispatch-review.mjs`; they are updated separately because they carry uncommitted Owner edits.
 
-## Unreleased — opencode permission replies outlive the event stream (AJ-720 follow-up)
+### opencode permission replies outlive the event stream (AJ-720 follow-up)
 
 - **Why**: CI intermittently failed `TestOpencode2Flows/permission` and `TestOpencodeServeWorkerV2/permission` with `Approval failed … context canceled`. Both opencode backends sent the permission reply with the event-stream context captured when the request arrived; approvers answer asynchronously, so a stream that had ended or reconnected cancelled the reply and the job failed.
 - **What**: replies (1.x and 2.x) now use the session's lifetime context; the server call keeps its own 15-second timeout, and a reply after `Close` still fails.
 - **Gates**: new `TestOpencodePermissionReplyOutlivesStream` (fails if the reply ignores the session lifetime); `go build ./...`, `go vet ./...`, isolated cockpit and sub tests, `-race -count=3` on the opencode cockpit tests.
 
-## Unreleased — AJ-724 · delegation path no longer depends on the orchestrator or governance packages
+### AJ-724 · delegation path no longer depends on the orchestrator or governance packages
 
 - **Why**: `internal/sub` pulled in orchestrate, audit, sessions, agent, pact, ledger and projection for two calls only, so the frozen orchestrator could not be removed on its own.
 - **What**: the cross-vendor API-key isolation table and `Strip` moved to a new dependency-free `internal/vendorenv` (orchestrate keeps a thin wrapper; the M11 table test moved with it, the ACP wiring test stays in orchestrate). `cockpit`'s ACP command mapping keeps the gemini-cli removal message inline instead of importing `agent`. `sub`, `subpanel` and `cockpit` now depend only on `acp`, `credentiallinks`, `gitx`, `lockx`, `procx` and `vendorenv`; `TestDelegationPathAvoidsFrozenPackages` pins that.
 - **Gates**: `go build ./...`, `go vet ./...`, isolated `go test ./...`; the new dependency test fails when the old `agent` import is restored.
 
-## Unreleased — AJ-721 · read-only tool-call limit 40 → 200
+### AJ-721 · read-only tool-call limit 40 → 200
 
 - **Why**: in the AJ-718 end-to-end suite every harness with read-only support (codex, opencode 1.x/2.x, agy) failed `readonly_long` at call 41 — a 60-file read is an ordinary review, so 40 was too tight. Owner decision 2026-10-18.
 - **What**: `sub.DefaultReadOnlyToolCallLimit = 200` replaces the hard-coded 40 in `sub run` and `sub doctor`. The limit still applies only to read-only jobs; `0` still disables it.
 - **Gates**: new `TestRunJobDefaultToolCallLimitAllowsSixtyFileRead` (fails with the old value), `go build ./...`, `go vet ./...`, isolated `go test ./...`.
 
-## Unreleased — AJ-720 · opencode 2.x backend
+### AJ-720 · opencode 2.x backend
 
 - **One `opencode` harness, two backends**: the installed major version (one cached probe) selects the existing 1.x backend or the new 2.x backend; ≥ 3 still fails fast. Resuming across majors is refused using the previous job's recorded CLI version (both majors use `ses_` ids). 1.x behaviour, tests and goldens are unchanged.
 - **2.x backend**: a private `serve --stdio` server per job (stdin lease, random `OPENCODE_PASSWORD`, redaction, process-tree cleanup), native session, model/variant, permission, event and history APIs, the first terminal of the prompt's own busy period, recursive child-session usage, typed failures (auth/quota/transient/model), reconnect without replay, and cancellation that also stops running tool processes. SSE heartbeats keep a long silent tool alive; repository `AGENTS.md` is honoured.
@@ -139,7 +154,7 @@
 - **Drift and evidence**: v2 OpenAPI projection, non-billable permission probe (13 cases on the real binary), v2 CI matrix, separate release baselines per channel, five real free-model goldens (write, readonly, resume, cancel with a running `sleep`, failure) replayed offline, and v2 support in the AJ-718 suite.
 - **Live results (host, 2.0.32, `opencode/deepseek-v4.1-flash-free`)**: `sub doctor opencode` all PASS (only the informational "not sandboxed" warning every non-codex harness gets); AJ-718 e2e **13/14**. The only failure is `readonly_long` at the shared 40-call cap. 1.x scored 12/14.
 - **Gates**: `go build ./...`, gofmt, `go vet ./...` (plus `harness_e2e` and `record` tags), isolated `go test ./...`, Opencode2 race tests, both Python suites, static drift, bats 145/0.
-## Unreleased — AJ-706 · event-driven Live agent tree
+### AJ-706 · event-driven Live agent tree
 
 - Add a Live view above the Dashboard metrics and as a tab in job details, shared with the read-only `pactify sub panel`. The tree shows the host, the router's aliases, fallbacks and exhausted routes, each observed job (harness · model · effort, duration, tokens, calls, diff, quota), tool categories and a session log; resume and fallback links and retry loops are drawn from recorded relations. Nothing is inferred: no probabilities, no invented sub-agents, and rows without a timestamp (real `log.jsonl` events carry none) show no time.
 - Add a read-only `/jobs/{id}/events` SSE on the existing shared handler and `Store.Logs` reader. It keeps the 1 MiB initial window, the 100-event tail and cancellation, and forwards only structured projections: no raw payloads, and credential assignments and flags are masked in display text. Job summaries gain the recorded effort and a known positive cost.
@@ -147,70 +162,70 @@
 - The detail drawer keeps the intrinsic height of its children, so long Live content scrolls inside the drawer instead of overlapping the action footer; four Playwright geometry regressions (web and panel at 1440×1100 and 375×812) fail when the fix is removed.
 - Gates: TypeScript; 165 Vitest tests; both embedded builds; Go build, vet and the serve, subpanel and sub suites. Playwright ran 26/26 outside the sandbox with `--retries 0`. Screenshots were checked against mocks and against a real running codex job through the panel.
 
-## Unreleased — AJ-719 · harness update process; opencode 2.x fails fast
+### AJ-719 · harness update process; opencode 2.x fails fast
 
 - opencode 2.0 ships as a new npm package, `@opencode/cli`, and replaces every v1 server route and the `serve` startup line that pactify drives. Measured on 2.0.32 in an isolated home: the deployed pactify waited 30 s per probe and failed with `opencode serve startup timed out`. Pactify now rejects opencode ≥ 2 before starting any harness process, in jobs, `sub doctor` and model discovery, with a message that names the fallback. The local CLI (1.19.0) is unaffected, and `opencode-ai@latest` is still 1.19.3. See [opencode-2-impact.md](harness-v2/opencode-2-impact.md); whether to build a v2 adapter is an open Owner decision.
 - Add a weekly release watch (`internal/cockpit/harnessdrift/releases.py`, the `releases` job in `harness-drift.yml`). It reads registry and installer metadata for every official channel, successor packages included, and fails the scheduled run only for an untriaged new major line, a deprecated channel or an unparseable version. Registry outages are skipped. The process from detection to response is in [harness-updates.md](harness-updates.md).
 - Gates: `go build ./...`, `go vet ./...`, `go test ./...`, bats, the drift unit tests and the static drift check; the doctor before/after comparison was run against the real 2.0.32 binary.
 
-## Unreleased — AJ-718 · end-to-end harness integration suite
+### AJ-718 · end-to-end harness integration suite
 
 - Promotion gate 2 is now an end-to-end integration suite plus three endurance tasks that judge only integration signals; one-attempt completion of large tasks is reported per harness + model as a capability reference (Owner confirmed 2026-10-17). See [harness-v2.md §4](specs/harness-v2.md).
 - Add the opt-in `harness_e2e` suite (`internal/sub/e2e`): 14 scenarios driven through the real `pactify sub` CLI in private homes, from worktree write/apply/discard and resume to cancel, a 4-minute tool, 5 MB output, parallel jobs, model fulfillment, failure surfaces, record consistency, AGENTS.md pickup, untouched user directories and the Claude Code plugin host path. Live run outside the sandbox: codex 11 / opencode 12 / agy 13 of 14 pass; the only shared failure is the read-only 40-call cap, which cuts off a 60-file read on all three. Kimi, rerun after the Owner logged in again (2026-10-18), passes 12 with 2 N/A, because kimi offers no read-only mode. Its first two failures were gaps in the suite: kimi streams tool arguments as in-progress `tool_call_update` text, and reads usage from `wire.jsonl` after the turn instead of logging it. Both checks are fixed and have regression tests. Kimi rotated its refresh token during the run and the new token was written back correctly. Results in [aj718-e2e-report.md](harness-v2/aj718-e2e-report.md).
 - Fix defects the suite found: codex and agy invalid models and opencode missing login / kimi invalid grant were classified `other`; successful git stderr kept refreshing the idle watchdog; opencode native tool truncation never reached warnings (now an informational warning that does not replace the job error); codex `willRetry` notifications no longer become the terminal error or a quota class.
 - Credential refresh: per-file credential links lost rotated refresh tokens, because kimi rewrites its credentials atomically and rotates the refresh token. This invalidated the Owner's kimi login after the AJ-713 recording and the first suite run. Managed homes now restore a refreshed private credential over the user's file when the source is unchanged (keeping its permissions), and otherwise move it to `~/.pactify/credential-quarantine` with a warning; they never delete it. Configuration rewrites are still discarded. Kimi shares its `credentials` and `oauth` directories, so pactify and an interactive kimi use the same refresh lock. The AJ-713 recording guide is corrected. The remaining check-then-rename window is tracked in [backlog.md](backlog.md).
 
-## Unreleased — agy · Sonnet 5.5 comparison
+### agy · Sonnet 5.5 comparison
 
 - Ran agy with `claude-sonnet-5-5-high` on the same Phase 0 tasks to tell model gaps from harness gaps: 7 of the 9 tasks it finished were complete in one attempt (T09 minor, T07 incomplete), against 3 of the same 9 for gemini-3.8-flash-high, with 9/9 jobs succeeded and passed acceptance, no gofmt misses, and about 4x less time per task. The gap is model-side. T05 and the read-only tasks wait for the 3p weekly quota reset. Results in [agy-eval.md](agy-eval.md); the experimental notices are unchanged.
 
-## Unreleased — Linux process snapshot ignores processes exiting mid-read
+### Linux process snapshot ignores processes exiting mid-read
 
 - On Linux, a process that exits while its `/proc/<pid>/stat` is being read fails the read with ESRCH wrapped in a `*PathError`. The process snapshot compared the error with `==`, so the vanished process failed the whole snapshot and `Close` returned `read /proc/<pid>/stat: no such process` (CI flake in `TestReviewReadonlySessionOverridesUserConfig`). It now uses `errors.Is`, like `Identity.Alive`. Regression: `TestSnapshotSkipsProcessExitingDuringRead` (Linux only).
 
-## Unreleased — agy final report survives timer wake-ups
+### agy final report survives timer wake-ups
 
 - agy can wake the model again after it has reported, through a background-task notification or a timer the model scheduled. The reply to that wake-up ("That was just the timer…") used to replace the report as the job's final text: 3 of 10 jobs in the agy + Sonnet 5.5 evaluation lost their report this way (T07, T09, T10). The final text is now the longest answer since the last working tool step, followed by any later answers; `manage_task` and `schedule` count as waiting, not work. Completion followup detection still reads only the last answer. Regression `TestAgyV2ReportSurvivesTimerReply` fails on the old parser; replaying the real T07, T09 and T10 streams recovers their reports, and T03 is unchanged.
 
-## Unreleased — Harness v2 · opencode evaluation (MiniMax-M3)
+### Harness v2 · opencode evaluation (MiniMax-M3)
 
 - Evaluated opencode v2 (`opencode serve`) on the Phase 0 tasks with `minimax-coding-plan/MiniMax-M3`: 4/10 large tasks complete in one attempt, 10/10 jobs succeeded and passed acceptance, no new full-suite failures; read-only 1/3, as R1 and R3 were cut off by the 40-call cap. opencode stays experimental. Results in [opencode-eval.md](opencode-eval.md); notices now cite both models (plugin 0.2.6).
 - Eval reports note that the v1 job directories were removed during the 2026-10-17 disk cleanup; per-task logs and verdicts remain.
 
-## Unreleased — AJ-711 · agy v2 re-evaluation
+### AJ-711 · agy v2 re-evaluation
 
 - Re-evaluated agy v2 on the Phase 0 tasks (gemini-3.8-flash-high): large tasks 3/10 complete in one attempt (v1: 1/10), so agy stays experimental; read-only converged 3/3 with usable conclusions when the read-only tool-call cap was raised to 120 in an eval-only build, 2/3 under the default cap of 40. Results in [agy-eval.md](agy-eval.md); the experimental notices now cite 3/10 (plugin 0.2.5).
 - Classify agy transport failures before an HTTP status (`request failed: Post …`, e.g. `use of closed network connection` after a long tool run) as transient, so the existing same-session retry resumes them instead of failing a finished turn.
 - Refuse git `--git-dir`/`--work-tree` anywhere in agy read-only commands after an independent re-review of the allowlist found no bypass; residual risks are recorded in the [allowlist report](harness-v2/aj711-policy-allowlist.md).
 
-## Unreleased — AJ-711 read-only allowlist review
+### AJ-711 read-only allowlist review
 
 - Replace agy grep/rg option and find predicate denylists with explicit allowlists; remove tree and go list/vet, restrict go env to queries, and reject Git repository redirection/no-index, file magic compilation/custom magic and wc file-list indirection.
 - Execute every approved command from quoted argv so shell glob/brace/tilde expansion cannot change validated arguments. Document literal-glob behavior and recursive-search alternatives; native program prefixes follow the same hook list. Opencode remains unchanged.
 - Fix the async quota probe inheriting a harness marker and deleted job temp; a real seven-second fake /usage process now verifies both snapshots survive terminal cleanup and private temps are removed.
 - Add regressions for all confirmed bypasses, reviewed scope/expansion risks and R1/R3 commands. Superseded prior positive assertions and fresh live/gate evidence are recorded in the [allowlist report](harness-v2/aj711-policy-allowlist.md).
 
-## Unreleased — AJ-711 flash reevaluation follow-up
+### AJ-711 flash reevaluation follow-up
 
 - Replace agy's exact read-command list with shell-words parsing and program-specific argument checks; align native prefix permissions while leaving opencode's static policy unchanged.
 - Collect the opening quota snapshot concurrently with startup, allow 20 seconds, and supplement terminal results within a 20-second closing budget. Retry terminal malformed-call diagnostics through AJ-693 in the same conversation and retain raw terminal evidence.
 - Use a configurable 30-minute idle limit while tools are active; preserve the ordinary 10-minute event/tree-change watchdog and cancellation behavior across adapters.
 - Regressions were run failing before implementation. Required commands, dependency audit, superseded deadline assertion, flash live probes and user-directory comparisons are recorded in the [follow-up report](harness-v2/aj711-flash-followup.md). Plugin files and version remain unchanged.
 
-## Unreleased — AJ-713 · consistency gates, part one
+### AJ-713 · consistency gates, part one
 
 - Add opt-in sanitized raw-protocol recording and adapter replay, with five real opencode and four real kimi transcripts, field-rename mutation checks, denied-write evidence, and sensitive-data scanning. Agy live recording remains deferred until host evaluation finishes.
 - Align all four doctors to ten rows, retaining live probes and explicit N/A reasons; add sandbox declarations and non-billable offline failure-classifier injection.
 - Add weekly/manual kimi/agy drift checks with offline-only PR checks, version-change doctor hints, and installation skip reasons. Keep Experimental labels and plugin 0.2.4 unchanged.
 - Add the C1–C17 evidence matrix. Validation output, user-directory metadata comparisons, and the three explicitly superseded doctor test contracts are recorded in the [AJ-713 report](harness-v2/aj713-report.md).
 
-## Unreleased — AJ-712 · kimi P0
+### AJ-712 · kimi P0
 
 - Read durable wire failures before retry/fallback classification; sum all agent usage with per-agent resume baselines; discover ACP models without a prompt, with warned offline fallback and shared catalog caching.
 - Keep kimi read-only disabled: shared Git state and absolute symlinks defeat the proposed isolation. Restore K1 refusals and doctor Read-only SKIP; retain Network evidence and `sandboxed=false`. Plugin version: 0.2.4.
 - Review fixes cover main-only usage completion, precise transient/quota/auth classification, retained ACP and wire evidence, prompt-error wire verification, and independent catalog locking/cleanup. Validation and host live evidence: [AJ-712 report](harness-v2/aj712-report.md).
 
-## Unreleased — AJ-711 · agy v2
+### AJ-711 · agy v2
 
 - Review fixes: scope doctor process ownership to its disposable store, replace Python hooks with a compiled fail-closed policy, remove native prefix grants, refuse workspace hooks in read-only mode, and conservatively detect pending results.
 - Keep quota observations in a separate rollback-compatible ledger; cap opening probes at five seconds, publish terminal status before bounded closing probes, and keep snapshot failures out of job errors.
@@ -222,9 +237,9 @@
 - Add static effort constraints and agy doctor denial/network checks; correct the shared doctor retry access mode. Plugin version: 0.2.3.
 - Validation, superseded AJ-683 tests, isolation evidence, and outstanding live/browser gates: [AJ-711 report](harness-v2/aj711-report.md).
 
-## Unreleased
+### M1 与 M2（2026-10-15～16）
 
-2026-10-15～16 合入 main，**尚未发布**；当前发布版仍为 v0.12.0。M1 功能已合入，v0.13.0 挂起，Owner 选择继续内部自用。
+2026-10-15～16 合入 main，随 v0.13.0 发布。
 
 - **修复 panel 手机抽屉高度**（AJ-701 / PR #130）：独立 panel 的 Tailwind 扫描原先遗漏共享 Jobs / UI 源码，最终 CSS 缺少定位、flex 和滚动工具类；显式补齐扫描，两种入口共用手机 `fixed`、视口高度和内部滚动规则，桌面保留右侧抽屉。打开抽屉时锁住背景，关闭恢复原 overflow；用 `@supports` 保留生产 CSS 的 `100vh` 兜底及 `100dvh`。仅将三处既有像素尺寸断言改为容差比较，新增长结果滚动 e2e、滚动锁定及独立构建 CSS 回归。验证：新增回归先红后绿；TypeScript、vitest 66 文件 / 629 项、两个前端 build、`go build ./...` 通过；Playwright 待宿主机以 `--retries 0 --repeat-each 5` 验证。
 - **Jobs 看板与运行链**（AJ-701）：dashboard / 本机 panel 共用 Board 风格的工具栏、四列看板与详情抽屉；按显式 resume / fallback 链合并卡片，保留逐轮日志、结果、diff 和深链接，窄屏堆叠看板并全屏显示抽屉。Routing 独立页签继续沿用原保存校验，panel 仍只读；用量置于底部。删除摘要 `issue` 字段与编号提取，标题只取 brief 第一条非空行；五份委派 skill 共享块补充标题约定。验证：新增回归先红后绿；指定四包 race、`go build ./...`、隔离 HOME / PACTIFY_HOME 的 Go 全量测试、TypeScript、vitest 64 文件 / 626 项、两个前端 build、bats 144/144 通过；更新 Jobs / panel / Routing e2e 并增加运行链、分列、抽屉与 390px 覆盖，Playwright 和最终 build 视觉验收待宿主机运行。

@@ -4,24 +4,22 @@ Pactify is a harness router. It delegates coding tasks to codex (the default),
 kimi, agy and opencode, and records jobs, logs and results locally. The Claude
 Code plugin provides slash commands; the Go CLI manages the same jobs.
 
-The latest published release is **v0.12.0**. Router M1 is merged but unreleased;
-v0.13.0 is on hold for internal use. Build this checkout to use the current
-router. The pact protocol, ledger, MCP server and agent wiring were retired in
-AJ-744; tag `v0.12.0` remains the rollback anchor. See [CHANGELOG](docs/CHANGELOG.md).
+The latest published release is **v0.13.0**, the first harness router release.
+The pact protocol, ledger, MCP server and agent wiring were retired in AJ-744;
+tag `v0.12.0` remains the rollback anchor. See [CHANGELOG](docs/CHANGELOG.md).
 
 ## Install
 
-The router is merged on `main` but not yet released. Until v0.13.0 is published,
-the installer and `go install …@latest` both install **v0.12.0**, which predates the
-router and has no `pactify sub`. Install from `main` instead (Go version in `go.mod`):
+Install the published binary on macOS or Linux (amd64 / arm64):
 
 ```sh
-go install github.com/agentjoey/pactify/cmd/pactify@main
+curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
 pactify sub --help
 ```
 
-Or build from a checkout: `go build -o pactify ./cmd/pactify`. After a release,
-`curl -fsSL https://pactify.dev/install.sh | sh` installs the published binary.
+Or install with Go (version in `go.mod`):
+`go install github.com/agentjoey/pactify/cmd/pactify@latest`. To build from a
+checkout: `go build -o pactify ./cmd/pactify`.
 
 Install and authenticate the harness CLI you intend to use. Check its integration
 with `pactify sub doctor <harness>`; see [doctor](docs/sub-doctor.md).

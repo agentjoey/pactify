@@ -11,11 +11,11 @@ Pactify 是 **harness 路由器**：在 Claude Code 里用 slash 命令委派大
 pact 协议、账本与 MCP 已退役（AJ-744）；旧编排器已删除（AJ-735），回滚锚点为 tag `v0.12.0`。
 **Location:** ~/AgentWorks/Code_Claude/pactify
 **GitHub:**   agentjoey/pactify
-**Version:** **v0.12.0**（2026-10-15，当前发布版；退役功能的回滚锚点）。未发布变更与完整历史见 **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)**。
+**Version:** **v0.13.0**（2026-10-20，当前发布版；首个 harness 路由器版本）。退役功能的回滚锚点为 tag `v0.12.0`。未发布变更与完整历史见 **[`docs/CHANGELOG.md`](docs/CHANGELOG.md)**。
 
-**当前状况（2026-10-18，基于当前 checkout）**
-- **4 个 harness**：codex 为默认；kimi、agy、opencode 为实验性。agy 大任务一次完成 1/10，见 [`docs/agy-eval.md`](docs/agy-eval.md)；opencode（deepseek-flash）一次完成 6/10，见 [`docs/opencode-eval.md`](docs/opencode-eval.md)。只读档：codex、agy、opencode 提供（opencode 1.x/2.x 只读不含 shell，AJ-734），kimi 不提供。
-- **M1 功能已合入、未发布**：v0.13.0 挂起，Owner 选择继续内部自用；已支持后台 job、续接、取消、日志、worktree 隔离与 `sub doctor`。
+**当前状况（2026-10-20，基于当前 checkout）**
+- **4 个 harness**：codex 为默认；kimi、agy、opencode 为实验性。agy（Gemini 3.8 Flash）大任务一次完成 3/10，见 [`docs/agy-eval.md`](docs/agy-eval.md)；opencode（deepseek-flash）一次完成 6/10，见 [`docs/opencode-eval.md`](docs/opencode-eval.md)。只读档：codex、agy、opencode 提供（opencode 1.x/2.x 只读不含 shell，AJ-734），kimi 不提供。
+- **M1 已随 v0.13.0 发布**：支持后台 job、续接、取消、日志、worktree 隔离与 `sub doctor`。安装：`go install github.com/agentjoey/pactify/cmd/pactify@latest` 或 `install.sh`；正式对外发布（官网、Agensi 上架）另行规划。
 - **任务查看**：Claude Code 有 `/jobs`，CLI 有本地只读面板 `pactify sub panel`；web 只剩 Dashboard / Jobs / Settings（含 Live），serve 只提供 `/api/sub`。摘要契约见 [`docs/sub-status.md`](docs/sub-status.md)。
 - **代码清理（2026-10-16～18）**：已删除云端与 linx 共享架构（AJ-664）、gemini-cli（#106、#107）、serve 旧治理 API（AJ-723）和编排器（AJ-735：orchestrate、plan、run、schedule、audit 等命令及 13 个包）。删除清单与找回方法见 [`docs/removed-code.md`](docs/removed-code.md)，回滚锚点为 tag `v0.12.0`。
 - **本地闭环**：当前有 11 个 `internal` 顶层包（AJ-744 移除 12 个治理包）；验收结果见 CHANGELOG。

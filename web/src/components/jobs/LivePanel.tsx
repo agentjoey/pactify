@@ -228,8 +228,8 @@ export function LiveTree({
         <h2>Live</h2>
         <span>
           {selected.replay
-            ? "Recent run replay · recorded tail"
-            : "Observed activity"}
+            ? "Recent run · recorded activity"
+            : "Current activity"}
         </span>
       </div>
       {unavailable && <p>Job summary unavailable</p>}
@@ -317,9 +317,7 @@ export function LiveTree({
             ))}
           </div>
           <p className="panel-caption">
-            Last 1 MiB, up to 100 initial events. Calls and tools reflect this
-            observed window. Up to 4 event streams; other jobs use summary
-            polling. Replay shows recorded data without timed animation.
+            Recent activity only. Counts may be partial. Use the CLI for full logs.
           </p>
         </>
       )}

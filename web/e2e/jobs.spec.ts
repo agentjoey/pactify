@@ -36,7 +36,7 @@ for (const width of [1440, 390]) {
       exact: true,
     });
     await expect(running.locator("article")).toHaveCount(1);
-    await expect(running).toContainText("rework 1");
+    await expect(running).toContainText("1 rework");
     const queuedCard = page
       .getByRole("region", { name: "Queued", exact: true })
       .locator("article")
@@ -73,22 +73,22 @@ for (const width of [1440, 390]) {
     await page.getByLabel("Project", { exact: true }).selectOption("");
     await page.getByLabel("Harness", { exact: true }).selectOption("codex");
     await page.getByLabel("Status", { exact: true }).selectOption("progress");
-    await page.getByPlaceholder("Search jobs").fill("Example-659");
+    await page.getByPlaceholder("Search jobs").fill("local job panel");
     await expect(page.locator("article")).toHaveCount(1);
     await running
-      .getByRole("link", { name: "Example-659 · Local read-only job panel" })
+      .getByRole("link", { name: "Build a local job panel" })
       .click();
     const modal = page.getByRole("dialog", { name: "Job details" });
-    await expect(
-      modal.getByRole("heading", { name: "Result summary" }),
-    ).toBeVisible();
+    await expect(modal.getByRole("tab", { name: "Live", exact: true })).toHaveAttribute("aria-selected", "true");
+    await modal.getByRole("tab", { name: "Summary", exact: true }).click();
+    await expect(modal.getByRole("heading", { name: "Result summary" })).toBeVisible();
     await modal
       .getByRole("navigation", { name: "Run timeline" })
       .getByRole("link", { name: /^job-panel ·/ })
       .click();
     await expect(
       modal.getByRole("heading", {
-        name: "Example-659 · Local read-only job panel",
+        name: "Build a local job panel",
         exact: true,
       }),
     ).toBeVisible();
@@ -112,7 +112,7 @@ for (const width of [1440, 390]) {
     });
     await page.keyboard.press("Escape");
     await expect(modal).toHaveCount(0);
-    await expect(page.getByPlaceholder("Search jobs")).toHaveValue("Example-659");
+    await expect(page.getByPlaceholder("Search jobs")).toHaveValue("local job panel");
     await navigate(page, "Dashboard", width);
     await expect(
       page.getByRole("img", { name: "Token usage · last 14 days" }),
@@ -241,7 +241,7 @@ test("Resume creates the next run and refreshes the merged chain", async ({
     queued
       .locator("article")
       .filter({ hasText: "Fix CLI exit code edge cases" }),
-  ).toContainText("rework 1");
+  ).toContainText("1 rework");
   await expect(queued.locator("article")).toHaveCount(2);
 });
 test("Cancel needs an inline confirmation and can be backed out", async ({
@@ -279,7 +279,7 @@ for (const action of ["Apply", "Discard"])
     const card = page
       .getByRole("region", { name: "Needs attention", exact: true })
       .locator("article")
-      .filter({ hasText: "Example-657" });
+      .filter({ hasText: "Share job summaries" });
     await card.getByRole("button", { name: "Review", exact: true }).click();
     const detail = page.getByRole("dialog", { name: "Job details" });
     await expect(
@@ -288,7 +288,7 @@ for (const action of ["Apply", "Discard"])
     await expect(detail.locator("pre")).toContainText("+func Listen(port int)");
     await detail.getByRole("button", { name: action, exact: true }).click();
     const confirmation = page.getByRole("dialog", {
-      name: new RegExp(`^${action} Example-657`),
+      name: new RegExp(`^${action} Share job summaries`),
     });
     await confirmation
       .getByRole("button", { name: `Confirm ${action}`, exact: true })
@@ -307,7 +307,8 @@ test("Dashboard cost failure does not hide KPIs or chart", async ({ page }) => {
     route.fulfill({ status: 503, body: "offline" }),
   );
   await page.goto("/#/dashboard");
-  await expect(page.getByText("Unavailable", { exact: true })).toHaveCount(2);
+  await expect(page.getByRole("alert")).toContainText("503");
+  await expect(page.getByText("Unavailable", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("In progress", { exact: true })).toContainText(
     "1",
   );

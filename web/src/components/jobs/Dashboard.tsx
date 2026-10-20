@@ -38,10 +38,12 @@ export function Dashboard({
   source,
   jobs,
   jobsUnavailable,
+  jobsError,
 }: {
   source: JobsSource;
   jobs: Job[] | null;
   jobsUnavailable: boolean;
+  jobsError?: string;
 }) {
   const cost = useResource<Cost>(
     source,
@@ -64,7 +66,14 @@ export function Dashboard({
   const unavailable = !!cost.error || (!!cost.data && !report);
   return (
     <div className="dashboard-content">
-      <LiveTree source={source} jobs={jobs} unavailable={jobsUnavailable} />
+      {(jobsUnavailable || unavailable) && (
+        <p role="alert" className="panel-error">
+          {jobsError || cost.error || "Usage could not be loaded. Retrying shortly."}
+        </p>
+      )}
+      {jobsUnavailable ? (
+        <section className="panel-section"><h2>Live</h2><p>—</p></section>
+      ) : <LiveTree source={source} jobs={jobs} />}
       <div className="kpi-grid">
         {(
           [
@@ -78,7 +87,7 @@ export function Dashboard({
           <section className="panel-section kpi" aria-label={label} key={key}>
             <h2>{label}</h2>
             <strong>
-              {jobsUnavailable ? "Unavailable" : !jobs ? "…" : kpis[key]}
+              {jobsUnavailable ? "—" : !jobs ? "…" : kpis[key]}
             </strong>
           </section>
         ))}
@@ -86,7 +95,7 @@ export function Dashboard({
       <section className="panel-section token-chart">
         <h2>Token usage · last 14 days</h2>
         {jobsUnavailable ? (
-          <p>Unavailable</p>
+          <p>—</p>
         ) : !jobs ? (
           <p>Loading usage…</p>
         ) : (
@@ -96,7 +105,7 @@ export function Dashboard({
       <section className="panel-section">
         <h2>By harness</h2>
         {unavailable ? (
-          <p>Unavailable</p>
+          <p>—</p>
         ) : !report ? (
           <p>Loading usage…</p>
         ) : (
@@ -156,7 +165,7 @@ export function Dashboard({
                         </td>
                         <td>
                           {jobsUnavailable
-                            ? "Unavailable"
+                            ? "—"
                             : durations.length
                               ? formatDuration(
                                   durations.reduce((a, b) => a + b, 0) /
@@ -194,7 +203,7 @@ export function Dashboard({
       <section className="panel-section">
         <h2>Quota</h2>
         {unavailable ? (
-          <p>Unavailable</p>
+          <p>—</p>
         ) : !report ? (
           <p>Loading quota…</p>
         ) : (

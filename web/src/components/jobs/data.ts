@@ -28,6 +28,7 @@ export function useResource<T>(
     if (!path) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
+    let ended = false;
     async function load() {
       try {
         const response = await source.fetch(path!, controller.signal);
@@ -40,9 +41,10 @@ export function useResource<T>(
           setUpdated(new Date());
         }
       } catch (e) {
+        ended = (e as { status?: number }).status === 401;
         if (!controller.signal.aborted) setError((e as Error).message);
       } finally {
-        if (!controller.signal.aborted) timer = setTimeout(load, interval);
+        if (!controller.signal.aborted && !ended) timer = setTimeout(load, interval);
       }
     }
     void load();

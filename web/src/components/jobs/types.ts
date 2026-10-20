@@ -1,5 +1,6 @@
 export interface Job {
   actions?: string[];
+  dismissedAt?: string;
   effort?: string;
   changedFiles?: number;
   addedLines?: number;

@@ -137,9 +137,11 @@ describe("standalone panel", () => {
     );
     window.location.hash = "/jobs/live";
     const { unmount } = render(<Panel />);
-    await screen.findByText("Result summary");
+    await screen.findByRole("tab", {name:"Summary"}, {timeout: 5000});
+    fireEvent.click(screen.getByRole("tab", {name:"Summary"}));
+    await screen.findByText("Result summary", undefined, {timeout: 5000});
     fireEvent.click(screen.getByRole("tab", {name:"Brief"}));
-    await screen.findByText("Build panel");
+    await screen.findByText("Build panel", undefined, {timeout: 5000});
     fireEvent.click(screen.getByRole("tab", {name:"Summary"}));
     for (const title of ["Summary", "Logs", "Diff", "Brief"]) {
       expect(screen.getByRole("tab", {name:title})).toBeInTheDocument();

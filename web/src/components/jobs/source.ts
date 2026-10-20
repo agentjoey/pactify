@@ -45,7 +45,7 @@ export async function readJobStream(
   if (signal.aborted) abort();
   const decoder = new TextDecoder();
   let pending = "";
-  status("Connected");
+  status("Receiving updates");
   try {
     while (!signal.aborted) {
       const { value, done } = await reader.read();

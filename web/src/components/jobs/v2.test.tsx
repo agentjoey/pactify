@@ -143,7 +143,7 @@ it("groups by local completion day, stacks cards and expands and collapses", () 
 });
 it("hides empty section headings and shows the global empty state", () => {
   render(<JobList jobs={[]} />);
-  expect(screen.getByText("No delegation jobs yet")).toBeInTheDocument();
+  expect(screen.getByText("Start your first job")).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Queued" })).toBeNull();
 });
 it("persists project, status and title search in the URL without splitting chains", () => {
@@ -360,7 +360,7 @@ it("keeps Dashboard cards independent when cost is unavailable", async () => {
   expect(
     screen.getByRole("img", { name: "Token usage · last 14 days" }),
   ).toBeInTheDocument();
-  await screen.findAllByText("Unavailable");
+  expect(await screen.findByRole("alert")).toHaveTextContent("offline");
 });
 it("saves only defaults while preserving aliases, fallbacks, groups and version", async () => {
   const src = source();
@@ -410,7 +410,7 @@ for (const status of [409, 422])
 it("panel Settings and actions show only data even if the source exposes writes", async () => {
   const src = source();
   render(<Settings source={src} readOnly />);
-  await screen.findByText("Edit settings from the dashboard or the CLI.");
+  expect((await screen.findByText("pactify serve", {selector:"code"})).parentElement).toHaveTextContent("Edit settings with pactify serve (dashboard) or the CLI.");
   await screen.findByText("verified 1");
   expect(screen.queryByRole("combobox")).toBeNull();
   expect(
@@ -599,7 +599,7 @@ it("does not treat a malformed jobs response as an empty successful list", async
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Invalid response",
   );
-  expect(screen.queryByText("No delegation jobs yet")).toBeNull();
+  expect(screen.queryByText("Start your first job")).toBeNull();
 });
 it("makes covered cards in a collapsed stack inert", () => {
   const { container } = render(
@@ -642,7 +642,7 @@ it("uses completion dates for seven calendar day KPIs and zero fills chart days"
 it("uses the specified empty message when filters leave all four sections empty", () => {
   history.replaceState(null, "", "/#/jobs?search=missing");
   render(<JobList jobs={[makeJob("a")]} />);
-  expect(screen.getByText("No delegation jobs yet")).toBeInTheDocument();
+  expect(screen.getByText("No jobs match these filters.")).toBeInTheDocument();
 });
 it("announces action failures outside the inert background while preserving resume instructions", async () => {
   const row = makeJob("a", {

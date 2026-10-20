@@ -178,7 +178,7 @@ export function Settings({
     <div className="settings-content">
       {readOnly && (
         <p className="panel-caption">
-          Edit settings from the dashboard or the CLI.
+          Edit settings with <code>pactify serve</code> (dashboard) or the CLI.
         </p>
       )}
       <section aria-label="Harnesses">

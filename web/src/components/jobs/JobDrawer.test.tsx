@@ -32,3 +32,19 @@ it("removes temporary overflow styles when the original styles were absent", () 
   expect(document.documentElement.style.overflow).toBe("");
   expect(document.body.style.overflow).toBe("");
 });
+
+it("focuses the heading, wraps from it and lets Tab move past Close", () => {
+  render(<JobDrawer id="job" jobs={[]}><h1 tabIndex={-1}>Task title</h1><button>Next tab</button></JobDrawer>);
+  const heading=screen.getByRole("heading",{name:"Task title"});
+  const close=screen.getByRole("link",{name:"Close job details"});
+  const last=screen.getByRole("button",{name:"Next tab"});
+  expect(heading).toHaveFocus();
+  const reverse=new KeyboardEvent("keydown",{key:"Tab",shiftKey:true,bubbles:true,cancelable:true});
+  heading.dispatchEvent(reverse);
+  expect(reverse.defaultPrevented).toBe(true);
+  expect(last).toHaveFocus();
+  close.focus();
+  const forward=new KeyboardEvent("keydown",{key:"Tab",bubbles:true,cancelable:true});
+  close.dispatchEvent(forward);
+  expect(forward.defaultPrevented).toBe(false);
+});

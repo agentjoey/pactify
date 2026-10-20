@@ -890,8 +890,8 @@
       "Session.Message.Assistant.Reasoning": {
         "additionalProperties": false,
         "properties": {
-          "state": {
-            "$ref": "#/components/schemas/Session.Message.ProviderState_1"
+          "native": {
+            "$ref": "#/components/schemas/Session.Message.Native_1"
           },
           "text": {
             "type": "string"
@@ -955,11 +955,8 @@
           "name": {
             "type": "string"
           },
-          "providerResultState": {
-            "$ref": "#/components/schemas/Session.Message.ProviderState_3"
-          },
-          "providerState": {
-            "$ref": "#/components/schemas/Session.Message.ProviderState_2"
+          "native": {
+            "$ref": "#/components/schemas/Session.Message.Native_2"
           },
           "state": {
             "anyOf": [
@@ -1039,20 +1036,14 @@
           "model": {
             "$ref": "#/components/schemas/Model.Ref"
           },
-          "providerContext": {
-            "$ref": "#/components/schemas/Session.ProviderContext"
-          },
-          "providerState": {
-            "$ref": "#/components/schemas/Session.Message.ProviderState_5"
+          "native": {
+            "$ref": "#/components/schemas/Session.Message.Native_4"
           },
           "reason": {
             "enum": [
               "auto",
               "manual"
             ],
-            "type": "string"
-          },
-          "recent": {
             "type": "string"
           },
           "status": {
@@ -1089,8 +1080,7 @@
           "time",
           "status",
           "reason",
-          "summary",
-          "recent"
+          "summary"
         ],
         "type": "object"
       },
@@ -1170,9 +1160,6 @@
             ],
             "type": "string"
           },
-          "recent": {
-            "type": "string"
-          },
           "status": {
             "enum": [
               "running"
@@ -1204,8 +1191,7 @@
           "time",
           "status",
           "reason",
-          "summary",
-          "recent"
+          "summary"
         ],
         "type": "object"
       },
@@ -1393,16 +1379,13 @@
         ],
         "type": "object"
       },
-      "Session.Message.ProviderState_1": {
+      "Session.Message.Native_1": {
         "type": "object"
       },
-      "Session.Message.ProviderState_2": {
+      "Session.Message.Native_2": {
         "type": "object"
       },
-      "Session.Message.ProviderState_3": {
-        "type": "object"
-      },
-      "Session.Message.ProviderState_5": {
+      "Session.Message.Native_4": {
         "type": "object"
       },
       "Session.Message.Shell": {
@@ -1762,59 +1745,6 @@
         "type": "object"
       },
       "Session.Metadata": {
-        "type": "object"
-      },
-      "Session.ProviderContext": {
-        "additionalProperties": false,
-        "properties": {
-          "messages": {},
-          "provenance": {
-            "$ref": "#/components/schemas/Session.ProviderContext.Provenance"
-          },
-          "version": {
-            "enum": [
-              1
-            ],
-            "type": "number"
-          }
-        },
-        "required": [
-          "version",
-          "provenance",
-          "messages"
-        ],
-        "type": "object"
-      },
-      "Session.ProviderContext.Provenance": {
-        "additionalProperties": false,
-        "properties": {
-          "endpoint": {
-            "type": "string"
-          },
-          "modelID": {
-            "type": "string"
-          },
-          "protocol": {
-            "type": "string"
-          },
-          "provider": {
-            "type": "string"
-          },
-          "providerID": {
-            "$ref": "#/components/schemas/Provider.ID"
-          },
-          "route": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "providerID",
-          "provider",
-          "modelID",
-          "route",
-          "protocol",
-          "endpoint"
-        ],
         "type": "object"
       },
       "Session.StructuredError": {
@@ -2814,6 +2744,25 @@
           },
           {
             "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "true",
+                    "false"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
             "name": "directory",
             "required": false,
             "schema": {
@@ -3178,6 +3127,16 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "archived": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "metadata": {
                     "anyOf": [
                       {
@@ -3563,7 +3522,8 @@
                     "skill",
                     "shell",
                     "assistant",
-                    "compaction"
+                    "compaction",
+                    "idle"
                   ],
                   "type": "string"
                 },

@@ -60,9 +60,11 @@ installs for compatibility experiments.
 
 The opencode 2.x CI pin is 2.1.0. Golden transcripts retain their recorded
 `v2.0.32` version as capture provenance; changing a CI pin does not re-record
-traffic. The reviewed OpenAPI projection also retains its 2.0.32 baseline label
-in `opencodeapi/check.py`: pinned 2.1.0 and latest probes are compared against
-that contract to detect changes in consumed fields. Synthetic 2.0.32 fixtures
+traffic. The reviewed OpenAPI projection (`opencodeapi/openapi-v2.json`) was
+re-reviewed for 2.1.0: it renamed the provider-state fields of session messages to
+`native` and dropped `providerContext` and a compaction `recent` field, none of
+which pactify reads. Pinned and latest probes are compared against this contract to
+detect changes in consumed fields. Synthetic 2.0.32 fixtures
 and version-selection tests retain coverage of the earlier supported release.
 
 Contract fixes require offline replay; adapter changes also need live lifecycle

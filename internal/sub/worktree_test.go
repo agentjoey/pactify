@@ -329,6 +329,33 @@ func TestWorktreeRecoverKeepsReviewableChanges(t *testing.T) {
 	}
 }
 
+// AJ-770: on a case-insensitive volume the cwd may be spelled differently
+// from git's root (~/agentworks vs ~/AgentWorks) and still name the same directory.
+func TestWorktreeCwdSpelledInDifferentCase(t *testing.T) {
+	root := repo(t)
+	child := filepath.Join(root, "nested", "Dir é")
+	if err := os.MkdirAll(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	cwd := strings.ToUpper(child)
+	want, _ := os.Stat(child)
+	if got, err := os.Stat(cwd); err != nil || !os.SameFile(want, got) {
+		t.Skip("filesystem is case-sensitive")
+	}
+	s := Store{Root: t.TempDir()}
+	st, err := s.CreateRun("case", Request{Cwd: cwd}, true, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = runGit(root, "worktree", "remove", "--force", st.Worktree.Path) }()
+	if st.Worktree.Cwd != filepath.Join(st.Worktree.Path, "nested", "Dir é") {
+		t.Fatalf("cwd=%s", st.Worktree.Cwd)
+	}
+	if info, err := os.Stat(st.Worktree.Cwd); err != nil || !info.IsDir() {
+		t.Fatalf("isolated cwd missing: %v", err)
+	}
+}
+
 func TestWorktreeCwdCannotFollowHeadSymlinkOutsideIsolation(t *testing.T) {
 	root := repo(t)
 	outside := t.TempDir()

@@ -41,6 +41,8 @@ it("opens details, result, bounded logs with automatic follow, diff and closes t
  const {stream,cancel,fetcher}=mockAPI();
  history.replaceState(null,"","/#/jobs/live");
  const {unmount}=render(<Jobs />);
+ await screen.findByRole("tab", {name:"Summary"});
+ fireEvent.click(screen.getByRole("tab", {name:"Summary"}));
  await screen.findByText("Final reply: Complete");
  expect(screen.getByText("Final reply: Complete")).toBeInTheDocument();
  fireEvent.click(screen.getByRole("tab", {name:"Diff"}));
@@ -62,10 +64,10 @@ it("shows an honest empty state only after loading",async()=>{
  let resolve!: (value:Response)=>void;
  vi.stubGlobal("fetch",vi.fn(()=>new Promise<Response>(r=>{resolve=r;})));
  render(<Jobs />);
- expect(screen.queryByText("No delegation jobs yet")).not.toBeInTheDocument();
+ expect(screen.queryByText("Start your first job")).not.toBeInTheDocument();
  expect(screen.getByText("Loading jobs…")).toBeInTheDocument();
  await act(async()=>resolve(new Response("[]")));
- expect(await screen.findByText("No delegation jobs yet")).toBeInTheDocument();
+ expect(await screen.findByText("Start your first job")).toBeInTheDocument();
 });
 it("reports list errors and recovers on the next poll",async()=>{
  vi.useFakeTimers();
@@ -73,10 +75,10 @@ it("reports list errors and recovers on the next poll",async()=>{
  vi.stubGlobal("fetch",fetcher); render(<Jobs />);
  await act(async()=>{});
  expect(screen.getByRole("alert")).toHaveTextContent("503");
- expect(screen.queryByText("No delegation jobs yet")).not.toBeInTheDocument();
+ expect(screen.queryByText("Start your first job")).not.toBeInTheDocument();
  await act(async()=>{await vi.advanceTimersByTimeAsync(2000);});
  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
- expect(screen.getByText("No delegation jobs yet")).toBeInTheDocument();
+ expect(screen.getByText("Start your first job")).toBeInTheDocument();
 });
 it("handles separate detail, diff and stream errors",async()=>{
  history.replaceState(null,"","/#/jobs/missing");
@@ -101,6 +103,8 @@ it("keeps the detail usable when result, diff and logs are unavailable", async (
     return new Response(JSON.stringify([job]));
   }));
   render(<Jobs />);
+  await screen.findByRole("tab", {name:"Summary"});
+  fireEvent.click(screen.getByRole("tab", {name:"Summary"}));
   await screen.findByText("Result unavailable: invalid JSON");
  fireEvent.click(screen.getByRole("tab", {name:"Logs"}));
   expect(await screen.findByText(/502/)).toBeInTheDocument();
@@ -157,6 +161,8 @@ it("shows fallback navigation in the drawer while cards open the run chain", asy
   unmount();
   history.replaceState(null, "", "/#/jobs/live");
   render(<Jobs />);
+  await screen.findByRole("tab", {name:"Summary"});
+  fireEvent.click(screen.getByRole("tab", {name:"Summary"}));
   expect(await screen.findByRole("link", { name: "fallback from first" })).toHaveAttribute("href", "#/jobs/first");
   expect(screen.getByRole("link", { name: "→ fallback to last" })).toHaveAttribute("href", "#/jobs/last");
 });

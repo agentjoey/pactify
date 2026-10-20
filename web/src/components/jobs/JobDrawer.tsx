@@ -42,7 +42,12 @@ export function JobDrawer({
       },
     );
     opener.current = document.activeElement as HTMLElement | null;
-    panel.current?.focus();
+    const initialHeading = panel.current?.querySelector<HTMLElement>("h1");
+    (
+      initialHeading ||
+      panel.current?.querySelector<HTMLElement>("[data-detail-focus]") ||
+      panel.current
+    )?.focus();
     function keydown(event: KeyboardEvent) {
       if (
         (event.target as HTMLElement).closest?.('[role="dialog"]') &&
@@ -67,14 +72,16 @@ export function JobDrawer({
         if (
           event.shiftKey &&
           (document.activeElement === first ||
-            document.activeElement === panel.current)
+            document.activeElement === panel.current ||
+            document.activeElement === panel.current?.querySelector("h1"))
         ) {
           event.preventDefault();
           last?.focus();
         } else if (
           !event.shiftKey &&
           (document.activeElement === last ||
-            document.activeElement === panel.current)
+            document.activeElement === panel.current ||
+            document.activeElement === panel.current?.querySelector("h1"))
         ) {
           event.preventDefault();
           first?.focus();
@@ -115,11 +122,12 @@ export function JobDrawer({
         role="dialog"
         aria-modal="true"
         aria-label="Job details"
-        className="jobs-drawer fixed z-50 flex flex-col overflow-y-auto rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] shadow-[var(--shadow-raised)]"
+        className="jobs-drawer fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-surface)] shadow-[var(--shadow-raised)]"
       >
         <a
           href={jobsLink()}
           className="jobs-drawer-close"
+          data-detail-focus="pending"
           aria-label="Close job details"
         >
           × Close

@@ -4,6 +4,7 @@ import { Dashboard } from "./components/jobs/Dashboard";
 import { Settings } from "./components/jobs/Settings";
 import { useHash, useResource, validJobs } from "./components/jobs/data";
 import { dashboardJobsSource, type JobsSource } from "./components/jobs/source";
+import { LoadingJobs } from "./components/jobs/NextSteps";
 import { CableMark } from "./components/shell/CableMark";
 export type Lens = "dashboard" | "jobs" | "settings";
 export function AppContent({
@@ -72,10 +73,10 @@ export function AppContent({
       </header>
       <main className="v2-main">
         <div className="page-heading" inert={detailOpen}>
-          <p className="panel-eyebrow">LOCAL HARNESS ROUTER</p>
+          <p className="panel-eyebrow">Local jobs</p>
           <h1>{page[0].toUpperCase() + page.slice(1)}</h1>
         </div>
-        {page === "jobs" && (
+        {!jobs && !resource.error ? <LoadingJobs /> : page === "jobs" && (
           <Jobs
             source={source}
             standalone={readOnly}
@@ -84,19 +85,20 @@ export function AppContent({
             refresh={resource.refresh}
           />
         )}
-        {page === "jobs" && resource.error && (
+        {page !== "dashboard" && resource.error && (
           <p role="alert" className="panel-error">
             {resource.error}
           </p>
         )}
-        {page === "dashboard" && (
+        {page === "dashboard" && (!!jobs || !!resource.error) && (
           <Dashboard
             source={source}
             jobs={jobs}
             jobsUnavailable={!!resource.error}
+            jobsError={resource.error}
           />
         )}
-        {page === "settings" && (
+        {page === "settings" && (!!jobs || !!resource.error) && (
           <Settings source={source} readOnly={readOnly} />
         )}
       </main>

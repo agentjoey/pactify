@@ -263,3 +263,10 @@
   background: var(--color-bg-inset);
   padding: 6px 8px;
 }
+
+/* Native meter defaults differ across browsers and ignore accent-color.
+   Style tracks and fills explicitly for both panel palettes. */
+.live-harness meter, .live-harness progress { appearance: none; background: var(--color-bg-raised); border: 0; border-radius: 4px; overflow: hidden; }
+.live-harness meter::-webkit-meter-bar, .live-harness progress::-webkit-progress-bar { background: var(--color-bg-raised); border: 0; }
+.live-harness meter::-webkit-meter-optimum-value, .live-harness meter::-webkit-meter-suboptimum-value, .live-harness meter::-webkit-meter-even-less-good-value, .live-harness progress::-webkit-progress-value { background: var(--color-role-design); }
+.live-harness meter::-moz-meter-bar, .live-harness progress::-moz-progress-bar { background: var(--color-role-design); }

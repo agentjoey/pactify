@@ -6,6 +6,13 @@
   requested effort against its model before prompting. Leave actual effort
   unknown when upstream does not report it. Verify read-only E2E evidence for
   both opencode majors through the saved session policy; pin 2.x drift CI to 2.1.0.
+- Make the local job panel follow the system theme, improve text contrast, and
+  provide two primary CLI next steps on cards, full instructions in job details,
+  onboarding, loading and session error screens.
+  Keep task titles consistent across run details and open active runs on Live.
+  Pin detail actions outside the content scroll area; keep the panel's full CLI
+  command list in that content with a compact Next steps footer. Constrain the
+  fullscreen mobile drawer to the dynamic viewport and respect safe areas.
 - kimi is no longer experimental; read-only remains unavailable.
 - Adopt FSL-1.1-MIT: each version becomes MIT after two years; releases through
   v0.13.0 retain their original MIT license.

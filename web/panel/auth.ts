@@ -21,12 +21,13 @@ export async function panelFetch(path: string, signal: AbortSignal) {
     credentials: "omit",
     headers: { Authorization: `Bearer ${sessionStorage.getItem(sessionKey) || ""}` },
   });
-  if (!response.ok)
-    throw new Error(
-      response.status === 401
-        ? "Access expired. Run pactify sub panel again and open the printed URL."
-        : `Failed to load (${response.status}). Retrying shortly.`,
-    );
+  if (!response.ok) {
+    if (response.status === 401) {
+      window.dispatchEvent(new Event("pactify-panel-session-ended"));
+      throw Object.assign(new Error("Session ended"), { status: 401 });
+    }
+    throw new Error(`Failed to load (${response.status}). Retrying shortly.`);
+  }
   return response;
 }
 

@@ -20,12 +20,16 @@ it("includes the shared Jobs layout utilities in the standalone panel build", as
     for (const [className, property] of [
       ["absolute", "position:absolute"],
       ["flex", "display:flex"],
-      ["overflow-y-auto", "overflow-y:auto"],
+      ["overflow-hidden", "overflow:hidden"],
     ]) {
       expect(css).toMatch(new RegExp(`\\.${className}\\s*\\{[^}]*${property}`));
     }
+    expect(css).toMatch(/\.detail-scroll\s*\{[^}]*overflow-y:auto/);
+    expect(css).toMatch(/\.detail-scroll\s*\{[^}]*min-height:0/);
     expect(css).toMatch(/\.jobs-drawer\s*\{[^}]*height:100vh/);
     expect(css).toMatch(/\.jobs-drawer\s*\{[^}]*height:100dvh/);
+    expect(css).toMatch(/\.jobs-drawer\s*\{[^}]*max-height:100vh/);
+    expect(css).toMatch(/\.jobs-drawer\s*\{[^}]*max-height:100dvh/);
   } finally {
     await rm(output, {recursive: true, force: true});
   }

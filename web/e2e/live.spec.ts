@@ -41,7 +41,7 @@ test("Dashboard has recorded replay with no running jobs, and an empty state", a
   );
   await page.goto("/#/dashboard");
   await expect(
-    page.getByText("Recent run replay · recorded tail"),
+    page.getByText("Recent run · recorded activity"),
   ).toBeVisible();
   await expect(page.locator(".live-pulse")).toHaveCount(0);
   await expect(page.locator(".live-harness")).toHaveAttribute(
@@ -190,7 +190,8 @@ for (const panel of [false, true]) {
 
       const layout = async () =>
         drawer.evaluate(async (element) => {
-          element.scrollTop = element.scrollHeight;
+          const scroller = element.querySelector<HTMLElement>(".detail-scroll")!;
+          scroller.scrollTop = scroller.scrollHeight;
           await new Promise(requestAnimationFrame);
           const live = element.querySelector<HTMLElement>(".live-panel")!;
           const body = element.querySelector<HTMLElement>(".detail-body")!;
@@ -230,9 +231,9 @@ for (const panel of [false, true]) {
           }
           return {
             violations,
-            scrollTop: element.scrollTop,
+            scrollTop: scroller.scrollTop,
             remaining:
-              element.scrollHeight - element.clientHeight - element.scrollTop,
+              scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop,
           };
         });
       await expect.poll(async () => (await layout()).violations).toEqual([]);
@@ -240,11 +241,10 @@ for (const panel of [false, true]) {
       expect(finalLayout.scrollTop).toBeGreaterThan(0);
       expect(finalLayout.remaining).toBeLessThanOrEqual(1);
 
-      // Mutation check: restoring the original flex defaults must reproduce the
-      // geometric failure. This guards against a regression test that passes
-      // merely because the wrong tab was open or too little content was loaded.
+      // Removing the scroll boundary must reproduce overflow into the footer.
+      // This proves the check exercises enough content to catch the regression.
       await page.addStyleTag({
-        content: ".jobs-drawer > * { flex-shrink: 1 !important; }",
+        content: ".detail-scroll { overflow: visible !important; min-height: auto !important; }",
       });
       await expect
         .poll(async () => (await layout()).violations)

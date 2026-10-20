@@ -26,8 +26,7 @@ export function LogView({
         {lines.length ? lines.join("\n") : "Waiting for logs…"}
       </pre>
       <p className="panel-caption">
-        Starts within the last 1 MiB (up to 100 lines) and keeps up to 1,000
-        lines. Use the CLI for the full log.
+        Recent logs only. Use the CLI for the full log.
       </p>
     </section>
   );

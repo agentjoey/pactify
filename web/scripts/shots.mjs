@@ -100,7 +100,7 @@ try {
             detail.getByRole("heading", { name: "Task brief" }),
           ).toBeVisible();
         // A full-page screenshot cannot reveal an internally scrolled modal's top.
-        await detail.evaluate((node) => {
+        await detail.locator(".detail-scroll").evaluate((node) => {
           node.scrollTop = 0;
         });
         await capture(`job-${tab.toLowerCase()}`);
@@ -125,12 +125,12 @@ try {
       ).toBeEnabled();
       await capture("resume");
       await resume.getByRole("button", { name: "Back", exact: true }).click();
-      const worktree = page.locator("article").filter({ hasText: "Example-657" });
+      const worktree = page.locator("article").filter({ hasText: "Share job summaries" });
       await worktree
         .getByRole("button", { name: "Discard", exact: true })
         .click();
       await expect(
-        page.getByRole("dialog", { name: /^Discard Example-657/ }),
+        page.getByRole("dialog", { name: /^Discard Share job summaries/ }),
       ).toContainText("permanently delete the worktree");
       await capture("discard-confirm");
     }
@@ -146,7 +146,7 @@ try {
       await capture("panel-jobs");
       await page
         .getByRole("link", {
-          name: "Example-657 · Shared job summary model",
+          name: "Share job summaries",
           exact: true,
         })
         .click();

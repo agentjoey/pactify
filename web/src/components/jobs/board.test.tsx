@@ -45,7 +45,7 @@ it("renders one TaskCard-style card per chain using latest status and whole-chai
   expect(screen.getAllByRole("article")).toHaveLength(1);
   const card = screen.getByRole("article");
   expect(card).toHaveClass("task-card");
-  for (const text of ["3 runs", "rework 1", "fallback → opencode", "quota", "read-only", "Latest activity"])
+  for (const text of ["3 runs", "1 rework", "fallback → opencode", "quota", "read-only", "Latest activity"])
     expect(within(card).getByText(text)).toBeInTheDocument();
   expect(within(screen.getByRole("region", {name: "In progress"})).getByRole("link", {name: "First title"})).toHaveAttribute("href", "#/jobs/ccc");
   fireEvent.change(screen.getByLabelText("Harness"), {target: {value: "codex"}});
@@ -64,11 +64,11 @@ it("opens a deep-linked drawer over the board, switches runs, resets logs, close
   history.replaceState(null, "", "/#/jobs/bb");
   render(<Jobs />);
   const drawer = await screen.findByRole("dialog", {name: "Job details"});
-  await within(drawer).findByRole("heading", {name: "Title bb"});
+  await within(drawer).findByRole("heading", {name: "Title a"});
   fireEvent.click(within(drawer).getByRole("tab", {name: "Brief"}));
   await within(drawer).findByText("Brief bb");
   fireEvent.click(within(drawer).getByRole("tab", {name: "Summary"}));
-  expect(within(drawer).getByText("write · minimal config", {exact: true})).toBeInTheDocument();
+  expect(within(drawer).getByText("Write access", {exact: true})).toBeInTheDocument();
   expect(screen.getAllByRole("article", {hidden: true})).toHaveLength(1);
   expect(within(drawer).getByRole("link", {name: /a · succeeded · codex · 1m/})).toHaveAttribute("href", "#/jobs/a");
   await act(async () => { location.hash = "/jobs/a"; window.dispatchEvent(new HashChangeEvent("hashchange")); });

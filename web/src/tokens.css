@@ -54,7 +54,7 @@
   /* Text — 3 layers (cool near-white on dark). */
   --color-text-1: #eaeef5;
   --color-text-2: rgba(234,238,245,0.62);
-  --color-text-3: rgba(234,238,245,0.40);
+  --color-text-3: #8a96a9;
 
   /* Role colors — original brand hexes tuned for dark. On dark they read as
      text directly, so the -ink companions equal the main hue. */

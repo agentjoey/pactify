@@ -43,12 +43,12 @@ try {
         await drawer
           .getByRole("heading", { name: "Session log", exact: true })
           .waitFor();
-        await drawer.evaluate(async (element) => {
+        await drawer.locator(".detail-scroll").evaluate(async (element) => {
           element.scrollTop = 0;
           await new Promise(requestAnimationFrame);
         });
         await capture("detail", false);
-        await drawer.evaluate(async (element) => {
+        await drawer.locator(".detail-scroll").evaluate(async (element) => {
           element.scrollTop = element.scrollHeight;
           await new Promise(requestAnimationFrame);
         });

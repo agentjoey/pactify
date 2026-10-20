@@ -18,6 +18,7 @@ import {
 import { jobsLink, useHash, useResource, validJobs } from "./data";
 import { JobActions } from "./JobActions";
 import { JobDrawer } from "./JobDrawer";
+import { NextSteps, JobsOnboarding, LoadingJobs } from "./NextSteps";
 import { JobDetail } from "./JobDetail";
 import "./jobs.css";
 export type { Job } from "./types";
@@ -159,7 +160,7 @@ export function JobCard({
           <Badge color="text-2">{chain.runs.length} runs</Badge>
         )}
         {chain.rework > 0 && (
-          <Badge color="text-2">rework {chain.rework}</Badge>
+          <Badge color="text-2">{chain.rework} {chain.rework === 1 ? "rework" : "reworks"}</Badge>
         )}
         {fallbacks.map((h) => (
           <Badge key={h} color="warn">
@@ -168,7 +169,7 @@ export function JobCard({
         ))}
         {failures.map((f) => (
           <Badge key={f} color="warn">
-            {f}
+            {f === "harness" ? "Agent error" : f}
           </Badge>
         ))}
         {job.worktree && (
@@ -186,6 +187,7 @@ export function JobCard({
           {job.attention.map((a) => a.message).join(" · ")}
         </p>
       )}
+      {readOnly && sectionFor(job) === "attention" && <NextSteps job={job} compact />}
       <div className="card-actions">
         <JobActions
           job={job}
@@ -198,6 +200,7 @@ export function JobCard({
           <Button
             size="sm"
             variant="ghost"
+            title={readOnly ? "More in details" : undefined}
             onClick={() => {
               location.hash = jobsLink(job.id, "diff");
             }}
@@ -273,6 +276,8 @@ export function JobList({
       notify={notify}
     />
   );
+  if (loaded && !jobs.length) return <><JobsOnboarding />{children}</>;
+  if (!loaded) return <>{children}</>;
   return (
     <>
       <div className="jobs-toolbar">
@@ -342,7 +347,7 @@ export function JobList({
       {loaded && (
         <div className="jobs-sections">
           {!chains.length && (
-            <p className="panel-empty">No delegation jobs yet</p>
+            <p className="panel-empty">No jobs match these filters.</p>
           )}
           {(
             [
@@ -460,7 +465,7 @@ export function Jobs({
           </p>
         )}
         {!supplied && !resource.data && !resource.error && (
-          <p className="panel-empty">Loading jobs…</p>
+          <LoadingJobs />
         )}
       </div>
       {id && (
@@ -474,7 +479,7 @@ export function Jobs({
             onChanged={changed}
             notify={setToast}
             initialTab={
-              new URLSearchParams(hash.split("?")[1]).get("tab") || "summary"
+              new URLSearchParams(hash.split("?")[1]).get("tab") || ""
             }
           />
         </JobDrawer>

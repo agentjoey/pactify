@@ -7,7 +7,7 @@
     {
       "name": "pactify",
       "source": "./plugins/pactify",
-      "description": "Delegate large coding tasks from Claude Code to coding agent harnesses (codex, kimi, agy, opencode), review results, and view job status with /jobs."
+      "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex or kimi, or via slash commands to experimental agy and opencode; review results and view job status with /jobs."
     }
   ]
 }

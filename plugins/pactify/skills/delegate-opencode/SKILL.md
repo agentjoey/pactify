@@ -1,14 +1,18 @@
 ---
-name: opencode
-description: Experimental harness: no OS sandbox for writes; results vary by model. Delegate a large coding task, investigation or review to opencode through an authenticated local HTTP/SSE server and get a verified result summary.
+name: delegate-opencode
+description: Use only when the user explicitly asks to delegate via /delegate-opencode or /pactify:delegate-opencode. Experimental harness; no OS sandbox; write permission requests are approved by pactify; out-of-workspace directory access for file tools is denied; shell is not confined; results vary by model.
+disable-model-invocation: true
 ---
 
 # Delegate to opencode (experimental)
 
-**opencode is experimental: no OS sandbox for writes; results vary by model.**
-Prefer the default codex harness (`/delegate` or `/codex`).
+**opencode is experimental: no OS sandbox; write permission requests are approved by pactify;
+results vary by model.** Run only via `/delegate-opencode` or `/pactify:delegate-opencode`.
+Read-only permission requests are denied.
+Out-of-workspace directory access for file tools is denied; shell is not confined.
+Prefer the default codex harness (`/delegate` or `/delegate-codex`).
 
-**If the user invoked this skill explicitly (`/opencode` or `/pactify:opencode`), always delegate —
+**If the user invoked this skill explicitly (`/delegate-opencode` or `/pactify:delegate-opencode`), always delegate —
 whatever the task size. The user chose the harness; do not do the work yourself instead.**
 
 Launch command (step 2 below):
@@ -22,11 +26,11 @@ Models come from the live v1 `/config/providers` catalog, with provider/model id
 Omit `--model` to keep opencode's default. Resume with `--resume <job-id> --worktree` and the original cwd.
 
 <!-- BEGIN SHARED-DELEGATION -->
-When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than
-~10 minutes. Handle small edits directly; each delegation costs tens of thousands of callee tokens.
-Do not delegate tasks that depend on conversation context you cannot turn into a self-contained brief,
-or tasks needing frequent user interaction. Explicit skill invocations still delegate regardless of size;
-harness permission restrictions still apply.
+Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate
+or hand off to a harness; otherwise do the work directly. Task size alone never authorizes delegation.
+agy and opencode run only via their explicit `/delegate-agy` or `/delegate-opencode`
+slash commands (including the `/pactify:` namespaced forms); never select them on your own.
+Preserve the user's requested harness and access mode; harness permission restrictions still apply.
 Configured aliases can be used with `/delegate @alias <task>`.
 Inspect `pactify sub router --json` for available aliases and preserve any route
 explicitly chosen by the user.

@@ -1,27 +1,34 @@
 ---
-name: codex
-description: Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the codex harness and get back a verified result summary. Not for small edits you can do directly.
+name: delegate-agy
+description: Use only when the user explicitly asks to delegate via /delegate-agy or /pactify:delegate-agy. Experimental harness; no OS sandbox; write permission requests are approved by pactify; results vary by model.
+disable-model-invocation: true
 ---
 
-# Delegate to codex
+# Delegate to agy (experimental)
 
-**If the user invoked this skill explicitly (`/codex` or `/pactify:codex`), always delegate — whatever the task
-size. The user chose the harness; do not do the work yourself instead.**
+**agy is experimental: no OS sandbox; write permission requests are approved by pactify;
+results vary by model.** Run only via `/delegate-agy` or `/pactify:delegate-agy`.
+Read-only permission requests are denied.
+Prefer the default codex harness (`/delegate` or `/delegate-codex`).
+
+**If the user invoked this skill explicitly (`/delegate-agy` or `/pactify:delegate-agy`), always delegate — whatever
+the task size. The user chose the harness; do not do the work yourself instead.**
 
 Launch command (step 2 below):
 
-    pactify sub run codex --write --worktree --wait 0s --json <<'BRIEF'
+    pactify sub run agy --write --worktree --wait 0s --json <<'BRIEF'
     ...complete brief from step 1...
     BRIEF
 
-For read-only tasks replace `--write` with `--read-only`; never pass both.
+Use `--read-only` for investigations and reviews. Use `--write` only with explicit permission to change files. Never raise permissions yourself.
+Models come from `agy models`; preserve the requested model. Pactify always supplies a model, defaulting to router settings or flash-low.
 
 <!-- BEGIN SHARED-DELEGATION -->
-When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than
-~10 minutes. Handle small edits directly; each delegation costs tens of thousands of callee tokens.
-Do not delegate tasks that depend on conversation context you cannot turn into a self-contained brief,
-or tasks needing frequent user interaction. Explicit skill invocations still delegate regardless of size;
-harness permission restrictions still apply.
+Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate
+or hand off to a harness; otherwise do the work directly. Task size alone never authorizes delegation.
+agy and opencode run only via their explicit `/delegate-agy` or `/delegate-opencode`
+slash commands (including the `/pactify:` namespaced forms); never select them on your own.
+Preserve the user's requested harness and access mode; harness permission restrictions still apply.
 Configured aliases can be used with `/delegate @alias <task>`.
 Inspect `pactify sub router --json` for available aliases and preserve any route
 explicitly chosen by the user.
@@ -140,7 +147,25 @@ explicitly chosen by the user.
    Repeat step 3 after every rework turn; apply only after all required checks and reviews pass.
 <!-- END SHARED-DELEGATION -->
 
-For a quick task you are willing to block on (under ~9 minutes), you may instead delegate the complete
-brief to the `pactify:codex` subagent, which calls `pactify sub run codex --worktree --wait 540s --json` once,
-with access/model/effort flags from the brief, and returns stdout verbatim. If it returns a pending job id (exit 3), the main thread must still run
-`pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.
+Read-only access uses `--mode plan`, exact read-only shell commands, and a managed
+PreToolUse hook that denies writes. Tracked, untracked, and ignored files are checked
+against a fail-closed baseline. Write access uses `--dangerously-skip-permissions`;
+`sandboxed=false` because agy has no OS write sandbox here. With managed config, the hook rejects
+`BypassSandbox` requests.
+
+Each job keeps one persistent stream-json process and conversation across turns.
+Transient failures continue that conversation, restarting with `--conversation` after
+an exit. Empty replies and print timeouts fail. Unfinished replies receive up to two
+completion followups (`--completion-followups`). Quota snapshots before and after the
+job are non-billable and appear in `sub cost` and Dashboard Quota.
+
+Write access supports `--with-user-config` and reports the warning:
+`managed hooks are not installed with --with-user-config`. This opt-out uses the
+user's integrations; read-only access requires managed config. In managed mode,
+missing or invalid hook access settings deny writes. Read-only access refuses
+repositories containing workspace hooks directories (`.agents`, `.agent`, `_agents`).
+The file baseline covers the repository; writes outside it are denied by the hook.
+
+Agy 1.4.0 requires effort to match the model's tier suffix: for example,
+`gemini-3.8-flash-low --effort high` fails before inference. Use a matching
+model/effort pair or omit `--effort`; never silently switch the requested model.

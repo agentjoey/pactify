@@ -1,6 +1,6 @@
 ---
 name: delegate
-description: Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the default harness (codex) or a configured @alias and get back a verified result summary. Not for small edits you can do directly.
+description: Use when the user explicitly asks to delegate a coding task to the default harness (codex) or a configured @alias. Return a result summary for review.
 ---
 
 # Delegate to the default harness (codex)
@@ -22,11 +22,11 @@ Without an alias, keep the default harness. See [router configuration](../../../
 For read-only tasks replace `--write` with `--read-only`; never pass both.
 
 <!-- BEGIN SHARED-DELEGATION -->
-When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than
-~10 minutes. Handle small edits directly; each delegation costs tens of thousands of callee tokens.
-Do not delegate tasks that depend on conversation context you cannot turn into a self-contained brief,
-or tasks needing frequent user interaction. Explicit skill invocations still delegate regardless of size;
-harness permission restrictions still apply.
+Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate
+or hand off to a harness; otherwise do the work directly. Task size alone never authorizes delegation.
+agy and opencode run only via their explicit `/delegate-agy` or `/delegate-opencode`
+slash commands (including the `/pactify:` namespaced forms); never select them on your own.
+Preserve the user's requested harness and access mode; harness permission restrictions still apply.
 Configured aliases can be used with `/delegate @alias <task>`.
 Inspect `pactify sub router --json` for available aliases and preserve any route
 explicitly chosen by the user.

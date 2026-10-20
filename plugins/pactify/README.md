@@ -1,6 +1,8 @@
 # Pactify harness plugin
 
-Delegate large tasks from Claude Code to the official codex / kimi / agy / opencode CLI installed locally, then review the result summary and workspace changes.
+**Claude Code only.** This plugin requires a local terminal and cannot run in claude.ai chat or Cowork.
+The top-level `bin/` directory prevents installation in those environments.
+Delegate tasks only on explicit user request to a locally installed codex / kimi / agy / opencode CLI, then review the result summary and workspace changes.
 The default harness is codex. kimi read-only access uses a generated private config and a tool allowlist. Kimi has no OS sandbox for writes; permission requests are approved by pactify in write jobs.
 
 ## Installation
@@ -15,30 +17,39 @@ Run these commands in Claude Code:
 To update: `/plugin marketplace update pactify`, then update the pactify plugin from `/plugin` (Installed → pactify → Update) and run `/reload-plugins` or start a new session. Claude Code caches a plugin by its `plugin.json` version, so every change to this plugin bumps that version (CI enforces it). If an older install still shows stale skills, reinstall with `/plugin uninstall pactify@pactify` and `/plugin install pactify@pactify`.
 
 Prerequisites: `pactify` is on PATH and `pactify sub --help` works; the official codex / kimi / agy / opencode CLI you want to call is installed and logged in.
-The SessionStart hook only checks that pactify and its `sub` command are available. It suggests installing or upgrading when needed without blocking the session.
+Run `"${CLAUDE_PLUGIN_ROOT}/bin/pactify-check"` to report PATH availability, print `pactify version`, and check `pactify sub --help`.
+The SessionStart hook reuses this POSIX shell check with `--quiet`: successful checks are silent, and failures suggest installing or upgrading without blocking the session.
+The check prints these installation options if pactify is missing; it never runs installers or accesses the network:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+go install github.com/agentjoey/pactify/cmd/pactify@latest
+```
+
 The plugin does not proxy models, manage logins, or read or copy credentials.
 
 ## Usage
 
 ```text
 /delegate Add expiration and regression tests to src/cache/, then run the project's full test suite
-/codex Add expiration and regression tests to src/cache/, modify only that directory, and run the full npm test suite
-/opencode Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
-/agy Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
-/kimi Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
+/delegate-codex Add expiration and regression tests to src/cache/, modify only that directory, and run the full npm test suite
+/delegate-opencode Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
+/delegate-agy Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
+/delegate-kimi Add expiration and regression tests to src/cache/ with write access, then run the project's full test suite
 ```
 
-Use `/pactify:delegate`, `/pactify:codex`, `/pactify:kimi`, `/pactify:agy`, or `/pactify:opencode` to avoid conflicts with other skills of the same name.
-`/delegate` uses the default codex harness; `/codex`, `/kimi`, `/agy` and `/opencode` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
-Delegation suits tasks involving 3 or more files, exploration and testing, or more than about 10 minutes of work. Claude can handle small edits directly.
-When choosing autonomously, avoid delegating tasks that depend on extensive conversation context that cannot fit in a self-contained brief, or require frequent user interaction.
-Explicit invocations still delegate. Preserve the requested access mode; never raise permissions yourself.
+Use `/pactify:delegate`, `/pactify:delegate-codex`, `/pactify:delegate-kimi`, `/pactify:delegate-agy`, or `/pactify:delegate-opencode` to avoid conflicts with other skills of the same name.
+`/delegate` uses the default codex harness; `/delegate-codex`, `/delegate-kimi`, `/delegate-agy` and `/delegate-opencode` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
+Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate or hand off to a harness; otherwise do the work directly.
+Task size alone never authorizes delegation. Preserve the requested access mode; never raise permissions yourself.
+The codex and kimi skills remain model-invocable for explicit delegation requests.
+Experimental agy and opencode skills set `disable-model-invocation: true` and run only via their corresponding slash commands, including namespaced forms.
 
 The Claude main thread first writes a complete brief with Background, numbered goals, Known constraints and special cases, General constraints, and Acceptance commands.
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
 Require inspection of callers, special cases, and documented exceptions before changing rules, and a failing regression test before each behavior change. Do not change existing tests to accommodate new behavior unless the brief explicitly identifies the old behavior as wrong; name any such changes in the final reply.
 Forbid commits and credential access; optionally forbid subagents and report files.
-The five delegation skills (codex, kimi, agy, opencode, delegate) embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
+The five delegation skills (delegate-codex, delegate-kimi, delegate-agy, delegate-opencode, delegate) embed the same template, complete example, and review workflow. Bats checks that their shared blocks are identical.
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
@@ -61,6 +72,7 @@ To select a model, name it explicitly in the task. If the CLI cannot honor it, e
 For rework, explicitly request `--resume <job-id> --worktree`, preserving the original cwd and harness.
 For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` / `pactify:agy` / `pactify:opencode` forwarding subagent:
 it uses `model: haiku`, has only Bash, calls Bash once, and returns stdout verbatim. After a timeout, the main thread continues waiting.
+Forwarders require an explicit delegation request; agy and opencode forwarders may run only after the user invokes their corresponding skill slash command.
 The callee leaves changes uncommitted for the host to review.
 
 ## Viewing delegation jobs
@@ -185,7 +197,8 @@ The result's Harness line reports `kimi (minimal config)` or `kimi (user config)
 
 ## agy (experimental)
 
-agy is experimental: no OS sandbox for writes; results vary by model.
+agy is experimental: no OS sandbox; write permission requests are approved by pactify; results vary by model.
+Run only via `/delegate-agy` or `/pactify:delegate-agy`. Read-only permission requests are denied.
 The v2 adapter targets Antigravity CLI 1.4.0, with one persistent stream-json process
 per job. Every call explicitly supplies a model, defaulting to router settings or
 `gemini-3.8-flash-low`. Tokens come from step usage; result totals are cumulative.
@@ -231,9 +244,10 @@ normal minimal configuration, including directory permissions and link integrity
 
 ## opencode (experimental)
 
-opencode is experimental: no OS sandbox for writes; results vary by model, using
+opencode is experimental: no OS sandbox; write permission requests are approved by pactify; results vary by model, using
 1.19.0 v1 HTTP/SSE through a private authenticated `opencode serve` process per job.
-`/opencode` and `/pactify:opencode` use the shared delegation guide and host review workflow.
+Run only via `/delegate-opencode` or `/pactify:delegate-opencode`, using the shared delegation guide and host review workflow.
+Out-of-workspace directory access for file tools is denied; shell is not confined.
 Requested models use dynamic `provider/model` ids; omitting the model preserves opencode's default.
 Assistant messages confirm the actual model. Tokens and cost use the session summary;
 resumed jobs subtract the starting totals. Input includes cache reads and writes, and output includes reasoning.

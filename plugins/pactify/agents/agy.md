@@ -1,6 +1,6 @@
 ---
 name: agy
-description: Forward one large, self-contained coding task to the agy harness via `pactify sub`. Use only when the main thread has already written a self-contained brief.
+description: Experimental agy forwarder. Use only after the user explicitly invokes /delegate-agy or /pactify:delegate-agy and the main thread writes the brief. No OS sandbox; write permission requests are approved by pactify.
 model: haiku
 tools: Bash
 ---
@@ -25,7 +25,9 @@ Do not read files, search, plan, or summarize. Return the command's stdout verba
 return the stdout verbatim as well: it contains the job id that the main thread will wait on.
 If the command fails, return its exit code and stderr along with stdout; do not retry or change the model.
 
-agy is experimental: no OS sandbox for writes; results vary by model.
+agy is experimental: no OS sandbox; write permission requests are approved by pactify;
+results vary by model. Run only after the user explicitly invokes `/delegate-agy` or
+`/pactify:delegate-agy`. Read-only permission requests are denied.
 
 The host owns the workflow; do not perform these steps yourself. The brief must contain Background,
 numbered Goals, Known constraints and special cases, General constraints, and Acceptance commands

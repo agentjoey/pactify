@@ -8,6 +8,129 @@ setup() {
   export KIMI_CODE_HOME="$BATS_TEST_TMPDIR/kimi-home"
 }
 
+@test "Claude Code only plugin ships readable executable POSIX shell checks without launchers" {
+  [ -r "$P/bin/pactify-check" ]
+  [ -x "$P/bin/pactify-check" ]
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+for path in root.rglob('*'):
+    assert not path.is_symlink(), path
+    if path.is_file():
+        assert '\0' not in path.read_text(), path
+for path in (root / 'bin/pactify-check', root / 'hooks/check-pactify-sub.sh'):
+    text = path.read_text()
+    assert text.startswith('#!/bin/sh\n'), path
+    for forbidden in ('$(', '`', 'npx ', 'npm ', 'uvx ', 'eval '):
+        assert forbidden not in text, (path, forbidden)
+hook = (root / 'hooks/check-pactify-sub.sh').read_text()
+assert '"${CLAUDE_PLUGIN_ROOT}/bin/pactify-check"' in hook
+assert 'Claude Code only' in (root / 'README.md').read_text()
+PY
+  [ "$status" -eq 0 ]
+  for script in "$P/bin/pactify-check" "$P/hooks/check-pactify-sub.sh"; do
+    /bin/sh -n "$script"
+  done
+}
+
+@test "pactify-check reports missing CLI and prints both installers without executing them" {
+  mkdir "$BATS_TEST_TMPDIR/bin"
+  for command in curl go sh; do
+    cat > "$BATS_TEST_TMPDIR/bin/$command" <<'CLI'
+#!/bin/sh
+printf '%s\n' installer-executed >> "$PACTIFY_HOOK_CALL"
+exit 99
+CLI
+    chmod +x "$BATS_TEST_TMPDIR/bin/$command"
+  done
+  export PACTIFY_HOOK_CALL="$BATS_TEST_TMPDIR/call"
+  run env PATH="$BATS_TEST_TMPDIR/bin" "$P/bin/pactify-check"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"pactify CLI is not on PATH"* ]]
+  [[ "$output" == *"curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh"* ]]
+  [[ "$output" == *"go install github.com/agentjoey/pactify/cmd/pactify@latest"* ]]
+  [ ! -e "$PACTIFY_HOOK_CALL" ]
+}
+
+@test "pactify-check prints version and checks sub without exposing help output" {
+  mkdir "$BATS_TEST_TMPDIR/bin"
+  cat > "$BATS_TEST_TMPDIR/bin/pactify" <<'CLI'
+#!/bin/sh
+printf '%s\n' "$*" >> "$PACTIFY_HOOK_CALL"
+case "$*" in
+  version) printf '%s\n' 'pactify test-version'; exit "${VERSION_EXIT:-0}" ;;
+  'sub --help') printf '%s\n' help-must-not-leak; exit "${SUB_EXIT:-0}" ;;
+  *) exit 99 ;;
+esac
+CLI
+  chmod +x "$BATS_TEST_TMPDIR/bin/pactify"
+  export PACTIFY_HOOK_CALL="$BATS_TEST_TMPDIR/call"
+  run env PATH="$BATS_TEST_TMPDIR/bin" "$P/bin/pactify-check"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pactify is on PATH"* ]]
+  [[ "$output" == *"pactify test-version"* ]]
+  [[ "$output" == *"pactify sub is available"* ]]
+  [[ "$output" != *"help-must-not-leak"* ]]
+  [ "$(cat "$PACTIFY_HOOK_CALL")" = "$(printf 'version\nsub --help')" ]
+
+  run env PATH="$BATS_TEST_TMPDIR/bin" SUB_EXIT=1 "$P/bin/pactify-check"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"has no 'sub' command; upgrade pactify"* ]]
+
+  run env PATH="$BATS_TEST_TMPDIR/bin" VERSION_EXIT=1 "$P/bin/pactify-check"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"pactify version failed"* ]]
+}
+
+@test "harness skills are renamed and delegation requires an explicit user request in all five identical guides" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+names = ('delegate', 'delegate-codex', 'delegate-kimi', 'delegate-agy', 'delegate-opencode', 'jobs')
+assert {p.name for p in (root / 'skills').iterdir()} == set(names)
+blocks = []
+for name in names:
+    text = (root / 'skills' / name / 'SKILL.md').read_text()
+    frontmatter = text.split('---')[1]
+    assert f'name: {name}\n' in frontmatter, name
+    description = next(line for line in frontmatter.splitlines() if line.startswith('description:'))
+    assert 'user explicitly asks' in description, (name, description)
+    if name == 'jobs':
+        continue
+    assert 'user explicitly asks to delegate' in description, name
+    block = text.split('<!-- BEGIN SHARED-DELEGATION -->')[1].split('<!-- END SHARED-DELEGATION -->')[0]
+    for term in ('only when the user explicitly asks', 'pactify slash command', 'clear request to delegate', 'otherwise do the work directly'):
+        assert term in block, (name, term)
+    assert 'When deciding on your own' not in text, name
+    blocks.append(block)
+assert len(blocks) == 5 and len(set(blocks)) == 1
+for path in (root / 'agents').glob('*.md'):
+    assert 'user explicitly' in path.read_text(), path
+PY
+  [ "$status" -eq 0 ]
+}
+
+@test "experimental skills are slash-command only and document actual permission boundaries" {
+  run python3 - "$P" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+for name in ('agy', 'opencode'):
+    skill = (root / 'skills' / f'delegate-{name}' / 'SKILL.md').read_text()
+    assert 'disable-model-invocation: true\n' in skill.split('---')[1], name
+    for path in (root / 'skills' / f'delegate-{name}' / 'SKILL.md', root / 'agents' / f'{name}.md', root / 'README.md'):
+        text = path.read_text().lower()
+        for term in ('experimental', 'no os sandbox', 'permission requests are approved by pactify', f'/delegate-{name}', 'only'):
+            assert term in text, (path, term)
+        if name == 'opencode':
+            for term in ('out-of-workspace directory access for file tools is denied', 'shell is not confined'):
+                assert term in text, (path, term)
+for name in ('delegate', 'delegate-codex', 'delegate-kimi'):
+    frontmatter = (root / 'skills' / name / 'SKILL.md').read_text().split('---')[1]
+    assert 'disable-model-invocation: true' not in frontmatter, name
+PY
+  [ "$status" -eq 0 ]
+}
+
 @test "delegation guides recommend selecting the resume job explicitly" {
   run python3 - "$P" "$REPO/README.md" <<'PY'
 import pathlib, sys
@@ -52,21 +175,21 @@ PY
   done
 }
 
-@test "skills route large tasks and wait on the main thread" {
+@test "renamed stable skills delegate explicit requests and wait on the main thread" {
   for h in codex kimi; do
-    grep -q '^name: '"$h"'$' "$P/skills/$h/SKILL.md"
-    grep -q 'run_in_background' "$P/skills/$h/SKILL.md"
-    grep -q 'pactify sub wait' "$P/skills/$h/SKILL.md"
-    # An explicit /<harness> invocation must delegate regardless of task size.
-    grep -q 'invoked this skill explicitly' "$P/skills/$h/SKILL.md"
+    grep -q '^name: delegate-'"$h"'$' "$P/skills/delegate-$h/SKILL.md"
+    grep -q 'run_in_background' "$P/skills/delegate-$h/SKILL.md"
+    grep -q 'pactify sub wait' "$P/skills/delegate-$h/SKILL.md"
+    # An explicit /delegate-<harness> invocation must delegate regardless of task size.
+    grep -q 'invoked this skill explicitly' "$P/skills/delegate-$h/SKILL.md"
     # The background wait must outlive the default ~10-minute background limit so long-running jobs remain collectible.
-    grep -q 'timeout: 7200000' "$P/skills/$h/SKILL.md"
-    grep -q 'full\*\* test command' "$P/skills/$h/SKILL.md"
+    grep -q 'timeout: 7200000' "$P/skills/delegate-$h/SKILL.md"
+    grep -q 'full\*\* test command' "$P/skills/delegate-$h/SKILL.md"
   done
 }
 
 @test "session-start hook reports a missing pactify without failing the session" {
-  run env PATH=/usr/bin:/bin bash "$P/hooks/check-pactify-sub.sh"
+  run env CLAUDE_PLUGIN_ROOT="$P" PATH=/usr/bin:/bin /bin/sh "$P/hooks/check-pactify-sub.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"pactify CLI is not on PATH"* ]]
 }
@@ -81,37 +204,37 @@ PY
   mkdir "$BATS_TEST_TMPDIR/bin"
   cat > "$BATS_TEST_TMPDIR/bin/pactify" <<'CLI'
 #!/usr/bin/env bash
-printf '%s\n' "$*" > "$PACTIFY_HOOK_CALL"
+printf '%s\n' "$*" >> "$PACTIFY_HOOK_CALL"
 exit 1
 CLI
   chmod +x "$BATS_TEST_TMPDIR/bin/pactify"
   export PACTIFY_HOOK_CALL="$BATS_TEST_TMPDIR/call"
-  run env PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$P/hooks/check-pactify-sub.sh"
+  run env CLAUDE_PLUGIN_ROOT="$P" PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$P/hooks/check-pactify-sub.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"has no 'sub' command; upgrade pactify"* ]]
-  [ "$(cat "$PACTIFY_HOOK_CALL")" = "sub --help" ]
+  [ "$(cat "$PACTIFY_HOOK_CALL")" = "$(printf 'version\nsub --help')" ]
 }
 
 @test "session-start hook silently accepts a CLI with sub" {
   mkdir "$BATS_TEST_TMPDIR/bin"
   cat > "$BATS_TEST_TMPDIR/bin/pactify" <<'CLI'
 #!/usr/bin/env bash
-printf '%s\n' "$*" > "$PACTIFY_HOOK_CALL"
+printf '%s\n' "$*" >> "$PACTIFY_HOOK_CALL"
 echo 'help output must not leak into the session'
 exit 0
 CLI
   chmod +x "$BATS_TEST_TMPDIR/bin/pactify"
   export PACTIFY_HOOK_CALL="$BATS_TEST_TMPDIR/call"
-  run env PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$P/hooks/check-pactify-sub.sh"
+  run env CLAUDE_PLUGIN_ROOT="$P" PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$P/hooks/check-pactify-sub.sh"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
-  [ "$(cat "$PACTIFY_HOOK_CALL")" = "sub --help" ]
+  [ "$(cat "$PACTIFY_HOOK_CALL")" = "$(printf 'version\nsub --help')" ]
 }
 
 @test "kimi skill offers read-only with a generated private policy" {
-  grep -q 'run kimi --read-only --wait' "$P/skills/kimi/SKILL.md"
-  grep -q 'tools_snapshot' "$P/skills/kimi/SKILL.md"
-  grep -q -- '--with-user-config' "$P/skills/kimi/SKILL.md"
+  grep -q 'run kimi --read-only --wait' "$P/skills/delegate-kimi/SKILL.md"
+  grep -q 'tools_snapshot' "$P/skills/delegate-kimi/SKILL.md"
+  grep -q -- '--with-user-config' "$P/skills/delegate-kimi/SKILL.md"
 }
 
 @test "delegate skill is self-contained and uses the default harness" {
@@ -128,7 +251,7 @@ CLI
   grep -q 'timeout: 7200000' "$skill"
   grep -q 'pactify sub wait' "$skill"
   # Brief-writing and result-review rules must stay identical to codex's.
-  run python3 - "$P/skills/codex/SKILL.md" "$skill" <<'PY'
+  run python3 - "$P/skills/delegate-codex/SKILL.md" "$skill" <<'PY'
 import pathlib, sys
 codex, delegate = [pathlib.Path(p).read_text() for p in sys.argv[1:]]
 assert codex.split('1. Write', 1)[1].split('2. Start', 1)[0] == delegate.split('1. Write', 1)[1].split('2. Start', 1)[0]
@@ -138,7 +261,7 @@ PY
 }
 
 @test "kimi skill documents access limitations without an experimental label" {
-  run python3 - "$P/skills/kimi/SKILL.md" <<'PY'
+  run python3 - "$P/skills/delegate-kimi/SKILL.md" <<'PY'
 import pathlib, sys
 text = pathlib.Path(sys.argv[1]).read_text()
 frontmatter, body = text.split('---')[1:3]
@@ -173,7 +296,7 @@ PYCODE
 import pathlib, re, sys
 root = pathlib.Path(sys.argv[1])
 sections = []
-for name in ('delegate', 'codex', 'kimi'):
+for name in ('delegate', 'delegate-codex', 'delegate-kimi'):
     text = (root / 'skills' / name / 'SKILL.md').read_text()
     command = next(line.strip() for line in text.splitlines() if "<<'BRIEF'" in line)
     assert '--worktree' in command, (name, command)
@@ -191,12 +314,12 @@ PY
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 blocks = []
-for name in ('delegate', 'codex', 'kimi'):
+for name in ('delegate', 'delegate-codex', 'delegate-kimi'):
     text = (root / 'skills' / name / 'SKILL.md').read_text()
     start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->'
     assert text.count(start) == text.count(end) == 1, name
     block = text.split(start)[1].split(end)[0]
-    for term in ('1. Write', '2. Start', '3. When', '4. To', 'conversation context', 'frequent user interaction'):
+    for term in ('1. Write', '2. Start', '3. When', '4. To', 'explicitly asks', 'otherwise do the work directly'):
         assert term in block, (name, term)
     blocks.append(block)
 assert blocks[0] == blocks[1] == blocks[2], 'shared delegation guides differ'
@@ -208,7 +331,7 @@ PY
   run python3 - "$P" <<'PY'
 import pathlib, re, sys, textwrap
 root = pathlib.Path(sys.argv[1])
-for name in ('delegate', 'codex', 'kimi'):
+for name in ('delegate', 'delegate-codex', 'delegate-kimi'):
     text = (root / 'skills' / name / 'SKILL.md').read_text()
     brief = text.split('1. Write', 1)[1].split('2. Start', 1)[0]
     example = re.search(r'```text\n(.*?)\n *```', brief, re.S)
@@ -230,7 +353,7 @@ PY
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-for name in ('delegate', 'codex', 'kimi'):
+for name in ('delegate', 'delegate-codex', 'delegate-kimi'):
     text = (root / 'skills' / name / 'SKILL.md').read_text()
     review = text.split('3. When', 1)[1].split('4. To', 1)[0]
     gates = ('diff <baseCommit>', 'main thread must personally rerun', 'full test suite',
@@ -260,7 +383,7 @@ review = readme.split('## Reviewing a delegation', 1)[1]
 for term in ('diff', 'full test suite', 'real environment', 'independent review', '--resume --worktree', 'same worktree',
              'pactify sub apply <jobId>', 'pactify sub discard <jobId>', 'Review findings', 'Tests to add'):
     assert term in review, term
-for term in ('Background', 'numbered goals', 'Known constraints and special cases', 'General constraints', 'Acceptance commands', 'conversation context', 'frequent user interaction', 'timeout: 7200000'):
+for term in ('Background', 'numbered goals', 'Known constraints and special cases', 'General constraints', 'Acceptance commands', 'explicitly asks', 'otherwise do the work directly', 'timeout: 7200000'):
     assert term in readme, term
 PY
   [ "$status" -eq 0 ]
@@ -270,17 +393,17 @@ PY
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-text = (root / 'skills/agy/SKILL.md').read_text()
-original = (root / 'skills/kimi/SKILL.md').read_text()
+text = (root / 'skills/delegate-agy/SKILL.md').read_text()
+original = (root / 'skills/delegate-kimi/SKILL.md').read_text()
 start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->'
 assert text.split(start)[1].split(end)[0] == original.split(start)[1].split(end)[0]
-for term in ('name: agy', 'experimental', 'results vary by model', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
+for term in ('name: delegate-agy', 'experimental', 'results vary by model', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
     assert term in text, term
 agent = (root / 'agents/agy.md').read_text()
 for term in ('model: haiku', 'tools: Bash', 'pactify sub run agy', '--read-only', '--write', '--resume', '--worktree', '--cwd'):
     assert term in agent, term
 for path in (root / 'README.md', root.parent.parent / 'README.md'):
-    assert '/agy' in path.read_text(), path
+    assert '/delegate-agy' in path.read_text(), path
 PY
   [ "$status" -eq 0 ]
 }
@@ -289,7 +412,7 @@ PY
   run python3 - "$P" <<'PYTEST'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-skill = (root / 'skills/agy/SKILL.md').read_text()
+skill = (root / 'skills/delegate-agy/SKILL.md').read_text()
 for term in ('--read-only', '--mode plan', 'PreToolUse', 'sandboxed=false', 'BypassSandbox', '--completion-followups'):
     assert term in skill, term
 assert 'Always pass `--write`' not in skill
@@ -355,7 +478,7 @@ PY
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 blocks = []
-for name in ('delegate', 'codex', 'kimi', 'agy', 'opencode'):
+for name in ('delegate', 'delegate-codex', 'delegate-kimi', 'delegate-agy', 'delegate-opencode'):
     text = (root / 'skills' / name / 'SKILL.md').read_text()
     block = text.split('<!-- BEGIN SHARED-DELEGATION -->')[1].split('<!-- END SHARED-DELEGATION -->')[0]
     assert 'Write a short title on the first line' in block, name
@@ -413,9 +536,9 @@ PY
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-skill = (root / 'skills/opencode/SKILL.md').read_text()
+skill = (root / 'skills/delegate-opencode/SKILL.md').read_text()
 agent = (root / 'agents/opencode.md').read_text()
-reference = (root / 'skills/codex/SKILL.md').read_text()
+reference = (root / 'skills/delegate-codex/SKILL.md').read_text()
 def shared(text):
     return text.split('<!-- BEGIN SHARED-DELEGATION -->', 1)[1].split('<!-- END SHARED-DELEGATION -->', 1)[0]
 assert shared(skill) == shared(reference)
@@ -433,7 +556,7 @@ PY
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-skill = (root / 'skills/agy/SKILL.md').read_text()
+skill = (root / 'skills/delegate-agy/SKILL.md').read_text()
 assert 'Use `--read-only`' in skill
 assert 'Use `--write` only with explicit permission' in skill
 agent = (root / 'agents/agy.md').read_text()
@@ -451,7 +574,7 @@ PY
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-skill = (root / 'skills/opencode/SKILL.md').read_text()
+skill = (root / 'skills/delegate-opencode/SKILL.md').read_text()
 assert 'Use `--read-only` instead' in skill
 assert 'readonly_violation' in skill and 'sandboxed=false' in skill
 assert 'Always pass `--write`' not in skill
@@ -466,12 +589,12 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "agy documents managed hook opt-out and bumps plugin version" {
+@test "agy documents managed hook opt-out and renamed plugin has a minor version bump" {
   run python3 - "$P" <<'PY'
 import json, pathlib, sys
 root = pathlib.Path(sys.argv[1])
-assert tuple(map(int, json.loads((root / '.claude-plugin/plugin.json').read_text())['version'].split('.'))) >= (0, 2, 3)
-for path in (root / 'agents/agy.md', root / 'skills/agy/SKILL.md'):
+assert tuple(map(int, json.loads((root / '.claude-plugin/plugin.json').read_text())['version'].split('.'))) >= (0, 3, 0)
+for path in (root / 'agents/agy.md', root / 'skills/delegate-agy/SKILL.md'):
     text = path.read_text()
     assert 'managed hooks are not installed with --with-user-config' in text
     assert 'workspace hooks' in text

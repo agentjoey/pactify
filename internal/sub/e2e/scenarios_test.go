@@ -500,7 +500,7 @@ func hostPath(f *fixture) string {
 	b, _ := json.Marshal(config)
 	must(f.t, os.WriteFile(filepath.Join(f.root, "pactify/router.json"), b, 0600))
 	want := "中文原文\n```go\nfmt.Println(\"$HOME `quote` \\ & ; | < >\")\n```\nEND_718\n"
-	prompt := "/pactify:" + f.s.harness + "\nIn the repository " + f.repo + ", use the requested harness to write host.txt with the exact bytes between BEGIN_PAYLOAD and END_PAYLOAD (exclude delimiter lines, include the final newline). Do not commit. Apply the job changes, then return a short host summary containing E2E_HOST_SUMMARY. Use the current PATH pactify binary. This is a tiny integration probe; no full Go tests or agent review is needed.\nBEGIN_PAYLOAD\n" + want + "END_PAYLOAD\n"
+	prompt := "/pactify:delegate-" + f.s.harness + "\nIn the repository " + f.repo + ", use the requested harness to write host.txt with the exact bytes between BEGIN_PAYLOAD and END_PAYLOAD (exclude delimiter lines, include the final newline). Do not commit. Apply the job changes, then return a short host summary containing E2E_HOST_SUMMARY. Use the current PATH pactify binary. This is a tiny integration probe; no full Go tests or agent review is needed.\nBEGIN_PAYLOAD\n" + want + "END_PAYLOAD\n"
 	out, e := command(10*time.Minute, f.env, f.repo, "", "claude", "-p", "--model", "haiku", "--plugin-dir", filepath.Join(f.s.source, "plugins/pactify"), "--permission-mode", "bypassPermissions", prompt)
 	if e != nil {
 		f.fatalf("host: %v %s", e, safe(out))

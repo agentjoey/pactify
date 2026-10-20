@@ -1,0 +1,38 @@
+#!/bin/sh
+# Check local prerequisites only. Never install software or access the network.
+quiet=false
+case "$#:$1" in
+  0:) ;;
+  1:--quiet) quiet=true ;;
+  *) printf '%s\n' 'Usage: pactify-check [--quiet]' >&2; exit 2 ;;
+esac
+
+if ! command -v pactify >/dev/null 2>&1; then
+  printf '%s\n' \
+    'pactify plugin: the pactify CLI is not on PATH. Install it yourself with either command:' \
+    '  curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh' \
+    '  go install github.com/agentjoey/pactify/cmd/pactify@latest'
+  exit 1
+fi
+
+check_status=0
+if [ "$quiet" = true ]; then
+  if ! pactify version >/dev/null 2>&1; then
+    printf '%s\n' 'pactify plugin: pactify version failed; check or upgrade pactify.'
+    check_status=1
+  fi
+else
+  printf '%s\n' 'pactify plugin: pactify is on PATH.'
+  if ! pactify version; then
+    printf '%s\n' 'pactify plugin: pactify version failed; check or upgrade pactify.'
+    check_status=1
+  fi
+fi
+
+if ! pactify sub --help >/dev/null 2>&1; then
+  printf '%s\n' "pactify plugin: the installed pactify has no 'sub' command; upgrade pactify."
+  check_status=1
+elif [ "$quiet" = false ]; then
+  printf '%s\n' 'pactify plugin: pactify sub is available.'
+fi
+exit "$check_status"

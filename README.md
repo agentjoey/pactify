@@ -31,9 +31,11 @@ with `pactify sub doctor <harness>`; see [doctor](docs/sub-doctor.md).
 ```
 
 Use `/delegate` (or `/pactify:delegate`) for default codex delegation, or select
-`/codex`, `/kimi`, `/agy` or `/opencode`. `/jobs` (or `/pactify:jobs`) is read-only:
+`/delegate-codex`, `/delegate-kimi`, `/delegate-agy` or `/delegate-opencode`. `/jobs` (or `/pactify:jobs`) is read-only:
 `/jobs all` includes older jobs and `/jobs <id>` shows one job. Read the
 [plugin guide](plugins/pactify/README.md) for brief writing and result review.
+The plugin is for Claude Code only. Delegation requires an explicit user request;
+experimental agy and opencode skills run only through their slash commands.
 
 ## CLI basics
 

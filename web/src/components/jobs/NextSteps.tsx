@@ -95,7 +95,7 @@ export function JobsOnboarding() {
     <section className="panel-section jobs-onboarding">
       <h2>Start your first job</h2>
       <p>
-        In Claude Code, use <code>/delegate</code> or <code>/codex</code>, or start
+        In Claude Code, use <code>/delegate</code> or <code>/delegate-codex</code>, or start
         from your terminal:
       </p>
       <CopyCommand command="pactify sub run" />

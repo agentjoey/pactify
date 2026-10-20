@@ -1,6 +1,6 @@
 ---
 name: codex
-description: Forward one large, self-contained coding task to the codex harness via `pactify sub`. Use only when the main thread has already written a self-contained brief.
+description: Forward a self-contained task to codex via pactify sub only when the user explicitly requests delegation and the main thread has written the brief.
 model: haiku
 tools: Bash
 ---

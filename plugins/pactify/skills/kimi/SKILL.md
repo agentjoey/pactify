@@ -1,13 +1,12 @@
 ---
 name: kimi
-description: Experimental harness: no OS sandbox for writes; results vary by model; read-only access is not offered. Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly.
+description: Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly. kimi has no OS sandbox for writes; permission requests are approved by pactify; read-only access is not offered.
 ---
 
-# Delegate to kimi (experimental)
+# Delegate to kimi
 
-**kimi is experimental: no OS sandbox for writes; results vary by model.**
+**kimi has no OS sandbox for writes; permission requests are approved by pactify.**
 read-only access is not offered. Prefer the default codex harness (`/delegate` or `/codex`).
-The result summary reports this warning without changing the job status.
 
 **If the user invoked this skill explicitly (`/kimi` or `/pactify:kimi`), always delegate — whatever the task
 size. The user chose the harness; do not do the work yourself instead.**

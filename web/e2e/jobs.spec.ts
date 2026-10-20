@@ -164,6 +164,15 @@ for (const width of [1440, 390]) {
       contentType: "image/png",
     });
     await navigate(page, "Settings", width);
+    for (const name of ["codex", "kimi", "agy", "opencode"]) {
+      const card = page.getByRole("article", { name, exact: true });
+      await expect(card.getByText("experimental", { exact: true })).toHaveCount(
+        name === "agy" || name === "opencode" ? 1 : 0,
+      );
+      await expect(card).toContainText(
+        `Read-only: ${name === "kimi" ? "Not supported" : "Supported"}`,
+      );
+    }
     await expect(page.getByLabel("codex Default model")).toHaveValue(
       "gpt-6.1-sol",
     );

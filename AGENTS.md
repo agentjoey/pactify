@@ -1,7 +1,7 @@
 # Pactify — AGENTS contributor guide
 
 Pactify is a local harness router for coding tasks. The CLI and Claude Code plugin
-route jobs to codex by default, with experimental kimi, agy and opencode support.
+route jobs to codex by default, with kimi support and experimental agy and opencode support.
 Jobs provide logs, results, resume, cancellation, worktree isolation and quota fallback.
 Codex write mode enables network access by default.
 

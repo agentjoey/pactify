@@ -86,3 +86,18 @@ it("keeps harnesses visible when defaults fail", async () => {
   expect(screen.getByLabelText("agy Default model")).toBeInTheDocument();
   expect(screen.getByRole("alert")).toBeInTheDocument();
 });
+
+it("shows experimental labels only for agy and opencode and keeps kimi read-only unavailable", async () => {
+  const { harnesses, defaults } = fixture();
+  await act(async () => {
+    defaults.resolve(Response.json(snapshot));
+    harnesses.resolve(Response.json({ harnesses: ["codex", "kimi", "agy", "opencode"].map((name) => ({
+      ...harness, name, experimental: name === "agy" || name === "opencode", readOnly: name !== "kimi",
+    })) }));
+  });
+  for (const name of ["codex", "kimi", "agy", "opencode"]) {
+    const card = within(screen.getByRole("article", { name }));
+    expect(card.queryByText("experimental") !== null).toBe(name === "agy" || name === "opencode");
+    expect(card.getByText(`Read-only: ${name === "kimi" ? "Not supported" : "Supported"}`)).toBeInTheDocument();
+  }
+});

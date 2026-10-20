@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- kimi is no longer experimental; read-only remains unavailable.
 - Adopt FSL-1.1-MIT: each version becomes MIT after two years; releases through
   v0.13.0 retain their original MIT license.
 - Harden `serve` with Host validation, exact browser write-origin checks and

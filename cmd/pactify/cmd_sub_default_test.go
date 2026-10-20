@@ -74,26 +74,33 @@ func TestSubRunDefaultAndExplicitCodex(t *testing.T) {
 	}
 }
 
-func TestSubFallbackKeepsExperimentalWarningAndFailure(t *testing.T) {
-	store := sub.Store{Root: t.TempDir()}
-	st, err := store.Create("j1", sub.Request{Harness: "kimi", Cwd: t.TempDir(), Access: "write", Brief: "task"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	st.Status, st.Error, st.FinishedAt = sub.StatusFailed, "worker panic", time.Now().UTC()
-	if err := subSaveFallback(store, st); err != nil {
-		t.Fatal(err)
-	}
-	data, err := os.ReadFile(filepath.Join(store.Dir("j1"), "result.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var r sub.Result
-	if err := json.Unmarshal(data, &r); err != nil {
-		t.Fatal(err)
-	}
-	want := "kimi is experimental: no OS sandbox for writes; results vary by model"
-	if r.Status != sub.StatusFailed || len(r.Warnings) != 2 || r.Warnings[0] != want || r.Warnings[1] != "worker panic" || !strings.HasPrefix(r.Markdown(), "⚠️ "+want) {
-		t.Fatalf("fallback result=%+v", r)
+func TestSubFallbackWarningsAndFailure(t *testing.T) {
+	for _, name := range []string{"codex", "kimi", "agy", "opencode"} {
+		t.Run(name, func(t *testing.T) {
+			store := sub.Store{Root: t.TempDir()}
+			st, err := store.Create("j1", sub.Request{Harness: name, Cwd: t.TempDir(), Access: "write", Brief: "task"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			st.Status, st.Error, st.FinishedAt = sub.StatusFailed, "worker panic", time.Now().UTC()
+			if err := subSaveFallback(store, st); err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(filepath.Join(store.Dir("j1"), "result.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var r sub.Result
+			if err := json.Unmarshal(data, &r); err != nil {
+				t.Fatal(err)
+			}
+			want := "worker panic"
+			if name == "agy" || name == "opencode" {
+				want = name + " is experimental: no OS sandbox for writes; results vary by model; " + want
+			}
+			if r.Status != sub.StatusFailed || strings.Join(r.Warnings, "; ") != want || !strings.HasPrefix(r.Markdown(), "⚠️ "+want) {
+				t.Fatalf("fallback result=%+v; want warnings %q", r, want)
+			}
+		})
 	}
 }

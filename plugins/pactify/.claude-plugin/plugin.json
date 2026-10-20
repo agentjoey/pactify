@@ -1,9 +1,9 @@
 {
   "name": "pactify",
   "description": "Delegate large coding tasks from Claude Code to coding agent harnesses (codex, kimi, agy, opencode), review results, and view job status with /jobs.",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "author": { "name": "agentjoey" },
   "homepage": "https://github.com/agentjoey/pactify",
   "repository": "https://github.com/agentjoey/pactify",
-  "license": "MIT"
+  "license": "FSL-1.1-MIT"
 }

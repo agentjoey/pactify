@@ -604,6 +604,7 @@
   font-size: 11px;
   color: var(--color-text-3);
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 .kpi strong {
   font-size: 30px;
@@ -870,7 +871,16 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .kpi-grid > * {
+    grid-column: span 2;
+    min-width: 0;
+    padding: 12px;
+  }
+  .kpi-grid > :nth-child(-n+2) {
+    grid-column: span 3;
   }
   .jobs-drawer {
     inset: 0;
@@ -1026,4 +1036,27 @@
 }
 @media (max-width: 700px) {
   .header-links { gap: 8px; }
+}
+
+.jobs-keyboard { position: relative; margin-left: auto; }
+.jobs-keyboard > button { color: var(--color-text-3); }
+.jobs-keyboard-help {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  width: min(300px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-raised);
+}
+.jobs-keyboard-help dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 16px 0; }
+.jobs-keyboard-help dd { margin: 0; }
+.jobs-keyboard kbd { font-family: var(--font-mono); }
+.task-card:has([data-job-link]:focus-visible),
+.compact-history li:has([data-job-link]:focus-visible) {
+  outline: 2px solid var(--color-role-design);
+  outline-offset: 3px;
 }

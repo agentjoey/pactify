@@ -5,6 +5,7 @@ import { Modal } from "../ui/Modal";
 import type { Job } from "./types";
 import type { JobsSource } from "./source";
 import { responseError } from "./data";
+import { panelBuild } from "../../buildTarget";
 const labels: Record<string, string> = {
   cancel: "Cancel",
   resume: "Resume",
@@ -19,7 +20,9 @@ const consequences: Record<string, string> = {
   discard:
     "This will permanently delete the worktree and any unapplied changes. Recorded results and logs will be kept.",
 };
-export function JobActions({
+export const JobActions = panelBuild ? () => null : WriteJobActions;
+
+function WriteJobActions({
   job,
   source,
   readOnly = false,

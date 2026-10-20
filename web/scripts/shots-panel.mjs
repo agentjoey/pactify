@@ -8,7 +8,7 @@ import { startPanelMock } from "../e2e/panel-mock.mjs";
 
 const output = await mkdtemp(join(tmpdir(), "pactify-panel-shots-"));
 const { server, baseURL } = await startPanelMock();
-const views = ["jobs", "compact", "second-tab", "summary", "commands", "live", "logs", "diff", "brief", "dashboard", "settings", "empty", "401", "5xx", "loading"];
+const views = ["jobs", "shortcuts", "compact", "second-tab", "summary", "commands", "live", "logs", "diff", "brief", "dashboard", "settings", "empty", "401", "5xx", "loading"];
 let browser;
 try {
   browser = await chromium.launch();
@@ -37,6 +37,16 @@ try {
             await owner.getByRole("heading", {name:"Jobs",exact:true}).waitFor();
             await page.goto(`${baseURL}/?peer=1#/jobs`);
           } else await page.goto(`${baseURL}/#/${route}`);
+          if (view === "shortcuts") {
+            await page.getByRole("searchbox").waitFor();
+            await page.keyboard.press("/");
+            await expect(page.getByRole("searchbox")).toBeFocused();
+            await page.keyboard.press("Tab");
+            await page.keyboard.press("j");
+            await expect(page.getByRole("link",{name:"Build a local job panel",exact:true})).toBeFocused();
+            await page.keyboard.press("?");
+            await expect(page.getByRole("region",{name:"Keyboard shortcuts",exact:true})).toBeVisible();
+          }
           if (view === "commands") {
             const modal=page.getByRole("dialog", {name:"Job details"});
             if (width <= 700) await modal.getByRole("button", {name:"Show commands",exact:true}).click();
@@ -69,7 +79,21 @@ try {
               await modal.locator(".diff-added").waitFor();
               await expect(modal.locator(".diff-file summary")).toHaveText("internal/subpanel/server.go +1 / −0");
             }
-          } else if (view === "dashboard") await page.getByRole("img",{name:"Token usage · last 14 days"}).waitFor();
+          } else if (view === "dashboard") {
+            await page.getByRole("img",{name:"Token usage · last 14 days"}).waitFor();
+            if (width <= 700) {
+              const tiles=await page.locator(".kpi").evaluateAll(nodes => nodes.map(node => {
+                const {x,y}=node.getBoundingClientRect(); return {x,y};
+              }));
+              expect(tiles).toHaveLength(5);
+              expect(tiles[0].y).toBe(tiles[1].y);
+              expect(tiles[2].y).toBeGreaterThan(tiles[0].y);
+              expect(tiles[2].y).toBe(tiles[3].y);
+              expect(tiles[3].y).toBe(tiles[4].y);
+              expect(tiles[2].x).toBeLessThan(tiles[3].x);
+              expect(tiles[3].x).toBeLessThan(tiles[4].x);
+            }
+          }
           else if (view === "settings") await page.getByRole("article",{name:"codex",exact:true}).waitFor();
           else await page.getByRole("link",{name:"Build a local job panel",exact:true}).waitFor();
           await page.evaluate(() => document.fonts.ready);

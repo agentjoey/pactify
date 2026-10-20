@@ -8,6 +8,48 @@ import (
 	"testing"
 )
 
+func TestRejectedHostBrowserPage(t *testing.T) {
+	s, _ := fixture(t)
+	for _, host := range []string{"localhost:7777", "attacker.example", "[::1]:7777", "<script>alert(1)</script>"} {
+		t.Run(host, func(t *testing.T) {
+			r := httptest.NewRequest("GET", "http://127.0.0.1/?token="+s.launchToken, nil)
+			r.Host = host
+			r.Header.Set("Accept", "text/html,application/xhtml+xml")
+			w := httptest.NewRecorder()
+			s.Handler().ServeHTTP(w, r)
+			body := w.Body.String()
+			if w.Code != 403 || w.Header().Get("Content-Type") != "text/html; charset=utf-8" || !strings.Contains(body, "127.0.0.1") || !strings.Contains(body, "pactify sub panel") {
+				t.Fatalf("expected friendly HTML 403: %d %s", w.Code, body)
+			}
+			for _, forbidden := range []string{s.token, s.launchToken, "<script", "<style", "style=", "attacker.example"} {
+				if strings.Contains(body, forbidden) {
+					t.Fatalf("403 contains %q", forbidden)
+				}
+			}
+			if !strings.Contains(w.Header().Get("Content-Security-Policy"), "style-src 'self'") || w.Header().Get("Referrer-Policy") != "no-referrer" {
+				t.Fatal("missing security headers")
+			}
+		})
+	}
+	if w := request(s, "GET", "/?token="+s.launchToken, ""); w.Code != 200 {
+		t.Fatal("rejected Host consumed launch token")
+	}
+}
+
+func TestRejectedHostAPIStaysPlain(t *testing.T) {
+	s, _ := fixture(t)
+	for _, path := range []string{"/api/jobs", "/api", "/api/jobs/job-00/resume"} {
+		r := httptest.NewRequest("GET", "http://127.0.0.1"+path, nil)
+		r.Host = "localhost:7777"
+		r.Header.Set("Accept", "text/html")
+		w := httptest.NewRecorder()
+		s.Handler().ServeHTTP(w, r)
+		if w.Code != 403 || w.Body.String() != "loopback host required\n" || !strings.HasPrefix(w.Header().Get("Content-Type"), "text/plain") {
+			t.Fatalf("API 403 changed: %d %s", w.Code, w.Body.String())
+		}
+	}
+}
+
 func TestSecurityIncompleteDirectoryDoesNotBreakPanel(t *testing.T) {
 	s, store := fixture(t)
 	if err := os.Mkdir(store.Dir("half-created"), 0700); err != nil {

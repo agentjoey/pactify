@@ -2,7 +2,9 @@
    The palette uses an indigo accent on a dark background.
 
    Self-hosted fonts: no external network requests at runtime (CSP-friendly).
-   Files live in web/public/fonts/ and are served from the app origin. */
+   Latin/Latin Extended and UI symbol subsets live in web/public/fonts/.
+   Inter retains variable weights with optical size fixed at 14.
+   Rebuild with scripts/subset-fonts.py (fonttools[woff]); served from this origin. */
 
 @font-face {
   font-family: "InterVariable";

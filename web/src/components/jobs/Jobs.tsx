@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -20,6 +20,7 @@ import { JobActions } from "./JobActions";
 import { JobDrawer } from "./JobDrawer";
 import { NextSteps, JobsOnboarding, LoadingJobs } from "./NextSteps";
 import { JobDetail } from "./JobDetail";
+import { JobsKeyboard } from "./JobsKeyboard";
 import "./jobs.css";
 export type { Job } from "./types";
 export { LogView, splitDiff } from "./logs";
@@ -95,7 +96,7 @@ function CompletedRow({ chain }: { chain: JobChain }) {
   return (
     <li>
       <span data-column="status" className="compact-status" title={job.status}>{job.status}</span>
-      <a data-column="title" className="compact-title" title={title} href={jobsLink(job.id)}>{title}</a>
+      <a data-job-link data-column="title" className="compact-title" title={title} href={jobsLink(job.id)}>{title}</a>
       <div className="compact-meta">
         <span data-column="harness" title={model}>{model}</span>
         <span data-column="project" title={job.repo}>{projectName(job.repo)}</span>
@@ -180,7 +181,7 @@ export function JobCard({
         </span>
       </div>
       <h3>
-        <a href={jobsLink(job.id)}>{chain.root.title || chain.root.id}</a>
+        <a data-job-link href={jobsLink(job.id)}>{chain.root.title || chain.root.id}</a>
       </h3>
       <JobMetadata job={job} />
       <div className="panel-tags">
@@ -273,6 +274,8 @@ export function JobList({
   };
   const [compact, setCompact] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const list = useRef<HTMLDivElement>(null);
+  const search = useRef<HTMLInputElement>(null);
   function filter(key: string, value: string) {
     const next = new URLSearchParams(location.hash.split("?")[1]);
     if (value) next.set(key, value);
@@ -374,15 +377,18 @@ export function JobList({
         <label className="jobs-search">
           <span className="sr-only">Search jobs</span>
           <input
+            ref={search}
+            aria-keyshortcuts="/"
             type="search"
             placeholder="Search jobs"
             value={filters.search}
             onChange={(e) => filter("search", e.target.value)}
           />
         </label>
+        <JobsKeyboard list={list} search={search} />
       </div>
       {loaded && (
-        <div className="jobs-sections">
+        <div className="jobs-sections" ref={list}>
           {!chains.length && (
             <p className="panel-empty">No jobs match these filters.</p>
           )}

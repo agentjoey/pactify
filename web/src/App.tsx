@@ -39,9 +39,21 @@ export function AppContent({
   }, []);
   const jobs = Array.isArray(resource.data) ? resource.data : null;
   const detailOpen = page === "jobs" && /^#\/jobs\/[^/?]+/.test(hash);
-  const attention = mergeJobChains(jobs || []).filter(
+  const chains = mergeJobChains(jobs || []);
+  const attention = chains.filter(
     chain => sectionFor(chain.latest) === "attention",
   ).length;
+  const running = chains.some(chain => sectionFor(chain.latest) === "progress");
+  useEffect(() => {
+    let icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!icon) {
+      icon = document.createElement("link");
+      icon.rel = "icon";
+      document.head.append(icon);
+    }
+    icon.type = "image/svg+xml";
+    icon.href = `/favicon-${attention ? "attention" : running ? "running" : "neutral"}.svg`;
+  }, [attention, running]);
   useEffect(() => {
     document.title = `${attention ? `(${attention}) ` : ""}${readOnly ? "pactify panel" : `Pactify · ${page[0].toUpperCase() + page.slice(1)}`}`;
   }, [page, readOnly, attention]);

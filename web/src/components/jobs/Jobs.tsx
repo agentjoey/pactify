@@ -9,7 +9,7 @@ import { mergeJobChains, type JobChain } from "./board";
 import {
   completedDays,
   formatDuration,
-  formatCost,
+  jobCost,
   projectName,
   sectionFor,
   shortNumber,
@@ -23,6 +23,11 @@ import { JobDetail } from "./JobDetail";
 import "./jobs.css";
 export type { Job } from "./types";
 export { LogView, splitDiff } from "./logs";
+function matchesSearch(job: Job, search: string) {
+  const query = search.toLowerCase();
+  return [job.title, job.id, job.repo, job.modelRequested, job.modelActual]
+    .some(value => value?.toLowerCase().includes(query));
+}
 interface Filters {
   status: string;
   harness: string;
@@ -44,7 +49,7 @@ export function filterJobs(jobs: Job[], filters: Filters) {
         (!filters.harness || j.harness === filters.harness) &&
         (!filters.repo || j.repo === filters.repo) &&
         (!filters.search ||
-          j.title.toLowerCase().includes(filters.search.toLowerCase())),
+          matchesSearch(j, filters.search)),
     )
     .sort(
       (a, b) =>
@@ -76,8 +81,35 @@ export function JobMetadata({ job }: { job: Job }) {
         {shortNumber(usage.input)} in / {shortNumber(usage.output)} out
         {(job.usagePartial || job.activity?.usagePartial) && " · partial"}
       </span>
-      {job.costUSD != null && <span>{formatCost(job.costUSD)}</span>}
+      <span>{jobCost(job)}</span>
     </div>
+  );
+}
+function CompletedRow({ chain }: { chain: JobChain }) {
+  const job = chain.latest;
+  const title = chain.root.title || chain.root.id;
+  const model = `${job.harness} · ${job.modelActual || job.modelRequested || "Harness default"}`;
+  const usage = tokens(job);
+  const usageTitle = `${usage.input.toLocaleString("en-US")} input / ${usage.output.toLocaleString("en-US")} output tokens`;
+  const time = job.finishedAt || job.createdAt;
+  return (
+    <li>
+      <span data-column="status" className="compact-status" title={job.status}>{job.status}</span>
+      <a data-column="title" className="compact-title" title={title} href={jobsLink(job.id)}>{title}</a>
+      <div className="compact-meta">
+        <span data-column="harness" title={model}>{model}</span>
+        <span data-column="project" title={job.repo}>{projectName(job.repo)}</span>
+        <span data-column="duration" title={job.duration}>{job.duration}</span>
+        <span data-column="tokens" title={usageTitle}>
+          {shortNumber(usage.input)} in / {shortNumber(usage.output)} out
+          {job.usagePartial && " · partial"}
+        </span>
+        <span data-column="cost" title={jobCost(job)}>{jobCost(job)}</span>
+        <time data-column="time" dateTime={time} title={new Date(time).toLocaleString("en-US")}>
+          {new Date(time).toLocaleTimeString("en-US", {hour:"2-digit",minute:"2-digit"})}
+        </time>
+      </div>
+    </li>
   );
 }
 export function JobCard({
@@ -239,6 +271,7 @@ export function JobList({
     status: params.get("status") || "",
     search: params.get("search") || "",
   };
+  const [compact, setCompact] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   function filter(key: string, value: string) {
     const next = new URLSearchParams(location.hash.split("?")[1]);
@@ -257,7 +290,7 @@ export function JobList({
       ) &&
       (!filters.search ||
         chain.runs.some((job) =>
-          job.title.toLowerCase().includes(filters.search.toLowerCase()),
+          matchesSearch(job, filters.search),
         )) &&
       (!filters.status ||
         (filters.status === "failed"
@@ -281,6 +314,10 @@ export function JobList({
   return (
     <>
       <div className="jobs-toolbar">
+        <Button size="sm" variant="ghost" aria-pressed={filters.status === "attention"}
+          onClick={() => filter("status", filters.status === "attention" ? "" : "attention")}>
+          Needs attention
+        </Button>
         <label title={filters.repo}>
           Project
           <select
@@ -372,7 +409,12 @@ export function JobList({
           {!!chains.filter((c) => sectionFor(c.latest) === "completed")
             .length && (
             <section aria-label="Completed">
-              <h2>Completed</h2>
+              <div className="section-heading">
+                <h2>Completed</h2>
+                <Button size="sm" variant="ghost" aria-pressed={compact} onClick={() => setCompact(!compact)}>
+                  Compact list
+                </Button>
+              </div>
               {completedDays(
                 chains.filter((c) => sectionFor(c.latest) === "completed"),
               ).map(({ day, label, rows }) => (
@@ -381,7 +423,7 @@ export function JobList({
                     <h3>
                       {label} · {rows.length} completed
                     </h3>
-                    <Button
+                    {!compact && <Button
                       size="sm"
                       variant="ghost"
                       aria-expanded={!!expanded[day]}
@@ -391,9 +433,11 @@ export function JobList({
                       }
                     >
                       {expanded[day] ? "Collapse" : "Show all"}
-                    </Button>
+                    </Button>}
                   </div>
-                  <div
+                  {compact ? <ul className="compact-history" aria-label="Completed jobs">
+                    {rows.map(chain => <CompletedRow key={chain.root.id} chain={chain} />)}
+                  </ul> : <div
                     id={`day-${day}`}
                     className={expanded[day] ? "job-grid" : "job-stack"}
                   >
@@ -401,7 +445,7 @@ export function JobList({
                       (chain, index) =>
                         card(chain, !expanded[day] && index > 0),
                     )}
-                  </div>
+                  </div>}
                 </div>
               ))}
             </section>

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/agentjoey/pactify/internal/buildinfo"
 	"os"
 )
 
@@ -13,6 +14,7 @@ var (
 )
 
 func main() {
+	buildinfo.Version = version
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

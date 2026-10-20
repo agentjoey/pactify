@@ -27,6 +27,11 @@ export async function startMock(port = 0, panel = false) {
       const path = panel
         ? url.pathname
         : url.pathname.replace(/^\/api\/sub(?=\/)/, "/api");
+      if (req.method === "GET" && ["/api/info", "/api/doctor"].includes(path)) {
+        res.writeHead(200, {"Content-Type":"application/json"});
+        res.end(JSON.stringify(path === "/api/info" ? {version:"dev"} : {lastRun:null,harnesses:[{name:"codex",installed:true,version:"0.162.1"}]}));
+        return;
+      }
       if ((await jobs(req, res, path)) || (await router(req, res, path)))
         return;
       if (url.pathname.startsWith("/api/")) {
@@ -55,7 +60,9 @@ export async function startMock(port = 0, panel = false) {
           }[extname(file)] || "application/octet-stream",
         "Cache-Control": "no-store",
       });
-      res.end(data);
+      res.end(panel && extname(file) === ".html" && !url.searchParams.has("token") && !url.searchParams.has("peer")
+        ? data.toString().replace("</head>", '<meta name="pactify-session" content="mock-panel-session"></head>')
+        : data);
     } catch {
       res.writeHead(500);
       res.end("Mock request failed");

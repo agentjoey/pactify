@@ -51,7 +51,7 @@ it("shows one 5xx banner and KPI placeholders, then retries", async () => {
   for (const node of document.querySelectorAll(".kpi strong")) expect(node).toHaveTextContent("—");
   expect(screen.queryAllByText("Unavailable")).toHaveLength(0);
   const count = fetcher.mock.calls.length;
-  await act(async () => {await vi.advanceTimersByTimeAsync(2000);});
+  await act(async () => {await vi.advanceTimersByTimeAsync(4000);});
   expect(fetcher.mock.calls.length).toBeGreaterThan(count);
 });
 it("uses the task title, run number, Live default and heading focus in details", async () => {
@@ -131,7 +131,7 @@ for (const status of ["succeeded", "failed"]) {
     fireEvent.click(review);
     await act(async () => {window.dispatchEvent(new HashChangeEvent("hashchange"));});
     const modal = await screen.findByRole("dialog");
-    const nextSteps = await within(modal).findByRole("region", {name: "Terminal commands"});
+    const nextSteps = await within(modal).findByRole("region", {name: "Next steps"});
     expect(within(nextSteps).getAllByRole("button", {name: /^Copy pactify sub /})).toHaveLength(5);
     for (const command of ["apply latest", "discard latest", "run --resume latest --worktree", "logs latest", "result latest"]) {
       expect(within(nextSteps).getByRole("button", {name: `Copy pactify sub ${command}`})).toBeInTheDocument();
@@ -155,16 +155,10 @@ for (const readOnly of [false, true]) {
     expect(scroller).not.toContainElement(footer);
     if (readOnly) {
       expect(within(footer as HTMLElement).getByRole("heading",{name:"Next steps"})).toBeInTheDocument();
-      const commands = within(scroller as HTMLElement).getByRole("region",{name:"Terminal commands"});
+      const commands = within(footer as HTMLElement).getByRole("region",{name:"Next steps"});
       expect(within(commands).getAllByRole("button",{name:/^Copy pactify sub /})).toHaveLength(5);
-      const scrollIntoView = vi.fn();
-      const focus = vi.fn();
-      const target = commands.parentElement!;
-      target.scrollIntoView = scrollIntoView;
-      target.focus = focus;
-      fireEvent.click(within(footer as HTMLElement).getByRole("button",{name:"Show commands"}));
-      expect(scrollIntoView).toHaveBeenCalled();
-      expect(focus).toHaveBeenCalled();
+      expect(scroller!.querySelector(".next-steps")).toBeNull();
+      expect(within(footer).queryByRole("button",{name:"Show commands"})).toBeNull();
     } else {
       for (const name of ["Resume", "Apply", "Discard"]) expect(within(footer as HTMLElement).getByRole("button",{name})).toBeInTheDocument();
     }

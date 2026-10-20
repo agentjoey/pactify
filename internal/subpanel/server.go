@@ -154,12 +154,14 @@ func (s *Server) Handler() http.Handler {
 	})
 }
 
-// ReadOnlyHandler serves /router, /cost, /jobs and its detail, logs, events and diff subresources.
+// ReadOnlyHandler serves job resources, routing, costs, harnesses, doctor and build info.
 // The host owns authentication and must mount this behind its security boundary.
 // Reads use atomic snapshots and never recover workers or write job files.
 func ReadOnlyHandler(store sub.Store) http.Handler {
 	s := &Server{store: store}
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /doctor", s.doctor)
+	mux.HandleFunc("GET /info", s.info)
 	mux.HandleFunc("GET /cost", s.cost)
 	mux.HandleFunc("GET /router", s.router)
 	mux.HandleFunc("GET /harnesses", s.harnesses)

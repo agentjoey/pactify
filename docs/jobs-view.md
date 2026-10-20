@@ -1,8 +1,8 @@
 # Jobs view
 
-Web v2 的主导航是 **Dashboard / Jobs / Settings**，窄屏使用 **Page** 下拉框。默认进入 Jobs，路由与筛选由 hash 决定。**Live** 位于 Dashboard 顶部和任务详情的 Live 页签中，不是独立主导航。`pactify serve` 与只读 `pactify sub panel` 共享页面；都使用固定深色配色。
+Web v2 uses **Dashboard / Jobs / Settings** navigation, with a **Page** selector on narrow screens. Jobs is the default page; hash routes preserve navigation and filters. **Live** appears on Dashboard and in job details. The dashboard and read-only panel share these pages; the dashboard uses a dark palette and the panel follows the system theme.
 
-Jobs 跨仓库展示委派任务，支持 Project、Harness、Status 与标题搜索；筛选写入 URL query。列表先按显式 resume/fallback 链合并，再保留任一轮匹配仓库、harness 或标题的整链，不按相同标题或 session id 猜测关系。链首提供标题，最新一轮提供状态、模型、耗时与 token；卡片还显示成本、worktree、retry、fallback 与 failure class。`rework` 只计手动 resume 链接，不含自动 retries。链时间线按因果排序，分叉、环和缺失链接按现有确定性规则处理。
+Jobs displays work across repositories and supports Project, Harness, Status and text filters in the URL. Search matches title, job ID, repository and requested or actual model. Explicit resume/fallback links form chains; matching any run retains the whole chain. Chains use the root title and latest run status, model, duration and usage. Cards also show costs, worktrees, retries, fallbacks and failure classes. Rework counts manual resume links, not automatic retries. Timelines use causal order and handle branches, cycles and missing links deterministically.
 
 任务分为 **In progress / Queued / Needs attention / Completed**：running/retrying 优先进入 In progress，queued 单列；终态有 attention 进入 Needs attention，其余终态进入 Completed。Completed 按本地完成日期分组，默认折叠为卡片堆叠，可 Show all。列表每 2 秒刷新；窄屏卡片堆叠，详情抽屉全屏。
 
@@ -41,6 +41,27 @@ pactify sub panel --port 17100 --no-open
 
 前端移除 URL 中的 token，将 session 保留在当前标签页的 `sessionStorage`。API 与 fetch 日志流使用 `Authorization: Bearer <session>`，不使用认证 cookie；重启 panel 后需使用新 URL。panel 认证与 serve 的宿主安全模型独立。
 
+A new tab opened at the cleaned panel URL can request the existing session
+through a BroadcastChannel with a request nonce. Tabs of the same panel origin
+share the session through this channel; BroadcastChannel is same-origin only,
+and the panel CSP forbids third-party scripts. A tab that already has a session
+restores it immediately without waiting for a handoff. It keeps the received
+session in its own sessionStorage and uses bearer headers; the session is never
+added to a URL or copied command. Without an answering tab, the panel shows
+“Session ended” after two seconds. The original launch URL remains single-use.
+
+Polling pauses while the document is hidden, doubles its delay after errors from
+2 seconds up to 30 seconds, resets on success, and stops on 401. The header shows
+relative update age, documentation and the CLI version; the tab title counts
+chains needing attention. Search includes title, job ID, repository and both
+requested and actual models. Completed history uses eight aligned desktop
+columns: status, title, harness/model, project, duration, tokens, cost and time.
+Titles truncate with their full text in a tooltip. Narrow rows put title/status
+above one metadata line. Job details show one command list: in the pinned footer
+on desktop, or revealed from the compact footer button on narrow screens. Cards and
+Usage show reported costUSD, subscription for codex/kimi/agy without a reported
+cost, and unknown for other unpriced harnesses.
+
 ## API 与边界
 
 两种宿主挂载同一个 `subpanel.ReadOnlyHandler`：
@@ -50,6 +71,8 @@ pactify sub panel --port 17100 --no-open
 | 列表 / 详情 | `/api/sub/jobs?all=1`、`/api/sub/jobs/<id>` | `/api/jobs?all=1`、`/api/jobs/<id>` |
 | SSE 日志 / 事件 | `/api/sub/jobs/<id>/{logs,events}` | `/api/jobs/<id>/{logs,events}` |
 | diff | `/api/sub/jobs/<id>/diff` | `/api/jobs/<id>/diff` |
+| Doctor snapshot | `/api/sub/doctor` | `/api/doctor` |
+| CLI version | `/api/sub/info` | `/api/info` |
 | harness 状态 / 模型 | `/api/sub/harnesses`（`?refresh=1` 刷新） | `/api/harnesses` |
 | 路由配置 | `GET /api/sub/router` | `GET /api/router` |
 | 用量汇总 | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
@@ -64,6 +87,22 @@ pactify sub panel --port 17100 --no-open
 日志从末尾 1 MiB 窗口内最多 100 条可读记录开始，半行缓冲最多 64 KiB，浏览器最多保留 1,000 行；终态关闭流，离开详情取消请求，断流 / 错误显示状态。完整日志使用 `pactify sub logs <id> --follow`。
 
 worktree diff 相对记录的 base commit，包含未跟踪文件，不 staging、不修改 Git index；上限为 512 KiB / 10 秒，截断显示提示。无 worktree、已 discard 或无法读取时展示已有变更清单 / 提示，result 不保存完整 patch；结果文件读取上限为 4 MiB。
+
+The diff response includes `maxBytes` (524288), `truncated`, `patch`, `files` and
+`note`. The viewer colours text nodes, shows per-file line counts, and initially
+collapses files larger than 400 lines. File headers show a single path for
+unchanged names and old → new for renames, with added/removed line counts. A truncated patch shows its size limit and
+a copyable `git -C <worktree> diff <base> --` command for the full tracked diff.
+
+`GET /doctor` returns `{lastRun: null, harnesses: [...]}` because doctor persists
+verified versions, not complete reports. Each harness has `name`, `installed`,
+`version` and `verifiedVersion`. Installed versions come only from stored catalog
+entries matching current executable metadata; an absent or changed snapshot
+shows “version unknown”. The endpoint never runs a harness, discovers models,
+executes doctor, recovers jobs, or writes storage. Settings offers a copyable
+`pactify sub doctor` command. `GET /info` returns `{version: "..."}` using the
+running CLI's release version. Both routes reject non-GET methods, including HEAD,
+and inherit their host's authentication and Host checks.
 
 ## 构建与验证
 

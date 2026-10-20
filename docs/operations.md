@@ -19,19 +19,35 @@ requests. See [sub-doctor.md](sub-doctor.md) before running probes.
 ## Local server
 
 ```bash
-pactify serve --addr 127.0.0.1:17082
+pactify serve --addr 127.0.0.1:7777
 ```
 
-The launchd plist should pass only `serve --addr 127.0.0.1:17082`.
+The launchd plist should pass only `serve --addr 127.0.0.1:7777`.
 `--seat`, `--project`, `--relay-url`, `--relay-token` and `--remote-control` were
 removed in AJ-744 and now fail as unknown flags. SIGINT shuts the server down.
 
 Serve exposes `/api/sub` and static resources, including job event SSE. Read
-locally with `curl http://127.0.0.1:17082/api/sub/jobs`. Browser writes check
-Origin; configure `PACTIFY_ALLOWED_ORIGINS` for the reverse proxy domain.
-Keep serve on loopback and use Cloudflare Tunnel + Access for authenticated
-external access. Origin checks are not login authentication. Deployment details
-are in [jobs-view.md](jobs-view.md).
+locally with `curl http://127.0.0.1:7777/api/sub/jobs`. Every request validates
+Host: a loopback bind accepts `127.0.0.1`, `localhost` or `[::1]` only with the
+listening port. Browser writes require an exact `http` origin on that port;
+requests without Origin remain allowed. Configure `PACTIFY_ALLOWED_ORIGINS`
+(comma-separated full origins) for a reverse proxy that performs authentication.
+Its hosts are accepted with or without their explicit configured ports. Host
+and Origin checks do not authenticate users.
+
+Non-loopback addresses (including `0.0.0.0`, `::` and an omitted host) require
+`PACTIFY_SERVE_TOKEN` with at least 32 characters. Host must then match the bound
+IP/hostname and port or an allowed proxy host. If a token is set on any address,
+every `/api/` request, including reads and SSE, needs `Authorization: Bearer
+<token>`; static assets stay public behind the Host check. The dashboard UI does
+not send this token: use a reverse proxy that authenticates users and injects
+the header. Dashboard workers receive neither the token nor
+`PACTIFY_ALLOWED_ORIGINS`.
+
+Responses include `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
+and `Content-Security-Policy: frame-ancestors 'none'`. The server allows 10 seconds
+for request headers and 60 seconds for idle connections, without an overall SSE
+write deadline. Deployment details are in [jobs-view.md](jobs-view.md).
 
 ## Release and launchd
 

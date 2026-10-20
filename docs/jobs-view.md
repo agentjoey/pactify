@@ -14,20 +14,21 @@ Live 使用记录中的 harness、模型、effort、调用、diff、quota、resu
 
 **Settings** 展示四个 harness 的安装状态、版本、实验标记、read-only 能力、模型列表和默认 model/effort；serve 可保存默认值、刷新模型。Routing 位于 Settings 内，展示配置路径、别名、有序回退链、额度组与耗尽记录，支持 Edit / Save / Cancel、回退排序及 Clear 的页内确认。panel 的 Settings / Routing 只读。422 在字段旁显示，409 提示配置已在别处更改，Reload 丢弃草稿。Routing 每 30 秒刷新，编辑期间保留草稿及原版本。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
 
-## 通过 pactify.agentjoey.ai 访问
+## 通过认证反向代理访问
 
-Owner 部署的访问路径：
+访问路径：
 
 ```text
-浏览器 → Cloudflare Access 登录 → Cloudflare Tunnel（本机 cloudflared）
-       → http://localhost:17082 → launchd 托管的 pactify serve
+浏览器 → 执行用户认证的反向代理 → http://127.0.0.1:7777 → pactify serve
 ```
 
-打开 `https://pactify.agentjoey.ai/#/jobs`，完成 Access 登录。前提是 Tunnel 与该域名的 Access 保护已启用。serve 自身没有登录认证，Origin 校验仅保护浏览器写请求，不能替代 Access。
+例如打开 `https://dash.example.com/#/jobs`，先完成代理认证。`PACTIFY_ALLOWED_ORIGINS` 用于执行用户认证的反向代理，应配置完整 origin，例如 `https://dash.example.com`；支持逗号分隔和去除末尾斜杠。
 
-此部署中 serve 必须只监听 loopback：`pactify serve --addr 127.0.0.1:17082`。CLI 默认仍为 `127.0.0.1:7777`。经反向代理编辑 Settings、Routing 或执行 Jobs 操作前，将完整 origin 加入 `PACTIFY_ALLOWED_ORIGINS`，例如 `https://pactify.agentjoey.ai`。
+默认 `pactify serve --addr 127.0.0.1:7777` 无需 token。所有请求（含静态资源和 SSE）校验 Host：loopback 监听仅接受 `127.0.0.1`、`localhost`、`[::1]` 加监听端口，以及 allowlist origin 的 Host（带或不带其显式端口）。浏览器写请求必须精确匹配该端口的 `http` loopback origin，或列入 allowlist；其他本机端口、`null` 均返回 403。无 Origin 的 CLI / 脚本请求继续允许。这些校验不能代替用户认证。
 
-API 使用 serve 进程的 `PACTIFY_HOME`，与 CLI 一样读取 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。launchd 与交互式 shell 的环境不同，会影响任务目录和 resume 所需配置；shell 中导出的变量不会自动进入服务。worker 不继承 `PACTIFY_ALLOWED_ORIGINS`。服务在后台回收已结束的 worker。
+非 loopback 监听（包括 `0.0.0.0`、`::` 和省略主机）必须配置至少 32 字符的 `PACTIFY_SERVE_TOKEN`，Host 仅接受绑定 IP / 主机名加端口或 allowlist 中的代理 Host。任何地址只要设置 token，所有 `/api/` 请求（含读取和 SSE）都须携带 `Authorization: Bearer <token>`，否则返回 401。静态资源仍公开，但受 Host 校验。Dashboard UI 自身不发送该 token；token 模式用于认证后注入 header 的反向代理，代理也须覆盖 SSE 请求。
+
+API 使用 serve 进程的 `PACTIFY_HOME`，与 CLI 一样读取 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。launchd 与交互式 shell 的环境不同，会影响任务目录和 resume 所需配置；shell 中导出的变量不会自动进入服务。worker 不继承 `PACTIFY_ALLOWED_ORIGINS` 或 `PACTIFY_SERVE_TOKEN`。服务在后台回收已结束的 worker。
 
 ## 本机 sub panel
 
@@ -56,7 +57,7 @@ pactify sub panel --port 17100 --no-open
 | 清除耗尽记录 | `DELETE /api/sub/quota/<encoded-key>` | 不注册 |
 | 任务操作 | `POST /api/sub/jobs/<id>/{cancel,resume,apply,discard}` | 不注册 |
 
-共享只读 API 仅接受 GET，HEAD 也拒绝。serve 的写操作经过 Origin guard，仅接受 JSON，请求体上限 64 KiB，状态冲突返回 409。Dashboard resume 每 store 最多四个活跃 job（含 queued/retrying），超限返回 429；CLI 不占此额度。结束、取消或启动失败释放名额。CLI 与 dashboard 共用 session lock。
+共享只读 API 仅接受 GET，HEAD 也拒绝。serve 的所有请求经过 Host 校验，token 模式还要求 API Bearer header；写操作经过上述精确 Origin 校验，仅接受 JSON，请求体上限 64 KiB，状态冲突返回 409。Dashboard resume 每 store 最多四个活跃 job（含 queued/retrying），超限返回 429；CLI 不占此额度。结束、取消或启动失败释放名额。CLI 与 dashboard 共用 session lock。
 
 任务读取使用原子 state 快照和单次索引，不恢复孤儿 worker、不创建锁文件、不修改任务状态。缺失 `state.json` 的目录会跳过，非法 job id 被拒绝。cost API 的参数及错误沿用 [`sub cost`](sub-cost.md)，额外返回过滤过期记录后的 `exhaustedRoutes`，不根据历史 `quotaSnapshots` 推断耗尽或重置时间。
 
@@ -80,4 +81,4 @@ node scripts/shots-panel.mjs
 
 `build` 与 `build:panel` 分别生成 Git 跟踪的 `internal/serve/dist` 与 `internal/subpanel/dist`；`npm run e2e` 依次构建两份再运行 Playwright。测试与截图脚本使用独立 mock 服务最终 embedded dist，不依赖常驻 daemon。
 
-重建 dist 不会更新 launchd 服务。host 完成验收后需重新编译 embed 二进制（`go build -o pactify ./cmd/pactify`）、在 macOS 上 `codesign --force -s - ./pactify`，再按现有配置替换并重启 serve；见 [部署](deployment.md) 与 [运维](operations.md)。host 还需检查截图和外部 Tunnel + Access 的实际访问。
+重建 dist 不会更新 launchd 服务。host 完成验收后需重新编译 embed 二进制（`go build -o pactify ./cmd/pactify`）、在 macOS 上 `codesign --force -s - ./pactify`，再按现有配置替换并重启 serve；见 [部署](deployment.md) 与 [运维](operations.md)。host 还需检查截图和外部认证反向代理的实际访问。

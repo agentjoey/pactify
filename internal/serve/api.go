@@ -24,8 +24,17 @@ func writeErr(w http.ResponseWriter, code int, msg string) {
 	writeJSON(w, code, map[string]string{"error": msg})
 }
 
-// Handler returns the HTTP routes.
-func (s *Server) Handler() http.Handler {
+// Handler returns routes protected for the explicit listening address.
+// Tests and other HTTP hosts must pass their actual address, including the port.
+func (s *Server) Handler(addr string) (http.Handler, error) {
+	security, err := newSecurityConfig(addr)
+	if err != nil {
+		return nil, err
+	}
+	return s.handler(security), nil
+}
+
+func (s *Server) handler(security *securityConfig) http.Handler {
 	mux := http.NewServeMux()
 	store, err := sub.DefaultStore()
 	if err != nil {
@@ -40,7 +49,6 @@ func (s *Server) Handler() http.Handler {
 	// Unknown API routes must not fall through to the SPA index.
 	mux.Handle("/api/", http.NotFoundHandler())
 	mux.Handle("/", dashboardHandler())
-	// SEC-1: every mutating route above goes through the browser-CSRF guard —
-	// register new routes inside this mux so they inherit it.
-	return writeGuard(mux)
+	// Keep all routes, including static assets and SSE, behind this boundary.
+	return security.guard(mux)
 }

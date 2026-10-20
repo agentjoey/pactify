@@ -57,7 +57,7 @@ codesign --force -s - ./pactify          # ⚠️ 给 launchd 跑之前必做（
 
 ## 工程约定（2026-06-19 dark-ui 复盘）
 - **已知妥协必登记**：在代码注释里写下 later/TODO/「精确做法需…」之类的妥协时，**同步在 docs/backlog.md 加一行**，否则债隐形——`internal/stats`（已于 AJ-723 删除）的 per-task LOC bug（每任务都显示整分支 +842/−307）正是 `WithLOC` 注释自承认「精确归因需 commit SHA」却搁置成债，直到用户肉眼发现才修。
-- **前端改动看效果走 dev proxy**：`cd web && npm run dev` 经 vite proxy 直连常驻 serve（PACTIFY_SERVE_URL，默认 :17082）热重载；只有最终验收 / 要 live 才 `npm run build` + 重建二进制 + `launchctl kickstart`。
+- **前端改动看效果走 dev proxy**：`cd web && npm run dev` 经 vite proxy 直连常驻 serve（PACTIFY_SERVE_URL，默认 :7777）热重载；只有最终验收 / 要 live 才 `npm run build` + 重建二进制 + `launchctl kickstart`。
 - **视觉门**：UI 改动提交前必须 playwright 截图实测——vitest/tsc 绿 ≠ 视觉对。`node web/scripts/shots.mjs [view]` 截最终嵌入 build（隔离 fixture，不读真实 job 库）；Live 用 `shots-live.mjs`，`pactify sub panel` 用 `shots-panel.mjs`（先 `npm run build:panel`）。截图前先 `npm run build`，证明画面来自最终 dist 而不是长驻 daemon 的陈旧 dist。
 
 <!-- BEGIN SHARED-INTAKE v2 -->

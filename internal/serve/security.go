@@ -1,47 +1,106 @@
 package serve
 
 import (
+	"crypto/subtle"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
-// writeGuard rejects cross-site browser-initiated mutating requests (SEC-1).
-//
-// serve binds localhost, but that does NOT stop a malicious web page in the
-// user's browser from firing a CSRF POST at 127.0.0.1: cross-origin "simple
-// requests" (e.g. Content-Type: text/plain, which json.Decoder happily parses)
-// skip the CORS preflight entirely, and endpoints like
-// POST /api/sub/jobs/{id}/resume launch a worker. DNS rebinding makes the
-// page itself same-origin with the attacker's hostname, bypassing any
-// "localhost-only" assumption.
-//
-// The guard keys on the Origin header, which browsers attach to EVERY mutating
-// request (same-origin or cross-origin, fetch or form) and non-browser clients
-// (curl, CLI, Go) do not send at all:
-//
-//   - no Origin            → not a browser-mediated write → allow (CLI/scripts)
-//   - Origin host loopback → the user's own dashboard (any port: embedded
-//     dashboard, vite dev proxy, playwright) → allow
-//   - Origin in the allowlist (PACTIFY_ALLOWED_ORIGINS, comma-separated full
-//     origins, e.g. a reverse-proxy domain) → allow
-//   - anything else, including "null" (sandboxed iframes) → 403
-//
-// Read requests (GET/HEAD) pass untouched: no registered GET mutates, and the
-// browser's same-origin policy already blocks a cross-site page from READING
-// responses. (Residual: DNS-rebinding page could read GET responses since the
-// browser considers them same-origin; closing that needs per-instance token
-// auth — tracked in backlog SEC-1 follow-up, not load-bearing for the
-// code-exec hole this guard closes.)
-func writeGuard(next http.Handler) http.Handler {
-	allowed := allowedOrigins()
+type securityConfig struct {
+	listenAddr *net.TCPAddr
+	host       string
+	token      string
+	allowed    map[string]struct{}
+}
+
+func newSecurityConfig(addr string) (*securityConfig, error) {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid serve address: %w", err)
+	}
+	token := os.Getenv("PACTIFY_SERVE_TOKEN")
+	if token != "" && utf8.RuneCountInString(token) < 32 {
+		return nil, fmt.Errorf("PACTIFY_SERVE_TOKEN must contain at least 32 characters")
+	}
+	resolved, err := net.ResolveTCPAddr("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("resolve serve address: %w", err)
+	}
+	if !resolved.IP.IsLoopback() && token == "" {
+		return nil, fmt.Errorf("non-loopback serve address requires PACTIFY_SERVE_TOKEN (at least 32 characters); set it for an authenticating reverse proxy or use --addr 127.0.0.1:7777")
+	}
+	return &securityConfig{listenAddr: resolved, host: host, token: token, allowed: allowedOrigins()}, nil
+}
+
+func (s *securityConfig) guard(next http.Handler) http.Handler {
+	hosts := map[string]struct{}{}
+	ownOrigins := map[string]struct{}{}
+	var localHosts []string
+	if s.listenAddr.IP.IsLoopback() {
+		localHosts = []string{"127.0.0.1", "localhost", "::1"}
+	} else {
+		host := s.host
+		if host == "" && s.listenAddr.IP != nil {
+			host = s.listenAddr.IP.String()
+		}
+		if host != "" {
+			localHosts = []string{host}
+		}
+	}
+	for _, host := range localHosts {
+		authority := net.JoinHostPort(host, strconv.Itoa(s.listenAddr.Port))
+		hosts[authority] = struct{}{}
+		// Browser writes on a remote deployment require an explicit proxy origin.
+		if s.listenAddr.IP.IsLoopback() {
+			ownOrigins["http://"+authority] = struct{}{}
+		}
+	}
+	for origin := range s.allowed {
+		if u := parseOrigin(origin); u != nil {
+			hosts[u.Host] = struct{}{}
+			host := u.Hostname()
+			if strings.Contains(host, ":") {
+				host = "[" + host + "]"
+			}
+			hosts[host] = struct{}{}
+		}
+	}
+	writes := writeGuard(next, ownOrigins, s.allowed)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+		if _, ok := hosts[r.Host]; !ok || r.Host == "" {
+			writeErr(w, http.StatusForbidden, "host not allowed")
+			return
+		}
+		if s.token != "" && strings.HasPrefix(r.URL.Path, "/api/") {
+			auth := r.Header.Get("Authorization")
+			if !strings.HasPrefix(auth, "Bearer ") || subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(auth, "Bearer ")), []byte(s.token)) != 1 {
+				w.Header().Set("WWW-Authenticate", "Bearer")
+				writeErr(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+		}
+		writes.ServeHTTP(w, r)
+	})
+}
+
+// writeGuard requires an exact dashboard or authenticated reverse-proxy Origin
+// for browser writes. CLI/scripts without an Origin remain supported.
+func writeGuard(next http.Handler, ownOrigins, allowed map[string]struct{}) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
 			origin := r.Header.Get("Origin")
-			if origin != "" && !originAllowed(origin, allowed) {
+			// An explicitly empty header is not an absent Origin.
+			if _, present := r.Header["Origin"]; present && (len(r.Header.Values("Origin")) != 1 || !originAllowed(origin, ownOrigins, allowed)) {
 				writeJSON(w, http.StatusForbidden, map[string]string{
 					"error": "cross-origin write rejected: origin " + origin +
 						" is not this dashboard (set PACTIFY_ALLOWED_ORIGINS to allow a reverse-proxy origin)",
@@ -53,9 +112,8 @@ func writeGuard(next http.Handler) http.Handler {
 	})
 }
 
-// allowedOrigins reads the PACTIFY_ALLOWED_ORIGINS escape hatch (comma-separated
-// full origins like "https://pact.example.com") for reverse-proxied dashboards,
-// where the browser's Origin is the proxy's domain rather than loopback.
+// allowedOrigins reads comma-separated full origins for a reverse proxy that
+// performs authentication. Preserve the existing environment parsing contract.
 func allowedOrigins() map[string]struct{} {
 	out := map[string]struct{}{}
 	for _, o := range strings.Split(os.Getenv("PACTIFY_ALLOWED_ORIGINS"), ",") {
@@ -66,23 +124,22 @@ func allowedOrigins() map[string]struct{} {
 	return out
 }
 
-// originAllowed reports whether the Origin header value names this machine's
-// own dashboard: a loopback host on any port/scheme, or an explicit allowlist
-// entry. "null" and unparseable origins are never allowed.
-func originAllowed(origin string, allowed map[string]struct{}) bool {
-	if _, ok := allowed[strings.TrimSuffix(origin, "/")]; ok {
-		return true
-	}
+// parseOrigin rejects URL components that cannot occur in a browser Origin.
+func parseOrigin(origin string) *url.URL {
 	u, err := url.Parse(origin)
-	if err != nil || u.Host == "" {
-		return false // includes "null" and garbage
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.Hostname() == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || strings.Contains(origin, "#") {
+		return nil
 	}
-	host := u.Hostname()
-	if host == "localhost" {
+	return u
+}
+
+func originAllowed(origin string, ownOrigins, allowed map[string]struct{}) bool {
+	if parseOrigin(origin) == nil {
+		return false
+	}
+	if _, ok := ownOrigins[origin]; ok {
 		return true
 	}
-	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
-		return true
-	}
-	return false
+	_, ok := allowed[origin]
+	return ok
 }

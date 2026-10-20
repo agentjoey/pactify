@@ -41,11 +41,25 @@ read-only access boundaries are documented in the harness contracts.
 
 ## HTTP and local storage
 
-`serve --addr` defaults to `127.0.0.1:7777`; the local deployment uses
-`127.0.0.1:17082`. It serves Dashboard, Jobs and Settings, with Live inside job
-details. Unknown `/api/*` routes return 404. Browser writes check Origin;
-external access uses Cloudflare Tunnel + Access, with allowed proxy origins
-configured through `PACTIFY_ALLOWED_ORIGINS`. See [operations](operations.md).
+`serve --addr` defaults to `127.0.0.1:7777`. It serves Dashboard, Jobs and
+Settings, with Live inside job details. Unknown `/api/*` routes return 404 after
+security checks. All requests, including static assets and SSE, validate Host:
+loopback binds accept only `127.0.0.1`, `localhost` or `[::1]` with the listening
+port; non-loopback binds accept the bound IP/hostname with that port. Hosts from
+`PACTIFY_ALLOWED_ORIGINS` are also accepted, with or without their explicit port.
+This comma-separated list of full origins is for a reverse proxy that performs
+authentication. Browser writes require an exact allowed origin or an `http`
+loopback origin with the listening port; requests without Origin remain allowed.
+
+Non-loopback binds, including wildcard addresses, require `PACTIFY_SERVE_TOKEN`
+(at least 32 characters). Setting it on any bind requires `Authorization: Bearer
+<token>` for every `/api/` request, including SSE; static assets stay public.
+The dashboard UI does not send the token, so token mode is for authenticating
+reverse proxies that inject the header. Dashboard workers inherit neither this
+token nor `PACTIFY_ALLOWED_ORIGINS`. Serve sets `nosniff`, `no-referrer` and CSP
+`frame-ancestors 'none'`, with a 10-second header timeout and 60-second idle
+timeout; streaming responses have no overall write timeout. See
+[operations](operations.md).
 
 Job and router data live under `PACTIFY_HOME` (default `~/.pactify`). No pact
 protocol files, ledger projections, MCP server or agent configuration wiring are

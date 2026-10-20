@@ -62,14 +62,27 @@ See [harness contracts](docs/specs/harness-subagents.md) for access boundaries.
 ## Dashboard
 
 ```sh
-pactify serve --addr 127.0.0.1:17082
+pactify serve --addr 127.0.0.1:7777
 ```
 
-Open `http://127.0.0.1:17082` for Dashboard, Jobs and Settings; Live is embedded in
-job details. The server provides `/api/sub` and embedded static assets. Keep it on
-loopback. External access uses Cloudflare Tunnel + Access; configure
-`PACTIFY_ALLOWED_ORIGINS` for the proxy origin. The Origin guard is not login
-authentication. See [deployment prerequisites](docs/jobs-view.md).
+Open `http://127.0.0.1:7777` for Dashboard, Jobs and Settings; Live is embedded in
+job details. The server provides `/api/sub` and embedded static assets. Every
+request checks Host: loopback names (`127.0.0.1`, `localhost`, `[::1]`) must use
+the listening port. Browser writes require an exact `http` origin on that port;
+CLI/scripts without Origin remain supported.
+
+For a reverse proxy that performs authentication, set `PACTIFY_ALLOWED_ORIGINS`
+to its comma-separated full origins (for example `https://dash.example.com`).
+Their hosts, with or without an explicitly configured port, are also accepted.
+These checks do not authenticate users.
+
+Non-loopback binds (including `0.0.0.0` and `::`) require `PACTIFY_SERVE_TOKEN`
+with at least 32 characters. Whenever set, it requires `Authorization: Bearer
+<token>` on every `/api/` request, including reads and SSE. Static assets remain
+public behind the Host check. The dashboard UI does not send this token: token
+mode is for reverse proxies that inject the header after authenticating users.
+Non-loopback Host values must match the bound IP/hostname and port or an allowed
+proxy host. See [deployment prerequisites](docs/jobs-view.md).
 
 For a separate local read-only panel, run `pactify sub panel` (random loopback
 port, opens the browser), or `pactify sub panel --port 17100 --no-open`.

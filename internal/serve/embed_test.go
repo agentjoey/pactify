@@ -10,7 +10,9 @@ import (
 
 func TestServesEmbeddedDashboard(t *testing.T) {
 	srv := New()
-	ts := httptest.NewServer(srv.Handler())
+	ts := httptest.NewUnstartedServer(nil)
+	ts.Config.Handler = serveHandler(t, srv, ts.Listener.Addr().String())
+	ts.Start()
 	defer ts.Close()
 
 	resp, err := http.Get(ts.URL + "/")

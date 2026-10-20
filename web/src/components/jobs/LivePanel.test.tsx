@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LiveTree } from "./LivePanel";
 import type { Job } from "./types";
@@ -91,11 +91,15 @@ it("renders streamed tool/usage/diff data, pauses hidden streams, resets replaye
   expect(screen.getByRole("log").textContent).toContain("Checking tests");
   expect(screen.getByText("retry ×2")).toBeTruthy();
   expect(screen.getByText("rework → running")).toBeTruthy();
-  visibility.mockReturnValue("hidden");
-  document.dispatchEvent(new Event("visibilitychange"));
+  await act(async () => {
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
   await waitFor(() => expect(canceled).toBe(1));
-  visibility.mockReturnValue("visible");
-  document.dispatchEvent(new Event("visibilitychange"));
+  await act(async () => {
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
   await screen.findByText("1 observed call");
   expect(screen.queryByText("2 observed calls")).toBeNull();
   view.unmount();

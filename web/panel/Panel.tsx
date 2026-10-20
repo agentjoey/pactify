@@ -17,8 +17,8 @@ export {
   splitDiff,
 } from "../src/components/jobs/Jobs";
 export type { Job } from "../src/components/jobs/Jobs";
-export function Panel() {
-  const [ended, setEnded] = useState(false);
+export function Panel({ sessionEnded = false }: { sessionEnded?: boolean }) {
+  const [ended, setEnded] = useState(sessionEnded);
   useEffect(() => {
     const end = () => setEnded(true);
     window.addEventListener("pactify-panel-session-ended", end);

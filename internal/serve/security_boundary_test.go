@@ -148,3 +148,40 @@ func guardedTestRoutes(t *testing.T, h http.Handler) http.Handler {
 	}
 	return security.guard(h)
 }
+
+func TestServeDoctorAndInfoBoundaries(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "")
+	t.Setenv("PACTIFY_SERVE_TOKEN", "")
+	t.Setenv("PATH", t.TempDir())
+	h, err := New().Handler("127.0.0.1:7777")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/api/sub/doctor", "/api/sub/info"} {
+		for _, tc := range []struct {
+			method, host string
+			want         int
+		}{
+			{"GET", "evil.example:7777", http.StatusForbidden},
+			{"POST", "evil.example:7777", http.StatusForbidden},
+			{"GET", "127.0.0.1:7777", http.StatusOK},
+			{"POST", "127.0.0.1:7777", http.StatusMethodNotAllowed},
+			{"HEAD", "127.0.0.1:7777", http.StatusMethodNotAllowed},
+		} {
+			r := httptest.NewRequest(tc.method, path, nil)
+			r.Host = tc.host
+			if tc.method == "POST" {
+				r.Header.Set("Origin", "http://127.0.0.1:7777")
+			}
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if w.Code != tc.want {
+				t.Errorf("%s %s Host %s: %d %s", tc.method, path, tc.host, w.Code, w.Body.String())
+			}
+			if tc.want == http.StatusMethodNotAllowed && w.Header().Get("Allow") != "GET" {
+				t.Errorf("%s Allow: %q", path, w.Header().Get("Allow"))
+			}
+		}
+	}
+}

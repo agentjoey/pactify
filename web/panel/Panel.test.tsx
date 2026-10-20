@@ -1,9 +1,14 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JobList, LogView, Panel, filterJobs, splitDiff } from "./Panel";
 import type { Job } from "./Panel";
 
-afterEach(() => {history.replaceState(null, "", "/");});
+afterEach(() => {
+  cleanup();
+  sessionStorage.clear();
+  vi.unstubAllGlobals();
+  history.replaceState(null, "", "/");
+});
 
 const jobs: Job[] = [
   {
@@ -120,7 +125,7 @@ describe("standalone panel", () => {
     sessionStorage.setItem("pactify-panel-session", "test-session");
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: string) => input.endsWith("/logs") ? new Response(body) : ({
+      vi.fn(async (input: string) => input.endsWith("/logs") ? new Response(body) : input.endsWith("/events") ? new Response("event: done\ndata: {}\n\n") : ({
         ok: true,
         json: async () =>
           input.endsWith("/diff")
@@ -135,8 +140,9 @@ describe("standalone panel", () => {
               : jobs,
       })),
     );
-    window.location.hash = "/jobs/live";
-    const { unmount } = render(<Panel />);
+    history.replaceState(null, "", "/#/jobs/live");
+    const view = await act(async () => render(<Panel />));
+    const { unmount } = view;
     await screen.findByRole("tab", {name:"Summary"}, {timeout: 5000});
     fireEvent.click(screen.getByRole("tab", {name:"Summary"}));
     await screen.findByText("Result summary", undefined, {timeout: 5000});
@@ -147,7 +153,6 @@ describe("standalone panel", () => {
       expect(screen.getByRole("tab", {name:title})).toBeInTheDocument();
     }
     fireEvent.click(screen.getByRole("tab", {name:"Logs"}));
-    const { act } = await import("@testing-library/react");
     await act(async () => {
       controller!.enqueue(new TextEncoder().encode('data: "message live log"\n\n'));
     });

@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../ui/Button";
 import type { JobsSource } from "./source";
-import { responseError } from "./data";
+import { CopyCommand } from "./NextSteps";
+import { responseError, useResource } from "./data";
 import { Routing } from "./Routing";
+interface DoctorSnapshot {
+  lastRun: string | null;
+  harnesses: { name: string; installed: boolean; version: string }[];
+}
 interface Default {
   model?: string;
   effort?: string;
@@ -39,6 +44,10 @@ export function Settings({
   source: JobsSource;
   readOnly?: boolean;
 }) {
+  const doctor = useResource<DoctorSnapshot>(
+    source,
+    source.jobsPath.replace(/\/jobs$/, "/doctor"),
+  );
   const [harnesses, setHarnesses] = useState<Harness[]>([]);
   const [harnessLoading, setHarnessLoading] = useState(true);
   const [harnessError, setHarnessError] = useState("");
@@ -181,6 +190,21 @@ export function Settings({
           Edit settings with <code>pactify serve</code> (dashboard) or the CLI.
         </p>
       )}
+      <section className="panel-section" aria-label="Doctor status">
+        <h2>Doctor status</h2>
+        {doctor.error ? (
+          <p role="alert">{doctor.error}</p>
+        ) : doctor.data ? (
+          <>
+            <p>Last doctor run: {doctor.data.lastRun || "unknown"}</p>
+            <p className="panel-caption">Stored harness versions; no checks are run by this page.</p>
+            {(doctor.data.harnesses || []).map(h => (
+              <p key={h.name}>{h.name} · {h.installed ? h.version || "version unknown" : "not installed"}</p>
+            ))}
+          </>
+        ) : <p>Loading doctor status…</p>}
+        <CopyCommand command="pactify sub doctor" />
+      </section>
       <section aria-label="Harnesses">
         <div className="section-heading">
           <h2>Harnesses</h2>

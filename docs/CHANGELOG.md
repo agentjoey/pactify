@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Share local panel sessions with a second tab on the same origin. Pause hidden
+  polling and back off on errors; show relative update times and attention counts.
+  Add coloured, collapsible file diffs with stats and full-diff commands, broader
+  job search, an attention filter, compact completed history, and per-job costs.
+  Show stored doctor/version information, documentation and read-only guidance.
+  Preserve panel sessions on reload and keep a manual detail-tab selection when
+  the initial data arrives. Align compact history columns and simplify diff file
+  paths; show one command list per viewport, with full desktop footer commands
+  and a mobile expander.
+
 - Discover opencode 1.x model effort variants for Settings and validate each
   requested effort against its model before prompting. Leave actual effort
   unknown when upstream does not report it. Verify read-only E2E evidence for

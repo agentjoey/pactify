@@ -20,6 +20,7 @@ import (
 const MaxDiffBytes = 512 * 1024
 
 type DiffResponse struct {
+	MaxBytes  int             `json:"maxBytes"`
 	Patch     string          `json:"patch"`
 	Files     []sub.FileDelta `json:"files"`
 	Truncated bool            `json:"truncated"`
@@ -65,7 +66,7 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		apiError(w, err)
 		return
 	}
-	d := DiffResponse{Files: []sub.FileDelta{}}
+	d := DiffResponse{MaxBytes: MaxDiffBytes, Files: []sub.FileDelta{}}
 	if result, err := s.result(st.ID); err == nil && result.Diff.Files != nil {
 		d.Files = result.Diff.Files
 	}

@@ -46,8 +46,8 @@ it("opens details, result, bounded logs with automatic follow, diff and closes t
  await screen.findByText("Final reply: Complete");
  expect(screen.getByText("Final reply: Complete")).toBeInTheDocument();
  fireEvent.click(screen.getByRole("tab", {name:"Diff"}));
- expect(await screen.findByText("Truncated")).toBeInTheDocument();
- fireEvent.click(screen.getByText("a/a.go b/a.go"));
+ expect(await screen.findByText("Truncated at 512 KiB")).toBeInTheDocument();
+ fireEvent.click(screen.getByText("a.go", {selector:"summary"}));
  expect(screen.getByText(/\+new line/)).toBeInTheDocument();
  fireEvent.click(screen.getByRole("tab", {name:"Logs"}));
  const log=screen.getByRole("log");
@@ -76,7 +76,7 @@ it("reports list errors and recovers on the next poll",async()=>{
  await act(async()=>{});
  expect(screen.getByRole("alert")).toHaveTextContent("503");
  expect(screen.queryByText("Start your first job")).not.toBeInTheDocument();
- await act(async()=>{await vi.advanceTimersByTimeAsync(2000);});
+ await act(async()=>{await vi.advanceTimersByTimeAsync(4000);});
  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
  expect(screen.getByText("Start your first job")).toBeInTheDocument();
 });

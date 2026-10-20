@@ -6,7 +6,8 @@ import { jobsLink, useResource } from "./data";
 import { mergeJobChains } from "./board";
 import { JobMetadata } from "./Jobs";
 import { JobActions } from "./JobActions";
-import { LogView, splitDiff } from "./logs";
+import { LogView } from "./logs";
+import { DiffView, type Diff } from "./DiffView";
 import { NextSteps } from "./NextSteps";
 import { Button } from "../ui/Button";
 import { LiveTree } from "./LivePanel";
@@ -16,12 +17,6 @@ interface Detail {
   markdown: string;
   resultError?: string;
   result?: { finalText?: string; warnings?: string[]; costUSD?: number };
-}
-interface Diff {
-  patch: string;
-  files: { Path: string; Added: number; Deleted: number }[];
-  truncated?: boolean;
-  note: string;
 }
 const tabs = ["Summary", "Live", "Logs", "Diff", "Brief"];
 export function JobDetail({
@@ -46,6 +41,22 @@ export function JobDetail({
   );
   const heading = useRef<HTMLHeadingElement>(null);
   const commands = useRef<HTMLDivElement>(null);
+  const [narrow, setNarrow] = useState(() => window.matchMedia?.("(max-width: 700px)").matches ?? false);
+  const [commandsOpen, setCommandsOpen] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia?.("(max-width: 700px)");
+    if (!media) return;
+    const update = () => setNarrow(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (narrow && commandsOpen) {
+      commands.current?.scrollIntoView({block: "start"});
+      commands.current?.focus({preventScroll: true});
+    }
+  }, [narrow, commandsOpen]);
   const path = `${source.jobsPath}/${encodeURIComponent(id)}`;
   const detail = useResource<Detail>(source, path, 2000);
   const job = detail.data?.job || jobs.find(job => job.id === id);
@@ -54,7 +65,9 @@ export function JobDetail({
   );
   // Once data arrives, preserve the initial tab even when the job finishes.
   useEffect(() => {
-    if (detail.data && !selectedTab) setTab(tab);
+    // A click can arrive between this render and its passive effect. Read the
+    // latest selection so the default never overwrites that user action.
+    if (detail.data && !selectedTab) setTab(current => current || tab);
   }, [detail.data, selectedTab, tab]);
   const diff = useResource<Diff>(
     source,
@@ -238,7 +251,7 @@ export function JobDetail({
                   <section className="panel-section">
                     <h2>Usage</h2>
                     <JobMetadata
-                      job={{ ...data.job, costUSD: data.result?.costUSD }}
+                      job={{ ...data.job, costUSD: data.job.costUSD ?? data.result?.costUSD }}
                     />
                     <p>
                       {data.job.harness} ·{" "}
@@ -265,26 +278,7 @@ export function JobDetail({
                   ) : !diff.data ? (
                     <p>Loading diff…</p>
                   ) : (
-                    <>
-                      {diff.data.note && <p>{diff.data.note}</p>}
-                      {diff.data.truncated && <p>Truncated</p>}
-                      {(diff.data.files || []).map((file) => (
-                        <p key={file.Path}>
-                          {file.Path} +{file.Added} / −{file.Deleted}
-                        </p>
-                      ))}
-                      {splitDiff(diff.data.patch || "").map((file, i) => (
-                        <details key={i} open>
-                          <summary>
-                            {file.patch.startsWith("diff --git ")
-                              ? file.name
-                              : "Patch"}
-                          </summary>
-                          <pre>{file.patch}</pre>
-                        </details>
-                      ))}
-                      {!diff.data.patch && !diff.data.note && <p>No diff</p>}
-                    </>
+                    <DiffView diff={diff.data} job={data.job} />
                   )}
                 </section>
               )}
@@ -295,28 +289,27 @@ export function JobDetail({
                 </section>
               )}
             </div>
-            {readOnly && (
-              <div className="detail-commands" ref={commands} tabIndex={-1}>
+            {readOnly && narrow && commandsOpen && (
+              <div id="detail-terminal-commands" className="detail-commands" ref={commands} tabIndex={-1}>
                 <NextSteps job={data.job} title="Terminal commands" />
               </div>
             )}
           </div>
           <footer className="detail-footer">
-            {readOnly ? (
+            {readOnly ? (narrow ? (
               <div className="detail-next-steps">
                 <h2>Next steps</h2>
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => {
-                    commands.current?.scrollIntoView({block: "start"});
-                    commands.current?.focus({preventScroll: true});
-                  }}
+                  aria-expanded={commandsOpen}
+                  aria-controls="detail-terminal-commands"
+                  onClick={() => setCommandsOpen(!commandsOpen)}
                 >
-                  Show commands
+                  {commandsOpen ? "Hide commands" : "Show commands"}
                 </Button>
               </div>
-            ) : (
+            ) : <NextSteps job={data.job} />) : (
               <JobActions
                 job={data.job}
                 source={source}

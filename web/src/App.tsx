@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Jobs, type Job } from "./components/jobs/Jobs";
 import { Dashboard } from "./components/jobs/Dashboard";
 import { Settings } from "./components/jobs/Settings";
@@ -6,6 +6,8 @@ import { useHash, useResource, validJobs } from "./components/jobs/data";
 import { dashboardJobsSource, type JobsSource } from "./components/jobs/source";
 import { LoadingJobs } from "./components/jobs/NextSteps";
 import { CableMark } from "./components/shell/CableMark";
+import { mergeJobChains } from "./components/jobs/board";
+import { sectionFor } from "./components/jobs/statistics";
 export type Lens = "dashboard" | "jobs" | "settings";
 export function AppContent({
   source = dashboardJobsSource,
@@ -24,11 +26,25 @@ export function AppContent({
     2000,
     validJobs,
   );
+  const info = useResource<{ version: string }>(
+    source,
+    source.jobsPath.replace(/\/jobs$/, "/info"),
+  );
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!document.hidden) setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   const jobs = Array.isArray(resource.data) ? resource.data : null;
   const detailOpen = page === "jobs" && /^#\/jobs\/[^/?]+/.test(hash);
+  const attention = mergeJobChains(jobs || []).filter(
+    chain => sectionFor(chain.latest) === "attention",
+  ).length;
   useEffect(() => {
-    document.title = `Pactify · ${page[0].toUpperCase() + page.slice(1)}`;
-  }, [page]);
+    document.title = `${attention ? `(${attention}) ` : ""}${readOnly ? "pactify panel" : `Pactify · ${page[0].toUpperCase() + page.slice(1)}`}`;
+  }, [page, readOnly, attention]);
   function navigate(value: string) {
     location.hash = "/" + value;
   }
@@ -38,7 +54,7 @@ export function AppContent({
         <a className="v2-brand" href="#/jobs" aria-label="Pactify Jobs">
           <CableMark />
           <strong>pactify</strong>
-          {readOnly && <small>panel</small>}
+          {readOnly && <small title="This panel is read-only. Make changes with the CLI or pactify serve.">panel</small>}
         </a>
         <nav aria-label="Main navigation" className="v2-navigation">
           {(["dashboard", "jobs", "settings"] as const).map((value) => (
@@ -63,11 +79,15 @@ export function AppContent({
             </option>
           ))}
         </select>
+        <div className="header-links">
+          {info.data?.version && <span aria-label="Pactify version">{info.data.version}</span>}
+          <a href="https://github.com/agentjoey/pactify#readme" target="_blank" rel="noopener noreferrer">Docs</a>
+        </div>
         <span className="v2-updated" role="status">
           {resource.error
             ? "Update unavailable"
             : resource.updated
-              ? `Updated ${resource.updated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+              ? `Updated ${Math.max(0, Math.floor((now - +resource.updated) / 1000))}s ago`
               : "Updating…"}
         </span>
       </header>

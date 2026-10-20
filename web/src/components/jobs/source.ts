@@ -21,7 +21,7 @@ export const dashboardJobsSource: JobsSource = {
   async fetch(path, signal) {
     const response = await fetch(path, { signal, credentials: "same-origin" });
     if (!response.ok)
-      throw new Error(`Failed to load (${response.status}). Retrying shortly.`);
+      throw Object.assign(new Error(`Failed to load (${response.status}). Retrying shortly.`), {status: response.status});
     return response;
   },
 };

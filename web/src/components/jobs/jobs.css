@@ -230,7 +230,7 @@
 }
 .v2-header {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: 20px;
   border-bottom: 1px solid var(--color-border-subtle);
@@ -850,7 +850,7 @@
     width: 140px;
   }
   .v2-updated {
-    grid-column: 1/-1;
+    grid-column: 2;
     font-size: 10px;
   }
   .v2-main {
@@ -973,4 +973,57 @@
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid var(--color-border-subtle);
+}
+
+.header-links { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--color-text-2); }
+.diff-file summary { cursor: pointer; padding: 10px 0; overflow-wrap: anywhere; }
+.diff-file summary span { font-size: 12px; color: var(--color-text-2); }
+.diff-patch { padding: 8px 0; }
+.diff-patch > span { display: block; min-height: 1lh; padding: 0 10px; }
+.diff-added { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 12%, transparent); }
+.diff-removed { color: var(--color-danger); background: color-mix(in srgb, var(--color-danger) 12%, transparent); }
+.diff-hunk { color: var(--color-role-design); background: color-mix(in srgb, var(--color-role-design) 10%, transparent); }
+.diff-header { font-weight: 600; color: var(--color-text-2); }
+.compact-history { list-style: none; padding: 0; margin: 0; }
+.compact-history li {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 185px 100px 75px 170px 90px 75px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: 12px;
+}
+.compact-meta { display: contents; }
+.compact-history [data-column] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compact-title { font-weight: 550; }
+.compact-meta > * { color: var(--color-text-2); }
+.detail-footer > .next-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+.detail-footer > .next-steps > h2,
+.detail-footer > .next-steps > p { grid-column: 1 / -1; margin: 0; }
+.detail-footer .copy-command { margin: 0; }
+@media (max-width: 1100px) {
+  .compact-history li { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .compact-title { grid-column: 1; grid-row: 1; }
+  .compact-status { grid-column: 2; grid-row: 1; }
+  .compact-meta {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, .65fr) minmax(0, 1.4fr) minmax(0, 1.3fr) minmax(0, .8fr);
+    gap: 6px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 700px) {
+  .header-links { gap: 8px; }
 }

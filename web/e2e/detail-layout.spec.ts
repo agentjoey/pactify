@@ -28,7 +28,9 @@ for (const panel of [false, true]) {
       await expect(modal.getByRole("heading", {name:"Result summary",exact:true})).toBeVisible();
       const footer = modal.locator(".detail-footer");
       const controls = panel
-        ? [footer.getByRole("heading", {name:"Next steps",exact:true})]
+        ? [footer.getByRole("heading", {name:"Next steps",exact:true}),
+           ...(width > 700 ? await footer.getByRole("button", {name:/^Copy pactify sub /}).all()
+             : [footer.getByRole("button", {name:/^(Show|Hide) commands$/})])]
         : ["Resume", "Apply", "Discard"].map(name => footer.getByRole("button", {name,exact:true}));
       // Check before scrolling: an offscreen footer must fail even if scrolling
       // to the bottom would eventually reveal its controls.
@@ -43,8 +45,10 @@ for (const panel of [false, true]) {
         expect(Math.abs(box!.y - initial!.y)).toBeLessThanOrEqual(1);
       }
       if (panel) {
-        await footer.getByRole("button", {name:"Show commands",exact:true}).click();
-        const commands = modal.getByRole("region", {name:"Terminal commands",exact:true});
+        if (width <= 700) await footer.getByRole("button", {name:"Show commands",exact:true}).click();
+        else await expect(footer.getByRole("button", {name:"Show commands",exact:true})).toHaveCount(0);
+        const commands = modal.getByRole("region", {name:width <= 700 ? "Terminal commands" : "Next steps",exact:true});
+        await expect(modal.locator(".next-steps")).toHaveCount(1);
         await expect(commands.getByRole("heading")).toBeInViewport();
         await expect(commands.getByRole("button", {name:/^Copy pactify sub /})).toHaveCount(5);
         const last = commands.getByRole("button", {name:"Copy pactify sub result job-summary",exact:true});

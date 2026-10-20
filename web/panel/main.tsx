@@ -4,10 +4,9 @@ import { Panel } from "./Panel";
 import "./panel.css";
 import { initializeTheme } from "./theme";
 import { initializeSession } from "./auth";
-initializeSession();
 initializeTheme();
-createRoot(document.getElementById("root")!).render(
+void initializeSession().then((authenticated) => createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Panel />
+    <Panel sessionEnded={!authenticated} />
   </StrictMode>,
-);
+));

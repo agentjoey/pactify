@@ -29,26 +29,39 @@ export function useResource<T>(
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     let ended = false;
+    let loading = false;
+    let delay = interval;
     async function load() {
+      if (document.hidden || ended || loading || controller.signal.aborted) return;
+      loading = true;
       try {
         const response = await source.fetch(path!, controller.signal);
         const value: T = await response.json();
         if (validate && !validate(value))
           throw new Error("Invalid response. Retrying shortly.");
         if (!controller.signal.aborted) {
+          delay = interval;
           setData(value);
           setError("");
           setUpdated(new Date());
         }
       } catch (e) {
+        delay = Math.min(delay * 2, 30000);
         ended = (e as { status?: number }).status === 401;
         if (!controller.signal.aborted) setError((e as Error).message);
       } finally {
-        if (!controller.signal.aborted && !ended) timer = setTimeout(load, interval);
+        loading = false;
+        if (!controller.signal.aborted && !ended && !document.hidden) timer = setTimeout(load, delay);
       }
     }
+    const visibility = () => {
+      clearTimeout(timer);
+      if (!document.hidden) void load();
+    };
+    document.addEventListener("visibilitychange", visibility);
     void load();
     return () => {
+      document.removeEventListener("visibilitychange", visibility);
       controller.abort();
       clearTimeout(timer);
     };

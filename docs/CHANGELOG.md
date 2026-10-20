@@ -8,6 +8,13 @@
 
 ---
 
+## Unreleased — AJ-610 · plain `go test` cannot touch the real `~/.pactify`
+
+- `PACTIFY_HOME` now has one meaning everywhere: the store root (`~/.pactify` when unset) holding `jobs/`, `harness-homes/`, catalogs and `credential-quarantine/`. The conflicting readers named in the issue (registry, agentcfg, the old `security_test.go` and `acprunner_test.go`) were deleted with the governance packages, so no semantic change was needed.
+- Add `testenv.Isolate`, called from a `TestMain` in every test package that links `internal/sub` or `internal/credentiallinks` (`cmd/pactify`, `serve`, `sub`, `sub/e2e`, `subpanel`, `credentiallinks`). With `PACTIFY_HOME` unset — or set to the real user store — tests get a fresh path under the temp directory, removed afterwards. An explicit `PACTIFY_HOME` is kept, so live e2e and golden recording keep their persistent homes. The path is named but not created: helper subprocesses re-run `TestMain` with a scrubbed environment and exit inside the test, which left 13 empty directories in the first version.
+- Tests: `TestIsolatePactifyHome` (unset, explicit, real store, real store spelled with `..` and a trailing slash) and `TestDefaultStoreIsIsolated` in `sub`, which fails when that package's `TestMain` is removed.
+- Evidence: `go test -count=1 ./...` with `PACTIFY_HOME` unset and `HOME` pointed at an empty directory passes, and no `.pactify` appears in that `HOME`.
+
 ## Unreleased — AJ-770 · worktree jobs accept a cwd spelled in a different case
 
 - `sub run --worktree` failed with `cwd is outside the worktree` when the cwd was spelled differently from git's root on a case-insensitive macOS volume (e.g. `$PWD=~/agentworks/...` while the repository is `~/AgentWorks/...`). `filepath.Rel` compared the two spellings as strings, produced `../../agentworks/...`, and the job was created before the check rejected it, leaving a failed job behind.

@@ -31,6 +31,14 @@ func OpencodeEnv(opts StartOpts) ([]string, error) {
 			permission = map[string]any{"*": "deny", "edit": "deny", "write": "deny", "read": "allow", "glob": "allow", "grep": "allow", "list": "allow", "bash": "deny"}
 			config["experimental"] = map[string]any{"continue_loop_on_deny": true}
 		}
+		if opts.Access == AccessWrite {
+			experimental, _ := config["experimental"].(map[string]any)
+			if experimental == nil {
+				experimental = map[string]any{}
+			}
+			experimental["continue_loop_on_deny"] = true
+			config["experimental"] = experimental
+		}
 		config["permission"] = permission
 		raw, err := json.Marshal(config)
 		if err != nil {

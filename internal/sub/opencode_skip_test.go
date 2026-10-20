@@ -29,6 +29,7 @@ func TestOpencodeDoctorRunsReadOnly(t *testing.T) {
 			}
 			return Result{ToolCalls: 1, Status: StatusSucceeded, CLIVersion: "test", ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
 		},
+		writeCheck:    func(context.Context, Store, string, Result) error { return nil },
 		readonlyCheck: func(context.Context, Store, string, Result) error { return nil },
 	})
 	if err != nil || len(reports) != 1 {

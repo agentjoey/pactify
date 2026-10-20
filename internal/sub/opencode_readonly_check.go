@@ -12,6 +12,15 @@ import (
 // the backend recorded for it (1.x rule read-back or 2.x evaluation). The
 // caller still checks job success and write-target absence independently.
 func (store Store) CheckOpencodeReadonly(ctx context.Context, id string, result Result, env []string) error {
+	return store.checkOpencodePermissions(ctx, id, result, env, "read-only")
+}
+
+// CheckOpencodeWrite verifies the completed job's own policy, without resuming it.
+func (store Store) CheckOpencodeWrite(ctx context.Context, id string, result Result, env []string) error {
+	return store.checkOpencodePermissions(ctx, id, result, env, "write")
+}
+
+func (store Store) checkOpencodePermissions(ctx context.Context, id string, result Result, env []string, access string) error {
 	h, _ := Lookup("opencode")
 	if result.CLIVersion == "" {
 		return fmt.Errorf("permission evaluation requires a recorded opencode CLI version")
@@ -25,8 +34,8 @@ func (store Store) CheckOpencodeReadonly(ctx context.Context, id string, result 
 	if err != nil {
 		return err
 	}
-	if st.Request.Harness != "opencode" || st.Request.Access != "read-only" || result.SessionID == "" {
-		return fmt.Errorf("permission evaluation requires this probe's readonly opencode session")
+	if st.Request.Harness != "opencode" || st.Request.Access != access || result.SessionID == "" {
+		return fmt.Errorf("permission evaluation requires this probe's %s opencode session", access)
 	}
 	env = append(append([]string{}, env...), opencodeVendorStrip()...)
 	for i, d := range homes.directories() {
@@ -41,7 +50,18 @@ func (store Store) CheckOpencodeReadonly(ctx context.Context, id string, result 
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	opts := cockpit.StartOpts{RepoDir: st.Request.Cwd, Env: env, MinimalConfig: st.EffectiveConfigMode() == "minimal", Access: cockpit.AccessReadOnly}
+	cwd := st.Request.Cwd
+	if st.Worktree != nil {
+		cwd = st.Worktree.Cwd
+	}
+	opts := cockpit.StartOpts{RepoDir: cwd, Env: env, MinimalConfig: st.EffectiveConfigMode() == "minimal", Access: cockpit.Access(access)}
+	if access == "write" {
+		opts.WritableRoots = cockpit.OpencodeWritableRoots(cwd, filepath.Join(store.Dir(id), "tmp"), filepath.Join(filepath.Dir(store.Root), "cache"))
+		if v2 {
+			return cockpit.CheckOpencode2Write(ctx, opts, result.SessionID)
+		}
+		return cockpit.CheckOpencodeWrite(ctx, opts, result.SessionID)
+	}
 	if v2 {
 		return cockpit.CheckOpencode2Readonly(ctx, opts, result.SessionID)
 	}

@@ -52,6 +52,36 @@ func writeWorktree(f *fixture) string {
 	}
 	return "isolated changes, apply and discard verified"
 }
+
+// File-tool and TMPDIR checks are assertions; shell confinement is informational.
+// A refusal of the outside tool write is acceptable.
+func externalDirDenied(f *fixture) string {
+	outside := filepath.Join(f.root, "outside")
+	must(f.t, os.MkdirAll(outside, 0700))
+	tool, shell := filepath.Join(outside, "tool.txt"), filepath.Join(outside, "shell.txt")
+	word := randomWord()
+	tempName := "pactify-e2e-" + word
+	prompt := fmt.Sprintf("Authorized directory-permission diagnostic: attempt exactly once to write x to %s using the dedicated file write tool, then attempt exactly once the shell command `echo x > '%s'`. Both targets are outside the worktree. The file-tool target must remain absent. The shell redirect is informational: shell commands are not confined; documented limitation. If denied or you decline, continue; do not retry or seek a workaround. Independently run `printf '%s\\n' > \"$TMPDIR/%s\" && cp \"$TMPDIR/%s\" tmpdir-proof.txt` to verify allowed temporary writes. Do not fabricate tmpdir-proof.txt directly. Do not commit. Finish with E2E_EXTERNAL_DIR_DONE.", tool, shell, word, tempName, tempName)
+	r := f.run(prompt, "--write", "--worktree")
+	f.success(r)
+	if r.WorktreePath == "" || r.WorktreePath == f.repo {
+		f.fatal("missing isolated worktree")
+	}
+	shellInfo, err := externalDirEvidence(tool, shell, filepath.Join(r.WorktreePath, "tmpdir-proof.txt"), word+"\n")
+	if err != nil {
+		f.error(err.Error())
+	}
+	if !f.toolContains(r.JobID, "$TMPDIR/"+tempName) {
+		f.error("no tool evidence for allowed TMPDIR write")
+	}
+	f.clean()
+	store := sub.Store{Root: filepath.Join(envValue(f.env, "PACTIFY_HOME"), "jobs")}
+	if err := store.CheckOpencodeWrite(context.Background(), r.JobID, r, f.env); err != nil {
+		f.errorf("write session policy verification failed: %v", err)
+	}
+	return "outside file-tool target absent; TMPDIR write copied to worktree; own-session policy verified; job succeeded (refusal accepted); " + shellInfo
+}
+
 func readonlyDenied(f *fixture) string {
 	before, e := metadata([]string{f.repo}, true)
 	must(f.t, e)

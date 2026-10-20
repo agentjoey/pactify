@@ -348,6 +348,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if h.Name == "codex" && opts.Access == cockpit.AccessWrite {
 		opts.WritableRoots = append(opts.WritableRoots, tmpDir)
 	}
+	if h.Name == "opencode" && opts.Access == cockpit.AccessWrite {
+		opts.WritableRoots = cockpit.OpencodeWritableRoots(opts.RepoDir, tmpDir, filepath.Join(filepath.Dir(store.Root), "cache"))
+	}
 	if h.Name == "opencode" && opencodeMajor(result.CLIVersion) == 2 {
 		if err := checkOpencode2SavedHomes(st); err != nil {
 			return fail(err)

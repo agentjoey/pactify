@@ -18,9 +18,16 @@ type Opencode2Rule struct {
 }
 
 // Opencode2Permissions is also consumed by the non-billable permission probe.
-func Opencode2Permissions(access Access) []Opencode2Rule {
+func Opencode2Permissions(access Access, roots ...string) []Opencode2Rule {
 	if access != AccessReadOnly {
-		return []Opencode2Rule{{"edit", "*", "ask"}, {"shell", "*", "ask"}, {"question", "*", "deny"}}
+		rules := []Opencode2Rule{{"edit", "*", "ask"}, {"shell", "*", "ask"}, {"question", "*", "deny"}}
+		if access == AccessWrite {
+			rules = append(rules, Opencode2Rule{"external_directory", "*", "deny"})
+			for _, root := range OpencodeWritableRoots(roots...) {
+				rules = append(rules, Opencode2Rule{"external_directory", strings.TrimRight(root, "/") + "/*", "ask"})
+			}
+		}
+		return rules
 	}
 	// Upstream shell.ts:140-148 skips permission.assert when shell/parse.ts:173-198
 	// produces no commands (for example, a redirect-only statement). Keep shell's
@@ -29,7 +36,9 @@ func Opencode2Permissions(access Access) []Opencode2Rule {
 	// whitelist only after the upstream bypass is fixed (shell parsing must not bypass permission checks).
 	return []Opencode2Rule{{"*", "*", "deny"}, {"read", "*", "allow"}, {"glob", "*", "allow"}, {"grep", "*", "allow"}, {"shell", "*", "deny"}}
 }
-func opencode2Permissions(access Access) []Opencode2Rule { return Opencode2Permissions(access) }
+func opencode2Permissions(access Access, roots ...string) []Opencode2Rule {
+	return Opencode2Permissions(access, roots...)
+}
 
 func Opencode2Env(opts StartOpts) ([]string, error) {
 	env := append([]string{}, opts.Env...)
@@ -46,7 +55,7 @@ func Opencode2Env(opts StartOpts) ([]string, error) {
 		}
 	}
 	delete(config, "permission")
-	config["permissions"] = opencode2Permissions(opts.Access)
+	config["permissions"] = opencode2Permissions(opts.Access, opts.WritableRoots...)
 	raw, err := json.Marshal(config)
 	if err != nil {
 		return nil, err

@@ -62,7 +62,10 @@ cron, MCP and network tools are unavailable. Use `kimi --read-only` for reviews;
 requests in write jobs are approved by pactify. `agy --read-only` uses plan mode and managed hooks. opencode uses
 a per-job `opencode serve`; its read-only mode denies shell/edit tools, reports
 `sandboxed=false`, and fails with `readonly_violation` if repository files change.
-Experimental harnesses have no OS sandbox for writes; results vary by model.
+In write mode, pactify blocks opencode file tools from accessing directories outside
+the job workspace, job TMPDIR and `$PACTIFY_HOME/cache`. Shell commands can still
+reach files those checks cannot see. Opencode runs without an OS sandbox; these
+permission checks are a guardrail, not isolation. Experimental harness results vary by model.
 
 ## Dashboard
 

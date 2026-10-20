@@ -20,7 +20,8 @@ func TestOpencode2DoctorReadonlyPermissionEvidence(t *testing.T) {
 			h, _ := Lookup("opencode")
 			readonlyRuns := 0
 			reports, err := runDoctor(context.Background(), Store{Root: filepath.Join(t.TempDir(), "jobs")}, []Harness{h}, doctorDeps{
-				model: "opencode/test-free", lookPath: func(string) (string, error) { return "synthetic", nil },
+				writeCheck: func(context.Context, Store, string, Result) error { return nil },
+				model:      "opencode/test-free", lookPath: func(string) (string, error) { return "synthetic", nil },
 				run: func(ctx context.Context, store Store, id string, h Harness, _ WorkerConfig) (Result, error) {
 					st, err := store.Load(id)
 					if err != nil {

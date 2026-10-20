@@ -231,7 +231,7 @@ normal minimal configuration, including directory permissions and link integrity
 
 | | codex | kimi | agy | opencode |
 |---|---|---|---|---|
-| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + edit/bash/webfetch allow |
+| `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + per-type permissions + directory guardrail |
 | `--read-only` | read-only sandbox, no network | private tool allowlist + tools snapshot + fail-closed baseline | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline |
 
 ## Known limitations
@@ -252,9 +252,15 @@ Requested models use dynamic `provider/model` ids; omitting the model preserves 
 Assistant messages confirm the actual model. Tokens and cost use the session summary;
 resumed jobs subtract the starting totals. Input includes cache reads and writes, and output includes reasoning.
 
-Write access uses build and responds to permission requests with `once`.
+Write access uses build with permissions decided by type. Pactify blocks opencode
+file tools from accessing directories outside the job workspace, job TMPDIR and
+`$PACTIFY_HOME/cache`. Allowed requests receive `once`; unknown permissions and
+`doom_loop` are denied. Shell commands can still reach files those checks cannot
+see. Opencode runs without an OS sandbox; this is a guardrail, not isolation.
 Use `--read-only` for reviews: plan exposes only read/glob/grep/list (no shell), every permission
-request is denied, and any repository diff fails as `readonly_violation`. Doctor probes both access profiles.
+request is denied, and any repository diff fails as `readonly_violation`. Doctor probes
+both access profiles and verifies the write session denies outside directories and
+requires adapter checks for its writable roots (`outside=deny`, `inside=ask`).
 Results report `sandboxed=false`: neither profile provides an OS sandbox. Use `--worktree`.
 
 Two persistent 0700 mirrors at `$PACTIFY_HOME/harness-homes/opencode/share` and

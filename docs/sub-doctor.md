@@ -63,6 +63,9 @@ remove shell and edit tools from read-only sessions. Doctor reads the completed
 job's own session permissions and requires shell, edit and external-directory
 denials rather than asking a model to invoke removed tools. Repository changes
 or an unverifiable baseline fail with `readonly_violation`.
+For write jobs, doctor verifies the completed opencode session denies outside
+directories and asks for in-root paths, which require the adapter's resolved-path
+checks. It reads stored rules on 1.x and evaluates the session policy on 2.x.
 
 ## Configuration and isolated state
 

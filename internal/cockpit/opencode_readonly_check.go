@@ -12,6 +12,10 @@ import (
 // back, without resuming or PATCHing it. In 1.19 session rules are evaluated
 // after agent and user rules, so the last matching session rule decides.
 func CheckOpencodeReadonly(ctx context.Context, opts StartOpts, id string) error {
+	return checkOpencodePermissions(ctx, opts, id, []opencodePermission{{"bash", "touch x", "deny"}, {"edit", "x", "deny"}, {"external_directory", "/pactify-readonly-probe/*", "deny"}})
+}
+
+func checkOpencodePermissions(ctx context.Context, opts StartOpts, id string, checks []opencodePermission) error {
 	if id == "" {
 		return fmt.Errorf("opencode permission check requires the probe session id")
 	}
@@ -26,9 +30,9 @@ func CheckOpencodeReadonly(ctx context.Context, opts StartOpts, id string) error
 	if err := server.call(ctx, "GET", "/session/"+url.PathEscape(id), nil, &session); err != nil {
 		return fmt.Errorf("opencode session permission read: %w", err)
 	}
-	for _, check := range []struct{ permission, pattern string }{{"bash", "touch x"}, {"edit", "x"}, {"external_directory", "/pactify-readonly-probe/*"}} {
-		if action := opencodeLastAction(session.Permission, check.permission, check.pattern); action != "deny" {
-			return fmt.Errorf("opencode readonly %s permission is %q; expected deny", check.permission, action)
+	for _, check := range checks {
+		if action := opencodeLastAction(session.Permission, check.Permission, check.Pattern); action != check.Action {
+			return fmt.Errorf("opencode %s %s permission is %q; expected %s", opts.Access, check.Permission, action, check.Action)
 		}
 	}
 	return nil
@@ -51,4 +55,29 @@ func opencodeWildcard(glob, s string) bool {
 	quoted = strings.ReplaceAll(quoted, `\*`, ".*")
 	quoted = strings.ReplaceAll(quoted, `\?`, ".")
 	return regexp.MustCompile("^(?s:" + quoted + ")$").MatchString(s)
+}
+
+// CheckOpencodeWrite reads the completed write job's stored rules without PATCHing.
+func CheckOpencodeWrite(ctx context.Context, opts StartOpts, id string) error {
+	checks, err := opencodeWriteChecks(opts)
+	if err != nil {
+		return err
+	}
+	return checkOpencodePermissions(ctx, opts, id, checks)
+}
+
+func opencodeWriteChecks(opts StartOpts) ([]opencodePermission, error) {
+	roots := OpencodeWritableRoots(opts.WritableRoots...)
+	if len(roots) == 0 {
+		return nil, fmt.Errorf("opencode write permission check requires allowed roots")
+	}
+	outside := "/pactify-write-probe-outside/*"
+	if opencodePathAllowed(opencodeDirectoryPath(outside), roots) {
+		return nil, fmt.Errorf("opencode write probe outside path is within allowed roots")
+	}
+	checks := []opencodePermission{{"external_directory", outside, "deny"}}
+	for _, root := range roots {
+		checks = append(checks, opencodePermission{"external_directory", strings.TrimRight(root, "/") + "/*", "ask"})
+	}
+	return checks, nil
 }

@@ -173,7 +173,7 @@ func TestHarnessE2E(t *testing.T) {
 		name string
 		run  func(*fixture) string
 	}{
-		{"write_worktree", writeWorktree}, {"readonly_denied", readonlyDenied}, {"readonly_long", readonlyLong}, {"resume", resume}, {"cancel", cancelJob}, {"long_tool", longTool}, {"large_output", largeOutput}, {"parallel", parallelJobs}, {"model", modelCheck}, {"failure_surface", failureSurface}, {"records", records}, {"instructions", instructions},
+		{"write_worktree", writeWorktree}, {"external_dir_denied", externalDirDenied}, {"readonly_denied", readonlyDenied}, {"readonly_long", readonlyLong}, {"resume", resume}, {"cancel", cancelJob}, {"long_tool", longTool}, {"large_output", largeOutput}, {"parallel", parallelJobs}, {"model", modelCheck}, {"failure_surface", failureSurface}, {"records", records}, {"instructions", instructions},
 	}
 	selected := map[string]bool{}
 	if v := os.Getenv("PACTIFY_E2E_SCENARIOS"); v != "" {
@@ -220,6 +220,11 @@ func TestHarnessE2E(t *testing.T) {
 				s.report.Results = append(s.report.Results, row)
 				fmt.Printf("E2E %s %s %s %s\n", h, name, status, row.Reason)
 			})
+			if name == "external_dir_denied" && h != "opencode" {
+				status = "N/A"
+				reason = "opencode external_directory guardrail only; other harnesses use different permission policies"
+				t.Skip(reason)
+			}
 			if setupErr != nil && name != "failure_surface" && name != "user_dirs_clean" {
 				reason = "model setup failed: " + setupErr.Error()
 				t.Error(reason)

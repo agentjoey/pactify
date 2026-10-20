@@ -83,6 +83,7 @@ func doctorDefaultProbe(t *testing.T, h Harness, requested, actual string, route
 			}
 			return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: actual, ModelVerified: actual != "", FinalText: "done", InputTokens: 1, ToolCalls: 1}, nil
 		},
+		writeCheck:    func(context.Context, Store, string, Result) error { return nil },
 		readonlyCheck: func(context.Context, Store, string, Result) error { return nil },
 	})
 	if err != nil || len(reports) != 1 {

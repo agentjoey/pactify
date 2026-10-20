@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -337,5 +338,70 @@ func TestJobNpmUppercaseCachePreference(t *testing.T) {
 				t.Fatalf("uppercase preference lost: %+v %v %v", opts, warnings, err)
 			}
 		})
+	}
+}
+
+func TestWorkerOpencodeWritableRoots(t *testing.T) {
+	for _, name := range []string{"codex", "opencode", "kimi", "agy"} {
+		for _, access := range []string{"write", "read-only"} {
+			t.Run(name+"/"+access, func(t *testing.T) {
+				store, session, backend := workerFixture(t, access)
+				for key := range cacheNames {
+					t.Setenv(key, "")
+				}
+				t.Setenv("NPM_CONFIG_CACHE", "")
+				session.script = func(s *fakeSession) {
+					s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
+				}
+				h := newFakeHarness(backend)
+				h.Name = name
+				// Doctor can use a separate cache home: opencode still grants only PACTIFY_HOME/cache.
+				_, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{CacheHome: t.TempDir()})
+				if err != nil {
+					t.Fatal(err)
+				}
+				got := backend.gotOpts.WritableRoots
+				var want []string
+				if access == "write" {
+					switch name {
+					case "opencode":
+						want = cockpit.OpencodeWritableRoots(backend.gotOpts.RepoDir, childEnv(backend.gotOpts.Env, "TMPDIR"), filepath.Join(filepath.Dir(store.Root), "cache"))
+					case "codex":
+						for _, key := range []string{"GOCACHE", "GOMODCACHE", "npm_config_cache", "TMPDIR"} {
+							want = append(want, childEnv(backend.gotOpts.Env, key))
+						}
+					}
+				}
+				if !reflect.DeepEqual(got, want) {
+					t.Fatalf("roots=%v want=%v", got, want)
+				}
+			})
+		}
+	}
+}
+
+func TestWorkerOpencodeWorktreeRoots(t *testing.T) {
+	store, session, backend := workerFixture(t, "write")
+	original, err := store.Load("j1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := store.CreateRun("isolated", original.Request, true, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = runGit(original.Request.Cwd, "worktree", "remove", "--force", st.Worktree.Path) })
+	session.script = func(s *fakeSession) {
+		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
+	}
+	h := newFakeHarness(backend)
+	h.Name = "opencode"
+	result, err := RunJob(context.Background(), store, "isolated", h, WorkerConfig{})
+	if err != nil || result.Status != StatusSucceeded {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	want := cockpit.OpencodeWritableRoots(st.Worktree.Cwd, childEnv(backend.gotOpts.Env, "TMPDIR"), filepath.Join(filepath.Dir(store.Root), "cache"))
+	if !reflect.DeepEqual(backend.gotOpts.WritableRoots, want) || backend.gotOpts.RepoDir == original.Request.Cwd {
+		t.Fatalf("opts=%+v want roots=%v", backend.gotOpts, want)
 	}
 }

@@ -3,6 +3,7 @@ package e2e
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -247,4 +248,24 @@ func toolRunningEvidence(rows [][]byte, opencode2 bool) bool {
 // readonlyToolPolicy identifies sessions whose write tools are removed entirely.
 func readonlyToolPolicy(harness string, opencode2 bool) bool {
 	return harness == "kimi" || harness == "opencode"
+}
+
+// TMPDIR is cleaned at job completion; its copied content is checked in the worktree.
+func externalDirEvidence(tool, shell, proof, want string) (string, error) {
+	_, shellErr := os.Lstat(shell)
+	info := fmt.Sprintf("shell redirect target appeared=%t; shell commands are not confined; documented limitation", shellErr == nil)
+	if shellErr != nil && !os.IsNotExist(shellErr) {
+		info += "; target inspection: " + shellErr.Error()
+	}
+	if _, err := os.Lstat(tool); !os.IsNotExist(err) {
+		return info, fmt.Errorf("outside file-tool target exists or cannot be inspected: %s (%v)", tool, err)
+	}
+	b, err := os.ReadFile(proof)
+	if err != nil {
+		return info, fmt.Errorf("TMPDIR write proof: %w", err)
+	}
+	if string(b) != want {
+		return info, fmt.Errorf("TMPDIR write proof content mismatch")
+	}
+	return info, nil
 }

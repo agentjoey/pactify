@@ -37,7 +37,8 @@ func TestOpencodeDoctorDynamicModelAndIsolation(t *testing.T) {
 				return []string{"deepseek/deepseek-v4-pro", "test/flash-fast", "test/large"}, nil
 			}
 			reports, err := runDoctor(context.Background(), Store{Root: filepath.Join(os.Getenv("PACTIFY_HOME"), "jobs")}, []Harness{h}, doctorDeps{
-				lookPath: func(string) (string, error) { return "fake", nil },
+				lookPath:   func(string) (string, error) { return "fake", nil },
+				writeCheck: func(context.Context, Store, string, Result) error { return nil },
 				readonlyCheck: func(_ context.Context, store Store, id string, _ Result) error {
 					if st, err := store.Load(id); err != nil || st.Request.Access != "read-only" {
 						t.Errorf("policy check on %s: access=%q err=%v", id, st.Request.Access, err)

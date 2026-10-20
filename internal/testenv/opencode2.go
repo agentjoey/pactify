@@ -110,6 +110,7 @@ func Opencode2Peer(t *testing.T) {
 			// 2.0.32 lists every connectable provider; /api/provider lists only connected ones.
 			write([]any{map[string]any{"id": "opencode", "connections": []any{}}, map[string]any{"id": "minimax-coding-plan", "connections": []any{}}})
 		case "POST /api/session":
+			os.WriteFile(filepath.Join(data, "permissions.json"), body, 0600)
 			write(map[string]string{"id": "ses_root"})
 		case "GET /api/session/ses_missing":
 			w.WriteHeader(404)
@@ -204,8 +205,12 @@ func Opencode2Peer(t *testing.T) {
 			emit("session.created", "ses_child", map[string]any{"parentID": "ses_root"})
 			emit("session.created", "ses_grandchild", map[string]any{"parentID": "ses_child"})
 			switch scenario {
-			case "permission", "readonly":
-				emit("permission.asked", "ses_grandchild", map[string]any{"id": "per_1", "action": "shell", "resources": []string{"echo x > probe.txt"}})
+			case "permission", "readonly", "permission-policy":
+				props := map[string]any{"id": "per_1", "action": "shell", "resources": []string{"echo x > probe.txt"}}
+				if scenario == "permission-policy" {
+					_ = json.Unmarshal([]byte(os.Getenv("COCKPIT_OC_PERMISSION")), &props)
+				}
+				emit("permission.asked", "ses_grandchild", props)
 			case "cancel", "cancel-real-process", "cancel-before-delivery", "user", "shutdown", "inactivity":
 				if scenario == "cancel" || scenario == "cancel-real-process" {
 					if scenario == "cancel-real-process" {
@@ -303,12 +308,41 @@ func Opencode2Peer(t *testing.T) {
 			}
 		case "GET /api/session/ses_root/permission", "GET /api/session/ses_child/permission", "GET /api/session/ses_grandchild/permission":
 			if scenario == "reconnect-permission" && r.URL.Path == "/api/session/ses_root/permission" && active {
-				write([]any{map[string]any{"id": "per_lost", "sessionID": "ses_root", "action": "shell", "resources": []string{"git status"}, "metadata": map[string]string{"note": "retained"}}})
+				write([]any{map[string]any{"id": "per_lost", "sessionID": "ses_root", "action": "shell", "resources": []string{"git status", "echo retained"}}})
 			} else {
 				write([]any{})
 			}
 		case "POST /api/session/ses_root/permission":
 			effect := "deny"
+			if policy := os.Getenv("COCKPIT_OC2_WRITE_POLICY"); policy != "" {
+				effect = "ask"
+				var sent struct {
+					Permissions []struct{ Action, Resource, Effect string }
+				}
+				b, _ := os.ReadFile(filepath.Join(data, "permissions.json"))
+				_ = json.Unmarshal(b, &sent)
+				if policy == "empty" {
+					sent.Permissions = nil
+				}
+				resources, _ := req["resources"].([]any)
+				for _, resource := range resources {
+					path, _ := resource.(string)
+					for _, rule := range sent.Permissions {
+						if (rule.Action == "*" || rule.Action == req["action"]) && (rule.Resource == path || rule.Resource == "*" || strings.HasSuffix(rule.Resource, "*") && strings.HasPrefix(path, strings.TrimSuffix(rule.Resource, "*"))) {
+							effect = rule.Effect
+						}
+					}
+				}
+				if policy == "outside-allow" {
+					effect = "allow"
+				}
+				if policy == "inside-allow" && effect == "ask" {
+					effect = "allow"
+				}
+				if policy == "inside-deny" {
+					effect = "deny"
+				}
+			}
 			if action, _ := req["action"].(string); action == os.Getenv("COCKPIT_OC2_ALLOW_ACTION") {
 				effect = "allow"
 			}

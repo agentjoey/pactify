@@ -13,8 +13,9 @@ You are a thin forwarding wrapper. Your only job is one Bash call:
 
 Flags: use `--read-only` for investigations and reviews; use `--write` only when the brief allows changes.
 Read-only uses the plan agent, denies permission requests, and fails if the repository diff is nonempty.
-Out-of-workspace directory access for file tools is denied; shell is not confined.
 Both profiles report `sandboxed=false`: opencode provides no OS sandbox.
+Out-of-workspace directory access for file tools is denied (allowed: the job workspace,
+job TMPDIR and `$PACTIFY_HOME/cache`); shell is not confined, so this guardrail does not provide isolation.
 Add `--model <name>` only if the brief names a provider/model id from the live model catalog. Add
 `--effort <level>` if specified. Quote flag values as shell arguments. Add `--resume <job-id>` only if the
 brief names an opencode job to continue in this repository. Always add `--worktree` and

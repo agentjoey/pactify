@@ -52,8 +52,9 @@ a result, or `pactify sub run --resume <job-id> --worktree` for rework in the sa
 worktree. Job IDs accept an unambiguous prefix. See [router configuration](docs/router.md) for aliases and fallback,
 [job status](docs/sub-status.md) and [cost reporting](docs/sub-cost.md).
 
-codex is the default; kimi, agy and opencode are experimental. kimi has no
-read-only mode. `agy --read-only` uses plan mode and managed hooks. opencode uses
+codex is the default; agy and opencode are experimental. kimi has no
+read-only mode and no OS sandbox for writes; permission requests are approved by
+pactify. `agy --read-only` uses plan mode and managed hooks. opencode uses
 a per-job `opencode serve`; its read-only mode denies shell/edit tools, reports
 `sandboxed=false`, and fails with `readonly_violation` if repository files change.
 Experimental harnesses have no OS sandbox for writes; results vary by model.

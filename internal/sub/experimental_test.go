@@ -12,13 +12,13 @@ import (
 )
 
 func TestRunJobExperimentalWarningFromRegistry(t *testing.T) {
-	for _, name := range []string{"codex", "kimi", "renamed-kimi"} {
+	for _, name := range []string{"codex", "kimi", "agy", "opencode", "renamed-agy"} {
 		for _, outcome := range []string{"succeeded", "failed", "startup-failed", "canceled"} {
 			t.Run(name+"/"+outcome, func(t *testing.T) {
 				store, s, b := workerFixture(t, "write")
 				registered := name
-				if name == "renamed-kimi" {
-					registered = "kimi"
+				if name == "renamed-agy" {
+					registered = "agy"
 				}
 				h, ok := Lookup(registered)
 				if !ok {
@@ -26,6 +26,9 @@ func TestRunJobExperimentalWarningFromRegistry(t *testing.T) {
 				}
 				fixture := newFakeHarness(b)
 				h.Name, h.Backend, h.Version, h.Verify, h.Conceal = name, fixture.Backend, fixture.Version, fixture.Verify, nil
+				if registered == "opencode" {
+					h.Version = func(context.Context) (string, error) { return "1.19.0", nil }
+				}
 				st, err := store.Load("j1")
 				if err != nil {
 					t.Fatal(err)
@@ -75,10 +78,10 @@ func TestRunJobExperimentalWarningFromRegistry(t *testing.T) {
 				if err != nil || state.Status != wantStatus || state.Error != wantError {
 					t.Fatalf("state=%+v err=%v; want error %q", state, err, wantError)
 				}
-				want := "kimi is experimental: no OS sandbox for writes; results vary by model"
-				if name == "codex" {
-					if contains(r.Warnings, "experimental") {
-						t.Fatalf("codex warnings=%v", r.Warnings)
+				want := registered + " is experimental: no OS sandbox for writes; results vary by model"
+				if name == "codex" || name == "kimi" {
+					if contains(r.Warnings, "experimental") || strings.Contains(r.Markdown(), "experimental") {
+						t.Fatalf("%s warnings=%v", name, r.Warnings)
 					}
 				} else if len(r.Warnings) == 0 || r.Warnings[0] != want || !strings.HasPrefix(r.Markdown(), "⚠️ "+want) {
 					t.Fatalf("experimental warning missing: %+v", r)

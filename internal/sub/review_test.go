@@ -187,31 +187,36 @@ func TestReviewKillHarnessesContinuesAfterErrors(t *testing.T) {
 	}
 }
 
-func TestReviewFallbackKeepsExperimentalWarning(t *testing.T) {
-	for _, path := range []string{"recover", "cancel"} {
-		t.Run(path, func(t *testing.T) {
-			store := Store{Root: t.TempDir()}
-			st, err := store.Create("kimi", Request{Harness: "kimi", Access: "write"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			st.CreatedAt = time.Now().Add(-time.Minute)
-			if err := store.Save(st); err != nil {
-				t.Fatal(err)
-			}
-			if path == "recover" {
-				st, err = store.Recover(st.ID)
-			} else {
-				st, err = store.RequestCancel(st.ID)
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			result := readReviewResult(t, store, st.ID)
-			want := "kimi is experimental: no OS sandbox for writes; results vary by model"
-			if len(result.Warnings) != 2 || result.Warnings[0] != want || result.Warnings[1] != st.Error || st.Error == want {
-				t.Fatalf("fallback warnings=%v state error=%q", result.Warnings, st.Error)
-			}
-		})
+func TestReviewFallbackWarningsFromRegistry(t *testing.T) {
+	for _, name := range []string{"codex", "kimi", "agy", "opencode"} {
+		for _, path := range []string{"recover", "cancel"} {
+			t.Run(name+"/"+path, func(t *testing.T) {
+				store := Store{Root: t.TempDir()}
+				st, err := store.Create(name, Request{Harness: name, Access: "write"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				st.CreatedAt = time.Now().Add(-time.Minute)
+				if err := store.Save(st); err != nil {
+					t.Fatal(err)
+				}
+				if path == "recover" {
+					st, err = store.Recover(st.ID)
+				} else {
+					st, err = store.RequestCancel(st.ID)
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				result := readReviewResult(t, store, st.ID)
+				want := []string{st.Error}
+				if name == "agy" || name == "opencode" {
+					want = append([]string{name + " is experimental: no OS sandbox for writes; results vary by model"}, want...)
+				}
+				if st.Error == "" || strings.Join(result.Warnings, "\n") != strings.Join(want, "\n") {
+					t.Fatalf("fallback warnings=%v state error=%q; want %v", result.Warnings, st.Error, want)
+				}
+			})
+		}
 	}
 }

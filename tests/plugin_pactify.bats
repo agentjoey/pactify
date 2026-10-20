@@ -136,24 +136,34 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "kimi skill labels its experimental status and access limitations" {
+@test "kimi skill documents access limitations without an experimental label" {
   run python3 - "$P/skills/kimi/SKILL.md" <<'PY'
 import pathlib, sys
 text = pathlib.Path(sys.argv[1]).read_text()
 frontmatter, body = text.split('---')[1:3]
 description = next(line for line in frontmatter.splitlines() if line.startswith('description:'))
 for part in (description, body):
-    for term in ('experimental', 'results vary by model', 'read-only', 'not offered'):
+    assert 'experimental' not in part.lower(), part
+    for term in ('no os sandbox for writes', 'permission requests are approved by pactify', 'read-only', 'not offered'):
         assert term in part.lower(), (term, part)
 PY
   [ "$status" -eq 0 ]
 }
 
-@test "README documents default delegation and experimental kimi" {
+@test "README documents default delegation and kimi access limitations" {
   grep -q '/delegate' "$P/README.md"
   grep -q '/pactify:delegate' "$P/README.md"
   grep -q 'default.*codex' "$P/README.md"
-  grep -q 'kimi.*experimental' "$P/README.md"
+  run python3 - "$P" <<'PYCODE'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+for path in (root / 'README.md', root / 'agents/kimi.md'):
+    text = path.read_text().lower()
+    assert 'kimi is experimental' not in text, path
+    for term in ('kimi', 'read-only', 'no os sandbox for writes', 'permission requests are approved by pactify'):
+        assert term in text, (path, term)
+PYCODE
+  [ "$status" -eq 0 ]
   grep -q 'results vary by model' "$P/README.md"
 }
 

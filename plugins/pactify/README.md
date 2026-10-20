@@ -1,7 +1,7 @@
 # Pactify harness plugin
 
 Delegate large tasks from Claude Code to the official codex / kimi / agy / opencode CLI installed locally, then review the result summary and workspace changes.
-The default harness is codex; kimi is experimental: no OS sandbox for writes; results vary by model.
+The default harness is codex. kimi has no read-only access and no OS sandbox for writes; permission requests are approved by pactify.
 
 ## Installation
 
@@ -133,7 +133,6 @@ Apply / discard accept any job id in a resume chain and act on its shared worktr
 ## Result summary
 
 - First line: `✓ codex succeeded`, `✗ codex failed` (or `canceled`), or `⚠️` followed by warnings joined with `; `.
-- kimi jobs include the experimental warning on the first line. It is stored in `Result.Warnings` without changing job status.
 - `Harness` and `CLI`: the tool and version actually used.
 - `Model: <requested> → <actual> (unverified)`: requested and actual models; `(default)` when no model was requested. The unverified marker appears only without independent verification.
 - `Access`: `read-only` or `write`.
@@ -203,11 +202,11 @@ normal minimal configuration, including directory permissions and link integrity
 | | codex | kimi | agy | opencode |
 |---|---|---|---|---|
 | `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + edit/bash/webfetch allow |
-| `--read-only` | read-only sandbox, no network | Not offered in the first release | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline |
+| `--read-only` | read-only sandbox, no network | Not offered | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline |
 
 ## Known limitations
 
-- kimi read-only access is not offered in the first release (`sub run kimi --read-only` exits 2): the harness cannot enforce it. Use codex, agy or opencode instead.
+- kimi read-only access is not offered (`sub run kimi --read-only` exits 2): the harness cannot enforce it. Use codex, agy or opencode instead.
 - A user-config job that fails during startup without returning a session id cannot be archived. Minimal kimi sessions remain separate even in this case.
 - Each delegation has about 20–50 thousand tokens of fixed callee overhead, making it unsuitable for small tasks.
 - Only locally installed, logged-in official CLIs are supported. Follow the summary warnings when independent model verification fails.

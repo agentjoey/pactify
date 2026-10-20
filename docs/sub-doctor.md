@@ -49,8 +49,10 @@ check; a model's verbal claim is insufficient. Codex write mode enables network
 access for dependency downloads and tests. The read-only probe must actually
 invoke tools; claiming that a write was denied does not pass.
 
-Kimi cannot enforce read-only access, so its read-only rows are skipped. Agy uses
-plan mode, managed hooks, argument-checked commands and a repository baseline;
+Kimi is no longer experimental. It cannot enforce read-only access, so its
+read-only rows are skipped. Kimi has no OS sandbox for writes; permission requests
+are approved by pactify. Agy uses plan mode, managed hooks, argument-checked
+commands and a repository baseline;
 these controls do not provide an OS sandbox for writes. Opencode 1.x and 2.x
 remove shell and edit tools from read-only sessions. Doctor reads the completed
 job's own session permissions and requires shell, edit and external-directory

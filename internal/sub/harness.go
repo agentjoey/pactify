@@ -134,7 +134,6 @@ var registry = map[string]Harness{
 		LocalUsageBaseline: cockpit.KimiWireOffset, LocalUsageBaselines: cockpit.KimiWireOffsets,
 		Models: kimiModels, ModelDetails: kimiModelDetails,
 		TransientRetry: true, Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
-		Experimental:  "kimi is experimental: no OS sandbox for writes; results vary by model",
 		MinimalConfig: true,
 		Conceal:       concealKimi,
 		Verify:        verifyKimiUsage,

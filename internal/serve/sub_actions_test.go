@@ -17,9 +17,11 @@ import (
 )
 
 func actionRequest(h http.Handler, id, action, body, ct, origin string) *httptest.ResponseRecorder {
-	r := httptest.NewRequest("POST", "/api/sub/jobs/"+id+"/"+action, strings.NewReader(body))
+	r := httptest.NewRequest("POST", "http://127.0.0.1:7777/api/sub/jobs/"+id+"/"+action, strings.NewReader(body))
 	r.Header.Set("Content-Type", ct)
-	r.Header.Set("Origin", origin)
+	if origin != "" {
+		r.Header.Set("Origin", origin)
+	}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	return w
@@ -44,7 +46,7 @@ func TestJobActionAPI(t *testing.T) {
 	started := ""
 	mux := http.NewServeMux()
 	server.registerJobWrites(mux, store, func(id string) error { started = id; return nil })
-	h := writeGuard(mux)
+	h := guardedTestRoutes(t, mux)
 	call := func(id, action, body string) *httptest.ResponseRecorder {
 		return actionRequest(h, id, action, body, "application/json", "")
 	}
@@ -154,7 +156,7 @@ func TestJobActionAPI(t *testing.T) {
 func TestJobActionRequestGuards(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "")
-	h := New().Handler()
+	h := serveHandler(t, New(), "127.0.0.1:7777")
 	for _, action := range []string{"cancel", "resume", "apply", "discard"} {
 		for _, tc := range []struct {
 			body, ct, origin string

@@ -9,7 +9,7 @@ import (
 
 func TestLegacyAPIRemoved(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
-	h := New().Handler()
+	h := serveHandler(t, New(), "127.0.0.1:7777")
 	for _, route := range []string{
 		"GET /api/projects", "GET /api/projects/p/state", "GET /api/projects/p/worktrees",
 		"GET /api/projects/p/events", "GET /api/projects/p/events/log",
@@ -39,7 +39,7 @@ func TestLegacyAPIRemoved(t *testing.T) {
 		t.Run(route, func(t *testing.T) {
 			method, path, _ := strings.Cut(route, " ")
 			w := httptest.NewRecorder()
-			h.ServeHTTP(w, httptest.NewRequest(method, path, nil))
+			h.ServeHTTP(w, httptest.NewRequest(method, "http://127.0.0.1:7777"+path, nil))
 			if w.Code != http.StatusNotFound {
 				t.Fatalf("removed route returned %d: %s", w.Code, w.Body)
 			}

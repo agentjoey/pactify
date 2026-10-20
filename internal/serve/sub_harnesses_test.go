@@ -20,9 +20,9 @@ func TestServeHarnesses(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, "verified-versions.json"), []byte(`{"codex":{"version":"0.162.0"}}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	h := New().Handler()
+	h := serveHandler(t, New(), "127.0.0.1:7777")
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, httptest.NewRequest("GET", "/api/sub/harnesses?refresh=1", nil))
+	h.ServeHTTP(w, httptest.NewRequest("GET", "http://127.0.0.1:7777/api/sub/harnesses?refresh=1", nil))
 	var body struct {
 		Harnesses []struct {
 			Name                     string
@@ -70,11 +70,11 @@ func TestHarnessesDiscoveryCacheAPI(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(bins, "agy"), []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
-	h := New().Handler()
+	h := serveHandler(t, New(), "127.0.0.1:7777")
 	get := func(query string) string {
 		t.Helper()
 		w := httptest.NewRecorder()
-		h.ServeHTTP(w, httptest.NewRequest("GET", "/api/sub/harnesses"+query, nil))
+		h.ServeHTTP(w, httptest.NewRequest("GET", "http://127.0.0.1:7777/api/sub/harnesses"+query, nil))
 		if w.Code != 200 {
 			t.Fatalf("%d %s", w.Code, w.Body.String())
 		}

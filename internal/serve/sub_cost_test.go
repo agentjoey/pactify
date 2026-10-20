@@ -22,7 +22,7 @@ func TestSubCostAPI(t *testing.T) {
 	if err := os.WriteFile(store.ResultPath(st.ID), []byte(`{"status":"succeeded","inputTokens":1234,"usagePartial":true}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	h := New().Handler()
+	h := serveHandler(t, New(), "127.0.0.1:7777")
 	for _, tc := range []struct {
 		method, query string
 		status        int
@@ -32,7 +32,7 @@ func TestSubCostAPI(t *testing.T) {
 		{"HEAD", "", 405}, {"POST", "", 405}, {"DELETE", "", 405},
 	} {
 		w := httptest.NewRecorder()
-		h.ServeHTTP(w, httptest.NewRequest(tc.method, "/api/sub/cost"+tc.query, nil))
+		h.ServeHTTP(w, httptest.NewRequest(tc.method, "http://127.0.0.1:7777/api/sub/cost"+tc.query, nil))
 		if w.Code != tc.status {
 			t.Fatalf("%s %s: %d %s", tc.method, tc.query, w.Code, w.Body.String())
 		}

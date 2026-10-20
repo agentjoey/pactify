@@ -17,12 +17,14 @@ func TestRouterAPI(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("PACTIFY_HOME", home)
 	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "")
-	h := New().Handler()
+	h := serveHandler(t, New(), "127.0.0.1:7777")
 	call := func(method, path, body, contentType, origin string) *httptest.ResponseRecorder {
 		t.Helper()
-		r := httptest.NewRequest(method, path, strings.NewReader(body))
+		r := httptest.NewRequest(method, "http://127.0.0.1:7777"+path, strings.NewReader(body))
 		r.Header.Set("Content-Type", contentType)
-		r.Header.Set("Origin", origin)
+		if origin != "" {
+			r.Header.Set("Origin", origin)
+		}
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
 		return w
@@ -86,7 +88,7 @@ func TestRouterAPI(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(home, "router.json")); !os.IsNotExist(err) {
 		t.Fatal("rejected writes changed disk")
 	}
-	w := call("PUT", "/api/sub/router", body(version, config), "application/json; charset=utf-8", "http://localhost:5173")
+	w := call("PUT", "/api/sub/router", body(version, config), "application/json; charset=utf-8", "http://localhost:7777")
 	if w.Code != 200 {
 		t.Fatalf("PUT: %d %s", w.Code, w.Body.String())
 	}

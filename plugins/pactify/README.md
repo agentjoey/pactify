@@ -82,10 +82,10 @@ Lists use `pactify sub status --json` (`--all` for all jobs); see the
 the conversation; list mode does not load individual results or logs.
 
 The dashboard also has a **Jobs** tab with the same summaries, details, live logs,
-diff and resume links as the local `pactify sub panel`. For the Owner's deployment,
-open `https://pactify.agentjoey.ai/#/jobs` and sign in through Cloudflare Access.
-Share `#/jobs/<id>` links to open a job directly. The Tunnel forwards to loopback-only serve at `127.0.0.1:17082`; serve does
-not provide login authentication. Alternatively, run `pactify sub panel` locally
+diff and resume links as the local `pactify sub panel`. Open
+`http://127.0.0.1:7777/#/jobs` after `pactify serve`; `#/jobs/<id>` links open a job
+directly. serve does not provide login authentication: keep it on loopback, or put it
+behind a reverse proxy that authenticates users (see the README Dashboard section). Alternatively, run `pactify sub panel` locally
 and open its printed one-time URL (or use `--port 17100 --no-open`). Both browser
 entries are read-only and share one Jobs UI; panel retains its independent Bearer
 authentication. See [Jobs view](../../docs/jobs-view.md) for deployment prerequisites,

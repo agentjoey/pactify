@@ -13,6 +13,7 @@ import (
 )
 
 func TestSubAPIReadOnlyAndDefaultStore(t *testing.T) {
+	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "https://dash.example.com")
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	store, err := sub.DefaultStore()
 	if err != nil {
@@ -32,10 +33,10 @@ func TestSubAPIReadOnlyAndDefaultStore(t *testing.T) {
 	if err := os.WriteFile(store.LogPath(st.ID), []byte("old-outside-window\n"+strings.Repeat("x", (1<<20)+128)+"\nmessage after oversized line\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	h := New().Handler()
+	h := serveHandler(t, New(), "127.0.0.1:7777")
 	query := func(method, path string) *httptest.ResponseRecorder {
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "http://pactify.agentjoey.ai"+path, nil)
+		r := httptest.NewRequest("GET", "https://dash.example.com"+path, nil)
 		r.Method = method
 		h.ServeHTTP(w, r)
 		return w
@@ -95,9 +96,9 @@ func TestSubAPIReadOnlyAndDefaultStore(t *testing.T) {
 
 func TestSubAPIEmptyAndErrors(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
-	h := New().Handler()
+	h := serveHandler(t, New(), "127.0.0.1:7777")
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, httptest.NewRequest("GET", "/api/sub/jobs", nil))
+	h.ServeHTTP(w, httptest.NewRequest("GET", "http://127.0.0.1:7777/api/sub/jobs", nil))
 	if w.Code != 200 || strings.TrimSpace(w.Body.String()) != "[]" {
 		t.Fatalf("empty: %d %s", w.Code, w.Body.String())
 	}
@@ -106,7 +107,7 @@ func TestSubAPIEmptyAndErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	w = httptest.NewRecorder()
-	h.ServeHTTP(w, httptest.NewRequest("GET", "/api/sub/jobs", nil))
+	h.ServeHTTP(w, httptest.NewRequest("GET", "http://127.0.0.1:7777/api/sub/jobs", nil))
 	if w.Code != 500 {
 		t.Fatalf("store error: %d %s", w.Code, w.Body.String())
 	}

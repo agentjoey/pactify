@@ -26,20 +26,24 @@ cd web && npm ci
 npm run dev
 ```
 
-Vite proxy 连接 `PACTIFY_SERVE_URL`（默认 `http://127.0.0.1:17082`）指向的本地 `pactify serve`。
+Vite proxy 连接 `PACTIFY_SERVE_URL`（默认 `http://127.0.0.1:7777`）指向的本地 `pactify serve`，同时将转发的 Host 和已有 Origin 改为目标地址，支持开发时写入。
 本地重建的二进制交给 launchd 前需 `codesign --force -s - ./pactify`；详见 [operations.md](operations.md)。
 
 ## 本地 serve
 
 ```bash
-pactify serve --addr 127.0.0.1:17082
+pactify serve --addr 127.0.0.1:7777
 ```
 
 serve 只提供 `/api/sub`（Jobs、Dashboard、Settings、Live，含 job events SSE）和嵌入静态资源。
-浏览器写请求受 CSRF Origin guard 保护；反向代理域名通过
-`PACTIFY_ALLOWED_ORIGINS` 配置。GET 不要求额外 header。保持 loopback 监听，
-公网入口使用 Cloudflare Tunnel + Access 认证；见 [jobs-view.md](jobs-view.md)。
-launchd plist 只传 `serve --addr 127.0.0.1:17082`；旧 `--seat`、`--project` 和 relay
+所有请求（含静态资源和 SSE）均校验 Host：loopback 监听仅接受 `127.0.0.1`、`localhost`、`[::1]` 加监听端口。
+浏览器写请求的 Origin 必须精确匹配该端口的 `http` loopback origin，或列入 `PACTIFY_ALLOWED_ORIGINS`；无 Origin 的 CLI / 脚本请求继续允许。
+`PACTIFY_ALLOWED_ORIGINS` 是逗号分隔的完整 origin 列表，用于执行用户认证的反向代理；也允许这些 origin 的 Host，带或不带其显式配置的端口。Host / Origin 校验不代替用户认证。
+
+非 loopback 监听（含 `0.0.0.0`、`::` 和省略主机）必须设置至少 32 字符的 `PACTIFY_SERVE_TOKEN`，Host 仅接受绑定 IP / 主机名加端口或上述代理 Host。
+任何监听地址只要设置该 token，所有 `/api/` 请求（含 GET 和 SSE）均须携带 `Authorization: Bearer <token>`；静态资源仍公开，但受 Host 校验。
+Dashboard UI 自身不发送此 token；token 模式用于认证后注入该 header 的反向代理。详见 [jobs-view.md](jobs-view.md)。
+launchd plist 只传 `serve --addr 127.0.0.1:7777`；旧 `--seat`、`--project` 和 relay
 兼容参数已删除。serve 不发现治理项目，也不运行定时编排。
 
 ## pactify.dev (Astro site on Vercel)

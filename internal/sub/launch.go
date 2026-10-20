@@ -42,7 +42,7 @@ func (store Store) startWorkerCommand(id string, cmd *exec.Cmd, dashboard bool) 
 		cmd.Env = []string{}
 		for _, entry := range os.Environ() {
 			key, _, _ := strings.Cut(entry, "=")
-			if key != "PACTIFY_ALLOWED_ORIGINS" {
+			if key != "PACTIFY_ALLOWED_ORIGINS" && key != "PACTIFY_SERVE_TOKEN" {
 				cmd.Env = append(cmd.Env, entry)
 			}
 		}

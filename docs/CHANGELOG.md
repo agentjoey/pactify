@@ -8,6 +8,16 @@
 
 ---
 
+## Unreleased — AJ-790 · serve checks Host and exact write origins
+
+- **Why**: `pactify serve` accepted any Host header, so a DNS-rebinding page could read job briefs, logs and diffs, and it accepted writes from every localhost port, so any local dev page could change the router or resume a job with an arbitrary brief.
+- **Host check**: every request must use a loopback name (`127.0.0.1`, `localhost`, `[::1]`) with the listening port, or the host of a `PACTIFY_ALLOWED_ORIGINS` entry; anything else gets 403.
+- **Writes**: browser writes need the exact own origin or an allowed proxy origin. Requests without Origin (CLI, scripts) are unchanged.
+- **Non-loopback binds** require `PACTIFY_SERVE_TOKEN` (32+ characters). When set, every `/api/` request needs `Authorization: Bearer <token>`. Workers never inherit the token.
+- **Hardening**: ReadHeaderTimeout and IdleTimeout, plus `nosniff`, `no-referrer` and `frame-ancestors 'none'` headers.
+- **Dev proxy**: Vite rewrites the forwarded Origin and now defaults to `127.0.0.1:7777`; set `PACTIFY_SERVE_URL` for another port.
+- **Docs**: personal remote-access details (tunnel vendor, domain, port) removed from README, docs and the plugin README; plugin 0.2.12 → 0.2.13.
+
 ## Unreleased — license changes to FSL-1.1-MIT
 
 - Owner decided on 2026-10-20 to license the product under the Functional Source License 1.1 with MIT as the future license (`LICENSE`, plugin `license` field, README License section). Competing commercial use is not permitted; each version becomes MIT two years after release. Versions up to and including v0.13.0 stay under MIT.

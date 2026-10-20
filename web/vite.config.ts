@@ -3,6 +3,8 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const serveTarget = process.env.PACTIFY_SERVE_URL || "http://127.0.0.1:7777";
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
@@ -24,15 +26,23 @@ export default defineConfig({
     },
   },
   // Dev server proxies the API + SSE stream (both live under /api) to the running
-  // `pactify serve` (launchd default :17082, override with PACTIFY_SERVE_URL), so
+  // `pactify serve` (default :7777, override with PACTIFY_SERVE_URL), so
   // `vite` hot-reload hits the real backend WITHOUT the
   // build → go:embed dist → rebuild binary → restart launchd round-trip. Only the
   // embedded production build (npm run build) needs that chain.
   server: {
     proxy: {
       "/api": {
-        target: process.env.PACTIFY_SERVE_URL || "http://127.0.0.1:17082",
+        target: serveTarget,
         changeOrigin: true,
+        configure(proxy) {
+          proxy.on("proxyReq", (proxyReq, req) => {
+            // The browser talks to Vite; serve checks the backend's exact origin.
+            if (req.headers.origin !== undefined) {
+              proxyReq.setHeader("Origin", new URL(serveTarget).origin);
+            }
+          });
+        },
       },
     },
   },

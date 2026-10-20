@@ -176,10 +176,27 @@ func ParseRouter(path string, data []byte) (*Router, error) {
 	return r, nil
 }
 func (r *Router) Resolve(name string) (Route, error) {
+	return r.ResolveWithOverrides(name, nil, nil)
+}
+
+// ResolveWithOverrides accounts for explicit CLI sources when filling defaults.
+// Non-nil pointers preserve empty flags; aliases remain the next priority.
+func (r *Router) ResolveWithOverrides(name string, model, effort *string) (Route, error) {
+	resolve := func(route Route) Route {
+		explicitModel := route.Model != "" || model != nil
+		route = r.withDefaults(route, explicitModel)
+		if model != nil {
+			route.Model = *model
+		}
+		if effort != nil {
+			route.Effort = *effort
+		}
+		return route
+	}
 	if strings.HasPrefix(name, "@") {
 		if r != nil {
 			if route, ok := r.Aliases[strings.TrimPrefix(name, "@")]; ok {
-				return r.withDefaults(route), nil
+				return resolve(route), nil
 			}
 		}
 		names := []string{}
@@ -194,17 +211,18 @@ func (r *Router) Resolve(name string) (Route, error) {
 	if _, ok := Lookup(name); !ok {
 		return Route{}, fmt.Errorf("unknown harness %q; available: %s", name, strings.Join(Names(), ", "))
 	}
-	return r.withDefaults(Route{Harness: name}), nil
+	return resolve(Route{Harness: name}), nil
 }
 
 // withDefaults fills omitted fields only; explicit CLI overrides are applied later.
-func (r *Router) withDefaults(route Route) Route {
+func (r *Router) withDefaults(route Route, explicitModel bool) Route {
 	if r != nil {
+		h, _ := Lookup(route.Harness)
 		defaults := r.Defaults[route.Harness]
 		if route.Model == "" {
 			route.Model = defaults.Model
 		}
-		if route.Effort == "" {
+		if route.Effort == "" && !(explicitModel && h.ModelIncludesEffort) {
 			route.Effort = defaults.Effort
 		}
 	}

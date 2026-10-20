@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,15 +20,19 @@ import (
 // Worktree is shared by every turn of a resumed session. Owner names the first
 // job, whose worktree.lock serializes resume, apply and discard across turns.
 type Worktree struct {
-	Holder       string `json:"holder,omitempty"` // Current session owner after a cross-harness transfer; Owner stays the shared lock key.
-	Applied      bool   `json:"applied,omitempty"`
-	Path         string `json:"path"`
-	BaseCommit   string `json:"baseCommit"`
-	OriginalRoot string `json:"originalRoot"`
-	Cwd          string `json:"cwd"`
-	Owner        string `json:"owner"`
-	SourceDirty  bool   `json:"sourceDirty"`
-	Discarded    bool   `json:"discarded"`
+	// A pointer distinguishes legacy jobs (absent) from a recorded empty ref set.
+	InitialBranches  *[]string `json:"initialBranches,omitempty"`
+	ReportedHeads    []string  `json:"reportedHeads,omitempty"`
+	ReportedBranches []string  `json:"reportedBranches,omitempty"`
+	Holder           string    `json:"holder,omitempty"` // Current session owner after a cross-harness transfer; Owner stays the shared lock key.
+	Applied          bool      `json:"applied,omitempty"`
+	Path             string    `json:"path"`
+	BaseCommit       string    `json:"baseCommit"`
+	OriginalRoot     string    `json:"originalRoot"`
+	Cwd              string    `json:"cwd"`
+	Owner            string    `json:"owner"`
+	SourceDirty      bool      `json:"sourceDirty"`
+	Discarded        bool      `json:"discarded"`
 }
 
 const dirtyWorktreeWarning = "The original workspace has uncommitted changes; they were not included in the worktree"
@@ -93,6 +98,10 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 	if !filepath.IsLocal(rel) {
 		return State{}, fmt.Errorf("cwd is outside the worktree")
 	}
+	branches, err := localBranches(root)
+	if err != nil {
+		return State{}, err
+	}
 	st, err := s.Create(id, req)
 	if err != nil {
 		return State{}, err
@@ -101,7 +110,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 	if err != nil {
 		return State{}, err
 	}
-	w := &Worktree{Path: path, Cwd: filepath.Join(path, rel), OriginalRoot: root, BaseCommit: base, Owner: id, SourceDirty: len(dirty) > 0}
+	w := &Worktree{Path: path, Cwd: filepath.Join(path, rel), OriginalRoot: root, BaseCommit: base, Owner: id, SourceDirty: len(dirty) > 0, InitialBranches: &branches}
 	// Hold the lifecycle lock through checkout: Recover must not declare a slow
 	// preparation dead or publish a terminal result while git is still writing.
 	err = s.WithState(context.Background(), id, func(current *State) error {
@@ -129,6 +138,86 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 		}
 	}
 	return st, err
+}
+
+func localBranches(root string) ([]string, error) {
+	out, err := runGit(root, "for-each-ref", "--sort=refname", "--format=%(refname)", "refs/heads/")
+	if err != nil {
+		return nil, err
+	}
+	if len(out) == 0 {
+		return []string{}, nil
+	}
+	return strings.Split(strings.TrimSuffix(string(out), "\n"), "\n"), nil
+}
+
+// Completion (including worker recovery) already holds this job's state lock.
+// Read immutable terminal histories to also deduplicate older-round resumes;
+// never acquire another job's state lock from this path.
+func (s Store) collectWorktreeWarnings(st *State) ([]string, error) {
+	w := st.Worktree
+	entries, err := os.ReadDir(s.Root)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == st.ID {
+			continue
+		}
+		prior, err := s.Load(entry.Name())
+		if err != nil || !Terminal(prior.Status) || prior.Worktree == nil || prior.Worktree.Owner != w.Owner {
+			continue
+		}
+		for _, head := range prior.Worktree.ReportedHeads {
+			if !slices.Contains(w.ReportedHeads, head) {
+				w.ReportedHeads = append(w.ReportedHeads, head)
+			}
+		}
+		for _, branch := range prior.Worktree.ReportedBranches {
+			if !slices.Contains(w.ReportedBranches, branch) {
+				w.ReportedBranches = append(w.ReportedBranches, branch)
+			}
+		}
+	}
+	var warnings []string
+	head, err := headCommit(w.Path)
+	if err != nil {
+		return nil, err
+	}
+	if head != w.BaseCommit && !slices.Contains(w.ReportedHeads, head) {
+		_, err := runGit(w.Path, "merge-base", "--is-ancestor", w.BaseCommit, head)
+		if err == nil {
+			count, err := runGit(w.Path, "rev-list", "--count", w.BaseCommit+".."+head)
+			if err != nil {
+				return nil, err
+			}
+			warnings = append(warnings, fmt.Sprintf("harness committed %s commit(s) in the worktree; changes are still included in the diff", strings.TrimSpace(string(count))))
+		} else {
+			var exit *exec.ExitError
+			if !errors.As(err, &exit) || exit.ExitCode() != 1 {
+				return nil, err
+			}
+			warnings = append(warnings, "harness worktree HEAD moved; HEAD is not a descendant of BaseCommit; changes are still included in the diff")
+		}
+		w.ReportedHeads = append(w.ReportedHeads, head)
+	}
+	if w.InitialBranches != nil {
+		branches, err := localBranches(w.Path)
+		if err != nil {
+			return warnings, err
+		}
+		var created []string
+		for _, branch := range branches {
+			if !slices.Contains(*w.InitialBranches, branch) && !slices.Contains(w.ReportedBranches, branch) {
+				created = append(created, strings.TrimPrefix(branch, "refs/heads/"))
+				w.ReportedBranches = append(w.ReportedBranches, branch)
+			}
+		}
+		if len(created) > 0 {
+			warnings = append(warnings, "new branch(es) appeared in the repository while the job ran, likely created by the harness: "+strings.Join(created, ", ")+" (not removed)")
+		}
+	}
+	return warnings, nil
 }
 
 func (s Store) resumeRun(id string, req Request, isolated bool, previous State, session string) (State, error) {

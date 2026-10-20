@@ -119,7 +119,7 @@ func (b *agyBackend) ResumeWith(ctx context.Context, id string, o StartOpts) (Se
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("unknown agy model %q; available: %s", o.Model, modelChoices("agy", o.Model, models))
+			return nil, fmt.Errorf("%w: unknown agy model %q; available: %s", ErrModelUnavailable, o.Model, modelChoices("agy", o.Model, models))
 		}
 	}
 	env, err := AgyEnv(o)

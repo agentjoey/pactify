@@ -42,3 +42,20 @@ func TestCodexDefaultsRetainAdvertisedEffort(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRouterTieredModelDoesNotInheritEffort(t *testing.T) {
+	r, err := ParseRouter("router.json", []byte(`{"defaults":{"agy":{"model":"default-model","effort":"high"}},"aliases":{"tier":{"harness":"agy","model":"gemini-3.8-flash-low"},"effort":{"harness":"agy","model":"gemini-3.8-flash-low","effort":"low"},"no-model":{"harness":"agy"}},"fallback":{"codex":["agy","@tier","@effort"]}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, effort := range map[string]string{"agy": "high", "@tier": "", "@effort": "low", "@no-model": "high"} {
+		got, err := r.Resolve(name)
+		if err != nil || got.Effort != effort {
+			t.Errorf("%s: %+v, %v; want effort %q", name, got, err, effort)
+		}
+	}
+	chain := r.Chain(Route{Harness: "codex"})
+	if len(chain) != 4 || chain[1].Effort != "high" || chain[2].Effort != "" || chain[3].Effort != "low" {
+		t.Fatalf("fallback routes: %+v", chain)
+	}
+}

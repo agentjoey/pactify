@@ -49,8 +49,9 @@ Scenario names, in AJ-718 numbering: `write_worktree`, `readonly_denied`,
 host probe, so `user_dirs_clean` executes last. Unknown scenario names fail.
 
 Codex and kimi use their subscription defaults; explicit kimi overrides must
-stay under `kimi-code/*`. Agy is restricted to
-`gemini-3.8-flash`. Opencode 1.x launches a private `opencode serve` and reads the live v1
+stay under `kimi-code/*`. Agy is restricted to the
+`gemini-3.8-flash` tiers (`-low` by default, `-medium`, `-high`); agy 1.4.3 no longer
+accepts the bare name. Opencode 1.x launches a private `opencode serve` and reads the live v1
 `/config/providers` catalog without a prompt (the sole upstream metadata HTTP
 request outside the pactify CLI), selects an `opencode/*-free` model (preferring flash), and validates
 explicit overrides against that catalog: only `opencode/*-free` or

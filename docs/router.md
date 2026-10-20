@@ -35,6 +35,8 @@ pactify sub router --json
 
 模型和 effort 分别按 `--model` / `--effort` 显式参数 > `@alias` > `defaults[harness]` > harness 自身默认选取。显式参数也可覆盖为空值；别名省略的字段继承 defaults。不存在的别名会列出可用名字。Claude Code 支持 `/delegate @cheap <任务>`；适合小型文档等低风险写任务，复杂代码和只读任务优先 codex。别名必须先在本机配置。
 
+对模型名已包含 effort 档位的 harness（agy），显式 `--model` 或别名指定 model 时，不继承 `defaults[harness].effort`，避免模型后缀与默认 effort 冲突。显式 `--effort`（包括空值）和别名 effort 仍按上述优先级生效；未显式指定 model 时仍继承默认 effort，其他 harness 的行为不变。
+
 ## 启动选路
 
 1. 显式 harness / `@alias` 是首选，省略时用 codex。

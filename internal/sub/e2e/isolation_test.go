@@ -203,11 +203,12 @@ func (s *suite) selectModel(f *fixture) error {
 			}
 		}
 	case "agy":
+		// agy 1.4.3 names flash by effort tier; the bare name is no longer accepted.
 		if s.model == "" {
-			s.model = "gemini-3.8-flash"
+			s.model = agyE2EModel
 		}
-		if s.model != "gemini-3.8-flash" {
-			return fmt.Errorf("agy model must be gemini-3.8-flash")
+		if !allowedAgy(s.model) {
+			return fmt.Errorf("agy model must be a gemini-3.8-flash tier (-low, -medium or -high)")
 		}
 	case "kimi":
 		if s.model != "" && !strings.HasPrefix(s.model, "kimi-code/") {
@@ -217,11 +218,21 @@ func (s *suite) selectModel(f *fixture) error {
 	}
 	return nil
 }
+
+const agyE2EModel = "gemini-3.8-flash-low"
+
+func allowedAgy(m string) bool {
+	switch m {
+	case "gemini-3.8-flash-low", "gemini-3.8-flash-medium", "gemini-3.8-flash-high":
+		return true
+	}
+	return false
+}
 func allowedOpencode(m string) bool {
 	return !strings.Contains(strings.ToLower(m), "deepseek-v4-pro") && (strings.HasPrefix(m, "opencode/") && strings.HasSuffix(m, "-free") || m == "minimax-coding-plan/MiniMax-M3")
 }
 func (f *fixture) quota() (json.RawMessage, error) {
-	b, e := command(30*time.Second, f.env, f.repo, "", "agy", "-p", "/usage", "--model", "gemini-3.8-flash", "--output-format", "json")
+	b, e := command(30*time.Second, f.env, f.repo, "", "agy", "-p", "/usage", "--model", agyE2EModel, "--output-format", "json")
 	if e != nil {
 		return nil, fmt.Errorf("agy /usage: %v", e)
 	}

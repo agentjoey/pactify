@@ -148,6 +148,11 @@ func (s Store) finishLocked(st *State, result *Result, reason string, finished t
 		result.describeWorktree(*st)
 	}
 	if st.Worktree != nil && !st.Worktree.Discarded {
+		warnings, err := s.collectWorktreeWarnings(st)
+		result.Warnings = append(result.Warnings, warnings...)
+		if err != nil {
+			result.Warnings = append(result.Warnings, "Failed to inspect worktree HEAD and branches: "+err.Error())
+		}
 		if change, err := worktreeChanges(st.Worktree, false); err == nil {
 			result.Diff = change.diff
 		} else {

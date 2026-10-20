@@ -11,6 +11,8 @@ for (const panel of [true, false]) test.describe(panel ? "panel P2" : "dashboard
       await page.goto("/#/jobs");
       const search=page.getByRole("searchbox");
       await expect(search).toBeVisible();
+      // Wait for the job list: the shortcut listener attaches in an effect after the first paint.
+      await expect(page.getByRole("region",{name:"In progress",exact:true}).getByRole("link")).toBeVisible();
       await page.keyboard.press("/"); await expect(search).toBeFocused();
       await page.keyboard.type("jk/?"); await expect(search).toHaveValue("jk/?");
       await expect(page.getByRole("region",{name:"Keyboard shortcuts",exact:true})).toHaveCount(0);

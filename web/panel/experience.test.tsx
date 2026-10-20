@@ -11,7 +11,7 @@ it("shows onboarding without filters only when there are no jobs", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => Response.json([])));
   render(<Panel />);
   await screen.findByRole("heading",{name:"Start your first job"});
-  for (const text of ["/delegate", "/codex", "pactify sub run", "pactify sub doctor"]) expect(screen.getByText(text)).toBeInTheDocument();
+  for (const text of ["/delegate", "/delegate-codex", "pactify sub run", "pactify sub doctor"]) expect(screen.getByText(text)).toBeInTheDocument();
   expect(screen.queryByLabelText("Project")).toBeNull();
   expect(screen.getByRole("link",{name:"Read the getting started guide"})).toHaveAttribute("href","https://github.com/agentjoey/pactify#readme");
 });

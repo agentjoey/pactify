@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Make the plugin Claude Code only with a local prerequisite check, require explicit
+  user requests for delegation, and restrict experimental agy/opencode skills to
+  slash commands with documented permission boundaries. Rename `/codex`, `/kimi`,
+  `/agy`, `/opencode` to `/delegate-codex`, `/delegate-kimi`, `/delegate-agy`,
+  `/delegate-opencode` (namespaced forms such as `/pactify:codex` become
+  `/pactify:delegate-codex`). `/delegate` and `/jobs` keep their names.
+
 - Reduce the local panel bundle by removing dashboard write dialogs and routing
   editing code at build time. Subset self-hosted fonts; add Jobs keyboard
   shortcuts and help, polling-driven status favicons, a two-plus-three mobile

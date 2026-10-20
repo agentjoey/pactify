@@ -1,14 +1,14 @@
 ---
-name: kimi
-description: Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly. kimi has no OS sandbox for writes; permission requests are approved by pactify; read-only access uses a generated private config and a tool allowlist.
+name: delegate-kimi
+description: Use when the user explicitly asks to delegate a coding task to the kimi harness. kimi has no OS sandbox for writes; permission requests are approved by pactify; read-only access uses a generated private config and a tool allowlist.
 ---
 
 # Delegate to kimi
 
 **kimi has no OS sandbox for writes; permission requests are approved by pactify.**
-read-only access uses a generated private config and a tool allowlist. Prefer the default codex harness (`/delegate` or `/codex`).
+read-only access uses a generated private config and a tool allowlist. Prefer the default codex harness (`/delegate` or `/delegate-codex`).
 
-**If the user invoked this skill explicitly (`/kimi` or `/pactify:kimi`), always delegate — whatever the task
+**If the user invoked this skill explicitly (`/delegate-kimi` or `/pactify:delegate-kimi`), always delegate — whatever the task
 size. The user chose the harness; do not do the work yourself instead.**
 
 Launch command (step 2 below):
@@ -22,11 +22,11 @@ Use `--write` only when changes are authorized. For reviews and investigations, 
 Never raise permissions yourself; resume with the original access mode.
 
 <!-- BEGIN SHARED-DELEGATION -->
-When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than
-~10 minutes. Handle small edits directly; each delegation costs tens of thousands of callee tokens.
-Do not delegate tasks that depend on conversation context you cannot turn into a self-contained brief,
-or tasks needing frequent user interaction. Explicit skill invocations still delegate regardless of size;
-harness permission restrictions still apply.
+Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate
+or hand off to a harness; otherwise do the work directly. Task size alone never authorizes delegation.
+agy and opencode run only via their explicit `/delegate-agy` or `/delegate-opencode`
+slash commands (including the `/pactify:` namespaced forms); never select them on your own.
+Preserve the user's requested harness and access mode; harness permission restrictions still apply.
 Configured aliases can be used with `/delegate @alias <task>`.
 Inspect `pactify sub router --json` for available aliases and preserve any route
 explicitly chosen by the user.

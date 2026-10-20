@@ -125,6 +125,21 @@ func (s *Server) Handler() http.Handler {
 			host = h
 		}
 		if host != "127.0.0.1" {
+			if (r.Method == http.MethodGet || r.Method == http.MethodHead) &&
+				r.URL.Path != "/api" && !strings.HasPrefix(r.URL.Path, "/api/") &&
+				strings.Contains(r.Header.Get("Accept"), "text/html") {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusForbidden)
+				if r.Method != http.MethodHead {
+					_, _ = io.WriteString(w, `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Open the local panel</title></head>
+<body><main><h1>Open the panel at 127.0.0.1</h1>
+<p>This local panel only accepts requests to <code>127.0.0.1</code>. Addresses such as <code>localhost</code> are not accepted.</p>
+<p>Open the <code>http://127.0.0.1:…</code> URL printed by <code>pactify sub panel</code> in your terminal, including its launch token. If needed, run the command again for a new link.</p>
+</main></body></html>`)
+				}
+				return
+			}
 			http.Error(w, "loopback host required", http.StatusForbidden)
 			return
 		}

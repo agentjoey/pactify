@@ -4,6 +4,7 @@ import type { JobsSource } from "./source";
 import { CopyCommand } from "./NextSteps";
 import { responseError, useResource } from "./data";
 import { Routing } from "./Routing";
+import { panelBuild } from "../../buildTarget";
 interface DoctorSnapshot {
   lastRun: string | null;
   harnesses: { name: string; installed: boolean; version: string }[];
@@ -59,7 +60,7 @@ export function Settings({
   const [conflict, setConflict] = useState(false);
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [busy, setBusy] = useState(false);
-  const writable = !!source.write && !readOnly;
+  const writable = !panelBuild && !!source.write && !readOnly;
   const harnessesPath =
     source.harnessesPath || source.jobsPath.replace(/\/jobs$/, "/harnesses");
   const load = useCallback(

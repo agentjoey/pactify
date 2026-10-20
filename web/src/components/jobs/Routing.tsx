@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Button } from "../ui/Button";
 import type { JobsSource } from "./source";
+import { panelBuild } from "../../buildTarget";
 
 const harnesses = ["codex", "kimi", "agy", "opencode"];
 interface Route {
@@ -177,7 +178,7 @@ export function Routing({
   const [now, setNow] = useState(Date.now);
   // Capture the base version separately from snapshots: an in-flight poll may finish after Edit.
   const editVersion = useRef<string | null>(null);
-  const writable = !!source.write && !readOnly;
+  const writable = !panelBuild && !!source.write && !readOnly;
 
   const load = useCallback(
     async (signal: AbortSignal) => {
@@ -391,7 +392,7 @@ export function Routing({
                   Edit
                 </Button>
               )}
-              {draft && (
+              {writable && draft && (
                 <>
                   <Button size="sm" disabled={busy} onClick={() => void save()}>
                     Save
@@ -417,7 +418,7 @@ export function Routing({
             !message && <p className="panel-caption">Loading routing…</p>
           ) : (
             <>
-              {draft ? (
+              {writable && draft ? (
                 <fieldset disabled={busy} className="routing-editor">
                   <h2>Aliases</h2>
                   {draft.aliases.map((a, i) => {
@@ -806,7 +807,7 @@ export function Routing({
                         </Button>
                       )}
                     </div>
-                    {confirmKey === q.key && (
+                    {writable && confirmKey === q.key && (
                       <div
                         className="routing-confirm"
                         role="dialog"

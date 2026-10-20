@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Reduce the local panel bundle by removing dashboard write dialogs and routing
+  editing code at build time. Subset self-hosted fonts; add Jobs keyboard
+  shortcuts and help, polling-driven status favicons, a two-plus-three mobile
+  KPI layout, and a helpful panel page for rejected browser Hosts.
+
 - Share local panel sessions with a second tab on the same origin. Pause hidden
   polling and back off on errors; show relative update times and attention counts.
   Add coloured, collapsible file diffs with stats and full-diff commands, broader

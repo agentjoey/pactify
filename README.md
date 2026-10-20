@@ -76,3 +76,12 @@ port, opens the browser), or `pactify sub panel --port 17100 --no-open`.
 
 [Architecture](docs/architecture.md) · [Development and deployment](docs/deployment.md) ·
 [Operations](docs/operations.md) · [Contributing](CONTRIBUTING.md)
+
+## License
+
+Pactify is licensed under the [Functional Source License, Version 1.1, MIT Future
+License](LICENSE) (FSL-1.1-MIT). You may use, modify and redistribute it for any
+purpose except a Competing Use; internal use, non-commercial education and
+research, and professional services are permitted. Each version becomes available
+under the MIT license two years after its release. Versions up to and including
+v0.13.0 were released under the MIT license and remain available under it.

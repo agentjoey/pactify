@@ -8,6 +8,11 @@
 
 ---
 
+## Unreleased — license changes to FSL-1.1-MIT
+
+- Owner decided on 2026-10-20 to license the product under the Functional Source License 1.1 with MIT as the future license (`LICENSE`, plugin `license` field, README License section). Competing commercial use is not permitted; each version becomes MIT two years after release. Versions up to and including v0.13.0 stay under MIT.
+- Plugin version 0.2.11 → 0.2.12, because `plugin.json` changed.
+
 ## v0.13.0 — 2026-10-20 · 首个 harness 路由器版本
 
 **为什么发这一版**：2026-10-15 产品转向「harness 路由器」后，M1、M2、Harness v2 和退役清理都已合入 `main`，但发布版仍是没有 `pactify sub` 的 v0.12.0，`go install …@latest` 与 `install.sh` 装到的都是旧编排器。Owner 2026-10-20 决定先发 v0.13.0，再按正式对外发布（官网、Agensi 上架）另行准备。

@@ -129,7 +129,6 @@ var registry = map[string]Harness{
 		},
 	},
 	"kimi": {
-		NoReadOnly:         "kimi does not offer read-only access: it cannot enforce it. Use codex, opencode or agy with --read-only.",
 		Home:               &harnessHome{Env: "KIMI_CODE_HOME", Source: kimiHomeDir, Managed: managedKimiHome, Layout: kimiHome, Doctor: doctorKimiHome},
 		LocalUsageBaseline: cockpit.KimiWireOffset, LocalUsageBaselines: cockpit.KimiWireOffsets,
 		Models: kimiModels, ModelDetails: kimiModelDetails,
@@ -138,6 +137,16 @@ var registry = map[string]Harness{
 		Conceal:       concealKimi,
 		Verify:        verifyKimiUsage,
 	},
+}
+
+// ForAccess selects disjoint session stores and locks for kimi's access modes.
+func (h Harness) ForAccess(access string) Harness {
+	if h.Name == "kimi" && access == "read-only" && h.Home != nil {
+		home := *h.Home
+		home.Managed, home.Layout = managedKimiReadOnlyHome, kimiReadOnlyHome
+		h.Home = &home
+	}
+	return h
 }
 
 func (h Harness) configMode(withUserConfig bool) string {

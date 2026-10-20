@@ -131,39 +131,15 @@ func TestHostSecureStorageAndAuthPreflightFake(t *testing.T) {
 	}
 }
 
-func TestKimiReadonlyRequiresExitTwoAndDiagnosticFake(t *testing.T) {
+func TestReadonlyToolPolicyIncludesKimiFake(t *testing.T) {
 	for _, tc := range []struct {
-		code int
-		text string
-		want bool
+		harness  string
+		v2, want bool
 	}{
-		{2, "kimi does not offer read-only access: it cannot enforce it", true},
-		{0, "kimi cannot enforce read-only", false},
-		{1, "kimi cannot enforce read-only", false},
-		{2, "unrelated failure", false},
+		{"kimi", false, true}, {"opencode", true, true}, {"opencode", false, true}, {"codex", false, false}, {"agy", false, false},
 	} {
-		cmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("exit %d", tc.code))
-		err := kimiReadonlyRejection([]byte(tc.text), cmd.Run())
-		if (err == nil) != tc.want {
-			t.Errorf("exit=%d text=%s: %v", tc.code, tc.text, err)
-		}
-	}
-}
-
-func TestKimiReadonlyProbeCancelsUnexpectedJobFake(t *testing.T) {
-	for _, failCancel := range []bool{false, true} {
-		called := ""
-		err := kimiReadonlyProbe(func() ([]byte, error) {
-			return exec.Command("/bin/sh", "-c", `printf '{"jobId":"unexpected-job"}'`).Output()
-		}, func(id string) error {
-			called = id
-			if failCancel {
-				return fmt.Errorf("fake cancel failure")
-			}
-			return nil
-		})
-		if called != "unexpected-job" || err == nil {
-			t.Fatalf("unexpected job was not canceled and failed: cancel=%q err=%v", called, err)
+		if got := readonlyToolPolicy(tc.harness, tc.v2); got != tc.want {
+			t.Errorf("%s: policy=%t want=%t", tc.harness, got, tc.want)
 		}
 	}
 }

@@ -1,12 +1,12 @@
 ---
 name: kimi
-description: Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly. kimi has no OS sandbox for writes; permission requests are approved by pactify; read-only access is not offered.
+description: Delegate a large coding task (multi-file change, investigation, or anything that needs running tests) to the kimi harness and get back a verified result summary. Not for small edits you can do directly. kimi has no OS sandbox for writes; permission requests are approved by pactify; read-only access uses a generated private config and a tool allowlist.
 ---
 
 # Delegate to kimi
 
 **kimi has no OS sandbox for writes; permission requests are approved by pactify.**
-read-only access is not offered. Prefer the default codex harness (`/delegate` or `/codex`).
+read-only access uses a generated private config and a tool allowlist. Prefer the default codex harness (`/delegate` or `/codex`).
 
 **If the user invoked this skill explicitly (`/kimi` or `/pactify:kimi`), always delegate — whatever the task
 size. The user chose the harness; do not do the work yourself instead.**
@@ -17,7 +17,9 @@ Launch command (step 2 below):
     ...complete brief from step 1...
     BRIEF
 
-Always pass `--write`; kimi read-only tasks must go to codex. Never raise permissions yourself.
+Use `--write` only when changes are authorized. For reviews and investigations, use
+`pactify sub run kimi --read-only --wait 0s --json` (add `--worktree` for isolation).
+Never raise permissions yourself; resume with the original access mode.
 
 <!-- BEGIN SHARED-DELEGATION -->
 When deciding on your own, delegate only large tasks: 3+ files, exploration and test runs, or more than
@@ -148,7 +150,19 @@ brief to the `pactify:kimi` subagent, which calls `pactify sub run kimi --worktr
 with access/model/effort flags from the brief, and returns stdout verbatim. If it returns a pending job id (exit 3), the main thread must still run
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.
 
-**Read-only tasks are not offered for kimi in this version**: `pactify sub run kimi --read-only` exits 2.
-Kimi cannot enforce read-only access. Send read-only investigations and reviews to codex, opencode or
-agy with `--read-only`. Only use kimi with `--write` when the user has allowed changes; do not raise
-permissions on your own. Kimi jobs report `sandboxed=false`.
+**Read-only access** uses `harness-homes/kimi-readonly`, separate from write sessions.
+Before each job, pactify renders a private 0600 `config.toml` from at most 1 MiB of
+user TOML, copying only `default_model`, `models` and `providers` with their credential
+references. All other user sections are omitted. Identical configs share leases;
+changes require an idle home. The last job removes the generated config. The tool
+allowlist is Read, Grep, Glob, ReadMediaFile, TodoList, TaskList, TaskOutput and WaitFor.
+Execution-time enforcement applies to every agent; deny rules additionally cover Write,
+Edit, Bash, Agent*, Cron* and TaskStop. Shell, sub-agent, cron, MCP and network tools
+are unavailable. ACP uses default mode; plan mode is not the enforcement boundary.
+Every agent's `llm.tools_snapshot` must stay within the allowlist, and a repository
+baseline must remain unchanged. Missing evidence fails successful jobs; failed or
+canceled jobs retain their original classification. Observed tool/file violations
+still fail every terminal path. Execution-related environment overrides are neutralized;
+project-local workspace settings cannot replace the global tool policy. `--with-user-config`
+is incompatible with `--read-only`; resume requires the original access and config
+modes. Kimi jobs report `sandboxed=false`; this tool policy is not an OS sandbox.

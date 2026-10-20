@@ -66,7 +66,8 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 					if name == "kimi" {
 						// Require independent managed-home evidence as
 						// well as the synthetic worker result.
-						managed, err := managedKimiHome()
+						homeDecl := h.ForAccess(req.Access).Home
+						managed, err := homeDecl.Managed()
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -74,7 +75,10 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						if err := kimiHome(managed, source).Prepare(ctx); err != nil {
+						if req.Access == "read-only" {
+							os.WriteFile(filepath.Join(source, "config.toml"), []byte("default_permission_mode = \"manual\"\n"), 0600)
+						}
+						if err := homeDecl.Layout(managed, source).Prepare(ctx); err != nil {
 							t.Fatal(err)
 						}
 						st.HarnessHome = managed
@@ -82,7 +86,7 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 							t.Fatal(err)
 						}
 						r.SessionID = "probe"
-						writeKimiJobRecord(t, managed, r.SessionID, "")
+						writeKimiJobRecord(t, managed, r.SessionID, `{"type":"llm.tools_snapshot","tools":[{"name":"Read"}]}`+"\n")
 					}
 					if req.Access == "write" {
 						if fault != "write" {
@@ -145,14 +149,14 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 				if len(reports[0].Checks) != wantChecks {
 					t.Fatalf("checks=%+v", reports[0].Checks)
 				}
-				if name == "kimi" && reports[0].Checks[3].Status != "SKIP" {
+				if name == "kimi" && fault == "" && reports[0].Checks[3].Status != "PASS" {
 					t.Fatalf("kimi readonly=%+v", reports[0].Checks[3])
 				}
 				if fault == "missing" || fault == "version" {
 					if calls != 0 {
 						t.Fatalf("ran missing CLI %d times", calls)
 					}
-				} else if calls != map[string]int{"codex": 2, "kimi": 1}[name] {
+				} else if calls != 2 {
 					t.Fatalf("calls=%d", calls)
 				}
 				entries, err := os.ReadDir(tempParent)

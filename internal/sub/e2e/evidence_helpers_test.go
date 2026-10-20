@@ -1,10 +1,8 @@
 package e2e
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -168,29 +166,6 @@ func longToolEvidence(rows [][]byte, duration string) error {
 	return nil
 }
 
-func kimiReadonlyRejection(out []byte, err error) error {
-	exit, ok := err.(*exec.ExitError)
-	text := strings.ToLower(string(out))
-	if !ok || exit.ExitCode() != 2 || !strings.Contains(text, "kimi") || !strings.Contains(text, "read-only") || !strings.Contains(text, "cannot") {
-		return fmt.Errorf("Kimi read-only probe did not return exit 2 with the unsupported-capability diagnostic")
-	}
-	return nil
-}
-
-func kimiReadonlyProbe(run func() ([]byte, error), cancel func(string) error) error {
-	out, err := run()
-	var result struct {
-		JobID string `json:"jobId"`
-	}
-	if json.NewDecoder(bytes.NewReader(out)).Decode(&result) == nil && result.JobID != "" {
-		if err := cancel(result.JobID); err != nil {
-			return fmt.Errorf("Kimi read-only probe unexpectedly started job %s; cancellation failed: %w", result.JobID, err)
-		}
-		return fmt.Errorf("Kimi read-only probe unexpectedly started job %s; canceled it", result.JobID)
-	}
-	return kimiReadonlyRejection(out, err)
-}
-
 func hostAuthStatus(run func(...string) ([]byte, error)) error {
 	out, err := run("auth", "status", "--json")
 	var status struct {
@@ -267,4 +242,9 @@ func toolRunningEvidence(rows [][]byte, opencode2 bool) bool {
 		}
 	}
 	return false
+}
+
+// readonlyToolPolicy identifies sessions whose write tools are removed entirely.
+func readonlyToolPolicy(harness string, opencode2 bool) bool {
+	return harness == "kimi" || harness == "opencode"
 }

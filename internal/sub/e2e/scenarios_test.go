@@ -57,7 +57,7 @@ func readonlyDenied(f *fixture) string {
 	must(f.t, e)
 	prompt := "Read existing.txt using the read tool. Do not create denied-shell.txt or denied-tool.txt. Explain briefly that writing tools are unavailable. Do not seek a workaround. Finish with E2E_DENIED_DONE."
 	var r sub.Result
-	if f.s.harness == "opencode" {
+	if readonlyToolPolicy(f.s.harness, f.s.adapter.Opencode2) {
 		r = f.run(prompt, "--read-only")
 	} else {
 		r = f.run("Authorized read-only permission diagnostic: actually attempt the shell command `echo x > denied-shell.txt` once, then attempt to create denied-tool.txt containing x using your dedicated file write/edit tool once. Both writes must be denied. Do not simulate calls or merely explain the policy. Report actual tool errors and finish with E2E_DENIED_DONE.", "--read-only")
@@ -75,9 +75,9 @@ func readonlyDenied(f *fixture) string {
 			f.errorf("write escaped: %s", n)
 		}
 	}
-	if f.s.harness == "opencode" {
-		f.verifyPolicyReadonly(r, "denied-shell.txt", "denied-tool.txt")
-		return "unchanged repository; readonly session policy verified; targets absent; job succeeded"
+	if readonlyToolPolicy(f.s.harness, f.s.adapter.Opencode2) {
+		f.verifyReadonlyPolicy(r, "denied-shell.txt", "denied-tool.txt")
+		return "write tools removed; own-session policy or tools snapshots verified; targets absent; job succeeded"
 	}
 	shell, file := deniedWrites(f.s.harness, append(f.rawLogs(r.JobID), f.stderrLines(r.JobID)...))
 	if !shell || !file {
@@ -97,8 +97,8 @@ func readonlyLong(f *fixture) string {
 	before, e := metadata([]string{f.repo}, true)
 	must(f.t, e)
 	r := f.run("Read part-01.txt through part-60.txt in order. Each has a numbered random string. Use exactly one separate tool invocation per file; do not batch files, use loops, scripts, glob reads or parallel tool calls. Return E2E_TOKENS= followed by all 60 random strings concatenated in numeric order without spaces. Do not change files.", "--read-only")
-	if f.s.harness == "opencode" {
-		f.verifyPolicyReadonly(r, "denied-shell.txt", "denied-tool.txt")
+	if readonlyToolPolicy(f.s.harness, f.s.adapter.Opencode2) {
+		f.verifyReadonlyPolicy(r, "denied-shell.txt", "denied-tool.txt")
 	}
 	if r.Status != sub.StatusSucceeded {
 		f.fatalf("60-read job status=%s toolCalls=%d warnings=%s (CLI read-only tool-call cap remains 40)", r.Status, r.ToolCalls, safe([]byte(strings.Join(r.Warnings, "; "))))
@@ -117,7 +117,9 @@ func readonlyLong(f *fixture) string {
 	}
 	f.clean()
 	evidence := ""
-	if f.s.harness == "opencode" {
+	if f.s.harness == "kimi" {
+		evidence = "; private session tools snapshots within allowlist; targets absent"
+	} else if f.s.harness == "opencode" {
 		evidence = "; readonly session policy verified; targets absent"
 	}
 	return fmt.Sprintf("60 separate reads and answer checked; toolCalls=%d%s", r.ToolCalls, evidence)
@@ -599,5 +601,21 @@ func (f *fixture) verifyPolicyReadonly(result sub.Result, targets ...string) {
 	store := sub.Store{Root: filepath.Join(envValue(f.env, "PACTIFY_HOME"), "jobs")}
 	if err := store.CheckOpencodeReadonly(context.Background(), result.JobID, result, f.env); err != nil {
 		f.errorf("readonly session policy verification failed: %v", err)
+	}
+}
+
+func (f *fixture) verifyReadonlyPolicy(result sub.Result, targets ...string) {
+	if f.s.harness != "kimi" {
+		f.verifyPolicyReadonly(result, targets...)
+		return
+	}
+	for _, target := range targets {
+		if _, err := os.Lstat(filepath.Join(f.repo, target)); !os.IsNotExist(err) {
+			f.errorf("readonly write target exists or cannot be inspected: %s", target)
+		}
+	}
+	store := sub.Store{Root: filepath.Join(envValue(f.env, "PACTIFY_HOME"), "jobs")}
+	if err := store.CheckKimiReadonly(result.JobID, result, f.env); err != nil {
+		f.errorf("readonly tools snapshot verification failed: %v", err)
 	}
 }

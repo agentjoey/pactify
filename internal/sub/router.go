@@ -319,7 +319,7 @@ func quotaFallbackWarning(from, to Route, resetAt *time.Time, now time.Time) str
 }
 
 // routeAllows reports whether a route's harness offers the requested access.
-// Read-only excludes only harnesses that refuse it (kimi) and unknown ones.
+// Read-only excludes harnesses that refuse it and unknown ones.
 func routeAllows(route Route, access string) bool {
 	if access != "read-only" {
 		return true

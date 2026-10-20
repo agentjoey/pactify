@@ -50,15 +50,21 @@ func TestKimiReviewBadBaselineReturnsImmediately(t *testing.T) {
 	}
 }
 
-func TestKimiReviewReadOnlyRejectedBeforeStart(t *testing.T) {
-	store, _, b, h, _, _ := kimiJobFixture(t, false)
+func TestKimiReviewReadOnlyStartsWithPrivatePolicy(t *testing.T) {
+	store, sess, b, h, source, writeHome := kimiJobFixture(t, false)
 	h.Verify = nil
+	os.WriteFile(filepath.Join(source, "config.toml"), []byte("default_permission_mode = \"yolo\"\n"), 0600)
+	home := filepath.Join(filepath.Dir(writeHome), "kimi-readonly")
+	sess.script = func(s *fakeSession) {
+		writeKimiJobRecord(t, home, s.ThreadID(), `{"type":"llm.tools_snapshot","tools":[{"name":"Read"}]}`+"\n")
+		s.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnCompleted}
+	}
 	st, _ := store.Load("j1")
 	st.Request.Access = "read-only"
 	store.Save(st)
 	r, err := RunJob(context.Background(), store, st.ID, h, WorkerConfig{})
-	if err == nil || r.Status != StatusFailed || b.gotOpts.RepoDir != "" {
-		t.Fatalf("read-only exposed workspace: %+v %v", r, err)
+	if err != nil || r.Status != StatusSucceeded || !contains(b.gotOpts.Env, "KIMI_CODE_HOME="+home) {
+		t.Fatalf("read-only private policy did not start: %+v %v", r, err)
 	}
 }
 

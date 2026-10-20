@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -40,6 +41,9 @@ type managedHome struct {
 	Remove             []string
 	// Directories are ordered private directories, never links to user state.
 	Directories []string
+	// GenerateConfig renders private config.toml bytes before taking a lease.
+	// Identical regular 0600 policies may share a home; changes require exclusivity.
+	GenerateConfig func() ([]byte, error)
 }
 
 type harnessHome struct {
@@ -288,7 +292,28 @@ func (m *managedHome) usageLock() (*os.File, bool, error) {
 	}
 	return f, false, nil
 }
+
+func releaseHomeLease(f *os.File) error {
+	// A concurrent fork may briefly retain this open-file description until
+	// exec closes it. Unlock explicitly so it cannot retain a finished job's
+	// lease and prevent the last user's exclusive cleanup.
+	err := syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	closeErr := f.Close()
+	if err != nil {
+		return err
+	}
+	return closeErr
+}
+
 func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr error) {
+	var config []byte
+	if m.GenerateConfig != nil {
+		var err error
+		config, err = m.GenerateConfig()
+		if err != nil {
+			return err
+		}
+	}
 	release, err := lockx.Acquire(ctx, m.Home+".lock")
 	if err != nil {
 		return err
@@ -298,16 +323,29 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 	if err != nil {
 		return err
 	}
+	if m.GenerateConfig != nil && !exclusive {
+		root, err := m.openRoot()
+		if err != nil {
+			releaseHomeLease(use)
+			return err
+		}
+		matches := matchingManagedConfig(root, config)
+		root.Close()
+		if !matches {
+			releaseHomeLease(use)
+			return fmt.Errorf("%s managed home is in use with a different or unsafe config; retry after the active job finishes", m.Name)
+		}
+	}
 	defer func() {
 		if prepareErr == nil && retain {
 			if err := syscall.Flock(int(use.Fd()), syscall.LOCK_SH); err != nil {
 				prepareErr = err
-				use.Close()
+				releaseHomeLease(use)
 				return
 			}
 			m.use = use
 		} else {
-			use.Close()
+			releaseHomeLease(use)
 		}
 	}()
 	if err = m.guard(); err != nil {
@@ -325,7 +363,7 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 	}
 	defer func() {
 		if prepareErr != nil && exclusive {
-			if warnings := m.cleanupEntries(); len(warnings) > 0 {
+			if warnings := append(m.removeGeneratedConfig(), m.cleanupEntries()...); len(warnings) > 0 {
 				prepareErr = fmt.Errorf("%w; %s", prepareErr, strings.Join(warnings, "; "))
 			}
 		}
@@ -464,6 +502,11 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 			return err
 		}
 	}
+	if m.GenerateConfig != nil && exclusive && !matchingManagedConfig(root, config) {
+		if err := writeManagedConfig(root, config); err != nil {
+			return err
+		}
+	}
 	return m.saveSources()
 }
 func (m *managedHome) Check() error {
@@ -543,21 +586,93 @@ func (m *managedHome) Cleanup() []string {
 	}
 	defer release()
 	if m.use != nil {
-		m.use.Close()
+		unlockErr := releaseHomeLease(m.use)
 		m.use = nil
+		if unlockErr != nil {
+			return []string{fmt.Sprintf("%s home lease release failed: %v", m.Name, unlockErr)}
+		}
 	}
 	use, exclusive, err := m.usageLock()
 	if err != nil {
 		return []string{fmt.Sprintf("%s home link check failed: %v", m.Name, err)}
 	}
-	defer use.Close()
+	defer releaseHomeLease(use)
 	if !exclusive {
 		return nil
 	}
+	warnings := m.removeGeneratedConfig()
 	if err := m.loadSources(); err != nil {
-		return []string{fmt.Sprintf("%s source metadata unavailable: %v; private refreshes retained", m.Name, err)}
+		return append(warnings, fmt.Sprintf("%s source metadata unavailable: %v; private refreshes retained", m.Name, err))
 	}
-	return m.cleanupEntries()
+	return append(warnings, m.cleanupEntries()...)
+}
+
+func matchingManagedConfig(root *os.Root, config []byte) bool {
+	info, err := root.Lstat("config.toml")
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0600 {
+		return false
+	}
+	f, err := root.OpenFile("config.toml", os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	opened, err := f.Stat()
+	if err != nil || !os.SameFile(info, opened) {
+		return false
+	}
+	data, err := io.ReadAll(io.LimitReader(f, int64(len(config))+1))
+	return err == nil && bytes.Equal(data, config)
+}
+
+func writeManagedConfig(root *os.Root, config []byte) error {
+	// Called only with the exclusive lease; replacing a stale symlink never
+	// edits its target. Root confines temporary writes and the final rename.
+	const tmp = ".config.toml.pactify-tmp"
+	if err := root.Remove(tmp); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	f, err := root.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer root.Remove(tmp)
+	err = f.Chmod(0600)
+	if err == nil {
+		_, err = f.Write(config)
+	}
+	if err == nil {
+		err = f.Sync()
+	}
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return err
+	}
+	return root.Rename(tmp, "config.toml")
+}
+
+// Only an exclusive cleanup may erase the policy, including its provider keys.
+func (m *managedHome) removeGeneratedConfig() []string {
+	if m.GenerateConfig == nil {
+		return nil
+	}
+	if err := m.guard(); err != nil {
+		return []string{fmt.Sprintf("%s generated config cleanup refused: %v", m.Name, err)}
+	}
+	root, err := m.openRoot()
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err == nil {
+		defer root.Close()
+		err = root.RemoveAll("config.toml")
+	}
+	if err != nil {
+		return []string{fmt.Sprintf("%s generated config cleanup failed: %v", m.Name, err)}
+	}
+	return nil
 }
 func (m *managedHome) cleanupEntries() []string {
 	if _, err := os.Lstat(m.Home); os.IsNotExist(err) {

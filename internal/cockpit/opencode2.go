@@ -26,7 +26,7 @@ func Opencode2Permissions(access Access) []Opencode2Rule {
 	// produces no commands (for example, a redirect-only statement). Keep shell's
 	// final rule as wildcard deny so whollyDisabled removes the tool entirely.
 	// Tool removal: packages/core/src/tool.ts:231,292-295. Reassess the shell
-	// whitelist only after the upstream bypass is fixed (docs/backlog.md, AJ-720 B1).
+	// whitelist only after the upstream bypass is fixed (shell parsing must not bypass permission checks).
 	return []Opencode2Rule{{"*", "*", "deny"}, {"read", "*", "allow"}, {"glob", "*", "allow"}, {"grep", "*", "allow"}, {"shell", "*", "deny"}}
 }
 func opencode2Permissions(access Access) []Opencode2Rule { return Opencode2Permissions(access) }
@@ -117,6 +117,17 @@ func Opencode2ModelDetails(ctx context.Context, opts StartOpts) (ModelDiscovery,
 	sort.Strings(d.Efforts)
 	if len(d.Items) == 0 {
 		return d, fmt.Errorf("opencode returned no models")
+	}
+	// Default metadata is optional: older servers may not expose a selection.
+	var selected opencode2Model
+	if err := s.call2(ctx, "GET", "/api/model/default", nil, &selected); err == nil && selected.Enabled {
+		candidate := selected.ProviderID + "/" + selected.ID
+		for _, model := range d.Items {
+			if model == candidate {
+				d.DefaultModel = candidate
+				break
+			}
+		}
 	}
 	return d, nil
 }

@@ -443,7 +443,7 @@ func TestWorkerPromptFailureUsesQuotaSnapshot(t *testing.T) {
 	}
 }
 
-// AJ-718: codex can start a thread with an unknown model, then reject the
+// codex can start a thread with an unknown model, then reject the
 // account/model combination at turn time using a provider error message.
 func TestCodexUnsupportedSubscriptionModelFailure(t *testing.T) {
 	message := `{"type":"error","status":400,"error":{"type":"invalid_request_error","message":"The 'e2e-nonexistent-model-718' model is not supported when using Codex with a ChatGPT account."}}`
@@ -482,7 +482,7 @@ func TestCodexUnsupportedSubscriptionModelFailure(t *testing.T) {
 
 func TestManagedMissingLoginFailureIsAuth(t *testing.T) {
 	// The home path is quoted in the error; a 429 in it once made this
-	// transient about 1% of the time via random TempDir names (AJ-739).
+	// transient about 1% of the time via random TempDir names.
 	home := func(t *testing.T) string {
 		dir := filepath.Join(t.TempDir(), "home-1429")
 		if err := os.MkdirAll(dir, 0o700); err != nil {

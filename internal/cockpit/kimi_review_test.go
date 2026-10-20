@@ -16,7 +16,7 @@ func TestKimiReviewClassificationCounterexamples(t *testing.T) {
 		{"429 Too Many Requests", "transient"},
 		{"rate_limit_exceeded", "transient"},
 		{"too many requests, retry later", "transient"},
-		// AJ-739: digits inside a quoted path are not a status code.
+		// digits inside a quoted path are not a status code.
 		{"kimi credentials unavailable; run kimi login first: stat /tmp/TestX1429567/001/credentials: no such file or directory", "auth"},
 		{"failed to read /tmp/run-4290/notes.txt", "other"},
 		{"max_tokens must be <= 512", "other"},

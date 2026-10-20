@@ -25,7 +25,7 @@ Do not read files, search, plan, or summarize. Return the command's stdout verba
 return the stdout verbatim as well: it contains the job id that the main thread will wait on.
 If the command fails, return its exit code and stderr along with stdout; do not retry or change the model.
 
-agy is experimental (3/10 large tasks completed in one attempt; v2 read-only uses plan mode and a fail-closed baseline).
+agy is experimental: no OS sandbox for writes; results vary by model.
 
 The host owns the workflow; do not perform these steps yourself. The brief must contain Background,
 numbered Goals, Known constraints and special cases, General constraints, and Acceptance commands

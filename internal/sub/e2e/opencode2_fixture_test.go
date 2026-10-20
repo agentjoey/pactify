@@ -66,3 +66,68 @@ func TestOpencode2FixtureFreeModelDiscovery(t *testing.T) {
 		t.Fatal("paid override accepted")
 	}
 }
+
+func TestModelPolicyEnvironment(t *testing.T) {
+	t.Setenv("PACTIFY_E2E_ALLOWED_MODELS", `{"opencode":["custom/*"],"agy":["custom-agy"],"kimi":["custom-kimi"]}`)
+	if !allowedOpencode("custom/model") || allowedOpencode("opencode/flash-free") {
+		t.Fatal("opencode allowlist override ignored")
+	}
+	for harness, model := range map[string]string{"agy": "custom-agy", "kimi": "custom-kimi"} {
+		s := &suite{harness: harness, model: model}
+		if err := s.selectModel(nil); err != nil {
+			t.Fatalf("%s custom model: %v", harness, err)
+		}
+	}
+}
+
+func TestOpencodePolicyOverridesArePerHarness(t *testing.T) {
+	t.Setenv("PACTIFY_E2E_ALLOWED_MODELS", `{"agy":["custom-agy"]}`)
+	h, _ := sub.Lookup("opencode")
+	h = h.ForVersion("v2.0.32")
+	root := t.TempDir()
+	env, err := isolatedFixtureEnv(root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.Models = func(context.Context, cockpit.StartOpts) ([]string, error) {
+		return []string{"minimax-coding-plan/MiniMax-M3", "opencode/zeta-free"}, nil
+	}
+	s := &suite{harness: "opencode", adapter: h}
+	f := &fixture{s: s, env: env, repo: root}
+	if err := s.selectModel(f); err != nil || s.model != "opencode/zeta-free" {
+		t.Fatalf("model=%q err=%v", s.model, err)
+	}
+}
+
+func TestModelPolicyDefaultsAndDenials(t *testing.T) {
+	t.Setenv("PACTIFY_E2E_ALLOWED_MODELS", `{}`)
+	t.Setenv("PACTIFY_E2E_DENIED_MODELS", "*deepseek-v4-pro*")
+	for _, tc := range []struct {
+		harness, model string
+		allowed        bool
+	}{
+		{"codex", "native/model", true}, {"opencode", "opencode/mini-free", true},
+		{"opencode", "minimax-coding-plan/MiniMax-M3", true}, {"opencode", "other/mini-free", false},
+		{"opencode", "opencode/deepseek-v4-pro-free", false}, {"agy", "gemini-3.8-flash", true},
+		{"agy", "other-model", false}, {"kimi", "kimi-code/model", true}, {"kimi", "other/model", false},
+	} {
+		if got := allowedE2EModel(tc.harness, tc.model); got != tc.allowed {
+			t.Errorf("%s/%s allowed=%t", tc.harness, tc.model, got)
+		}
+	}
+	t.Setenv("PACTIFY_E2E_ALLOWED_MODELS", `{"opencode":["*"]}`)
+	t.Setenv("PACTIFY_E2E_DENIED_MODELS", "custom/*")
+	if allowedOpencode("custom/model") || !allowedOpencode("other/model") {
+		t.Fatal("denylist must take precedence")
+	}
+	t.Setenv("PACTIFY_E2E_DENIED_MODELS", "")
+	if !allowedOpencode("custom/model") {
+		t.Fatal("explicit empty denylist must disable denials")
+	}
+	for _, raw := range []string{"invalid", `[]`, `null`} {
+		t.Setenv("PACTIFY_E2E_ALLOWED_MODELS", raw)
+		if allowedOpencode("opencode/mini-free") {
+			t.Fatalf("invalid policy accepted: %s", raw)
+		}
+	}
+}

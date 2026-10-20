@@ -25,7 +25,7 @@ export function seedJobs() {
     {
       ...base,
       id: "job-panel",
-      title: "AJ-659 · Local read-only job panel",
+      title: "Example-659 · Local read-only job panel",
       createdAt: ago(30),
       finishedAt: ago(20),
       resumedBy: ["job-review"],
@@ -50,7 +50,7 @@ export function seedJobs() {
     {
       ...base,
       id: "job-summary",
-      title: "AJ-657 · Shared job summary model",
+      title: "Example-657 · Shared job summary model",
       createdAt: ago(60),
       finishedAt: ago(50),
       attention: [

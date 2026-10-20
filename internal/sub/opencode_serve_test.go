@@ -139,14 +139,14 @@ func TestOpencodeDoctorNetworkV2(t *testing.T) {
 			os.WriteFile(filepath.Join(st.Request.Cwd, "out.txt"), []byte("ok"), 0600)
 			os.WriteFile(filepath.Join(st.Request.Cwd, "doctor-network.json"), []byte(`{"bind":true,"external":true}`), 0600)
 		}
-		return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: st.Request.Model, ModelVerified: true, InputTokens: 1, ToolCalls: 1, FinalText: "done"}, nil
+		return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: "native/default", ModelVerified: true, InputTokens: 1, ToolCalls: 1, FinalText: "done"}, nil
 	}, readonlyCheck: func(context.Context, Store, string, Result) error { return nil }})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, check := range reports[0].Checks {
 		want := "PASS"
-		// AJ-713 adds explicit sandbox and N/A rows. This fixture deliberately
+		// Sandbox and non-applicable rows remain visible. This fixture deliberately
 		// removes h.Home above; its original live-probe assertions stay PASS.
 		switch check.Name {
 		case "Sandbox":

@@ -25,8 +25,8 @@ to the conversation. Select only the fields needed below, sort, cap rows and tex
 return the compact projection. Never paste raw JSON or the full request/brief into context.
 Run `pactify sub quota --json` once in list mode (also for `/jobs all`). It returns
 currently exhausted routes independently of the displayed jobs and repository filter.
-Before the table show one line “当前额度耗尽的路线” (translate to the user’s language):
-list harness/model and reset time, or “无” for `[]`. A null `resetAt` means unknown reset;
+Before the table show one line “Currently exhausted routes” (translate to the user’s language):
+list harness/model and reset time, or “None” for `[]`. A null `resetAt` means unknown reset;
 the memory expires 24 hours after `recordedAt`, not a confirmed provider reset.
 Report lookup errors instead of claiming no exhausted routes. Do not read quota.json directly.
 
@@ -68,7 +68,7 @@ Render a compact Markdown table with these six columns and at most 10 rows:
 - Flatten newlines, escape Markdown pipes and markup from data, truncate title/activity cells
   to about 60/100 characters, and keep each row on one line. For `[]`, say `No delegation jobs`.
 
-End with a short next-steps paragraph (`下一步` in Chinese). Label counts as referring to
+End with a short next-steps paragraph (translated to the user’s language). Label counts as referring to
 the returned latest 10, not the entire job history. Follow the next-steps rules below.
 
 ## All: `/jobs all`

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -170,7 +171,7 @@ func (f *fixture) clean() {
 	}
 }
 func (s *suite) selectModel(f *fixture) error {
-	if strings.Contains(strings.ToLower(s.model), "deepseek-v4-pro") {
+	if deniedE2EModel(s.model) {
 		return fmt.Errorf("forbidden model")
 	}
 	switch s.harness {
@@ -181,19 +182,22 @@ func (s *suite) selectModel(f *fixture) error {
 		}
 		if s.model != "" {
 			if !allowedOpencode(s.model) || !available[s.model] {
-				return fmt.Errorf("override must be live-listed opencode/*-free or minimax-coding-plan/MiniMax-M3")
+				return fmt.Errorf("override must be live-listed and permitted by PACTIFY_E2E_ALLOWED_MODELS")
 			}
 			return nil
 		}
+		var customPolicies map[string][]string
+		_ = json.Unmarshal([]byte(os.Getenv("PACTIFY_E2E_ALLOWED_MODELS")), &customPolicies)
+		_, customPolicy := customPolicies["opencode"]
 		models := []string{}
 		for m := range available {
-			if strings.HasPrefix(m, "opencode/") && strings.HasSuffix(m, "-free") && allowedOpencode(m) {
+			if allowedOpencode(m) && (customPolicy || strings.HasPrefix(m, "opencode/") && strings.HasSuffix(m, "-free")) {
 				models = append(models, m)
 			}
 		}
 		sort.Strings(models)
 		if len(models) == 0 {
-			return fmt.Errorf("no live opencode/*-free model available")
+			return fmt.Errorf("no live model permitted by PACTIFY_E2E_ALLOWED_MODELS")
 		}
 		s.model = models[0]
 		for _, m := range models {
@@ -207,32 +211,70 @@ func (s *suite) selectModel(f *fixture) error {
 		if s.model == "" {
 			s.model = agyE2EModel
 		}
-		if !allowedAgy(s.model) {
-			return fmt.Errorf("agy model must be a gemini-3.8-flash tier (-low, -medium or -high)")
+		if !allowedE2EModel("agy", s.model) {
+			return fmt.Errorf("agy model is not permitted by PACTIFY_E2E_ALLOWED_MODELS")
 		}
 	case "kimi":
-		if s.model != "" && !strings.HasPrefix(s.model, "kimi-code/") {
-			return fmt.Errorf("kimi overrides must use the kimi-code subscription provider")
+		if s.model != "" && !allowedE2EModel("kimi", s.model) {
+			return fmt.Errorf("kimi model is not permitted by PACTIFY_E2E_ALLOWED_MODELS")
 		}
 	case "codex":
+		if s.model != "" && !allowedE2EModel("codex", s.model) {
+			return fmt.Errorf("codex model is not permitted by PACTIFY_E2E_ALLOWED_MODELS")
+		}
 	}
 	return nil
 }
 
 const agyE2EModel = "gemini-3.8-flash-low"
 
-func allowedAgy(m string) bool {
-	switch m {
-	case "gemini-3.8-flash-low", "gemini-3.8-flash-medium", "gemini-3.8-flash-high":
-		return true
+// Model restrictions apply only to the opt-in live test suite, never product routing.
+func allowedOpencode(m string) bool { return allowedE2EModel("opencode", m) }
+
+func matchesE2EModel(pattern, model string) bool {
+	expression := "^" + strings.ReplaceAll(regexp.QuoteMeta(pattern), `\*`, ".*") + "$"
+	return regexp.MustCompile(expression).MatchString(model)
+}
+
+func deniedE2EModel(model string) bool {
+	patterns, set := os.LookupEnv("PACTIFY_E2E_DENIED_MODELS")
+	if !set {
+		patterns = "*deepseek-v4-pro*"
+	}
+	for _, pattern := range strings.Split(patterns, ",") {
+		if pattern = strings.TrimSpace(pattern); pattern != "" && matchesE2EModel(strings.ToLower(pattern), strings.ToLower(model)) {
+			return true
+		}
 	}
 	return false
 }
-func allowedOpencode(m string) bool {
-	return !strings.Contains(strings.ToLower(m), "deepseek-v4-pro") && (strings.HasPrefix(m, "opencode/") && strings.HasSuffix(m, "-free") || m == "minimax-coding-plan/MiniMax-M3")
+
+func allowedE2EModel(harness, model string) bool {
+	if deniedE2EModel(model) {
+		return false
+	}
+	policy := map[string][]string{
+		"codex": {"*"}, "opencode": {"opencode/*-free", "minimax-coding-plan/MiniMax-M3"},
+		"agy": {"gemini-3.8-flash-*"}, "kimi": {"kimi-code/*"},
+	}
+	if raw, set := os.LookupEnv("PACTIFY_E2E_ALLOWED_MODELS"); set {
+		var overrides map[string][]string
+		if json.Unmarshal([]byte(raw), &overrides) != nil || overrides == nil {
+			return false
+		}
+		for name, patterns := range overrides {
+			policy[name] = patterns
+		}
+	}
+	for _, pattern := range policy[harness] {
+		if matchesE2EModel(pattern, model) {
+			return true
+		}
+	}
+	return false
 }
 func (f *fixture) quota() (json.RawMessage, error) {
-	b, e := command(30*time.Second, f.env, f.repo, "", "agy", "-p", "/usage", "--model", agyE2EModel, "--output-format", "json")
+	b, e := command(30*time.Second, f.env, f.repo, "", "agy", "-p", "/usage", "--model", f.s.model, "--output-format", "json")
 	if e != nil {
 		return nil, fmt.Errorf("agy /usage: %v", e)
 	}

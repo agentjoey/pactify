@@ -19,7 +19,7 @@ func TestSubAPIReadOnlyAndDefaultStore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, err := store.Create("job-dashboard", sub.Request{Harness: "codex", Brief: "# AJ-689 Jobs", Cwd: t.TempDir()})
+	st, err := store.Create("job-dashboard", sub.Request{Harness: "codex", Brief: "# Example-689 Jobs", Cwd: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestSubAPIReadOnlyAndDefaultStore(t *testing.T) {
 	for _, path := range []string{"/api/sub/jobs", "/api/sub/jobs/" + st.ID, "/api/sub/jobs/" + st.ID + "/logs", "/api/sub/jobs/" + st.ID + "/diff", "/api/sub/jobs/" + st.ID + "/cancel", "/api/sub/jobs/" + st.ID + "/resume", "/api/sub/jobs/" + st.ID + "/apply", "/api/sub/jobs/" + st.ID + "/discard"} {
 		for _, method := range []string{"HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE", "CONNECT"} {
 			want := http.StatusMethodNotAllowed
-			// AJ-704 adds these serve-only POSTs; without JSON they reject 415.
+			// Serve-only POSTs require JSON and reject other content types with 415.
 			if method == "POST" && (strings.HasSuffix(path, "/cancel") || strings.HasSuffix(path, "/resume") || strings.HasSuffix(path, "/apply") || strings.HasSuffix(path, "/discard")) {
 				want = http.StatusUnsupportedMediaType
 			}

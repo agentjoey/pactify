@@ -123,7 +123,7 @@ func TestMinimalConfigFinishUsesRecordedModeForLegacyJobs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Pre-AJ-636 jobs loaded user configuration; never label those minimal.
+	// Legacy jobs loaded user configuration; never label those minimal.
 	st.ConfigMode = ""
 	if err := store.Save(st); err != nil {
 		t.Fatal(err)

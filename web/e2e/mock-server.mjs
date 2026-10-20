@@ -1,4 +1,4 @@
-// Serve only the final embedded build and the AJ-704 harness APIs.
+// Serve only the final embedded build and the harness APIs.
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";

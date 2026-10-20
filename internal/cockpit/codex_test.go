@@ -1045,7 +1045,7 @@ func TestCodexWriteAccessMapsToWorkspaceWrite(t *testing.T) {
 	if got["sandbox"] != "workspace-write" || got["approvalPolicy"] != "never" {
 		t.Fatalf("params = %v", got)
 	}
-	// Owner 2026-10-15: write mode has network access, so delegated work can run a
+	// Write mode has network access so delegated work can run a
 	// project's full test suite (local listeners) and fetch dependencies.
 	want := map[string]any{"sandbox_workspace_write": map[string]any{"network_access": true}}
 	if !reflect.DeepEqual(got["config"], want) {
@@ -1418,8 +1418,8 @@ func TestCodexSessionOptionsReachProcess(t *testing.T) {
 }
 
 // Delegated (Hidden) sessions must not pile up in the user's Codex thread list:
-// Close archives the thread before tearing down the app-server (Phase 0 left 28
-// visible "projects" in the Codex app, one per job worktree).
+// Close archives the thread before tearing down the app-server so each job
+// worktree does not leave a visible project in the Codex app.
 func TestCodexHiddenSessionArchivesOnClose(t *testing.T) {
 	s := newFakeCodexServer(t)
 	var archived []string

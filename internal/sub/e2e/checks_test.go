@@ -248,8 +248,8 @@ func TestHostEnvironmentKeepsUserHomeOnDarwin(t *testing.T) {
 		}
 		return ""
 	}
-	env := hostEnvironment([]string{"HOME=/fixture/home", "PATH=/bin"}, "/Users/me", "/fixture/claude", "darwin")
-	if envValue(env, "HOME") != "/Users/me" || envValue(env, "CLAUDE_CONFIG_DIR") != "/fixture/claude" {
+	env := hostEnvironment([]string{"HOME=/fixture/home", "PATH=/bin"}, "/home/example", "/fixture/claude", "darwin")
+	if envValue(env, "HOME") != "/home/example" || envValue(env, "CLAUDE_CONFIG_DIR") != "/fixture/claude" {
 		t.Fatalf("darwin host env = %v", env)
 	}
 	env = hostEnvironment([]string{"HOME=/fixture/home"}, "/home/me", "/fixture/claude", "linux")

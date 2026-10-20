@@ -115,7 +115,7 @@ func snapshotOpencodeUserData() (func() error, error) {
 	}, nil
 }
 
-// Prefer IDs ending in -free, favoring flash/mini/lite/nano within that set.
+// When no configured default is available, prefer IDs ending in -free, favoring flash/mini/lite/nano.
 // Without free models, keep the original name-based tiers (not a price quote).
 // Preserve live-list order within each tier.
 func opencodeDoctorModel(models []string) string {

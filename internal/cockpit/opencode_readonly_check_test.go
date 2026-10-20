@@ -27,7 +27,7 @@ func TestOpencodeLastAction(t *testing.T) {
 	}
 }
 
-// AJ-734: the doctor reads the persisted 1.x session's rules back. A write
+// the doctor reads the persisted 1.x session's rules back. A write
 // session (bash ask) must not pass as read-only.
 func TestCheckOpencodeReadonlyReadsSessionRules(t *testing.T) {
 	for _, access := range []Access{AccessReadOnly, AccessWrite} {

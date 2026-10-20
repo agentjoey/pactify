@@ -185,12 +185,24 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		add("Installed", true, "CLI version "+r.Version)
 		jobStore := Store{Root: filepath.Join(root, h.Name, "home", "jobs")}
 		network := h.Name == "codex" || h.Name == "opencode" || h.Name == "agy" || h.Name == "kimi"
-		model := "gpt-6-luna"
+		model := ""
 		if h.Name == "agy" {
+			// Agy requires an explicit model to select its supported flash probe profile.
 			model = cockpit.AgyDefaultModel
 		}
 		if h.DoctorModel != "" {
 			model = h.DoctorModel
+		}
+		if h.Name == "opencode" && d.model == "" {
+			router, err := store.LoadRouter()
+			if err != nil {
+				abortProbe("Model", err.Error())
+				reports = append(reports, alignDoctorChecks(r))
+				continue
+			}
+			if router != nil {
+				model = router.Defaults[h.Name].Model
+			}
 		}
 		if d.model != "" {
 			model = d.model
@@ -208,8 +220,8 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		}
 		// Explicit models follow RunJob's backend validation, just like sub run.
 		// In particular, agy can proceed when its catalog pre-check is unavailable.
-		// Other harnesses retain fixed DoctorModel defaults; agy discovery is flash-only.
-		if d.model == "" && (h.DoctorModel == "" || h.Name == "agy") && h.Models != nil {
+		// Native defaults need no catalog lookup; opencode uses its configured default before heuristics.
+		if d.model == "" && h.Name != "codex" && h.Name != "kimi" && (h.DoctorModel == "" && model == "" || h.Name == "agy") && h.Models != nil {
 			opts := cockpit.StartOpts{Env: vendorenv.Strip(h.Kind)}
 			var modelHomes []*managedHome
 			if h.Home != nil {
@@ -237,7 +249,16 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 					return reports, e
 				}
 			}
-			models, e := h.Models(ctx, opts)
+			var models []string
+			var configured string
+			var e error
+			if h.Name == "opencode" && h.ModelDetails != nil {
+				var details cockpit.ModelDiscovery
+				details, e = h.ModelDetails(ctx, opts)
+				models, configured = details.Items, details.DefaultModel
+			} else {
+				models, e = h.Models(ctx, opts)
+			}
 			for _, layout := range modelHomes {
 				if warnings := layout.Cleanup(); len(warnings) > 0 {
 					e = fmt.Errorf("model listing error=%v; %s", e, strings.Join(warnings, "; "))
@@ -258,7 +279,10 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				}
 			}
 			if h.Name == "opencode" {
-				model = opencodeDoctorModel(models)
+				model = configured
+				if model == "" {
+					model = opencodeDoctorModel(models)
+				}
 			}
 		}
 		if h.Name == "agy" && !strings.HasPrefix(model, "gemini-3.8-flash-") {
@@ -300,15 +324,14 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			writeReason += "; " + strings.Join(writable.Warnings, "; ")
 		}
 		add("Write access", goodWrite && wrote && strings.TrimSpace(writable.FinalText) != "" && writable.InputTokens+writable.OutputTokens > 0, writeReason)
-		add("Model", goodWrite && writable.ModelVerified && writable.ModelActual == model, fmt.Sprintf("requested=%s, actual=%s, independently verified=%t", model, writable.ModelActual, writable.ModelVerified))
+		add("Model", goodWrite && writable.ModelVerified && writable.ModelActual != "" && (model == "" || writable.ModelActual == model), fmt.Sprintf("requested=%s, actual=%s, independently verified=%t", model, writable.ModelActual, writable.ModelVerified))
 		results := []Result{writable}
 		ranAll := writeErr == nil && writable.Status == StatusSucceeded
 		if h.NoReadOnly != "" {
 			skip("Read-only access", h.NoReadOnly)
 		} else if h.Name == "opencode" {
 			// Read-only removes the write and shell tools before the model sees
-			// them (2.x since AJ-720, 1.x since AJ-734), so the model cannot
-			// attempt a denied write. Evidence is the session's own permission
+			// them, so it cannot attempt a denied write. Evidence is the session's own permission
 			// policy, read back after the job; no tool-call count is required.
 			readonly, roRepo, roErr := run("read-only", "This is a read-only diagnostic. Do not create probe.txt or seek a workaround. Explain briefly that writing tools are unavailable, then finish.")
 			_, statErr := os.Lstat(filepath.Join(roRepo, "probe.txt"))
@@ -519,7 +542,7 @@ func doctorKimiHome(store Store, id string, result Result, succeeded bool) error
 	return nil
 }
 
-// cheapestDoctorModel keeps doctor probes on the cheapest tier (spec §11) when a
+// cheapestDoctorModel prefers lower-effort names to limit probe cost when a
 // harness lists effort tiers as "<model>-low/-medium/-high"; otherwise it keeps
 // the harness's own first (default) entry. Names stay dynamic, never hardcoded.
 func cheapestDoctorModel(models []string) string {

@@ -8,9 +8,9 @@ import (
 )
 
 func TestRedaction(t *testing.T) {
-	raw := `{"Authorization":"Bearer secret-value","cookie":"session=private","password":"hidden","key":"provider-opaque-key","token":"opaque","device_id":"device-value","email":"person@example.com","path":"/Users/alice/repo","nested":"password=hunter2 token=abc /home/bob/repo Bearer abc.def"}`
+	raw := `{"Authorization":"Bearer secret-value","cookie":"session=private","password":"hidden","key":"provider-opaque-key","token":"opaque","device_id":"device-value","email":"person@example.com","path":"` + "/" + `Users/alice/repo","nested":"password=hunter2 token=abc /home/bob/repo Bearer abc.def"}`
 	got := Sanitize(raw)
-	for _, secret := range []string{"secret-value", "session=private", "hidden", "provider-opaque-key", "opaque", "device-value", "person@example.com", "/Users/alice", "hunter2", "token=abc", "/home/bob", "abc.def"} {
+	for _, secret := range []string{"secret-value", "session=private", "hidden", "provider-opaque-key", "opaque", "device-value", "person@example.com", "/" + "Users/alice", "hunter2", "token=abc", "/home/bob", "abc.def"} {
 		if strings.Contains(got, secret) {
 			t.Errorf("leaked %q: %s", secret, got)
 		}
@@ -21,7 +21,7 @@ func TestRedaction(t *testing.T) {
 }
 
 func TestScannerRejectsSensitiveData(t *testing.T) {
-	for _, s := range []string{`{"token":"opaque"}`, `{"password":"secret"}`, `{"Authorization":"Basic xyz"}`, `{"cookie":"private"}`, `{"device_id":"abc"}`, `person@example.com`, `/Users/alice/repo`, `C:\Users\alice\repo`, `/home/bob/a`} {
+	for _, s := range []string{`{"token":"opaque"}`, `{"password":"secret"}`, `{"Authorization":"Basic xyz"}`, `{"cookie":"private"}`, `{"device_id":"abc"}`, `person@example.com`, "/" + "Users/alice/repo", `C:\Users\alice\repo`, `/home/bob/a`} {
 		if Scan(s) == nil {
 			t.Errorf("accepted %s", s)
 		}

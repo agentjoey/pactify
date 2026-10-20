@@ -60,7 +60,7 @@ func TestRouterSelection(t *testing.T) {
 	if err != nil || got != preferred {
 		t.Fatalf("%+v %v", got, err)
 	}
-	// AJ-740: read-only skips only harnesses that refuse it (kimi), in both
+	// read-only skips only harnesses that refuse it (kimi), in both
 	// the chosen route and the remaining fallback chain.
 	got, remaining, _, err := r.Select([]Route{preferred, {Harness: "kimi"}, {Harness: "opencode", Model: "mini"}, {Harness: "codex"}}, nil, "read-only", now)
 	if err != nil || got != preferred || len(remaining) != 2 || remaining[0].Harness != "opencode" || remaining[1].Harness != "codex" {

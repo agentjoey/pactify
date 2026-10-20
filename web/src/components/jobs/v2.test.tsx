@@ -21,7 +21,7 @@ import App from "../../App";
 
 export const makeJob = (id: string, extra: Partial<Job> = {}): Job => ({
   id,
-  title: `AJ-705 ${id}`,
+  title: `Example-705 ${id}`,
   harness: "codex",
   modelRequested: "model",
   repo: "/repo/pactify",
@@ -159,11 +159,11 @@ it("persists project, status and title search in the URL without splitting chain
     target: { value: "codex" },
   });
   fireEvent.change(screen.getByPlaceholderText("Search jobs"), {
-    target: { value: "AJ-705 a" },
+    target: { value: "Example-705 a" },
   });
   expect(screen.getAllByRole("article")).toHaveLength(1);
   expect(location.hash).toContain("harness=codex");
-  expect(location.hash).toContain("search=AJ-705+a");
+  expect(location.hash).toContain("search=Example-705+a");
 });
 for (const action of ["cancel", "apply", "discard"] as const) {
   it(`${action} renders only server actions, confirms consequences and refreshes after success`, async () => {
@@ -208,7 +208,7 @@ it("resume sends multiline instructions, shows the new id and refreshes", async 
   );
   fireEvent.click(screen.getByRole("button", { name: "Resume" }));
   expect(
-    screen.getByRole("dialog", { name: "Resume AJ-705 a" }),
+    screen.getByRole("dialog", { name: "Resume Example-705 a" }),
   ).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Instructions for the next run"), {
     target: { value: "Fix\nthen test" },
@@ -454,7 +454,7 @@ it("keeps filters when closing a detail and traps focus inside it", async () => 
         ),
       ),
   );
-  history.replaceState(null, "", "/#/jobs/a?harness=codex&search=AJ-705");
+  history.replaceState(null, "", "/#/jobs/a?harness=codex&search=Example-705");
   render(<Jobs source={src} />);
   const dialog = await screen.findByRole("dialog");
   await within(dialog).findByText("Result");
@@ -468,7 +468,7 @@ it("keeps filters when closing a detail and traps focus inside it", async () => 
     window.dispatchEvent(new HashChangeEvent("hashchange"));
   });
   expect(location.hash).toContain("harness=codex");
-  expect(screen.getByPlaceholderText("Search jobs")).toHaveValue("AJ-705");
+  expect(screen.getByPlaceholderText("Search jobs")).toHaveValue("Example-705");
 });
 it("uses activity usage for retrying and advances elapsed time every second", async () => {
   vi.useFakeTimers();
@@ -577,7 +577,7 @@ it("opens a confirmation outside the scrolled detail and Escape closes only that
   await within(detail).findByText("Result");
   fireEvent.click(within(detail).getByRole("button", { name: "Discard" }));
   const confirmation = screen.getByRole("dialog", {
-    name: "Discard AJ-705 a?",
+    name: "Discard Example-705 a?",
   });
   expect(detail).not.toContainElement(confirmation);
   fireEvent.keyDown(
@@ -585,7 +585,7 @@ it("opens a confirmation outside the scrolled detail and Escape closes only that
     { key: "Escape" },
   );
   expect(
-    screen.queryByRole("dialog", { name: "Discard AJ-705 a?" }),
+    screen.queryByRole("dialog", { name: "Discard Example-705 a?" }),
   ).toBeNull();
   expect(
     screen.getByRole("dialog", { name: "Job details" }),

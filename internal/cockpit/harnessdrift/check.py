@@ -145,7 +145,7 @@ def live_check(harness):
             summary('PASS kimi: help and unauthenticated ACP initialize; no session or prompt created.')
         else:
             check_constants(Path(command).resolve().read_bytes())
-            summary('PASS agy: help and stream-json constants from the AJ-711 contract fixture; no inference or new recording.')
+            summary('PASS agy: help and stream-json constants from the Example-711 contract fixture; no inference or new recording.')
 
 
 if __name__ == '__main__':

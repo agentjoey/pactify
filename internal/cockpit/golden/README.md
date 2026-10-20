@@ -22,7 +22,7 @@ to `tokenz`, retaining valid JSON and the original expectation. Both must produc
 an outcome mismatch. `TestGoldenReadOnlyContainsDeniedWrite` requires an actual
 rejected write tool call, rather than a verbal refusal. `TestGoldenFilesSanitized`
 scans every recorded transcript. `testdata/agy-contract.json` is explicitly a
-synthetic AJ-711 contract, not a live recording; this task must not launch agy.
+synthetic stream-event contract, not a live recording; replay does not launch agy.
 
 ## Record explicitly
 
@@ -57,7 +57,7 @@ Rename failure retains the private file and reports its location; do not remove
 the recording root until preservation succeeds. The recorder applies the same source-metadata write-back/conflict-quarantine
 policy to opencode's file link and reports any preservation failure. E2E fixtures
 use a stricter policy: every replaced file link fails loudly and is quarantined
-outside the fixture root for Owner review. Never remove a private
+outside the fixture root for operator review. Never remove a private
 replacement as credential cleanup, and never put refreshed tokens in the repo.
 
 Take metadata-only snapshots of `~/.config/opencode`, `~/.local/share/opencode`,
@@ -101,10 +101,10 @@ PACTIFY_HOME="$(mktemp -d)" go test ./internal/cockpit/... -run 'TestGolden|Test
 If preservation fails, stop recording and interactive sessions before recovery.
 Keep the reported private file and recording root. Fix quarantine ownership,
 0700 directory permissions or same-volume rename availability, then retry. The
-Owner can alternatively rename the retained file into a private persistent
+operator can alternatively rename the retained file into a private persistent
 quarantine on the same volume, or restore it to the correct source by rename
 with the source's original mode after resolving concurrent refreshes. Never
 blindly replace a source that also changed. No credential contents need be read,
 printed or copied. The remaining metadata-check/rename race with interactive agy
-refresh is tracked in docs/backlog.md; exchange syscalls alone do not provide a
+refresh remains possible; exchange syscalls alone do not provide a
 simple portable compare-and-replace contract.

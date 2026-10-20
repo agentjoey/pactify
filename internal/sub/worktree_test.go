@@ -329,7 +329,7 @@ func TestWorktreeRecoverKeepsReviewableChanges(t *testing.T) {
 	}
 }
 
-// AJ-770: on a case-insensitive volume the cwd may be spelled differently
+// on a case-insensitive volume the cwd may be spelled differently
 // from git's root (~/agentworks vs ~/AgentWorks) and still name the same directory.
 func TestWorktreeCwdSpelledInDifferentCase(t *testing.T) {
 	root := repo(t)

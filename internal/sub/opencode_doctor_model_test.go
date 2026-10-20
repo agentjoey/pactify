@@ -16,8 +16,8 @@ func TestOpencodeDoctorModelFreePreference(t *testing.T) {
 		{"other-free-keeps-live-order", []string{"paid/flash", "zen/pro-free", "zen/haiku-free"}, "zen/pro-free"},
 		{"free-in-name", []string{"paid/flash", "zen/model-free-preview"}, "paid/flash"},
 		{"case-insensitive", []string{"paid/flash", "zen/large-free", "ZEN/FLASH-FREE-PREVIEW"}, "zen/large-free"},
-		// IDs supplied by the Owner's host review; no live listing or API call.
-		{"host-list-fragment", []string{"opencode/deepseek-v4-flash", "minimax-coding-plan/MiniMax-M3", "opencode/deepseek-v4.1-flash-free"}, "opencode/deepseek-v4.1-flash-free"},
+		// Representative provider IDs exercise selection without live listing or API calls.
+		{"provider-list-fragment", []string{"opencode/deepseek-v4-flash", "minimax-coding-plan/MiniMax-M3", "opencode/deepseek-v4.1-flash-free"}, "opencode/deepseek-v4.1-flash-free"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := opencodeDoctorModel(tc.models); got != tc.want {

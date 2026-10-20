@@ -28,7 +28,7 @@ Live 使用记录中的 harness、模型、effort、调用、diff、quota、resu
 
 非 loopback 监听（包括 `0.0.0.0`、`::` 和省略主机）必须配置至少 32 字符的 `PACTIFY_SERVE_TOKEN`，Host 仅接受绑定 IP / 主机名加端口或 allowlist 中的代理 Host。任何地址只要设置 token，所有 `/api/` 请求（含读取和 SSE）都须携带 `Authorization: Bearer <token>`，否则返回 401。静态资源仍公开，但受 Host 校验。Dashboard UI 自身不发送该 token；token 模式用于认证后注入 header 的反向代理，代理也须覆盖 SSE 请求。
 
-API 使用 serve 进程的 `PACTIFY_HOME`，与 CLI 一样读取 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。launchd 与交互式 shell 的环境不同，会影响任务目录和 resume 所需配置；shell 中导出的变量不会自动进入服务。worker 不继承 `PACTIFY_ALLOWED_ORIGINS` 或 `PACTIFY_SERVE_TOKEN`。服务在后台回收已结束的 worker。
+API 使用 serve 进程的 `PACTIFY_HOME`，与 CLI 一样读取 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。后台服务与交互式 shell 的环境不同，会影响任务目录和 resume 所需配置；shell 中导出的变量不会自动进入服务。worker 不继承 `PACTIFY_ALLOWED_ORIGINS` 或 `PACTIFY_SERVE_TOKEN`。服务在后台回收已结束的 worker。
 
 ## 本机 sub panel
 
@@ -81,4 +81,4 @@ node scripts/shots-panel.mjs
 
 `build` 与 `build:panel` 分别生成 Git 跟踪的 `internal/serve/dist` 与 `internal/subpanel/dist`；`npm run e2e` 依次构建两份再运行 Playwright。测试与截图脚本使用独立 mock 服务最终 embedded dist，不依赖常驻 daemon。
 
-重建 dist 不会更新 launchd 服务。host 完成验收后需重新编译 embed 二进制（`go build -o pactify ./cmd/pactify`）、在 macOS 上 `codesign --force -s - ./pactify`，再按现有配置替换并重启 serve；见 [部署](deployment.md) 与 [运维](operations.md)。host 还需检查截图和外部认证反向代理的实际访问。
+After rebuilding dist, rebuild the Go binary and restart the local server. For macOS background services, see [operations](operations.md). Check screenshots and the actual authenticated proxy path when applicable.

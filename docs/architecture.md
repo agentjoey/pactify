@@ -1,10 +1,10 @@
 # Pactify — Architecture
 
-> Last updated: **2026-10-18** | Status: **v0.12.0 已发布**；M1 已合入但未发布，v0.13.0 挂起、继续内部自用。历史与未发布变更见 [`CHANGELOG.md`](CHANGELOG.md)。
+> Current release: **v0.13.0**. See [CHANGELOG](CHANGELOG.md).
 
 Pactify is a local harness router. The CLI and Claude Code plugin delegate tasks
 to codex (default), kimi, agy and opencode. Jobs, results and worktrees are managed
-locally. Governance mode was retired in AJ-744; tag `v0.12.0` is the rollback anchor.
+locally.
 
 ## Components
 
@@ -32,12 +32,12 @@ harness and model; job state, structured events, logs and results support status
 inspection, waiting, cancellation and resume. Write jobs can use an isolated
 Git worktree. The host reviews and verifies the diff before explicitly applying
 or discarding it. See [router](router.md), [status](sub-status.md) and
-[harness contracts](specs/harness-subagents.md).
+[doctor](sub-doctor.md).
 
 Harness backends use each CLI's supported transport: codex app-server, ACP or
 streaming CLI sessions, and per-job opencode HTTP/SSE servers. Managed harness
 homes isolate sessions and configuration; explicit user-configuration opt-in and
-read-only access boundaries are documented in the harness contracts.
+read-only access boundaries are documented in the doctor guide.
 
 ## HTTP and local storage
 
@@ -63,5 +63,4 @@ timeout; streaming responses have no overall write timeout. See
 
 Job and router data live under `PACTIFY_HOME` (default `~/.pactify`). No pact
 protocol files, ledger projections, MCP server or agent configuration wiring are
-part of the current product. `.agent/` is this repository's ignored development
-workbench.
+part of the current product.

@@ -20,6 +20,7 @@ func TestOpencodeDoctorDynamicModelAndIsolation(t *testing.T) {
 				t.Fatal("not registered")
 			}
 			h.Version = func(context.Context) (string, error) { return "1.19.0", nil }
+			h.ModelDetails = nil // This test supplies an ID-only discovery fake below.
 			root, _ := managedHarnessHome("opencode")
 			h.Models = func(_ context.Context, o cockpit.StartOpts) ([]string, error) {
 				if o.RepoDir == "" {
@@ -54,6 +55,7 @@ func TestOpencodeDoctorDynamicModelAndIsolation(t *testing.T) {
 					h.Backend = func() cockpit.Backend { return b }
 					h.Verify = nil
 					h.Version = func(context.Context) (string, error) { return "1.19.0", nil }
+					h.ModelDetails = nil // This test supplies an ID-only discovery fake below.
 					sess.script = func(s *fakeSession) {
 						db := filepath.Join(root, "share/opencode/opencode.db")
 						if fault != "missing-db" {

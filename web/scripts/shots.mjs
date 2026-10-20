@@ -125,12 +125,12 @@ try {
       ).toBeEnabled();
       await capture("resume");
       await resume.getByRole("button", { name: "Back", exact: true }).click();
-      const worktree = page.locator("article").filter({ hasText: "AJ-657" });
+      const worktree = page.locator("article").filter({ hasText: "Example-657" });
       await worktree
         .getByRole("button", { name: "Discard", exact: true })
         .click();
       await expect(
-        page.getByRole("dialog", { name: /^Discard AJ-657/ }),
+        page.getByRole("dialog", { name: /^Discard Example-657/ }),
       ).toContainText("permanently delete the worktree");
       await capture("discard-confirm");
     }
@@ -146,7 +146,7 @@ try {
       await capture("panel-jobs");
       await page
         .getByRole("link", {
-          name: "AJ-657 · Shared job summary model",
+          name: "Example-657 · Shared job summary model",
           exact: true,
         })
         .click();

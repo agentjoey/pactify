@@ -4,7 +4,7 @@ import { Jobs } from "./Jobs";
 import App from "../../App";
 
 const job = {
- id: "live", title: "AJ-689 Jobs view", harness: "codex",
+ id: "live", title: "Example-689 Jobs view", harness: "codex",
  modelRequested: "default", repo: "/repo/" + "long-path".repeat(20), cwd: "/repo",
  access: "write", configMode: "minimal", status: "running", duration: "1m",
  createdAt: "2026-10-16T00:00:00Z", inputTokens: 12, outputTokens: 3,

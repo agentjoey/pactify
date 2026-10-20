@@ -41,7 +41,7 @@ func TestReviewACPFinalAfterTool(t *testing.T) {
 	}
 }
 
-// AJ-734: read-only denies bash outright even when the user's config allows
+// read-only denies bash outright even when the user's config allows
 // it, and every command, including formerly allowed ones and the old bypass
 // shapes, ends in deny under the session rules (evaluated last in 1.19).
 func TestReviewReadonlyBashDenied(t *testing.T) {

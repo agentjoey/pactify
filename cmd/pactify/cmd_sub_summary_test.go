@@ -20,7 +20,7 @@ func TestSubStatusSummaryFiltersAndCompatibility(t *testing.T) {
 	for _, id := range []string{"older", "newer"} {
 		store, st := statusFixture(t, id, "codex", now, &sub.Result{Status: sub.StatusFailed, Warnings: []string{"warning"}})
 		st, _ = store.Load(id)
-		st.Request.Brief = "# **AJ-657** `摘要`"
+		st.Request.Brief = "# **Example-657** `摘要`"
 		st.Worktree = &sub.Worktree{Path: "/jobs/" + id + "/wt", Cwd: "/jobs/" + id + "/wt/nested", OriginalRoot: "/repos/" + id, Owner: id}
 		if err := store.Save(st); err != nil {
 			t.Fatal(err)
@@ -40,7 +40,7 @@ func TestSubStatusSummaryFiltersAndCompatibility(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &rows); err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 1 || rows[0]["jobId"] != "newer" || rows[0]["title"] != "AJ-657 摘要" || rows[0]["cwd"] != "/workspace/newer" || rows[0]["runCwd"] != "/jobs/newer/wt/nested" {
+	if len(rows) != 1 || rows[0]["jobId"] != "newer" || rows[0]["title"] != "Example-657 摘要" || rows[0]["cwd"] != "/workspace/newer" || rows[0]["runCwd"] != "/jobs/newer/wt/nested" {
 		t.Fatalf("filtered summary: %s", out.String())
 	}
 	// List cwd retains its historical meaning; runCwd exposes the actual location.
@@ -62,7 +62,7 @@ func TestSubStatusSummaryFiltersAndCompatibility(t *testing.T) {
 		t.Errorf("worktree compatibility: %v", w)
 	}
 	human, code, err := captureStatus(t, nil, false)
-	if code != 0 || err != nil || !strings.Contains(human, "AJ-657 摘要") || !strings.Contains(human, "⚠") {
+	if code != 0 || err != nil || !strings.Contains(human, "Example-657 摘要") || !strings.Contains(human, "⚠") {
 		t.Fatalf("human: %d %v %s", code, err, human)
 	}
 }

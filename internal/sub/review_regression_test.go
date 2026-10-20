@@ -67,7 +67,7 @@ func TestReviewReadonlyLostWorker(t *testing.T) {
 	}
 }
 
-// AJ-734: opencode read-only removes the shell tool, so doctor cannot ask the
+// opencode read-only removes the shell tool, so doctor cannot ask the
 // model to attempt a denied write. PASS rests on the session's own policy
 // (read back after the job) plus an absent write target; one probe only.
 func TestReviewDoctorOpencodeReadonlyPolicy(t *testing.T) {
@@ -102,7 +102,7 @@ func TestReviewDoctorOpencodeReadonlyPolicy(t *testing.T) {
 						os.WriteFile(filepath.Join(st.Request.Cwd, "probe.txt"), []byte("x"), 0600)
 					}
 				}
-				return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: st.Request.Model, ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
+				return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: "native/default", ModelVerified: true, InputTokens: 1, FinalText: "done"}, nil
 			}, readonlyCheck: func(_ context.Context, _ Store, id string, _ Result) error {
 				checked++
 				if id != "read-only" {

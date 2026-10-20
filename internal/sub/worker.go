@@ -27,7 +27,7 @@ const (
 )
 
 // DefaultReadOnlyToolCallLimit bounds runaway read-only jobs. It is sized for
-// real reviews that read a few hundred files; 40 cut off a 60-file read (AJ-718).
+// real reviews that read a few hundred files; 40 cut off a 60-file read.
 const DefaultReadOnlyToolCallLimit = 200
 
 const emptyReplyFollowupPrompt = "You ended without a written answer. Reply now with your result: what you found or changed and which checks you ran. Do not start new work."

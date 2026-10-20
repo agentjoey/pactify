@@ -170,7 +170,7 @@ func (s Store) rememberQuotaSnapshot(jobID, harness string, q cockpit.QuotaObser
 	if err = atomicJSON(path, entries); err != nil {
 		return err
 	}
-	// Prune snapshot entries left by the unreleased AJ-711 implementation.
+	// Prune snapshot entries left by the unreleased implementation.
 	releaseQuota, err := lockx.Acquire(context.Background(), s.quotaPath()+".lock")
 	if err != nil {
 		return err

@@ -32,7 +32,7 @@ button:disabled {
 .mono {
   font-family: var(--font-mono);
 }
-/* ui/Modal entry — 180ms scale+fade per spec §1. The overlay fades, the panel
+/* ui/Modal entry — 180ms scale and fade to make opening state visible. The overlay fades, the panel
    scales up from 96%. Suppressed under reduced-motion (instant, no transform). */
 @media (prefers-reduced-motion: no-preference) {
   .ui-modal-overlay {

@@ -196,6 +196,7 @@ func TestOpencodeCatalogInvalidatesAcrossVersions(t *testing.T) {
 	h.Home = nil
 	h.Version = func(context.Context) (string, error) { return "1.19.0", nil }
 	h.Models = func(context.Context, cockpit.StartOpts) ([]string, error) { return []string{"opencode/v1-only"}, nil }
+	h.ModelDetails = nil // Preserve the synthetic v1 discovery boundary.
 	catalog := newHarnessCatalog()
 	store := Store{Root: filepath.Join(os.Getenv("PACTIFY_HOME"), "jobs")}
 	first := catalog.harness(context.Background(), store, h, HarnessDefault{}, false)

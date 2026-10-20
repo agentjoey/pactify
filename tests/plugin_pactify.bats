@@ -57,9 +57,9 @@ PY
     grep -q '^name: '"$h"'$' "$P/skills/$h/SKILL.md"
     grep -q 'run_in_background' "$P/skills/$h/SKILL.md"
     grep -q 'pactify sub wait' "$P/skills/$h/SKILL.md"
-    # An explicit /<harness> invocation must delegate regardless of task size (Phase 0 smoke, 2026-10-15).
+    # An explicit /<harness> invocation must delegate regardless of task size.
     grep -q 'invoked this skill explicitly' "$P/skills/$h/SKILL.md"
-    # The background wait must outlive the default ~10-minute background limit (Phase 0: 5 of 26 runs).
+    # The background wait must outlive the default ~10-minute background limit so long-running jobs remain collectible.
     grep -q 'timeout: 7200000' "$P/skills/$h/SKILL.md"
     grep -q 'full\*\* test command' "$P/skills/$h/SKILL.md"
   done
@@ -108,7 +108,7 @@ CLI
   [ "$(cat "$PACTIFY_HOOK_CALL")" = "sub --help" ]
 }
 
-@test "kimi skill does not offer read-only (Phase 0 K1)" {
+@test "kimi skill does not offer read-only" {
   grep -q 'not offered for kimi' "$P/skills/kimi/SKILL.md"
   ! grep -q 'run kimi --read-only --wait' "$P/skills/kimi/SKILL.md"
 }
@@ -136,14 +136,14 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "kimi skill labels its experimental status and Phase 0 limitations" {
+@test "kimi skill labels its experimental status and access limitations" {
   run python3 - "$P/skills/kimi/SKILL.md" <<'PY'
 import pathlib, sys
 text = pathlib.Path(sys.argv[1]).read_text()
 frontmatter, body = text.split('---')[1:3]
 description = next(line for line in frontmatter.splitlines() if line.startswith('description:'))
 for part in (description, body):
-    for term in ('experimental', '6/10', 'read-only', 'not offered'):
+    for term in ('experimental', 'results vary by model', 'read-only', 'not offered'):
         assert term in part.lower(), (term, part)
 PY
   [ "$status" -eq 0 ]
@@ -154,7 +154,7 @@ PY
   grep -q '/pactify:delegate' "$P/README.md"
   grep -q 'default.*codex' "$P/README.md"
   grep -q 'kimi.*experimental' "$P/README.md"
-  grep -q '6/10' "$P/README.md"
+  grep -q 'results vary by model' "$P/README.md"
 }
 
 @test "skills isolate large tasks and share the review apply discard resume workflow" {
@@ -209,7 +209,7 @@ for name in ('delegate', 'codex', 'kimi'):
     assert re.search(r'^1\. .+\n2\. .+', example, re.M), name
     for term in ('src/cache/', 'Do not edit existing tests to fit the new behavior', 'cannot infer',
                  '**full** test command', 'Do not spawn subagents or write report files',
-                 'PACTIFY_HOME="$(mktemp -d)" go test ./... -count=1'):
+                 'go test ./...'):
         assert term in brief, (name, term)
 PY
   [ "$status" -eq 0 ]
@@ -263,7 +263,7 @@ text = (root / 'skills/agy/SKILL.md').read_text()
 original = (root / 'skills/kimi/SKILL.md').read_text()
 start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->'
 assert text.split(start)[1].split(end)[0] == original.split(start)[1].split(end)[0]
-for term in ('name: agy', 'experimental', '3/10', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
+for term in ('name: agy', 'experimental', 'results vary by model', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
     assert term in text, term
 agent = (root / 'agents/agy.md').read_text()
 for term in ('model: haiku', 'tools: Bash', 'pactify sub run agy', '--read-only', '--write', '--resume', '--worktree', '--cwd'):
@@ -409,7 +409,7 @@ def shared(text):
     return text.split('<!-- BEGIN SHARED-DELEGATION -->', 1)[1].split('<!-- END SHARED-DELEGATION -->', 1)[0]
 assert shared(skill) == shared(reference)
 for text in (skill, agent):
-    for term in ('experimental', '6/10', 'pactify sub run opencode', '--resume', '--worktree', '--read-only', '--write', 'read-only'):
+    for term in ('experimental', 'results vary by model', 'pactify sub run opencode', '--resume', '--worktree', '--read-only', '--write', 'read-only'):
         assert term in text, (term, text)
 assert 'model: haiku' in agent and 'tools: Bash' in agent
 for path in (root / 'README.md', root.parents[1] / 'README.md', root.parents[1] / 'docs/sub-doctor.md'):
@@ -418,7 +418,7 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "agy read-only restored after AJ-683 with explicit write permission" {
+@test "agy read-only supports explicit write permission" {
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
@@ -436,7 +436,7 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "opencode read-only uses plan and declares its sandbox boundary (AJ-710)" {
+@test "opencode read-only uses plan and declares its sandbox boundary" {
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
@@ -455,7 +455,7 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "agy documents managed hook opt-out and bumps plugin version (AJ-711 review)" {
+@test "agy documents managed hook opt-out and bumps plugin version" {
   run python3 - "$P" <<'PY'
 import json, pathlib, sys
 root = pathlib.Path(sys.argv[1])

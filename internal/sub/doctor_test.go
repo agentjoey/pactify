@@ -56,15 +56,15 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 					if !strings.HasPrefix(s.Root, tempParent+string(os.PathSeparator)) || !strings.HasPrefix(req.Cwd, tempParent+string(os.PathSeparator)) || s.Root == store.Root {
 						t.Fatalf("not isolated: %+v %+v", s, req)
 					}
-					if req.Model == "" || req.Resume != "" {
+					if req.Model != "" || req.Resume != "" {
 						t.Fatalf("request=%+v", req)
 					}
 					if _, err := runGit(req.Cwd, "rev-parse", "HEAD"); err != nil {
 						t.Fatal(err)
 					}
-					r := Result{Status: StatusSucceeded, CLIVersion: "1.2.3", ModelVerified: true, ModelActual: req.Model, FinalText: "done", InputTokens: 10, ToolCalls: 1}
+					r := Result{Status: StatusSucceeded, CLIVersion: "1.2.3", ModelVerified: true, ModelActual: "native/default", FinalText: "done", InputTokens: 10, ToolCalls: 1}
 					if name == "kimi" {
-						// AJ-643 requires independent managed-home evidence as
+						// Require independent managed-home evidence as
 						// well as the synthetic worker result.
 						managed, err := managedKimiHome()
 						if err != nil {
@@ -107,7 +107,7 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 						case "tokens":
 							r.InputTokens = 0
 						case "model":
-							r.ModelActual = "wrong"
+							r.ModelActual = ""
 						case "unverified":
 							r.ModelVerified = false
 						case "version-drift":
@@ -141,7 +141,7 @@ func TestDoctorChecksAndIsolation(t *testing.T) {
 				if len(reports) != 1 || reports[0].Passed() != (fault == "") {
 					t.Fatalf("fault=%s reports=%+v", fault, reports)
 				}
-				wantChecks := 10 // AJ-713 explicitly replaces the old 6/7-row contract.
+				wantChecks := 10 // All harnesses share the ten-check contract.
 				if len(reports[0].Checks) != wantChecks {
 					t.Fatalf("checks=%+v", reports[0].Checks)
 				}
@@ -220,6 +220,9 @@ func TestDoctorUsesRunJobAndConcealsEveryProbe(t *testing.T) {
 						t.Error("worker did not isolate hidden probe")
 					}
 					s.info.Model = o.Model
+					if s.info.Model == "" {
+						s.info.Model = "native/default"
+					}
 					if o.Access == cockpit.AccessWrite {
 						if err := os.WriteFile(filepath.Join(o.RepoDir, "out.txt"), []byte("ok"), 0600); err != nil {
 							t.Error(err)

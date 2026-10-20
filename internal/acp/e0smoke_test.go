@@ -9,7 +9,7 @@ import (
 )
 
 // TestE0AcpSmoke drives the REAL pinned claude ACP bridge to answer the cockpit
-// spec's E0 go/no-go questions. Gated by E0_SMOKE=1 (spawns the bridge, needs
+// transport startup and handshake requirements. Gated by E0_SMOKE=1 (spawns the bridge, needs
 // network + claude Agent SDK auth), so it never runs in CI.
 //
 //	# via the resolved bin (WORKS):

@@ -31,7 +31,7 @@ func TestDoctorReadOnlyProbeRequiresExecutedWriteCommand(t *testing.T) {
 						t.Fatal(err)
 					}
 					req := st.Request
-					r := Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: req.Model, ModelVerified: true, InputTokens: 1, FinalText: "done", ToolCalls: 1}
+					r := Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: "native/default", ModelVerified: true, InputTokens: 1, FinalText: "done", ToolCalls: 1}
 					if req.Access == "write" {
 						for name, content := range map[string]string{"out.txt": "ok", "doctor-network.json": `{"bind":true,"external":true}`} {
 							if err := os.WriteFile(filepath.Join(req.Cwd, name), []byte(content), 0600); err != nil {

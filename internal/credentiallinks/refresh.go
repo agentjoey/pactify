@@ -93,7 +93,7 @@ func restore(path, source string, before Stamp, quarantine string, chmod func(st
 		}
 		// Metadata validation and rename cannot exclude an interactive in-place
 		// agy refresh in this window; managed-home leases cover pactify jobs only.
-		// Track cross-process atomic write-back in docs/backlog.md (AJ-718).
+		// A concurrent in-place refresh can still occur between metadata validation and rename.
 		if err := os.Rename(path, before.Path); err != nil {
 			return "", err
 		}

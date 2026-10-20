@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Spinner } from "./Spinner";
 
-// Button — the sole app-wide button primitive (spec §1 "Primitives", board1).
+// Button is the shared primitive so interaction states remain consistent across the app.
 // variant: primary (role-design bg, dark text) / ghost (transparent, subtle
 // border, text-2) / danger (danger-tinted). size: sm | md. Disabled drops to
 // 40% opacity and removes pointer events. focus-visible shows a 2px role-design

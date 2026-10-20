@@ -1,5 +1,5 @@
 {
-  "provenance": "Synthetic contract from AJ-711 tests and docs/harness-v2/probe-report.md A3; not a new live recording. Live agy goldens are deferred until host evaluation completes.",
+  "provenance": "Synthetic agy stream-event contract for offline replay; not a live recording.",
   "stdin": [{"event":"user","message":{"content":"contract"}}],
   "stdout": [
     {"event":"init","conversation_id":"contract","init":{"model":"gemini-3.8-flash-low"}},

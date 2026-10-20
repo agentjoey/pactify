@@ -14,8 +14,8 @@ Launch command (step 2 below):
     ...complete brief from step 1...
     BRIEF
 
-An explicit alias is supported: `/delegate @cheap <task>` launches
-`pactify sub run @cheap --write --worktree --wait 0s --json` with the complete brief on stdin.
+An explicit alias is supported: `/delegate @alias <task>` launches
+`pactify sub run @alias --write --worktree --wait 0s --json` with the complete brief on stdin.
 Pass the exact alias as one quoted argument. Explicit `--model` / `--effort` override alias values.
 Without an alias, keep the default harness. See [router configuration](../../../../docs/router.md).
 
@@ -27,10 +27,9 @@ When deciding on your own, delegate only large tasks: 3+ files, exploration and 
 Do not delegate tasks that depend on conversation context you cannot turn into a self-contained brief,
 or tasks needing frequent user interaction. Explicit skill invocations still delegate regardless of size;
 harness permission restrictions still apply.
-For delegated documentation or other small, low-risk write tasks, prefer a configured `@cheap`
-alias; use the default codex route for complex code, architecture, security and read-only work.
-Aliases are configured in `$PACTIFY_HOME/router.json`; inspect `pactify sub router --json` before
-assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
+Configured aliases can be used with `/delegate @alias <task>`.
+Inspect `pactify sub router --json` for available aliases and preserve any route
+explicitly chosen by the user.
 
 1. Write a self-contained brief using the five sections below. The callee starts cold and cannot see
    this conversation. Write a short title on the first line; if the user uses an issue tracker,
@@ -41,7 +40,7 @@ assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
    Do not edit existing tests to fit the new behavior unless the brief explicitly says the old behavior
    is wrong; name any such exception in the final reply. Require a failing regression test before each
    behavior change. The acceptance commands must include the project's **full** test command, not just
-   affected packages. For Go tests use `PACTIFY_HOME="$(mktemp -d)"` to isolate pactify state.
+   affected packages.
    Forbid commits and credential access. Optionally add: "Do not spawn subagents or write report files;
    put conclusions and command output in the final reply."
    Use this complete example as a template, replacing its paths, constraints and commands for the project:
@@ -61,7 +60,7 @@ assuming `@cheap` exists. Preserve any route explicitly chosen by the user.
    Do not spawn subagents or write report files; reply with conclusions and command output.
    Acceptance commands:
    go build ./...
-   PACTIFY_HOME="$(mktemp -d)" go test ./... -count=1
+   go test ./...
    ```
 
 2. Start the launch command above from the **main thread** (not a subagent — its background command

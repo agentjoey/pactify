@@ -73,10 +73,10 @@ for (const width of [1440, 390]) {
     await page.getByLabel("Project", { exact: true }).selectOption("");
     await page.getByLabel("Harness", { exact: true }).selectOption("codex");
     await page.getByLabel("Status", { exact: true }).selectOption("progress");
-    await page.getByPlaceholder("Search jobs").fill("AJ-659");
+    await page.getByPlaceholder("Search jobs").fill("Example-659");
     await expect(page.locator("article")).toHaveCount(1);
     await running
-      .getByRole("link", { name: "AJ-659 · Local read-only job panel" })
+      .getByRole("link", { name: "Example-659 · Local read-only job panel" })
       .click();
     const modal = page.getByRole("dialog", { name: "Job details" });
     await expect(
@@ -88,7 +88,7 @@ for (const width of [1440, 390]) {
       .click();
     await expect(
       modal.getByRole("heading", {
-        name: "AJ-659 · Local read-only job panel",
+        name: "Example-659 · Local read-only job panel",
         exact: true,
       }),
     ).toBeVisible();
@@ -112,7 +112,7 @@ for (const width of [1440, 390]) {
     });
     await page.keyboard.press("Escape");
     await expect(modal).toHaveCount(0);
-    await expect(page.getByPlaceholder("Search jobs")).toHaveValue("AJ-659");
+    await expect(page.getByPlaceholder("Search jobs")).toHaveValue("Example-659");
     await navigate(page, "Dashboard", width);
     await expect(
       page.getByRole("img", { name: "Token usage · last 14 days" }),
@@ -270,7 +270,7 @@ for (const action of ["Apply", "Discard"])
     const card = page
       .getByRole("region", { name: "Needs attention", exact: true })
       .locator("article")
-      .filter({ hasText: "AJ-657" });
+      .filter({ hasText: "Example-657" });
     await card.getByRole("button", { name: "Review", exact: true }).click();
     const detail = page.getByRole("dialog", { name: "Job details" });
     await expect(
@@ -279,7 +279,7 @@ for (const action of ["Apply", "Discard"])
     await expect(detail.locator("pre")).toContainText("+func Listen(port int)");
     await detail.getByRole("button", { name: action, exact: true }).click();
     const confirmation = page.getByRole("dialog", {
-      name: new RegExp(`^${action} AJ-657`),
+      name: new RegExp(`^${action} Example-657`),
     });
     await confirmation
       .getByRole("button", { name: `Confirm ${action}`, exact: true })

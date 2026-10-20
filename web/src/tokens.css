@@ -1,6 +1,5 @@
-/* Dashboard v2 design tokens — single source of truth (spec §1, LOCKED).
-   Values are normative; do not improvise. Mockup ref:
-   docs/superpowers/mockups/dashboard-v2/board1-tokens-v2.html (B · Indigo).
+/* Dashboard design tokens keep shared component colors and spacing consistent.
+   The palette uses an indigo accent on a dark background.
 
    Self-hosted fonts: no external network requests at runtime (CSP-friendly).
    Files live in web/public/fonts/ and are served from the app origin. */
@@ -99,7 +98,7 @@
   --motion-layout: 200ms;
   --motion-ease: cubic-bezier(0.25, 1, 0.5, 1);
 
-  /* Legacy shell tokens (ui2-shell spec §1). Added as aliases so the shared
+  /* Legacy shell token aliases. Added as aliases so the shared
      Toolbar + new views can read the handoff names while existing components
      keep using --color-* names. No rename = no broad refactor. */
   --bg: var(--color-bg-page);              /* #0a0e14 */

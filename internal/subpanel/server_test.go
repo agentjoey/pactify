@@ -26,7 +26,7 @@ func fixture(t *testing.T) (*Server, sub.Store) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 12; i++ {
-		st, err := store.Create(fmt.Sprintf("job-%02d", i), sub.Request{Harness: "codex", Brief: "# AJ-659 Local panel", Cwd: t.TempDir()})
+		st, err := store.Create(fmt.Sprintf("job-%02d", i), sub.Request{Harness: "codex", Brief: "# Example-659 Local panel", Cwd: t.TempDir()})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -132,7 +132,7 @@ func TestListDetailAndRecordedDiff(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &d); err != nil {
 		t.Fatal(err)
 	}
-	if d.Brief != "# AJ-659 Local panel" || d.Result.FinalText != "Finished **panel**" || !strings.Contains(d.Markdown, "Final reply") || len(d.Job.ResumedBy) != 1 {
+	if d.Brief != "# Example-659 Local panel" || d.Result.FinalText != "Finished **panel**" || !strings.Contains(d.Markdown, "Final reply") || len(d.Job.ResumedBy) != 1 {
 		t.Fatalf("detail: %s", w.Body.String())
 	}
 	w = request(s, "GET", "/api/jobs/job-00/diff", s.token)

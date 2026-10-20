@@ -1,7 +1,7 @@
 # Pactify harness plugin
 
 Delegate large tasks from Claude Code to the official codex / kimi / agy / opencode CLI installed locally, then review the result summary and workspace changes.
-The default harness is codex; kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only access is not offered).
+The default harness is codex; kimi is experimental: no OS sandbox for writes; results vary by model.
 
 ## Installation
 
@@ -96,7 +96,7 @@ authentication. See [Jobs view](../../docs/jobs-view.md) for deployment prerequi
 1. Read the summary and first-line warnings, then inspect the complete diff and new files. The worktree starts from the original repository HEAD without uncommitted source changes.
    Read `worktreePath` and `baseCommit` from the result, run `git -C <worktreePath> diff <baseCommit> --` and
    `git -C <worktreePath> ls-files --others --exclude-standard`, and open the listed new files.
-2. The main thread personally reruns all Acceptance commands in the worktree, including the full test suite. Use `PACTIFY_HOME="$(mktemp -d)"` for Go tests.
+2. The main thread personally reruns all Acceptance commands in the worktree, including the full test suite.
    The callee's report does not replace host validation.
 3. Where possible, the main thread personally tries the real environment and observes the user flow, log readability, and actual model behavior as relevant.
    Record checks performed and gaps; automated tests do not establish real-environment acceptance.
@@ -169,7 +169,7 @@ The result's Harness line reports `kimi (minimal config)` or `kimi (user config)
 
 ## agy (experimental)
 
-agy remains experimental (3/10 large tasks completed in one attempt in the v2 re-evaluation).
+agy is experimental: no OS sandbox for writes; results vary by model.
 The v2 adapter targets Antigravity CLI 1.4.0, with one persistent stream-json process
 per job. Every call explicitly supplies a model, defaulting to router settings or
 `gemini-3.8-flash-low`. Tokens come from step usage; result totals are cumulative.
@@ -207,7 +207,7 @@ normal minimal configuration, including directory permissions and link integrity
 
 ## Known limitations
 
-- kimi read-only access is not offered in the first release (`sub run kimi --read-only` exits 2): Phase 0 plan mode never converged on read-only tasks. Use codex instead.
+- kimi read-only access is not offered in the first release (`sub run kimi --read-only` exits 2): the harness cannot enforce it. Use codex, agy or opencode instead.
 - A user-config job that fails during startup without returning a session id cannot be archived. Minimal kimi sessions remain separate even in this case.
 - Each delegation has about 20–50 thousand tokens of fixed callee overhead, making it unsuitable for small tasks.
 - Only locally installed, logged-in official CLIs are supported. Follow the summary warnings when independent model verification fails.
@@ -215,7 +215,7 @@ normal minimal configuration, including directory permissions and link integrity
 
 ## opencode (experimental)
 
-opencode is an experimental harness (6/10 large tasks completed in one attempt with deepseek-flash, 4/10 with MiniMax-M3), using
+opencode is experimental: no OS sandbox for writes; results vary by model, using
 1.19.0 v1 HTTP/SSE through a private authenticated `opencode serve` process per job.
 `/opencode` and `/pactify:opencode` use the shared delegation guide and host review workflow.
 Requested models use dynamic `provider/model` ids; omitting the model preserves opencode's default.
@@ -238,7 +238,7 @@ a warning that sessions remain visible. Resume preserves both recorded directori
 and requires the same config mode. `sub doctor opencode` verifies the default path.
 
 Doctor accepts `--model <id>` with exactly one explicit harness, for example
-`pactify sub doctor opencode --model minimax-coding-plan/MiniMax-M3`. The requested
+`pactify sub doctor opencode --model provider/model`. The requested
 model overrides doctor defaults and name heuristics for every probe. It uses the
 same backend validation as `sub run --model`, including agy's fallback to CLI
 validation when its model-list pre-check fails. Invalid or unconfirmed models fail
@@ -253,4 +253,6 @@ the omitted count and a full-list hint: `opencode models`, `agy models`,
 probe returns the same error as its write probe, its reason says
 `same as above (Write access)` instead of repeating the alternatives.
 
-路由别名、quotaGroups、额度回退及 `--worktree-from`：见 [Harness 路由](../../docs/router.md)。
+Configured aliases can be used with `/delegate @alias <task>`; inspect
+`pactify sub router --json` for available names. For quota groups, quota fallback
+and `--worktree-from`, see [routing](../../docs/router.md).

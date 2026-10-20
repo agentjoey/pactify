@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 // Badge — a pill colored by a token name. `color` maps to a --color-<name>
-// CSS var (spec §1 / board1): 15%-alpha background + the full-strength color as
+// CSS variable: 15%-alpha background + the full-strength color as
 // the text. Any role-/semantic token name in tokens.css is valid.
 export type BadgeColor =
   | "role-product"

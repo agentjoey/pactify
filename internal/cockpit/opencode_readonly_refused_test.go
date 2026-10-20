@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// AJ-710 explicitly restores the read-only profile disabled in AJ-683.
+// Read-only sessions must remove shell tools that cannot enforce safe parsing.
 func TestOpencodeReadOnlyPolicy(t *testing.T) {
 	env, err := OpencodeEnv(StartOpts{Access: AccessReadOnly, MinimalConfig: true})
 	if err != nil {
@@ -35,7 +35,7 @@ func TestOpencodeReadOnlyPolicy(t *testing.T) {
 	}
 }
 
-// AJ-734: the session rules deny bash entirely; no command is allowed back.
+// the session rules deny bash entirely; no command is allowed back.
 func TestOpencodeReadOnlySessionRules(t *testing.T) {
 	want := []opencodePermission{{"*", "*", "deny"}, {"read", "*", "allow"}, {"glob", "*", "allow"}, {"grep", "*", "allow"}, {"list", "*", "allow"}, {"bash", "*", "deny"}}
 	if got := opencodeReadonlyPermissions(); !reflect.DeepEqual(got, want) {

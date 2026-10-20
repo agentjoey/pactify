@@ -67,7 +67,7 @@ func TestCollectorFailureAndRateLimits(t *testing.T) {
 
 // codex's thread/tokenUsage/updated carries both the last request ("last") and the
 // thread's running total ("total"); cockpit maps "last" into Usage. A job summary must
-// report the job's cost, i.e. the total (Phase 0 found a 17x undercount from "last").
+// report the running total so multi-request jobs are not undercounted.
 func TestCollectorUsesCodexThreadTotal(t *testing.T) {
 	var c Collector
 	raw := []byte(`{"tokenUsage":{"total":{"inputTokens":1067257,"cachedInputTokens":1014784,"outputTokens":3932},"last":{"inputTokens":62506,"outputTokens":258}}}`)

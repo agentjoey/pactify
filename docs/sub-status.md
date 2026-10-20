@@ -2,7 +2,7 @@
 
 成本汇总使用独立的只读命令 `pactify sub cost`，JSON 与容错约定见 [sub-cost.md](sub-cost.md)。
 
-`internal/sub.JobSummary` 是 `/jobs`（AJ-658）和本地 panel（AJ-659）共用的数据层。
+`internal/sub.JobSummary` 是 `/jobs` 和本地 panel 共用的数据层。
 `Store.Summarize(state, peers, now)` 接收通过 `Store.Load` / `Store.Recover` 原子读取的 State，读取该 job 的可选 result 和日志尾部；`peers` 应包含全部 job 的 State，以生成完整的反向续接关系。该方法不修改 job。
 
 ```sh
@@ -16,7 +16,7 @@ pactify sub status <id> --json                # 单个对象
 
 ## JSON 兼容性
 
-AJ-701：删除 `issue` 字段及编号提取。标题只取 brief 第一条非空行（不再跳过 `Background:` 等段落标签），保留 Markdown 清理与 80 字符上限；使用 issue tracker 时可自行把编号写进标题。
+删除 `issue` 字段及编号提取。标题只取 brief 第一条非空行（不再跳过 `Background:` 等段落标签），保留 Markdown 清理与 80 字符上限；使用 issue tracker 时可自行把编号写进标题。
 
 列表仍为对象数组，保留 `jobId`、`status`、`harness`、`cwd`、`createdAt`、可选 `finishedAt`，新增下面的摘要字段；`id` 与 `jobId` 相同。
 单个 job 仍为对象，保留完整 State 的既有字段（包括 `request`、`updatedAt`、`error`、进程信息、worktree 元数据）和 `duration`，新增摘要字段；它没有 `jobId` 别名。单个对象仍保留历史的零值 `finishedAt` 表示未结束；列表则省略未结束的 `finishedAt`。
@@ -81,7 +81,7 @@ Informational warnings 不产生 `warnings` attention：harness 的 Experimental
 以 `has not been checked; run pactify sub doctor first` 结尾的提示，以及
 `Usage may be incomplete; only recorded usage is included`（`partialUsageWarning`）和以
 `CLI version changed: ` 开头的提示。它们仍保留在 result、`pactify sub result` 输出及 `warningCount` 中。
-其他警告仍需要处理，包括 AJ-748 的空回复警告。
+其他警告仍需要处理，包括空回复警告。
 
 worktree 的 `applied` 是一次成功 apply 的持久化记录（空补丁的成功 apply 也算）。成功 apply 为共享该 worktree 的已有 job 记录标记；新续接 job 的标记重置为 pending。discard 后状态优先显示 discarded。查询不会根据当前仓库内容猜测是否 apply，也不会把目录消失当作 discard。版本升级前未记录的 apply 无法还原，显示 pending。这里只记录元数据，原有 apply 冲突检测、补丁操作和 discard 行为保持原样。
 
@@ -116,7 +116,7 @@ worker 每 100 ms 将后代进程的 PID 和内核启动时间保存到 `state.j
 检查、持久化或终止失败时保留 TMPDIR。周期快照仍有采样间隙，不能保证记录到
 在两次采样间创建并立即脱离整个已知进程树的进程。
 
-## 失败分类与额度记忆（AJ-692 / R1）
+## 失败分类与额度记忆（R1）
 
 `result.json` 与摘要共用 `failureClass`、`quotaResetAt`。分类是新增元数据，
 State 的 `error` 原文和既有退出码保持不变。各 harness 的匹配表放在 cockpit adapter 旁；
@@ -154,7 +154,7 @@ CLI 对应只读接口 `pactify sub quota --json`，返回 QuotaRoute 数组，�
 历史 result 缺少分类时不回写或猜测，继续兼容显示。
 
 
-## 临时错误自动续接（AJ-693 / R2）
+## 临时错误自动续接（R2）
 
 `sub run --retries N` 接受 0–5，默认 2；0 关闭自动续接。Request 中保存
 `retries` 数值，旧请求未记录时采用默认值。仅在一轮失败经 R1 分类为 transient、
@@ -201,7 +201,7 @@ adapter 累计值不重复相加；Kimi prompt usage 在轮间累加。Kimi wire
 漏末段用量，即使续接成功也保守保留 usagePartial。`sub cost` 的 RETRIES 是有过续接的
 job 数，单个 job 续接多次也只计 1；手动 `--resume` 产生新 job，不计自动续接。
 
-## 空回复补问（AJ-748）
+## 空回复补问
 
 所有 harness（codex、kimi、agy、opencode）正常结束一轮、且最终文本经 `strings.TrimSpace`
 仍为空时，worker 在同一 live session 内恰好补问一次：
@@ -236,14 +236,14 @@ agy 正常空回复不再生成 `empty_answer` 失败；无内容的 `print_time
 agy 独立的 `CompletionFollowups`（默认 2 次，等待运行中的命令并报告实际结果）保持原行为，
 与 worker 的这一次空回复补问分开计数。
 
-## 结果信封的沙箱字段（AJ-710）
+## 结果信封的沙箱字段
 
 `result.json` 和 `pactify sub result --json` 总是包含布尔字段 `sandboxed`：codex 为 true，其他 harness 为 false。
 它声明 OS 沙箱能力，与请求的 access 独立。opencode 只读依赖 plan、permission 拒绝和最终 diff 检查，
 仓库外的副作用没有 OS 级限制。ACP 的累计终稿随终态事件的 `text` / `final` 发布，事件背压不会丢文本或工具计数。
 
 
-## Live 事件流（AJ-706）
+## Live 事件流
 
 Dashboard 的 `GET /api/sub/jobs/{id}/events` 与本地只读 panel 的
 `GET /api/jobs/{id}/events` 复用 `Store.Logs` 的读取、跟随和取消逻辑。

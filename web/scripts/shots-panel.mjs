@@ -26,13 +26,13 @@ try {
       page.on("pageerror", (e) => errors.push(e.message));
       await page.goto(baseURL);
       await page
-        .getByRole("link", { name: "AJ-659 · Local read-only job panel" })
+        .getByRole("link", { name: "Example-659 · Local read-only job panel" })
         .waitFor();
       await page.evaluate(() => document.fonts.ready);
       for (const view of ["list", "detail"]) {
         if (view === "detail") {
           await page
-            .getByRole("link", { name: "AJ-659 · Local read-only job panel" })
+            .getByRole("link", { name: "Example-659 · Local read-only job panel" })
             .click();
           await page.getByRole("tab", {name: "Logs", exact: true}).click();
           await page.getByText("Finished", { exact: true }).waitFor();

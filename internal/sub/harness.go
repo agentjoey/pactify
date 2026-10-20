@@ -91,7 +91,7 @@ var registry = map[string]Harness{
 	"agy": {
 		ModelIncludesEffort: true,
 		TransientRetry:      true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: AgyVersion,
-		Experimental: "agy is an experimental harness (large tasks completed in one attempt 3/10; v2 read-only uses plan mode and a fail-closed baseline)", MinimalConfig: true,
+		Experimental: "agy is experimental: no OS sandbox for writes; results vary by model", MinimalConfig: true,
 		Home:   &harnessHome{Env: "HOME", Source: os.UserHomeDir, Managed: managedAgyHome, Layout: agyHome, Doctor: doctorAgyHome, BeforeDoctor: snapshotAgyUserIndex},
 		Models: cockpit.AgyModels, EffortValues: []string{"low", "medium", "high", "xhigh", "max"},
 		// Default jobs hide sessions through the managed HOME. User config explicitly
@@ -106,8 +106,8 @@ var registry = map[string]Harness{
 	"opencode": {
 		TransientRetry: true, Name: "opencode", Kind: "opencode", Backend: cockpit.NewOpencodeBackend,
 		Version: cliVersion("opencode", opencodeVendorStrip()...), Supported: opencodeSupported,
-		Experimental: "opencode is an experimental harness (large tasks completed in one attempt 6/10 with deepseek-flash, 4/10 with MiniMax-M3)", MinimalConfig: true,
-		Home: opencodeHomes(), Models: cockpit.OpencodeModels,
+		Experimental: "opencode is experimental: no OS sandbox for writes; results vary by model", MinimalConfig: true,
+		Home: opencodeHomes(), Models: cockpit.OpencodeModels, ModelDetails: cockpit.OpencodeModelDetails,
 		Verify: func(_ context.Context, v VerificationInput) Verification {
 			if v.Info.Model == "" {
 				return Verification{UsagePartial: true, Warning: "Opencode did not report an assistant model; model could not be verified"}
@@ -120,8 +120,7 @@ var registry = map[string]Harness{
 	},
 
 	"codex": {
-		DoctorModel: "gpt-6-luna",
-		Models:      cockpit.CodexModels, ModelDetails: cockpit.CodexModelDetails,
+		Models: cockpit.CodexModels, ModelDetails: cockpit.CodexModelDetails,
 		TransientRetry: true, Name: "codex", Kind: "codex-cli", Backend: cockpit.NewCodexBackend, Version: cliVersion("codex"),
 		HidesItself:   true,
 		MinimalConfig: true,
@@ -132,10 +131,10 @@ var registry = map[string]Harness{
 	"kimi": {
 		NoReadOnly:         "kimi does not offer read-only access: it cannot enforce it. Use codex, opencode or agy with --read-only.",
 		Home:               &harnessHome{Env: "KIMI_CODE_HOME", Source: kimiHomeDir, Managed: managedKimiHome, Layout: kimiHome, Doctor: doctorKimiHome},
-		LocalUsageBaseline: cockpit.KimiWireOffset, LocalUsageBaselines: cockpit.KimiWireOffsets, DoctorModel: "kimi-code/kimi-for-coding",
+		LocalUsageBaseline: cockpit.KimiWireOffset, LocalUsageBaselines: cockpit.KimiWireOffsets,
 		Models: kimiModels, ModelDetails: kimiModelDetails,
 		TransientRetry: true, Name: "kimi", Kind: "kimi-cli", Backend: func() cockpit.Backend { return cockpit.NewACPBackend("kimi-cli") }, Version: cliVersion("kimi"),
-		Experimental:  "kimi is an experimental harness (Phase 0: large tasks completed in one attempt 6/10; read-only access is not offered)",
+		Experimental:  "kimi is experimental: no OS sandbox for writes; results vary by model",
 		MinimalConfig: true,
 		Conceal:       concealKimi,
 		Verify:        verifyKimiUsage,
@@ -149,7 +148,7 @@ func (h Harness) configMode(withUserConfig bool) string {
 	return "user"
 }
 
-// EffectiveConfigMode treats records from before AJ-636 as user config.
+// EffectiveConfigMode treats legacy records without a config mode as user config.
 func (s State) EffectiveConfigMode() string {
 	if s.ConfigMode == "" {
 		return "user"
@@ -260,7 +259,7 @@ func opencodeSupported(version string) error {
 
 // The opt-in fixture exercises the detached CLI lifecycle without an installed agent.
 func fakeHarness() Harness {
-	return Harness{Name: "fake", HidesItself: true, Kind: "codex-cli", Backend: func() cockpit.Backend { return fixtureBackend{} }, Version: func(context.Context) (string, error) { return "test", nil }, Verify: func(_ context.Context, v VerificationInput) Verification {
+	return Harness{Name: "fake", DoctorModel: "fixture-default", HidesItself: true, Kind: "codex-cli", Backend: func() cockpit.Backend { return fixtureBackend{} }, Version: func(context.Context) (string, error) { return "test", nil }, Verify: func(_ context.Context, v VerificationInput) Verification {
 		return Verification{Model: v.Info.Model, Verified: v.Info.Model != ""}
 	}}
 }

@@ -46,14 +46,35 @@ func OpencodeEnv(opts StartOpts) ([]string, error) {
 
 // OpencodeModels discovers public model IDs over v1 without submitting a prompt.
 func OpencodeModels(ctx context.Context, opts StartOpts) ([]string, error) {
+	d, err := OpencodeModelDetails(ctx, opts)
+	return d.Items, err
+}
+
+func OpencodeModelDetails(ctx context.Context, opts StartOpts) (ModelDiscovery, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	server, err := startOpencodeServer(ctx, opts)
 	if err != nil {
-		return nil, err
+		return ModelDiscovery{}, err
 	}
 	defer server.close()
-	return server.models(ctx)
+	models, err := server.models(ctx)
+	if err != nil {
+		return ModelDiscovery{}, err
+	}
+	d := ModelDiscovery{Items: models}
+	var config struct {
+		Model string `json:"model"`
+	}
+	if err := server.call(ctx, "GET", "/config", nil, &config); err == nil {
+		for _, model := range models {
+			if model == config.Model {
+				d.DefaultModel = model
+				break
+			}
+		}
+	}
+	return d, nil
 }
 
 func opencodeFailure(message string, raw json.RawMessage) Failure {

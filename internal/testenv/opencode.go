@@ -107,6 +107,9 @@ func OpencodeServePeer(t *testing.T) {
 					return
 				}
 			}
+		case "GET /config":
+			model := os.Getenv("COCKPIT_OPENCODE_DEFAULT_MODEL")
+			json.NewEncoder(w).Encode(map[string]string{"model": model})
 		case "GET /config/providers":
 			fmt.Fprint(w, `{"providers":[{"id":"opencode","models":{"test-free":{"id":"test-free","cost":{"input":0}},"paid":{"id":"paid","cost":{"input":1}}}},{"id":"minimax-coding-plan","models":{"MiniMax-M3":{"id":"MiniMax-M3","cost":{"input":0}}}}],"default":{"opencode":"paid"}}`)
 		case "POST /session", "PATCH /session/sid":

@@ -35,3 +35,6 @@ docs/superpowers/
 docs/decisions/
 web/dist/
 .understand-anything/
+
+# Private Claude Code instructions
+CLAUDE.local.md

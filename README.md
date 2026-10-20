@@ -5,8 +5,7 @@ kimi, agy and opencode, and records jobs, logs and results locally. The Claude
 Code plugin provides slash commands; the Go CLI manages the same jobs.
 
 The latest published release is **v0.13.0**, the first harness router release.
-The pact protocol, ledger, MCP server and agent wiring were retired in AJ-744;
-tag `v0.12.0` remains the rollback anchor. See [CHANGELOG](docs/CHANGELOG.md).
+See [CHANGELOG](docs/CHANGELOG.md).
 
 ## Install
 
@@ -57,7 +56,7 @@ codex is the default; kimi, agy and opencode are experimental. kimi has no
 read-only mode. `agy --read-only` uses plan mode and managed hooks. opencode uses
 a per-job `opencode serve`; its read-only mode denies shell/edit tools, reports
 `sandboxed=false`, and fails with `readonly_violation` if repository files change.
-See [harness contracts](docs/specs/harness-subagents.md) for access boundaries.
+Experimental harnesses have no OS sandbox for writes; results vary by model.
 
 ## Dashboard
 

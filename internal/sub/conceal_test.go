@@ -14,7 +14,7 @@ import (
 // Contract: every harness pactify can delegate to must keep its sessions out of the
 // user's own session lists — either the backend hides them itself (codex archives
 // the thread on Close) or the harness provides Conceal. A new harness without a
-// strategy fails here instead of littering the user's apps (Owner, 2026-10-15).
+// strategy fails here because delegated sessions must stay out of the user's session lists.
 func TestEveryHarnessHidesItsSessions(t *testing.T) {
 	for _, name := range Names() {
 		h, _ := Lookup(name)

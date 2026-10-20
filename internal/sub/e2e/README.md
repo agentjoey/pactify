@@ -1,4 +1,4 @@
-# Live harness CLI integration tests (AJ-718)
+# Live harness CLI integration tests
 
 These tests launch real models and may consume subscription quota. They are
 excluded from ordinary builds/tests. Pure evidence and metadata helpers live in untagged `_test.go` files and have
@@ -13,7 +13,7 @@ export TMPDIR=/private/tmp # or another writable temporary directory
 PACTIFY_HOME="$(mktemp -d)" \
 PACTIFY_E2E_HARNESS=codex \
 PACTIFY_E2E_HOST=1 \
-PACTIFY_E2E_REPORT="$TMPDIR/aj718-codex.json" \
+PACTIFY_E2E_REPORT="$TMPDIR/harness-codex.json" \
 go test -tags harness_e2e ./internal/sub/e2e -run '^TestHarnessE2E$' \
   -count=1 -v -timeout 90m
 ```
@@ -38,20 +38,21 @@ Environment variables:
 | --- | --- |
 | `PACTIFY_E2E_HARNESS` | Required: codex, opencode, agy or kimi |
 | `PACTIFY_E2E_MODEL` | Optional allowed model override |
+| `PACTIFY_E2E_ALLOWED_MODELS` | Optional JSON object mapping harness names to model glob arrays; replaces only the supplied harness policies |
+| `PACTIFY_E2E_DENIED_MODELS` | Optional comma-separated glob denylist; an explicit empty value disables it |
 | `PACTIFY_E2E_SCENARIOS` | Optional comma-separated scenario names; default all |
 | `PACTIFY_E2E_HOST=1` | Include `host_path`; otherwise it is omitted, never mislabeled N/A |
 | `PACTIFY_E2E_REPORT` | Optional JSON file to replace with this harness's summary |
 
-Scenario names, in AJ-718 numbering: `write_worktree`, `readonly_denied`,
+Scenario names, in Example-718 numbering: `write_worktree`, `readonly_denied`,
 `readonly_long`, `resume`, `cancel`, `long_tool`, `large_output`, `parallel`,
 `model`, `failure_surface`, `records`, `instructions`, `user_dirs_clean`,
 `host_path`. Metadata is captured before the entire run and checked after the
 host probe, so `user_dirs_clean` executes last. Unknown scenario names fail.
 
-Codex and kimi use their subscription defaults; explicit kimi overrides must
-stay under `kimi-code/*`. Agy is restricted to the
-`gemini-3.8-flash` tiers (`-low` by default, `-medium`, `-high`); agy 1.4.3 no longer
-accepts the bare name. Opencode 1.x launches a private `opencode serve` and reads the live v1
+Codex and kimi use their native defaults; the default allowlist keeps kimi
+overrides under `kimi-code/*` and agy on the `gemini-3.8-flash-*` tiers (see the
+model policy section). Opencode 1.x launches a private `opencode serve` and reads the live v1
 `/config/providers` catalog without a prompt (the sole upstream metadata HTTP
 request outside the pactify CLI), selects an `opencode/*-free` model (preferring flash), and validates
 explicit overrides against that catalog: only `opencode/*-free` or
@@ -91,8 +92,7 @@ Before write-back, the private
 credential file is chmod'd to the source's original permissions; chmod failure
 quarantines it and emits a warning. Changed source metadata also quarantines it.
 Metadata validation and rename cannot exclude an interactive agy in-place
-refresh between the two operations; this remaining window is tracked in
-`docs/backlog.md`. Inner fixture-store quarantines are moved as whole directories
+refresh between the two operations; a concurrent refresh can still occur in this window. Inner fixture-store quarantines are moved as whole directories
 to the outer quarantine before fixture deletion; a failed move retains the fixture.
 Agy's `/usage` is a built-in, non-billable command, captured before/after all scenarios. Gemini
 weekly quota below 20%, or an unavailable/unrecognized safety snapshot, prevents
@@ -112,7 +112,7 @@ capability exemptions. The unchanged CLI read-only 40-tool-call cap can make
 `readonly_long` fail; this test deliberately requires 60 separate invocations.
 
 Failures log job IDs, selected status fields and `sub logs --tail 40`, sanitized
-with the existing AJ-713 sanitizer before output/persistence. Full job logs are
+with the existing Example-713 sanitizer before output/persistence. Full job logs are
 only in temporary job storage and are removed on normal completion. Reports do
 not preserve credentials or raw user configuration. Metadata snapshots use
 Lstat/WalkDir without following links and compare inode, mode, size, mtime and
@@ -132,7 +132,7 @@ worktree columns. Missing usage must be partial, rather than a fabricated known
 zero. `truncated` describes final-text truncation, not every harness's own tool
 output clipping. The large-output row also reports native boolean truncation
 flags observed in tool records and requires a result warning when one is present;
-absence of a flag is not proof of complete upstream output. Opencode read-only uses the existing AJ-713 diagnostic plan
+absence of a flag is not proof of complete upstream output. Opencode read-only uses the existing Example-713 diagnostic plan
 prompt override to elicit actual denied tools without changing permissions.
 Agy's instruction probe supplies both AGENTS.md and GEMINI.md and says so.
 
@@ -165,7 +165,7 @@ job may remain blocked on every subsequent prepare. Stop pactify jobs and
 interactive sessions for that harness first. Do not delete the retained file or
 its fixture. Resolve directory ownership/0700 permissions and same-volume rename
 availability, then retry; prepare will safely re-evaluate source metadata. If
-manual recovery is needed, the Owner must choose between restoring the retained
+manual recovery is needed, the operator must choose between restoring the retained
 file to the correct login source by rename (preserving the original source mode)
 or renaming it to an owned 0700 persistent quarantine on the retained file's
 volume. Do not blindly overwrite a source that also refreshed. If neither is
@@ -197,6 +197,36 @@ go test -tags harness_e2e ./internal/sub/e2e -run '^TestHarnessE2E$' \
 Offline tagged fixture checks (no model calls):
 
 ```sh
-PACTIFY_HOME="$(mktemp -d /private/tmp/aj720.XXXXXX)" \
+PACTIFY_HOME="$(mktemp -d /private/tmp/pactify-e2e.XXXXXX)" \
 go test -tags harness_e2e ./internal/sub/e2e -run '^TestOpencode2' -count=1
 ```
+
+## Live-test model policy
+
+These defaults preserve existing live-run selection and apply only to this suite:
+
+```json
+{
+  "codex": ["*"],
+  "opencode": ["opencode/*-free", "minimax-coding-plan/MiniMax-M3"],
+  "agy": ["gemini-3.8-flash-*"],
+  "kimi": ["kimi-code/*"]
+}
+```
+
+Allowlist matching is case-sensitive, denylist matching is case-insensitive,
+and `*` spans provider separators. The default
+`PACTIFY_E2E_DENIED_MODELS` is `*deepseek-v4-pro*`; deny rules take precedence.
+Malformed allowlist JSON fails closed. Example:
+
+```sh
+export PACTIFY_E2E_ALLOWED_MODELS='{"opencode":["provider/model-a","provider/model-b"]}'
+export PACTIFY_E2E_MODEL=provider/model-a
+```
+
+Opencode overrides must still be present in live discovery. Without an override,
+opencode keeps its sorted free-model selection (preferring flash); when a custom
+allowlist is supplied, eligible listed models can also be selected automatically.
+Codex and kimi use native defaults unless overridden. Agy's default is
+`gemini-3.8-flash-low` (agy 1.4.3 requires a tier suffix); set `PACTIFY_E2E_MODEL` when using a custom agy policy. The
+non-billable agy usage snapshot uses that selected model too.

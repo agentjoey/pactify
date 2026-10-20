@@ -73,7 +73,7 @@ func TestSubStatusListJSONContract(t *testing.T) {
 			t.Errorf("missing %s: %s", key, out)
 		}
 	}
-	// AJ-657 adds summary fields; the original keys above remain required.
+	// Summary fields are additive; the original keys above remain required.
 	if _, ok := rows[0]["finishedAt"]; ok {
 		t.Errorf("unfinished job has finishedAt: %s", out)
 	}

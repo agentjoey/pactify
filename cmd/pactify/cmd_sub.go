@@ -179,15 +179,16 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if err != nil {
 		return subRouterError(err)
 	}
-	route, err := router.Resolve(name)
-	if err != nil {
-		return 2, err
-	}
+	var modelOverride, effortOverride *string
 	if model != "" || c.Flags().Changed("model") {
-		route.Model = model
+		modelOverride = &model
 	}
 	if effort != "" || c.Flags().Changed("effort") {
-		route.Effort = effort
+		effortOverride = &effort
+	}
+	route, err := router.ResolveWithOverrides(name, modelOverride, effortOverride)
+	if err != nil {
+		return 2, err
 	}
 	name, model, effort = route.Harness, route.Model, route.Effort
 	h, ok := sub.Lookup(name)

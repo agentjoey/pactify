@@ -38,6 +38,8 @@ type managedHome struct {
 	Mirror             bool
 	Exclude            []string
 	Remove             []string
+	// Directories are ordered private directories, never links to user state.
+	Directories []string
 }
 
 type harnessHome struct {
@@ -187,6 +189,39 @@ func (m *managedHome) openRoot() (*os.Root, error) {
 
 func (m *managedHome) Prepare(ctx context.Context) error { return m.prepare(ctx, false) }
 
+func (m *managedHome) prepareDirectories() error {
+	if err := os.MkdirAll(m.Home, 0700); err != nil {
+		return err
+	}
+	root, err := m.openRoot()
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	if err := root.Chmod(".", 0700); err != nil {
+		return err
+	}
+	for _, name := range m.Directories {
+		if _, err := m.path(name); err != nil {
+			return err
+		}
+		info, err := root.Lstat(name)
+		if os.IsNotExist(err) {
+			if err = root.Mkdir(name, 0700); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		} else if !info.IsDir() {
+			return fmt.Errorf("%s private path is not a real directory: %s", m.Name, name)
+		}
+		if err = root.Chmod(name, 0700); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Persist metadata across processes and shared leases; never store file contents.
 func (m *managedHome) loadSources() error {
 	m.sources = map[string]credentiallinks.Stamp{}
@@ -277,6 +312,13 @@ func (m *managedHome) prepare(ctx context.Context, retain bool) (prepareErr erro
 	}()
 	if err = m.guard(); err != nil {
 		return err
+	}
+	// agy falls back to the user's appDataDir when these directories are absent.
+	// Prepare them even when login validation below fails.
+	if len(m.Directories) > 0 {
+		if err = m.prepareDirectories(); err != nil {
+			return err
+		}
 	}
 	if err = m.loadSources(); err != nil {
 		return err
@@ -434,6 +476,16 @@ func (m *managedHome) Check() error {
 	}
 	if !info.IsDir() || info.Mode().Perm() != 0700 {
 		return fmt.Errorf("%s managed home must be a 0700 directory", m.Name)
+	}
+	for _, name := range m.Directories {
+		path, err := m.path(name)
+		if err != nil {
+			return err
+		}
+		info, err := os.Lstat(path)
+		if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
+			return fmt.Errorf("%s private path must be a real 0700 directory: %s", m.Name, name)
+		}
 	}
 	links, err := m.links()
 	if err != nil {

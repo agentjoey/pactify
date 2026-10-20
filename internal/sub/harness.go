@@ -22,12 +22,14 @@ type Harness struct {
 	// Opencode2 identifies the backend chosen by ForVersion; callers must not parse versions again.
 	Opencode2 bool
 	// EffortValues is a closed, static constraint when the harness defines one.
-	EffortValues   []string
-	TransientRetry bool // Prompt can send another turn on the same session.
-	Name           string
-	Kind           string
-	Backend        func() cockpit.Backend
-	Version        func(context.Context) (string, error)
+	EffortValues []string
+	// ModelIncludesEffort means an explicit model must not inherit default effort.
+	ModelIncludesEffort bool
+	TransientRetry      bool // Prompt can send another turn on the same session.
+	Name                string
+	Kind                string
+	Backend             func() cockpit.Backend
+	Version             func(context.Context) (string, error)
 	// Supported rejects installed CLI versions whose contract the adapter
 	// does not drive, before any harness process is started.
 	Supported func(version string) error
@@ -87,7 +89,8 @@ type ConcealContext struct {
 
 var registry = map[string]Harness{
 	"agy": {
-		TransientRetry: true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: AgyVersion,
+		ModelIncludesEffort: true,
+		TransientRetry:      true, Name: "agy", Kind: "antigravity", Backend: cockpit.NewAgyBackend, Version: AgyVersion,
 		Experimental: "agy is an experimental harness (large tasks completed in one attempt 3/10; v2 read-only uses plan mode and a fail-closed baseline)", MinimalConfig: true,
 		Home:   &harnessHome{Env: "HOME", Source: os.UserHomeDir, Managed: managedAgyHome, Layout: agyHome, Doctor: doctorAgyHome, BeforeDoctor: snapshotAgyUserIndex},
 		Models: cockpit.AgyModels, EffortValues: []string{"low", "medium", "high", "xhigh", "max"},
@@ -212,6 +215,12 @@ func cliVersion(bin string, env ...string) func(context.Context) (string, error)
 				return "", err
 			}
 			defer os.RemoveAll(home)
+			if bin == "agy" {
+				layout := &managedHome{Name: "agy", Home: home, Directories: agyPrivateDirs}
+				if err = layout.prepareDirectories(); err != nil {
+					return "", err
+				}
+			}
 			cmd.Env = append(os.Environ(), env...)
 			cmd.Env = append(cmd.Env, "HOME="+home)
 			if bin == "opencode" {

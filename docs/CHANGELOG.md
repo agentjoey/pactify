@@ -8,6 +8,14 @@
 
 ---
 
+## Unreleased — AJ-794 · four fixes from the harness promotion run
+
+- **agy unknown model** is now classified as `model` (the error wraps `ErrModelUnavailable`), so users see a model failure instead of `other`.
+- **agy private home** always contains real 0700 `.gemini` and `.gemini/antigravity-cli` directories before agy starts. Without them, agy 1.4.3 falls back to the real `~/.gemini/antigravity-cli` when the user is not logged in.
+- **Explicit model, default effort**: for harnesses whose model names carry the effort tier (agy), an explicit `--model` or alias model no longer inherits `defaults[harness].effort`; see `docs/router.md`.
+- **Commits and branches in worktrees**: when a job ends, pactify warns if the worktree HEAD moved off the base commit or new local branches appeared while the job ran. It never resets HEAD or deletes branches.
+- **e2e suite**: agy 1.4.3 requires a tier suffix; the suite now defaults to `gemini-3.8-flash-low`.
+
 ## Unreleased — AJ-790 · serve checks Host and exact write origins
 
 - **Why**: `pactify serve` accepted any Host header, so a DNS-rebinding page could read job briefs, logs and diffs, and it accepted writes from every localhost port, so any local dev page could change the router or resume a job with an arbitrary brief.

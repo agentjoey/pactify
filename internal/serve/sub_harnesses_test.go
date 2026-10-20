@@ -4,10 +4,44 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/agentjoey/pactify/internal/sub"
+	"github.com/agentjoey/pactify/internal/testenv"
 )
+
+func TestOpencodeServePeer(t *testing.T) { testenv.OpencodeServePeer(t) }
+
+func TestHarnessesOpencode1EffortChoices(t *testing.T) {
+	testenv.InstallOpencodeServe(t)
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	bin, err := exec.LookPath("opencode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Exclude installed harnesses; discovery uses only synthetic homes and peers.
+	t.Setenv("PATH", filepath.Dir(bin))
+	h := serveHandler(t, New(), "127.0.0.1:7777")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "http://127.0.0.1:7777/api/sub/harnesses?refresh=1", nil))
+	var body struct{ Harnesses []sub.HarnessInfo }
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &body) != nil {
+		t.Fatalf("%d %s", w.Code, w.Body.String())
+	}
+	for _, row := range body.Harnesses {
+		if row.Name == "opencode" {
+			if row.Models.Error != "" || !reflect.DeepEqual(row.Efforts, []string{"high", "low", "max"}) {
+				t.Fatalf("Settings API lost opencode 1.x variants: %+v", row)
+			}
+			return
+		}
+	}
+	t.Fatal("missing opencode row")
+}
 
 func TestServeHarnesses(t *testing.T) {
 	home := t.TempDir()

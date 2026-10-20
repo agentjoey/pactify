@@ -243,25 +243,40 @@ func (s *opencodeServer) call(ctx context.Context, method, path string, body, ou
 	}
 	return nil
 }
-func (s *opencodeServer) models(ctx context.Context) ([]string, error) {
+func (s *opencodeServer) modelDetails(ctx context.Context) (ModelDiscovery, error) {
 	var catalog struct {
 		Providers []struct {
-			ID     string                     `json:"id"`
-			Models map[string]json.RawMessage `json:"models"`
+			ID     string `json:"id"`
+			Models map[string]struct {
+				Variants map[string]json.RawMessage `json:"variants"`
+			} `json:"models"`
 		} `json:"providers"`
 	}
 	if err := s.call(ctx, "GET", "/config/providers", nil, &catalog); err != nil {
-		return nil, err
+		return ModelDiscovery{}, err
 	}
-	models := []string{}
+	d := ModelDiscovery{Items: []string{}, ModelEfforts: map[string][]string{}}
+	efforts := map[string]bool{}
 	for _, provider := range catalog.Providers {
-		for id := range provider.Models {
-			models = append(models, provider.ID+"/"+id)
+		for id, model := range provider.Models {
+			key := provider.ID + "/" + id
+			d.Items = append(d.Items, key)
+			variants := []string{}
+			for variant := range model.Variants {
+				variants = append(variants, variant)
+				efforts[variant] = true
+			}
+			sort.Strings(variants)
+			d.ModelEfforts[key] = variants
 		}
 	}
-	sort.Strings(models)
-	if len(models) == 0 {
-		return nil, fmt.Errorf("opencode returned no models")
+	for effort := range efforts {
+		d.Efforts = append(d.Efforts, effort)
 	}
-	return models, nil
+	sort.Strings(d.Items)
+	sort.Strings(d.Efforts)
+	if len(d.Items) == 0 {
+		return d, fmt.Errorf("opencode returned no models")
+	}
+	return d, nil
 }

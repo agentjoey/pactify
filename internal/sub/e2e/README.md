@@ -6,7 +6,9 @@ ordinary tests that use synthetic records and fake executables only. Run from a 
 committed, merged or pushed. All job lifecycle operations use a pactify binary
 built from the current source, through subprocess CLI commands. Assertions read
 CLI JSON, job-owned log records, files and process identities; they do not call
-adapter or worker inference functions. Opencode v2 uses the product metadata-only model discovery and own-session permission evaluation helpers.
+adapter or worker inference functions. Opencode uses the product metadata-only
+model discovery and own-session policy verification helpers (1.x rule read-back,
+2.x permission evaluation).
 
 ```sh
 export TMPDIR=/private/tmp # or another writable temporary directory
@@ -53,8 +55,8 @@ host probe, so `user_dirs_clean` executes last. Unknown scenario names fail.
 Codex and kimi use their native defaults; the default allowlist keeps kimi
 overrides under `kimi-code/*` and agy on the `gemini-3.8-flash-*` tiers (see the
 model policy section). Opencode 1.x launches a private `opencode serve` and reads the live v1
-`/config/providers` catalog without a prompt (the sole upstream metadata HTTP
-request outside the pactify CLI), selects an `opencode/*-free` model (preferring flash), and validates
+`/config/providers` catalog without a prompt, selects an `opencode/*-free`
+model (preferring flash), and validates
 explicit overrides against that catalog: only `opencode/*-free` or
 `minimax-coding-plan/MiniMax-M3` are allowed. The unauthenticated opencode 1.x probe
 uses the latter, because a free endpoint does not require authentication. No
@@ -132,8 +134,8 @@ worktree columns. Missing usage must be partial, rather than a fabricated known
 zero. `truncated` describes final-text truncation, not every harness's own tool
 output clipping. The large-output row also reports native boolean truncation
 flags observed in tool records and requires a result warning when one is present;
-absence of a flag is not proof of complete upstream output. Opencode read-only uses the existing Example-713 diagnostic plan
-prompt override to elicit actual denied tools without changing permissions.
+absence of a flag is not proof of complete upstream output. Opencode read-only
+evidence uses the completed job's session policy as described below.
 Agy's instruction probe supplies both AGENTS.md and GEMINI.md and says so.
 
 The host probe requires Claude login and runs the non-billable `claude auth
@@ -157,7 +159,7 @@ report failed probes instead of silently disabling the sandbox.
 
 `long_tool` requires a recorded `sleep 240` command, actual tool-output marker,
 and job-record duration of at least 240 seconds. A final answer repeating the
-prompt marker cannot pass. Read-only denial checks use native error structures;
+prompt marker cannot pass. Non-opencode read-only denial checks use native error structures;
 `error: null`, successful tool records and verbal refusals do not qualify.
 
 If credential preservation fails, the diagnostic names the retained file and the
@@ -179,10 +181,16 @@ metadata API. The default remains an available opencode/*-free model. The four
 real user XDG roots and user opencode.db are compared by metadata only, without
 credential-refresh exemptions.
 
-The v2 readonly checks require job success, absent write targets, and deny
-results for shell/edit/external_directory evaluated on that job's own session.
-Write tools are removed before model execution, so attempted-write events are
-not required. readonly_long still demands 60 separate reads and a correct
+For both opencode majors, `readonly_denied` and `readonly_long` require job
+success, absent write targets, unchanged repository metadata, and policy
+verification on that job's own persisted session via `Store.CheckOpencodeReadonly`.
+Write and shell tools are removed before model execution, so attempted-write
+events are not required and prompts do not ask the model to attempt writes.
+On 1.x, upstream has no session-scoped permission evaluation API: rule read-back
+proves the rules pactify stored, not opencode's own evaluation. Pactify checks
+that the last matching stored rules deny bash/edit/external_directory. On 2.x,
+the session permission API directly evaluates shell/edit/external_directory.
+`readonly_long` still demands 60 separate reads and the exact concatenated
 answer; the 40-call limit is unchanged and any limit failure remains a FAIL.
 The v2 failure surface uses an unavailable provider/model preflight (auth or
 model classification), since free endpoints require no login.
@@ -198,7 +206,7 @@ Offline tagged fixture checks (no model calls):
 
 ```sh
 PACTIFY_HOME="$(mktemp -d /private/tmp/pactify-e2e.XXXXXX)" \
-go test -tags harness_e2e ./internal/sub/e2e -run '^TestOpencode2' -count=1
+go test -tags harness_e2e ./internal/sub/e2e -run '^TestOpencode' -count=1
 ```
 
 ## Live-test model policy

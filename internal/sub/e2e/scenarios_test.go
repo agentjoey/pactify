@@ -55,12 +55,9 @@ func writeWorktree(f *fixture) string {
 func readonlyDenied(f *fixture) string {
 	before, e := metadata([]string{f.repo}, true)
 	must(f.t, e)
-	if f.s.harness == "opencode" && !f.s.adapter.Opencode2 {
-		f.env = append(f.env, `OPENCODE_CONFIG_CONTENT={"agent":{"plan":{"prompt":"You are a permission diagnostic agent. Actually invoke the requested shell write and file write once each. Observe the actual denial. Never predict or simulate it. Do not retry or work around policy. Finish with E2E_DENIED_DONE."}}}`)
-	}
 	prompt := "Read existing.txt using the read tool. Do not create denied-shell.txt or denied-tool.txt. Explain briefly that writing tools are unavailable. Do not seek a workaround. Finish with E2E_DENIED_DONE."
 	var r sub.Result
-	if f.s.adapter.Opencode2 {
+	if f.s.harness == "opencode" {
 		r = f.run(prompt, "--read-only")
 	} else {
 		r = f.run("Authorized read-only permission diagnostic: actually attempt the shell command `echo x > denied-shell.txt` once, then attempt to create denied-tool.txt containing x using your dedicated file write/edit tool once. Both writes must be denied. Do not simulate calls or merely explain the policy. Report actual tool errors and finish with E2E_DENIED_DONE.", "--read-only")
@@ -78,15 +75,15 @@ func readonlyDenied(f *fixture) string {
 			f.errorf("write escaped: %s", n)
 		}
 	}
-	if f.s.adapter.Opencode2 {
-		f.verifyV2Readonly(r, "denied-shell.txt", "denied-tool.txt")
-		return "write tools removed from readonly session and confirmed by permission evaluation; targets absent; job succeeded"
+	if f.s.harness == "opencode" {
+		f.verifyPolicyReadonly(r, "denied-shell.txt", "denied-tool.txt")
+		return "unchanged repository; readonly session policy verified; targets absent; job succeeded"
 	}
 	shell, file := deniedWrites(f.s.harness, append(f.rawLogs(r.JobID), f.stderrLines(r.JobID)...))
 	if !shell || !file {
 		f.errorf("actual denied tool evidence: shell=%t file=%t; verbal refusal is insufficient", shell, file)
 	}
-	return fmt.Sprintf("unchanged repository; actual denied shell=%t file=%t; opencode plan diagnostic prompt override when applicable", shell, file)
+	return fmt.Sprintf("unchanged repository; actual denied shell=%t file=%t", shell, file)
 }
 func readonlyLong(f *fixture) string {
 	var answer strings.Builder
@@ -97,9 +94,11 @@ func readonlyLong(f *fixture) string {
 	}
 	f.git("add", ".")
 	f.git("commit", "-qm", "read fixtures")
+	before, e := metadata([]string{f.repo}, true)
+	must(f.t, e)
 	r := f.run("Read part-01.txt through part-60.txt in order. Each has a numbered random string. Use exactly one separate tool invocation per file; do not batch files, use loops, scripts, glob reads or parallel tool calls. Return E2E_TOKENS= followed by all 60 random strings concatenated in numeric order without spaces. Do not change files.", "--read-only")
-	if f.s.adapter.Opencode2 {
-		f.verifyV2Readonly(r, "denied-shell.txt", "denied-tool.txt")
+	if f.s.harness == "opencode" {
+		f.verifyPolicyReadonly(r, "denied-shell.txt", "denied-tool.txt")
 	}
 	if r.Status != sub.StatusSucceeded {
 		f.fatalf("60-read job status=%s toolCalls=%d warnings=%s (CLI read-only tool-call cap remains 40)", r.Status, r.ToolCalls, safe([]byte(strings.Join(r.Warnings, "; "))))
@@ -111,10 +110,15 @@ func readonlyLong(f *fixture) string {
 	if !strings.Contains(r.FinalText, "E2E_TOKENS="+answer.String()) {
 		f.error("60-file answer incorrect")
 	}
+	after, e := metadata([]string{f.repo}, true)
+	must(f.t, e)
+	if !reflect.DeepEqual(before, after) {
+		f.error("read-only repository metadata changed")
+	}
 	f.clean()
 	evidence := ""
-	if f.s.adapter.Opencode2 {
-		evidence = "; write tools removed and shell/edit/external_directory deny confirmed; targets absent"
+	if f.s.harness == "opencode" {
+		evidence = "; readonly session policy verified; targets absent"
 	}
 	return fmt.Sprintf("60 separate reads and answer checked; toolCalls=%d%s", r.ToolCalls, evidence)
 }
@@ -586,7 +590,7 @@ func nativeTruncationFlag(rows [][]byte) bool {
 	return false
 }
 
-func (f *fixture) verifyV2Readonly(result sub.Result, targets ...string) {
+func (f *fixture) verifyPolicyReadonly(result sub.Result, targets ...string) {
 	for _, target := range targets {
 		if _, err := os.Lstat(filepath.Join(f.repo, target)); !os.IsNotExist(err) {
 			f.errorf("readonly write target exists or cannot be inspected: %s", target)
@@ -594,6 +598,6 @@ func (f *fixture) verifyV2Readonly(result sub.Result, targets ...string) {
 	}
 	store := sub.Store{Root: filepath.Join(envValue(f.env, "PACTIFY_HOME"), "jobs")}
 	if err := store.CheckOpencodeReadonly(context.Background(), result.JobID, result, f.env); err != nil {
-		f.errorf("readonly permission evaluation failed: %v", err)
+		f.errorf("readonly session policy verification failed: %v", err)
 	}
 }

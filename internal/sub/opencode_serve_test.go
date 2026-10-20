@@ -140,7 +140,7 @@ func TestOpencodeDoctorNetworkV2(t *testing.T) {
 			os.WriteFile(filepath.Join(st.Request.Cwd, "doctor-network.json"), []byte(`{"bind":true,"external":true}`), 0600)
 		}
 		return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: "native/default", ModelVerified: true, InputTokens: 1, ToolCalls: 1, FinalText: "done"}, nil
-	}, readonlyCheck: func(context.Context, Store, string, Result) error { return nil }})
+	}, writeCheck: func(context.Context, Store, string, Result) error { return nil }, readonlyCheck: func(context.Context, Store, string, Result) error { return nil }})
 	if err != nil {
 		t.Fatal(err)
 	}

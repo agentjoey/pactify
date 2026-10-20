@@ -151,6 +151,9 @@ explicitly chosen by the user.
 
 **Read-only access** uses `agent: "plan"` with only read/glob/grep/list (no shell), denies every
 permission request, and fails with `readonly_violation` if the final repository diff is nonempty.
-Doctor runs a read-only probe and reads the session's permission rules back.
+Doctor verifies the completed session's permission policy for both access profiles.
+In write mode, pactify blocks opencode file tools from accessing directories outside
+the job workspace, job TMPDIR and `$PACTIFY_HOME/cache`. Shell commands can still
+reach files these checks cannot see. This is a guardrail, not isolation.
 Both profiles report `sandboxed=false`: opencode has no OS sandbox, so repository checks do not
 restrict effects outside the repository. Keep `--worktree` for delegated tasks.

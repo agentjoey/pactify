@@ -62,9 +62,6 @@ func goldenRun(ctx context.Context, tr golden.Transcript, opts StartOpts, wireHo
 	go func() {
 		for a := range s.Approvals() {
 			_ = a.Respond(DecisionAllow)
-			if ack := os.Getenv("GOLDEN_APPROVAL_ACK"); ack != "" {
-				os.WriteFile(ack, []byte("ok"), 0600)
-			}
 		}
 	}()
 	done := make(chan error, 1)
@@ -407,7 +404,21 @@ func goldenHTTPPeer(tr golden.Transcript) {
 		}
 	}
 	queues := map[string][]golden.Frame{}
+	deniedReplies := map[string]bool{}
 	for _, f := range tr.Frames {
+		if !v2 && f.Path == "/event" {
+			for _, line := range strings.Split(f.Data, "\n") {
+				if data, ok := strings.CutPrefix(line, "data: "); ok {
+					var event struct {
+						Type       string
+						Properties struct{ ID, Permission string }
+					}
+					if json.Unmarshal([]byte(data), &event) == nil && event.Type == "permission.asked" && event.Properties.Permission == "external_directory" {
+						deniedReplies["/permission/"+event.Properties.ID+"/reply"] = true
+					}
+				}
+			}
+		}
 		if f.Channel == "http" {
 			key := f.Method + " " + f.Path
 			queues[key] = append(queues[key], f)
@@ -437,6 +448,19 @@ func goldenHTTPPeer(tr golden.Transcript) {
 			queues[key] = q[1:]
 		}
 		mu.Unlock()
+		if len(q) == 0 && !v2 && tr.Resume != "" && r.Method == "PATCH" && r.URL.Path == "/session/"+tr.Resume {
+			// Historical 1.x recordings predate write-mode resume PATCH. Emulate
+			// only this new endpoint, requiring the complete fail-closed policy.
+			var body struct{ Permission []opencodePermission }
+			expected := []opencodePermission{{"edit", "*", "ask"}, {"bash", "*", "ask"}, {"external_directory", "*", "deny"}, {"doom_loop", "*", "deny"}}
+			if json.NewDecoder(r.Body).Decode(&body) != nil || !reflect.DeepEqual(body.Permission, expected) {
+				http.Error(w, "invalid write resume policy", 400)
+				return
+			}
+			w.WriteHeader(200)
+			io.WriteString(w, `{"id":"`+tr.Resume+`"}`)
+			return
+		}
 		if len(q) == 0 {
 			http.Error(w, "unrecorded request: "+key, 500)
 			return
@@ -495,6 +519,23 @@ func goldenHTTPPeer(tr golden.Transcript) {
 				newPrompt = body.ID
 			}
 			once.Do(func() { close(prompt) })
+		}
+		if strings.HasSuffix(r.URL.Path, "/reply") && strings.Contains(r.URL.Path, "/permission/") {
+			// A denied adapter request never reaches the worker. Synchronize SSE
+			// replay on the actual HTTP reply, for approvals and denials alike.
+			if !v2 && tr.Resume != "" {
+				var body struct{ Reply string }
+				var recorded struct{ Reply string }
+				_ = json.Unmarshal([]byte(f.Request), &recorded)
+				if deniedReplies[r.URL.Path] {
+					recorded.Reply = "reject"
+				}
+				if json.NewDecoder(r.Body).Decode(&body) != nil || body.Reply != recorded.Reply {
+					http.Error(w, "permission reply did not match per-type policy", 400)
+					return
+				}
+			}
+			os.WriteFile(os.Getenv("GOLDEN_APPROVAL_ACK"), []byte("ok"), 0600)
 		}
 		w.WriteHeader(f.Status)
 		if v2 && oldPrompt != "" {

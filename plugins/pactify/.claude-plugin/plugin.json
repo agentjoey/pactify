@@ -1,7 +1,7 @@
 {
   "name": "pactify",
   "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex or kimi, or via slash commands to experimental agy and opencode; review results and view job status with /jobs.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": { "name": "agentjoey" },
   "homepage": "https://github.com/agentjoey/pactify",
   "repository": "https://github.com/agentjoey/pactify",

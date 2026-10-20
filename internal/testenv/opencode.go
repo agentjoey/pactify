@@ -37,6 +37,7 @@ func OpencodeServePeer(t *testing.T) {
 	var stream chan map[string]any
 	scenario := os.Getenv("COCKPIT_OC_SCENARIO")
 	aborted := false
+	connections := 0
 	emit := func(typ string, props map[string]any) {
 		if typ != "session.error" || scenario != "unknown-no-id" {
 			props["sessionID"] = "sid"
@@ -103,6 +104,8 @@ func OpencodeServePeer(t *testing.T) {
 			ch := make(chan map[string]any, 256)
 			mu.Lock()
 			stream = ch
+			connections++
+			firstConnection := connections == 1
 			mu.Unlock()
 			fmt.Fprint(w, "data: {\"type\":\"server.connected\",\"properties\":{}}\n\n")
 			w.(http.Flusher).Flush()
@@ -112,6 +115,9 @@ func OpencodeServePeer(t *testing.T) {
 					b, _ := json.Marshal(ev)
 					fmt.Fprintf(w, "data: %s\n\n", b)
 					w.(http.Flusher).Flush()
+					if scenario == "recovered-permission-policy" && firstConnection && ev["type"] == "message.updated" {
+						return
+					}
 				case <-r.Context().Done():
 					return
 				}
@@ -192,11 +198,18 @@ func OpencodeServePeer(t *testing.T) {
 				}
 				return
 			}
-			if scenario == "permission" || scenario == "readonly" {
+			if scenario == "recovered-permission-policy" {
+				return
+			}
+			if scenario == "permission" || scenario == "readonly" || scenario == "permission-policy" {
 				go func() {
 					mu.Lock()
 					defer mu.Unlock()
-					emit("permission.asked", map[string]any{"id": "per-1", "permission": "edit", "patterns": []string{"out.txt"}})
+					props := map[string]any{"id": "per-1", "permission": "edit", "patterns": []string{"out.txt"}}
+					if scenario == "permission-policy" {
+						_ = json.Unmarshal([]byte(os.Getenv("COCKPIT_OC_PERMISSION")), &props)
+					}
+					emit("permission.asked", props)
 				}()
 			} else {
 				if scenario == "ignored-delete" || scenario == "untracked-delete" {
@@ -225,8 +238,14 @@ func OpencodeServePeer(t *testing.T) {
 			go finish()
 		case "GET /session/sid/children":
 			fmt.Fprint(w, `[]`)
+		case "GET /session/status":
+			fmt.Fprint(w, `{"sid":{"type":"busy"}}`)
 		case "GET /permission":
-			fmt.Fprint(w, `[]`)
+			if scenario == "recovered-permission-policy" {
+				fmt.Fprintf(w, "[%s]", os.Getenv("COCKPIT_OC_PERMISSION"))
+			} else {
+				fmt.Fprint(w, `[]`)
+			}
 		case "POST /session/sid/abort":
 			mu.Lock()
 			aborted = true

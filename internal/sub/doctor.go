@@ -49,6 +49,7 @@ type doctorDeps struct {
 	run      func(context.Context, Store, string, Harness, WorkerConfig) (Result, error)
 	// readonlyCheck reads the probe session's permission policy or kimi tools snapshot.
 	readonlyCheck func(context.Context, Store, string, Result) error
+	writeCheck    func(context.Context, Store, string, Result) error
 	now           func() time.Time
 	tempParent    string
 	model         string
@@ -122,6 +123,11 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 				return store.CheckKimiReadonly(id, result, nil)
 			}
 			return store.CheckOpencodeReadonly(ctx, id, result, nil)
+		}
+	}
+	if d.writeCheck == nil {
+		d.writeCheck = func(ctx context.Context, store Store, id string, result Result) error {
+			return store.CheckOpencodeWrite(ctx, id, result, nil)
 		}
 	}
 	root, err := os.MkdirTemp(d.tempParent, "pactify-sub-doctor-*")
@@ -330,7 +336,16 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		if writeErr == nil && writable.Status != StatusSucceeded && len(writable.Warnings) > 0 {
 			writeReason += "; " + strings.Join(writable.Warnings, "; ")
 		}
-		add("Write access", goodWrite && wrote && strings.TrimSpace(writable.FinalText) != "" && writable.InputTokens+writable.OutputTokens > 0, writeReason)
+		writePolicyOK := true
+		if h.Name == "opencode" {
+			permissionErr := d.writeCheck(ctx, jobStore, "write", writable)
+			writePolicyOK = permissionErr == nil
+			writeReason += fmt.Sprintf(", external_directory outside=deny and inside=ask (adapter checks required) verified=%t", permissionErr == nil)
+			if permissionErr != nil {
+				writeReason += "; " + permissionErr.Error()
+			}
+		}
+		add("Write access", goodWrite && writePolicyOK && wrote && strings.TrimSpace(writable.FinalText) != "" && writable.InputTokens+writable.OutputTokens > 0, writeReason)
 		add("Model", goodWrite && writable.ModelVerified && writable.ModelActual != "" && (model == "" || writable.ModelActual == model), fmt.Sprintf("requested=%s, actual=%s, independently verified=%t", model, writable.ModelActual, writable.ModelVerified))
 		results := []Result{writable}
 		ranAll := writeErr == nil && writable.Status == StatusSucceeded

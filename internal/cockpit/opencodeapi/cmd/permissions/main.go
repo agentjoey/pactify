@@ -10,7 +10,7 @@ import (
 func main() {
 	if err := json.NewEncoder(os.Stdout).Encode(map[string][]cockpit.Opencode2Rule{
 		"readonly": cockpit.Opencode2Permissions(cockpit.AccessReadOnly),
-		"write":    cockpit.Opencode2Permissions(cockpit.AccessWrite),
+		"write":    cockpit.Opencode2Permissions(cockpit.AccessWrite, os.Args[1:]...),
 	}); err != nil {
 		panic(err)
 	}

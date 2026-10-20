@@ -61,6 +61,7 @@ func TestDoctorModelOverride(t *testing.T) {
 						}
 						return Result{Status: StatusSucceeded, CLIVersion: "test", ModelActual: st.Request.Model, ModelVerified: true, FinalText: "done", InputTokens: 1, ToolCalls: 1}, nil
 					},
+					writeCheck:    func(context.Context, Store, string, Result) error { return nil },
 					readonlyCheck: func(context.Context, Store, string, Result) error { return nil },
 				})
 				if err != nil || len(reports) != 1 || !reports[0].Passed() || calls != map[bool]int{true: 3, false: 2}[name == "agy"] {

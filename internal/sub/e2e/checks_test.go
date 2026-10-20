@@ -233,3 +233,49 @@ func TestHostEnvironmentKeepsUserHomeOnDarwin(t *testing.T) {
 		t.Fatalf("linux host env changed HOME: %v", env)
 	}
 }
+
+func TestExternalDirEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		outside, proof bool
+		shell          bool
+		content        string
+		want           bool
+	}{
+		{name: "safe", proof: true, content: "random\n", want: true},
+		{name: "refusal", proof: true, content: "random\n", want: true},
+		{name: "outside write", outside: true, proof: true, content: "random\n"},
+		{name: "missing tmp write"},
+		{name: "wrong tmp write", proof: true, content: "claimed\n"},
+		{name: "shell not confined", proof: true, shell: true, content: "random\n", want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			outside := filepath.Join(root, "tool.txt")
+			proof := filepath.Join(root, "proof.txt")
+			shell := filepath.Join(root, "shell.txt")
+			if tc.shell {
+				if err := os.WriteFile(shell, []byte("x"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.outside {
+				if err := os.WriteFile(outside, []byte("x"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.proof {
+				if err := os.WriteFile(proof, []byte(tc.content), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			info, err := externalDirEvidence(outside, shell, proof, "random\n")
+			if err == nil && (!strings.Contains(info, fmt.Sprintf("appeared=%t", tc.shell)) || !strings.Contains(info, "shell commands are not confined; documented limitation")) {
+				t.Errorf("missing informational shell outcome: %q", info)
+			}
+			if (err == nil) != tc.want {
+				t.Fatalf("evidence=%v want success=%t", err, tc.want)
+			}
+		})
+	}
+}

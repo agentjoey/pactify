@@ -284,7 +284,7 @@ func TestOpencode2PermissionPolicyAndLease(t *testing.T) {
 	if strings.Contains(config, "continue_loop_on_deny") || strings.Contains(config, `"permission":`) || strings.Contains(config, `"list"`) {
 		t.Fatal(config)
 	}
-	if got, want := opencode2Permissions(AccessWrite), ([]Opencode2Rule{{"edit", "*", "ask"}, {"shell", "*", "ask"}, {"question", "*", "deny"}}); !reflect.DeepEqual(got, want) {
+	if got, want := opencode2Permissions(AccessWrite), ([]Opencode2Rule{{"edit", "*", "ask"}, {"shell", "*", "ask"}, {"question", "*", "deny"}, {"external_directory", "*", "deny"}}); !reflect.DeepEqual(got, want) {
 		t.Fatalf("write rules=%+v want=%+v", got, want)
 	}
 	rules := opencode2Permissions(AccessReadOnly)

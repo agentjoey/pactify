@@ -233,8 +233,12 @@ func TestAgyReviewWorkspaceHooksThroughSymlink(t *testing.T) {
 	if e := os.Symlink(sub, alias); e != nil {
 		t.Fatal(e)
 	}
+	canonicalRepo, err := filepath.EvalSymlinks(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, e := AgyEnv(StartOpts{RepoDir: alias, Access: AccessReadOnly, MinimalConfig: true, Env: []string{"HOME=" + t.TempDir()}})
-	if e == nil || !strings.Contains(e.Error(), filepath.Join(repo, ".agent")) {
+	if e == nil || !strings.Contains(e.Error(), filepath.Join(canonicalRepo, ".agent")) {
 		t.Fatalf("real workspace hooks missed: %v", e)
 	}
 }

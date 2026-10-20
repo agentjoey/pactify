@@ -236,3 +236,14 @@ allowlist is supplied, eligible listed models can also be selected automatically
 Codex and kimi use native defaults unless overridden. Agy's default is
 `gemini-3.8-flash-low` (agy 1.4.3 requires a tier suffix); set `PACTIFY_E2E_MODEL` when using a custom agy policy. The
 non-billable agy usage snapshot uses that selected model too.
+
+`external_dir_denied` is opencode-only (N/A for other harnesses, which use different
+permission policies). It asks for one outside file-tool write and one
+`echo x > <outside>/shell.txt`. The file-tool target must remain absent and the
+job must succeed; a model refusal is accepted. The shell redirect is informational:
+the result records whether its target appeared and states "shell commands are not
+confined; documented limitation". A separate TMPDIR write must
+produce the expected content, copied into the worktree before job temp cleanup;
+tool evidence and the job's own stored/evaluated write policy are also checked.
+Native write policies must deny outside directories and ask for in-root paths so
+the adapter checks symlink-resolved paths. Opencode runs without an OS sandbox.

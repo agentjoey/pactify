@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Restrict opencode write-mode external directory permissions to the job workspace,
+  job TMPDIR and Pactify cache, with native rules and adapter checks on both majors.
+  Ask before in-root directory access so symlinks reach the adapter checks; use
+  actual file paths from both API versions and preserve recovered requests.
+  Support literal bracketed filenames and symlinked temp paths; prefer absolute
+  v1 tool paths when worktree-relative permission patterns use a different base.
+  Deny unknown permissions and doom loops; verify write policies in doctor and add
+  an opt-in external-directory E2E scenario with informational shell results.
+  Opencode still has no OS sandbox;
+  shell commands can reach files beyond the directory checks.
+
 - Make the plugin Claude Code only with a local prerequisite check, require explicit
   user requests for delegation, and restrict experimental agy/opencode skills to
   slash commands with documented permission boundaries. Rename `/codex`, `/kimi`,

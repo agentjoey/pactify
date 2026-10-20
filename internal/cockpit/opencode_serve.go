@@ -168,11 +168,8 @@ func newOpencodeSession(ctx context.Context, opts StartOpts, id string) (*openco
 		var session struct {
 			ID string `json:"id"`
 		}
-		permissions := []opencodePermission{{"edit", "*", "ask"}, {"bash", "*", "ask"}}
+		permissions := opencodePermissions(opts)
 		// Session rules are evaluated after agent/user permissions in 1.19.
-		if opts.Access == AccessReadOnly {
-			permissions = opencodeReadonlyPermissions()
-		}
 		body := map[string]any{"title": "Pactify delegated task"}
 		if permissions != nil {
 			body["permission"] = permissions
@@ -182,9 +179,9 @@ func newOpencodeSession(ctx context.Context, opts StartOpts, id string) (*openco
 		}
 		s.id = session.ID
 	}
-	if id != "" && opts.Access == AccessReadOnly {
+	if id != "" && (opts.Access == AccessReadOnly || opts.Access == AccessWrite) {
 		// PATCH appends these ordered rules after the session's old policy.
-		if err := server.call(ctx, "PATCH", s.path(), map[string]any{"permission": opencodeReadonlyPermissions()}, nil); err != nil {
+		if err := server.call(ctx, "PATCH", s.path(), map[string]any{"permission": opencodePermissions(opts)}, nil); err != nil {
 			return fail(err)
 		}
 	}
@@ -410,21 +407,24 @@ func (s *opencodeSession) Prompt(ctx context.Context, msg UserMessage) error {
 					goto finishedStream
 				}
 				// Recover permission requests missed while disconnected.
-				var pending []struct {
-					ID         string `json:"id"`
-					SessionID  string `json:"sessionID"`
-					Permission string `json:"permission"`
-				}
+				var pending []json.RawMessage
 				if pendingErr := s.server.call(streamCtx, "GET", "/permission", nil, &pending); pendingErr != nil {
 					err = pendingErr
 					_ = res.Body.Close()
 					reconnected = false
 					continue
 				}
-				for _, request := range pending {
+				for _, raw := range pending {
+					var request struct {
+						ID         string `json:"id"`
+						SessionID  string `json:"sessionID"`
+						Permission string `json:"permission"`
+					}
+					if json.Unmarshal(raw, &request) != nil || request.ID == "" {
+						continue
+					}
 					if s.owns(request.SessionID) && !permissions[request.ID] {
 						permissions[request.ID] = true
-						raw, _ := json.Marshal(request)
 						s.dispatch(Event{Kind: EventSystem, State: "permission.asked", Raw: raw})
 						s.permission(request.ID, request.Permission, raw)
 					}
@@ -622,7 +622,7 @@ func (s *opencodeSession) permission(id, name string, raw json.RawMessage) {
 		})
 		return err
 	}
-	if s.opts.Access == AccessReadOnly {
+	if s.opts.Access == AccessReadOnly || !s.allowWritePermission(name, raw, false) {
 		_ = respond(DecisionDeny)
 		return
 	}

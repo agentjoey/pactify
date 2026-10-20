@@ -28,7 +28,7 @@ type StartOpts struct {
 	SystemPrompt        string // 可空
 	Effort              string // 可空；每轮推理 effort
 	Access              Access
-	WritableRoots       []string  // Additional cache directories for workspace-write; ignored for read-only/default.
+	WritableRoots       []string  // codex: additional writable directories; opencode write: roots plus its literal cwd.
 	Env                 []string  // 追加在继承环境之后；同名键以此为准
 	Stderr              io.Writer // nil → os.Stderr
 	// Hidden keeps a delegated session out of the user's own thread list: codex

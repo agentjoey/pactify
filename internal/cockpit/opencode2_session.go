@@ -104,7 +104,7 @@ func newOpencode2Session(ctx context.Context, opts StartOpts, id string) (*openc
 			return fail(err)
 		}
 	}
-	permissions := opencode2Permissions(opts.Access)
+	permissions := opencode2Permissions(opts.Access, opts.WritableRoots...)
 	if id == "" {
 		body := map[string]any{"title": "Pactify delegated task", "agent": s.info.Access, "location": map[string]string{"directory": opts.RepoDir}, "permissions": permissions}
 		if len(model) > 0 {
@@ -196,7 +196,7 @@ func (s *opencode2Session) permission2(sid, id, name string, raw json.RawMessage
 		})
 		return replyErr
 	}
-	if s.opts.Access == AccessReadOnly {
+	if s.opts.Access == AccessReadOnly || !s.allowWritePermission(name, raw, true) {
 		_ = respond(DecisionDeny)
 		return
 	}

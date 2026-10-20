@@ -78,17 +78,20 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 	if err != nil {
 		return State{}, err
 	}
-	canonicalCwd, err := filepath.EvalSymlinks(req.Cwd)
-	if err != nil {
-		return State{}, err
-	}
 	root, err = filepath.EvalSymlinks(root)
 	if err != nil {
 		return State{}, err
 	}
-	rel, err := filepath.Rel(root, canonicalCwd)
+	// Let git place the cwd in the repository: comparing path strings fails
+	// when the cwd is spelled differently from git's root, as on
+	// case-insensitive macOS volumes (~/agentworks vs ~/AgentWorks).
+	prefix, err := runGit(req.Cwd, "rev-parse", "--show-prefix")
 	if err != nil {
 		return State{}, err
+	}
+	rel := filepath.Clean(filepath.FromSlash(strings.TrimSuffix(string(prefix), "\n")))
+	if !filepath.IsLocal(rel) {
+		return State{}, fmt.Errorf("cwd is outside the worktree")
 	}
 	st, err := s.Create(id, req)
 	if err != nil {

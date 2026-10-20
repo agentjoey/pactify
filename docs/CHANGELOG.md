@@ -8,6 +8,13 @@
 
 ---
 
+## Unreleased — AJ-770 · worktree jobs accept a cwd spelled in a different case
+
+- `sub run --worktree` failed with `cwd is outside the worktree` when the cwd was spelled differently from git's root on a case-insensitive macOS volume (e.g. `$PWD=~/agentworks/...` while the repository is `~/AgentWorks/...`). `filepath.Rel` compared the two spellings as strings, produced `../../agentworks/...`, and the job was created before the check rejected it, leaving a failed job behind.
+- The cwd's repository-relative path now comes from `git rev-parse --show-prefix` run in the cwd, so git's own path resolution decides; the locality check now runs before the job is created. The symlink-in-HEAD check stays after checkout, where it needs the worktree.
+- Regression: `TestWorktreeCwdSpelledInDifferentCase` (upper-cased cwd with a nested non-ASCII directory; skipped on case-sensitive filesystems) fails on the old code with `cwd is outside the worktree` and passes now. CLI check with the fake harness from a lower-cased `$PWD`: the old binary fails, the new one succeeds with the isolated cwd `wt/Sub` and diff path `Sub/out.txt`.
+- Not changed: `--resume` still matches the previous job by the exact cwd string, so resuming from a differently spelled cwd finds no session (recorded in Notion Inbox).
+
 ## Unreleased — AJ-769 · Settings loads fast; agy 1.4 model discovery
 
 - Discover agy models with plain `agy models` first (agy 1.4 removed the model flag), then try `agy models --model gemini-3.8-flash-low` for older CLIs. Allow **15 seconds per attempt, 30 seconds total** so the measured 8.5-second listing fits without sacrificing legacy compatibility. Parse tab-separated stdout through ANSI/carriage-return cleanup; errors name the plain command and retain up to 200 characters of its trimmed stderr. Update full-list hints, doctor/plugin documentation and plugin **0.2.10 → 0.2.11**.

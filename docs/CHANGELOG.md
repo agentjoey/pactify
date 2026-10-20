@@ -13,7 +13,13 @@
   Pin detail actions outside the content scroll area; keep the panel's full CLI
   command list in that content with a compact Next steps footer. Constrain the
   fullscreen mobile drawer to the dynamic viewport and respect safe areas.
-- kimi is no longer experimental; read-only remains unavailable.
+- kimi is no longer experimental.
+- kimi supports read-only jobs: a separate private home with a generated config
+  that keeps only model/provider settings and enables read-only tools for every
+  agent; per-agent tools snapshots are verified after the job, with a
+  fail-closed repository baseline. Early failures and cancellations keep their
+  class and quota fallback; identical configs allow concurrent jobs; the
+  generated config is removed after the last job; resume keeps the access mode.
 - Adopt FSL-1.1-MIT: each version becomes MIT after two years; releases through
   v0.13.0 retain their original MIT license.
 - Harden `serve` with Host validation, exact browser write-origin checks and

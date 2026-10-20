@@ -108,9 +108,10 @@ CLI
   [ "$(cat "$PACTIFY_HOOK_CALL")" = "sub --help" ]
 }
 
-@test "kimi skill does not offer read-only" {
-  grep -q 'not offered for kimi' "$P/skills/kimi/SKILL.md"
-  ! grep -q 'run kimi --read-only --wait' "$P/skills/kimi/SKILL.md"
+@test "kimi skill offers read-only with a generated private policy" {
+  grep -q 'run kimi --read-only --wait' "$P/skills/kimi/SKILL.md"
+  grep -q 'tools_snapshot' "$P/skills/kimi/SKILL.md"
+  grep -q -- '--with-user-config' "$P/skills/kimi/SKILL.md"
 }
 
 @test "delegate skill is self-contained and uses the default harness" {
@@ -144,7 +145,7 @@ frontmatter, body = text.split('---')[1:3]
 description = next(line for line in frontmatter.splitlines() if line.startswith('description:'))
 for part in (description, body):
     assert 'experimental' not in part.lower(), part
-    for term in ('no os sandbox for writes', 'permission requests are approved by pactify', 'read-only', 'not offered'):
+    for term in ('no os sandbox for writes', 'permission requests are approved by pactify', 'read-only', 'tool allowlist'):
         assert term in part.lower(), (term, part)
 PY
   [ "$status" -eq 0 ]

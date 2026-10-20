@@ -218,6 +218,13 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	if req.Access == "read-only" && h.NoReadOnly != "" {
 		return fail(errors.New(h.NoReadOnly))
 	}
+	if err := kimiReadOnlyConfigError(req); err != nil {
+		return fail(err)
+	}
+	if req.Harness == "kimi" && req.Access == "read-only" && st.EffectiveConfigMode() != "minimal" {
+		return fail(fmt.Errorf("kimi --read-only requires a generated private config; start a fresh session"))
+	}
+	h = h.ForAccess(req.Access)
 	if requiresReadOnlyBaseline(req) {
 		baseline, captureErr := captureReadOnly(req.Cwd)
 		if captureErr != nil {
@@ -288,6 +295,9 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	encoder := json.NewEncoder(log)
 	opts := cockpit.StartOpts{ReadOnlyPolicy: cfg.ReadOnlyPolicy, CompletionFollowups: req.CompletionFollowups, RepoDir: req.Cwd, Model: req.Model, Effort: req.Effort, Access: cockpit.Access(req.Access), Env: vendorenv.Strip(h.Kind), Stderr: log, Hidden: true}
 	opts.MinimalConfig = result.ConfigMode == "minimal"
+	if req.Harness == "kimi" && req.Access == "read-only" {
+		opts.Env = append(opts.Env, kimiReadOnlyEnv()...)
+	}
 	marker := id
 	if cfg.ProcessMarker != "" {
 		marker = cfg.ProcessMarker

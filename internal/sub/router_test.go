@@ -60,18 +60,17 @@ func TestRouterSelection(t *testing.T) {
 	if err != nil || got != preferred {
 		t.Fatalf("%+v %v", got, err)
 	}
-	// read-only skips only harnesses that refuse it (kimi), in both
-	// the chosen route and the remaining fallback chain.
+	// Kimi remains eligible in both the selected route and fallback chain.
 	got, remaining, _, err := r.Select([]Route{preferred, {Harness: "kimi"}, {Harness: "opencode", Model: "mini"}, {Harness: "codex"}}, nil, "read-only", now)
-	if err != nil || got != preferred || len(remaining) != 2 || remaining[0].Harness != "opencode" || remaining[1].Harness != "codex" {
+	if err != nil || got != preferred || len(remaining) != 3 || remaining[0].Harness != "kimi" || remaining[1].Harness != "opencode" || remaining[2].Harness != "codex" {
 		t.Fatalf("read-only agy: %+v %v %v", got, remaining, err)
 	}
 	got, _, _, err = r.Select([]Route{{Harness: "kimi"}, {Harness: "opencode", Model: "mini"}}, nil, "read-only", now)
-	if err != nil || got.Harness != "opencode" {
-		t.Fatalf("read-only opencode: %+v %v", got, err)
+	if err != nil || got.Harness != "kimi" {
+		t.Fatalf("read-only kimi: %+v %v", got, err)
 	}
-	if _, _, _, err = r.Select([]Route{{Harness: "kimi"}, {Harness: "nope"}}, nil, "read-only", now); err == nil || !strings.Contains(err.Error(), "no routes support read-only access") {
-		t.Fatalf("kimi/unknown read-only must be refused: %v", err)
+	if got, _, _, err = r.Select([]Route{{Harness: "kimi"}, {Harness: "nope"}}, nil, "read-only", now); err != nil || got.Harness != "kimi" {
+		t.Fatalf("kimi read-only route unavailable: %v", err)
 	}
 	_, _, _, err = r.Select([]Route{preferred}, []QuotaRoute{{Harness: "agy", ResetAt: &later, RecordedAt: now}}, "write", now)
 	if err == nil || !strings.Contains(err.Error(), later.UTC().Format(time.RFC3339)) {

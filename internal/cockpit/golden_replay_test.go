@@ -218,8 +218,8 @@ func TestGoldenReplay(t *testing.T) {
 		})
 	}
 }
-func TestGoldenKimiReadOnlyUnavailable(t *testing.T) {
-	t.Log("No kimi read-only recording: upstream cannot enforce read-only access; entry points reject it.")
+func TestGoldenKimiReadOnlyRecordingPending(t *testing.T) {
+	t.Log("Kimi read-only uses a generated private tool policy; live recording is pending host verification.")
 }
 func TestGoldenFilesSanitized(t *testing.T) {
 	files, _ := filepath.Glob("testdata/golden/*.json")

@@ -109,6 +109,9 @@ func (s Store) LogPath(id string) string    { return filepath.Join(s.Dir(id), "l
 func (s Store) ResultPath(id string) string { return filepath.Join(s.Dir(id), "result.json") }
 
 func (s Store) Create(id string, req Request) (State, error) {
+	if err := kimiReadOnlyConfigError(req); err != nil {
+		return State{}, err
+	}
 	if err := validJobID(id); err != nil {
 		return State{}, err
 	}

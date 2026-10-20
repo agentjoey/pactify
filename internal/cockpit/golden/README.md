@@ -73,7 +73,7 @@ PACTIFY_HOME="$record_root" PACTIFY_RECORD_HOME="$record_root" \
 ```
 
 Repeat with `readonly`, `resume`, `cancel`, `failure`; kimi uses `write`, `resume`,
-`cancel`, `failure` only, because it cannot enforce read-only access. Limit live kimi
+`cancel`, `failure` only; read-only recordings with the generated private tool policy await host verification. Limit live kimi
 recording invocations to ten per task. No record command is run in CI.
 
 Opencode queries the live provider list first. It chooses `opencode/*-free`;

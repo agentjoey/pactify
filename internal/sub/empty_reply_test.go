@@ -22,6 +22,12 @@ func TestEmptyReplyFollowup(t *testing.T) {
 					store, s, _ := workerFixture(t, access)
 					st, _ := store.Load("j1")
 					st.Request.Harness, st.ConfigMode = name, "minimal"
+					if name == "kimi" && access == "read-only" {
+						source := fakeKimiUserHome(t)
+						if err := os.WriteFile(filepath.Join(source, "config.toml"), []byte(kimiROConfigFixture), 0600); err != nil {
+							t.Fatal(err)
+						}
+					}
 					if err := recordVerifiedVersion(context.Background(), filepath.Dir(store.Root), name, "9.9.9", time.Now()); err != nil {
 						t.Fatal(err)
 					}
@@ -36,6 +42,9 @@ func TestEmptyReplyFollowup(t *testing.T) {
 						starts++
 						if string(opts.Access) != access {
 							t.Errorf("access=%s, want %s", opts.Access, access)
+						}
+						if name == "kimi" && access == "read-only" {
+							writeKimiJobRecord(t, childEnv(opts.Env, "KIMI_CODE_HOME"), "same-session", `{"type":"llm.tools_snapshot","tools":[{"name":"Read"}]}`+"\n")
 						}
 						return &retrySession{fakeSession: s, id: "same-session", prompt: func(_ context.Context, m cockpit.UserMessage) error {
 							prompts = append(prompts, m.Text)
@@ -60,6 +69,10 @@ func TestEmptyReplyFollowup(t *testing.T) {
 					}}
 					h := newFakeHarness(nil)
 					h.Name = name
+					if name == "kimi" && access == "read-only" {
+						kimi, _ := Lookup("kimi")
+						h.Home = kimi.Home
+					}
 					h.Backend = func() cockpit.Backend { return b }
 					r, err := RunJob(context.Background(), store, "j1", h, WorkerConfig{ToolCallLimit: 2})
 					wantPrompts := []string{st.Request.Brief, "You ended without a written answer. Reply now with your result: what you found or changed and which checks you ran. Do not start new work."}

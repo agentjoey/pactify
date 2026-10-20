@@ -47,7 +47,7 @@ func (r DoctorReport) Passed() bool {
 type doctorDeps struct {
 	lookPath func(string) (string, error)
 	run      func(context.Context, Store, string, Harness, WorkerConfig) (Result, error)
-	// readonlyCheck reads an opencode probe session's permission policy back.
+	// readonlyCheck reads the probe session's permission policy or kimi tools snapshot.
 	readonlyCheck func(context.Context, Store, string, Result) error
 	now           func() time.Time
 	tempParent    string
@@ -114,6 +114,13 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 	}
 	if d.readonlyCheck == nil {
 		d.readonlyCheck = func(ctx context.Context, store Store, id string, result Result) error {
+			st, err := store.Load(id)
+			if err != nil {
+				return err
+			}
+			if st.Request.Harness == "kimi" {
+				return store.CheckKimiReadonly(id, result, nil)
+			}
 			return store.CheckOpencodeReadonly(ctx, id, result, nil)
 		}
 	}
@@ -329,7 +336,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 		ranAll := writeErr == nil && writable.Status == StatusSucceeded
 		if h.NoReadOnly != "" {
 			skip("Read-only access", h.NoReadOnly)
-		} else if h.Name == "opencode" {
+		} else if h.Name == "opencode" || h.Name == "kimi" {
 			// Read-only removes the write and shell tools before the model sees
 			// them, so it cannot attempt a denied write. Evidence is the session's own permission
 			// policy, read back after the job; no tool-call count is required.
@@ -338,6 +345,9 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			permissionErr := d.readonlyCheck(ctx, jobStore, "read-only", readonly)
 			good := roErr == nil && readonly.Status == StatusSucceeded && os.IsNotExist(statErr) && permissionErr == nil
 			reason := fmt.Sprintf("write tools removed from readonly session and confirmed by permission evaluation; status=%s, write target absent=%t, shell/edit/external_directory deny=%t%s", readonly.Status, os.IsNotExist(statErr), permissionErr == nil, doctorError(roErr))
+			if h.Name == "kimi" {
+				reason = fmt.Sprintf("private session tools snapshots within read-only allowlist=%t; status=%s, write target absent=%t%s", permissionErr == nil, readonly.Status, os.IsNotExist(statErr), doctorError(roErr))
+			}
 			if permissionErr != nil {
 				reason += "; " + permissionErr.Error()
 			}

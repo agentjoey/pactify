@@ -372,6 +372,9 @@ func TestKimiDoctorChecksManagedHomeEvidence(t *testing.T) {
 		t.Run(fault, func(t *testing.T) {
 			t.Setenv("PACTIFY_HOME", t.TempDir())
 			userHome := fakeKimiUserHome(t)
+			if err := os.WriteFile(filepath.Join(userHome, "config.toml"), []byte(kimiROConfigFixture), 0600); err != nil {
+				t.Fatal(err)
+			}
 			h, _ := Lookup("kimi")
 			h.Version = func(context.Context) (string, error) { return "test", nil }
 			h.Conceal = func(ConcealContext) error { t.Error("doctor must not archive minimal sessions"); return nil }
@@ -390,8 +393,11 @@ func TestKimiDoctorChecksManagedHomeEvidence(t *testing.T) {
 						home = t.TempDir()
 					}
 					extra := ""
+					if b.gotOpts.Access == cockpit.AccessReadOnly {
+						extra = `{"type":"llm.tools_snapshot","tools":[{"name":"Read"}]}` + "\n"
+					}
 					if fault == "mcp" {
-						extra = `{"type":"mcp.tools_discovered","tools":[]}` + "\n"
+						extra += `{"type":"mcp.tools_discovered","tools":[]}` + "\n"
 					}
 					if fault == "wrong-home" {
 						home = t.TempDir()
@@ -407,9 +413,11 @@ func TestKimiDoctorChecksManagedHomeEvidence(t *testing.T) {
 						_ = os.Remove(filepath.Join(home, "config.toml"))
 						_ = os.Symlink("/wrong", filepath.Join(home, "config.toml"))
 					}
-					_ = os.WriteFile(filepath.Join(b.gotOpts.RepoDir, "out.txt"), []byte("doctor-ok\n"), 0600)
-					// Kimi also supplies evidence for the network diagnostic.
-					_ = os.WriteFile(filepath.Join(b.gotOpts.RepoDir, "doctor-network.json"), []byte(`{"bind":true,"external":true}`), 0600)
+					if b.gotOpts.Access == cockpit.AccessWrite {
+						_ = os.WriteFile(filepath.Join(b.gotOpts.RepoDir, "out.txt"), []byte("doctor-ok\n"), 0600)
+						// The write probe also supplies evidence for the network diagnostic.
+						_ = os.WriteFile(filepath.Join(b.gotOpts.RepoDir, "doctor-network.json"), []byte(`{"bind":true,"external":true}`), 0600)
+					}
 					s.events <- cockpit.Event{Kind: cockpit.EventMessage, Text: "done", Final: true}
 					state := cockpit.StateTurnCompleted
 					if fault == "failed-job" {

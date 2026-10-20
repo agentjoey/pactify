@@ -1,7 +1,7 @@
 # Pactify harness plugin
 
 Delegate large tasks from Claude Code to the official codex / kimi / agy / opencode CLI installed locally, then review the result summary and workspace changes.
-The default harness is codex. kimi has no read-only access and no OS sandbox for writes; permission requests are approved by pactify.
+The default harness is codex. kimi read-only access uses a generated private config and a tool allowlist. Kimi has no OS sandbox for writes; permission requests are approved by pactify in write jobs.
 
 ## Installation
 
@@ -32,7 +32,7 @@ Use `/pactify:delegate`, `/pactify:codex`, `/pactify:kimi`, `/pactify:agy`, or `
 `/delegate` uses the default codex harness; `/codex`, `/kimi`, `/agy` and `/opencode` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
 Delegation suits tasks involving 3 or more files, exploration and testing, or more than about 10 minutes of work. Claude can handle small edits directly.
 When choosing autonomously, avoid delegating tasks that depend on extensive conversation context that cannot fit in a self-contained brief, or require frequent user interaction.
-Explicit invocations still delegate, but kimi's read-only restriction remains: never raise permissions yourself.
+Explicit invocations still delegate. Preserve the requested access mode; never raise permissions yourself.
 
 The Claude main thread first writes a complete brief with Background, numbered goals, Known constraints and special cases, General constraints, and Acceptance commands.
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
@@ -42,7 +42,8 @@ The five delegation skills (codex, kimi, agy, opencode, delegate) embed the same
 
 The main thread runs `pactify sub run [harness] --write --worktree --wait 0s --json`.
 Omitting the harness uses codex: `/delegate` runs `pactify sub run --write --worktree --wait 0s --json`.
-Use codex, opencode, or agy `--read-only` for read-only tasks. `kimi --read-only` is refused (exits 2), including resume of an old read-only job.
+Use `--read-only` for read-only tasks, including kimi. Kimi requires its generated private config,
+rejects `--with-user-config` in read-only mode, and requires the original access mode on resume.
 Exit 3 means the job is still running and stdout contains `jobId`. The main thread runs
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000`, then reviews the result as described below.
 If the background wait stops at its time limit, check `pactify sub status` and resume the same wait; do not start a duplicate job.
@@ -153,14 +154,30 @@ Jobs are stored in `$PACTIFY_HOME/jobs/<jobId>/`, defaulting to `~/.pactify/jobs
 
 Archived sessions are unhidden by `--resume` and hidden again afterward. Minimal kimi sessions stay in their separate home throughout resume. The `Session` line contains its id. Hiding failures appear on the first line, for example if a kimi update changes its session format. kimi derives workspace entries from session records and keeps them after archiving, just as when you archive a session manually.
 
-Kimi's managed home is 0700 and has no `mcp.json`. Before each launch pactify
-repairs three symlinks: `config.toml`, `credentials/`, and `device_id`, pointing
-to the process's `KIMI_CODE_HOME` or `~/.kimi-code` when unset. Missing originals
-require `kimi login`; pactify never reads or copies credential/config contents.
-If kimi replaces a link with a regular file or directory, the job warns and
-removes that private copy at completion; the next launch recreates the link.
-Keep this shared home for resume. Kimi resume preserves the recorded home and
-requires the original minimal/user config mode; use a fresh session to switch.
+Kimi uses separate 0700 homes: `harness-homes/kimi` for write jobs and
+`harness-homes/kimi-readonly` for read-only jobs. Both link `credentials/`, `oauth/`
+and `device_id` to the user's home; credential files are never linked individually.
+Write jobs also link `config.toml`; read-only jobs parse at most 1 MiB and copy only
+`default_model`, `models` and `providers`, including credential references. All other
+user sections are omitted. Before each job, pactify renders a private 0600 config.
+Identical regular configs share leases; differing bytes or unsafe metadata require
+an idle home and an atomic replacement. The last job removes the generated config.
+Config contents are never logged. Permission rules and tool policy are generated. The execution-time tool allowlist is Read,
+Grep, Glob, ReadMediaFile, TodoList, TaskList, TaskOutput and WaitFor; additional
+deny rules cover Write, Edit, Bash, Agent*, Cron* and TaskStop. Shell, sub-agent,
+cron, MCP and network tools are unavailable, including for child agents. ACP uses
+default mode; plan mode alone does not enforce this policy. Every agent's
+`llm.tools_snapshot` is checked after the job; an unexpected tool fails with
+`readonly_violation` even on failed or canceled jobs. Missing evidence fails successful
+jobs; failed/canceled jobs retain their original classification and quota fallback. An unchanged
+repository baseline is also required. This is a tool policy, not an OS sandbox.
+The global tool policy also applies to project MCP/plugin/agent tools. Project-local
+`.kimi-code/local.toml` only supplies workspace directories. Read-only jobs neutralize
+execution-related Kimi environment switches while retaining model/authentication
+variables. Neither home has `mcp.json`. Credential quarantine/refresh handling applies to both.
+Keep these homes for resume. Kimi requires the original access and minimal/user
+config modes on resume; use a fresh session to switch. Read-only cannot use
+`--with-user-config`.
 Codex's minimal configuration and `--with-user-config` behavior are unchanged.
 Run `pactify sub doctor kimi` to verify the managed links, a successful probe in
 that home, no probe entry in the user's index, and no `mcp.tools_discovered` event.
@@ -202,11 +219,11 @@ normal minimal configuration, including directory permissions and link integrity
 | | codex | kimi | agy | opencode |
 |---|---|---|---|---|
 | `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + edit/bash/webfetch allow |
-| `--read-only` | read-only sandbox, no network | Not offered | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline |
+| `--read-only` | read-only sandbox, no network | private tool allowlist + tools snapshot + fail-closed baseline | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline |
 
 ## Known limitations
 
-- kimi read-only access is not offered (`sub run kimi --read-only` exits 2): the harness cannot enforce it. Use codex, agy or opencode instead.
+- kimi `--read-only` enforces a tool allowlist in a generated private config, checks tools snapshots and repository metadata, and rejects `--with-user-config`.
 - A user-config job that fails during startup without returning a session id cannot be archived. Minimal kimi sessions remain separate even in this case.
 - Each delegation has about 20–50 thousand tokens of fixed callee overhead, making it unsuitable for small tasks.
 - Only locally installed, logged-in official CLIs are supported. Follow the summary warnings when independent model verification fails.

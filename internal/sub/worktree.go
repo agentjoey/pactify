@@ -222,6 +222,9 @@ func (s Store) collectWorktreeWarnings(st *State) ([]string, error) {
 
 func (s Store) resumeRun(id string, req Request, isolated bool, previous State, session string) (State, error) {
 	h, _ := Lookup(req.Harness)
+	if h.Name == "kimi" && (req.Access == "read-only") != (previous.Request.Access == "read-only") {
+		return State{}, fmt.Errorf("kimi resume requires the original access mode (%s); use the matching --read-only or --write setting or start a fresh session", previous.Request.Access)
+	}
 	if h.NoReadOnly != "" && (req.Access == "read-only" || previous.Request.Access == "read-only") {
 		return State{}, &ReadOnlyUnavailableError{Reason: h.NoReadOnly}
 	}

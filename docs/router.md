@@ -64,7 +64,7 @@ default effort still applies, and other harnesses are unchanged.
 5. If all routes are exhausted, exit 2 without creating a job and show the
    earliest recovery time. Every constraint on a route must reset before use.
 6. Read-only jobs skip unknown harnesses and those that cannot enforce read-only
-   access (currently kimi). Codex, agy and opencode remain eligible. Explicitly
+   access. Codex, kimi, agy and opencode remain eligible. Explicitly
    choosing an unsupported access mode still reports an access error.
 
 Selection warnings say `quota exhausted for X; using Y`, with a reset countdown
@@ -211,6 +211,7 @@ allows discard to clean up Git registration. HTTP cancellation of terminal jobs
 returns 409, while the CLI retains its terminal cleanup behavior.
 
 `sandboxed` is always a boolean: true for codex, false for other harnesses.
-Opencode read-only removes write/shell tools and checks the repository baseline;
-it does not provide an OS sandbox. Model-name heuristics do not infer free usage
+Kimi read-only uses a generated private tool allowlist, verifies per-agent tools
+snapshots and checks the repository baseline. Opencode read-only removes write/shell
+tools and checks the repository baseline. Neither provides an OS sandbox. Model-name heuristics do not infer free usage
 from `cost=0`.

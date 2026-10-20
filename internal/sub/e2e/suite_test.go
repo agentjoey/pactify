@@ -220,21 +220,6 @@ func TestHarnessE2E(t *testing.T) {
 				s.report.Results = append(s.report.Results, row)
 				fmt.Printf("E2E %s %s %s %s\n", h, name, status, row.Reason)
 			})
-			if (name == "readonly_denied" || name == "readonly_long") && h == "kimi" {
-				err := kimiReadonlyProbe(func() ([]byte, error) {
-					return f.cli("Read-only capability probe; do not call a model.", "run", "kimi", "--read-only", "--cwd", f.repo, "--wait", "0s", "--json")
-				}, func(id string) error {
-					f.trackJob(id)
-					_, err := f.cli("", "cancel", id)
-					return err
-				})
-				if err != nil {
-					f.fatal(err)
-				}
-				status = "N/A"
-				reason = "Kimi ACP cannot enforce read-only; CLI explicitly rejects it"
-				return
-			}
 			if setupErr != nil && name != "failure_surface" && name != "user_dirs_clean" {
 				reason = "model setup failed: " + setupErr.Error()
 				t.Error(reason)

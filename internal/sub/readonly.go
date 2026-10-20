@@ -3,6 +3,7 @@ package sub
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -10,6 +11,8 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/agentjoey/pactify/internal/cockpit"
 )
 
 type ReadOnlyFile struct {
@@ -79,6 +82,32 @@ func (s Store) verifyReadOnly(st *State, result *Result) (string, bool) {
 	if !requiresReadOnlyBaseline(st.Request) {
 		return "", false
 	}
+	var evidenceErr error
+	if st.Request.Harness == "kimi" {
+		evidenceErr = s.CheckKimiReadonly(st.ID, *result, nil)
+		var violation *cockpit.KimiReadOnlyViolation
+		if errors.As(evidenceErr, &violation) {
+			return evidenceErr.Error(), true
+		}
+	}
+	message, violation := verifyReadOnlyFiles(st, result)
+	if st.Request.Harness == "kimi" && result.Status != StatusSucceeded {
+		// Missing evidence cannot replace an auth/model/quota failure or a
+		// cancellation. Positively observed file/tool violations still win.
+		if !violation {
+			return "", false
+		}
+	}
+	if message != "" {
+		return message, violation
+	}
+	if evidenceErr != nil {
+		return evidenceErr.Error(), false
+	}
+	return "", false
+}
+
+func verifyReadOnlyFiles(st *State, result *Result) (string, bool) {
 	if len(result.Diff.Files) > 0 {
 		return "Read-only task changed repository files", true
 	}
@@ -176,5 +205,5 @@ func doctorDeniedWrite(logPath, harness string) bool {
 }
 
 func requiresReadOnlyBaseline(req Request) bool {
-	return (req.Harness == "opencode" || req.Harness == "agy") && req.Access == "read-only"
+	return (req.Harness == "opencode" || req.Harness == "agy" || req.Harness == "kimi") && req.Access == "read-only"
 }

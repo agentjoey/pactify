@@ -359,6 +359,11 @@ func MapDecisionToOutcome(d Decision, opts []acp.PermissionOption) acp.Permissio
 	case DecisionDeny:
 		for _, o := range opts {
 			k := strings.ToLower(o.Kind)
+			// Plan actions can either exit into execution or start a revision
+			// loop. A denial selects only a plain rejection, otherwise cancels.
+			if strings.Contains(strings.ToLower(o.OptionID), "plan_") || strings.Contains(k, "plan_") {
+				continue
+			}
 			if strings.Contains(k, "reject") || strings.Contains(k, "deny") {
 				return acp.PermissionOutcome{OptionID: o.OptionID}
 			}
@@ -438,11 +443,11 @@ func applyACPOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID, res a
 			}
 		}
 	}
-	if opts.Access == AccessReadOnly && hasMode(res.Modes, "plan") {
-		if err := c.SetMode(ctx, sid, "plan"); err != nil {
-			return info, fmt.Errorf("set plan mode: %w", err)
+	if opts.Access == AccessReadOnly && (hasMode(res.Modes, "default") || res.CurrentModeID != "default") {
+		if err := c.SetMode(ctx, sid, "default"); err != nil {
+			return info, fmt.Errorf("set default mode: %w", err)
 		}
-		info.Access = "plan"
+		info.Access = "default"
 	}
 	return info, nil
 }
@@ -502,9 +507,6 @@ func applyACPResumeOpts(ctx context.Context, c acpConfigurer, sid acp.SessionID,
 	}
 	if opts.Access != "" {
 		mode := "default"
-		if opts.Access == AccessReadOnly {
-			mode = "plan"
-		}
 		if err := c.SetMode(ctx, sid, mode); err != nil {
 			return info, fmt.Errorf("set %s mode: %w", mode, err)
 		}

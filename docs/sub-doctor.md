@@ -46,12 +46,17 @@ limitation. Storage diagnostics appear separately.
 Network probes use Python's standard library to bind a random loopback port and
 request `https://example.com`. Missing Python or unreachable HTTPS fails this
 check; a model's verbal claim is insufficient. Codex write mode enables network
-access for dependency downloads and tests. The read-only probe must actually
-invoke tools; claiming that a write was denied does not pass.
+access for dependency downloads and tests. Codex and agy read-only probes must
+actually invoke tools; claiming that a write was denied does not pass.
 
-Kimi is no longer experimental. It cannot enforce read-only access, so its
-read-only rows are skipped. Kimi has no OS sandbox for writes; permission requests
-are approved by pactify. Agy uses plan mode, managed hooks, argument-checked
+Kimi read-only probes must succeed, leave `probe.txt` absent, and have every
+agent's `llm.tools_snapshot` within the generated private config's tool allowlist:
+Read, Grep, Glob, ReadMediaFile, TodoList, TaskList, TaskOutput and WaitFor.
+Unexpected tools or missing snapshots fail the check. The execution-time policy
+disables shell, writes, sub-agents, cron, MCP and network tools; additional deny
+rules cover Write, Edit, Bash, Agent*, Cron* and TaskStop. ACP uses default mode,
+not plan mode. An unchanged repository baseline is required. Kimi has no OS sandbox
+for writes; permission requests in write jobs are approved by pactify. Agy uses plan mode, managed hooks, argument-checked
 commands and a repository baseline;
 these controls do not provide an OS sandbox for writes. Opencode 1.x and 2.x
 remove shell and edit tools from read-only sessions. Doctor reads the completed
@@ -65,7 +70,39 @@ Probes follow `sub run`'s default minimal configuration. Ordinary jobs can opt i
 to `--with-user-config`; doctor verifies the default path. Codex disables optional
 MCP, plugins, skills and memory through native process-local overrides while
 retaining authentication, providers, sandbox settings and repository instructions.
-Kimi uses `$PACTIFY_HOME/harness-homes/kimi`, agy uses a managed HOME, and opencode
+Kimi uses `$PACTIFY_HOME/harness-homes/kimi` for write jobs and
+`$PACTIFY_HOME/harness-homes/kimi-readonly` for read-only jobs. Before each job,
+pactify renders a private 0600 config from at most 1 MiB of user TOML. The only
+copied top-level settings are `default_model`, `models` and `providers` (including
+provider API-key environment references and OAuth storage/key references).
+Generated permission/tools sections replace all execution settings; unknown
+sections are omitted. Config contents are never logged. Concurrent jobs share
+an identical regular 0600 config under shared leases. A changed or unsafe config
+requires the home to be idle; otherwise startup fails with an in-use diagnostic.
+The last job removes the generated config, including any provider API keys.
+Credentials and OAuth remain directory links. `--with-user-config` is incompatible
+with kimi `--read-only`; resume requires the original access and config modes.
+Write jobs use a separate home and lock.
+
+Snapshot evidence is required for success. Missing evidence on failed or canceled
+jobs preserves their original status, reason and failure class, including quota
+fallback. Observed non-allowlisted tools or repository writes still fail every
+terminal path with `readonly_violation`. Evidence must come from the recorded
+managed read-only home. Paths are canonicalized; large wire events are decoded
+without a scanner line limit. Empty agents without an LLM call may have no wire;
+an existing wire without a snapshot, or a known LLM call without a wire, fails.
+
+Kimi 2.2.0's project-local `.kimi-code/local.toml` schema contains only
+`workspace.additional_dir`; it cannot override the global tools policy. Project
+MCP/plugin/agent tools remain subject to that policy. The tools section has no
+environment binding. Pactify forces the dangerous-command guard on, clears
+inherited workspace trust and experimental switches, and disables cron and
+background keep-alive overrides for read-only jobs. Model and authentication
+environment variables remain available. These findings were checked against the
+installed binary's `FileProjectLocalConfigService`, `ToolsConfigSchema` and
+`AgentToolPolicyService`, plus the upstream [config reference](https://moonshotai.github.io/kimi-code/llms-full.txt).
+
+Agy uses a managed HOME, and opencode
 uses private XDG directories. Necessary authentication links are managed without
 printing credential contents. Session stores remain private and persistent for
 resume. Changed configuration copies are discarded with warnings; credential

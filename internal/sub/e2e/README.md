@@ -8,7 +8,7 @@ built from the current source, through subprocess CLI commands. Assertions read
 CLI JSON, job-owned log records, files and process identities; they do not call
 adapter or worker inference functions. Opencode uses the product metadata-only
 model discovery and own-session policy verification helpers (1.x rule read-back,
-2.x permission evaluation).
+2.x permission evaluation). Kimi read-only scenarios verify the private session tools snapshots with the product helper, including every agent.
 
 ```sh
 export TMPDIR=/private/tmp # or another writable temporary directory
@@ -103,11 +103,9 @@ live agy prompts; these rows are FAIL with an explicit skipped reason, not N/A.
 this live remaining-quota check.
 
 Every selected scenario emits `E2E <harness> <scenario> PASS|FAIL|N/A <reason>`.
-Only upstream unsupported features receive N/A (kimi read-only, after an actual
-CLI probe verifies exit code 2 and the unsupported-capability diagnostic). An
-unexpected job ID is tracked, canceled immediately and fails the scenario;
-cancellation failure also fails the scenario. The manually
-untriggerable quota-exhaustion subcase is documented as N/A / covered by golden
+Kimi runs both read-only scenarios; evidence is its own private session tools snapshots
+and unchanged repository metadata. The manually untriggerable quota-exhaustion
+subcase is documented as N/A / covered by golden
 replay in `failure_surface`; it does not make other subcases pass. Environment
 restrictions and model noncompliance are failures with evidence, not upstream
 capability exemptions. The unchanged CLI read-only 40-tool-call cap can make

@@ -205,6 +205,10 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if readOnly && h.NoReadOnly != "" {
 		return 2, fmt.Errorf("%s", h.NoReadOnly)
 	}
+	withUserConfig, _ := c.Flags().GetBool("with-user-config")
+	if name == "kimi" && readOnly && withUserConfig {
+		return 2, fmt.Errorf("kimi --read-only cannot be used with --with-user-config; read-only requires a generated private config")
+	}
 	if wait < 0 {
 		return 2, fmt.Errorf("--wait must not be negative")
 	}

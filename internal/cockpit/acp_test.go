@@ -312,10 +312,10 @@ func TestApplyACPOptsModelEffortReadOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f.set["model"] != "kimi-code/kimi-for-coding" || f.set["thinking"] != "low" || !reflect.DeepEqual(f.modes, []string{"plan"}) {
+	if f.set["model"] != "kimi-code/kimi-for-coding" || f.set["thinking"] != "low" || !reflect.DeepEqual(f.modes, []string{"default"}) {
 		t.Fatalf("set=%v modes=%v", f.set, f.modes)
 	}
-	if want := (SessionInfo{Model: "kimi-code/kimi-for-coding", Effort: "low", Access: "plan"}); info != want {
+	if want := (SessionInfo{Model: "kimi-code/kimi-for-coding", Effort: "low", Access: "default"}); info != want {
 		t.Fatalf("info=%+v", info)
 	}
 }
@@ -575,7 +575,7 @@ func TestACPBackendOptionsReachProcess(t *testing.T) {
 			if !ok {
 				t.Fatal("ACP session lacks Info")
 			}
-			if got := info.Info(); got != (SessionInfo{Model: "kimi-code/kimi-for-coding", Effort: "low", Access: "plan"}) {
+			if got := info.Info(); got != (SessionInfo{Model: "kimi-code/kimi-for-coding", Effort: "low", Access: "default"}) {
 				t.Fatalf("info=%+v", got)
 			}
 			if err := sess.Interrupt(ctx); err != nil {
@@ -586,7 +586,7 @@ func TestACPBackendOptionsReachProcess(t *testing.T) {
 			}
 			select {
 			case e := <-sess.Events():
-				prefix := "override|kimi-code/kimi-for-coding|low|plan|" + opts.RepoDir + "|true|"
+				prefix := "override|kimi-code/kimi-for-coding|low|default|" + opts.RepoDir + "|true|"
 				if e.Kind != EventMessage || !strings.HasPrefix(e.Text, prefix) {
 					t.Fatalf("event=%+v", e)
 				}
@@ -748,7 +748,7 @@ func TestACPBackendOptionsReachSlowProcess(t *testing.T) {
 	}
 	select {
 	case e := <-sess.Events():
-		if e.Kind != EventMessage || !strings.Contains(e.Text, "|kimi-code/kimi-for-coding|low|plan|") {
+		if e.Kind != EventMessage || !strings.Contains(e.Text, "|kimi-code/kimi-for-coding|low|default|") {
 			t.Fatalf("event=%+v", e)
 		}
 	case <-ctx.Done():

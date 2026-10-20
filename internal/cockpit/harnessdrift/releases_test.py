@@ -17,9 +17,9 @@ def registry(versions):
     return fetch
 
 
-BASE = {'codex': '0.162.1', 'kimi': '2.2.0', 'opencode': '1.19.0', 'opencode2': '2.0.32', 'agy': '1.4.0'}
+BASE = {'codex': '0.162.1', 'kimi': '2.2.0', 'opencode': '1.19.0', 'opencode2': '2.1.0', 'agy': '1.4.0'}
 CURRENT = {'@openai/codex': '0.163.0', '@moonshot-ai/kimi-code': '2.2.0', 'opencode-ai': '1.19.3',
-           '@opencode/cli': '2.0.32', 'linux_amd64.json': '1.4.0'}
+           '@opencode/cli': '2.1.0', 'linux_amd64.json': '1.4.0'}
 
 
 class ReleaseWatchTests(unittest.TestCase):
@@ -57,6 +57,7 @@ class ReleaseWatchTests(unittest.TestCase):
 
     def test_repo_baselines_cover_every_channel(self):
         table = releases.baselines()
+        self.assertEqual(table['opencode2'], '2.1.0')
         for channels in releases.CHANNELS.values():
             for _, _, key in channels:
                 self.assertIsNotNone(releases.major(table[key]), key)

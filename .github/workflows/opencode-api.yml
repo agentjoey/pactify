@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"package":"opencode-ai@1.19","name":"v1-pinned","flags":""},{"package":"@opencode/cli@2.0.32","name":"v2-pinned","flags":"--v2"}]' || '[{"package":"opencode-ai@1.19","name":"v1-pinned","flags":""},{"package":"opencode-ai@latest","name":"v1-latest","flags":""},{"package":"@opencode/cli@2.0.32","name":"v2-pinned","flags":"--v2"},{"package":"@opencode/cli@latest","name":"v2-latest","flags":"--v2"}]') }}
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"package":"opencode-ai@1.19","name":"v1-pinned","flags":""},{"package":"@opencode/cli@2.1.0","name":"v2-pinned","flags":"--v2"}]' || '[{"package":"opencode-ai@1.19","name":"v1-pinned","flags":""},{"package":"opencode-ai@latest","name":"v1-latest","flags":""},{"package":"@opencode/cli@2.1.0","name":"v2-pinned","flags":"--v2"},{"package":"@opencode/cli@latest","name":"v2-latest","flags":"--v2"}]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

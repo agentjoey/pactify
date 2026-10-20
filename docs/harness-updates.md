@@ -11,7 +11,7 @@ a package's `latest` tag alone does not reveal a migration to a new package.
 | --- | --- | --- | --- |
 | codex | npm `@openai/codex` | `internal/cockpit/codexschema/CODEX_VERSION` | `codex-schema.yml`: latest schema fields |
 | kimi | npm `@moonshot-ai/kimi-code` | `internal/cockpit/harnessdrift/versions.json` | `harness-drift.yml`: arguments and ACP handshake |
-| opencode | npm `opencode-ai` (1.x), `@opencode/cli` (2.x) | `versions.json`: 1.19.0 / 2.0.32 | `opencode-api.yml`: pinned and latest OpenAPI contracts for both channels |
+| opencode | npm `opencode-ai` (1.x), `@opencode/cli` (2.x) | `versions.json`: 1.19.0 / 2.1.0 | `opencode-api.yml`: pinned and latest OpenAPI contracts for both channels |
 | agy | Installer manifest | `versions.json` | `harness-drift.yml`: arguments and stream events |
 
 Local doctor verification is recorded in `$PACTIFY_HOME/verified-versions.json`.
@@ -57,6 +57,15 @@ installs for compatibility experiments.
    [E2E guide](../internal/sub/e2e/README.md), including its configurable model policy.
 7. Representative long-running tasks that exercise multi-file changes, review
    and recovery, with concrete acceptance commands and a quota budget.
+
+The opencode 2.x CI pin is 2.1.0. Golden transcripts retain their recorded
+`v2.0.32` version as capture provenance; changing a CI pin does not re-record
+traffic. The reviewed OpenAPI projection (`opencodeapi/openapi-v2.json`) was
+re-reviewed for 2.1.0: it renamed the provider-state fields of session messages to
+`native` and dropped `providerContext` and a compaction `recent` field, none of
+which pactify reads. Pinned and latest probes are compared against this contract to
+detect changes in consumed fields. Synthetic 2.0.32 fixtures
+and version-selection tests retain coverage of the earlier supported release.
 
 Contract fixes require offline replay; adapter changes also need live lifecycle
 coverage in an environment that supports the harness. Record failures and skipped

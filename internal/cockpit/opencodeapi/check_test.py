@@ -42,10 +42,10 @@ class WorkflowTest(unittest.TestCase):
         self.assertIsNotNone(expression)
         pull_request = json.loads(expression[1])
         scheduled = json.loads(expression[2])
-        self.assertEqual([row["package"] for row in pull_request], ["opencode-ai@1.19", "@opencode/cli@2.0.32"])
+        self.assertEqual([row["package"] for row in pull_request], ["opencode-ai@1.19", "@opencode/cli@2.1.0"])
         self.assertEqual({row["package"]: row["flags"] for row in scheduled}, {
             "opencode-ai@1.19": "", "opencode-ai@latest": "",
-            "@opencode/cli@2.0.32": "--v2", "@opencode/cli@latest": "--v2",
+            "@opencode/cli@2.1.0": "--v2", "@opencode/cli@latest": "--v2",
         })
 
 class V2ContractTest(unittest.TestCase):

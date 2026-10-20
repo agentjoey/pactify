@@ -133,7 +133,7 @@ def main():
     expected = snapshot.read_text()
     if actual != expected:
         print("".join(difflib.unified_diff(expected.splitlines(True), actual.splitlines(True),
-                                          fromfile="reviewed v2 contract (2.0.32)" if args.v2 else "reviewed v1 contract (1.19.0)", tofile=str(args.schema))), end="")
+                                          fromfile="reviewed v2 contract (2.1.0)" if args.v2 else "reviewed v1 contract (1.19.0)", tofile=str(args.schema))), end="")
         raise SystemExit(1)
     print("PASS: used opencode " + ("v2" if args.v2 else "v1") + " paths and schemas match the reviewed snapshot")
 

@@ -108,7 +108,7 @@ func TestModelPolicyDefaultsAndDenials(t *testing.T) {
 	}{
 		{"codex", "native/model", true}, {"opencode", "opencode/mini-free", true},
 		{"opencode", "minimax-coding-plan/MiniMax-M3", true}, {"opencode", "other/mini-free", false},
-		{"opencode", "opencode/deepseek-v4-pro-free", false}, {"agy", "gemini-3.8-flash", true},
+		{"opencode", "opencode/deepseek-v4-pro-free", false}, {"agy", "gemini-3.8-flash-low", true}, {"agy", "gemini-3.8-flash", false},
 		{"agy", "other-model", false}, {"kimi", "kimi-code/model", true}, {"kimi", "other/model", false},
 	} {
 		if got := allowedE2EModel(tc.harness, tc.model); got != tc.allowed {

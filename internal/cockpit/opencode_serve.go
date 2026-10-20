@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -122,13 +123,45 @@ func newOpencodeSession(ctx context.Context, opts StartOpts, id string) (*openco
 		}
 		return nil, err
 	}
+	if opts.Model == "" && opts.Effort != "" {
+		// Resume retains the session's last model unless explicitly overridden.
+		if id != "" {
+			var history []opencodeMessage
+			if err := server.call(ctx, "GET", s.path()+"/message", nil, &history); err != nil {
+				return fail(err)
+			}
+			for _, message := range history {
+				if info := message.Info; info.Role == "assistant" && info.ProviderID != "" && info.ModelID != "" {
+					opts.Model = info.ProviderID + "/" + info.ModelID
+				}
+			}
+		}
+		if opts.Model == "" {
+			var config struct{ Model string }
+			if err := server.call(ctx, "GET", "/config", nil, &config); err != nil {
+				return fail(err)
+			}
+			opts.Model = config.Model
+		}
+		if opts.Model == "" {
+			return fail(fmt.Errorf("%w: cannot determine the opencode model for --effort; specify --model provider/model", ErrModelUnavailable))
+		}
+		s.opts.Model = opts.Model
+	}
 	if opts.Model != "" {
-		models, err := server.models(ctx)
+		details, err := server.modelDetails(ctx)
 		if err != nil {
 			return fail(err)
 		}
-		if err := validateOpencodeModel(opts.Model, models); err != nil {
+		if err := validateOpencodeModel(opts.Model, details.Items); err != nil {
 			return fail(err)
+		}
+		if variants := details.ModelEfforts[opts.Model]; opts.Effort != "" && !slices.Contains(variants, opts.Effort) {
+			choices := strings.Join(variants, ", ")
+			if len(variants) == 0 {
+				choices = "none (omit --effort for this model)"
+			}
+			return fail(fmt.Errorf("%w: --effort %q for %s; valid values: %s", ErrEffortUnavailable, opts.Effort, opts.Model, choices))
 		}
 	}
 	if s.id == "" {
@@ -246,7 +279,8 @@ func (s *opencodeSession) updateInfo(info opencodeMessageInfo) {
 	s.mu.Lock()
 	s.info.Provider = info.ProviderID
 	s.info.Model = info.ProviderID + "/" + info.ModelID
-	s.info.Effort = s.opts.Effort
+	// The 1.x assistant message reports the model but no applied variant.
+	// A validated request alone does not establish the effort actually used.
 	s.mu.Unlock()
 }
 func opencodeErrorText(raw json.RawMessage) string {

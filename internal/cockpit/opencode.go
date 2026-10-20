@@ -58,16 +58,15 @@ func OpencodeModelDetails(ctx context.Context, opts StartOpts) (ModelDiscovery, 
 		return ModelDiscovery{}, err
 	}
 	defer server.close()
-	models, err := server.models(ctx)
+	d, err := server.modelDetails(ctx)
 	if err != nil {
 		return ModelDiscovery{}, err
 	}
-	d := ModelDiscovery{Items: models}
 	var config struct {
 		Model string `json:"model"`
 	}
 	if err := server.call(ctx, "GET", "/config", nil, &config); err == nil {
-		for _, model := range models {
+		for _, model := range d.Items {
 			if model == config.Model {
 				d.DefaultModel = model
 				break
@@ -115,5 +114,5 @@ func opencodeFailure(message string, raw json.RawMessage) Failure {
 	if json.Unmarshal(raw, &stop) == nil && stop.Reason != "" {
 		return acpFailure(message, raw, nil)
 	}
-	return matchFailure(message, []failureRule{{"opencode 2.x has no pactify login", "auth"}, {"run opencode login first", "auth"}, {"insufficient balance", "quota"}, {"requested model is not offered by this agent", "model"}})
+	return matchFailure(message, []failureRule{{"opencode 2.x has no pactify login", "auth"}, {"run opencode login first", "auth"}, {"insufficient balance", "quota"}, {"requested model is not offered by this agent", "model"}, {ErrEffortUnavailable.Error(), "model"}})
 }

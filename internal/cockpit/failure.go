@@ -47,7 +47,7 @@ func FailureFromError(harness string, err error, now time.Time) Failure {
 	if err == nil {
 		return Failure{Class: "other"}
 	}
-	if errors.Is(err, ErrModelUnavailable) || errors.Is(err, ErrModelUnsupported) {
+	if errors.Is(err, ErrModelUnavailable) || errors.Is(err, ErrModelUnsupported) || errors.Is(err, ErrEffortUnavailable) {
 		return Failure{Class: "model"}
 	}
 	var httpError *opencodeHTTPError

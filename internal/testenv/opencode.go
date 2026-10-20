@@ -88,6 +88,15 @@ func OpencodeServePeer(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
+		if path := os.Getenv("COCKPIT_OC_REQUESTS"); path != "" {
+			f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			json.NewEncoder(f).Encode(map[string]string{"method": r.Method, "path": r.URL.Path})
+			f.Close()
+		}
 		switch r.Method + " " + r.URL.Path {
 		case "GET /event":
 			w.Header().Set("Content-Type", "text/event-stream")
@@ -111,7 +120,7 @@ func OpencodeServePeer(t *testing.T) {
 			model := os.Getenv("COCKPIT_OPENCODE_DEFAULT_MODEL")
 			json.NewEncoder(w).Encode(map[string]string{"model": model})
 		case "GET /config/providers":
-			fmt.Fprint(w, `{"providers":[{"id":"opencode","models":{"test-free":{"id":"test-free","cost":{"input":0}},"paid":{"id":"paid","cost":{"input":1}}}},{"id":"minimax-coding-plan","models":{"MiniMax-M3":{"id":"MiniMax-M3","cost":{"input":0}}}}],"default":{"opencode":"paid"}}`)
+			fmt.Fprint(w, `{"providers":[{"id":"opencode","models":{"test-free":{"id":"test-free","cost":{"input":0},"variants":{"low":{},"high":{}}},"paid":{"id":"paid","cost":{"input":1},"variants":{"high":{},"max":{}}}}},{"id":"minimax-coding-plan","models":{"MiniMax-M3":{"id":"MiniMax-M3","cost":{"input":0},"variants":{}}}}],"default":{"opencode":"paid"}}`)
 		case "POST /session", "PATCH /session/sid":
 			body, _ := io.ReadAll(r.Body)
 			os.WriteFile(filepath.Join(data, "permissions.json"), body, 0600)
@@ -148,12 +157,14 @@ func OpencodeServePeer(t *testing.T) {
 			}
 			json.NewEncoder(w).Encode(msgs)
 		case "POST /session/sid/prompt_async":
+			body, _ := io.ReadAll(r.Body)
+			os.WriteFile(filepath.Join(data, "prompt.json"), body, 0600)
 			var req struct {
 				Agent string `json:"agent"`
 				Model struct{ ProviderID, ModelID string }
 				Parts []struct{ Text string }
 			}
-			if json.NewDecoder(r.Body).Decode(&req) != nil {
+			if json.Unmarshal(body, &req) != nil {
 				http.Error(w, "invalid prompt", 400)
 				return
 			}

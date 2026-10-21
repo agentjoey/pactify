@@ -155,6 +155,7 @@ See [Jobs dashboard](jobs-view.md) for API access and security.
 `GET /api/sub/harnesses` (panel: `GET /api/harnesses`, requiring Bearer auth)
 returns `harnesses` rows with `name`, `installed`, `version`, `verifiedVersion`,
 `experimental`, `readOnly`, `sandboxed`, `models`, `default` and `efforts`.
+Only agy is experimental; opencode 1.x and 2.x are supported.
 `models` includes items, errors, warnings and the latest discovery timestamp.
 Router defaults take precedence over advertised native defaults. Effort metadata
 can contain the union advertised by models; it does not guarantee that every

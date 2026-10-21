@@ -316,19 +316,19 @@ func (s Store) activity(id string) *Activity {
 }
 
 // actionableWarnings counts warnings a person should act on. Informational
-// notes repeat on every job (experimental harness, version not yet checked by
+// notes repeat on every job (harness limitations, version not yet checked by
 // doctor, CLI version changes, partial usage, uncommitted changes left out of a
 // worktree) and would otherwise mark nearly every row for attention.
 func actionableWarnings(r Result) int {
-	experimental := ""
+	harnessWarning := ""
 	if h, ok := Lookup(r.Harness); ok {
-		experimental = h.Experimental
+		harnessWarning = h.informationalWarning()
 	}
 	n := 0
 	for _, w := range r.Warnings {
 		switch {
 		case w == partialUsageWarning, strings.HasPrefix(w, "CLI version changed: "):
-		case w == experimental && w != "", w == dirtyWorktreeWarning, strings.HasSuffix(w, "has not been checked; run pactify sub doctor first"):
+		case w == harnessWarning && w != "", w == dirtyWorktreeWarning, strings.HasSuffix(w, "has not been checked; run pactify sub doctor first"):
 		default:
 			n++
 		}

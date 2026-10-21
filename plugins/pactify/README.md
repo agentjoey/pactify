@@ -42,8 +42,8 @@ Use `/pactify:delegate`, `/pactify:delegate-codex`, `/pactify:delegate-kimi`, `/
 `/delegate` uses the default codex harness; `/delegate-codex`, `/delegate-kimi`, `/delegate-agy` and `/delegate-opencode` select a harness explicitly. An explicit invocation always delegates, regardless of task size.
 Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate or hand off to a harness; otherwise do the work directly.
 Task size alone never authorizes delegation. Preserve the requested access mode; never raise permissions yourself.
-The codex and kimi skills remain model-invocable for explicit delegation requests.
-Experimental agy and opencode skills set `disable-model-invocation: true` and run only via their corresponding slash commands, including namespaced forms.
+The codex, kimi and opencode skills are model-invocable for explicit delegation requests.
+The experimental agy skill sets `disable-model-invocation: true` and runs only via its slash command, including the namespaced form. The supported opencode skill, like kimi, is model-invocable only on an explicit user request to delegate.
 
 The Claude main thread first writes a complete brief with Background, numbered goals, Known constraints and special cases, General constraints, and Acceptance commands.
 Specify paths, scope, access, and known exceptions: the callee cannot infer constraints from the current conversation. Acceptance commands must include the project's full test suite.
@@ -72,7 +72,7 @@ To select a model, name it explicitly in the task. If the CLI cannot honor it, e
 For rework, explicitly request `--resume <job-id> --worktree`, preserving the original cwd and harness.
 For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` / `pactify:agy` / `pactify:opencode` forwarding subagent:
 it uses `model: haiku`, has only Bash, calls Bash once, and returns stdout verbatim. After a timeout, the main thread continues waiting.
-Forwarders require an explicit delegation request; agy and opencode forwarders may run only after the user invokes their corresponding skill slash command.
+Forwarders require an explicit delegation request; the agy forwarder may run only after the user invokes its skill slash command.
 The callee leaves changes uncommitted for the host to review.
 
 ## Viewing delegation jobs
@@ -231,6 +231,7 @@ normal minimal configuration, including directory permissions and link integrity
 
 | | codex | kimi | agy | opencode |
 |---|---|---|---|---|
+| Support | Supported (default) | Supported | Experimental | Supported (1.x and 2.x) |
 | `--write` | workspace-write sandbox, **network enabled** (supports tests with local servers and dependency downloads) | kimi default mode (direct writes, no sandbox) | `--dangerously-skip-permissions` (full write access) | build + per-type permissions + directory guardrail |
 | `--read-only` | read-only sandbox, no network | private tool allowlist + tools snapshot + fail-closed baseline | plan + exact commands + managed hooks + fail-closed baseline | plan + read/glob/grep/list only (no shell) + fail-closed baseline |
 
@@ -242,11 +243,13 @@ normal minimal configuration, including directory permissions and link integrity
 - Only locally installed, logged-in official CLIs are supported. Follow the summary warnings when independent model verification fails.
 - Automated tests do not cover installation and delegation in real Claude Code. Release acceptance still requires a Claude Code smoke test.
 
-## opencode (experimental)
+## opencode
 
-opencode is experimental: no OS sandbox; write permission requests are approved by pactify; results vary by model, using
-1.19.0 v1 HTTP/SSE through a private authenticated `opencode serve` process per job.
-Run only via `/delegate-opencode` or `/pactify:delegate-opencode`, using the shared delegation guide and host review workflow.
+opencode is supported on both 1.x and 2.x: no OS sandbox; write permission requests are approved by pactify; results vary by model. Version 1.x uses v1 HTTP/SSE through a private authenticated
+`opencode serve` process per job; 2.x uses the reviewed `@opencode/cli` API contract.
+Use `/delegate-opencode`, `/pactify:delegate-opencode`, or an explicit user request
+to delegate to opencode, with the shared delegation guide and host review workflow.
+See the [support policy](../../docs/harness-updates.md) for both majors.
 Out-of-workspace directory access for file tools is denied; shell is not confined.
 Requested models use dynamic `provider/model` ids; omitting the model preserves opencode's default.
 Assistant messages confirm the actual model. Tokens and cost use the session summary;

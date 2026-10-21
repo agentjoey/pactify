@@ -33,16 +33,16 @@ func writeWorktree(f *fixture) string {
 	if r.WorktreePath == "" || r.WorktreePath == f.repo {
 		f.fatal("missing isolated worktree")
 	}
-	f.file(r.WorktreePath, "e2e.txt", "alpha\n")
-	f.file(r.WorktreePath, "existing.txt", "after\n")
+	f.modelFile(r.WorktreePath, "e2e.txt", "alpha\n")
+	f.modelFile(r.WorktreePath, "existing.txt", "after\n")
 	f.clean()
 	f.file(f.repo, "existing.txt", "before\n")
 	b, e := f.cli("", "apply", r.JobID)
 	if e != nil {
 		f.fatalf("apply: %v %s", e, safe(b))
 	}
-	f.file(f.repo, "e2e.txt", "alpha\n")
-	f.file(f.repo, "existing.txt", "after\n")
+	f.sameFile(r.WorktreePath, f.repo, "e2e.txt")
+	f.sameFile(r.WorktreePath, f.repo, "existing.txt")
 	b, e = f.cli("", "discard", r.JobID)
 	if e != nil {
 		f.fatalf("discard: %v %s", e, safe(b))
@@ -126,7 +126,8 @@ func readonlyLong(f *fixture) string {
 	f.git("commit", "-qm", "read fixtures")
 	before, e := metadata([]string{f.repo}, true)
 	must(f.t, e)
-	r := f.run("Read part-01.txt through part-60.txt in order. Each has a numbered random string. Use exactly one separate tool invocation per file; do not batch files, use loops, scripts, glob reads or parallel tool calls. Return E2E_TOKENS= followed by all 60 random strings concatenated in numeric order without spaces. Do not change files.", "--read-only")
+	// 60 sequential tool calls: slow (free) models need more than the default 5-minute wait.
+	r := f.finish(f.start("Read part-01.txt through part-60.txt in order. Each has a numbered random string. Use exactly one separate tool invocation per file; do not batch files, use loops, scripts, glob reads or parallel tool calls. Return E2E_TOKENS= followed by all 60 random strings concatenated in numeric order without spaces. Do not change files.", "--read-only"), 15*time.Minute)
 	if readonlyToolPolicy(f.s.harness, f.s.adapter.Opencode2) {
 		f.verifyReadonlyPolicy(r, "denied-shell.txt", "denied-tool.txt")
 	}
@@ -169,8 +170,8 @@ func resume(f *fixture) string {
 	if !strings.Contains(b.FinalText, word) {
 		f.error("resumed reply forgot word")
 	}
-	f.file(b.WorktreePath, "first.txt", word+"\n")
-	f.file(b.WorktreePath, "second.txt", "second\n")
+	f.modelFile(b.WorktreePath, "first.txt", word+"\n")
+	f.modelFile(b.WorktreePath, "second.txt", "second\n")
 	if f.toolContains(b.JobID, "first.txt") {
 		f.error("resume used the first-round file instead of memory")
 	}
@@ -309,7 +310,9 @@ func parallelJobs(f *fixture) string {
 			f.error("parallel worktree not unique")
 		}
 		paths[r.WorktreePath] = true
-		f.file(r.WorktreePath, "same.txt", fmt.Sprintf("job-%d\n", i))
+		if err := parallelFileContent(r.WorktreePath, i); err != nil {
+			f.error(err.Error())
+		}
 	}
 	f.clean()
 	return "three concurrent jobs; unique worktrees and independent same.txt contents"
@@ -380,8 +383,8 @@ func failureSurface(f *fixture) string {
 func records(f *fixture) string {
 	r := f.run("Create e2e.txt containing exactly alpha followed by a newline. Replace existing.txt with exactly after followed by a newline. Use tools. Do not commit. Reply E2E_RECORDS_DONE.", "--worktree")
 	f.success(r)
-	f.file(r.WorktreePath, "e2e.txt", "alpha\n")
-	f.file(r.WorktreePath, "existing.txt", "after\n")
+	f.modelFile(r.WorktreePath, "e2e.txt", "alpha\n")
+	f.modelFile(r.WorktreePath, "existing.txt", "after\n")
 	f.clean()
 	b, e := f.cli("", "result", r.JobID, "--json")
 	must(f.t, e)
@@ -535,7 +538,7 @@ func hostPath(f *fixture) string {
 	if e != nil {
 		f.fatalf("host: %v %s", e, safe(out))
 	}
-	f.file(f.repo, "host.txt", want)
+	f.modelFile(f.repo, "host.txt", want)
 	if !strings.Contains(string(out), "E2E_HOST_SUMMARY") {
 		f.error("host summary missing")
 	}

@@ -35,7 +35,9 @@ Use `/delegate` (or `/pactify:delegate`) for default codex delegation, or select
 `/jobs all` includes older jobs and `/jobs <id>` shows one job. Read the
 [plugin guide](plugins/pactify/README.md) for brief writing and result review.
 The plugin is for Claude Code only. Delegation requires an explicit user request;
-experimental agy and opencode skills run only through their slash commands.
+the experimental agy skill runs only through its slash command. The supported
+opencode skill, like kimi, can be invoked by the model only on an explicit user
+request to delegate.
 
 ## CLI basics
 
@@ -54,18 +56,28 @@ a result, or `pactify sub run --resume <job-id> --worktree` for rework in the sa
 worktree. Job IDs accept an unambiguous prefix. See [router configuration](docs/router.md) for aliases and fallback,
 [job status](docs/sub-status.md) and [cost reporting](docs/sub-cost.md).
 
-codex is the default; agy and opencode are experimental. Kimi read-only jobs use a
+codex is the default; kimi and opencode are supported, and agy is experimental. Kimi read-only jobs use a
 generated private config with an execution-time tool allowlist, snapshot verification
 for every agent, and a fail-closed repository baseline. Shell, writes, sub-agents,
 cron, MCP and network tools are unavailable. Use `kimi --read-only` for reviews;
 `--with-user-config` is incompatible. Kimi has no OS sandbox for writes; permission
 requests in write jobs are approved by pactify. `agy --read-only` uses plan mode and managed hooks. opencode uses
-a per-job `opencode serve`; its read-only mode denies shell/edit tools, reports
+a per-job server (`opencode serve` on 1.x, `@opencode/cli` on 2.x); its read-only mode denies shell/edit tools, reports
 `sandboxed=false`, and fails with `readonly_violation` if repository files change.
 In write mode, pactify blocks opencode file tools from accessing directories outside
 the job workspace, job TMPDIR and `$PACTIFY_HOME/cache`. Shell commands can still
 reach files those checks cannot see. Opencode runs without an OS sandbox; these
 permission checks are a guardrail, not isolation. Experimental harness results vary by model.
+
+| Harness | Support policy |
+| --- | --- |
+| codex | Supported; default harness |
+| kimi | Supported |
+| opencode 1.x (`opencode-ai`) | Supported while `opencode-ai` still publishes 1.x releases and the v1 drift/contract check stays green |
+| opencode 2.x (`@opencode/cli`) | Supported; pinned by the reviewed contract (currently 2.1.0) |
+| agy | Experimental |
+
+See [upstream compatibility](docs/harness-updates.md) for contract checks and evaluation gates.
 
 ## Dashboard
 

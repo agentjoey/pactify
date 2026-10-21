@@ -1,13 +1,12 @@
 ---
 name: delegate-opencode
-description: Use only when the user explicitly asks to delegate via /delegate-opencode or /pactify:delegate-opencode. Experimental harness; no OS sandbox; write permission requests are approved by pactify; out-of-workspace directory access for file tools is denied; shell is not confined; results vary by model.
-disable-model-invocation: true
+description: Use when the user explicitly asks to delegate a coding task to the opencode harness. no OS sandbox; write permission requests are approved by pactify; out-of-workspace directory access for file tools is denied; shell is not confined; results vary by model.
 ---
 
-# Delegate to opencode (experimental)
+# Delegate to opencode
 
-**opencode is experimental: no OS sandbox; write permission requests are approved by pactify;
-results vary by model.** Run only via `/delegate-opencode` or `/pactify:delegate-opencode`.
+**opencode has no OS sandbox; write permission requests are approved by pactify;
+results vary by model.** Use only when the user explicitly requests delegation.
 Read-only permission requests are denied.
 Out-of-workspace directory access for file tools is denied; shell is not confined.
 Prefer the default codex harness (`/delegate` or `/delegate-codex`).
@@ -22,14 +21,14 @@ Launch command (step 2 below):
     BRIEF
 
 Use `--read-only` instead for investigations and reviews. Use `--write` only when the user allows changes. Never raise permissions yourself.
-Models come from the live v1 `/config/providers` catalog, with provider/model ids; preserve the requested model.
+Models come from the live v1 `/config/providers` or v2 `/api/model` catalog, with provider/model ids; preserve the requested model.
 Omit `--model` to keep opencode's default. Resume with `--resume <job-id> --worktree` and the original cwd.
 
 <!-- BEGIN SHARED-DELEGATION -->
 Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate
 or hand off to a harness; otherwise do the work directly. Task size alone never authorizes delegation.
-agy and opencode run only via their explicit `/delegate-agy` or `/delegate-opencode`
-slash commands (including the `/pactify:` namespaced forms); never select them on your own.
+agy runs only via its explicit `/delegate-agy` slash command (including the
+`/pactify:delegate-agy` namespaced form); never select it on your own.
 Preserve the user's requested harness and access mode; harness permission restrictions still apply.
 Configured aliases can be used with `/delegate @alias <task>`.
 Inspect `pactify sub router --json` for available aliases and preserve any route

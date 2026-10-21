@@ -103,6 +103,9 @@ func TestOpencodeWritePermissionAdapters(t *testing.T) {
 	for _, major := range []int{1, 2} {
 		for _, tc := range []struct {
 			name           string
+			label          string
+			files          any
+			subdir         bool
 			paths          []string
 			filepath       string
 			allow, warning bool
@@ -110,6 +113,28 @@ func TestOpencodeWritePermissionAdapters(t *testing.T) {
 			recovered      bool
 			v1only, v2only bool
 		}{
+			// apply_patch asks for edit with git-root-relative patterns and a
+			// comma-joined filepath. Absolute files[] paths must win, even in a subdir.
+			{name: "edit", label: "apply_patch inside subdir", paths: []string{"sub/a", "sub/b"}, filepath: "sub/a, sub/b", files: []any{map[string]any{"filePath": "INSIDE/a", "relativePath": "sub/a", "type": "add", "patch": "+a", "additions": 1, "deletions": 0}, map[string]any{"filePath": "INSIDE/b", "relativePath": "sub/b", "type": "update", "patch": "+b", "additions": 1, "deletions": 0}}, subdir: true, allow: true, v1only: true},
+			{name: "edit", label: "apply_patch one outside", paths: []string{"a", "b"}, filepath: "a, b", files: []any{map[string]any{"filePath": "INSIDE/a", "relativePath": "a", "type": "update", "patch": "+a", "additions": 1, "deletions": 0}, map[string]any{"filePath": "OUTSIDE/b", "relativePath": "b", "type": "update", "patch": "+b", "additions": 1, "deletions": 0}}, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch move outside", paths: []string{"a"}, filepath: "a", files: []any{map[string]any{"filePath": "INSIDE/a", "relativePath": "a", "movePath": "OUTSIDE/b", "type": "move", "patch": "@@", "additions": 0, "deletions": 0}}, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch move inside", paths: []string{"a"}, filepath: "a", files: []any{map[string]any{"filePath": "INSIDE/a", "relativePath": "a", "movePath": "INSIDE/b", "type": "move", "patch": "@@", "additions": 0, "deletions": 0}}, allow: true, v1only: true},
+			{name: "edit", label: "apply_patch relative filePath", paths: []string{"a"}, files: []any{map[string]any{"filePath": "a", "relativePath": "a"}}, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch missing filePath", paths: []string{"a"}, files: []any{map[string]any{"relativePath": "a"}}, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch numeric filePath", paths: []string{"a"}, files: []any{map[string]any{"filePath": 42}}, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch relative movePath", paths: []string{"a"}, files: []any{map[string]any{"filePath": "INSIDE/a", "movePath": "b"}}, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch numeric movePath", paths: []string{"a"}, files: []any{map[string]any{"filePath": "INSIDE/a", "movePath": 42}}, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch null entry", paths: []string{"a"}, files: []any{nil}, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch non-array", paths: []string{"a"}, files: "malformed", warning: true, v1only: true},
+			{name: "edit", label: "apply_patch null files", paths: []string{"a"}, files: json.RawMessage(`null`), warning: true, v1only: true},
+			{name: "edit", label: "apply_patch empty files fallback", paths: []string{"a"}, files: []any{}, allow: true, v1only: true},
+			{name: "edit", label: "apply_patch git-root path outside cwd", paths: []string{"sibling.txt"}, filepath: "sibling.txt", files: []any{map[string]any{"filePath": "PROJECT/sibling.txt"}}, subdir: true, warning: true, v1only: true},
+			{name: "edit", label: "apply_patch recovered inside", paths: []string{"sub/a"}, filepath: "sub/a", files: []any{map[string]any{"filePath": "INSIDE/a", "relativePath": "sub/a", "type": "delete", "patch": "-a", "additions": 0, "deletions": 1}}, subdir: true, recovered: true, allow: true, v1only: true},
+			{name: "edit", label: "apply_patch recovered outside", paths: []string{"a"}, files: []any{map[string]any{"filePath": "OUTSIDE/a"}}, recovered: true, warning: true, v1only: true},
+			// V2 edit and patch both use action edit, relative to the session cwd.
+			{name: "edit", label: "v2 relative inside cwd", paths: []string{"a"}, subdir: true, allow: true, v2only: true},
+			{name: "edit", label: "v2 dotdot inside project outside cwd", paths: []string{"../sibling.txt"}, subdir: true, warning: true, v2only: true},
+			{name: "edit", label: "v2 absolute outside", paths: []string{"OUTSIDE/a"}, subdir: true, warning: true, v2only: true},
 			{name: "external_directory", paths: []string{"INSIDE/**"}, allow: true},
 			{name: "external_directory", paths: []string{"INSIDE/*", "OUTSIDE/*"}, warning: true},
 			{name: "external_directory", paths: []string{"INSIDE*"}, warning: true},
@@ -154,7 +179,7 @@ func TestOpencodeWritePermissionAdapters(t *testing.T) {
 			{name: "bash", allow: true}, {name: "shell", allow: true},
 			{name: "webfetch", allow: true}, {name: "websearch", allow: true}, {name: "task", allow: true}, {name: "todowrite", allow: true},
 		} {
-			t.Run(strings.Join([]string{string(rune('0' + major)), tc.name, strings.Join(tc.paths, ","), tc.filepath}, "/"), func(t *testing.T) {
+			t.Run(strings.Join([]string{string(rune('0' + major)), tc.name, tc.label, strings.Join(tc.paths, ","), tc.filepath}, "/"), func(t *testing.T) {
 				if tc.v1only && major != 1 || tc.v2only && major != 2 {
 					t.Skip("version-specific permission shape")
 				}
@@ -172,16 +197,37 @@ func TestOpencodeWritePermissionAdapters(t *testing.T) {
 					testenv.InstallOpencode2(t)
 					t.Setenv("COCKPIT_OC2_SCENARIO", "permission-policy")
 				}
-				root, outside := t.TempDir(), t.TempDir()
+				project, outside := t.TempDir(), t.TempDir()
+				root := project
+				if tc.subdir {
+					root = filepath.Join(project, "sub")
+					if err := os.Mkdir(root, 0700); err != nil {
+						t.Fatal(err)
+					}
+					// Joining git-root-relative sub/a against cwd would follow this
+					// unrelated directory and falsely deny an in-cwd file.
+					if err := os.Symlink(outside, filepath.Join(root, "sub")); err != nil {
+						t.Fatal(err)
+					}
+				}
 				if err := os.Symlink(outside, filepath.Join(root, "escape")); err != nil {
 					t.Fatal(err)
 				}
-				replace := strings.NewReplacer("INSIDE", root, "OUTSIDE", outside)
+				replace := strings.NewReplacer("INSIDE", root, "OUTSIDE", outside, "PROJECT", project)
 				paths := []string{}
 				for _, p := range tc.paths {
 					paths = append(paths, replace.Replace(p))
 				}
-				payload := map[string]any{"id": "per-1", "sessionID": "sid", "permission": tc.name, "patterns": paths, "always": paths, "metadata": map[string]string{"filepath": replace.Replace(tc.filepath)}}
+				metadata := map[string]any{"filepath": replace.Replace(tc.filepath)}
+				if tc.files != nil {
+					files, err := json.Marshal(tc.files)
+					if err != nil {
+						t.Fatal(err)
+					}
+					metadata["files"] = json.RawMessage(replace.Replace(string(files)))
+					metadata["diff"] = "test patch"
+				}
+				payload := map[string]any{"id": "per-1", "sessionID": "sid", "permission": tc.name, "patterns": paths, "always": []string{"*"}, "metadata": metadata}
 				if major == 2 {
 					if tc.filepath != "" {
 						paths = append(paths, replace.Replace(tc.filepath))
@@ -213,7 +259,8 @@ func TestOpencodeWritePermissionAdapters(t *testing.T) {
 					select {
 					case a := <-s.Approvals():
 						forwarded = true
-						if tc.recovered && !strings.Contains(string(a.RawInput), paths[0]) {
+						var recovered any
+						if tc.recovered && (json.Unmarshal(a.RawInput, &recovered) != nil || !reflect.DeepEqual(recovered, mustDecodePermission(t, raw))) {
 							t.Errorf("recovered request lost path data: %s", a.RawInput)
 						}
 						if err := a.Respond(DecisionAllowForSession); err != nil {
@@ -575,4 +622,13 @@ func TestOpencodeWriteExternalSymlinks(t *testing.T) {
 			})
 		}
 	}
+}
+
+func mustDecodePermission(t *testing.T, raw []byte) any {
+	t.Helper()
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		t.Fatal(err)
+	}
+	return value
 }

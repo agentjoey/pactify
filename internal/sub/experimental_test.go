@@ -79,12 +79,15 @@ func TestRunJobExperimentalWarningFromRegistry(t *testing.T) {
 					t.Fatalf("state=%+v err=%v; want error %q", state, err, wantError)
 				}
 				want := registered + " is experimental: no OS sandbox for writes; results vary by model"
-				if name == "codex" || name == "kimi" {
+				if name == "codex" || name == "kimi" || name == "opencode" {
 					if contains(r.Warnings, "experimental") || strings.Contains(r.Markdown(), "experimental") {
 						t.Fatalf("%s warnings=%v", name, r.Warnings)
 					}
 				} else if len(r.Warnings) == 0 || r.Warnings[0] != want || !strings.HasPrefix(r.Markdown(), "⚠️ "+want) {
 					t.Fatalf("experimental warning missing: %+v", r)
+				}
+				if name == "opencode" && !contains(r.Warnings, "opencode has no OS sandbox for writes; file-tool directory guard only; shell is not confined") {
+					t.Fatalf("missing opencode permission boundary warning: %v", r.Warnings)
 				}
 				data, err := os.ReadFile(store.ResultPath("j1"))
 				var saved Result

@@ -270,8 +270,8 @@ func (s Store) fallbackLocked(st *State, status Status, reason string) error {
 		r.ToolCalls = c.ToolCalls
 		r.markUsagePartial()
 	}
-	if h, ok := Lookup(st.Request.Harness); ok && h.Experimental != "" {
-		r.Warnings = append([]string{h.Experimental}, r.Warnings...)
+	if h, ok := Lookup(st.Request.Harness); ok && h.informationalWarning() != "" {
+		r.Warnings = append([]string{h.informationalWarning()}, r.Warnings...)
 	}
 	return s.finishLocked(st, &r, reason, time.Now())
 }

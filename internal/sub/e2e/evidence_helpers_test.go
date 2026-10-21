@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // Pure evidence checks are untagged so ordinary tests can exercise them without
@@ -268,4 +269,31 @@ func externalDirEvidence(tool, shell, proof, want string) (string, error) {
 		return info, fmt.Errorf("TMPDIR write proof content mismatch")
 	}
 	return info, nil
+}
+
+// Model-written files are compared without trailing whitespace: the suite checks
+// integration, not whether a model reproduced a final newline.
+func modelFileContent(root, name, want string) error {
+	b, err := os.ReadFile(filepath.Join(root, name))
+	if err != nil || strings.TrimRightFunc(string(b), unicode.IsSpace) != strings.TrimRightFunc(want, unicode.IsSpace) {
+		return fmt.Errorf("file %s missing or incorrect (read error=%v; got=%q want=%q)", name, err, b, want)
+	}
+	return nil
+}
+
+func parallelFileContent(worktree string, job int) error {
+	return modelFileContent(worktree, "same.txt", fmt.Sprintf("job-%d", job))
+}
+
+// Files pactify copies (apply) must match their source byte for byte.
+func sameFileContent(src, dst, name string) error {
+	want, err := os.ReadFile(filepath.Join(src, name))
+	if err != nil {
+		return fmt.Errorf("file %s unreadable in source: %v", name, err)
+	}
+	got, err := os.ReadFile(filepath.Join(dst, name))
+	if err != nil || string(got) != string(want) {
+		return fmt.Errorf("file %s not copied byte for byte (read error=%v; got=%q want=%q)", name, err, got, want)
+	}
+	return nil
 }

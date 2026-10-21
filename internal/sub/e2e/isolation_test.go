@@ -165,6 +165,16 @@ func (f *fixture) file(root, name, want string) {
 		f.errorf("file %s missing or incorrect (read error=%v; got=%q want=%q)", name, e, string(b), want)
 	}
 }
+func (f *fixture) modelFile(root, name, want string) {
+	if err := modelFileContent(root, name, want); err != nil {
+		f.error(err.Error())
+	}
+}
+func (f *fixture) sameFile(src, dst, name string) {
+	if err := sameFileContent(src, dst, name); err != nil {
+		f.error(err.Error())
+	}
+}
 func (f *fixture) clean() {
 	if v := f.git("status", "--porcelain=v1", "--untracked-files=all"); v != "" {
 		f.errorf("original repository changed: %s", safe([]byte(v)))

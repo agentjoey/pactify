@@ -153,3 +153,8 @@ caches require separate management.
 See [status](sub-status.md), [routing](router.md) and
 [upstream compatibility](harness-updates.md). Live test coverage and its limits
 are described in the [E2E guide](../internal/sub/e2e/README.md).
+
+Opencode 1.x and 2.x are supported; agy remains experimental. Promotion does not
+change the Sandbox check: opencode still reports WARN because it has no OS
+sandbox. Write probes retain the file-tool directory guard checks; shell commands
+are not confined. See [support policy](harness-updates.md) for version contracts.

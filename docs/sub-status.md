@@ -77,7 +77,7 @@ apply 和 discard 会标记共享 worktree 的已有各轮，因此这些轮次�
 （没有 worktree 也可）。重复执行成功，保留首次时间。它只在生命周期锁内更新 State，不删除或改写 result、日志及续接关系；
 与 apply/discard 一样不提供 `--json`。
 
-Informational warnings 不产生 `warnings` attention：harness 的 Experimental 提示、`dirtyWorktreeWarning`、
+Informational warnings 不产生 `warnings` attention：harness 的 informational warning (agy experimental or opencode permission boundary)、`dirtyWorktreeWarning`、
 以 `has not been checked; run pactify sub doctor first` 结尾的提示，以及
 `Usage may be incomplete; only recorded usage is included`（`partialUsageWarning`）和以
 `CLI version changed: ` 开头的提示。它们仍保留在 result、`pactify sub result` 输出及 `warningCount` 中。

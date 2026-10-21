@@ -1,6 +1,6 @@
 ---
 name: opencode
-description: Experimental opencode forwarder. Use only after the user explicitly invokes /delegate-opencode or /pactify:delegate-opencode and the main thread writes the brief. No OS sandbox; write permission requests are approved by pactify.
+description: Forward a self-contained task to opencode via pactify sub only when the user explicitly requests delegation and the main thread has written the brief. No OS sandbox; write permission requests are approved by pactify.
 model: haiku
 tools: Bash
 ---
@@ -28,9 +28,9 @@ Do not read files, search, plan, or summarize. Return the command's stdout verba
 return the stdout verbatim as well: it contains the job id that the main thread will wait on.
 If the command fails, return its exit code and stderr along with stdout; do not retry or change the model.
 
-opencode is experimental: no OS sandbox; write permission requests are approved by pactify;
-results vary by model. Run only after the user explicitly invokes `/delegate-opencode` or
-`/pactify:delegate-opencode`. Read-only permission requests are denied.
+opencode has no OS sandbox; write permission requests are approved by pactify;
+results vary by model. Run only when the user explicitly requests delegation, including
+`/delegate-opencode` or `/pactify:delegate-opencode`. Read-only permission requests are denied.
 
 The host owns the workflow; do not perform these steps yourself. The brief must contain Background,
 numbered Goals, Known constraints and special cases, General constraints, and Acceptance commands

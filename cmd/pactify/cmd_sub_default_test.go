@@ -95,8 +95,11 @@ func TestSubFallbackWarningsAndFailure(t *testing.T) {
 				t.Fatal(err)
 			}
 			want := "worker panic"
-			if name == "agy" || name == "opencode" {
+			if name == "agy" {
 				want = name + " is experimental: no OS sandbox for writes; results vary by model; " + want
+			}
+			if name == "opencode" {
+				want = "opencode has no OS sandbox for writes; file-tool directory guard only; shell is not confined; " + want
 			}
 			if r.Status != sub.StatusFailed || strings.Join(r.Warnings, "; ") != want || !strings.HasPrefix(r.Markdown(), "⚠️ "+want) {
 				t.Fatalf("fallback result=%+v; want warnings %q", r, want)

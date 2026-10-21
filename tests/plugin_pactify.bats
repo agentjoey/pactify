@@ -222,7 +222,10 @@ CLI
   cat > "$BATS_TEST_TMPDIR/bin/pactify" <<'CLI'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PACTIFY_HOOK_CALL"
-echo 'help output must not leak into the session'
+case "$*" in
+  version) echo 'pactify 0.13.0 (test, test)' ;;
+  *) echo 'help output must not leak into the session' ;;
+esac
 exit 0
 CLI
   chmod +x "$BATS_TEST_TMPDIR/bin/pactify"

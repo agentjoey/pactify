@@ -10,7 +10,10 @@ Codex write mode enables network access by default.
 - `cmd/pactify/`: Go CLI entry point and commands.
 - `internal/`: harness adapters, job lifecycle, routing, local HTTP server and panel.
 - `web/`: React dashboard, read-only panel and frontend tests.
-- `plugins/pactify/`: Claude Code skills, forwarding agents and hooks.
+- `plugins/src/`: canonical skill templates, shared guide and plugin metadata.
+- `plugins/pactify/`: generated Claude Code skills, forwarding agents and hooks.
+- `plugins/agent-plugin/`: generated portable plugin and host marketplaces.
+- `plugins/agents-skills/`: generated portable skills for `.agents/skills/`.
 - `tests/`: Bats CLI and plugin checks.
 - `docs/`: public product and contributor documentation.
 
@@ -28,6 +31,7 @@ test -z "$(gofmt -l cmd internal)"
 (cd web && npm ci && npx tsc --noEmit && npx vitest run)
 (cd web && npx playwright test --retries 0)
 bats tests/
+go run ./internal/plugingen/cmd/plugingen -check
 ```
 
 The live harness E2E suite is opt-in and can consume model quota; see its
@@ -45,9 +49,11 @@ The live harness E2E suite is opt-in and can consume model quota; see its
 - Rebuild tracked embedded assets after web changes: run `npm run build` and
   `npm run build:panel` in `web/`, then rebuild the Go binary. Dashboard assets
   live in `internal/serve/dist/`; panel assets live in `internal/subpanel/dist/`.
-- Bump the patch version in `plugins/pactify/.claude-plugin/plugin.json` whenever
-  changing anything under `plugins/pactify/`. Keep the five SHARED-DELEGATION
-  blocks identical and the three entry guides identical except their first line.
+- Edit `plugins/src/` and run `go run ./internal/plugingen/cmd/plugingen`; never
+  hand-edit generated skills. Bump the plugin version in `plugins/src/config.json`
+  when changing the plugin and regenerate both manifests. Keep the five
+  SHARED-DELEGATION blocks identical and the three entry guides identical except
+  their first line. See [generator instructions](plugins/src/README.md).
 - Record user-visible changes under Unreleased in [CHANGELOG](docs/CHANGELOG.md).
 - Keep credentials, personal settings and machine-specific deployment details out
   of tracked files. Private Claude Code instructions belong in `CLAUDE.local.md`.

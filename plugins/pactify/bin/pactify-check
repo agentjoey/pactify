@@ -1,5 +1,7 @@
 #!/bin/sh
+# Generated from plugins/src; do not edit.
 # Check local prerequisites only. Never install software or access the network.
+minimum='0.13.0'
 quiet=false
 case "$#:$1" in
   0:) ;;
@@ -15,19 +17,77 @@ if ! command -v pactify >/dev/null 2>&1; then
   exit 1
 fi
 
+# Normalize a numeric component without octal interpretation or integer overflow.
+normalize() {
+  number=$1
+  case "$number" in ''|*[!0-9]*) return 1 ;; esac
+  while [ "${number#0}" != "$number" ]; do number=${number#0}; done
+  number=${number:-0}
+  [ "${#number}" -le 9 ]
+}
+
+compare_version() {
+  set -f
+  IFS=' '
+  set -- $version_line
+  if [ "${1:-}" != pactify ] || [ "$#" -lt 2 ]; then return 2; fi
+  installed=${2#v}
+  installed=${installed%%+*}
+  IFS=.
+  set -- $installed
+  [ "$#" -eq 3 ] || return 2
+  normalize "$1" || return 2; major=$number
+  normalize "$2" || return 2; minor=$number
+  normalize "$3" || return 2; patch=$number
+  set -- $minimum
+  min_major=$1; min_minor=$2; min_patch=$3
+  if [ "$major" -gt "$min_major" ]; then return 0; fi
+  if [ "$major" -lt "$min_major" ]; then return 1; fi
+  if [ "$minor" -gt "$min_minor" ]; then return 0; fi
+  if [ "$minor" -lt "$min_minor" ]; then return 1; fi
+  [ "$patch" -ge "$min_patch" ]
+}
+
 check_status=0
-if [ "$quiet" = true ]; then
-  if ! pactify version >/dev/null 2>&1; then
-    printf '%s\n' 'pactify plugin: pactify version failed; check or upgrade pactify.'
-    check_status=1
-  fi
-else
+if [ "$quiet" = false ]; then
   printf '%s\n' 'pactify plugin: pactify is on PATH.'
-  if ! pactify version; then
-    printf '%s\n' 'pactify plugin: pactify version failed; check or upgrade pactify.'
-    check_status=1
-  fi
 fi
+# Send the command's exit status through the pipe as well as its output. The
+# reader runs in a separate shell; no temporary files or external tools are needed.
+if {
+  pactify version
+  printf '\nPACTIFY_VERSION_EXIT=%s\n' "$?"
+} | (
+  version_line=''
+  version_exit=1
+  while IFS= read -r line; do
+    case "$line" in
+      PACTIFY_VERSION_EXIT=*) version_exit=${line#PACTIFY_VERSION_EXIT=} ;;
+      '') ;;
+      *)
+        if [ -z "$version_line" ]; then version_line=$line; fi
+        if [ "$quiet" = false ]; then printf '%s\n' "$line"; fi
+        ;;
+    esac
+  done
+  if [ "$version_exit" != 0 ]; then
+    printf '%s\n' 'pactify plugin: pactify version failed; check or upgrade pactify.'
+    exit 1
+  fi
+  compare_version
+  comparison=$?
+  case "$comparison" in
+    0) exit 0 ;;
+    1)
+      printf '%s\n' "pactify plugin: $version_line is too old; upgrade pactify to >= $minimum."
+      printf '%s\n' 'Run this command yourself:' \
+    '  curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh' \
+    '  go install github.com/agentjoey/pactify/cmd/pactify@latest'
+      exit 1 ;;
+    *) printf '%s\n' "pactify plugin: CLI version is unknown ($version_line); requires >= $minimum. Check or upgrade pactify yourself."
+       exit 0 ;;
+  esac
+); then :; else check_status=1; fi
 
 if ! pactify sub --help >/dev/null 2>&1; then
   printf '%s\n' "pactify plugin: the installed pactify has no 'sub' command; upgrade pactify."

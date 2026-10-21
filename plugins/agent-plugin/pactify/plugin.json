@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "name": "agentjoey"
+  },
+  "description": "Delegate coding tasks only on explicit user request to codex, kimi or opencode, or explicitly to experimental agy; review results and view job status.",
+  "homepage": "https://github.com/agentjoey/pactify",
+  "license": "FSL-1.1-MIT",
+  "name": "pactify",
+  "repository": "https://github.com/agentjoey/pactify",
+  "version": "0.5.0"
+}

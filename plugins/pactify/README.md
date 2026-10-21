@@ -24,9 +24,9 @@ Run these commands in Claude Code:
 
 To update: `/plugin marketplace update pactify`, then update the pactify plugin from `/plugin` (Installed → pactify → Update) and run `/reload-plugins` or start a new session. Claude Code caches a plugin by its `plugin.json` version, so every change to this plugin bumps that version (CI enforces it). If an older install still shows stale skills, reinstall with `/plugin uninstall pactify@pactify` and `/plugin install pactify@pactify`.
 
-Prerequisites: `pactify` is on PATH and `pactify sub --help` works; the official codex / kimi / agy / opencode CLI you want to call is installed and logged in.
+Prerequisites: `pactify` meets the minimum CLI version in [source configuration](https://github.com/agentjoey/pactify/blob/main/plugins/src/config.json), is on PATH and `pactify sub --help` works; the official codex / kimi / agy / opencode CLI you want to call is installed and logged in.
 Run `"${CLAUDE_PLUGIN_ROOT}/bin/pactify-check"` to report PATH availability, print `pactify version`, and check `pactify sub --help`.
-The SessionStart hook reuses this POSIX shell check with `--quiet`: successful checks are silent, and failures suggest installing or upgrading without blocking the session.
+The SessionStart hook reuses this POSIX shell check with `--quiet`: recognized compatible versions are silent; unknown versions warn, and failures suggest installing or upgrading without blocking the session.
 The check prints these installation options if pactify is missing; it never runs installers or accesses the network:
 
 ```sh
@@ -35,6 +35,45 @@ go install github.com/agentjoey/pactify/cmd/pactify@latest
 ```
 
 The plugin does not proxy models, manage logins, or read or copy credentials.
+
+## Other hosts
+
+The [portable Agent Plugins 1.0 bundle](https://github.com/agentjoey/pactify/tree/main/plugins/agent-plugin)
+provides the same delegation and review workflow with bounded polling.
+The install locations below are **pending the final repository location** and may change;
+these examples target `agentjoey/pactify` and `plugins/agent-plugin`.
+
+For Codex:
+
+```sh
+codex plugin marketplace add agentjoey/pactify --sparse plugins/agent-plugin
+```
+
+Then select pactify in the host's plugin interface. For Copilot:
+
+```sh
+copilot plugin install agentjoey/pactify:plugins/agent-plugin/pactify
+```
+
+For Cursor, open Settings → Plugins and paste
+`https://github.com/agentjoey/pactify/tree/main/plugins/agent-plugin` into plugin search.
+The bundle includes marketplace files for all three hosts.
+See the [Codex packaging guide](https://developers.openai.com/plugins/build/plugins),
+[Copilot plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference)
+and [Cursor plugins guide](https://cursor.com/docs/plugins) for host installation details.
+
+Alternatively, copy the folders from
+[plugins/agents-skills](https://github.com/agentjoey/pactify/tree/main/plugins/agents-skills)
+into `.agents/skills/`. The release's `pactify-delegate.zip` contains one Agensi skill.
+Checks only detect pactify and show install commands; agents must never run installers.
+
+The host must allow `pactify sub` outside its sandbox because pactify runs harness CLIs
+outside the workspace. For example, in Codex's `~/.codex/rules/default.rules`:
+
+```python
+prefix_rule(pattern=["pactify", "sub"], decision="allow")
+```
+
 
 ## Usage
 

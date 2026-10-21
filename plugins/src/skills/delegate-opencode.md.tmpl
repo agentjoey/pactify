@@ -1,0 +1,42 @@
+---
+name: delegate-opencode
+description: Use when the user explicitly asks to delegate a coding task to the opencode harness. no OS sandbox; write permission requests are approved by pactify; out-of-workspace directory access for file tools is denied; shell is not confined; results vary by model.{{if ne .Host "claude"}}
+license: {{.License}}
+compatibility: 'Requires the pactify CLI (>= {{.MinCLI}}) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'{{end}}
+---
+{{if ne .Host "claude"}}
+<!-- Generated from plugins/src; do not edit. -->
+
+{{include "fragments/prerequisites.md.tmpl"}}
+{{end}}
+# Delegate to opencode
+
+**opencode has no OS sandbox; write permission requests are approved by pactify;
+results vary by model.** Use only when the user explicitly requests delegation.
+Read-only permission requests are denied.
+Out-of-workspace directory access for file tools is denied; shell is not confined.
+Prefer the default codex harness (`/delegate` or `/delegate-codex`).
+
+**If the user invoked this skill explicitly ({{command "delegate-opencode"}}), always delegate —
+whatever the task size. The user chose the harness; do not do the work yourself instead.**
+
+Launch command (step 2 below):
+
+    pactify sub run opencode --write --worktree --wait 0s --json <<'BRIEF'
+    ...complete brief from step 1...
+    BRIEF
+
+Use `--read-only` instead for investigations and reviews. Use `--write` only when the user allows changes. Never raise permissions yourself.
+Models come from the live v1 `/config/providers` or v2 `/api/model` catalog, with provider/model ids; preserve the requested model.
+Omit `--model` to keep opencode's default. Resume with `--resume <job-id> --worktree` and the original cwd.
+
+{{include "shared-delegation.md.tmpl"}}
+
+**Read-only access** uses `agent: "plan"` with only read/glob/grep/list (no shell), denies every
+permission request, and fails with `readonly_violation` if the final repository diff is nonempty.
+Doctor verifies the completed session's permission policy for both access profiles.
+In write mode, pactify blocks opencode file tools from accessing directories outside
+the job workspace, job TMPDIR and `$PACTIFY_HOME/cache`. Shell commands can still
+reach files these checks cannot see. This is a guardrail, not isolation.
+Both profiles report `sandboxed=false`: opencode has no OS sandbox, so repository checks do not
+restrict effects outside the repository. Keep `--worktree` for delegated tasks.

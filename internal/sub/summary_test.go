@@ -377,3 +377,10 @@ func TestSummaryAcknowledgesSharedWorktree(t *testing.T) {
 		})
 	}
 }
+
+func TestOpencodeBoundaryWarningInformational(t *testing.T) {
+	r := Result{Harness: "opencode", Warnings: []string{"opencode has no OS sandbox for writes; file-tool directory guard only; shell is not confined"}}
+	if got := actionableWarnings(r); got != 0 {
+		t.Fatalf("boundary warning counted as actionable: %d", got)
+	}
+}

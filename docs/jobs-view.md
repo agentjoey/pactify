@@ -12,7 +12,7 @@ Jobs displays work across repositories and supports Project, Harness, Status and
 
 Live 使用记录中的 harness、模型、effort、调用、diff、quota、resume/fallback 与 retry 关系，不推测未观察到的 agent。结构化 events 经脱敏后显示，原始载荷不会传入树；无时间戳的记录不显示时间。事件按 animation frame 批处理，同页最多四条事件流，其余依赖摘要刷新；页面隐藏或卸载时关闭流。
 
-**Settings** 展示四个 harness 的安装状态、版本、实验标记、read-only 能力、模型列表和默认 model/effort；serve 可保存默认值、刷新模型。Routing 位于 Settings 内，展示配置路径、别名、有序回退链、额度组与耗尽记录，支持 Edit / Save / Cancel、回退排序及 Clear 的页内确认。panel 的 Settings / Routing 只读。422 在字段旁显示，409 提示配置已在别处更改，Reload 丢弃草稿。Routing 每 30 秒刷新，编辑期间保留草稿及原版本。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
+**Settings** 展示四个 harness 的安装状态、版本、实验标记 (agy only; both opencode majors are supported)、read-only 能力、模型列表和默认 model/effort；serve 可保存默认值、刷新模型。Routing 位于 Settings 内，展示配置路径、别名、有序回退链、额度组与耗尽记录，支持 Edit / Save / Cancel、回退排序及 Clear 的页内确认。panel 的 Settings / Routing 只读。422 在字段旁显示，409 提示配置已在别处更改，Reload 丢弃草稿。Routing 每 30 秒刷新，编辑期间保留草稿及原版本。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
 
 ## 通过认证反向代理访问
 

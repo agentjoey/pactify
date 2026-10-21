@@ -21,7 +21,15 @@ go test -tags harness_e2e ./internal/sub/e2e -run '^TestHarnessE2E$' \
 ```
 
 Run harnesses **serially**, in order: codex, opencode, agy, kimi. Scenarios also
-run serially, except the three worktree jobs inside `parallel`. Each scenario
+run serially, except the three worktree jobs inside `parallel`. The suite checks
+integration, not exact model formatting: files a model writes (for example
+`same.txt` in `parallel`, `e2e.txt` in `write_worktree` and `records`, `host.txt`
+in `host_path`) are compared after trimming trailing whitespace, so a missing
+final newline passes while wrong content, missing files and shared worktrees still
+fail. Files pactify itself produces stay byte-exact: after `apply` every file must
+match the job worktree byte for byte, and fixture-written files and TMPDIR proofs
+are compared exactly. `readonly_long` waits up to 15 minutes because slow models
+need longer for 60 sequential tool calls. Each scenario
 gets a fresh git repository and `PACTIFY_HOME`. Resume rounds share their
 scenario's private session store. `records` recreates scenario 1's write-worktree job
 rather than depending on another scenario, so filtered runs remain independent.

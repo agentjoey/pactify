@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Promote opencode 1.x and 2.x to supported harnesses across CLI results, doctor,
+  catalogs and plugin guides. Preserve no-OS-sandbox warnings, the file-tool
+  directory guard and the shell-not-confined limitation; agy stays experimental.
+  Support 1.x while `opencode-ai` publishes 1.x releases and its drift/contract
+  check stays green; pin 2.x by the reviewed contract.
+- Check v1 apply_patch permissions against every absolute `metadata.files`
+  filePath and movePath, including recovered requests and subdirectory jobs.
+  Fail closed on malformed file lists and paths.
+- Make the parallel E2E isolation check ignore trailing whitespace in same.txt;
+  wrong job contents, missing files and shared worktrees still fail.
+- Allow the opencode plugin skill to be model-invoked on an explicit user
+  delegation request, like kimi. Only agy requires an explicit slash command.
+  Bump the plugin minor version to 0.4.0.
+
 - Restrict opencode write-mode external directory permissions to the job workspace,
   job TMPDIR and Pactify cache, with native rules and adapter checks on both majors.
   Ask before in-root directory access so symlinks reach the adapter checks; use
@@ -14,7 +28,7 @@
   shell commands can reach files beyond the directory checks.
 
 - Make the plugin Claude Code only with a local prerequisite check, require explicit
-  user requests for delegation, and restrict experimental agy/opencode skills to
+  user requests for delegation, and restrict the experimental agy skill to
   slash commands with documented permission boundaries. Rename `/codex`, `/kimi`,
   `/agy`, `/opencode` to `/delegate-codex`, `/delegate-kimi`, `/delegate-agy`,
   `/delegate-opencode` (namespaced forms such as `/pactify:codex` become

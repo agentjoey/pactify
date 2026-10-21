@@ -93,8 +93,8 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 	result = Result{JobID: id, Harness: req.Harness, ModelRequested: req.Model, Access: req.Access, Status: StatusFailed, LogPath: store.LogPath(id)}
 	result.ConfigMode = st.EffectiveConfigMode()
 	result.Warnings = append(result.Warnings, st.RouteWarnings...)
-	if h.Experimental != "" {
-		result.Warnings = append(result.Warnings, h.Experimental)
+	if h.informationalWarning() != "" {
+		result.Warnings = append(result.Warnings, h.informationalWarning())
 	}
 	result.describeWorktree(st)
 	unverifiedWarning, versionWarning := "", ""
@@ -152,7 +152,7 @@ func RunJob(ctx context.Context, store Store, id string, h Harness, cfg WorkerCo
 		} else {
 			for _, warning := range result.Warnings {
 				// These warnings describe harness readiness, not a job error.
-				if !informational(warning) && !slices.Contains(cacheWarnings, warning) && !slices.Contains(st.RouteWarnings, warning) && warning != h.Experimental && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
+				if !informational(warning) && !slices.Contains(cacheWarnings, warning) && !slices.Contains(st.RouteWarnings, warning) && warning != h.informationalWarning() && warning != unverifiedWarning && warning != versionWarning && warning != dirtyWorktreeWarning {
 					reason = warning
 					break
 				}

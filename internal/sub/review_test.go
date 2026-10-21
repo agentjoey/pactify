@@ -210,8 +210,11 @@ func TestReviewFallbackWarningsFromRegistry(t *testing.T) {
 				}
 				result := readReviewResult(t, store, st.ID)
 				want := []string{st.Error}
-				if name == "agy" || name == "opencode" {
+				if name == "agy" {
 					want = append([]string{name + " is experimental: no OS sandbox for writes; results vary by model"}, want...)
+				}
+				if name == "opencode" {
+					want = append([]string{"opencode has no OS sandbox for writes; file-tool directory guard only; shell is not confined"}, want...)
 				}
 				if st.Error == "" || strings.Join(result.Warnings, "\n") != strings.Join(want, "\n") {
 					t.Fatalf("fallback warnings=%v state error=%q; want %v", result.Warnings, st.Error, want)

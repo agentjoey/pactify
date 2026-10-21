@@ -26,8 +26,8 @@ Models come from `agy models`; preserve the requested model. Pactify always supp
 <!-- BEGIN SHARED-DELEGATION -->
 Delegate only when the user explicitly asks: a pactify slash command, or a clear request to delegate
 or hand off to a harness; otherwise do the work directly. Task size alone never authorizes delegation.
-agy and opencode run only via their explicit `/delegate-agy` or `/delegate-opencode`
-slash commands (including the `/pactify:` namespaced forms); never select them on your own.
+agy runs only via its explicit `/delegate-agy` slash command (including the
+`/pactify:delegate-agy` namespaced form); never select it on your own.
 Preserve the user's requested harness and access mode; harness permission restrictions still apply.
 Configured aliases can be used with `/delegate @alias <task>`.
 Inspect `pactify sub router --json` for available aliases and preserve any route

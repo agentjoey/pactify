@@ -38,6 +38,8 @@ type Harness struct {
 	NoReadOnly string
 	// Experimental is an informational warning, independent of job status.
 	Experimental string
+	// Warning describes a supported harness limitation without an experimental label.
+	Warning string
 	// MinimalConfig is supported only after a native, process-local path has
 	// been verified. Unavailable harnesses retain user config and say why.
 	MinimalConfig       bool
@@ -106,7 +108,7 @@ var registry = map[string]Harness{
 	"opencode": {
 		TransientRetry: true, Name: "opencode", Kind: "opencode", Backend: cockpit.NewOpencodeBackend,
 		Version: cliVersion("opencode", opencodeVendorStrip()...), Supported: opencodeSupported,
-		Experimental: "opencode is experimental: no OS sandbox for writes; results vary by model", MinimalConfig: true,
+		Warning: "opencode has no OS sandbox for writes; file-tool directory guard only; shell is not confined", MinimalConfig: true,
 		Home: opencodeHomes(), Models: cockpit.OpencodeModels, ModelDetails: cockpit.OpencodeModelDetails,
 		Verify: func(_ context.Context, v VerificationInput) Verification {
 			if v.Info.Model == "" {
@@ -412,3 +414,12 @@ func kimiListHidesInHome(home, cwd, sessionID string) error {
 // Efforts lists static protocol constraints. ACP harnesses advertise model-specific
 // options at session setup, so an empty list delegates validation to the backend.
 func (h Harness) Efforts() []string { return append([]string{}, h.EffortValues...) }
+
+// informationalWarning is persisted for all outcomes, including recovery before
+// a worker starts. Experimental also controls the public catalog's label.
+func (h Harness) informationalWarning() string {
+	if h.Experimental != "" {
+		return h.Experimental
+	}
+	return h.Warning
+}

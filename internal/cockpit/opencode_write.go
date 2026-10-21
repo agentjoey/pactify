@@ -110,7 +110,8 @@ func (s *opencodeSession) allowWritePermission(name string, raw json.RawMessage,
 			Patterns  []string `json:"patterns"`
 			Resources []string `json:"resources"`
 			Metadata  struct {
-				Filepath string `json:"filepath"`
+				Filepath string          `json:"filepath"`
+				Files    json.RawMessage `json:"files"`
 			} `json:"metadata"`
 		}
 		err := json.Unmarshal(raw, &request)
@@ -118,7 +119,14 @@ func (s *opencodeSession) allowWritePermission(name string, raw json.RawMessage,
 		if v2 {
 			paths = request.Resources
 		} else if name != "external_directory" {
-			if filepath.IsAbs(request.Metadata.Filepath) {
+			files, filesErr := opencodeV1FilePaths(request.Metadata.Files)
+			if filesErr != nil {
+				err = filesErr
+			} else if len(files) > 0 {
+				// apply_patch patterns and its comma-joined filepath are relative
+				// to Instance.worktree, not necessarily this job's cwd.
+				paths = files
+			} else if filepath.IsAbs(request.Metadata.Filepath) {
 				// V1 patterns are rule keys relative to Instance.worktree, which
 				// can differ from RepoDir for linked worktrees. The absolute tool
 				// filepath is authoritative when present.
@@ -184,6 +192,39 @@ func (s *opencodeSession) allowWritePermission(name string, raw json.RawMessage,
 		s.dispatch(Event{Kind: EventSystem, State: "warning", Text: warning})
 	}
 	return allow
+}
+
+// A present files value must be an array. An empty array preserves the legacy
+// filepath/pattern fallback; every nonempty entry requires an absolute filePath.
+func opencodeV1FilePaths(raw json.RawMessage) ([]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var files []struct {
+		FilePath string          `json:"filePath"`
+		MovePath json.RawMessage `json:"movePath"`
+	}
+	if err := json.Unmarshal(raw, &files); err != nil {
+		return nil, err
+	}
+	if files == nil {
+		return nil, fmt.Errorf("metadata.files must be an array")
+	}
+	var paths []string
+	for _, file := range files {
+		if !filepath.IsAbs(file.FilePath) {
+			return nil, fmt.Errorf("metadata.files filePath must be absolute")
+		}
+		paths = append(paths, file.FilePath)
+		if len(file.MovePath) > 0 {
+			var move string
+			if err := json.Unmarshal(file.MovePath, &move); err != nil || !filepath.IsAbs(move) {
+				return nil, fmt.Errorf("metadata.files movePath must be absolute")
+			}
+			paths = append(paths, move)
+		}
+	}
+	return paths, nil
 }
 
 func opencodePermissions(opts StartOpts) []opencodePermission {

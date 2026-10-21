@@ -167,7 +167,7 @@ for (const width of [1440, 390]) {
     for (const name of ["codex", "kimi", "agy", "opencode"]) {
       const card = page.getByRole("article", { name, exact: true });
       await expect(card.getByText("experimental", { exact: true })).toHaveCount(
-        name === "agy" || name === "opencode" ? 1 : 0,
+        name === "agy" ? 1 : 0,
       );
       await expect(card).toContainText(
         `Read-only: ${name === "kimi" ? "Not supported" : "Supported"}`,

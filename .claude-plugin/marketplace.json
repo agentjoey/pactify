@@ -7,7 +7,7 @@
     {
       "name": "pactify",
       "source": "./plugins/pactify",
-      "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex or kimi, or via slash commands to experimental agy and opencode; review results and view job status with /jobs."
+      "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex, kimi or opencode, or via slash commands to experimental agy; review results and view job status with /jobs."
     }
   ]
 }

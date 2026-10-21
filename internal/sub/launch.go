@@ -147,8 +147,8 @@ func (store Store) CancelJob(ctx context.Context, id string) (State, error) {
 }
 func (store Store) SaveFallback(st State) error {
 	result := Result{JobID: st.ID, Status: st.Status, Harness: st.Request.Harness, Access: st.Request.Access, ModelRequested: st.Request.Model, LogPath: store.LogPath(st.ID), Warnings: []string{st.Error}}
-	if h, ok := Lookup(st.Request.Harness); ok && h.Experimental != "" {
-		result.Warnings = append([]string{h.Experimental}, result.Warnings...)
+	if h, ok := Lookup(st.Request.Harness); ok && h.informationalWarning() != "" {
+		result.Warnings = append([]string{h.informationalWarning()}, result.Warnings...)
 	}
 	return store.Finish(st.ID, &result, st.Error, time.Now())
 }

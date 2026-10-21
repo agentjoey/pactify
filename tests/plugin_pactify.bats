@@ -110,21 +110,23 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "experimental skills are slash-command only and document actual permission boundaries" {
+@test "agy is slash-command only and supported skills document actual permission boundaries" {
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 for name in ('agy', 'opencode'):
     skill = (root / 'skills' / f'delegate-{name}' / 'SKILL.md').read_text()
-    assert 'disable-model-invocation: true\n' in skill.split('---')[1], name
+    assert ('disable-model-invocation: true\n' in skill.split('---')[1]) == (name == 'agy'), name
     for path in (root / 'skills' / f'delegate-{name}' / 'SKILL.md', root / 'agents' / f'{name}.md', root / 'README.md'):
         text = path.read_text().lower()
-        for term in ('experimental', 'no os sandbox', 'permission requests are approved by pactify', f'/delegate-{name}', 'only'):
+        if path.name != 'README.md':
+            assert ('experimental' in text) == (name == 'agy'), path
+        for term in ('no os sandbox', 'permission requests are approved by pactify', f'/delegate-{name}', 'only'):
             assert term in text, (path, term)
         if name == 'opencode':
             for term in ('out-of-workspace directory access for file tools is denied', 'shell is not confined'):
                 assert term in text, (path, term)
-for name in ('delegate', 'delegate-codex', 'delegate-kimi'):
+for name in ('delegate', 'delegate-codex', 'delegate-kimi', 'delegate-opencode'):
     frontmatter = (root / 'skills' / name / 'SKILL.md').read_text().split('---')[1]
     assert 'disable-model-invocation: true' not in frontmatter, name
 PY
@@ -532,7 +534,7 @@ PY
   [ "$status" -eq 0 ]
 }
 
-@test "opencode plugin is experimental and shares the delegation contract" {
+@test "opencode plugin is supported and shares the explicit-request delegation contract" {
   run python3 - "$P" <<'PY'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
@@ -542,8 +544,12 @@ reference = (root / 'skills/delegate-codex/SKILL.md').read_text()
 def shared(text):
     return text.split('<!-- BEGIN SHARED-DELEGATION -->', 1)[1].split('<!-- END SHARED-DELEGATION -->', 1)[0]
 assert shared(skill) == shared(reference)
+assert 'agy and opencode run only' not in shared(skill)
+assert 'agy runs only' in shared(skill)
 for text in (skill, agent):
-    for term in ('experimental', 'results vary by model', 'pactify sub run opencode', '--resume', '--worktree', '--read-only', '--write', 'read-only'):
+    assert 'experimental' not in text.lower()
+    assert 'Run only via' not in text
+    for term in ('no OS sandbox', 'pactify sub run opencode', '--resume', '--worktree', '--read-only', '--write', 'read-only'):
         assert term in text, (term, text)
 assert 'model: haiku' in agent and 'tools: Bash' in agent
 for path in (root / 'README.md', root.parents[1] / 'README.md', root.parents[1] / 'docs/sub-doctor.md'):

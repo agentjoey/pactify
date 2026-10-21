@@ -1,3 +1,4 @@
+import { beforeEach } from "vitest";
 import {
   act,
   cleanup,
@@ -412,7 +413,7 @@ it("panel Settings and actions show only data even if the source exposes writes"
   render(<Settings source={src} readOnly />);
   expect((await screen.findByText("pactify serve", {selector:"code"})).parentElement).toHaveTextContent("Edit settings with pactify serve (dashboard) or the CLI.");
   await screen.findByText("verified 1");
-  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.getAllByRole("combobox").map(el=>el.getAttribute("aria-label"))).toEqual(["Settings section"]);
   expect(
     screen.queryByRole("button", { name: /Save|Edit|Refresh models|Clear/ }),
   ).toBeNull();
@@ -668,3 +669,7 @@ it("announces action failures outside the inert background while preserving resu
     "Keep these instructions",
   );
 });
+
+// Legacy list behavior remains covered explicitly; pipeline defaults have their own suite.
+beforeEach(() => { localStorage.setItem("pactify-jobs-view", "list"); });
+afterEach(() => { localStorage.clear(); });

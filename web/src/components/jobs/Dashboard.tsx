@@ -11,6 +11,11 @@ import {
 } from "./statistics";
 import { TokenChart } from "./TokenChart";
 import { Quota, type QuotaData } from "./Quota";
+import { JobCard } from "./Jobs";
+import { mergeJobChains } from "./board";
+import { sectionFor, projectName } from "./statistics";
+import { StatusPill } from "../ui/Design";
+import { relativeTime } from "./pipeline";
 import { LiveTree } from "./LivePanel";
 interface Total {
   jobs: number;
@@ -39,12 +44,24 @@ export function Dashboard({
   jobs,
   jobsUnavailable,
   jobsError,
+  readOnly = false,
+  onChanged = () => {},
 }: {
   source: JobsSource;
   jobs: Job[] | null;
   jobsUnavailable: boolean;
   jobsError?: string;
+  readOnly?: boolean;
+  onChanged?: () => void;
 }) {
+  const harnesses = useResource<{harnesses:{name:string;installed:boolean;version:string}[]}>(source,source.harnessesPath || source.jobsPath.replace(/\/jobs$/, "/harnesses"));
+  const chains = mergeJobChains(jobs || []);
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const cost = useResource<Cost>(
     source,
     `${source.costPath}?since=7d&by=harness`,
@@ -66,14 +83,12 @@ export function Dashboard({
   const unavailable = !!cost.error || (!!cost.data && !report);
   return (
     <div className="dashboard-content">
-      {(jobsUnavailable || unavailable) && (
+      {notice && <div className="v2-toast" role="status">{notice}</div>}
+      {(jobsUnavailable || unavailable || !!harnesses.error) && (
         <p role="alert" className="panel-error">
-          {jobsError || cost.error || "Usage could not be loaded. Retrying shortly."}
+          {jobsError || cost.error || harnesses.error || "Usage could not be loaded. Retrying shortly."}
         </p>
       )}
-      {jobsUnavailable ? (
-        <section className="panel-section"><h2>Live</h2><p>—</p></section>
-      ) : <LiveTree source={source} jobs={jobs} />}
       <div className="kpi-grid">
         {(
           [
@@ -92,6 +107,28 @@ export function Dashboard({
           </section>
         ))}
       </div>
+      <div className="dashboard-columns">
+      <div className="dashboard-primary">
+        {([["progress", "Running now"], ["attention", "Needs attention"]] as const).map(([key, title]) => {
+          const rows = chains.filter(chain => sectionFor(chain.latest) === key);
+          return (
+            <section key={key} className="dashboard-jobs">
+              <div className="section-heading">
+                <h2>{title} <span className="count-pill">{rows.length}</span></h2>
+                <a href={`#/jobs?status=${key}`}>All jobs →</a>
+              </div>
+              <div className="dashboard-job-grid">
+                {rows.map(chain => <JobCard key={chain.root.id} chain={chain} source={source} readOnly={readOnly} onChanged={onChanged} notify={setNotice} />)}
+                {!rows.length && <p className="panel-caption">
+                  {jobsUnavailable ? "—" : key === "progress" ? "All lines idle" : "Nothing waiting for you"}
+                </p>}
+              </div>
+            </section>
+          );
+        })}
+      {jobsUnavailable ? (
+        <section className="panel-section"><h2>Live</h2><p>—</p></section>
+      ) : <LiveTree source={source} jobs={jobs} />}
       <section className="panel-section token-chart">
         <h2>Token usage · last 14 days</h2>
         {jobsUnavailable ? (
@@ -200,6 +237,22 @@ export function Dashboard({
           </>
         )}
       </section>
+      </div>
+      <aside className="dashboard-secondary">
+        <section className="panel-section dashboard-harnesses">
+          <div className="section-heading"><h2>Harnesses</h2><a href="#/settings">Manage →</a></div>
+          {harnesses.error ? <p className="panel-caption">—</p>
+            : !harnesses.data ? <p>Loading harnesses…</p>
+            : (harnesses.data.harnesses || []).map(harness => {
+              const running = chains.some(chain => chain.latest.harness === harness.name && sectionFor(chain.latest) === "progress");
+              return (
+                <div className="harness-summary" key={harness.name}>
+                  <div><strong>{harness.name}</strong><p className="panel-caption">{harness.version || "Version unknown"}</p></div>
+                  <StatusPill status={!harness.installed ? "not installed" : running ? "running" : "ready"} running={running} />
+                </div>
+              );
+            })}
+        </section>
       <section className="panel-section">
         <h2>Quota</h2>
         {unavailable ? (
@@ -210,6 +263,18 @@ export function Dashboard({
           <Quota report={report} now={now} />
         )}
       </section>
+      <section className="panel-section recent-activity">
+        <h2>Recent activity</h2>
+        {chains.slice(0, 6).map(({ latest }) => (
+          <a href={`#/jobs/${encodeURIComponent(latest.id)}`} key={latest.id}>
+            <StatusPill status={latest.status} running={sectionFor(latest) === "progress"} />
+            <strong>{latest.title || latest.id}</strong>
+            <small>{projectName(latest.repo)} · {relativeTime(latest.finishedAt || latest.createdAt, now)} ago</small>
+          </a>
+        ))}
+      </section>
+      </aside>
+      </div>
     </div>
   );
 }

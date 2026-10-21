@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Spinner } from "./Spinner";
 
 // Button is the shared primitive so interaction states remain consistent across the app.
-// variant: primary (role-design bg, dark text) / ghost (transparent, subtle
+// variant: primary (accent bg, contrasting ink) / ghost (transparent, subtle
 // border, text-2) / danger (danger-tinted). size: sm | md. Disabled drops to
 // 40% opacity and removes pointer events. focus-visible shows a 2px role-design
 // ring at 40% alpha. Motion uses the shared 120ms micro var plus a subtle
@@ -14,7 +14,7 @@ export type ButtonSize = "sm" | "md";
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary:
-    "bg-[var(--color-role-design)] text-[var(--color-bg-page)] font-medium hover:brightness-110",
+    "bg-[var(--accent)] text-[var(--accent-ink)] font-medium hover:brightness-110",
   ghost:
     "bg-transparent border border-[var(--color-border-subtle)] text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:border-[var(--color-border-strong)]",
   danger:

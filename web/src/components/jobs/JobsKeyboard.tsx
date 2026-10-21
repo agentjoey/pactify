@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { stationLeft } from "./pipeline";
 import { Button } from "../ui/Button";
 
 export function JobsKeyboard({ list, search }: {
@@ -24,6 +25,24 @@ export function JobsKeyboard({ list, search }: {
       if (event.key === "/") {
         event.preventDefault();
         search.current?.focus();
+        return;
+      }
+      if (event.key === "h" || event.key === "l") {
+        const board = list.current?.querySelector<HTMLElement>(".pipeline-scroll");
+        if (!board) return;
+        const stations = [...board.querySelectorAll<HTMLElement>("[data-station]")];
+        const target = board.scrollLeft;
+        const focused = stations.findIndex(station => station.contains(document.activeElement));
+        const nearest = stations.reduce((best, station, index) =>
+          Math.abs(stationLeft(board, station) - target) < Math.abs(stationLeft(board, stations[best]) - target) ? index : best, 0);
+        const current = focused >= 0 ? focused : nearest;
+        const next = Math.max(0, Math.min(stations.length - 1, current + (event.key === "l" ? 1 : -1)));
+        event.preventDefault();
+        board.scrollTo?.({
+          left: stationLeft(board, stations[next]),
+          behavior: "instant",
+        });
+        (stations[next].querySelector<HTMLAnchorElement>("[data-job-link]") || stations[next]).focus({ preventScroll: true });
         return;
       }
       const links = [...(list.current?.querySelectorAll<HTMLAnchorElement>("[data-job-link]") || [])]
@@ -52,14 +71,15 @@ export function JobsKeyboard({ list, search }: {
     };
   }, [help, list, search]);
   return <div className="jobs-keyboard" ref={hint}>
-    <Button size="sm" variant="ghost" aria-keyshortcuts="?" aria-expanded={help} aria-controls={id} onClick={() => setHelp(!help)}>
-      <kbd>?</kbd> Keyboard shortcuts
+    <Button size="sm" variant="ghost" aria-label="Keyboard shortcuts" aria-keyshortcuts="?" aria-expanded={help} aria-controls={id} onClick={() => setHelp(!help)}>
+      <kbd>?</kbd> <span className="keyboard-label">Keyboard shortcuts</span>
     </Button>
     {help && <section id={id} className="jobs-keyboard-help" aria-label="Keyboard shortcuts">
       <h2>Keyboard shortcuts</h2>
       <dl>
         <dt><kbd>/</kbd></dt><dd>Focus search</dd>
         <dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>Next / previous job</dd>
+        <dt><kbd>h</kbd> / <kbd>l</kbd></dt><dd>Previous / next station</dd>
         <dt><kbd>Enter</kbd></dt><dd>Open details</dd>
         <dt><kbd>Esc</kbd></dt><dd>Close details or help</dd>
         <dt><kbd>?</kbd></dt><dd>Toggle this help</dd>

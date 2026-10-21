@@ -1,3 +1,4 @@
+import { beforeEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import App from "../src/App";
@@ -164,3 +165,7 @@ for (const readOnly of [false, true]) {
     }
   });
 }
+
+// Legacy list behavior remains covered explicitly; pipeline defaults have their own suite.
+beforeEach(() => { localStorage.setItem("pactify-jobs-view", "list"); });
+afterEach(() => { localStorage.clear(); });

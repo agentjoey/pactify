@@ -116,8 +116,8 @@ export function LoadingJobs() {
   return (
     <div role="status" aria-label="Loading jobs" className="loading-jobs">
       <span className="sr-only">Loading jobs…</span>
-      {[0, 1, 2].map(n => (
-        <div className="loading-skeleton" key={n} aria-hidden="true" />
+      {["Queued", "Running", "Needs you", "Shipped"].map((name, index) => (
+        <div className="loading-station" key={name} aria-hidden="true"><span className="section-label">0{index + 1} · {name}</span><div className="loading-skeleton" /></div>
       ))}
     </div>
   );

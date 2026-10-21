@@ -1,3 +1,4 @@
+import { beforeEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { JobList, LogView, Panel, filterJobs, splitDiff } from "./Panel";
@@ -171,3 +172,7 @@ describe("standalone panel", () => {
     vi.unstubAllGlobals();
   });
 });
+
+// Legacy list behavior remains covered explicitly; pipeline defaults have their own suite.
+beforeEach(() => { localStorage.setItem("pactify-jobs-view", "list"); });
+afterEach(() => { localStorage.clear(); });

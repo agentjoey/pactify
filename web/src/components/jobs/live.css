@@ -270,3 +270,10 @@
 .live-harness meter::-webkit-meter-bar, .live-harness progress::-webkit-progress-bar { background: var(--color-bg-raised); border: 0; }
 .live-harness meter::-webkit-meter-optimum-value, .live-harness meter::-webkit-meter-suboptimum-value, .live-harness meter::-webkit-meter-even-less-good-value, .live-harness progress::-webkit-progress-value { background: var(--color-role-design); }
 .live-harness meter::-moz-meter-bar, .live-harness progress::-moz-progress-bar { background: var(--color-role-design); }
+/* Live uses the same recessed wells and semantic accents as the pipeline. */
+.live-panel { font-weight: 400; }
+.live-panel strong, .live-panel b, .live-panel th, .live-panel h2, .live-panel h3 { font-weight: 500; }
+.live-node { background: var(--bg-panel); border-radius: 9px; }
+.live-host, .live-router { border-color: var(--accent-line); }
+.live-host { color: var(--accent); }
+.live-harness[data-phase="running"] { border-color: color-mix(in srgb,var(--info) 40%,var(--border)); box-shadow: var(--shadow-card); }

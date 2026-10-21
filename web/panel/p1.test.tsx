@@ -1,3 +1,4 @@
+import { beforeEach } from "vitest";
 import { act, cleanup, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { AppContent } from "../src/App";
@@ -79,16 +80,17 @@ it("shows relative updates, chain attention count, docs, version and read-only g
   const fetcher=vi.fn(async (path:string)=>Response.json(path.endsWith("/info") ? {version:"1.2.3"} : [{...job,attention:[{kind:"warnings",message:"Check"}]}]));
   render(<AppContent source={source(fetcher)} readOnly />); await act(async()=>{});
   expect(document.title).toBe("(1) pactify panel");
-  expect(screen.getByText("Updated 0s ago")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("live · 0s ago");
   expect(screen.getByText("1.2.3")).toBeInTheDocument();
   expect(screen.getByTitle(/read-only.*CLI.*pactify serve/)).toBeInTheDocument();
   expect(screen.getByRole("link",{name:"Docs"})).toHaveAttribute("rel","noopener noreferrer");
   expect(screen.getByRole("link",{name:"Docs"})).toHaveAttribute("target","_blank");
-  await act(async()=>{await vi.advanceTimersByTimeAsync(1000);}); expect(screen.getByText("Updated 1s ago")).toBeInTheDocument();
+  await act(async()=>{await vi.advanceTimersByTimeAsync(1000);}); expect(screen.getByRole("status")).toHaveTextContent("live · 1s ago");
 });
 it("shows read-only doctor status and a copyable CLI hint in Settings", async () => {
   const fetcher=vi.fn(async (path:string)=>Response.json(path.endsWith("/doctor") ? {lastRun:null,harnesses:[{name:"codex",installed:true,version:"9.1"}]} : path.endsWith("/harnesses") ? {harnesses:[]} : {version:"v",config:{}}));
   render(<Settings source={{...source(fetcher),routerPath:"/api/router"}} readOnly />);
+  fireEvent.click(screen.getByRole("button",{name:"Doctor"}));
   expect(await screen.findByText("Last doctor run: unknown")).toBeInTheDocument();
   expect(screen.getByText("codex · 9.1")).toBeInTheDocument();
   expect(screen.getByRole("button",{name:"Copy pactify sub doctor"})).toBeInTheDocument();
@@ -103,3 +105,7 @@ it("marks dashboard 401 errors so shared polling can stop", async () => {
     vi.unstubAllGlobals();
   }
 });
+
+// Legacy list behavior remains covered explicitly; pipeline defaults have their own suite.
+beforeEach(() => { localStorage.setItem("pactify-jobs-view", "list"); });
+afterEach(() => { localStorage.clear(); });

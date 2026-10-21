@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Notice } from "../ui/Design";
 import { CopyCommand } from "./NextSteps";
 import { useResource } from "./data";
 import type { JobsSource } from "./source";
@@ -39,30 +40,55 @@ const valid = (value: unknown) => {
   const v = value as StorageSnapshot;
   return !!v?.policy && Array.isArray(v.locations) && Array.isArray(v.staleWorktrees) && Array.isArray(v.failures);
 };
-export function Storage({ source, readOnly = false }: { source: JobsSource; readOnly?: boolean }) {
+export function Storage({ source, readOnly = false, embedded = false }: {
+  source: JobsSource;
+  readOnly?: boolean;
+  embedded?: boolean;
+}) {
   const path = source.jobsPath.replace(/\/jobs$/, "/storage");
   const status = useResource<StorageSnapshot>(source, path, 60000, valid);
   const [notice, setNotice] = useState("");
   const data = status.data;
-  return <section className="panel-section" aria-label="Storage">
-    <div className="section-heading"><h2>Storage</h2>
+  return <section className="panel-section storage-content" aria-label="Storage">
+    <div className="section-heading">
+      <h2>{embedded ? "Locations" : "Storage"}</h2>
       {!panelBuild && !readOnly && source.write && data && <StorageCleanup source={source} path={path} onChanged={(text) => { setNotice(text); status.refresh(); }} />}
     </div>
     {status.error && <p role="alert">Storage unavailable: {status.error}</p>}
     {!data && !status.error && <p>Loading storage…</p>}
-    {notice && <p role="status">{notice}</p>}
+    {notice && <Notice kind="ok">{notice}</Notice>}
     {data && <>
-      <p>Retention: {storageDuration(data.policy.olderThan)} · Cache cap: {storageBytes(data.policy.cacheMaxBytes)} · Automatic cleanup interval: {storageDuration(data.policy.interval)}</p>
+      <div className="storage-policy" aria-label="Cleanup policy">
+        <span>Retention: {storageDuration(data.policy.olderThan)}</span>
+        <span>Cache cap: {storageBytes(data.policy.cacheMaxBytes)}</span>
+        <span>Automatic cleanup interval: {storageDuration(data.policy.interval)}</span>
+      </div>
       <p className="panel-caption">Finished resume chains are kept until every job is eligible. Pending worktrees are retained. Sizes are estimates, refreshed at most once a minute.</p>
-      <dl>{data.locations.map(l => <div key={l.name} className="storage-location">
-        <dt><code>{l.name}/</code></dt><dd>{storageBytes(l.bytes)} · {storageBytes(l.reclaimable)} reclaimable</dd>
-        {Object.entries(l.breakdown || {}).map(([name, bytes]) => <dd key={name} className="panel-caption">{name}: {storageBytes(bytes)}</dd>)}
-      </div>)}</dl>
-      <p>Last prune: {data.lastRun ? `${data.lastRun.startedAt} · ${data.lastRun.endedAt ? data.lastRun.failures.length ? "completed with failures" : "completed" : "running or interrupted"}` : "Never run"}</p>
-      {data.lastRun?.removed.map(l => <p className="panel-caption" key={l.location}>{l.location}: {storageItems(l.items)} removed · {storageBytes(l.bytes)} freed{storageRemovalDetails(l)}</p>)}
-      {data.lastRun?.failures.map((f, i) => <p role="alert" key={i}>{f}</p>)}
-      {data.staleWorktrees.length > 0 && <p className="version-warning">Stale worktrees (kept): {data.staleWorktrees.join(", ")}</p>}
-      {data.failures.map((f, i) => <p role="alert" key={i}>{f}</p>)}
+      <dl className="storage-locations">
+        {data.locations.map(location => {
+          const cap = location.name === "cache" && data.policy.cacheMaxBytes > 0 ? data.policy.cacheMaxBytes : null;
+          return <div key={location.name} className="storage-location">
+            <dt><code>{location.name}/</code></dt>
+            <dd className="storage-size">{storageBytes(location.bytes)}</dd>
+            <dd className="storage-reclaimable">{storageBytes(location.reclaimable)} reclaimable</dd>
+            {cap !== null && <dd className="storage-capacity">
+              <div className="storage-usage" role="meter" aria-label={`${location.name} usage`}
+                aria-valuemin={0} aria-valuemax={cap} aria-valuenow={Math.min(cap, Math.max(0, location.bytes))}
+                aria-valuetext={`${storageBytes(location.bytes)} of ${storageBytes(cap)} cap`}>
+                <span style={{width: `${Math.min(100, Math.max(0, location.bytes / cap * 100))}%`}} />
+              </div>
+            </dd>}
+            {Object.entries(location.breakdown || {}).map(([name, bytes]) => (
+              <dd key={name} className="panel-caption storage-breakdown">{name}: {storageBytes(bytes)}</dd>
+            ))}
+          </div>;
+        })}
+      </dl>
+      <p className="storage-last-prune">Last prune: {data.lastRun ? `${data.lastRun.startedAt} · ${data.lastRun.endedAt ? data.lastRun.failures.length ? "completed with failures" : "completed" : "running or interrupted"}` : "Never run"}</p>
+      {data.lastRun?.removed.map(location => <p className="panel-caption" key={location.location}>{location.location}: {storageItems(location.items)} removed · {storageBytes(location.bytes)} freed{storageRemovalDetails(location)}</p>)}
+      {data.lastRun?.failures.map((failure, i) => <p role="alert" key={i}>{failure}</p>)}
+      {data.staleWorktrees.length > 0 && <Notice kind="warn">Stale worktrees (kept): {data.staleWorktrees.join(", ")}</Notice>}
+      {data.failures.map((failure, i) => <p role="alert" key={i}>{failure}</p>)}
     </>}
     {(panelBuild || readOnly || !source.write) && <CopyCommand command="pactify sub prune --yes" />}
   </section>;

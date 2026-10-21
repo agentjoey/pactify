@@ -6,12 +6,12 @@ import { Modal } from "./Modal";
 import { Spinner } from "./Spinner";
 
 describe("Button", () => {
-  it("renders the primary variant by default with role-design bg + dark text", () => {
+  it("renders the primary variant by default with accent bg + accent ink", () => {
     render(<Button>Go</Button>);
     const btn = screen.getByRole("button", { name: "Go" });
-    // primary uses the role-design token background and dark text
-    expect(btn.className).toMatch(/bg-\[var\(--color-role-design\)\]/);
-    expect(btn.className).toMatch(/text-\[var\(--color-bg-page\)\]/);
+    // primary uses the selected theme's accent and its contrasting ink
+    expect(btn.className).toMatch(/bg-\[var\(--accent\)\]/);
+    expect(btn.className).toMatch(/text-\[var\(--accent-ink\)\]/);
   });
 
   it("renders the ghost variant (transparent, subtle border, text-2)", () => {

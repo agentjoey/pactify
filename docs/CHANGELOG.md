@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Redesign the dashboard and read-only panel with the Pactify green palette,
+  self-hosted Space Grotesk, shared status and live indicators, and persisted
+  manual dark/light themes. Make production Lines the default Jobs view, with
+  project/harness grouping, four stations, a sticky line rail, a phone station
+  pager, Shipped expansion and station keyboard navigation. Retain the secondary
+  List view, filters, job details, dashboard action confirmations and GET-only
+  panel commands. Add a KPI-first dashboard and sectioned Settings with Appearance
+  and Shortcuts; preserve storage cleanup and routing behavior. Keep phone
+  stations aligned to the pager, disclose filters from the compact toolbar,
+  align compact history cells, and use themed drawer scrims. Preserve the exact
+  defaults-save confirmation and show storage locations with actual cache caps.
+
 - Add conservative storage lifecycle management: 14-day finished-chain retention,
   protected stale worktrees, a 5 GB cache cap with LRU eviction to 80%, private
   session/log cleanup, and periodic background maintenance. Add `pactify sub prune`

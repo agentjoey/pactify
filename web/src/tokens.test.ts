@@ -34,7 +34,7 @@ describe("dashboard v2 tokens.css", () => {
   it("self-hosts the fonts with font-display: swap and no external URLs", () => {
     expect(tokensCss).toContain("@font-face");
     expect(tokensCss).toContain("font-display: swap");
-    expect(tokensCss).toContain("/fonts/InterVariable.woff2");
+    expect(tokensCss).toContain("/fonts/SpaceGrotesk-Latin.woff2");
     expect(tokensCss).toContain("/fonts/JetBrainsMono-Regular.woff2");
     expect(tokensCss).toContain("/fonts/JetBrainsMono-Medium.woff2");
     expect(tokensCss).not.toMatch(/src:\s*url\(["']?https?:/i);
@@ -55,4 +55,23 @@ describe("legacy palette fully superseded in dashboard CSS", () => {
     expect(indexCss).toContain("var(--color-bg-page)");
     expect(indexCss).toContain('@import "./tokens.css"');
   });
+});
+
+const luminance = (hex: string) => hex.slice(1).match(/../g)!.map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+const ratio=(a:string,b:string)=>{const [hi,lo]=[luminance(a),luminance(b)].sort((x,y)=>y-x);return (hi+.05)/(lo+.05);};
+it("keeps content text tokens AA on all surfaces in both themes", () => {
+  const blocks=[tokensCss.match(/:root\s*\{([\s\S]*?)\}/)![1],tokensCss.match(/:root\[data-theme="light"\]\s*\{([\s\S]*?)\}/)![1]];
+  for(const block of blocks){
+    const values=Object.fromEntries([...block.matchAll(/(--[\w-]+):\s*(#[\da-f]{6})/g)].map(m=>[m[1],m[2]]));
+    // text-4 is a decorative divider/disabled token, never used for content.
+    for(const text of ["--text","--text-2","--text-3"])
+      for(const bg of ["--bg","--bg-panel","--bg-elev","--bg-elev2","--bg-input"])
+        expect(ratio(values[text],values[bg]),`${text} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(values['--accent-ink'],values['--accent'])).toBeGreaterThanOrEqual(4.5);
+  }
+});
+it("contains no gradients in any shared CSS or TSX", async () => {
+  const {readdirSync}=await import("node:fs");
+  function check(dir:string){for(const file of readdirSync(dir,{withFileTypes:true})){const path=resolve(dir,file.name);if(file.isDirectory())check(path);else if(/\.(css|tsx)$/.test(file.name))expect(readFileSync(path,"utf8"),path).not.toContain("gradient(");}}
+  check(resolve(process.cwd(),"src"));
 });

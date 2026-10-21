@@ -1,18 +1,37 @@
 # Jobs view
 
-Web v2 uses **Dashboard / Jobs / Settings** navigation, with a **Page** selector on narrow screens. Jobs is the default page; hash routes preserve navigation and filters. **Live** appears on Dashboard and in job details. The dashboard and read-only panel share these pages; the dashboard uses a dark palette and the panel follows the system theme.
+The dashboard (`pactify serve`) and GET-only panel (`pactify sub panel`) share **Dashboard / Jobs / Settings** navigation. Jobs is the default page. The header shows attention counts, a search trigger (⌘K or `/`), live polling age, Settings and a theme control. On phones, navigation stays in a segmented row and content has a 16px gutter. Live remains on Dashboard and in job details.
 
-Jobs displays work across repositories and supports Project, Harness, Status and text filters in the URL. Search matches title, job ID, repository and requested or actual model. Explicit resume/fallback links form chains; matching any run retains the whole chain. Chains use the root title and latest run status, model, duration and usage. Cards also show costs, worktrees, retries, fallbacks and failure classes. Rework counts manual resume links, not automatic retries. Timelines use causal order and handle branches, cycles and missing links deterministically.
+Both builds default to **dark**, independently of the OS. Choose **light** or **dark** from the header or **Settings → Appearance**. The choice is saved in this browser's localStorage when available. Space Grotesk and JetBrains Mono are served locally; no Google Fonts requests or CSP changes are needed. Motion respects `prefers-reduced-motion`.
 
-任务分为 **In progress / Queued / Needs attention / Completed**：running/retrying 优先进入 In progress，queued 单列；终态有 attention 进入 Needs attention，其余终态进入 Completed。Completed 按本地完成日期分组，默认折叠为卡片堆叠，可 Show all。列表每 2 秒刷新；窄屏卡片堆叠，详情抽屉全屏。
+## Pipeline and list
 
-直接打开 `#/jobs` 或 `#/jobs/<id>`；抽屉按所选轮次显示 brief、结果、Live、可读日志、按文件折叠的 diff 和续接链，关闭返回列表并保留筛选。serve 中可按 summary 的 `actions` 执行 cancel、resume、apply、discard；panel 不显示写操作。整条续接链没有 queued/running/retrying job 时，仅最新已结束且有 session 的 turn 可 resume。
+**Lines** is the default Jobs view. Its four stations use the existing latest-run section rule:
 
-**Dashboard** 展示 Live agent tree、任务指标、最近 7 个本地日历日的 token 趋势、按 harness 的 jobs / success rate / duration / tokens / cost，以及 quota。用量与额度来自独立 cost API，每 30 秒刷新，不随 Jobs 筛选变化。美元、subscription、unknown 与 partial 分开标示；失败显示不可用状态。没有已知 resetAt 时不推断额度重置时间。
+| Station | Jobs |
+| --- | --- |
+| 01 Queued | `queued`, even with attention |
+| 02 Running | `running` or `retrying`, even with attention |
+| 03 Needs you | Other statuses with attention |
+| 04 Shipped | Other statuses without attention |
 
-Live 使用记录中的 harness、模型、effort、调用、diff、quota、resume/fallback 与 retry 关系，不推测未观察到的 agent。结构化 events 经脱敏后显示，原始载荷不会传入树；无时间戳的记录不显示时间。事件按 animation frame 批处理，同页最多四条事件流，其余依赖摘要刷新；页面隐藏或卸载时关闭流。
+Group production lines by **Project** (repository basename), **Harness**, or **One line**. Each line shows observed harnesses or project counts, its running share and jobs finished today. Belts move only on lines with running jobs. Statistics use actual jobs, timestamps and available actions; there is no inferred capacity or execution stage. Shipped shows the three most recent jobs per line, with **+N more** expanding that line in place. Completion-day totals use the browser's local calendar.
 
-**Settings** 展示四个 harness 的安装状态、版本、实验标记 (agy only; both opencode majors are supported)、read-only 能力、模型列表和默认 model/effort；serve 可保存默认值、刷新模型。Routing 位于 Settings 内，展示配置路径、别名、有序回退链、额度组与耗尽记录，支持 Edit / Save / Cancel、回退排序及 Clear 的页内确认。panel 的 Settings / Routing 只读。422 在字段旁显示，409 提示配置已在别处更改，Reload 丢弃草稿。Routing 每 30 秒刷新，编辑期间保留草稿及原版本。接口及锁、版本契约见 [路由文档](router.md#jobs-页管理路由aj-700)。
+On desktop, the line label rail stays fixed while stations scroll horizontally. Scroll padding reserves its 220px width so Queued remains visible. Below 640px, stations become a full-width horizontal pager, initially on **Running**. Tap a station tile or swipe; highlighted tiles and page dots track the visible station. The board handles empty/filter-empty states, while onboarding, loading, server errors and expired sessions retain explicit guidance.
+
+Switch to **List** for the existing sectioned cards, completion-day stacks and optional **Compact list** with eight aligned metadata columns. The Lines/List choice is saved in localStorage when available. Project, Harness, Status and search filters remain in the URL and work in both views. In Lines, the view switch, grouping, search and shortcuts share one toolbar; **Filters** reveals the other controls. Phone filters also use this disclosure in List. Search stays visible and `/` focuses it in both views. Search matches title, ID, repository and requested or actual model. Explicit resume/fallback links form chains; matching any run retains the whole chain. Chains use their root title and latest run's status, model, duration and usage. Manual resume links count as rework; automatic retries do not.
+
+Use `/` or **⌘K** to search, **j/k** for next/previous job, **h/l** for previous/next station in Lines, **Enter** for details and **Escape** to close. **?** opens shortcut help. Typing inside inputs does not trigger job navigation.
+
+Open `#/jobs` or `#/jobs/<id>` directly. The drawer preserves filters and shows brief, result, Live, bounded readable logs, file diffs and run timelines. Dashboard actions retain their existing confirmations for cancel, resume, apply and discard. Needs-you cards in the panel instead offer copyable terminal commands. The panel sends GET requests only and keeps its strict CSP and session handling.
+
+## Dashboard and Settings
+
+Dashboard starts with five KPIs: in progress, queued, attention, succeeded in seven local calendar days and failed in seven local calendar days. Phones use a 2+3 tile layout. The main column contains running and attention jobs, the Live tree, a 14-day token chart and harness usage. The side column shows installed harness snapshots, quota and recent job activity. Cost, subscription, unknown and partial usage remain distinct; unavailable data is not fabricated.
+
+Settings uses a left navigation and content area, with a section select on phones. **Harnesses / Models & routing** retains installed versions, models, default model/effort, aliases, fallback ordering, quota groups and exhaustion records. Dashboard edits still handle 422 field errors, 409 conflicts and explicit reloads; panel machine settings remain read-only. **Storage** shows per-location sizes and reclaimable estimates, cache usage against its actual cap, policy chips, protected-worktree notices and the reviewed dashboard cleanup flow; the panel provides CLI commands. **Doctor** shows only the existing stored snapshot, never running checks. **Appearance** stores a manual theme and **Shortcuts** documents navigation.
+
+Live displays observed harnesses, models, effort, calls, diff, quota, resume/fallback and retry links. Redacted events are batched per animation frame, with at most four live streams; hidden or unmounted views close their streams. No unobserved agents, stages or quota reset times are inferred.
 
 ## 通过认证反向代理访问
 
@@ -54,7 +73,7 @@ Polling pauses while the document is hidden, doubles its delay after errors from
 2 seconds up to 30 seconds, resets on success, and stops on 401. The header shows
 relative update age, documentation and the CLI version; the tab title counts
 chains needing attention. Search includes title, job ID, repository and both
-requested and actual models. Completed history uses eight aligned desktop
+requested and actual models. In List view, compact completed history uses eight aligned desktop
 columns: status, title, harness/model, project, duration, tokens, cost and time.
 Titles truncate with their full text in a tooltip. Narrow rows put title/status
 above one metadata line. Job details show one command list: in the pinned footer

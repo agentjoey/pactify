@@ -103,3 +103,14 @@ it("shows experimental labels only for agy and keeps kimi read-only unavailable"
     expect(card.getByText(`Read-only: ${name === "kimi" ? "Not supported" : "Supported"}`)).toBeInTheDocument();
   }
 });
+
+it("keeps the exact Defaults saved confirmation visible after saving", async () => {
+  const source: JobsSource = {
+    jobsPath: "/jobs", costPath: "/cost", routerPath: "/router", harnessesPath: "/harnesses",
+    fetch: vi.fn(async path => Response.json(path.includes("harnesses") ? {harnesses:[harness]} : path.endsWith("doctor") ? {lastRun:null,harnesses:[]} : snapshot)),
+    write: vi.fn(async () => Response.json({})),
+  };
+  render(<Settings source={source} />);
+  fireEvent.click(await screen.findByRole("button", {name:"Save defaults"}));
+  expect(await screen.findByText("Defaults saved", {exact:true})).toBeVisible();
+});

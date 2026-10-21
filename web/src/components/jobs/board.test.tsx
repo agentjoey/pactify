@@ -1,3 +1,4 @@
+import { beforeEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Jobs, JobList, type Job } from "./Jobs";
@@ -84,3 +85,7 @@ it("opens a deep-linked drawer over the board, switches runs, resets logs, close
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByRole("link", {name: "Title a"})).toHaveFocus();
 });
+
+// Legacy list behavior remains covered explicitly; pipeline defaults have their own suite.
+beforeEach(() => { localStorage.setItem("pactify-jobs-view", "list"); });
+afterEach(() => { localStorage.clear(); });

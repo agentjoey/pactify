@@ -1,19 +1,11 @@
-/* Dashboard design tokens keep shared component colors and spacing consistent.
-   The palette uses an indigo accent on a dark background.
-
-   Self-hosted fonts: no external network requests at runtime (CSP-friendly).
-   Latin/Latin Extended and UI symbol subsets live in web/public/fonts/.
-   Inter retains variable weights with optical size fixed at 14.
-   Rebuild with scripts/subset-fonts.py (fonttools[woff]); served from this origin. */
-
+/* Self-hosted SIL OFL fonts. Rebuild subsets with scripts/subset-fonts.py. */
 @font-face {
-  font-family: "InterVariable";
+  font-family: "Space Grotesk";
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 400 700;
   font-display: swap;
-  src: url("/fonts/InterVariable.woff2") format("woff2");
+  src: url("/fonts/SpaceGrotesk-Latin.woff2") format("woff2");
 }
-
 @font-face {
   font-family: "JetBrains Mono";
   font-style: normal;
@@ -21,7 +13,6 @@
   font-display: swap;
   src: url("/fonts/JetBrainsMono-Regular.woff2") format("woff2");
 }
-
 @font-face {
   font-family: "JetBrains Mono";
   font-style: normal;
@@ -29,118 +20,105 @@
   font-display: swap;
   src: url("/fonts/JetBrainsMono-Medium.woff2") format("woff2");
 }
-
-/* Tailwind v4 @theme — exposes tokens as CSS vars AND wires utilities.
-   `static` keeps EVERY var in the build output: components read tokens at
-   runtime via var() in inline styles / node data, which Tailwind's usage
-   scanner can't see — without `static` ~70% of this sheet is tree-shaken. */
 @theme static {
-  /* Font stacks. Overriding --font-mono re-points every `font-mono` utility
-     to the self-hosted JetBrains Mono stack app-wide. */
-  --font-sans: "InterVariable", "Inter", system-ui, sans-serif;
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
-
-  /* Background — 4 layers (DARK theme, 2026-06-19 handoff). page = near-black
-     void, cards/panels = deep slate, raised/overlay = slightly lighter. */
-  --color-bg-page:    #0a0e14;
-  --color-bg-surface: #10151e;
-  --color-bg-raised:  #171e2a;
-  --color-bg-overlay: #171e2a;
-  /* A recessed well fill (inputs/segments/terminals) on dark surfaces. */
-  --color-bg-inset:   #0c1119;
-
-  /* Borders (light hairlines on dark). */
-  --color-border-subtle: rgba(255,255,255,0.07);
-  --color-border-strong: rgba(255,255,255,0.13);
-
-  /* Text — 3 layers (cool near-white on dark). */
-  --color-text-1: #eaeef5;
-  --color-text-2: rgba(234,238,245,0.62);
-  --color-text-3: #8a96a9;
-
-  /* Role colors — original brand hexes tuned for dark. On dark they read as
-     text directly, so the -ink companions equal the main hue. */
-  --color-role-product: #ffd479;  --color-role-product-ink: #ffd479;
-  --color-role-design:  #8ab4ff;  --color-role-design-ink:  #8ab4ff;
-  --color-role-dev:     #6ee7a0;  --color-role-dev-ink:     #6ee7a0;
-
-  /* Role colors — extended roster (dark-tuned). */
-  --color-role-qa: #0d9488;
-  --color-role-pm: #e07c1e;
-  --color-role-designer: #9b3fd4;
-  --color-role-research: #b13fce;
-  --color-role-ops: #e0884a;
-
-  /* Semantic (legible on dark). */
-  --color-danger:  #f97066;
-  --color-warn:    #f5c451;
-  --color-success: #6ee7a0;
-
-  /* Text on solid accent fills (e.g. filled buttons / user bubble). */
-  --color-on-accent: #0b0f16;
-
-  /* Radius. */
+  --color-bg-page: var(--bg);
+  --color-bg-surface: var(--bg-elev);
+  --color-bg-raised: var(--bg-elev2);
+  --color-bg-overlay: var(--bg-elev2);
+  --color-bg-inset: var(--bg-panel);
+  --color-border-subtle: var(--border-2);
+  --color-border-strong: var(--border);
+  --color-text-1: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-role-product: #ffd479;
+  --color-role-design: #8ab4ff;
+  --color-role-dev: #6ee7a0;
+  --color-role-product-ink: var(--proj);
+  --color-role-design-ink: var(--info);
+  --color-role-dev-ink: var(--ok);
+  --color-role-qa: var(--ok);
+  --color-role-pm: var(--changes);
+  --color-role-designer: var(--info);
+  --color-role-research: var(--info);
+  --color-role-ops: var(--changes);
+  --color-danger: var(--err);
+  --color-warn: var(--review);
+  --color-success: var(--ok);
+  --color-on-accent: var(--accent-ink);
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-
-  /* Shadows — deep, for dark surfaces. */
-  --shadow-card:    0 1px 2px rgba(0,0,0,.40);
-  --shadow-raised:  0 8px 22px rgba(0,0,0,.45);
-  --shadow-overlay: 0 18px 44px rgba(0,0,0,.60);
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --shadow-card: 0 1px 2px #0006;
+  --shadow-raised: 0 8px 22px #0007;
+  --shadow-overlay: 0 18px 44px #0009;
 }
-
-/* Motion + legacy role re-pointing. The legacy vars --role-product/-design/-dev
-   are read directly via var() by existing canvas components (see roleColorVar()
-   in lib/canvas.ts). Re-pointing them here shifts their hue to the new
-   desaturated palette automatically — no component edits required. */
 :root {
-  /* Motion. */
-  --motion-micro: 120ms;
-  --motion-layout: 200ms;
-  --motion-ease: cubic-bezier(0.25, 1, 0.5, 1);
-
-  /* Legacy shell token aliases. Added as aliases so the shared
-     Toolbar + new views can read the handoff names while existing components
-     keep using --color-* names. No rename = no broad refactor. */
-  --bg: var(--color-bg-page);              /* #0a0e14 */
-  --bg-panel: #0c1119;                     /* panels / rails */
-  --bg-elev: var(--color-bg-surface);      /* #10151e */
-  --bg-elev2: var(--color-bg-raised);      /* #171e2a */
-  --bg-input: #0f141d;                     /* input wells */
-  --bg-code: #07090d;                      /* code / terminal wells */
-  --border: #222b3a;                       /* primary borders */
-  --border-2: #171e2a;                     /* subtle dividers */
-
-  /* Text four-level scale (exact hex from handoff). --color-text-1 is
-     equivalent; -2/-3 in the @theme use opacity approximations for existing
-     components, but the handoff names below are authoritative for new UI. */
-  --text: var(--color-text-1);             /* #eaeef5 */
+  color-scheme: dark;
+  --bg: #0a0e14;
+  --bg-panel: #0c1119;
+  --bg-elev: #10151e;
+  --bg-elev2: #171e2a;
+  --bg-input: #0f141d;
+  --bg-code: #07090d;
+  --scrim: rgba(4, 7, 11, .78);
+  --border: #222b3a;
+  --border-2: #171e2a;
+  --text: #eaeef5;
   --text-2: #c2cad8;
   --text-3: #7e889b;
+  /* Decorative/disabled marks only; never content text. */
   --text-4: #52617a;
-
-  /* Role / status semantics (handoff names). */
-  --proj: var(--color-role-product);       /* gold */
-  --info: var(--color-role-design);        /* blue */
-  --dev: var(--color-role-dev);            /* emerald */
-  --ops: var(--color-role-ops);            /* orange */
-  --err: var(--color-danger);              /* red */
-  --warn: var(--color-warn);
-  --success: var(--color-success);
-  /* Accent uses emerald per task decision (README allows single-family route). */
-  --accent: var(--color-role-dev);         /* #6ee7a0 */
-  --accent-ink: #04140b;
+  --accent: #54d398;
   --accent-2: #0f261b;
+  --accent-ink: #04140b;
   --accent-line: #236b49;
-
-  /* Legacy role vars → new dark brand hexes (supersedes index.css :root). */
+  --ok: #6ee7a0;
+  --warn: #ffd479;
+  --review: #f5c451;
+  --err: #f97066;
+  --info: #8ab4ff;
+  --changes: #e0884a;
+  --proj: var(--warn);
+  --dev: var(--ok);
+  --ops: var(--changes);
+  --success: var(--ok);
+  --danger: var(--err);
   --role-product: var(--color-role-product);
   --role-design: var(--color-role-design);
   --role-dev: var(--color-role-dev);
-
-  /* Semantic shorthands consumed by existing CSS (e.g. .comms-blocked uses
-     var(--warn)) — without these the declarations are invalid and silently
-     render nothing. */
-  --danger: var(--color-danger);
+  --motion-micro: 120ms;
+  --motion-layout: 200ms;
+  --motion-ease: cubic-bezier(0.25, 1, 0.5, 1);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f6f9;
+  --bg-panel: #ffffff;
+  --bg-elev: #ffffff;
+  --bg-elev2: #eef1f6;
+  --bg-input: #f7f9fc;
+  --bg-code: #eef1f6;
+  --scrim: rgba(10, 14, 20, .35);
+  --border: #d9dfe8;
+  --border-2: #e6eaf0;
+  --text: #0e141d;
+  --text-2: #2b3546;
+  --text-3: #526075;
+  --text-4: #728097;
+  --accent: #15804f;
+  --accent-2: #e9f5ee;
+  --accent-ink: #ffffff;
+  --accent-line: #97c6aa;
+  --ok: #197246;
+  --warn: #805600;
+  --review: #805600;
+  --err: #b52d26;
+  --info: #365eae;
+  --changes: #96440f;
+  --color-role-product: #805600;
+  --color-role-design: #365eae;
+  --color-role-dev: #197246;
 }

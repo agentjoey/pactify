@@ -96,7 +96,7 @@ export function JobDrawer({
         chain.runs.some((job) => job.id === latestId.current),
       );
       const link = [
-        ...document.querySelectorAll<HTMLAnchorElement>(".panel-job h3 a"),
+        ...document.querySelectorAll<HTMLAnchorElement>("[data-job-link]"),
       ].find(
         (link) =>
           link.hash.split("?")[0] ===

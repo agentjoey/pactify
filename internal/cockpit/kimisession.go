@@ -89,6 +89,10 @@ func writeJSONFile(path string, v any) error {
 // agree. It starts a private, loopback-only `kimi web --no-open` on a free port,
 // reads the bearer token from its startup output, and stops it afterwards.
 func ArchiveKimiSessionsViaServer(ctx context.Context, ids []string, home ...string) error {
+	return withKimiWebServer(ctx, home, func(base, token string) error { return archiveKimiSessionsHTTP(ctx, base, token, ids) })
+}
+
+func withKimiWebServer(ctx context.Context, home []string, action func(string, string) error) error {
 	port, err := freeLoopbackPort()
 	if err != nil {
 		return err
@@ -131,7 +135,7 @@ func ArchiveKimiSessionsViaServer(ctx context.Context, ids []string, home ...str
 	}()
 	select {
 	case t := <-token:
-		return archiveKimiSessionsHTTP(ctx, fmt.Sprintf("http://127.0.0.1:%d", port), t, ids)
+		return action(fmt.Sprintf("http://127.0.0.1:%d", port), t)
 	case <-ctx.Done():
 		return fmt.Errorf("kimi web did not report its token: %w", ctx.Err())
 	}

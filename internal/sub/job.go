@@ -2,6 +2,7 @@
 package sub
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -109,6 +110,22 @@ func (s Store) LogPath(id string) string    { return filepath.Join(s.Dir(id), "l
 func (s Store) ResultPath(id string) string { return filepath.Join(s.Dir(id), "result.json") }
 
 func (s Store) Create(id string, req Request) (State, error) {
+	if err := kimiReadOnlyConfigError(req); err != nil {
+		return State{}, err
+	}
+	if err := validJobID(id); err != nil {
+		return State{}, err
+	}
+	release, err := s.storageGate(context.Background())
+	if err != nil {
+		return State{}, err
+	}
+	defer release()
+	return s.create(id, req)
+}
+
+// create is used by resume/transfer while their outer storage gate is held.
+func (s Store) create(id string, req Request) (State, error) {
 	if err := kimiReadOnlyConfigError(req); err != nil {
 		return State{}, err
 	}

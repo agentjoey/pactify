@@ -84,7 +84,7 @@ func OpencodeServePeer(t *testing.T) {
 			http.Error(w, "Unauthorized", 401)
 			return
 		}
-		if r.URL.Query().Get("directory") == "" {
+		if r.URL.Query().Get("directory") == "" && r.URL.Path != "/experimental/session" {
 			http.Error(w, "directory is required", 400)
 			return
 		}
@@ -99,6 +99,30 @@ func OpencodeServePeer(t *testing.T) {
 			f.Close()
 		}
 		switch r.Method + " " + r.URL.Path {
+		case "GET /path":
+			if scenario == "storage-unconfirmed" {
+				http.Error(w, "unrecognized path API", 404)
+				return
+			}
+			state := filepath.Join(os.Getenv("XDG_STATE_HOME"), "opencode")
+			config := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "opencode")
+			if os.Getenv("XDG_STATE_HOME") == "" || os.Getenv("XDG_CONFIG_HOME") == "" {
+				http.Error(w, "missing private roots", 500)
+				return
+			}
+			os.MkdirAll(state, 0700)
+			os.MkdirAll(config, 0700)
+			json.NewEncoder(w).Encode(map[string]string{"home": os.Getenv("HOME"), "state": state, "config": config, "worktree": r.URL.Query().Get("directory"), "directory": r.URL.Query().Get("directory")})
+		case "GET /experimental/session":
+			if scenario == "storage-checkpoint" {
+				os.Truncate(db, 0)
+				fmt.Fprint(w, `[]`)
+			} else {
+				fmt.Fprint(w, `[{"id":"orphan"}]`)
+			}
+		case "DELETE /session/orphan":
+			os.Truncate(db, 0)
+			fmt.Fprint(w, `true`)
 		case "GET /event":
 			w.Header().Set("Content-Type", "text/event-stream")
 			ch := make(chan map[string]any, 256)

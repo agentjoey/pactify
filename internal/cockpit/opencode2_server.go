@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/agentjoey/pactify/internal/acp"
 	"github.com/agentjoey/pactify/internal/cockpit/golden"
 	"github.com/agentjoey/pactify/internal/lockx"
 	"github.com/agentjoey/pactify/internal/procx"
@@ -74,7 +73,7 @@ func startOpencode2Server(ctx context.Context, opts StartOpts) (*opencodeServer,
 	s.http = &http.Client{Transport: roundTrip, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	s.cmd = exec.Command("opencode", "serve", "--stdio", "--hostname", "127.0.0.1", "--port", "0")
 	s.cmd.Dir = opts.RepoDir
-	s.cmd.Env = acp.CommandEnv(append(env, "OPENCODE_PASSWORD="+s.password))
+	s.cmd.Env = OpencodeCommandEnv(append(env, "OPENCODE_PASSWORD="+s.password), opts.MinimalConfig)
 	stderr := opts.Stderr
 	if stderr == nil {
 		stderr = os.Stderr

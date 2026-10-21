@@ -43,6 +43,9 @@ func opencode2Permissions(access Access, roots ...string) []Opencode2Rule {
 func Opencode2Env(opts StartOpts) ([]string, error) {
 	env := append([]string{}, opts.Env...)
 	content := os.Getenv("OPENCODE_CONFIG_CONTENT")
+	if opts.MinimalConfig {
+		content = ""
+	}
 	for _, entry := range env {
 		if v, ok := strings.CutPrefix(entry, "OPENCODE_CONFIG_CONTENT="); ok {
 			content = v

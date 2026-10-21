@@ -128,6 +128,8 @@ func shellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'
 // WorktreeFrom starts a fresh session, transferring exclusive use while retaining
 // the shared lock identity and original base (including earlier turns' edits).
 func (s Store) WorktreeFrom(id string, req Request, selector string) (created State, err error) {
+	// withWorktree supplies the lifecycle lock. Holding the storage gate while
+	// waiting for its state locks would invert prune's finalization order.
 	previous, err := s.ResolveResumeJob(selector)
 	if err != nil {
 		return created, err
@@ -153,7 +155,7 @@ func (s Store) WorktreeFrom(id string, req Request, selector string) (created St
 		}
 		req.Resume = ""
 		req.Cwd = source.Request.Cwd
-		created, err = s.Create(id, req)
+		created, err = s.create(id, req)
 		if err != nil {
 			return err
 		}

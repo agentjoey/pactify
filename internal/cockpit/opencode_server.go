@@ -21,7 +21,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/agentjoey/pactify/internal/acp"
 	"github.com/agentjoey/pactify/internal/cockpit/golden"
 	"github.com/agentjoey/pactify/internal/procx"
 )
@@ -65,7 +64,7 @@ func startOpencodeServer(ctx context.Context, opts StartOpts) (*opencodeServer, 
 	s.http = &http.Client{Transport: roundTrip, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	s.cmd = exec.Command("opencode", "serve", "--hostname", "127.0.0.1", "--port", "0")
 	s.cmd.Dir = opts.RepoDir
-	s.cmd.Env = acp.CommandEnv(append(env, "OPENCODE_SERVER_USERNAME=opencode", "OPENCODE_SERVER_PASSWORD="+s.password))
+	s.cmd.Env = OpencodeCommandEnv(append(env, "OPENCODE_SERVER_USERNAME=opencode", "OPENCODE_SERVER_PASSWORD="+s.password), opts.MinimalConfig)
 	stderr := opts.Stderr
 	if stderr == nil {
 		stderr = os.Stderr
@@ -188,7 +187,7 @@ func (s *opencodeServer) request(ctx context.Context, method, path string, body 
 		reader = bytes.NewReader(b)
 	}
 	endpoint := s.url + path
-	if !s.v2 {
+	if !s.v2 && !strings.HasPrefix(path, "/experimental/session?") {
 		endpoint += "?" + url.Values{"directory": {s.directory}}.Encode()
 	}
 	req, err := http.NewRequestWithContext(ctx, method, endpoint, reader)

@@ -12,6 +12,136 @@ pactify sub doctor <harness>
 Doctor checks harness compatibility and runs real probes that may consume model
 quota. See [doctor](sub-doctor.md) and [upstream compatibility](harness-updates.md).
 
+## Storage lifecycle
+
+All projects share `$PACTIFY_HOME/jobs/`. The default home is `~/.pactify`.
+Retention applies uniformly across projects:
+
+- Keep a finished job for 14 days after its recorded finish time. Delete its
+  entire directory only when every member of its resume/fallback/worktree chain
+  is eligible. Running, queued, unknown, recent or unverifiable members protect
+  the whole chain. Results without verifiable session ownership are retained.
+- Pending worktrees are never automatically deleted. After 14 days they appear
+  as stale in Settings and doctor. Apply/discard them individually, or explicitly
+  use manual `--include-worktrees`, which invokes the existing discard operation
+  before removing an eligible job. Applied/discarded jobs follow normal retention.
+- Above 5 GB (5,000,000,000 bytes), evict cache entries by last access/modification
+  time until usage is at most 80% of the cap. Extracted Go modules are evicted as
+  units; read-only directories are made writable without chmodding linked files.
+- Remove orphan sessions and expired logs only inside Pactify's private harness
+  homes. Keep credentials, symlinks, unrecognized layouts and shared configuration.
+  OpenCode 1.x and 2.x use separate homes, including `harness-homes/opencode2`.
+  Its database sweep uses the native session API; reclaimable database bytes
+  cannot be estimated without running that API and are excluded from estimates.
+  Cleanup requires the matching installed OpenCode major; a mismatched home is
+  retained with a failure so the other major cannot migrate its database.
+
+Before removing a job, prune deletes the sessions from every eligible turn:
+Codex uses the existing app-server client and `thread/delete`, including archived
+threads, without unarchiving. Already deleted threads are accepted. Without
+Codex, or when its API fails, the job stays for retry. **Deleting these threads
+removes them from Codex Remote Control; ordinary completion only archives them
+and Remote Control can still show archived threads.** Kimi uses its local web
+delete API with a verified private-file fallback. OpenCode uses its native
+private server API. Agy removes only recognized private conversation files;
+an unsupported layout is retained with a failure. Non-Codex sessions created
+with `--with-user-config` are retained because prune never cleans real user homes.
+
+No cleanup traverses a credential link or an external symlink. Incomplete scans,
+unreadable state, unsafe paths and ownership errors keep affected data and are
+reported. Prune takes the lifecycle state locks, the creation/resume gate and
+private-home leases. Manual cleanup during active jobs protects shared caches
+and homes. Automatic cleanup waits until jobs are idle, so starting a job cannot
+consume the daily interval while shared storage is protected.
+
+```sh
+pactify sub prune                              # plan only, including kept items/reasons
+pactify sub prune --json                       # machine-readable plan
+pactify sub prune --yes                        # execute the default policy
+pactify sub prune --older-than 720h --cache-max 5GiB --yes
+pactify sub prune --include-worktrees --yes     # also discard eligible stale worktrees
+```
+
+`--older-than` accepts positive Go durations (14 days is `336h`). `--cache-max`
+accepts positive bytes or KB/MB/GB and KiB/MiB/GiB, including decimal values.
+Overrides affect that invocation only. `--include-worktrees` is manual only;
+the dashboard action and automatic runs never enable it. Exit codes: **0** means
+the plan/execution completed without reported failures, **1** means an operational
+or partial-cleanup failure (inspect JSON `failures`), and **2** means invalid
+arguments. Intentionally protected items do not by themselves cause failure.
+
+Configure defaults in `$PACTIFY_HOME/storage.json`, beside `router.json`:
+
+```json
+{
+  "olderThan": "336h",
+  "cacheMaxBytes": 5000000000,
+  "interval": "24h"
+}
+```
+
+Missing fields use these defaults; invalid policies stop cleanup. `sub run`
+starts a detached, silent maintenance child after its worker starts. The child
+waits up to two minutes for idle jobs. The resident `pactify serve` checks once per
+minute. The configured interval is checked under a cross-process prune lock,
+so automatic runs occur at most once per interval. Manual runs also reset that
+interval. Maintenance does not change the job's output or exit code.
+
+`$PACTIFY_HOME/storage-status.json` records start/end times, per-location bytes
+freed and item counts, and failures. An absent end time means the run is still
+running or was interrupted. Settings and doctor report this history and stale
+worktrees. Polled size estimates use metadata only, bounded to 200,000 entries
+and five seconds per scan; status polling caches them for one minute and omits
+item lists. Explicit plans and cleanup do not share the polling budget and honor
+command/request cancellation. A polling limit therefore cannot prevent cleanup
+of a larger store; unsafe or unverifiable individual items are still retained.
+Symlink targets and credential contents are excluded from size estimates.
+
+Read endpoints are `GET /api/sub/storage` and `GET /api/sub/storage/plan` in
+serve, and `/api/storage` and `/api/storage/plan` in the read-only panel. GETs
+never run harnesses or write storage. The dashboard previews a fresh plan, then
+sends its version to `POST /api/sub/storage/prune`. A changed plan returns 409
+and requires review again. The POST uses the existing bearer-token/exact-Origin
+guard. The panel remains GET-only and shows a copyable
+`pactify sub prune --yes` command.
+
+Pruning permanently removes deleted jobs from cost history. The default plan groups
+items by reason with up to five examples; `pactify sub prune --verbose` lists every
+item. JSON output retains the full plan. `storage.json` requires retention of at
+least 24 hours and a cache cap of at least 1 GB.
+
+Job-start maintenance checks the recorded interval before spawning a child. A
+nonblocking scheduler lock allows one poller, running from the resolved Pactify
+home for at most two minutes. A busy store is retried by a later job start or
+the resident server. Job creation waits at most two seconds for the snapshot
+gate; cleanup revalidates each chain and uses its existing resume-scope lock.
+Directories move atomically into `trash/` before file removal; marked partial
+removals are retried on the next cleanup. Damaged job metadata protects its
+chain and shared homes/cache, while unrelated verified chains remain eligible.
+
+Opencode cleanup strips inherited database/config/data overrides for private-home
+jobs and probes, while `--with-user-config` retains native environment selection.
+Cleanup pins the relative database name. It confirms v1's reported state/config
+paths against private XDG roots; v2 can also confirm its reported data path.
+Unrecognized responses fail closed and include reported/expected paths.
+Native session deletion is counted separately from a labelled database size delta;
+checkpointing without session deletion does not count as removed data. The
+database delta is the size before minus the size after: positive values indicate
+a reduction and negative values indicate growth.
+Local native session preflight completes before deletion, including a Codex
+executable check. Agy retry receipts live in `storage-receipts/agy.json`, outside
+mirrored homes; existing receipts migrate on use.
+
+Unreadable job state protects every chain whose IDs can be recovered from its raw
+metadata. Without recoverable references, all job deletions are protected. Shared
+storage remains protected when a running job cannot be ruled out. Empty or
+lock-only crash directories stop blocking shared cleanup after a one-hour grace;
+they remain visible and age out under retention. Orphan trash markers also expire
+after one hour. Shared-storage passes recheck state every 64 items or one second,
+and detect new job directories between those checks. Pruned jobs are permanently
+removed from cost history.
+
+
 ## Local server
 
 Run `pactify serve` (default `127.0.0.1:7777`), or specify `--addr`. SIGINT shuts

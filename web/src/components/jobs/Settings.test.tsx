@@ -20,6 +20,7 @@ function fixture() {
   const source: JobsSource = {
     jobsPath: "/jobs", costPath: "/cost", harnessesPath: "/harnesses", routerPath: "/router",
     fetch: vi.fn((path: string) => {
+      if (path === "/storage") return Promise.resolve(Response.json({ policy: { olderThan: "336h", cacheMaxBytes: 5000000000, interval: "24h" }, locations: [], staleWorktrees: [], failures: [], lastRun: null }));
       if (path === "/doctor") return Promise.resolve(Response.json({lastRun:null,harnesses:[]}));
       if (path.includes("harnesses")) return harnesses.promise;
       // Routing can load before Settings' independent defaults request completes.

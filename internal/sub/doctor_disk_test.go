@@ -40,7 +40,7 @@ func TestDoctorDiskSpaceAndCacheSize(t *testing.T) {
 				}
 				return tc.available, tc.err
 			})
-			if len(checks) != 2 || checks[0].Name != "Disk space" || checks[0].Status != tc.status || checks[1].Name != "Shared cache" || checks[1].Status != "PASS" || !strings.Contains(checks[1].Reason, "7 bytes") || !strings.Contains(checks[1].Reason, filepath.Join(home, "cache")) {
+			if len(checks) != 5 || checks[0].Name != "Disk space" || checks[0].Status != tc.status || checks[1].Name != "Shared cache" || checks[1].Status != "PASS" || !strings.Contains(checks[1].Reason, "7 bytes") || !strings.Contains(checks[1].Reason, filepath.Join(home, "cache")) {
 				t.Fatalf("checks=%+v", checks)
 			}
 			if !(DoctorReport{Checks: checks}).Passed() {
@@ -67,7 +67,7 @@ func TestDoctorPrintsStorageChecksWithoutCreatingJobs(t *testing.T) {
 func TestDoctorMissingHomeUsesExistingVolume(t *testing.T) {
 	home := filepath.Join(t.TempDir(), "not-created", "home")
 	checks := doctorStorageChecks(Store{Root: filepath.Join(home, "jobs")}, nil)
-	if len(checks) != 2 || checks[0].Status != "PASS" && checks[0].Status != "WARN" || checks[1].Status != "PASS" || !strings.Contains(checks[1].Reason, "0 bytes") {
+	if len(checks) != 5 || checks[0].Status != "PASS" && checks[0].Status != "WARN" || checks[1].Status != "PASS" || !strings.Contains(checks[1].Reason, "0 bytes") {
 		t.Fatalf("checks=%+v", checks)
 	}
 	if _, err := os.Stat(home); !os.IsNotExist(err) {

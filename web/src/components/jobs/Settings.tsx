@@ -5,6 +5,7 @@ import { CopyCommand } from "./NextSteps";
 import { responseError, useResource } from "./data";
 import { Routing } from "./Routing";
 import { panelBuild } from "../../buildTarget";
+import { Storage } from "./Storage";
 interface DoctorSnapshot {
   lastRun: string | null;
   harnesses: { name: string; installed: boolean; version: string }[];
@@ -191,6 +192,7 @@ export function Settings({
           Edit settings with <code>pactify serve</code> (dashboard) or the CLI.
         </p>
       )}
+      <Storage source={source} readOnly={readOnly} />
       <section className="panel-section" aria-label="Doctor status">
         <h2>Doctor status</h2>
         {doctor.error ? (

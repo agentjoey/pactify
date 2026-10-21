@@ -137,6 +137,7 @@ func newSubCmd() *cobra.Command {
 		cockpit.RunAgyHook(c.Context(), c.InOrStdin(), c.OutOrStdout(), os.Getenv("PACTIFY_AGY_READ_ONLY"))
 	}}
 	command.AddCommand(newSubLoginCmd(), hook, run, waitCmd, status, result, cancel, worker, newSubDoctorCmd(), newSubLogsCmd(), newSubPanelCmd(), newSubCostCmd(), newSubQuotaCmd(), newSubRouterCmd())
+	command.AddCommand(newSubPruneCmd(), newSubAutoPruneCmd())
 	addSubWorktreeCommands(command, run)
 	return command
 }
@@ -287,6 +288,7 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 		}
 		return 1, err
 	}
+	store.StartStorageMaintenance(id)
 	return subWait(c, store, id, wait, jsonOut, true)
 }
 func subStartWorker(store sub.Store, id string) error { return store.StartWorker(id) }

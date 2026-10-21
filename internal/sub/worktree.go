@@ -246,7 +246,7 @@ func (s Store) resumeRun(id string, req Request, isolated bool, previous State, 
 func (s Store) resumeRunLocked(id string, req Request, isolated bool, previous State, session string) (State, error) {
 	h, _ := Lookup(req.Harness)
 	createResume := func() (State, error) {
-		st, err := s.Create(id, req)
+		st, err := s.create(id, req)
 		if err != nil {
 			return st, err
 		}

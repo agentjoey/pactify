@@ -28,11 +28,13 @@ import (
 var assets embed.FS
 
 type Server struct {
-	store       sub.Store
-	token       string
-	launchToken string
-	tokenMu     sync.Mutex
-	exchanged   bool
+	store         sub.Store
+	storage       sub.StorageReader
+	storageReader *sub.StorageReader
+	token         string
+	launchToken   string
+	tokenMu       sync.Mutex
+	exchanged     bool
 }
 
 type Detail struct {
@@ -172,10 +174,17 @@ func (s *Server) Handler() http.Handler {
 // ReadOnlyHandler serves job resources, routing, costs, harnesses, doctor and build info.
 // The host owns authentication and must mount this behind its security boundary.
 // Reads use atomic snapshots and never recover workers or write job files.
-func ReadOnlyHandler(store sub.Store) http.Handler {
+func ReadOnlyHandler(store sub.Store, readers ...*sub.StorageReader) http.Handler {
 	s := &Server{store: store}
+	if len(readers) > 0 {
+		s.storageReader = readers[0]
+	} else {
+		s.storageReader = &s.storage
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /doctor", s.doctor)
+	mux.HandleFunc("GET /storage", s.storageStatus)
+	mux.HandleFunc("GET /storage/plan", s.storagePlan)
 	mux.HandleFunc("GET /info", s.info)
 	mux.HandleFunc("GET /cost", s.cost)
 	mux.HandleFunc("GET /router", s.router)

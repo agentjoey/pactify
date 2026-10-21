@@ -7,6 +7,21 @@ Code plugin provides slash commands; the Go CLI manages the same jobs.
 The latest published release is **v0.13.0**, the first harness router release.
 See [CHANGELOG](docs/CHANGELOG.md).
 
+Storage is retained under `$PACTIFY_HOME` (default `~/.pactify`). Finished resume
+chains expire after 14 days; pending worktrees are kept. Shared caches have a
+5 GB cap and are evicted to 80% of that cap. Preview with `pactify sub prune`,
+then use `pactify sub prune --yes` to execute. Settings shows storage status;
+the dashboard can confirm cleanup and the read-only panel provides the CLI
+command. Pruning deletes Codex threads, removing them from Remote Control;
+archiving alone can leave them listed. See [storage operations](docs/operations.md#storage-lifecycle)
+for configuration, safeguards and exit codes.
+
+
+Pruning permanently removes deleted jobs from cost history. The default plan groups
+items by reason with up to five examples; `pactify sub prune --verbose` lists every
+item. JSON output retains the full plan. `storage.json` requires retention of at
+least 24 hours and a cache cap of at least 1 GB.
+
 ## Install
 
 Install the published binary on macOS or Linux (amd64 / arm64):

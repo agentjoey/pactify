@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/agentjoey/pactify/internal/acp"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +16,9 @@ func OpencodeEnv(opts StartOpts) ([]string, error) {
 	env := append([]string(nil), opts.Env...)
 	if opts.Access != AccessDefault {
 		content := os.Getenv("OPENCODE_CONFIG_CONTENT")
+		if opts.MinimalConfig {
+			content = ""
+		}
 		for _, entry := range env {
 			if value, ok := strings.CutPrefix(entry, "OPENCODE_CONFIG_CONTENT="); ok {
 				content = value
@@ -47,7 +51,7 @@ func OpencodeEnv(opts StartOpts) ([]string, error) {
 		env = append(env, "OPENCODE_CONFIG_CONTENT="+string(raw))
 	}
 	if opts.MinimalConfig {
-		env = append(env, "OPENCODE_DISABLE_AUTOUPDATE=1", "OPENCODE_DISABLE_CLAUDE_CODE=1", "OPENCODE_DISABLE_EXTERNAL_SKILLS=1", "OPENCODE_PURE=1")
+		env = append(env, "OPENCODE_DB=opencode.db", "OPENCODE_DISABLE_CHANNEL_DB=1", "OPENCODE_CONFIG=", "OPENCODE_CONFIG_DIR=", "OPENCODE_DISABLE_AUTOUPDATE=1", "OPENCODE_DISABLE_CLAUDE_CODE=1", "OPENCODE_DISABLE_EXTERNAL_SKILLS=1", "OPENCODE_PURE=1")
 	}
 	return env, nil
 }
@@ -123,4 +127,23 @@ func opencodeFailure(message string, raw json.RawMessage) Failure {
 		return acpFailure(message, raw, nil)
 	}
 	return matchFailure(message, []failureRule{{"opencode 2.x has no pactify login", "auth"}, {"run opencode login first", "auth"}, {"insufficient balance", "quota"}, {"requested model is not offered by this agent", "model"}, {ErrEffortUnavailable.Error(), "model"}})
+}
+
+// OpencodeCommandEnv preserves native user configuration unless private is true.
+// Private adapters supply their XDG/config roots and discard inherited native
+// path selection so a private server cannot open a user database.
+func OpencodeCommandEnv(overrides []string, private ...bool) []string {
+	if len(private) == 0 || !private[0] {
+		return acp.CommandEnv(overrides)
+	}
+	env := acp.CommandEnv(nil)
+	out := make([]string, 0, len(env)+len(overrides))
+	for _, e := range env {
+		k, _, _ := strings.Cut(e, "=")
+		if k == "OPENCODE_DB" || k == "OPENCODE_DISABLE_CHANNEL_DB" || strings.HasPrefix(k, "OPENCODE_CONFIG") || strings.HasPrefix(k, "OPENCODE_DATA") {
+			continue
+		}
+		out = append(out, e)
+	}
+	return append(out, overrides...)
 }

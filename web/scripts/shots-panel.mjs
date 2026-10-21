@@ -94,7 +94,12 @@ try {
               expect(tiles[3].x).toBeLessThan(tiles[4].x);
             }
           }
-          else if (view === "settings") await page.getByRole("article",{name:"codex",exact:true}).waitFor();
+          else if (view === "settings") {
+            await page.getByRole("article",{name:"codex",exact:true}).waitFor();
+            await expect(page.getByRole("region",{name:"Storage",exact:true})).toContainText("4.8 GB");
+            await expect(page.getByRole("button",{name:"Copy pactify sub prune --yes",exact:true})).toBeVisible();
+            await expect(page.getByRole("button",{name:"Clean up now",exact:true})).toHaveCount(0);
+          }
           else await page.getByRole("link",{name:"Build a local job panel",exact:true}).waitFor();
           await page.evaluate(() => document.fonts.ready);
           await expect(page.locator("html")).toHaveAttribute("data-theme",theme);

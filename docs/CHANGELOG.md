@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Add conservative storage lifecycle management: 14-day finished-chain retention,
+  protected stale worktrees, a 5 GB cache cap with LRU eviction to 80%, private
+  session/log cleanup, and periodic background maintenance. Add `pactify sub prune`
+  with a dry-run default, JSON, retention/cache overrides and explicit worktree
+  discard. Delete eligible Codex threads through app-server so Remote Control
+  stops listing them. Show cached storage estimates, policy and run results in
+  Settings and doctor; add a reviewed dashboard cleanup action while keeping
+  the local panel GET-only. Store policy/status in home-level JSON files.
+  Summarize large plans by reason (`--verbose` lists all items), isolate native
+  databases, bound job-start scheduling and lock waits, and recover interrupted
+  removals through trash. Verify the real OpenCode v1 path contract, preserve
+  user-config environment selection, bound repeated state scans, and count native
+  session removals separately from measured database changes. Keep retry receipts
+  outside mirrored homes and protect chains referenced by damaged metadata.
+  Pruned jobs are removed from cost history.
 - Promote opencode 1.x and 2.x to supported harnesses across CLI results, doctor,
   catalogs and plugin guides. Preserve no-OS-sandbox warnings, the file-tool
   directory guard and the shell-not-confined limitation; agy stays experimental.

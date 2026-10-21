@@ -233,6 +233,7 @@ func cliVersion(bin string, env ...string) func(context.Context) (string, error)
 			cmd.Env = append(os.Environ(), env...)
 			cmd.Env = append(cmd.Env, "HOME="+home)
 			if bin == "opencode" {
+				cmd.Env = cockpit.OpencodeCommandEnv(append(env, "HOME="+home, "OPENCODE_DB=opencode.db", "OPENCODE_DISABLE_CHANNEL_DB=1"), true)
 				for _, key := range []string{"XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"} {
 					cmd.Env = append(cmd.Env, key+"="+filepath.Join(home, key))
 				}

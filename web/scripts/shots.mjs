@@ -52,6 +52,8 @@ try {
           page.getByRole("region", { name: "In progress", exact: true }),
         ).toBeVisible();
       if (view === "settings") {
+        await expect(page.getByRole("region", { name: "Storage", exact: true })).toContainText("4.8 GB");
+        await expect(page.getByText(/Stale worktrees \(kept\)/)).toBeVisible();
         await expect(page.getByLabel("codex Default model")).toBeVisible();
         await expect(
           page
@@ -71,6 +73,12 @@ try {
         );
       }
       await capture(view);
+      if (view === "settings") {
+        await page.getByRole("button", { name: "Clean up now", exact: true }).click();
+        await expect(page.getByRole("dialog", { name: "Confirm storage cleanup" })).toBeVisible();
+        await capture("storage-confirmation");
+        await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      }
     }
     if (!only || only === "jobs") {
       await page.goto(`${base}/#/jobs/job-summary`);

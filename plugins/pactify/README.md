@@ -156,6 +156,27 @@ Apply / discard accept any job id in a resume chain and act on its shared worktr
 
 Jobs are stored in `$PACTIFY_HOME/jobs/<jobId>/`, defaulting to `~/.pactify/jobs/<jobId>/`.
 
+Storage cleanup defaults to 14-day retention for finished resume chains and a
+5 GB shared-cache cap (evicting to 80%). Pending worktrees are retained and shown
+as stale after 14 days; only manual `pactify sub prune --include-worktrees --yes`
+discards them. `pactify sub prune` previews items, sizes and protection reasons;
+`pactify sub prune --yes` executes. `--older-than 720h`, `--cache-max 5GiB` and
+`--json` are supported. Configure `olderThan`, `cacheMaxBytes` and `interval` in
+`$PACTIFY_HOME/storage.json`; the interval defaults to 24 hours. Job starts
+schedule silent background cleanup after jobs become idle, and `pactify serve`
+also checks periodically. Settings and doctor show sizes and the last run;
+the read-only panel supplies the CLI command. Credentials and real user homes
+are protected. Pruning deletes Codex threads via `thread/delete`, removing them
+from Remote Control; completion only archives them and can leave them listed.
+API failures retain the job for retry. See [storage operations](../../docs/operations.md#storage-lifecycle)
+for full policy, API endpoints, limitations and exit codes (0 success, 1 operational
+or partial failure, 2 invalid arguments).
+
+Pruning permanently removes deleted jobs from cost history. The default plan groups
+items by reason with up to five examples; `pactify sub prune --verbose` lists every
+item. JSON output retains the full plan. `storage.json` requires retention of at
+least 24 hours and a cache cap of at least 1 GB.
+
 **Session hiding**: delegated sessions are hidden when the job ends, so they do not appear in your own session / project lists. Every harness must declare its hiding mechanism, enforced by tests:
 
 | Harness | Hiding mechanism | View the original session |

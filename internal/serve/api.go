@@ -42,9 +42,11 @@ func (s *Server) handler(security *securityConfig) http.Handler {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		})
 	} else {
+		storage := &sub.StorageReader{}
+		s.registerStorageWrites(mux, store, storage)
 		s.registerRouterWrites(mux, store)
 		s.registerJobWrites(mux, store, store.StartDashboardWorker)
-		mux.Handle("/api/sub/", http.StripPrefix("/api/sub", subpanel.ReadOnlyHandler(store)))
+		mux.Handle("/api/sub/", http.StripPrefix("/api/sub", subpanel.ReadOnlyHandler(store, storage)))
 	}
 	// Unknown API routes must not fall through to the SPA index.
 	mux.Handle("/api/", http.NotFoundHandler())

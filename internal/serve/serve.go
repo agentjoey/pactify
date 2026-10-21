@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"github.com/agentjoey/pactify/internal/sub"
 	"net"
 	"net/http"
 	"time"
@@ -24,6 +25,11 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 	httpSrv := dashboardHTTPServer(addr, s.handler(security))
 	stopped := make(chan struct{})
 	defer close(stopped)
+	maintenance, cancel := context.WithCancel(ctx)
+	defer cancel()
+	if store, err := sub.DefaultStore(); err == nil {
+		go store.MaintainStorage(maintenance)
+	}
 	go func() {
 		select {
 		case <-ctx.Done():

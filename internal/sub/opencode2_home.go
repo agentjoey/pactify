@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/agentjoey/pactify/internal/acp"
 	"github.com/agentjoey/pactify/internal/cockpit"
 )
 
@@ -150,7 +149,7 @@ func OpencodeLogin(ctx context.Context, args []string, stdin io.Reader, stdout, 
 	defer release()
 	cmd := exec.CommandContext(ctx, "opencode", append([]string{"auth", "login", "--standalone"}, args...)...)
 	cmd.Dir = filepath.Dir(layouts[0].Home)
-	cmd.Env = acp.CommandEnv(env)
+	cmd.Env = cockpit.OpencodeCommandEnv(env, true)
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

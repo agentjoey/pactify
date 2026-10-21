@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve, extname, sep } from "node:path";
 import { createJobsAPI } from "./jobs-fixtures.mjs";
 import { createRouterAPI } from "./router-fixtures.mjs";
+import { createStorageAPI } from "./storage-fixtures.mjs";
 export async function startMock(port = 0, panel = false) {
   const dist = fileURLToPath(
     new URL(
@@ -14,12 +15,14 @@ export async function startMock(port = 0, panel = false) {
   );
   const jobs = createJobsAPI(!panel),
     router = createRouterAPI(!panel);
+  const storage = createStorageAPI(!panel);
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, "http://localhost");
       if (req.method === "POST" && url.pathname === "/__test/reset") {
         jobs.reset();
         router.reset();
+        storage.reset();
         res.writeHead(200);
         res.end("{}");
         return;
@@ -32,7 +35,7 @@ export async function startMock(port = 0, panel = false) {
         res.end(JSON.stringify(path === "/api/info" ? {version:"dev"} : {lastRun:null,harnesses:[{name:"codex",installed:true,version:"0.162.1"}]}));
         return;
       }
-      if ((await jobs(req, res, path)) || (await router(req, res, path)))
+      if ((await jobs(req, res, path)) || (await router(req, res, path)) || (await storage(req, res, path)))
         return;
       if (url.pathname.startsWith("/api/")) {
         res.writeHead(404);

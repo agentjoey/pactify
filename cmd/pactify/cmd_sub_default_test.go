@@ -57,8 +57,9 @@ func TestSubRunDefaultAndExplicitCodex(t *testing.T) {
 			}
 		})
 	}
+	// With nothing to resume, that is the clearer error than the missing CLI.
 	out, code := runCLI(t, bin, repo, "continue", "sub", "run", "--resume")
-	if code != 2 || !strings.Contains(out, "pactify sub doctor codex") {
+	if code != 2 || !strings.Contains(out, "no codex session to resume") {
 		t.Fatalf("default resume: code=%d out=%s", code, out)
 	}
 	for _, args := range [][]string{{"codex", "kimi"}, {"nope"}, {"fake", "codex"}} {

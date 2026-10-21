@@ -74,6 +74,8 @@ func TestSubResumeValidation(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	t.Setenv("PACTIFY_SUB_FAKE", "1")
 	bin := buildPactify(t)
+	// Resume errors must win over the missing-CLI preflight (CI has no codex).
+	t.Setenv("PATH", "/usr/bin:/bin")
 	repo := gitRepoForCLI(t)
 	store, _ := sub.DefaultStore()
 	resumeCLIJob(t, store, "done", repo, "fake", "session", sub.StatusSucceeded, 1)

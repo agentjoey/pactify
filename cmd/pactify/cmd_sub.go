@@ -263,10 +263,6 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 		routing = &sub.Routing{Remaining: remaining, QuotaGroups: router.QuotaGroups}
 		routeWarnings = warnings
 	}
-	primary, _ := sub.Lookup(req.Harness)
-	if err := primary.CheckInstalled(); err != nil {
-		return 2, fmt.Errorf("harness CLI %q is not installed on PATH; install %s and ensure it is on PATH, then run pactify sub doctor %s: %w", primary.Name, primary.Name, primary.Name, err)
-	}
 	id := sub.NewJobID(time.Now(), rand.Reader)
 	st, code, err := subCreateRun(c, store, id, req, resume, resumeJob)
 	if err != nil {

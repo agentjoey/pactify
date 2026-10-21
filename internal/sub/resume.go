@@ -101,7 +101,7 @@ func (s Store) ResumeCandidates(harness, cwd string) ([]State, error) {
 			continue
 		}
 		st, err := s.Load(entry.Name())
-		if err != nil || st.Request.Harness != harness || st.Request.Cwd != cwd {
+		if err != nil || st.Request.Harness != harness || !sameResumeDirectory(st.Request.Cwd, cwd) {
 			continue
 		}
 		if st.Status != StatusSucceeded && (st.Worktree == nil || !Terminal(st.Status)) {
@@ -122,6 +122,17 @@ func (s Store) ResumeCandidates(harness, cwd string) ([]State, error) {
 		candidates = append(candidates, st)
 	}
 	return candidates, nil
+}
+
+// Directory identity handles case-insensitive filesystems and symlink aliases.
+// Preserve legacy matching when either path cannot be inspected.
+func sameResumeDirectory(a, b string) bool {
+	left, leftErr := os.Stat(a)
+	right, rightErr := os.Stat(b)
+	if leftErr != nil || rightErr != nil {
+		return a == b
+	}
+	return left.IsDir() && right.IsDir() && os.SameFile(left, right)
 }
 
 // LatestResumeJob exposes the CLI's existing latest-session selection without

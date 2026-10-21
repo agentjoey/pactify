@@ -68,7 +68,8 @@ func Doctor(ctx context.Context, store Store, names []string, out io.Writer, opt
 	if opts.Model != "" && len(names) != 1 {
 		return false, fmt.Errorf("--model requires exactly one harness")
 	}
-	if len(names) == 0 {
+	installedOnly := len(names) == 0
+	if installedOnly {
 		names = Names()
 	}
 	harnesses := make([]Harness, 0, len(names))
@@ -87,10 +88,35 @@ func Doctor(ctx context.Context, store Store, names []string, out io.Writer, opt
 			return false, err
 		}
 	}
-	reports, err := runDoctor(ctx, store, harnesses, doctorDeps{model: opts.Model})
+	// Only the implicit all-harness path skips missing executables. Explicit
+	// names still get the full Installed failure and prerequisite rows.
+	var skipped []DoctorReport
+	if installedOnly {
+		installed := make([]Harness, 0, len(harnesses))
+		for _, h := range harnesses {
+			if h.CheckInstalled() != nil {
+				skipped = append(skipped, DoctorReport{Harness: h.Name, Checks: []DoctorCheck{{"Installed", "SKIP", "not installed"}}})
+			} else {
+				installed = append(installed, h)
+			}
+		}
+		harnesses = installed
+	}
+	var reports []DoctorReport
+	var err error
+	if len(harnesses) > 0 {
+		reports, err = runDoctor(ctx, store, harnesses, doctorDeps{model: opts.Model})
+	} else if installedOnly {
+		err = fmt.Errorf("no harness CLI is installed on PATH. Install a harness CLI, then run pactify sub doctor <harness>")
+	}
+	reports = append(reports, skipped...)
 	passed := err == nil
 	for _, r := range reports {
-		if _, e := fmt.Fprintf(out, "%s %s\n", r.Harness, r.Version); e != nil {
+		label := r.Harness
+		if h, ok := Lookup(r.Harness); ok && h.Experimental != "" {
+			label += " (experimental)"
+		}
+		if _, e := fmt.Fprintf(out, "%s %s\n", label, r.Version); e != nil {
 			return false, e
 		}
 		for _, c := range r.Checks {
@@ -161,10 +187,7 @@ func runDoctor(ctx context.Context, store Store, harnesses []Harness, d doctorDe
 			}
 		}
 
-		_, installErr := d.lookPath(h.Name)
-		if h.Name == "fake" && os.Getenv("PACTIFY_SUB_FAKE") == "1" {
-			installErr = nil
-		}
+		installErr := harnessInstalled(h.Name, d.lookPath)
 		if installErr == nil {
 			if h.Version == nil {
 				installErr = fmt.Errorf("no version probe")

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Make the first run work cleanly. `pactify sub run` checks the harness CLI is on
+  PATH before creating a job or worktree and exits 2 with a doctor hint when it
+  is missing. `pactify sub doctor` without arguments checks only installed
+  harnesses, lists missing ones as SKIP and marks experimental ones. `go install`
+  builds report their module version and VCS revision instead of `dev`. Bare
+  `--resume` matches the working directory by identity, so case or symlink
+  spellings on macOS find the previous session. install.sh downloads from the
+  GitHub `releases/latest/download` URL instead of the rate-limited API, and
+  release tags now run the test suite before goreleaser.
+
 - Add a privacy policy (`PRIVACY.md`) and a Data handling section to the plugin
   README: pactify has no telemetry or remote server, and briefs and code reach a
   provider only through the user's own harness CLI. Translate the remaining

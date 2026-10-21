@@ -1,13 +1,21 @@
 # `pactify sub doctor`
 
 ```sh
-pactify sub doctor                 # All registered harnesses
+pactify sub doctor                 # Installed harnesses only
 pactify sub doctor codex           # One harness
 pactify sub doctor opencode --model provider/model
 ```
 
 Doctor launches real harness requests and may consume quota. Install and log in
-to the relevant CLI first. Codex and kimi use the harness's native default model
+to the relevant CLI first. With no harness argument, missing CLIs are listed once
+as `SKIP Installed: not installed` and do not affect the exit code. If none are
+installed, doctor exits 1 with an installation hint. An explicit harness argument
+still reports a missing CLI as FAIL and exits 1. Experimental harnesses are marked
+`(experimental)` in text output, including skipped harnesses. `sub run` also checks
+the selected starting harness's executable on PATH before creating a job or worktree;
+a missing CLI exits 2 and points to `pactify sub doctor <harness>`.
+
+Codex and kimi use the harness's native default model
 unless `--model` is supplied. Doctor still requires a nonempty, independently
 verified actual model; explicitly requested models must match it. Opencode
 prefers `defaults.opencode.model` from the router, then a native default reported
@@ -26,9 +34,14 @@ write failure is shown as `same as above (Write access)`.
 
 ## Checks and results
 
-Each harness has ten aligned rows. PASS/FAIL record checked outcomes; SKIP means
+Each checked harness has ten aligned rows. PASS/FAIL record checked outcomes; SKIP means
 not applicable or not run after a prerequisite failure; WARN describes a
 limitation. Storage diagnostics appear separately.
+
+The read-only HTTP doctor snapshot is unchanged: `lastRun` remains null, and
+`harnesses` contains `name`, `installed`, `version` and `verifiedVersion`. It reads
+stored metadata and does not run probes. No JSON fields are added by the CLI's
+default selection or experimental text labels.
 
 | Check | Evidence |
 | --- | --- |

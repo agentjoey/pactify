@@ -348,7 +348,7 @@ func (s Store) lastRunFor(harness, cwd string) (State, string, error) {
 			continue
 		}
 		st, err := s.Load(entry.Name())
-		if err != nil || st.Request.Harness != harness || st.Request.Cwd != cwd {
+		if err != nil || st.Request.Harness != harness || !sameResumeDirectory(st.Request.Cwd, cwd) {
 			continue
 		}
 		if st.Status != StatusSucceeded && (st.Worktree == nil || !Terminal(st.Status)) {

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// 编译期断言：fake 实现接口。
+// Compile-time assertions: the fakes implement the interfaces.
 var (
 	_ Backend = (*FakeBackend)(nil)
 	_ Session = (*FakeSession)(nil)
@@ -129,7 +129,7 @@ func TestFakeSessionCloseIdempotent(t *testing.T) {
 		t.Fatalf("second Close failed: %v", err)
 	}
 
-	// channel 已关闭，range 应正常退出。
+	// The channel is closed, so range should exit normally.
 	for range s.Events() {
 		t.Fatal("closed channel should not yield events")
 	}

@@ -1,5 +1,6 @@
 {
   "name": "pactify",
+  "description": "Delegate coding tasks to locally installed codex, kimi, agy or opencode harness CLIs from Claude Code.",
   "owner": {
     "name": "agentjoey"
   },

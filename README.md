@@ -2,7 +2,8 @@
 
 Pactify is a harness router. It delegates coding tasks to codex (the default),
 kimi, agy and opencode, and records jobs, logs and results locally. The Claude
-Code plugin provides slash commands; the Go CLI manages the same jobs.
+Code plugin provides slash commands; the Go CLI manages the same jobs. See the
+[privacy policy](https://github.com/agentjoey/pactify/blob/main/PRIVACY.md).
 
 The latest published release is **v0.13.0**, the first harness router release.
 See [CHANGELOG](docs/CHANGELOG.md).

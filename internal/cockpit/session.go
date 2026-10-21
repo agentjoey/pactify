@@ -23,7 +23,7 @@ const (
 var ErrPromptRateLimited = errors.New("prompt rate limit exceeded")
 
 // PendingApproval is one unanswered approval, with a session-stable id the UI
-// echoes back to Respond. RawInput is the full tool input (审批卡信任根).
+// echoes back to Respond. RawInput is the full tool input (the approval card's trust root).
 type PendingApproval struct {
 	ID       string // manager-assigned, stable within the session
 	Kind     string

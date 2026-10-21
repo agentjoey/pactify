@@ -6,25 +6,25 @@ import (
 	"sync"
 )
 
-// FakeBackend 是 Backend 的内存 fake，用于 manager 集成与单测。
+// FakeBackend is an in-memory fake of Backend, used for manager integration and unit tests.
 type FakeBackend struct{}
 
-// NewFakeBackend 返回一个可用的 FakeBackend。
+// NewFakeBackend returns a usable FakeBackend.
 func NewFakeBackend() *FakeBackend {
 	return &FakeBackend{}
 }
 
-// Start 创建一个新的 FakeSession，ThreadID 使用 opts.Seat。
+// Start creates a new FakeSession, using opts.Seat as ThreadID.
 func (b *FakeBackend) Start(ctx context.Context, opts StartOpts) (Session, error) {
 	return NewFakeSession(opts.Seat), nil
 }
 
-// Resume 按 threadID 恢复一个 FakeSession。
+// Resume restores a FakeSession by threadID.
 func (b *FakeBackend) Resume(ctx context.Context, threadID string) (Session, error) {
 	return NewFakeSession(threadID), nil
 }
 
-// FakeSession 是 Session 的内存 fake，可被测试手动驱动。
+// FakeSession is an in-memory fake of Session that tests can drive manually.
 type FakeSession struct {
 	threadID string
 
@@ -37,7 +37,7 @@ type FakeSession struct {
 	closeOnce sync.Once
 }
 
-// NewFakeSession 创建带缓冲 channel 的 FakeSession。
+// NewFakeSession creates a FakeSession with buffered channels.
 func NewFakeSession(threadID string) *FakeSession {
 	return &FakeSession{
 		threadID:  threadID,
@@ -46,12 +46,12 @@ func NewFakeSession(threadID string) *FakeSession {
 	}
 }
 
-// ThreadID 返回会话持久句柄。
+// ThreadID returns the session's persistent handle.
 func (s *FakeSession) ThreadID() string {
 	return s.threadID
 }
 
-// Prompt 记录用户消息并按串行语义立即返回。
+// Prompt records the user message and returns immediately with serialized semantics.
 func (s *FakeSession) Prompt(ctx context.Context, msg UserMessage) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -59,7 +59,7 @@ func (s *FakeSession) Prompt(ctx context.Context, msg UserMessage) error {
 	return nil
 }
 
-// Interrupt 记录被调用。
+// Interrupt records that it was called.
 func (s *FakeSession) Interrupt(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -67,17 +67,17 @@ func (s *FakeSession) Interrupt(ctx context.Context) error {
 	return nil
 }
 
-// Events 返回统一信封流；会话结束时 channel 会被 close。
+// Events returns the unified envelope stream; the channel is closed when the session ends.
 func (s *FakeSession) Events() <-chan Event {
 	return s.events
 }
 
-// Approvals 返回审批请求流；会话结束时 channel 会被 close。
+// Approvals returns the approval request stream; the channel is closed when the session ends.
 func (s *FakeSession) Approvals() <-chan ApprovalRequest {
 	return s.approvals
 }
 
-// Close 幂等地关闭 Events 与 Approvals channel。
+// Close closes the Events and Approvals channels idempotently.
 func (s *FakeSession) Close() error {
 	s.closeOnce.Do(func() {
 		close(s.events)
@@ -86,12 +86,12 @@ func (s *FakeSession) Close() error {
 	return nil
 }
 
-// Emit 把事件写入 Events() channel，供测试确定性驱动。
+// Emit writes an event to the Events() channel for deterministic test driving.
 func (s *FakeSession) Emit(e Event) {
 	s.events <- e
 }
 
-// EmitApproval 把审批请求写入 Approvals() channel；Respond 幂等。
+// EmitApproval writes an approval request to the Approvals() channel; Respond is idempotent.
 func (s *FakeSession) EmitApproval(a ApprovalRequest) {
 	inner := a.Respond
 	var once sync.Once

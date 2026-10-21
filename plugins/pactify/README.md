@@ -5,6 +5,14 @@ The top-level `bin/` directory prevents installation in those environments.
 Delegate tasks only on explicit user request to a locally installed codex / kimi / agy / opencode CLI, then review the result summary and workspace changes.
 The default harness is codex. kimi read-only access uses a generated private config and a tool allowlist. Kimi has no OS sandbox for writes; permission requests are approved by pactify in write jobs.
 
+## Data handling
+
+pactify runs locally, has no telemetry, and operates no remote server. The plugin only runs pactify commands on your machine; its installation check never accesses the network. Briefs and repository content are sent only by the harness CLI you installed and logged in yourself, to that CLI's provider: codex to OpenAI, kimi to Moonshot AI, agy to Google, and opencode to whichever provider you configured in opencode.
+
+pactify stores data locally under `PACTIFY_HOME` (default `~/.pactify`): job metadata, briefs, logs, diffs and results, plus private harness homes and caches. Retention follows the [storage lifecycle](https://github.com/agentjoey/pactify/blob/main/docs/operations.md#storage-lifecycle). The dashboard (`pactify serve`) defaults to loopback, non-loopback binds require `PACTIFY_SERVE_TOKEN`, and the read-only panel listens only on `127.0.0.1`. To delete data, run `pactify sub prune` (preview, then `--yes`; add `--include-worktrees` for pending worktrees), or remove `PACTIFY_HOME`.
+
+pactify itself does not send telemetry or check for updates. Network access happens through the harness CLIs you installed: `pactify sub run`, resume, retries and jobs started from the dashboard or panel delegate to that CLI, which contacts its provider; `pactify sub doctor` runs harness probes and may consume model quota, and its network probe, when run, has the harness bind a loopback port and make an external HTTPS request to `https://example.com`; `pactify sub login opencode` runs `opencode auth login`. pactify invokes git commands locally and does not fetch, pull, push or clone. See the [privacy policy](https://github.com/agentjoey/pactify/blob/main/PRIVACY.md).
+
 ## Installation
 
 Run these commands in Claude Code:
@@ -83,7 +91,7 @@ or attention. Running jobs appear first; pending matters are highlighted with ne
 `/jobs all` reads all jobs but shows at most 20 rows within about 30 lines, counting the rest.
 `/jobs <id>` shows one job's result excerpt, last 20 log lines, recorded diff statistics and
 direct resume links. The namespaced forms also accept `all` or a job id.
-Use `pactify sub cost` for token and cost totals by harness, model, repository or day, with recent quota snapshots; see the [cost contract](../../docs/sub-cost.md).
+Use `pactify sub cost` for token and cost totals by harness, model, repository or day, with recent quota snapshots; see the [cost contract](https://github.com/agentjoey/pactify/blob/main/docs/sub-cost.md).
 
 The jobs skill is read-only: it never applies, discards, cancels, dismisses or resumes jobs.
 After host review, `pactify sub dismiss <id>` clears handled failure/warning attention; apply and discard also clear it, and pending worktrees must be handled first.
@@ -91,7 +99,7 @@ Suggestions follow the review workflow below: inspect the full diff and new file
 rerun acceptance including the full test suite, then apply after approval. Rework uses the
 same worktree with `--resume <job-id> --worktree` after confirming the selected session.
 Lists use `pactify sub status --json` (`--all` for all jobs); see the
-[summary field contract](../../docs/sub-status.md). JSON is projected locally before entering
+[summary field contract](https://github.com/agentjoey/pactify/blob/main/docs/sub-status.md). JSON is projected locally before entering
 the conversation; list mode does not load individual results or logs.
 
 The dashboard also has a **Jobs** tab with the same summaries, details, live logs,
@@ -101,7 +109,7 @@ directly. serve does not provide login authentication: keep it on loopback, or p
 behind a reverse proxy that authenticates users (see the README Dashboard section). Alternatively, run `pactify sub panel` locally
 and open its printed one-time URL (or use `--port 17100 --no-open`). Both browser
 entries are read-only and share one Jobs UI; panel retains its independent Bearer
-authentication. See [Jobs view](../../docs/jobs-view.md) for deployment prerequisites,
+authentication. See [Jobs view](https://github.com/agentjoey/pactify/blob/main/docs/jobs-view.md) for deployment prerequisites,
 `PACTIFY_HOME`, limits and build commands.
 
 ## Reviewing a delegation
@@ -168,7 +176,7 @@ also checks periodically. Settings and doctor show sizes and the last run;
 the read-only panel supplies the CLI command. Credentials and real user homes
 are protected. Pruning deletes Codex threads via `thread/delete`, removing them
 from Remote Control; completion only archives them and can leave them listed.
-API failures retain the job for retry. See [storage operations](../../docs/operations.md#storage-lifecycle)
+API failures retain the job for retry. See [storage operations](https://github.com/agentjoey/pactify/blob/main/docs/operations.md#storage-lifecycle)
 for full policy, API endpoints, limitations and exit codes (0 success, 1 operational
 or partial failure, 2 invalid arguments).
 
@@ -180,7 +188,7 @@ least 24 hours and a cache cap of at least 1 GB.
 **Session hiding**: delegated sessions are hidden when the job ends, so they do not appear in your own session / project lists. Every harness must declare its hiding mechanism, enforced by tests:
 
 | Harness | Hiding mechanism | View the original session |
-|---|---|---|---|
+|---|---|---|
 | codex | Archive the thread at completion (hidden in Codex desktop and mobile) | `codex unarchive <sessionId>` |
 | kimi (minimal config, default) | Use the persistent shared `$PACTIFY_HOME/harness-homes/kimi` via `KIMI_CODE_HOME`; sessions never enter your own index. No `kimi web` or archive call. | `KIMI_CODE_HOME="$PACTIFY_HOME/harness-homes/kimi" kimi session list --cwd <directory>` (use `~/.pactify` if `PACTIFY_HOME` is unset) |
 | kimi (`--with-user-config`) | Use the user's home and call kimi's archive API via a temporary localhost-only `kimi web --no-open`. If unavailable, fall back to the session archive field (CLI only, with a warning), then verify with `kimi session list`. | `kimi session list --archived --cwd <directory>`, or restore from archived sessions in kimi web |
@@ -270,7 +278,7 @@ opencode is supported on both 1.x and 2.x: no OS sandbox; write permission reque
 `opencode serve` process per job; 2.x uses the reviewed `@opencode/cli` API contract.
 Use `/delegate-opencode`, `/pactify:delegate-opencode`, or an explicit user request
 to delegate to opencode, with the shared delegation guide and host review workflow.
-See the [support policy](../../docs/harness-updates.md) for both majors.
+See the [support policy](https://github.com/agentjoey/pactify/blob/main/docs/harness-updates.md) for both majors.
 Out-of-workspace directory access for file tools is denied; shell is not confined.
 Requested models use dynamic `provider/model` ids; omitting the model preserves opencode's default.
 Assistant messages confirm the actual model. Tokens and cost use the session summary;
@@ -315,4 +323,4 @@ probe returns the same error as its write probe, its reason says
 
 Configured aliases can be used with `/delegate @alias <task>`; inspect
 `pactify sub router --json` for available names. For quota groups, quota fallback
-and `--worktree-from`, see [routing](../../docs/router.md).
+and `--worktree-from`, see [routing](https://github.com/agentjoey/pactify/blob/main/docs/router.md).

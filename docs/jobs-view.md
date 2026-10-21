@@ -33,32 +33,32 @@ Settings uses a left navigation and content area, with a section select on phone
 
 Live displays observed harnesses, models, effort, calls, diff, quota, resume/fallback and retry links. Redacted events are batched per animation frame, with at most four live streams; hidden or unmounted views close their streams. No unobserved agents, stages or quota reset times are inferred.
 
-## 通过认证反向代理访问
+## Access through an authenticated reverse proxy
 
-访问路径：
+Access path:
 
 ```text
-浏览器 → 执行用户认证的反向代理 → http://127.0.0.1:7777 → pactify serve
+browser → authenticated reverse proxy → http://127.0.0.1:7777 → pactify serve
 ```
 
-例如打开 `https://dash.example.com/#/jobs`，先完成代理认证。`PACTIFY_ALLOWED_ORIGINS` 用于执行用户认证的反向代理，应配置完整 origin，例如 `https://dash.example.com`；支持逗号分隔和去除末尾斜杠。
+For example, open `https://dash.example.com/#/jobs` and complete proxy authentication first. `PACTIFY_ALLOWED_ORIGINS` is for a reverse proxy that performs user authentication and should be configured with full origins, such as `https://dash.example.com`; comma-separated values and trailing-slash removal are supported.
 
-默认 `pactify serve --addr 127.0.0.1:7777` 无需 token。所有请求（含静态资源和 SSE）校验 Host：loopback 监听仅接受 `127.0.0.1`、`localhost`、`[::1]` 加监听端口，以及 allowlist origin 的 Host（带或不带其显式端口）。浏览器写请求必须精确匹配该端口的 `http` loopback origin，或列入 allowlist；其他本机端口、`null` 均返回 403。无 Origin 的 CLI / 脚本请求继续允许。这些校验不能代替用户认证。
+By default `pactify serve --addr 127.0.0.1:7777` requires no token. All requests (including static assets and SSE) validate Host: a loopback listener accepts only `127.0.0.1`, `localhost`, `[::1]` plus the listening port, and allowlist-origin Hosts (with or without their explicit port). Browser write requests must exactly match the `http` loopback origin on that port or be allowlisted; other local ports and `null` return 403. CLI / script requests without Origin remain allowed. These checks cannot replace user authentication.
 
-非 loopback 监听（包括 `0.0.0.0`、`::` 和省略主机）必须配置至少 32 字符的 `PACTIFY_SERVE_TOKEN`，Host 仅接受绑定 IP / 主机名加端口或 allowlist 中的代理 Host。任何地址只要设置 token，所有 `/api/` 请求（含读取和 SSE）都须携带 `Authorization: Bearer <token>`，否则返回 401。静态资源仍公开，但受 Host 校验。Dashboard UI 自身不发送该 token；token 模式用于认证后注入 header 的反向代理，代理也须覆盖 SSE 请求。
+Non-loopback listeners (including `0.0.0.0`, `::` and an omitted host) require `PACTIFY_SERVE_TOKEN` with at least 32 characters, and Host accepts only the bound IP / hostname plus port or an allowlisted proxy Host. Whenever a token is set on any address, every `/api/` request (including reads and SSE) must carry `Authorization: Bearer <token>`, otherwise it returns 401. Static assets remain public but are subject to the Host check. The Dashboard UI itself does not send this token; token mode is for reverse proxies that inject the header after authenticating users, and the proxy must also cover SSE requests.
 
-API 使用 serve 进程的 `PACTIFY_HOME`，与 CLI 一样读取 `$PACTIFY_HOME/jobs`，未设置时为 `~/.pactify/jobs`。后台服务与交互式 shell 的环境不同，会影响任务目录和 resume 所需配置；shell 中导出的变量不会自动进入服务。worker 不继承 `PACTIFY_ALLOWED_ORIGINS` 或 `PACTIFY_SERVE_TOKEN`。服务在后台回收已结束的 worker。
+The API uses the serve process's `PACTIFY_HOME` and, like the CLI, reads `$PACTIFY_HOME/jobs`, or `~/.pactify/jobs` when unset. A background service has a different environment from an interactive shell, which affects job directories and the configuration needed for resume; variables exported in the shell do not automatically reach the service. Workers do not inherit `PACTIFY_ALLOWED_ORIGINS` or `PACTIFY_SERVE_TOKEN`. The service reclaims finished workers in the background.
 
-## 本机 sub panel
+## Local sub panel
 
 ```sh
 pactify sub panel
 pactify sub panel --port 17100 --no-open
 ```
 
-默认选择随机 loopback 端口并打开浏览器；`--no-open` 只打印 URL，只能监听 `127.0.0.1`，Ctrl-C 退出。首次访问 `http://127.0.0.1:<port>/?token=…` 消耗一次性 launch token，换取独立 session token；重用原 URL 返回 401。
+By default it selects a random loopback port and opens the browser; `--no-open` only prints the URL, it can listen only on `127.0.0.1`, and Ctrl-C exits. The first visit to `http://127.0.0.1:<port>/?token=…` consumes a one-time launch token in exchange for an independent session token; reusing the original URL returns 401.
 
-前端移除 URL 中的 token，将 session 保留在当前标签页的 `sessionStorage`。API 与 fetch 日志流使用 `Authorization: Bearer <session>`，不使用认证 cookie；重启 panel 后需使用新 URL。panel 认证与 serve 的宿主安全模型独立。
+The frontend removes the token from the URL and keeps the session in the current tab's `sessionStorage`. The API and fetch log streams use `Authorization: Bearer <session>`, not an authentication cookie; after restarting the panel a new URL is required. Panel authentication is independent of serve's host security model.
 
 A new tab opened at the cleaned panel URL can request the existing session
 through a BroadcastChannel with a request nonce. Tabs of the same panel origin
@@ -81,31 +81,31 @@ on desktop, or revealed from the compact footer button on narrow screens. Cards 
 Usage show reported costUSD, subscription for codex/kimi/agy without a reported
 cost, and unknown for other unpriced harnesses.
 
-## API 与边界
+## API and boundaries
 
-两种宿主挂载同一个 `subpanel.ReadOnlyHandler`：
+Both hosts mount the same `subpanel.ReadOnlyHandler`:
 
-| 功能 | serve | 本机 panel |
+| Feature | serve | Local panel |
 | --- | --- | --- |
-| 列表 / 详情 | `/api/sub/jobs?all=1`、`/api/sub/jobs/<id>` | `/api/jobs?all=1`、`/api/jobs/<id>` |
-| SSE 日志 / 事件 | `/api/sub/jobs/<id>/{logs,events}` | `/api/jobs/<id>/{logs,events}` |
+| List / details | `/api/sub/jobs?all=1`, `/api/sub/jobs/<id>` | `/api/jobs?all=1`, `/api/jobs/<id>` |
+| SSE logs / events | `/api/sub/jobs/<id>/{logs,events}` | `/api/jobs/<id>/{logs,events}` |
 | diff | `/api/sub/jobs/<id>/diff` | `/api/jobs/<id>/diff` |
 | Doctor snapshot | `/api/sub/doctor` | `/api/doctor` |
 | CLI version | `/api/sub/info` | `/api/info` |
-| harness 状态 / 模型 | `/api/sub/harnesses`（`?refresh=1` 刷新） | `/api/harnesses` |
-| 路由配置 | `GET /api/sub/router` | `GET /api/router` |
-| 用量汇总 | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
-| 保存路由 / 默认值 | `PUT /api/sub/router` | 不注册 |
-| 清除耗尽记录 | `DELETE /api/sub/quota/<encoded-key>` | 不注册 |
-| 任务操作 | `POST /api/sub/jobs/<id>/{cancel,resume,apply,discard}` | 不注册 |
+| Harness status / models | `/api/sub/harnesses` (`?refresh=1` to refresh) | `/api/harnesses` |
+| Router configuration | `GET /api/sub/router` | `GET /api/router` |
+| Usage summary | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
+| Save router / defaults | `PUT /api/sub/router` | Not registered |
+| Clear exhaustion records | `DELETE /api/sub/quota/<encoded-key>` | Not registered |
+| Job actions | `POST /api/sub/jobs/<id>/{cancel,resume,apply,discard}` | Not registered |
 
-共享只读 API 仅接受 GET，HEAD 也拒绝。serve 的所有请求经过 Host 校验，token 模式还要求 API Bearer header；写操作经过上述精确 Origin 校验，仅接受 JSON，请求体上限 64 KiB，状态冲突返回 409。Dashboard resume 每 store 最多四个活跃 job（含 queued/retrying），超限返回 429；CLI 不占此额度。结束、取消或启动失败释放名额。CLI 与 dashboard 共用 session lock。
+The shared read-only API accepts only GET and rejects HEAD as well. All serve requests undergo the Host check, and token mode also requires the API Bearer header; write operations undergo the exact Origin check above, accept only JSON, cap the request body at 64 KiB, and return 409 on state conflicts. Dashboard resume allows at most four active jobs per store (including queued/retrying) and returns 429 when exceeded; the CLI does not consume this quota. Finishing, canceling or a failed start releases the slot. The CLI and dashboard share the session lock.
 
-任务读取使用原子 state 快照和单次索引，不恢复孤儿 worker、不创建锁文件、不修改任务状态。缺失 `state.json` 的目录会跳过，非法 job id 被拒绝。cost API 的参数及错误沿用 [`sub cost`](sub-cost.md)，额外返回过滤过期记录后的 `exhaustedRoutes`，不根据历史 `quotaSnapshots` 推断耗尽或重置时间。
+Job reads use an atomic state snapshot and a single index, without recovering orphan workers, creating lock files or modifying job state. Directories missing `state.json` are skipped, and invalid job ids are rejected. The cost API reuses [`sub cost`](sub-cost.md) for its arguments and errors, additionally returning `exhaustedRoutes` after filtering expired records, and does not infer exhaustion or reset times from historical `quotaSnapshots`.
 
-日志从末尾 1 MiB 窗口内最多 100 条可读记录开始，半行缓冲最多 64 KiB，浏览器最多保留 1,000 行；终态关闭流，离开详情取消请求，断流 / 错误显示状态。完整日志使用 `pactify sub logs <id> --follow`。
+Logs start from at most 100 readable records within the last 1 MiB window, with a half-line buffer of at most 64 KiB, and the browser retains at most 1,000 lines; a terminal job closes the stream, leaving details cancels the request, and a broken stream / error displays a status. Use `pactify sub logs <id> --follow` for the complete log.
 
-worktree diff 相对记录的 base commit，包含未跟踪文件，不 staging、不修改 Git index；上限为 512 KiB / 10 秒，截断显示提示。无 worktree、已 discard 或无法读取时展示已有变更清单 / 提示，result 不保存完整 patch；结果文件读取上限为 4 MiB。
+The worktree diff is relative to the recorded base commit, includes untracked files, does not stage or modify the Git index, is limited to 512 KiB / 10 seconds, and shows a truncation notice. When there is no worktree, it has been discarded or it cannot be read, the existing change list / notice is shown; the result does not store the full patch. Result file reads are limited to 4 MiB.
 
 The diff response includes `maxBytes` (524288), `truncated`, `patch`, `files` and
 `note`. The viewer colours text nodes, shows per-file line counts, and initially
@@ -123,7 +123,7 @@ executes doctor, recovers jobs, or writes storage. Settings offers a copyable
 running CLI's release version. Both routes reject non-GET methods, including HEAD,
 and inherit their host's authentication and Host checks.
 
-## 构建与验证
+## Build and verification
 
 ```sh
 cd web
@@ -137,6 +137,6 @@ node scripts/shots-live.mjs
 node scripts/shots-panel.mjs
 ```
 
-`build` 与 `build:panel` 分别生成 Git 跟踪的 `internal/serve/dist` 与 `internal/subpanel/dist`；`npm run e2e` 依次构建两份再运行 Playwright。测试与截图脚本使用独立 mock 服务最终 embedded dist，不依赖常驻 daemon。
+`build` and `build:panel` produce the Git-tracked `internal/serve/dist` and `internal/subpanel/dist` respectively; `npm run e2e` builds both in order and then runs Playwright. Tests and screenshot scripts use an independent mock service and the final embedded dist, without depending on a resident daemon.
 
 After rebuilding dist, rebuild the Go binary and restart the local server. For macOS background services, see [operations](operations.md). Check screenshots and the actual authenticated proxy path when applicable.

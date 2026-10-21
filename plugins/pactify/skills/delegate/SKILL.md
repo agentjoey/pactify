@@ -17,7 +17,7 @@ Launch command (step 2 below):
 An explicit alias is supported: `/delegate @alias <task>` launches
 `pactify sub run @alias --write --worktree --wait 0s --json` with the complete brief on stdin.
 Pass the exact alias as one quoted argument. Explicit `--model` / `--effort` override alias values.
-Without an alias, keep the default harness. See [router configuration](../../../../docs/router.md).
+Without an alias, keep the default harness. See [router configuration](https://github.com/agentjoey/pactify/blob/main/docs/router.md).
 
 For read-only tasks replace `--write` with `--read-only`; never pass both.
 

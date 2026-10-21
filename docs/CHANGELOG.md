@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add a privacy policy (`PRIVACY.md`) and a Data handling section to the plugin
+  README: pactify has no telemetry or remote server, and briefs and code reach a
+  provider only through the user's own harness CLI. Translate the remaining
+  Chinese docs (status and cost contracts, Jobs view, web README) and code
+  comments to English, make plugin links absolute so they work in an installed
+  plugin, and add a marketplace description.
+
 - Redesign the dashboard and read-only panel with the Pactify green palette,
   self-hosted Space Grotesk, shared status and live indicators, and persisted
   manual dark/light themes. Make production Lines the default Jobs view, with

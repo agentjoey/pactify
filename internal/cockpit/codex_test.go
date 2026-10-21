@@ -1093,7 +1093,7 @@ func TestCodexRateLimitsSurfaceAsSystemEvent(t *testing.T) {
 	}
 }
 
-// Review Focus 1：缓冲区满时回合结束事件不能丢。
+// Review Focus 1: the turn-end event must not be dropped when the buffer is full.
 func TestCodexTurnEndNeverDropped(t *testing.T) {
 	assertCodexTerminalNotDropped(t, StateTurnCompleted)
 }

@@ -16,20 +16,20 @@ const (
 	AccessWrite    Access = "write"
 )
 
-// StartOpts 启动一个会话所需。
+// StartOpts contains what is needed to start a session.
 type StartOpts struct {
 	// Transcript is opt-in sanitized protocol recording; normal jobs leave it nil.
 	Transcript          *golden.Recorder
 	ReadOnlyPolicy      bool   // Exercise the managed read-only hook with native write access (doctor).
 	CompletionFollowups *int   // agy: nil uses two completion followups; zero disables them.
-	RepoDir             string // agent 的 cwd = 仓库根
+	RepoDir             string // agent cwd = repository root
 	Seat                string // PACT_AGENT_ID
-	Model               string // 非空时必须兑现，否则 Start 返回错误
-	SystemPrompt        string // 可空
-	Effort              string // 可空；每轮推理 effort
+	Model               string // when non-empty, must be honored; otherwise Start returns an error
+	SystemPrompt        string // optional
+	Effort              string // optional; per-turn reasoning effort
 	Access              Access
 	WritableRoots       []string  // codex: additional writable directories; opencode write: roots plus its literal cwd.
-	Env                 []string  // 追加在继承环境之后；同名键以此为准
+	Env                 []string  // appended after the inherited environment; same-name keys use these values
 	Stderr              io.Writer // nil → os.Stderr
 	// Hidden keeps a delegated session out of the user's own thread list: codex
 	// archives the thread when the session closes and unarchives it before a
@@ -63,10 +63,10 @@ const (
 	StateTurnFailed    = "turn_failed"
 )
 
-// UserMessage 是用户发送给后端的文本消息。
+// UserMessage is a text message sent by the user to the backend.
 type UserMessage struct{ Text string }
 
-// Decision 是审批决策（枚举字符串，透传各后端的语义）。
+// Decision is an approval decision (an enum string, passing through each backend's semantics).
 type Decision string
 
 const (
@@ -75,7 +75,7 @@ const (
 	DecisionAllowForSession Decision = "allow_for_session"
 )
 
-// EventKind 是统一信封的事件类型。
+// EventKind is the event type of the unified envelope.
 type EventKind string
 
 const (
@@ -89,14 +89,14 @@ const (
 	EventSystem  EventKind = "system"
 )
 
-// ToolEvent 描述一次工具调用的一段（start/output/end）。
+// ToolEvent describes one segment of a tool call (start/output/end).
 type ToolEvent struct {
 	Phase string `json:"phase"` // "start"|"output"|"end"
 	Name  string `json:"name"`
-	Text  string `json:"text"` // 输出增量或摘要
+	Text  string `json:"text"` // output delta or summary
 }
 
-// Usage 是一次 usage 更新（token 计数，后端各取所能）。
+// Usage is one usage update (token counts, using what each backend provides).
 type Usage struct {
 	InputTokens  int     `json:"inputTokens"`
 	OutputTokens int     `json:"outputTokens"`
@@ -104,44 +104,44 @@ type Usage struct {
 	CostUSD      float64 `json:"costUSD"`
 }
 
-// Event 是统一信封；按 Kind 取对应字段，允许字段缺位（禁伪造）。Raw 留原始后端载荷。
+// Event is the unified envelope; select fields by Kind, and fields may be absent (fabrication is forbidden). Raw holds the original backend payload.
 // JSON tags are lowercase: this struct is the SSE wire shape the dashboard's
 // CockpitPanel consumes (ev.kind / ev.text / ev.tool / …); without tags Go would
 // emit capitalized keys and every event would render as an empty system row.
 type Event struct {
 	Kind  EventKind       `json:"kind"`
-	Text  string          `json:"text,omitempty"`  // message: 增量/终稿文本
-	Final bool            `json:"final,omitempty"` // message or terminal state: 是否终稿
+	Text  string          `json:"text,omitempty"`  // message: delta/final text
+	Final bool            `json:"final,omitempty"` // message or terminal state: whether this is the final text
 	Tool  *ToolEvent      `json:"tool,omitempty"`  // Kind==EventTool
 	Usage *Usage          `json:"usage,omitempty"` // Kind==EventUsage
-	State string          `json:"state,omitempty"` // Kind==EventState: "turn_started"|"turn_completed"|"turn_failed" 等
-	Err   string          `json:"err,omitempty"`   // Kind==EventError: 结构化错误摘要
-	Raw   json.RawMessage `json:"raw,omitempty"`   // 原始后端载荷（可空）
+	State string          `json:"state,omitempty"` // Kind==EventState: "turn_started"|"turn_completed"|"turn_failed" etc.
+	Err   string          `json:"err,omitempty"`   // Kind==EventError: structured error summary
+	Raw   json.RawMessage `json:"raw,omitempty"`   // original backend payload (optional)
 }
 
-// ApprovalRequest 是后端发起的审批请求；Respond 回决策（幂等，重复调用返回 error）。
-// RawInput 是工具/命令的完整原始参数（审批卡信任根，禁用 Title 之类自由文本作根）。
+// ApprovalRequest is an approval request initiated by the backend; Respond returns a decision (idempotent; repeated calls return an error).
+// RawInput is the complete original arguments of the tool/command (the trust root of the approval card; free text such as Title must not be used as the root).
 type ApprovalRequest struct {
-	Kind     string // "command"|"file_change"|"permission"|"mcp_elicitation" 等
+	Kind     string // "command"|"file_change"|"permission"|"mcp_elicitation" etc.
 	ToolName string
 	RawInput json.RawMessage
 	Respond  func(Decision) error
 }
 
-// Backend 是会话工厂；具体后端（codex / claude / acp）实现它。
+// Backend is a session factory; concrete backends (codex / claude / acp) implement it.
 type Backend interface {
 	Start(ctx context.Context, opts StartOpts) (Session, error)
 	Resume(ctx context.Context, threadID string) (Session, error)
 }
 
-// Session 是一次与后端的对话；消费者从 Events/Approvals 读取，调用 Prompt 推进。
+// Session is one conversation with a backend; consumers read from Events/Approvals and call Prompt to advance.
 type Session interface {
-	Prompt(ctx context.Context, msg UserMessage) error // 串行队列；多轮同会话
+	Prompt(ctx context.Context, msg UserMessage) error // serialized queue; multiple turns in the same session
 	Interrupt(ctx context.Context) error
-	Events() <-chan Event              // 统一信封流（会话结束时 close）
-	Approvals() <-chan ApprovalRequest // 审批流（会话结束时 close）
-	ThreadID() string                  // 持久续接句柄
-	Close() error                      // 收割；幂等
+	Events() <-chan Event              // unified envelope stream (closed when the session ends)
+	Approvals() <-chan ApprovalRequest // approval stream (closed when the session ends)
+	ThreadID() string                  // persistent resume handle
+	Close() error                      // reap; idempotent
 }
 
 // StartError preserves the ID of a session created before configuration failed.

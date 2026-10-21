@@ -1,4 +1,4 @@
-# 委派成本汇总契约
+# Delegated cost summary contract
 
 ```sh
 pactify sub cost                         # --since 7d --by harness
@@ -10,64 +10,64 @@ pactify sub cost --by repo --json
 pactify sub cost --by day
 ```
 
-只读取与其他 `sub` 命令相同的 `$PACTIFY_HOME/jobs/*/{state,result}.json`；未设置
-`PACTIFY_HOME` 时使用 `~/.pactify/jobs`。不调用 Recover、不创建目录或锁、不恢复或
-修改 job，不读取日志、harness home 或凭据。Jobs 页通过共用的只读 API 复用本汇总，
-HTTP 扩展字段与刷新行为见 [Jobs view](jobs-view.md#api-与边界)。CLI JSON 契约保持不变。
+Reads only the same `$PACTIFY_HOME/jobs/*/{state,result}.json` as other `sub` commands; when
+`PACTIFY_HOME` is unset it uses `~/.pactify/jobs`. It does not call Recover, create directories or locks, recover or
+modify jobs, or read logs, harness homes or credentials. The Jobs page reuses this summary through the shared read-only API;
+HTTP extension fields and refresh behavior are described in [Jobs view](jobs-view.md#api-and-boundaries). The CLI JSON contract remains unchanged.
 
-## 时间、分组与容错
+## Time, grouping and fault tolerance
 
-- 按 State 的 `createdAt` 过滤，范围为 `[since, until]`，`until` 是命令启动时间。
-  `--since` 接受 `<N>d`、`<N>h` 或 `YYYY-MM-DD`，默认仍为 `7d`。
-- `<N>d` 沿用 status 的日历日约定：包含本地时区今天及之前 N−1 天，从首日零点
-  起算。`1d` 从今天零点开始，`3d` 从前天零点开始，`7d` 从六天前零点开始；
-  `30d` 同理。跨夏令时时仍按日历日计算。
-- `<N>h` 从命令启动时刻精确回溯 N 小时，保留秒与纳秒；`24h` 表示过去 24 小时，
-  与 `1d` 的日历日含义不同。日期格式仍从本地时区该日零点起算，包含当天。
-- N 必须是仅含十进制数字的正整数，可以有前导零；拒绝 0、负数、带符号或小数的
-  数值、其他单位以及组合时长（例如 `1d2h`）。超大数值或使起始时间超出 RFC3339
-  年份范围 `0000–9999` 的值会报错，不发生溢出或时间回绕。日期不接受未来日期。
-  不支持 `all`。
-- `harness` 使用 State 的请求 harness，缺失时取 result 的 harness；`model` 依次取
-  result 的 `modelActual`、`modelRequested`、State 的请求模型。
-  `repo` 复用 `JobRepo`：worktree 的 `originalRoot` 优先于 State 的 `repo`，
-  旧 job 可以从仍存在的请求目录解析仓库根目录。`day` 按本地时区创建日分组。
-- 分组按 key 升序。未知模型或仓库保留空字符串 key，文本显示 `(unknown)`，
-  不根据 session、目录名或 job id 猜测元数据。
-- 成功、失败、取消数取有效 result 的终态；result 原子发布早于终态 State，
-  因此有有效终态 result 的 running State 也可计入。`jobs` 为这三类之和。
-- 缺失、不可读或损坏的 result 跳过并计数，不导致命令失败。JSON `null`、无终态、
-  不匹配的非空 jobId、负数 token 或成本也视为损坏。State 缺失、不可读、损坏、id
-  不匹配或创建时间缺失时，单独计数。读取限制在单个 job 目录内，不跟随越界链接。
-- `skipped.missingResult` / `invalidResult` 只计时间范围内已知 State 的 job；
-  `invalidState` 无法确定创建时间，计扫描到的全部坏 State。非目录条目（含符号链接
-  job 目录）忽略。不存在的 store 返回空汇总；store 本身不可读取仍报错。
+- Filter by State's `createdAt`, over the range `[since, until]`, where `until` is the command start time.
+  `--since` accepts `<N>d`, `<N>h` or `YYYY-MM-DD`, and still defaults to `7d`.
+- `<N>d` follows status's calendar-day convention: it includes local-timezone today and the preceding N−1 days, starting
+  at midnight of the first day. `1d` starts at today's midnight, `3d` at the day before yesterday's midnight, `7d` at six days ago's midnight;
+  `30d` works the same way. Daylight saving time still uses calendar days.
+- `<N>h` goes back exactly N hours from the command start time, preserving seconds and nanoseconds; `24h` means the past 24 hours,
+  which differs from `1d`'s calendar-day meaning. The date format still starts at midnight of that day in the local timezone and includes that day.
+- N must be a positive integer containing only decimal digits and may have leading zeros; reject 0, negative numbers, signed or decimal
+  values, other units and combined durations (such as `1d2h`). Extremely large values, or values that make the start time exceed the RFC3339
+  year range `0000–9999`, report an error without overflow or time wraparound. Dates do not accept future dates.
+  `all` is not supported.
+- `harness` uses the requested harness from State, falling back to the result's harness when missing; `model` uses the result's
+  `modelActual`, then `modelRequested`, then State's requested model.
+  `repo` reuses `JobRepo`: a worktree's `originalRoot` takes precedence over State's `repo`,
+  and older jobs can resolve the repository root from the request directory if it still exists. `day` groups by local-timezone creation day.
+- Groups are sorted by key ascending. Unknown models or repositories keep an empty-string key and display as `(unknown)`;
+  metadata is not guessed from the session, directory name or job id.
+- Succeeded, failed and canceled counts use the terminal state of valid results; results are published atomically before the terminal State,
+  so a running State with a valid terminal result can also be counted. `jobs` is the sum of these three.
+- Missing, unreadable or corrupt results are skipped and counted, without failing the command. JSON `null`, no terminal state,
+  a mismatched non-empty jobId, or negative tokens or cost are also treated as corrupt. State that is missing, unreadable, corrupt, has a mismatched id
+  or lacks a creation time is counted separately. Reads are confined to a single job directory and do not follow links outside it.
+- `skipped.missingResult` / `invalidResult` count only jobs with a known State within the time range;
+  `invalidState` cannot determine a creation time, so it counts every bad State found during scanning. Non-directory entries (including symlinked
+  job directories) are ignored. A nonexistent store returns an empty summary; an unreadable store itself still reports an error.
 
-## 成本与不完整用量
+## Cost and incomplete usage
 
-只汇总 result 显式提供的数值 `costUSD`，当前正常由 opencode 提供。
-缺失或 `null` 不补零；显式 `0` 是有效已报告成本。`costUSD` 在没有已报告美元成本时
-为 JSON `null`。codex、kimi、agy 未提供成本时计为订阅，文本显示 `subscription`；其他
-harness 缺失成本时显示 `unknown (N)`。混合分组及合计同时显示已报告美元和
-`subscription` / `unknown (N)`，例如 `subscription + unknown (2)` 或
-`$0.125000 + subscription + unknown (2)`。
+Only numeric `costUSD` explicitly provided by the result is aggregated; currently it is normally provided by opencode.
+Missing or `null` values are not filled with zero; an explicit `0` is a valid reported cost. `costUSD` is JSON `null` when no
+US-dollar cost was reported. When codex, kimi or agy does not provide a cost it is counted as a subscription and displayed as `subscription`;
+when another harness has no cost it displays `unknown (N)`. Mixed groups and totals display both reported US dollars and
+`subscription` / `unknown (N)`, for example `subscription + unknown (2)` or
+`$0.125000 + subscription + unknown (2)`.
 
-CLI 生成的表头、提示、错误、帮助和成本标签统一使用英文。JSON 的分组枚举 `by`
-固定为 `harness` / `model` / `repo` / `day`；订阅在 JSON 中以数值字段
-`subscriptionJobs` 表示，没有中文枚举或展示标签。来自 job 的模型、仓库和额度原文
-作为数据保留，不翻译。
+CLI-generated headers, hints, errors, help and cost labels consistently use English. The JSON group enum `by`
+is fixed to `harness` / `model` / `repo` / `day`; subscriptions are represented in JSON by the numeric field
+`subscriptionJobs`, with no Chinese enums or display labels. Model, repository and quota text from jobs
+is preserved as data and not translated.
 
-现有 Result 编码使用 `costUSD,omitempty`，可能省略真实零值；历史数据无法区分
-未报告与被省略的零，本命令将这种 opencode job 归为 unknown，不推算价格，也不改写结果。
+Existing Result encoding uses `costUSD,omitempty`, which may omit a true zero value; historical data cannot distinguish
+an unreported cost from an omitted zero, so this command classifies such opencode jobs as unknown, does not estimate prices, and does not rewrite results.
 
-`usagePartialJobs` 单独统计 `usagePartial: true` 的 job，表格 `PARTIAL` 列显示数量；
-它们已记录的 token 和成本仍计入总量，不能把汇总理解为完整用量。
-`retries` 统计 result.retries 非空的 job 数；同一 job 续接多次仍只计 1，手动 `resumeOf` 不计入 retries。`fallbacks` 仍为 R3 预留，目前始终为 0。
+`usagePartialJobs` separately counts jobs with `usagePartial: true`, and the table's `PARTIAL` column displays the count;
+their recorded tokens and cost still count toward totals, and the summary must not be understood as complete usage.
+`retries` counts jobs whose result.retries is non-empty; a single job retried multiple times still counts as 1, and manual `resumeOf` is not counted in retries. `fallbacks` remains reserved for R3 and is currently always 0.
 
-## JSON 结构
+## JSON structure
 
-顶层字段固定为 `since`、`until`、`by`、`groups`、`total`、`skipped`、`quotaSnapshots`。
-时间为 RFC3339。空数组始终为 `[]`，所有 totals 和 skipped 字段始终输出。
+Top-level fields are fixed as `since`, `until`, `by`, `groups`, `total`, `skipped` and `quotaSnapshots`.
+Times are RFC3339. Empty arrays are always `[]`, and all totals and skipped fields are always output.
 
 ```json
 {
@@ -119,19 +119,19 @@ CLI 生成的表头、提示、错误、帮助和成本标签统一使用英文�
 }
 ```
 
-`groups` 的每项为 `key` 加 totals 字段；`total` 为全部有效 job 的合计。
-`costReportedJobs`、`subscriptionJobs`、`unpricedJobs` 互斥，三者之和等于 `jobs`。
-美元使用 result 的原始数值相加，文本保留六位小数，不做定价估算。
+Each `groups` item is a `key` plus the totals fields; `total` is the aggregate of all valid jobs.
+`costReportedJobs`, `subscriptionJobs` and `unpricedJobs` are mutually exclusive, and their sum equals `jobs`.
+US dollars are summed from the result's original numeric values, displayed with six decimal places in text, without pricing estimates.
 
-额度快照不受 `--since` 过滤：每个 harness 从全部有效历史结果中取最新一条非空
-`rateLimit`，按 harness 排序。观测时间优先使用 State 的 `finishedAt`，没有时取
-`updatedAt`，再取 `createdAt`；同时间取字典序较大的 job id。忽略未来创建或未来观测
-时间。后来的空 `rateLimit` 不覆盖旧快照。保留来源 job 和时间，快照不代表实时查询，
-CLI 汇总不读取 R1 的 `quota.json`；Jobs HTTP API 单独读取它来提供 `exhaustedRoutes`，
-不改变上述历史快照的含义。
+Quota snapshots are not filtered by `--since`: each harness takes the latest non-empty
+`rateLimit` from all valid historical results, sorted by harness. Observation time prefers State's `finishedAt`, then
+`updatedAt`, then `createdAt`; ties use the lexicographically larger job id. Future creation or future observation
+times are ignored. A later empty `rateLimit` does not overwrite an older snapshot. The source job and time are retained; snapshots do not represent a live query,
+and the CLI summary does not read R1's `quota.json`; the Jobs HTTP API reads it separately to provide `exhaustedRoutes`,
+without changing the meaning of the historical snapshots above.
 
-## 与已有查询的关系
+## Relationship to existing queries
 
-`sub status` / `/jobs` / panel 的摘要与错误处理保持原样；特别是 status 文本用量
-汇总仍对终态 result 缺失或损坏报错，本命令独立采用跳过并计数的策略。
-Result 的 `float64` / `omitempty` 编码保持不变，worker、result 和日志恢复调用方不受影响。
+`sub status` / `/jobs` / panel summaries and error handling remain unchanged; in particular, status text usage
+aggregation still errors on missing or corrupt terminal results, while this command independently uses a skip-and-count strategy.
+Result `float64` / `omitempty` encoding remains unchanged, and worker, result and log recovery callers are unaffected.

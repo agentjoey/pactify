@@ -52,8 +52,13 @@ for (const panel of [true, false]) test.describe(panel ? "panel P2" : "dashboard
       const icon=await request.get(`/favicon-${state}.svg`); expect(icon.ok()).toBe(true); expect(icon.headers()["content-type"]).toContain("image/svg+xml");
     }
     await page.evaluate(()=>document.fonts.ready);
-    expect(await page.evaluate(()=>document.fonts.check('13px InterVariable', 'Café Ā Ł Œ → · −'))).toBe(true);
+    expect(await page.evaluate(()=>document.fonts.check('13px "Space Grotesk"', 'Café Ā Ł Œ → · −'))).toBe(true);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
     await test.info().attach("mobile-kpis",{body:await page.screenshot({fullPage:true}),contentType:"image/png"});
   });
+});
+
+// Keep the established list interactions under test alongside pipeline.spec.ts.
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => localStorage.setItem("pactify-jobs-view", "list"));
 });

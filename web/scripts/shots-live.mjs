@@ -1,9 +1,9 @@
 // Final embedded dashboard and panel builds, isolated mock, no daemon/harness.
 import { mkdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { chromium } from "@playwright/test";
 import { startMock } from "../e2e/mock-server.mjs";
-const output = resolve(process.env.LIVE_SHOTS_DIR || "/tmp/pactify-shots/live");
+const output = resolve(process.env.SHOT_OUT ? join(process.env.SHOT_OUT, "live") : process.env.LIVE_SHOTS_DIR || "/tmp/pactify-shots/live");
 await mkdir(output, { recursive: true });
 let browser;
 try {
@@ -11,15 +11,16 @@ try {
   for (const panel of [false, true]) {
     const { server, baseURL } = await startMock(0, panel);
     try {
-      for (const [device, width, height] of [
+      for (const theme of ["dark", "light"]) for (const [_device, width, height] of [
         ["desktop", 1440, 1100],
-        ["mobile", 375, 812],
+        ["mobile", 390, 844],
       ]) {
         const page = await browser.newPage({
           viewport: { width, height },
-          colorScheme: "dark",
+          colorScheme: theme,
           reducedMotion: "reduce",
         });
+        await page.addInitScript(theme => { try { localStorage.setItem("pactify-theme", theme); } catch { /* Optional browser preference. */ } }, theme);
         await page.goto(`${baseURL}/#/dashboard`);
         await page.getByText("3 observed calls").waitFor();
         await page.evaluate(() => document.fonts.ready);
@@ -31,7 +32,7 @@ try {
           throw new Error("Horizontal overflow");
         const prefix = panel ? "panel" : "web";
         const capture = async (view, fullPage) => {
-          const path = resolve(output, `${prefix}-${view}-${device}.png`);
+          const path = resolve(output, `${prefix}-${view}-${theme}-${width}.png`);
           await page.screenshot({ path, fullPage });
           console.log(path);
         };

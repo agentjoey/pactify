@@ -1,3 +1,4 @@
+import { beforeEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -70,3 +71,7 @@ it("keeps all self-hosted font subsets below 250 KB combined", () => {
   expect(sizes).toHaveLength(3);
   expect(sizes.reduce((sum,size)=>sum+size,0)).toBeLessThan(250000);
 });
+
+// Legacy list behavior remains covered explicitly; pipeline defaults have their own suite.
+beforeEach(() => { localStorage.setItem("pactify-jobs-view", "list"); });
+afterEach(() => { localStorage.clear(); });

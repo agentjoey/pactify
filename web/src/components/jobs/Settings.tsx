@@ -5,6 +5,7 @@ import { CopyCommand } from "./NextSteps";
 import { responseError, useResource } from "./data";
 import { Routing } from "./Routing";
 import { panelBuild } from "../../buildTarget";
+import { ThemeControl, SectionLabel, Notice } from "../ui/Design";
 import { Storage } from "./Storage";
 interface DoctorSnapshot {
   lastRun: string | null;
@@ -46,6 +47,8 @@ export function Settings({
   source: JobsSource;
   readOnly?: boolean;
 }) {
+  const sections = [["machine","Harnesses / Models & routing"],["storage","Storage"],["doctor","Doctor"],["appearance","Appearance"],["shortcuts","Shortcuts"]] as const;
+  const [section, setSection] = useState("machine");
   const doctor = useResource<DoctorSnapshot>(
     source,
     source.jobsPath.replace(/\/jobs$/, "/doctor"),
@@ -186,14 +189,52 @@ export function Settings({
     setNotice("");
   }
   return (
-    <div className="settings-content">
+    <div className="settings-layout">
+      <aside className="settings-nav">
+        <nav aria-label="Settings sections">
+          {[{title: "Machine", items: sections.slice(0, 3)}, {title: "Preferences", items: sections.slice(3)}].map(group => (
+            <div className="settings-nav-group" key={group.title}>
+              <SectionLabel>{group.title}</SectionLabel>
+              {group.items.map(([key, title]) => (
+                <button type="button" key={key} aria-current={section === key ? "page" : undefined} onClick={() => setSection(key)}>
+                  {title}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+      </aside>
+      <label className="settings-select">Settings section
+        <select aria-label="Settings section" value={section} onChange={event => setSection(event.target.value)}>
+          {sections.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
+        </select>
+      </label>
+      <div className="settings-content">
+        {section === "appearance" && (
+          <section className="panel-section" aria-label="Appearance">
+            <h3>Theme</h3><p>Choose a palette for this browser. Dark is the default.</p><ThemeControl expanded />
+          </section>
+        )}
+        {section === "shortcuts" && (
+          <section className="panel-section" aria-label="Shortcuts">
+            <h3>Keyboard shortcuts</h3>
+            <dl className="shortcut-list">
+              <dt>/ or ⌘K</dt><dd>Search jobs</dd>
+              <dt>j / k</dt><dd>Next / previous job</dd>
+              <dt>h / l</dt><dd>Previous / next station</dd>
+              <dt>Enter</dt><dd>Open details</dd>
+              <dt>Escape</dt><dd>Close details</dd>
+              <dt>?</dt><dd>Show shortcut help</dd>
+            </dl>
+          </section>
+        )}
       {readOnly && (
         <p className="panel-caption">
           Edit settings with <code>pactify serve</code> (dashboard) or the CLI.
         </p>
       )}
-      <Storage source={source} readOnly={readOnly} />
-      <section className="panel-section" aria-label="Doctor status">
+      {section === "storage" && <Storage source={source} readOnly={readOnly} embedded />}
+      {section === "doctor" && <section className="panel-section" aria-label="Doctor status">
         <h2>Doctor status</h2>
         {doctor.error ? (
           <p role="alert">{doctor.error}</p>
@@ -207,7 +248,8 @@ export function Settings({
           </>
         ) : <p>Loading doctor status…</p>}
         <CopyCommand command="pactify sub doctor" />
-      </section>
+      </section>}
+      <div hidden={section !== "machine"}>
       <section aria-label="Harnesses">
         <div className="section-heading">
           <h2>Harnesses</h2>
@@ -226,7 +268,7 @@ export function Settings({
             {error}
           </p>
         )}
-        {notice && <p role="status">{notice}</p>}
+        {notice && <Notice kind="ok">{notice}</Notice>}
         {conflict && (
           <p role="alert" className="panel-error">
             Config changed elsewhere — reload to see the latest
@@ -392,6 +434,8 @@ export function Settings({
           )}
         />
       </section>
+      </div>
+      </div>
     </div>
   );
 }

@@ -171,10 +171,14 @@ for (const width of [1440, 390]) {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.emulateMedia({colorScheme:"light"});
     await page.goto("/#/jobs");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.getByRole("button", {name:"Switch to light theme",exact:true}).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     const background = () => page.locator(".v2-app").evaluate(node => getComputedStyle(node).backgroundColor);
     const light = await background();
     await page.emulateMedia({colorScheme:"dark"});
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page.getByRole("button", {name:"Switch to dark theme",exact:true}).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     expect(await background()).not.toBe(light);
     const attention = page.getByRole("region", {name:"Needs attention",exact:true});
@@ -249,7 +253,7 @@ for (const width of [1440, 390]) {
     });
     await page.goto("/#/jobs");
     await expect(page.getByRole("status",{name:"Loading jobs",exact:true})).toBeVisible();
-    await expect(page.locator(".loading-skeleton")).toHaveCount(3);
+    await expect(page.locator(".loading-skeleton")).toHaveCount(4);
     release();
     await expect(page.getByRole("heading",{name:"Start your first job",exact:true})).toBeVisible();
     await expect(page.getByLabel("Project",{exact:true})).toHaveCount(0);
@@ -321,4 +325,9 @@ for (const width of [1440,390]) test(`panel compact history and coloured diff at
   await expect(added).toContainText("+func Listen");
   expect(await added.evaluate(node=>getComputedStyle(node).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
   await expect(page.locator(".diff-file summary")).toHaveText("internal/subpanel/server.go +1 / −0");
+});
+
+// Keep the established list interactions under test alongside pipeline.spec.ts.
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => localStorage.setItem("pactify-jobs-view", "list"));
 });

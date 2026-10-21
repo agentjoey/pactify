@@ -89,3 +89,18 @@ it("formats retention durations and item counts for people", async () => {
   expect(await within(region).findByText(/Retention: 14 days/)).toBeInTheDocument();
   expect(within(region).getByText(/interval: 1 day/)).toBeInTheDocument();
 });
+
+it("shows location rows and a usage bar only when a real cap exists", async () => {
+  const data = {...plan, locations:[
+    {name:"cache",bytes:4800000000,reclaimable:200000000,breakdown:{npm:100000000}},
+    {name:"jobs",bytes:1000,reclaimable:700},
+  ]};
+  render(<Storage embedded readOnly source={{jobsPath:"/jobs",costPath:"/cost",fetch:vi.fn(async()=>Response.json(data))}}/>);
+  const cache = await screen.findByRole("meter", {name:"cache usage"});
+  expect(cache).toHaveAttribute("aria-valuemax", "5000000000");
+  expect(cache).toHaveAttribute("aria-valuenow", "4800000000");
+  expect(screen.queryByRole("meter", {name:"jobs usage"})).toBeNull();
+  expect(screen.getByText("npm: 100 MB")).toBeInTheDocument();
+  expect(screen.queryByRole("heading", {name:"Storage"})).toBeNull();
+  expect(screen.getByRole("heading", {name:"Locations"})).toBeInTheDocument();
+});

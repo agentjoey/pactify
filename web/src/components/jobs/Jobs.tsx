@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -22,6 +22,10 @@ import { NextSteps, JobsOnboarding, LoadingJobs } from "./NextSteps";
 import { JobDetail } from "./JobDetail";
 import { JobsKeyboard } from "./JobsKeyboard";
 import "./jobs.css";
+import { Pipeline } from "./PipelineBoard";
+import { type LineGrouping, relativeTime } from "./pipeline";
+import { Segmented, StatusPill } from "../ui/Design";
+import { storedChoice, saveChoice } from "../../theme";
 export type { Job } from "./types";
 export { LogView, splitDiff } from "./logs";
 function matchesSearch(job: Job, search: string) {
@@ -95,7 +99,7 @@ function CompletedRow({ chain }: { chain: JobChain }) {
   const time = job.finishedAt || job.createdAt;
   return (
     <li>
-      <span data-column="status" className="compact-status" title={job.status}>{job.status}</span>
+      <span data-column="status" className="compact-status" title={job.status}><StatusPill status={job.status}/></span>
       <a data-job-link data-column="title" className="compact-title" title={title} href={jobsLink(job.id)}>{title}</a>
       <div className="compact-meta">
         <span data-column="harness" title={model}>{model}</span>
@@ -145,12 +149,18 @@ export function JobCard({
   const failures = [
     ...new Set(chain.runs.map((run) => run.failureClass).filter(Boolean)),
   ];
+  const pillStatus = ["running", "retrying", "queued"].includes(job.status)
+    ? job.status === "running" && job.retryAttempt ? `retrying (${job.retryAttempt}/${job.retryLimit})` : job.status
+    : job.failureClass === "quota" || job.attention.some(a => a.kind === "quota") ? "quota" : job.status === "failed" ? "failed"
+    : job.attention.some(a => a.kind === "worktree_pending") ? "ready"
+    : job.attention.some(a => a.kind === "warnings") ? "warnings" : job.status;
   const open = () => {
     location.hash = jobsLink(job.id);
   };
   return (
     <article
       inert={preview}
+      data-section={sectionFor(job)}
       className={`task-card panel-job ${chain.runs.some((run) => run.id === selected) ? "selected" : ""}`}
       onClick={(e) => {
         if (
@@ -162,28 +172,18 @@ export function JobCard({
       }}
     >
       <div className="panel-job-top">
-        <Badge
-          color={
-            job.status === "failed"
-              ? "danger"
-              : ["running", "succeeded"].includes(job.status)
-                ? "success"
-                : "warn"
-          }
-        >
-          {job.status === "running" && job.retryAttempt
-            ? `retrying (${job.retryAttempt}/${job.retryLimit})`
-            : job.status}
-        </Badge>
+        <StatusPill running={["running","retrying"].includes(job.status)} status={pillStatus} />
         <span className="harness-label">
           {job.harness} ·{" "}
           {job.modelActual || job.modelRequested || "Harness default"}
         </span>
       </div>
+      <p className="job-id">{job.id} · {job.status === "queued" ? `waiting ${relativeTime(job.createdAt)}` : job.duration}</p>
       <h3>
         <a data-job-link href={jobsLink(job.id)}>{chain.root.title || chain.root.id}</a>
       </h3>
       <JobMetadata job={job} />
+      {sectionFor(job) === "attention" && job.changedFiles != null && <p className="change-meta">{job.harness} · {job.changedFiles} files {job.addedLines != null && job.deletedLines != null && <span>+{job.addedLines}/−{job.deletedLines}</span>}</p>}
       <div className="panel-tags">
         {!["running", "retrying", "queued"].includes(job.status) &&
           !!job.retryCount && (
@@ -200,7 +200,7 @@ export function JobCard({
             fallback → {h}
           </Badge>
         ))}
-        {failures.map((f) => (
+        {failures.filter(f => f !== pillStatus).map((f) => (
           <Badge key={f} color="warn">
             {f === "harness" ? "Agent error" : f}
           </Badge>
@@ -272,6 +272,10 @@ export function JobList({
     status: params.get("status") || "",
     search: params.get("search") || "",
   };
+  const [view, setView] = useState(() => storedChoice("pactify-jobs-view", "lines") === "list" ? "list" : "lines");
+  const [grouping, setGrouping] = useState<LineGrouping>("project");
+  const [filtersOpen, setFiltersOpen] = useState(() => !!(filters.repo || filters.harness || filters.status));
+  const filtersId = useId();
   const [compact, setCompact] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const list = useRef<HTMLDivElement>(null);
@@ -312,11 +316,35 @@ export function JobList({
       notify={notify}
     />
   );
-  if (loaded && !jobs.length) return <><JobsOnboarding />{children}</>;
-  if (!loaded) return <>{children}</>;
+  if (loaded && !jobs.length) return (
+    <>{view === "lines" && <Pipeline chains={[]} grouping={grouping} card={card} />}<JobsOnboarding />{children}</>
+  );
+  if (!loaded) return <>{view === "lines" && <Pipeline chains={[]} grouping={grouping} card={card} />}{children}</>;
   return (
     <>
-      <div className="jobs-toolbar">
+      <div className={`jobs-toolbar ${view === "lines" ? "lines-toolbar" : "list-toolbar"} ${filtersOpen ? "filters-open" : ""}`}>
+        <Segmented label="Jobs view" value={view} options={[["lines", "Lines"], ["list", "List"]]}
+          onChange={value => { setView(value); saveChoice("pactify-jobs-view", value); }} />
+        {view === "lines" && <div className="line-group-control">
+          <span className="section-label">Lines by:</span>
+          <Segmented label="Group production lines by" value={grouping}
+            options={[["project", "Project"], ["harness", "Harness"], ["one", "One line"]]} onChange={setGrouping} />
+        </div>}
+        <label className="jobs-search">
+          <span className="sr-only">Search jobs</span>
+          <input
+            ref={search}
+            aria-keyshortcuts="/"
+            type="search"
+            placeholder="Search jobs"
+            value={filters.search}
+            onChange={(e) => filter("search", e.target.value)}
+          />
+        </label>
+        <JobsKeyboard list={list} search={search} />
+        <Button className="filters-toggle" size="sm" variant="ghost" aria-expanded={filtersOpen}
+          aria-controls={filtersId} onClick={() => setFiltersOpen(!filtersOpen)}>Filters</Button>
+        <div id={filtersId} className="filters-controls" hidden={view === "lines" && !filtersOpen}>
         <Button size="sm" variant="ghost" aria-pressed={filters.status === "attention"}
           onClick={() => filter("status", filters.status === "attention" ? "" : "attention")}>
           Needs attention
@@ -374,24 +402,14 @@ export function JobList({
             ))}
           </select>
         </label>
-        <label className="jobs-search">
-          <span className="sr-only">Search jobs</span>
-          <input
-            ref={search}
-            aria-keyshortcuts="/"
-            type="search"
-            placeholder="Search jobs"
-            value={filters.search}
-            onChange={(e) => filter("search", e.target.value)}
-          />
-        </label>
-        <JobsKeyboard list={list} search={search} />
+        </div>
       </div>
       {loaded && (
         <div className="jobs-sections" ref={list}>
           {!chains.length && (
             <p className="panel-empty">No jobs match these filters.</p>
           )}
+          {view === "lines" ? <Pipeline chains={chains} grouping={grouping} card={card}/> : <>
           {(
             [
               ["progress", "In progress"],
@@ -456,6 +474,7 @@ export function JobList({
               ))}
             </section>
           )}
+          </>}
         </div>
       )}
       {children}

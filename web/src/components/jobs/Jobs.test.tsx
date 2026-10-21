@@ -11,7 +11,7 @@ const job = {
  attention: [], resumeOf: "", resumedBy: [], worktree: {path:"/tmp/wt",baseCommit:"abc",status:"pending"},
  activity: {summary:"tool exec go test",inputTokens:99,outputTokens:8,usagePartial:true},
 };
-beforeEach(() => { localStorage.clear(); history.replaceState(null, "", "/"); });
+beforeEach(() => { localStorage.clear(); localStorage.setItem("pactify-jobs-view", "list"); history.replaceState(null, "", "/"); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); history.replaceState(null,"","/"); });
 function mockAPI() {
  const cancel = vi.fn();
@@ -116,13 +116,13 @@ it("keeps the detail usable when result, diff and logs are unavailable", async (
   expect(screen.getByRole("heading", { name: "Run timeline" })).toBeInTheDocument();
 });
 
-it("offers mobile page selection", async () => {
+it("offers page navigation through the shared header", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => new Response("[]")));
   render(<App />);
-  fireEvent.change(screen.getByLabelText("Page"), {target: {value: "settings"}});
+  fireEvent.click(screen.getByRole("link", {name: "Settings"}));
   await act(async () => {window.dispatchEvent(new HashChangeEvent('hashchange'));});
   expect(location.hash).toBe("#/settings");
-  expect(screen.getByRole("heading", {name:"Settings"})).toBeInTheDocument();
+  expect(await screen.findByRole("heading", {name:"Settings"})).toBeInTheDocument();
 });
 
 it("shows a failure class badge on failed cards and tolerates legacy jobs", async () => {

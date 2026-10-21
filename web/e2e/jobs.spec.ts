@@ -5,16 +5,9 @@ const noOverflow = async (page: Page) =>
       () => document.documentElement.scrollWidth - innerWidth,
     ),
   ).toBeLessThanOrEqual(1);
-async function navigate(page: Page, label: string, width: number) {
-  if (width < 700)
-    await page
-      .getByLabel("Page", { exact: true })
-      .selectOption(label.toLowerCase());
-  else
-    await page
-      .getByRole("navigation", { name: "Main navigation" })
-      .getByRole("link", { name: label, exact: true })
-      .click();
+async function navigate(page: Page, label: string, _width: number) {
+  await page.getByRole("navigation", { name: "Main navigation" })
+    .getByRole("link", { name: label, exact: true }).click();
   await expect(
     page.getByRole("heading", { name: label, exact: true }),
   ).toBeVisible();
@@ -35,6 +28,7 @@ for (const width of [1440, 390]) {
       name: "In progress",
       exact: true,
     });
+    if (width < 640) await page.getByRole("button", {name:"Filters", exact:true}).click();
     await expect(running.locator("article")).toHaveCount(1);
     await expect(running).toContainText("1 rework");
     const queuedCard = page
@@ -315,4 +309,9 @@ test("Dashboard cost failure does not hide KPIs or chart", async ({ page }) => {
   await expect(
     page.getByRole("img", { name: "Token usage · last 14 days" }),
   ).toBeVisible();
+});
+
+// Keep the established list interactions under test alongside pipeline.spec.ts.
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => localStorage.setItem("pactify-jobs-view", "list"));
 });

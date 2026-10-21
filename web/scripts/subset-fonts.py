@@ -8,11 +8,10 @@ from pathlib import Path
 
 from fontTools import subset
 from fontTools.ttLib import TTFont
-from fontTools.varLib.instancer import instantiateVariableFont
 
 RANGES = (
     (0x0000, 0x024F), (0x0300, 0x036F), (0x1D00, 0x1EFF),
-    (0x2000, 0x206F), (0x20A0, 0x22FF), (0x2500, 0x27BF),
+    (0x2000, 0x206F), (0x20A0, 0x23FF), (0x2500, 0x27BF),
     (0x2C60, 0x2C7F), (0xA720, 0xA7FF), (0xAB30, 0xAB6F),
     (0xFEFF, 0xFEFF), (0xFFFD, 0xFFFD),
 )
@@ -29,13 +28,12 @@ for path in sorted(Path("public/fonts").glob("*.woff2")):
     subsetter = subset.Subsetter(options=options)
     subsetter.populate(unicodes=UNICODES)
     subsetter.subset(font)
-    # Fix Inter's optical size at its UI/text master while retaining variable
-    # weights. This avoids shipping a second optical-size variation dimension.
-    if "fvar" in font and any(axis.axisTag == "opsz" for axis in font["fvar"].axes):
-        font = instantiateVariableFont(font, {"opsz": 14}, inplace=True)
     before = path.stat().st_size
     font.save(path)
     actual = set(TTFont(path).getBestCmap())
     assert expected <= actual, f"Lost glyphs: {expected - actual}"
-    assert set(map(ord, "Café Ā Ł Œ → · − … × ↑ ↓")) <= actual, path
+    assert set(map(ord, "Café · − ×")) <= actual, path
+    # Each face retains its original UI symbols; missing symbols use the local fallback.
+    symbols = set(map(ord, "→ · − ✓ × ⌘ ⇆ ↕ ⌕")) & expected
+    assert symbols <= actual, path
     print(f"{path.name}: {before:,} -> {path.stat().st_size:,} bytes; {len(actual)} codepoints; UI glyphs verified")

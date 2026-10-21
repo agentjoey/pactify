@@ -1,3 +1,4 @@
+import { beforeEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { JobList } from "../src/components/jobs/Jobs";
@@ -59,3 +60,7 @@ for (const [header,path] of [
   const {container}=render(<DiffView job={job} diff={{patch:`diff --git ${header}\n-old\n+new\n`,files:[]}} />);
   expect(container.querySelector("summary")?.textContent?.trim()).toBe(`${path} +1 / −1`);
 });
+
+// Legacy list behavior remains covered explicitly; pipeline defaults have their own suite.
+beforeEach(() => { localStorage.setItem("pactify-jobs-view", "list"); });
+afterEach(() => { localStorage.clear(); });

@@ -9,6 +9,7 @@ import { JobActions } from "./JobActions";
 import { LogView } from "./logs";
 import { DiffView, type Diff } from "./DiffView";
 import { NextSteps } from "./NextSteps";
+import { StatusPill } from "../ui/Design";
 import { Button } from "../ui/Button";
 import { LiveTree } from "./LivePanel";
 interface Detail {
@@ -123,9 +124,7 @@ export function JobDetail({
             aria-label="Job detail content"
             tabIndex={0}
           >
-            <div className="panel-eyebrow">
-              {data.job.id} · {data.job.status}
-            </div>
+            <div className="detail-identity"><span className="panel-eyebrow">{data.job.id}</span><StatusPill status={data.job.status} running={["running", "retrying"].includes(data.job.status)}/></div>
             <h1 ref={heading} tabIndex={-1}>
               {chain ? chain.root.title || chain.root.id : data.job.title || id}
             </h1>

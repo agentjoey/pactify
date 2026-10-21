@@ -8,28 +8,3 @@
 @supports (height: 100dvh) {
   #root { height: 100dvh; }
 }
-
-/* Standalone panel only. Dashboard keeps its original dark palette. */
-:root[data-theme] {
-  color-scheme: light dark;
-  --color-bg-page: light-dark(#f5f7fa, #0a0e14);
-  --color-bg-surface: light-dark(#ffffff, #10151e);
-  --color-bg-raised: light-dark(#eef1f6, #171e2a);
-  --color-bg-overlay: light-dark(#ffffff, #171e2a);
-  --color-bg-inset: light-dark(#f4f6f9, #0c1119);
-  --color-border-subtle: light-dark(#e3e7ef, rgba(255,255,255,0.07));
-  --color-border-strong: light-dark(#cbd2de, rgba(255,255,255,0.13));
-  --color-text-1: light-dark(#182232, #eaeef5);
-  --color-text-2: light-dark(#526077, rgba(234,238,245,0.62));
-  --color-text-3: light-dark(#59677d, #8a96a9);
-  --color-role-product: light-dark(#805600, #ffd479);
-  --color-role-design: light-dark(#365eae, #8ab4ff);
-  --color-role-dev: light-dark(#197246, #6ee7a0);
-  --color-warn: light-dark(#925d00, #f5c451);
-  --color-danger: light-dark(#be3431, #f97066);
-  --color-success: light-dark(#197246, #6ee7a0);
-  --border: var(--color-border-strong);
-  --bg-input: var(--color-bg-inset);
-}
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"] { color-scheme: dark; }

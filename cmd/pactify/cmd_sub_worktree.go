@@ -51,6 +51,9 @@ func subCreateRun(c *cobra.Command, store sub.Store, id string, req sub.Request,
 	worktree, _ := c.Flags().GetBool("worktree")
 	from, _ := c.Flags().GetString("worktree-from")
 	if from != "" {
+		if err := checkHarnessInstalled(req.Harness); err != nil {
+			return sub.State{}, 2, err
+		}
 		st, err := store.WorktreeFrom(id, req, from)
 		return st, 2, err
 	}
@@ -73,6 +76,17 @@ func subCreateRun(c *cobra.Command, store sub.Store, id string, req sub.Request,
 			req.Effort = previous.Request.Effort
 		}
 		selector = previous.ID
+		// Report why a session cannot be resumed before blaming a missing CLI.
+		if err := store.CheckResume(req, selector); err != nil {
+			if resumeJob != subResumeLatest {
+				return sub.State{}, 2, err
+			}
+			return sub.State{}, createRunErrorCode(err), err
+		}
+	}
+	// Check the starting harness before any job record or worktree exists.
+	if err := checkHarnessInstalled(req.Harness); err != nil {
+		return sub.State{}, 2, err
 	}
 	if resume && resumeJob != subResumeLatest {
 		st, err := store.ResumeRun(id, req, worktree, selector)
@@ -104,11 +118,22 @@ func subCreateRun(c *cobra.Command, store sub.Store, id string, req sub.Request,
 			fmt.Fprintf(c.ErrOrStderr(), "Selected %s; use --resume <job-id> to select a different job.\n", st.ResumeOf)
 		}
 	}
-	code := 1
+	return st, createRunErrorCode(err), err
+}
+
+func createRunErrorCode(err error) int {
 	var noSession *sub.NoSessionError
 	var noReadOnly *sub.ReadOnlyUnavailableError
 	if errors.As(err, &noSession) || errors.As(err, &noReadOnly) || errors.Is(err, sub.ErrWorktreeNeedsCommit) {
-		code = 2
+		return 2
 	}
-	return st, code, err
+	return 1
+}
+
+func checkHarnessInstalled(name string) error {
+	h, _ := sub.Lookup(name)
+	if err := h.CheckInstalled(); err != nil {
+		return fmt.Errorf("harness CLI %q is not installed on PATH; install %s and ensure it is on PATH, then run pactify sub doctor %s: %w", name, name, name, err)
+	}
+	return nil
 }

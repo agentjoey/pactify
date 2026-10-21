@@ -1,5 +1,5 @@
 #!/bin/sh
-# pactify installer. Usage: curl -fsSL https://pactify.dev/install.sh | sh
+# pactify installer. Usage: curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
 # Overrides (for testing / pinning):
 #   PACTIFY_VERSION       tag to install (default: latest release)
 #   PACTIFY_DOWNLOAD_BASE base URL/dir holding the archives + checksums.txt (default: GitHub release)
@@ -35,10 +35,10 @@ main() {
   version="${PACTIFY_VERSION:-}"
   if [ -z "${PACTIFY_DOWNLOAD_BASE:-}" ]; then
     if [ -z "$version" ]; then
-      version="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
-      [ -n "$version" ] || { echo "error: could not resolve latest release for $REPO (GitHub API rate-limited?). Set PACTIFY_VERSION to pin a tag." >&2; exit 1; }
+      base="https://github.com/$REPO/releases/latest/download"
+    else
+      base="https://github.com/$REPO/releases/download/$version"
     fi
-    base="https://github.com/$REPO/releases/download/$version"
   else
     base="$PACTIFY_DOWNLOAD_BASE"
   fi

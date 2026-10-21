@@ -49,28 +49,42 @@ func (s Store) ResolveResumeJob(selector string) (State, error) {
 // ResumeRun resumes a particular terminal job rather than the latest session.
 // An omitted harness inherits the selected job's harness.
 func (s Store) ResumeRun(id string, req Request, isolated bool, selector string) (State, error) {
-	previous, err := s.ResolveResumeJob(selector)
+	previous, req, session, err := s.resumeTarget(req, selector)
 	if err != nil {
 		return State{}, err
+	}
+	return s.resumeRun(id, req, isolated, previous, session)
+}
+
+// CheckResume reports why selector cannot be resumed by req, without creating a job.
+func (s Store) CheckResume(req Request, selector string) error {
+	_, _, _, err := s.resumeTarget(req, selector)
+	return err
+}
+
+func (s Store) resumeTarget(req Request, selector string) (State, Request, string, error) {
+	previous, err := s.ResolveResumeJob(selector)
+	if err != nil {
+		return State{}, req, "", err
 	}
 	if req.Harness == "" {
 		req.Harness = previous.Request.Harness
 	}
 	if req.Harness != previous.Request.Harness {
-		return State{}, fmt.Errorf("job %s uses harness %s, not %s", previous.ID, previous.Request.Harness, req.Harness)
+		return State{}, req, "", fmt.Errorf("job %s uses harness %s, not %s", previous.ID, previous.Request.Harness, req.Harness)
 	}
 	if !Terminal(previous.Status) {
-		return State{}, fmt.Errorf("job %s is not finished (%s)", previous.ID, previous.Status)
+		return State{}, req, "", fmt.Errorf("job %s is not finished (%s)", previous.ID, previous.Status)
 	}
 	session, err := s.resumeSession(previous)
 	if err != nil {
-		return State{}, err
+		return State{}, req, "", err
 	}
 	if session == "" {
-		return State{}, fmt.Errorf("job %s has no session id to resume", previous.ID)
+		return State{}, req, "", fmt.Errorf("job %s has no session id to resume", previous.ID)
 	}
 	req.Cwd = previous.Request.Cwd
-	return s.resumeRun(id, req, isolated, previous, session)
+	return previous, req, session, nil
 }
 
 func (s Store) resumeSession(st State) (string, error) {
@@ -101,7 +115,7 @@ func (s Store) ResumeCandidates(harness, cwd string) ([]State, error) {
 			continue
 		}
 		st, err := s.Load(entry.Name())
-		if err != nil || st.Request.Harness != harness || st.Request.Cwd != cwd {
+		if err != nil || st.Request.Harness != harness || !sameResumeDirectory(st.Request.Cwd, cwd) {
 			continue
 		}
 		if st.Status != StatusSucceeded && (st.Worktree == nil || !Terminal(st.Status)) {
@@ -122,6 +136,17 @@ func (s Store) ResumeCandidates(harness, cwd string) ([]State, error) {
 		candidates = append(candidates, st)
 	}
 	return candidates, nil
+}
+
+// Directory identity handles case-insensitive filesystems and symlink aliases.
+// Preserve legacy matching when either path cannot be inspected.
+func sameResumeDirectory(a, b string) bool {
+	left, leftErr := os.Stat(a)
+	right, rightErr := os.Stat(b)
+	if leftErr != nil || rightErr != nil {
+		return a == b
+	}
+	return left.IsDir() && right.IsDir() && os.SameFile(left, right)
 }
 
 // LatestResumeJob exposes the CLI's existing latest-session selection without

@@ -160,8 +160,8 @@ func TestSubRunKimiReadOnlyOffered(t *testing.T) {
 	t.Setenv("PACTIFY_HOME", t.TempDir())
 	bin := buildPactify(t)
 	repo := gitRepoForCLI(t)
-	// Keep real kimi off PATH; this verifies dispatch without driving a model.
-	t.Setenv("PATH", "/usr/bin:/bin")
+	// An inert CLI verifies dispatch without driving a model.
+	stubUnavailableHarness(t, "kimi")
 	out, code := runCLI(t, bin, repo, "review this", "sub", "run", "kimi", "--read-only", "--wait", "0s")
 	if code != 3 || !strings.Contains(out, "is still running") {
 		t.Fatalf("code=%d out=%s", code, out)

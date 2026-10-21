@@ -28,7 +28,7 @@ func TestSubAgyInvalidEffortBeforeLaunch(t *testing.T) {
 func TestSubAgyExplicitModelEffortPriority(t *testing.T) {
 	bin := buildPactify(t)
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("PATH", "/usr/bin:/bin") // No installed harness or real login is used.
+	stubUnavailableHarness(t, "agy") // Inert CLI; no real harness or login is used.
 	for _, tc := range []struct {
 		name   string
 		args   []string

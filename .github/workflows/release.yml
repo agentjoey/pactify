@@ -8,7 +8,30 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: PACTIFY_HOME="$(mktemp -d)" go test ./... -count=1
+      - name: gofmt
+        run: test -z "$(gofmt -l cmd internal)"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: install bats
+        run: npm install -g bats@1.12.0
+      - name: bats
+        run: bats tests/
+
   goreleaser:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

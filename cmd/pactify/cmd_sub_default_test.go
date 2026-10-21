@@ -33,7 +33,7 @@ func TestSubRunDefaultAndExplicitCodex(t *testing.T) {
 	t.Setenv("PACTIFY_SUB_FAKE", "1")
 	bin := buildPactify(t)
 	repo := gitRepoForCLI(t)
-	// Exercise the detached worker without starting a real coding agent.
+	// Missing primary CLIs must fail before a detached worker or job is created.
 	t.Setenv("PATH", "/usr/bin:/bin")
 	for _, tc := range []struct {
 		name, access string
@@ -49,19 +49,15 @@ func TestSubRunDefaultAndExplicitCodex(t *testing.T) {
 				args = append(args, "--read-only")
 			}
 			out, code := runCLI(t, bin, repo, "inspect this repo", append(args, "--wait", "0s", "--json")...)
-			var pending struct {
-				JobID string `json:"jobId"`
+			if code != 2 || !strings.Contains(out, `harness CLI "codex" is not installed on PATH`) || !strings.Contains(out, "pactify sub doctor codex") {
+				t.Fatalf("missing codex must fail before job creation: code=%d out=%s", code, out)
 			}
-			if code != 3 || json.Unmarshal([]byte(out), &pending) != nil || pending.JobID == "" {
-				t.Fatalf("start: code=%d out=%s", code, out)
-			}
-			out, code = runCLI(t, bin, repo, "", "sub", "wait", pending.JobID, "--json")
-			var r sub.Result
-			if code != 1 || json.Unmarshal([]byte(out), &r) != nil || r.Harness != "codex" || r.Access != tc.access || r.Status != sub.StatusFailed || !strings.Contains(strings.Join(r.Warnings, " "), "codex") {
-				t.Fatalf("missing codex must fail the selected job: code=%d out=%s", code, out)
+			if _, err := os.Stat(filepath.Join(os.Getenv("PACTIFY_HOME"), "jobs")); !os.IsNotExist(err) {
+				t.Fatalf("missing codex created jobs: %v", err)
 			}
 		})
 	}
+	// With nothing to resume, that is the clearer error than the missing CLI.
 	out, code := runCLI(t, bin, repo, "continue", "sub", "run", "--resume")
 	if code != 2 || !strings.Contains(out, "no codex session to resume") {
 		t.Fatalf("default resume: code=%d out=%s", code, out)

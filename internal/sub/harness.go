@@ -18,6 +18,20 @@ import (
 // DefaultHarness is used when the CLI's harness argument is omitted.
 const DefaultHarness = "codex"
 
+// CheckInstalled uses doctor's PATH detection without running the harness.
+func (h Harness) CheckInstalled() error {
+	return harnessInstalled(h.Name, exec.LookPath)
+}
+
+func harnessInstalled(name string, lookPath func(string) (string, error)) error {
+	// Reserved, opt-in lifecycle fixtures do not need a vendor executable.
+	if os.Getenv("PACTIFY_SUB_FAKE") == "1" && (name == "fake" || name == "codex" && os.Getenv("PACTIFY_SUB_FAKE_CODEX") == "1") {
+		return nil
+	}
+	_, err := lookPath(name)
+	return err
+}
+
 type Harness struct {
 	// Opencode2 identifies the backend chosen by ForVersion; callers must not parse versions again.
 	Opencode2 bool

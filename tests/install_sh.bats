@@ -41,3 +41,53 @@ REPO="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
   [ "$status" -ne 0 ]
   [ ! -f "$bindir/pactify" ]
 }
+
+stub_release_downloads() {
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  arch="$(uname -m)"; case "$arch" in x86_64) arch=amd64;; aarch64|arm64) arch=arm64;; esac
+  export DOWNLOAD_FIXTURE="$BATS_TEST_TMPDIR/release"
+  export CURL_LOG="$BATS_TEST_TMPDIR/curl.log"
+  export PACTIFY_BINDIR="$BATS_TEST_TMPDIR/installed"
+  mkdir -p "$DOWNLOAD_FIXTURE" "$BATS_TEST_TMPDIR/stubs"
+  printf '#!/bin/sh\necho fake-pactify\n' > "$BATS_TEST_TMPDIR/pactify"
+  (cd "$BATS_TEST_TMPDIR" && tar czf "$DOWNLOAD_FIXTURE/pactify_${os}_${arch}.tar.gz" pactify)
+  (cd "$DOWNLOAD_FIXTURE" && shasum -a 256 "pactify_${os}_${arch}.tar.gz" > checksums.txt)
+  cat > "$BATS_TEST_TMPDIR/stubs/curl" <<'STUB'
+#!/bin/sh
+set -eu
+[ "$#" -eq 4 ] && [ "$1" = -fsSL ] && [ "$3" = -o ] || exit 90
+printf '%s\n' "$2" >> "$CURL_LOG"
+cp "$DOWNLOAD_FIXTURE/${2##*/}" "$4"
+STUB
+  chmod +x "$BATS_TEST_TMPDIR/stubs/curl"
+  export PATH="$BATS_TEST_TMPDIR/stubs:$PATH"
+  unset PACTIFY_DOWNLOAD_BASE PACTIFY_VERSION
+}
+
+@test "install.sh downloads latest assets without GitHub API" {
+  stub_release_downloads
+  run sh "$REPO/install.sh"
+  [ "$status" -eq 0 ]
+  [ -x "$PACTIFY_BINDIR/pactify" ]
+  [[ "$output" == *'is not on your PATH'* ]]
+  [ "$(cat "$CURL_LOG")" = "https://github.com/agentjoey/pactify/releases/latest/download/pactify_${os}_${arch}.tar.gz
+https://github.com/agentjoey/pactify/releases/latest/download/checksums.txt" ]
+  run "$PACTIFY_BINDIR/pactify"
+  [ "$output" = fake-pactify ]
+}
+
+@test "install.sh stub download rejects mismatched checksum" {
+  stub_release_downloads
+  printf 'corrupt archive' >> "$DOWNLOAD_FIXTURE/pactify_${os}_${arch}.tar.gz"
+  run sh "$REPO/install.sh"
+  [ "$status" -ne 0 ]
+  [ ! -e "$PACTIFY_BINDIR/pactify" ]
+}
+
+@test "install.sh uses pinned release asset URLs" {
+  stub_release_downloads
+  run env PACTIFY_VERSION=v0.13.0 sh "$REPO/install.sh"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$CURL_LOG")" = "https://github.com/agentjoey/pactify/releases/download/v0.13.0/pactify_${os}_${arch}.tar.gz
+https://github.com/agentjoey/pactify/releases/download/v0.13.0/checksums.txt" ]
+}

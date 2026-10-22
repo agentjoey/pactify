@@ -114,7 +114,8 @@ a result, or `pactify sub run --resume <job-id> --worktree` for rework in the sa
 worktree. Discard still works when the original directory is gone; it finds the main
 repository through the worktree. Harnesses run with `PACTIFY_JOB` set, and `pactify sub run`
 and `pactify sub doctor` refuse to start inside a job, so a delegated harness does not
-delegate again.
+delegate again. A terminal opened from a process that a job left running (for example a dev
+server) inherits the marker; open a fresh terminal instead.
 Job IDs accept an unambiguous prefix. See [router configuration](docs/router.md) for aliases and fallback,
 [job status](docs/sub-status.md) and [cost reporting](docs/sub-cost.md).
 

@@ -153,7 +153,8 @@ func refuseInsideJob() error {
 	if os.Getenv("PACTIFY_JOB") == "" {
 		return nil
 	}
-	return fmt.Errorf("already running inside a pactify job (PACTIFY_JOB is set); do the task directly instead of delegating again. If this shell is not part of a job, unset PACTIFY_JOB")
+	// Harness models read this message; it must not suggest a way around the guard.
+	return fmt.Errorf("already running inside a pactify job (PACTIFY_JOB is set); do the task directly and do not delegate again")
 }
 
 func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool, resumeJob string) (int, error) {

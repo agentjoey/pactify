@@ -46,7 +46,7 @@ these examples target `agentjoey/pactify` and `plugins/agent-plugin`.
 For Codex:
 
 ```sh
-codex plugin marketplace add agentjoey/pactify --sparse plugins/agent-plugin
+codex plugin marketplace add agentjoey/pactify --sparse .agents/plugins --sparse plugins/agent-plugin
 ```
 
 Then select pactify in the host's plugin interface. For Copilot:

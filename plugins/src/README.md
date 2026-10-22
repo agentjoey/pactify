@@ -45,6 +45,9 @@ Generated outputs:
   marketplace files, README and the `pactify/` Agent Plugins 1.0 plugin. Its plugin
   has no hooks, forwarding agents, bin or Claude manifest. JSON uses only allowed
   fields; generated markers appear in portable Markdown and shell scripts.
+- Repository-root `.agents/plugins/`, `.github/plugin/` and `.cursor-plugin/`
+  marketplaces pointing at `./plugins/agent-plugin/pactify`. Git marketplace hosts
+  read the repository root even with a sparse checkout.
 - `plugins/agents-skills/<name>/`: identical portable skills and scripts ready to copy
   into `.agents/skills/`. Helpers are invoked with `sh scripts/pactify-check`
   relative to the skill directory, without relying on a plugin-specific PATH.

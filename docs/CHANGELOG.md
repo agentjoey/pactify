@@ -10,6 +10,9 @@
   a plain `.agents/skills` copy in `plugins/agents-skills`, and a reproducible
   `pactify-delegate.zip` for Agensi attached to each release. The plugin (0.5.0)
   now checks for pactify CLI 0.13.0 or newer and prints an upgrade hint.
+  Repository-root host marketplaces point into the bundle, because Git
+  marketplace hosts read the repository root even with a sparse checkout
+  (plugin 0.5.1).
 
 - Make the first run work cleanly. `pactify sub run` checks the harness CLI is on
   PATH before creating a job or worktree and exits 2 with a doctor hint when it

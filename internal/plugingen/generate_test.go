@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -42,10 +43,15 @@ func TestOutputRoots(t *testing.T) {
 			t.Errorf("missing output at new root: %s", path)
 		}
 	}
+	rootMarketplaces := map[string]bool{
+		".agents/plugins/marketplace.json": true,
+		".github/plugin/marketplace.json":  true,
+		".cursor-plugin/marketplace.json":  true,
+	}
 	for path := range files {
 		if !strings.HasPrefix(path, "plugins/agent-plugin/") &&
 			!strings.HasPrefix(path, "plugins/agents-skills/") &&
-			!strings.HasPrefix(path, "plugins/pactify/") {
+			!strings.HasPrefix(path, "plugins/pactify/") && !rootMarketplaces[path] {
 			t.Errorf("output outside plugin roots: %s", path)
 		}
 	}
@@ -53,9 +59,22 @@ func TestOutputRoots(t *testing.T) {
 	if _, err := Sync(root, files, false); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"dist", ".agents", ".github/plugin", ".cursor-plugin"} {
-		if _, err := os.Stat(filepath.Join(root, path)); !os.IsNotExist(err) {
-			t.Errorf("generated unexpected repository-root path %s: %v", path, err)
+	if _, err := os.Stat(filepath.Join(root, "dist")); !os.IsNotExist(err) {
+		t.Errorf("generated unexpected repository-root path dist: %v", err)
+	}
+	for _, dir := range []string{".agents", ".github", ".cursor-plugin"} {
+		err := filepath.WalkDir(filepath.Join(root, dir), func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			rel, _ := filepath.Rel(root, path)
+			if !rootMarketplaces[filepath.ToSlash(rel)] {
+				t.Errorf("generated unexpected repository-root file %s", rel)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
 	}
 }

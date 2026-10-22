@@ -22,10 +22,11 @@ the task size. The user chose the harness; do not do the work yourself instead.*
 
 Launch command (step 2 below):
 
-    pactify sub run agy --write --worktree --wait 0s --json <<'BRIEF'
+{{if eq .Host "claude"}}    pactify sub run agy --write --worktree --wait 0s --json <<'BRIEF'
     ...complete brief from step 1...
     BRIEF
-
+{{else}}    pactify sub run agy --write --worktree --wait 0s --json --brief-file <brief-file>
+{{end}}
 Use `--read-only` for investigations and reviews. Use `--write` only with explicit permission to change files. Never raise permissions yourself.
 Models come from `agy models`; preserve the requested model. Pactify always supplies a model, defaulting to router settings or flash-low.
 

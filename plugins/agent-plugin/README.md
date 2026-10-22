@@ -4,7 +4,7 @@
 
 Generated at `plugins/agent-plugin/`, this directory is a marketplace repository
 root. Plain skill copies live at `plugins/agents-skills/`. Its `pactify/` child is an
-Agent Plugins 1.0 plugin (version 0.5.1, license FSL-1.1-MIT).
+Agent Plugins 1.0 plugin (version 0.5.2, license FSL-1.1-MIT).
 It requires pactify >= 0.13.0, git, macOS or Linux, and an installed and
 logged-in harness CLI. It has no lifecycle hooks or forwarding agents.
 Each skill includes a local prerequisite checker. Never run installers on the user's behalf.
@@ -47,11 +47,14 @@ outside the workspace. For example, in Codex's `~/.codex/rules/default.rules`:
 prefix_rule(pattern=["pactify", "sub"], decision="allow")
 ```
 
+Codex matches rules against simple commands only, so the portable skills pass the brief
+with `--brief-file` instead of a heredoc.
+
 
 Use delegate for default codex delegation or an explicit @alias, delegate-codex,
 delegate-kimi, delegate-opencode, or explicitly invoke experimental delegate-agy.
 Use jobs for read-only status. Delegate only on explicit user request.
 Start with `--wait 0s --json`, parse the job id on exit 3, and repeat
-`pactify sub wait <jobId> --timeout 540` while pending. Review the complete diff
+`pactify sub wait <jobId> --timeout 540s` while pending. Review the complete diff
 and new files, rerun all acceptance commands, then apply/discard or resume for rework.
 See each skill for the complete shared rules.

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -212,7 +213,7 @@ func TestDistributions(t *testing.T) {
 		t.Fatalf("wrong skills: %v", counts)
 	}
 	portable := shared["portable"]
-	for _, term := range []string{"--timeout 540", "exit 3", "complete diff", "ls-files --others", "full test suite", "independent reviewer", "sub apply", "sub discard", "--resume", "--worktree-from"} {
+	for _, term := range []string{"--timeout 540s", "exit 3", "complete diff", "ls-files --others", "full test suite", "independent reviewer", "sub apply", "sub discard", "--resume", "--worktree-from"} {
 		if !strings.Contains(portable, term) {
 			t.Errorf("missing portable review/polling rule %q", term)
 		}
@@ -279,6 +280,23 @@ func TestDistributions(t *testing.T) {
 	}
 }
 
+// Every documented wait timeout must parse as the CLI's duration flag.
+func TestWaitTimeoutsAreDurations(t *testing.T) {
+	re := regexp.MustCompile(`sub wait \S+ --timeout (\S+?)` + "[`\\s]")
+	seen := 0
+	for path, f := range generated(t) {
+		for _, m := range re.FindAllStringSubmatch(string(f.Data), -1) {
+			seen++
+			if _, err := time.ParseDuration(m[1]); err != nil {
+				t.Errorf("%s: --timeout %s is not a duration: %v", path, m[1], err)
+			}
+		}
+	}
+	if seen == 0 {
+		t.Fatal("no documented wait timeouts found")
+	}
+}
+
 func TestZipDeterminismAndLayout(t *testing.T) {
 	files := generated(t)
 	first, err := Agensi(files)
@@ -321,7 +339,7 @@ func TestZipDeterminismAndLayout(t *testing.T) {
 			if err := ValidateSkill("pactify-delegate", string(data), true); err != nil {
 				t.Fatal(err)
 			}
-			for _, term := range []string{"command -v pactify", "pactify version", "Never run these commands or any installer yourself", "curl -fsSL", "go install", "sub apply", "sub discard", "--timeout 540"} {
+			for _, term := range []string{"command -v pactify", "pactify version", "Never run these commands or any installer yourself", "curl -fsSL", "go install", "sub apply", "sub discard", "--timeout 540s"} {
 				if !strings.Contains(string(data), term) {
 					t.Errorf("zip guide missing %s", term)
 				}

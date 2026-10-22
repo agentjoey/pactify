@@ -32,9 +32,7 @@ the task size. The user chose the harness; do not do the work yourself instead.*
 
 Launch command (step 2 below):
 
-    pactify sub run agy --write --worktree --wait 0s --json <<'BRIEF'
-    ...complete brief from step 1...
-    BRIEF
+    pactify sub run agy --write --worktree --wait 0s --json --brief-file <brief-file>
 
 Use `--read-only` for investigations and reviews. Use `--write` only with explicit permission to change files. Never raise permissions yourself.
 Models come from `agy models`; preserve the requested model. Pactify always supplies a model, defaulting to router settings or flash-low.
@@ -80,22 +78,23 @@ explicitly chosen by the user.
    go test ./...
    ```
 
-2. Start the launch command above from the host. Supply the complete brief on stdin,
-   with a quoted heredoc delimiter
-   absent from the brief. Preserve requested models with `--model <name>` and effort with
+2. Start the launch command above from the host. Write the complete brief to a new file
+   outside the repository, such as in the system temporary directory, and pass its path with
+   `--brief-file`. Run each `pactify sub` command as one simple command, without heredocs,
+   pipes, redirection or variable expansion, so host command rules can match it. Preserve requested models with `--model <name>` and effort with
    `--effort <level>`, quoting shell arguments; never silently switch models.
    Quota fallback can create a new job; `sub wait` and `sub result` follow the fallback chain from
    the first job id to its final result. Use the returned final `jobId` for review/apply/discard.
    When a quota failure already left changes, automatic fallback stops. Review the diff first,
    then start a fresh session with `pactify sub run <next> --worktree-from <job-id>` and a complete
-   brief on stdin; this transfers the worktree while preserving its original base. For a legacy
+   brief in `--brief-file`; this transfers the worktree while preserving its original base. For a legacy
    workspace job without a worktree, review and start a fresh workspace run instead.
    It exits 3 immediately with `{"jobId": ...}`: pending, not failure. Parse the job id from stdout.
    For any other error, report it and available models if supplied; do not blindly retry.
    Repeat this command while it exits 3 (pending); each timeout returns JSON with
    `jobId` and `status: "running"`. Parse the returned job id and preserve CLI errors:
 
-       pactify sub wait <jobId> --timeout 540
+       pactify sub wait <jobId> --timeout 540s
 
    Exit 0 completes successfully; exit 1 reports a failed job; exit 2 reports invalid
    arguments. Review any terminal result, including failed jobs with changes. Do not
@@ -122,6 +121,8 @@ explicitly chosen by the user.
      Open the listed new files too: `git diff` alone does not show untracked content.
    - The host must personally rerun all acceptance commands, including the full test suite,
      in the worktree. Do not treat the callee's test report as host verification.
+     If the host sandbox makes the worktree read-only, point tool caches such as `GOCACHE`
+     at the system temporary directory; do not apply first just to run the tests.
    - Where feasible, personally try the change in the real environment: exercise the actual user
      flow and inspect output readability and actual model behavior when relevant. Record what was
      tried and what could not be verified; automated tests alone do not establish real-world behavior.
@@ -135,7 +136,7 @@ explicitly chosen by the user.
 
 4. To request rework, do not apply or discard. Pass `--resume <job-id> --worktree` on the next `run`
    with the id of the job being reviewed, the original `--cwd` and harness, preserving access mode,
-   config mode and any requested model/effort. Supply a new brief on stdin and collect it with the
+   config mode and any requested model/effort. Supply a new brief in `--brief-file` and collect it with the
    same polling procedure in step 2. An exact id is safest; a unique prefix of the full id
    or its final random component also works. An ambiguous prefix fails and lists every candidate.
    Resume continues in the same worktree with the same base commit; the summary shows the full change

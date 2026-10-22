@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add `pactify sub run --brief-file <path>` to read the brief from a file instead of
+  stdin. Codex applies command rules such as `prefix_rule(pattern=["pactify", "sub"])`
+  only to simple commands, so a heredoc launch ran inside its sandbox and could not
+  create the job. The portable skills now write the brief to a temporary file and run
+  each `pactify sub` command as one simple command, use `--timeout 540s` (the
+  documented `540` was rejected as a duration), and note read-only worktrees in
+  host sandboxes (plugin 0.5.2).
+
 - Generate every plugin distribution from one host-agnostic source in
   `plugins/src` (`go run ./internal/plugingen/cmd/plugingen`; CI runs `-check`).
   The Claude Code skills are unchanged byte for byte. New outputs: an Agent

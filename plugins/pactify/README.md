@@ -74,6 +74,9 @@ outside the workspace. For example, in Codex's `~/.codex/rules/default.rules`:
 prefix_rule(pattern=["pactify", "sub"], decision="allow")
 ```
 
+Codex matches rules against simple commands only, so the portable skills pass the brief
+with `--brief-file` instead of a heredoc.
+
 
 ## Usage
 

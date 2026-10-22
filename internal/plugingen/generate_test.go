@@ -231,27 +231,31 @@ func TestDistributions(t *testing.T) {
 			t.Errorf("version differs: %s", path)
 		}
 	}
-	for _, host := range []string{".agents/plugins", ".github/plugin", ".cursor-plugin"} {
-		var m struct {
-			Plugins []struct{ Source json.RawMessage }
-		}
-		path := portableRoot + "/" + host + "/marketplace.json"
-		if err := json.Unmarshal(files[path].Data, &m); err != nil {
-			t.Fatal(err)
-		}
-		if len(m.Plugins) != 1 {
-			t.Fatalf("wrong marketplace: %s", path)
-		}
-		if host == ".agents/plugins" {
-			var source map[string]string
-			if err := json.Unmarshal(m.Plugins[0].Source, &source); err != nil {
-				t.Fatal(err)
+	// Git hosts treat the repository root as the marketplace root, even with a
+	// sparse checkout, so the root copies point into the bundle.
+	for prefix, plugin := range map[string]string{portableRoot + "/": "./pactify", "": "./" + portableRoot + "/pactify"} {
+		for _, host := range []string{".agents/plugins", ".github/plugin", ".cursor-plugin"} {
+			var m struct {
+				Plugins []struct{ Source json.RawMessage }
 			}
-			if source["source"] != "local" || source["path"] != "./pactify" {
-				t.Fatal(source)
+			path := prefix + host + "/marketplace.json"
+			if err := json.Unmarshal(files[path].Data, &m); err != nil {
+				t.Fatalf("%s: %v", path, err)
 			}
-		} else if string(m.Plugins[0].Source) != `"./pactify"` {
-			t.Errorf("wrong marketplace path %s", m.Plugins[0].Source)
+			if len(m.Plugins) != 1 {
+				t.Fatalf("wrong marketplace: %s", path)
+			}
+			if host == ".agents/plugins" {
+				var source map[string]string
+				if err := json.Unmarshal(m.Plugins[0].Source, &source); err != nil {
+					t.Fatal(err)
+				}
+				if source["source"] != "local" || source["path"] != plugin {
+					t.Fatalf("%s: %v", path, source)
+				}
+			} else if string(m.Plugins[0].Source) != `"`+plugin+`"` {
+				t.Errorf("wrong marketplace path in %s: %s", path, m.Plugins[0].Source)
+			}
 		}
 	}
 }

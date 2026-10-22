@@ -167,20 +167,24 @@ func Generate(root string) (map[string]File, error) {
 	if err := addJSON(portableRoot+"/pactify/.cursor-plugin/plugin.json", cursor); err != nil {
 		return nil, err
 	}
-	marketplace := map[string]any{"name": cfg.Name, "owner": manifest["author"], "plugins": []any{
-		map[string]any{"name": cfg.Name, "source": "./pactify", "description": cfg.Description},
-	}}
-	for _, host := range []string{".github/plugin", ".cursor-plugin"} {
-		if err := addJSON(portableRoot+"/"+host+"/marketplace.json", marketplace); err != nil {
+	// The bundle is a marketplace root of its own; Git hosts use the repository
+	// root even with a sparse checkout, so the root copies point into the bundle.
+	for prefix, plugin := range map[string]string{portableRoot + "/": "./pactify", "": "./" + portableRoot + "/pactify"} {
+		marketplace := map[string]any{"name": cfg.Name, "owner": manifest["author"], "plugins": []any{
+			map[string]any{"name": cfg.Name, "source": plugin, "description": cfg.Description},
+		}}
+		for _, host := range []string{".github/plugin", ".cursor-plugin"} {
+			if err := addJSON(prefix+host+"/marketplace.json", marketplace); err != nil {
+				return nil, err
+			}
+		}
+		codex := map[string]any{"name": cfg.Name, "interface": map[string]string{"displayName": "Pactify"}, "plugins": []any{
+			map[string]any{"name": cfg.Name, "source": map[string]string{"source": "local", "path": plugin},
+				"policy": map[string]string{"installation": "AVAILABLE", "authentication": "ON_INSTALL"}, "category": "Productivity"},
+		}}
+		if err := addJSON(prefix+".agents/plugins/marketplace.json", codex); err != nil {
 			return nil, err
 		}
-	}
-	codex := map[string]any{"name": cfg.Name, "interface": map[string]string{"displayName": "Pactify"}, "plugins": []any{
-		map[string]any{"name": cfg.Name, "source": map[string]string{"source": "local", "path": "./pactify"},
-			"policy": map[string]string{"installation": "AVAILABLE", "authentication": "ON_INSTALL"}, "category": "Productivity"},
-	}}
-	if err := addJSON(portableRoot+"/.agents/plugins/marketplace.json", codex); err != nil {
-		return nil, err
 	}
 	r := renderer{source, c, map[string]bool{}}
 	readme, err := r.render("portable-README.md.tmpl")

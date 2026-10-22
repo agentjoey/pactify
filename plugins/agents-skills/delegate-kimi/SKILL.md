@@ -39,6 +39,8 @@ Never raise permissions yourself; resume with the original access mode.
 <!-- BEGIN SHARED-DELEGATION -->
 Delegate only when the user explicitly asks: an explicit pactify skill invocation, or a clear request to delegate
 or hand off to a harness; otherwise do the work directly. Task size alone never authorizes delegation.
+If `PACTIFY_JOB` is set, you are already running inside a pactify job: do the task directly and
+never run `pactify sub run`; the CLI refuses it.
 agy runs only when the user explicitly invokes the delegate-agy skill; never select it on your own.
 Preserve the user's requested harness and access mode; harness permission restrictions still apply.
 Configured aliases can be used with `/delegate @alias <task>`.

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Refuse `pactify sub run` and `pactify sub doctor` inside a job. Harnesses run with
+  `PACTIFY_JOB` set, and a delegated opencode job that found a committed pactify skill
+  delegated twice more. Both commands (including `--resume` and `--worktree-from`) now
+  exit 2 there; read-only commands still work and harness-native subagents are
+  unaffected. This is a guard against accidental recursion, not a security boundary.
+  The skills say so too (plugin 0.5.3). CLI test packages clear `PACTIFY_JOB` (AJ-842).
+- Discard a worktree whose original directory is gone, for example a job started
+  inside another job's worktree. Discard finds the main repository through the
+  worktree's `.git` file and ignores an enclosing repository; without a repository
+  it removes only the job's own `jobs/<id>/wt` directory through the anchored store
+  root, marks the job discarded and notes the leftover git metadata. Apply reports
+  the missing directory instead of a git chdir error (AJ-843).
+
 - Add `pactify sub run --brief-file <path>` to read the brief from a file instead of
   stdin. Codex applies command rules such as `prefix_rule(pattern=["pactify", "sub"])`
   only to simple commands, so a heredoc launch ran inside its sandbox and could not

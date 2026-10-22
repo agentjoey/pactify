@@ -146,7 +146,20 @@ func newSubCmd() *cobra.Command {
 // The slash keeps this implicit-value marker outside the valid job-id space.
 const subResumeLatest = "<latest/session>"
 
+// refuseInsideJob stops commands that start harnesses from running inside a
+// job. The worker exports PACTIFY_JOB to every harness process, so a delegated
+// harness that finds a pactify skill must do the task instead of delegating.
+func refuseInsideJob() error {
+	if os.Getenv("PACTIFY_JOB") == "" {
+		return nil
+	}
+	return fmt.Errorf("already running inside a pactify job (PACTIFY_JOB is set); do the task directly instead of delegating again. If this shell is not part of a job, unset PACTIFY_JOB")
+}
+
 func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, resume, fresh bool, wait time.Duration, jsonOut bool, resumeJob string) (int, error) {
+	if err := refuseInsideJob(); err != nil {
+		return 2, err
+	}
 	retries := sub.DefaultRetries
 	if c.Flags().Lookup("retries") != nil {
 		retries, _ = c.Flags().GetInt("retries")

@@ -111,7 +111,11 @@ pactify sub logs <job-id> --tail 20
 Review the complete worktree diff and untracked files, and run acceptance checks
 before `pactify sub apply <job-id>`. Use `pactify sub discard <job-id>` to discard
 a result, or `pactify sub run --resume <job-id> --worktree` for rework in the same
-worktree. Job IDs accept an unambiguous prefix. See [router configuration](docs/router.md) for aliases and fallback,
+worktree. Discard still works when the original directory is gone; it finds the main
+repository through the worktree. Harnesses run with `PACTIFY_JOB` set, and `pactify sub run`
+and `pactify sub doctor` refuse to start inside a job, so a delegated harness does not
+delegate again.
+Job IDs accept an unambiguous prefix. See [router configuration](docs/router.md) for aliases and fallback,
 [job status](docs/sub-status.md) and [cost reporting](docs/sub-cost.md).
 
 codex is the default; kimi and opencode are supported, and agy is experimental. Kimi read-only jobs use a

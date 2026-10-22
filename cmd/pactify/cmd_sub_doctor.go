@@ -26,6 +26,11 @@ func newSubDoctorCmd() *cobra.Command {
 		}
 		return nil
 	}, Run: func(c *cobra.Command, args []string) {
+		// Doctor starts real harness jobs.
+		if err := refuseInsideJob(); err != nil {
+			subExit(c, 2, err)
+			return
+		}
 		store, err := sub.DefaultStore()
 		if err != nil {
 			subExit(c, 1, err)

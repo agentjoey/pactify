@@ -14,13 +14,17 @@ func addSubWorktreeCommands(command, run *cobra.Command) {
 	run.Flags().Bool("worktree", false, "Run in a detached worktree based on HEAD (resume reuses it)")
 	for _, name := range []string{"apply", "discard"} {
 		command.AddCommand(&cobra.Command{Use: name + " <job>", Short: name + " a job's isolated worktree", Args: subArgs(1), Run: func(c *cobra.Command, args []string) {
+			var notes []string
 			store, err := sub.DefaultStore()
 			if err == nil {
 				if c.Name() == "apply" {
 					err = store.ApplyWorktree(args[0])
 				} else {
-					err = store.DiscardWorktree(args[0])
+					notes, err = store.DiscardWorktreeNotes(args[0])
 				}
+			}
+			for _, note := range notes {
+				fmt.Fprintln(c.ErrOrStderr(), "Note: "+note)
 			}
 			if err != nil {
 				subExit(c, 1, err)

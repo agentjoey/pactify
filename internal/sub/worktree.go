@@ -523,6 +523,9 @@ func (s Store) ApplyWorktree(id string) error {
 		if err := s.CheckAction(*st, "apply"); err != nil {
 			return err
 		}
+		if info, err := os.Stat(w.OriginalRoot); err != nil || !info.IsDir() {
+			return actionConflict("original directory %s no longer exists; nothing to apply to. Discard the job instead", w.OriginalRoot)
+		}
 		change, err := worktreeChanges(w, true)
 		if err != nil {
 			return err
@@ -573,7 +576,15 @@ func (s Store) ApplyWorktree(id string) error {
 }
 
 func (s Store) DiscardWorktree(id string) error {
-	return s.withWorktree(id, func(st *State, w *Worktree) error {
+	_, err := s.DiscardWorktreeNotes(id)
+	return err
+}
+
+// DiscardWorktreeNotes discards a job's worktree and reports how cleanup
+// differed from the normal path, such as a missing original repository.
+func (s Store) DiscardWorktreeNotes(id string) ([]string, error) {
+	var notes []string
+	err := s.withWorktree(id, func(st *State, w *Worktree) error {
 		if err := s.worktreeIdle(w); err != nil {
 			return err
 		}
@@ -598,13 +609,22 @@ func (s Store) DiscardWorktree(id string) error {
 			}
 			related = append(related, st)
 		}
-		// git also removes registrations for a worktree whose directory was
-		// deleted externally. Never prune other jobs' worktrees.
-		if _, err := runGit(w.OriginalRoot, "worktree", "remove", "--force", "--force", w.Path); err != nil {
+		gitDir, note := worktreeRepository(w)
+		if note != "" {
+			notes = append(notes, note)
+		}
+		if gitDir == "" {
+			if err := s.removeOwnWorktreeDir(w); err != nil {
+				return err
+			}
+			notes = append(notes, "git worktree metadata may remain; run `git worktree prune` in the original repository if it still exists")
+		} else if _, err := runGit(gitDir, "worktree", "remove", "--force", "--force", w.Path); err != nil {
+			// git also removes registrations for a worktree whose directory was
+			// deleted externally. Never prune other jobs' worktrees.
 			if _, statErr := os.Lstat(w.Path); !os.IsNotExist(statErr) {
 				return err
 			}
-			list, listErr := runGit(w.OriginalRoot, "worktree", "list", "--porcelain", "-z")
+			list, listErr := runGit(gitDir, "worktree", "list", "--porcelain", "-z")
 			if listErr != nil {
 				return listErr
 			}
@@ -633,6 +653,60 @@ func (s Store) DiscardWorktree(id string) error {
 		}
 		return nil
 	})
+	return notes, err
+}
+
+// worktreeRepository returns the directory to run git worktree commands in.
+// The original root can disappear, for example when it was another job's
+// worktree; the main repository is then found through the worktree's .git file.
+func worktreeRepository(w *Worktree) (string, string) {
+	if info, err := os.Stat(w.OriginalRoot); err == nil && info.IsDir() {
+		return w.OriginalRoot, ""
+	}
+	missing := fmt.Sprintf("original directory %s no longer exists", w.OriginalRoot)
+	if _, err := os.Lstat(w.Path); err != nil {
+		return "", missing
+	}
+	out, err := runGit(w.Path, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+	if err != nil {
+		return "", fmt.Sprintf("%s; git could not read the worktree: %s", missing, strings.TrimSpace(err.Error()))
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	// Without its own .git file, git would resolve an enclosing repository.
+	if len(lines) != 2 || !sameResumeDirectory(lines[0], w.Path) {
+		return "", missing + "; the worktree no longer belongs to a repository"
+	}
+	repo := lines[1]
+	if filepath.Base(repo) == ".git" {
+		repo = filepath.Dir(repo)
+	}
+	if info, err := os.Stat(repo); err != nil || !info.IsDir() {
+		return "", missing
+	}
+	return repo, missing + "; used repository " + repo
+}
+
+// removeOwnWorktreeDir deletes a worktree directory without git. Only the
+// job's own jobs/<owner>/wt may be removed, through the anchored store root.
+func (s Store) removeOwnWorktreeDir(w *Worktree) error {
+	if _, err := os.Lstat(w.Path); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	if filepath.Base(w.Path) != "wt" || !sameResumeDirectory(filepath.Dir(w.Path), s.Dir(w.Owner)) {
+		return fmt.Errorf("worktree path %s is not this job's directory %s; refusing to remove it outside the job directory", w.Path, filepath.Join(s.Dir(w.Owner), "wt"))
+	}
+	r, err := s.openStorage()
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	rel := filepath.Join(filepath.Base(s.Root), w.Owner, "wt")
+	if err := storageRealPath(r, rel); err != nil {
+		return err
+	}
+	return r.RemoveAll(rel)
 }
 
 func (r *Result) describeWorktree(st State) {

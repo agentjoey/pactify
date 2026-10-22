@@ -141,6 +141,54 @@ after one hour. Shared-storage passes recheck state every 64 items or one second
 and detect new job directories between those checks. Pruned jobs are permanently
 removed from cost history.
 
+## Upgrade and uninstall
+
+Upgrade the CLI the way it was installed. The installer replaces the binary in
+`PACTIFY_BINDIR` (default: the first writable of `/usr/local/bin` and
+`~/.local/bin`); `go install` writes to `$(go env GOBIN)`, or `$(go env GOPATH)/bin`
+when `GOBIN` is unset:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+go install github.com/agentjoey/pactify/cmd/pactify@latest
+pactify version
+```
+
+Job state in `$PACTIFY_HOME` carries over. Update the host integrations as well:
+
+- Claude Code: `claude plugin marketplace update pactify`, then
+  `claude plugin update pactify@pactify`, then `/reload-plugins` or a new session.
+- Codex: `codex plugin marketplace upgrade pactify`.
+- Copilot and Cursor: update the plugin through the host's plugin manager.
+- Copied `.agents/skills` folders: copy them again from the new release.
+
+To uninstall:
+
+1. Run `pactify sub status --all`. Apply or discard every job that still has a
+   pending worktree, and cancel running jobs with `pactify sub cancel <job-id>`.
+   Deleting the home discards unapplied worktree changes.
+2. Stop any `pactify serve` or `pactify sub panel` process you started.
+3. Check `$PACTIFY_HOME/credential-quarantine` (default
+   `~/.pactify/credential-quarantine`). When a harness refreshed a login file that
+   pactify could not write back, the private copy is kept there; move anything you
+   still need before deleting it.
+4. Delete `$PACTIFY_HOME` (default `~/.pactify`). Harness credentials are linked
+   into `harness-homes/` by directory; `rm -rf` removes the links, not your own
+   credential directories.
+5. Delete the binary: `command -v pactify` shows its location.
+6. Remove host integrations:
+   - Claude Code: `claude plugin uninstall pactify@pactify`, then
+     `claude plugin marketplace remove pactify`.
+   - Codex: `codex plugin remove pactify@pactify`, then
+     `codex plugin marketplace remove pactify`. Also delete the
+     `prefix_rule(pattern=["pactify", "sub"], ...)` line if you added it to
+     `~/.codex/rules/default.rules`.
+   - Copilot and Cursor: remove the plugin through the host's plugin manager.
+   - Delete copied `.agents/skills/delegate*` and `.agents/skills/jobs` folders.
+
+Pactify never edits your own harness configuration or credentials, so no other
+cleanup is required.
+
 
 ## Local server
 

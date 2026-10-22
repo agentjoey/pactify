@@ -94,7 +94,7 @@ explicitly chosen by the user.
    Repeat this command while it exits 3 (pending); each timeout returns JSON with
    `jobId` and `status: "running"`. Parse the returned job id and preserve CLI errors:
 
-       pactify sub wait <jobId> --timeout 540
+       pactify sub wait <jobId> --timeout 540s
 
    Exit 0 completes successfully; exit 1 reports a failed job; exit 2 reports invalid
    arguments. Review any terminal result, including failed jobs with changes. Do not
@@ -121,6 +121,8 @@ explicitly chosen by the user.
      Open the listed new files too: `git diff` alone does not show untracked content.
    - The host must personally rerun all acceptance commands, including the full test suite,
      in the worktree. Do not treat the callee's test report as host verification.
+     If the host sandbox makes the worktree read-only, point tool caches such as `GOCACHE`
+     at the system temporary directory; do not apply first just to run the tests.
    - Where feasible, personally try the change in the real environment: exercise the actual user
      flow and inspect output readability and actual model behavior when relevant. Record what was
      tried and what could not be verified; automated tests alone do not establish real-world behavior.

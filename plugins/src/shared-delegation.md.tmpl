@@ -76,7 +76,9 @@ explicitly chosen by the user.
 
      Open the listed new files too: `git diff` alone does not show untracked content.
    - {{if eq .Host "claude"}}The main thread must{{else}}The host must{{end}} personally rerun all acceptance commands, including the full test suite,
-     in the worktree. Do not treat the callee's test report as host verification.
+     in the worktree. Do not treat the callee's test report as host verification.{{if ne .Host "claude"}}
+     If the host sandbox makes the worktree read-only, point tool caches such as `GOCACHE`
+     at the system temporary directory; do not apply first just to run the tests.{{end}}
    - Where feasible, personally try the change in the real environment: exercise the actual user
      flow and inspect output readability and actual model behavior when relevant. Record what was
      tried and what could not be verified; automated tests alone do not establish real-world behavior.

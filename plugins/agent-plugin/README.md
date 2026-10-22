@@ -55,6 +55,6 @@ Use delegate for default codex delegation or an explicit @alias, delegate-codex,
 delegate-kimi, delegate-opencode, or explicitly invoke experimental delegate-agy.
 Use jobs for read-only status. Delegate only on explicit user request.
 Start with `--wait 0s --json`, parse the job id on exit 3, and repeat
-`pactify sub wait <jobId> --timeout 540` while pending. Review the complete diff
+`pactify sub wait <jobId> --timeout 540s` while pending. Review the complete diff
 and new files, rerun all acceptance commands, then apply/discard or resume for rework.
 See each skill for the complete shared rules.

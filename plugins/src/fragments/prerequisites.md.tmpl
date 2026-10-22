@@ -1,0 +1,9 @@
+Before using this skill, detect the CLI with `command -v pactify` and `pactify version`.
+Run `sh scripts/pactify-check` relative to this skill directory to check the minimum CLI version.
+If the CLI is missing or too old, show the user these commands and ask them to install or upgrade it.
+Never run these commands or any installer yourself:
+
+```sh
+{{.InstallCommands}}```
+
+The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.

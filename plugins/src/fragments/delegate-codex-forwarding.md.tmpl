@@ -1,0 +1,5 @@
+
+For a quick task you are willing to block on (under ~9 minutes), you may instead delegate the complete
+brief to the `pactify:codex` subagent, which calls `pactify sub run codex --worktree --wait 540s --json` once,
+with access/model/effort flags from the brief, and returns stdout verbatim. If it returns a pending job id (exit 3), the main thread must still run
+`pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.

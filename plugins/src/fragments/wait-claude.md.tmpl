@@ -1,0 +1,7 @@
+   Then run, with `run_in_background: true` **and `timeout: 7200000`** (otherwise the background
+   command stops at the default ~10-minute limit while the job keeps running):
+
+       pactify sub wait <jobId>
+
+   If the background command is reported as stopped (time limit) rather than completed, check
+   `pactify sub status`, then start the same wait again.

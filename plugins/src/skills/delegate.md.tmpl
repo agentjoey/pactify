@@ -1,0 +1,31 @@
+---
+name: delegate
+description: Use when the user explicitly asks to delegate a coding task to the default harness (codex) or a configured @alias. Return a result summary for review.{{if ne .Host "claude"}}
+license: {{.License}}
+compatibility: 'Requires the pactify CLI (>= {{.MinCLI}}) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'{{end}}
+---
+{{if ne .Host "claude"}}
+<!-- Generated from plugins/src; do not edit. -->
+
+{{include "fragments/prerequisites.md.tmpl"}}
+{{end}}
+# Delegate to the default harness (codex)
+
+**If the user invoked this skill explicitly ({{command "delegate"}}), always delegate — whatever the task
+size. The user chose delegation; do not do the work yourself instead.**
+
+Launch command (step 2 below):
+
+    pactify sub run --write --worktree --wait 0s --json <<'BRIEF'
+    ...complete brief from step 1...
+    BRIEF
+
+An explicit alias is supported: `/delegate @alias <task>` launches
+`pactify sub run @alias --write --worktree --wait 0s --json` with the complete brief on stdin.
+Pass the exact alias as one quoted argument. Explicit `--model` / `--effort` override alias values.
+Without an alias, keep the default harness. See [router configuration](https://github.com/agentjoey/pactify/blob/main/docs/router.md).
+
+For read-only tasks replace `--write` with `--read-only`; never pass both.
+
+{{include "shared-delegation.md.tmpl"}}
+{{if eq .Host "claude"}}{{include "fragments/delegate-forwarding.md.tmpl"}}{{end}}

@@ -1,0 +1,26 @@
+---
+name: delegate-codex
+description: Use when the user explicitly asks to delegate a coding task to the codex harness. Return a result summary for review.{{if ne .Host "claude"}}
+license: {{.License}}
+compatibility: 'Requires the pactify CLI (>= {{.MinCLI}}) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'{{end}}
+---
+{{if ne .Host "claude"}}
+<!-- Generated from plugins/src; do not edit. -->
+
+{{include "fragments/prerequisites.md.tmpl"}}
+{{end}}
+# Delegate to codex
+
+**If the user invoked this skill explicitly ({{command "delegate-codex"}}), always delegate — whatever the task
+size. The user chose the harness; do not do the work yourself instead.**
+
+Launch command (step 2 below):
+
+    pactify sub run codex --write --worktree --wait 0s --json <<'BRIEF'
+    ...complete brief from step 1...
+    BRIEF
+
+For read-only tasks replace `--write` with `--read-only`; never pass both.
+
+{{include "shared-delegation.md.tmpl"}}
+{{if eq .Host "claude"}}{{include "fragments/delegate-codex-forwarding.md.tmpl"}}{{end}}

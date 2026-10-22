@@ -1,0 +1,13 @@
+{
+  "name": "pactify",
+  "owner": {
+    "name": "agentjoey"
+  },
+  "plugins": [
+    {
+      "description": "Delegate coding tasks only on explicit user request to codex, kimi or opencode, or explicitly to experimental agy; review results and view job status.",
+      "name": "pactify",
+      "source": "./pactify"
+    }
+  ]
+}

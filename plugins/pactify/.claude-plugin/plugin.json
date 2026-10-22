@@ -1,9 +1,11 @@
 {
-  "name": "pactify",
+  "author": {
+    "name": "agentjoey"
+  },
   "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex, kimi or opencode, or via slash commands to experimental agy; review results and view job status with /jobs.",
-  "version": "0.4.2",
-  "author": { "name": "agentjoey" },
   "homepage": "https://github.com/agentjoey/pactify",
+  "license": "FSL-1.1-MIT",
+  "name": "pactify",
   "repository": "https://github.com/agentjoey/pactify",
-  "license": "FSL-1.1-MIT"
+  "version": "0.5.0"
 }

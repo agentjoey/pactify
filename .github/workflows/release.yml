@@ -20,6 +20,8 @@ jobs:
         run: go vet ./...
       - name: go test
         run: PACTIFY_HOME="$(mktemp -d)" go test ./... -count=1
+      - name: generated plugin distributions are current
+        run: go run ./internal/plugingen/cmd/plugingen -check
       - name: gofmt
         run: test -z "$(gofmt -l cmd internal)"
       - uses: actions/setup-node@v4
@@ -41,9 +43,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      # Keep the upload artifact outside the GoReleaser output directory.
+      - name: build Agensi skill zip
+        run: go run ./internal/plugingen/cmd/plugingen -agensi "$RUNNER_TEMP/pactify-delegate.zip"
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: attach Agensi skill zip
+        run: gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP/pactify-delegate.zip"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

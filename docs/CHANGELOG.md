@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Generate every plugin distribution from one host-agnostic source in
+  `plugins/src` (`go run ./internal/plugingen/cmd/plugingen`; CI runs `-check`).
+  The Claude Code skills are unchanged byte for byte. New outputs: an Agent
+  Plugins 1.0 bundle for Codex, Copilot and Cursor in `plugins/agent-plugin`
+  (no hooks or forwarding agents; waits by polling `pactify sub wait --timeout`),
+  a plain `.agents/skills` copy in `plugins/agents-skills`, and a reproducible
+  `pactify-delegate.zip` for Agensi attached to each release. The plugin (0.5.0)
+  now checks for pactify CLI 0.13.0 or newer and prints an upgrade hint.
+
 - Make the first run work cleanly. `pactify sub run` checks the harness CLI is on
   PATH before creating a job or worktree and exits 2 with a doctor hint when it
   is missing. `pactify sub doctor` without arguments checks only installed

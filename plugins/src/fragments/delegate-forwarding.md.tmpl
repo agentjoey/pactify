@@ -1,0 +1,5 @@
+
+For a quick task you are willing to block on (under ~9 minutes), the main thread may instead call
+`pactify sub run --worktree --wait 540s --json` with the complete brief on stdin and access/model/effort flags as above.
+If it returns a pending job id (exit 3), the main thread must still run
+`pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.

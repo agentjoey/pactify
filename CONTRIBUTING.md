@@ -69,3 +69,14 @@ JSON
 
 `enforce_admins: false` lets maintainers direct-push trivial docs/chore commits,
 matching the *Maintainer exception* above.
+
+## Plugin distributions
+
+Edit [plugins/src](plugins/src/README.md), then run
+`go run ./internal/plugingen/cmd/plugingen` from the repository root. Never hand-edit
+generated skills, manifests or CLI checkers. Bump the plugin version in
+`plugins/src/config.json` when changing the plugin. Commit source and generated
+outputs together; `go run ./internal/plugingen/cmd/plugingen -check` verifies them.
+Portable outputs live in `plugins/agent-plugin/` and `plugins/agents-skills/`;
+`dist/` remains GoReleaser's disposable output directory. Agents and hooks under
+`plugins/pactify/` remain hand-maintained.

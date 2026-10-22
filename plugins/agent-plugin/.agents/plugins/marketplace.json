@@ -1,0 +1,20 @@
+{
+  "interface": {
+    "displayName": "Pactify"
+  },
+  "name": "pactify",
+  "plugins": [
+    {
+      "category": "Productivity",
+      "name": "pactify",
+      "policy": {
+        "authentication": "ON_INSTALL",
+        "installation": "AVAILABLE"
+      },
+      "source": {
+        "path": "./pactify",
+        "source": "local"
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+   Repeat this command while it exits 3 (pending); each timeout returns JSON with
+   `jobId` and `status: "running"`. Parse the returned job id and preserve CLI errors:
+
+       pactify sub wait <jobId> --timeout 540
+
+   Exit 0 completes successfully; exit 1 reports a failed job; exit 2 reports invalid
+   arguments. Review any terminal result, including failed jobs with changes. Do not
+   start a duplicate job. If the host supports background commands, run the wait in
+   the background instead and collect its result; repeat on exit 3 as needed.

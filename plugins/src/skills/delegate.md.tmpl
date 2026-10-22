@@ -16,12 +16,13 @@ size. The user chose delegation; do not do the work yourself instead.**
 
 Launch command (step 2 below):
 
-    pactify sub run --write --worktree --wait 0s --json <<'BRIEF'
+{{if eq .Host "claude"}}    pactify sub run --write --worktree --wait 0s --json <<'BRIEF'
     ...complete brief from step 1...
     BRIEF
-
+{{else}}    pactify sub run --write --worktree --wait 0s --json --brief-file <brief-file>
+{{end}}
 An explicit alias is supported: `/delegate @alias <task>` launches
-`pactify sub run @alias --write --worktree --wait 0s --json` with the complete brief on stdin.
+`pactify sub run @alias --write --worktree --wait 0s --json` with the complete brief {{if eq .Host "claude"}}on stdin{{else}}in `--brief-file`{{end}}.
 Pass the exact alias as one quoted argument. Explicit `--model` / `--effort` override alias values.
 Without an alias, keep the default harness. See [router configuration](https://github.com/agentjoey/pactify/blob/main/docs/router.md).
 

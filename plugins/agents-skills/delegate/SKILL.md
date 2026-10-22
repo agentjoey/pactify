@@ -27,12 +27,10 @@ size. The user chose delegation; do not do the work yourself instead.**
 
 Launch command (step 2 below):
 
-    pactify sub run --write --worktree --wait 0s --json <<'BRIEF'
-    ...complete brief from step 1...
-    BRIEF
+    pactify sub run --write --worktree --wait 0s --json --brief-file <brief-file>
 
 An explicit alias is supported: `/delegate @alias <task>` launches
-`pactify sub run @alias --write --worktree --wait 0s --json` with the complete brief on stdin.
+`pactify sub run @alias --write --worktree --wait 0s --json` with the complete brief in `--brief-file`.
 Pass the exact alias as one quoted argument. Explicit `--model` / `--effort` override alias values.
 Without an alias, keep the default harness. See [router configuration](https://github.com/agentjoey/pactify/blob/main/docs/router.md).
 
@@ -79,15 +77,16 @@ explicitly chosen by the user.
    go test ./...
    ```
 
-2. Start the launch command above from the host. Supply the complete brief on stdin,
-   with a quoted heredoc delimiter
-   absent from the brief. Preserve requested models with `--model <name>` and effort with
+2. Start the launch command above from the host. Write the complete brief to a new file
+   outside the repository, such as in the system temporary directory, and pass its path with
+   `--brief-file`. Run each `pactify sub` command as one simple command, without heredocs,
+   pipes, redirection or variable expansion, so host command rules can match it. Preserve requested models with `--model <name>` and effort with
    `--effort <level>`, quoting shell arguments; never silently switch models.
    Quota fallback can create a new job; `sub wait` and `sub result` follow the fallback chain from
    the first job id to its final result. Use the returned final `jobId` for review/apply/discard.
    When a quota failure already left changes, automatic fallback stops. Review the diff first,
    then start a fresh session with `pactify sub run <next> --worktree-from <job-id>` and a complete
-   brief on stdin; this transfers the worktree while preserving its original base. For a legacy
+   brief in `--brief-file`; this transfers the worktree while preserving its original base. For a legacy
    workspace job without a worktree, review and start a fresh workspace run instead.
    It exits 3 immediately with `{"jobId": ...}`: pending, not failure. Parse the job id from stdout.
    For any other error, report it and available models if supplied; do not blindly retry.
@@ -134,7 +133,7 @@ explicitly chosen by the user.
 
 4. To request rework, do not apply or discard. Pass `--resume <job-id> --worktree` on the next `run`
    with the id of the job being reviewed, the original `--cwd` and harness, preserving access mode,
-   config mode and any requested model/effort. Supply a new brief on stdin and collect it with the
+   config mode and any requested model/effort. Supply a new brief in `--brief-file` and collect it with the
    same polling procedure in step 2. An exact id is safest; a unique prefix of the full id
    or its final random component also works. An ambiguous prefix fails and lists every candidate.
    Resume continues in the same worktree with the same base commit; the summary shows the full change

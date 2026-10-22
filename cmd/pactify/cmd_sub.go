@@ -82,6 +82,7 @@ func newSubCmd() *cobra.Command {
 	run.Flags().DurationVar(&wait, "wait", 540*time.Second, "How long to wait before returning the job id")
 	run.Flags().BoolVar(&jsonOut, "json", false, "Print JSON")
 	run.Flags().Bool("with-user-config", false, "Load all user integrations instead of the minimal configuration")
+	run.Flags().String("brief-file", "", "Read the task brief from a file instead of stdin")
 	var timeout time.Duration
 	var waitJSON bool
 	waitCmd := &cobra.Command{Use: "wait <job>", Short: "Wait for a job result", Args: subArgs(1), Run: func(c *cobra.Command, args []string) {
@@ -228,12 +229,17 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if !info.IsDir() {
 		return 2, fmt.Errorf("--cwd is not a directory")
 	}
-	brief, err := io.ReadAll(c.InOrStdin())
-	if err != nil {
+	var brief []byte
+	if path, _ := c.Flags().GetString("brief-file"); path != "" {
+		brief, err = os.ReadFile(path)
+		if err != nil {
+			return 2, fmt.Errorf("read --brief-file: %w", err)
+		}
+	} else if brief, err = io.ReadAll(c.InOrStdin()); err != nil {
 		return 2, err
 	}
 	if strings.TrimSpace(string(brief)) == "" {
-		return 2, fmt.Errorf("task brief must not be empty; provide it on stdin")
+		return 2, fmt.Errorf("task brief must not be empty; provide it on stdin or with --brief-file")
 	}
 	req := sub.Request{Harness: name, Model: model, Effort: effort, Cwd: dir, Brief: string(brief), Access: "write"}
 	req.Retries = &retries

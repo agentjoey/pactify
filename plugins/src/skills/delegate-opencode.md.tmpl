@@ -22,10 +22,11 @@ whatever the task size. The user chose the harness; do not do the work yourself 
 
 Launch command (step 2 below):
 
-    pactify sub run opencode --write --worktree --wait 0s --json <<'BRIEF'
+{{if eq .Host "claude"}}    pactify sub run opencode --write --worktree --wait 0s --json <<'BRIEF'
     ...complete brief from step 1...
     BRIEF
-
+{{else}}    pactify sub run opencode --write --worktree --wait 0s --json --brief-file <brief-file>
+{{end}}
 Use `--read-only` instead for investigations and reviews. Use `--write` only when the user allows changes. Never raise permissions yourself.
 Models come from the live v1 `/config/providers` or v2 `/api/model` catalog, with provider/model ids; preserve the requested model.
 Omit `--model` to keep opencode's default. Resume with `--resume <job-id> --worktree` and the original cwd.

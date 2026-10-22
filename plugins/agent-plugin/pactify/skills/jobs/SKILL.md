@@ -147,7 +147,7 @@ shares it, including turns outside the displayed list. Keep suggestions short an
   selects the most recent completed session for the original --cwd and harness and lists multiple
   candidates on stderr. Prefer the explicit id so rework goes to the intended task.
   Preserve access, config mode,
-  requested model and effort; pass a self-contained rework brief on stdin and use the
+  requested model and effort; pass a self-contained rework brief in `--brief-file` and use the
   guide's run/poll flow. Keep the same worktree and base commit. Do not start concurrent
   turns in one worktree. A discarded or missing worktree cannot resume; legacy sessions
   without a worktree require success for automatic selection and cannot gain isolation mid-session. Start fresh if needed.

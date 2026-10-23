@@ -12,7 +12,7 @@ esac
 if ! command -v pactify >/dev/null 2>&1; then
   printf '%s\n' \
     'pactify plugin: the pactify CLI is not on PATH. Install it yourself with either command:' \
-    '  curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh' \
+    '  curl -fsSL https://pactify.dev/install.sh | sh' \
     '  go install github.com/agentjoey/pactify/cmd/pactify@latest'
   exit 1
 fi
@@ -81,7 +81,7 @@ if {
     1)
       printf '%s\n' "pactify plugin: $version_line is too old; upgrade pactify to >= $minimum."
       printf '%s\n' 'Run this command yourself:' \
-    '  curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh' \
+    '  curl -fsSL https://pactify.dev/install.sh | sh' \
     '  go install github.com/agentjoey/pactify/cmd/pactify@latest'
       exit 1 ;;
     *) printf '%s\n' "pactify plugin: CLI version is unknown ($version_line); requires >= $minimum. Check or upgrade pactify yourself."

@@ -47,7 +47,7 @@ CLI
   run env PATH="$BATS_TEST_TMPDIR/bin" "$P/bin/pactify-check"
   [ "$status" -eq 1 ]
   [[ "$output" == *"pactify CLI is not on PATH"* ]]
-  [[ "$output" == *"curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh"* ]]
+  [[ "$output" == *"curl -fsSL https://pactify.dev/install.sh | sh"* ]]
   [[ "$output" == *"go install github.com/agentjoey/pactify/cmd/pactify@latest"* ]]
   [ ! -e "$PACTIFY_HOOK_CALL" ]
 }

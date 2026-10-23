@@ -4,7 +4,7 @@
 
 Generated at `plugins/agent-plugin/`, this directory is a marketplace repository
 root. Plain skill copies live at `plugins/agents-skills/`. Its `pactify/` child is an
-Agent Plugins 1.0 plugin (version 0.5.3, license FSL-1.1-MIT).
+Agent Plugins 1.0 plugin (version 0.5.4, license FSL-1.1-MIT).
 It requires pactify >= 0.13.0, git, macOS or Linux, and an installed and
 logged-in harness CLI. It has no lifecycle hooks or forwarding agents.
 Each skill includes a local prerequisite checker. Never run installers on the user's behalf.

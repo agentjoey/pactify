@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Install with `curl -fsSL https://pactify.dev/install.sh | sh`. The README, the
+  installation guide, the installer's usage line and the plugins' missing-CLI hint now
+  point to pactify.dev instead of the raw GitHub URL; the installer still downloads
+  the release from GitHub and verifies its checksum (plugin 0.5.4).
+
 - `pactify sub <unknown>` now reports `unknown command` with suggestions and a
   `--help` hint (exit 2) instead of `accepts 0 arg(s), received 1`. The
   `--read-only` help text describes the harness's own read-only mechanism instead

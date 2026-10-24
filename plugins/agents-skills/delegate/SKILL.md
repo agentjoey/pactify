@@ -2,7 +2,7 @@
 name: delegate
 description: Use when the user explicitly asks to delegate a coding task to the default harness (codex) or a configured @alias. Return a result summary for review.
 license: FSL-1.1-MIT
-compatibility: 'Requires the pactify CLI (>= 0.13.0) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'
+compatibility: 'Requires the pactify CLI (>= 0.14.0) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'
 ---
 
 <!-- Generated from plugins/src; do not edit. -->

@@ -1,7 +1,14 @@
 # Changelog
 
-## Unreleased
+## v0.14.0 — 2026-10-25
 
+kimi and opencode leave experimental and kimi gains a read-only mode; job storage gets a
+lifecycle with `pactify sub prune`; the Codex, Copilot and Cursor plugins and the
+`.agents/skills` folders ship alongside the Claude Code plugin; and pactify.dev becomes the
+install address.
+
+- The portable plugins and skills require pactify 0.14.0, the first release with
+  `pactify sub run --brief-file` (plugin 0.5.5).
 - Install with `curl -fsSL https://pactify.dev/install.sh | sh`. The README, the
   installation guide, the installer's usage line and the plugins' missing-CLI hint now
   point to pactify.dev instead of the raw GitHub URL; the installer still downloads

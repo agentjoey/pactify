@@ -1,7 +1,7 @@
 #!/bin/sh
 # Generated from plugins/src; do not edit.
 # Check local prerequisites only. Never install software or access the network.
-minimum='0.13.0'
+minimum='0.14.0'
 quiet=false
 case "$#:$1" in
   0:) ;;

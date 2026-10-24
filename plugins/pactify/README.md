@@ -34,7 +34,12 @@ curl -fsSL https://pactify.dev/install.sh | sh
 go install github.com/agentjoey/pactify/cmd/pactify@latest
 ```
 
-The plugin does not proxy models, manage logins, or read or copy credentials.
+The plugin does not proxy models. The pactify CLI it calls runs each harness under your
+own login: private harness homes link to your existing login directory or file (such as
+opencode's `auth.json`) instead of copying it. Two exceptions: kimi read-only jobs render a
+private 0600 config from your kimi `config.toml`, including its `providers` section and any
+API keys written there, and the last job removes it; opencode 2.x signs in with
+`pactify sub login opencode`, which stores that login in `$PACTIFY_HOME`.
 
 ## Other hosts
 

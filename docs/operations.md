@@ -172,9 +172,10 @@ To uninstall:
    `~/.pactify/credential-quarantine`). When a harness refreshed a login file that
    pactify could not write back, the private copy is kept there; move anything you
    still need before deleting it.
-4. Delete `$PACTIFY_HOME` (default `~/.pactify`). Harness credentials are linked
-   into `harness-homes/` by directory; `rm -rf` removes the links, not your own
-   credential directories.
+4. Delete `$PACTIFY_HOME` (default `~/.pactify`). Harness logins are linked into
+   `harness-homes/` as directories or single files; `rm -rf` removes the links, not
+   your own login files. An opencode 2.x login made with `pactify sub login opencode`
+   lives only in `$PACTIFY_HOME` and is removed with it.
 5. Delete the binary: `command -v pactify` shows its location.
 6. Remove host integrations:
    - Claude Code: `claude plugin uninstall pactify@pactify`, then

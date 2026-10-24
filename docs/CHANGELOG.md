@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Correct how the plugin README and the uninstall guide describe credentials: logins
+  are linked as directories or single files, kimi read-only renders a private config
+  that can hold provider API keys, and an opencode 2.x login lives in
+  `$PACTIFY_HOME` (plugin 0.5.6).
+
 ## v0.14.0 — 2026-10-25
 
 kimi and opencode leave experimental and kimi gains a read-only mode; job storage gets a

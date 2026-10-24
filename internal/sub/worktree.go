@@ -89,7 +89,7 @@ func (s Store) CreateRun(id string, req Request, isolated, resume bool) (State, 
 	}
 	// Let git place the cwd in the repository: comparing path strings fails
 	// when the cwd is spelled differently from git's root, as on
-	// case-insensitive macOS volumes (~/agentworks vs ~/AgentWorks).
+	// case-insensitive macOS volumes (~/projects vs ~/Projects).
 	prefix, err := runGit(req.Cwd, "rev-parse", "--show-prefix")
 	if err != nil {
 		return State{}, err

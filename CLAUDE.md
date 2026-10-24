@@ -55,6 +55,8 @@ The live harness E2E suite is opt-in and can consume model quota; see its
   SHARED-DELEGATION blocks identical and the three entry guides identical except
   their first line. See [generator instructions](plugins/src/README.md).
 - Record user-visible changes under Unreleased in [CHANGELOG](docs/CHANGELOG.md).
+  Public text (docs, CHANGELOG, PR descriptions) names no internal tracker ids, private
+  repositories, local paths or session links.
 - Keep credentials, personal settings and machine-specific deployment details out
   of tracked files. Private Claude Code instructions belong in `CLAUDE.local.md`.
 

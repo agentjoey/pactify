@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -166,4 +167,10 @@ func TestSubRunKimiReadOnlyOffered(t *testing.T) {
 	if code != 3 || !strings.Contains(out, "is still running") {
 		t.Fatalf("code=%d out=%s", code, out)
 	}
+	// The detached worker keeps writing to PACTIFY_HOME; let the job finish before TempDir cleanup.
+	id := regexp.MustCompile(`\d{8}-\d{6}-[0-9a-f]{6}`).FindString(out)
+	if id == "" {
+		t.Fatalf("no job id in output: %s", out)
+	}
+	runCLI(t, bin, repo, "", "sub", "wait", id)
 }

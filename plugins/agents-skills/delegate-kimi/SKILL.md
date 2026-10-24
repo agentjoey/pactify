@@ -2,7 +2,7 @@
 name: delegate-kimi
 description: Use when the user explicitly asks to delegate a coding task to the kimi harness. kimi has no OS sandbox for writes; permission requests are approved by pactify; read-only access uses a generated private config and a tool allowlist.
 license: FSL-1.1-MIT
-compatibility: 'Requires the pactify CLI (>= 0.13.0) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'
+compatibility: 'Requires the pactify CLI (>= 0.14.0) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'
 ---
 
 <!-- Generated from plugins/src; do not edit. -->

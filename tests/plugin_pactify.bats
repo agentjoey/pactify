@@ -223,7 +223,7 @@ CLI
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PACTIFY_HOOK_CALL"
 case "$*" in
-  version) echo 'pactify 0.13.0 (test, test)' ;;
+  version) echo 'pactify 0.14.0 (test, test)' ;;
   *) echo 'help output must not leak into the session' ;;
 esac
 exit 0

@@ -2,7 +2,7 @@
 name: jobs
 description: Use when the user explicitly asks to view delegation jobs from the host. Show compact status tables, job details and read-only next step suggestions.
 license: FSL-1.1-MIT
-compatibility: 'Requires the pactify CLI (>= 0.13.0) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'
+compatibility: 'Requires the pactify CLI (>= 0.14.0) and git on macOS or Linux; pactify runs harness CLIs outside the workspace, so the host must allow running `pactify sub` outside its sandbox.'
 ---
 
 <!-- Generated from plugins/src; do not edit. -->

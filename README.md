@@ -5,7 +5,7 @@ kimi, agy and opencode, and records jobs, logs and results locally. The Claude
 Code plugin provides slash commands; the Go CLI manages the same jobs. See the
 [privacy policy](https://github.com/agentjoey/pactify/blob/main/PRIVACY.md).
 
-The latest published release is **v0.13.0**, the first harness router release.
+The latest published release is **v0.14.0**.
 See [CHANGELOG](docs/CHANGELOG.md).
 
 Storage is retained under `$PACTIFY_HOME` (default `~/.pactify`). Finished resume

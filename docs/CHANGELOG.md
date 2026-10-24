@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The dashboard header and the dashboard and panel favicons use the official pactify mark.
 - Correct how the plugin README and the uninstall guide describe credentials: logins
   are linked as directories or single files, kimi read-only renders a private config
   that can hold provider API keys, and an opencode 2.x login lives in

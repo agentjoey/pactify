@@ -1,5 +1,5 @@
 #!/bin/sh
-# pactify installer. Usage: curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+# pactify installer. Usage: curl -fsSL https://pactify.dev/install.sh | sh
 # Overrides (for testing / pinning):
 #   PACTIFY_VERSION       tag to install (default: latest release)
 #   PACTIFY_DOWNLOAD_BASE base URL/dir holding the archives + checksums.txt (default: GitHub release)

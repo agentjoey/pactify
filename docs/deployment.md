@@ -3,7 +3,7 @@
 Install the published binary on macOS or Linux:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+curl -fsSL https://pactify.dev/install.sh | sh
 # Or install with Go:
 go install github.com/agentjoey/pactify/cmd/pactify@latest
 ```

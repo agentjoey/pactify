@@ -13,7 +13,7 @@ If the CLI is missing or too old, show the user these commands and ask them to i
 Never run these commands or any installer yourself:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+curl -fsSL https://pactify.dev/install.sh | sh
 go install github.com/agentjoey/pactify/cmd/pactify@latest
 ```
 

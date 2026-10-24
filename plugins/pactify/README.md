@@ -30,7 +30,7 @@ The SessionStart hook reuses this POSIX shell check with `--quiet`: recognized c
 The check prints these installation options if pactify is missing; it never runs installers or accesses the network:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+curl -fsSL https://pactify.dev/install.sh | sh
 go install github.com/agentjoey/pactify/cmd/pactify@latest
 ```
 

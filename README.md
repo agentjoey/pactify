@@ -28,7 +28,7 @@ least 24 hours and a cache cap of at least 1 GB.
 Install the published binary on macOS or Linux (amd64 / arm64):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+curl -fsSL https://pactify.dev/install.sh | sh
 pactify sub --help
 ```
 

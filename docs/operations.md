@@ -149,7 +149,7 @@ Upgrade the CLI the way it was installed. The installer replaces the binary in
 when `GOBIN` is unset:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/agentjoey/pactify/main/install.sh | sh
+curl -fsSL https://pactify.dev/install.sh | sh
 go install github.com/agentjoey/pactify/cmd/pactify@latest
 pactify version
 ```

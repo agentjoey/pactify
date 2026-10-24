@@ -41,7 +41,13 @@ func subTerminal(s sub.Status) bool {
 	return sub.Terminal(s)
 }
 func newSubCmd() *cobra.Command {
-	command := &cobra.Command{Use: "sub", Short: "Run a local coding harness as a background job", Args: subArgs(0), RunE: func(c *cobra.Command, _ []string) error { return c.Help() }}
+	command := &cobra.Command{Use: "sub", Short: "Run a local coding harness as a background job", Args: func(c *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			subExit(c, 2, subUnknownCommand(c, args[0]))
+		}
+		return nil
+	}, RunE: func(c *cobra.Command, _ []string) error { return c.Help() }}
+	command.SuggestionsMinimumDistance = 2
 	command.SetFlagErrorFunc(func(c *cobra.Command, err error) error { subExit(c, 2, err); return nil })
 	var model, effort, cwd string
 	var readOnly, write, fresh, jsonOut bool
@@ -74,7 +80,7 @@ func newSubCmd() *cobra.Command {
 	run.Flags().StringVar(&model, "model", "", "Requested model (must be available)")
 	run.Flags().StringVar(&effort, "effort", "", "Reasoning effort")
 	run.Flags().StringVar(&cwd, "cwd", ".", "Working directory")
-	run.Flags().BoolVar(&readOnly, "read-only", false, "Deny all permission requests")
+	run.Flags().BoolVar(&readOnly, "read-only", false, "Run without writes, using the harness's own read-only mechanism")
 	run.Flags().BoolVar(&write, "write", false, "Allow workspace writes (default)")
 	run.Flags().StringVar(&resume, "resume", "", "Resume a job by id/unique prefix; omit the value for the latest session")
 	run.Flags().Lookup("resume").NoOptDefVal = subResumeLatest
@@ -141,6 +147,16 @@ func newSubCmd() *cobra.Command {
 	command.AddCommand(newSubPruneCmd(), newSubAutoPruneCmd())
 	addSubWorktreeCommands(command, run)
 	return command
+}
+
+// Cobra only reports unknown subcommands for the root command; sub would otherwise
+// fail with a bare argument-count error.
+func subUnknownCommand(c *cobra.Command, name string) error {
+	msg := fmt.Sprintf("unknown command %q for %q", name, c.CommandPath())
+	if suggestions := c.SuggestionsFor(name); len(suggestions) > 0 {
+		msg += "\n\nDid you mean this?\n\t" + strings.Join(suggestions, "\n\t")
+	}
+	return fmt.Errorf("%s\n\nRun '%s --help' for usage.", msg, c.CommandPath())
 }
 
 // The slash keeps this implicit-value marker outside the valid job-id space.
@@ -288,6 +304,10 @@ func subRun(c *cobra.Command, name, model, effort, cwd string, readOnly, write, 
 	if err != nil {
 		return code, err
 	}
+	// JSON callers are agents and scripts that may merge stderr into the JSON they parse.
+	if !jsonOut && st.Request.Access == "write" && st.Worktree == nil {
+		fmt.Fprintln(c.ErrOrStderr(), "Note: this write job edits "+st.Request.Cwd+" in place; use --worktree to run it in an isolated worktree.")
+	}
 	if routing != nil {
 		st.Routing = routing
 		st.RouteWarnings = routeWarnings
@@ -376,8 +396,8 @@ func subOutput(c *cobra.Command, store sub.Store, st sub.State, jsonOut bool) (i
 	if result.Status == sub.StatusSucceeded {
 		return 0, nil
 	}
-	// Backend model errors retain their offered-model list in both state and result.
-	if strings.Contains(st.Error, "requested model") || strings.Contains(st.Error, "requested effort") || strings.Contains(st.Error, "agent exposes no model option over ACP") {
+	// A rejected model or effort is an invalid argument; the result keeps the offered-model list.
+	if result.FailureClass == "model" {
 		return 2, nil
 	}
 	return 1, nil

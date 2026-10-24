@@ -108,6 +108,8 @@ pactify sub result <job-id>
 pactify sub logs <job-id> --tail 20
 ```
 
+Write jobs without `--worktree` edit the directory in place; the CLI prints a note on stderr
+for them (except with `--json`). Use `--worktree` to review changes before applying them.
 Review the complete worktree diff and untracked files, and run acceptance checks
 before `pactify sub apply <job-id>`. Use `pactify sub discard <job-id>` to discard
 a result, or `pactify sub run --resume <job-id> --worktree` for rework in the same
@@ -141,6 +143,13 @@ permission checks are a guardrail, not isolation. Experimental harness results v
 | agy | Experimental |
 
 See [upstream compatibility](docs/harness-updates.md) for contract checks and evaluation gates.
+
+## Upgrade and uninstall
+
+Rerun the installer or `go install …@latest` to upgrade; job state carries over.
+To uninstall, resolve pending worktree jobs, delete `$PACTIFY_HOME` (after checking
+its `credential-quarantine` folder), the binary and the host plugins. See
+[upgrade and uninstall](docs/operations.md#upgrade-and-uninstall) for each step.
 
 ## Dashboard
 

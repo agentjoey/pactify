@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- `pactify sub <unknown>` now reports `unknown command` with suggestions and a
+  `--help` hint (exit 2) instead of `accepts 0 arg(s), received 1`. The
+  `--read-only` help text describes the harness's own read-only mechanism instead
+  of "Deny all permission requests" (AJ-844).
+- `sub result`, `sub wait` and `sub run` exit 2 for a model failure only when the
+  result's `failureClass` is `model`; the error text is no longer matched. Model
+  refusals recognized by classification, such as codex "model is not supported when
+  using codex with a chatgpt account" and agy "invalid model selection", now exit 2
+  instead of 1. Other failures of a job started with `--model` (for example auth or
+  quota) now exit 1 instead of 2. A codex server that starts a different model than
+  requested is classified as `model` (AJ-844).
+- Write jobs without `--worktree` print a note on stderr that they edit the directory
+  in place (not with `--json`, whose callers may merge stderr into parsed output) (AJ-845).
+- Document upgrade and uninstall steps for the CLI, `$PACTIFY_HOME` (including the
+  credential quarantine folder) and host plugins (AJ-846).
+
 - Refuse `pactify sub run` and `pactify sub doctor` inside a job. Harnesses run with
   `PACTIFY_JOB` set, and a delegated opencode job that found a committed pactify skill
   delegated twice more. Both commands (including `--resume` and `--worktree-from`) now

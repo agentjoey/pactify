@@ -525,7 +525,7 @@ func (c *codexClient) threadOpts(ctx context.Context, method string, params map[
 		return SessionInfo{}, "", fmt.Errorf("parse %s result: %w", method, err)
 	}
 	if model != "" && res.Model != model {
-		return res.info(), res.Thread.ID, c.modelRequestError(ctx, model, fmt.Errorf("server reported model %q", res.Model))
+		return res.info(), res.Thread.ID, c.modelRequestError(ctx, model, fmt.Errorf("%w: server reported model %q", ErrModelUnavailable, res.Model))
 	}
 	return res.info(), res.Thread.ID, nil
 }

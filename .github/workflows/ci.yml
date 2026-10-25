@@ -81,7 +81,7 @@ jobs:
             echo "::error::internal/serve/dist is stale — run 'cd web && npm run build' and commit it"; exit 1; }
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright has no Chromium build for ubuntu-latest (26.04) yet
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

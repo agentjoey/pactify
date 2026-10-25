@@ -1,6 +1,9 @@
-Before using this skill, detect the CLI with `command -v pactify` and `pactify version`.
+{{if eq .Host "claude"}}Before the first pactify command in a session, run `pactify-check --quiet` once (this plugin's `bin/`
+is on the Bash PATH). No output means the CLI is ready. If `pactify-check` is not found, run
+`pactify version` and compare it with the minimum version {{.MinCLI}}.
+{{else}}Before using this skill, detect the CLI with `command -v pactify` and `pactify version`.
 Run `sh scripts/pactify-check` relative to this skill directory to check the minimum CLI version.
-If the CLI is missing or too old, show the user these commands and ask them to install or upgrade it.
+{{end}}If the CLI is missing or too old, show the user these commands and ask them to install or upgrade it.
 Never run these commands or any installer yourself:
 
 ```sh

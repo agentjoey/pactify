@@ -16,21 +16,21 @@ import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 for path in root.rglob('*'):
     assert not path.is_symlink(), path
-    if path.is_file():
+    if path.is_file() and path.name != 'icon.png':
         assert '\0' not in path.read_text(), path
-for path in (root / 'bin/pactify-check', root / 'hooks/check-pactify-sub.sh'):
-    text = path.read_text()
-    assert text.startswith('#!/bin/sh\n'), path
-    for forbidden in ('$(', '`', 'npx ', 'npm ', 'uvx ', 'eval '):
-        assert forbidden not in text, (path, forbidden)
-hook = (root / 'hooks/check-pactify-sub.sh').read_text()
-assert '"${CLAUDE_PLUGIN_ROOT}/bin/pactify-check"' in hook
+text = (root / 'bin/pactify-check').read_text()
+assert text.startswith('#!/bin/sh\n')
+for forbidden in ('$(', '`', 'npx ', 'npm ', 'uvx ', 'eval '):
+    assert forbidden not in text, forbidden
+# Directory review holds plugins whose hooks run scripts; skills run the check instead.
+assert not (root / 'hooks').exists()
+for skill in (root / 'skills').glob('*/SKILL.md'):
+    assert 'run `pactify-check --quiet` once' in skill.read_text(), skill
+assert (root / '.claude-plugin/icon.png').read_bytes().startswith(b'\x89PNG')
 assert 'Claude Code only' in (root / 'README.md').read_text()
 PY
   [ "$status" -eq 0 ]
-  for script in "$P/bin/pactify-check" "$P/hooks/check-pactify-sub.sh"; do
-    /bin/sh -n "$script"
-  done
+  /bin/sh -n "$P/bin/pactify-check"
 }
 
 @test "pactify-check reports missing CLI and prints both installers without executing them" {
@@ -117,7 +117,7 @@ root = pathlib.Path(sys.argv[1])
 for name in ('agy', 'opencode'):
     skill = (root / 'skills' / f'delegate-{name}' / 'SKILL.md').read_text()
     assert ('disable-model-invocation: true\n' in skill.split('---')[1]) == (name == 'agy'), name
-    for path in (root / 'skills' / f'delegate-{name}' / 'SKILL.md', root / 'agents' / f'{name}.md', root / 'README.md'):
+    for path in (root / 'skills' / f'delegate-{name}' / 'SKILL.md', root / 'agents' / f'sub-{name}.md', root / 'README.md'):
         text = path.read_text().lower()
         if path.name != 'README.md':
             assert ('experimental' in text) == (name == 'agy'), path
@@ -171,9 +171,9 @@ PY
 
 @test "forwarding agents use haiku and only Bash" {
   for h in codex kimi; do
-    grep -q '^model: haiku$' "$P/agents/$h.md"
-    grep -q '^tools: Bash$' "$P/agents/$h.md"
-    grep -q "pactify sub run $h" "$P/agents/$h.md"
+    grep -q '^model: haiku$' "$P/agents/sub-$h.md"
+    grep -q '^tools: Bash$' "$P/agents/sub-$h.md"
+    grep -q "pactify sub run $h" "$P/agents/sub-$h.md"
   done
 }
 
@@ -190,19 +190,13 @@ PY
   done
 }
 
-@test "session-start hook reports a missing pactify without failing the session" {
-  run env CLAUDE_PLUGIN_ROOT="$P" PATH=/usr/bin:/bin /bin/sh "$P/hooks/check-pactify-sub.sh"
-  [ "$status" -eq 0 ]
+@test "quiet check reports a missing pactify" {
+  run env PATH=/usr/bin:/bin /bin/sh "$P/bin/pactify-check" --quiet
+  [ "$status" -eq 1 ]
   [[ "$output" == *"pactify CLI is not on PATH"* ]]
 }
 
-@test "session-start hook configuration invokes an executable script with a quoted plugin path" {
-  run python3 -c "import json;h=json.load(open('$P/hooks/hooks.json'));s=h['hooks']['SessionStart'][0]['hooks'][0];assert s['type']=='command';assert s['command']=='\"\u0024{CLAUDE_PLUGIN_ROOT}/hooks/check-pactify-sub.sh\"'"
-  [ "$status" -eq 0 ]
-  [ -x "$P/hooks/check-pactify-sub.sh" ]
-}
-
-@test "session-start hook reports a CLI without sub and exits successfully" {
+@test "quiet check reports a CLI without sub" {
   mkdir "$BATS_TEST_TMPDIR/bin"
   cat > "$BATS_TEST_TMPDIR/bin/pactify" <<'CLI'
 #!/usr/bin/env bash
@@ -211,13 +205,13 @@ exit 1
 CLI
   chmod +x "$BATS_TEST_TMPDIR/bin/pactify"
   export PACTIFY_HOOK_CALL="$BATS_TEST_TMPDIR/call"
-  run env CLAUDE_PLUGIN_ROOT="$P" PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$P/hooks/check-pactify-sub.sh"
-  [ "$status" -eq 0 ]
+  run env PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$P/bin/pactify-check" --quiet
+  [ "$status" -eq 1 ]
   [[ "$output" == *"has no 'sub' command; upgrade pactify"* ]]
   [ "$(cat "$PACTIFY_HOOK_CALL")" = "$(printf 'version\nsub --help')" ]
 }
 
-@test "session-start hook silently accepts a CLI with sub" {
+@test "quiet check silently accepts a CLI with sub" {
   mkdir "$BATS_TEST_TMPDIR/bin"
   cat > "$BATS_TEST_TMPDIR/bin/pactify" <<'CLI'
 #!/usr/bin/env bash
@@ -230,7 +224,7 @@ exit 0
 CLI
   chmod +x "$BATS_TEST_TMPDIR/bin/pactify"
   export PACTIFY_HOOK_CALL="$BATS_TEST_TMPDIR/call"
-  run env CLAUDE_PLUGIN_ROOT="$P" PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$P/hooks/check-pactify-sub.sh"
+  run env PATH="$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$P/bin/pactify-check" --quiet
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ "$(cat "$PACTIFY_HOOK_CALL")" = "$(printf 'version\nsub --help')" ]
@@ -286,7 +280,7 @@ PY
   run python3 - "$P" <<'PYCODE'
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
-for path in (root / 'README.md', root / 'agents/kimi.md'):
+for path in (root / 'README.md', root / 'agents/sub-kimi.md'):
     text = path.read_text().lower()
     assert 'kimi is experimental' not in text, path
     for term in ('kimi', 'read-only', 'no os sandbox for writes', 'permission requests are approved by pactify'):
@@ -379,7 +373,7 @@ PY
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 for name in ('codex', 'kimi'):
-    text = (root / 'agents' / (name + '.md')).read_text()
+    text = (root / 'agents' / ('sub-' + name + '.md')).read_text()
     for term in ('--worktree', '--cwd', 'same worktree', 'full test', 'real environment',
                  'independent review', 'apply', 'discard', 'Review findings', 'Tests to add'):
         assert term in text, (name, term)
@@ -404,7 +398,7 @@ start, end = '<!-- BEGIN SHARED-DELEGATION -->', '<!-- END SHARED-DELEGATION -->
 assert text.split(start)[1].split(end)[0] == original.split(start)[1].split(end)[0]
 for term in ('name: delegate-agy', 'experimental', 'results vary by model', 'invoked this skill explicitly', 'pactify sub run agy', '--read-only', '--write', '--worktree'):
     assert term in text, term
-agent = (root / 'agents/agy.md').read_text()
+agent = (root / 'agents/sub-agy.md').read_text()
 for term in ('model: haiku', 'tools: Bash', 'pactify sub run agy', '--read-only', '--write', '--resume', '--worktree', '--cwd'):
     assert term in agent, term
 for path in (root / 'README.md', root.parent.parent / 'README.md'):
@@ -542,7 +536,7 @@ PY
 import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 skill = (root / 'skills/delegate-opencode/SKILL.md').read_text()
-agent = (root / 'agents/opencode.md').read_text()
+agent = (root / 'agents/sub-opencode.md').read_text()
 reference = (root / 'skills/delegate-codex/SKILL.md').read_text()
 def shared(text):
     return text.split('<!-- BEGIN SHARED-DELEGATION -->', 1)[1].split('<!-- END SHARED-DELEGATION -->', 1)[0]
@@ -568,7 +562,7 @@ root = pathlib.Path(sys.argv[1])
 skill = (root / 'skills/delegate-agy/SKILL.md').read_text()
 assert 'Use `--read-only`' in skill
 assert 'Use `--write` only with explicit permission' in skill
-agent = (root / 'agents/agy.md').read_text()
+agent = (root / 'agents/sub-agy.md').read_text()
 assert 'use `--read-only`' in agent
 assert 'Flags: always `--write`' not in agent
 for path in (root / 'README.md', root.parent.parent / 'README.md'):
@@ -587,7 +581,7 @@ skill = (root / 'skills/delegate-opencode/SKILL.md').read_text()
 assert 'Use `--read-only` instead' in skill
 assert 'readonly_violation' in skill and 'sandboxed=false' in skill
 assert 'Always pass `--write`' not in skill
-agent = (root / 'agents/opencode.md').read_text()
+agent = (root / 'agents/sub-opencode.md').read_text()
 assert 'use `--read-only`' in agent
 assert 'sandboxed=false' in agent and 'Flags: always `--write`' not in agent
 for path in (root / 'README.md', root.parents[1] / 'README.md'):
@@ -603,7 +597,7 @@ PY
 import json, pathlib, sys
 root = pathlib.Path(sys.argv[1])
 assert tuple(map(int, json.loads((root / '.claude-plugin/plugin.json').read_text())['version'].split('.'))) >= (0, 3, 0)
-for path in (root / 'agents/agy.md', root / 'skills/delegate-agy/SKILL.md'):
+for path in (root / 'agents/sub-agy.md', root / 'skills/delegate-agy/SKILL.md'):
     text = path.read_text()
     assert 'managed hooks are not installed with --with-user-config' in text
     assert 'workspace hooks' in text

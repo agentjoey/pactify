@@ -19,7 +19,6 @@ go install github.com/agentjoey/pactify/cmd/pactify@latest
 
 The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.
 
-
 # Delegate to opencode
 
 **opencode has no OS sandbox; write permission requests are approved by pactify;

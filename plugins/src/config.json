@@ -1,10 +1,12 @@
 {
-  "version": "0.5.6",
+  "version": "0.6.0",
   "minCLI": "0.14.0",
   "license": "FSL-1.1-MIT",
   "description": "Delegate coding tasks only on explicit user request to codex, kimi or opencode, or explicitly to experimental agy; review results and view job status.",
   "claudeDescription": "Claude Code only. Delegate coding tasks only on explicit user request to codex, kimi or opencode, or via slash commands to experimental agy; review results and view job status with /jobs.",
   "name": "pactify",
   "author": "agentjoey",
+  "authorURL": "https://github.com/agentjoey",
+  "homepage": "https://pactify.dev",
   "repository": "https://github.com/agentjoey/pactify"
 }

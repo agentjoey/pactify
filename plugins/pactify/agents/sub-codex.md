@@ -1,5 +1,5 @@
 ---
-name: codex
+name: sub-codex
 description: Forward a self-contained task to codex via pactify sub only when the user explicitly requests delegation and the main thread has written the brief.
 model: haiku
 tools: Bash

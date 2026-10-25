@@ -19,7 +19,6 @@ go install github.com/agentjoey/pactify/cmd/pactify@latest
 
 The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.
 
-
 # View delegation jobs
 
 Invoke with `/jobs`; both accept `all` or one job id.

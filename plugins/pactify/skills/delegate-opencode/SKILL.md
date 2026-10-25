@@ -3,6 +3,19 @@ name: delegate-opencode
 description: Use when the user explicitly asks to delegate a coding task to the opencode harness. no OS sandbox; write permission requests are approved by pactify; out-of-workspace directory access for file tools is denied; shell is not confined; results vary by model.
 ---
 
+Before the first pactify command in a session, run `pactify-check --quiet` once (this plugin's `bin/`
+is on the Bash PATH). No output means the CLI is ready. If `pactify-check` is not found, run
+`pactify version` and compare it with the minimum version 0.14.0.
+If the CLI is missing or too old, show the user these commands and ask them to install or upgrade it.
+Never run these commands or any installer yourself:
+
+```sh
+curl -fsSL https://pactify.dev/install.sh | sh
+go install github.com/agentjoey/pactify/cmd/pactify@latest
+```
+
+The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.
+
 # Delegate to opencode
 
 **opencode has no OS sandbox; write permission requests are approved by pactify;

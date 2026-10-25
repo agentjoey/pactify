@@ -19,7 +19,6 @@ go install github.com/agentjoey/pactify/cmd/pactify@latest
 
 The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.
 
-
 # Delegate to agy (experimental)
 
 **agy is experimental: no OS sandbox; write permission requests are approved by pactify;

@@ -7,9 +7,8 @@ compatibility: 'Requires the pactify CLI (>= {{.MinCLI}}) and git on macOS or Li
 ---
 {{if ne .Host "claude"}}
 <!-- Generated from plugins/src; do not edit. -->
-
-{{include "fragments/prerequisites.md.tmpl"}}
 {{end}}
+{{include "fragments/prerequisites.md.tmpl"}}
 # Delegate to agy (experimental)
 
 **agy is experimental: no OS sandbox; write permission requests are approved by pactify;

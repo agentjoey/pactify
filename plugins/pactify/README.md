@@ -5,13 +5,27 @@ The top-level `bin/` directory prevents installation in those environments.
 Delegate tasks only on explicit user request to a locally installed codex / kimi / agy / opencode CLI, then review the result summary and workspace changes.
 The default harness is codex. kimi read-only access uses a generated private config and a tool allowlist. Kimi has no OS sandbox for writes; permission requests are approved by pactify in write jobs.
 
+## Example use cases
+
+- **Hand off a scoped change and keep working.** `/delegate-codex Add pagination to GET /tasks, with tests, then run go test ./...`
+  starts a background job in its own git worktree. When it finishes, Claude reviews the diff, reruns
+  the acceptance commands and applies the change only after your approval.
+- **Get a read-only second opinion from another model.** `/delegate-kimi Review src/auth/ read-only for missing permission checks`
+  or the same request with `/delegate-opencode` runs a read-only job; any repository change fails the job.
+  Claude checks the findings against the code before reporting them.
+- **Keep going when a provider's quota runs out.** With a fallback chain in `~/.pactify/router.json`,
+  a `/delegate` job that hits a quota limit moves to the next harness in the chain instead of failing;
+  see [routing](https://github.com/agentjoey/pactify/blob/main/docs/router.md).
+- **Track, rework and clean up jobs.** `/jobs` lists running and finished jobs with what needs attention;
+  rework continues the same session and worktree with `--resume <job-id> --worktree`.
+
 ## Data handling
 
 pactify runs locally, has no telemetry, and operates no remote server. The plugin only runs pactify commands on your machine; its installation check never accesses the network. Briefs and repository content are sent only by the harness CLI you installed and logged in yourself, to that CLI's provider: codex to OpenAI, kimi to Moonshot AI, agy to Google, and opencode to whichever provider you configured in opencode.
 
 pactify stores data locally under `PACTIFY_HOME` (default `~/.pactify`): job metadata, briefs, logs, diffs and results, plus private harness homes and caches. Retention follows the [storage lifecycle](https://github.com/agentjoey/pactify/blob/main/docs/operations.md#storage-lifecycle). The dashboard (`pactify serve`) defaults to loopback, non-loopback binds require `PACTIFY_SERVE_TOKEN`, and the read-only panel listens only on `127.0.0.1`. To delete data, run `pactify sub prune` (preview, then `--yes`; add `--include-worktrees` for pending worktrees), or remove `PACTIFY_HOME`.
 
-pactify itself does not send telemetry or check for updates. Network access happens through the harness CLIs you installed: `pactify sub run`, resume, retries and jobs started from the dashboard or panel delegate to that CLI, which contacts its provider; `pactify sub doctor` runs harness probes and may consume model quota, and its network probe, when run, has the harness bind a loopback port and make an external HTTPS request to `https://example.com`; `pactify sub login opencode` runs `opencode auth login`. pactify invokes git commands locally and does not fetch, pull, push or clone. See the [privacy policy](https://github.com/agentjoey/pactify/blob/main/PRIVACY.md).
+pactify itself does not send telemetry or check for updates. Network access happens through the harness CLIs you installed: `pactify sub run`, resume, retries and jobs started from the dashboard or panel delegate to that CLI, which contacts its provider; `pactify sub doctor` runs harness probes and may consume model quota, and its network probe, when run, has the harness bind a loopback port and make an external HTTPS request to `https://example.com`; `pactify sub login opencode` runs `opencode auth login`. pactify invokes git commands locally and does not fetch, pull, push or clone. See the [privacy policy](https://pactify.dev/privacy).
 
 ## Installation
 
@@ -26,7 +40,7 @@ To update: `/plugin marketplace update pactify`, then update the pactify plugin 
 
 Prerequisites: `pactify` meets the minimum CLI version in [source configuration](https://github.com/agentjoey/pactify/blob/main/plugins/src/config.json), is on PATH and `pactify sub --help` works; the official codex / kimi / agy / opencode CLI you want to call is installed and logged in.
 Run `"${CLAUDE_PLUGIN_ROOT}/bin/pactify-check"` to report PATH availability, print `pactify version`, and check `pactify sub --help`.
-The SessionStart hook reuses this POSIX shell check with `--quiet`: recognized compatible versions are silent; unknown versions warn, and failures suggest installing or upgrading without blocking the session.
+The plugin installs no hooks. Before the first pactify command in a session, the skills run this POSIX shell check with `--quiet`: recognized compatible versions are silent; unknown versions warn, and failures suggest installing or upgrading.
 The check prints these installation options if pactify is missing; it never runs installers or accesses the network:
 
 ```sh
@@ -43,45 +57,8 @@ API keys written there, and the last job removes it; opencode 2.x signs in with
 
 ## Other hosts
 
-The [portable Agent Plugins 1.0 bundle](https://github.com/agentjoey/pactify/tree/main/plugins/agent-plugin)
-provides the same delegation and review workflow with bounded polling.
-The install locations below are **pending the final repository location** and may change;
-these examples target `agentjoey/pactify` and `plugins/agent-plugin`.
-
-For Codex:
-
-```sh
-codex plugin marketplace add agentjoey/pactify --sparse .agents/plugins --sparse plugins/agent-plugin
-```
-
-Then select pactify in the host's plugin interface. For Copilot:
-
-```sh
-copilot plugin install agentjoey/pactify:plugins/agent-plugin/pactify
-```
-
-For Cursor, open Settings → Plugins and paste
-`https://github.com/agentjoey/pactify/tree/main/plugins/agent-plugin` into plugin search.
-The bundle includes marketplace files for all three hosts.
-See the [Codex packaging guide](https://developers.openai.com/plugins/build/plugins),
-[Copilot plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference)
-and [Cursor plugins guide](https://cursor.com/docs/plugins) for host installation details.
-
-Alternatively, copy the folders from
-[plugins/agents-skills](https://github.com/agentjoey/pactify/tree/main/plugins/agents-skills)
-into `.agents/skills/`. The release's `pactify-delegate.zip` contains one Agensi skill.
-Checks only detect pactify and show install commands; agents must never run installers.
-
-The host must allow `pactify sub` outside its sandbox because pactify runs harness CLIs
-outside the workspace. For example, in Codex's `~/.codex/rules/default.rules`:
-
-```python
-prefix_rule(pattern=["pactify", "sub"], decision="allow")
-```
-
-Codex matches rules against simple commands only, so the portable skills pass the brief
-with `--brief-file` instead of a heredoc.
-
+Codex, Copilot and Cursor use the portable bundle instead of this plugin; see
+[other hosts](https://github.com/agentjoey/pactify#other-hosts) in the main README.
 
 ## Usage
 
@@ -125,7 +102,7 @@ your own checks. Resume preserves the original harness, cwd, access mode and wor
 
 To select a model, name it explicitly in the task. If the CLI cannot honor it, execution must fail with the available models instead of silently falling back.
 For rework, explicitly request `--resume <job-id> --worktree`, preserving the original cwd and harness.
-For tasks you can wait about 9 minutes for, you can also use the `pactify:codex` / `pactify:kimi` / `pactify:agy` / `pactify:opencode` forwarding subagent:
+For tasks you can wait about 9 minutes for, you can also use the `pactify:sub-codex` / `pactify:sub-kimi` / `pactify:sub-agy` / `pactify:sub-opencode` forwarding subagent:
 it uses `model: haiku`, has only Bash, calls Bash once, and returns stdout verbatim. After a timeout, the main thread continues waiting.
 Forwarders require an explicit delegation request; the agy forwarder may run only after the user invokes its skill slash command.
 The callee leaves changes uncommitted for the host to review.
@@ -371,3 +348,21 @@ probe returns the same error as its write probe, its reason says
 Configured aliases can be used with `/delegate @alias <task>`; inspect
 `pactify sub router --json` for available names. For quota groups, quota fallback
 and `--worktree-from`, see [routing](https://github.com/agentjoey/pactify/blob/main/docs/router.md).
+
+## Troubleshooting
+
+- **`pactify CLI is not on PATH` or `too old`:** install or upgrade with one of the commands above, then
+  start a new Claude Code session so the new PATH is picked up.
+- **A harness fails to start or reports a login error:** log in with that harness's own CLI, then run
+  `pactify sub doctor <harness>` to check the installation, login and access profiles.
+- **The background wait stopped before the job finished:** run `pactify sub status` and resume the same
+  wait with `pactify sub wait <jobId>`; do not start a duplicate job.
+- **`pactify sub apply` refuses to apply:** files touched by the job also have uncommitted changes or
+  conflicts in your checkout. Inspect them; never force an overwrite.
+- **Skills look stale after an update:** see the update steps under Installation, or reinstall the plugin.
+
+## Support
+
+- Documentation: [pactify.dev](https://pactify.dev) and the [main README](https://github.com/agentjoey/pactify#readme).
+- Bugs and questions: [GitHub issues](https://github.com/agentjoey/pactify/issues).
+- Security reports: follow [SECURITY.md](https://github.com/agentjoey/pactify/blob/main/SECURITY.md); do not open a public issue.

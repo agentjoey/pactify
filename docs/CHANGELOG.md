@@ -12,6 +12,9 @@
   - The plugin ships a listing icon, links its homepage to pactify.dev, and its README
     adds example use cases, troubleshooting and support sections. Instructions for
     other hosts now live only in the main README.
+  - The install instructions add the marketplace from
+    `https://pactify.dev/marketplace.json`. Existing marketplaces added from the GitHub
+    repository keep working.
 - The dashboard header and the dashboard and panel favicons use the official pactify mark.
 - Correct how the plugin README and the uninstall guide describe credentials: logins
   are linked as directories or single files, kimi read-only renders a private config

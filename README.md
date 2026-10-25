@@ -42,7 +42,7 @@ with `pactify sub doctor <harness>`; see [doctor](docs/sub-doctor.md).
 ## Claude Code plugin
 
 ```text
-/plugin marketplace add agentjoey/pactify
+/plugin marketplace add https://pactify.dev/marketplace.json
 /plugin install pactify@pactify
 ```
 

@@ -32,7 +32,7 @@ pactify itself does not send telemetry or check for updates. Network access happ
 Run these commands in Claude Code:
 
 ```text
-/plugin marketplace add agentjoey/pactify
+/plugin marketplace add https://pactify.dev/marketplace.json
 /plugin install pactify@pactify
 ```
 

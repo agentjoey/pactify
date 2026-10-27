@@ -19,7 +19,6 @@ go install github.com/agentjoey/pactify/cmd/pactify@latest
 
 The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.
 
-
 # Delegate to the default harness (codex)
 
 **If the user invoked this skill explicitly (`/delegate`), always delegate — whatever the task

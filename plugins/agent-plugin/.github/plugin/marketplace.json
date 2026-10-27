@@ -1,7 +1,8 @@
 {
   "name": "pactify",
   "owner": {
-    "name": "agentjoey"
+    "name": "agentjoey",
+    "url": "https://github.com/agentjoey"
   },
   "plugins": [
     {

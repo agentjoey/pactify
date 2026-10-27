@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Prepare the Claude Code plugin for the plugin directory (plugin 0.6.0):
+  - **Breaking:** the forwarding subagents are renamed `pactify:sub-codex`,
+    `pactify:sub-kimi`, `pactify:sub-agy` and `pactify:sub-opencode`, so they are not
+    mistaken for the harnesses' own agents. Update any instructions that name the old
+    `pactify:codex`-style agents. Slash commands and CLI commands are unchanged.
+  - The plugin no longer installs a SessionStart hook. Skills run `pactify-check --quiet`
+    once before the first pactify command in a session instead.
+  - The plugin ships a listing icon, links its homepage to pactify.dev, and its README
+    adds example use cases, troubleshooting and support sections. Instructions for
+    other hosts now live only in the main README.
+  - The install instructions add the marketplace from
+    `https://pactify.dev/marketplace.json`. Existing marketplaces added from the GitHub
+    repository keep working.
 - The dashboard header and the dashboard and panel favicons use the official pactify mark.
 - Correct how the plugin README and the uninstall guide describe credentials: logins
   are linked as directories or single files, kimi read-only renders a private config

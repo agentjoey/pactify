@@ -3,6 +3,19 @@ name: delegate-codex
 description: Use when the user explicitly asks to delegate a coding task to the codex harness. Return a result summary for review.
 ---
 
+Before the first pactify command in a session, run `pactify-check --quiet` once (this plugin's `bin/`
+is on the Bash PATH). No output means the CLI is ready. If `pactify-check` is not found, run
+`pactify version` and compare it with the minimum version 0.14.0.
+If the CLI is missing or too old, show the user these commands and ask them to install or upgrade it.
+Never run these commands or any installer yourself:
+
+```sh
+curl -fsSL https://pactify.dev/install.sh | sh
+go install github.com/agentjoey/pactify/cmd/pactify@latest
+```
+
+The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.
+
 # Delegate to codex
 
 **If the user invoked this skill explicitly (`/delegate-codex` or `/pactify:delegate-codex`), always delegate — whatever the task
@@ -143,6 +156,6 @@ explicitly chosen by the user.
 <!-- END SHARED-DELEGATION -->
 
 For a quick task you are willing to block on (under ~9 minutes), you may instead delegate the complete
-brief to the `pactify:codex` subagent, which calls `pactify sub run codex --worktree --wait 540s --json` once,
+brief to the `pactify:sub-codex` subagent, which calls `pactify sub run codex --worktree --wait 540s --json` once,
 with access/model/effort flags from the brief, and returns stdout verbatim. If it returns a pending job id (exit 3), the main thread must still run
 `pactify sub wait <jobId>` with `run_in_background: true` and `timeout: 7200000` to collect the result.

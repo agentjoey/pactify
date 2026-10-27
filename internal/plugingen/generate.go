@@ -30,6 +30,8 @@ type config struct {
 	ClaudeDescription string
 	Name              string
 	Author            string
+	AuthorURL         string
+	Homepage          string
 	Repository        string
 }
 
@@ -91,7 +93,7 @@ func Generate(root string) (map[string]File, error) {
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return nil, err
 	}
-	if cfg.Name == "" || cfg.Version == "" || cfg.MinCLI == "" || cfg.License == "" || cfg.Author == "" || cfg.Repository == "" {
+	if cfg.Name == "" || cfg.Version == "" || cfg.MinCLI == "" || cfg.License == "" || cfg.Author == "" || cfg.AuthorURL == "" || cfg.Homepage == "" || cfg.Repository == "" {
 		return nil, fmt.Errorf("incomplete plugins/src/config.json")
 	}
 	commands, err := os.ReadFile(filepath.Join(source, "install-commands.txt"))
@@ -152,7 +154,7 @@ func Generate(root string) (map[string]File, error) {
 	}
 	manifest := map[string]any{
 		"name": cfg.Name, "version": cfg.Version, "description": cfg.ClaudeDescription,
-		"author": map[string]string{"name": cfg.Author}, "homepage": cfg.Repository,
+		"author": map[string]string{"name": cfg.Author, "url": cfg.AuthorURL}, "homepage": cfg.Homepage,
 		"repository": cfg.Repository, "license": cfg.License,
 	}
 	if err := addJSON("plugins/pactify/.claude-plugin/plugin.json", manifest); err != nil {

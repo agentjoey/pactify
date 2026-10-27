@@ -19,7 +19,6 @@ go install github.com/agentjoey/pactify/cmd/pactify@latest
 
 The host must allow `pactify sub` outside its sandbox, since harness CLIs run outside the workspace.
 
-
 # Delegate to kimi
 
 **kimi has no OS sandbox for writes; permission requests are approved by pactify.**

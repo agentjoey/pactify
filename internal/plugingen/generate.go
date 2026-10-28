@@ -33,6 +33,10 @@ type config struct {
 	AuthorURL         string
 	Homepage          string
 	Repository        string
+	Keywords          []string
+	DocumentationURL  string
+	SupportURL        string
+	PrivacyPolicyURL  string
 }
 
 type context struct {
@@ -93,7 +97,8 @@ func Generate(root string) (map[string]File, error) {
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return nil, err
 	}
-	if cfg.Name == "" || cfg.Version == "" || cfg.MinCLI == "" || cfg.License == "" || cfg.Author == "" || cfg.AuthorURL == "" || cfg.Homepage == "" || cfg.Repository == "" {
+	if cfg.Name == "" || cfg.Version == "" || cfg.MinCLI == "" || cfg.License == "" || cfg.Author == "" || cfg.AuthorURL == "" || cfg.Homepage == "" || cfg.Repository == "" ||
+		len(cfg.Keywords) == 0 || cfg.DocumentationURL == "" || cfg.SupportURL == "" || cfg.PrivacyPolicyURL == "" {
 		return nil, fmt.Errorf("incomplete plugins/src/config.json")
 	}
 	commands, err := os.ReadFile(filepath.Join(source, "install-commands.txt"))
@@ -155,9 +160,14 @@ func Generate(root string) (map[string]File, error) {
 	manifest := map[string]any{
 		"name": cfg.Name, "version": cfg.Version, "description": cfg.ClaudeDescription,
 		"author": map[string]string{"name": cfg.Author, "url": cfg.AuthorURL}, "homepage": cfg.Homepage,
-		"repository": cfg.Repository, "license": cfg.License,
+		"repository": cfg.Repository, "license": cfg.License, "keywords": cfg.Keywords,
 	}
-	if err := addJSON("plugins/pactify/.claude-plugin/plugin.json", manifest); err != nil {
+	// Directory listing links are Claude Code fields; the portable manifest schema does not allow them.
+	claude := map[string]any{"documentationUrl": cfg.DocumentationURL, "supportUrl": cfg.SupportURL, "privacyPolicyUrl": cfg.PrivacyPolicyURL}
+	for k, v := range manifest {
+		claude[k] = v
+	}
+	if err := addJSON("plugins/pactify/.claude-plugin/plugin.json", claude); err != nil {
 		return nil, err
 	}
 	manifest["$schema"] = Schema

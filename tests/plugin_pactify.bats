@@ -524,9 +524,15 @@ PY
   done
   run python3 - "$P/.claude-plugin/plugin.json" <<'PY'
 import json, sys
-description = json.load(open(sys.argv[1]))['description']
+manifest = json.load(open(sys.argv[1]))
+description = manifest['description']
 for term in ('codex', 'kimi', 'agy', 'opencode', '/jobs'):
     assert term in description, term
+# The plugin directory reads these listing links from the manifest.
+assert manifest['supportUrl'] == 'https://github.com/agentjoey/pactify/issues'
+assert manifest['documentationUrl'] == 'https://pactify.dev/docs'
+assert manifest['privacyPolicyUrl'] == 'https://pactify.dev/privacy'
+assert manifest['keywords']
 PY
   [ "$status" -eq 0 ]
 }

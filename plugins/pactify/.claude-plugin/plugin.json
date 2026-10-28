@@ -4,9 +4,19 @@
     "url": "https://github.com/agentjoey"
   },
   "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex, kimi or opencode, or via slash commands to experimental agy; review results and view job status with /jobs.",
+  "documentationUrl": "https://pactify.dev/docs",
   "homepage": "https://pactify.dev",
+  "keywords": [
+    "delegation",
+    "harness",
+    "codex",
+    "kimi",
+    "opencode"
+  ],
   "license": "FSL-1.1-MIT",
   "name": "pactify",
+  "privacyPolicyUrl": "https://pactify.dev/privacy",
   "repository": "https://github.com/agentjoey/pactify",
-  "version": "0.6.0"
+  "supportUrl": "https://github.com/agentjoey/pactify/issues",
+  "version": "0.6.1"
 }

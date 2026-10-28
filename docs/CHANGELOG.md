@@ -3,7 +3,8 @@
 ## Unreleased
 
 - The Claude Code plugin manifest lists keywords and its documentation, support and
-  privacy links for the plugin directory (plugin 0.6.1).
+  privacy links for the plugin directory, and the plugins and marketplaces name
+  Pactify as author (plugin 0.6.1).
 - Prepare the Claude Code plugin for the plugin directory (plugin 0.6.0):
   - **Breaking:** the forwarding subagents are renamed `pactify:sub-codex`,
     `pactify:sub-kimi`, `pactify:sub-agy` and `pactify:sub-opencode`, so they are not

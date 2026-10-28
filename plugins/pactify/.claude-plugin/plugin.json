@@ -1,7 +1,7 @@
 {
   "author": {
-    "name": "agentjoey",
-    "url": "https://github.com/agentjoey"
+    "name": "Pactify",
+    "url": "https://pactify.dev"
   },
   "description": "Claude Code only. Delegate coding tasks only on explicit user request to codex, kimi or opencode, or via slash commands to experimental agy; review results and view job status with /jobs.",
   "documentationUrl": "https://pactify.dev/docs",

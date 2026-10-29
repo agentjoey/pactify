@@ -691,6 +691,7 @@
   align-items: start;
 }
 .routing-heading > div:first-child {
+  flex: 1;
   min-width: 0;
 }
 .routing-heading h2 {
@@ -1249,12 +1250,12 @@
 /* Terminal page hierarchy: square, label, rule, optional trailing control. */
 .v2-app h1, .panel-job h3, .harness-card h3 { font-family: var(--font-sans); }
 .section-heading > h2, .panel-section > h2, .jobs-sections > section > h2,
-.panel-section-heading > h2 { display: flex; align-items: center; gap: 12px; min-width: 0; font: 400 10px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: .2em; color: var(--text-3); }
+.panel-section-heading > h2, .routing-heading > div:first-child > h2, .routing-quotas > h2 { display: flex; align-items: center; gap: 12px; min-width: 0; font: 400 10px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: .2em; color: var(--text-3); }
 .section-heading > h2 { flex: 1; }
 .section-heading > h2::before, .panel-section > h2::before, .jobs-sections > section > h2::before,
-.panel-section-heading > h2::before { content: ""; width: 7px; height: 7px; flex: 0 0 7px; background: var(--accent); }
+.panel-section-heading > h2::before, .routing-heading > div:first-child > h2::before, .routing-quotas > h2::before { content: ""; width: 7px; height: 7px; flex: 0 0 7px; background: var(--accent); }
 .section-heading > h2::after, .panel-section > h2::after, .jobs-sections > section > h2::after,
-.panel-section-heading > h2::after { content: ""; height: 1px; flex: 1; background: var(--border); }
+.panel-section-heading > h2::after, .routing-heading > div:first-child > h2::after, .routing-quotas > h2::after { content: ""; height: 1px; flex: 1; background: var(--border); }
 .section-heading > a { font: 400 10px var(--font-mono); text-transform: uppercase; letter-spacing: .12em; }
 .panel-section, .task-card { border-color: var(--border); }
 .panel-job h3 { font-size: 16px; font-weight: 600; line-height: 1.5; }

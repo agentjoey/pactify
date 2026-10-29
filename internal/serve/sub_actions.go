@@ -15,7 +15,7 @@ import (
 // registerJobWrites is mounted only inside serve's Origin guard. Passing the
 // launcher keeps request handling testable without starting a real harness.
 func (s *Server) registerJobWrites(mux *http.ServeMux, store sub.Store, startWorker func(string) error) {
-	for _, action := range []string{"cancel", "resume", "apply", "discard"} {
+	for _, action := range []string{"cancel", "resume", "apply", "discard", "dismiss"} {
 		mux.HandleFunc("POST /api/sub/jobs/{id}/"+action, func(w http.ResponseWriter, r *http.Request) {
 			mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 			if err != nil || mediaType != "application/json" {
@@ -88,6 +88,8 @@ func (s *Server) registerJobWrites(mux *http.ServeMux, store sub.Store, startWor
 				err = store.ApplyWorktree(id)
 			case "discard":
 				err = store.DiscardWorktree(id)
+			case "dismiss":
+				err = store.Dismiss(r.Context(), id)
 			}
 			if err != nil {
 				var conflict *sub.ActionConflict

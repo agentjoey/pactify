@@ -11,8 +11,10 @@ const labels: Record<string, string> = {
   resume: "Resume",
   apply: "Apply",
   discard: "Discard",
+  dismiss: "Dismiss",
 };
 const consequences: Record<string, string> = {
+  dismiss: "Dismiss this job? It stays in history but leaves Needs you.",
   cancel:
     "This will stop the running job. Its worktree and recorded results will be kept.",
   apply:

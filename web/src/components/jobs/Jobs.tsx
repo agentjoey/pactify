@@ -273,6 +273,7 @@ export function JobList({
     search: params.get("search") || "",
   };
   const [view, setView] = useState(() => storedChoice("pactify-jobs-view", "lines") === "list" ? "list" : "lines");
+  const [lineVisibility, setLineVisibility] = useState(() => storedChoice("pactify-jobs-lines", "active") === "all" ? "all" : "active");
   const [grouping, setGrouping] = useState<LineGrouping>("project");
   const [filtersOpen, setFiltersOpen] = useState(() => !!(filters.repo || filters.harness || filters.status));
   const filtersId = useId();
@@ -330,6 +331,9 @@ export function JobList({
           <Segmented label="Group production lines by" value={grouping}
             options={[["project", "Project"], ["harness", "Harness"], ["one", "One line"]]} onChange={setGrouping} />
         </div>}
+        {view === "lines" && <Segmented label="Line visibility" value={lineVisibility}
+          options={[["active", "Active"], ["all", "All lines"]]}
+          onChange={value => { setLineVisibility(value); saveChoice("pactify-jobs-lines", value); }} />}
         <label className="jobs-search">
           <span className="sr-only">Search jobs</span>
           <input
@@ -409,7 +413,8 @@ export function JobList({
           {!chains.length && (
             <p className="panel-empty">No jobs match these filters.</p>
           )}
-          {view === "lines" ? <Pipeline chains={chains} grouping={grouping} card={card}/> : <>
+          {view === "lines" ? <Pipeline chains={chains} grouping={grouping} card={card}
+            showAll={lineVisibility === "all" || !!(filters.repo || filters.harness || filters.status || filters.search)}/> : <>
           {(
             [
               ["progress", "In progress"],

@@ -75,22 +75,64 @@ function StationCell({ station, line, rows, now, card }: {
   );
 }
 
-export function Pipeline({ chains, grouping, card }: {
+export function Pipeline({ chains, grouping, card, showAll = false }: {
   chains: JobChain[];
   grouping: LineGrouping;
   card: (chain: JobChain) => ReactNode;
+  showAll?: boolean;
 }) {
-  const scroll = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(1);
-  const current = useRef(1);
   const [now, setNow] = useState(Date.now);
-  const jobs: Job[] = chains.map(chain => chain.latest);
-  const lines = groupLines(jobs, grouping);
-  const byId = new Map(chains.map(chain => [chain.latest.id, chain]));
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const lines = groupLines(chains.map(chain => chain.latest), grouping, now);
+  const quiet = showAll ? [] : lines.filter(line => !line.active);
+  const allExpanded = quiet.length > 0 && quiet.every(line => expanded.has(`${grouping}:${line.name}`));
   useEffect(() => {
     const timer = setInterval(() => { if (!document.hidden) setNow(Date.now()); }, 1000);
     return () => clearInterval(timer);
   }, []);
+  return <>
+    <LineBoard chains={chains} grouping={grouping} card={card} now={now}
+      lines={showAll ? lines : lines.filter(line => line.active)} />
+    {quiet.length > 0 && <section className="quiet-lines" aria-label="Quiet lines">
+      <div className="quiet-lines-heading">
+        <div><h2>Quiet lines · {quiet.length}</h2>
+          <p>Nothing running or waiting, last activity 3+ days ago</p></div>
+        <Button size="sm" variant="ghost" aria-expanded={allExpanded} onClick={() => {
+          setExpanded(allExpanded ? new Set() : new Set(quiet.map(line => `${grouping}:${line.name}`)));
+        }}>{allExpanded ? "Hide quiet lines" : "Show quiet lines"}</Button>
+      </div>
+      {quiet.map(line => {
+        const key = `${grouping}:${line.name}`;
+        const open = expanded.has(key);
+        return <div className="quiet-line" key={key}>
+          <Button className="quiet-line-chip" size="sm" variant="ghost" aria-expanded={open}
+            onClick={() => setExpanded(previous => {
+              const next = new Set(previous);
+              if (next.has(key)) next.delete(key); else next.add(key);
+              return next;
+            })}>
+            {line.name} · {relativeTime(line.latestActivity ? new Date(line.latestActivity).toISOString() : "", now)} ago
+          </Button>
+          {open && <LineBoard chains={chains} grouping={grouping} card={card} now={now} lines={[line]} quiet />}
+        </div>;
+      })}
+    </section>}
+  </>;
+}
+
+function LineBoard({ chains, grouping, card, lines, now, quiet = false }: {
+  chains: JobChain[];
+  grouping: LineGrouping;
+  card: (chain: JobChain) => ReactNode;
+  lines: Line[];
+  now: number;
+  quiet?: boolean;
+}) {
+  const scroll = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(quiet ? 3 : 1);
+  const current = useRef(quiet ? 3 : 1);
+  const jobs: Job[] = lines.flatMap(line => line.jobs);
+  const byId = new Map(chains.map(chain => [chain.latest.id, chain]));
 
   function go(index: number) {
     current.current = index;
@@ -182,9 +224,9 @@ export function Pipeline({ chains, grouping, card }: {
             aria-current={active === index ? "step" : undefined} onClick={() => go(index)} />
         ))}
       </div>
-      <p className="pipeline-hint"><SectionLabel>⇆ stations · ↕ lines</SectionLabel>
+      {!quiet && <p className="pipeline-hint"><SectionLabel>⇆ stations · ↕ lines</SectionLabel>
         <span>j/k next job · h/l next station · Enter details</span><span>Belt moves while jobs run</span>
-      </p>
+      </p>}
     </div>
   );
 }

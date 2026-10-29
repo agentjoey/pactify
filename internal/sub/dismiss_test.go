@@ -51,7 +51,11 @@ func TestDismissFailedReadOnlyJob(t *testing.T) {
 	if len(after.Attention) != 0 || !after.DismissedAt.Equal(dismissed.DismissedAt) {
 		t.Fatalf("dismissed summary: %+v", after)
 	}
-	before.Attention, before.DismissedAt = []Attention{}, dismissed.DismissedAt
+	// Dismiss is offered only until the job is acknowledged.
+	if !reflect.DeepEqual(before.Actions, []string{"resume", "dismiss"}) || !reflect.DeepEqual(after.Actions, []string{"resume"}) {
+		t.Fatalf("actions before=%v after=%v", before.Actions, after.Actions)
+	}
+	before.Attention, before.DismissedAt, before.Actions = []Attention{}, dismissed.DismissedAt, after.Actions
 	if !reflect.DeepEqual(before, after) {
 		t.Fatalf("dismiss changed other summary fields: before=%+v after=%+v", before, after)
 	}

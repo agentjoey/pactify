@@ -10,7 +10,7 @@ export const stations = [
 ] as const;
 export const stationFor = (job: Job): Section => sectionFor(job);
 
-export function groupLines(jobs: Job[], grouping: LineGrouping) {
+export function groupLines(jobs: Job[], grouping: LineGrouping, now: number) {
   const lines = new Map<string, Job[]>();
   for (const job of jobs) {
     const name = grouping === "project" ? projectName(job.repo)
@@ -19,7 +19,20 @@ export function groupLines(jobs: Job[], grouping: LineGrouping) {
     if (line) line.push(job);
     else lines.set(name, [job]);
   }
-  return [...lines].sort(([a], [b]) => a.localeCompare(b)).map(([name, jobs]) => ({ name, jobs }));
+  return [...lines].map(([name, jobs]) => {
+    const latestActivity = jobs.reduce((latest, job) => {
+      for (const value of [job.createdAt, job.startedAt, job.finishedAt]) {
+        const time = Date.parse(value || "");
+        if (Number.isFinite(time)) latest = Math.max(latest, time);
+      }
+      return latest;
+    }, 0);
+    const hasWork = jobs.some(job => stationFor(job) !== "completed");
+    const active = hasWork || latestActivity > now - 3 * 86400000;
+    return { name, jobs, latestActivity, active, hasWork };
+  }).sort((a, b) => Number(b.hasWork) - Number(a.hasWork)
+    || Number(b.active) - Number(a.active)
+    || b.latestActivity - a.latestActivity || a.name.localeCompare(b.name));
 }
 
 export function endedToday(job: Job, now = new Date()) {

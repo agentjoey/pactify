@@ -187,6 +187,7 @@ Serve also exposes the following POST endpoints; the panel registers none:
 | `/api/sub/jobs/{id}/resume` | `{brief:"..."}`; starts a background job and returns `{jobId:"..."}` |
 | `/api/sub/jobs/{id}/apply` | Optional `{}`; applies safely to the source workspace, returns `{ok:true}` |
 | `/api/sub/jobs/{id}/discard` | Optional `{}`; removes the worktree, returns `{ok:true}` |
+| `/api/sub/jobs/{id}/dismiss` | Optional `{}`; acknowledges terminal failure/warnings without changing results or worktrees, returns `{ok:true}`; requires unacknowledged attention and no pending worktree |
 
 Host, Origin and configured token checks apply. Bodies must be JSON (charset is
 allowed) and at most 64 KiB: non-JSON is 415, oversized bodies 413, malformed JSON

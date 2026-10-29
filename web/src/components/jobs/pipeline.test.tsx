@@ -14,10 +14,10 @@ for (const status of ["queued","running","retrying","succeeded","failed","cancel
       expect(stations.find(s => s.key === stationFor(job("a", {status,attention:kind ? [{kind,message:kind}] : []})))?.name).toBe(expected);
     });
 it("groups lines by project name, harness and one line", () => {
-  const jobs = [job("a"), job("b",{repo:"/other/pactify",harness:"kimi"}),job("c",{repo:"/repo/tool"})];
-  expect(groupLines(jobs,"project").map(l => [l.name,l.jobs.length])).toEqual([["pactify",2],["tool",1]]);
-  expect(groupLines(jobs,"harness").map(l => [l.name,l.jobs.length])).toEqual([["codex",2],["kimi",1]]);
-  expect(groupLines(jobs,"one")[0].jobs).toHaveLength(3);
+  const jobs = [job("a",{createdAt:"2026-10-01T00:00:00Z"}), job("b",{repo:"/other/pactify",harness:"kimi",createdAt:"2026-10-02T00:00:00Z"}),job("c",{repo:"/repo/tool",createdAt:"2026-10-03T00:00:00Z"})];
+  expect(groupLines(jobs,"project", Date.parse("2026-10-29T00:00:00Z")).map(l => [l.name,l.jobs.length])).toEqual([["tool",1],["pactify",2]]);
+  expect(groupLines(jobs,"harness", Date.parse("2026-10-29T00:00:00Z")).map(l => [l.name,l.jobs.length])).toEqual([["codex",2],["kimi",1]]);
+  expect(groupLines(jobs,"one", Date.parse("2026-10-29T00:00:00Z"))[0].jobs).toHaveLength(3);
 });
 it("defaults to Lines, expands Shipped in place, and persists List", () => {
   const jobs = Array.from({length:5},(_,i)=>job(`shipped-${i}`));

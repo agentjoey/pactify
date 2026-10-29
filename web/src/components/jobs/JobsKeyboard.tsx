@@ -28,7 +28,9 @@ export function JobsKeyboard({ list, search }: {
         return;
       }
       if (event.key === "h" || event.key === "l") {
-        const board = list.current?.querySelector<HTMLElement>(".pipeline-scroll");
+        const focusedBoard = document.activeElement?.closest<HTMLElement>(".pipeline-scroll");
+        const board = focusedBoard && list.current?.contains(focusedBoard)
+          ? focusedBoard : list.current?.querySelector<HTMLElement>(".pipeline-scroll");
         if (!board) return;
         const stations = [...board.querySelectorAll<HTMLElement>("[data-station]")];
         const target = board.scrollLeft;

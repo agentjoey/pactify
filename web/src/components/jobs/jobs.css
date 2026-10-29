@@ -1278,3 +1278,12 @@
   .jobs-toolbar .jobs-keyboard { position: static; }
   .jobs-toolbar .jobs-keyboard-help { right: 0; top: calc(100% + 8px); z-index: 20; }
 }
+
+.quiet-lines { margin-top: 20px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); min-width: 0; }
+.quiet-lines-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.quiet-lines-heading h2 { font-size: 14px; }
+.quiet-lines-heading p { margin-top: 4px; color: var(--text-3); font-size: 12px; }
+.quiet-line { min-width: 0; }
+.quiet-line + .quiet-line { margin-top: 8px; }
+.quiet-line-chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.quiet-line > .pipeline { margin-top: 12px; margin-bottom: 16px; }

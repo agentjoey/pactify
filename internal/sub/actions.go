@@ -34,7 +34,7 @@ func (s Store) Actions(st State) []string {
 }
 func (index *SummaryIndex) Actions(st State) []string {
 	actions := []string{}
-	for _, action := range []string{"cancel", "resume", "apply", "discard"} {
+	for _, action := range []string{"cancel", "resume", "apply", "discard", "dismiss"} {
 		if index.CheckAction(st, action) == nil {
 			actions = append(actions, action)
 		}
@@ -58,11 +58,29 @@ func (index *SummaryIndex) CheckAction(st State, action string) error {
 		}
 		return nil
 	}
-	if action != "resume" && action != "apply" && action != "discard" {
+	if action != "resume" && action != "apply" && action != "discard" && action != "dismiss" {
 		return actionConflict("unknown job action %q", action)
 	}
 	if !Terminal(st.Status) {
 		return actionConflict("job %s is still running; run pactify sub cancel %s first", st.ID, st.ID)
+	}
+	if action == "dismiss" {
+		if !st.DismissedAt.IsZero() {
+			return actionConflict("job %s is already dismissed", st.ID)
+		}
+		if st.FallbackTo != "" {
+			return actionConflict("job %s was replaced by fallback job %s", st.ID, st.FallbackTo)
+		}
+		if w := st.Worktree; w != nil {
+			if !w.Applied && !w.Discarded {
+				return actionConflict("job %s has a pending worktree; apply or discard it first", st.ID)
+			}
+			return actionConflict("job %s was already acknowledged by applying or discarding its worktree", st.ID)
+		}
+		if st.Status != StatusFailed && actionableWarnings(index.results[st.ID]) == 0 {
+			return actionConflict("job %s has no failure or warnings to dismiss", st.ID)
+		}
+		return nil
 	}
 	if action == "resume" {
 		session := index.results[st.ID].SessionID

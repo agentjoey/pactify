@@ -45,7 +45,7 @@ A single job remains an object, retaining the existing fields of the complete St
 | `createdAt` | RFC3339 string | creation time |
 | `startedAt` | RFC3339 string, optional | time the worker claimed the job and it entered running; not guessed from `updatedAt` for older jobs |
 | `finishedAt` | RFC3339 string, optional | finish time (see the historical zero-value exception for a single object above) |
-| `dismissedAt` | RFC3339 string, optional | time the first `pactify sub dismiss <id>` acknowledged the job as handled; omitted when not dismissed |
+| `dismissedAt` | RFC3339 string, optional | time the CLI or dashboard first acknowledged the job as handled; omitted when not dismissed |
 | `duration` | string | elapsed time from creation to finish or query time, including queue time, rounded to seconds; keeps the old semantics, such as `3s`, `1m2s` |
 | `attention` | array | list of `{kind, message}`; `[]` when nothing needs attention; only terminal jobs produce entries |
 | `activity` | object, optional | present only for running jobs, described below |
@@ -69,6 +69,7 @@ A single job remains an object, retaining the existing fields of the complete St
 
 A terminal job counts as acknowledged when its `dismissedAt` is non-zero, or when the worktree status is `applied` / `discarded`,
 and no longer produces `failed` / `warnings` attention. The `worktree_pending` rule is unchanged.
+The summary's `actions` array includes `dismiss` only for terminal jobs with unacknowledged failure or actionable warnings and no pending worktree. Applied or discarded worktrees already acknowledge those issues, so they do not offer Dismiss. Serve accepts `POST /api/sub/jobs/{id}/dismiss` with an optional empty JSON object; it uses the same acknowledgement operation as `pactify sub dismiss <id>`. The result and worktree remain unchanged; the read-only panel registers no write endpoint.
 Apply and discard mark all existing turns that share the worktree, so failures and warnings from those turns also clear attention;
 new resume turns are still handled according to their own pending status. Fields such as `status`, `failureClass` and `warningCount` keep their original values.
 

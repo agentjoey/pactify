@@ -17,13 +17,17 @@ Both builds default to **dark**, independently of the OS. Choose **light** or **
 
 Group production lines by **Project** (repository basename), **Harness**, or **One line**. Each line shows observed harnesses or project counts, its running share and jobs finished today. Belts move only on lines with running jobs. Statistics use actual jobs, timestamps and available actions; there is no inferred capacity or execution stage. Shipped shows the three most recent jobs per line, with **+N more** expanding that line in place. Completion-day totals use the browser's local calendar.
 
+Lines with queued, running/retrying or Needs-you jobs stay active regardless of age. Lines are also active when any creation, start or finish timestamp is less than three days old. Current work sorts before recent completions, with the latest activity first within each group; quiet lines follow in latest-activity order.
+
+The **Active** / **All lines** toolbar choice defaults to Active and is saved in localStorage when available. Active collapses older idle lines under **Quiet lines · N**. Each chip shows the line name and relative age; click it to expand that line in place, or use **Show quiet lines** / **Hide quiet lines** for all of them. All lines shows every line without the quiet section. Any search or filter reveals matching lines regardless of age.
+
 On desktop, the line label rail stays fixed while stations scroll horizontally. Scroll padding reserves its 220px width so Queued remains visible. Below 640px, stations become a full-width horizontal pager, initially on **Running**. Tap a station tile or swipe; highlighted tiles and page dots track the visible station. The board handles empty/filter-empty states, while onboarding, loading, server errors and expired sessions retain explicit guidance.
 
 Switch to **List** for the existing sectioned cards, completion-day stacks and optional **Compact list** with eight aligned metadata columns. The Lines/List choice is saved in localStorage when available. Project, Harness, Status and search filters remain in the URL and work in both views. In Lines, the view switch, grouping, search and shortcuts share one toolbar; **Filters** reveals the other controls. Phone filters also use this disclosure in List. Search stays visible and `/` focuses it in both views. Search matches title, ID, repository and requested or actual model. Explicit resume/fallback links form chains; matching any run retains the whole chain. Chains use their root title and latest run's status, model, duration and usage. Manual resume links count as rework; automatic retries do not.
 
 Use `/` or **⌘K** to search, **j/k** for next/previous job, **h/l** for previous/next station in Lines, **Enter** for details and **Escape** to close. **?** opens shortcut help. Typing inside inputs does not trigger job navigation.
 
-Open `#/jobs` or `#/jobs/<id>` directly. The drawer preserves filters and shows brief, result, Live, bounded readable logs, file diffs and run timelines. Dashboard actions retain their existing confirmations for cancel, resume, apply and discard. Needs-you cards in the panel instead offer copyable terminal commands. The panel sends GET requests only and keeps its strict CSP and session handling.
+Open `#/jobs` or `#/jobs/<id>` directly. The drawer preserves filters and shows brief, result, Live, bounded readable logs, file diffs and run timelines. Dashboard actions confirm cancel, resume, apply, discard and dismiss. **Dismiss** is offered for terminal jobs whose only attention is an unacknowledged failure or actionable warnings, with no pending worktree. It keeps the result and job history, acknowledges the job and moves the card out of Needs you. It does not apply, discard or otherwise change a worktree. Needs-you cards in the panel instead offer copyable terminal commands. The panel sends GET requests only and keeps its strict CSP and session handling.
 
 ## Dashboard and Settings
 
@@ -97,7 +101,7 @@ Both hosts mount the same `subpanel.ReadOnlyHandler`:
 | Usage summary | `/api/sub/cost?since=7d&by=harness` | `/api/cost?since=7d&by=harness` |
 | Save router / defaults | `PUT /api/sub/router` | Not registered |
 | Clear exhaustion records | `DELETE /api/sub/quota/<encoded-key>` | Not registered |
-| Job actions | `POST /api/sub/jobs/<id>/{cancel,resume,apply,discard}` | Not registered |
+| Job actions | `POST /api/sub/jobs/<id>/{cancel,resume,apply,discard,dismiss}` | Not registered |
 
 The shared read-only API accepts only GET and rejects HEAD as well. All serve requests undergo the Host check, and token mode also requires the API Bearer header; write operations undergo the exact Origin check above, accept only JSON, cap the request body at 64 KiB, and return 409 on state conflicts. Dashboard resume allows at most four active jobs per store (including queued/retrying) and returns 429 when exceeded; the CLI does not consume this quota. Finishing, canceling or a failed start releases the slot. The CLI and dashboard share the session lock.
 

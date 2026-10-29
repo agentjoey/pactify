@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prioritize active Jobs lines, collapse quiet lines with a remembered Active/All lines choice, and add Dismiss for handled failures and warnings.
+
 - The Claude Code plugin manifest lists keywords and its documentation, support and
   privacy links for the plugin directory, and the plugins and marketplaces name
   Pactify as author (plugin 0.6.1).

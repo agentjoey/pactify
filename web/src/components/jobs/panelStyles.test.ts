@@ -17,6 +17,9 @@ it("includes the shared Jobs layout utilities in the standalone panel build", as
     const assets = join(output, "assets");
     const names = (await readdir(assets)).filter(name => name.endsWith(".css"));
     const css = (await Promise.all(names.map(name => readFile(join(assets, name), "utf8")))).join("\n");
+    expect(css).not.toContain("gradient(");
+    expect(css).toContain("--chart-codex");
+    expect(css).toContain("--status-running");
     for (const [className, property] of [
       ["absolute", "position:absolute"],
       ["flex", "display:flex"],

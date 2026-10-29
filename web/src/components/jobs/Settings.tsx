@@ -255,6 +255,7 @@ export function Settings({
           <h2>Harnesses</h2>
           {writable && snapshot && (
             <Button
+              variant="primary"
               loading={busy}
               disabled={conflict}
               onClick={() => void save()}
@@ -296,12 +297,12 @@ export function Settings({
                   <span className="experimental">experimental</span>
                 )}
               </div>
-              <p>
-                {h.installed ? "Installed" : "Not installed"}
-                {h.version && ` · ${h.version}`}
+              <p className="harness-kv">
+                <span>{h.installed ? "Installed" : "Not installed"}</span>
+                {h.version && <span>{h.version}</span>}
               </p>
-              <p className="panel-caption">
-                verified {h.verifiedVersion || "unknown"}
+              <p className="harness-kv">
+                <span>verified</span>{" "}<span>{h.verifiedVersion || "unknown"}</span>
               </p>
               {h.version &&
                 h.verifiedVersion &&
@@ -310,8 +311,8 @@ export function Settings({
                     Installed version differs from verified version
                   </p>
                 )}
-              <p className="panel-caption">
-                Read-only: {h.readOnly ? "Supported" : "Not supported"}
+              <p className="harness-kv">
+                <span>Read-only:</span>{" "}<span>{h.readOnly ? "Supported" : "Not supported"}</span>
               </p>
               {writable ? (
                 <fieldset disabled={busy}>

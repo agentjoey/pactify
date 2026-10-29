@@ -108,3 +108,17 @@ test("panel Routing is read-only", async ({ page }) => {
     page.getByRole("button", { name: "Clear", exact: true }),
   ).toHaveCount(0);
 });
+
+test("Routing section headings use the shared square and rule", async ({ page, request }) => {
+  await request.post("/__test/reset");
+  await page.goto("/#/settings");
+  for (const name of ["Routing", "Exhausted routes"]) {
+    const heading = page.getByRole("heading", { level: 2, name, exact: true });
+    await expect(heading).toBeVisible();
+    const marks = await heading.evaluate(node => ({
+      square: getComputedStyle(node, "::before").width,
+      rule: getComputedStyle(node, "::after").height,
+    }));
+    expect(marks).toEqual({ square: "7px", rule: "1px" });
+  }
+});

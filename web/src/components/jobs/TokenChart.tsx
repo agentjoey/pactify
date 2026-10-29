@@ -1,11 +1,10 @@
 import { dailyTokens, shortNumber } from "./statistics";
 
-const colors = [
-  "var(--color-role-design)",
-  "var(--color-role-dev)",
-  "var(--color-role-product)",
-  "var(--color-danger)",
-];
+const chartColor = (harness: string) => ({
+  codex: "var(--chart-codex)",
+  kimi: "var(--chart-kimi)",
+  opencode: "var(--chart-opencode)",
+}[harness] || "var(--text-3)");
 export function TokenChart({ days }: { days: ReturnType<typeof dailyTokens> }) {
   const harnesses = [
     ...new Set(days.flatMap((day) => Object.keys(day.harnesses))),
@@ -66,7 +65,7 @@ export function TokenChart({ days }: { days: ReturnType<typeof dailyTokens> }) {
             let offset = 0;
             return (
               <g key={day.day}>
-                {harnesses.map((h, index) => {
+                {harnesses.map((h) => {
                   const value = day.harnesses[h] || 0;
                   const height = (value / domain) * 200;
                   offset += height;
@@ -77,7 +76,7 @@ export function TokenChart({ days }: { days: ReturnType<typeof dailyTokens> }) {
                       y={200 - offset}
                       width="36"
                       height={height}
-                      fill={colors[index % colors.length]}
+                      fill={chartColor(h)}
                       tabIndex={0}
                       aria-label={`${day.day} · ${h}: ${value.toLocaleString("en-US")} tokens`}
                     >
@@ -100,9 +99,9 @@ export function TokenChart({ days }: { days: ReturnType<typeof dailyTokens> }) {
         </div>
       </div>
       <div className="chart-legend">
-        {harnesses.map((h, i) => (
+        {harnesses.map((h) => (
           <span key={h}>
-            <i style={{ background: colors[i % colors.length] }} />
+            <i style={{ background: chartColor(h) }} />
             {h}
           </span>
         ))}

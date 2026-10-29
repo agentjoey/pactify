@@ -63,7 +63,7 @@ export function filterJobs(jobs: Job[], filters: Filters) {
         b.id.localeCompare(a.id),
     );
 }
-export function JobMetadata({ job }: { job: Job }) {
+export function JobMetadata({ job, prominent = false }: { job: Job; prominent?: boolean }) {
   const [now, setNow] = useState(Date.now);
   const running = ["running", "retrying"].includes(job.status);
   useEffect(() => {
@@ -82,8 +82,9 @@ export function JobMetadata({ job }: { job: Job }) {
       </span>
       <span
         title={`${usage.input.toLocaleString("en-US")} input / ${usage.output.toLocaleString("en-US")} output tokens`}
+        data-usage-tokens
       >
-        {shortNumber(usage.input)} in / {shortNumber(usage.output)} out
+        {prominent ? <><strong>{shortNumber(usage.input)}</strong> in / <strong>{shortNumber(usage.output)}</strong> out</> : `${shortNumber(usage.input)} in / ${shortNumber(usage.output)} out`}
         {(job.usagePartial || job.activity?.usagePartial) && " · partial"}
       </span>
       <span>{jobCost(job)}</span>

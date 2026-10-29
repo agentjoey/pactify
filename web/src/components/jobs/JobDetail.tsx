@@ -247,9 +247,10 @@ export function JobDetail({
                       </>
                     )}
                   </section>
-                  <section className="panel-section">
+                  <section className="panel-section detail-usage">
                     <h2>Usage</h2>
                     <JobMetadata
+                      prominent
                       job={{ ...data.job, costUSD: data.job.costUSD ?? data.result?.costUSD }}
                     />
                     <p>

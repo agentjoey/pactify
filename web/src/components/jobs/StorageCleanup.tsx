@@ -38,7 +38,7 @@ function WriteStorageCleanup({ source, path, onChanged }: { source: JobsSource; 
     finally { setBusy(false); }
   }
   return <div>
-    <Button loading={busy} onClick={() => void preview()}>Clean up now</Button>
+    <Button variant="primary" loading={busy} onClick={() => void preview()}>Clean up now</Button>
     {error && !plan && <p role="alert">{error}</p>}
     {plan && createPortal(<div className="v2-app v2-modal-host"><Modal title="Confirm storage cleanup" variant="danger" onClose={() => { if (!busy) { setPlan(null); setError(""); } }} footer={<>
       <Button variant="danger" loading={busy} disabled={!!error} onClick={() => void execute()}>Confirm cleanup</Button>

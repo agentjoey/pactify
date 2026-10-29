@@ -229,8 +229,17 @@ for (const panel of [false, true]) {
                 );
             }
           }
+          // The log pins to its newest row; its top edge must not cut a row in half.
+          const log = live.querySelector<HTMLElement>(".live-session")!;
+          const logTop = log.getBoundingClientRect().top;
+          const firstRow = [...log.children].find(
+            (row) => row.getBoundingClientRect().bottom > logTop + tolerance,
+          );
+          if (firstRow && firstRow.getBoundingClientRect().top < logTop - tolerance)
+            violations.push("Session log shows a partial first row");
           return {
             violations,
+            logOverflows: log.scrollHeight > log.clientHeight,
             scrollTop: scroller.scrollTop,
             remaining:
               scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop,
@@ -239,6 +248,7 @@ for (const panel of [false, true]) {
       await expect.poll(async () => (await layout()).violations).toEqual([]);
       const finalLayout = await layout();
       expect(finalLayout.scrollTop).toBeGreaterThan(0);
+      expect(finalLayout.logOverflows).toBe(true);
       expect(finalLayout.remaining).toBeLessThanOrEqual(1);
 
       // Removing the scroll boundary must reproduce overflow into the footer.

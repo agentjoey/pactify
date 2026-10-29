@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The Live session log no longer cuts its top row in half when it follows the newest output.
+
 - Restyle the dashboard and read-only panel with a light terminal palette, neutral dark theme and shared controls.
 
 - Prioritize active Jobs lines, collapse quiet lines with a remembered Active/All lines choice, and add Dismiss for handled failures and warnings.

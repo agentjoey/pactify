@@ -67,7 +67,19 @@ function LiveJob({
     };
   }, [source, job.id]);
   useEffect(() => {
-    if (log.current) log.current.scrollTop = log.current.scrollHeight;
+    const el = log.current;
+    if (!el) return;
+    // Size an overflowing log to whole rows so pinning it to the newest row
+    // never leaves half a row at the top edge.
+    el.style.height = "";
+    const max = el.clientHeight;
+    let fit = 0;
+    for (const row of [...el.children].reverse() as HTMLElement[]) {
+      if (fit + row.offsetHeight > max) break;
+      fit += row.offsetHeight;
+    }
+    if (el.scrollHeight > max && fit > 0) el.style.height = `${fit}px`;
+    el.scrollTop = el.scrollHeight;
   }, [state.log]);
   const terminal = !["running", "retrying", "queued"].includes(job.status);
   const phase = terminal

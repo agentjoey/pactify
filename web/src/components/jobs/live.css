@@ -44,7 +44,7 @@
   color: var(--color-text-2);
 }
 .live-router .live-exhausted {
-  color: var(--color-status-danger, #f87171);
+  color: var(--err);
 }
 .live-jobs {
   display: grid;
@@ -70,7 +70,7 @@
   box-shadow: 0 0 16px color-mix(in srgb, var(--color-role-dev) 9%, transparent);
 }
 .live-harness[data-phase="failed"] {
-  border-color: var(--color-status-danger, #f87171);
+  border-color: var(--err);
 }
 .live-node-heading,
 .live-metrics {
@@ -95,7 +95,7 @@
 .live-harness progress {
   width: 100%;
   height: 7px;
-  accent-color: var(--color-role-design);
+  accent-color: var(--accent);
 }
 .live-quota {
   font-size: 11px;
@@ -268,12 +268,15 @@
    Style tracks and fills explicitly for both panel palettes. */
 .live-harness meter, .live-harness progress { appearance: none; background: var(--color-bg-raised); border: 0; border-radius: 4px; overflow: hidden; }
 .live-harness meter::-webkit-meter-bar, .live-harness progress::-webkit-progress-bar { background: var(--color-bg-raised); border: 0; }
-.live-harness meter::-webkit-meter-optimum-value, .live-harness meter::-webkit-meter-suboptimum-value, .live-harness meter::-webkit-meter-even-less-good-value, .live-harness progress::-webkit-progress-value { background: var(--color-role-design); }
-.live-harness meter::-moz-meter-bar, .live-harness progress::-moz-progress-bar { background: var(--color-role-design); }
-/* Live uses the same recessed wells and semantic accents as the pipeline. */
+.live-harness meter::-webkit-meter-optimum-value, .live-harness meter::-webkit-meter-suboptimum-value, .live-harness meter::-webkit-meter-even-less-good-value, .live-harness progress::-webkit-progress-value { background: var(--accent); }
+.live-harness meter::-moz-meter-bar, .live-harness progress::-moz-progress-bar { background: var(--accent); }
+/* Bordered terminal nodes share the page's neutral surfaces and status colors. */
 .live-panel { font-weight: 400; }
 .live-panel strong, .live-panel b, .live-panel th, .live-panel h2, .live-panel h3 { font-weight: 500; }
-.live-node { background: var(--bg-panel); border-radius: 9px; }
-.live-host, .live-router { border-color: var(--accent-line); }
-.live-host { color: var(--accent); }
-.live-harness[data-phase="running"] { border-color: color-mix(in srgb,var(--info) 40%,var(--border)); box-shadow: var(--shadow-card); }
+.live-node { background: var(--bg-elev); border-radius: 12px; }
+.live-host, .live-router { border-color: var(--border); color: var(--text); }
+.live-harness[data-phase="running"] { border: 1px dashed var(--status-running); box-shadow: none; }
+.live-harness[data-phase="running"] .live-phase { color: var(--status-running); border: 1px dashed currentColor; border-radius: 999px; padding: 4px 10px; }
+.live-node-heading strong { font: 600 22px var(--font-sans); }
+.live-tool[data-active="true"] { border: 1px dashed var(--status-running); }
+.live-session-heading { font: 400 10px var(--font-mono); text-transform: uppercase; letter-spacing: .2em; color: var(--text-3); }

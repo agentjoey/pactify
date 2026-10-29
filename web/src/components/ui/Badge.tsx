@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 
-// Badge — a pill colored by a token name. `color` maps to a --color-<name>
-// CSS variable: 15%-alpha background + the full-strength color as
-// the text. Any role-/semantic token name in tokens.css is valid.
+// Capability and metadata tags use a quiet outline in the supplied token color.
 export type BadgeColor =
   | "role-product"
   | "role-design"
@@ -15,8 +13,7 @@ export type BadgeColor =
   | "danger"
   | "warn"
   | "success"
-  // Muted informational color (tier badges); contrast verified 5.34–5.77:1
-  // across this project's backgrounds.
+  // Muted informational color (tier badges).
   | "text-2";
 
 export function Badge({
@@ -44,14 +41,12 @@ export function Badge({
   return (
     <span
       className={[
-        // UPPERCASE so badges (roles / capability tags) read distinctly from the
-        // lowercase pact-state pills — state = lowercase, badge = UPPERCASE.
-        "inline-flex items-center rounded-full px-2 py-px text-[10px] font-medium uppercase tracking-[.4px] leading-[18px]",
+        "ui-badge",
         className,
       ].join(" ")}
       style={{
         color: token,
-        background: `color-mix(in srgb, ${token} 15%, transparent)`,
+        borderColor: token,
       }}
       title={title}
       role={ariaLabel ? "img" : undefined}

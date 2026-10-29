@@ -412,7 +412,7 @@ it("panel Settings and actions show only data even if the source exposes writes"
   const src = source();
   render(<Settings source={src} readOnly />);
   expect((await screen.findByText("pactify serve", {selector:"code"})).parentElement).toHaveTextContent("Edit settings with pactify serve (dashboard) or the CLI.");
-  await screen.findByText("verified 1");
+  expect((await screen.findByText("verified")).parentElement).toHaveTextContent(/^verified 1$/);
   expect(screen.getAllByRole("combobox").map(el=>el.getAttribute("aria-label"))).toEqual(["Settings section"]);
   expect(
     screen.queryByRole("button", { name: /Save|Edit|Refresh models|Clear/ }),

@@ -10,10 +10,9 @@ const tokensCss = readFileSync(resolve(process.cwd(), "src/tokens.css"), "utf8")
 const indexCss = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
 
 describe("dashboard v2 tokens.css", () => {
-  it("declares the dark-theme palette hexes (2026-06-19 handoff)", () => {
-    // Dark theme: page near-black void, cards deep slate, role hues are the
-    // original brand hexes tuned for dark surfaces.
-    const palette = ["#0a0e14", "#10151e", "#171e2a", "#ffd479", "#8ab4ff", "#6ee7a0"];
+  it("declares the neutral dark palette", () => {
+    // Neutral surfaces retain the semantic dark role colors.
+    const palette = ["#0b0b0c", "#18181a", "#1f1f22", "#ffd479", "#8ab4ff", "#6ee7a0"];
     const lower = tokensCss.toLowerCase();
     for (const hex of palette) {
       expect(lower, `missing dark token ${hex}`).toContain(hex.toLowerCase());
@@ -74,4 +73,20 @@ it("contains no gradients in any shared CSS or TSX", async () => {
   const {readdirSync}=await import("node:fs");
   function check(dir:string){for(const file of readdirSync(dir,{withFileTypes:true})){const path=resolve(dir,file.name);if(file.isDirectory())check(path);else if(/\.(css|tsx)$/.test(file.name))expect(readFileSync(path,"utf8"),path).not.toContain("gradient(");}}
   check(resolve(process.cwd(),"src"));
+  check(resolve(process.cwd(),"panel"));
+});
+
+it("defines the terminal palette, statuses and stable chart series in both themes", () => {
+  const blocks = [tokensCss.match(/:root\s*\{([\s\S]*?)\}/)![1], tokensCss.match(/:root\[data-theme="light"\]\s*\{([\s\S]*?)\}/)![1]];
+  const keys = ["--bg", "--bg-panel", "--bg-elev", "--bg-elev2", "--bg-input", "--bg-code", "--border", "--border-2", "--text", "--text-2", "--text-3", "--text-4", "--accent", "--accent-ink", "--accent-2", "--accent-line", "--status-running", "--status-attention", "--status-attention-ink", "--status-success", "--status-success-ink", "--status-failure-line", "--chart-codex", "--chart-kimi", "--chart-opencode"];
+  const palettes = [
+    ["#0b0b0c", "#111112", "#18181a", "#1f1f22", "#141416", "#050505", "#2a2a2e", "#1f1f22", "#ededee", "#c9c9cd", "#9a9aa1", "#5e5e65", "#54d398", "#04140b", "#0f261b", "#236b49", "#8ab4ff", "#f5c451", "#1a1302", "#6ee7a0", "#04140b", "#f97066", "#8ab4ff", "#6ee7a0", "#f5c451"],
+    ["#f6f5f1", "#fafaf7", "#ffffff", "#eceae4", "#fafaf7", "#fafaf7", "#dedcd5", "#e2e0d9", "#141413", "#5c5b56", "#6b6963", "#a8a69f", "#141413", "#f6f5f1", "#eceae4", "#dedcd5", "#141413", "#c2410c", "#ffffff", "#141413", "#f6f5f1", "#c2410c", "#141413", "#8a8880", "#c9c7bf"],
+  ];
+  blocks.forEach((block, theme) => {
+    const values = Object.fromEntries([...block.matchAll(/(--[\w-]+):\s*(#[\da-f]{6})/g)].map(m => [m[1], m[2]]));
+    keys.forEach((key, i) => expect(values[key], `theme ${theme}: ${key}`).toBe(palettes[theme][i]));
+    for (const bg of ["--bg", "--bg-elev"]) expect(ratio(values["--text-3"], values[bg]), `text-3 on ${bg}`).toBeGreaterThanOrEqual(4.5);
+    for (const [ink, fill] of [["--status-attention-ink", "--status-attention"], ["--status-success-ink", "--status-success"]]) expect(ratio(values[ink], values[fill])).toBeGreaterThanOrEqual(4.5);
+  });
 });

@@ -99,10 +99,10 @@ test('belts sit behind the first card and light theme reaches the page and scrim
  expect(await page.locator('.belt line').evaluateAll(lines=>lines.every(line=>getComputedStyle(line).animationName==='none'))).toBe(true);
  const body=()=>page.locator('body').evaluate(node=>getComputedStyle(node).backgroundColor);
  const dark=await body();await page.getByRole('button',{name:'Switch to light theme',exact:true}).click();
- expect(await body()).not.toBe(dark);expect(await body()).toBe('rgb(244, 246, 249)');
+ expect(await body()).not.toBe(dark);expect(await body()).toBe('rgb(246, 245, 241)');
  expect(await page.locator('.v2-header, .pipeline-scroll, .pipeline .task-card').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).backgroundColor==='rgb(255, 255, 255)'))).toBe(true);
  await page.getByRole('region',{name:'Running',exact:true}).getByRole('link').first().click();
  await expect(page.getByRole('dialog',{name:'Job details'})).toBeVisible();
- expect(await page.locator('.jobs-scrim').evaluate(node=>getComputedStyle(node).backgroundColor)).toBe('rgba(10, 14, 20, 0.35)');
+ expect(await page.locator('.jobs-scrim').evaluate(node=>getComputedStyle(node).backgroundColor)).toBe('rgba(20, 20, 19, 0.35)');
 });
 });

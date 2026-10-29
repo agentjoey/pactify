@@ -89,7 +89,8 @@ export function Dashboard({
           {jobsError || cost.error || harnesses.error || "Usage could not be loaded. Retrying shortly."}
         </p>
       )}
-      <div className="kpi-grid">
+      <div className="kpi-overview">
+        <div className="kpi-grid">
         {(
           [
             ["progress", "In progress"],
@@ -106,6 +107,14 @@ export function Dashboard({
             </strong>
           </section>
         ))}
+        </div>
+        <svg className="dot-matrix" width="216" height="72" viewBox="0 0 216 72" aria-hidden="true">
+          {Array.from({ length: 24 * 8 }, (_, i) => (
+            <circle key={i} cx={(i % 24) * 9 + 4.5} cy={Math.floor(i / 24) * 9 + 4.5}
+              r={i % 24 < 8 ? .9 : i % 24 < 17 ? 1.6 : 2.4}
+              fill="currentColor" opacity={i % 24 < 8 ? .35 : i % 24 < 17 ? .6 : 1} />
+          ))}
+        </svg>
       </div>
       <div className="dashboard-columns">
       <div className="dashboard-primary">

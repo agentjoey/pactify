@@ -91,7 +91,7 @@ function WriteJobActions({
           <Button
             key={a}
             size="sm"
-            variant={a === "discard" ? "danger" : "ghost"}
+            variant={a === "discard" ? "danger" : a === "apply" ? "primary" : "ghost"}
             onClick={() => setAction(a)}
           >
             {labels[a]}
@@ -112,6 +112,7 @@ function WriteJobActions({
               footer={
                 <>
                   <Button
+                    variant={action === "discard" ? "danger" : "primary"}
                     loading={busy}
                     disabled={action === "resume" && !instructions.trim()}
                     onClick={() => void execute()}

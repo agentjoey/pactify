@@ -7,8 +7,8 @@ body {
   margin: 0;
   background: var(--color-bg-page);
   color: var(--color-text-1);
-  font-family: var(--font-sans);
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   line-height: 1.4;
   font-feature-settings: "cv01", "cv02", "cv03", "tnum";
 }
@@ -104,11 +104,15 @@ button:disabled {
 :root { font-synthesis: none; }
 :root[data-theme="light"] { color-scheme: light; }
 code, kbd, pre, .mono { font-family: var(--font-mono); font-weight: 400; }
-.section-label, .panel-eyebrow { font: 400 9.5px/1.6 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--text-3); }
-.segmented { display: inline-flex; align-items: center; gap: 4px; padding: 3px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 9px; }
-.segmented button { font: 500 12px var(--font-sans); color: var(--text-2); border: 0; border-radius: 6px; padding: 7px 12px; background: transparent; }
+.section-label, .panel-eyebrow { font: 400 10px/1.6 var(--font-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--text-3); }
+.segmented { display: inline-flex; align-items: center; gap: 4px; padding: 3px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 999px; }
+.segmented button { font: 700 11px var(--font-mono); color: var(--text-2); border: 0; border-radius: 999px; padding: 7px 12px; background: transparent; }
 .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
-.status-pill { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border: 1px solid color-mix(in srgb,currentColor 30%,transparent); background: color-mix(in srgb,currentColor 7%,transparent); padding: 3px 8px; border-radius: 999px; font: 500 10px/1.4 var(--font-sans); }
+.status-pill { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border: 1px solid var(--text-4); background: transparent; color: var(--text-2); padding: 4px 10px; border-radius: 999px; font: 700 10px/1.4 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
+.status-pill.tone-info { border-style: dashed; border-color: var(--status-running); color: var(--status-running); }
+.status-pill.tone-warn { border-color: var(--status-attention); background: var(--status-attention); color: var(--status-attention-ink); }
+.status-pill.tone-err { border-color: var(--status-failure-line); color: var(--err); }
+.status-pill.tone-ok { border-color: var(--status-success); background: var(--status-success); color: var(--status-success-ink); }
 .status-dot { display: inline-block; flex: 0 0 6px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .tone-muted { color: var(--text-2); }
 .tone-info { color: var(--info); }
@@ -128,3 +132,15 @@ code, kbd, pre, .mono { font-family: var(--font-mono); font-weight: 400; }
 }
 @keyframes breathe { 50% { opacity: .35; } }
 @keyframes live-ring { from { transform: scale(.6); opacity: .7; } to { transform: scale(2.4); opacity: 0; } }
+
+/* Shared terminal controls, including controls rendered in modal portals. */
+.ui-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 7px 14px; border: 1px solid var(--button-border); border-radius: 6px; background: transparent; color: var(--text); font: 700 11px/1.4 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; user-select: none; transition: background-color var(--motion-micro), border-color var(--motion-micro), transform var(--motion-micro); }
+.ui-button-sm { min-height: 34px; padding: 6px 12px; font-size: 10px; }
+.ui-button-primary { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.ui-button-danger { border-color: var(--status-failure-line); color: var(--err); }
+.ui-button:hover:not(:disabled) { border-color: currentColor; background: var(--bg-elev2); }
+.ui-button-primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+.ui-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ui-button:disabled { opacity: .4; pointer-events: none; cursor: not-allowed; }
+@media (prefers-reduced-motion: no-preference) { .ui-button:active:not(:disabled) { transform: scale(.97); } }
+.ui-badge { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; background: transparent; font: 500 10px/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: .1em; }

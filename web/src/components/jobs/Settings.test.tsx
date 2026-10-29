@@ -100,7 +100,9 @@ it("shows experimental labels only for agy and keeps kimi read-only unavailable"
   for (const name of ["codex", "kimi", "agy", "opencode"]) {
     const card = within(screen.getByRole("article", { name }));
     expect(card.queryByText("experimental") !== null).toBe(name === "agy");
-    expect(card.getByText(`Read-only: ${name === "kimi" ? "Not supported" : "Supported"}`)).toBeInTheDocument();
+    expect(card.getByText("Read-only:").parentElement).toHaveTextContent(
+      name === "kimi" ? /^Read-only: Not supported$/ : /^Read-only: Supported$/,
+    );
   }
 });
 

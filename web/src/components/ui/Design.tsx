@@ -9,7 +9,7 @@ export function StatusPill({ status, running = false }: {
   status: string;
   running?: boolean;
 }) {
-  const tone = running ? "info"
+  const tone = running || /running|retrying/.test(status) ? "info"
     : /fail|quota|cancel/.test(status) ? "err"
     : /ready|pending|warn/.test(status) ? "warn"
     : /succeed|applied|shipped/.test(status) ? "ok" : "muted";

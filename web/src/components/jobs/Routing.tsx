@@ -394,7 +394,7 @@ export function Routing({
               )}
               {writable && draft && (
                 <>
-                  <Button size="sm" disabled={busy} onClick={() => void save()}>
+                  <Button variant="primary" size="sm" disabled={busy} onClick={() => void save()}>
                     Save
                   </Button>
                   <Button

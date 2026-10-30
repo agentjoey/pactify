@@ -43,9 +43,9 @@ it("copies a CLI command and reports clipboard failure with manual-copy guidance
   expect(await screen.findByText("Could not copy. Select the command and copy it manually.")).toBeInTheDocument();
 });
 it("keeps write actions and suppresses them in read-only mode", () => {
-  const props = {job:job({actions:["apply","discard","resume"]}),source:dashboardJobsSource,onChanged:vi.fn(),notify:vi.fn()};
+  const props = {job:job({actions:["dismiss","resume"]}),source:dashboardJobsSource,onChanged:vi.fn(),notify:vi.fn()};
   const {rerender} = render(<JobActions {...props} />);
-  for (const name of ["Apply","Discard","Resume"]) expect(screen.getByRole("button",{name})).toBeInTheDocument();
+  for (const name of ["Dismiss","Resume"]) expect(screen.getByRole("button",{name})).toBeInTheDocument();
   rerender(<JobActions {...props} readOnly />);
   expect(screen.queryByRole("button")).toBeNull();
 });

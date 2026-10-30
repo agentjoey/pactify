@@ -182,22 +182,21 @@ for (const width of [1440, 390]) {
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     expect(await background()).not.toBe(light);
     const attention = page.getByRole("region", {name:"Needs attention",exact:true});
-    await expect(attention.getByRole("button", {name:"Copy pactify sub apply job-summary",exact:true})).toBeVisible();
-    await attention.getByRole("button", {name:"Copy pactify sub apply job-summary",exact:true}).click();
+    await expect(attention.getByRole("button", {name:"Copy pactify sub logs job-failed",exact:true})).toBeVisible();
+    await attention.getByRole("button", {name:"Copy pactify sub logs job-failed",exact:true}).click();
     await expect(attention.getByRole("status")).toHaveText("Copied");
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("pactify sub apply job-summary");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("pactify sub logs job-failed");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     for (const card of await attention.locator("article").all()) {
       expect(await card.getByRole("button", {name:/^Copy pactify sub /}).count()).toBeLessThanOrEqual(2);
       await expect(card.getByText(/Run a command in your terminal|Ctrl\+D/)).toHaveCount(0);
     }
-    const summaryCard = attention.locator("article").filter({hasText:"Share job summaries"});
-    await expect(summaryCard.getByRole("button", {name:/^Copy pactify sub /})).toHaveCount(2);
-    await expect(summaryCard.getByRole("button", {name:"Copy pactify sub discard job-summary",exact:true})).toBeVisible();
-    await expect(summaryCard.getByRole("button", {name:"More in details",exact:true})).toHaveCount(0);
-    const review = summaryCard.getByRole("button", {name:"Review",exact:true});
-    await expect(review).toHaveAttribute("title","More in details");
-    await review.click();
+    // A pending worktree is approved in the delegating session, so it is not an attention card.
+    await expect(attention.locator("article").filter({hasText:"Share job summaries"})).toHaveCount(0);
+    const failedCard = attention.locator("article").filter({hasText:"Fix CLI exit code edge cases"});
+    await expect(failedCard.getByRole("button", {name:"More in details",exact:true})).toHaveCount(0);
+    await expect(failedCard.getByRole("button", {name:"Review",exact:true})).toHaveAttribute("title","More in details");
+    await page.evaluate(() => {location.hash = "#/jobs/job-summary";});
     const summaryDetail = page.getByRole("dialog", {name:"Job details"});
     if (width <= 700) await summaryDetail.getByRole("button", {name:"Show commands",exact:true}).click();
     const steps = summaryDetail.getByRole("region", {name:width <= 700 ? "Terminal commands" : "Next steps",exact:true});

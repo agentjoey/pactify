@@ -5,7 +5,9 @@ export type Section = "progress" | "queued" | "attention" | "completed";
 export function sectionFor(job: Job): Section {
   if (["running", "retrying"].includes(job.status)) return "progress";
   if (job.status === "queued") return "queued";
-  return job.attention.length ? "attention" : "completed";
+  // Worktree approval belongs to the delegating session, so a pending
+  // worktree alone leaves the job completed rather than needing attention.
+  return job.attention.some((a) => a.kind !== "worktree_pending") ? "attention" : "completed";
 }
 export const projectName = (repo: string) =>
   repo.replace(/\/$/, "").split("/").pop() || repo || "Unknown project";

@@ -8,7 +8,7 @@ import { startPanelMock } from "../e2e/panel-mock.mjs";
 export async function capturePages(panel = false) {
   const output = join(process.env.SHOT_OUT || "/tmp/pactify-shots", panel ? "panel" : "dashboard");
   const { server, baseURL } = panel ? await startPanelMock() : await startMock();
-  const views = ["dashboard", "jobs-pipeline", "jobs-list", "shortcuts", "summary", "live", "logs", "diff", "brief", "commands", "settings-machine", "settings-storage", "settings-doctor", "settings-appearance", "settings-shortcuts", "empty", "loading", "error", "401", ...(panel ? ["second-tab"] : ["storage-confirmation", "resume", "discard-confirm"])];
+  const views = ["dashboard", "jobs-pipeline", "jobs-list", "shortcuts", "summary", "live", "logs", "diff", "brief", "commands", "settings-machine", "settings-storage", "settings-doctor", "settings-appearance", "settings-shortcuts", "empty", "loading", "error", "401", ...(panel ? ["second-tab"] : ["storage-confirmation", "resume"])];
   let browser;
   try {
     await mkdir(output, { recursive: true });
@@ -79,15 +79,14 @@ export async function capturePages(panel = false) {
             await page.getByRole("searchbox").blur();
             await page.keyboard.press("?");
             await expect(page.getByRole("region", { name: "Keyboard shortcuts", exact: true })).toBeVisible();
-          } else if (["resume", "discard-confirm"].includes(view)) {
+          } else if (view === "resume") {
             if (width < 640) await page.getByRole("button", { name: "Go to Needs you", exact: true }).click();
             else await page.locator('[data-station="attention"] .station-heading').scrollIntoViewIfNeeded();
-            const card = page.locator("article").filter({ hasText: view === "resume" ? "Fix CLI exit code edge cases" : "Share job summaries" });
-            await card.getByRole("button", { name: view === "resume" ? "Resume" : "Discard", exact: true }).click();
+            const card = page.locator("article").filter({ hasText: "Fix CLI exit code edge cases" });
+            await card.getByRole("button", { name: "Resume", exact: true }).click();
             const dialog = page.getByRole("dialog");
             await expect(dialog).toBeVisible();
-            if (view === "resume") await dialog.getByLabel("Instructions for the next run").fill("Fix the remaining checks.\nRun all tests.");
-            else await expect(dialog).toContainText("permanently delete the worktree");
+            await dialog.getByLabel("Instructions for the next run").fill("Fix the remaining checks.\nRun all tests.");
           } else await expect(page.locator(".pipeline-scroll")).toBeVisible();
         }
         if (panel) await expect(page.getByRole("button", { name: /^(Cancel|Resume|Apply|Discard|Save defaults|Clean up now)$/ })).toHaveCount(0);

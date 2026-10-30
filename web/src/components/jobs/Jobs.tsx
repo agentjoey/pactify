@@ -76,9 +76,11 @@ export function JobMetadata({ job, prominent = false }: { job: Job; prominent?: 
     <div className="panel-metadata">
       <span title={job.repo}>{projectName(job.repo)}</span>
       <span>
-        {running && Number.isFinite(Date.parse(job.createdAt))
-          ? formatDuration((now - Date.parse(job.createdAt)) / 1000)
-          : job.duration}
+        {job.status === "queued"
+          ? `waiting ${relativeTime(job.createdAt)}`
+          : running && Number.isFinite(Date.parse(job.createdAt))
+            ? formatDuration((now - Date.parse(job.createdAt)) / 1000)
+            : job.duration}
       </span>
       <span
         title={`${usage.input.toLocaleString("en-US")} input / ${usage.output.toLocaleString("en-US")} output tokens`}
@@ -153,8 +155,10 @@ export function JobCard({
   const pillStatus = ["running", "retrying", "queued"].includes(job.status)
     ? job.status === "running" && job.retryAttempt ? `retrying (${job.retryAttempt}/${job.retryLimit})` : job.status
     : job.failureClass === "quota" || job.attention.some(a => a.kind === "quota") ? "quota" : job.status === "failed" ? "failed"
-    : job.attention.some(a => a.kind === "worktree_pending") ? "ready"
-    : job.attention.some(a => a.kind === "warnings") ? "warnings" : job.status;
+    : job.attention.some(a => a.kind === "warnings") ? "warnings"
+    : job.status === "succeeded" ? "done" : job.status;
+  const terminal = !["running", "retrying", "queued"].includes(job.status);
+  const pendingWorktree = terminal && job.worktree?.status === "pending";
   const open = () => {
     location.hash = jobsLink(job.id);
   };
@@ -179,15 +183,13 @@ export function JobCard({
           {job.modelActual || job.modelRequested || "Harness default"}
         </span>
       </div>
-      <p className="job-id">{job.id} · {job.status === "queued" ? `waiting ${relativeTime(job.createdAt)}` : job.duration}</p>
       <h3>
         <a data-job-link href={jobsLink(job.id)}>{chain.root.title || chain.root.id}</a>
       </h3>
       <JobMetadata job={job} />
-      {sectionFor(job) === "attention" && job.changedFiles != null && <p className="change-meta">{job.harness} · {job.changedFiles} files {job.addedLines != null && job.deletedLines != null && <span>+{job.addedLines}/−{job.deletedLines}</span>}</p>}
+      {terminal && job.changedFiles != null && <p className="change-meta">{job.changedFiles} {job.changedFiles === 1 ? "file" : "files"} {job.addedLines != null && job.deletedLines != null && <span>+{job.addedLines}/−{job.deletedLines}</span>}</p>}
       <div className="panel-tags">
-        {!["running", "retrying", "queued"].includes(job.status) &&
-          !!job.retryCount && (
+        {terminal && !!job.retryCount && (
             <Badge color="text-2">retries: {job.retryCount}</Badge>
           )}
         {chain.runs.length > 1 && (
@@ -206,9 +208,7 @@ export function JobCard({
             {f === "harness" ? "Agent error" : f}
           </Badge>
         ))}
-        {job.worktree && (
-          <Badge color="text-2">worktree · {job.worktree.status}</Badge>
-        )}
+        {pendingWorktree && <Badge color="text-2">worktree pending</Badge>}
         {job.access === "read-only" && <Badge color="text-2">read-only</Badge>}
       </div>
       {["running", "retrying"].includes(job.status) && (
@@ -230,7 +230,7 @@ export function JobCard({
           onChanged={onChanged}
           notify={notify}
         />
-        {sectionFor(job) === "attention" && (
+        {(sectionFor(job) === "attention" || pendingWorktree) && (
           <Button
             size="sm"
             variant="ghost"

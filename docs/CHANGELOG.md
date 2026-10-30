@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Job cards show the status, one harness/model label, one duration and the diff, with larger text and no run id. Finished jobs read Done; a pending worktree no longer counts as Needs you, and the dashboard no longer offers Apply or Discard, leaving those to the delegating session or the CLI.
+
 - Dashboard counts use smaller numbers with larger labels, show In progress in blue in both themes, and the dot matrix beside them flows left to right while a job runs.
 
 - The Live session log no longer cuts its top row in half when it follows the newest output.

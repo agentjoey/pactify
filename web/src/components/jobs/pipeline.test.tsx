@@ -10,7 +10,8 @@ afterEach(() => { cleanup(); localStorage.clear(); history.replaceState(null,"",
 for (const status of ["queued","running","retrying","succeeded","failed","canceled"])
   for (const kind of ["", "worktree_pending", "failed", "quota", "warnings"])
     it(`maps ${status}/${kind || 'none'} to the existing section rule`, () => {
-      const expected = status === "queued" ? "Queued" : ["running","retrying"].includes(status) ? "Running" : kind ? "Needs you" : "Shipped";
+      // A pending worktree alone is approved in the delegating session, not here.
+      const expected = status === "queued" ? "Queued" : ["running","retrying"].includes(status) ? "Running" : kind && kind !== "worktree_pending" ? "Needs you" : "Shipped";
       expect(stations.find(s => s.key === stationFor(job("a", {status,attention:kind ? [{kind,message:kind}] : []})))?.name).toBe(expected);
     });
 it("groups lines by project name, harness and one line", () => {
@@ -41,8 +42,9 @@ it("keeps station shortcuts, job navigation and detail links in Lines", () => {
 });
 it("keeps panel Lines copyable and suppresses writes even with a writable source", () => {
   const write=vi.fn();
-  render(<JobList readOnly source={{jobsPath:"/jobs",costPath:"/cost",fetch:vi.fn(),write}} jobs={[job("ready",{actions:["apply","discard","resume"],attention:[{kind:"worktree_pending",message:"Ready"}],worktree:{path:"/wt",baseCommit:"abc",status:"pending"}})]}/>);
-  expect(screen.getByRole("button",{name:"Copy pactify sub apply ready"})).toBeInTheDocument();
+  render(<JobList readOnly source={{jobsPath:"/jobs",costPath:"/cost",fetch:vi.fn(),write}} jobs={[job("ready",{actions:["apply","discard","resume"],attention:[{kind:"warnings",message:"Check"},{kind:"worktree_pending",message:"Ready"}],worktree:{path:"/wt",baseCommit:"abc",status:"pending"}})]}/>);
+  expect(screen.getByRole("button",{name:"Copy pactify sub run --resume ready --worktree"})).toBeInTheDocument();
+  expect(screen.queryByRole("button",{name:/^Copy pactify sub (apply|discard) /})).toBeNull();
   expect(screen.queryByRole("button",{name:/^(Apply|Discard|Resume|Cancel)$/})).toBeNull();expect(write).not.toHaveBeenCalled();
 });
 

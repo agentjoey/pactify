@@ -56,10 +56,11 @@ export function stationStat(key: Section, jobs: Job[], now = Date.now()) {
   }
   if (key === "progress") return rows.length ? `${rows.length} in progress` : "all lines idle";
   if (key === "attention") {
-    const toApply = rows.filter(job => job.actions?.includes("apply") || job.attention.some(a => a.kind === "worktree_pending")).length;
-    return `${toApply} to apply · ${rows.filter(job => job.status === "failed").length} failed`;
+    const failed = rows.filter(job => job.status === "failed").length;
+    return `${failed} failed${rows.length > failed ? ` · ${rows.length - failed} to review` : ""}`;
   }
-  return `${rows.filter(job => endedToday(job, new Date(now))).length} done today`;
+  const toApply = rows.filter(job => job.worktree?.status === "pending").length;
+  return `${rows.filter(job => endedToday(job, new Date(now))).length} done today${toApply ? ` · ${toApply} to apply` : ""}`;
 }
 
 export function stationTodayCount(key: Section, jobs: Job[], now = new Date()) {

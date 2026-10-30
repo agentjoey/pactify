@@ -9,18 +9,12 @@ import { panelBuild } from "../../buildTarget";
 const labels: Record<string, string> = {
   cancel: "Cancel",
   resume: "Resume",
-  apply: "Apply",
-  discard: "Discard",
   dismiss: "Dismiss",
 };
 const consequences: Record<string, string> = {
   dismiss: "Dismiss this job? It stays in history but leaves Needs you.",
   cancel:
     "This will stop the running job. Its worktree and recorded results will be kept.",
-  apply:
-    "This will apply the worktree changes to the original repository. Conflicts will leave the worktree available for review.",
-  discard:
-    "This will permanently delete the worktree and any unapplied changes. Recorded results and logs will be kept.",
 };
 export const JobActions = panelBuild ? () => null : WriteJobActions;
 
@@ -91,7 +85,7 @@ function WriteJobActions({
           <Button
             key={a}
             size="sm"
-            variant={a === "discard" ? "danger" : a === "apply" ? "primary" : "ghost"}
+            variant="ghost"
             onClick={() => setAction(a)}
           >
             {labels[a]}
@@ -112,7 +106,7 @@ function WriteJobActions({
               footer={
                 <>
                   <Button
-                    variant={action === "discard" ? "danger" : "primary"}
+                    variant="primary"
                     loading={busy}
                     disabled={action === "resume" && !instructions.trim()}
                     onClick={() => void execute()}

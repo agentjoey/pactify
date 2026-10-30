@@ -166,7 +166,7 @@ it("persists project, status and title search in the URL without splitting chain
   expect(location.hash).toContain("harness=codex");
   expect(location.hash).toContain("search=Example-705+a");
 });
-for (const action of ["cancel", "apply", "discard"] as const) {
+for (const action of ["cancel", "dismiss"] as const) {
   it(`${action} renders only server actions, confirms consequences and refreshes after success`, async () => {
     const src = source();
     const changed = vi.fn();
@@ -183,7 +183,7 @@ for (const action of ["cancel", "apply", "discard"] as const) {
     fireEvent.click(screen.getByRole("button", { name: label }));
     expect(src.write).not.toHaveBeenCalled();
     const dialog = screen.getByRole("dialog");
-    expect(dialog.textContent).toMatch(/stop|changes|worktree/i);
+    expect(dialog.textContent).toMatch(/stop|history/i);
     fireEvent.click(
       within(dialog).getByRole("button", { name: `Confirm ${label}` }),
     );
@@ -195,6 +195,19 @@ for (const action of ["cancel", "apply", "discard"] as const) {
     expect(changed).toHaveBeenCalled();
   });
 }
+it("leaves worktree apply and discard to the delegating session even when offered", () => {
+  render(
+    <JobActions
+      job={makeJob("a", { actions: ["apply", "discard", "resume"] })}
+      source={source()}
+      onChanged={vi.fn()}
+      notify={vi.fn()}
+    />,
+  );
+  expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+  for (const name of ["Apply", "Discard"])
+    expect(screen.queryByRole("button", { name })).toBeNull();
+});
 it("resume sends multiline instructions, shows the new id and refreshes", async () => {
   const src = source();
   const notify = vi.fn();
@@ -222,7 +235,7 @@ it("resume sends multiline instructions, shows the new id and refreshes", async 
   expect(notify).toHaveBeenCalledWith("Started next");
   expect(changed).toHaveBeenCalled();
 });
-for (const action of ["cancel", "resume", "apply", "discard"])
+for (const action of ["cancel", "resume", "dismiss"])
   it(`${action} displays backend failures`, async () => {
     const src = source();
     src.write.mockImplementation(
@@ -543,24 +556,33 @@ it("supports failed model discovery, refresh, manual entry and Harness default c
     JSON.parse(src.write.mock.calls[1][1].body as string).config.defaults,
   ).toEqual({});
 });
-it("places Review on attention cards and opens Diff directly without rendering unoffered actions", async () => {
+it("shows a finished card with a pending worktree as Done with its diff, Review and no approval buttons", async () => {
   const row = makeJob("a", {
-    actions: ["apply"],
-    attention: [{ kind: "worktree_pending", message: "Review changes" }],
+    actions: ["apply", "discard"],
+    attention: [{ kind: "worktree_pending", message: "Worktree is awaiting apply or discard" }],
+    worktree: { path: "/wt", baseCommit: "abc", status: "pending" },
+    changedFiles: 46, addedLines: 625, deletedLines: 116,
   });
   const src = source([row]);
   render(<JobList jobs={[row]} source={src} />);
+  fireEvent.click(screen.getByRole("button", { name: "List" }));
   const card = screen.getByRole("article");
-  expect(
-    within(card).getByRole("button", { name: "Apply" }),
-  ).toBeInTheDocument();
-  for (const name of ["Cancel", "Resume", "Discard"])
+  expect(within(card).getByText("done")).toBeInTheDocument();
+  expect(within(card).queryByText(/ready/i)).toBeNull();
+  expect(card).toHaveTextContent("46 files +625/−116");
+  expect(within(card).getByText("worktree pending")).toBeInTheDocument();
+  expect(within(card).queryByText(/awaiting apply/i)).toBeNull();
+  // The run id is internal; duration and harness/model appear once each.
+  expect(card.textContent).not.toContain(row.id + " ·");
+  expect(card.textContent!.split(row.duration).length - 1).toBe(1);
+  expect(card.textContent!.split("codex · model").length - 1).toBe(1);
+  for (const name of ["Apply", "Discard", "Cancel", "Resume"])
     expect(within(card).queryByRole("button", { name })).toBeNull();
   fireEvent.click(within(card).getByRole("button", { name: "Review" }));
   expect(location.hash).toBe("#/jobs/a?tab=diff");
 });
 it("opens a confirmation outside the scrolled detail and Escape closes only that confirmation", async () => {
-  const row = makeJob("a", { actions: ["discard"] });
+  const row = makeJob("a", { actions: ["dismiss"] });
   const src = source([row]);
   src.fetch.mockImplementation(
     async (path) =>
@@ -576,9 +598,9 @@ it("opens a confirmation outside the scrolled detail and Escape closes only that
   render(<Jobs source={src} />);
   const detail = await screen.findByRole("dialog", { name: "Job details" });
   await within(detail).findByText("Result");
-  fireEvent.click(within(detail).getByRole("button", { name: "Discard" }));
+  fireEvent.click(within(detail).getByRole("button", { name: "Dismiss" }));
   const confirmation = screen.getByRole("dialog", {
-    name: "Discard Example-705 a?",
+    name: "Dismiss Example-705 a?",
   });
   expect(detail).not.toContainElement(confirmation);
   fireEvent.keyDown(
@@ -586,7 +608,7 @@ it("opens a confirmation outside the scrolled detail and Escape closes only that
     { key: "Escape" },
   );
   expect(
-    screen.queryByRole("dialog", { name: "Discard Example-705 a?" }),
+    screen.queryByRole("dialog", { name: "Dismiss Example-705 a?" }),
   ).toBeNull();
   expect(
     screen.getByRole("dialog", { name: "Job details" }),

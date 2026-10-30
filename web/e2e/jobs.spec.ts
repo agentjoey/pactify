@@ -50,7 +50,7 @@ for (const width of [1440, 390]) {
     const today = completed.locator(".completed-day").first();
     await expect(today.getByRole("button", { name: "Show all" })).toBeVisible();
     await today.getByRole("button", { name: "Show all" }).click();
-    await expect(today.locator("article")).toHaveCount(6);
+    await expect(today.locator("article")).toHaveCount(7); // includes the finished job whose worktree awaits the delegating session
     await today.getByRole("button", { name: "Collapse" }).click();
     await expect(today.locator(".job-stack")).toBeVisible();
     await page
@@ -267,35 +267,34 @@ test("Cancel needs an inline confirmation and can be backed out", async ({
     ).status,
   ).toBe("canceled");
 });
-for (const action of ["Apply", "Discard"])
-  test(`${action} confirms and updates the worktree`, async ({ page }) => {
-    await page.goto("/#/jobs");
-    const card = page
-      .getByRole("region", { name: "Needs attention", exact: true })
-      .locator("article")
-      .filter({ hasText: "Share job summaries" });
-    await card.getByRole("button", { name: "Review", exact: true }).click();
-    const detail = page.getByRole("dialog", { name: "Job details" });
-    await expect(
-      detail.getByRole("tab", { name: "Diff", exact: true }),
-    ).toHaveAttribute("aria-selected", "true");
-    await expect(detail.locator("pre")).toContainText("+func Listen(port int)");
-    await detail.getByRole("button", { name: action, exact: true }).click();
-    const confirmation = page.getByRole("dialog", {
-      name: new RegExp(`^${action} Share job summaries`),
-    });
-    await confirmation
-      .getByRole("button", { name: `Confirm ${action}`, exact: true })
-      .click();
-    await detail.getByRole("tab", { name: "Summary", exact: true }).click();
-    await expect(
-      detail.getByText(
-        new RegExp(
-          `Worktree:.*${action === "Apply" ? "applied" : "discarded"}`,
-        ),
-      ),
-    ).toBeVisible();
-  });
+test("a finished job with a pending worktree is Done and leaves apply and discard to the delegating session", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/#/jobs");
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Needs attention", exact: true })
+      .locator("article").filter({ hasText: "Share job summaries" }),
+  ).toHaveCount(0);
+  const sizes = await page.locator("article.task-card").evaluateAll((cards) =>
+    cards.flatMap((card) => [card, ...card.querySelectorAll("*")])
+      .filter((node) => [...node.childNodes].some((child) => child.nodeType === 3 && child.textContent!.trim()))
+      .map((node) => parseFloat(getComputedStyle(node).fontSize)),
+  );
+  expect(sizes.length).toBeGreaterThan(0);
+  expect(Math.min(...sizes)).toBeGreaterThanOrEqual(11);
+  await page.getByRole("button", { name: "Lines", exact: true }).click();
+  const lineSizes = await page.locator("article.task-card").evaluateAll((cards) =>
+    cards.flatMap((card) => [card, ...card.querySelectorAll("*")])
+      .filter((node) => [...node.childNodes].some((child) => child.nodeType === 3 && child.textContent!.trim()))
+      .map((node) => parseFloat(getComputedStyle(node).fontSize)),
+  );
+  expect(Math.min(...lineSizes)).toBeGreaterThanOrEqual(11);
+  await page.goto("/#/jobs/job-summary?tab=diff");
+  const detail = page.getByRole("dialog", { name: "Job details" });
+  await expect(detail.locator("pre")).toContainText("+func Listen(port int)");
+  await expect(detail.getByRole("button", { name: /^(Apply|Discard)$/ })).toHaveCount(0);
+  await expect(detail.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
+});
 test("Dashboard cost failure does not hide KPIs or chart", async ({ page }) => {
   await page.route("**/api/sub/cost?*", (route) =>
     route.fulfill({ status: 503, body: "offline" }),

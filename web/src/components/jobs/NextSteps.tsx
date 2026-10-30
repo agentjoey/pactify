@@ -65,10 +65,10 @@ export function NextSteps({ job, compact = false, title = "Next steps" }: {
 }) {
   const available = nextCommands(job);
   const priority = ["failed", "canceled"].includes(job.status)
-    ? ["run", "logs", "result", "apply", "discard", "dismiss"]
+    ? ["run", "logs", "result", "dismiss"]
     : ["running", "retrying", "queued"].includes(job.status)
       ? ["logs", "cancel"]
-      : ["apply", "discard", "run", "logs", "result", "dismiss"];
+      : ["run", "logs", "result", "dismiss"];
   const commands = compact
     ? priority.flatMap(verb => available.filter(command =>
         command.startsWith(`pactify sub ${verb} `),

@@ -109,7 +109,7 @@ for (const status of ["succeeded", "failed"]) {
     const row: Job = {
       ...job, status, resumeOf: "", actions: ["resume", "apply", "discard"],
       worktree: {path: "/wt", baseCommit: "abc", status: "pending"},
-      attention: [{kind: "worktree_pending", message: "Review changes"}],
+      attention: [{kind: status === "failed" ? "failed" : "warnings", message: "Review changes"}, {kind: "worktree_pending", message: "Awaiting apply"}],
     };
     vi.stubGlobal("fetch", vi.fn(async (path: string) =>
       path.endsWith("/latest")
@@ -120,10 +120,9 @@ for (const status of ["succeeded", "failed"]) {
     const card = await screen.findByRole("article");
     const commands = within(card).getAllByRole("button", {name: /^Copy pactify sub /});
     expect(commands).toHaveLength(2);
+    // Worktree approval stays with the delegating session, so cards never lead with apply or discard.
     expect(commands.map(button => button.getAttribute("aria-label"))).toEqual(
-      status === "succeeded"
-        ? ["Copy pactify sub apply latest", "Copy pactify sub discard latest"]
-        : ["Copy pactify sub run --resume latest --worktree", "Copy pactify sub logs latest"],
+      ["Copy pactify sub run --resume latest --worktree", "Copy pactify sub logs latest"],
     );
     expect(within(card).queryByText(/Run a command in your terminal|Ctrl\+D/)).toBeNull();
     const review = within(card).getByRole("button", {name: "Review"});
@@ -161,7 +160,8 @@ for (const readOnly of [false, true]) {
       expect(scroller!.querySelector(".next-steps")).toBeNull();
       expect(within(footer).queryByRole("button",{name:"Show commands"})).toBeNull();
     } else {
-      for (const name of ["Resume", "Apply", "Discard"]) expect(within(footer as HTMLElement).getByRole("button",{name})).toBeInTheDocument();
+      expect(within(footer as HTMLElement).getByRole("button",{name:"Resume"})).toBeInTheDocument();
+      for (const name of ["Apply", "Discard"]) expect(within(footer as HTMLElement).queryByRole("button",{name})).toBeNull();
     }
   });
 }

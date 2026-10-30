@@ -91,11 +91,9 @@ describe("standalone panel", () => {
     expect(screen.queryByText("Build the panel")).not.toBeInTheDocument();
     expect(screen.getByText("Review changes")).toBeInTheDocument();
   });
-  it("marks attention with readable messages and shows partial running usage", () => {
+  it("keeps a pending worktree out of Needs attention and shows partial running usage", () => {
     render(<JobList jobs={jobs} />);
-    expect(screen.getByRole("region", {name:"Needs attention"})).toHaveTextContent(
-      "Awaiting apply",
-    );
+    expect(screen.queryByText("Awaiting apply")).toBeNull();
     expect(screen.getByText(/99.*10.*partial/)).toBeInTheDocument();
   });
   it("renders log text safely and reports stream status", () => {

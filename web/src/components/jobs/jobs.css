@@ -358,7 +358,7 @@
 }
 .harness-label {
   color: var(--color-text-3);
-  font-size: 10px;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -378,8 +378,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px 12px;
-  color: var(--color-text-3);
-  font-size: 10px;
+  color: var(--color-text-2);
+  font-size: 12px;
   line-height: 1.7;
 }
 .panel-metadata > span {
@@ -396,12 +396,12 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font: 10px var(--font-mono);
+  font: 12px var(--font-mono);
   color: var(--color-text-2);
 }
 .v2-app .panel-attention {
   margin-top: 12px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--color-warn);
   overflow-wrap: anywhere;
 }
@@ -1073,18 +1073,19 @@
 .pipeline .task-card[data-section="progress"] { border-color: color-mix(in srgb,var(--info) 40%,var(--border)); }
 .pipeline .task-card[data-section="attention"] { border-color: color-mix(in srgb,var(--warn) 35%,var(--border)); }
 .pipeline .panel-job-top { flex-wrap: wrap; gap: 8px; }
-.pipeline .harness-label { font: 400 9px/1.5 var(--font-mono); overflow-wrap: anywhere; }
-.pipeline .panel-metadata { display: flex; flex-wrap: wrap; gap: 8px; font-size: 9px; }
-.job-id { color: var(--text-3); font: 400 9px/1.5 var(--font-mono); overflow-wrap: anywhere; }
-.pipeline .job-id { margin-top: 8px; }
+.pipeline .harness-label { font: 400 12px/1.5 var(--font-mono); overflow-wrap: anywhere; }
+.pipeline .panel-metadata { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; }
 .pipeline .panel-tags { gap: 4px; }
-.pipeline .panel-activity { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 400 10px/1.6 var(--font-mono); }
-.change-meta { color: var(--text-2); font: 400 10px/1.6 var(--font-mono); }
+.pipeline .panel-activity { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 400 12px/1.6 var(--font-mono); }
+.change-meta { margin-top: 6px; color: var(--text-2); font: 500 13px/1.6 var(--font-mono); }
 .change-meta span { color: var(--changes); }
-.pipeline .panel-attention { font-size: 11px; }
-.pipeline .next-steps h2 { font: 400 9px var(--font-mono); text-transform: uppercase; letter-spacing: .12em; }
+.pipeline .panel-attention { font-size: 13px; }
+.task-card .ui-badge { font-size: 11px; letter-spacing: .06em; }
+.task-card .status-pill { font-size: 11px; }
+.task-card .ui-button-sm { font-size: 12px; }
+.pipeline .next-steps h2 { font: 400 11px var(--font-mono); text-transform: uppercase; letter-spacing: .12em; }
 .pipeline .copy-command { min-width: 0; }
-.pipeline .copy-command code { font-size: 9px; }
+.pipeline .copy-command code { font-size: 12px; }
 .pipeline .card-actions { flex-wrap: wrap; }
 .station-empty { position: relative; z-index: 1; display: inline-block; margin: 20px 0 8px; padding: 4px 8px; background: var(--bg-elev); color: var(--text-3); font: 400 10px/12px var(--font-mono); }
 .shipped-row { display: grid; grid-template-columns: 16px minmax(0,1fr) auto; gap: 8px; align-items: center; background: var(--bg-elev); border: 1px solid var(--border-2); border-radius: 8px; padding: 12px; cursor: pointer; }
@@ -1260,7 +1261,7 @@
 .panel-section, .task-card { border-color: var(--border); }
 .panel-job h3 { font-size: 16px; font-weight: 600; line-height: 1.5; }
 .dashboard-job-grid .panel-job h3 { font-size: 22px; }
-.panel-job .harness-label { font-size: 10px; }
+.panel-job .harness-label { font-size: 12px; }
 .kpi-overview { display: flex; align-items: center; gap: 32px; padding: 4px 0 10px; }
 .kpi-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 24px; flex: 1; min-width: 0; }
 .panel-section.kpi { display: flex; flex-wrap: wrap; flex-direction: row-reverse; justify-content: end; align-items: center; gap: 12px; padding: 0; background: transparent; border: 0; }

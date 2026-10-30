@@ -31,7 +31,8 @@ it("lists job summaries, running first, using the dashboard API", async () => {
  const link=await screen.findByRole("link",{name:job.title});
  expect(screen.getAllByRole("article")[0]).toContainElement(link);
  expect(screen.getByText(/99.*8.*partial/)).toBeInTheDocument();
- expect(screen.getAllByText(/worktree · pending/)).toHaveLength(2);
+ // Only the finished run marks its pending worktree; the running card does not.
+ expect(screen.getAllByText("worktree pending")).toHaveLength(1);
  expect(screen.getByText("tool exec go test")).toBeInTheDocument();
  expect(fetcher).toHaveBeenCalledWith("/api/sub/jobs?all=1",expect.objectContaining({credentials:"same-origin"}));
  fireEvent.change(screen.getByLabelText("Harness"),{target:{value:"kimi"}});

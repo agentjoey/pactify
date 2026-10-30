@@ -12,7 +12,7 @@ export function StatusPill({ status, running = false }: {
   const tone = running || /running|retrying/.test(status) ? "info"
     : /fail|quota|cancel/.test(status) ? "err"
     : /ready|pending|warn/.test(status) ? "warn"
-    : /succeed|applied|shipped/.test(status) ? "ok" : "muted";
+    : /succeed|done|applied|shipped/.test(status) ? "ok" : "muted";
   return (
     <span className={`status-pill tone-${tone}`}>
       <span className={`status-dot ${running ? "breathing" : ""}`} aria-hidden="true" />

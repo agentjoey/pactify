@@ -31,7 +31,7 @@ for (const panel of [false, true]) {
         ? [footer.getByRole("heading", {name:"Next steps",exact:true}),
            ...(width > 700 ? await footer.getByRole("button", {name:/^Copy pactify sub /}).all()
              : [footer.getByRole("button", {name:/^(Show|Hide) commands$/})])]
-        : ["Resume", "Apply", "Discard"].map(name => footer.getByRole("button", {name,exact:true}));
+        : [footer.getByRole("button", {name:"Resume",exact:true})];
       // Check before scrolling: an offscreen footer must fail even if scrolling
       // to the bottom would eventually reveal its controls.
       for (const control of controls) await expectInside(modal, control);

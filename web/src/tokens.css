@@ -79,6 +79,7 @@
   --chart-kimi: #6ee7a0;
   --chart-opencode: #f5c451;
   --status-running: #8ab4ff;
+  --kpi-running: var(--status-running);
   --status-attention: #f5c451;
   --status-attention-ink: #1a1302;
   --status-success: #6ee7a0;
@@ -126,6 +127,7 @@
   --chart-kimi: #8a8880;
   --chart-opencode: #c9c7bf;
   --status-running: #141413;
+  --kpi-running: #2457d6;
   --status-attention: #c2410c;
   --status-attention-ink: #ffffff;
   --status-success: #141413;

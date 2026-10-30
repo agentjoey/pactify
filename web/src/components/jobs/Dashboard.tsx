@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { Job } from "./types";
 import type { JobsSource } from "./source";
 import { useResource } from "./data";
@@ -108,11 +108,14 @@ export function Dashboard({
           </section>
         ))}
         </div>
-        <svg className="dot-matrix" width="216" height="72" viewBox="0 0 216 72" aria-hidden="true">
+        <svg className="dot-matrix" width="216" height="72" viewBox="0 0 216 72" aria-hidden="true"
+          data-running={!jobsUnavailable && !!jobs && kpis.progress > 0}>
           {Array.from({ length: 24 * 8 }, (_, i) => (
+            // --col staggers the running wave so it travels left to right.
             <circle key={i} cx={(i % 24) * 9 + 4.5} cy={Math.floor(i / 24) * 9 + 4.5}
               r={i % 24 < 8 ? .9 : i % 24 < 17 ? 1.6 : 2.4}
-              fill="currentColor" opacity={i % 24 < 8 ? .35 : i % 24 < 17 ? .6 : 1} />
+              fill="currentColor" opacity={i % 24 < 8 ? .35 : i % 24 < 17 ? .6 : 1}
+              style={{ "--col": i % 24 } as CSSProperties} />
           ))}
         </svg>
       </div>

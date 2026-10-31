@@ -76,7 +76,6 @@ func TestDismissJobAPI(t *testing.T) {
 	}{
 		{name: "running", status: sub.StatusRunning},
 		{name: "clean", status: sub.StatusSucceeded},
-		{name: "pending", status: sub.StatusFailed, worktree: &sub.Worktree{Path: "pending-path"}},
 		{name: "applied", status: sub.StatusFailed, worktree: &sub.Worktree{Applied: true}},
 		{name: "discarded", status: sub.StatusFailed, worktree: &sub.Worktree{Discarded: true}},
 	} {
@@ -96,5 +95,33 @@ func TestDismissJobAPI(t *testing.T) {
 		if !current.DismissedAt.IsZero() || !reflect.DeepEqual(current.Worktree, st.Worktree) {
 			t.Errorf("rejected dismiss mutated %s", tc.name)
 		}
+	}
+}
+
+func TestDismissJobAPIKeepsPendingWorktree(t *testing.T) {
+	t.Setenv("PACTIFY_HOME", t.TempDir())
+	t.Setenv("PACTIFY_ALLOWED_ORIGINS", "")
+	store, err := sub.DefaultStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := serveHandler(t, New(), "127.0.0.1:7777")
+	st, err := store.Create("pending-failed", sub.Request{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Status, st.Worktree = sub.StatusFailed, &sub.Worktree{Path: "pending-path"}
+	if err := store.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	if w := actionRequest(h, st.ID, "dismiss", `{}`, "application/json", ""); w.Code != 200 {
+		t.Fatalf("dismiss: %d %s", w.Code, w.Body.String())
+	}
+	current, err := store.Load(st.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.DismissedAt.IsZero() || !reflect.DeepEqual(current.Worktree, st.Worktree) {
+		t.Fatalf("dismiss state = %+v", current)
 	}
 }

@@ -87,7 +87,7 @@ func TestDismissGuards(t *testing.T) {
 	}{
 		{"queued", StatusQueued, nil, "job guarded is still queued; wait for it or cancel it first"},
 		{"running", StatusRunning, nil, "job guarded is still running; wait for it or cancel it first"},
-		{"pending", StatusFailed, &Worktree{}, "job guarded has a pending worktree; apply or discard it first"},
+		{"pending", StatusFailed, &Worktree{}, ""},
 		{"applied", StatusSucceeded, &Worktree{Applied: true}, ""},
 		{"discarded", StatusCanceled, &Worktree{Discarded: true}, ""},
 	} {
@@ -120,5 +120,31 @@ func TestDismissGuards(t *testing.T) {
 	s := Store{Root: t.TempDir()}
 	if err := s.Dismiss(context.Background(), "unknown"); !os.IsNotExist(err) {
 		t.Fatalf("unknown job: %v", err)
+	}
+}
+
+func TestDismissPendingWorktreeKeepsItsAttention(t *testing.T) {
+	s := Store{Root: t.TempDir()}
+	st, err := s.Create("pending", Request{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Status, st.Worktree = StatusFailed, &Worktree{Path: "wt"}
+	if err := s.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Dismiss(context.Background(), st.ID); err != nil {
+		t.Fatal(err)
+	}
+	after, err := s.Load(st.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.DismissedAt.IsZero() || !reflect.DeepEqual(after.Worktree, st.Worktree) {
+		t.Fatalf("dismiss state = %+v", after)
+	}
+	row := s.NewSummaryIndex([]State{after}).Summarize(after, time.Now())
+	if len(row.Attention) != 1 || row.Attention[0].Kind != AttentionWorktreePending {
+		t.Fatalf("attention = %+v", row.Attention)
 	}
 }

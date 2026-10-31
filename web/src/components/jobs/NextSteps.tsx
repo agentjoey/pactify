@@ -51,8 +51,7 @@ export function nextCommands(job: Job): string[] {
     add("result");
     if (
       !job.dismissedAt &&
-      (!job.worktree || ["applied", "discarded"].includes(job.worktree.status)) &&
-      job.attention.some(a => ["failed", "warnings"].includes(a.kind))
+      (allowed.has("dismiss") || job.attention.some(a => ["failed", "warnings"].includes(a.kind)))
     ) add("dismiss");
   }
   return commands;

@@ -1271,7 +1271,7 @@
 .kpi:nth-child(1) strong { color: var(--kpi-running); }
 .kpi:nth-child(4) strong { color: var(--ok); }
 :root:not([data-theme="light"]) .kpi:nth-child(5) strong { color: var(--err); }
-.kpi:nth-child(3) strong { color: var(--status-attention); }
+.kpi:nth-child(2) strong { color: var(--status-attention); }
 .dot-matrix { flex: 0 0 216px; color: var(--accent); }
 .dot-matrix[data-running="true"] { color: var(--kpi-running); }
 @keyframes dot-flow { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }

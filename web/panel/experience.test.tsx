@@ -132,7 +132,7 @@ for (const status of ["succeeded", "failed"]) {
     await act(async () => {window.dispatchEvent(new HashChangeEvent("hashchange"));});
     const modal = await screen.findByRole("dialog");
     const nextSteps = await within(modal).findByRole("region", {name: "Next steps"});
-    expect(within(nextSteps).getAllByRole("button", {name: /^Copy pactify sub /})).toHaveLength(5);
+    expect(within(nextSteps).getAllByRole("button", {name: /^Copy pactify sub /})).toHaveLength(6);
     for (const command of ["apply latest", "discard latest", "run --resume latest --worktree", "logs latest", "result latest"]) {
       expect(within(nextSteps).getByRole("button", {name: `Copy pactify sub ${command}`})).toBeInTheDocument();
     }

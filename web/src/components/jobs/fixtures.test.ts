@@ -7,11 +7,11 @@ it("keeps every seeded job and reset independent, including nested arrays", () =
   const first = seedJobs();
   const second = seedJobs();
   first.find((j) => j.id === "job-failed")!.resumedBy.push("child");
-  expect(first.find((j) => j.id === "job-queued")!.resumedBy).toEqual([]);
+  expect(first.find((j) => j.id === "job-kimi")!.resumedBy).toEqual([]);
   expect(second.find((j) => j.id === "job-failed")!.resumedBy).toEqual([]);
   expect(seedJobs().find((j) => j.id === "job-failed")!.resumedBy).toEqual([]);
 });
-it("resumes only its parent chain, refreshes two queued cards, and resets cleanly", async () => {
+it("resumes only its parent chain, refreshes its queued card, and resets cleanly", async () => {
   const api = createJobsAPI(true);
   async function request(path: string, method = "GET", body = {}) {
     let value: unknown;
@@ -46,7 +46,6 @@ it("resumes only its parent chain, refreshes two queued cards, and resets cleanl
   );
   expect(queued.map((c) => c.root.title).sort()).toEqual([
     "Fix CLI exit code edge cases",
-    "Queued implementation",
   ]);
   expect(queued.find((c) => c.root.id === "job-failed")?.rework).toBe(1);
   expect(

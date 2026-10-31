@@ -18,8 +18,8 @@ for (const status of ["succeeded", "failed", "canceled"]) it(`uses server action
 it("does not guess unavailable actions for old jobs or busy shared worktrees", () => {
   for (const actions of [undefined, []]) expect(commands({actions, worktree:{path:"/wt",baseCommit:"abc",status:"pending"}})).toEqual(["pactify sub logs job-123", "pactify sub result job-123"]);
 });
-it("offers dismiss only for unacknowledged terminal failures/warnings with resolved or no worktree", () => {
-  for (const state of [undefined, "applied", "discarded"]) {
+it("offers dismiss only for unacknowledged terminal failures/warnings with any worktree state", () => {
+  for (const state of [undefined, "pending", "applied", "discarded"]) {
     const worktree = state ? {path:"/wt",baseCommit:"abc",status:state} : undefined;
     expect(commands({status:"failed", actions:[], worktree, attention:[{kind:"failed",message:"Failed"}]})).toContain("pactify sub dismiss job-123");
     expect(commands({status:"failed", actions:[], worktree, dismissedAt:"2026-10-20", attention:[]})).not.toContain("pactify sub dismiss job-123");

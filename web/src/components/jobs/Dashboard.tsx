@@ -94,8 +94,8 @@ export function Dashboard({
         {(
           [
             ["progress", "In progress"],
-            ["queued", "Queued"],
             ["attention", "Needs attention"],
+            ["review", "In review"],
             ["succeeded", "Succeeded (7d)"],
             ["failed", "Failed (7d)"],
           ] as const

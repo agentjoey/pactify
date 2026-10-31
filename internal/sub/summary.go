@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -88,21 +89,65 @@ type Activity struct {
 	UsagePartial bool   `json:"usagePartial,omitempty"`
 }
 
+var summaryHeadings = []string{"background", "context", "overview", "summary", "goal", "goals", "task", "tasks", "objective", "背景", "任务背景", "上下文", "概述", "目标", "任务", "需求", "说明"}
+
+func summaryHeading(text string) bool {
+	text = strings.ToLower(strings.TrimSpace(strings.TrimRight(text, ":：")))
+	return slices.Contains(summaryHeadings, text)
+}
+
+func summaryHeadingPrefix(text string) (string, bool) {
+	i := strings.IndexAny(text, ":：")
+	if i < 0 {
+		return "", false
+	}
+	if !summaryHeading(text[:i]) {
+		return "", false
+	}
+	rest := strings.TrimSpace(strings.TrimLeft(text[i:], ":："))
+	return rest, rest != ""
+}
+
+func cleanSummaryLine(line string) string {
+	clean := strings.TrimSpace(line)
+	if clean == "" {
+		return ""
+	}
+	if strings.HasPrefix(clean, "#") {
+		clean = strings.TrimSpace(strings.TrimLeft(clean, "#"))
+		if end := strings.TrimRight(clean, "#"); len(end) < len(clean) && (end == "" || strings.HasSuffix(end, " ") || strings.HasSuffix(end, "\t")) {
+			clean = strings.TrimSpace(end)
+		}
+	}
+	// Preserve underscores inside identifiers such as KIMI_CODE_HOME.
+	return strings.Trim(strings.NewReplacer("**", "", "__", "", "`", "").Replace(clean), "*_ ")
+}
+
 func briefSummary(brief string) string {
+	first := ""
 	for line := range strings.SplitSeq(brief, "\n") {
-		clean := strings.TrimSpace(line)
+		clean := cleanSummaryLine(line)
 		if clean == "" {
+			// Keep the historical result when the first non-empty raw line is
+			// markdown punctuation that cleans away to nothing.
+			if first == "" && strings.TrimSpace(line) != "" {
+				return ""
+			}
 			continue
 		}
-		if strings.HasPrefix(clean, "#") {
-			clean = strings.TrimSpace(strings.TrimLeft(clean, "#"))
-			if end := strings.TrimRight(clean, "#"); len(end) < len(clean) && (end == "" || strings.HasSuffix(end, " ") || strings.HasSuffix(end, "\t")) {
-				clean = strings.TrimSpace(end)
-			}
+		if first == "" {
+			first = clean
 		}
-		// Preserve underscores inside identifiers such as KIMI_CODE_HOME.
-		clean = strings.Trim(strings.NewReplacer("**", "", "__", "", "`", "").Replace(clean), "*_ ")
+		if summaryHeading(clean) {
+			continue
+		}
+		if rest, ok := summaryHeadingPrefix(clean); ok {
+			clean = rest
+		}
 		return truncateSummary(strings.Join(strings.Fields(clean), " "), 80)
+	}
+	if first != "" {
+		return truncateSummary(strings.Join(strings.Fields(first), " "), 80)
 	}
 	return ""
 }

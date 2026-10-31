@@ -2,14 +2,14 @@ import { expect, test } from "@playwright/test";
 for (const panel of [false,true]) test.describe(panel ? "panel pipeline" : "dashboard pipeline",()=>{
  test.use({baseURL: panel ? `http://127.0.0.1:${process.env.PANEL_E2E_PORT || 4176}` : `http://localhost:${process.env.E2E_PORT || 4173}`});
  test.beforeEach(async ({request})=>{await request.post('/__test/reset');});
-test("Queued snapping clears the sticky line rail",async({page})=>{
+test("Running snapping clears the sticky line rail",async({page})=>{
   await page.setViewportSize({width:1100,height:900});await page.goto('/#/jobs');
   const board=page.locator('.pipeline-scroll');await expect(board).toBeVisible();
   await board.evaluate(el=>{el.scrollLeft=el.scrollWidth;});
   await board.focus();
   await page.keyboard.press('h');
   const rail=await page.locator('.line-rail').boundingBox();
-  const header=await page.locator('[data-station="queued"] .station-heading').boundingBox();
+  const header=await page.locator('[data-station="progress"] .station-heading').boundingBox();
   expect(header!.x).toBeGreaterThanOrEqual(rail!.x+rail!.width-1);
   const viewport=await board.boundingBox();
   expect(header!.x+header!.width).toBeLessThanOrEqual(viewport!.x+viewport!.width+1);
@@ -40,8 +40,8 @@ test("phone pager defaults to Running and tiles and dots follow scrolling",async
   await settled();
   await page.waitForTimeout(600); // let the post-resize settle window pass before scrolling by hand
   const board=page.locator('.pipeline-scroll');await board.evaluate(el=>{el.scrollLeft=0;});
-  await expect(page.getByRole('button',{name:'Go to Queued',exact:true})).toHaveAttribute('aria-current','step');
-  await expect(page.locator('.pager-dot[aria-current="step"]')).toHaveAttribute('aria-label','Queued page');
+  await expect(page.getByRole('button',{name:'Go to Running',exact:true})).toHaveAttribute('aria-current','step');
+  await expect(page.locator('.pager-dot[aria-current="step"]')).toHaveAttribute('aria-label','Running page');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
 });
 test("theme defaults dark and header selection survives reload",async({page})=>{
@@ -76,9 +76,9 @@ for (const width of [1440,390]) test(`filter disclosure keeps filtering at ${wid
  await expect(filters).toHaveAttribute('aria-expanded','false');
  await expect(page.getByRole('combobox',{name:'Harness',exact:true})).toBeHidden();
  await filters.click();
- await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('queued');
+ await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('review');
  await expect(page.locator('.pipeline-scroll article')).toHaveCount(1);
- await expect(page.locator('.pipeline-scroll article')).toContainText('Queued implementation');
+ await expect(page.locator('.pipeline-scroll article')).toContainText('Share job summaries');
  await filters.click();
  await page.locator('h1').click();
  await page.keyboard.press('/');await expect(page.getByRole('searchbox')).toBeFocused();

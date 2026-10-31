@@ -3,9 +3,9 @@ import { projectName, sectionFor, type Section } from "./statistics";
 
 export type LineGrouping = "project" | "harness" | "one";
 export const stations = [
-  { key: "queued", name: "Queued", number: "01", tone: "muted" },
-  { key: "progress", name: "Running", number: "02", tone: "info" },
-  { key: "attention", name: "Needs you", number: "03", tone: "warn" },
+  { key: "progress", name: "Running", number: "01", tone: "info" },
+  { key: "attention", name: "Needs you", number: "02", tone: "warn" },
+  { key: "review", name: "In review", number: "03", tone: "muted" },
   { key: "completed", name: "Shipped", number: "04", tone: "ok" },
 ] as const;
 export const stationFor = (job: Job): Section => sectionFor(job);
@@ -50,17 +50,13 @@ export function relativeTime(value: string, now = Date.now()) {
 
 export function stationStat(key: Section, jobs: Job[], now = Date.now()) {
   const rows = jobs.filter(job => stationFor(job) === key);
-  if (key === "queued") {
-    const oldest = rows.reduce<Job | undefined>((a, b) => !a || b.createdAt < a.createdAt ? b : a, undefined);
-    return oldest ? `oldest waiting ${relativeTime(oldest.createdAt, now)}` : "nothing waiting";
-  }
+  if (key === "review") return rows.length ? `${rows.length} with the delegating session` : "nothing to review";
   if (key === "progress") return rows.length ? `${rows.length} in progress` : "all lines idle";
   if (key === "attention") {
     const failed = rows.filter(job => job.status === "failed").length;
-    return `${failed} failed${rows.length > failed ? ` · ${rows.length - failed} to review` : ""}`;
+    return `${failed} failed${rows.length > failed ? ` · ${rows.length - failed} with warnings` : ""}`;
   }
-  const toApply = rows.filter(job => job.worktree?.status === "pending").length;
-  return `${rows.filter(job => endedToday(job, new Date(now))).length} done today${toApply ? ` · ${toApply} to apply` : ""}`;
+  return `${rows.filter(job => endedToday(job, new Date(now))).length} done today`;
 }
 
 export function stationTodayCount(key: Section, jobs: Job[], now = new Date()) {
@@ -68,7 +64,7 @@ export function stationTodayCount(key: Section, jobs: Job[], now = new Date()) {
     if (stationFor(job) !== key) return false;
     if (key === "completed") return endedToday(job, now);
     const time = key === "progress" ? job.startedAt || job.createdAt
-      : key === "attention" ? job.finishedAt || job.createdAt : job.createdAt;
+      : job.finishedAt || job.createdAt;
     return new Date(time).toDateString() === now.toDateString() && +new Date(time) <= +now;
   }).length;
 }

@@ -1,13 +1,14 @@
 import type { Job } from "./types";
 import { mergeJobChains, type JobChain } from "./board";
 
-export type Section = "progress" | "queued" | "attention" | "completed";
+export type Section = "progress" | "attention" | "review" | "completed";
 export function sectionFor(job: Job): Section {
-  if (["running", "retrying"].includes(job.status)) return "progress";
-  if (job.status === "queued") return "queued";
-  // Worktree approval belongs to the delegating session, so a pending
-  // worktree alone leaves the job completed rather than needing attention.
-  return job.attention.some((a) => a.kind !== "worktree_pending") ? "attention" : "completed";
+  // Queued only lasts until the worker claims the job; there is no scheduler.
+  if (["queued", "running", "retrying"].includes(job.status)) return "progress";
+  if (job.attention.some((a) => a.kind !== "worktree_pending")) return "attention";
+  // A pending worktree means the delegating session still has to review it.
+  // Dismiss closes the card when that review will not happen.
+  return job.worktree?.status === "pending" && !job.dismissedAt ? "review" : "completed";
 }
 export const projectName = (repo: string) =>
   repo.replace(/\/$/, "").split("/").pop() || repo || "Unknown project";
@@ -77,8 +78,8 @@ export function dashboardKpis(jobs: Job[], now = new Date()) {
   since.setDate(since.getDate() - 6);
   const result = {
     progress: 0,
-    queued: 0,
     attention: 0,
+    review: 0,
     succeeded: 0,
     failed: 0,
   };

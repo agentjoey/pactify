@@ -106,7 +106,7 @@ func TestKimiP0OfflineWarning(t *testing.T) {
 func TestKimiP0QuotaFallback(t *testing.T) {
 	store, s, _, h, _, home := kimiJobFixture(t, false)
 	st, _ := store.Load("j1")
-	st.Routing = &Routing{Remaining: []Route{{Harness: "codex"}}}
+	st.Routing = &Routing{Remaining: []Route{{Harness: "kimi", Model: "fallback"}}}
 	store.Save(st)
 	s.script = func(s *fakeSession) {
 		writeKimiJobRecord(t, home, s.ThreadID(), "{\"type\":\"turn.ended\",\"reason\":\"failed\",\"error\":{\"code\":\"provider.rate_limit\",\"message\":\"subscription quota exhausted\"}}\n")
@@ -117,7 +117,7 @@ func TestKimiP0QuotaFallback(t *testing.T) {
 		t.Fatalf("%+v %v", r, err)
 	}
 	child, err := store.Load(r.FallbackTo)
-	if err != nil || child.Request.Harness != "codex" || child.FallbackFrom != "j1" {
+	if err != nil || child.Request.Harness != "kimi" || child.FallbackFrom != "j1" {
 		t.Fatal(child, err)
 	}
 }

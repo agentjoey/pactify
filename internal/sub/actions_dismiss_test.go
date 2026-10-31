@@ -24,7 +24,9 @@ func TestDismissActionEligibility(t *testing.T) {
 		{name: "running", status: StatusRunning, warnings: []string{"review result"}},
 		{name: "queued", status: StatusQueued},
 		{name: "dismissed", status: StatusFailed, dismissed: true},
-		{name: "pending", status: StatusFailed, worktree: &Worktree{}},
+		{name: "pending failed", status: StatusFailed, worktree: &Worktree{}, want: true},
+		{name: "pending warnings", status: StatusSucceeded, warnings: []string{"review result"}, worktree: &Worktree{}, want: true},
+		{name: "pending clean", status: StatusSucceeded, worktree: &Worktree{}, want: true},
 		{name: "applied", status: StatusFailed, worktree: &Worktree{Applied: true}},
 		{name: "discarded", status: StatusFailed, worktree: &Worktree{Discarded: true}},
 	} {

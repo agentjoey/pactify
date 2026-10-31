@@ -76,8 +76,20 @@ func (s Store) LoadRouter() (*Router, error) {
 	return ParseRouter(path, data)
 }
 
-// ParseRouter is the shared CLI and dashboard configuration validator.
+// ParseRouter is the shared CLI and dashboard configuration validator. Existing
+// cross-harness fallback entries load as ignored routes so older configuration
+// files keep working; IgnoredFallbacks reports them.
 func ParseRouter(path string, data []byte) (*Router, error) {
+	return parseRouter(path, data, false)
+}
+
+// ParseRouterStrict is the write-path validator. Fallback chains must stay on
+// their configured harness, matching runtime routing.
+func ParseRouterStrict(path string, data []byte) (*Router, error) {
+	return parseRouter(path, data, true)
+}
+
+func parseRouter(path string, data []byte, rejectCrossHarness bool) (*Router, error) {
 	fail := func(field string, err error) (*Router, error) {
 		return nil, &RouterConfigError{Path: path, Field: field, Err: err}
 	}
@@ -168,12 +180,40 @@ func ParseRouter(path string, data []byte) (*Router, error) {
 	}
 	for name, list := range r.Fallback {
 		for i, label := range list {
-			if _, err := r.Resolve(label); err != nil {
+			route, err := r.Resolve(label)
+			if err != nil {
 				return fail(fmt.Sprintf("fallback.%s[%d]", name, i), err)
+			}
+			if rejectCrossHarness && route.Harness != name {
+				return fail(fmt.Sprintf("fallback.%s[%d]", name, i), fmt.Errorf("route %s uses harness %s; fallback chains must stay on %s", label, route.Harness, name))
 			}
 		}
 	}
 	return r, nil
+}
+
+// IgnoredFallbacks lists configured fallback entries that cannot run on their
+// chain's harness. They are retained so the dashboard can show and remove them.
+func (r *Router) IgnoredFallbacks() []string {
+	if r == nil {
+		return nil
+	}
+	names := make([]string, 0, len(r.Fallback))
+	for name := range r.Fallback {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var warnings []string
+	for _, name := range names {
+		for i, label := range r.Fallback[name] {
+			route, err := r.Resolve(label)
+			if err != nil || route.Harness == name {
+				continue
+			}
+			warnings = append(warnings, fmt.Sprintf("fallback.%s[%d]: ignored route %s (harness %s); fallback chains must stay on %s", name, i, label, route.Harness, name))
+		}
+	}
+	return warnings
 }
 func (r *Router) Resolve(name string) (Route, error) {
 	return r.ResolveWithOverrides(name, nil, nil)
@@ -235,6 +275,9 @@ func (r *Router) Chain(first Route) []Route {
 	}
 	for _, label := range r.Fallback[first.Harness] {
 		route, _ := r.Resolve(label)
+		if route.Harness != first.Harness {
+			continue
+		}
 		if !slices.Contains(routes, route) {
 			routes = append(routes, route)
 		}

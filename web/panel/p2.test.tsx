@@ -7,7 +7,7 @@ import { AppContent } from "../src/App";
 import type { Job } from "../src/components/jobs/types";
 
 const job: Job = {id:"first", title:"First → café · −1", status:"running", harness:"codex", modelRequested:"model", access:"write", configMode:"minimal", repo:"/repo", cwd:"/repo", createdAt:"2026-10-20T12:00:00Z", duration:"1m", inputTokens:0, outputTokens:0, attention:[], resumeOf:"", resumedBy:[]};
-const jobs = [job, {...job,id:"second",title:"Second",status:"queued"}, ...["third","fourth","fifth"].map((id,i) => ({...job,id,title:id,status:"succeeded",createdAt:`2026-10-20T11:00:0${2-i}Z`}))];
+const jobs = [job, {...job,id:"second",title:"Second",status:"queued",createdAt:"2026-10-20T11:59:00Z"}, ...["third","fourth","fifth"].map((id,i) => ({...job,id,title:id,status:"succeeded",createdAt:`2026-10-20T11:00:0${2-i}Z`}))];
 afterEach(() => {cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); history.replaceState(null,"","/"); document.querySelector('link[rel="icon"]')?.remove();});
 
 for (const standalone of [true,false]) it(`navigates visible jobs with shortcuts in the ${standalone ? "panel" : "dashboard"}`, async () => {

@@ -45,7 +45,18 @@ func (s Store) quotaFallbackLocked(st *State, result *Result, now time.Time) err
 	if err != nil {
 		return err
 	}
-	next, remaining, warnings, err := r.Select(st.Routing.Remaining, quotas, st.Request.Access, now)
+	// Older versions could freeze routes from another harness. They are not
+	// fallback candidates; remove them before selecting the next attempt.
+	var remainingRoutes []Route
+	for _, route := range st.Routing.Remaining {
+		if route.Harness == st.Request.Harness {
+			remainingRoutes = append(remainingRoutes, route)
+		}
+	}
+	if len(remainingRoutes) == 0 {
+		return nil
+	}
+	next, remaining, warnings, err := r.Select(remainingRoutes, quotas, st.Request.Access, now)
 	if err != nil {
 		result.Warnings = append(result.Warnings, err.Error())
 		return nil

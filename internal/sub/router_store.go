@@ -62,7 +62,7 @@ func (s Store) RouterSnapshot(now time.Time) (RouterSnapshot, error) {
 // SaveRouter compares the original bytes under the same advisory lock mechanism
 // used by quota writers. Atomic rename publishes a private (0600) complete file.
 func (s Store) SaveRouter(ctx context.Context, version string, data json.RawMessage) error {
-	config, err := ParseRouter(s.RouterPath(), data)
+	config, err := ParseRouterStrict(s.RouterPath(), data)
 	if err != nil {
 		return err
 	}

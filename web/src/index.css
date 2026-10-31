@@ -105,9 +105,11 @@ button:disabled {
 :root[data-theme="light"] { color-scheme: light; }
 code, kbd, pre, .mono { font-family: var(--font-mono); font-weight: 400; }
 .section-label, .panel-eyebrow { font: 400 10px/1.6 var(--font-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--text-3); }
-.segmented { display: inline-flex; align-items: center; gap: 4px; padding: 3px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 999px; }
-.segmented button { font: 700 11px var(--font-mono); color: var(--text-2); border: 0; border-radius: 999px; padding: 7px 12px; background: transparent; }
-.segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.segmented { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; gap: 4px; padding: 3px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 999px; }
+.segmented-thumb { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px - (var(--segments) - 1) * 4px) / var(--segments)); border-radius: 999px; background: var(--accent); pointer-events: none; transform: translateX(calc(var(--segment-index) * (100% + 4px))); }
+@media (prefers-reduced-motion: no-preference) { .segmented-thumb { transition: transform 180ms var(--motion-ease); } }
+.segmented button { position: relative; z-index: 1; min-width: 0; font: 700 11px var(--font-mono); color: var(--text-2); border: 0; border-radius: 999px; padding: 7px 12px; background: transparent; }
+.segmented button[aria-pressed="true"] { color: var(--accent-ink); }
 .status-pill { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border: 1px solid var(--text-4); background: transparent; color: var(--text-2); padding: 4px 10px; border-radius: 999px; font: 700 10px/1.4 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
 .status-pill.tone-info { border-style: dashed; border-color: var(--status-running); color: var(--status-running); }
 .status-pill.tone-warn { border-color: var(--status-attention); background: var(--status-attention); color: var(--status-attention-ink); }

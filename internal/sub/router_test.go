@@ -43,6 +43,86 @@ func TestRouterConfigAndAliases(t *testing.T) {
 		}
 	}
 }
+func TestRouterChainKeepsOneHarness(t *testing.T) {
+	r := &Router{Aliases: map[string]Route{
+		"same": {Harness: "codex", Model: "a"},
+		"mm":   {Harness: "opencode", Model: "mini"},
+	}, Fallback: map[string][]string{"codex": {"@mm", "@same", "kimi", "opencode"}}}
+	chain := r.Chain(Route{Harness: "codex"})
+	if len(chain) != 2 || chain[1].Harness != "codex" || chain[1].Model != "a" {
+		t.Fatalf("cross-harness route in chain: %+v", chain)
+	}
+	if remaining := r.Chain(Route{Harness: "codex", Model: "first"}); len(remaining) != 2 {
+		t.Fatalf("chain=%+v", remaining)
+	}
+}
+
+func TestRouterLoadKeepsCrossHarnessEntriesAsWarnings(t *testing.T) {
+	s := Store{Root: filepath.Join(t.TempDir(), "jobs")}
+	routerFile(t, s, `{"aliases":{"mm":{"harness":"opencode","model":"mini"},"fast":{"harness":"codex"}},"fallback":{"codex":["@mm","@fast","kimi"]}}`)
+	r, err := s.LoadRouter()
+	if err != nil {
+		t.Fatalf("load rejected an existing cross-harness entry: %v", err)
+	}
+	if got := r.Fallback["codex"]; len(got) != 3 {
+		t.Fatalf("raw fallback changed: %+v", got)
+	}
+	warnings := r.IgnoredFallbacks()
+	if len(warnings) != 2 || !strings.Contains(warnings[0], "fallback.codex[0]") || !strings.Contains(warnings[0], "@mm") || !strings.Contains(warnings[1], "fallback.codex[2]") {
+		t.Fatalf("warnings=%q", warnings)
+	}
+}
+
+func TestQuotaFallbackSkipsFrozenCrossHarnessRoutes(t *testing.T) {
+	s := Store{Root: filepath.Join(t.TempDir(), "jobs")}
+	st, err := s.Create("j", Request{Harness: "codex", Model: "primary", Access: "write", Cwd: gitRepo(t)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Routing = &Routing{Remaining: []Route{{Harness: "opencode", Model: "mini"}, {Harness: "codex", Model: "later"}}}
+	if err = s.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := TakeSnapshot(st.Request.Cwd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Baseline = &baseline
+	if err = s.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	r := Result{JobID: st.ID, Status: StatusFailed, FailureClass: "quota"}
+	if err = s.Finish(st.ID, &r, "usage limit", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if r.FallbackTo == "" {
+		t.Fatalf("same-harness successor was skipped: %+v", r)
+	}
+	child, err := s.Load(r.FallbackTo)
+	if err != nil || child.Request.Harness != "codex" || child.Request.Model != "later" {
+		t.Fatalf("child=%+v err=%v", child, err)
+	}
+}
+
+func TestQuotaFallbackRefusesOnlyCrossHarnessRoutes(t *testing.T) {
+	s := Store{Root: filepath.Join(t.TempDir(), "jobs")}
+	st, err := s.Create("j", Request{Harness: "codex", Access: "write", Cwd: gitRepo(t)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Routing = &Routing{Remaining: []Route{{Harness: "agy", Model: "low"}}}
+	if err = s.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	r := Result{JobID: st.ID, Status: StatusFailed, FailureClass: "quota"}
+	if err = s.Finish(st.ID, &r, "usage limit", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if r.FallbackTo != "" {
+		t.Fatalf("fell back to another harness: %+v", r)
+	}
+}
+
 func TestRouterSelection(t *testing.T) {
 	now := time.Now()
 	later := now.Add(time.Hour)
@@ -84,11 +164,12 @@ func TestQuotaFallbackBaseline(t *testing.T) {
 				s, sess, b := workerFixture(t, "write")
 				st, _ := s.Load("j1")
 				st.Request.Harness = "codex"
+				st.Request.Model = "primary"
 				if unborn {
 					st.Request.Cwd = unbornRepo(t)
 					write(t, st.Request.Cwd, "pre.txt", "before\n")
 				}
-				st.Routing = &Routing{Remaining: []Route{{Harness: "kimi"}}}
+				st.Routing = &Routing{Remaining: []Route{{Harness: "codex", Model: "fallback"}}}
 				_ = s.Save(st)
 				sess.script = func(f *fakeSession) {
 					if changed {
@@ -102,7 +183,7 @@ func TestQuotaFallbackBaseline(t *testing.T) {
 				}
 				old, _ := s.Load("j1")
 				if changed {
-					if old.FallbackTo != "" || !contains(result.Warnings, "review the diff, then: pactify sub run kimi --worktree-from j1") {
+					if old.FallbackTo != "" || !contains(result.Warnings, "review the diff, then: pactify sub run codex --model 'fallback' --worktree-from j1") {
 						t.Fatalf("%+v %+v", old, result)
 					}
 				} else {
@@ -203,7 +284,8 @@ func TestFallbackDoesNotIgnoreRemovedUserFile(t *testing.T) {
 	s, sess, b := workerFixture(t, "write")
 	st, _ := s.Load("j1")
 	st.Request.Harness = "codex"
-	st.Routing = &Routing{Remaining: []Route{{Harness: "kimi"}}}
+	st.Request.Model = "primary"
+	st.Routing = &Routing{Remaining: []Route{{Harness: "codex", Model: "fallback"}}}
 	_ = s.Save(st)
 	write(t, st.Request.Cwd, "preexisting.txt", "user content\n")
 	sess.script = func(f *fakeSession) {
@@ -218,11 +300,11 @@ func TestFallbackDoesNotIgnoreRemovedUserFile(t *testing.T) {
 func TestWorktreeFallbackAndResumeOwnership(t *testing.T) {
 	s, sess, b := workerFixture(t, "write")
 	initial, _ := s.Load("j1")
-	old, err := s.CreateRun("isolated", Request{Harness: "codex", Cwd: initial.Request.Cwd, Access: "write", Brief: "task"}, true, false)
+	old, err := s.CreateRun("isolated", Request{Harness: "codex", Model: "primary", Cwd: initial.Request.Cwd, Access: "write", Brief: "task"}, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	old.Routing = &Routing{Remaining: []Route{{Harness: "kimi"}}}
+	old.Routing = &Routing{Remaining: []Route{{Harness: "codex", Model: "fallback"}}}
 	_ = s.Save(old)
 	sess.script = func(f *fakeSession) {
 		f.events <- cockpit.Event{Kind: cockpit.EventState, State: cockpit.StateTurnFailed, Err: "usage limit"}
@@ -258,8 +340,8 @@ func TestWorktreeFallbackAndResumeOwnership(t *testing.T) {
 func TestFallbackUnavailableBaselineAndReadOnly(t *testing.T) {
 	for _, access := range []string{"write", "read-only"} {
 		s := Store{Root: filepath.Join(t.TempDir(), "jobs")}
-		st, _ := s.Create("j", Request{Harness: "codex", Access: access, Cwd: gitRepo(t)})
-		st.Routing = &Routing{Remaining: []Route{{Harness: "kimi"}}}
+		st, _ := s.Create("j", Request{Harness: "codex", Model: "primary", Access: access, Cwd: gitRepo(t)})
+		st.Routing = &Routing{Remaining: []Route{{Harness: "codex", Model: "fallback"}}}
 		_ = s.Save(st)
 		r := Result{JobID: st.ID, Status: StatusFailed, FailureClass: "quota"}
 		if err := s.Finish(st.ID, &r, "quota", time.Now()); err != nil {
@@ -273,13 +355,13 @@ func TestFallbackUnavailableBaselineAndReadOnly(t *testing.T) {
 
 func TestFallbackStopsWhenCleanupCannotBeProven(t *testing.T) {
 	s := Store{Root: filepath.Join(t.TempDir(), "jobs")}
-	st, _ := s.Create("j", Request{Harness: "codex", Access: "write", Cwd: gitRepo(t)})
+	st, _ := s.Create("j", Request{Harness: "codex", Model: "primary", Access: "write", Cwd: gitRepo(t)})
 	baseline, err := TakeSnapshot(st.Request.Cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
 	st.Baseline = &baseline
-	st.Routing = &Routing{Remaining: []Route{{Harness: "kimi"}}}
+	st.Routing = &Routing{Remaining: []Route{{Harness: "codex", Model: "fallback"}}}
 	st.ProcessTrackingError = "lost process identity"
 	_ = s.Save(st)
 	r := Result{JobID: st.ID, Status: StatusFailed, FailureClass: "quota"}
@@ -302,9 +384,9 @@ func TestRouterResetAndChainOrder(t *testing.T) {
 	soon := now.Add(time.Hour)
 	late := now.Add(2 * time.Hour)
 	expired := now.Add(-time.Minute)
-	r := &Router{Aliases: map[string]Route{"same": {Harness: "codex"}, "cheap": {Harness: "opencode", Model: "m"}}, Fallback: map[string][]string{"codex": {"@same", "@cheap", "kimi", "@cheap"}}}
+	r := &Router{Aliases: map[string]Route{"same": {Harness: "codex"}, "cheap": {Harness: "codex", Model: "m"}}, Fallback: map[string][]string{"codex": {"@same", "@cheap", "kimi", "@cheap"}}}
 	routes := r.Chain(Route{Harness: "codex"})
-	if len(routes) != 3 || routes[1].Model != "m" || routes[2].Harness != "kimi" {
+	if len(routes) != 2 || routes[1].Model != "m" {
 		t.Fatalf("%+v", routes)
 	}
 	q := []QuotaRoute{{Harness: "codex", ResetAt: &late, RecordedAt: now}, {Harness: "codex", Model: "m", ResetAt: &soon, RecordedAt: now}, {Harness: "kimi", ResetAt: &soon, RecordedAt: now}}
@@ -413,7 +495,7 @@ func TestRuntimeFallbackEnglishWarningPersistsToFinalResult(t *testing.T) {
 		t.Fatal(err)
 	}
 	st.Baseline = &baseline
-	st.Routing = &Routing{Remaining: []Route{{Harness: "opencode", Model: "mini"}}}
+	st.Routing = &Routing{Remaining: []Route{{Harness: "agy", Model: "low"}}}
 	if err = store.Save(st); err != nil {
 		t.Fatal(err)
 	}
@@ -421,7 +503,7 @@ func TestRuntimeFallbackEnglishWarningPersistsToFinalResult(t *testing.T) {
 	if err = store.Finish(st.ID, &failed, "Individual quota reached", now); err != nil {
 		t.Fatal(err)
 	}
-	const want = "quota exhausted for agy/high; using opencode/mini (resets in 6d 18h)"
+	const want = "quota exhausted for agy/high; using agy/low (resets in 6d 18h)"
 	if !contains(failed.Warnings, want) || failed.FallbackTo == "" {
 		t.Fatalf("%+v", failed)
 	}
